@@ -20,7 +20,10 @@ export default [
   {
     rules: {
       // TypeScript
-      "@typescript-eslint/no-unused-vars": ["error", { argIgnorePattern: "^_" }],
+      "@typescript-eslint/no-unused-vars": [
+        "error",
+        { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
+      ],
       "@typescript-eslint/no-explicit-any": "error",
       "@typescript-eslint/explicit-function-return-type": "off",
 
@@ -31,13 +34,23 @@ export default [
     },
   },
 
+  // 脚本类文件允许 console 输出
+  {
+    files: ["prisma/**/*.ts", "tests/**/*.ts"],
+    rules: {
+      "no-console": "off",
+    },
+  },
+
   // 忽略
   {
     ignores: [
       ".next/**",
       "node_modules/**",
       "prisma/generated/**",
-     "*.config.*",
-   ],
+      // 浏览器直载脚本（不经打包器，运行于页面环境）
+      "public/**",
+      "*.config.*",
+    ],
   },
 ];

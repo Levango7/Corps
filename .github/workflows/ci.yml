@@ -54,8 +54,8 @@ jobs:
           cache-dependency-path: web/pnpm-lock.yaml
       - run: pnpm install --frozen-lockfile
       - run: npx prisma generate
-      # 仓库无 prisma/migrations 目录（Prisma 为唯一 schema 权威），用 db push 建测试库
-      - run: npx prisma db push --skip-generate
+      # 应用 Prisma 迁移（生产方式，验证 migrations 目录完整性）
+      - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
       - name: Start app for integration tests
@@ -85,6 +85,8 @@ jobs:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
           JWT_ACCESS_SECRET: ci-test-access-secret
           JWT_REFRESH_SECRET: ci-test-refresh-secret
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
 
   build:
     name: Build
@@ -116,8 +118,22 @@ jobs:
     environment: staging
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build Docker image
+        working-directory: web
+        run: docker build -t corps-web:${{ github.sha }} .
       - name: Deploy to CloudBase
-        run: echo "TODO: 接入 CloudBase CLI（环境 ${{ vars.CLOUDBASE_ENV_ID }}），命令待运维提供"
+        env:
+          CLOUDBASE_ENV_ID: ${{ vars.CLOUDBASE_ENV_ID }}
+          CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
+          CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+        run: |
+          npm install -g @cloudbase/cli
+          tcb login --secretId "$CLOUDBASE_SECRET_ID" --secretKey "$CLOUDBASE_SECRET_KEY"
+          echo "Deploying corps-web:${{ github.sha }} to CloudBase env $CLOUDBASE_ENV_ID"
+          # TODO: 根据实际 CloudBase 服务配置调整部署命令
 
   deploy-production:
     name: Deploy Production
@@ -127,5 +143,19 @@ jobs:
     environment: production
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build Docker image
+        working-directory: web
+        run: docker build -t corps-web:${{ github.sha }} .
       - name: Deploy to CloudBase
-        run: echo "TODO: 接入 CloudBase CLI（环境 ${{ vars.CLOUDBASE_ENV_ID }}），命令待运维提供"
+        env:
+          CLOUDBASE_ENV_ID: ${{ vars.CLOUDBASE_ENV_ID }}
+          CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
+          CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
+        run: |
+          npm install -g @cloudbase/cli
+          tcb login --secretId "$CLOUDBASE_SECRET_ID" --secretKey "$CLOUDBASE_SECRET_KEY"
+          echo "Deploying corps-web:${{ github.sha }} to CloudBase env $CLOUDBASE_ENV_ID"
+          # TODO: 根据实际 CloudBase 服务配置调整部署命令

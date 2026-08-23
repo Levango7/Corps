@@ -18,28 +18,28 @@
  * -------------------------------------------------------------------------- */
 :root {
   /* Accent — 柔和沉静蓝（降饱和，保留专业感，非钴蓝刺眼） */
-  --p-accent:        #4263EB;
-  --p-accent-dk:     #3A55D8;   /* hover */
-  --p-accent-dkr:    #2F47C0;   /* active */
-  --p-accent-soft:   #EBEEFB;   /* 选中态背景 tint（微暖蓝） */
-  --p-on-accent:     #FFFFFF;
+  --p-accent: #4263eb;
+  --p-accent-dk: #3a55d8; /* hover */
+  --p-accent-dkr: #2f47c0; /* active */
+  --p-accent-soft: #ebeefb; /* 选中态背景 tint（微暖蓝） */
+  --p-on-accent: #ffffff;
 
   /* Neutral — Light（微暖灰，营造温暖平和） */
-  --p-bg:        #F8F8F6;
-  --p-surface:   #FEFEFC;
-  --p-surface-2: #F4F4F1;
-  --p-surface-3: #ECECE8;
-  --p-fg:        #1A1A18;
-  --p-fg-2:      #3D3D3A;
-  --p-muted:     #6B6B68;
-  --p-meta:      #9A9A96;
-  --p-border:        #E5E5E0;
-  --p-border-soft:   #F0F0EC;
+  --p-bg: #f8f8f6;
+  --p-surface: #fefefc;
+  --p-surface-2: #f4f4f1;
+  --p-surface-3: #ecece8;
+  --p-fg: #1a1a18;
+  --p-fg-2: #3d3d3a;
+  --p-muted: #6b6b68;
+  --p-meta: #9a9a96;
+  --p-border: #e5e5e0;
+  --p-border-soft: #f0f0ec;
 
   /* Semantic */
-  --p-success: #1A9E6B;
-  --p-warn:    #C9881A;
-  --p-danger:  #DC3D4A;
+  --p-success: #1a9e6b;
+  --p-warn: #c9881a;
+  --p-danger: #dc3d4a;
 
   /* Focus ring (accent @ 28%，对应 #4263EB） */
   --p-accent-ring: rgba(66, 99, 235, 0.28);
@@ -50,158 +50,170 @@
  * -------------------------------------------------------------------------- */
 :root {
   /* —— 表面 / 文字 / 边框 —— */
-  --bg:          var(--p-bg);
-  --surface:     var(--p-surface);
-  --surface-2:   var(--p-surface-2);
-  --surface-3:   var(--p-surface-3);
+  --bg: var(--p-bg);
+  --surface: var(--p-surface);
+  --surface-2: var(--p-surface-2);
+  --surface-3: var(--p-surface-3);
   /* 宁静淡蓝表面（白天极浅蓝 / 深色回落深蓝灰），用于卡片以营造平和质感 */
   --surface-calm: color-mix(in srgb, var(--p-surface) 93%, var(--shell-blue) 7%);
 
   /* —— 外壳纯天蓝（与品牌钴蓝解耦，避免底布显紫；纯蓝调、偏湖蓝）——
      单独派生，仅用于外壳背景，不参与强调色 */
-  --shell-blue:    #6BA3D8;                                                         /* 柔和天蓝（降饱和，更宁静） */
+  --shell-blue: #6ba3d8; /* 柔和天蓝（降饱和，更宁静） */
 
   /* —— 应用外壳三层背景（浅色：纯蓝调、明度递降、同色系协调、肉眼可辨）——
      topbar 极淡蓝(最亮) → sidebar 淡蓝微透(中间) → content 浅蓝底布(最沉静) */
-  --shell-topbar:  color-mix(in srgb, var(--p-surface) 96%, var(--shell-blue) 4%);  /* 极淡蓝顶栏 */
-  --shell-sidebar: color-mix(in srgb, var(--p-surface) 80%, var(--shell-blue) 10%); /* 淡蓝微透侧栏，中间层 */
-  --shell-content: color-mix(in srgb, var(--p-surface-2) 66%, var(--shell-blue) 14%); /* 浅蓝内容底布，白卡片浮其上 */
+  --shell-topbar: color-mix(in srgb, var(--p-surface) 96%, var(--shell-blue) 4%); /* 极淡蓝顶栏 */
+  --shell-sidebar: color-mix(
+    in srgb,
+    var(--p-surface) 80%,
+    var(--shell-blue) 10%
+  ); /* 淡蓝微透侧栏，中间层 */
+  --shell-content: color-mix(
+    in srgb,
+    var(--p-surface-2) 66%,
+    var(--shell-blue) 14%
+  ); /* 浅蓝内容底布，白卡片浮其上 */
 
   /* —— 外壳边界特效（侧栏右缘渐变描边 / 正文左缘柔光）——
      用纯蓝调，避免紫味 */
-  --shell-edge:      color-mix(in srgb, var(--shell-blue) 32%, transparent);        /* 侧栏右边界渐变主色 */
-  --shell-edge-soft: color-mix(in srgb, var(--shell-blue) 12%, var(--border) 60%);  /* 正文左缘柔光描边 */
+  --shell-edge: color-mix(in srgb, var(--shell-blue) 32%, transparent); /* 侧栏右边界渐变主色 */
+  --shell-edge-soft: color-mix(
+    in srgb,
+    var(--shell-blue) 12%,
+    var(--border) 60%
+  ); /* 正文左缘柔光描边 */
 
   /* 混色基准黑（color-mix 压暗语义，集中管理，避免组件层裸 #000） */
   --mix-black: #000;
 
-  --fg:          var(--p-fg);
-  --fg-2:        var(--p-fg-2);
-  --muted:       var(--p-muted);
-  --meta:        var(--p-meta);
+  --fg: var(--p-fg);
+  --fg-2: var(--p-fg-2);
+  --muted: var(--p-muted);
+  --meta: var(--p-meta);
 
-  --border:        var(--p-border);
-  --border-soft:   var(--p-border-soft);
+  --border: var(--p-border);
+  --border-soft: var(--p-border-soft);
 
   /* —— 强调色（派生经 color-mix，租户覆盖 --accent 即联动）—— */
-  --accent:         var(--p-accent);
-  --accent-hover:   color-mix(in srgb, var(--accent) 88%, #000);
-  --accent-active:  color-mix(in srgb, var(--accent) 78%, #000);
-  --accent-soft:    color-mix(in srgb, var(--accent) 10%, transparent);
+  --accent: var(--p-accent);
+  --accent-hover: color-mix(in srgb, var(--accent) 88%, #000);
+  --accent-active: color-mix(in srgb, var(--accent) 78%, #000);
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
   --accent-soft-fg: var(--accent);
-  --on-accent:      var(--p-on-accent);
-  --accent-ring:    var(--p-accent-ring);
+  --on-accent: var(--p-on-accent);
+  --accent-ring: var(--p-accent-ring);
 
   /* —— 语义状态色 —— */
-  --success:      var(--p-success);
-  --warn:         var(--p-warn);
-  --danger:       var(--p-danger);
+  --success: var(--p-success);
+  --warn: var(--p-warn);
+  --danger: var(--p-danger);
   --success-soft: color-mix(in srgb, var(--success) 12%, transparent);
-  --warn-soft:    color-mix(in srgb, var(--warn) 14%, transparent);
-  --danger-soft:  color-mix(in srgb, var(--danger) 12%, transparent);
+  --warn-soft: color-mix(in srgb, var(--warn) 14%, transparent);
+  --danger-soft: color-mix(in srgb, var(--danger) 12%, transparent);
 
   /* —— 任务状态/优先级点色（C-extension，复用语义色）—— */
-  --status-todo-fg:  var(--muted);
+  --status-todo-fg: var(--muted);
   --status-doing-fg: var(--accent);
-  --status-done-fg:  var(--success);
-  --prio-high-fg:    var(--danger);
-  --prio-med-fg:     var(--warn);
-  --prio-low-fg:     var(--muted);
+  --status-done-fg: var(--success);
+  --prio-high-fg: var(--danger);
+  --prio-med-fg: var(--warn);
+  --prio-low-fg: var(--muted);
 
   /* —— 字体 —— */
   --font-display: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-body:    "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
-  --font-mono:    "JetBrains Mono", "Fira Code", ui-monospace, monospace;
+  --font-body: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;
+  --font-mono: "JetBrains Mono", "Fira Code", ui-monospace, monospace;
 
   /* —— 字号阶梯（8 级，应用密度 base=14px）—— */
-  --text-xs:  12px;   /* 0.75rem  辅助/标签 */
-  --text-sm:  13px;   /* 0.8125rem 次要 */
-  --text-base:14px;   /* 0.875rem 正文基准 */
-  --text-md:  16px;   /* 1rem     强调正文 */
-  --text-lg:  18px;   /* 1.125rem 小标题 */
-  --text-xl:  20px;   /* 1.25rem 二级标题 */
-  --text-2xl: 24px;   /* 1.5rem  一级标题 */
-  --text-3xl: 30px;   /* 1.875rem 页眉标题 */
-  --text-4xl: 36px;   /* 2.25rem 极少用 */
+  --text-xs: 12px; /* 0.75rem  辅助/标签 */
+  --text-sm: 13px; /* 0.8125rem 次要 */
+  --text-base: 14px; /* 0.875rem 正文基准 */
+  --text-md: 16px; /* 1rem     强调正文 */
+  --text-lg: 18px; /* 1.125rem 小标题 */
+  --text-xl: 20px; /* 1.25rem 二级标题 */
+  --text-2xl: 24px; /* 1.5rem  一级标题 */
+  --text-3xl: 30px; /* 1.875rem 页眉标题 */
+  --text-4xl: 36px; /* 2.25rem 极少用 */
 
   /* —— 行高 —— */
-  --leading-tight:   1.2;
-  --leading-snug:    1.35;
-  --leading-normal:  1.5;
+  --leading-tight: 1.2;
+  --leading-snug: 1.35;
+  --leading-normal: 1.5;
   --leading-relaxed: 1.625;
 
   /* —— 字距 —— */
-  --tracking-display: -0.02em;  /* ≥30px 展示字 */
-  --tracking-tight:   -0.01em;  /* ≥20px 标题 */
-  --tracking-normal:  0;        /* 正文 */
-  --tracking-caps:    0.06em;   /* ALL CAPS / 小标签 */
+  --tracking-display: -0.02em; /* ≥30px 展示字 */
+  --tracking-tight: -0.01em; /* ≥20px 标题 */
+  --tracking-normal: 0; /* 正文 */
+  --tracking-caps: 0.06em; /* ALL CAPS / 小标签 */
 
   /* —— 字重（三级）—— */
-  --weight-regular:   400;
-  --weight-medium:    510;
-  --weight-semibold:  590;
+  --weight-regular: 400;
+  --weight-medium: 510;
+  --weight-semibold: 590;
 
   /* —— 间距（4px 网格）—— */
-  --space-1:  4px;
-  --space-2:  8px;
-  --space-3:  12px;
-  --space-4:  16px;
-  --space-5:  22px;
-  --space-6:  24px;
-  --space-8:  32px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 22px;
+  --space-6: 24px;
+  --space-8: 32px;
   --space-10: 40px;
   --space-12: 48px;
   --space-16: 64px;
   --space-20: 80px;
 
   /* —— 圆角（≤16px，禁 ≥24px 过度圆滑）—— */
-  --radius-sm:   8px;
-  --radius-md:   10px;
-  --radius-lg:   14px;
-  --radius-xl:   16px;
+  --radius-sm: 8px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 16px;
   --radius-pill: 9999px;
 
   /* —— 阴影（克制，浅色以边框为主）—— */
   --elev-flat: none;
   --elev-ring: 0 0 0 1px var(--border);
-  --elev-sm:  0 1px 2px rgba(26,26,24,0.03), 0 1px 1px rgba(26,26,24,0.02);
-  --elev-md:  0 4px 12px rgba(26,26,24,0.05), 0 2px 4px rgba(26,26,24,0.03);
-  --elev-lg:  0 12px 32px rgba(26,26,24,0.08), 0 4px 8px rgba(26,26,24,0.04);
+  --elev-sm: 0 1px 2px rgba(26, 26, 24, 0.03), 0 1px 1px rgba(26, 26, 24, 0.02);
+  --elev-md: 0 4px 12px rgba(26, 26, 24, 0.05), 0 2px 4px rgba(26, 26, 24, 0.03);
+  --elev-lg: 0 12px 32px rgba(26, 26, 24, 0.08), 0 4px 8px rgba(26, 26, 24, 0.04);
   /* 悬浮微抬升：卡片 hover 时极轻上移 + 柔化投影，制造"可交互"提示 */
-  --elev-hover: 0 6px 18px rgba(26,26,24,0.06), 0 2px 6px rgba(26,26,24,0.03);
+  --elev-hover: 0 6px 18px rgba(26, 26, 24, 0.06), 0 2px 6px rgba(26, 26, 24, 0.03);
 
   /* —— 动效（收敛 150ms）—— */
   --motion-fast: 120ms;
   --motion-base: 150ms;
   --motion-slow: 220ms;
-  --motion-enter: 420ms;   /* 页面/卡片入场 */
+  --motion-enter: 420ms; /* 页面/卡片入场 */
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  --ease-out:      cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
   /* —— 层级 —— */
-  --z-base:    0;
+  --z-base: 0;
   --z-dropdown: 1000;
-  --z-sticky:  1100;
-  --z-modal:   1200;
-  --z-toast:   1300;
-  --z-cmd:     1400;
+  --z-sticky: 1100;
+  --z-modal: 1200;
+  --z-toast: 1300;
+  --z-cmd: 1400;
 
   /* —— 布局骨架 —— */
   --container-max: 1280px;
-  --sidebar-w:     240px;
-  --topbar-h:      56px;
-  --section-y:     36px;
+  --sidebar-w: 240px;
+  --topbar-h: 56px;
+  --section-y: 36px;
 
   /* —— 布局细节尺寸（P2: 抽离硬编码值）—— */
-  --sidebar-w-collapsed: 64px;   /* 折叠侧栏宽度 */
-  --sidebar-w-mobile:    280px;  /* 移动端抽屉宽度 */
-  --search-w-sm:         240px;  /* 搜索框宽度（小屏） */
-  --search-w-lg:         300px;  /* 搜索框宽度（大屏） */
-  --board-col-min-h:     500px;  /* 看板列最小高度 */
-  --board-col-min-w:     260px;  /* 看板列最小宽度 */
-  --task-aside-w:        260px;  /* 任务详情侧栏宽度 */
-  --cmd-palette-top:     12vh;   /* 命令面板顶部偏移 */
-  --cmd-palette-max-h:   50vh;   /* 命令面板结果最大高度 */
+  --sidebar-w-collapsed: 64px; /* 折叠侧栏宽度 */
+  --sidebar-w-mobile: 280px; /* 移动端抽屉宽度 */
+  --search-w-sm: 240px; /* 搜索框宽度（小屏） */
+  --search-w-lg: 300px; /* 搜索框宽度（大屏） */
+  --board-col-min-h: 500px; /* 看板列最小高度 */
+  --board-col-min-w: 260px; /* 看板列最小宽度 */
+  --task-aside-w: 260px; /* 任务详情侧栏宽度 */
+  --cmd-palette-top: 12vh; /* 命令面板顶部偏移 */
+  --cmd-palette-max-h: 50vh; /* 命令面板结果最大高度 */
 
   /* —— 焦点环（统一，禁移除）—— */
   --focus-ring: 0 0 0 3px var(--accent-ring);
@@ -225,46 +237,50 @@
  * 深色以"亮度递进"表达层级，阴影极弱，靠 1px 边框分隔
  * -------------------------------------------------------------------------- */
 :root[data-theme="dark"] {
-  --p-bg:        #111112;
-  --p-surface:   #1A1A1E;
-  --p-surface-2: #1F1F23;
+  --p-bg: #111112;
+  --p-surface: #1a1a1e;
+  --p-surface-2: #1f1f23;
   --p-surface-3: #272730;
-  --p-surface-calm: color-mix(in srgb, #1A1A1E 92%, #5B7EF5 7%);
+  --p-surface-calm: color-mix(in srgb, #1a1a1e 92%, #5b7ef5 7%);
 
-  --p-fg:   #F4F4F2;
-  --p-fg-2: #C8C8C2;
-  --p-muted:#8B8B82;
-  --p-meta: #6A6A62;
+  --p-fg: #f4f4f2;
+  --p-fg-2: #c8c8c2;
+  --p-muted: #8b8b82;
+  --p-meta: #6a6a62;
 
-  --p-border:      #2A2A2E;
-  --p-border-soft: #1F1F23;
+  --p-border: #2a2a2e;
+  --p-border-soft: #1f1f23;
 
-  --p-accent:      #5B7EF5;
-  --p-accent-dk:   #7B9CF7;
-  --p-accent-dkr:  #94B0F9;
+  --p-accent: #5b7ef5;
+  --p-accent-dk: #7b9cf7;
+  --p-accent-dkr: #94b0f9;
   --p-accent-soft: rgba(91, 126, 245, 0.16);
-  --p-on-accent:   #FFFFFF;
+  --p-on-accent: #ffffff;
 
-  --p-success: #34C98A;
-  --p-warn:    #E0A93A;
-  --p-danger:  #F25B67;
-  --p-accent-ring: rgba(91, 126, 245, 0.40);
+  --p-success: #34c98a;
+  --p-warn: #e0a93a;
+  --p-danger: #f25b67;
+  --p-accent-ring: rgba(91, 126, 245, 0.4);
 
-  --elev-sm: 0 1px 2px rgba(0,0,0,0.36);
-  --elev-md: 0 4px 12px rgba(0,0,0,0.46);
-  --elev-lg: 0 12px 32px rgba(0,0,0,0.56);
-  --elev-hover: 0 6px 18px rgba(0,0,0,0.50), 0 2px 6px rgba(0,0,0,0.36);
+  --elev-sm: 0 1px 2px rgba(0, 0, 0, 0.36);
+  --elev-md: 0 4px 12px rgba(0, 0, 0, 0.46);
+  --elev-lg: 0 12px 32px rgba(0, 0, 0, 0.56);
+  --elev-hover: 0 6px 18px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.36);
 
   --hover-soft: color-mix(in srgb, var(--p-surface-2) 80%, var(--p-accent) 8%);
   --eyebrow-fg: var(--p-accent-dk);
   --eyebrow-bg: color-mix(in srgb, var(--p-accent) 16%, transparent);
 
   /* 外壳三层背景（深色：靠亮度递进表达层级，纯蓝调协调） */
-  --shell-blue:    #4A8FD8;                                                         /* 深色模式柔和天蓝（与浅色同调） */
-  --shell-topbar:  color-mix(in srgb, var(--p-surface) 94%, var(--shell-blue) 5%);  /* 极淡蓝顶栏 */
-  --shell-sidebar: color-mix(in srgb, var(--p-surface) 86%, var(--shell-blue) 8%);  /* 微透蓝侧栏 */
-  --shell-content: color-mix(in srgb, var(--p-surface-2) 80%, var(--shell-blue) 10%); /* 明显深蓝灰内容底布 */
-  --shell-edge:      color-mix(in srgb, var(--shell-blue) 38%, transparent);
+  --shell-blue: #4a8fd8; /* 深色模式柔和天蓝（与浅色同调） */
+  --shell-topbar: color-mix(in srgb, var(--p-surface) 94%, var(--shell-blue) 5%); /* 极淡蓝顶栏 */
+  --shell-sidebar: color-mix(in srgb, var(--p-surface) 86%, var(--shell-blue) 8%); /* 微透蓝侧栏 */
+  --shell-content: color-mix(
+    in srgb,
+    var(--p-surface-2) 80%,
+    var(--shell-blue) 10%
+  ); /* 明显深蓝灰内容底布 */
+  --shell-edge: color-mix(in srgb, var(--shell-blue) 38%, transparent);
   --shell-edge-soft: color-mix(in srgb, var(--shell-blue) 16%, var(--border) 55%);
   --mix-black: #000;
 }
@@ -277,11 +293,11 @@
  * 例：某客户品牌色为森林绿 #1F7A4D
  * -------------------------------------------------------------------------- */
 :root[data-tenant-theme="acme"] {
-  --p-accent:      #1F7A4D;
-  --p-accent-dk:   #1A6841;
-  --p-accent-dkr:  #155636;
-  --p-accent-soft: color-mix(in srgb, #1F7A4D 12%, transparent);
-  --p-accent-ring: rgba(31, 122, 77, 0.30);
+  --p-accent: #1f7a4d;
+  --p-accent-dk: #1a6841;
+  --p-accent-dkr: #155636;
+  --p-accent-soft: color-mix(in srgb, #1f7a4d 12%, transparent);
+  --p-accent-ring: rgba(31, 122, 77, 0.3);
 }
 
 /* 强制尊重系统的"减少动态效果"偏好 */

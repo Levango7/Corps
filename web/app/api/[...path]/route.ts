@@ -6,8 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
  */
 const allowedOrigins = new Set(
   [process.env.NEXT_PUBLIC_APP_URL, "http://localhost:3000", "http://127.0.0.1:3000"].filter(
-    Boolean
-  ) as string[]
+    Boolean,
+  ) as string[],
 );
 
 export async function OPTIONS(req: NextRequest) {

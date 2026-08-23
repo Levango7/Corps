@@ -50,13 +50,17 @@ export default function WorkspaceLayout({
   const [workspace, setWorkspace] = useState<Workspace | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [themePref, setThemePref] = useState<ThemePref>("system");
-  const [resolvedDark, setResolvedDark] = useState(false);
+  const [, setResolvedDark] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [switcherHighlight, setSwitcherHighlight] = useState(-1);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const [user, setUser] = useState<{ name: string | null; email: string; image: string | null } | null>(null);
+  const [user, setUser] = useState<{
+    name: string | null;
+    email: string;
+    image: string | null;
+  } | null>(null);
   const switcherRef = useRef<HTMLDivElement>(null);
   const switcherListRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -146,8 +150,8 @@ export default function WorkspaceLayout({
     const getFocusable = () =>
       Array.from(
         node.querySelectorAll<HTMLElement>(
-          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
-        )
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
       ).filter((el) => el.offsetParent !== null || el === document.activeElement);
     const focusables = getFocusable();
     if (focusables.length > 0) focusables[0].focus();
@@ -210,11 +214,11 @@ export default function WorkspaceLayout({
     if (targetId === wid) return;
     try {
       // 换工作区必须换 wid 令牌，否则 RLS 上下文仍指向旧工作区
-      const res = await api<{ accessToken: string }>("/api/v1/auth/refresh", {
+      // access_token 由服务端以 httpOnly cookie 下发，前端无需读取响应体中的 token
+      await api("/api/v1/auth/refresh", {
         method: "POST",
         body: JSON.stringify({ workspaceId: targetId }),
       });
-      if (res.accessToken) setToken(res.accessToken);
     } catch {
       /* 换区失败时保留当前令牌，由目标页的 401 兜底 */
     }
@@ -263,8 +267,7 @@ export default function WorkspaceLayout({
     ) : (
       <Moon size={18} />
     );
-  const themeLabel =
-    themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色";
+  const themeLabel = themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色";
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -272,7 +275,7 @@ export default function WorkspaceLayout({
         {/* 汉堡菜单：< lg 显示，≥ lg 隐藏 */}
         <button
           onClick={() => setDrawerOpen(true)}
-            className="lg:hidden p-[var(--space-2)] -ml-[var(--space-1)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+          className="lg:hidden p-[var(--space-2)] -ml-[var(--space-1)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
           aria-label="打开侧栏"
         >
           <Menu size={18} />
@@ -308,7 +311,9 @@ export default function WorkspaceLayout({
                   setSwitcherHighlight((prev) => (prev + 1) % workspaces.length);
                 } else if (e.key === "ArrowUp") {
                   e.preventDefault();
-                  setSwitcherHighlight((prev) => (prev - 1 + workspaces.length) % workspaces.length);
+                  setSwitcherHighlight(
+                    (prev) => (prev - 1 + workspaces.length) % workspaces.length,
+                  );
                 } else if (e.key === "Enter") {
                   e.preventDefault();
                   if (switcherHighlight >= 0 && switcherHighlight < workspaces.length) {
@@ -327,7 +332,9 @@ export default function WorkspaceLayout({
                   onClick={() => switchWorkspace(w.id)}
                   aria-selected={switcherHighlight === i}
                   className={`w-full flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] transition-colors duration-[var(--motion-fast)] ${
-                    switcherHighlight === i ? "bg-[var(--surface-2)]" : "hover:bg-[var(--surface-2)]"
+                    switcherHighlight === i
+                      ? "bg-[var(--surface-2)]"
+                      : "hover:bg-[var(--surface-2)]"
                   }`}
                 >
                   <span className="flex-1 text-left truncate">{w.name}</span>
@@ -495,7 +502,9 @@ export default function WorkspaceLayout({
           </button>
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-[var(--space-4)] lg:p-[var(--space-6)]">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-[var(--space-4)] lg:p-[var(--space-6)]">
+          {children}
+        </main>
       </div>
 
       {/* 移动端抽屉 (< lg)：overlay + 滑入动画，独立于桌面端折叠状态 */}

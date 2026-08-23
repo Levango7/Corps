@@ -11,7 +11,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
       <head>
         {/* 首帧前同步解析主题偏好，避免深色用户看到一次浅色闪白。
-            静态脚本文件（public/theme-init.js），不使用内联注入。 */}
+            必须同步执行（不能 async/defer），故显式豁免 no-sync-scripts。 */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/theme-init.js" />
       </head>
       <body>{children}</body>

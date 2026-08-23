@@ -27,9 +27,9 @@
   /* —— 语义前景色（soft 背景上的可读文字色）
      design-tokens 仅提供 --*-soft 背景色，未提供配套前景色；
      浅色下用深色文字确保对比，深色下在 [data-theme="dark"] 中提亮。 —— */
-  --success-fg: #055A40;
-  --warn-fg: #78350F;
-  --danger-fg: #7F1D1D;
+  --success-fg: #055a40;
+  --warn-fg: #78350f;
+  --danger-fg: #7f1d1d;
 
   /* —— 任务状态点色背景（看板列色 / 状态标记底色）
      design-tokens 提供 --status-*-fg 前景色，此处补齐配套背景色，
@@ -44,9 +44,9 @@
 
 [data-theme="dark"] {
   /* 深色下 soft 背景变暗，前景色需提亮以保证可读性 */
-  --success-fg: #6EE7B7;
-  --warn-fg: #FCD34D;
-  --danger-fg: #FCA5A5;
+  --success-fg: #6ee7b7;
+  --warn-fg: #fcd34d;
+  --danger-fg: #fca5a5;
 
   /* 遮罩层深色压暗 */
   --overlay: rgba(0, 0, 0, 0.56);
@@ -55,11 +55,14 @@
 /* ============================================================================
  * 全局 Reset
  * ========================================================================= */
-*, *::before, *::after {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
 }
 
-html, body {
+html,
+body {
   height: 100%;
   margin: 0;
   padding: 0;
@@ -75,7 +78,10 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
-button, input, select, textarea {
+button,
+input,
+select,
+textarea {
   font: inherit;
   color: inherit;
 }
@@ -91,20 +97,24 @@ a {
   text-decoration: none;
 }
 
-ul, ol {
+ul,
+ol {
   list-style: none;
   margin: 0;
   padding: 0;
 }
 
-img, svg {
+img,
+svg {
   display: block;
   max-width: 100%;
 }
 
 /* 强制尊重系统的"减少动态效果"偏好 */
 @media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after {
+  *,
+  *::before,
+  *::after {
     animation-duration: 0.01ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;

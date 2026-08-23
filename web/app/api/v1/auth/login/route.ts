@@ -31,12 +31,14 @@ export async function POST(req: NextRequest) {
 
     // 解析工作区列表（含角色）。走 RLS 事务：members 表若启用行级安全，
     // 依赖策略中的 app.auth_op='login' 逃生口（按 user_id 放行）。
-    const members = await runWithAuthOp("login", (tx) =>
-      tx.member.findMany({
-        where: { userId: baUser.id },
-        include: { workspace: true },
-      }),
-      baUser.id
+    const members = await runWithAuthOp(
+      "login",
+      (tx) =>
+        tx.member.findMany({
+          where: { userId: baUser.id },
+          include: { workspace: true },
+        }),
+      baUser.id,
     );
     const workspaces = members.map((m) => ({
       id: m.workspaceId,
@@ -56,7 +58,11 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       code: 200,
-      data: { user: { id: baUser.id, email: baUser.email, name: baUser.name }, workspaces, accessToken },
+      data: {
+        user: { id: baUser.id, email: baUser.email, name: baUser.name },
+        workspaces,
+
+      },
     });
     baRes.headers.getSetCookie?.().forEach((c) => response.headers.append("set-cookie", c));
     // 下发 httpOnly access_token cookie（Web 端自动随请求发送，XSS 不可读）
@@ -70,7 +76,10 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ code: 400, message: "Validation error", errors: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: "Validation error", errors: error.errors },
+        { status: 400 },
+      );
     }
     console.error("Login error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });

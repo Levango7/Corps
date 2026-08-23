@@ -4,7 +4,6 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { signAccessToken } from "@/lib/jwt";
 
-
 const registerSchema = z.object({
   email: z.string().email(),
   password: z.string().min(8),
@@ -26,7 +25,11 @@ export async function POST(req: NextRequest) {
 
     // 1) Better Auth 创建用户 + 会话（写入 cookie）
     const baRes = await auth.api.signUpEmail({
-      body: { email: validated.email, password: validated.password, name: validated.name },
+      body: {
+        email: validated.email,
+        password: validated.password,
+        name: validated.name ?? validated.email.split("@")[0],
+      },
       headers: req.headers,
       asResponse: true,
     });
@@ -37,7 +40,10 @@ export async function POST(req: NextRequest) {
     const baBody = await baRes.json();
     const baUser = baBody.user;
     if (!baUser?.id) {
-      return NextResponse.json({ code: 500, message: "Auth provider returned no user" }, { status: 500 });
+      return NextResponse.json(
+        { code: 500, message: "Auth provider returned no user" },
+        { status: 500 },
+      );
     }
 
     // 2) 创建首个工作区 + owner 成员（单事务，走 provision 逃生口）
@@ -53,7 +59,7 @@ export async function POST(req: NextRequest) {
         });
         return { workspace: ws };
       },
-      baUser.id
+      baUser.id,
     );
 
     // 3) 签发 workspace 作用域 wid 令牌（驱动 RLS）
@@ -65,10 +71,10 @@ export async function POST(req: NextRequest) {
         data: {
           user: { id: baUser.id, email: baUser.email, name: baUser.name },
           workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
-          accessToken,
+
         },
       },
-      { status: 201 }
+      { status: 201 },
     );
     // 透传 Better Auth 会话 cookie
     baRes.headers.getSetCookie?.().forEach((c) => response.headers.append("set-cookie", c));
@@ -83,7 +89,10 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ code: 400, message: "Validation error", errors: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: "Validation error", errors: error.errors },
+        { status: 400 },
+      );
     }
     console.error("Register error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });

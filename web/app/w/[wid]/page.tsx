@@ -1,7 +1,6 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
   Plus,
@@ -46,7 +45,13 @@ const STAT_CARDS: {
   color: string;
   match: (s: Status) => boolean;
 }[] = [
-  { key: "todo", label: "待办", icon: Circle, color: "var(--status-todo)", match: (s) => s === "todo" },
+  {
+    key: "todo",
+    label: "待办",
+    icon: Circle,
+    color: "var(--status-todo)",
+    match: (s) => s === "todo",
+  },
   {
     key: "doing",
     label: "进行中",
@@ -54,7 +59,13 @@ const STAT_CARDS: {
     color: "var(--status-doing)",
     match: (s) => s === "in_progress" || s === "review",
   },
-  { key: "done", label: "已完成", icon: CheckCircle2, color: "var(--status-done)", match: (s) => s === "done" },
+  {
+    key: "done",
+    label: "已完成",
+    icon: CheckCircle2,
+    color: "var(--status-done)",
+    match: (s) => s === "done",
+  },
 ];
 
 const PRIORITY_COLOR: Record<Priority, string> = {
@@ -74,7 +85,10 @@ function dueMeta(iso?: string | null) {
   if (days === 0) return { text: "今天到期", color: "var(--warn)" };
   if (days === 1) return { text: "明天到期", color: "var(--warn)" };
   if (days <= 7) return { text: `${days} 天后`, color: "var(--muted)" };
-  return { text: d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }), color: "var(--meta)" };
+  return {
+    text: d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }),
+    color: "var(--meta)",
+  };
 }
 
 /** 相对时间戳：刚刚 / N 分钟前 / N 小时前 / N 天前 / 月-日 */
@@ -101,7 +115,6 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   const [showNew, setShowNew] = useState(false);
   // "最近更新"列表排序方式：recent 最近更新 / due 即将到期 / priority 优先级
   const [sortKey, setSortKey] = useState<"recent" | "due" | "priority">("recent");
-  const router = useRouter();
 
   const load = useCallback(async () => {
     try {
@@ -122,7 +135,6 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     doing: tasks.filter((t) => STAT_CARDS[1].match(t.status)).length,
     done: tasks.filter((t) => STAT_CARDS[2].match(t.status)).length,
   };
-
 
   const openTasks = tasks.filter((t) => t.status !== "done");
   const overdue = openTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date());
@@ -186,7 +198,9 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
               >
                 <div className="flex items-center gap-2">
                   <Icon size={16} style={{ color: card.color }} />
-                  <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{card.label}</span>
+                  <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
+                    {card.label}
+                  </span>
                   <ArrowRight
                     size={14}
                     className="ml-auto text-[var(--meta)] opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-fast)]"
@@ -326,9 +340,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                       </span>
                     )}
                     {/* 截止日期与相对时间戳之间的分隔符 */}
-                    {due && rel && (
-                      <span className="shrink-0 text-[var(--meta)]">·</span>
-                    )}
+                    {due && rel && <span className="shrink-0 text-[var(--meta)]">·</span>}
                     {/* 相对时间戳：var(--meta) 色 */}
                     {rel && (
                       <span className="shrink-0 text-[length:var(--text-xs)] tabular-nums text-[var(--meta)]">
@@ -352,12 +364,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
         )}
       </section>
 
-      <NewTaskDialog
-        wid={wid}
-        open={showNew}
-        onClose={() => setShowNew(false)}
-        onCreated={load}
-      />
+      <NewTaskDialog wid={wid} open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
     </div>
   );
 }

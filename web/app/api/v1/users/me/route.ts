@@ -90,7 +90,7 @@ export async function PATCH(req: NextRequest) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { code: 400, message: "Validation error", errors: error.errors },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Update user error:", error);

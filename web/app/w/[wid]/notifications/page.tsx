@@ -38,11 +38,7 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 
 type NotificationType =
-  | "mention"
-  | "task_assigned"
-  | "task_updated"
-  | "comment_added"
-  | "decision_updated";
+  "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated";
 
 interface Notification {
   id: string;
@@ -69,11 +65,11 @@ const TYPE_META: Record<
   NotificationType,
   { icon: typeof AtSign; color: string; text: (title: string) => string }
 > = {
-  mention:          { icon: AtSign,        color: "var(--accent)",  text: (t) => `${t} 中提到了你` },
-  task_assigned:    { icon: UserPlus,      color: "var(--success)", text: (t) => `你被分配到任务 ${t}` },
-  task_updated:     { icon: RefreshCw,     color: "var(--accent)",  text: (t) => `任务 ${t} 已更新` },
-  comment_added:    { icon: MessageSquare, color: "var(--warn)",    text: (t) => `${t} 有新评论` },
-  decision_updated: { icon: FileText,      color: "var(--fg-2)",    text: (t) => `${t} 的决策已更新` },
+  mention: { icon: AtSign, color: "var(--accent)", text: (t) => `${t} 中提到了你` },
+  task_assigned: { icon: UserPlus, color: "var(--success)", text: (t) => `你被分配到任务 ${t}` },
+  task_updated: { icon: RefreshCw, color: "var(--accent)", text: (t) => `任务 ${t} 已更新` },
+  comment_added: { icon: MessageSquare, color: "var(--warn)", text: (t) => `${t} 有新评论` },
+  decision_updated: { icon: FileText, color: "var(--fg-2)", text: (t) => `${t} 的决策已更新` },
 };
 
 /** 相对时间戳：刚刚 / N 分钟前 / N 小时前 / N 天前 / 月-日（与概览页一致） */
@@ -93,11 +89,7 @@ function relativeTime(iso?: string): string | null {
   return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
 }
 
-export default function NotificationsPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default function NotificationsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const router = useRouter();
 
@@ -109,7 +101,7 @@ export default function NotificationsPage({
   const load = useCallback(async () => {
     try {
       const res = await api<{ notifications: Notification[] }>(
-        `/api/v1/workspaces/${wid}/notifications`
+        `/api/v1/workspaces/${wid}/notifications`,
       );
       setAll(res?.notifications ?? []);
     } catch {
@@ -123,10 +115,7 @@ export default function NotificationsPage({
     load();
   }, [load]);
 
-  const unreadCount = useMemo(
-    () => all.filter((n) => !n.read).length,
-    [all]
-  );
+  const unreadCount = useMemo(() => all.filter((n) => !n.read).length, [all]);
 
   // 当前筛选下的可见列表，按 createdAt 降序
   const visible = useMemo(() => {
@@ -154,9 +143,7 @@ export default function NotificationsPage({
   /** 单条点击：乐观标记已读（fire-and-forget）+ 跳转任务详情 */
   function openNotification(n: Notification) {
     if (!n.read) {
-      setAll((prev) =>
-        prev.map((x) => (x.id === n.id ? { ...x, read: true } : x))
-      );
+      setAll((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
       // 不阻塞跳转，失败时下次进入页面会重新加载纠正
       api(`/api/v1/workspaces/${wid}/notifications`, {
         method: "PATCH",
@@ -242,11 +229,7 @@ export default function NotificationsPage({
                     n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
                   }`}
                 >
-                  <Icon
-                    size={16}
-                    className="shrink-0 mt-0.5"
-                    style={{ color: meta.color }}
-                  />
+                  <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
                   <div className="flex-1 min-w-0">
                     <p
                       className={`text-[length:var(--text-base)] truncate ${
@@ -285,10 +268,7 @@ export default function NotificationsPage({
  */
 function NotificationListSkeleton({ count = 6 }: { count?: number }) {
   return (
-    <div
-      className="flex flex-col gap-[var(--space-3)]"
-      aria-busy="true"
-    >
+    <div className="flex flex-col gap-[var(--space-3)]" aria-busy="true">
       {Array.from({ length: count }).map((_, i) => (
         <div
           key={i}
@@ -296,10 +276,7 @@ function NotificationListSkeleton({ count = 6 }: { count?: number }) {
         >
           <Skeleton className="shrink-0 mt-0.5 w-4 h-4 rounded-full" />
           <div className="flex-1">
-            <Skeleton
-              className="h-[14px]"
-              style={{ maxWidth: `${60 + ((i * 37) % 36)}%` }}
-            />
+            <Skeleton className="h-[14px]" style={{ maxWidth: `${60 + ((i * 37) % 36)}%` }} />
             <Skeleton className="mt-1 w-16 h-[12px]" />
           </div>
           <Skeleton className="shrink-0 mt-1 w-2 h-2 rounded-full" />
@@ -314,27 +291,15 @@ function EmptyState({ filter }: { filter: Filter }) {
   if (filter === "unread") {
     return (
       <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-        <Bell
-          size={48}
-          className="text-[var(--muted)] opacity-40 mb-4"
-          strokeWidth={1.5}
-        />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-          没有未读通知
-        </p>
+        <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
+        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">没有未读通知</p>
       </div>
     );
   }
   return (
     <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-      <Bell
-        size={48}
-        className="text-[var(--muted)] opacity-40 mb-4"
-        strokeWidth={1.5}
-      />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-        暂无通知
-      </p>
+      <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
+      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">暂无通知</p>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
         当有人 @你、分配任务或更新决策时，会在这里提醒你
       </p>

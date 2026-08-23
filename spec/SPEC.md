@@ -74,18 +74,34 @@
 | POST | /api/v1/auth/register | 注册 + 创建首个工作区 | 否 | 初始化 owner |
 | POST | /api/v1/auth/login | 登录 | 否 | 返回 access+refresh |
 | POST | /api/v1/auth/refresh | 刷新令牌 | refresh | 轮换 |
+| POST | /api/v1/auth/logout | 登出 | access | 清除 cookie + 删除 session |
+| GET | /api/v1/users/me | 当前用户信息 | access | |
+| PATCH | /api/v1/users/me | 更新个人资料 | access | |
 | GET | /api/v1/workspaces | 我的工作区列表 | access | 多租户切换 |
 | POST | /api/v1/workspaces | 创建工作区 | access | |
+| GET | /api/v1/workspaces/:wid | 工作区详情 | access+RBAC | |
+| PATCH | /api/v1/workspaces/:wid | 更新工作区 | access+Admin | |
 | GET | /api/v1/workspaces/:wid/tasks | 任务列表（看板/列表视图） | access+RBAC | RLS 过滤 |
 | POST | /api/v1/workspaces/:wid/tasks | 创建任务 | access+RBAC | |
+| GET | /api/v1/workspaces/:wid/tasks/:id | 任务详情 | access+RBAC | |
 | PATCH | /api/v1/workspaces/:wid/tasks/:id | 更新任务（含拖拽改状态） | access+RBAC | |
 | DELETE | /api/v1/workspaces/:wid/tasks/:id | 删除任务 | access+RBAC | |
-| GET | /api/v1/workspaces/:wid/members | 成员列表 | access+RBAC | |
-| POST | /api/v1/workspaces/:wid/members/invite | 邀请成员 | access+Admin | |
-| DELETE | /api/v1/workspaces/:wid/members/:uid | 移除成员 | access+Admin | Member 调返回 403 |
+| GET | /api/v1/workspaces/:wid/tasks/:id/comments | 评论列表 | access+RBAC | |
 | POST | /api/v1/workspaces/:wid/tasks/:id/comments | 任务评论 + @提及 | access+RBAC | |
 | GET/POST | /api/v1/workspaces/:wid/tasks/:id/decisions | 决策记录（Markdown 单编辑） | access+RBAC | |
-| POST | /api/v1/billing/checkout | 创建 Stripe Checkout Session | access+Owner | 升级 |
+| PATCH | /api/v1/workspaces/:wid/tasks/:id/decisions/:did | 编辑决策 | access+RBAC | 乐观锁 |
+| GET | /api/v1/workspaces/:wid/tasks/:id/decisions/:did/versions | 决策版本历史 | access+RBAC | |
+| GET | /api/v1/workspaces/:wid/decisions | 决策列表（跨任务） | access+RBAC | 分页+搜索 |
+| GET | /api/v1/workspaces/:wid/members | 成员列表 | access+RBAC | |
+| POST | /api/v1/workspaces/:wid/members/invite | 邀请成员 | access+Admin | |
+| PATCH | /api/v1/workspaces/:wid/members/:uid | 修改成员角色 | access+Admin | |
+| DELETE | /api/v1/workspaces/:wid/members/:uid | 移除成员 | access+Admin | Member 调返回 403 |
+| GET | /api/v1/workspaces/:wid/notifications | 通知列表 | access+RBAC | 支持 unread/count 参数 |
+| PATCH | /api/v1/workspaces/:wid/notifications | 标记已读 | access+RBAC | 单条/全部 |
+| GET | /api/v1/workspaces/:wid/search | 全局搜索 | access+RBAC | 任务+决策 |
+| POST | /api/v1/workspaces/:wid/billing/checkout | 创建 Stripe Checkout Session | access+Owner | 升级 |
+| POST | /api/v1/workspaces/:wid/billing/portal | Stripe Customer Portal | access+Owner | |
+| GET | /api/v1/workspaces/:wid/billing/status | 计费状态 | access+RBAC | |
 | POST | /api/v1/billing/webhook | Stripe webhook（quantity 同步） | stripe 签名 | |
 
 ## 6. 数据库表清单（锁定，Phase 2 由架构师产出完整迁移 SQL）
@@ -117,7 +133,7 @@
 ## 8. 设计 Token（锁定）
 
 - **设计语言**：Calm Precision（克制精密）= Notion 留白 + Linear 精度 + Stripe 克制
-- **主色**：`--accent #2A48E6`（钴蓝 600，纯色，非靛紫/非紫粉渐变）；深色 `--accent #4D74FB`
+- **主色**：`--accent #4263EB`（钴蓝 600，纯色，非靛紫/非紫粉渐变）；深色 `--accent #4D74FB`
 - **表面**：`--bg #F7F8FA` / `--surface #FFFFFF`；深色 `--bg #0E0F12` / `--surface #16181D`
 - **文字**：`--fg #16181D` / `--fg-2 #3A3F4A` / `--muted #6B7280`
 - **边框**：`--border #E6E8EC` / `--border-soft #F0F1F4`（发丝级）

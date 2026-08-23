@@ -2,15 +2,7 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import {
-  CreditCard,
-  Check,
-  ExternalLink,
-  Loader2,
-  AlertTriangle,
-  Users,
-  Info,
-} from "lucide-react";
+import { CreditCard, Check, ExternalLink, Loader2, AlertTriangle, Users, Info } from "lucide-react";
 import { api } from "@/lib/api";
 
 type Plan = "free" | "pro";
@@ -124,7 +116,9 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
 
   const isOwner = status?.role === "owner";
   const sub = status?.subscription;
-  const subMeta = sub ? SUB_STATUS_LABEL[sub.status] ?? { label: sub.status, tone: "muted" } : null;
+  const subMeta = sub
+    ? (SUB_STATUS_LABEL[sub.status] ?? { label: sub.status, tone: "muted" })
+    : null;
   const seatsUsed = status?.seatsUsed ?? 0;
   const seatLimit = status?.seatLimit ?? 0;
 
@@ -335,9 +329,15 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         <div className="mt-5 flex items-start gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--fg-2)] text-[length:var(--text-sm)]">
           <Info size={16} className="shrink-0 mt-0.5 text-[var(--muted)]" />
           <span>
-            当前环境未配置 Stripe 测试密钥（<code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">STRIPE_SECRET_KEY</code>
+            当前环境未配置 Stripe 测试密钥（
+            <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">
+              STRIPE_SECRET_KEY
+            </code>
             {" / "}
-            <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">STRIPE_PRICE_ID</code>），升级入口已隐藏。配置后刷新即可启用。
+            <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">
+              STRIPE_PRICE_ID
+            </code>
+            ），升级入口已隐藏。配置后刷新即可启用。
           </span>
         </div>
       )}

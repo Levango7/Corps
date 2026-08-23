@@ -6,13 +6,16 @@ const roleSchema = z.object({ role: z.enum(["admin", "member"]) });
 
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; uid: string }> }
+  { params }: { params: Promise<{ wid: string; uid: string }> },
 ) {
   const { wid, uid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: "Only owner/admin can change roles" }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: "Only owner/admin can change roles" },
+      { status: 403 },
+    );
   }
 
   const { role } = roleSchema.parse(await req.json());
@@ -32,10 +35,11 @@ export async function PATCH(
       });
       return { notFound: false as const, isOwner: false as const };
     },
-    ctx.payload.sub
+    ctx.payload.sub,
   );
 
-  if (outcome.notFound) return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
+  if (outcome.notFound)
+    return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
   if (outcome.isOwner) {
     return NextResponse.json({ code: 403, message: "不能修改拥有者角色" }, { status: 403 });
   }
@@ -45,13 +49,16 @@ export async function PATCH(
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; uid: string }> }
+  { params }: { params: Promise<{ wid: string; uid: string }> },
 ) {
   const { wid, uid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: "Only owner/admin can remove members" }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: "Only owner/admin can remove members" },
+      { status: 403 },
+    );
   }
   if (uid === ctx.payload.sub) {
     return NextResponse.json({ code: 400, message: "不能移除自己" }, { status: 400 });
@@ -77,12 +84,19 @@ export async function DELETE(
         stripeSubId = subscription.stripeSubId;
       }
       const remain = await tx.member.count({ where: { workspaceId: wid } });
-      return { notFound: false as const, isOwner: false as const, stripeCustomerId, stripeSubId, remain };
+      return {
+        notFound: false as const,
+        isOwner: false as const,
+        stripeCustomerId,
+        stripeSubId,
+        remain,
+      };
     },
-    ctx.payload.sub
+    ctx.payload.sub,
   );
 
-  if (outcome.notFound) return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
+  if (outcome.notFound)
+    return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
   if (outcome.isOwner) {
     return NextResponse.json({ code: 403, message: "不能移除工作区拥有者" }, { status: 403 });
   }

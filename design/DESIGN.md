@@ -38,11 +38,11 @@
 | 元数据 | `#9AA1AD` / 暗 `#6A707C` | `--meta` | 时间戳/计数 |
 | 边框 | `#E6E8EC` / 暗 `#272A31` | `--border` | 默认 1px 边框 |
 | 发丝边框 | `#F0F1F4` / 暗 `#1E2026` | `--border-soft` | 行内分隔 |
-| **强调主色** | `#2A48E6` / 暗 `#4D74FB` | `--accent` | **唯一品牌色（钴蓝纯色）** |
+| **强调主色** | `#4263EB` / 暗 `#4D74FB` | `--accent` | **唯一品牌色（钴蓝纯色）** |
 | 强调悬停 | `#2440CC` / 暗 `#6E8EFC` | `--accent-hover` | 按钮/链接 hover |
 | 强调激活 | `#1E38B0` / 暗 `#88A4FD` | `--accent-active` | 按下态 |
 | 强调柔和底 | `#EAF0FF` / 暗 `rgba(77,116,251,.16)` | `--accent-soft` | 选中导航背景 |
-| 强调柔和字 | `#2A48E6` / 暗 `#4D74FB` | `--accent-soft-fg` | 选中项文字 |
+| 强调柔和字 | `#4263EB` / 暗 `#4D74FB` | `--accent-soft-fg` | 选中项文字 |
 | 强调上文字 | `#FFFFFF` | `--on-accent` | 强调底上的文字 |
 | 焦点环 | `rgba(42,72,230,.30)` / 暗 `rgba(77,116,251,.40)` | `--accent-ring` | focus-visible 环 |
 | 成功 | `#1A9E6B` / 暗 `#34C98A` | `--success` | 完成态/通过 |
@@ -210,7 +210,7 @@
 ### 5.1.1 系统图标（favicon · 浏览器标签页）
 
 - **形态**：内联 SVG（data URI 注入 `<head>` 的 `<link rel="icon">`），**不**用 emoji、不用 PNG 位图、不与飞书/钉钉的具象 logo 雷同。
-- **视觉**：圆角方形底（`--accent` 钴蓝 #2A48E6）+ 白色描边几何"协作网络"（三节点 + 连线），与界面 Lucide 线性风格同源、保证品牌一致。
+- **视觉**：圆角方形底（`--accent` 钴蓝 #4263EB）+ 白色描边几何"协作网络"（三节点 + 连线），与界面 Lucide 线性风格同源、保证品牌一致。
 - **规范**：`viewBox="0 0 32 32"`、`stroke-width="2"`、`stroke-linecap/linejoin="round"`，单色描边不渐变；标签页/书签/PWA 均复用同一源。
 - **实现**：原型在 `index.html` `<head>` 内联；正式工程由设计系统导出 `favicon.svg` 置于 `public/`，并在 `app/(main)/layout` 的 metadata 引用。
 

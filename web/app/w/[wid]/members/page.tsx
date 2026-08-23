@@ -2,7 +2,15 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { UserPlus, Trash2, Users, Shield, ShieldCheck, User as UserIcon, CheckCircle2 } from "lucide-react";
+import {
+  UserPlus,
+  Trash2,
+  Users,
+  Shield,
+  ShieldCheck,
+  User as UserIcon,
+  CheckCircle2,
+} from "lucide-react";
 import { api } from "@/lib/api";
 
 type Role = "owner" | "admin" | "member";
@@ -94,7 +102,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   }
 
   async function remove(uid: string, label: string) {
-    if (!window.confirm("确定移除该成员？此操作不可撤销。")) return;
+    if (!window.confirm(`确定移除「${label}」？此操作不可撤销。`)) return;
     setError("");
     try {
       await api(`/api/v1/workspaces/${wid}/members/${uid}`, { method: "DELETE" });
@@ -197,7 +205,11 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
 
       {seatsFull && canManage && (
         <div className="mb-6 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
-          席位已用满。前往 <Link href={`/w/${wid}/billing`} className="underline underline-offset-2">计费</Link> 增加席位后可继续邀请。
+          席位已用满。前往{" "}
+          <Link href={`/w/${wid}/billing`} className="underline underline-offset-2">
+            计费
+          </Link>{" "}
+          增加席位后可继续邀请。
         </div>
       )}
 
@@ -218,7 +230,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           {/* 移动端骨架（卡片布局） */}
           <div className="md:hidden flex flex-col gap-2">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3">
+              <div
+                key={i}
+                className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3"
+              >
                 <div className="flex items-center gap-3">
                   <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
                   <div className="flex-1 space-y-2">
@@ -264,7 +279,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                         </span>
                       )}
                     </div>
-                    <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">{m.email}</div>
+                    <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
+                      {m.email}
+                    </div>
                   </div>
                   <div className="flex items-center gap-1">
                     {editable ? (
@@ -312,7 +329,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
               const Icon = meta2.icon;
               const editable = canManage && m.role !== "owner" && !m.isSelf;
               return (
-                <div key={m.id} className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3">
+                <div
+                  key={m.id}
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3"
+                >
                   <div className="flex items-center gap-3">
                     <Avatar m={m} />
                     <div className="flex-1 min-w-0">
@@ -327,7 +347,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">{m.email}</span>
+                        <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
+                          {m.email}
+                        </span>
                         {!editable && (
                           <span className="flex items-center gap-1 shrink-0 text-[length:var(--text-xs)] text-[var(--fg-2)]">
                             <Icon size={12} className="text-[var(--muted)]" />
@@ -347,7 +369,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                         <option value="member">成员</option>
                         <option value="admin">管理员</option>
                       </select>
-                      <span className="text-[length:var(--text-xs)] text-[var(--meta)]">拥有者不可在此更改</span>
+                      <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                        拥有者不可在此更改
+                      </span>
                       <button
                         onClick={() => remove(m.id, m.name || m.email)}
                         className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"

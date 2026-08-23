@@ -8,71 +8,73 @@ const querySchema = z.object({
 });
 
 /** GET /v1/workspaces/{wid}/search?q= — 全局搜索任务标题 + 决策记录 markdown */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const url = new URL(req.url);
-  const parsed = querySchema.safeParse({
-    q: url.searchParams.get("q"),
-    limit: url.searchParams.get("limit"),
-  });
-  if (!parsed.success) {
-    return NextResponse.json({ code: 400, message: "参数 q 必填" }, { status: 400 });
+  try {
+    const url = new URL(req.url);
+    const parsed = querySchema.safeParse({
+      q: url.searchParams.get("q"),
+      limit: url.searchParams.get("limit"),
+    });
+    if (!parsed.success) {
+      return NextResponse.json({ code: 400, message: "参数 q 必填" }, { status: 400 });
+    }
+
+    const q = parsed.data.q.trim();
+    const limit = Math.min(parseInt(parsed.data.limit ?? "20"), 50);
+
+    const [tasks, decisions] = await runWithWorkspace(wid, async (tx) => {
+      const tasks = await tx.task.findMany({
+        where: {
+          workspaceId: wid,
+          OR: [
+            { title: { contains: q, mode: "insensitive" } },
+            { description: { contains: q, mode: "insensitive" } },
+          ],
+        },
+        select: { id: true, title: true, status: true, priority: true },
+        take: limit,
+      });
+
+      const decisions = await tx.decision.findMany({
+        where: {
+          workspaceId: wid,
+          markdown: { contains: q, mode: "insensitive" },
+        },
+        select: {
+          id: true,
+          markdown: true,
+          version: true,
+          taskId: true,
+          createdAt: true,
+          author: { select: { id: true, name: true, email: true } },
+        },
+        take: limit,
+        orderBy: { createdAt: "desc" },
+      });
+
+      return [tasks, decisions];
+    });
+
+    return NextResponse.json({
+      code: 200,
+      data: {
+        tasks: tasks.map((t) => ({ ...t, kind: "task" as const })),
+        decisions: decisions.map((d) => ({
+          id: d.id,
+          kind: "decision" as const,
+          title: `决策 v${d.version} · ${d.author.name || d.author.email}`,
+          snippet: d.markdown.slice(0, 120),
+          taskId: d.taskId,
+          href: `/w/${wid}/task/${d.taskId}`,
+        })),
+      },
+    });
+  } catch (error) {
+    console.error("[GET search] error:", error);
+    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
   }
-
-  const q = parsed.data.q.trim();
-  const limit = Math.min(parseInt(parsed.data.limit ?? "20"), 50);
-
-  const [tasks, decisions] = await runWithWorkspace(wid, async (tx) => {
-    const tasks = await tx.task.findMany({
-      where: {
-        workspaceId: wid,
-        OR: [
-          { title: { contains: q, mode: "insensitive" } },
-          { description: { contains: q, mode: "insensitive" } },
-        ],
-      },
-      select: { id: true, title: true, status: true, priority: true },
-      take: limit,
-    });
-
-    const decisions = await tx.decision.findMany({
-      where: {
-        workspaceId: wid,
-        markdown: { contains: q, mode: "insensitive" },
-      },
-      select: {
-        id: true,
-        markdown: true,
-        version: true,
-        taskId: true,
-        createdAt: true,
-        author: { select: { id: true, name: true, email: true } },
-      },
-      take: limit,
-      orderBy: { createdAt: "desc" },
-    });
-
-    return [tasks, decisions];
-  });
-
-  return NextResponse.json({
-    code: 200,
-    data: {
-      tasks: tasks.map((t) => ({ ...t, kind: "task" as const })),
-      decisions: decisions.map((d) => ({
-        id: d.id,
-        kind: "decision" as const,
-        title: `决策 v${d.version} · ${d.author.name || d.author.email}`,
-        snippet: d.markdown.slice(0, 120),
-        taskId: d.taskId,
-        href: `/w/${wid}/task/${d.taskId}`,
-      })),
-    },
-  });
 }

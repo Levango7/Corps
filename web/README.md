@@ -69,24 +69,24 @@ stripe trigger checkout.session.completed
 
 ## API 端点（MVP）
 
-| Method | Path | 功能 |
-|--------|------|------|
-| POST | /api/v1/auth/register | 注册（Better Auth 建户）+ 创建首个工作区 + wid 令牌 |
-| POST | /api/v1/auth/login | 登录 + wid 令牌 |
-| POST | /api/v1/auth/refresh | 令牌轮换（可携带 workspaceId 换区） |
-| GET | /api/health | 健康检查 |
-| GET/POST | /api/v1/workspaces | 工作区列表/创建 |
-| GET/PATCH | /api/v1/workspaces/:wid | 工作区详情（含 role）/ 改名改 slug（owner/admin） |
-| GET/POST | /api/v1/workspaces/:wid/tasks | 任务列表/创建 |
-| GET/PATCH/DELETE | /api/v1/workspaces/:wid/tasks/:id | 任务详情/更新/删除 |
-| GET/POST | /api/v1/workspaces/:wid/tasks/:id/comments | 评论列表/新增 |
-| GET/POST | /api/v1/workspaces/:wid/tasks/:id/decisions | 决策记录（版本自增、只追加） |
-| GET | /api/v1/workspaces/:wid/members | 成员列表（含 isSelf） |
-| POST | /api/v1/workspaces/:wid/members/invite | 邀请成员（需对方已注册） |
-| GET | /api/v1/workspaces/:wid/billing/status | 订阅状态/席位占用 |
-| POST | /api/v1/workspaces/:wid/billing/checkout | 创建 Stripe Checkout 会话 |
-| POST | /api/v1/workspaces/:wid/billing/portal | 创建 Customer Portal 会话 |
-| POST | /api/v1/billing/webhook | Stripe Webhook（席位同步，独立路径） |
+| Method           | Path                                        | 功能                                                |
+| ---------------- | ------------------------------------------- | --------------------------------------------------- |
+| POST             | /api/v1/auth/register                       | 注册（Better Auth 建户）+ 创建首个工作区 + wid 令牌 |
+| POST             | /api/v1/auth/login                          | 登录 + wid 令牌                                     |
+| POST             | /api/v1/auth/refresh                        | 令牌轮换（可携带 workspaceId 换区）                 |
+| GET              | /api/health                                 | 健康检查                                            |
+| GET/POST         | /api/v1/workspaces                          | 工作区列表/创建                                     |
+| GET/PATCH        | /api/v1/workspaces/:wid                     | 工作区详情（含 role）/ 改名改 slug（owner/admin）   |
+| GET/POST         | /api/v1/workspaces/:wid/tasks               | 任务列表/创建                                       |
+| GET/PATCH/DELETE | /api/v1/workspaces/:wid/tasks/:id           | 任务详情/更新/删除                                  |
+| GET/POST         | /api/v1/workspaces/:wid/tasks/:id/comments  | 评论列表/新增                                       |
+| GET/POST         | /api/v1/workspaces/:wid/tasks/:id/decisions | 决策记录（版本自增、只追加）                        |
+| GET              | /api/v1/workspaces/:wid/members             | 成员列表（含 isSelf）                               |
+| POST             | /api/v1/workspaces/:wid/members/invite      | 邀请成员（需对方已注册）                            |
+| GET              | /api/v1/workspaces/:wid/billing/status      | 订阅状态/席位占用                                   |
+| POST             | /api/v1/workspaces/:wid/billing/checkout    | 创建 Stripe Checkout 会话                           |
+| POST             | /api/v1/workspaces/:wid/billing/portal      | 创建 Customer Portal 会话                           |
+| POST             | /api/v1/billing/webhook                     | Stripe Webhook（席位同步，独立路径）                |
 
 ## 项目结构
 
@@ -119,6 +119,7 @@ web/
 ## MVP 范围
 
 **P0 核心功能**：
+
 - ✅ 注册登录 + 创建首个工作区（Better Auth）
 - ✅ 任务看板（看板视图 + 拖拽改状态 + 新建任务弹窗）
 - ✅ 任务详情页（属性编辑/评论/决策记录 Markdown）
@@ -128,18 +129,19 @@ web/
 - ✅ 前端 UI 对齐设计原型（Calm Precision 设计系统）
 
 **P1 后续迭代**：
+
 - 端到端测试（AC-01 ~ AC-06 自动化）
 - 全局搜索（Cmd+K 当前仅导航）
 - Docker Compose 加入 Redis（缓存）
 
 ## 验收标准（EARS 格式）
 
-| 编号 | 功能 | 标准 |
-|------|------|------|
-| AC-01 | 注册 | 创建账户 + 工作区 + owner 角色，返回 wid 令牌 |
-| AC-02 | 注册 | 邮箱已存在返回 409 |
-| AC-03 | 隔离 | 跨租户请求返回 404/403 |
-| AC-05 | RBAC | Member 调用管理接口返回 403 |
+| 编号  | 功能 | 标准                                                 |
+| ----- | ---- | ---------------------------------------------------- |
+| AC-01 | 注册 | 创建账户 + 工作区 + owner 角色，返回 wid 令牌        |
+| AC-02 | 注册 | 邮箱已存在返回 409                                   |
+| AC-03 | 隔离 | 跨租户请求返回 404/403                               |
+| AC-05 | RBAC | Member 调用管理接口返回 403                          |
 | AC-06 | 看板 | 拖拽任务卡更新状态并持久化；决策记录只追加、版本自增 |
 
 ## 待办

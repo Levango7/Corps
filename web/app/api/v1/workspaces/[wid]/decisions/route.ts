@@ -26,10 +26,7 @@ function parsePagination(url: URL) {
 }
 
 /** GET /v1/workspaces/{wid}/decisions */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
@@ -64,7 +61,7 @@ export async function GET(
         skip,
         take: limit,
       }),
-    ])
+    ]),
   );
 
   // 拍平为前端期望的 taskTitle / authorName 字段

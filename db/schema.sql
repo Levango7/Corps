@@ -77,7 +77,7 @@ CREATE TABLE IF NOT EXISTS workspaces (
   name       varchar(100) NOT NULL,
   slug       varchar(50)  NOT NULL UNIQUE,
   owner_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plan       varchar(20)  NOT NULL DEFAULT 'free' CHECK (plan IN ('free','pro')),
+  plan       varchar(20)  NOT NULL DEFAULT 'free' CHECK (plan IN ('free','starter','pro','enterprise')),
   seat_limit integer      NOT NULL DEFAULT 10 CHECK (seat_limit >= 1 AND seat_limit <= 1000),
   created_at timestamptz  NOT NULL DEFAULT now(),
   updated_at timestamptz  NOT NULL DEFAULT now()
@@ -176,6 +176,20 @@ CREATE TABLE IF NOT EXISTS subscriptions (
 );
 CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
 
+-- notifications — workspace-scoped user notifications (通知中心)
+CREATE TABLE IF NOT EXISTS notifications (
+  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
+  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  type        varchar(30) NOT NULL,
+  entity_id   uuid NOT NULL,
+  entity_title varchar(255) NOT NULL,
+  read        boolean NOT NULL DEFAULT false,
+  created_at  timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_notifications_ws_user_read ON notifications(workspace_id, user_id, read);
+CREATE INDEX IF NOT EXISTS idx_notifications_ws_created   ON notifications(workspace_id, created_at);
+
 -- sessions — Better Auth session store (no RLS: identity domain, app-layer gated)
 CREATE TABLE IF NOT EXISTS sessions (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -230,6 +244,7 @@ ALTER TABLE comments          ENABLE ROW LEVEL SECURITY;
 ALTER TABLE decisions         ENABLE ROW LEVEL SECURITY;
 ALTER TABLE decision_versions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE subscriptions     ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notifications     ENABLE ROW LEVEL SECURITY;
 ALTER TABLE workspaces        ENABLE ROW LEVEL SECURITY;
 
 -- Unset GUC ⇒ comparison against NULL ⇒ no rows: missing context is a hard DENY.
@@ -279,6 +294,17 @@ CREATE POLICY p_subscriptions_rls ON subscriptions
   WITH CHECK (
     workspace_id = current_setting('app.workspace_id', true)::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
+  );
+
+CREATE POLICY p_notifications_rls ON notifications
+  FOR ALL
+  USING (
+    workspace_id = current_setting('app.workspace_id', true)::uuid
+    AND user_id = current_setting('app.user_id', true)::uuid
+  )
+  WITH CHECK (
+    workspace_id = current_setting('app.workspace_id', true)::uuid
+    AND user_id = current_setting('app.user_id', true)::uuid
   );
 
 -- workspaces: readable via membership; writable by owner, with narrow

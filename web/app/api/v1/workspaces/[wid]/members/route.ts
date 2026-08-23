@@ -1,35 +1,37 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const members = await runWithWorkspace(
-    wid,
-    (tx) =>
-      tx.member.findMany({
-        where: { workspaceId: wid },
-        include: { user: { select: { id: true, email: true, name: true, image: true } } },
-        orderBy: { joinedAt: "asc" },
-      }),
-    ctx.payload.sub
-  );
+  try {
+    const members = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.member.findMany({
+          where: { workspaceId: wid },
+          include: { user: { select: { id: true, email: true, name: true, image: true } } },
+          orderBy: { joinedAt: "asc" },
+        }),
+      ctx.payload.sub,
+    );
 
-  return NextResponse.json({
-    code: 200,
-    data: members.map((m) => ({
-      id: m.user.id,
-      email: m.user.email,
-      name: m.user.name,
-      image: m.user.image,
-      role: m.role,
-      isSelf: m.user.id === ctx.payload.sub,
-      joinedAt: m.joinedAt,
-    })),
-  });
+    return NextResponse.json({
+      code: 200,
+      data: members.map((m) => ({
+        id: m.user.id,
+        email: m.user.email,
+        name: m.user.name,
+        image: m.user.image,
+        role: m.role,
+        isSelf: m.user.id === ctx.payload.sub,
+        joinedAt: m.joinedAt,
+      })),
+    });
+  } catch (error) {
+    console.error("[GET members] error:", error);
+    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+  }
 }

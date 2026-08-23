@@ -90,7 +90,7 @@ export default function NewTaskDialog({
     const el = dialogRef.current;
     if (!el) return;
     const focusable = el.querySelectorAll<HTMLElement>(
-      'button, a, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+      'button, a, input, textarea, select, [tabindex]:not([tabindex="-1"])',
     );
     if (focusable.length > 0) focusable[0].focus();
     const handleKeyDown = (e: KeyboardEvent) => {

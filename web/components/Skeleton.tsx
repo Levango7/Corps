@@ -13,13 +13,7 @@
 import type { CSSProperties } from "react";
 
 /** 基础 Skeleton 块：animate-pulse + surface-2 背景 + radius-sm 圆角 */
-export function Skeleton({
-  className,
-  style,
-}: {
-  className?: string;
-  style?: CSSProperties;
-}) {
+export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
     <div
       style={style}
@@ -36,18 +30,9 @@ export function Skeleton({
  *   状态图标 15px + 标题占位 + 优先级 13px + 日期 xs + 头像 24px
  * 调用方可通过 className 覆盖外层容器样式。
  */
-export function TaskListSkeleton({
-  count = 5,
-  className,
-}: {
-  count?: number;
-  className?: string;
-}) {
+export function TaskListSkeleton({ count = 5, className }: { count?: number; className?: string }) {
   return (
-    <div
-      className={`divide-y divide-[var(--border-soft)] ${className ?? ""}`}
-      aria-busy="true"
-    >
+    <div className={`divide-y divide-[var(--border-soft)] ${className ?? ""}`} aria-busy="true">
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3">
           {/* 状态图标占位 */}
@@ -79,9 +64,7 @@ export function TaskListSkeleton({
 export function StatCardSkeleton({ className }: { className?: string }) {
   return (
     <div
-      className={`grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 ${
-        className ?? ""
-      }`}
+      className={`grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 ${className ?? ""}`}
       aria-busy="true"
     >
       {Array.from({ length: 3 }).map((_, i) => (

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import type Stripe from "stripe";
 import { runWithAuthOp } from "@/lib/auth";
 import { requireStripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
 
@@ -11,7 +12,7 @@ export async function POST(req: NextRequest) {
   if (!STRIPE_WEBHOOK_SECRET) {
     return NextResponse.json(
       { code: 500, message: "STRIPE_WEBHOOK_SECRET 未配置，webhook 拒绝接收" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 
@@ -43,7 +44,10 @@ export async function POST(req: NextRequest) {
         if (wid && customerId && subId) {
           await runWithAuthOp("webhook", async (tx) => {
             // metadata 可能被篡改或指向已删除的工作区：先确认存在再落库
-            const workspace = await tx.workspace.findUnique({ where: { id: wid }, select: { id: true } });
+            const workspace = await tx.workspace.findUnique({
+              where: { id: wid },
+              select: { id: true },
+            });
             if (!workspace) return;
 
             await tx.subscription.upsert({
@@ -65,14 +69,16 @@ export async function POST(req: NextRequest) {
       }
       case "invoice.payment_failed": {
         // AC-09：扣款失败仅标记 past_due，不立即中断服务
-        const inv = event.data.object;
+        const inv = event.data.object as Stripe.Invoice & {
+          subscription?: string | { id: string } | null;
+        };
         const subId = asString(inv.subscription);
         if (subId) {
           await runWithAuthOp("webhook", (tx) =>
             tx.subscription.updateMany({
               where: { stripeSubId: subId },
               data: { status: "past_due" },
-            })
+            }),
           );
         }
         break;
@@ -82,9 +88,11 @@ export async function POST(req: NextRequest) {
         const subId = asString(sub.id);
         if (subId) {
           // Stripe SDK v18+ 类型已移除 current_period_end，但 API 响应仍包含此字段
-          const periodEnd = (sub as Stripe.Subscription & {
-            current_period_end?: number;
-          }).current_period_end;
+          const periodEnd = (
+            sub as Stripe.Subscription & {
+              current_period_end?: number;
+            }
+          ).current_period_end;
           await runWithAuthOp("webhook", (tx) =>
             tx.subscription.updateMany({
               where: { stripeSubId: subId },
@@ -93,7 +101,7 @@ export async function POST(req: NextRequest) {
                 quantity: sub.items?.data?.[0]?.quantity ?? 1,
                 currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
               },
-            })
+            }),
           );
         }
         break;
@@ -106,7 +114,7 @@ export async function POST(req: NextRequest) {
             tx.subscription.updateMany({
               where: { stripeSubId: subId },
               data: { status: "canceled", canceledAt: new Date() },
-            })
+            }),
           );
         }
         break;

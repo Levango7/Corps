@@ -1,6 +1,15 @@
 "use client";
 
-import { use, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent } from "react";
+import {
+  use,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+} from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
@@ -348,9 +357,7 @@ export default function TaskDetailPage({
     setHistoryFor(d);
     setHistoryLoading(true);
     try {
-      const v = await api<DecisionVersion[]>(
-        `${base}/tasks/${id}/decisions/${d.id}/versions`
-      );
+      const v = await api<DecisionVersion[]>(`${base}/tasks/${id}/decisions/${d.id}/versions`);
       setVersions(v);
     } catch {
       setVersions([]);
@@ -539,7 +546,9 @@ export default function TaskDetailPage({
                     value={decisionDraft}
                     onChange={(e) => setDecisionDraft(e.target.value)}
                     rows={6}
-                    placeholder={"## 决定\n采用方案 B。\n\n## 理由\n- 迁移成本更低\n- 与现有权限模型兼容"}
+                    placeholder={
+                      "## 决定\n采用方案 B。\n\n## 理由\n- 迁移成本更低\n- 与现有权限模型兼容"
+                    }
                     className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
                   />
                 ) : (
@@ -618,7 +627,10 @@ export default function TaskDetailPage({
 
             <div className="divide-y divide-[var(--border-soft)]">
               {comments.map((c) => (
-                <div key={c.id} className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
+                <div
+                  key={c.id}
+                  className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                >
                   <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
                     {(c.author.name || c.author.email)[0]?.toUpperCase()}
                   </div>
@@ -651,7 +663,11 @@ export default function TaskDetailPage({
                     setTimeout(() => setMentionOpen(false), 150);
                   }}
                   rows={2}
-                  placeholder={isMobile ? "写下你的想法…（@ 提及，⌘+Enter 发送）" : "写下你的想法…（@ 提及成员，⌘/Ctrl + Enter 发送）"}
+                  placeholder={
+                    isMobile
+                      ? "写下你的想法…（@ 提及，⌘+Enter 发送）"
+                      : "写下你的想法…（@ 提及成员，⌘/Ctrl + Enter 发送）"
+                  }
                   className="w-full px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-base)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
                 />
                 {mentionOpen && mentionCandidates.length > 0 && (

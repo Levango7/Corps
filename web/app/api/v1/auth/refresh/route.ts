@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, runWithAuthOp } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
 
@@ -23,14 +22,13 @@ export async function POST(req: NextRequest) {
           where: { userId: session.user.id },
           include: { workspace: true },
         }),
-      session.user.id
+      session.user.id,
     );
     if (members.length === 0) {
       return NextResponse.json({ code: 401, message: "No workspace" }, { status: 401 });
     }
 
-    const target =
-      members.find((m) => m.workspaceId === workspaceId) ?? members[0];
+    const target = members.find((m) => m.workspaceId === workspaceId) ?? members[0];
     const accessToken = await signAccessToken({
       sub: session.user.id,
       wid: target.workspaceId,
@@ -39,7 +37,10 @@ export async function POST(req: NextRequest) {
 
     const response = NextResponse.json({
       code: 200,
-      data: { accessToken, workspace: { id: target.workspaceId, name: target.workspace.name, role: target.role } },
+      data: {
+
+        workspace: { id: target.workspaceId, name: target.workspace.name, role: target.role },
+      },
     });
     // 下发 httpOnly access_token cookie（Web 端自动随请求发送，XSS 不可读）
     response.cookies.set("access_token", accessToken, {
@@ -52,7 +53,10 @@ export async function POST(req: NextRequest) {
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {
-      return NextResponse.json({ code: 400, message: "Validation error", errors: error.errors }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: "Validation error", errors: error.errors },
+        { status: 400 },
+      );
     }
     console.error("Refresh error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });

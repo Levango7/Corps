@@ -1,0 +1,13 @@
+node_modules
+.next
+.git
+*.md
+.env*
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker
+tests
+e2e-test.sh
+coverage
+*.tsbuildinfo

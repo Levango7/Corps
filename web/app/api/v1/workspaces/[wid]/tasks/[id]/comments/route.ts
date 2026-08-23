@@ -5,7 +5,7 @@ import { z } from "zod";
 /** GET /v1/workspaces/{wid}/tasks/{id}/comments — 评论时间线（正序） */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; id: string }> }
+  { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
@@ -32,7 +32,7 @@ const createCommentSchema = z.object({
 
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; id: string }> }
+  { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
@@ -43,10 +43,13 @@ export async function POST(
 
     const comment = await runWithWorkspace(wid, async (tx) => {
       // 校验任务确实属于本工作区（防跨租户写入）
-      const task = await tx.task.findFirst({ where: { id, workspaceId: wid }, select: { id: true } });
+      const task = await tx.task.findFirst({
+        where: { id, workspaceId: wid },
+        select: { id: true, assigneeId: true, title: true },
+      });
       if (!task) return null;
 
-      return tx.comment.create({
+      const created = await tx.comment.create({
         data: {
           taskId: id,
           workspaceId: wid,
@@ -56,6 +59,37 @@ export async function POST(
         },
         include: { author: { select: { id: true, name: true, email: true, image: true } } },
       });
+
+      // A-3: 通知 —— mention 通知（每个被提及的用户，排除评论作者自己）
+      const mentions = validated.mentions ?? [];
+      for (const mentionedUserId of mentions) {
+        if (mentionedUserId && mentionedUserId !== ctx.payload.sub) {
+          await tx.notification.create({
+            data: {
+              userId: mentionedUserId,
+              workspaceId: wid,
+              type: "mention",
+              entityId: id,
+              entityTitle: task.title,
+            },
+          });
+        }
+      }
+
+      // A-3: 通知 —— comment_added（任务指派人，如果不是评论作者）
+      if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
+        await tx.notification.create({
+          data: {
+            userId: task.assigneeId,
+            workspaceId: wid,
+            type: "comment_added",
+            entityId: id,
+            entityTitle: task.title,
+          },
+        });
+      }
+
+      return created;
     });
 
     if (!comment) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
@@ -65,7 +99,7 @@ export async function POST(
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Create comment error:", error);

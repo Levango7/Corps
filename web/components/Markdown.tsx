@@ -29,7 +29,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
           className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] font-[family-name:var(--font-mono)] text-[0.9em] text-[var(--fg)]"
         >
           {token.slice(1, -1)}
-        </code>
+        </code>,
       );
     } else if (token.startsWith("[")) {
       const close = token.indexOf("](");
@@ -45,19 +45,19 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
           className="text-[var(--accent)] hover:underline underline-offset-2"
         >
           {label}
-        </a>
+        </a>,
       );
     } else if (token.startsWith("**")) {
       nodes.push(
         <strong key={k} className="font-[var(--weight-semibold)] text-[var(--fg)]">
           {token.slice(2, -2)}
-        </strong>
+        </strong>,
       );
     } else {
       nodes.push(
         <em key={k} className="italic">
           {token.slice(1, -1)}
-        </em>
+        </em>,
       );
     }
     last = m.index + token.length;
@@ -91,12 +91,14 @@ export default function Markdown({ source }: { source: string }) {
           className="my-3 p-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)] overflow-x-auto"
         >
           {lang && (
-            <div className="mb-2 text-[length:var(--text-xs)] text-[var(--meta)] select-none">{lang}</div>
+            <div className="mb-2 text-[length:var(--text-xs)] text-[var(--meta)] select-none">
+              {lang}
+            </div>
           )}
           <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] whitespace-pre">
             {buf.join("\n")}
           </code>
-        </pre>
+        </pre>,
       );
       continue;
     }
@@ -121,7 +123,7 @@ export default function Markdown({ source }: { source: string }) {
           style={{ fontSize }}
         >
           {renderInline(h[2], `h${key}`)}
-        </p>
+        </p>,
       );
       i++;
       continue;
@@ -140,7 +142,7 @@ export default function Markdown({ source }: { source: string }) {
           className="my-3 pl-3 border-l-2 border-[var(--border)] text-[var(--fg-2)]"
         >
           {renderInline(buf.join(" "), `q${key}`)}
-        </blockquote>
+        </blockquote>,
       );
       continue;
     }
@@ -163,7 +165,7 @@ export default function Markdown({ source }: { source: string }) {
               <span>{renderInline(it, `l${key}-${n}`)}</span>
             </li>
           ))}
-        </ul>
+        </ul>,
       );
       continue;
     }
@@ -188,7 +190,7 @@ export default function Markdown({ source }: { source: string }) {
     blocks.push(
       <p key={key++} className="my-2 text-[var(--fg-2)] leading-[1.7]">
         {renderInline(buf.join(" "), `p${key}`)}
-      </p>
+      </p>,
     );
   }
 

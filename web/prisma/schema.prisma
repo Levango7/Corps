@@ -75,6 +75,7 @@ model Member {
 
   @@id([userId, workspaceId])
   @@index([workspaceId])
+  @@index([userId])
   @@map("members")
 }
 
@@ -140,6 +141,7 @@ model Notification {
 
   @@index([userId, workspaceId])
   @@index([workspaceId])
+  @@index([workspaceId, userId, read])
   @@map("notifications")
 }
 
@@ -237,7 +239,7 @@ model Subscription {
   stripeCustomerId  String?  @map("stripe_customer_id") @db.VarChar(255)
   stripeSubId       String?  @map("stripe_sub_id") @db.VarChar(255)
   quantity          Int      @default(1)
-  status            String   @default("active") @db.VarChar(20) // active, past_due, canceled, trialing
+  status            String   @default("active") @db.VarChar(20) // active, past_due, canceled, trialing, incomplete
   currentPeriodEnd  DateTime? @map("current_period_end")
   canceledAt        DateTime? @map("canceled_at")
   createdAt         DateTime @default(now()) @map("created_at")

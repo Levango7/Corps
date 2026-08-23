@@ -37,7 +37,6 @@ const COLUMNS: { id: Task["status"]; title: string; color: string }[] = [
   { id: "done", title: "已完成", color: "var(--status-done)" },
 ];
 
-
 /** 优先级左侧色条颜色：low 透明（占位保持卡片左缘对齐），其余用语义色。 */
 const PRIORITY_BAR_COLORS: Record<Task["priority"], string> = {
   low: "transparent",
@@ -66,10 +65,19 @@ const STATUS_LABELS: Record<Task["status"], string> = {
  * color-mix 是 W3C 标准方案，且能随主题切换自动重算。
  */
 const STATUS_BADGE_STYLES: Record<Task["status"], { background: string; color: string }> = {
-  todo:        { background: "color-mix(in srgb, var(--status-todo) 12%, transparent)",  color: "var(--status-todo)" },
-  in_progress: { background: "color-mix(in srgb, var(--status-doing) 12%, transparent)", color: "var(--status-doing)" },
-  review:      { background: "color-mix(in srgb, var(--warn) 14%, transparent)",         color: "var(--warn)" },
-  done:        { background: "color-mix(in srgb, var(--status-done) 12%, transparent)",  color: "var(--status-done)" },
+  todo: {
+    background: "color-mix(in srgb, var(--status-todo) 12%, transparent)",
+    color: "var(--status-todo)",
+  },
+  in_progress: {
+    background: "color-mix(in srgb, var(--status-doing) 12%, transparent)",
+    color: "var(--status-doing)",
+  },
+  review: { background: "color-mix(in srgb, var(--warn) 14%, transparent)", color: "var(--warn)" },
+  done: {
+    background: "color-mix(in srgb, var(--status-done) 12%, transparent)",
+    color: "var(--status-done)",
+  },
 };
 
 /**
@@ -77,10 +85,16 @@ const STATUS_BADGE_STYLES: Record<Task["status"], { background: string; color: s
  * 复用语义色映射，避免引入不存在的 --priority-* token。
  */
 const PRIORITY_BADGE_STYLES: Record<Task["priority"], { background: string; color: string }> = {
-  low:    { background: "color-mix(in srgb, var(--meta) 12%, transparent)",   color: "var(--meta)" },
-  medium: { background: "color-mix(in srgb, var(--muted) 12%, transparent)",  color: "var(--muted)" },
-  high:   { background: "color-mix(in srgb, var(--warn) 14%, transparent)",   color: "var(--warn)" },
-  urgent: { background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)" },
+  low: { background: "color-mix(in srgb, var(--meta) 12%, transparent)", color: "var(--meta)" },
+  medium: {
+    background: "color-mix(in srgb, var(--muted) 12%, transparent)",
+    color: "var(--muted)",
+  },
+  high: { background: "color-mix(in srgb, var(--warn) 14%, transparent)", color: "var(--warn)" },
+  urgent: {
+    background: "color-mix(in srgb, var(--danger) 12%, transparent)",
+    color: "var(--danger)",
+  },
 };
 
 /**
@@ -91,7 +105,7 @@ function computeSortOrder(
   tasks: Task[],
   column: Task["status"],
   targetIndex: number,
-  excludeId: string
+  excludeId: string,
 ): number {
   const columnTasks = tasks
     .filter((t) => t.status === column && t.id !== excludeId)
@@ -119,9 +133,7 @@ function formatRelativeDueDate(dueDate: string): {
   now.setHours(0, 0, 0, 0);
   const due = new Date(dueDate);
   due.setHours(0, 0, 0, 0);
-  const diffDays = Math.round(
-    (due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-  );
+  const diffDays = Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
   if (diffDays < 0) return { text: `逾期 ${-diffDays} 天`, tone: "overdue" };
   if (diffDays === 0) return { text: "今天", tone: "today" };
   if (diffDays === 1) return { text: "明天", tone: "normal" };
@@ -193,9 +205,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
 
     // 乐观更新：仅改被拖动任务的 status + sortOrder，渲染时按列分组并按 sortOrder 排序
     setTasks((prev) =>
-      prev.map((t) =>
-        t.id === taskId ? { ...t, status: newStatus, sortOrder: newSortOrder } : t
-      )
+      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, sortOrder: newSortOrder } : t)),
     );
 
     try {
@@ -260,10 +270,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
    * 单列选择器（< md）与多列布局（md 水平滚动 / lg 4 列网格）共用此渲染。
    * 列根元素带 min-w-[260px] flex-shrink-0 以支撑 md 水平滚动；lg 下 lg:min-w-0 让 grid 列自由收缩。
    */
-  const renderColumn = (
-    column: (typeof COLUMNS)[number],
-    columnTasks: Task[]
-  ): ReactNode => (
+  const renderColumn = (column: (typeof COLUMNS)[number], columnTasks: Task[]): ReactNode => (
     <div
       key={column.id}
       className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
@@ -274,10 +281,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       }}
     >
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
-        <div
-          className="w-2 h-2 rounded-full"
-          style={{ background: column.color }}
-        />
+        <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
         <span className="font-medium text-[var(--fg)]">{column.title}</span>
         <span className="ml-auto text-xs text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
           {columnTasks.length}
@@ -321,10 +325,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
             }}
           >
             <div className="flex items-start gap-2">
-              <GripVertical
-                size={14}
-                className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab"
-              />
+              <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
                   <span className="text-[length:var(--text-xs)] font-mono text-[var(--muted)]">
@@ -392,7 +393,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   const safeListPage = Math.min(listPage, listTotalPages);
   const paginatedListTasks = sortedListTasks.slice(
     (safeListPage - 1) * LIST_PAGE_SIZE,
-    safeListPage * LIST_PAGE_SIZE
+    safeListPage * LIST_PAGE_SIZE,
   );
   const showListPagination = sortedListTasks.length > LIST_PAGE_SIZE;
 
@@ -448,7 +449,9 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     content = (
       <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
         <Kanban size={48} className="mb-4 opacity-40" />
-        <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">还没有任务</p>
+        <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">
+          还没有任务
+        </p>
         <p className="text-[length:var(--text-sm)] mb-4">创建第一个任务，开始跟踪进度</p>
         <button
           onClick={() => setShowNew(true)}
@@ -464,8 +467,12 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       <div>
         <div className="flex items-center justify-between mb-6 gap-3">
           <div>
-            <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">任务看板</h1>
-            <p className="text-[var(--muted)] text-[length:var(--text-sm)]">{tasks.length} 个任务</p>
+            <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">
+              任务看板
+            </h1>
+            <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
+              {tasks.length} 个任务
+            </p>
           </div>
           <div className="flex items-center gap-3">
             {/* 视图切换 < sm：仅图标按钮组 */}
@@ -545,10 +552,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                         : "text-[var(--muted)] hover:text-[var(--fg)]"
                     }`}
                   >
-                    <div
-                      className="w-1.5 h-1.5 rounded-full"
-                      style={{ background: col.color }}
-                    />
+                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
                     {col.title}
                   </button>
                 ))}
@@ -557,7 +561,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                 COLUMNS.find((c) => c.id === activeColumn)!,
                 tasks
                   .filter((t) => t.status === activeColumn)
-                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
+                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
               )}
             </div>
 
@@ -569,8 +573,8 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                     column,
                     tasks
                       .filter((t) => t.status === column.id)
-                      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))
-                  )
+                      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
+                  ),
                 )}
               </div>
             </div>
@@ -656,9 +660,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                         </span>
                       </td>
                       <td className="px-4 h-10 text-[var(--muted)]">
-                        {task.dueDate
-                          ? new Date(task.dueDate).toLocaleDateString()
-                          : "—"}
+                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
                       </td>
                     </tr>
                   ))}
@@ -714,12 +716,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         </div>
       )}
       {content}
-      <NewTaskDialog
-        wid={wid}
-        open={showNew}
-        onClose={() => setShowNew(false)}
-        onCreated={load}
-      />
+      <NewTaskDialog wid={wid} open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
     </>
   );
 }

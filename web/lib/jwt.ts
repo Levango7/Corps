@@ -36,7 +36,9 @@ export async function signAccessToken(payload: Omit<JWTPayload, "iat" | "exp">):
   });
 }
 
-export async function signRefreshToken(payload: Omit<RefreshTokenPayload, "iat" | "exp">): Promise<string> {
+export async function signRefreshToken(
+  payload: Omit<RefreshTokenPayload, "iat" | "exp">,
+): Promise<string> {
   return jwt.sign(payload, requireSecret("JWT_REFRESH_SECRET"), {
     expiresIn: "7d",
   });

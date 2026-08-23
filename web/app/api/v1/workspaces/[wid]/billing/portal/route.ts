@@ -2,26 +2,26 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { requireStripe } from "@/lib/stripe";
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> }
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (ctx.member.role !== "owner") {
-    return NextResponse.json({ code: 403, message: "Only owner can manage billing" }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: "Only owner can manage billing" },
+      { status: 403 },
+    );
   }
 
   const subscription = await runWithWorkspace(
     wid,
     (tx) => tx.subscription.findUnique({ where: { workspaceId: wid } }),
-    ctx.payload.sub
+    ctx.payload.sub,
   );
   if (!subscription?.stripeCustomerId) {
     return NextResponse.json(
       { code: 400, message: "尚无 Stripe 客户，请先通过升级完成订阅" },
-      { status: 400 }
+      { status: 400 },
     );
   }
 

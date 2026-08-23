@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 
-const BASE = "http://localhost:3000/api/v1";
+// 可用 TEST_BASE_URL 覆盖（CI 默认本机 3000）
+const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000/api/v1";
 
 describe("AC-01: 注册创建账户+工作区+owner+返回JWT", () => {
   const email = `test-${Date.now()}@corps.test`;

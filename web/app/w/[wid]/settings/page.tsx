@@ -1,7 +1,15 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import { Settings as SettingsIcon, Check, Loader2, AlertTriangle, Sun, Moon, Monitor } from "lucide-react";
+import {
+  Settings as SettingsIcon,
+  Check,
+  Loader2,
+  AlertTriangle,
+  Sun,
+  Moon,
+  Monitor,
+} from "lucide-react";
 import { api } from "@/lib/api";
 
 type Role = "owner" | "admin" | "member";
@@ -49,7 +57,10 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   // 个人资料
   const [userName, setUserName] = useState("");
   const [userImage, setUserImage] = useState("");
-  const [userInitial, setUserInitial] = useState<{ name: string | null; image: string | null } | null>(null);
+  const [userInitial, setUserInitial] = useState<{
+    name: string | null;
+    image: string | null;
+  } | null>(null);
   const [userBusy, setUserBusy] = useState(false);
   const [userSaved, setUserSaved] = useState(false);
   const [userImageError, setUserImageError] = useState("");
@@ -144,7 +155,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const dirty = ws ? name.trim() !== ws.name || slug.trim() !== ws.slug : false;
   const userDirty =
     userInitial !== null &&
-    (userName.trim() !== (userInitial.name ?? "") || userImage.trim() !== (userInitial.image ?? ""));
+    (userName.trim() !== (userInitial.name ?? "") ||
+      userImage.trim() !== (userInitial.image ?? ""));
 
   const inputClass =
     "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:bg-[var(--surface-2)] disabled:text-[var(--muted)] placeholder:text-[var(--meta)]";

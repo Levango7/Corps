@@ -27,8 +27,7 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
   const headers = new Headers(opts.headers);
   if (!headers.has("Content-Type") && opts.body) headers.set("Content-Type", "application/json");
 
-  const doFetch = (h: Headers) =>
-    fetch(path, { ...opts, headers: h, credentials: "include" });
+  const doFetch = (h: Headers) => fetch(path, { ...opts, headers: h, credentials: "include" });
 
   let res = await doFetch(headers);
 
@@ -46,7 +45,9 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
     }
   }
 
-  const json = await res.json().catch(() => ({ code: res.status, message: res.statusText, data: null }));
+  const json = await res
+    .json()
+    .catch(() => ({ code: res.status, message: res.statusText, data: null }));
   if (!res.ok) {
     throw new Error(json?.message || `请求失败 (${res.status})`);
   }

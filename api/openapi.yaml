@@ -745,8 +745,8 @@ components:
       properties:
         code:
           type: integer
-          description: "0 = success; non-zero = error (mirrors HTTP status where applicable)"
-          example: 0
+          description: "Business status code, mirrors HTTP status code (200=success, 4xx/5xx=error)"
+          example: 200
         data:
           nullable: true
         message:

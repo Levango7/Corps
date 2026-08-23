@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, AlertCircle } from "lucide-react";
 
-
 export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -34,12 +33,11 @@ export default function SignupPage() {
         setError(
           res.status === 409
             ? "该邮箱已注册，直接登录即可"
-            : data.message || "创建失败，请稍后重试"
+            : data.message || "创建失败，请稍后重试",
         );
         setBusy(false);
         return;
       }
-
 
       router.push(`/w/${data.data.workspace.id}`);
     } catch {

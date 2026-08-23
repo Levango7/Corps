@@ -1,13 +1,14 @@
 #!/bin/bash
 # E2E API + 页面渲染测试脚本
-# 在 ~/corps-web/web 目录执行
+# 仅支持 WSL/Linux；根目录可通过 CORPS_WEB_ROOT 环境变量覆盖（默认 ~/corps-web）
 
 set +e  # 不因错误退出，继续运行所有测试
 
-cd ~/corps-web/web || { echo "ERROR: cannot cd to ~/corps-web/web"; exit 1; }
+CORPS_WEB_ROOT="${CORPS_WEB_ROOT:-$HOME/corps-web}"
+cd "$CORPS_WEB_ROOT/web" || { echo "ERROR: cannot cd to $CORPS_WEB_ROOT/web"; exit 1; }
 
 # 手动执行 predev：复制 design-tokens.css
-cp ~/corps-web/design/design-tokens.css ~/corps-web/web/app/design-tokens.css 2>&1 && echo "design-tokens.css copied" || echo "WARN: design-tokens.css copy failed"
+cp "$CORPS_WEB_ROOT/design/design-tokens.css" "$CORPS_WEB_ROOT/web/app/design-tokens.css" 2>&1 && echo "design-tokens.css copied" || echo "WARN: design-tokens.css copy failed"
 
 echo "=== Starting dev server (npx next dev) ==="
 # 用 npx next dev 绕过 pnpm 的 install 检查（ignored builds 导致 pnpm dev 失败）

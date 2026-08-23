@@ -1,6 +1,58 @@
 import { PrismaClient } from "@prisma/client";
+// better-auth/crypto 导出公开的 hashPassword，使用与 Better Auth 一致的哈希算法
+// （默认 scrypt）。seed 必须用此函数哈希密码，否则登录时 signInEmail 验证失败。
+import { hashPassword } from "better-auth/crypto";
 
 const prisma = new PrismaClient();
+
+/**
+ * 幂等地创建演示用户：
+ *   1. 用 Better Auth 的 hashPassword 生成密码哈希（scrypt，与生产一致）
+ *   2. 写入 users.password_hash（schema 字段，保持数据一致性）
+ *   3. 写入 accounts.password（providerId="credential"）—— Better Auth signInEmail
+ *      实际查找的位置，缺失则登录失败。
+ * 若用户已存在则跳过（支持重复运行 seed）。
+ */
+async function ensureUser(email: string, name: string, password: string) {
+  const existing = await prisma.user.findUnique({ where: { email } });
+  if (existing) {
+    // 确保凭据 account 记录存在（历史 seed 可能只写了 user.password_hash）
+    const credAccount = await prisma.account.findFirst({
+      where: { userId: existing.id, providerId: "credential" },
+    });
+    if (!credAccount) {
+      const hashed = await hashPassword(password);
+      await prisma.account.create({
+        data: {
+          userId: existing.id,
+          providerId: "credential",
+          accountId: email,
+          password: hashed,
+        },
+      });
+    }
+    return existing;
+  }
+
+  const hashedPassword = await hashPassword(password);
+  const user = await prisma.user.create({
+    data: {
+      email,
+      name,
+      password: hashedPassword,
+    },
+  });
+  // Better Auth signInEmail 通过 accounts(providerId="credential") 验证密码
+  await prisma.account.create({
+    data: {
+      userId: user.id,
+      providerId: "credential",
+      accountId: email,
+      password: hashedPassword,
+    },
+  });
+  return user;
+}
 
 async function main() {
   // 生产环境保护——禁止运行 seed
@@ -11,38 +63,14 @@ async function main() {
 
   console.log("🌱 开始播种演示数据...");
 
-  // 1. 创建演示用户
-  const demoUser = await prisma.user.upsert({
-    where: { email: "demo@corps.app" },
-    update: {},
-    create: {
-      email: "demo@corps.app",
-      name: "演示用户",
-      password: "Demo123456!",
-    },
-  });
+  // 1. 创建演示用户（密码用 Better Auth 的 scrypt 哈希）
+  const demoUser = await ensureUser("demo@corps.app", "演示用户", "Demo123456!");
   console.log(`  ✓ 演示用户: ${demoUser.email}`);
 
-  const alice = await prisma.user.upsert({
-    where: { email: "alice@corps.app" },
-    update: {},
-    create: {
-      email: "alice@corps.app",
-      name: "Alice（产品负责人）",
-      password: "Alice1234!",
-    },
-  });
+  const alice = await ensureUser("alice@corps.app", "Alice（产品负责人）", "Alice1234!");
   console.log(`  ✓ Alice: ${alice.email}`);
 
-  const bob = await prisma.user.upsert({
-    where: { email: "bob@corps.app" },
-    update: {},
-    create: {
-      email: "bob@corps.app",
-      name: "Bob（开发工程师）",
-      password: "Bob12345!",
-    },
-  });
+  const bob = await ensureUser("bob@corps.app", "Bob（开发工程师）", "Bob12345!");
   console.log(`  ✓ Bob: ${bob.email}`);
 
   // 2. 创建演示工作区

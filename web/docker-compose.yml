@@ -5,11 +5,12 @@ version: "3.8"
 
 services:
   postgres:
-    image: postgres:18.4-alpine
+    image: postgres:16-alpine
     container_name: corps-postgres
     environment:
+      # 可用环境变量覆盖：POSTGRES_USER / POSTGRES_PASSWORD / POSTGRES_DB
       POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: changeme-dev-only
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme-dev-only}
       POSTGRES_DB: corps
     ports:
       - "5432:5432"

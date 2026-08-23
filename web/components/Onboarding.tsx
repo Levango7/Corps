@@ -26,7 +26,12 @@ const STORAGE_KEY = "corps_onboarding_completed";
  *
  * 可跳过；完成后 localStorage 标记不再显示。
  */
-export default function Onboarding({ wid, taskCount, memberCount, onDismiss }: OnboardingProps) {
+export default function Onboarding({
+  wid,
+  taskCount,
+  memberCount: _memberCount,
+  onDismiss,
+}: OnboardingProps) {
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
   const router = useRouter();
@@ -73,7 +78,8 @@ export default function Onboarding({ wid, taskCount, memberCount, onDismiss }: O
             corps 是面向 5-30 人中小团队的轻量协作工具。
           </p>
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">核心闭环</strong>：讨论结论自动落位成任务与决策记录——不再手动搬运。
+            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">核心闭环</strong>
+            ：讨论结论自动落位成任务与决策记录——不再手动搬运。
           </p>
           <div className="mt-4 p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)]">
             不为用不上的功能付费——免费层 ≤10 人，¥59/人/月 起步档。
@@ -108,7 +114,8 @@ export default function Onboarding({ wid, taskCount, memberCount, onDismiss }: O
             邀请同事加入工作区，分配 Owner/Admin/Member 角色。
           </p>
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">注意</strong>：邀请前对方需先在 corps 注册账号。
+            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">注意</strong>
+            ：邀请前对方需先在 corps 注册账号。
           </p>
         </div>
       ),

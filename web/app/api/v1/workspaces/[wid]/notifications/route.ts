@@ -14,48 +14,50 @@ import { z } from "zod";
 const NOTIFICATION_LIMIT = 50;
 
 /** GET /v1/workspaces/{wid}/notifications */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> }
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const url = new URL(req.url);
-  const unreadOnly = url.searchParams.get("unread") === "true";
-  const countOnly = url.searchParams.get("count") === "true";
+  try {
+    const url = new URL(req.url);
+    const unreadOnly = url.searchParams.get("unread") === "true";
+    const countOnly = url.searchParams.get("count") === "true";
 
-  const userId = ctx.payload.sub;
-  const baseWhere = { userId, workspaceId: wid } as const;
-  const where = unreadOnly ? { ...baseWhere, read: false } : baseWhere;
+    const userId = ctx.payload.sub;
+    const baseWhere = { userId, workspaceId: wid } as const;
+    const where = unreadOnly ? { ...baseWhere, read: false } : baseWhere;
 
-  // count=true：仅返回未读计数
-  if (countOnly) {
-    const unread = await runWithWorkspace(wid, (tx) =>
-      tx.notification.count({ where: { ...baseWhere, read: false } })
+    // count=true：仅返回未读计数
+    if (countOnly) {
+      const unread = await runWithWorkspace(wid, (tx) =>
+        tx.notification.count({ where: { ...baseWhere, read: false } }),
+      );
+      return NextResponse.json({ code: 200, data: { unread } });
+    }
+
+    // 默认：返回通知列表（createdAt 降序，limit 50）
+    const notifications = await runWithWorkspace(wid, (tx) =>
+      tx.notification.findMany({
+        where,
+        select: {
+          id: true,
+          type: true,
+          entityId: true,
+          entityTitle: true,
+          read: true,
+          createdAt: true,
+        },
+        orderBy: { createdAt: "desc" },
+        take: NOTIFICATION_LIMIT,
+      }),
     );
-    return NextResponse.json({ code: 200, data: { unread } });
+
+    return NextResponse.json({ code: 200, data: { notifications } });
+  } catch (error) {
+    console.error("[GET notifications] error:", error);
+    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
   }
-
-  // 默认：返回通知列表（createdAt 降序，limit 50）
-  const notifications = await runWithWorkspace(wid, (tx) =>
-    tx.notification.findMany({
-      where,
-      select: {
-        id: true,
-        type: true,
-        entityId: true,
-        entityTitle: true,
-        read: true,
-        createdAt: true,
-      },
-      orderBy: { createdAt: "desc" },
-      take: NOTIFICATION_LIMIT,
-    })
-  );
-
-  return NextResponse.json({ code: 200, data: { notifications } });
 }
 
 const patchSchema = z
@@ -68,10 +70,7 @@ const patchSchema = z
   });
 
 /** PATCH /v1/workspaces/{wid}/notifications — 标记已读 */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> }
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
@@ -89,7 +88,7 @@ export async function PATCH(
       tx.notification.updateMany({
         where,
         data: { read: true },
-      })
+      }),
     );
 
     return NextResponse.json({ code: 200, data: { success: true } });
@@ -97,7 +96,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Patch notification error:", error);

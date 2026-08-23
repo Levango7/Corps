@@ -4,7 +4,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions/{did}/versions — 某条决策的版本历史（版本倒序） */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; id: string; did: string }> }
+  { params }: { params: Promise<{ wid: string; id: string; did: string }> },
 ) {
   const { wid, id, did } = await params;
   const ctx = await getWorkspaceContext(req, wid);

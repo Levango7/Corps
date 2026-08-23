@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, AlertCircle } from "lucide-react";
 
-
 export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -33,7 +32,6 @@ export default function LoginPage() {
         setBusy(false);
         return;
       }
-
 
       const first = data.data?.workspaces?.[0];
       if (first) {

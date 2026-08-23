@@ -53,7 +53,7 @@ export async function authenticate(req: NextRequest): Promise<JWTPayload | null>
 
 export async function getWorkspaceContext(
   req: NextRequest,
-  wid: string
+  wid: string,
 ): Promise<{ payload: JWTPayload; member: { role: string; workspaceId: string } } | null> {
   const payload = await authenticate(req);
   if (!payload) return null;
@@ -67,7 +67,7 @@ export async function getWorkspaceContext(
         where: { userId: payload.sub, workspaceId: wid },
         select: { role: true, workspaceId: true },
       }),
-    payload.sub
+    payload.sub,
   );
   if (!member) return null;
 
@@ -77,11 +77,11 @@ export async function getWorkspaceContext(
 export function requireRole(allowed: string[]) {
   return function (req: NextRequest, context: { params: Promise<{ wid: string }> }) {
     return async () => {
-      const { payload, member } = await getWorkspaceContext(req, (await context.params).wid);
-      if (!member) {
+      const ctx = await getWorkspaceContext(req, (await context.params).wid);
+      if (!ctx) {
         return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
       }
-      if (!allowed.includes(member.role)) {
+      if (!allowed.includes(ctx.member.role)) {
         return NextResponse.json({ code: 403, message: "Forbidden" }, { status: 403 });
       }
       return null;
@@ -104,7 +104,7 @@ async function setGucs(tx: Tx, gucs: Record<string, string | undefined>) {
  */
 export async function withGuc<T>(
   gucs: Record<string, string | undefined>,
-  fn: (tx: Tx) => Promise<T>
+  fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
   return prisma.$transaction(async (tx) => {
     await setGucs(tx, gucs);
@@ -120,7 +120,7 @@ export async function withGuc<T>(
 export function runWithAuthOp<T>(
   op: "login" | "provision" | "webhook",
   fn: (tx: Tx) => Promise<T>,
-  userId?: string
+  userId?: string,
 ): Promise<T> {
   return withGuc({ auth_op: op, user_id: userId }, fn);
 }
@@ -134,7 +134,7 @@ export function runWithAuthOp<T>(
 export async function runWithWorkspace<T>(
   wid: string,
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
-  userId?: string
+  userId?: string,
 ): Promise<T> {
   return withGuc({ workspace_id: wid, user_id: userId }, fn);
 }

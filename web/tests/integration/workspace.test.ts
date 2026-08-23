@@ -1,13 +1,15 @@
 import { describe, it, expect, beforeAll } from "vitest";
 
-const BASE = "http://localhost:3000/api/v1";
+// 可用 TEST_BASE_URL 覆盖（CI 默认本机 3000）
+const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000/api/v1";
+
+// 模块级共享：AC-03 注册的租户 A / B，AC-04 的跨租户回归复用
+let tokenA: string;
+let tokenB: string;
+let widA: string;
+let widB: string;
 
 describe("AC-03: 跨租户请求隔离", () => {
-  let tokenA: string;
-  let tokenB: string;
-  let widA: string;
-  let widB: string;
-
   beforeAll(async () => {
     // 创建租户 A
     const rA = await fetch(`${BASE}/auth/register`, {
@@ -41,7 +43,7 @@ describe("AC-03: 跨租户请求隔离", () => {
     await fetch(`${BASE}/workspaces/${widB}/tasks`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenB}`,
+        Authorization: `Bearer ${tokenB}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
@@ -54,14 +56,14 @@ describe("AC-03: 跨租户请求隔离", () => {
 
   it("AC-03: 租户A的token访问租户B的任务列表应返回 404 或 403", async () => {
     const res = await fetch(`${BASE}/workspaces/${widB}/tasks`, {
-      headers: { "Authorization": `Bearer ${tokenA}` },
+      headers: { Authorization: `Bearer ${tokenA}` },
     });
     expect([404, 403]).toContain(res.status);
   });
 
   it("AC-03: 租户A不能直接构造URL访问租户B的任务详情", async () => {
     const res = await fetch(`${BASE}/workspaces/${widB}/tasks/fake-uuid`, {
-      headers: { "Authorization": `Bearer ${tokenA}` },
+      headers: { Authorization: `Bearer ${tokenA}` },
     });
     expect([404, 403]).toContain(res.status);
   });
@@ -89,7 +91,7 @@ describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
     const taskRes = await fetch(`${BASE}/workspaces/${widB}/tasks`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${tokenB}`,
+        Authorization: `Bearer ${tokenB}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ title: "B的机密任务", status: "todo", priority: "high" }),
@@ -98,7 +100,7 @@ describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
 
     // 租户 A（AC-03 场景中已注册）
     const listA = await fetch(`${BASE}/workspaces/${widA}/tasks`, {
-      headers: { "Authorization": `Bearer ${tokenA}` },
+      headers: { Authorization: `Bearer ${tokenA}` },
     });
     const tasksA = await listA.json();
     expect(JSON.stringify(tasksA)).not.toContain("B的机密任务");
@@ -107,7 +109,7 @@ describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
     const patchRes = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
       method: "PATCH",
       headers: {
-        "Authorization": `Bearer ${tokenA}`,
+        Authorization: `Bearer ${tokenA}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ title: "被篡改" }),
@@ -116,13 +118,13 @@ describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
 
     const deleteRes = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${tokenA}` },
+      headers: { Authorization: `Bearer ${tokenA}` },
     });
     expect([401, 403, 404]).toContain(deleteRes.status);
 
     // B 的任务未被改动
     const detailB = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
-      headers: { "Authorization": `Bearer ${tokenB}` },
+      headers: { Authorization: `Bearer ${tokenB}` },
     });
     expect((await detailB.json()).data.title).toBe("B的机密任务");
   });
@@ -133,7 +135,14 @@ describe("AC-05: RBAC 权限控制", () => {
   let memberToken: string;
   let wid: string;
   let memberUid: string;
-  let dOwner: any;
+  interface RegisterPayload {
+    data: {
+      user: { id: string; email: string; name: string | null };
+      workspace: { id: string };
+      accessToken: string;
+    };
+  }
+  let dOwner: RegisterPayload;
 
   beforeAll(async () => {
     // 注册 owner
@@ -146,7 +155,7 @@ describe("AC-05: RBAC 权限控制", () => {
         workspaceName: "RBAC Test",
       }),
     });
-    dOwner = await rOwner.json();
+    dOwner = (await rOwner.json()) as RegisterPayload;
     ownerToken = dOwner.data.accessToken;
     wid = dOwner.data.workspace.id;
 
@@ -168,7 +177,7 @@ describe("AC-05: RBAC 权限控制", () => {
     await fetch(`${BASE}/workspaces/${wid}/members/invite`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${ownerToken}`,
+        Authorization: `Bearer ${ownerToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email: dMember.data.user.email }),
@@ -179,7 +188,7 @@ describe("AC-05: RBAC 权限控制", () => {
     // member 尝试移除 owner → 应 403
     const res = await fetch(`${BASE}/workspaces/${wid}/members/${dOwner.data.user.id}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${memberToken}` },
+      headers: { Authorization: `Bearer ${memberToken}` },
     });
     expect(res.status).toBe(403);
   });
@@ -188,7 +197,7 @@ describe("AC-05: RBAC 权限控制", () => {
     const res = await fetch(`${BASE}/workspaces/${wid}/members/invite`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${memberToken}`,
+        Authorization: `Bearer ${memberToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ email: `new-${Date.now()}@corps.test` }),
@@ -200,7 +209,7 @@ describe("AC-05: RBAC 权限控制", () => {
     const res = await fetch(`${BASE}/workspaces/${wid}/billing/checkout`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${memberToken}`,
+        Authorization: `Bearer ${memberToken}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({}),
@@ -211,7 +220,7 @@ describe("AC-05: RBAC 权限控制", () => {
   it("Owner可以移除Member", async () => {
     const res = await fetch(`${BASE}/workspaces/${wid}/members/${memberUid}`, {
       method: "DELETE",
-      headers: { "Authorization": `Bearer ${ownerToken}` },
+      headers: { Authorization: `Bearer ${ownerToken}` },
     });
     expect(res.status).toBe(200);
   });
@@ -236,7 +245,7 @@ describe("AC-06: 看板拖拽乐观更新", () => {
     const createRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks`, {
       method: "POST",
       headers: {
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ title: "拖拽测试任务", status: "todo", priority: "medium" }),
@@ -250,7 +259,7 @@ describe("AC-06: 看板拖拽乐观更新", () => {
     const patchRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks/${taskId}`, {
       method: "PATCH",
       headers: {
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ status: "in_progress", sortOrder: 100.5 }),
@@ -260,7 +269,7 @@ describe("AC-06: 看板拖拽乐观更新", () => {
 
     // 重新拉取详情，确认已持久化而非仅响应体回显
     const getRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks/${taskId}`, {
-      headers: { "Authorization": `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
     const persisted = await getRes.json();
     expect(persisted.data.status).toBe("in_progress");
@@ -270,7 +279,7 @@ describe("AC-06: 看板拖拽乐观更新", () => {
     const badRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks/${taskId}`, {
       method: "PATCH",
       headers: {
-        "Authorization": `Bearer ${token}`,
+        Authorization: `Bearer ${token}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({ status: "doing" }),

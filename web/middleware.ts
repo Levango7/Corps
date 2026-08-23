@@ -35,7 +35,7 @@ export function middleware(req: NextRequest) {
   if (!isAllowed(req)) {
     return NextResponse.json(
       { code: 403, message: "Cross-origin request blocked (CSRF protection)" },
-      { status: 403 }
+      { status: 403 },
     );
   }
   return NextResponse.next();

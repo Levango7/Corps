@@ -92,9 +92,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     const timer = setTimeout(() => {
       // 请求发出
       setIsSearching(true);
-      api<SearchResults>(
-        `/api/v1/workspaces/${wid}/search?q=${encodeURIComponent(q)}`
-      )
+      api<SearchResults>(`/api/v1/workspaces/${wid}/search?q=${encodeURIComponent(q)}`)
         .then((data) => {
           setResults({
             tasks: (data?.tasks ?? []).map((t) => ({
@@ -125,8 +123,20 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
       { id: "nav-home", title: "概览", kind: "nav", href: `/w/${wid}`, icon: LayoutDashboard },
       { id: "nav-board", title: "看板", kind: "nav", href: `/w/${wid}/board`, icon: Kanban },
       { id: "nav-members", title: "成员", kind: "nav", href: `/w/${wid}/members`, icon: Users },
-      { id: "nav-billing", title: "计费", kind: "nav", href: `/w/${wid}/billing`, icon: CreditCard },
-      { id: "nav-settings", title: "设置", kind: "nav", href: `/w/${wid}/settings`, icon: Settings },
+      {
+        id: "nav-billing",
+        title: "计费",
+        kind: "nav",
+        href: `/w/${wid}/billing`,
+        icon: CreditCard,
+      },
+      {
+        id: "nav-settings",
+        title: "设置",
+        kind: "nav",
+        href: `/w/${wid}/settings`,
+        icon: Settings,
+      },
     ];
 
     const q = query.trim().toLowerCase();
@@ -218,19 +228,14 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         <ul ref={listRef} className="max-h-[var(--cmd-palette-max-h)] overflow-y-auto py-1.5">
           {items.length === 0 && (
             <li className="px-4 py-8 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-              {query.trim()
-                ? isSearching
-                  ? "正在搜索…"
-                  : "输入以搜索…"
-                : "没有可显示的项"}
+              {query.trim() ? (isSearching ? "正在搜索…" : "输入以搜索…") : "没有可显示的项"}
             </li>
           )}
           {items.map((item, idx) => {
             const Icon = item.icon;
             const active = idx === cursor;
             const prev = items[idx - 1];
-            const showTaskHeader =
-              showGroups && item.kind === "task" && prev?.kind !== "task";
+            const showTaskHeader = showGroups && item.kind === "task" && prev?.kind !== "task";
             const showDecisionHeader =
               showGroups && item.kind === "decision" && prev?.kind !== "decision";
             return (

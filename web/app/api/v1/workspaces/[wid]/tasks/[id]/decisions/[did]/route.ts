@@ -14,7 +14,7 @@ const updateDecisionSchema = z.object({
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; id: string; did: string }> }
+  { params }: { params: Promise<{ wid: string; id: string; did: string }> },
 ) {
   const { wid, id, did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
@@ -33,7 +33,7 @@ export async function PATCH(
         return { conflict: true as const, currentVersion: decision.version };
       }
 
-      return tx.decision.update({
+      const updated = await tx.decision.update({
         where: { id: did },
         data: {
           markdown: validated.markdown,
@@ -49,6 +49,25 @@ export async function PATCH(
         },
         include: { author: { select: { id: true, name: true, email: true } } },
       });
+
+      // A-3: 通知 —— decision_updated（任务指派人，如果不是决策作者）
+      const task = await tx.task.findFirst({
+        where: { id, workspaceId: wid },
+        select: { assigneeId: true, title: true },
+      });
+      if (task?.assigneeId && task.assigneeId !== ctx.payload.sub) {
+        await tx.notification.create({
+          data: {
+            userId: task.assigneeId,
+            workspaceId: wid,
+            type: "decision_updated",
+            entityId: id,
+            entityTitle: task.title,
+          },
+        });
+      }
+
+      return updated;
     });
 
     if ("notFound" in result) {
@@ -56,8 +75,11 @@ export async function PATCH(
     }
     if ("conflict" in result) {
       return NextResponse.json(
-        { code: 409, message: `决策已被他人更新（当前版本 ${result.currentVersion}），请刷新后重试` },
-        { status: 409 }
+        {
+          code: 409,
+          message: `决策已被他人更新（当前版本 ${result.currentVersion}），请刷新后重试`,
+        },
+        { status: 409 },
       );
     }
 
@@ -66,7 +88,7 @@ export async function PATCH(
     if (error instanceof z.ZodError) {
       return NextResponse.json(
         { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
-        { status: 400 }
+        { status: 400 },
       );
     }
     console.error("Update decision error:", error);
