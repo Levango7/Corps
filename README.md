@@ -25,14 +25,14 @@ docs/decisions/ADR-{001,002,003}.md  # 架构决策记录
 ### 后端工程（本次落地，28个文件）
 ```
 web/
-├── package.json                  # Next.js 16 + Prisma 6 + argon2 + lucide-react
+├── package.json                  # Next.js 16 + Prisma 6 + Better Auth + lucide-react
 ├── prisma/schema.prisma          # 9表模型（Workspace/User/Member/Task/Comment/Decision/Session/Subscription）
 ├── docker-compose.yml            # PostgreSQL 18.4 + RLS初始化
 ├── docker/init-rls.sql           # SET LOCAL app.workspace_id 注入
 ├── lib/
 │   ├── prisma.ts                 # 单例Prisma客户端
 │   ├── jwt.ts                    # access(15min) + refresh(7d)
-│   ├── argon2.ts                 # argon2id hash/verify
+
 │   └── auth.ts                   # 认证中间件 + RBAC守卫
 ├── app/
 │   ├── globals.css               # CSS变量（对齐design-tokens.css）

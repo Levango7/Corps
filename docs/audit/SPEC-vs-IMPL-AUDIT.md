@@ -10,7 +10,7 @@
 
 | SPEC 需求 | 实现文件 | 状态 | 备注 |
 |-----------|----------|------|------|
-| 注册登录 + 创建工作区 | `app/api/v1/auth/register/route.ts` + `app/auth/signup/page.tsx` | ✅ | Better Auth + argon2id |
+| 注册登录 + 创建工作区 | `app/api/v1/auth/register/route.ts` + `app/auth/signup/page.tsx` | ✅ | Better Auth + scrypt（Spec §4 已对齐） |
 | 任务详情（字段完整 CRUD） | `app/api/v1/workspaces/[wid]/tasks/[id]/route.ts` + `app/w/[wid]/task/[id]/page.tsx` | ✅ | 字段完整 |
 | 成员邀请 + 三角色 RBAC | `app/api/v1/workspaces/[wid]/members/invite/route.ts` + `app/w/[wid]/members/page.tsx` | ✅ | 服务端强制 |
 | 空状态引导 + Onboarding | `components/Onboarding.tsx` | ✅ | 本次新增 |

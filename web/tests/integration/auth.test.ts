@@ -3,10 +3,17 @@ import { describe, it, expect, beforeAll } from "vitest";
 // 可用 TEST_BASE_URL 覆盖（CI 默认本机 3000）
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000/api/v1";
 
+/** 从 Set-Cookie 头提取 access_token 值 */
+function extractAccessToken(res: Response): string {
+  const cookies = res.headers.getSetCookie?.() ?? [];
+  const tokenCookie = cookies.find((c) => c.startsWith("access_token="));
+  return tokenCookie?.split("=")[1]?.split(";")[0] ?? "";
+}
+
 describe("AC-01: 注册创建账户+工作区+owner+返回JWT", () => {
   const email = `test-${Date.now()}@corps.test`;
 
-  it("POST /auth/register 返回 201 + accessToken + workspace + owner角色", async () => {
+  it("POST /auth/register 返回 201 + accessToken(cookie) + workspace", async () => {
     const res = await fetch(`${BASE}/auth/register`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -24,14 +31,17 @@ describe("AC-01: 注册创建账户+工作区+owner+返回JWT", () => {
     expect(json.code).toBeDefined();
     expect(json.data).toBeDefined();
 
-    // JWT令牌
-    expect(json.data.accessToken).toBeDefined();
-    expect(typeof json.data.accessToken).toBe("string");
+    // JWT令牌通过 httpOnly cookie 下发（不在响应体，XSS 不可读）
+    const accessToken = extractAccessToken(res);
+    expect(accessToken).toBeDefined();
+    expect(typeof accessToken).toBe("string");
+    expect(accessToken.length).toBeGreaterThan(10);
 
     // 工作区创建
     expect(json.data.workspace).toBeDefined();
     expect(json.data.workspace.name).toBe("测试工作区");
-    expect(json.data.workspace.role).toBe("owner");
+    // register 响应的 workspace 不含 role（role 通过 login/refresh 的 workspaces 列表返回）
+    expect(json.data.workspace.id).toBeDefined();
   });
 });
 

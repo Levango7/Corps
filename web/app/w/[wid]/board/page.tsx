@@ -293,6 +293,8 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           <div
             key={task.id}
             draggable
+            role="button"
+            tabIndex={0}
             onClick={(e) => {
               // 拖拽与点击冲突：若拖拽距离 > 5px，视为拖拽而非点击，不触发跳转
               const start = dragStartRef.current;
@@ -301,7 +303,13 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               }
               router.push(`/w/${wid}/task/${task.id}`);
             }}
-            className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] ${
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                router.push(`/w/${wid}/task/${task.id}`);
+              }
+            }}
+            className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
               draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
             }`}
             style={{
@@ -476,9 +484,10 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           </div>
           <div className="flex items-center gap-3">
             {/* 视图切换 < sm：仅图标按钮组 */}
-            <div className="sm:hidden inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]">
+            <div className="sm:hidden inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]" role="group" aria-label="视图切换">
               <button
                 onClick={() => setView("board")}
+                aria-pressed={view === "board"}
                 className={`p-2 rounded-[var(--radius-sm)] transition-colors ${
                   view === "board"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -490,6 +499,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
               <button
                 onClick={() => setView("list")}
+                aria-pressed={view === "list"}
                 className={`p-2 rounded-[var(--radius-sm)] transition-colors ${
                   view === "list"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -501,9 +511,10 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
             </div>
             {/* 视图切换 ≥ sm：toggle 按钮组（看板 | 列表） */}
-            <div className="hidden sm:inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]">
+            <div className="hidden sm:inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]" role="group" aria-label="视图切换">
               <button
                 onClick={() => setView("board")}
+                aria-pressed={view === "board"}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
                   view === "board"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -516,6 +527,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
               <button
                 onClick={() => setView("list")}
+                aria-pressed={view === "list"}
                 className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
                   view === "list"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -546,6 +558,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   <button
                     key={col.id}
                     onClick={() => setActiveColumn(col.id)}
+                    aria-pressed={activeColumn === col.id}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
                       activeColumn === col.id
                         ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -586,8 +599,16 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               {paginatedListTasks.map((task) => (
                 <div
                   key={task.id}
+                  role="button"
+                  tabIndex={0}
                   onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform]"
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      router.push(`/w/${wid}/task/${task.id}`);
+                    }
+                  }}
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
                   style={{
                     borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
                   }}
@@ -634,8 +655,16 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   {paginatedListTasks.map((task) => (
                     <tr
                       key={task.id}
+                      role="button"
+                      tabIndex={0}
                       onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
-                      className="border-b border-[var(--border)] last:border-b-0 cursor-pointer hover:bg-[var(--surface-2)] transition-colors"
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          router.push(`/w/${wid}/task/${task.id}`);
+                        }
+                      }}
+                      className="border-b border-[var(--border)] last:border-b-0 cursor-pointer hover:bg-[var(--surface-2)] transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
                     >
                       <td className="px-4 h-10 text-[var(--fg)] font-medium truncate max-w-xs">
                         {task.title}

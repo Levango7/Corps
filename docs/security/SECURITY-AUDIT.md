@@ -46,7 +46,7 @@
 | react | 19.2.0 | — |
 | better-auth | 1.3.28 | — |
 | stripe | 18.3.0 | — |
-| argon2 | 0.41.1 | — |
+
 | jsonwebtoken | 9.0.2 | — |
 
 **建议**：CI 中加入 `npm audit` 步骤，警报 CVE ≥ high 时阻断 build。
@@ -78,7 +78,7 @@
 
 | 项目 | 当前状态 |
 |------|----------|
-| 哈希算法 | argon2id（Better Auth 默认 scrypt，但 lib/argon2.ts 提供 argon2id） |
+| 哈希算法 | scrypt（Better Auth 默认，Spec §4 已对齐；lib/argon2.ts 为历史遗留，生产未启用） |
 | 最小长度 | 由前端 + Zod 校验控制 |
 
 ---
@@ -103,7 +103,7 @@ localStorage.setItem("corps_access_token", t);  // ❌ XSS 可达
 
 | 类别 | 评分 | 说明 |
 |------|------|------|
-| 认证 | 8/10 | Better Auth + argon2id + JWT 轮换，Token 存储需整改 |
+| 认证 | 8/10 | Better Auth + scrypt + JWT 轮换，Token 存储需整改 |
 | 授权 | 9/10 | RLS 引擎层强制 + RBAC 三层控制 |
 | 数据隔离 | 10/10 | PostgreSQL RLS 双重保障（应用层 + 引擎层） |
 | 输入校验 | 9/10 | Zod 全覆盖所有端点 |

@@ -18,7 +18,7 @@
 | CSS | Tailwind CSS | 4.1.8 |
 | ORM | Prisma | 6.15.0 |
 | 数据库 | PostgreSQL | 18.4 (RLS) |
-| 密码 | argon2 | 0.41.1 (argon2id) |
+| 密码哈希 | scrypt（Better Auth 默认） | 随 better-auth 1.3.28 |
 | 图标 | lucide-react | 0.513.0 |
 | 校验 | zod | 3.24.4 |
 
@@ -54,7 +54,7 @@ web/
 ├── lib/
 │   ├── prisma.ts               # 单例Prisma客户端
 │   ├── jwt.ts                  # JWT生成/验证
-│   ├── argon2.ts               # argon2id哈希
+
 │   └── auth.ts                 # 认证中间件+RBAC
 ├── app/
 │   ├── globals.css             # CSS变量（对齐design-tokens）
@@ -154,11 +154,12 @@ npm run dev
 - ✅ 所有源码文件已完整落盘
 
 ### 未实现功能（后续迭代）
-1. Better Auth 集成（当前使用自定义JWT）
-2. Stripe 计费 webhook
-3. 前端 UI 对齐设计原型（当前组件较简略）
-4. 端到端测试
-5. CloudBase 部署配置
+> 注：以下为 2026-08-22 落地时的状态；Better Auth / Stripe / 前端 UI 对齐已于 2026-08-22 后续完成（见 README.md 待办清单）。
+
+1. 端到端测试（本机 `npm run dev` 后手测，见 web/README.md 验证步骤）
+2. CloudBase 部署配置
+3. AC-04/05/06 测试为占位，需真实 PG 连接补齐
+4. Token 存储迁移至 httpOnly cookie（安全审计已记录）
 
 ---
 

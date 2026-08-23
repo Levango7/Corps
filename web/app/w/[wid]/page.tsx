@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import NewTaskDialog from "@/components/NewTaskDialog";
+import Onboarding from "@/components/Onboarding";
 import { TaskListSkeleton, StatCardSkeleton } from "@/components/Skeleton";
 
 // 与后端枚举严格一致（tasks 表 CHECK：todo/in_progress/review/done）
@@ -113,6 +114,8 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  // Onboarding 引导：用户完成或跳过后本地标记，避免重复弹窗
+  const [onboardingDismissed, setOnboardingDismissed] = useState(false);
   // "最近更新"列表排序方式：recent 最近更新 / due 即将到期 / priority 优先级
   const [sortKey, setSortKey] = useState<"recent" | "due" | "priority">("recent");
 
@@ -365,6 +368,16 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       </section>
 
       <NewTaskDialog wid={wid} open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
+
+      {/* Onboarding 引导：仅在工作区无任务且未标记完成时显示 */}
+      {loaded && !onboardingDismissed && (
+        <Onboarding
+          wid={wid}
+          taskCount={tasks.length}
+          memberCount={0}
+          onDismiss={() => setOnboardingDismissed(true)}
+        />
+      )}
     </div>
   );
 }

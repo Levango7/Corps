@@ -9,6 +9,35 @@ const checkoutSchema = z.object({
   cancelUrl: z.string().optional(),
 });
 
+/**
+ * A-4 开放重定向防护：仅允许同源 URL（origin 匹配本应用）。
+ * 非法/跨域 URL 一律回退到默认值，避免钓鱼重定向。
+ * 允许的 origin 来源：
+ *   1. NEXT_PUBLIC_APP_URL（生产/预览部署域名）
+ *   2. 当前请求的 origin（覆盖 localhost、内网预览等环境）
+ */
+function safeRedirectUrl(input: string | undefined, fallback: string, requestOrigin: string): string {
+  if (!input) return fallback;
+  try {
+    const parsed = new URL(input);
+    const allowedOrigins = new Set<string>([requestOrigin]);
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL;
+    if (appUrl) {
+      try {
+        allowedOrigins.add(new URL(appUrl).origin);
+      } catch {
+        /* NEXT_PUBLIC_APP_URL 配置异常时忽略，不影响请求 origin 比对 */
+      }
+    }
+    if (allowedOrigins.has(parsed.origin)) {
+      return parsed.toString();
+    }
+  } catch {
+    /* 非法 URL 直接回退 */
+  }
+  return fallback;
+}
+
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
@@ -43,14 +72,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       return NextResponse.json({ code: 404, message: "工作区不存在" }, { status: 404 });
     }
     const origin = new URL(req.url).origin;
+    const defaultSuccessUrl = `${origin}/w/${wid}/billing?success=1&session_id={CHECKOUT_SESSION_ID}`;
+    const defaultCancelUrl = `${origin}/w/${wid}/billing?canceled=1`;
+    // A-4: 校验 successUrl / cancelUrl 必须同源，防止开放重定向到恶意站点
+    const successUrl = safeRedirectUrl(body.successUrl, defaultSuccessUrl, origin);
+    const cancelUrl = safeRedirectUrl(body.cancelUrl, defaultCancelUrl, origin);
 
     const session = await stripe.checkout.sessions.create({
       mode: "subscription",
       customer: subscription?.stripeCustomerId ?? undefined,
       line_items: [{ price: priceId, quantity: Math.max(workspace?.seatLimit ?? 1, 1) }],
-      success_url:
-        body.successUrl ?? `${origin}/w/${wid}/billing?success=1&session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: body.cancelUrl ?? `${origin}/w/${wid}/billing?canceled=1`,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
       metadata: { workspaceId: wid },
     });
 

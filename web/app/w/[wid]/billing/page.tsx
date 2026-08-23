@@ -88,7 +88,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
     try {
       const { url } = await api<{ url: string }>(`/api/v1/workspaces/${wid}/billing/checkout`, {
         method: "POST",
-        body: JSON.stringify({}),
+        body: JSON.stringify({ planId: plan }),
       });
       if (url) window.location.href = url;
       else setError("Stripe 未返回结算链接");

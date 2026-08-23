@@ -32,10 +32,11 @@
   --danger-fg: #7f1d1d;
 
   /* —— 任务状态点色背景（看板列色 / 状态标记底色）
-     design-tokens 提供 --status-*-fg 前景色，此处补齐配套背景色，
-     用 var() 引用语义 token，自动跟随主题。 —— */
+      design-tokens 提供 --status-*-fg 前景色，此处补齐配套背景色，
+      用 var() 引用语义 token，自动跟随主题。 —— */
   --status-todo: var(--muted);
   --status-doing: var(--accent);
+  --status-warn: var(--warn);
   --status-done: var(--success);
 
   /* —— 遮罩层（模态/抽屉背景压暗）—— */

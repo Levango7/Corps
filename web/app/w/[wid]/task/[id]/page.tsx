@@ -132,8 +132,9 @@ export default function TaskDetailPage({
   const [dirty, setDirty] = useState(false);
 
   // ── 自定义确认弹窗（替代 window.confirm）──
+  // 待执行操作以 ref 持有（函数引用不应放进 useState，避免 React 反模式）
   const [confirmOpen, setConfirmOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<() => void>(() => () => {});
+  const confirmActionRef = useRef<() => void>(() => {});
 
   // ── 评论 @提及自动补全 ──
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -378,7 +379,7 @@ export default function TaskDetailPage({
 
   function removeTask() {
     if (!task) return;
-    setConfirmAction(() => actuallyRemoveTask);
+    confirmActionRef.current = actuallyRemoveTask;
     setConfirmOpen(true);
   }
 
@@ -491,7 +492,7 @@ export default function TaskDetailPage({
           </div>
 
           {/* 决策记录 */}
-          <section className="mt-[var(--space-6)]">
+          <section id="decisions" className="mt-[var(--space-6)] scroll-mt-[var(--topbar-h)]">
             <div className="flex items-center justify-between mb-[var(--space-3)]">
               <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
                 <FileText size={16} className="text-[var(--muted)]" />
@@ -874,7 +875,7 @@ export default function TaskDetailPage({
               <button
                 type="button"
                 onClick={() => {
-                  confirmAction();
+                  confirmActionRef.current();
                   setConfirmOpen(false);
                 }}
                 className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 transition-opacity duration-[var(--motion-fast)]"

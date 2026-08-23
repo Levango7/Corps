@@ -110,20 +110,27 @@ export default function Markdown({ source }: { source: string }) {
       continue;
     }
 
-    // 标题
+    // 标题：渲染为语义化 h1-h4，而非 <p>，保证文档大纲与 SEO 可访问性
     const h = line.match(/^(#{1,4})\s+(.*)$/);
     if (h) {
       const level = h[1].length;
       const fontSize =
-        level === 1 ? "var(--text-xl)" : level === 2 ? "var(--text-lg)" : "var(--text-md)";
+        level === 1
+          ? "var(--text-xl)"
+          : level === 2
+            ? "var(--text-lg)"
+            : level === 3
+              ? "var(--text-md)"
+              : "var(--text-sm)";
+      const HeadingTag = (`h${level}` as "h1" | "h2" | "h3" | "h4");
       blocks.push(
-        <p
+        <HeadingTag
           key={key++}
           className="mt-4 mb-2 font-[var(--weight-semibold)] text-[var(--fg)]"
           style={{ fontSize }}
         >
           {renderInline(h[2], `h${key}`)}
-        </p>,
+        </HeadingTag>,
       );
       i++;
       continue;

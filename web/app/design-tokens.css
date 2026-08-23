@@ -115,10 +115,16 @@
   /* —— 任务状态/优先级点色（C-extension，复用语义色）—— */
   --status-todo-fg: var(--muted);
   --status-doing-fg: var(--accent);
+  --status-warn-fg: var(--warn); /* review 状态前景：评审/警告色 */
   --status-done-fg: var(--success);
   --prio-high-fg: var(--danger);
   --prio-med-fg: var(--warn);
   --prio-low-fg: var(--muted);
+
+  /* —— 状态点色背景（看板列色 / 状态标记底色，供 board/概览等引用）
+       与 globals.css 中已定义的 --status-todo/doing/done 同组；
+       --status-warn 补齐 review 状态背景色，消除 task 详情页 var(--status-warn) 失效。 —— */
+  --status-warn: var(--warn);
 
   /* —— 字体 —— */
   --font-display: "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif;

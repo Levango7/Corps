@@ -27,6 +27,30 @@ jobs:
       - run: npx eslint .
       - run: npx prettier --check .
 
+  # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
+  # 独立 job 并行运行，与 test job 互不阻塞，缩短 CI 总时长
+  audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # 仅审计生产依赖；--audit-level=high 表示 high/critical 漏洞会让命令退出非 0
+      # moderate/low 漏洞会打印但不影响退出码，避免过度阻塞迭代
+      - name: Audit production deps (high/critical block CI)
+        run: pnpm audit --prod --audit-level=high
+
   test:
     name: Test
     runs-on: ubuntu-latest
@@ -78,8 +102,6 @@ jobs:
           JWT_REFRESH_SECRET: ci-test-refresh-secret
           BETTER_AUTH_SECRET: ci-test-better-auth-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000
-      - run: pnpm audit --prod --audit-level=high
-        continue-on-error: true
       - run: npx vitest run
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
@@ -87,10 +109,19 @@ jobs:
           JWT_REFRESH_SECRET: ci-test-refresh-secret
           BETTER_AUTH_SECRET: ci-test-better-auth-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - name: Stop dev server
+        working-directory: web
+        shell: bash
+        if: always()
+        run: |
+          if [ -f next-dev.pid ]; then
+            kill "$(cat next-dev.pid)" 2>/dev/null || true
+            rm -f next-dev.pid
+          fi
 
   build:
     name: Build
-    needs: [lint, test]
+    needs: [lint, test, audit]
     runs-on: ubuntu-latest
     defaults:
       run:

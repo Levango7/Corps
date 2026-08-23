@@ -24,7 +24,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     }
 
     const q = parsed.data.q.trim();
-    const limit = Math.min(parseInt(parsed.data.limit ?? "20"), 50);
+    // A-9: trim 后若为空字符串（纯空格输入），返回 400 避免匹配全部记录
+    if (!q) {
+      return NextResponse.json(
+        { code: 400, message: "参数 q 不能为空或纯空格" },
+        { status: 400 },
+      );
+    }
+
+    // A-8: parseInt 后可能为 NaN（非数字输入），需兜底为默认值；
+    // 同时 clamp 到合理范围 [1, 100]，防止过大 take 拖垮查询。
+    const DEFAULT_LIMIT = 20;
+    const MAX_LIMIT = 100;
+    const parsedLimit = parseInt(parsed.data.limit ?? String(DEFAULT_LIMIT), 10);
+    const limit = Number.isNaN(parsedLimit)
+      ? DEFAULT_LIMIT
+      : Math.min(Math.max(parsedLimit, 1), MAX_LIMIT);
 
     const [tasks, decisions] = await runWithWorkspace(wid, async (tx) => {
       const tasks = await tx.task.findMany({

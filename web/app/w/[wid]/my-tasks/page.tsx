@@ -179,6 +179,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
               <button
                 key={f.id}
                 onClick={() => setStatusFilter(f.id)}
+                aria-pressed={statusFilter === f.id}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] whitespace-nowrap transition-colors duration-[var(--motion-fast)] ${
                   statusFilter === f.id
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)] font-[var(--weight-medium)]"

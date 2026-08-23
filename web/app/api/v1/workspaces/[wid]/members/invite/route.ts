@@ -33,6 +33,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
+        // A-6: SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务，
+        // 避免两个事务同时读到 memberCount < seatLimit 后都创建成员导致超限。
+        // 注：workspaces 表受 RLS 保护，事务内已注入 app.workspace_id / app.user_id，
+        // 当前工作区行对成员可见，FOR UPDATE 不会与 RLS 冲突。
+        await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
+
         const workspace = await tx.workspace.findUnique({ where: { id: wid } });
         const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 

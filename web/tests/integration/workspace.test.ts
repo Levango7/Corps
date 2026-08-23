@@ -3,6 +3,13 @@ import { describe, it, expect, beforeAll } from "vitest";
 // 可用 TEST_BASE_URL 覆盖（CI 默认本机 3000）
 const BASE = process.env.TEST_BASE_URL ?? "http://localhost:3000/api/v1";
 
+/** 从 Set-Cookie 头提取 access_token 值（register/login 通过 httpOnly cookie 下发） */
+function extractAccessToken(res: Response): string {
+  const cookies = res.headers.getSetCookie?.() ?? [];
+  const tokenCookie = cookies.find((c) => c.startsWith("access_token="));
+  return tokenCookie?.split("=")[1]?.split(";")[0] ?? "";
+}
+
 // 模块级共享：AC-03 注册的租户 A / B，AC-04 的跨租户回归复用
 let tokenA: string;
 let tokenB: string;
@@ -22,7 +29,7 @@ describe("AC-03: 跨租户请求隔离", () => {
       }),
     });
     const dA = await rA.json();
-    tokenA = dA.data.accessToken;
+    tokenA = extractAccessToken(rA);
     widA = dA.data.workspace.id;
 
     // 创建租户 B
@@ -36,7 +43,7 @@ describe("AC-03: 跨租户请求隔离", () => {
       }),
     });
     const dB = await rB.json();
-    tokenB = dB.data.accessToken;
+    tokenB = extractAccessToken(rB);
     widB = dB.data.workspace.id;
 
     // 在租户 B 中创建一个任务作为"私密数据"
@@ -85,7 +92,7 @@ describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
       }),
     });
     const dB = await rB.json();
-    const tokenB = dB.data.accessToken;
+    const tokenB = extractAccessToken(rB);
     const widB = dB.data.workspace.id;
 
     const taskRes = await fetch(`${BASE}/workspaces/${widB}/tasks`, {
@@ -156,7 +163,7 @@ describe("AC-05: RBAC 权限控制", () => {
       }),
     });
     dOwner = (await rOwner.json()) as RegisterPayload;
-    ownerToken = dOwner.data.accessToken;
+    ownerToken = extractAccessToken(rOwner);
     wid = dOwner.data.workspace.id;
 
     // 注册 member 账户
@@ -170,7 +177,7 @@ describe("AC-05: RBAC 权限控制", () => {
       }),
     });
     const dMember = await rMember.json();
-    memberToken = dMember.data.accessToken;
+    memberToken = extractAccessToken(rMember);
     memberUid = dMember.data.user.id;
 
     // owner 邀请 member 加入工作区
@@ -239,7 +246,7 @@ describe("AC-06: 看板拖拽乐观更新", () => {
       }),
     });
     const dOwner = await rOwner.json();
-    const token = dOwner.data.accessToken as string;
+    const token = extractAccessToken(rOwner) as string;
     const dragWid = dOwner.data.workspace.id as string;
 
     const createRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks`, {

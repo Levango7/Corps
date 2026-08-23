@@ -140,7 +140,13 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
     }
   }
 
-  /** 单条点击：乐观标记已读（fire-and-forget）+ 跳转任务详情 */
+  /** 单条点击：乐观标记已读（fire-and-forget）+ 跳转对应详情
+   *  跳转目标按通知类型区分：
+   *    - task_assigned / task_updated / comment_added / mention → 任务详情
+   *    - decision_updated → 任务详情的决策区（hash 锚点 #decisions）
+   *  所有通知的 entityId 均指向关联任务，故统一跳 /task/{entityId}，
+   *  decision_updated 追加 #decisions 锚点以便定位到决策记录区。
+   */
   function openNotification(n: Notification) {
     if (!n.read) {
       setAll((prev) => prev.map((x) => (x.id === n.id ? { ...x, read: true } : x)));
@@ -150,7 +156,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
         body: JSON.stringify({ id: n.id }),
       }).catch(() => {});
     }
-    router.push(`/w/${wid}/task/${n.entityId}`);
+    const target = `/w/${wid}/task/${n.entityId}`;
+    router.push(n.type === "decision_updated" ? `${target}#decisions` : target);
   }
 
   return (

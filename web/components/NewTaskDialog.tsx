@@ -187,8 +187,10 @@ export default function NewTaskDialog({
               autoFocus
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
               placeholder="一句话说清要做什么"
               className={`${fieldControl} h-10`}
+              aria-required="true"
             />
           </div>
 
@@ -202,6 +204,7 @@ export default function NewTaskDialog({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
+              maxLength={2000}
               placeholder="背景、验收标准，或粘贴相关链接…"
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />

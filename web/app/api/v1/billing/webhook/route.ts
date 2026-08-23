@@ -93,16 +93,31 @@ export async function POST(req: NextRequest) {
               current_period_end?: number;
             }
           ).current_period_end;
-          await runWithAuthOp("webhook", (tx) =>
-            tx.subscription.updateMany({
+          await runWithAuthOp("webhook", async (tx) => {
+            await tx.subscription.updateMany({
               where: { stripeSubId: subId },
               data: {
                 status: sub.status ?? "active",
                 quantity: sub.items?.data?.[0]?.quantity ?? 1,
                 currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
+                canceledAt:
+                  sub.status === "canceled" ? new Date() : undefined,
               },
-            }),
-          );
+            });
+            // A-7: 订阅进入 canceled 状态时同步降级 workspace.plan 为 free
+            if (sub.status === "canceled") {
+              const subscription = await tx.subscription.findFirst({
+                where: { stripeSubId: subId },
+                select: { workspaceId: true },
+              });
+              if (subscription) {
+                await tx.workspace.update({
+                  where: { id: subscription.workspaceId },
+                  data: { plan: "free" },
+                });
+              }
+            }
+          });
         }
         break;
       }
@@ -110,12 +125,24 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object;
         const subId = asString(sub.id);
         if (subId) {
-          await runWithAuthOp("webhook", (tx) =>
-            tx.subscription.updateMany({
+          await runWithAuthOp("webhook", async (tx) => {
+            // A-7: 订阅删除/取消时，将 workspace.plan 降级为 free，
+            // 并标记 subscription 为 canceled。先查 subscription 拿到 workspaceId。
+            const subscription = await tx.subscription.findFirst({
+              where: { stripeSubId: subId },
+              select: { workspaceId: true },
+            });
+            await tx.subscription.updateMany({
               where: { stripeSubId: subId },
               data: { status: "canceled", canceledAt: new Date() },
-            }),
-          );
+            });
+            if (subscription) {
+              await tx.workspace.update({
+                where: { id: subscription.workspaceId },
+                data: { plan: "free" },
+              });
+            }
+          });
         }
         break;
       }

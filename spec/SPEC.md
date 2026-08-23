@@ -43,7 +43,7 @@
 | AI 智能助手 | 无数据、无算力预算、非核心 | 有数据积累后 |
 | 自定义域名多租户 | DNS/SSL 自动化复杂度高 | scale-out |
 | 企业微信/钉钉/SSO/SAML | 企业版路径 | 企业版 |
-| 移动端/桌面端原生 App | Web 仅，否则范围爆炸 | P1（响应式 Web 先行） |
+| 移动端/桌面端原生 App | Web 仅，否则范围爆炸 | v2 晚期（响应式 Web 先行） |
 | 审计日志 / 数据驻留合规 | scale-out 阶段 | 企业版 |
 
 ## 4. 技术架构（锁定 — 含版本锚定）
@@ -58,7 +58,7 @@
 | ORM | Prisma | @prisma/client@6 (≥6.15.0) | 迁移可逆（契合可回滚）+ 类型共享 |
 | 数据库 | PostgreSQL | 18.4 | RLS 行级安全成熟，多租户隔离引擎层强制 |
 | 认证 | Better Auth | better-auth 最新稳定 | TS 原生、sessions/MFA/多租户(orgs)插件、Prisma 适配器 |
-| 密码 | argon2id | — | 抗 GPU 暴力破解 |
+| 密码 | scrypt（Better Auth 默认） | — | Better Auth 1.3 稳定版未暴露 argon2 钩子；scrypt 强度仍够，argon2id 作为后续升级项见 OPEN-DECISIONS |
 | 计费 | Stripe | stripe 最新稳定 | Checkout/Portal/webhook 成熟，中国市场用 Stripe 跨境或替换方案待定 |
 | 部署 | 腾讯云 CloudBase + 国内 CDN | — | 目标市场中国大陆，国内直连最优 |
 | 认证令牌 | access JWT 15min + refresh 不透明串 7d 轮换 | — | 满足"JWT 15min access + 7d refresh" |
@@ -109,7 +109,7 @@
 | 表名 | 核心字段 | 索引 | 关联 |
 |------|----------|------|------|
 | workspaces | id(uuid), name, owner_id, plan, seat_limit | pk | |
-| users | id(uuid), email(unique), password_hash(argon2id), name | pk,email | |
+| users | id(uuid), email(unique), password_hash(scrypt), name | pk,email | |
 | members | user_id, workspace_id, role(owner/admin/member) | (workspace_id) | workspaces,users |
 | tasks | id, workspace_id, title, desc, status, priority, assignee_id, due_date, order | (workspace_id,status) | workspaces,members |
 | comments | id, task_id, author_id, body, mentions[] | (task_id) | tasks,users |
@@ -165,7 +165,7 @@
 - 响应式：桌面优先；断点 sm640/md768/lg1024/xl1280；MVP 以 lg+ 为主、md 可用、移动 Web 不崩不专属优化
 - 性能：首屏 LCP < 2.5s；简单 API p95 < 300ms；看板加载 < 1s（≤200 任务/工作区）
 - 多租户红线：workspace_id 仅从 JWT 解析；应用连接角色无 BYPASSRLS；RLS 上线即存在且有隔离测试
-- 认证：argon2id、access 15min/refresh 7d 轮换、HTTPS only、secure+httpOnly cookie、CSRF 防护
+- 认证：scrypt（Better Auth 默认）、access 15min/refresh 7d 轮换、HTTPS only、secure+httpOnly cookie、CSRF 防护
 - 可回滚：每次部署可一键回滚；DB migration 必须可逆（down migration）
 - 图标：锁定 Lucide(SVG)，禁 emoji、禁混用；API 文档禁 emoji
 - 计费：中国市场 Stripe 跨境可行性待 Phase 2 复核，必要时替换为国内支付（微信/支付宝）
@@ -190,7 +190,7 @@ npm run dev  # 等待 Ready on http://localhost:3000
 
 # 3. 核心成功流：注册 + 建工作区 + 建任务
 curl -X POST http://localhost:3000/api/v1/auth/register -H "Content-Type: application/json" \
-  -d '{"email":"lead@acme.test","password":"<argon2-hash-ready>","workspaceName":"Acme"}'
+  -d '{"email":"lead@acme.test","password":"<scrypt-hash-ready>","workspaceName":"Acme"}'
 # 断言：返回 201 + access/refresh + 自动建 workspace(owner)
 
 # 4. 关键错误流：跨租户越权
@@ -214,6 +214,7 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 | 2026-08-22 | 修复阻断缺陷：登录未存 access token、计费路由缺 [wid] 段、members/layout 自引用循环、schema `@db.JsonArray` 非法注解、`React.use` 未导入、6 处硬编码 text-white、缺失 --shell-*/--accent-ring/--overlay token | 端到端可运行性审查 | 前后端多文件 |
 | 2026-08-22 | 新增依赖 jsonwebtoken@9.0.2（lib/jwt.ts 引用但 package.json 缺失，运行时阻断） | tsc 全量核查发现 | package.json |
 | 2026-08-22 | 品牌与路径统一为 corps：`collab-saas-mvp` → `corps`（文档路径引用），`Corps` → `corps`（全部 UI/文档，含小写统一） | 用户指令「全部统一成 corps」 | 全部 .md/.tsx/.ts/.html |
+| 2026-08-24 | 文档对齐实际实现：密码哈希 argon2id → scrypt（与 Better Auth 默认一致）；移动端 App "何时考虑" P1 → v2 晚期（与 ROADMAP 一致）；定价 Pro 层 31+人 → 11–30人高级功能档（与产品定位 5–30人一致）；DESIGN.md 日历标注为 v2 占位（与 SPEC §3 一致） | Task #72 文档一致性修复 | SPEC.md + pricing-strategy.md + DESIGN.md + 审计/安全/竞品文档 |
 
 ---
 
@@ -223,4 +224,4 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 |------|--------|-----------|---------------------|-----------------|------------|---------------|--------|
 | 2026-08-19 | Phase 1 | 国内支付选型（Stripe 跨境 vs 微信/支付宝） | 目标市场中国大陆 | 优先 Stripe 跨境验证，不行则微信/支付宝 | 待 Phase 2 复核合规 | Phase 2 结论 | OPEN |
 | 2026-08-19 | Phase 1 | 付费档具体定价（¥50-80/人/月 锚定 $8-12） | 免费限 10 人已定 | ¥59/人/月 起步档 | 待用户最终确认价目表 | 用户确认 | OPEN |
-| 2026-08-22 | Phase 3 (ADR-002) | 密码哈希 scrypt vs Spec 锁定 argon2id | Better Auth 1.3 稳定版未暴露 argon2 哈希钩子 | MVP 用 scrypt（强度仍够），后续评估自定义 hasher 插件或回退原生 argon2 | Better Auth 上游能力 | 用户拍板或上游支持 | OPEN |
+| 2026-08-22 | Phase 3 (ADR-002) | 密码哈希 scrypt vs Spec 锁定 argon2id | Better Auth 1.3 稳定版未暴露 argon2 哈希钩子 | MVP 用 scrypt（强度仍够），后续评估自定义 hasher 插件或回退原生 argon2 | Better Auth 上游能力 | 用户拍板或上游支持 | RESOLVED（2026-08-24 Spec 已对齐 scrypt） |

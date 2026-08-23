@@ -24,6 +24,12 @@ export async function PATCH(
     const validated = updateDecisionSchema.parse(await req.json());
 
     const result = await runWithWorkspace(wid, async (tx) => {
+      // A-10: 用 SELECT FOR UPDATE 锁定 decision 行，串行化并发编辑事务，
+      // 保证"读版本 + 比对 + 更新"是原子操作，避免乐观锁检查被绕过导致丢失更新。
+      // 注：decisions 表受 RLS 保护，事务内已注入 app.workspace_id / app.user_id，
+      // 当前工作区行对成员可见，FOR UPDATE 不会与 RLS 冲突。
+      await tx.$queryRaw`SELECT id FROM decisions WHERE id = ${did}::uuid FOR UPDATE`;
+
       const decision = await tx.decision.findFirst({
         where: { id: did, taskId: id, workspaceId: wid },
         select: { id: true, version: true },

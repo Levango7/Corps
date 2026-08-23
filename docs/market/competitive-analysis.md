@@ -55,9 +55,9 @@ corps 解决的正是这个问题——**讨论结论自动落位成任务与决
 - **corps vs Trello**：corps 在 Trello 的"简单"基础上增加了"决策→任务"闭环 + 企业级隔离 + 席位计费
 
 #### Linear（高端参照）
-- **优势**：工程师体验极致、Cmmd+K 命令栏标杆、200ms 动效标准
+- **优势**：工程师体验极致、Cmd+K 命令栏标杆、200ms 动效标准
 - **劣势**：仅面向工程师、定价偏高($8+)、无文档决策能力
-- **corps vs Linear**：corps 吸收 Linear 的交互精度（Cmmd+K、键盘可达、收敛动效），但面向更广的"项目推动者"群体（非仅工程师）
+- **corps vs Linear**：corps 吸收 Linear 的交互精度（Cmd+K、键盘可达、收敛动效），但面向更广的"项目推动者"群体（非仅工程师）
 
 #### Notion（功能参照）
 - **优勢**：文档能力最强、灵活数据库视图、模板生态
@@ -67,7 +67,7 @@ corps 解决的正是这个问题——**讨论结论自动落位成任务与决
 #### 飞书（最強竞品）
 - **优势**：IM+文档+日历+审批全一体、国内生态最强、免费策略
 - **劣势**：過重（中小企业用不上全套）、决策仍散落在聊天中、锁定飞书生态
-- **corps vs 飞书**：corps 不做 IM、不做日歷、不做视频——专精于"决策→任务"这一个纵切场景，比飞书更轻、更聚焦
+- **corps vs 飞书**：corps 不做 IM、不做日历、不做视频——专精于"决策→任务"这一个纵切场景，比飞书更轻、更聚焦
 
 ---
 
@@ -107,8 +107,8 @@ corps 解决的正是这个问题——**讨论结论自动落位成任务与决
 |--------|----------|----------|
 | 引擎层多租户隔离（RLS） | ADR-001、schema.sql（318行RLS策略）、app_role NOBYPASSRLS | Trello/Linear 无此能力 |
 | 设计系统完备 | DESIGN.md（272行）、design-tokens.css（286行）、prototype/index.html（1668行） | Calm Precision 设计语言独特 |
-| 决策记录差异化 | SPPEC.md AC-10（版本留痕+双向回链）、decisions+decision_versions 双表设计 | 竞品均无原生态支持 |
-| 认证基础设施 | Better Auth 1.3.28 + argon2id + 15min/7d JWT轮换 | TS原生认证 |
+| 决策记录差异化 | SPEC.md AC-10（版本留痕+双向回链）、decisions+decision_versions 双表设计 | 竞品均无原生态支持 |
+| 认证基础设施 | Better Auth 1.3.28 + scrypt + 15min/7d JWT轮换 | TS原生认证 |
 | 计费基础设施 | Stripe Checkout/Portal/Webhook + quantity自动同步（AC-08/09） | 席位自动同步 |
 
 ### 劣势（Weaknesses）

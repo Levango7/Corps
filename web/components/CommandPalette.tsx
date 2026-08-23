@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Search,
@@ -178,11 +178,19 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
       ?.scrollIntoView({ block: "nearest" });
   }, [cursor]);
 
-  function go(href: string) {
-    router.push(href);
-    onClose();
-  }
-  goRef.current = go;
+  const go = useCallback(
+    (href: string) => {
+      router.push(href);
+      onClose();
+    },
+    [router, onClose],
+  );
+
+  // 把 go 的最新引用同步到 ref，供键盘 useEffect 使用，避免 stale closure。
+  // 必须在 useEffect 中写入 ref，渲染期间直接赋值是 React 反模式。
+  useEffect(() => {
+    goRef.current = go;
+  }, [go]);
 
   return (
     <div
