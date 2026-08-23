@@ -1,0 +1,394 @@
+"use client";
+
+import { use, useEffect, useRef, useState } from "react";
+import { useRouter, usePathname } from "next/navigation";
+import Link from "next/link";
+import {
+  LayoutDashboard,
+  Kanban,
+  Users,
+  Settings,
+  CreditCard,
+  ChevronLeft,
+  ChevronRight,
+  Moon,
+  Sun,
+  Monitor,
+  Search,
+  Menu,
+  X,
+  ChevronsUpDown,
+  Check,
+  LogOut,
+} from "lucide-react";
+import { api, setToken } from "@/lib/api";
+import CommandPalette from "@/components/CommandPalette";
+
+interface Workspace {
+  id: string;
+  name: string;
+  slug: string;
+  role: string;
+}
+
+type ThemePref = "system" | "light" | "dark";
+
+const THEME_KEY = "corps_theme";
+const SIDEBAR_KEY = "corps_sidebar_collapsed";
+
+export default function WorkspaceLayout({
+  children,
+  params,
+}: {
+  children: React.ReactNode;
+  params: Promise<{ wid: string }>;
+}) {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
+  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [collapsed, setCollapsed] = useState(false);
+  const [themePref, setThemePref] = useState<ThemePref>("system");
+  const [resolvedDark, setResolvedDark] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [cmdOpen, setCmdOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [user, setUser] = useState<{ name: string | null; email: string; image: string | null } | null>(null);
+  const switcherRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const pathname = usePathname();
+  const { wid } = use(params);
+
+  useEffect(() => {
+    // 主题：与设置页共用 corps_theme（light | dark | system）
+    const stored = localStorage.getItem(THEME_KEY);
+    const pref: ThemePref = stored === "light" || stored === "dark" ? stored : "system";
+    const resolved =
+      pref === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : pref;
+    setThemePref(pref);
+    setResolvedDark(resolved === "dark");
+    document.documentElement.setAttribute("data-theme", resolved);
+
+    if (localStorage.getItem(SIDEBAR_KEY) === "true") setCollapsed(true);
+
+    api<Workspace[]>("/api/v1/workspaces")
+      .then((ws) => {
+        setWorkspaces(ws);
+        const cur = ws.find((w) => w.id === wid);
+        if (cur) setWorkspace(cur);
+        else router.push("/auth/login");
+      })
+      .catch(() => router.push("/auth/login"));
+  }, [wid, router]);
+
+  useEffect(() => {
+    api<{ name: string | null; email: string; image: string | null }>("/api/v1/users/me")
+      .then(setUser)
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    function onKey(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setCmdOpen((v) => !v);
+      }
+      if (e.key === "Escape") {
+        setCmdOpen(false);
+        setSwitcherOpen(false);
+        setDrawerOpen(false);
+      }
+    }
+    function onClick(e: MouseEvent) {
+      if (switcherRef.current && !switcherRef.current.contains(e.target as Node)) {
+        setSwitcherOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    window.addEventListener("mousedown", onClick);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mousedown", onClick);
+    };
+  }, []);
+
+  function toggleSidebar() {
+    const next = !collapsed;
+    setCollapsed(next);
+    localStorage.setItem(SIDEBAR_KEY, String(next));
+  }
+
+  function toggleTheme() {
+    // 三态循环：system → light → dark → system
+    const order: ThemePref[] = ["system", "light", "dark"];
+    const idx = order.indexOf(themePref);
+    const next = order[(idx + 1) % order.length];
+    const resolved =
+      next === "system"
+        ? window.matchMedia("(prefers-color-scheme: dark)").matches
+          ? "dark"
+          : "light"
+        : next;
+    setThemePref(next);
+    setResolvedDark(resolved === "dark");
+    document.documentElement.setAttribute("data-theme", resolved);
+    localStorage.setItem(THEME_KEY, next);
+  }
+
+  async function switchWorkspace(targetId: string) {
+    setSwitcherOpen(false);
+    if (targetId === wid) return;
+    try {
+      // 换工作区必须换 wid 令牌，否则 RLS 上下文仍指向旧工作区
+      const res = await api<{ accessToken: string }>("/api/v1/auth/refresh", {
+        method: "POST",
+        body: JSON.stringify({ workspaceId: targetId }),
+      });
+      if (res.accessToken) setToken(res.accessToken);
+    } catch {
+      /* 换区失败时保留当前令牌，由目标页的 401 兜底 */
+    }
+    router.push(`/w/${targetId}`);
+  }
+
+  if (!workspace) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--shell-content)]">
+        <div className="animate-pulse text-[length:var(--text-sm)] text-[var(--muted)]">
+          正在载入工作区
+        </div>
+      </div>
+    );
+  }
+
+  const navItems = [
+    { href: `/w/${wid}`, label: "概览", icon: LayoutDashboard, exact: true },
+    { href: `/w/${wid}/board`, label: "看板", icon: Kanban, exact: false },
+    { href: `/w/${wid}/members`, label: "成员", icon: Users, exact: false },
+    { href: `/w/${wid}/billing`, label: "计费", icon: CreditCard, exact: false },
+    { href: `/w/${wid}/settings`, label: "设置", icon: Settings, exact: false },
+  ];
+
+  const themeIcon =
+    themePref === "system" ? (
+      <Monitor size={18} />
+    ) : themePref === "light" ? (
+      <Sun size={18} />
+    ) : (
+      <Moon size={18} />
+    );
+  const themeLabel =
+    themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色";
+
+  return (
+    <div className="min-h-screen flex flex-col">
+      <header className="h-[var(--topbar-h)] px-4 border-b border-[var(--shell-edge)] bg-[var(--shell-topbar)] flex items-center gap-3 sticky top-0 z-[var(--z-sticky)]">
+        {/* 汉堡菜单：< lg 显示，≥ lg 隐藏 */}
+        <button
+          onClick={() => setDrawerOpen(true)}
+          className="lg:hidden p-2 -ml-1 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+          aria-label="打开侧栏"
+        >
+          <Menu size={18} />
+        </button>
+
+        <div className="flex items-center gap-2 relative" ref={switcherRef}>
+          <Link
+            href={`/w/${wid}`}
+            className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]"
+          >
+            corps
+          </Link>
+          <span className="text-[var(--border)] select-none">/</span>
+          <button
+            onClick={() => setSwitcherOpen((v) => !v)}
+            className="flex items-center gap-1 px-2 h-7 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] text-[length:var(--text-sm)]"
+          >
+            <span className="text-[var(--fg)] max-w-[100px] sm:max-w-[180px] truncate">
+              {workspace.name}
+            </span>
+            <ChevronsUpDown size={13} className="text-[var(--meta)]" />
+          </button>
+          {switcherOpen && (
+            <div className="absolute top-full left-0 mt-1.5 w-60 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-1 z-[var(--z-dropdown)]">
+              <div className="px-3 py-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
+                切换工作区
+              </div>
+              {workspaces.map((w) => (
+                <button
+                  key={w.id}
+                  onClick={() => switchWorkspace(w.id)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                >
+                  <span className="flex-1 text-left truncate">{w.name}</span>
+                  {w.id === wid && <Check size={14} className="text-[var(--accent)] shrink-0" />}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+
+        <div className="flex-1 flex items-center justify-center">
+          {/* ≥ md：完整搜索框 */}
+          <button
+            onClick={() => setCmdOpen(true)}
+            className="hidden md:flex items-center gap-2 px-3 h-8 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--muted)] text-[length:var(--text-sm)] hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)] w-[240px] lg:w-[300px]"
+          >
+            <Search size={15} />
+            <span className="flex-1 text-left truncate">搜索任务</span>
+            <kbd className="text-[length:var(--text-xs)] text-[var(--meta)] font-[family-name:var(--font-mono)]">
+              ⌘K
+            </kbd>
+          </button>
+          {/* < md：搜索图标按钮，触发命令面板 */}
+          <button
+            onClick={() => setCmdOpen(true)}
+            className="md:hidden p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            aria-label="搜索"
+          >
+            <Search size={18} />
+          </button>
+        </div>
+
+        <div className="flex items-center gap-1 ml-auto">
+          <button
+            onClick={toggleTheme}
+            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            aria-label={`切换主题（当前：${themeLabel}）`}
+            title={themeLabel}
+          >
+            {themeIcon}
+          </button>
+          {user && (
+            <div className="flex items-center gap-2 px-2">
+              {user.image ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.image}
+                  alt=""
+                  className="w-7 h-7 rounded-full object-cover"
+                />
+              ) : (
+                <div className="w-7 h-7 rounded-full bg-[var(--surface-3)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)] text-[var(--fg-2)]">
+                  {(user.name ?? user.email)[0].toUpperCase()}
+                </div>
+              )}
+              <span className="hidden sm:inline text-[length:var(--text-sm)] text-[var(--fg-2)] max-w-[100px] truncate">
+                {user.name ?? user.email.split("@")[0]}
+              </span>
+            </div>
+          )}
+          <button
+            onClick={async () => {
+              try {
+                await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
+              } catch {
+                // 即使 logout 请求失败也跳转
+              }
+              router.push("/auth/login");
+            }}
+            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            aria-label="退出登录"
+            title="退出登录"
+          >
+            <LogOut size={18} />
+          </button>
+        </div>
+      </header>
+
+      <div className="flex flex-1 overflow-hidden">
+        {/* 桌面端侧栏 (≥ lg)：固定显示，可折叠（保留当前行为） */}
+        <aside
+          className={`hidden lg:flex bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] flex-col transition-[width] duration-[var(--motion-base)] ease-[var(--ease-standard)] ${
+            collapsed ? "w-[64px]" : "w-[var(--sidebar-w)]"
+          }`}
+        >
+          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+            {navItems.map(({ href, label, icon: Icon, exact }) => {
+              const active = exact ? pathname === href : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  className={`flex items-center gap-3 px-3 h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                    active
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                      : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                  } ${collapsed ? "justify-center px-0" : ""}`}
+                  title={collapsed ? label : undefined}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  {!collapsed && <span className="truncate">{label}</span>}
+                </Link>
+              );
+            })}
+          </nav>
+
+          <button
+            onClick={toggleSidebar}
+            className="m-2 p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
+            aria-label={collapsed ? "展开侧栏" : "折叠侧栏"}
+          >
+            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
+          </button>
+        </aside>
+
+        <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-4 lg:p-6">{children}</main>
+      </div>
+
+      {/* 移动端抽屉 (< lg)：overlay + 滑入动画，独立于桌面端折叠状态 */}
+      <div className="lg:hidden">
+        {/* 背景蒙层：点击关闭 */}
+        <div
+          className={`fixed inset-0 bg-[var(--overlay)] z-[var(--z-modal)] transition-opacity duration-[var(--motion-base)] ${
+            drawerOpen ? "opacity-100" : "opacity-0 pointer-events-none"
+          }`}
+          onClick={() => setDrawerOpen(false)}
+          aria-hidden={!drawerOpen}
+        />
+        {/* 抽屉：从左侧滑入 */}
+        <aside
+          className={`fixed inset-y-0 left-0 w-[280px] h-full bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] z-[var(--z-modal)] transform transition-transform duration-[var(--motion-base)] ease-[var(--ease-standard)] flex flex-col ${
+            drawerOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
+          aria-hidden={!drawerOpen}
+          aria-label="侧栏导航"
+        >
+          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+            {navItems.map(({ href, label, icon: Icon, exact }) => {
+              const active = exact ? pathname === href : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  aria-current={active ? "page" : undefined}
+                  onClick={() => setDrawerOpen(false)}
+                  className={`flex items-center gap-3 px-3 h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                    active
+                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                      : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                  }`}
+                >
+                  <Icon size={18} className="shrink-0" />
+                  <span className="truncate">{label}</span>
+                </Link>
+              );
+            })}
+          </nav>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="m-2 p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
+            aria-label="关闭侧栏"
+          >
+            <X size={16} />
+          </button>
+        </aside>
+      </div>
+
+      {cmdOpen && <CommandPalette wid={wid} onClose={() => setCmdOpen(false)} />}
+    </div>
+  );
+}

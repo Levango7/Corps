@@ -1,0 +1,1668 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>corps · 高保真原型（设计评审）</title>
+<!-- 系统图标（favicon）：内联 SVG，与界面 Lucide 线性风格同源——钴蓝描边 + 几何拼合"协作网络"，避免与飞书/钉钉具象图标雷同 -->
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20viewBox='0%200%2032%2032'%3E%3Crect%20width='32'%20height='32'%20rx='8'%20fill='%232A48E6'/%3E%3Cg%20fill='none'%20stroke='white'%20stroke-width='2'%20stroke-linecap='round'%20stroke-linejoin='round'%3E%3Ccircle%20cx='16'%20cy='9'%20r='2.4'/%3E%3Ccircle%20cx='9'%20cy='21'%20r='2.4'/%3E%3Ccircle%20cx='23'%20cy='21'%20r='2.4'/%3E%3Cpath%20d='M16%2011.4%2010.4%2019M16%2011.4%2021.6%2019M11.4%2021h9.2'/%3E%3C/g%3E%3C/svg%3E" />
+<!-- 引用外部已锁定的设计 Token：所有颜色/字体/间距均走语义变量，禁止裸 hex -->
+<link rel="stylesheet" href="../design-tokens.css" />
+<style>
+  /* ============================================================
+     原型样式层 —— 仅引用 design-tokens.css 的语义变量
+     结构 / 间距 / 圆角 / 动效全来自 Token，不写裸色值
+     ============================================================ */
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    font-size: var(--text-base);
+    font-weight: var(--weight-regular);
+    line-height: var(--leading-normal);
+    color: var(--fg);
+    background: var(--shell-content);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    transition: background var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard);
+  }
+  h1, h2, h3, h4 { margin: 0; font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+  p { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  button { font-family: inherit; }
+  ul { margin: 0; padding: 0; list-style: none; }
+  :focus-visible { outline: none; box-shadow: var(--focus-ring); }
+
+  /* ---- 图标（内联 SVG sprite，Lucide 单库）---- */
+  .icon { width: 20px; height: 20px; display: inline-block; flex-shrink: 0; stroke: currentColor; }
+  .ic-16 { width: 16px; height: 16px; }
+  .ic-20 { width: 20px; height: 20px; }
+  .ic-24 { width: 24px; height: 24px; }
+  .ic-32 { width: 32px; height: 32px; }
+
+  /* ---- 通用工具 ---- */
+  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .mono { font-family: var(--font-mono); }
+  .kbd {
+    font-family: var(--font-mono); font-size: var(--text-xs);
+    color: var(--meta); background: var(--surface-2);
+    border: 1px solid var(--border); border-radius: var(--radius-sm);
+    padding: 1px 6px; line-height: 1.4;
+  }
+  .muted { color: var(--muted); }
+  .meta { color: var(--meta); }
+  .fg2 { color: var(--fg-2); }
+  .row { display: flex; align-items: center; }
+  .col { display: flex; flex-direction: column; }
+  .gap-1 { gap: var(--space-1); } .gap-2 { gap: var(--space-2); }
+  .gap-3 { gap: var(--space-3); } .gap-4 { gap: var(--space-4); }
+  .between { justify-content: space-between; }
+  .wrap { flex-wrap: wrap; }
+
+  /* ---- 按钮（4 变体 × 状态）---- */
+  .btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2);
+    height: 36px; padding: 0 var(--space-4); border-radius: var(--radius-sm);
+    font-size: var(--text-base); font-weight: var(--weight-medium);
+    border: 1px solid transparent; cursor: pointer; white-space: nowrap;
+    transition: background var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard);
+  }
+  .btn:focus-visible { box-shadow: var(--focus-ring); outline: none; }
+  .btn:active { transform: translateY(1px); }
+  .btn-sm { height: 32px; padding: 0 var(--space-3); font-size: var(--text-sm); }
+  .btn-lg { height: 40px; padding: 0 var(--space-5); font-size: var(--text-md); }
+  .btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 1px 2px rgba(16,24,29,0.08); }
+  .btn-primary:hover { background: var(--accent-hover); box-shadow: 0 2px 6px rgba(42,72,230,0.20); }
+  .btn-primary:active { background: var(--accent-active); box-shadow: none; }
+  .btn-secondary { background: transparent; color: var(--accent); border-color: var(--accent); }
+  .btn-secondary:hover { background: var(--accent-soft); }
+  .btn-ghost { background: transparent; color: var(--fg-2); }
+  .btn-ghost:hover { background: var(--hover-soft); color: var(--fg); }
+  .btn-destructive { background: var(--danger); color: var(--on-accent); }
+  .btn-destructive:hover { background: color-mix(in srgb, var(--danger) 88%, var(--mix-black)); }
+  .btn:disabled { opacity: .5; cursor: not-allowed; }
+  .btn .spin { animation: spin 0.9s linear infinite; }
+
+  /* ---- 图标按钮（≥40 热区，aria-label 必填）---- */
+  .icon-btn {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 40px; height: 40px; border-radius: var(--radius-md);
+    background: transparent; border: none; color: var(--fg-2); cursor: pointer;
+    transition: background var(--motion-base) var(--ease-standard);
+  }
+  .icon-btn:hover { background: var(--surface-2); }
+
+  /* ---- 卡片 ---- */
+  .card { background: var(--surface-calm); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-5); box-shadow: var(--elev-sm); transition: box-shadow var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard); }
+  .card-hover { transition: box-shadow var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard); }
+  .card-hover:hover { box-shadow: var(--elev-hover); border-color: color-mix(in srgb, var(--accent) 22%, var(--border)); transform: translateY(-2px); }
+
+  /* ---- 页面头 eyebrow 层级（小标签 → 大标题 → 副标题，营造产品级纵深）---- */
+  .eyebrow { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-xs); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-caps); color: var(--eyebrow-fg); background: var(--eyebrow-bg); padding: 3px var(--space-2) 3px; border-radius: var(--radius-pill); margin-bottom: var(--space-2); }
+  .page-title { font-size: var(--text-3xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-display); line-height: var(--leading-tight); }
+  .page-sub { font-size: var(--text-base); color: var(--muted); margin-top: var(--space-2); }
+
+  /* ---- 右栏「今日聚焦」：与正文明显界限 + 左边界特效 ---- */
+  .rail {
+    background: color-mix(in srgb, var(--shell-content) 60%, var(--surface) 40%);
+    border: 1px solid var(--shell-edge-soft);
+    border-left: 1px solid var(--shell-edge);
+    box-shadow: -6px 0 18px -10px var(--shell-edge), inset 1px 0 0 var(--shell-edge);
+    border-radius: var(--radius-lg);
+    padding: var(--space-4);
+    display: flex; flex-direction: column; gap: var(--space-3);
+  }
+  .rail-head { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--accent); margin-bottom: var(--space-1); }
+  .rail .mini { background: var(--surface); }
+
+  /* ---- OKR 目标卡 ---- */
+  .okr-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: var(--space-4); }
+  .okr-card { padding: var(--space-5); }
+  .okr-head { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-bottom: var(--space-4); }
+  .okr-q { font-size: var(--text-xs); font-weight: var(--weight-bold); color: var(--accent); background: var(--accent-soft); padding: 2px var(--space-2); border-radius: var(--radius-sm); }
+  .okr-name { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+  .okr-progress { display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-4); }
+  .okr-progress .bar { flex: 1; height: 8px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; }
+  .okr-progress .bar span { display: block; height: 100%; border-radius: var(--radius-pill); background: var(--accent); transition: width var(--motion-slow) var(--ease-out); }
+  .okr-progress .pct { font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--fg-2); font-family: var(--font-mono); }
+  .okr-kr { display: flex; flex-direction: column; gap: var(--space-2); }
+  .kr { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) var(--space-3); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); }
+  .kr-t { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+  .kr-m { font-size: var(--text-xs); color: var(--meta); white-space: nowrap; }
+
+  /* ---- 工作汇报 ---- */
+  .report-block { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-bottom: 1px solid var(--border-soft); }
+  .report-block:last-of-type { border-bottom: none; }
+  .rb-label { font-size: var(--text-sm); color: var(--muted); }
+  .rb-val { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+  .rb-val em { font-style: normal; font-size: var(--text-xs); color: var(--success); margin-left: var(--space-2); }
+  .report-note { margin-top: var(--space-4); font-size: var(--text-sm); color: var(--meta); background: var(--surface-2); padding: var(--space-3); border-radius: var(--radius-md); }
+  .report-tags { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
+  .rt { display: inline-flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-medium); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); }
+  .rt-win { color: var(--success); background: color-mix(in srgb, var(--success) 12%, transparent); }
+  .rt-risk { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+  .report-preview { display: flex; flex-direction: column; gap: var(--space-2); }
+  .rp-line { font-size: var(--text-sm); color: var(--fg-2); line-height: var(--leading-relaxed); }
+
+  /* ---- 入场动效（克制：仅 opacity + 4px 上移，页面切换时触发）---- */
+  @keyframes lc-rise { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+  .page.active { animation: lc-rise var(--motion-enter) var(--ease-out) both; }
+  @media (prefers-reduced-motion: reduce) { .page.active { animation: none; } }
+
+  /* ---- 徽章 / 状态点 / 头像 ---- */
+  .badge {
+    display: inline-flex; align-items: center; gap: var(--space-1);
+    padding: 2px var(--space-2); border-radius: var(--radius-pill);
+    font-size: var(--text-xs); font-weight: var(--weight-medium); letter-spacing: var(--tracking-caps);
+  }
+  .badge-owner { background: var(--accent-soft); color: var(--accent-soft-fg); }
+  .badge-admin { background: var(--surface-3); color: var(--fg); }
+  .badge-member { background: var(--surface-3); color: var(--muted); }
+  .badge-pending { background: var(--surface-2); color: var(--meta); }
+  .badge-success { background: var(--success-soft); color: var(--success); }
+  .badge-warn { background: var(--warn-soft); color: var(--warn); }
+  .dot { width: 8px; height: 8px; border-radius: var(--radius-pill); flex-shrink: 0; display: inline-block; }
+  .dot-doing { background: var(--status-doing-fg); }
+  .dot-todo { background: var(--status-todo-fg); }
+  .dot-done { background: var(--status-done-fg); }
+  .dot-ph { background: var(--prio-high-fg); }
+  .dot-pm { background: var(--prio-med-fg); }
+  .dot-pl { background: var(--prio-low-fg); }
+  .avatar {
+    display: inline-flex; align-items: center; justify-content: center;
+    border-radius: var(--radius-pill); background: var(--surface-3); color: var(--fg-2);
+    font-weight: var(--weight-medium); flex-shrink: 0;
+  }
+  .av-24 { width: 24px; height: 24px; font-size: var(--text-xs); }
+  .av-32 { width: 32px; height: 32px; font-size: var(--text-sm); }
+  .av-36 { width: 36px; height: 36px; font-size: var(--text-base); }
+  .who { display: inline-flex; align-items: center; gap: var(--space-2); }
+
+  /* ---- 输入 ---- */
+  .field { display: flex; flex-direction: column; gap: var(--space-2); }
+  .field label { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--fg-2); }
+  .input {
+    height: 40px; padding: 0 var(--space-4); border-radius: var(--radius-sm);
+    border: 1px solid var(--border); background: var(--surface); color: var(--fg);
+    font-size: var(--text-md); font-family: var(--font-body); width: 100%;
+    transition: border-color var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
+  }
+  .input::placeholder { color: var(--meta); }
+  .input:focus { border-color: var(--accent); box-shadow: var(--focus-ring); outline: none; }
+  .input.err { border-color: var(--danger); }
+  .hint { font-size: var(--text-xs); color: var(--muted); }
+  .err-msg { font-size: var(--text-xs); color: var(--danger); }
+
+  /* ---- 进度条 ---- */
+  .progress { height: 8px; border-radius: var(--radius-pill); background: var(--surface-3); overflow: hidden; }
+  .progress > span { display: block; height: 100%; background: var(--accent); border-radius: var(--radius-pill); }
+
+  /* ---- 表格 ---- */
+  .tbl { width: 100%; border-collapse: collapse; }
+  .tbl th { text-align: left; font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--meta); padding: var(--space-3) var(--space-4); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .tbl td { font-size: var(--text-base); color: var(--fg); padding: var(--space-2) var(--space-4); border-bottom: 1px solid var(--border-soft); height: 48px; vertical-align: middle; }
+  .tbl tbody tr:hover td { background: var(--surface-2); }
+
+  /* ---- 应用外壳 ---- */
+  .app-shell { display: flex; flex-direction: column; height: 100vh; }
+  .topbar {
+    height: var(--topbar-h); flex-shrink: 0; display: flex; align-items: center; gap: var(--space-4);
+    padding: 0 var(--space-4); border-bottom: 1px solid var(--shell-edge-soft); background: var(--shell-topbar); position: relative; z-index: var(--z-sticky); box-shadow: 0 1px 0 var(--shell-edge);
+  }
+  .ws-switch { display: inline-flex; align-items: center; gap: var(--space-2); height: 36px; padding: 0 var(--space-2) 0 var(--space-1); border-radius: var(--radius-md); cursor: pointer; background: transparent; border: 1px solid transparent; color: var(--fg); transition: background var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard); }
+  .ws-switch:hover { background: var(--hover-soft); border-color: var(--border); }
+  .ws-switch .name { font-size: var(--text-base); font-weight: var(--weight-semibold); }
+  .ws-switch .online { width: 7px; height: 7px; border-radius: 50%; background: var(--success); box-shadow: 0 0 0 2px var(--surface); }
+  .cmd {
+    flex: 1; max-width: 540px; margin: 0 auto; display: flex; align-items: center; gap: var(--space-2);
+    height: 36px; padding: 0 var(--space-3); border: 1px solid var(--border); border-radius: var(--radius-md);
+    background: var(--surface-2); color: var(--muted); cursor: text; font-size: var(--text-sm);
+    transition: border-color var(--motion-base) var(--ease-standard), background var(--motion-base) var(--ease-standard), box-shadow var(--motion-base) var(--ease-standard);
+  }
+  .cmd:hover { border-color: var(--accent); background: var(--surface); box-shadow: var(--focus-ring); }
+  .cmd:focus-within { border-color: var(--accent); background: var(--surface); box-shadow: var(--focus-ring); }
+  .cmd .ph { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cmd .kbd { margin-left: auto; font-family: var(--font-mono); font-size: var(--text-xs); color: var(--meta); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 1px 6px; background: var(--surface); }
+  .topbar-right { display: flex; align-items: center; gap: var(--space-1); margin-left: auto; padding-left: var(--space-2); border-left: 1px solid var(--border-soft); }
+  .icon-btn { width: 36px; height: 36px; border-radius: var(--radius-md); border: none; background: transparent; color: var(--fg-2); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: background var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard); }
+  .icon-btn:hover { background: var(--hover-soft); color: var(--fg); }
+  .icon-btn:active { transform: translateY(0.5px); }
+  .icon-btn:focus-visible { box-shadow: var(--focus-ring); }
+  .role-select {
+    height: 36px; border-radius: var(--radius-md); border: 1px solid transparent; background: transparent;
+    color: var(--fg-2); font-size: var(--text-sm); font-weight: var(--weight-medium); font-family: var(--font-body); cursor: pointer; padding: 0 var(--space-2);
+  }
+  .role-select:hover { background: var(--surface-2); }
+  .role-select:focus-visible { box-shadow: var(--focus-ring); }
+
+  .body { display: flex; flex: 1; min-height: 0; }
+  .sidebar {
+    width: var(--sidebar-w); flex-shrink: 0;
+    /* 右侧边界特效：渐变描边 + 向外柔光，强化与正文区的分隔 */
+    border-right: 1px solid var(--shell-edge-soft);
+    box-shadow: 1px 0 0 var(--shell-edge), 6px 0 16px -8px var(--shell-edge);
+    background: var(--shell-sidebar);
+    display: flex; flex-direction: column; padding: var(--space-3); gap: var(--space-1); overflow-y: auto;
+  }
+  .sb-brand { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3) var(--space-4); }
+  .sb-brand .logo { width: 28px; height: 28px; border-radius: var(--radius-md); background: var(--accent); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; font-weight: var(--weight-semibold); font-size: var(--text-sm); }
+  .sb-brand .t { font-size: var(--text-md); font-weight: var(--weight-semibold); }
+  .sb-section { font-size: var(--text-xs); color: var(--meta); letter-spacing: var(--tracking-caps); padding: var(--space-3) var(--space-3) var(--space-1); font-weight: var(--weight-medium); }
+  .nav-item {
+    display: flex; align-items: center; gap: var(--space-3); height: 38px; padding: 0 var(--space-3);
+    border-radius: var(--radius-md); color: var(--fg-2); font-size: var(--text-base); font-weight: var(--weight-medium);
+    cursor: pointer; position: relative; user-select: none;
+    transition: background var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard);
+  }
+  .nav-item svg { flex-shrink: 0; }
+  .nav-item:hover { background: var(--surface-2); color: var(--fg); }
+  .nav-item:active { transform: translateY(0.5px); }
+  .nav-item.active { background: var(--accent-soft); color: var(--accent); }
+  .nav-item.active::before { content: ""; position: absolute; left: 0; top: 7px; bottom: 7px; width: 3px; background: var(--accent); border-radius: 0 3px 3px 0; }
+  .sb-spacer { flex: 1; }
+  .sb-foot { border-top: 1px solid var(--border-soft); padding-top: var(--space-2); margin-top: var(--space-2); }
+  .sb-user { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-3); border-radius: var(--radius-md); cursor: pointer; transition: background var(--motion-base) var(--ease-standard); }
+  .sb-user:hover { background: var(--surface-2); }
+  .sb-user .n { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+
+  /* ---- 侧栏可折叠 ---- */
+  .sb-collapse-btn {
+    margin-left: auto; width: 28px; height: 28px; border-radius: var(--radius-sm);
+    border: none; background: transparent; color: var(--meta); cursor: pointer;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: background var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard);
+  }
+  .sb-collapse-btn:hover { background: var(--surface-2); color: var(--fg); }
+  .sidebar { transition: width var(--motion-base) var(--ease-standard); }
+  .sidebar.collapsed { width: 64px; padding-left: var(--space-2); padding-right: var(--space-2); }
+  .sidebar.collapsed .sb-brand { justify-content: center; padding-left: 0; padding-right: 0; }
+  .sidebar.collapsed .sb-brand .t,
+  .sidebar.collapsed .sb-section,
+  .sidebar.collapsed .nav-item span,
+  .sidebar.collapsed .sb-user .col { display: none; }
+  .sidebar.collapsed .sb-collapse-btn { margin-left: 0; }
+  .sidebar.collapsed .nav-item { justify-content: center; padding: 0; gap: 0; }
+  .sidebar.collapsed .nav-item::before { left: 0; }
+  .sidebar.collapsed .sb-user { justify-content: center; padding-left: 0; padding-right: 0; }
+  /* 收起态：图标栏居中、激活项用左侧细条提示当前位置 */
+  .sidebar.collapsed .nav-item.active { background: var(--accent-soft); }
+
+  .content { flex: 1; overflow-y: auto; padding: var(--space-6); display: flex; flex-direction: column; border-left: 1px solid transparent; box-shadow: inset 1px 0 0 var(--shell-edge-soft); }
+  .page { display: none; max-width: var(--container-max); margin: 0 auto; width: 100%; }
+  .page.active { display: block; flex: 1 0 auto; }
+  /* ---- 尾栏：内容短贴底、内容长滚到底才显 ---- */
+  .app-footer {
+    max-width: var(--container-max); width: 100%; margin: auto auto 0;
+    padding: var(--space-4) 0 var(--space-2); border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between; gap: var(--space-3);
+    font-size: var(--text-sm); color: var(--meta);
+  }
+  .app-footer .fl { display: flex; align-items: center; gap: var(--space-2); }
+  .app-footer .fr { display: flex; align-items: center; gap: var(--space-3); }
+  .app-footer a { color: var(--fg-2); cursor: pointer; }
+  .app-footer a:hover { color: var(--accent); }
+  /* ---- 集成卡 / 文档行（新页面）---- */
+  .integration-card { border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-4); display: flex; flex-direction: column; gap: var(--space-3); }
+  .doc-row { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); padding: var(--space-2) 0; border-bottom: 1px solid var(--border-soft); }
+  .doc-row:last-child { border-bottom: none; }
+  .doc-name { font-size: var(--text-sm); }
+  .input:disabled { opacity: .6; cursor: not-allowed; }
+
+  .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: var(--space-4); margin-bottom: var(--space-6); flex-wrap: wrap; }
+  .page-head .head-text { display: flex; flex-direction: column; align-items: flex-start; }
+
+  /* ---- 非对称工作台 2:1 ---- */
+  .grid-2-1 { display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-6); align-items: start; }
+
+  /* ---- 本周概览统计条 ---- */
+  .stat-strip { display: flex; flex-wrap: wrap; align-items: stretch; gap: var(--space-3); margin-bottom: var(--space-6); }
+  .stat { display: flex; flex-direction: column; justify-content: center; min-width: 110px; flex: 1; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--surface-calm); }
+  .stat .sv { font-size: var(--text-xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); line-height: var(--leading-tight); }
+  .stat .sl { font-size: var(--text-xs); color: var(--meta); margin-top: 2px; }
+  .stat.accent { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 20%, var(--border)); }
+  .stat.accent .sv { color: var(--accent); }
+  .stat-add { flex: 0 0 auto; align-self: stretch; }
+  .panel-title { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+  .panel-title h3 { font-size: var(--text-lg); font-weight: var(--weight-semibold); }
+  .count-chip { font-size: var(--text-xs); color: var(--meta); font-family: var(--font-mono); }
+
+  /* 进行中任务列表 */
+  .task-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); margin-bottom: var(--space-2); transition: box-shadow var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard), transform var(--motion-base) var(--ease-standard); }
+  .task-row:hover { box-shadow: var(--elev-hover); border-color: color-mix(in srgb, var(--accent) 18%, var(--border)); transform: translateY(-1px); }
+  .task-row .tt { font-size: var(--text-base); font-weight: var(--weight-medium); flex: 1; min-width: 0; }
+  .task-row .due { font-size: var(--text-xs); color: var(--meta); font-family: var(--font-mono); white-space: nowrap; }
+  .task-row.done .tt { color: var(--meta); text-decoration: line-through; }
+  /* 行内勾选框（克制方形，accent 填充）*/
+  .chk { width: 18px; height: 18px; flex-shrink: 0; border-radius: var(--radius-sm); border: 1.5px solid var(--border); background: var(--surface); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; color: transparent; transition: background var(--motion-base) var(--ease-standard), border-color var(--motion-base) var(--ease-standard), color var(--motion-base) var(--ease-standard); }
+  .chk:hover { border-color: var(--accent); }
+  .chk.on { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .chk svg { width: 14px; height: 14px; }
+
+  /* 右栏卡片 */
+  .mini { padding: var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); margin-bottom: var(--space-3); }
+  .mini .h { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-sm); font-weight: var(--weight-semibold); color: var(--fg-2); margin-bottom: var(--space-3); }
+  .mini-row { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) 0; border-bottom: 1px solid var(--border-soft); }
+  .mini-row:last-child { border-bottom: none; }
+  .mini-row .t { font-size: var(--text-sm); flex: 1; min-width: 0; }
+  .mini-row .s { font-size: var(--text-xs); color: var(--meta); white-space: nowrap; }
+
+  /* ---- 看板 ---- */
+  .seg { display: inline-flex; background: var(--surface-2); border-radius: var(--radius-md); padding: 2px; }
+  .seg button { height: 32px; padding: 0 var(--space-4); border: none; background: transparent; border-radius: var(--radius-sm); font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--muted); cursor: pointer; display: inline-flex; align-items: center; gap: var(--space-2); }
+  .seg button.active { background: var(--surface); color: var(--fg); box-shadow: var(--elev-sm); }
+
+  .board { display: grid; grid-template-columns: repeat(3, 1fr); gap: var(--space-4); align-items: start; }
+  .col-card { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); padding: var(--space-3); }
+  .col-head { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-2) var(--space-2) var(--space-3); }
+  .col-head .ct { font-size: var(--text-sm); font-weight: var(--weight-semibold); }
+  .col-head .n { font-size: var(--text-xs); color: var(--meta); font-family: var(--font-mono); }
+  .kanban-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md); padding: var(--space-3); margin-bottom: var(--space-2); cursor: grab; }
+  .kanban-card:hover { box-shadow: var(--elev-sm); }
+  .kanban-card .kt { font-size: var(--text-base); font-weight: var(--weight-medium); margin-bottom: var(--space-3); }
+  .kanban-card .km { display: flex; align-items: center; justify-content: space-between; gap: var(--space-2); }
+  .kanban-card .kp { display: flex; align-items: center; gap: var(--space-2); }
+
+  /* 列表视图 */
+  .list-view { display: none; }
+  .list-row { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); margin-bottom: var(--space-2); }
+  .list-row .lt { flex: 1; min-width: 0; font-size: var(--text-base); font-weight: var(--weight-medium); }
+  .list-row .lc { display: flex; align-items: center; gap: var(--space-4); }
+
+  /* ---- 任务详情 ---- */
+  .detail-grid { display: grid; grid-template-columns: 2fr 1fr; gap: var(--space-6); align-items: start; }
+  .detail-main .dt { font-size: var(--text-2xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); margin-bottom: var(--space-3); }
+  .desc { font-size: var(--text-base); color: var(--fg-2); line-height: var(--leading-normal); }
+  .section-h { display: flex; align-items: center; gap: var(--space-2); font-size: var(--text-lg); font-weight: var(--weight-semibold); margin: var(--space-6) 0 var(--space-3); }
+  .comment { display: flex; gap: var(--space-3); padding: var(--space-4) 0; border-bottom: 1px solid var(--border-soft); }
+  .comment .cb { flex: 1; }
+  .comment .cmeta { font-size: var(--text-sm); margin-bottom: var(--space-1); }
+  .comment .cmeta b { font-weight: var(--weight-semibold); }
+  .comment .ctime { color: var(--meta); font-size: var(--text-xs); margin-left: var(--space-2); }
+  .mention { color: var(--accent); font-weight: var(--weight-medium); }
+  .decision { background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: var(--space-4); }
+  .decision .dh { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-2); }
+  .decision .dv { font-size: var(--text-xs); color: var(--meta); font-family: var(--font-mono); }
+  .decision .dver { font-size: var(--text-xs); color: var(--muted); }
+  .decision p { font-size: var(--text-sm); color: var(--fg-2); line-height: var(--leading-normal); }
+  .meta-panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-5); position: sticky; top: var(--space-4); }
+  .mp-row { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) 0; border-bottom: 1px solid var(--border-soft); }
+  .mp-row:last-child { border-bottom: none; }
+  .mp-row .k { font-size: var(--text-sm); color: var(--muted); }
+  .mp-row .v { font-size: var(--text-sm); font-weight: var(--weight-medium); }
+
+  /* ---- 计费 ---- */
+  .plan-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: var(--space-4); align-items: start; }
+  .price-list { display: flex; flex-direction: column; gap: var(--space-2); }
+  .price-item { display: flex; align-items: center; justify-content: space-between; padding: var(--space-3) var(--space-4); border: 1px solid var(--border); border-radius: var(--radius-md); background: var(--surface); }
+  .price-item.cur { border-color: var(--accent); }
+  .price-item .pn { font-size: var(--text-base); font-weight: var(--weight-medium); }
+  .price-item .pp { font-size: var(--text-sm); color: var(--muted); }
+  .price-item .pc { font-size: var(--text-base); font-weight: var(--weight-semibold); font-family: var(--font-mono); white-space: nowrap; }
+
+  /* ---- 空 / 错误 / 加载 / 边界 态 ---- */
+  .state-block { display: none; }
+  .stage[data-state="normal"] .state-normal,
+  .stage[data-state="loading"] .state-loading,
+  .stage[data-state="empty"] .state-empty,
+  .stage[data-state="error"] .state-error,
+  .stage[data-state="edge"] .state-edge { display: block; }
+  .empty-box { text-align: center; padding: var(--space-12) var(--space-6); border: 1px solid var(--border-soft); border-radius: var(--radius-lg); background: var(--surface-2); }
+  .empty-box .et { font-size: var(--text-xl); font-weight: var(--weight-semibold); margin: var(--space-4) 0 var(--space-2); color: var(--fg); }
+  .empty-box .es { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-5); max-width: 420px; margin-left: auto; margin-right: auto; }
+  .empty-illu { width: 64px; height: 64px; border-radius: 9999px; background: var(--accent-soft); color: var(--accent); display: inline-flex; align-items: center; justify-content: center; margin-bottom: var(--space-4); }
+  .error-box { text-align: center; padding: var(--space-12) var(--space-6); }
+  .error-box .et { font-size: var(--text-xl); font-weight: var(--weight-semibold); margin: var(--space-4) 0 var(--space-2); }
+  .error-box .es { font-size: var(--text-sm); color: var(--muted); margin-bottom: var(--space-5); }
+  .banner { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3) var(--space-4); border-radius: var(--radius-md); font-size: var(--text-sm); margin-bottom: var(--space-4); }
+  .banner-warn { background: var(--warn-soft); color: var(--warn); }
+  .banner-info { background: var(--accent-soft); color: var(--accent-soft-fg); }
+  .skeleton { background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 37%, var(--surface-2) 63%); background-size: 400% 100%; animation: shimmer 1.4s var(--ease-standard) infinite; border-radius: var(--radius-sm); }
+  @keyframes shimmer { 0% { background-position: 100% 0; } 100% { background-position: -100% 0; } }
+  .sk-row { height: 52px; margin-bottom: var(--space-2); border-radius: var(--radius-md); }
+  .sk-line { height: 14px; margin: var(--space-2) 0; }
+  .sk-card { height: 84px; border-radius: var(--radius-md); margin-bottom: var(--space-2); }
+
+  /* ---- 演示控制条（原型评审辅助）---- */
+  .demo-bar { display: inline-flex; align-items: center; gap: var(--space-1); background: var(--surface-2); border: 1px solid var(--border-soft); border-radius: var(--radius-md); padding: 3px; }
+  .demo-bar .lbl { font-size: var(--text-xs); color: var(--meta); padding: 0 var(--space-2); }
+  .demo-bar button { height: 30px; padding: 0 var(--space-3); border: none; background: transparent; border-radius: var(--radius-sm); font-size: var(--text-xs); font-weight: var(--weight-medium); color: var(--muted); cursor: pointer; font-family: var(--font-body); }
+  .demo-bar button.active { background: var(--surface); color: var(--fg); box-shadow: var(--elev-sm); }
+
+  /* ---- 命令栏 Cmd+K ---- */
+  .cmdk[hidden] { display: none; }
+  .cmdk { position: fixed; inset: 0; z-index: var(--z-cmd); display: flex; align-items: flex-start; justify-content: center; padding-top: 14vh; }
+  .cmdk-backdrop { position: absolute; inset: 0; background: rgba(16,24,29,0.45); }
+  .cmdk-panel { position: relative; width: min(560px, 92vw); background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); box-shadow: var(--elev-lg); overflow: hidden; }
+  .cmdk-input-row { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-4); border-bottom: 1px solid var(--border); }
+  .cmdk-input-row input { flex: 1; border: none; background: transparent; font-size: var(--text-md); font-family: var(--font-body); color: var(--fg); outline: none; }
+  .cmdk-input-row input::placeholder { color: var(--meta); }
+  .cmdk-results { max-height: 50vh; overflow-y: auto; padding: var(--space-2); }
+  .cmdk-group { font-size: var(--text-xs); color: var(--meta); letter-spacing: var(--tracking-caps); padding: var(--space-3) var(--space-3) var(--space-1); font-weight: var(--weight-medium); }
+  .cmdk-item { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-3); border-radius: var(--radius-md); cursor: pointer; font-size: var(--text-base); color: var(--fg-2); }
+  .cmdk-item .sub { margin-left: auto; font-size: var(--text-xs); color: var(--meta); }
+  .cmdk-item.active, .cmdk-item:hover { background: var(--accent-soft); color: var(--accent-soft-fg); }
+
+  /* ---- Toast ---- */
+  .toast-wrap { position: fixed; right: var(--space-5); bottom: var(--space-5); z-index: var(--z-toast); display: flex; flex-direction: column; gap: var(--space-2); max-width: 360px; }
+  .toast { display: flex; align-items: flex-start; gap: var(--space-3); background: var(--surface); border: 1px solid var(--border); border-left: 3px solid var(--muted); border-radius: var(--radius-md); box-shadow: var(--elev-md); padding: var(--space-3) var(--space-4); font-size: var(--text-sm); animation: toast-in var(--motion-slow) var(--ease-out); }
+  .toast.success { border-left-color: var(--success); }
+  .toast.alert { border-left-color: var(--danger); }
+  .toast .tc { flex: 1; }
+  .toast .tt { font-weight: var(--weight-medium); }
+  @keyframes toast-in { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+
+  /* ---- 原型角标 ---- */
+  .proto-badge { position: fixed; left: var(--space-4); bottom: var(--space-3); z-index: var(--z-toast); font-size: var(--text-xs); color: var(--meta); background: var(--surface); border: 1px solid var(--border-soft); border-radius: var(--radius-pill); padding: 4px var(--space-3); pointer-events: none; }
+
+  /* ---- 登录/注册页 ---- */
+  .page-auth { display: none; min-height: 100vh; align-items: center; justify-content: center; padding: var(--space-6); position: relative; }
+  .page-auth.active { display: flex; }
+  .auth-card { width: 100%; max-width: 420px; background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-xl); padding: var(--space-8); box-shadow: var(--elev-sm); }
+  .auth-brand { text-align: center; margin-bottom: var(--space-6); }
+  .auth-brand .logo { width: 44px; height: 44px; border-radius: var(--radius-lg); background: var(--accent); color: var(--on-accent); display: inline-flex; align-items: center; justify-content: center; font-weight: var(--weight-semibold); font-size: var(--text-lg); margin-bottom: var(--space-3); }
+  .auth-brand .n { font-size: var(--text-2xl); font-weight: var(--weight-semibold); letter-spacing: var(--tracking-tight); }
+  .auth-brand .s { font-size: var(--text-sm); color: var(--muted); margin-top: var(--space-1); }
+  .tabs { display: flex; background: var(--surface-2); border-radius: var(--radius-md); padding: 3px; margin-bottom: var(--space-6); }
+  .tabs button { flex: 1; height: 36px; border: none; background: transparent; border-radius: var(--radius-sm); font-size: var(--text-base); font-weight: var(--weight-medium); color: var(--muted); cursor: pointer; }
+  .tabs button.active { background: var(--surface); color: var(--fg); box-shadow: var(--elev-sm); }
+  .auth-form { display: none; flex-direction: column; gap: var(--space-4); }
+  .auth-form.active { display: flex; }
+  .auth-foot { text-align: center; margin-top: var(--space-5); }
+  .auth-theme { position: absolute; top: var(--space-5); right: var(--space-5); }
+  .strength { display: flex; gap: 4px; margin-top: 2px; }
+  .strength i { flex: 1; height: 4px; border-radius: var(--radius-pill); background: var(--surface-3); }
+  .strength i.on { background: var(--success); }
+
+  /* ---- 响应式（MVP 以 lg+ 为主，md 可用，移动不崩）---- */
+  @media (max-width: 1024px) {
+    .grid-2-1, .detail-grid, .plan-grid { grid-template-columns: 1fr; }
+    .board { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { display: none; }
+    .cmd { display: none; }
+    .content { padding: var(--space-4); }
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  /* ---- 月历（日程页）---- */
+  .cal { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); overflow: hidden; box-shadow: var(--elev-sm); }
+  .cal-head { display: grid; grid-template-columns: repeat(7, 1fr); border-bottom: 1px solid var(--border); }
+  .cal-head div { padding: var(--space-2); text-align: center; font-size: var(--text-xs); color: var(--meta); letter-spacing: var(--tracking-caps); font-weight: var(--weight-medium); }
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); }
+  .cal-cell { min-height: 96px; border-right: 1px solid var(--border-soft); border-bottom: 1px solid var(--border-soft); padding: var(--space-2); transition: background var(--motion-base) var(--ease-standard); }
+  .cal-cell:nth-child(7n) { border-right: none; }
+  .cal-cell:hover { background: var(--surface-2); }
+  .cal-cell.out { background: var(--surface-2); }
+  .cal-cell.out .cal-date { color: var(--meta); }
+  .cal-date { font-size: var(--text-sm); font-weight: var(--weight-medium); color: var(--fg-2); }
+  .cal-cell.today { background: var(--accent-soft); }
+  .cal-cell.today .cal-date { color: var(--accent); }
+  .cal-ev { display: flex; align-items: center; gap: 4px; margin-top: var(--space-1); font-size: var(--text-xs); color: var(--fg-2); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .cal-dot { width: 6px; height: 6px; border-radius: 9999px; flex-shrink: 0; }
+
+</style>
+</head>
+<body>
+
+<!-- ===== Lucide 内联 SVG 雪碧图（单图标库，禁 emoji / 禁混用）===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="ic-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/></symbol>
+    <symbol id="ic-kanban" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.93a2 2 0 0 1-1.66-.9l-.82-1.2A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/><path d="M8 10v4"/><path d="M12 10v2"/><path d="M16 10v6"/></symbol>
+    <symbol id="ic-message" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></symbol>
+    <symbol id="ic-calendar" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></symbol>
+    <symbol id="ic-file" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M16 13H8"/><path d="M16 17H8"/><path d="M10 9H8"/></symbol>
+    <symbol id="ic-users" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+    <symbol id="ic-settings" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="ic-search" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+    <symbol id="ic-bell" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></symbol>
+    <symbol id="ic-card" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></symbol>
+    <symbol id="ic-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></symbol>
+    <symbol id="ic-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="ic-chevron-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m9 18 6-6-6-6"/></symbol>
+    <symbol id="ic-chevron-down" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></symbol>
+    <symbol id="ic-more" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/></symbol>
+    <symbol id="ic-logout" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" x2="9" y1="12" y2="12"/></symbol>
+    <symbol id="ic-user-plus" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="16" x2="22" y1="11" y2="11"/></symbol>
+    <symbol id="ic-trash" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></symbol>
+    <symbol id="ic-circle-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></symbol>
+    <symbol id="ic-filter" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></symbol>
+    <symbol id="ic-tag" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.586 2.586A2 2 0 0 0 11.172 2H4a2 2 0 0 0-2 2v7.172a2 2 0 0 0 .586 1.414l8.704 8.704a2.426 2.426 0 0 0 3.42 0l6.58-6.58a2.426 2.426 0 0 0 0-3.42z"/><circle cx="7.5" cy="7.5" r=".5" fill="currentColor"/></symbol>
+    <symbol id="ic-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="M4.93 4.93l1.41 1.41"/><path d="M17.66 17.66l1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="M6.34 17.66l-1.41 1.41"/><path d="M19.07 4.93l-1.41 1.41"/></symbol>
+    <symbol id="ic-moon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></symbol>
+    <symbol id="ic-circle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/></symbol>
+    <symbol id="ic-circle-dot" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="3" fill="currentColor"/></symbol>
+    <symbol id="ic-circle-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m9 12 2 2 4-4"/></symbol>
+    <symbol id="ic-grip" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
+    <symbol id="ic-x" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></symbol>
+    <symbol id="ic-alert" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="ic-swap" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m7 15 5 5 5-5"/><path d="m7 9 5-5 5 5"/></symbol>
+    <symbol id="ic-loader" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></symbol>
+  </defs>
+</svg>
+
+<!-- ============================ 应用外壳 ============================ -->
+<div class="app-shell" id="app-shell">
+
+  <!-- 顶栏（56px）-->
+  <header class="topbar">
+    <button class="ws-switch" aria-label="切换工作区">
+      <span class="avatar av-24" style="background:var(--accent-soft);color:var(--accent-soft-fg);position:relative">A<span class="online" style="position:absolute;right:-1px;bottom:-1px"></span></span>
+      <span class="name">Acme 增长组</span>
+      <svg class="icon ic-16"><use href="#ic-swap"/></svg>
+    </button>
+
+    <div class="cmd" id="cmd-trigger" role="button" tabindex="0" aria-label="打开全局命令栏">
+      <svg class="icon ic-20"><use href="#ic-search"/></svg>
+      <span class="ph">搜索任务、决策记录…</span>
+      <span class="kbd">⌘K</span>
+    </div>
+
+    <div class="topbar-right">
+      <button class="icon-btn" id="bell-btn" aria-label="打开通知"><svg class="icon ic-20"><use href="#ic-bell"/></svg></button>
+      <button class="icon-btn" id="theme-btn" aria-label="切换浅色 / 深色主题"><svg class="icon ic-20" id="theme-icon"><use href="#ic-moon"/></svg></button>
+      <select class="role-select" id="role-select" aria-label="切换预览角色（演示 RBAC）">
+        <option value="owner">角色：Owner</option>
+        <option value="admin">角色：Admin</option>
+        <option value="member">角色：Member</option>
+      </select>
+      <button class="ws-switch" aria-label="当前用户 陈思" style="padding:var(--space-1) var(--space-2)"><span class="avatar av-32" style="position:relative">陈<span class="online" style="position:absolute;right:-1px;bottom:-1px"></span></span></button>
+    </div>
+  </header>
+
+  <div class="body">
+    <!-- Slim Sidebar（240px）-->
+    <aside class="sidebar" id="sidebar">
+      <div class="sb-brand">
+        <span class="logo">L</span><span class="t">corps</span>
+        <button class="sb-collapse-btn" id="sb-collapse" aria-label="折叠侧栏" title="折叠侧栏"><svg class="icon ic-20"><use href="#ic-panel-left-close"/></svg></button>
+      </div>
+      <nav>
+        <div class="sb-section">工作区</div>
+        <a class="nav-item active" data-page="home" title="工作台"><svg class="icon ic-20"><use href="#ic-dashboard"/></svg><span>工作台</span></a>
+        <a class="nav-item" data-page="board" title="任务看板"><svg class="icon ic-20"><use href="#ic-kanban"/></svg><span>任务看板</span></a>
+        <a class="nav-item" data-page="mytasks" title="我的待办"><svg class="icon ic-20"><use href="#ic-check-square"/></svg><span>我的待办</span></a>
+        <a class="nav-item" data-page="detail" title="文档决策"><svg class="icon ic-20"><use href="#ic-file"/></svg><span>文档决策</span></a>
+        <a class="nav-item" data-page="goals" title="目标 OKR"><svg class="icon ic-20"><use href="#ic-target"/></svg><span>目标 OKR</span></a>
+        <div class="sb-section">办公</div>
+        <a class="nav-item" data-page="meeting" title="会议预约"><svg class="icon ic-20"><use href="#ic-calendar-clock"/></svg><span>会议预约</span></a>
+        <a class="nav-item" data-page="reports" title="工作汇报"><svg class="icon ic-20"><use href="#ic-bar-chart-2"/></svg><span>工作汇报</span></a>
+        <a class="nav-item" data-page="office" title="智能 Office"><svg class="icon ic-20"><use href="#ic-files"/></svg><span>智能 Office</span></a>
+        <a class="nav-item" data-page="calendar" title="日程"><svg class="icon ic-20"><use href="#ic-calendar"/></svg><span>日程</span></a>
+        <a class="nav-item" data-page="coming" data-title="云盘" title="云盘"><svg class="icon ic-20"><use href="#ic-hard-drive"/></svg><span>云盘</span></a>
+        <a class="nav-item" data-page="coming" data-title="知识库" title="知识库"><svg class="icon ic-20"><use href="#ic-book-open"/></svg><span>知识库</span></a>
+        <div class="sb-section">团队</div>
+        <a class="nav-item" data-page="members" title="成员"><svg class="icon ic-20"><use href="#ic-users"/></svg><span>成员</span></a>
+        <a class="nav-item" data-page="coming" data-title="审批" title="审批"><svg class="icon ic-20"><use href="#ic-check-check"/></svg><span>审批</span></a>
+        <a class="nav-item" data-page="integrations" title="集成中心"><svg class="icon ic-20"><use href="#ic-plug"/></svg><span>集成中心</span></a>
+      </nav>
+      <div class="sb-spacer"></div>
+      <div class="sb-foot">
+        <div class="sb-section">账户</div>
+        <a class="nav-item" data-page="billing" title="计费"><svg class="icon ic-20"><use href="#ic-card"/></svg><span>计费</span></a>
+        <a class="nav-item" data-page="settings" title="设置"><svg class="icon ic-20"><use href="#ic-settings"/></svg><span>设置</span></a>
+        <div class="sb-user">
+          <span class="avatar av-32">陈</span>
+          <div class="col"><span class="n">陈思</span><span class="meta" style="font-size:var(--text-xs)">chen@acme.test</span></div>
+          <svg class="icon ic-16 chev" style="margin-left:auto;color:var(--meta)"><use href="#ic-chevron-down"/></svg>
+        </div>
+      </div>
+    </aside>
+
+    <!-- 主内容 -->
+    <main class="content">
+
+      <!-- ============ 页面 1：工作区 Home ============ -->
+      <section class="page active" id="page-home">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-dashboard"/></svg>Acme 增长组</span>
+            <h1 class="page-title">工作台</h1>
+            <p class="page-sub">本周进行中的工作一览</p>
+          </div>
+          <div class="demo-bar" aria-label="状态预览（原型演示）">
+            <span class="lbl">状态预览</span>
+            <button data-state="normal" class="active">正常</button>
+            <button data-state="loading">加载</button>
+            <button data-state="empty">空</button>
+            <button data-state="error">错误</button>
+            <button data-state="edge">边界</button>
+          </div>
+        </div>
+
+        <!-- 本周概览统计条 -->
+        <div class="stat-strip">
+          <div class="stat"><span class="sv">12</span><span class="sl">本周任务</span></div>
+          <div class="stat"><span class="sv">4</span><span class="sl">进行中</span></div>
+          <div class="stat"><span class="sv">2</span><span class="sl">待我处理</span></div>
+          <div class="stat accent"><span class="sv">3</span><span class="sl">今明到期</span></div>
+          <div class="stat"><span class="sv">68%</span><span class="sl">本周完成率</span></div>
+          <button class="btn btn-primary stat-add"><svg class="icon ic-20"><use href="#ic-plus"/></svg>快速新建</button>
+        </div>
+
+
+        <div class="stage" id="home-stage" data-state="normal">
+          <!-- 正常态 -->
+          <div class="state-block state-normal">
+            <div class="grid-2-1">
+              <div>
+                <div class="panel-title"><h3>进行中</h3><span class="count-chip">4</span></div>
+                <div class="task-row">
+                  <svg class="icon ic-20" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg>
+                  <span class="tt truncate">Q3 增长复盘</span>
+                  <span class="who"><span class="avatar av-24">陈</span></span>
+                  <span class="due">08-22</span>
+                </div>
+                <div class="task-row">
+                  <svg class="icon ic-20" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg>
+                  <span class="tt truncate">客户 Onboarding 流程 v2</span>
+                  <span class="who"><span class="avatar av-24">李</span></span>
+                  <span class="due">08-25</span>
+                </div>
+                <div class="task-row">
+                  <svg class="icon ic-20" style="color:var(--status-todo-fg)"><use href="#ic-circle"/></svg>
+                  <span class="tt truncate">官网落地页文案定稿</span>
+                  <span class="who"><span class="avatar av-24">王</span></span>
+                  <span class="due">08-20</span>
+                </div>
+                <div class="task-row">
+                  <svg class="icon ic-20" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg>
+                  <span class="tt truncate">支付网关 Stripe 对接</span>
+                  <span class="who"><span class="avatar av-24">张</span></span>
+                  <span class="due">08-28</span>
+                </div>
+              </div>
+              <div class="rail">
+                <div class="rail-head"><svg class="icon ic-20"><use href="#ic-zap"/></svg><span>今日聚焦</span></div>
+                <div class="mini card-hover">
+                  <div class="h"><svg class="icon ic-20"><use href="#ic-check"/></svg><span>今日待办</span></div>
+                  <div class="mini-row"><span class="who"><span class="avatar av-24">周</span></span><span class="t truncate">回复投资人 DD 清单</span><span class="s">18:00 前</span></div>
+                </div>
+                <div class="mini card-hover">
+                  <div class="h"><svg class="icon ic-20"><use href="#ic-file"/></svg><span>最近更新</span></div>
+                  <div class="mini-row"><span class="who"><span class="avatar av-24">周</span></span><span class="t truncate">竞品功能对比表</span><span class="s">2 小时前</span></div>
+                </div>
+                <div class="mini card-hover">
+                  <div class="h"><svg class="icon ic-20"><use href="#ic-calendar"/></svg><span>今日日程</span></div>
+                  <div class="mini-row"><span class="t truncate">团队周会</span><span class="s">16:00–17:00 · 会议室 A</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 加载态（骨架屏）-->
+          <div class="state-block state-loading">
+            <div class="grid-2-1">
+              <div>
+                <div class="panel-title"><h3>进行中</h3></div>
+                <div class="skeleton sk-row"></div><div class="skeleton sk-row"></div><div class="skeleton sk-row"></div>
+              </div>
+              <div class="rail">
+                <div class="skeleton sk-line" style="width:60%"></div>
+                <div class="skeleton sk-line"></div><div class="skeleton sk-line"></div>
+                <div class="skeleton sk-line" style="width:80%"></div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 空态 -->
+          <div class="state-block state-empty">
+            <div class="empty-box">
+              <svg class="icon ic-32" style="color:var(--muted)"><use href="#ic-kanban"/></svg>
+              <div class="et">这个工作区还是空的</div>
+              <div class="es">创建你的第一个任务并指派给伙伴，15 分钟内就能跑通协作流程。</div>
+              <button class="btn btn-primary" onclick="showToast('已创建示例任务，去「任务看板」查看','success')"><svg class="icon ic-20"><use href="#ic-plus"/></svg>新建任务</button>
+            </div>
+          </div>
+
+          <!-- 错误态 -->
+          <div class="state-block state-error">
+            <div class="error-box">
+              <svg class="icon ic-32" style="color:var(--danger)"><use href="#ic-circle-alert"/></svg>
+              <div class="et">工作区数据加载失败</div>
+              <div class="es">网络似乎出了问题，请检查连接后重试。你的数据不会丢失。</div>
+              <button class="btn btn-secondary" onclick="document.getElementById('home-stage').dataset.state='normal'"><svg class="icon ic-20"><use href="#ic-chevron-right"/></svg>重试</button>
+            </div>
+          </div>
+
+          <!-- 边界态（>200 任务虚拟滚动）-->
+          <div class="state-block state-edge">
+            <div class="banner banner-info"><svg class="icon ic-20"><use href="#ic-filter"/></svg><span>该工作区已有 <b class="mono">213</b> 个任务，已启用虚拟滚动，仅渲染可见区域。</span></div>
+            <div class="grid-2-1">
+              <div>
+                <div class="panel-title"><h3>进行中</h3><span class="count-chip">213</span></div>
+                <div id="edge-list"></div>
+                <button class="btn btn-ghost" style="margin-top:var(--space-2)"><svg class="icon ic-20"><use href="#ic-chevron-down"/></svg>显示更多</button>
+              </div>
+              <div>
+                <div class="mini card-hover"><div class="h"><svg class="icon ic-20"><use href="#ic-calendar"/></svg><span>今日日程</span></div><div class="mini-row"><span class="t truncate">团队周会</span><span class="s">16:00–17:00</span></div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 2：任务看板 ============ -->
+      <section class="page" id="page-board">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-kanban"/></svg>工作区</span>
+            <h1 class="page-title">任务看板</h1>
+            <p class="page-sub">按状态分列 · 拖拽卡片即可变更状态</p>
+          </div>
+          <div class="row gap-3 wrap">
+            <div class="seg" id="board-view">
+              <button class="active" data-view="kanban"><svg class="icon ic-16"><use href="#ic-kanban"/></svg>看板</button>
+              <button data-view="list"><svg class="icon ic-16"><use href="#ic-file"/></svg>列表</button>
+            </div>
+            <button class="btn btn-primary"><svg class="icon ic-20"><use href="#ic-plus"/></svg>新建任务</button>
+            <div class="demo-bar" aria-label="状态预览（原型演示）">
+              <span class="lbl">状态</span>
+              <button data-state="normal" class="active">正常</button>
+              <button data-state="loading">加载</button>
+              <button data-state="empty">空</button>
+              <button data-state="error">错误</button>
+              <button data-state="edge">边界</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="stage" id="board-stage" data-state="normal">
+          <!-- 正常态：看板视图 -->
+          <div class="state-block state-normal">
+            <div class="board" id="board-kanban">
+              <div class="col-card">
+                <div class="col-head"><span class="ct">待办</span><span class="n">1</span><svg class="icon ic-16" style="margin-left:auto;color:var(--meta)"><use href="#ic-plus"/></svg></div>
+                <div class="kanban-card">
+                  <div class="kt truncate">官网落地页文案定稿</div>
+                  <div class="km"><span class="kp"><span class="dot dot-pm"></span><span class="badge badge-member">中</span><span class="who"><span class="avatar av-24">王</span></span></span><span class="row gap-1"><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-20</span><svg class="icon ic-16" style="color:var(--meta)"><use href="#ic-grip"/></svg></span></div>
+                </div>
+              </div>
+              <div class="col-card">
+                <div class="col-head"><span class="ct">进行中</span><span class="n">2</span><svg class="icon ic-16" style="margin-left:auto;color:var(--meta)"><use href="#ic-plus"/></svg></div>
+                <div class="kanban-card">
+                  <div class="kt truncate">Q3 增长复盘</div>
+                  <div class="km"><span class="kp"><span class="dot dot-ph"></span><span class="badge badge-warn">高</span><span class="who"><span class="avatar av-24">陈</span></span></span><span class="row gap-1"><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-22</span><svg class="icon ic-16" style="color:var(--meta)"><use href="#ic-grip"/></svg></span></div>
+                </div>
+                <div class="kanban-card">
+                  <div class="kt truncate">支付网关 Stripe 对接</div>
+                  <div class="km"><span class="kp"><span class="dot dot-pl"></span><span class="badge badge-member">低</span><span class="who"><span class="avatar av-24">张</span></span></span><span class="row gap-1"><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-28</span><svg class="icon ic-16" style="color:var(--meta)"><use href="#ic-grip"/></svg></span></div>
+                </div>
+              </div>
+              <div class="col-card">
+                <div class="col-head"><span class="ct">已完成</span><span class="n">1</span><svg class="icon ic-16" style="margin-left:auto;color:var(--meta)"><use href="#ic-plus"/></svg></div>
+                <div class="kanban-card">
+                  <div class="kt truncate">竞品功能对比表</div>
+                  <div class="km"><span class="kp"><svg class="icon ic-16" style="color:var(--status-done-fg)"><use href="#ic-circle-check"/></svg><span class="who"><span class="avatar av-24">周</span></span></span><span class="row gap-1"><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-15</span><svg class="icon ic-16" style="color:var(--meta)"><use href="#ic-grip"/></svg></span></div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 列表视图（同数据）-->
+            <div class="list-view" id="board-list">
+              <div class="list-row"><svg class="icon ic-20" style="color:var(--status-todo-fg)"><use href="#ic-circle"/></svg><span class="lt truncate">官网落地页文案定稿</span><span class="lc"><span class="dot dot-pm"></span><span class="badge badge-member">中</span><span class="who"><span class="avatar av-24">王</span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-20</span></span></div>
+              <div class="list-row"><svg class="icon ic-20" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg><span class="lt truncate">Q3 增长复盘</span><span class="lc"><span class="dot dot-ph"></span><span class="badge badge-warn">高</span><span class="who"><span class="avatar av-24">陈</span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-22</span></span></div>
+              <div class="list-row"><svg class="icon ic-20" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg><span class="lt truncate">支付网关 Stripe 对接</span><span class="lc"><span class="dot dot-pl"></span><span class="badge badge-member">低</span><span class="who"><span class="avatar av-24">张</span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-28</span></span></div>
+              <div class="list-row"><svg class="icon ic-20" style="color:var(--status-done-fg)"><use href="#ic-circle-check"/></svg><span class="lt truncate">竞品功能对比表</span><span class="lc"><span class="who"><span class="avatar av-24">周</span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-15</span></span></div>
+            </div>
+          </div>
+
+          <!-- 加载态 -->
+          <div class="state-block state-loading">
+            <div class="board">
+              <div class="col-card"><div class="col-head"><span class="ct">待办</span></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+              <div class="col-card"><div class="col-head"><span class="ct">进行中</span></div><div class="skeleton sk-card"></div><div class="skeleton sk-card"></div></div>
+              <div class="col-card"><div class="col-head"><span class="ct">已完成</span></div><div class="skeleton sk-card"></div></div>
+            </div>
+          </div>
+
+          <!-- 空态 -->
+          <div class="state-block state-empty">
+            <div class="empty-box">
+              <svg class="icon ic-32" style="color:var(--muted)"><use href="#ic-kanban"/></svg>
+              <div class="et">还没有任何任务</div>
+              <div class="es">从模板快速创建，或新建你的第一个任务开始协作。</div>
+              <div class="row gap-2" style="justify-content:center"><button class="btn btn-primary"><svg class="icon ic-20"><use href="#ic-plus"/></svg>新建任务</button><button class="btn btn-ghost">从模板新建</button></div>
+            </div>
+          </div>
+
+          <!-- 错误态 -->
+          <div class="state-block state-error">
+            <div class="error-box">
+              <svg class="icon ic-32" style="color:var(--danger)"><use href="#ic-circle-alert"/></svg>
+              <div class="et">看板加载失败</div>
+              <div class="es">拖拽状态未能保存时也会回弹到原列并提示，请重试。</div>
+              <button class="btn btn-secondary" onclick="document.getElementById('board-stage').dataset.state='normal'"><svg class="icon ic-20"><use href="#ic-chevron-right"/></svg>重试</button>
+            </div>
+          </div>
+
+          <!-- 边界态（单列 >20 卡）-->
+          <div class="state-block state-edge">
+            <div class="banner banner-warn"><svg class="icon ic-20"><use href="#ic-alert"/></svg><span>「进行中」列已有 <b class="mono">24</b> 张卡片，列内已启用滚动，建议拆分子任务。</span></div>
+            <div class="board">
+              <div class="col-card">
+                <div class="col-head"><span class="ct">进行中</span><span class="n">24</span></div>
+                <div style="max-height:360px;overflow-y:auto">
+                  <div class="kanban-card"><div class="kt truncate">Q3 增长复盘</div><div class="km"><span class="kp"><span class="dot dot-ph"></span><span class="who"><span class="avatar av-24">陈</span></span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-22</span></div></div>
+                  <div class="kanban-card"><div class="kt truncate">支付网关 Stripe 对接</div><div class="km"><span class="kp"><span class="dot dot-pl"></span><span class="who"><span class="avatar av-24">张</span></span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">08-28</span></div></div>
+                  <div class="kanban-card"><div class="kt truncate">设计系统 Token 收敛</div><div class="km"><span class="kp"><span class="dot dot-pm"></span><span class="who"><span class="avatar av-24">李</span></span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">09-02</span></div></div>
+                  <div class="kanban-card"><div class="kt truncate">周报自动化脚本</div><div class="km"><span class="kp"><span class="dot dot-pl"></span><span class="who"><span class="avatar av-24">王</span></span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">09-05</span></div></div>
+                  <div class="kanban-card"><div class="kt truncate">客户成功回访清单</div><div class="km"><span class="kp"><span class="dot dot-pm"></span><span class="who"><span class="avatar av-24">周</span></span></span><span class="due mono" style="font-size:var(--text-xs);color:var(--meta)">09-08</span></div></div>
+                </div>
+              </div>
+              <div class="col-card"><div class="col-head"><span class="ct">待办</span><span class="n">3</span></div><div class="kanban-card"><div class="kt truncate">官网落地页文案定稿</div></div></div>
+              <div class="col-card"><div class="col-head"><span class="ct">已完成</span><span class="n">1</span></div><div class="kanban-card"><div class="kt truncate">竞品功能对比表</div></div></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 3：任务详情 ============ -->
+      <section class="page" id="page-detail">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-file"/></svg>TASK-2041</span>
+            <h1 class="page-title">客户 Onboarding 流程 v2</h1>
+            <p class="page-sub">任务详情 · 状态、负责人与决策记录</p>
+          </div>
+          <button class="btn btn-ghost"><svg class="icon ic-20"><use href="#ic-settings"/></svg>编辑</button>
+        </div>
+
+        <div class="detail-grid">
+          <div class="detail-main">
+            <div class="dt">客户 Onboarding 流程 v2</div>
+            <p class="desc">梳理新客户从签约到首次成功使用的 6 步流程，挂决策记录 v2，作为销售与交付团队的统一口径。</p>
+
+            <div class="section-h"><svg class="icon ic-20"><use href="#ic-message"/></svg>评论 <span class="count-chip">1</span></div>
+            <div class="comment">
+              <span class="avatar av-32">李</span>
+              <div class="cb">
+                <div class="cmeta"><b>李维</b><span class="ctime">2 小时前</span></div>
+                <p class="desc"><span class="mention">@王悦</span> 流程图初稿已写入决策记录，请 review 一下第 3 步的验收标准。</p>
+              </div>
+            </div>
+            <div class="comment">
+              <span class="avatar av-32">王</span>
+              <div class="cb">
+                <div class="cmeta"><b>王悦</b><span class="ctime">刚刚</span></div>
+                <p class="desc">收到，已补充「首次成功使用」的判定条件，详见决策记录 v2。</p>
+              </div>
+            </div>
+            <div class="field" style="margin-top:var(--space-4)">
+              <input class="input" placeholder="写下评论，使用 @ 提及成员…" aria-label="添加评论" />
+            </div>
+
+            <div class="section-h"><svg class="icon ic-20"><use href="#ic-file"/></svg>决策记录 <span class="count-chip">1</span></div>
+            <div class="decision">
+              <div class="dh"><b>Onboarding 六步法 v2</b><span class="dv">v2 · 作者 周敏</span></div>
+              <p>1. 签约确认 → 2. 开通工作区 → 3. 首场培训（验收：关键角色完成 1 次实操）→ 4. 数据迁移 → 5. 首次成功使用（判定：7 日内创建首个任务并指派）→ 6. 季度回访。</p>
+              <div class="dver">版本留痕：v1（08-12 周敏）→ v2（08-19 周敏），Markdown 单编辑，历史可回溯。</div>
+            </div>
+          </div>
+
+          <aside class="meta-panel">
+            <div class="mp-row"><span class="k">负责人</span><span class="v who"><span class="avatar av-24">李</span>李维</span></div>
+            <div class="mp-row"><span class="k">截止日期</span><span class="v mono">08-25</span></div>
+            <div class="mp-row"><span class="k">优先级</span><span class="v"><span class="row gap-2"><span class="dot dot-ph"></span>高</span></span></div>
+            <div class="mp-row"><span class="k">状态</span><span class="v"><span class="row gap-2"><svg class="icon ic-16" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg>进行中</span></span></div>
+            <div class="mp-row"><span class="k">创建于</span><span class="v mono">08-12</span></div>
+            <div class="mp-row"><span class="k">标签</span><span class="v"><span class="badge badge-member"><svg class="icon ic-16"><use href="#ic-tag"/></svg>交付</span></span></div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ============ 页面 3.5：目标 OKR ============ -->
+      <section class="page" id="page-goals">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-target"/></svg>目标管理</span>
+            <h1 class="page-title">目标 OKR</h1>
+            <p class="page-sub">本季度团队目标与关键结果 · 进度自动汇总自任务看板</p>
+          </div>
+          <button class="btn btn-primary btn-sm"><svg class="icon ic-16"><use href="#ic-plus"/></svg>新建目标</button>
+        </div>
+
+        <div class="okr-list">
+          <div class="okr-card card-hover">
+            <div class="okr-head"><div class="row gap-2"><span class="okr-q">Q3</span><span class="okr-name">提升新客激活率</span></div><span class="badge badge-warn">进行中</span></div>
+            <div class="okr-progress"><div class="bar"><span style="width:62%"></span></div><span class="pct">62%</span></div>
+            <div class="okr-kr"><div class="kr"><span class="kr-t">落地页 A/B 实验上线</span><span class="kr-m">关联 3 个任务</span></div><div class="kr"><span class="kr-t">Onboarding 邮件序列重构</span><span class="kr-m">关联 5 个任务</span></div><div class="kr"><span class="kr-t">激活率看板接入 BI</span><span class="kr-m">关联 2 个任务</span></div></div>
+          </div>
+          <div class="okr-card card-hover">
+            <div class="okr-head"><div class="row gap-2"><span class="okr-q">Q3</span><span class="okr-name">计费上线与付费转化</span></div><span class="badge badge-pending">待启动</span></div>
+            <div class="okr-progress"><div class="bar"><span style="width:18%"></span></div><span class="pct">18%</span></div>
+            <div class="okr-kr"><div class="kr"><span class="kr-t">Stripe 订阅接入</span><span class="kr-m">关联 4 个任务</span></div><div class="kr"><span class="kr-t">席位计费逻辑</span><span class="kr-m">关联 2 个任务</span></div><div class="kr"><span class="kr-t">试用转付费流程</span><span class="kr-m">关联 1 个任务</span></div></div>
+          </div>
+          <div class="okr-card card-hover">
+            <div class="okr-head"><div class="row gap-2"><span class="okr-q">Q2</span><span class="okr-name">文档协作体验打磨</span></div><span class="badge badge-done">已达成</span></div>
+            <div class="okr-progress"><div class="bar"><span style="width:100%"></span></div><span class="pct">100%</span></div>
+            <div class="okr-kr"><div class="kr"><span class="kr-t">决策记录模板</span><span class="kr-m">关联 6 个任务</span></div><div class="kr"><span class="kr-t">评论与 @ 提醒</span><span class="kr-m">关联 4 个任务</span></div></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 4：成员管理 ============ -->
+      <section class="page" id="page-members">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-users"/></svg>团队</span>
+            <h1 class="page-title">成员</h1>
+            <p class="page-sub">当前 5 人占用席位 · 三角色 RBAC（Owner / Admin / Member）</p>
+          </div>
+        </div>
+
+        <div class="card" style="margin-bottom:var(--space-6)">
+          <div class="row gap-3 wrap">
+            <div class="field" style="flex:1;min-width:240px"><label for="inv-email">邀请成员（邮箱）</label><input class="input need-admin" id="inv-email" placeholder="partner@acme.test" /></div>
+            <div class="field" style="width:160px"><label for="inv-role">角色</label><select class="input need-admin" id="inv-role" style="height:40px"><option>Member</option><option>Admin</option><option>Owner</option></select></div>
+            <div class="field" style="justify-content:flex-end"><button class="btn btn-primary need-admin" style="margin-top:auto"><svg class="icon ic-20"><use href="#ic-user-plus"/></svg>邀请</button></div>
+          </div>
+          <p class="hint need-admin" style="margin-top:var(--space-2)">仅 Owner / Admin 可邀请成员与修改角色；Member 不可见以上操作。</p>
+        </div>
+
+        <div class="card" style="padding:0;overflow:hidden">
+          <table class="tbl">
+            <thead><tr><th>成员</th><th>角色</th><th>邮箱</th><th style="width:120px">操作</th></tr></thead>
+            <tbody>
+              <tr>
+                <td><span class="who"><span class="avatar av-32">陈</span>陈思</span></td>
+                <td><span class="badge badge-owner">Owner</span></td>
+                <td class="muted">chen@acme.test</td>
+                <td><div class="row gap-1"><button class="icon-btn need-admin" aria-label="更多操作" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-more"/></svg></button></div></td>
+              </tr>
+              <tr>
+                <td><span class="who"><span class="avatar av-32">李</span>李维</span></td>
+                <td><span class="badge badge-admin">Admin</span></td>
+                <td class="muted">li@acme.test</td>
+                <td><div class="row gap-1"><button class="icon-btn need-admin" aria-label="修改角色" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-more"/></svg></button><button class="icon-btn need-admin" aria-label="移除成员" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-trash"/></svg></button></div></td>
+              </tr>
+              <tr>
+                <td><span class="who"><span class="avatar av-32">王</span>王悦</span></td>
+                <td><span class="badge badge-member">Member</span></td>
+                <td class="muted">wang@acme.test</td>
+                <td><div class="row gap-1"><button class="icon-btn need-admin" aria-label="修改角色" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-more"/></svg></button><button class="icon-btn need-admin" aria-label="移除成员" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-trash"/></svg></button></div></td>
+              </tr>
+              <tr>
+                <td><span class="who"><span class="avatar av-32">张</span>张航</span></td>
+                <td><span class="badge badge-member">Member</span></td>
+                <td class="muted">zhang@acme.test</td>
+                <td><div class="row gap-1"><button class="icon-btn need-admin" aria-label="修改角色" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-more"/></svg></button><button class="icon-btn need-admin" aria-label="移除成员" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-trash"/></svg></button></div></td>
+              </tr>
+              <tr>
+                <td><span class="who"><span class="avatar av-32">周</span>周敏</span></td>
+                <td><span class="badge badge-pending">邀请待接受</span></td>
+                <td class="muted">zhou@acme.test</td>
+                <td><button class="btn btn-ghost btn-sm need-admin">撤回邀请</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="hint" style="margin-top:var(--space-3)">演示：用顶栏「角色」切换器查看 RBAC 隐藏规则——Member 不会看到移除 / 邀请 / 改角色按钮（前端隐藏，服务端仍强制 403）。</p>
+      </section>
+
+      <!-- ============ 页面 5：计费 ============ -->
+      <section class="page" id="page-billing">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-card"/></svg>账户</span>
+            <h1 class="page-title">计费</h1>
+            <p class="page-sub">席位用量与订阅管理 · 免费版限 10 人</p>
+          </div>
+        </div>
+
+        <div class="plan-grid">
+          <div class="card">
+            <div class="row between" style="margin-bottom:var(--space-4)">
+              <div>
+                <div class="row gap-2"><h3 style="font-size:var(--text-lg)">当前套餐</h3><span class="badge badge-member">免费版</span></div>
+                <p class="muted" style="font-size:var(--text-sm);margin-top:var(--space-1)">适合 10 人以内的小团队</p>
+              </div>
+            </div>
+            <div class="row between" style="margin-bottom:var(--space-2)"><span class="fg2" style="font-size:var(--text-sm)">席位用量</span><span class="mono" style="font-size:var(--text-sm);font-weight:var(--weight-semibold)">5 / 10</span></div>
+            <div class="progress" style="margin-bottom:var(--space-5)"><span style="width:50%"></span></div>
+            <div class="row gap-3 wrap">
+              <button class="btn btn-primary need-owner"><svg class="icon ic-20"><use href="#ic-card"/></svg>升级到付费版 ¥59/人/月</button>
+              <button class="btn btn-ghost need-owner">管理订阅</button>
+            </div>
+            <p class="hint need-owner" style="margin-top:var(--space-3)">仅工作区 Owner 可升级与管理订阅；Admin / Member 不可见上述按钮。</p>
+            <div class="banner banner-warn need-notowner" style="margin-top:var(--space-3);display:none"><svg class="icon ic-20"><use href="#ic-circle-alert"/></svg><span>仅工作区 Owner 可管理计费与订阅。</span></div>
+          </div>
+
+          <div class="card">
+            <h3 style="font-size:var(--text-lg);margin-bottom:var(--space-4)">价目</h3>
+            <div class="price-list">
+              <div class="price-item cur"><div><div class="pn">免费版</div><div class="pp">≤ 10 人</div></div><div class="pc">¥0</div></div>
+              <div class="price-item"><div><div class="pn">团队版</div><div class="pp">无限成员 · 高级权限</div></div><div class="pc">¥59<span style="font-size:var(--text-xs);color:var(--muted)">/人/月</span></div></div>
+              <div class="price-item"><div><div class="pn">商业版</div><div class="pp">审计 · 数据驻留</div></div><div class="pc">¥80<span style="font-size:var(--text-xs);color:var(--muted)">/人/月</span></div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:var(--space-6);padding:0;overflow:hidden">
+          <div class="panel-title" style="padding:var(--space-5) var(--space-5) 0"><h3>账单历史</h3></div>
+          <div class="state-block" id="bill-empty" style="display:block">
+            <div class="empty-box" style="border:none">
+              <svg class="icon ic-32" style="color:var(--muted)"><use href="#ic-file"/></svg>
+              <div class="et">暂无账单</div>
+              <div class="es">升级到付费版后，账单将显示在此处。当前处于 2026-08 试用中。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 7：会议预约 ============ -->
+      <section class="page" id="page-meeting">
+        <div class="page-head">
+          <div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-calendar-clock"/></svg>办公</span><h1 class="page-title">会议预约</h1><p class="page-sub">连接日程平台，把会议结论一键沉淀为任务</p></div>
+        </div>
+        <div class="card card-hover" style="margin-bottom:var(--space-5)">
+          <div class="panel-title"><h3>连接日程平台</h3><span class="badge badge-pending">设计占位</span></div>
+          <div class="grid-2-1" style="grid-template-columns:1fr 1fr">
+            <div class="integration-card card-hover">
+              <div class="row gap-3"><svg class="icon ic-24"><use href="#ic-calendar"/></svg><div class="col"><span style="font-weight:var(--weight-medium)">飞书日历</span><span class="meta" style="font-size:var(--text-sm)">同步会议与日程，发起即建任务</span></div></div>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button>
+            </div>
+            <div class="integration-card card-hover">
+              <div class="row gap-3"><svg class="icon ic-24"><use href="#ic-users"/></svg><div class="col"><span style="font-weight:var(--weight-medium)">腾讯会议</span><span class="meta" style="font-size:var(--text-sm)">预约会议并回写参会记录</span></div></div>
+              <button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="panel-title"><h3>新建预约</h3><span class="badge badge-pending">连接平台后可用</span></div>
+          <div class="col gap-3" style="max-width:480px">
+            <label class="col gap-1"><span class="meta">会议主题</span><input class="input" placeholder="如：Q3 增长复盘同步会" disabled /></label>
+            <label class="col gap-1"><span class="meta">时间</span><input class="input" type="text" placeholder="2026-08-25 16:00–17:00" disabled /></label>
+            <label class="col gap-1"><span class="meta">参会人</span><input class="input" placeholder="陈思、李雷、王芳" disabled /></label>
+            <button class="btn btn-primary" disabled style="align-self:flex-start">创建预约</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 7.5：工作汇报 ============ -->
+      <section class="page" id="page-reports">
+        <div class="page-head">
+          <div class="head-text">
+            <span class="eyebrow"><svg class="icon ic-16"><use href="#ic-bar-chart-2"/></svg>管理</span>
+            <h1 class="page-title">工作汇报</h1>
+            <p class="page-sub">由任务、目标与会议自动汇总 · 一键生成周报 / 月报</p>
+          </div>
+          <div class="row gap-2">
+            <div class="seg" id="report-range">
+              <button class="active" data-range="week">本周</button>
+              <button data-range="month">本月</button>
+            </div>
+            <button class="btn btn-secondary btn-sm"><svg class="icon ic-16"><use href="#ic-download"/></svg>导出</button>
+          </div>
+        </div>
+
+        <div class="grid-2-1">
+          <div class="card">
+            <div class="panel-title"><h3>本周汇总</h3><span class="count-chip">自动生成</span></div>
+            <div class="report-block"><span class="rb-label">已完成任务</span><span class="rb-val">14 <em>较上周 +3</em></span></div>
+            <div class="report-block"><span class="rb-label">进行中任务</span><span class="rb-val">9</span></div>
+            <div class="report-block"><span class="rb-label">达成关键结果</span><span class="rb-val">2 / 8</span></div>
+            <div class="report-block"><span class="rb-label">会议场次</span><span class="rb-val">6 <em>含 2 场外部</em></span></div>
+            <div class="report-note">汇报基于 <b>任务看板</b>、<b>目标 OKR</b>、<b>会议预约</b> 的实时数据自动生成，无需手工填表。</div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><h3>亮点与风险</h3></div>
+            <div class="report-tags">
+              <span class="rt rt-win"><svg class="icon ic-16"><use href="#ic-circle-check"/></svg>Stripe 计费接入过半</span>
+              <span class="rt rt-risk"><svg class="icon ic-16"><use href="#ic-circle-alert"/></svg>落地页文案逾期 2 天</span>
+              <span class="rt rt-win"><svg class="icon ic-16"><use href="#ic-circle-check"/></svg>激活率 +4.2pt</span>
+              <span class="rt rt-risk"><svg class="icon ic-16"><use href="#ic-circle-alert"/></svg>设计资源紧缺</span>
+            </div>
+            <div class="report-preview">
+              <div class="rp-line">本周团队围绕「提升新客激活率」推进 14 项任务，其中 Stripe 计费接入进度过半……</div>
+              <div class="rp-line">风险方面，落地页文案已逾期 2 天，建议优先排期；设计资源为本月瓶颈。</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 8：智能 Office ============ -->
+      <section class="page" id="page-office">
+        <div class="page-head"><div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-files"/></svg>办公</span><h1 class="page-title">智能 Office</h1><p class="page-sub">在工作区内起草与打开文档，结论随手沉淀为任务</p></div></div>
+        <div class="grid-2-1" style="grid-template-columns:repeat(2,1fr)">
+          <div class="card">
+            <div class="row gap-2" style="margin-bottom:var(--space-3)"><svg class="icon ic-24"><use href="#ic-file"/></svg><h3>Word 文档</h3></div>
+            <div class="col gap-2">
+              <div class="doc-row"><span class="doc-name truncate">Q3 增长复盘.docx</span><button class="btn btn-ghost btn-sm" onclick="showToast('文档编辑将在正式版本开放（设计原型）','')">打开</button></div>
+              <div class="doc-row"><span class="doc-name truncate">客户 Onboarding 六步法 v2.docx</span><button class="btn btn-ghost btn-sm" onclick="showToast('文档编辑将在正式版本开放（设计原型）','')">打开</button></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-3)" onclick="showToast('新建文档将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plus"/></svg>新建文档</button>
+          </div>
+          <div class="card">
+            <div class="row gap-2" style="margin-bottom:var(--space-3)"><svg class="icon ic-24"><use href="#ic-file"/></svg><h3>Excel 表格</h3></div>
+            <div class="col gap-2">
+              <div class="doc-row"><span class="doc-name truncate">预算表 v2.xlsx</span><button class="btn btn-ghost btn-sm" onclick="showToast('表格编辑将在正式版本开放（设计原型）','')">打开</button></div>
+              <div class="doc-row"><span class="doc-name truncate">渠道投放 ROI.xlsx</span><button class="btn btn-ghost btn-sm" onclick="showToast('表格编辑将在正式版本开放（设计原型）','')">打开</button></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-3)" onclick="showToast('新建表格将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plus"/></svg>新建表格</button>
+          </div>
+          <div class="card">
+            <div class="row gap-2" style="margin-bottom:var(--space-3)"><svg class="icon ic-24"><use href="#ic-file"/></svg><h3>PPT 演示</h3></div>
+            <div class="col gap-2">
+              <div class="doc-row"><span class="doc-name truncate">融资路演 v3.pptx</span><button class="btn btn-ghost btn-sm" onclick="showToast('演示编辑将在正式版本开放（设计原型）','')">打开</button></div>
+              <div class="doc-row"><span class="doc-name truncate">周报.pptx</span><button class="btn btn-ghost btn-sm" onclick="showToast('演示编辑将在正式版本开放（设计原型）','')">打开</button></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-3)" onclick="showToast('新建演示将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plus"/></svg>新建演示</button>
+          </div>
+          <div class="card">
+            <div class="row gap-2" style="margin-bottom:var(--space-3)"><svg class="icon ic-24"><use href="#ic-file"/></svg><h3>PDF</h3></div>
+            <div class="col gap-2">
+              <div class="doc-row"><span class="doc-name truncate">服务协议.pdf</span><button class="btn btn-ghost btn-sm" onclick="showToast('PDF 预览将在正式版本开放（设计原型）','')">打开</button></div>
+              <div class="doc-row"><span class="doc-name truncate">合规自查清单.pdf</span><button class="btn btn-ghost btn-sm" onclick="showToast('PDF 预览将在正式版本开放（设计原型）','')">打开</button></div>
+            </div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:var(--space-3)" onclick="showToast('上传 PDF 将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plus"/></svg>上传文件</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 9：集成中心 ============ -->
+      <section class="page" id="page-integrations">
+        <div class="page-head"><div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-plug"/></svg>集成</span><h1 class="page-title">集成中心</h1><p class="page-sub">连接你已在使用的办公平台，让讨论结论自动落位</p></div></div>
+        <div class="grid-2-1" style="grid-template-columns:repeat(2,1fr)">
+          <div class="integration-card"><div class="row gap-3 between"><div class="row gap-3"><svg class="icon ic-24"><use href="#ic-calendar"/></svg><span style="font-weight:var(--weight-medium)">飞书</span></div><span class="badge badge-pending">规划中</span></div><p class="meta" style="font-size:var(--text-sm)">IM、云文档、日历双向同步</p><button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button></div>
+          <div class="integration-card"><div class="row gap-3 between"><div class="row gap-3"><svg class="icon ic-24"><use href="#ic-users"/></svg><span style="font-weight:var(--weight-medium)">腾讯会议</span></div><span class="badge badge-pending">规划中</span></div><p class="meta" style="font-size:var(--text-sm)">会议预约与参会记录回写</p><button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button></div>
+          <div class="integration-card"><div class="row gap-3 between"><div class="row gap-3"><svg class="icon ic-24"><use href="#ic-message"/></svg><span style="font-weight:var(--weight-medium)">企业微信</span></div><span class="badge badge-pending">规划中</span></div><p class="meta" style="font-size:var(--text-sm)">审批流与通知触达</p><button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button></div>
+          <div class="integration-card"><div class="row gap-3 between"><div class="row gap-3"><svg class="icon ic-24"><use href="#ic-calendar"/></svg><span style="font-weight:var(--weight-medium)">Google Workspace</span></div><span class="badge badge-pending">规划中</span></div><p class="meta" style="font-size:var(--text-sm)">邮件、日历与文档互通</p><button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button></div>
+          <div class="integration-card"><div class="row gap-3 between"><div class="row gap-3"><svg class="icon ic-24"><use href="#ic-file"/></svg><span style="font-weight:var(--weight-medium)">Microsoft 365</span></div><span class="badge badge-pending">规划中</span></div><p class="meta" style="font-size:var(--text-sm)">Office 文档与 Teams 同步</p><button class="btn btn-secondary btn-sm" onclick="showToast('集成将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plug"/></svg>连接</button></div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 10：设置 ============ -->
+      <section class="page" id="page-settings">
+        <div class="page-head"><div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-settings"/></svg>账户</span><h1 class="page-title">设置</h1><p class="page-sub">管理你的账户、工作区与外观</p></div></div>
+        <div class="col gap-4" style="max-width:720px">
+          <div class="card">
+            <div class="panel-title"><h3>个人信息</h3></div>
+            <div class="col gap-3">
+              <div class="field"><label for="s-name">姓名</label><input class="input" id="s-name" value="陈思" /></div>
+              <div class="field"><label for="s-email">邮箱</label><input class="input" id="s-email" type="email" value="chen@acme.test" /></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><h3>工作区</h3></div>
+            <div class="col gap-3">
+              <div class="field"><label for="s-ws">工作区名称</label><input class="input" id="s-ws" value="Acme 增长组" /></div>
+              <div class="field"><label for="s-ws-key">工作区标识</label><input class="input" id="s-ws-key" value="acme" /></div>
+            </div>
+          </div>
+          <div class="card">
+            <div class="panel-title"><h3>外观</h3></div>
+            <div class="row gap-2 wrap">
+              <button class="btn btn-primary btn-sm" onclick="setThemeMode('light',this)">浅色</button>
+              <button class="btn btn-secondary btn-sm" onclick="setThemeMode('dark',this)">深色</button>
+              <button class="btn btn-ghost btn-sm" onclick="setThemeMode('system',this)">跟随系统</button>
+            </div>
+          </div>
+          <div class="card need-owner">
+            <div class="panel-title"><h3>危险区</h3></div>
+            <p class="meta" style="font-size:var(--text-sm);margin-bottom:var(--space-3)">删除工作区将移除所有任务、文档与成员，且不可恢复。仅工作区 Owner 可执行。</p>
+            <button class="btn btn-destructive btn-sm" onclick="showToast('删除操作需二次确认，正式版本开放','alert')"><svg class="icon ic-16"><use href="#ic-trash"/></svg>删除工作区</button>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 11：我的待办 ============ -->
+      <section class="page" id="page-mytasks">
+        <div class="page-head">
+          <div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-check-square"/></svg>陈思</span><h1 class="page-title">我的待办</h1><p class="page-sub">分配给你的任务与截止日</p></div>
+          <button class="btn btn-primary btn-sm" onclick="showToast('新建待办将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plus"/></svg>新建待办</button>
+        </div>
+        <div class="card" style="padding:var(--space-4)">
+          <div class="row between" style="margin-bottom:var(--space-4)">
+            <div class="seg" id="mytasks-filter">
+              <button class="active" data-filter="all">全部</button>
+              <button data-filter="todo">待办</button>
+              <button data-filter="doing">进行中</button>
+              <button data-filter="done">已完成</button>
+            </div>
+            <span class="count-chip" id="mytasks-count">5</span>
+          </div>
+          <div class="task-row" data-done="false"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"><svg class="icon"><use href="#ic-check"/></svg></span><span class="tt truncate">完成 Q3 增长复盘初稿</span><span class="who"><span class="avatar av-24">陈</span></span><span class="due">08-22</span></div>
+          <div class="task-row" data-done="false"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"><svg class="icon"><use href="#ic-check"/></svg></span><span class="tt truncate">评审客户 Onboarding 流程 v2</span><span class="who"><span class="avatar av-24">李</span></span><span class="due">08-25</span></div>
+          <div class="task-row" data-done="false"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"><svg class="icon"><use href="#ic-check"/></svg></span><span class="tt truncate">回复王芳关于落地页文案的疑问</span><span class="who"><span class="avatar av-24">陈</span></span><span class="due">08-20</span></div>
+          <div class="task-row" data-done="false"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"><svg class="icon"><use href="#ic-check"/></svg></span><span class="tt truncate">提交周报自动化脚本 PR</span><span class="who"><span class="avatar av-24">王</span></span><span class="due">08-28</span></div>
+          <div class="task-row" data-done="false"><span class="chk" role="checkbox" aria-checked="false" tabindex="0"><svg class="icon"><use href="#ic-check"/></svg></span><span class="tt truncate">准备融资路演材料</span><span class="who"><span class="avatar av-24">陈</span></span><span class="due">09-02</span></div>
+        </div>
+      </section>
+
+      <!-- ============ 页面 12：日程 ============ -->
+      <section class="page" id="page-calendar">
+        <div class="page-head">
+          <div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-calendar"/></svg>2026 年 8 月</span><h1 class="page-title">日程</h1><p class="page-sub">连接会议平台后自动同步</p></div>
+          <div class="row gap-2">
+            <button class="btn btn-ghost btn-sm" onclick="showToast('日程同步将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-calendar-clock"/></svg>同步平台</button>
+            <button class="btn btn-primary btn-sm" onclick="showToast('新建日程将在正式版本开放（设计原型）','')"><svg class="icon ic-16"><use href="#ic-plus"/></svg>新建日程</button>
+          </div>
+        </div>
+        <div class="cal">
+          <div class="cal-toolbar row between" style="padding:var(--space-4) var(--space-4) 0">
+            <div class="row gap-2"><svg class="icon ic-20"><use href="#ic-calendar"/></svg><h3 style="font-size:var(--text-lg);font-weight:var(--weight-semibold)">2026 年 8 月</h3></div>
+            <div class="row gap-1">
+              <button class="icon-btn" style="width:32px;height:32px" onclick="showToast('月份切换将在正式版本开放（设计原型）','')" aria-label="上一月"><svg class="icon ic-16" style="transform:scaleX(-1)"><use href="#ic-chevron-right"/></svg></button>
+              <button class="icon-btn" style="width:32px;height:32px" onclick="showToast('月份切换将在正式版本开放（设计原型）','')" aria-label="下一月"><svg class="icon ic-16"><use href="#ic-chevron-right"/></svg></button>
+            </div>
+          </div>
+          <div class="cal-head"><div>一</div><div>二</div><div>三</div><div>四</div><div>五</div><div>六</div><div>日</div></div>
+          <div class="cal-grid">
+            <div class="cal-cell out"><span class="cal-date">27</span></div>
+            <div class="cal-cell out"><span class="cal-date">28</span></div>
+            <div class="cal-cell out"><span class="cal-date">29</span></div>
+            <div class="cal-cell out"><span class="cal-date">30</span></div>
+            <div class="cal-cell out"><span class="cal-date">31</span></div>
+            <div class="cal-cell"><span class="cal-date">1</span></div>
+            <div class="cal-cell"><span class="cal-date">2</span></div>
+
+            <div class="cal-cell"><span class="cal-date">3</span></div>
+            <div class="cal-cell"><span class="cal-date">4</span></div>
+            <div class="cal-cell"><span class="cal-date">5</span></div>
+            <div class="cal-cell"><span class="cal-date">6</span></div>
+            <div class="cal-cell"><span class="cal-date">7</span></div>
+            <div class="cal-cell"><span class="cal-date">8</span></div>
+            <div class="cal-cell"><span class="cal-date">9</span></div>
+
+            <div class="cal-cell"><span class="cal-date">10</span></div>
+            <div class="cal-cell"><span class="cal-date">11</span></div>
+            <div class="cal-cell"><span class="cal-date">12</span></div>
+            <div class="cal-cell"><span class="cal-date">13</span></div>
+            <div class="cal-cell"><span class="cal-date">14</span></div>
+            <div class="cal-cell"><span class="cal-date">15</span></div>
+            <div class="cal-cell"><span class="cal-date">16</span></div>
+
+            <div class="cal-cell"><span class="cal-date">17</span></div>
+            <div class="cal-cell"><span class="cal-date">18</span><div class="cal-ev"><span class="cal-dot" style="background:var(--accent)"></span>周会 10:00</div></div>
+            <div class="cal-cell"><span class="cal-date">19</span></div>
+            <div class="cal-cell"><span class="cal-date">20</span></div>
+            <div class="cal-cell"><span class="cal-date">21</span></div>
+            <div class="cal-cell today"><span class="cal-date">22</span><div class="cal-ev"><span class="cal-dot" style="background:var(--accent)"></span>Q3 复盘 16:00</div><div class="cal-ev"><span class="cal-dot" style="background:var(--success)"></span>客户回访</div></div>
+            <div class="cal-cell"><span class="cal-date">23</span></div>
+
+            <div class="cal-cell"><span class="cal-date">24</span></div>
+            <div class="cal-cell"><span class="cal-date">25</span><div class="cal-ev"><span class="cal-dot" style="background:var(--warn)"></span>Onboarding 评审</div></div>
+            <div class="cal-cell"><span class="cal-date">26</span></div>
+            <div class="cal-cell"><span class="cal-date">27</span></div>
+            <div class="cal-cell"><span class="cal-date">28</span><div class="cal-ev"><span class="cal-dot" style="background:var(--accent)"></span>支付网关联调</div></div>
+            <div class="cal-cell"><span class="cal-date">29</span></div>
+            <div class="cal-cell"><span class="cal-date">30</span></div>
+
+            <div class="cal-cell"><span class="cal-date">31</span></div>
+            <div class="cal-cell out"><span class="cal-date">1</span></div>
+            <div class="cal-cell out"><span class="cal-date">2</span></div>
+            <div class="cal-cell out"><span class="cal-date">3</span></div>
+            <div class="cal-cell out"><span class="cal-date">4</span></div>
+            <div class="cal-cell out"><span class="cal-date">5</span></div>
+            <div class="cal-cell out"><span class="cal-date">6</span></div>
+          </div>
+        </div>
+        <p class="hint" style="margin-top:var(--space-4)">提示：连接飞书日历 / 腾讯会议后，会议将自动显示在此，并一键沉淀为任务。</p>
+      </section>
+
+      <!-- ============ 页面 13：规划中（云盘 / 知识库 / 审批 共用）============ -->
+      <section class="page" id="page-coming">
+        <div class="page-head"><div class="head-text"><span class="eyebrow"><svg class="icon ic-16"><use href="#ic-swap"/></svg>规划中</span><h1 class="page-title" id="coming-title">规划中</h1><p class="page-sub" id="coming-desc">该功能正在规划中，会在正式版本开放。</p></div></div>
+        <div class="empty-box" style="border:none;background:transparent">
+          <div class="empty-illu"><svg class="icon ic-32"><use href="#ic-swap"/></svg></div>
+          <div class="et">即将到来</div>
+          <div class="es">这是设计原型中的占位页面。正式版本将提供完整能力，并支持与飞书、腾讯会议、企业微信等平台对接。</div>
+          <button class="btn btn-secondary" onclick="showPage('home')">返回工作台</button>
+        </div>
+      </section>
+
+      <!-- ============ 尾栏（内容短贴底 / 滚动到底才显）============ -->
+      <footer class="app-footer">
+        <div class="fl">
+          <span class="logo" style="width:20px;height:20px;font-size:var(--text-xs)">L</span>
+          <span>corps</span>
+          <span class="meta">原型 · 非最终</span>
+        </div>
+        <div class="fr">
+          <button class="icon-btn" id="theme-btn-2" aria-label="切换主题" style="width:32px;height:32px"><svg class="icon ic-16"><use href="#ic-moon" id="theme-icon-2"/></svg></button>
+          <a onclick="showToast('帮助文档将在正式版本提供','')">帮助</a>
+          <a onclick="showToast('隐私政策将在正式版本提供','')">隐私</a>
+          <a onclick="showToast('服务条款将在正式版本提供','')">条款</a>
+          <span>© 2026</span>
+        </div>
+      </footer>
+
+    </main>
+  </div>
+</div>
+
+<!-- ============================ 登录 / 注册页 ============================ -->
+<section class="page-auth" id="page-auth">
+  <button class="icon-btn auth-theme" id="theme-btn-2" aria-label="切换浅色 / 深色主题"><svg class="icon ic-20" id="theme-icon-2"><use href="#ic-moon"/></svg></button>
+  <div class="auth-card">
+    <div class="auth-brand">
+      <div class="logo">L</div>
+      <div class="n">corps</div>
+      <div class="s">轻量协作，让结论自动落位成任务</div>
+    </div>
+
+    <div class="tabs" id="auth-tabs">
+      <button class="active" data-tab="login">登录</button>
+      <button data-tab="register">注册</button>
+    </div>
+
+    <!-- 登录 -->
+    <form class="auth-form active" id="form-login" onsubmit="return authSubmit(event,'登录成功，正在进入工作台')">
+      <div class="field"><label for="l-email">邮箱</label><input class="input" id="l-email" type="email" value="lead@acme.test" autocomplete="username" /></div>
+      <div class="field"><label for="l-pwd">密码</label><input class="input" id="l-pwd" type="password" value="acme2026!" autocomplete="current-password" /></div>
+      <button class="btn btn-primary btn-lg" type="submit" style="margin-top:var(--space-2)" id="l-submit">登录</button>
+      <div class="row between" style="font-size:var(--text-sm)"><a class="muted" href="#" onclick="return false">忘记密码？</a></div>
+    </form>
+
+    <!-- 注册 -->
+    <form class="auth-form" id="form-register" onsubmit="return authSubmit(event,'工作区已创建，正在进入')">
+      <div class="field"><label for="r-ws">工作区名称</label><input class="input" id="r-ws" value="Acme 增长组" /></div>
+      <div class="field"><label for="r-email">邮箱</label><input class="input" id="r-email" type="email" value="lead@acme.test" autocomplete="username" /></div>
+      <div class="field"><label for="r-pwd">密码</label><input class="input" id="r-pwd" type="password" value="acme2026!" autocomplete="new-password" oninput="updateStrength(this.value)" /><div class="strength" id="pwd-strength"><i></i><i></i><i></i><i></i></div><span class="hint">至少 8 位，含字母与数字</span></div>
+      <button class="btn btn-primary btn-lg" type="submit" style="margin-top:var(--space-2)" id="r-submit">创建工作区</button>
+    </form>
+
+    <div class="auth-foot"><a class="muted" href="#" style="font-size:var(--text-sm)" onclick="showPage('home');return false">跳过登录，浏览产品原型 →</a></div>
+  </div>
+</section>
+
+<!-- ============================ 命令栏 Cmd+K ============================ -->
+<div class="cmdk" id="cmdk" hidden>
+  <div class="cmdk-backdrop" data-close></div>
+  <div class="cmdk-panel" role="dialog" aria-modal="true" aria-label="全局命令栏">
+    <div class="cmdk-input-row">
+      <svg class="icon ic-20" style="color:var(--muted)"><use href="#ic-search"/></svg>
+      <input id="cmdk-input" placeholder="搜索任务、决策记录，或跳转到…" aria-label="命令栏搜索" />
+      <span class="kbd">Esc</span>
+    </div>
+    <div class="cmdk-results" id="cmdk-results">
+      <div class="cmdk-group">最近</div>
+      <div class="cmdk-item" data-go="board"><svg class="icon ic-20"><use href="#ic-clock"/></svg><span>Q3 增长复盘</span><span class="sub">进行中 · 陈思</span></div>
+      <div class="cmdk-item" data-go="detail"><svg class="icon ic-20"><use href="#ic-clock"/></svg><span>客户 Onboarding 流程 v2</span><span class="sub">进行中 · 李维</span></div>
+      <div class="cmdk-group">任务</div>
+      <div class="cmdk-item" data-go="board"><svg class="icon ic-20"><use href="#ic-kanban"/></svg><span>Q3 增长复盘</span><span class="sub">进行中 · 陈思</span></div>
+      <div class="cmdk-item" data-go="detail"><svg class="icon ic-20"><use href="#ic-file"/></svg><span>客户 Onboarding 流程 v2</span><span class="sub">进行中 · 李维</span></div>
+      <div class="cmdk-item" data-go="board"><svg class="icon ic-20"><use href="#ic-kanban"/></svg><span>支付网关 Stripe 对接</span><span class="sub">进行中 · 张航</span></div>
+      <div class="cmdk-group">决策记录</div>
+      <div class="cmdk-item" data-go="detail"><svg class="icon ic-20"><use href="#ic-file"/></svg><span>Onboarding 六步法 v2</span><span class="sub">v2 · 周敏</span></div>
+      <div class="cmdk-group">跳转</div>
+      <div class="cmdk-item" data-go="home"><svg class="icon ic-20"><use href="#ic-dashboard"/></svg><span>工作台</span></div>
+      <div class="cmdk-item" data-go="members"><svg class="icon ic-20"><use href="#ic-users"/></svg><span>成员管理</span></div>
+      <div class="cmdk-item" data-go="billing"><svg class="icon ic-20"><use href="#ic-card"/></svg><span>计费</span></div>
+      <div class="cmdk-item" data-go="meeting"><svg class="icon ic-20"><use href="#ic-calendar-clock"/></svg><span>会议预约</span></div>
+      <div class="cmdk-item" data-go="office"><svg class="icon ic-20"><use href="#ic-files"/></svg><span>智能 Office</span></div>
+      <div class="cmdk-item" data-go="integrations"><svg class="icon ic-20"><use href="#ic-plug"/></svg><span>集成中心</span></div>
+      <div class="cmdk-item" data-go="settings"><svg class="icon ic-20"><use href="#ic-settings"/></svg><span>设置</span></div>
+      <div class="cmdk-item" data-go="mytasks"><svg class="icon ic-20"><use href="#ic-check-square"/></svg><span>我的待办</span></div>
+      <div class="cmdk-item" data-go="calendar"><svg class="icon ic-20"><use href="#ic-calendar"/></svg><span>日程</span></div>
+      <div class="cmdk-item" data-go="coming" data-title="云盘"><svg class="icon ic-20"><use href="#ic-hard-drive"/></svg><span>云盘</span></div>
+      <div class="cmdk-item" data-go="coming" data-title="知识库"><svg class="icon ic-20"><use href="#ic-book-open"/></svg><span>知识库</span></div>
+      <div class="cmdk-item" data-go="coming" data-title="审批"><svg class="icon ic-20"><use href="#ic-check-check"/></svg><span>审批</span></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================ Toast 容器 ============================ -->
+<div class="toast-wrap" id="toast-wrap" aria-live="polite"></div>
+
+<!-- ============================ 原型角标 ============================ -->
+<div class="proto-badge">原型 · 非最终 · 仅供设计评审</div>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---- 侧栏折叠（最先初始化、独立容错，确保按钮一定有响应）---- */
+  try {
+    var sb = document.getElementById('sidebar');
+    var sbBtn = document.getElementById('sb-collapse');
+    function applySbIcon() {
+      if (!sb || !sbBtn) return;
+      var collapsed = sb.classList.contains('collapsed');
+      var ic = sbBtn.querySelector('use');
+      if (ic) ic.setAttribute('href', collapsed ? '#ic-panel-left-open' : '#ic-panel-left-close');
+      sbBtn.setAttribute('aria-label', collapsed ? '展开侧栏' : '折叠侧栏');
+      sbBtn.setAttribute('title', collapsed ? '展开侧栏' : '折叠侧栏');
+    }
+    if (sb && sbBtn) {
+      if (localStorage.getItem('lc-sb-collapsed') === '1') sb.classList.add('collapsed');
+      applySbIcon();
+      sbBtn.addEventListener('click', function () {
+        sb.classList.toggle('collapsed');
+        localStorage.setItem('lc-sb-collapsed', sb.classList.contains('collapsed') ? '1' : '0');
+        applySbIcon();
+      });
+    }
+  } catch (e) { if (window.console) console.error('sidebar collapse init failed', e); }
+
+  /* ---- 页面切换 ---- */
+  var pages = ['home', 'board', 'detail', 'goals', 'members', 'billing', 'meeting', 'reports', 'office', 'integrations', 'settings', 'mytasks', 'calendar', 'coming', 'auth'];
+  window.showPage = function (id, title) {
+    var isAuth = id === 'auth';
+    document.getElementById('app-shell').style.display = isAuth ? 'none' : 'flex';
+    document.getElementById('page-auth').classList.toggle('active', isAuth);
+    if (!isAuth) {
+      if (id === 'coming' && title) {
+        var ct = document.getElementById('coming-title');
+        var cd = document.getElementById('coming-desc');
+        if (ct) ct.textContent = title;
+        if (cd) cd.textContent = '「' + title + '」正在规划中，会在正式版本开放。';
+      }
+      pages.forEach(function (p) {
+        var el = document.getElementById('page-' + p);
+        if (el) el.classList.toggle('active', p === id);
+      });
+      document.querySelectorAll('.nav-item[data-page]').forEach(function (n) {
+        n.classList.toggle('active', n.dataset.page === id);
+      });
+      document.querySelector('.content').scrollTop = 0;
+    }
+  };
+  document.querySelectorAll('.nav-item[data-page]').forEach(function (n) {
+    n.addEventListener('click', function () { showPage(n.dataset.page, n.dataset.title); });
+  });
+
+  /* ---- 主题切换（浅色默认 / 深色 data-theme="dark"）---- */
+  function applyThemeIcon() {
+    var dark = document.documentElement.hasAttribute('data-theme');
+    var use1 = document.getElementById('theme-icon').querySelector('use');
+    var use2 = document.getElementById('theme-icon-2').querySelector('use');
+    var href = dark ? '#ic-sun' : '#ic-moon';
+    use1.setAttribute('href', href); use2.setAttribute('href', href);
+  }
+  function toggleTheme() {
+    if (document.documentElement.hasAttribute('data-theme')) document.documentElement.removeAttribute('data-theme');
+    else document.documentElement.setAttribute('data-theme', 'dark');
+    applyThemeIcon();
+  }
+  document.getElementById('theme-btn').addEventListener('click', toggleTheme);
+  document.getElementById('theme-btn-2').addEventListener('click', toggleTheme);
+  applyThemeIcon();
+
+  /* ---- 设置 · 外观切换（浅色 / 深色 / 跟随系统）---- */
+  window.setThemeMode = function (mode, btn) {
+    if (mode === 'light') document.documentElement.removeAttribute('data-theme');
+    else if (mode === 'dark') document.documentElement.setAttribute('data-theme', 'dark');
+    else {
+      var dark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+      if (dark) document.documentElement.setAttribute('data-theme', 'dark');
+      else document.documentElement.removeAttribute('data-theme');
+    }
+    applyThemeIcon();
+    document.querySelectorAll('[onclick^="setThemeMode"]').forEach(function (b) {
+      b.classList.remove('btn-primary'); b.classList.add('btn-secondary');
+    });
+    if (btn) { btn.classList.remove('btn-secondary'); btn.classList.add('btn-primary'); }
+  };
+
+  /* ---- 状态预览切换（Home / Board）---- */
+  function bindStage(stageId) {
+    var stage = document.getElementById(stageId);
+    stage.parentElement.querySelectorAll('.demo-bar button[data-state]').forEach(function (b) {
+      b.addEventListener('click', function () {
+        stage.dataset.state = b.dataset.state;
+        stage.parentElement.querySelectorAll('.demo-bar button[data-state]').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        if (stageId === 'home-stage' && b.dataset.state === 'edge') buildEdgeList();
+      });
+    });
+  }
+  bindStage('home-stage'); bindStage('board-stage');
+  function buildEdgeList() {
+    var box = document.getElementById('edge-list'); if (!box || box.childElementCount) return;
+    var titles = ['Q3 增长复盘','客户 Onboarding 流程 v2','支付网关 Stripe 对接','设计系统 Token 收敛','周报自动化脚本','客户成功回访清单','官网落地页文案定稿','竞品功能对比表','投资人 DD 材料','增长实验看板','数据埋点方案','入职培训 SOP'];
+    titles.forEach(function (t, i) {
+      var row = document.createElement('div'); row.className = 'task-row';
+      row.innerHTML = '<svg class="icon ic-20" style="color:var(--status-doing-fg)"><use href="#ic-circle-dot"/></svg><span class="tt truncate">' + t + '</span><span class="who"><span class="avatar av-24">' + ['陈','李','张','王','周'][i % 5] + '</span></span><span class="due">08-' + (10 + i) + '</span>';
+      box.appendChild(row);
+    });
+  }
+
+  /* ---- 我的待办：勾选完成 + 筛选 ---- */
+  (function () {
+    var wrap = document.getElementById('page-mytasks');
+    if (!wrap) return;
+    var rows = Array.prototype.slice.call(wrap.querySelectorAll('.task-row'));
+    function toggle(row, chk) {
+      var on = !row.classList.contains('done');
+      row.classList.toggle('done', on);
+      row.dataset.done = on ? 'true' : 'false';
+      chk.classList.toggle('on', on);
+      chk.setAttribute('aria-checked', on ? 'true' : 'false');
+    }
+    rows.forEach(function (row) {
+      var chk = row.querySelector('.chk');
+      if (!chk) return;
+      chk.addEventListener('click', function () { toggle(row, chk); });
+      chk.addEventListener('keydown', function (e) { if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); toggle(row, chk); } });
+    });
+    var filter = document.getElementById('mytasks-filter');
+    var count = document.getElementById('mytasks-count');
+    filter.querySelectorAll('button').forEach(function (b) {
+      b.addEventListener('click', function () {
+        filter.querySelectorAll('button').forEach(function (x) { x.classList.remove('active'); });
+        b.classList.add('active');
+        var f = b.dataset.filter, shown = 0;
+        rows.forEach(function (row) {
+          var done = row.dataset.done === 'true';
+          var visible = (f === 'all') || (f === 'done' && done) || ((f === 'todo' || f === 'doing') && !done);
+          row.style.display = visible ? '' : 'none';
+          if (visible) shown++;
+        });
+        if (count) count.textContent = shown;
+      });
+    });
+  })();
+
+  /* ---- 看板视图切换（看板 / 列表）---- */
+  document.querySelectorAll('#board-view button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#board-view button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      var kanban = document.getElementById('board-kanban'), list = document.getElementById('board-list');
+      if (b.dataset.view === 'list') { kanban.style.display = 'none'; list.style.display = 'block'; }
+      else { kanban.style.display = 'grid'; list.style.display = 'none'; }
+    });
+  });
+
+  /* ---- RBAC 角色切换 ---- */
+  function setRole(role) {
+    document.getElementById('role-select').value = role;
+    document.querySelectorAll('.need-owner').forEach(function (el) { el.style.display = (role === 'owner') ? '' : 'none'; });
+    document.querySelectorAll('.need-admin').forEach(function (el) { el.style.display = (role !== 'member') ? '' : 'none'; });
+    var note = document.querySelector('.need-notowner'); if (note) note.style.display = (role === 'owner') ? 'none' : 'block';
+  }
+  document.getElementById('role-select').addEventListener('change', function () { setRole(this.value); });
+  setRole('owner');
+
+  /* ---- 命令栏 Cmd+K ---- */
+  var cmdk = document.getElementById('cmdk'), cmdkInput = document.getElementById('cmdk-input');
+  var items = Array.prototype.slice.call(document.querySelectorAll('.cmdk-item'));
+  var activeIdx = 0;
+  function openCmdk() { cmdk.hidden = false; cmdkInput.value = ''; cmdkInput.focus(); setActive(0); }
+  function closeCmdk() { cmdk.hidden = true; }
+  function setActive(i) {
+    activeIdx = (i + items.length) % items.length;
+    items.forEach(function (el, k) { el.classList.toggle('active', k === activeIdx); });
+  }
+  document.getElementById('cmd-trigger').addEventListener('click', openCmdk);
+  document.getElementById('cmd-trigger').addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openCmdk(); } });
+  cmdk.querySelectorAll('[data-close]').forEach(function (el) { el.addEventListener('click', closeCmdk); });
+  cmdkInput.addEventListener('keydown', function (e) {
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(activeIdx + 1); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(activeIdx - 1); }
+    else if (e.key === 'Enter') { e.preventDefault(); var g = items[activeIdx].dataset.go; closeCmdk(); if (g) showPage(g, items[activeIdx].dataset.title); }
+    else if (e.key === 'Escape') { closeCmdk(); }
+  });
+  items.forEach(function (el, k) {
+    el.addEventListener('mouseenter', function () { setActive(k); });
+    el.addEventListener('click', function () { closeCmdk(); if (el.dataset.go) showPage(el.dataset.go, el.dataset.title); });
+  });
+  document.addEventListener('keydown', function (e) {
+    if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'k') { e.preventDefault(); cmdk.hidden ? openCmdk() : closeCmdk(); }
+    else if (e.key === 'Escape' && !cmdk.hidden) { closeCmdk(); }
+  });
+
+  /* ---- Toast ---- */
+  window.showToast = function (msg, type) {
+    var wrap = document.getElementById('toast-wrap');
+    var t = document.createElement('div');
+    t.className = 'toast' + (type ? ' ' + type : '');
+    t.setAttribute('role', type === 'alert' ? 'alert' : 'status');
+    t.innerHTML = '<div class="tc"><div class="tt">' + msg + '</div></div><button class="icon-btn" style="width:28px;height:28px" aria-label="关闭"><svg class="icon ic-16"><use href="#ic-x"/></svg></button>';
+    t.querySelector('button').addEventListener('click', function () { t.remove(); });
+    wrap.appendChild(t);
+    setTimeout(function () { if (t.parentNode) t.remove(); }, 4000);
+  };
+
+  /* ---- 登录 / 注册 演示 ---- */
+  document.querySelectorAll('#auth-tabs button').forEach(function (b) {
+    b.addEventListener('click', function () {
+      document.querySelectorAll('#auth-tabs button').forEach(function (x) { x.classList.remove('active'); });
+      b.classList.add('active');
+      document.getElementById('form-login').classList.toggle('active', b.dataset.tab === 'login');
+      document.getElementById('form-register').classList.toggle('active', b.dataset.tab === 'register');
+    });
+  });
+  window.authSubmit = function (e, okMsg) {
+    e.preventDefault();
+    var btn = e.submitter || e.target.querySelector('button[type=submit]');
+    var label = btn.textContent;
+    btn.disabled = true;
+    btn.innerHTML = '<svg class="icon ic-20 spin"><use href="#ic-loader"/></svg>处理中…';
+    setTimeout(function () {
+      btn.disabled = false; btn.textContent = label;
+      showToast(okMsg, 'success');
+      showPage('home');
+    }, 900);
+    return false;
+  };
+  window.updateStrength = function (v) {
+    var bars = document.querySelectorAll('#pwd-strength i');
+    var score = 0; if (v.length >= 8) score++; if (/[a-zA-Z]/.test(v) && /[0-9]/.test(v)) score++; if (v.length >= 12) score++; if (/[^a-zA-Z0-9]/.test(v)) score++;
+    bars.forEach(function (b, i) { b.classList.toggle('on', i < Math.min(score, 4)); });
+  };
+  updateStrength(document.getElementById('r-pwd').value);
+
+  /* ---- 通知演示 ---- */
+  document.getElementById('bell-btn').addEventListener('click', function () { showToast('暂无新通知', ''); });
+
+})();
+</script>
+<svg xmlns="http://www.w3.org/2000/svg" style="display:none">
+  <symbol id="ic-panel-left-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m16 15-3-3 3-3"/></symbol>
+  <symbol id="ic-panel-left-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="m14 9 3 3-3 3"/></symbol>
+  <symbol id="ic-calendar-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h4.5"/><path d="M16 2v4"/><path d="M3 10h5"/><path d="M21.5 17.5a3.5 3.5 0 1 1-7 0 3.5 3.5 0 0 1 7 0z"/><path d="M21.5 21v-3.5h-3.5"/></symbol>
+  <symbol id="ic-files" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.5 3H7a2 2 0 0 0-2 2v9h2V5h8.5z"/><path d="M11 7a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H9a2 2 0 0 1-2-2V7z"/></symbol>
+  <symbol id="ic-plug" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22v-5"/><path d="M9 8V2"/><path d="M15 8V2"/><path d="M18 8v5a4 4 0 0 1-4 4h-4a4 4 0 0 1-4-4V8Z"/></symbol>
+  <symbol id="ic-check-square" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></symbol>
+  <symbol id="ic-hard-drive" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="2" x2="22" y1="12" y2="12"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/><line x1="6" x2="6.01" y1="16" y2="16"/><line x1="10" x2="10.01" y1="16" y2="16"/></symbol>
+  <symbol id="ic-book-open" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></symbol>
+  <symbol id="ic-check-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 7 17l-5-5"/><path d="m22 10-7.5 7.5L13 16"/></symbol>
+  <symbol id="ic-bar-chart-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></symbol>
+  <symbol id="ic-target" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+  <symbol id="ic-clock" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+</svg>
+</body>
+</html>

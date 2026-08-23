@@ -1,0 +1,1135 @@
+openapi: 3.0.3
+info:
+  title: corps (团队) API
+  version: 1.0.0
+  description: >
+    MVP API for the corps multi-tenant collaboration SaaS. This document is the
+    single contract for frontend and backend in Phase 3. All paths are prefixed with
+    /api/v1/. Every response uses the uniform envelope { code, data, message }.
+    Multi-tenant isolation is enforced at the PostgreSQL engine layer via RLS; the
+    workspace_id is resolved ONLY from the verified JWT claim `wid` and is never
+    trusted from the client.
+  contact:
+    name: MVP Dev Expert Team — Architecture
+servers:
+  - url: http://localhost:3000
+    description: Local development (Next.js Route Handlers)
+  - url: https://{env}.corps.app
+    description: CloudBase deployment
+    variables:
+      env:
+        default: staging
+
+tags:
+  - name: auth
+    description: Registration, login, token refresh
+  - name: workspaces
+    description: Workspace (tenant) listing and creation
+  - name: tasks
+    description: Kanban task CRUD within a workspace
+  - name: members
+    description: Workspace membership and role-based access control
+  - name: comments
+    description: Task-scoped comments with @mentions
+  - name: decisions
+    description: Task-linked decision records (Markdown, versioned)
+  - name: billing
+    description: Stripe Checkout / Portal / webhook
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ===========================================================================
+  # AUTH
+  # ===========================================================================
+  /api/v1/auth/register:
+    post:
+      tags: [auth]
+      summary: Register a user and create their first workspace (owner)
+      description: >
+        Calls Better Auth signUpEmail (password hashed by Better Auth) to create the user
+        and session, then provisions a workspace and a members row with role `owner`.
+        Returns a workspace-scoped access JWT (15 min) for RLS. Covers AC-01 (201 + JWT +
+        workspace) and AC-02 (409 on duplicate email). The Better Auth session cookie is
+        set on the response.
+      security: []
+      operationId: register
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+      responses:
+        '201':
+          description: Account and workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TokenResponse'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/login:
+    post:
+      tags: [auth]
+      summary: Login with email + password
+      description: >
+        Calls Better Auth signInEmail (password verified by Better Auth), then returns the
+        user's workspaces and a workspace-scoped access JWT (15 min) for the primary
+        workspace. The Better Auth session cookie is set on the response.
+      security: []
+      operationId: login
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: Authenticated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  /api/v1/auth/refresh:
+    post:
+      tags: [auth]
+      summary: Rotate the refresh token
+      description: >
+        Exchanges a valid 7-day opaque refresh token for a new access + refresh pair
+        (rotation). The refresh token is carried in the httpOnly secure cookie
+        `lc_refresh`; an `X-Refresh-Token` header is accepted in development for
+        curl testing. On success the cookie is re-issued.
+      security:
+        - refreshAuth: []
+      operationId: refresh
+      responses:
+        '200':
+          description: Tokens rotated
+          headers:
+            Set-Cookie:
+              description: Re-issued httpOnly secure refresh cookie
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TokenResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
+  # ===========================================================================
+  # WORKSPACES
+  # ===========================================================================
+  /api/v1/workspaces:
+    get:
+      tags: [workspaces]
+      summary: List my workspaces
+      description: Returns every workspace the authenticated user is a member of.
+      operationId: listWorkspaces
+      responses:
+        '200':
+          description: Workspace list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WorkspaceList'
+    post:
+      tags: [workspaces]
+      summary: Create a workspace
+      description: >
+        Provisions a new workspace owned by the authenticated user, with a members row
+        of role `owner`. seat_limit defaults to 10 (free plan).
+      operationId: createWorkspace
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWorkspaceRequest'
+      responses:
+        '201':
+          description: Workspace created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Workspace'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ===========================================================================
+  # TASKS
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/tasks:
+    get:
+      tags: [tasks]
+      summary: List tasks in a workspace (board / list view)
+      description: >
+        Returns tasks filtered by RLS to the workspace in the JWT. Supports status and
+        assignee filters and ordering by sort_order. Covers AC-03/AC-04 (RLS isolation).
+      operationId: listTasks
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: status
+          in: query
+          schema: { type: string, enum: [todo, in_progress, review, done] }
+        - name: assignee_id
+          in: query
+          schema: { type: string, format: uuid }
+        - name: view
+          in: query
+          schema: { type: string, enum: [board, list], default: board }
+      responses:
+        '200':
+          description: Task list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TaskList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [tasks]
+      summary: Create a task
+      description: Creates a task in the workspace. assignee_id is optional (unassigned).
+      operationId: createTask
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTaskRequest'
+      responses:
+        '201':
+          description: Task created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/tasks/{id}:
+    patch:
+      tags: [tasks]
+      summary: Update a task (includes drag-to-change-status)
+      description: >
+        Partial update. Changing `status` is how the kanban drag persists (AC-06).
+        Optimistic update on the client; this is the server persistence.
+      operationId: updateTask
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTaskRequest'
+      responses:
+        '200':
+          description: Task updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Task'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [tasks]
+      summary: Delete a task
+      operationId: deleteTask
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Task deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Null'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================================================
+  # MEMBERS
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/members:
+    get:
+      tags: [members]
+      summary: List workspace members
+      operationId: listMembers
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MemberList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/members/invite:
+    post:
+      tags: [members]
+      summary: Invite a member
+      description: >
+        Owner/Admin only (AC-05: Member returns 403). If the email maps to an existing
+        user, a members row is created directly; otherwise an invite (pending member)
+        is recorded and an email is sent. Rejects when seat_limit would be exceeded.
+      operationId: inviteMember
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteRequest'
+      responses:
+        '201':
+          description: Invitation created or member added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Member'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  /api/v1/workspaces/{wid}/members/{uid}:
+    delete:
+      tags: [members]
+      summary: Remove a member
+      description: Owner/Admin only. Removing the last owner is rejected (400).
+      operationId: removeMember
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Uid'
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Null'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================================================
+  # COMMENTS
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/tasks/{id}/comments:
+    post:
+      tags: [comments]
+      summary: Add a comment with @mentions
+      description: >
+        Creates a comment bound to the task. `mentions` is an array of user_ids that
+        triggers notifications. Body must not be empty.
+      operationId: createComment
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCommentRequest'
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Comment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================================================
+  # DECISIONS
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions:
+    get:
+      tags: [decisions]
+      summary: List decision records for a task
+      description: Returns the latest version of each decision linked to the task.
+      operationId: listDecisions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Decision list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DecisionList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [decisions]
+      summary: Create a decision record (version 1)
+      description: >
+        Creates a decision record (Markdown) linked to the task and appends a version
+        history row. Covers AC-10 (version留痕 + bidirectional link).
+      operationId: createDecision
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDecisionRequest'
+      responses:
+        '201':
+          description: Decision created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Decision'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}:
+    # Extension beyond Spec section 5 (GET/POST only) — added so AC-10 editing path
+    # is fully specified. Marked ADDED.
+    patch:
+      tags: [decisions]
+      summary: '[ADDED] Edit a decision record (bumps version)'
+      description: >
+        Updates the Markdown, increments `version` on the decisions row, and appends a
+        new decision_versions history row. Optimistic concurrency via `base_version`.
+      operationId: updateDecision
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/Did'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateDecisionRequest'
+      responses:
+        '200':
+          description: Decision updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Decision'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+
+  # ===========================================================================
+  # BILLING
+  # ===========================================================================
+  /api/v1/billing/checkout:
+    post:
+      tags: [billing]
+      summary: Create a Stripe Checkout Session (upgrade)
+      description: >
+        Owner only (AC-05). Creates a Stripe Checkout Session (mode=subscription) for the
+        workspace plan; quantity is derived from `Workspace.seatLimit`. Returns the redirect
+        URL. `priceId` defaults to env STRIPE_PRICE_ID. On checkout.session.completed the
+        webhook writes the Subscription row.
+      operationId: createCheckout
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CheckoutRequest'
+      responses:
+        '200':
+          description: Checkout session created (redirect URL)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Checkout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/billing/status:
+    get:
+      tags: [billing]
+      summary: Get current plan + seat usage + subscription status
+      description: >
+        Returns Workspace.plan, seatLimit, current member count, and the Subscription
+        status (for the billing page). Used by the frontend Billing view.
+      operationId: billingStatus
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BillingStatus'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/billing/portal:
+    post:
+      tags: [billing]
+      summary: Create a Stripe Customer Portal session
+      description: >
+        Owner only. Returns a Stripe Billing Portal URL so the customer can update payment
+        method / cancel. Requires an existing Stripe customer (from a completed checkout).
+      operationId: billingPortal
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Portal session URL
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Checkout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/billing/webhook:
+    post:
+      tags: [billing]
+      summary: Stripe webhook receiver
+      description: >
+        Verified by the `Stripe-Signature` header (webhook secret). Handles
+        checkout.session.completed (upsert Subscription + plan=starter), customer.subscription.updated
+        (sync quantity, AC-08), and invoice.payment_failed (mark past_due, AC-09 — no immediate
+        service interruption). The raw request body is required for signature verification.
+      security:
+        - stripeSignature: []
+      operationId: billingWebhook
+      responses:
+        '200':
+          description: Webhook accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Null'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: Access JWT (15 min) in Authorization header. workspace_id resolved from JWT claim `wid`.
+    refreshAuth:
+      type: apiKey
+      in: cookie
+      name: better-auth.session_token
+      description: >
+        Better Auth session cookie (httpOnly, secure, 7-day). The /api/v1/auth/refresh
+        endpoint reads this cookie to re-issue a workspace-scoped access JWT.
+    stripeSignature:
+      type: apiKey
+      in: header
+      name: Stripe-Signature
+      description: HMAC-SHA256 signature of the raw body using the Stripe webhook secret.
+
+  parameters:
+    Wid:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403/404.
+      schema: { type: string, format: uuid }
+    TaskId:
+      name: id
+      in: path
+      required: true
+      description: Task id (UUID).
+      schema: { type: string, format: uuid }
+    Uid:
+      name: uid
+      in: path
+      required: true
+      description: User id (UUID) of the member to remove.
+      schema: { type: string, format: uuid }
+    Did:
+      name: did
+      in: path
+      required: true
+      description: Decision id (UUID).
+      schema: { type: string, format: uuid }
+
+  responses:
+    BadRequest:
+      description: Validation error (400)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 400
+            data: null
+            message: "email must be a valid address"
+    Unauthorized:
+      description: Missing or invalid token (401)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 401
+            data: null
+            message: "invalid or expired access token"
+    Forbidden:
+      description: Authenticated but not permitted (RBAC / tenant mismatch) (403)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 403
+            data: null
+            message: "role 'member' cannot perform this action"
+    NotFound:
+      description: Resource unknown to caller (RLS-filtered) (404)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 404
+            data: null
+            message: "workspace not found"
+    Conflict:
+      description: Resource conflict (409)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 409
+            data: null
+            message: "email already registered"
+
+  schemas:
+    # ---- uniform envelope ----
+    Envelope:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          description: "0 = success; non-zero = error (mirrors HTTP status where applicable)"
+          example: 0
+        data:
+          nullable: true
+        message:
+          type: string
+          example: "ok"
+    ErrorEnvelope:
+      type: object
+      required: [code, message]
+      properties:
+        code:
+          type: integer
+          example: 401
+        data:
+          nullable: true
+          example: null
+        message:
+          type: string
+          example: "invalid or expired access token"
+    Envelope_Null:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          nullable: true
+    Envelope_TokenResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/TokenResponse'
+    Envelope_Workspace:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Workspace'
+    Envelope_WorkspaceList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Workspace'
+    Envelope_Task:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Task'
+    Envelope_TaskList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'
+    Envelope_Member:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Member'
+    Envelope_MemberList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Member'
+    Envelope_Comment:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Comment'
+    Envelope_Decision:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Decision'
+    Envelope_DecisionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Decision'
+    Envelope_Checkout:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/CheckoutSession'
+    Envelope_BillingStatus:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/BillingStatus'
+
+    # ---- auth ----
+    RegisterRequest:
+      type: object
+      required: [email, password, name, workspaceName]
+      properties:
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        password:
+          type: string
+          minLength: 8
+          maxLength: 128
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+        workspaceName:
+          type: string
+          minLength: 1
+          maxLength: 80
+    LoginRequest:
+      type: object
+      required: [email, password]
+      properties:
+        email:
+          type: string
+          format: email
+        password:
+          type: string
+    TokenResponse:
+      type: object
+      required: [accessToken, refreshToken, expiresIn, wid, uid]
+      properties:
+        accessToken:
+          type: string
+          description: JWT (15 min). Contains claims sub(uid), wid, email, role.
+        refreshToken:
+          type: string
+          description: Opaque 7-day token (also set as httpOnly cookie lc_refresh).
+        expiresIn:
+          type: integer
+          example: 900
+          description: Access token TTL in seconds (900 = 15 min).
+        wid:
+          type: string
+          format: uuid
+          description: Active workspace id (resolved from registration, not client input).
+        uid:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member]
+
+    # ---- workspaces ----
+    Workspace:
+      type: object
+      required: [id, name, plan, seatLimit, role, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          type: string
+        plan:
+          type: string
+          enum: [free, pro]
+        seatLimit:
+          type: integer
+        role:
+          type: string
+          enum: [owner, admin, member]
+          description: Caller's role in this workspace.
+        createdAt:
+          type: string
+          format: date-time
+    CreateWorkspaceRequest:
+      type: object
+      required: [name]
+      properties:
+        name:
+          type: string
+          minLength: 1
+          maxLength: 80
+
+    # ---- tasks ----
+    Task:
+      type: object
+      required: [id, workspaceId, title, status, priority, sortOrder, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        title:
+          type: string
+        description:
+          type: string
+        status:
+          type: string
+          enum: [todo, in_progress, review, done]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        assigneeId:
+          nullable: true
+          type: string
+          format: uuid
+        dueDate:
+          nullable: true
+          type: string
+          format: date-time
+        sortOrder:
+          type: number
+          format: double
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateTaskRequest:
+      type: object
+      required: [title]
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        status:
+          type: string
+          enum: [todo, in_progress, review, done]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        assigneeId:
+          nullable: true
+          type: string
+          format: uuid
+        dueDate:
+          nullable: true
+          type: string
+          format: date-time
+        sortOrder:
+          type: number
+          format: double
+    UpdateTaskRequest:
+      type: object
+      description: Partial update. Any subset of fields may be sent.
+      properties:
+        title:
+          type: string
+          minLength: 1
+          maxLength: 200
+        description:
+          type: string
+          maxLength: 5000
+        status:
+          type: string
+          enum: [todo, in_progress, review, done]
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+        assigneeId:
+          nullable: true
+          type: string
+          format: uuid
+        dueDate:
+          nullable: true
+          type: string
+          format: date-time
+        sortOrder:
+          type: number
+          format: double
+
+    # ---- members ----
+    Member:
+      type: object
+      required: [userId, workspaceId, role, name, email]
+      properties:
+        userId:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        role:
+          type: string
+          enum: [owner, admin, member]
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        createdAt:
+          type: string
+          format: date-time
+    InviteRequest:
+      type: object
+      required: [email]
+      properties:
+        email:
+          type: string
+          format: email
+        role:
+          type: string
+          enum: [admin, member]
+          default: member
+
+    # ---- comments ----
+    Comment:
+      type: object
+      required: [id, taskId, authorId, body, mentions, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        authorId:
+          type: string
+          format: uuid
+        body:
+          type: string
+        mentions:
+          type: array
+          items:
+            type: string
+            format: uuid
+        createdAt:
+          type: string
+          format: date-time
+    CreateCommentRequest:
+      type: object
+      required: [body]
+      properties:
+        body:
+          type: string
+          minLength: 1
+          maxLength: 5000
+        mentions:
+          type: array
+          items:
+            type: string
+            format: uuid
+
+    # ---- decisions ----
+    Decision:
+      type: object
+      required: [id, taskId, markdown, version, authorId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        taskId:
+          type: string
+          format: uuid
+        markdown:
+          type: string
+        version:
+          type: integer
+        authorId:
+          type: string
+          format: uuid
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    CreateDecisionRequest:
+      type: object
+      required: [markdown]
+      properties:
+        markdown:
+          type: string
+          minLength: 1
+    UpdateDecisionRequest:
+      type: object
+      required: [markdown, baseVersion]
+      properties:
+        markdown:
+          type: string
+          minLength: 1
+        baseVersion:
+          type: integer
+          description: Optimistic concurrency baseline; mismatch returns 409.
+
+    # ---- billing ----
+    CheckoutRequest:
+      type: object
+      properties:
+        priceId:
+          type: string
+          description: Stripe Price ID. Defaults to env STRIPE_PRICE_ID when omitted.
+        successUrl:
+          type: string
+          format: uri
+        cancelUrl:
+          type: string
+          format: uri
+    CheckoutSession:
+      type: object
+      required: [url]
+      properties:
+        url:
+          type: string
+          format: uri
+          description: Redirect URL to Stripe Checkout (or Billing Portal).
+    BillingStatus:
+      type: object
+      required: [plan, seatLimit, memberCount, subscription]
+      properties:
+        plan:
+          type: string
+          enum: [free, starter, pro, enterprise]
+        seatLimit:
+          type: integer
+          description: Max members allowed on current plan.
+        memberCount:
+          type: integer
+          description: Current active member count.
+        seatsUsed:
+          type: integer
+        subscription:
+          nullable: true
+          type: object
+          properties:
+            status:
+              type: string
+              enum: [active, past_due, trialing, canceled]
+            quantity:
+              type: integer
+            currentPeriodEnd:
+              nullable: true
+              type: string
+              format: date-time
+            canManage:
+              type: boolean
+              description: true when a Stripe customer exists (Portal available).
