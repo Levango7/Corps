@@ -67,7 +67,6 @@ function highlight(text: string, query: string) {
 
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
   const [query, setQuery] = useState("");
-  const [tasks, setTasks] = useState<{ id: string; title: string; status?: string }[]>([]);
   const [results, setResults] = useState<{ tasks: CmdItem[]; decisions: CmdItem[] }>({
     tasks: [],
     decisions: [],
@@ -77,13 +76,8 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   const listRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
-
-  // 初次挂载：拉取本地任务列表（query 为空时展示）
-  useEffect(() => {
-    api<{ id: string; title: string; status?: string }[]>(`/api/v1/workspaces/${wid}/tasks`)
-      .then(setTasks)
-      .catch(() => setTasks([]));
-  }, [wid]);
+  // 持有 go 的最新引用，供键盘 useEffect 使用，避免 stale closure
+  const goRef = useRef<(href: string) => void>(() => {});
 
   // query 变化：防抖 300ms 后调用全局搜索端点（任务标题 + 决策 markdown）
   useEffect(() => {
@@ -134,21 +128,13 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
       { id: "nav-billing", title: "计费", kind: "nav", href: `/w/${wid}/billing`, icon: CreditCard },
       { id: "nav-settings", title: "设置", kind: "nav", href: `/w/${wid}/settings`, icon: Settings },
     ];
-    const taskItems: CmdItem[] = tasks.map((t) => ({
-      id: t.id,
-      title: t.title,
-      kind: "task",
-      href: `/w/${wid}/task/${t.id}`,
-      icon: CheckSquare,
-      hint: "任务",
-    }));
 
     const q = query.trim().toLowerCase();
-    // query 为空：导航项 + 本地任务前 8 条
-    if (!q) return [...navItems, ...taskItems.slice(0, 8)];
+    // query 为空：仅展示导航项（打开时不拉取所有任务，避免无谓请求）
+    if (!q) return navItems;
     // query 非空：使用搜索端点返回的任务 + 决策结果（分组显示）
     return [...results.tasks, ...results.decisions];
-  }, [query, tasks, results, wid]);
+  }, [query, results, wid]);
 
   // 是否展示分组标题（仅搜索态下）
   const showGroups = query.trim().length > 0;
@@ -156,7 +142,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   // 结果集变化后把游标收回首项，避免指向越界
   useEffect(() => {
     setCursor(0);
-  }, [query, tasks.length, results.tasks.length, results.decisions.length]);
+  }, [query, results.tasks.length, results.decisions.length]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -169,12 +155,11 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
       } else if (e.key === "Enter") {
         e.preventDefault();
         const target = items[cursor];
-        if (target) go(target.href);
+        if (target) goRef.current(target.href);
       }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, cursor]);
 
   useEffect(() => {
@@ -187,13 +172,14 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     router.push(href);
     onClose();
   }
+  goRef.current = go;
 
   return (
     <div
       role="dialog"
       aria-modal="true"
       aria-label="命令面板"
-      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[12vh] px-4"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4"
       style={{ background: "var(--overlay)" }}
       onClick={onClose}
     >
@@ -229,7 +215,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
           </kbd>
         </div>
 
-        <ul ref={listRef} className="max-h-[50vh] overflow-y-auto py-1.5">
+        <ul ref={listRef} className="max-h-[var(--cmd-palette-max-h)] overflow-y-auto py-1.5">
           {items.length === 0 && (
             <li className="px-4 py-8 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
               {query.trim()
@@ -288,7 +274,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
           })}
         </ul>
 
-        <div className="flex items-center gap-4 px-4 h-9 border-t border-[var(--border-soft)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
+        <div className="flex items-center gap-2 sm:gap-4 px-4 h-9 border-t border-[var(--border-soft)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
           <span>↑↓ 选择</span>
           <span>Enter 打开</span>
           <span className="ml-auto tabular-nums">{items.length} 项</span>

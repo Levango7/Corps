@@ -46,7 +46,7 @@ export function TaskListSkeleton({
   return (
     <div
       className={`divide-y divide-[var(--border-soft)] ${className ?? ""}`}
-      aria-hidden="true"
+      aria-busy="true"
     >
       {Array.from({ length: count }).map((_, i) => (
         <div key={i} className="flex items-center gap-3 px-4 sm:px-5 py-3">
@@ -82,7 +82,7 @@ export function StatCardSkeleton({ className }: { className?: string }) {
       className={`grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6 ${
         className ?? ""
       }`}
-      aria-hidden="true"
+      aria-busy="true"
     >
       {Array.from({ length: 3 }).map((_, i) => (
         <div

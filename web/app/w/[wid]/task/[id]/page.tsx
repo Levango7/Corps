@@ -115,10 +115,16 @@ export default function TaskDetailPage({
   const [sending, setSending] = useState(false);
   const [decisionDraft, setDecisionDraft] = useState("");
   const [decisionOpen, setDecisionOpen] = useState(false);
+  // 决策编辑/预览切换：edit=编辑 textarea，preview=渲染 markdown
+  const [decisionMode, setDecisionMode] = useState<"edit" | "preview">("edit");
 
   const [titleDraft, setTitleDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
   const [dirty, setDirty] = useState(false);
+
+  // ── 自定义确认弹窗（替代 window.confirm）──
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmAction, setConfirmAction] = useState<() => void>(() => () => {});
 
   // ── 评论 @提及自动补全 ──
   const [mentionOpen, setMentionOpen] = useState(false);
@@ -353,9 +359,8 @@ export default function TaskDetailPage({
     }
   }
 
-  async function removeTask() {
+  async function actuallyRemoveTask() {
     if (!task) return;
-    if (!window.confirm(`确认删除任务「${task.title}」？删除后无法恢复，评论与决策记录会一并删除。`)) return;
     try {
       await api(`${base}/tasks/${id}`, { method: "DELETE" });
       router.push(`/w/${wid}/board`);
@@ -364,22 +369,28 @@ export default function TaskDetailPage({
     }
   }
 
+  function removeTask() {
+    if (!task) return;
+    setConfirmAction(() => actuallyRemoveTask);
+    setConfirmOpen(true);
+  }
+
   if (loading) {
     return (
       <div className="max-w-5xl mx-auto">
         {/* 返回栏骨架 */}
-        <div className="mb-5 h-8 w-24 rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
+        <div className="mb-[var(--space-5)] h-8 w-24 rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
         {/* 标题 + 描述骨架 */}
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-5)]">
           <div className="h-8 w-3/4 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
-          <div className="mt-4 space-y-2.5">
+          <div className="mt-[var(--space-4)] space-y-2.5">
             <div className="h-4 w-full rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
             <div className="h-4 w-full rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
             <div className="h-4 w-full rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
           </div>
         </div>
         {/* 评论区骨架 */}
-        <div className="mt-8 space-y-4">
+        <div className="mt-[var(--space-8)] space-y-[var(--space-4)]">
           <div className="h-12 w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
           <div className="h-12 w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
         </div>
@@ -389,11 +400,11 @@ export default function TaskDetailPage({
 
   if (!task) {
     return (
-      <div className="max-w-2xl mx-auto py-16 text-center">
+      <div className="max-w-2xl mx-auto py-[var(--space-16)] text-center">
         <p className="text-[var(--fg-2)]">{error || "任务不存在或已被删除。"}</p>
         <Link
           href={`/w/${wid}/board`}
-          className="inline-flex items-center gap-1.5 mt-4 text-[length:var(--text-sm)] text-[var(--accent)] hover:underline underline-offset-2"
+          className="inline-flex items-center gap-1.5 mt-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--accent)] hover:underline underline-offset-2"
         >
           <ArrowLeft size={14} />
           返回看板
@@ -406,11 +417,11 @@ export default function TaskDetailPage({
   const fieldLabel =
     "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
   const fieldControl =
-    "w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-colors duration-[var(--motion-fast)]";
+    "w-full h-8 px-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-colors duration-[var(--motion-fast)]";
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-center justify-between mb-5">
+      <div className="flex items-center justify-between mb-[var(--space-5)]">
         <Link
           href={`/w/${wid}/board`}
           className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
@@ -420,7 +431,7 @@ export default function TaskDetailPage({
         </Link>
         <button
           onClick={removeTask}
-          className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+          className="inline-flex items-center justify-center gap-1.5 min-w-[32px] px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
         >
           <Trash2 size={15} />
           删除
@@ -428,15 +439,15 @@ export default function TaskDetailPage({
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">
+        <div className="mb-[var(--space-4)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">
           {error}
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_260px] gap-6 items-start">
+      <div className="grid grid-cols-1 lg:grid-cols-[1fr_var(--task-aside-w)] gap-[var(--space-6)] items-start">
         {/* ── 主列 ── */}
         <div className="min-w-0">
-          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-5">
+          <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-5)]">
             <textarea
               ref={titleRef}
               value={titleDraft}
@@ -464,18 +475,18 @@ export default function TaskDetailPage({
               }}
               rows={4}
               placeholder="补充背景、验收标准，或粘贴相关链接…"
-              className="mt-3 w-full resize-y bg-transparent text-[length:var(--text-base)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
+              className="mt-[var(--space-3)] w-full resize-y bg-transparent text-[length:var(--text-base)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
             />
 
-            <div className="mt-2 text-[length:var(--text-xs)] text-[var(--meta)]">
+            <div className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
               失焦自动保存
             </div>
           </div>
 
           {/* 决策记录 */}
-          <section className="mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+          <section className="mt-[var(--space-6)]">
+            <div className="flex items-center justify-between mb-[var(--space-3)]">
+              <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
                 <FileText size={16} className="text-[var(--muted)]" />
                 决策记录
                 {decisions.length > 0 && (
@@ -494,22 +505,61 @@ export default function TaskDetailPage({
             </div>
 
             {decisionOpen && (
-              <div className="mb-4 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
-                <textarea
-                  value={decisionDraft}
-                  onChange={(e) => setDecisionDraft(e.target.value)}
-                  rows={6}
-                  placeholder={"## 决定\n采用方案 B。\n\n## 理由\n- 迁移成本更低\n- 与现有权限模型兼容"}
-                  className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
-                />
-                <div className="flex items-center justify-between mt-3 pt-3 border-t border-[var(--border-soft)]">
+              <div className="mb-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)]">
+                {/* 编辑/预览切换 tab */}
+                <div className="inline-flex items-center gap-[var(--space-1)] mb-[var(--space-3)] p-[var(--space-1)] rounded-[var(--radius-md)] bg-[var(--surface-2)]">
+                  <button
+                    type="button"
+                    onClick={() => setDecisionMode("edit")}
+                    aria-pressed={decisionMode === "edit"}
+                    className={`px-[var(--space-3)] h-7 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] ${
+                      decisionMode === "edit"
+                        ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
+                        : "text-[var(--muted)] hover:text-[var(--fg-2)]"
+                    }`}
+                  >
+                    编辑
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDecisionMode("preview")}
+                    aria-pressed={decisionMode === "preview"}
+                    className={`px-[var(--space-3)] h-7 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] ${
+                      decisionMode === "preview"
+                        ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
+                        : "text-[var(--muted)] hover:text-[var(--fg-2)]"
+                    }`}
+                  >
+                    预览
+                  </button>
+                </div>
+
+                {decisionMode === "edit" ? (
+                  <textarea
+                    value={decisionDraft}
+                    onChange={(e) => setDecisionDraft(e.target.value)}
+                    rows={6}
+                    placeholder={"## 决定\n采用方案 B。\n\n## 理由\n- 迁移成本更低\n- 与现有权限模型兼容"}
+                    className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
+                  />
+                ) : (
+                  <div className="min-h-[120px] px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border-soft)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.7] overflow-y-auto">
+                    {decisionDraft.trim() ? (
+                      <Markdown source={decisionDraft} />
+                    ) : (
+                      <span className="text-[var(--meta)]">暂无内容可预览</span>
+                    )}
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between mt-[var(--space-3)] pt-[var(--space-3)] border-t border-[var(--border-soft)]">
                   <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
                     支持 Markdown · 每次保存生成新版本，历史不会被覆盖
                   </span>
                   <button
                     onClick={addDecision}
                     disabled={!decisionDraft.trim()}
-                    className="h-8 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+                    className="h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
                   >
                     保存为 v{(decisions[0]?.version ?? 0) + 1}
                   </button>
@@ -518,19 +568,19 @@ export default function TaskDetailPage({
             )}
 
             {decisions.length === 0 && !decisionOpen ? (
-              <div className="px-4 py-8 rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] text-center">
+              <div className="px-[var(--space-4)] py-[var(--space-8)] rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] text-center">
                 <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
                   还没有决策记录。把「为什么这么定」写下来，新同事不用再问一遍。
                 </p>
               </div>
             ) : (
-              <div className="space-y-3">
+              <div className="space-y-[var(--space-3)]">
                 {decisions.map((d) => (
                   <article
                     key={d.id}
                     className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] hover:shadow-[var(--elev-hover)] transition-shadow duration-[var(--motion-fast)] overflow-hidden"
                   >
-                    <header className="flex items-center gap-2 px-4 py-2.5 bg-[var(--surface-2)] border-b border-[var(--border-soft)]">
+                    <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 bg-[var(--surface-2)] border-b border-[var(--border-soft)]">
                       <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface)] border border-[var(--border)] text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--fg-2)]">
                         v{d.version}
                       </span>
@@ -545,7 +595,7 @@ export default function TaskDetailPage({
                         <History size={14} />
                       </button>
                     </header>
-                    <div className="px-4 py-3 text-[length:var(--text-base)]">
+                    <div className="px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-base)]">
                       <Markdown source={d.markdown} />
                     </div>
                   </article>
@@ -555,8 +605,8 @@ export default function TaskDetailPage({
           </section>
 
           {/* 评论 */}
-          <section className="mt-8">
-            <h2 className="flex items-center gap-2 mb-3 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+          <section className="mt-[var(--space-8)]">
+            <h2 className="flex items-center gap-[var(--space-2)] mb-[var(--space-3)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
               <MessageSquare size={16} className="text-[var(--muted)]" />
               讨论
               {comments.length > 0 && (
@@ -568,12 +618,12 @@ export default function TaskDetailPage({
 
             <div className="divide-y divide-[var(--border-soft)]">
               {comments.map((c) => (
-                <div key={c.id} className="flex gap-3 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
+                <div key={c.id} className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
                     {(c.author.name || c.author.email)[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-2">
+                    <div className="flex items-baseline gap-[var(--space-2)]">
                       <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
                         {c.author.name || c.author.email.split("@")[0]}
                       </span>
@@ -589,7 +639,7 @@ export default function TaskDetailPage({
               ))}
             </div>
 
-            <div className="mt-4 flex items-start gap-2">
+            <div className="mt-[var(--space-4)] flex items-start gap-[var(--space-2)]">
               <div className="relative flex-1">
                 <textarea
                   ref={draftRef}
@@ -602,10 +652,10 @@ export default function TaskDetailPage({
                   }}
                   rows={2}
                   placeholder={isMobile ? "写下你的想法…（@ 提及，⌘+Enter 发送）" : "写下你的想法…（@ 提及成员，⌘/Ctrl + Enter 发送）"}
-                  className="w-full px-3 py-2 overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-base)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
+                  className="w-full px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-base)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
                 />
                 {mentionOpen && mentionCandidates.length > 0 && (
-                  <div className="absolute top-full left-0 mt-1 z-[var(--z-dropdown)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-md)] py-1 min-w-[200px] max-h-60 overflow-y-auto">
+                  <div className="absolute top-full left-0 mt-[var(--space-1)] z-[var(--z-dropdown)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-md)] py-[var(--space-1)] min-w-[200px] max-h-60 overflow-y-auto">
                     {mentionCandidates.map((m, i) => (
                       <button
                         key={m.id}
@@ -613,7 +663,7 @@ export default function TaskDetailPage({
                           e.preventDefault();
                           insertMention(m);
                         }}
-                        className={`h-9 px-3 w-full flex items-center gap-2 text-left ${i === mentionIndex ? "bg-[var(--surface-2)]" : ""}`}
+                        className={`h-9 px-[var(--space-3)] w-full flex items-center gap-[var(--space-2)] text-left ${i === mentionIndex ? "bg-[var(--surface-2)]" : ""}`}
                       >
                         <AtSign size={14} className="text-[var(--meta)] shrink-0" />
                         <span className="truncate text-[length:var(--text-sm)] text-[var(--fg)]">
@@ -627,7 +677,7 @@ export default function TaskDetailPage({
               <button
                 onClick={addComment}
                 disabled={!draft.trim() || sending}
-                className="h-9 px-3 shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
               >
                 {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 发送
@@ -639,7 +689,7 @@ export default function TaskDetailPage({
         {/* ── 属性栏 ──
             < lg：单栏，置顶，字段水平排列（标签在上、选择器在下）
             ≥ lg：右侧 260px 栏，垂直表单，sticky */}
-        <aside className="order-first lg:order-last lg:sticky lg:top-4 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-3 lg:p-4 flex flex-wrap gap-x-5 gap-y-3 lg:block lg:space-y-4 lg:gap-0">
+        <aside className="order-first lg:order-last lg:sticky lg:top-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] lg:p-[var(--space-4)] grid grid-cols-2 md:flex md:flex-wrap gap-x-[var(--space-5)] gap-y-[var(--space-3)] lg:block lg:space-y-[var(--space-4)] lg:gap-0">
           <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
             <div className={fieldLabel}>
               <StatusIcon size={13} style={{ color: STATUS_META[task.status].color }} />
@@ -709,7 +759,7 @@ export default function TaskDetailPage({
             />
           </div>
 
-          <div className="w-full basis-full lg:basis-auto pt-3 border-t border-[var(--border-soft)] space-y-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
+          <div className="col-span-2 md:col-span-auto w-full basis-full lg:basis-auto pt-[var(--space-3)] border-t border-[var(--border-soft)] space-y-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
             <div>创建者 {task.creator?.name || task.creator?.email || "—"}</div>
             <div>创建于 {new Date(task.createdAt).toLocaleString("zh-CN")}</div>
             <div>更新于 {relTime(task.updatedAt)}</div>
@@ -732,8 +782,8 @@ export default function TaskDetailPage({
             className="w-full sm:max-w-lg max-h-[100dvh] sm:max-h-[80dvh] overflow-y-auto bg-[var(--surface)] sm:rounded-[var(--radius-lg)] sm:border sm:border-[var(--border)] shadow-[var(--elev-lg)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <header className="flex items-center justify-between px-4 py-3 border-b border-[var(--border-soft)] sticky top-0 bg-[var(--surface)]">
-              <h3 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+            <header className="flex items-center justify-between px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border-soft)] sticky top-0 bg-[var(--surface)]">
+              <h3 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
                 <History size={16} className="text-[var(--muted)]" />
                 版本历史 · v{historyFor.version}
               </h3>
@@ -745,9 +795,9 @@ export default function TaskDetailPage({
                 <X size={15} />
               </button>
             </header>
-            <div className="p-4 space-y-4">
+            <div className="p-[var(--space-4)] space-y-[var(--space-4)]">
               {historyLoading ? (
-                <div className="space-y-3">
+                <div className="space-y-[var(--space-3)]">
                   <div className="h-20 w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
                   <div className="h-20 w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
                 </div>
@@ -759,7 +809,7 @@ export default function TaskDetailPage({
                     key={v.id}
                     className="border border-[var(--border)] rounded-[var(--radius-md)] overflow-hidden hover:shadow-[var(--elev-hover)] transition-shadow duration-[var(--motion-fast)]"
                   >
-                    <header className="flex items-center gap-2 px-3 py-2 bg-[var(--surface-2)] border-b border-[var(--border-soft)]">
+                    <header className="flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] bg-[var(--surface-2)] border-b border-[var(--border-soft)]">
                       <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface)] border border-[var(--border)] text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--fg-2)]">
                         v{v.version}
                       </span>
@@ -767,12 +817,54 @@ export default function TaskDetailPage({
                         {v.author.name || v.author.email} · {relTime(v.createdAt)}
                       </span>
                     </header>
-                    <div className="px-3 py-2.5 text-[length:var(--text-sm)]">
+                    <div className="px-[var(--space-3)] py-2.5 text-[length:var(--text-sm)]">
                       <Markdown source={v.markdown} />
                     </div>
                   </article>
                 ))
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── 自定义确认弹窗（替代 window.confirm）── */}
+      {confirmOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="确认操作"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
+          onClick={() => setConfirmOpen(false)}
+        >
+          <div
+            className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] p-[var(--space-5)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
+              确认删除
+            </h3>
+            <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.6] mb-[var(--space-5)]">
+              确认删除任务「{task.title}」？删除后无法恢复，评论与决策记录会一并删除。
+            </p>
+            <div className="flex items-center justify-end gap-[var(--space-2)]">
+              <button
+                type="button"
+                onClick={() => setConfirmOpen(false)}
+                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+              >
+                取消
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  confirmAction();
+                  setConfirmOpen(false);
+                }}
+                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 transition-opacity duration-[var(--motion-fast)]"
+              >
+                确认删除
+              </button>
             </div>
           </div>
         </div>

@@ -105,6 +105,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   }
 
   async function changeRole(uid: string, role: Role) {
+    if (!window.confirm("确定更改该成员角色？")) return;
     setError("");
     setMembers((prev) => prev.map((m) => (m.id === uid ? { ...m, role } : m)));
     try {
@@ -139,7 +140,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           </p>
         </div>
         {seatsTotal > 0 && (
-          <div className="w-full sm:w-auto sm:text-right sm:shrink-0 order-first sm:order-none">
+          <div className="w-full sm:w-auto sm:text-right sm:shrink-0 order-first sm:order-none mb-4 sm:mb-0">
             <div className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
               席位 {seatsUsed} / {seatsTotal}
             </div>
@@ -267,14 +268,17 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                   </div>
                   <div className="flex items-center gap-1">
                     {editable ? (
-                      <select
-                        value={m.role}
-                        onChange={(e) => changeRole(m.id, e.target.value as Role)}
-                        className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-                      >
-                        <option value="member">成员</option>
-                        <option value="admin">管理员</option>
-                      </select>
+                      <div className="flex items-center gap-1">
+                        <select
+                          value={m.role}
+                          onChange={(e) => changeRole(m.id, e.target.value as Role)}
+                          className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                        >
+                          <option value="member">成员</option>
+                          <option value="admin">管理员</option>
+                        </select>
+                        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">拥有者不可在此更改</span>
+                      </div>
                     ) : (
                       <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">
                         <Icon size={16} className="text-[var(--muted)]" />
@@ -338,6 +342,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                         <option value="member">成员</option>
                         <option value="admin">管理员</option>
                       </select>
+                      <span className="text-[length:var(--text-xs)] text-[var(--meta)]">拥有者不可在此更改</span>
                       <button
                         onClick={() => remove(m.id, m.name || m.email)}
                         className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"

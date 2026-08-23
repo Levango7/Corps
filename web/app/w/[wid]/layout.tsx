@@ -49,10 +49,12 @@ export default function WorkspaceLayout({
   const [themePref, setThemePref] = useState<ThemePref>("system");
   const [resolvedDark, setResolvedDark] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
+  const [switcherHighlight, setSwitcherHighlight] = useState(-1);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState<{ name: string | null; email: string; image: string | null } | null>(null);
   const switcherRef = useRef<HTMLDivElement>(null);
+  const switcherListRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
@@ -147,6 +149,17 @@ export default function WorkspaceLayout({
     return () => node.removeEventListener("keydown", onTab);
   }, [drawerOpen]);
 
+  // 工作区切换下拉：打开时高亮当前工作区并聚焦列表，支持 ↑↓ Enter 键盘导航
+  useEffect(() => {
+    if (!switcherOpen) return;
+    setSwitcherHighlight(workspaces.findIndex((w) => w.id === wid));
+    // 等待 DOM 渲染后聚焦列表容器，使 onKeyDown 能接收键盘事件
+    const id = requestAnimationFrame(() => {
+      switcherListRef.current?.focus();
+    });
+    return () => cancelAnimationFrame(id);
+  }, [switcherOpen, workspaces, wid]);
+
   function toggleSidebar() {
     const next = !collapsed;
     setCollapsed(next);
@@ -217,17 +230,17 @@ export default function WorkspaceLayout({
 
   return (
     <div className="min-h-screen flex flex-col">
-      <header className="h-[var(--topbar-h)] px-4 border-b border-[var(--shell-edge)] bg-[var(--shell-topbar)] flex items-center gap-3 sticky top-0 z-[var(--z-sticky)]">
+      <header className="h-[var(--topbar-h)] px-[var(--space-4)] border-b border-[var(--shell-edge)] bg-[var(--shell-topbar)] flex items-center gap-[var(--space-3)] sticky top-0 z-[var(--z-sticky)]">
         {/* 汉堡菜单：< lg 显示，≥ lg 隐藏 */}
         <button
           onClick={() => setDrawerOpen(true)}
-          className="lg:hidden p-2 -ml-1 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            className="lg:hidden p-[var(--space-2)] -ml-[var(--space-1)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
           aria-label="打开侧栏"
         >
           <Menu size={18} />
         </button>
 
-        <div className="flex items-center gap-2 relative" ref={switcherRef}>
+        <div className="flex items-center gap-[var(--space-2)] relative" ref={switcherRef}>
           <Link
             href={`/w/${wid}`}
             className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]"
@@ -237,7 +250,7 @@ export default function WorkspaceLayout({
           <span className="text-[var(--border)] select-none">/</span>
           <button
             onClick={() => setSwitcherOpen((v) => !v)}
-            className="flex items-center gap-1 px-2 h-8 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] text-[length:var(--text-sm)]"
+            className="flex items-center gap-[var(--space-1)] px-[var(--space-2)] h-8 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] text-[length:var(--text-sm)]"
           >
             <span className="text-[var(--fg)] max-w-[100px] sm:max-w-[180px] truncate">
               {workspace.name}
@@ -245,15 +258,39 @@ export default function WorkspaceLayout({
             <ChevronsUpDown size={13} className="text-[var(--meta)]" />
           </button>
           {switcherOpen && (
-            <div className="absolute top-full left-0 mt-1.5 w-60 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-1 z-[var(--z-dropdown)]">
-              <div className="px-3 py-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
+            <div
+              ref={switcherListRef}
+              role="listbox"
+              tabIndex={-1}
+              aria-label="切换工作区"
+              onKeyDown={(e) => {
+                if (workspaces.length === 0) return;
+                if (e.key === "ArrowDown") {
+                  e.preventDefault();
+                  setSwitcherHighlight((prev) => (prev + 1) % workspaces.length);
+                } else if (e.key === "ArrowUp") {
+                  e.preventDefault();
+                  setSwitcherHighlight((prev) => (prev - 1 + workspaces.length) % workspaces.length);
+                } else if (e.key === "Enter") {
+                  e.preventDefault();
+                  if (switcherHighlight >= 0 && switcherHighlight < workspaces.length) {
+                    switchWorkspace(workspaces[switcherHighlight].id);
+                  }
+                }
+              }}
+              className="absolute top-full left-0 mt-1.5 w-60 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-[var(--space-1)] z-[var(--z-dropdown)] focus-visible:outline-none"
+            >
+              <div className="px-[var(--space-3)] py-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
                 切换工作区
               </div>
-              {workspaces.map((w) => (
+              {workspaces.map((w, i) => (
                 <button
                   key={w.id}
                   onClick={() => switchWorkspace(w.id)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                  aria-selected={switcherHighlight === i}
+                  className={`w-full flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] transition-colors duration-[var(--motion-fast)] ${
+                    switcherHighlight === i ? "bg-[var(--surface-2)]" : "hover:bg-[var(--surface-2)]"
+                  }`}
                 >
                   <span className="flex-1 text-left truncate">{w.name}</span>
                   {w.id === wid && <Check size={14} className="text-[var(--accent)] shrink-0" />}
@@ -267,7 +304,7 @@ export default function WorkspaceLayout({
           {/* ≥ md：完整搜索框 */}
           <button
             onClick={() => setCmdOpen(true)}
-            className="hidden md:flex items-center gap-2 px-3 h-8 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--muted)] text-[length:var(--text-sm)] hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)] w-[240px] lg:w-[300px]"
+            className="hidden md:flex items-center gap-[var(--space-2)] px-[var(--space-3)] h-8 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--muted)] text-[length:var(--text-sm)] hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)] w-[var(--search-w-sm)] lg:w-[var(--search-w-lg)]"
           >
             <Search size={15} />
             <span className="flex-1 text-left truncate">搜索任务</span>
@@ -278,26 +315,32 @@ export default function WorkspaceLayout({
           {/* < md：搜索图标按钮，触发命令面板 */}
           <button
             onClick={() => setCmdOpen(true)}
-            className="md:hidden p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            className="md:hidden p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
             aria-label="搜索"
           >
             <Search size={18} />
           </button>
         </div>
 
-        <div className="flex items-center gap-1 ml-auto">
+        <div className="flex items-center gap-[var(--space-1)] ml-auto">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
             aria-label={`切换主题（当前：${themeLabel}）`}
             title={themeLabel}
           >
             {themeIcon}
           </button>
+          <span
+            className="hidden md:inline text-[length:var(--text-xs)] text-[var(--meta)] select-none"
+            aria-hidden="true"
+          >
+            {themeLabel}
+          </span>
           {user && (
             <Link
               href={`/w/${wid}/settings`}
-              className="flex items-center gap-2 px-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+              className="flex items-center gap-[var(--space-2)] px-[var(--space-2)] rounded-lg hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
               aria-label="个人设置"
               title="个人设置"
             >
@@ -328,7 +371,7 @@ export default function WorkspaceLayout({
               }
               router.push("/auth/login");
             }}
-            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
             aria-label="退出登录"
             title="退出登录"
           >
@@ -341,10 +384,10 @@ export default function WorkspaceLayout({
         {/* 桌面端侧栏 (≥ lg)：固定显示，可折叠（保留当前行为） */}
         <aside
           className={`hidden lg:flex bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] flex-col transition-[width] duration-[var(--motion-base)] ease-[var(--ease-standard)] ${
-            collapsed ? "w-[64px]" : "w-[var(--sidebar-w)]"
+            collapsed ? "w-[var(--sidebar-w-collapsed)]" : "w-[var(--sidebar-w)]"
           }`}
         >
-          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
+          <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
             {navItems.map(({ href, label, icon: Icon, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
@@ -352,7 +395,7 @@ export default function WorkspaceLayout({
                   key={href}
                   href={href}
                   aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-3 px-3 h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
                     active
                       ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
@@ -368,14 +411,14 @@ export default function WorkspaceLayout({
 
           <button
             onClick={toggleSidebar}
-            className="m-2 p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
+            className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
             aria-label={collapsed ? "展开侧栏" : "折叠侧栏"}
           >
             {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
           </button>
         </aside>
 
-        <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-4 lg:p-6">{children}</main>
+        <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-[var(--space-4)] lg:p-[var(--space-6)]">{children}</main>
       </div>
 
       {/* 移动端抽屉 (< lg)：overlay + 滑入动画，独立于桌面端折叠状态 */}
@@ -391,7 +434,7 @@ export default function WorkspaceLayout({
         {/* 抽屉：从左侧滑入 */}
         <aside
           ref={drawerRef}
-          className={`fixed inset-y-0 left-0 w-[280px] h-full bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] z-[var(--z-modal)] transform transition-transform duration-[var(--motion-base)] ease-[var(--ease-standard)] flex flex-col ${
+          className={`fixed inset-y-0 left-0 w-[var(--sidebar-w-mobile)] h-full bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] z-[var(--z-modal)] transform transition-transform duration-[var(--motion-base)] ease-[var(--ease-standard)] flex flex-col ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           aria-hidden={!drawerOpen}
@@ -399,7 +442,7 @@ export default function WorkspaceLayout({
           aria-modal={drawerOpen ? "true" : undefined}
           aria-label="导航菜单"
         >
-          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
             {navItems.map(({ href, label, icon: Icon, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
@@ -408,7 +451,7 @@ export default function WorkspaceLayout({
                   href={href}
                   aria-current={active ? "page" : undefined}
                   onClick={() => setDrawerOpen(false)}
-                  className={`flex items-center gap-3 px-3 h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
                     active
                       ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
@@ -422,7 +465,7 @@ export default function WorkspaceLayout({
           </nav>
           <button
             onClick={() => setDrawerOpen(false)}
-            className="m-2 p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
+            className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
             aria-label="关闭侧栏"
           >
             <X size={16} />

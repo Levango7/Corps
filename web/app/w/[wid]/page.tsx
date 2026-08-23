@@ -78,6 +78,8 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showNew, setShowNew] = useState(false);
+  // "最近更新"列表排序方式：recent 最近更新 / due 即将到期 / priority 优先级
+  const [sortKey, setSortKey] = useState<"recent" | "due" | "priority">("recent");
   const router = useRouter();
 
   const load = useCallback(async () => {
@@ -102,13 +104,30 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
 
   const openTasks = tasks.filter((t) => t.status !== "done");
   const overdue = openTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date());
-  const recent = [...tasks]
-    .sort((a, b) => (b.updatedAt ?? "").localeCompare(a.updatedAt ?? ""))
-    .slice(0, 8);
+
+  /**
+   * "最近更新"列表排序：
+   * - recent：按 updatedAt 倒序（默认）
+   * - due：按截止日期升序，无截止日期排最后
+   * - priority：urgent > high > medium > low
+   */
+  const PRIORITY_ORDER: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+  const sortedRecent = [...tasks].sort((a, b) => {
+    if (sortKey === "due") {
+      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+      return aDue - bDue;
+    }
+    if (sortKey === "priority") {
+      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+    }
+    return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
+  });
+  const recent = sortedRecent.slice(0, 8);
 
   return (
     <div className="max-w-5xl mx-auto">
-      <div className="flex items-end justify-between mb-6 gap-4">
+      <div className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>
           <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             概览
@@ -123,7 +142,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
         </div>
         <button
           onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] shrink-0"
+          className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
         >
           <Plus size={16} />
           新建任务
@@ -134,7 +153,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       {!loaded ? (
         <StatCardSkeleton />
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] sm:gap-[var(--space-4)] mb-[var(--space-6)]">
           {(["todo", "doing", "done"] as const).map((s) => {
             const meta = STATUS_META[s];
             const Icon = meta.icon;
@@ -163,7 +182,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
 
       {/* 逾期提醒：inline banner，左侧 danger 色条 + 文案，< sm 仅显示计数 */}
       {loaded && overdue.length > 0 && (
-        <div className="mb-6 flex items-center gap-2.5 bg-[var(--danger-soft)] border-l-2 border-[var(--danger)] rounded-[var(--radius-md)] px-4 py-2.5 text-[length:var(--text-sm)]">
+        <div className="mb-[var(--space-6)] flex items-center gap-2.5 bg-[var(--danger-soft)] border-l-2 border-[var(--danger)] rounded-[var(--radius-md)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)]">
           <CalendarClock size={15} className="shrink-0 text-[var(--danger)]" />
           <span className="shrink-0 font-[var(--weight-medium)] text-[var(--danger-fg)]">
             已逾期 {overdue.length} 条
@@ -183,6 +202,13 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             ))}
             {overdue.length > 3 && <span className="text-[var(--meta)] ml-1 shrink-0">等</span>}
           </span>
+          {/* 移动端（< sm）查看全部逾期任务链接 */}
+          <Link
+            href={`/w/${wid}/board?status=overdue`}
+            className="sm:hidden ml-auto text-[var(--accent)] hover:underline"
+          >
+            查看全部
+          </Link>
         </div>
       )}
 
@@ -191,19 +217,32 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
           <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
             最近更新
           </h2>
-          <Link
-            href={`/w/${wid}/board`}
-            className="flex items-center gap-1 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-          >
-            全部
-            <ArrowRight size={14} />
-          </Link>
+          <div className="flex items-center gap-[var(--space-3)]">
+            {/* 排序下拉：最近更新 / 即将到期 / 优先级 */}
+            <select
+              value={sortKey}
+              onChange={(e) => setSortKey(e.target.value as "recent" | "due" | "priority")}
+              aria-label="排序方式"
+              className="text-[length:var(--text-sm)] text-[var(--fg-2)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)] px-2 py-1 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            >
+              <option value="recent">最近更新</option>
+              <option value="due">即将到期</option>
+              <option value="priority">优先级</option>
+            </select>
+            <Link
+              href={`/w/${wid}/board`}
+              className="flex items-center gap-1 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            >
+              全部
+              <ArrowRight size={14} />
+            </Link>
+          </div>
         </header>
 
         {!loaded ? (
           <TaskListSkeleton count={5} />
         ) : recent.length === 0 ? (
-          <div className="px-5 py-14 flex flex-col items-center text-center">
+          <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
             <LayoutDashboard
               size={48}
               className="text-[var(--muted)] opacity-40 mb-4"
@@ -264,6 +303,10 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                       >
                         {due.text}
                       </span>
+                    )}
+                    {/* 截止日期与相对时间戳之间的分隔符 */}
+                    {due && rel && (
+                      <span className="shrink-0 text-[var(--meta)]">·</span>
                     )}
                     {/* 相对时间戳：var(--meta) 色 */}
                     {rel && (

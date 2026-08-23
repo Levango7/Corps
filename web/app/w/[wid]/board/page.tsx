@@ -157,6 +157,9 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   const [draggingId, setDraggingId] = useState<string | null>(null);
   // 拖拽失败错误提示（5 秒后自动清除）
   const [dragError, setDragError] = useState<string | null>(null);
+  // 列表视图分页：每页 50 条，仅当总数 > 50 时启用分页控件
+  const [listPage, setListPage] = useState(1);
+  const LIST_PAGE_SIZE = 50;
   // 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转
   const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const { wid } = use(params);
@@ -263,7 +266,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   ): ReactNode => (
     <div
       key={column.id}
-      className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[500px] min-w-[260px] flex-shrink-0 lg:min-w-0"
+      className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {
         const taskId = e.dataTransfer.getData("text/plain");
@@ -320,7 +323,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
             <div className="flex items-start gap-2">
               <GripVertical
                 size={14}
-                className="text-[var(--meta)] mt-0.5 shrink-0"
+                className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab"
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
@@ -381,6 +384,18 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
   });
 
+  /**
+   * 列表视图分页：每页 LIST_PAGE_SIZE 条。
+   * safePage 防止删除任务后当前页越界（如总数从 51 变 50 时回退到第 1 页）。
+   */
+  const listTotalPages = Math.max(1, Math.ceil(sortedListTasks.length / LIST_PAGE_SIZE));
+  const safeListPage = Math.min(listPage, listTotalPages);
+  const paginatedListTasks = sortedListTasks.slice(
+    (safeListPage - 1) * LIST_PAGE_SIZE,
+    safeListPage * LIST_PAGE_SIZE
+  );
+  const showListPagination = sortedListTasks.length > LIST_PAGE_SIZE;
+
   let content: ReactNode;
 
   if (loading) {
@@ -403,7 +418,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           {COLUMNS.map((col) => (
             <div
               key={col.id}
-              className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[500px] min-w-[260px] flex-shrink-0 lg:min-w-0"
+              className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
             >
               {/* 列头 */}
               <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
@@ -564,7 +579,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           <>
             {/* < md：卡片列表（纵向排列，紧凑卡片） */}
             <div className="md:hidden space-y-2">
-              {sortedListTasks.map((task) => (
+              {paginatedListTasks.map((task) => (
                 <div
                   key={task.id}
                   onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
@@ -612,7 +627,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   </tr>
                 </thead>
                 <tbody>
-                  {sortedListTasks.map((task) => (
+                  {paginatedListTasks.map((task) => (
                     <tr
                       key={task.id}
                       onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
@@ -650,6 +665,31 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                 </tbody>
               </table>
             </div>
+
+            {/* 列表视图分页：仅当总数 > 50 时显示，上一页/下一页 + 页码 */}
+            {showListPagination && (
+              <div className="flex items-center justify-center gap-3 mt-4 text-[length:var(--text-sm)] text-[var(--muted)]">
+                <button
+                  onClick={() => setListPage((p) => Math.max(1, p - 1))}
+                  disabled={safeListPage <= 1}
+                  className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  aria-label="上一页"
+                >
+                  上一页
+                </button>
+                <span className="tabular-nums text-[var(--fg-2)]">
+                  {safeListPage} / {listTotalPages}
+                </span>
+                <button
+                  onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+                  disabled={safeListPage >= listTotalPages}
+                  className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                  aria-label="下一页"
+                >
+                  下一页
+                </button>
+              </div>
+            )}
           </>
         )}
       </div>

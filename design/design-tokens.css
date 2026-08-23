@@ -192,6 +192,17 @@
   --topbar-h:      56px;
   --section-y:     36px;
 
+  /* —— 布局细节尺寸（P2: 抽离硬编码值）—— */
+  --sidebar-w-collapsed: 64px;   /* 折叠侧栏宽度 */
+  --sidebar-w-mobile:    280px;  /* 移动端抽屉宽度 */
+  --search-w-sm:         240px;  /* 搜索框宽度（小屏） */
+  --search-w-lg:         300px;  /* 搜索框宽度（大屏） */
+  --board-col-min-h:     500px;  /* 看板列最小高度 */
+  --board-col-min-w:     260px;  /* 看板列最小宽度 */
+  --task-aside-w:        260px;  /* 任务详情侧栏宽度 */
+  --cmd-palette-top:     12vh;   /* 命令面板顶部偏移 */
+  --cmd-palette-max-h:   50vh;   /* 命令面板结果最大高度 */
+
   /* —— 焦点环（统一，禁移除）—— */
   --focus-ring: 0 0 0 3px var(--accent-ring);
 

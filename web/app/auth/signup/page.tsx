@@ -51,7 +51,7 @@ export default function SignupPage() {
   const inputClass =
     "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-[box-shadow,border-color] duration-[var(--motion-fast)] placeholder:text-[var(--meta)]";
   const labelClass =
-    "block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-1.5";
+    "block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]";
 
   // 密码强度：0 空 / 1 弱 / 2 中 / 3 强
   // 弱：纯字母或 <8 位；中：字母+数字 ≥8 位；强：字母+数字+特殊字符 ≥8 位
@@ -78,7 +78,7 @@ export default function SignupPage() {
 
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
-      <div className="mb-5 sm:mb-8">
+      <div className="mb-[var(--space-5)] sm:mb-8">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           创建工作区
         </h1>
@@ -89,13 +89,13 @@ export default function SignupPage() {
 
       <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-8 shadow-[var(--elev-sm)] border border-[var(--border)]">
         {error && (
-          <div className="mb-5 flex items-start gap-2 p-3 bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
+          <div className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />
             <span>{error}</span>
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-[var(--space-4)]">
           <div>
             <label htmlFor="workspaceName" className={labelClass}>
               工作区名称
@@ -112,7 +112,7 @@ export default function SignupPage() {
             />
           </div>
 
-          <div className="h-px bg-[var(--border-soft)]" />
+          <div className="h-px -my-2 bg-[var(--border-soft)]" />
 
           <div>
             <label htmlFor="name" className={labelClass}>
@@ -187,7 +187,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? "正在创建" : "创建并进入"}

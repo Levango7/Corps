@@ -177,7 +177,7 @@ export default function NewTaskDialog({
           </button>
         </header>
 
-        <form onSubmit={submit} className="px-5 py-4 space-y-4">
+        <form onSubmit={submit} className="px-4 sm:px-5 py-4 space-y-4">
           <div>
             <label className={fieldLabel} htmlFor="nt-title">
               标题
@@ -264,6 +264,7 @@ export default function NewTaskDialog({
               </label>
               <input
                 type="date"
+                min={new Date().toISOString().split("T")[0]}
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className={fieldControl}

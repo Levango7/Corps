@@ -32,6 +32,7 @@ function applyTheme(pref: ThemePref) {
         ? "dark"
         : "light"
       : pref;
+  document.documentElement.style.transition = "background-color 0.2s";
   document.documentElement.setAttribute("data-theme", resolved);
   localStorage.setItem("corps_theme", pref);
 }
@@ -51,6 +52,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const [userInitial, setUserInitial] = useState<{ name: string | null; image: string | null } | null>(null);
   const [userBusy, setUserBusy] = useState(false);
   const [userSaved, setUserSaved] = useState(false);
+  const [userImageError, setUserImageError] = useState("");
 
   const load = useCallback(async () => {
     try {
@@ -200,9 +202,19 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               type="url"
               value={userImage}
               onChange={(e) => setUserImage(e.target.value)}
+              onBlur={(e) => {
+                const v = e.target.value.trim();
+                if (v && !/^https?:\/\/.+/i.test(v)) setUserImageError("请输入有效的 URL");
+                else setUserImageError("");
+              }}
               className={inputClass}
               placeholder="https://..."
             />
+            {userImageError && (
+              <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--danger-fg)]">
+                {userImageError}
+              </p>
+            )}
             {userImage.trim() && (
               // eslint-disable-next-line @next/next/no-img-element
               <img
@@ -226,6 +238,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             {userBusy && <Loader2 size={15} className="animate-spin" />}
             保存修改
           </button>
+          {!userDirty && !userBusy && (
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">未做修改</span>
+          )}
           {userSaved && (
             <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">
               <Check size={15} className="text-[var(--success)]" />
@@ -284,6 +299,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               {busy && <Loader2 size={15} className="animate-spin" />}
               保存修改
             </button>
+            {!dirty && !busy && (
+              <span className="text-[length:var(--text-xs)] text-[var(--meta)]">未做修改</span>
+            )}
             {saved && (
               <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">
                 <Check size={15} className="text-[var(--success)]" />
@@ -315,7 +333,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <button
                 key={t.id}
                 onClick={() => pickTheme(t.id)}
-                className="w-full sm:flex-1 flex flex-col items-center gap-2 py-3 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)]"
+                className="w-full sm:flex-1 flex flex-col items-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)]"
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
                   background: active ? "var(--accent-soft)" : "var(--surface)",
@@ -338,7 +356,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
             概况
           </h2>
-          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-[length:var(--text-sm)]">
+          <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-y-3 sm:gap-x-4 text-[length:var(--text-sm)]">
             {[
               ["成员", `${ws.memberCount} 人`],
               ["任务", `${ws.taskCount} 条`],

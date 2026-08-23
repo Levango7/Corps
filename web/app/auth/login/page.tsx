@@ -40,6 +40,7 @@ export default function LoginPage() {
         router.push(`/w/${first.id}`);
       } else {
         setError("账号未加入任何工作区，请联系管理员邀请");
+        setPassword("");
         setBusy(false);
       }
     } catch {
@@ -50,7 +51,7 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
-      <div className="mb-5 sm:mb-8">
+      <div className="mb-[var(--space-5)] sm:mb-8">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           登录 corps
         </h1>
@@ -62,7 +63,7 @@ export default function LoginPage() {
       <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-8 shadow-[var(--elev-sm)] border border-[var(--border)]">
         {error && (
           <div
-            className="mb-5 flex items-start gap-2 p-3 bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] border"
+            className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] border"
             style={{ borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)" }}
           >
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />
@@ -74,7 +75,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-1.5"
+              className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
             >
               邮箱
             </label>
@@ -91,7 +92,7 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <div className="flex items-baseline justify-between mb-1.5">
+            <div className="flex items-baseline justify-between mb-[var(--space-2)]">
               <label
                 htmlFor="password"
                 className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)]"
@@ -121,7 +122,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? "正在登录" : "登录"}

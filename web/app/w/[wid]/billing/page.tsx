@@ -37,6 +37,7 @@ const PLANS: {
   unit: string;
   seats: string;
   features: string[];
+  details: string[];
 }[] = [
   {
     id: "free",
@@ -45,6 +46,7 @@ const PLANS: {
     unit: "永久",
     seats: "最多 3 人",
     features: ["任务看板", "评论与 @提醒", "决策记录（最近 10 条）"],
+    details: ["最多 3 人席位", "决策记录上限 10 条", "基础导出", "社区支持"],
   },
   {
     id: "starter",
@@ -53,6 +55,7 @@ const PLANS: {
     unit: "每人 / 月",
     seats: "按席位计费",
     features: ["无限决策记录", "任务筛选与视图", "邮件通知", "导出 CSV"],
+    details: ["无限决策记录", "任务筛选与视图", "邮件通知", "导出 CSV", "按席位计费", "邮件支持"],
   },
   {
     id: "growth",
@@ -61,6 +64,7 @@ const PLANS: {
     unit: "每人 / 月",
     seats: "按席位计费",
     features: ["标准版全部能力", "审计日志", "SSO（规划中）", "优先支持"],
+    details: ["标准版全部能力", "审计日志", "SSO（规划中）", "优先支持", "按席位计费", "专属客户成功"],
   },
 ];
 
@@ -252,7 +256,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 ) : (
                   <ExternalLink size={15} />
                 )}
-                管理付款方式与发票
+                管理账单
               </button>
             )}
           </div>
@@ -267,11 +271,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           return (
             <div
               key={p.id}
-              className="flex flex-col bg-[var(--surface)] border rounded-[var(--radius-lg)] p-4 sm:p-5"
-              style={{
-                borderColor: current ? "var(--accent)" : "var(--border)",
-                boxShadow: current ? "var(--elev-md)" : "var(--elev-sm)",
-              }}
+              className={`flex flex-col bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-5 ${current ? "border-2 border-[var(--accent)]" : "border border-[var(--border)]"}`}
+              style={{ boxShadow: "var(--elev-sm)" }}
             >
               <div className="flex items-baseline justify-between">
                 <span className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
@@ -307,6 +308,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
+                title={!upgradable ? "Stripe 未配置或非拥有者" : undefined}
                 className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   background: upgradable ? "var(--accent)" : "var(--surface-2)",
@@ -316,6 +318,23 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 {busy === p.id && <Loader2 size={15} className="animate-spin" />}
                 {current ? "使用中" : p.id === "free" ? "包含在内" : upgradable ? "升级" : "不可用"}
               </button>
+
+              <details className="mt-3 group">
+                <summary className="cursor-pointer text-[length:var(--text-xs)] text-[var(--meta)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] select-none">
+                  查看完整对比
+                </summary>
+                <ul className="mt-2 space-y-1.5">
+                  {p.details.map((d) => (
+                    <li
+                      key={d}
+                      className="flex items-start gap-1.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
+                    >
+                      <Check size={12} className="shrink-0 mt-0.5 text-[var(--success)]" />
+                      {d}
+                    </li>
+                  ))}
+                </ul>
+              </details>
             </div>
           );
         })}
