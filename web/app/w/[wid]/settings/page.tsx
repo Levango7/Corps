@@ -203,6 +203,14 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               className={inputClass}
               placeholder="https://..."
             />
+            {userImage.trim() && (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={userImage.trim()}
+                className="mt-2 w-16 h-16 rounded-full border border-[var(--border)] object-cover"
+                alt="头像预览"
+              />
+            )}
             <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
               留空则使用姓名首字母作为默认头像。
             </p>
@@ -354,23 +362,13 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 危险操作 */}
       {ws?.role === "owner" && (
-        <section
-          className="mt-5 rounded-[var(--radius-lg)] p-4 sm:p-5 border"
-          style={{ borderColor: "var(--danger)", background: "var(--danger-soft)" }}
-        >
+        <section className="mt-5 rounded-[var(--radius-lg)] p-4 sm:p-5 border border-[var(--danger)] bg-[var(--danger-soft)]">
           <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
-            删除工作区
+            危险操作
           </h2>
-          <p className="text-[length:var(--text-sm)] text-[var(--danger-fg)] opacity-90 mb-4">
-            将永久删除所有任务、评论与决策记录，且无法恢复。请先导出需要留存的内容。
+          <p className="text-[length:var(--text-sm)] text-[var(--danger-fg)] opacity-90">
+            删除工作区功能将在后续版本开放。
           </p>
-          <button
-            disabled
-            title="删除工作区需在服务端补充二次确认与数据导出，当前版本未开放"
-            className="w-full sm:w-auto h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] border border-[var(--danger)] text-[var(--danger)] opacity-50 cursor-not-allowed"
-          >
-            删除工作区
-          </button>
         </section>
       )}
     </div>

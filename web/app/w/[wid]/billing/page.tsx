@@ -96,6 +96,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
 
   async function upgrade(plan: Plan) {
     setError("");
+    if (!window.confirm("将跳转到 Stripe 完成支付，是否继续？")) return;
     setBusy(plan);
     try {
       const { url } = await api<{ url: string }>(`/api/v1/workspaces/${wid}/billing/checkout`, {
@@ -151,7 +152,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         </div>
       )}
       {canceled && (
-        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--fg-2)] text-[length:var(--text-sm)]">
+        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--fg-2)] text-[length:var(--text-sm)] border border-[var(--border)]">
           已取消本次结算，套餐未变更。
         </div>
       )}
@@ -306,7 +307,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
-                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed"
+                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   background: upgradable ? "var(--accent)" : "var(--surface-2)",
                   color: upgradable ? "var(--accent-fg)" : "var(--meta)",

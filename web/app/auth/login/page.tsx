@@ -61,7 +61,10 @@ export default function LoginPage() {
 
       <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-8 shadow-[var(--elev-sm)] border border-[var(--border)]">
         {error && (
-          <div className="mb-5 flex items-start gap-2 p-3 bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
+          <div
+            className="mb-5 flex items-start gap-2 p-3 bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] border"
+            style={{ borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)" }}
+          >
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />
             <span>{error}</span>
           </div>
@@ -95,6 +98,12 @@ export default function LoginPage() {
               >
                 密码
               </label>
+              <Link
+                href="/auth/forgot"
+                className="text-[var(--muted)] hover:text-[var(--accent)] text-xs"
+              >
+                忘记密码？
+              </Link>
             </div>
             <input
               id="password"
@@ -112,7 +121,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-2"
+            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? "正在登录" : "登录"}
@@ -124,7 +133,7 @@ export default function LoginPage() {
         还没有工作区？{" "}
         <Link
           href="/auth/signup"
-          className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2"
+          className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
         >
           创建一个
         </Link>

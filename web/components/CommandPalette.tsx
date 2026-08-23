@@ -12,6 +12,7 @@ import {
   Users,
   CreditCard,
   Settings,
+  X,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -48,6 +49,22 @@ interface SearchResults {
   decisions: SearchDecisionItem[];
 }
 
+/** 高亮匹配文本：在 text 中标记 query 命中的首段 */
+function highlight(text: string, query: string) {
+  if (!query) return text;
+  const idx = text.toLowerCase().indexOf(query.toLowerCase());
+  if (idx === -1) return text;
+  return (
+    <>
+      {text.slice(0, idx)}
+      <mark className="bg-[var(--accent-soft)] text-[var(--accent)] rounded px-0.5">
+        {text.slice(idx, idx + query.length)}
+      </mark>
+      {text.slice(idx + query.length)}
+    </>
+  );
+}
+
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
   const [query, setQuery] = useState("");
   const [tasks, setTasks] = useState<{ id: string; title: string; status?: string }[]>([]);
@@ -56,7 +73,9 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     decisions: [],
   });
   const [cursor, setCursor] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
 
   // 初次挂载：拉取本地任务列表（query 为空时展示）
@@ -71,9 +90,14 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     const q = query.trim();
     if (!q) {
       setResults({ tasks: [], decisions: [] });
+      setIsSearching(false);
       return;
     }
+    // 防抖期间：尚未发出请求
+    setIsSearching(false);
     const timer = setTimeout(() => {
+      // 请求发出
+      setIsSearching(true);
       api<SearchResults>(
         `/api/v1/workspaces/${wid}/search?q=${encodeURIComponent(q)}`
       )
@@ -166,6 +190,9 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
 
   return (
     <div
+      role="dialog"
+      aria-modal="true"
+      aria-label="命令面板"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[12vh] px-4"
       style={{ background: "var(--overlay)" }}
       onClick={onClose}
@@ -177,12 +204,26 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[var(--border-soft)]">
           <Search size={17} className="text-[var(--muted)] shrink-0" />
           <input
+            ref={inputRef}
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="搜索任务 / 决策，或跳转页面"
             className="flex-1 bg-transparent outline-none text-[length:var(--text-md)] text-[var(--fg)] placeholder:text-[var(--meta)]"
           />
+          {query && (
+            <button
+              type="button"
+              onClick={() => {
+                setQuery("");
+                inputRef.current?.focus();
+              }}
+              className="w-6 h-6 flex items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] shrink-0"
+              aria-label="清除搜索"
+            >
+              <X size={16} />
+            </button>
+          )}
           <kbd className="text-[length:var(--text-xs)] text-[var(--meta)] font-[family-name:var(--font-mono)] shrink-0">
             ESC
           </kbd>
@@ -191,7 +232,11 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         <ul ref={listRef} className="max-h-[50vh] overflow-y-auto py-1.5">
           {items.length === 0 && (
             <li className="px-4 py-8 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-              {query.trim() ? `正在搜索「${query}」…` : "没有可显示的项"}
+              {query.trim()
+                ? isSearching
+                  ? "正在搜索…"
+                  : "输入以搜索…"
+                : "没有可显示的项"}
             </li>
           )}
           {items.map((item, idx) => {
@@ -227,7 +272,9 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
                       size={16}
                       className={`shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--meta)]"}`}
                     />
-                    <span className="flex-1 text-left truncate">{item.title}</span>
+                    <span className="flex-1 text-left truncate">
+                      {highlight(item.title, query.trim())}
+                    </span>
                     {item.hint && (
                       <span className="text-[length:var(--text-xs)] text-[var(--meta)] shrink-0">
                         {item.hint}

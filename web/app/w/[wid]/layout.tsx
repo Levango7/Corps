@@ -53,6 +53,7 @@ export default function WorkspaceLayout({
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [user, setUser] = useState<{ name: string | null; email: string; image: string | null } | null>(null);
   const switcherRef = useRef<HTMLDivElement>(null);
+  const drawerRef = useRef<HTMLElement>(null);
   const router = useRouter();
   const pathname = usePathname();
   const { wid } = use(params);
@@ -113,6 +114,38 @@ export default function WorkspaceLayout({
       window.removeEventListener("mousedown", onClick);
     };
   }, []);
+
+  // 移动端抽屉 focus trap：打开时聚焦首个可聚焦元素，Tab 到末尾回弹首元素
+  useEffect(() => {
+    if (!drawerOpen || !drawerRef.current) return;
+    const node = drawerRef.current;
+    const getFocusable = () =>
+      Array.from(
+        node.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => el.offsetParent !== null || el === document.activeElement);
+    const focusables = getFocusable();
+    if (focusables.length > 0) focusables[0].focus();
+
+    function onTab(e: KeyboardEvent) {
+      if (e.key !== "Tab") return;
+      const items = getFocusable();
+      if (items.length === 0) return;
+      const first = items[0];
+      const last = items[items.length - 1];
+      const active = document.activeElement as HTMLElement | null;
+      if (e.shiftKey && active === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && active === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+    node.addEventListener("keydown", onTab);
+    return () => node.removeEventListener("keydown", onTab);
+  }, [drawerOpen]);
 
   function toggleSidebar() {
     const next = !collapsed;
@@ -204,7 +237,7 @@ export default function WorkspaceLayout({
           <span className="text-[var(--border)] select-none">/</span>
           <button
             onClick={() => setSwitcherOpen((v) => !v)}
-            className="flex items-center gap-1 px-2 h-7 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] text-[length:var(--text-sm)]"
+            className="flex items-center gap-1 px-2 h-8 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] text-[length:var(--text-sm)]"
           >
             <span className="text-[var(--fg)] max-w-[100px] sm:max-w-[180px] truncate">
               {workspace.name}
@@ -255,19 +288,24 @@ export default function WorkspaceLayout({
         <div className="flex items-center gap-1 ml-auto">
           <button
             onClick={toggleTheme}
-            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
             aria-label={`切换主题（当前：${themeLabel}）`}
             title={themeLabel}
           >
             {themeIcon}
           </button>
           {user && (
-            <div className="flex items-center gap-2 px-2">
+            <Link
+              href={`/w/${wid}/settings`}
+              className="flex items-center gap-2 px-2 rounded-lg hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+              aria-label="个人设置"
+              title="个人设置"
+            >
               {user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img
                   src={user.image}
-                  alt=""
+                  alt={user.name ?? user.email}
                   className="w-7 h-7 rounded-full object-cover"
                 />
               ) : (
@@ -278,10 +316,11 @@ export default function WorkspaceLayout({
               <span className="hidden sm:inline text-[length:var(--text-sm)] text-[var(--fg-2)] max-w-[100px] truncate">
                 {user.name ?? user.email.split("@")[0]}
               </span>
-            </div>
+            </Link>
           )}
           <button
             onClick={async () => {
+              if (!window.confirm("确定退出登录？")) return;
               try {
                 await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
               } catch {
@@ -289,7 +328,7 @@ export default function WorkspaceLayout({
               }
               router.push("/auth/login");
             }}
-            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            className="p-2 rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
             aria-label="退出登录"
             title="退出登录"
           >
@@ -305,7 +344,7 @@ export default function WorkspaceLayout({
             collapsed ? "w-[64px]" : "w-[var(--sidebar-w)]"
           }`}
         >
-          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
+          <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-1">
             {navItems.map(({ href, label, icon: Icon, exact }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
@@ -351,11 +390,14 @@ export default function WorkspaceLayout({
         />
         {/* 抽屉：从左侧滑入 */}
         <aside
+          ref={drawerRef}
           className={`fixed inset-y-0 left-0 w-[280px] h-full bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] z-[var(--z-modal)] transform transition-transform duration-[var(--motion-base)] ease-[var(--ease-standard)] flex flex-col ${
             drawerOpen ? "translate-x-0" : "-translate-x-full"
           }`}
           aria-hidden={!drawerOpen}
-          aria-label="侧栏导航"
+          role="dialog"
+          aria-modal={drawerOpen ? "true" : undefined}
+          aria-label="导航菜单"
         >
           <nav className="flex-1 overflow-y-auto py-3 px-2 space-y-0.5">
             {navItems.map(({ href, label, icon: Icon, exact }) => {

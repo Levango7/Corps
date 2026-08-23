@@ -1,7 +1,8 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import { UserPlus, Trash2, Users, Shield, ShieldCheck, User as UserIcon } from "lucide-react";
+import Link from "next/link";
+import { UserPlus, Trash2, Users, Shield, ShieldCheck, User as UserIcon, CheckCircle2 } from "lucide-react";
 import { api } from "@/lib/api";
 
 type Role = "owner" | "admin" | "member";
@@ -43,6 +44,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const [meta, setMeta] = useState<WorkspaceMeta | null>(null);
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
+  const [inviteSuccess, setInviteSuccess] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -67,7 +69,13 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
 
   async function invite() {
     setError("");
-    if (!email.trim() || busy) return;
+    setInviteSuccess("");
+    if (busy) return;
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email.trim())) {
+      setError("请输入有效的邮箱地址");
+      return;
+    }
     setBusy(true);
     try {
       await api(`/api/v1/workspaces/${wid}/members/invite`, {
@@ -75,6 +83,8 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         body: JSON.stringify({ email: email.trim() }),
       });
       setEmail("");
+      setInviteSuccess("已发送邀请邮件");
+      setTimeout(() => setInviteSuccess(""), 3000);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "邀请失败");
@@ -84,7 +94,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   }
 
   async function remove(uid: string, label: string) {
-    if (!confirm(`确认将 ${label} 移出工作区？其已创建的任务会保留。`)) return;
+    if (!window.confirm("确定移除该成员？此操作不可撤销。")) return;
     setError("");
     try {
       await api(`/api/v1/workspaces/${wid}/members/${uid}`, { method: "DELETE" });
@@ -147,34 +157,46 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)] border border-[var(--danger)]/20">
+        <div
+          className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)] border"
+          style={{ borderColor: "color-mix(in srgb, var(--danger) 20%, transparent)" }}
+        >
           {error}
         </div>
       )}
 
       {canManage && (
-        <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
-          <input
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && invite()}
-            placeholder="输入已注册的邮箱地址"
-            className="w-full sm:w-auto sm:flex-1 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
-          />
-          <button
-            onClick={invite}
-            disabled={busy || seatsFull}
-            className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
-          >
-            <UserPlus size={16} />
-            邀请
-          </button>
-        </div>
+        <>
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && invite()}
+              placeholder="输入已注册的邮箱地址"
+              className="w-full sm:w-auto sm:flex-1 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+            />
+            <button
+              onClick={invite}
+              disabled={busy || seatsFull}
+              className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+            >
+              <UserPlus size={16} />
+              邀请
+            </button>
+          </div>
+          {inviteSuccess && (
+            <div className="mb-4 flex items-start gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-sm)]">
+              <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-[var(--success)]" />
+              <span>{inviteSuccess}</span>
+            </div>
+          )}
+        </>
       )}
 
       {seatsFull && canManage && (
         <div className="mb-6 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
-          席位已用满。前往 <a href={`/w/${wid}/billing`} className="underline underline-offset-2">计费</a> 增加席位后可继续邀请。
+          席位已用满。前往 <Link href={`/w/${wid}/billing`} className="underline underline-offset-2">计费</Link> 增加席位后可继续邀请。
         </div>
       )}
 
@@ -307,22 +329,22 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                     </div>
                   </div>
                   {editable && (
-                    <div className="mt-3 flex flex-col sm:flex-row items-stretch sm:items-center sm:justify-end gap-2">
+                    <div className="mt-3 flex flex-col items-stretch gap-2">
                       <select
                         value={m.role}
                         onChange={(e) => changeRole(m.id, e.target.value as Role)}
-                        className="w-full sm:w-auto h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                        className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                       >
                         <option value="member">成员</option>
                         <option value="admin">管理员</option>
                       </select>
                       <button
                         onClick={() => remove(m.id, m.name || m.email)}
-                        className="w-full sm:w-auto flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+                        className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
                         aria-label={`移除 ${m.name || m.email}`}
                       >
                         <Trash2 size={16} />
-                        <span className="sm:hidden">移除</span>
+                        <span>移除</span>
                       </button>
                     </div>
                   )}

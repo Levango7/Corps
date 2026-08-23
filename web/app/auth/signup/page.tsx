@@ -53,6 +53,29 @@ export default function SignupPage() {
   const labelClass =
     "block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-1.5";
 
+  // 密码强度：0 空 / 1 弱 / 2 中 / 3 强
+  // 弱：纯字母或 <8 位；中：字母+数字 ≥8 位；强：字母+数字+特殊字符 ≥8 位
+  function getPasswordStrength(pw: string): 0 | 1 | 2 | 3 {
+    if (!pw) return 0;
+    const hasLetter = /[a-zA-Z]/.test(pw);
+    const hasDigit = /[0-9]/.test(pw);
+    const hasSpecial = /[^a-zA-Z0-9]/.test(pw);
+    if (pw.length < 8) return 1;
+    if (hasLetter && !hasDigit && !hasSpecial) return 1;
+    if (hasLetter && hasDigit && hasSpecial) return 3;
+    if (hasLetter && hasDigit) return 2;
+    return 1;
+  }
+
+  const strength = getPasswordStrength(password);
+  const strengthLabel = strength === 1 ? "弱" : strength === 2 ? "中" : strength === 3 ? "强" : "";
+  const strengthColor =
+    strength === 1
+      ? "bg-[var(--danger)]"
+      : strength === 2
+        ? "bg-[var(--warning)]"
+        : "bg-[var(--success)]";
+
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
       <div className="mb-5 sm:mb-8">
@@ -138,15 +161,36 @@ export default function SignupPage() {
               required
               minLength={8}
             />
+            {strength > 0 && (
+              <div
+                className="mt-2 flex items-center gap-1.5"
+                aria-label={`密码强度：${strengthLabel}`}
+              >
+                <div className="flex gap-1" aria-hidden="true">
+                  <div
+                    className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 1 ? strengthColor : "bg-[var(--border)]"}`}
+                  />
+                  <div
+                    className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 2 ? strengthColor : "bg-[var(--border)]"}`}
+                  />
+                  <div
+                    className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 3 ? strengthColor : "bg-[var(--border)]"}`}
+                  />
+                </div>
+                <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+                  {strengthLabel}
+                </span>
+              </div>
+            )}
           </div>
 
           <button
             type="submit"
             disabled={busy}
-            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-2"
+            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-2 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
-            {busy ? "正在创建" : "创建工作区"}
+            {busy ? "正在创建" : "创建并进入"}
           </button>
         </form>
       </div>

@@ -1,10 +1,19 @@
 "use client";
 
-import { use, useEffect, useState, type ReactNode } from "react";
+import { use, useEffect, useRef, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, GripVertical, Kanban, List } from "lucide-react";
+import {
+  Plus,
+  GripVertical,
+  Kanban,
+  List,
+  ChevronUp,
+  ChevronDown,
+  AlertCircle,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import NewTaskDialog from "@/components/NewTaskDialog";
+import { Skeleton } from "@/components/Skeleton";
 
 interface Task {
   id: string;
@@ -28,12 +37,6 @@ const COLUMNS: { id: Task["status"]; title: string; color: string }[] = [
   { id: "done", title: "已完成", color: "var(--status-done)" },
 ];
 
-const PRIORITY_COLORS: Record<Task["priority"], string> = {
-  low: "var(--meta)",
-  medium: "var(--muted)",
-  high: "var(--warn)",
-  urgent: "var(--danger)",
-};
 
 /** 优先级左侧色条颜色：low 透明（占位保持卡片左缘对齐），其余用语义色。 */
 const PRIORITY_BAR_COLORS: Record<Task["priority"], string> = {
@@ -50,18 +53,34 @@ const PRIORITY_LABELS: Record<Task["priority"], string> = {
   urgent: "紧急",
 };
 
-const STATUS_COLORS: Record<Task["status"], string> = {
-  todo: "var(--status-todo)",
-  in_progress: "var(--status-doing)",
-  review: "var(--warn)",
-  done: "var(--status-done)",
-};
-
 const STATUS_LABELS: Record<Task["status"], string> = {
   todo: "待办",
   in_progress: "进行中",
   review: "评审",
   done: "已完成",
+};
+
+/**
+ * 状态徽章样式：用 color-mix 替代 `${color}20` alpha 拼接。
+ * alpha 拼接在 var(--token) 上无效（var 不能与十六进制透明度后缀组合），
+ * color-mix 是 W3C 标准方案，且能随主题切换自动重算。
+ */
+const STATUS_BADGE_STYLES: Record<Task["status"], { background: string; color: string }> = {
+  todo:        { background: "color-mix(in srgb, var(--status-todo) 12%, transparent)",  color: "var(--status-todo)" },
+  in_progress: { background: "color-mix(in srgb, var(--status-doing) 12%, transparent)", color: "var(--status-doing)" },
+  review:      { background: "color-mix(in srgb, var(--warn) 14%, transparent)",         color: "var(--warn)" },
+  done:        { background: "color-mix(in srgb, var(--status-done) 12%, transparent)",  color: "var(--status-done)" },
+};
+
+/**
+ * 优先级徽章样式：用 color-mix 替代 `${color}20` alpha 拼接。
+ * 复用语义色映射，避免引入不存在的 --priority-* token。
+ */
+const PRIORITY_BADGE_STYLES: Record<Task["priority"], { background: string; color: string }> = {
+  low:    { background: "color-mix(in srgb, var(--meta) 12%, transparent)",   color: "var(--meta)" },
+  medium: { background: "color-mix(in srgb, var(--muted) 12%, transparent)",  color: "var(--muted)" },
+  high:   { background: "color-mix(in srgb, var(--warn) 14%, transparent)",   color: "var(--warn)" },
+  urgent: { background: "color-mix(in srgb, var(--danger) 12%, transparent)", color: "var(--danger)" },
 };
 
 /**
@@ -134,6 +153,12 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   const [view, setView] = useState<ViewMode>("board");
   // < md 单列选择器当前选中列
   const [activeColumn, setActiveColumn] = useState<Task["status"]>("todo");
+  // 拖拽视觉反馈：当前正在拖拽的任务 id
+  const [draggingId, setDraggingId] = useState<string | null>(null);
+  // 拖拽失败错误提示（5 秒后自动清除）
+  const [dragError, setDragError] = useState<string | null>(null);
+  // 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转
+  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
   const { wid } = use(params);
   const router = useRouter();
 
@@ -176,8 +201,28 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         body: JSON.stringify({ status: newStatus, sortOrder: newSortOrder }),
       });
     } catch {
-      /* 乐观更新失败：保留本地状态，用户可重试 */
+      // 乐观更新失败：回滚到服务端最新状态，并提示用户
+      setDragError("移动失败，已恢复");
+      await load();
+      setTimeout(() => setDragError(null), 5000);
     }
+  }
+
+  /**
+   * 移动端上下移动按钮：在同列内把 taskId 上移/下移一步。
+   * 触摸设备不支持 HTML5 DnD，提供显式按钮作为替代方案。
+   */
+  async function moveTaskByStep(taskId: string, delta: -1 | 1) {
+    const task = tasks.find((t) => t.id === taskId);
+    if (!task) return;
+    const columnTasks = tasks
+      .filter((t) => t.status === task.status)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    const currentIndex = columnTasks.findIndex((t) => t.id === taskId);
+    if (currentIndex < 0) return;
+    const targetIndex = currentIndex + delta;
+    if (targetIndex < 0 || targetIndex >= columnTasks.length) return;
+    await handleReorder(taskId, targetIndex, task.status);
   }
 
   /** 拖到某个任务卡片上：插入到该任务的位置（之前） */
@@ -241,13 +286,28 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           <div
             key={task.id}
             draggable
-            onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-all"
+            onClick={(e) => {
+              // 拖拽与点击冲突：若拖拽距离 > 5px，视为拖拽而非点击，不触发跳转
+              const start = dragStartRef.current;
+              if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5) {
+                return;
+              }
+              router.push(`/w/${wid}/task/${task.id}`);
+            }}
+            className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] ${
+              draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
+            }`}
             style={{
               borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
             }}
             onDragStart={(e) => {
               e.dataTransfer.setData("text/plain", task.id);
+              dragStartRef.current = { x: e.clientX, y: e.clientY };
+              setDraggingId(task.id);
+            }}
+            onDragEnd={() => {
+              setDraggingId(null);
+              dragStartRef.current = null;
             }}
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => {
@@ -264,24 +324,47 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               />
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1">
-                  <span className="text-xs font-mono text-[var(--muted)]">
+                  <span className="text-[length:var(--text-xs)] font-mono text-[var(--muted)]">
                     {formatTaskId(task.id)}
                   </span>
                 </div>
-                <p className="text-sm font-medium text-[var(--fg)] truncate">
+                <p className="text-[length:var(--text-sm)] font-medium text-[var(--fg)] truncate">
                   {task.title}
                 </p>
                 {task.dueDate && <DueTag dueDate={task.dueDate} />}
                 {task.assignee && (
                   <div className="flex items-center gap-1 mt-2">
-                    <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-xs flex items-center justify-center shrink-0">
+                    <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
                       {task.assignee.name?.[0]}
                     </div>
-                    <span className="text-xs text-[var(--muted)] truncate">
+                    <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
                       {task.assignee.name}
                     </span>
                   </div>
                 )}
+              </div>
+              {/* 移动端上下移动按钮：触摸设备不支持 HTML5 DnD，提供显式按钮 */}
+              <div className="md:hidden flex flex-col gap-0.5 shrink-0 -mr-1">
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveTaskByStep(task.id, -1);
+                  }}
+                  className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
+                  aria-label="上移"
+                >
+                  <ChevronUp size={14} />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    moveTaskByStep(task.id, 1);
+                  }}
+                  className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
+                  aria-label="下移"
+                >
+                  <ChevronDown size={14} />
+                </button>
               </div>
             </div>
           </div>
@@ -301,17 +384,57 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   let content: ReactNode;
 
   if (loading) {
+    // 看板骨架：标题行 + 4 列占位，每列 3 张卡片占位，避免加载完成时布局跳动
     content = (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin w-6 h-6 border-2 border-[var(--accent)] border-t-transparent rounded-full"></div>
+      <div aria-busy="true" aria-live="polite">
+        {/* 标题行 */}
+        <div className="flex items-center justify-between mb-6 gap-3">
+          <div>
+            <Skeleton className="h-7 w-28 mb-2" />
+            <Skeleton className="h-4 w-20" />
+          </div>
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-8 w-20 rounded-[var(--radius-md)]" />
+            <Skeleton className="h-8 w-24 rounded-[var(--radius-md)]" />
+          </div>
+        </div>
+        {/* 4 列骨架：md 水平滚动 / lg 4 列网格，与正式布局一致 */}
+        <div className="flex overflow-x-auto gap-4 pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+          {COLUMNS.map((col) => (
+            <div
+              key={col.id}
+              className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[500px] min-w-[260px] flex-shrink-0 lg:min-w-0"
+            >
+              {/* 列头 */}
+              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
+                <Skeleton className="w-2 h-2 rounded-full" />
+                <Skeleton className="h-4 w-14" />
+                <Skeleton className="ml-auto h-5 w-8 rounded-full" />
+              </div>
+              {/* 3 张卡片占位 */}
+              <div className="space-y-2">
+                {Array.from({ length: 3 }).map((_, i) => (
+                  <div
+                    key={i}
+                    className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5"
+                  >
+                    <Skeleton className="h-3 w-16 mb-2" />
+                    <Skeleton className="h-4 w-full mb-1" style={{ maxWidth: `${70 + i * 8}%` }} />
+                    <Skeleton className="h-3 w-20 mt-2" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     );
   } else if (tasks.length === 0) {
     content = (
       <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
         <Kanban size={48} className="mb-4 opacity-40" />
-        <p className="text-lg font-medium mb-2 text-[var(--fg-2)]">还没有任务</p>
-        <p className="text-sm mb-4">创建第一个任务，开始跟踪进度</p>
+        <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">还没有任务</p>
+        <p className="text-[length:var(--text-sm)] mb-4">创建第一个任务，开始跟踪进度</p>
         <button
           onClick={() => setShowNew(true)}
           className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
@@ -326,15 +449,15 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       <div>
         <div className="flex items-center justify-between mb-6 gap-3">
           <div>
-            <h1 className="text-2xl font-semibold text-[var(--fg)] mb-1">任务看板</h1>
-            <p className="text-[var(--muted)] text-sm">{tasks.length} 个任务</p>
+            <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">任务看板</h1>
+            <p className="text-[var(--muted)] text-[length:var(--text-sm)]">{tasks.length} 个任务</p>
           </div>
           <div className="flex items-center gap-3">
             {/* 视图切换 < sm：仅图标按钮组 */}
             <div className="sm:hidden inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]">
               <button
                 onClick={() => setView("board")}
-                className={`p-1.5 rounded-[var(--radius-sm)] transition-colors ${
+                className={`p-2 rounded-[var(--radius-sm)] transition-colors ${
                   view === "board"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -345,7 +468,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
               <button
                 onClick={() => setView("list")}
-                className={`p-1.5 rounded-[var(--radius-sm)] transition-colors ${
+                className={`p-2 rounded-[var(--radius-sm)] transition-colors ${
                   view === "list"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -359,7 +482,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
             <div className="hidden sm:inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]">
               <button
                 onClick={() => setView("board")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-sm transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
                   view === "board"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -371,7 +494,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
               <button
                 onClick={() => setView("list")}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-sm transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
                   view === "list"
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -401,7 +524,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   <button
                     key={col.id}
                     onClick={() => setActiveColumn(col.id)}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-[var(--radius-sm)] text-sm transition-colors ${
+                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
                       activeColumn === col.id
                         ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                         : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -445,7 +568,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                 <div
                   key={task.id}
                   onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-all"
+                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform]"
                   style={{
                     borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
                   }}
@@ -456,10 +579,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                     </p>
                     <span
                       className="text-xs px-1.5 py-0.5 rounded shrink-0"
-                      style={{
-                        background: `${STATUS_COLORS[task.status]}20`,
-                        color: STATUS_COLORS[task.status],
-                      }}
+                      style={STATUS_BADGE_STYLES[task.status]}
                     >
                       {STATUS_LABELS[task.status]}
                     </span>
@@ -507,10 +627,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                       <td className="px-4 h-10">
                         <span
                           className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            background: `${PRIORITY_COLORS[task.priority]}20`,
-                            color: PRIORITY_COLORS[task.priority],
-                          }}
+                          style={PRIORITY_BADGE_STYLES[task.priority]}
                         >
                           {PRIORITY_LABELS[task.priority]}
                         </span>
@@ -518,10 +635,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                       <td className="px-4 h-10">
                         <span
                           className="text-xs px-1.5 py-0.5 rounded"
-                          style={{
-                            background: `${STATUS_COLORS[task.status]}20`,
-                            color: STATUS_COLORS[task.status],
-                          }}
+                          style={STATUS_BADGE_STYLES[task.status]}
                         >
                           {STATUS_LABELS[task.status]}
                         </span>
@@ -544,6 +658,21 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
 
   return (
     <>
+      {dragError && (
+        <div
+          role="alert"
+          aria-live="assertive"
+          className="mb-4 flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border"
+          style={{
+            background: "color-mix(in srgb, var(--danger) 10%, transparent)",
+            borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)",
+            color: "var(--danger)",
+          }}
+        >
+          <AlertCircle size={16} className="shrink-0" />
+          <span className="text-[length:var(--text-sm)] font-medium">{dragError}</span>
+        </div>
+      )}
       {content}
       <NewTaskDialog
         wid={wid}

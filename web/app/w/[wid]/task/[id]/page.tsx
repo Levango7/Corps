@@ -126,6 +126,7 @@ export default function TaskDetailPage({
   const [mentionIndex, setMentionIndex] = useState(0);
   const [mentionStart, setMentionStart] = useState(-1);
   const draftRef = useRef<HTMLTextAreaElement>(null);
+  const titleRef = useRef<HTMLTextAreaElement>(null);
 
   // ── 视口尺寸（< sm 视为移动端，用于评论 placeholder 缩短）──
   const [isMobile, setIsMobile] = useState(false);
@@ -137,10 +138,41 @@ export default function TaskDetailPage({
     return () => mq.removeEventListener("change", update);
   }, []);
 
+  // ── 标题 textarea 自动高度 ──
+  useEffect(() => {
+    const el = titleRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [titleDraft]);
+
+  // ── 评论 textarea 自动高度 ──
+  useEffect(() => {
+    const el = draftRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [draft]);
+
   // ── 决策版本历史 ──
   const [historyFor, setHistoryFor] = useState<Decision | null>(null);
   const [versions, setVersions] = useState<DecisionVersion[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+
+  // ── 版本历史弹窗：Escape 关闭 ──
+  useEffect(() => {
+    if (!historyFor) return;
+    const onKey = (e: globalThis.KeyboardEvent) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setHistoryFor(null);
+      }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [historyFor]);
 
   const base = `/api/v1/workspaces/${wid}`;
 
@@ -322,7 +354,8 @@ export default function TaskDetailPage({
   }
 
   async function removeTask() {
-    if (!confirm("删除后无法恢复，评论与决策记录会一并删除。确认删除？")) return;
+    if (!task) return;
+    if (!window.confirm(`确认删除任务「${task.title}」？删除后无法恢复，评论与决策记录会一并删除。`)) return;
     try {
       await api(`${base}/tasks/${id}`, { method: "DELETE" });
       router.push(`/w/${wid}/board`);
@@ -405,6 +438,7 @@ export default function TaskDetailPage({
         <div className="min-w-0">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-5">
             <textarea
+              ref={titleRef}
               value={titleDraft}
               onChange={(e) => {
                 setTitleDraft(e.target.value);
@@ -416,7 +450,7 @@ export default function TaskDetailPage({
                 }
               }}
               rows={1}
-              className="w-full resize-none bg-transparent text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
+              className="w-full overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
             />
 
             <textarea
@@ -460,7 +494,7 @@ export default function TaskDetailPage({
             </div>
 
             {decisionOpen && (
-              <div className="mb-4 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4">
+              <div className="mb-4 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
                 <textarea
                   value={decisionDraft}
                   onChange={(e) => setDecisionDraft(e.target.value)}
@@ -506,7 +540,7 @@ export default function TaskDetailPage({
                       <button
                         onClick={() => showHistory(d)}
                         aria-label="版本历史"
-                        className="ml-auto inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
                       >
                         <History size={14} />
                       </button>
@@ -532,9 +566,9 @@ export default function TaskDetailPage({
               )}
             </h2>
 
-            <div className="space-y-4">
+            <div className="divide-y divide-[var(--border-soft)]">
               {comments.map((c) => (
-                <div key={c.id} className="flex gap-3 -mx-2 -my-1.5 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
+                <div key={c.id} className="flex gap-3 px-2 py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
                   <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
                     {(c.author.name || c.author.email)[0]?.toUpperCase()}
                   </div>
@@ -568,7 +602,7 @@ export default function TaskDetailPage({
                   }}
                   rows={2}
                   placeholder={isMobile ? "写下你的想法…（@ 提及，⌘+Enter 发送）" : "写下你的想法…（@ 提及成员，⌘/Ctrl + Enter 发送）"}
-                  className="w-full px-3 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-base)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
+                  className="w-full px-3 py-2 overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-base)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
                 />
                 {mentionOpen && mentionCandidates.length > 0 && (
                   <div className="absolute top-full left-0 mt-1 z-[var(--z-dropdown)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-md)] py-1 min-w-[200px] max-h-60 overflow-y-auto">
@@ -688,6 +722,9 @@ export default function TaskDetailPage({
           ≥ sm：居中弹窗（max-w-lg、80dvh、圆角） */}
       {historyFor && (
         <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="版本历史"
           className="fixed inset-0 z-[var(--z-modal)] flex items-end sm:items-center justify-center bg-[var(--overlay)]"
           onClick={() => setHistoryFor(null)}
         >
@@ -703,7 +740,7 @@ export default function TaskDetailPage({
               <button
                 onClick={() => setHistoryFor(null)}
                 aria-label="关闭"
-                className="inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
               >
                 <X size={15} />
               </button>

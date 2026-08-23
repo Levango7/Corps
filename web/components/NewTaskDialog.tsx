@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Loader2, Flag, Calendar } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -57,6 +57,9 @@ export default function NewTaskDialog({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
+  const dialogRef = useRef<HTMLDivElement>(null);
+  const descRef = useRef<HTMLTextAreaElement>(null);
+
   useEffect(() => {
     if (!open) return;
     // 重置 + 拉取成员列表供指派
@@ -80,6 +83,40 @@ export default function NewTaskDialog({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [open, onClose]);
+
+  // ── focus trap：Tab 在弹窗内循环 ──
+  useEffect(() => {
+    if (!open) return;
+    const el = dialogRef.current;
+    if (!el) return;
+    const focusable = el.querySelectorAll<HTMLElement>(
+      'button, a, input, textarea, select, [tabindex]:not([tabindex="-1"])'
+    );
+    if (focusable.length > 0) focusable[0].focus();
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      const first = focusable[0];
+      const last = focusable[focusable.length - 1];
+      if (e.shiftKey && document.activeElement === first) {
+        e.preventDefault();
+        last.focus();
+      } else if (!e.shiftKey && document.activeElement === last) {
+        e.preventDefault();
+        first.focus();
+      }
+    };
+    el.addEventListener("keydown", handleKeyDown);
+    return () => el.removeEventListener("keydown", handleKeyDown);
+  }, [open]);
+
+  // ── 描述 textarea 自动高度 ──
+  useEffect(() => {
+    const el = descRef.current;
+    if (el) {
+      el.style.height = "auto";
+      el.style.height = el.scrollHeight + "px";
+    }
+  }, [description, open]);
 
   if (!open) return null;
 
@@ -111,21 +148,29 @@ export default function NewTaskDialog({
 
   return (
     <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="new-task-title"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
       style={{ background: "var(--overlay)" }}
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        onClose();
       }}
     >
       <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+          <h2
+            id="new-task-title"
+            className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]"
+          >
             新建任务
           </h2>
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             aria-label="关闭"
           >
             <X size={16} />
@@ -152,6 +197,7 @@ export default function NewTaskDialog({
               描述（可选）
             </label>
             <textarea
+              ref={descRef}
               id="nt-desc"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -161,7 +207,7 @@ export default function NewTaskDialog({
             />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={fieldLabel}>状态</label>
               <select
@@ -195,7 +241,7 @@ export default function NewTaskDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className={fieldLabel}>负责人（可选）</label>
               <select
