@@ -15,12 +15,15 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - run: npx eslint .
       - run: npx prettier --check .
 
@@ -41,12 +44,15 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - run: npx prisma generate
       - run: npx prisma migrate deploy
         env:
@@ -65,14 +71,17 @@ jobs:
         working-directory: web
     steps:
       - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-          cache: "npm"
-          cache-dependency-path: web/package-lock.json
-      - run: npm ci --legacy-peer-deps
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
       - run: npx prisma generate
-      - run: npm run build
+      - run: pnpm run build
 
   deploy-staging:
     name: Deploy Staging
