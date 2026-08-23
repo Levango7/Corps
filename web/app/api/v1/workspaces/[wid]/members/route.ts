@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 
 export async function GET(
   req: NextRequest,
@@ -10,11 +9,16 @@ export async function GET(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const members = await prisma.member.findMany({
-    where: { workspaceId: wid },
-    include: { user: { select: { id: true, email: true, name: true, image: true } } },
-    orderBy: { joinedAt: "asc" },
-  });
+  const members = await runWithWorkspace(
+    wid,
+    (tx) =>
+      tx.member.findMany({
+        where: { workspaceId: wid },
+        include: { user: { select: { id: true, email: true, name: true, image: true } } },
+        orderBy: { joinedAt: "asc" },
+      }),
+    ctx.payload.sub
+  );
 
   return NextResponse.json({
     code: 200,

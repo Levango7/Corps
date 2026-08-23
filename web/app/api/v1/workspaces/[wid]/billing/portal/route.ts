@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { requireStripe } from "@/lib/stripe";
 
 export async function POST(
@@ -14,7 +13,11 @@ export async function POST(
     return NextResponse.json({ code: 403, message: "Only owner can manage billing" }, { status: 403 });
   }
 
-  const subscription = await prisma.subscription.findUnique({ where: { workspaceId: wid } });
+  const subscription = await runWithWorkspace(
+    wid,
+    (tx) => tx.subscription.findUnique({ where: { workspaceId: wid } }),
+    ctx.payload.sub
+  );
   if (!subscription?.stripeCustomerId) {
     return NextResponse.json(
       { code: 400, message: "尚无 Stripe 客户，请先通过升级完成订阅" },

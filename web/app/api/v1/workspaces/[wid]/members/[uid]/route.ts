@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 
 const roleSchema = z.object({ role: z.enum(["admin", "member"]) });
@@ -18,18 +17,28 @@ export async function PATCH(
 
   const { role } = roleSchema.parse(await req.json());
 
-  const target = await prisma.member.findUnique({
-    where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
-  });
-  if (!target) return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
-  if (target.role === "owner") {
+  const outcome = await runWithWorkspace(
+    wid,
+    async (tx) => {
+      const target = await tx.member.findUnique({
+        where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
+      });
+      if (!target) return { notFound: true as const };
+      if (target.role === "owner") return { isOwner: true as const };
+
+      await tx.member.update({
+        where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
+        data: { role },
+      });
+      return { notFound: false as const, isOwner: false as const };
+    },
+    ctx.payload.sub
+  );
+
+  if (outcome.notFound) return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
+  if (outcome.isOwner) {
     return NextResponse.json({ code: 403, message: "不能修改拥有者角色" }, { status: 403 });
   }
-
-  await prisma.member.update({
-    where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
-    data: { role },
-  });
 
   return NextResponse.json({ code: 200, data: { id: uid, role } });
 }
@@ -48,25 +57,43 @@ export async function DELETE(
     return NextResponse.json({ code: 400, message: "不能移除自己" }, { status: 400 });
   }
 
-  const target = await prisma.member.findUnique({
-    where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
-  });
-  if (!target) return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
-  if (target.role === "owner") {
+  const outcome = await runWithWorkspace(
+    wid,
+    async (tx) => {
+      const target = await tx.member.findUnique({
+        where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
+      });
+      if (!target) return { notFound: true as const };
+      if (target.role === "owner") return { isOwner: true as const };
+
+      await tx.member.delete({ where: { userId_workspaceId: { userId: uid, workspaceId: wid } } });
+
+      // 席位变化同步 Stripe subscription quantity（AC-08）
+      const subscription = await tx.subscription.findUnique({ where: { workspaceId: wid } });
+      let stripeCustomerId: string | null = null;
+      let stripeSubId: string | null = null;
+      if (subscription?.stripeCustomerId && subscription?.stripeSubId) {
+        stripeCustomerId = subscription.stripeCustomerId;
+        stripeSubId = subscription.stripeSubId;
+      }
+      const remain = await tx.member.count({ where: { workspaceId: wid } });
+      return { notFound: false as const, isOwner: false as const, stripeCustomerId, stripeSubId, remain };
+    },
+    ctx.payload.sub
+  );
+
+  if (outcome.notFound) return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
+  if (outcome.isOwner) {
     return NextResponse.json({ code: 403, message: "不能移除工作区拥有者" }, { status: 403 });
   }
 
-  await prisma.member.delete({ where: { userId_workspaceId: { userId: uid, workspaceId: wid } } });
-
-  const subscription = await prisma.subscription.findUnique({ where: { workspaceId: wid } });
-  if (subscription?.stripeCustomerId && subscription?.stripeSubId) {
-    const remain = await prisma.member.count({ where: { workspaceId: wid } });
+  if (outcome.stripeCustomerId && outcome.stripeSubId) {
     try {
       const { requireStripe } = await import("@/lib/stripe");
       const stripe = requireStripe();
-      const sub = await stripe.subscriptions.retrieve(subscription.stripeSubId);
-      await stripe.subscriptions.update(subscription.stripeSubId, {
-        items: [{ id: sub.items.data[0].id, quantity: remain }],
+      const sub = await stripe.subscriptions.retrieve(outcome.stripeSubId);
+      await stripe.subscriptions.update(outcome.stripeSubId, {
+        items: [{ id: sub.items.data[0].id, quantity: outcome.remain }],
       });
     } catch {
       /* Stripe 同步失败不阻断本地移除 */

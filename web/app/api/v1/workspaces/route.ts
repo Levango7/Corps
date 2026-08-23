@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { authenticate } from "@/lib/auth";
+import { authenticate, runWithAuthOp, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -9,20 +9,26 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   }
 
-  const workspaces = await prisma.workspace.findMany({
-    where: {
-      members: {
-        some: { userId: auth.sub },
-      },
-    },
-    include: {
-      members: {
-        where: { userId: auth.sub },
-        select: { role: true },
-      },
-    },
-    orderBy: { createdAt: "desc" },
-  });
+  // workspaces 的 RLS 策略按成员资格子查询 app.user_id 判定可见性，需注入 uid
+  const workspaces = await runWithAuthOp(
+    "login",
+    (tx) =>
+      tx.workspace.findMany({
+        where: {
+          members: {
+            some: { userId: auth.sub },
+          },
+        },
+        include: {
+          members: {
+            where: { userId: auth.sub },
+            select: { role: true },
+          },
+        },
+        orderBy: { createdAt: "desc" },
+      }),
+    auth.sub
+  );
 
   return NextResponse.json({
     code: 200,
@@ -52,26 +58,33 @@ export async function POST(req: NextRequest) {
 
     const slug = validated.name.toLowerCase().replace(/\s+/g, "-").slice(0, 50);
 
-    const workspace = await prisma.workspace.create({
-      data: {
-        name: validated.name,
-        slug,
-        ownerId: auth.sub,
+    // 建工作区 + owner 成员单事务，走 provision 逃生口（RLS 启用后仍可写）
+    const { id, name, slug: finalSlug } = await runWithAuthOp(
+      "provision",
+      async (tx) => {
+        const workspace = await tx.workspace.create({
+          data: {
+            name: validated.name,
+            slug,
+            ownerId: auth.sub,
+          },
+        });
+        await tx.member.create({
+          data: {
+            userId: auth.sub,
+            workspaceId: workspace.id,
+            role: "owner",
+          },
+        });
+        return { id: workspace.id, name: workspace.name, slug: workspace.slug };
       },
-    });
-
-    await prisma.member.create({
-      data: {
-        userId: auth.sub,
-        workspaceId: workspace.id,
-        role: "owner",
-      },
-    });
+      auth.sub
+    );
 
     return NextResponse.json(
       {
         code: 201,
-        data: { id: workspace.id, name: workspace.name, slug: workspace.slug },
+        data: { id, name, slug: finalSlug },
       },
       { status: 201 }
     );

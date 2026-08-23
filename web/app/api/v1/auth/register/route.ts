@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, runWithAuthOp } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
+import { signAccessToken } from "@/lib/jwt";
+
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -39,14 +40,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: 500, message: "Auth provider returned no user" }, { status: 500 });
     }
 
-    // 2) 创建首个工作区 + owner 成员
+    // 2) 创建首个工作区 + owner 成员（单事务，走 provision 逃生口）
     const slug = validated.workspaceName.toLowerCase().replace(/\s+/g, "-").slice(0, 50);
-    const workspace = await prisma.workspace.create({
-      data: { name: validated.workspaceName, slug, ownerId: baUser.id },
-    });
-    await prisma.member.create({
-      data: { userId: baUser.id, workspaceId: workspace.id, role: "owner" },
-    });
+    const { workspace } = await runWithAuthOp(
+      "provision",
+      async (tx) => {
+        const ws = await tx.workspace.create({
+          data: { name: validated.workspaceName, slug, ownerId: baUser.id },
+        });
+        await tx.member.create({
+          data: { userId: baUser.id, workspaceId: ws.id, role: "owner" },
+        });
+        return { workspace: ws };
+      },
+      baUser.id
+    );
 
     // 3) 签发 workspace 作用域 wid 令牌（驱动 RLS）
     const accessToken = await signAccessToken({ sub: baUser.id, wid: workspace.id, role: "owner" });

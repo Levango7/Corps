@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, runWithAuthOp } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
@@ -29,11 +29,15 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: 401, message: "Invalid credentials" }, { status: 401 });
     }
 
-    // 解析工作区列表（含角色）
-    const members = await prisma.member.findMany({
-      where: { userId: baUser.id },
-      include: { workspace: true },
-    });
+    // 解析工作区列表（含角色）。走 RLS 事务：members 表若启用行级安全，
+    // 依赖策略中的 app.auth_op='login' 逃生口（按 user_id 放行）。
+    const members = await runWithAuthOp("login", (tx) =>
+      tx.member.findMany({
+        where: { userId: baUser.id },
+        include: { workspace: true },
+      }),
+      baUser.id
+    );
     const workspaces = members.map((m) => ({
       id: m.workspaceId,
       name: m.workspace.name,

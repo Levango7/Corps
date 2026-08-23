@@ -58,7 +58,12 @@ export async function GET(req: NextRequest) {
 
 const updateSchema = z.object({
   name: z.string().min(1).max(100).optional(),
-  image: z.string().url().nullable().optional(),
+  // 头像 URL 白名单 http(s)，拒绝 file: / javascript: 等伪协议
+  image: z
+    .string()
+    .regex(/^https?:\/\/\S+$/i, "头像必须是 http(s) 链接")
+    .nullable()
+    .optional(),
 });
 
 /**

@@ -17,7 +17,8 @@ import { api } from "@/lib/api";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import { TaskListSkeleton, StatCardSkeleton } from "@/components/Skeleton";
 
-type Status = "todo" | "doing" | "done";
+// 与后端枚举严格一致（tasks 表 CHECK：todo/in_progress/review/done）
+type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
 
 interface Task {
@@ -30,11 +31,31 @@ interface Task {
   assignee?: { id: string; name: string | null; email: string } | null;
 }
 
+// 概览页三张统计卡：进行中 = in_progress + review 合并计数
 const STATUS_META: Record<Status, { label: string; icon: typeof Circle; color: string }> = {
   todo: { label: "待办", icon: Circle, color: "var(--status-todo)" },
-  doing: { label: "进行中", icon: CircleDot, color: "var(--status-doing)" },
+  in_progress: { label: "进行中", icon: CircleDot, color: "var(--status-doing)" },
+  review: { label: "评审", icon: CircleDot, color: "var(--warn)" },
   done: { label: "已完成", icon: CheckCircle2, color: "var(--status-done)" },
 };
+
+const STAT_CARDS: {
+  key: "todo" | "doing" | "done";
+  label: string;
+  icon: typeof Circle;
+  color: string;
+  match: (s: Status) => boolean;
+}[] = [
+  { key: "todo", label: "待办", icon: Circle, color: "var(--status-todo)", match: (s) => s === "todo" },
+  {
+    key: "doing",
+    label: "进行中",
+    icon: CircleDot,
+    color: "var(--status-doing)",
+    match: (s) => s === "in_progress" || s === "review",
+  },
+  { key: "done", label: "已完成", icon: CheckCircle2, color: "var(--status-done)", match: (s) => s === "done" },
+];
 
 const PRIORITY_COLOR: Record<Priority, string> = {
   low: "var(--meta)",
@@ -96,11 +117,12 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     load();
   }, [load]);
 
-  const counts: Record<Status, number> = {
-    todo: tasks.filter((t) => t.status === "todo").length,
-    doing: tasks.filter((t) => t.status === "doing").length,
-    done: tasks.filter((t) => t.status === "done").length,
+  const counts: Record<"todo" | "doing" | "done", number> = {
+    todo: tasks.filter((t) => STAT_CARDS[0].match(t.status)).length,
+    doing: tasks.filter((t) => STAT_CARDS[1].match(t.status)).length,
+    done: tasks.filter((t) => STAT_CARDS[2].match(t.status)).length,
   };
+
 
   const openTasks = tasks.filter((t) => t.status !== "done");
   const overdue = openTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date());
@@ -154,25 +176,24 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
         <StatCardSkeleton />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] sm:gap-[var(--space-4)] mb-[var(--space-6)]">
-          {(["todo", "doing", "done"] as const).map((s) => {
-            const meta = STATUS_META[s];
-            const Icon = meta.icon;
+          {STAT_CARDS.map((card) => {
+            const Icon = card.icon;
             return (
               <Link
-                key={s}
+                key={card.key}
                 href={`/w/${wid}/board`}
                 className="group bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-5 hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)]"
               >
                 <div className="flex items-center gap-2">
-                  <Icon size={16} style={{ color: meta.color }} />
-                  <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{meta.label}</span>
+                  <Icon size={16} style={{ color: card.color }} />
+                  <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{card.label}</span>
                   <ArrowRight
                     size={14}
                     className="ml-auto text-[var(--meta)] opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-fast)]"
                   />
                 </div>
                 <div className="mt-2 text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
-                  {counts[s]}
+                  {counts[card.key]}
                 </div>
               </Link>
             );

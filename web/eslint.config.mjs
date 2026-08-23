@@ -5,13 +5,13 @@ import nextPlugin from "@next/eslint-plugin-next";
 export default [
   // 基础推荐规则
   js.configs.recommended,
-  ...ts.configs.recomended,
+  ...ts.configs.recommended,
 
   // Next.js 推荐规则
   {
     plugins: { "@next/next": nextPlugin },
     rules: {
-      ...nextPlugin.configs.recomended.rules,
+      ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
@@ -26,7 +26,7 @@ export default [
 
       // 通用
       "no-console": ["warn", { allow: ["warn", "error"] }],
-      "no-debgger": "error",
+      "no-debugger": "error",
       "prefer-const": "error",
     },
   },

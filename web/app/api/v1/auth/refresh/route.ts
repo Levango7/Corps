@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth } from "@/lib/auth";
+import { auth, runWithAuthOp } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
@@ -16,10 +16,15 @@ export async function POST(req: NextRequest) {
     const body = await req.json().catch(() => ({}));
     const { workspaceId } = refreshSchema.parse(body);
 
-    const members = await prisma.member.findMany({
-      where: { userId: session.user.id },
-      include: { workspace: true },
-    });
+    const members = await runWithAuthOp(
+      "login",
+      (tx) =>
+        tx.member.findMany({
+          where: { userId: session.user.id },
+          include: { workspace: true },
+        }),
+      session.user.id
+    );
     if (members.length === 0) {
       return NextResponse.json({ code: 401, message: "No workspace" }, { status: 401 });
     }

@@ -41,15 +41,24 @@ export async function POST(
       const task = await tx.task.findFirst({ where: { id, workspaceId: wid }, select: { id: true } });
       if (!task) return null;
 
-      // 决策记录只追加不覆盖：版本号在事务内自增（AC-06 可追溯）
+      // 决策记录只追加不覆盖：版本号在事务内自增（AC-10 可追溯）
       const agg = await tx.decision.aggregate({ where: { taskId: id }, _max: { version: true } });
+      const version = (agg._max.version ?? 0) + 1;
 
       return tx.decision.create({
         data: {
           taskId: id,
           markdown: validated.markdown,
-          version: (agg._max.version ?? 0) + 1,
-          authorId: ctx.payload.sub,
+          version,
+          workspaceId: wid,
+          versions: {
+            create: {
+              workspaceId: wid,
+              markdown: validated.markdown,
+              version,
+              authorId: ctx.payload.sub,
+            },
+          },
         },
         include: { author: { select: { id: true, name: true, email: true } } },
       });

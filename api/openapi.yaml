@@ -6,9 +6,10 @@ info:
     MVP API for the corps multi-tenant collaboration SaaS. This document is the
     single contract for frontend and backend in Phase 3. All paths are prefixed with
     /api/v1/. Every response uses the uniform envelope { code, data, message }.
-    Multi-tenant isolation is enforced at the PostgreSQL engine layer via RLS; the
-    workspace_id is resolved ONLY from the verified JWT claim `wid` and is never
-    trusted from the client.
+    Multi-tenant access control: every {wid} route verifies the caller's membership
+    row for that workspace, then runs all tenant queries inside a transaction with
+    app.workspace_id / app.user_id set (RLS binds at engine level in hardened
+    deployments — see db/schema.sql).
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:
@@ -67,7 +68,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_TokenResponse'
+                $ref: '#/components/schemas/Envelope_RegisterResponse'
         '409':
           $ref: '#/components/responses/Conflict'
         '400':
@@ -95,7 +96,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_TokenResponse'
+                $ref: '#/components/schemas/Envelope_LoginResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '400':
@@ -104,26 +105,35 @@ paths:
   /api/v1/auth/refresh:
     post:
       tags: [auth]
-      summary: Rotate the refresh token
+      summary: Refresh the workspace-scoped access JWT
       description: >
-        Exchanges a valid 7-day opaque refresh token for a new access + refresh pair
-        (rotation). The refresh token is carried in the httpOnly secure cookie
-        `lc_refresh`; an `X-Refresh-Token` header is accepted in development for
-        curl testing. On success the cookie is re-issued.
+        Uses the Better Auth session cookie (7-day) to issue a new 15-min access JWT,
+        optionally scoped to a `workspaceId` the user belongs to (defaults to the first).
+        The new token is also set as the httpOnly `access_token` cookie.
       security:
         - refreshAuth: []
       operationId: refresh
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                workspaceId:
+                  type: string
+                  format: uuid
       responses:
         '200':
-          description: Tokens rotated
+          description: Access token re-issued
           headers:
             Set-Cookie:
-              description: Re-issued httpOnly secure refresh cookie
+              description: Re-issued httpOnly access_token cookie
               schema: { type: string }
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_TokenResponse'
+                $ref: '#/components/schemas/Envelope_RefreshResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
 
@@ -163,6 +173,59 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_Workspace'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+
+  # ===========================================================================
+  # SEARCH
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/search:
+    get:
+      tags: [workspaces]
+      summary: Search tasks and decisions within a workspace
+      description: >
+        Case-insensitive substring match over task title/description and decision
+        markdown. Used by the command palette (Cmd+K).
+      operationId: searchWorkspace
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: limit
+          in: query
+          schema: { type: integer, default: 20, maximum: 50 }
+      responses:
+        '200':
+          description: Matching tasks and decisions
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [tasks, decisions]
+                properties:
+                  tasks:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        kind: { type: string, enum: [task] }
+                        title: { type: string }
+                        status: { type: string, enum: [todo, in_progress, review, done] }
+                        priority: { type: string, enum: [low, medium, high, urgent] }
+                  decisions:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        kind: { type: string, enum: [decision] }
+                        title: { type: string }
+                        snippet: { type: string }
+                        taskId: { type: string, format: uuid }
+                        href: { type: string }
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -479,7 +542,7 @@ paths:
   # ===========================================================================
   # BILLING
   # ===========================================================================
-  /api/v1/billing/checkout:
+  /api/v1/workspaces/{wid}/billing/checkout:
     post:
       tags: [billing]
       summary: Create a Stripe Checkout Session (upgrade)
@@ -487,8 +550,10 @@ paths:
         Owner only (AC-05). Creates a Stripe Checkout Session (mode=subscription) for the
         workspace plan; quantity is derived from `Workspace.seatLimit`. Returns the redirect
         URL. `priceId` defaults to env STRIPE_PRICE_ID. On checkout.session.completed the
-        webhook writes the Subscription row.
+        webhook writes the Subscription row and sets plan='pro'.
       operationId: createCheckout
+      parameters:
+        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: false
         content:
@@ -507,7 +572,7 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
-  /api/v1/billing/status:
+  /api/v1/workspaces/{wid}/billing/status:
     get:
       tags: [billing]
       summary: Get current plan + seat usage + subscription status
@@ -529,7 +594,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
-  /api/v1/billing/portal:
+  /api/v1/workspaces/{wid}/billing/portal:
     post:
       tags: [billing]
       summary: Create a Stripe Customer Portal session
@@ -557,9 +622,10 @@ paths:
       summary: Stripe webhook receiver
       description: >
         Verified by the `Stripe-Signature` header (webhook secret). Handles
-        checkout.session.completed (upsert Subscription + plan=starter), customer.subscription.updated
-        (sync quantity, AC-08), and invoice.payment_failed (mark past_due, AC-09 — no immediate
-        service interruption). The raw request body is required for signature verification.
+        checkout.session.completed (workspace existence check, upsert Subscription +
+        plan=pro), customer.subscription.updated (sync quantity, AC-08), and
+        invoice.payment_failed (mark past_due, AC-09 — no immediate service
+        interruption). The raw request body is required for signature verification.
       security:
         - stripeSignature: []
       operationId: billingWebhook
@@ -705,12 +771,24 @@ components:
       properties:
         data:
           nullable: true
-    Envelope_TokenResponse:
+    Envelope_RegisterResponse:
       allOf:
         - $ref: '#/components/schemas/Envelope'
       properties:
         data:
-          $ref: '#/components/schemas/TokenResponse'
+          $ref: '#/components/schemas/RegisterResponse'
+    Envelope_LoginResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/LoginResponse'
+    Envelope_RefreshResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/RefreshResponse'
     Envelope_Workspace:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -816,40 +894,79 @@ components:
           format: email
         password:
           type: string
-    TokenResponse:
+    # ---- auth responses (cookie-based: refresh token lives in Better Auth
+    #      session cookie, never in the response body) ----
+    RegisterResponse:
       type: object
-      required: [accessToken, refreshToken, expiresIn, wid, uid]
+      required: [user, workspace, accessToken]
+      properties:
+        user:
+          type: object
+          required: [id, email, name]
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string, format: email }
+            name: { type: [string, 'null'] }
+        workspace:
+          type: object
+          required: [id, name, slug]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            slug: { type: string }
+        accessToken:
+          type: string
+          description: Workspace-scoped JWT (15 min). Also set as httpOnly access_token cookie.
+    LoginResponse:
+      type: object
+      required: [user, workspaces, accessToken]
+      properties:
+        user:
+          type: object
+          required: [id, email, name]
+          properties:
+            id: { type: string, format: uuid }
+            email: { type: string, format: email }
+            name: { type: [string, 'null'] }
+        workspaces:
+          type: array
+          items:
+            type: object
+            required: [id, name, role]
+            properties:
+              id: { type: string, format: uuid }
+              name: { type: string }
+              slug: { type: string }
+              role: { type: string, enum: [owner, admin, member] }
+        accessToken:
+          type: string
+          description: JWT scoped to the first workspace. Also set as httpOnly access_token cookie.
+    RefreshResponse:
+      type: object
+      required: [accessToken, workspace]
       properties:
         accessToken:
           type: string
-          description: JWT (15 min). Contains claims sub(uid), wid, email, role.
-        refreshToken:
-          type: string
-          description: Opaque 7-day token (also set as httpOnly cookie lc_refresh).
-        expiresIn:
-          type: integer
-          example: 900
-          description: Access token TTL in seconds (900 = 15 min).
-        wid:
-          type: string
-          format: uuid
-          description: Active workspace id (resolved from registration, not client input).
-        uid:
-          type: string
-          format: uuid
-        role:
-          type: string
-          enum: [owner, admin, member]
+          description: New workspace-scoped JWT (15 min).
+        workspace:
+          type: object
+          required: [id, name, role]
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            role: { type: string, enum: [owner, admin, member] }
 
     # ---- workspaces ----
     Workspace:
       type: object
-      required: [id, name, plan, seatLimit, role, createdAt]
+      required: [id, name, slug, plan, seatLimit, role]
       properties:
         id:
           type: string
           format: uuid
         name:
+          type: string
+        slug:
           type: string
         plan:
           type: string
@@ -967,26 +1084,29 @@ components:
           type: number
           format: double
 
-    # ---- members ----
+    # ---- members (shape mirrors the actual listMembers response) ----
     Member:
       type: object
-      required: [userId, workspaceId, role, name, email]
+      required: [id, email, name, role, joinedAt]
       properties:
-        userId:
+        id:
           type: string
           format: uuid
-        workspaceId:
-          type: string
-          format: uuid
-        role:
-          type: string
-          enum: [owner, admin, member]
-        name:
-          type: string
         email:
           type: string
           format: email
-        createdAt:
+        name:
+          type: [string, 'null']
+        image:
+          nullable: true
+          type: string
+        role:
+          type: string
+          enum: [owner, admin, member]
+        isSelf:
+          type: boolean
+          description: true when this member row belongs to the caller.
+        joinedAt:
           type: string
           format: date-time
     InviteRequest:
@@ -1108,7 +1228,7 @@ components:
       properties:
         plan:
           type: string
-          enum: [free, starter, pro, enterprise]
+          enum: [free, pro]
         seatLimit:
           type: integer
           description: Max members allowed on current plan.

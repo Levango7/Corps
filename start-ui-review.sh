@@ -1,4 +1,6 @@
 #!/bin/bash
+# UI 审查辅助脚本 —— 仅支持 WSL/Linux 环境（依赖 /mnt/* 路径、python3）。
+# Windows 原生环境请手动执行：cd web && pnpm dev，然后访问 /auth/register 注册。
 cd ~/corps-web
 export DATABASE_URL="postgresql://corps:corps_dev_2026@localhost:5432/corps_dev?schema=public"
 

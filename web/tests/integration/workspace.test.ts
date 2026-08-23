@@ -68,11 +68,63 @@ describe("AC-03: 跨租户请求隔离", () => {
 });
 
 describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
-  it("AC-04: 查询遗漏workspace_id时RLS应拦截（响应不包含跨租户数据）", async () => {
-    // 注：此测试验证的是"即使应用层漏写WHERE，PG RLS也会阻止数据返回"
-    // 实际验证需要 mock 一个没有 SET LOCAL app.workspace_id 的查询
-    // 此处为占位用例，需真实 PG 连接时实现
-    expect(true).toBe(true);
+  it("AC-04: 跨租户的读与写全部被拒（应用层兜底回归）", async () => {
+    // 说明：引擎层断言（无 WHERE 时由 PG RLS 拦截）需要以非表主、NOBYPASSRLS 的
+    // app_role 连接执行，CI 以 postgres 超级用户跑库无法复现（超级用户绕过 RLS）。
+    // 部署步骤见 db/schema.sql 头部注释。此处验证等价的应用层回归面：
+    // 租户 A 对租户 B 资源的一切读写都必须失败，不允许任何数据返回。
+    const rB = await fetch(`${BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: `rls-b-${Date.now()}@corps.test`,
+        password: "Test123456!",
+        workspaceName: "RLS Tenant B",
+      }),
+    });
+    const dB = await rB.json();
+    const tokenB = dB.data.accessToken;
+    const widB = dB.data.workspace.id;
+
+    const taskRes = await fetch(`${BASE}/workspaces/${widB}/tasks`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${tokenB}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "B的机密任务", status: "todo", priority: "high" }),
+    });
+    const taskId = (await taskRes.json()).data.id;
+
+    // 租户 A（AC-03 场景中已注册）
+    const listA = await fetch(`${BASE}/workspaces/${widA}/tasks`, {
+      headers: { "Authorization": `Bearer ${tokenA}` },
+    });
+    const tasksA = await listA.json();
+    expect(JSON.stringify(tasksA)).not.toContain("B的机密任务");
+
+    // 写路径：A 构造 URL 直接改/删 B 的任务
+    const patchRes = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${tokenA}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "被篡改" }),
+    });
+    expect([401, 403, 404]).toContain(patchRes.status);
+
+    const deleteRes = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: { "Authorization": `Bearer ${tokenA}` },
+    });
+    expect([401, 403, 404]).toContain(deleteRes.status);
+
+    // B 的任务未被改动
+    const detailB = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
+      headers: { "Authorization": `Bearer ${tokenB}` },
+    });
+    expect((await detailB.json()).data.title).toBe("B的机密任务");
   });
 });
 
@@ -167,7 +219,62 @@ describe("AC-05: RBAC 权限控制", () => {
 
 describe("AC-06: 看板拖拽乐观更新", () => {
   it("PATCH /tasks/:id 修改status并持久化", async () => {
-    // 注：验证拖拽流程：本地状态先变（乐观更新）→ API PATCH → 成功则保持/失败则回滚
-    expect(true).toBe(true);
+    // 拖拽链路的后端契约：本地先变（乐观）→ PATCH {status, sortOrder} → GET 可见持久化结果
+    const rOwner = await fetch(`${BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: `drag-${Date.now()}@corps.test`,
+        password: "Test123456!",
+        workspaceName: "Drag Test",
+      }),
+    });
+    const dOwner = await rOwner.json();
+    const token = dOwner.data.accessToken as string;
+    const dragWid = dOwner.data.workspace.id as string;
+
+    const createRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks`, {
+      method: "POST",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ title: "拖拽测试任务", status: "todo", priority: "medium" }),
+    });
+    const created = await createRes.json();
+    expect(createRes.status).toBe(201);
+    const taskId = created.data.id;
+    expect(created.data.status).toBe("todo");
+
+    // 模拟拖到"进行中"列
+    const patchRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "in_progress", sortOrder: 100.5 }),
+    });
+    expect(patchRes.status).toBe(200);
+    expect((await patchRes.json()).data.status).toBe("in_progress");
+
+    // 重新拉取详情，确认已持久化而非仅响应体回显
+    const getRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks/${taskId}`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    const persisted = await getRes.json();
+    expect(persisted.data.status).toBe("in_progress");
+    expect(persisted.data.sortOrder).toBe(100.5);
+
+    // 非法状态值必须被 Zod 拒绝（历史遗留值 "doing" 不在合法枚举内）
+    const badRes = await fetch(`${BASE}/workspaces/${dragWid}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: {
+        "Authorization": `Bearer ${token}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ status: "doing" }),
+    });
+    expect(badRes.status).toBe(400);
   });
 });

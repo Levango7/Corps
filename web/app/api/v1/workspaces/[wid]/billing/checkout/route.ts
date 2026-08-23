@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { requireStripe, STRIPE_PRICE_ID } from "@/lib/stripe";
 import { z } from "zod";
 
@@ -32,8 +31,17 @@ export async function POST(
 
   try {
     const stripe = requireStripe();
-    const workspace = await prisma.workspace.findUnique({ where: { id: wid } });
-    const subscription = await prisma.subscription.findUnique({ where: { workspaceId: wid } });
+    const { workspace, subscription } = await runWithWorkspace(
+      wid,
+      async (tx) => ({
+        workspace: await tx.workspace.findUnique({ where: { id: wid } }),
+        subscription: await tx.subscription.findUnique({ where: { workspaceId: wid } }),
+      }),
+      ctx.payload.sub
+    );
+    if (!workspace) {
+      return NextResponse.json({ code: 404, message: "工作区不存在" }, { status: 404 });
+    }
     const origin = new URL(req.url).origin;
 
     const session = await stripe.checkout.sessions.create({

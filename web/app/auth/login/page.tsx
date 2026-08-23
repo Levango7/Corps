@@ -99,12 +99,7 @@ export default function LoginPage() {
               >
                 密码
               </label>
-              <Link
-                href="/auth/forgot"
-                className="text-[var(--muted)] hover:text-[var(--accent)] text-xs"
-              >
-                忘记密码？
-              </Link>
+              {/* 忘记密码流程未实现（无 /auth/forgot 路由），上线前不展示死链接 */}
             </div>
             <input
               id="password"

@@ -1,5 +1,8 @@
 version: "3.8"
 
+# 本地开发用：仅提供 PostgreSQL。Next.js 应用直接 `pnpm dev` 运行，
+# 不在 compose 内编排（RLS 生产加固见 db/schema.sql 的 ACTIVATION 一节）。
+
 services:
   postgres:
     image: postgres:18.4-alpine

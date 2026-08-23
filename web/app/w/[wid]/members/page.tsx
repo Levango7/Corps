@@ -277,7 +277,12 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                           <option value="member">成员</option>
                           <option value="admin">管理员</option>
                         </select>
-                        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">拥有者不可在此更改</span>
+                        {/* 拥有者角色只能通过转让工作区变更，不在此选择器内 */}
+                        {m.role !== "owner" && (
+                          <span className="hidden sm:inline text-[length:var(--text-xs)] text-[var(--meta)]">
+                            不能授予/收回拥有者
+                          </span>
+                        )}
                       </div>
                     ) : (
                       <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">

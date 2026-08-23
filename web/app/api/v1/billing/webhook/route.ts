@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { runWithAuthOp } from "@/lib/auth";
 import { requireStripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
 
 function asString(v: string | { id: string } | null | undefined): string | undefined {
@@ -35,22 +35,31 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case "checkout.session.completed": {
         const s = event.data.object;
+        // 仅处理订阅模式会话，其他模式（一次性支付等）不属于本产品计费流
+        if (s.mode !== "subscription") break;
         const wid = s.metadata?.workspaceId;
         const customerId = asString(s.customer);
         const subId = asString(s.subscription);
         if (wid && customerId && subId) {
-          await prisma.subscription.upsert({
-            where: { workspaceId: wid },
-            create: {
-              workspaceId: wid,
-              stripeCustomerId: customerId,
-              stripeSubId: subId,
-              status: "active",
-              quantity: 1,
-            },
-            update: { stripeCustomerId: customerId, stripeSubId: subId, status: "active" },
+          await runWithAuthOp("webhook", async (tx) => {
+            // metadata 可能被篡改或指向已删除的工作区：先确认存在再落库
+            const workspace = await tx.workspace.findUnique({ where: { id: wid }, select: { id: true } });
+            if (!workspace) return;
+
+            await tx.subscription.upsert({
+              where: { workspaceId: wid },
+              create: {
+                workspaceId: wid,
+                stripeCustomerId: customerId,
+                stripeSubId: subId,
+                status: "active",
+                quantity: 1,
+              },
+              update: { stripeCustomerId: customerId, stripeSubId: subId, status: "active" },
+            });
+            // plan 枚举与 schema CHECK / openapi 保持一致：付费即 pro
+            await tx.workspace.update({ where: { id: wid }, data: { plan: "pro" } });
           });
-          await prisma.workspace.update({ where: { id: wid }, data: { plan: "starter" } });
         }
         break;
       }
@@ -59,10 +68,12 @@ export async function POST(req: NextRequest) {
         const inv = event.data.object;
         const subId = asString(inv.subscription);
         if (subId) {
-          await prisma.subscription.updateMany({
-            where: { stripeSubId: subId },
-            data: { status: "past_due" },
-          });
+          await runWithAuthOp("webhook", (tx) =>
+            tx.subscription.updateMany({
+              where: { stripeSubId: subId },
+              data: { status: "past_due" },
+            })
+          );
         }
         break;
       }
@@ -74,16 +85,16 @@ export async function POST(req: NextRequest) {
           const periodEnd = (sub as Stripe.Subscription & {
             current_period_end?: number;
           }).current_period_end;
-          await prisma.subscription.updateMany({
-            where: { stripeSubId: subId },
-            data: {
-              status: sub.status ?? "active",
-              quantity: sub.items?.data?.[0]?.quantity ?? 1,
-              currentPeriodEnd: periodEnd
-                ? new Date(periodEnd * 1000)
-                : undefined,
-            },
-          });
+          await runWithAuthOp("webhook", (tx) =>
+            tx.subscription.updateMany({
+              where: { stripeSubId: subId },
+              data: {
+                status: sub.status ?? "active",
+                quantity: sub.items?.data?.[0]?.quantity ?? 1,
+                currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
+              },
+            })
+          );
         }
         break;
       }
@@ -91,10 +102,12 @@ export async function POST(req: NextRequest) {
         const sub = event.data.object;
         const subId = asString(sub.id);
         if (subId) {
-          await prisma.subscription.updateMany({
-            where: { stripeSubId: subId },
-            data: { status: "canceled", canceledAt: new Date() },
-          });
+          await runWithAuthOp("webhook", (tx) =>
+            tx.subscription.updateMany({
+              where: { stripeSubId: subId },
+              data: { status: "canceled", canceledAt: new Date() },
+            })
+          );
         }
         break;
       }

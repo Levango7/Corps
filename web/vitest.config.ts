@@ -5,10 +5,10 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    environment: "jsdom",
+    // 集成测试是纯 API 测试（fetch localhost），无需 DOM
+    environment: "node",
     setupFiles: ["./tests/setup.ts"],
     globals: true,
-    css: true,
   },
   resolve: {
     alias: { "@": path.resolve(__dirname) },

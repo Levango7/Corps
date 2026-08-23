@@ -11,13 +11,16 @@ export async function GET(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const comments = await runWithWorkspace(wid, (tx) =>
-    tx.comment.findMany({
+  const comments = await runWithWorkspace(wid, async (tx) => {
+    const rows = await tx.comment.findMany({
       where: { taskId: id, task: { workspaceId: wid } },
       include: { author: { select: { id: true, name: true, email: true, image: true } } },
-      orderBy: { createdAt: "asc" },
-    })
-  );
+      orderBy: { createdAt: "desc" },
+      // 上限保护：取最近 200 条后反转为正序时间线；游标分页列入 v2
+      take: 200,
+    });
+    return rows.reverse();
+  });
 
   return NextResponse.json({ code: 200, data: comments });
 }
@@ -46,6 +49,7 @@ export async function POST(
       return tx.comment.create({
         data: {
           taskId: id,
+          workspaceId: wid,
           authorId: ctx.payload.sub,
           body: validated.body,
           mentions: validated.mentions ?? [],

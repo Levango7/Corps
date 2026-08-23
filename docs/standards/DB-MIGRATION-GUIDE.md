@@ -110,7 +110,7 @@ async function main() {
     data: [
       { workspaceId: demoWorkspace.id, title: "了解 corps 看板功能", status: "todo", priority: "high", createdBy: demoUser.id },
       { workspaceId: demoWorkspace.id, title: "邀请团队成员", status: "todo", priority: "medium", createdBy: demoUser.id },
-      { workspaceId: demoWorkspace.id, title: "创建第一条决策记录", status: "doing", priority: "low", createdBy: demoUser.id },
+      { workspaceId: demoWorkspace.id, title: "创建第一条决策记录", status: "in_progress", priority: "low", createdBy: demoUser.id },
     ],
     skipDuplicates: true,
   });
@@ -151,16 +151,27 @@ main()
 
 ## 第5章 RLS 迁移注意事项
 
-### 5.1 新增租户表
+### 5.1 权威来源与激活
+
+- **表结构权威 = `web/prisma/schema.prisma`**；`db/schema.sql` 是它的部署伴生文件，
+  额外承载 Prisma 不管的部分：运行时角色、RLS 策略、引擎授权。两者禁止各自演化。
+- 开发环境以表主/超级用户连接时 PostgreSQL **绕过 RLS**（本地便利，属预期）。
+- 生产激活步骤见 `db/schema.sql` 头部 ACTIVATION 一节：
+  创建非表主角色 `corps_app`（NOINHERIT、无 BYPASSRLS）→ 执行 schema.sql →
+  应用 `DATABASE_URL` 改连 `corps_app`。只有这条链路上 AC-04 的引擎层保证才生效。
+- 认证流逃逸口约定（事务级 GUC `app.auth_op`，由 `lib/auth.ts` 的
+  `runWithAuthOp()` 注入）：`login` / `provision` / `webhook` 三种白名单操作。
+
+### 5.2 新增租户表
 
 每新增一张业务表，必须同步：
 
-1. 添加 `workspace_id UUID NOT NULL REFERENCES workspaces(id)` 字段
-2. 启用 RLS：`ALTER TABLE xxx ENABLE ROW LEVEL SECURITY;`
-3. 创建 RLS 策略：`CREATE POLICY p_xxx_rls ON xxx USING (workspace_id = current_setting('app.workspace_id', true)::uuid);`
-4. 授权给 `app_role`：`GRANT SELECT, INSERT, UPDATE, DELETE ON xxx TO app_role;`
+1. 在 `web/prisma/schema.prisma` 添加模型，含 `workspaceId String @db.Uuid`
+2. 在 `db/schema.sql` 补 DDL + `ALTER TABLE xxx ENABLE ROW LEVEL SECURITY;`
+3. 创建策略：`CREATE POLICY p_xxx_rls ON xxx USING (workspace_id = current_setting('app.workspace_id', true)::uuid);`
+4. 授权给 `corps_app`：`GRANT SELECT, INSERT, UPDATE, DELETE ON xxx TO corps_app;`
 
-### 5.2 角色不变原则
+### 5.3 角色不变原则
 
-- `app_role` 永不授予 BYPASSRLS / SUPERUSER / 表的 OWNERSHIP
-- 迁移仅由 `app_migrator` 角色执行
+- `corps_app` 永不授予 BYPASSRLS / SUPERUSER / 表的 OWNERSHIP
+- 迁移与 DDL 变更仅由 `app_migrator` 角色执行

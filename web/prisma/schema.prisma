@@ -30,6 +30,7 @@ model User {
   comments        Comment[]
   decisions       Decision[]
   decisionVersions DecisionVersion[]
+  notifications   Notification[]
   ownedWorkspaces Workspace[]
   sessions        Session[]
   accounts        Account[]
@@ -53,6 +54,7 @@ model Workspace {
   comments        Comment[]
   decisions       Decision[]
   decisionVersions DecisionVersion[]
+  notifications   Notification[]
   subscriptions   Subscription?
 
   @@index([slug])
@@ -119,6 +121,26 @@ model Comment {
   @@index([taskId])
   @@index([workspaceId])
   @@map("comments")
+}
+
+// ─── 通知（mention / task_assigned / task_updated / comment_added / decision_updated）──
+
+model Notification {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  type        String   @db.VarChar(30) // mention, task_assigned, task_updated, comment_added, decision_updated
+  entityId    String   @map("entity_id") @db.Uuid // 关联的任务 ID
+  entityTitle String   @map("entity_title") @db.VarChar(255) // 冗余存储任务标题
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([userId, workspaceId])
+  @@index([workspaceId])
+  @@map("notifications")
 }
 
 model Decision {

@@ -11,15 +11,19 @@ export async function GET(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const result = await runWithWorkspace(wid, async (tx) => {
-    const workspace = await tx.workspace.findUnique({
-      where: { id: wid },
-      select: { plan: true, seatLimit: true },
-    });
-    const memberCount = await tx.member.count({ where: { workspaceId: wid } });
-    const subscription = await tx.subscription.findUnique({ where: { workspaceId: wid } });
-    return { workspace, memberCount, subscription };
-  });
+  const result = await runWithWorkspace(
+    wid,
+    async (tx) => {
+      const workspace = await tx.workspace.findUnique({
+        where: { id: wid },
+        select: { plan: true, seatLimit: true },
+      });
+      const memberCount = await tx.member.count({ where: { workspaceId: wid } });
+      const subscription = await tx.subscription.findUnique({ where: { workspaceId: wid } });
+      return { workspace, memberCount, subscription };
+    },
+    ctx.payload.sub
+  );
 
   const { workspace, memberCount, subscription } = result;
 

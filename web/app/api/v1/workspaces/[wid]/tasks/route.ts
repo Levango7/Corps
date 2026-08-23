@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 
@@ -20,14 +19,21 @@ export async function GET(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
+  // assignee=me：用当前认证用户 ID 过滤 assigneeId；其他值（或缺失）返回所有任务
+  const url = new URL(req.url);
+  const assigneeFilter =
+    url.searchParams.get("assignee") === "me" ? { assigneeId: ctx.payload.sub } : {};
+
   const tasks = await runWithWorkspace(wid, (tx) =>
     tx.task.findMany({
-      where: { workspaceId: wid },
+      where: { workspaceId: wid, ...assigneeFilter },
       include: {
         assignee: { select: { id: true, name: true, email: true } },
         _count: { select: { comments: true } },
       },
       orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+      // 上限保护：看板场景单工作区任务量可控；游标分页列入 v2（见 API-DESIGN-GUIDE）
+      take: 500,
     })
   );
 
@@ -46,21 +52,36 @@ export async function POST(
     const body = await req.json();
     const validated = createTaskSchema.parse(body);
 
-    const maxOrder = await prisma.task.aggregate({ where: { workspaceId: wid }, _max: { sortOrder: true } });
+    // 被指派人必须属于当前工作区（assignee_id 是跨表引用，RLS 不覆盖 users）
+    const task = await runWithWorkspace(wid, async (tx) => {
+      if (validated.assigneeId) {
+        const member = await tx.member.findUnique({
+          where: { userId_workspaceId: { userId: validated.assigneeId, workspaceId: wid } },
+          select: { userId: true },
+        });
+        if (!member) return { invalidAssignee: true as const };
+      }
 
-    const task = await runWithWorkspace(wid, (tx) =>
-      tx.task.create({
-        data: {
-          ...validated,
-          workspaceId: wid,
-          createdBy: ctx.payload.sub,
-          sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
-        },
-        include: { assignee: { select: { id: true, name: true, email: true } } },
-      })
-    );
+      const maxOrder = await tx.task.aggregate({ where: { workspaceId: wid }, _max: { sortOrder: true } });
+      return {
+        invalidAssignee: false as const,
+        task: await tx.task.create({
+          data: {
+            ...validated,
+            workspaceId: wid,
+            createdBy: ctx.payload.sub,
+            sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+          },
+          include: { assignee: { select: { id: true, name: true, email: true } } },
+        }),
+      };
+    }, ctx.payload.sub);
 
-    return NextResponse.json({ code: 201, data: task }, { status: 201 });
+    if (task.invalidAssignee) {
+      return NextResponse.json({ code: 400, message: "被指派人必须是当前工作区成员" }, { status: 400 });
+    }
+
+    return NextResponse.json({ code: 201, data: task.task }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ code: 400, message: "Validation error", errors: error.errors }, { status: 400 });

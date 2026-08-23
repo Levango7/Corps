@@ -1,7 +1,6 @@
-import "@testing-library/jest-dom";
 import { vi } from "vitest";
 
-// Mock Next.js router
+// Mock Next.js router（供组件级测试使用；API 集成测试不受影响）
 vi.mock("next/navigation", () => ({
   useRouter: () => ({
     push: vi.fn(),

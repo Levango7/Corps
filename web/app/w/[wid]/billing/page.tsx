@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 
-type Plan = "free" | "starter" | "growth";
+type Plan = "free" | "pro";
 
 interface BillingStatus {
   plan: Plan;
@@ -44,27 +44,18 @@ const PLANS: {
     name: "免费",
     price: "¥0",
     unit: "永久",
-    seats: "最多 3 人",
+    seats: "最多 10 人",
     features: ["任务看板", "评论与 @提醒", "决策记录（最近 10 条）"],
-    details: ["最多 3 人席位", "决策记录上限 10 条", "基础导出", "社区支持"],
+    details: ["最多 10 人席位", "决策记录上限 10 条", "基础导出", "社区支持"],
   },
   {
-    id: "starter",
-    name: "标准",
-    price: "¥29",
+    id: "pro",
+    name: "专业",
+    price: "¥59",
     unit: "每人 / 月",
     seats: "按席位计费",
     features: ["无限决策记录", "任务筛选与视图", "邮件通知", "导出 CSV"],
     details: ["无限决策记录", "任务筛选与视图", "邮件通知", "导出 CSV", "按席位计费", "邮件支持"],
-  },
-  {
-    id: "growth",
-    name: "增长",
-    price: "¥59",
-    unit: "每人 / 月",
-    seats: "按席位计费",
-    features: ["标准版全部能力", "审计日志", "SSO（规划中）", "优先支持"],
-    details: ["标准版全部能力", "审计日志", "SSO（规划中）", "优先支持", "按席位计费", "专属客户成功"],
   },
 ];
 

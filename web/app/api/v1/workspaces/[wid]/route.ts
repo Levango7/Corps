@@ -11,19 +11,22 @@ export async function GET(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
-  const ws = await runWithWorkspace(wid, (tx) =>
-    tx.workspace.findUnique({
-      where: { id: wid },
-      select: {
-        id: true,
-        name: true,
-        slug: true,
-        plan: true,
-        seatLimit: true,
-        createdAt: true,
-        _count: { select: { members: true, tasks: true } },
-      },
-    })
+  const ws = await runWithWorkspace(
+    wid,
+    (tx) =>
+      tx.workspace.findUnique({
+        where: { id: wid },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          plan: true,
+          seatLimit: true,
+          createdAt: true,
+          _count: { select: { members: true, tasks: true } },
+        },
+      }),
+    ctx.payload.sub
   );
 
   if (!ws) return NextResponse.json({ code: 404, message: "Workspace not found" }, { status: 404 });
@@ -69,12 +72,15 @@ export async function PATCH(
   try {
     const validated = updateWorkspaceSchema.parse(await req.json());
 
-    const ws = await runWithWorkspace(wid, (tx) =>
-      tx.workspace.update({
-        where: { id: wid },
-        data: validated,
-        select: { id: true, name: true, slug: true },
-      })
+    const ws = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.workspace.update({
+          where: { id: wid },
+          data: validated,
+          select: { id: true, name: true, slug: true },
+        }),
+      ctx.payload.sub
     );
 
     return NextResponse.json({ code: 200, data: ws });

@@ -20,6 +20,9 @@ import {
   ChevronsUpDown,
   Check,
   LogOut,
+  CheckSquare,
+  FileText,
+  Bell,
 } from "lucide-react";
 import { api, setToken } from "@/lib/api";
 import CommandPalette from "@/components/CommandPalette";
@@ -52,6 +55,7 @@ export default function WorkspaceLayout({
   const [switcherHighlight, setSwitcherHighlight] = useState(-1);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [user, setUser] = useState<{ name: string | null; email: string; image: string | null } | null>(null);
   const switcherRef = useRef<HTMLDivElement>(null);
   const switcherListRef = useRef<HTMLDivElement>(null);
@@ -91,6 +95,24 @@ export default function WorkspaceLayout({
       .then(setUser)
       .catch(() => {});
   }, []);
+
+  // 通知未读数：每 30 秒轮询；依赖 pathname 使路由切换时立即刷新一次
+  useEffect(() => {
+    let active = true;
+    function fetchCount() {
+      api<{ count: number }>(`/api/v1/workspaces/${wid}/notifications?count=true`)
+        .then((res) => {
+          if (active) setUnreadCount(res.count ?? 0);
+        })
+        .catch(() => {});
+    }
+    fetchCount();
+    const timer = setInterval(fetchCount, 30000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [wid, pathname]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -209,13 +231,29 @@ export default function WorkspaceLayout({
     );
   }
 
-  const navItems = [
-    { href: `/w/${wid}`, label: "概览", icon: LayoutDashboard, exact: true },
-    { href: `/w/${wid}/board`, label: "看板", icon: Kanban, exact: false },
-    { href: `/w/${wid}/members`, label: "成员", icon: Users, exact: false },
-    { href: `/w/${wid}/billing`, label: "计费", icon: CreditCard, exact: false },
-    { href: `/w/${wid}/settings`, label: "设置", icon: Settings, exact: false },
+  // 导航分组：工作区组（主体）+ 管理组（底部，带小字标题分隔）
+  const navGroups = [
+    {
+      label: null as string | null,
+      items: [
+        { href: `/w/${wid}`, label: "概览", icon: LayoutDashboard, exact: true },
+        { href: `/w/${wid}/board`, label: "看板", icon: Kanban, exact: false },
+        { href: `/w/${wid}/my-tasks`, label: "我的任务", icon: CheckSquare, exact: false },
+        { href: `/w/${wid}/decisions`, label: "决策记录", icon: FileText, exact: false },
+      ],
+    },
+    {
+      label: "管理" as string | null,
+      items: [
+        { href: `/w/${wid}/members`, label: "成员", icon: Users, exact: false },
+        { href: `/w/${wid}/billing`, label: "计费", icon: CreditCard, exact: false },
+        { href: `/w/${wid}/settings`, label: "设置", icon: Settings, exact: false },
+      ],
+    },
   ];
+
+  const notifHref = `/w/${wid}/notifications`;
+  const notifActive = pathname.startsWith(notifHref);
 
   const themeIcon =
     themePref === "system" ? (
@@ -388,26 +426,65 @@ export default function WorkspaceLayout({
           }`}
         >
           <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
-            {navItems.map(({ href, label, icon: Icon, exact }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                    active
-                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                      : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                  } ${collapsed ? "justify-center px-0" : ""}`}
-                  title={collapsed ? label : undefined}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  {!collapsed && <span className="truncate">{label}</span>}
-                </Link>
-              );
-            })}
+            {navGroups.map((group, gi) => (
+              <div key={gi} className="space-y-[var(--space-1)]">
+                {group.label && !collapsed && (
+                  <div className="text-[length:var(--text-xs)] text-[var(--meta)] px-[var(--space-3)] pt-[var(--space-4)] pb-[var(--space-1)]">
+                    {group.label}
+                  </div>
+                )}
+                {group.label && collapsed && (
+                  <div className="px-[var(--space-2)] pt-[var(--space-2)]">
+                    <div className="h-px bg-[var(--shell-edge)]" />
+                  </div>
+                )}
+                {group.items.map(({ href, label, icon: Icon, exact }) => {
+                  const active = exact ? pathname === href : pathname.startsWith(href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                        active
+                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                          : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                      } ${collapsed ? "justify-center px-0" : ""}`}
+                      title={collapsed ? label : undefined}
+                    >
+                      <Icon size={18} className="shrink-0" />
+                      {!collapsed && <span className="truncate">{label}</span>}
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
+
+          {/* 通知入口：固定在侧栏底部，带未读 badge */}
+          <div className="px-[var(--space-2)] pt-[var(--space-1)]">
+            <Link
+              href={notifHref}
+              aria-current={notifActive ? "page" : undefined}
+              className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                notifActive
+                  ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                  : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+              } ${collapsed ? "justify-center px-0" : ""}`}
+              title={collapsed ? "通知" : undefined}
+            >
+              <Bell size={18} className="shrink-0" />
+              {!collapsed && <span className="truncate">通知</span>}
+              {!collapsed && unreadCount > 0 && (
+                <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-white text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+              {collapsed && unreadCount > 0 && (
+                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" />
+              )}
+            </Link>
+          </div>
 
           <button
             onClick={toggleSidebar}
@@ -443,26 +520,56 @@ export default function WorkspaceLayout({
           aria-label="导航菜单"
         >
           <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
-            {navItems.map(({ href, label, icon: Icon, exact }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  onClick={() => setDrawerOpen(false)}
-                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                    active
-                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                      : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                  }`}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  <span className="truncate">{label}</span>
-                </Link>
-              );
-            })}
+            {navGroups.map((group, gi) => (
+              <div key={gi} className="space-y-[var(--space-1)]">
+                {group.label && (
+                  <div className="text-[length:var(--text-xs)] text-[var(--meta)] px-[var(--space-3)] pt-[var(--space-4)] pb-[var(--space-1)]">
+                    {group.label}
+                  </div>
+                )}
+                {group.items.map(({ href, label, icon: Icon, exact }) => {
+                  const active = exact ? pathname === href : pathname.startsWith(href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={() => setDrawerOpen(false)}
+                      className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                        active
+                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                          : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                      }`}
+                    >
+                      <Icon size={18} className="shrink-0" />
+                      <span className="truncate">{label}</span>
+                    </Link>
+                  );
+                })}
+              </div>
+            ))}
           </nav>
+          {/* 通知入口：底部，带未读 badge */}
+          <div className="px-[var(--space-2)] pt-[var(--space-1)]">
+            <Link
+              href={notifHref}
+              aria-current={notifActive ? "page" : undefined}
+              onClick={() => setDrawerOpen(false)}
+              className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                notifActive
+                  ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                  : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+              }`}
+            >
+              <Bell size={18} className="shrink-0" />
+              <span className="truncate">通知</span>
+              {unreadCount > 0 && (
+                <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-white text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
+                  {unreadCount > 99 ? "99+" : unreadCount}
+                </span>
+              )}
+            </Link>
+          </div>
           <button
             onClick={() => setDrawerOpen(false)}
             className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"

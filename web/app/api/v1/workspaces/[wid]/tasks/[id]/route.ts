@@ -49,15 +49,31 @@ export async function PATCH(
     const body = await req.json();
     const validated = updateTaskSchema.parse(body);
 
-    const task = await runWithWorkspace(wid, (tx) =>
-      tx.task.update({
-        where: { id },
-        data: validated,
-        include: { assignee: { select: { id: true, name: true, email: true } } },
-      })
-    );
+    const result = await runWithWorkspace(wid, async (tx) => {
+      // 被指派人必须属于当前工作区（assignee_id 是跨表引用，RLS 不覆盖 users）
+      if (validated.assigneeId) {
+        const member = await tx.member.findUnique({
+          where: { userId_workspaceId: { userId: validated.assigneeId, workspaceId: wid } },
+          select: { userId: true },
+        });
+        if (!member) return { invalidAssignee: true as const };
+      }
 
-    return NextResponse.json({ code: 200, data: task });
+      return {
+        invalidAssignee: false as const,
+        task: await tx.task.update({
+          where: { id },
+          data: validated,
+          include: { assignee: { select: { id: true, name: true, email: true } } },
+        }),
+      };
+    }, ctx.payload.sub);
+
+    if (result.invalidAssignee) {
+      return NextResponse.json({ code: 400, message: "被指派人必须是当前工作区成员" }, { status: 400 });
+    }
+
+    return NextResponse.json({ code: 200, data: result.task });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json({ code: 400, message: "Validation error", errors: error.errors }, { status: 400 });

@@ -6,25 +6,13 @@ export const metadata: Metadata = {
   description: "面向中小团队的轻量协作 SaaS",
 };
 
-/**
- * 在首帧前同步解析主题偏好，避免深色用户看到一次浅色闪白。
- * 与设置页 / 顶栏共用 localStorage key：corps_theme。
- */
-const themeBootstrap = `
-(function(){
-  try{
-    var p = localStorage.getItem("corps_theme") || "system";
-    var d = p === "dark" || (p === "system" && matchMedia("(prefers-color-scheme: dark)").matches);
-    document.documentElement.setAttribute("data-theme", d ? "dark" : "light");
-  }catch(e){}
-})();
-`;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: themeBootstrap }} />
+        {/* 首帧前同步解析主题偏好，避免深色用户看到一次浅色闪白。
+            静态脚本文件（public/theme-init.js），不使用内联注入。 */}
+        <script src="/theme-init.js" />
       </head>
       <body>{children}</body>
     </html>
