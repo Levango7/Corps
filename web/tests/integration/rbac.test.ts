@@ -61,7 +61,7 @@ beforeAll(async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: adminUser.user.email, password: "Test123456!" }),
   });
-  const adminLoginJson = await adminLogin.json();
+
   const adminCookies = adminLogin.headers.getSetCookie?.() ?? [];
   const adminToken = adminCookies
     .find((c) => c.startsWith("access_token="))
@@ -85,7 +85,7 @@ beforeAll(async () => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email: memberUser.user.email, password: "Test123456!" }),
   });
-  const memberLoginJson = await memberLogin.json();
+
   const memberCookies = memberLogin.headers.getSetCookie?.() ?? [];
 
   const memberRefresh = await fetch(`${BASE}/auth/refresh`, {
@@ -205,9 +205,11 @@ describe("RBAC: 移除成员权限", () => {
   });
 
   it("不能移除自己", async () => {
+    // 用 admin 删自己：admin 有移除权限，才会命中"不能移除自己"守卫返回 400
+    // （若用 member，会先被权限检查拦截返回 403，测不到该守卫）
     const res = await fetch(
-      `${BASE}/workspaces/${fixture.wid}/members/${fixture.member.user.id}`,
-      { method: "DELETE", headers: authHeader(fixture.member.accessToken) },
+      `${BASE}/workspaces/${fixture.wid}/members/${fixture.admin.user.id}`,
+      { method: "DELETE", headers: authHeader(fixture.admin.accessToken) },
     );
     expect(res.status).toBe(400);
   });

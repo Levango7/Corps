@@ -24,38 +24,40 @@ model User {
   updatedAt     DateTime  @updatedAt @map("updated_at")
   lastLoginAt   DateTime? @map("last_login_at")
 
-  members         Member[]
-  tasks           Task[]       @relation("TaskAssignee")
-  createdTasks    Task[]       @relation("TaskCreator")
-  comments        Comment[]
-  decisions       Decision[]
+  members          Member[]
+  tasks            Task[]            @relation("TaskAssignee")
+  createdTasks     Task[]            @relation("TaskCreator")
+  comments         Comment[]
+  decisions        Decision[]
   decisionVersions DecisionVersion[]
-  notifications   Notification[]
-  ownedWorkspaces Workspace[]
-  sessions        Session[]
-  accounts        Account[]
+  notifications    Notification[]
+  ownedWorkspaces  Workspace[]
+  sessions         Session[]
+  accounts         Account[]
+  analyticsEvents  AnalyticsEvent[]
 
   @@map("users")
 }
 
 model Workspace {
-  id           String   @id @default(uuid()) @db.Uuid
-  name         String   @db.VarChar(100)
-  slug         String   @unique @db.VarChar(50)
-  ownerId      String   @map("owner_id") @db.Uuid
-  plan         String   @default("free") @db.VarChar(20) // free, starter, pro, enterprise
-  seatLimit    Int      @default(10) @map("seat_limit")
-  createdAt    DateTime @default(now()) @map("created_at")
-  updatedAt    DateTime @updatedAt @map("updated_at")
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(50)
+  ownerId   String   @map("owner_id") @db.Uuid
+  plan      String   @default("free") @db.VarChar(20) // free, starter, pro, enterprise
+  seatLimit Int      @default(10) @map("seat_limit")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
 
-  owner           User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  members         Member[]
-  tasks           Task[]
-  comments        Comment[]
-  decisions       Decision[]
+  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members          Member[]
+  tasks            Task[]
+  comments         Comment[]
+  decisions        Decision[]
   decisionVersions DecisionVersion[]
-  notifications   Notification[]
-  subscriptions   Subscription?
+  notifications    Notification[]
+  subscriptions    Subscription?
+  analyticsEvents  AnalyticsEvent[]
 
   @@index([slug])
   @@index([ownerId])
@@ -63,14 +65,14 @@ model Workspace {
 }
 
 model Member {
-  userId     String   @map("user_id") @db.Uuid
-  workspaceId String  @map("workspace_id") @db.Uuid
-  role       String   @default("member") @db.VarChar(20) // owner, admin, member
-  invitedBy  String?  @map("invited_by") @db.Uuid
-  joinedAt   DateTime @default(now()) @map("joined_at")
-  invitedAt  DateTime @default(now()) @map("invited_at")
+  userId      String   @map("user_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  role        String   @default("member") @db.VarChar(20) // owner, admin, member
+  invitedBy   String?  @map("invited_by") @db.Uuid
+  joinedAt    DateTime @default(now()) @map("joined_at")
+  invitedAt   DateTime @default(now()) @map("invited_at")
 
-  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@id([userId, workspaceId])
@@ -80,27 +82,34 @@ model Member {
 }
 
 model Task {
-  id          String   @id @default(uuid()) @db.Uuid
-  workspaceId String   @map("workspace_id") @db.Uuid
-  title       String   @db.VarChar(255)
-  description String?  @map("description") @db.Text
-  status      String   @default("todo") @db.VarChar(20) // todo, in_progress, review, done
-  priority    String   @default("medium") @db.VarChar(20) // low, medium, high, urgent
-  assigneeId  String?  @map("assignee_id") @db.Uuid
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  title       String    @db.VarChar(255)
+  description String?   @map("description") @db.Text
+  status      String    @default("todo") @db.VarChar(20) // todo, in_progress, review, done
+  priority    String    @default("medium") @db.VarChar(20) // low, medium, high, urgent
+  assigneeId  String?   @map("assignee_id") @db.Uuid
   dueDate     DateTime? @map("due_date")
-  sortOrder   Float    @default(0) @map("sort_order")
-  createdBy   String   @map("created_by") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  sortOrder   Float     @default(0) @map("sort_order")
+  createdBy   String    @map("created_by") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
 
-  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  assignee     User?             @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  creator      User              @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
-  comments     Comment[]
-  decisions    Decision[]
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee  User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  creator   User       @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  comments  Comment[]
+  decisions Decision[]
 
+  // 看板视图：按工作区筛选任务状态列
   @@index([workspaceId, status])
+  // 任务时间线/最近活动排序
   @@index([workspaceId, createdAt])
+  // 我的任务：按工作区 + 负责人筛选
+  @@index([workspaceId, assigneeId])
+  // 看板拖拽排序：按工作区 + sortOrder 高效分页
+  @@index([workspaceId, sortOrder])
+  // 跨工作区的负责人查询（保留单列索引以兼容现有查询）
   @@index([assigneeId])
   @@map("tasks")
 }
@@ -119,7 +128,8 @@ model Comment {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
 
-  @@index([taskId])
+  // 任务详情页：按时间顺序加载评论（覆盖索引前缀）
+  @@index([taskId, createdAt])
   @@index([workspaceId])
   @@map("comments")
 }
@@ -139,9 +149,14 @@ model Notification {
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
+  // 用户在某工作区的通知列表
   @@index([userId, workspaceId])
+  // 工作区维度的通知查询
   @@index([workspaceId])
+  // 未读通知计数与筛选（高频查询：工作区 + 用户 + 已读状态）
   @@index([workspaceId, userId, read])
+  // 通知中心按时间倒序分页（游标分页）
+  @@index([workspaceId, createdAt])
   @@map("notifications")
 }
 
@@ -155,12 +170,13 @@ model Decision {
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
-  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
   versions  DecisionVersion[]
 
-  @@index([taskId])
+  // 任务决策按版本号定位（覆盖索引前缀兼容单 taskId 查询）
+  @@index([taskId, version])
   @@index([workspaceId])
   @@map("decisions")
 }
@@ -188,35 +204,36 @@ model DecisionVersion {
 }
 
 model Session {
-  id            String   @id @default(uuid()) @db.Uuid
-  expiresAt     DateTime @map("expires_at")
-  token         String   @unique @map("token") @db.Text
-  createdAt     DateTime @default(now()) @map("created_at")
-  updatedAt     DateTime @updatedAt @map("updated_at")
-  ipAddress     String?  @map("ip_address") @db.VarChar(45)
-  userAgent     String?  @map("user_agent") @db.VarChar(500)
-  userId        String   @map("user_id") @db.Uuid
-  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String   @id @default(uuid()) @db.Uuid
+  expiresAt DateTime @map("expires_at")
+  token     String   @unique @map("token") @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+  ipAddress String?  @map("ip_address") @db.VarChar(45)
+  userAgent String?  @map("user_agent") @db.VarChar(500)
+  userId    String   @map("user_id") @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@index([userId])
+  // 用户会话列表 + 过期时间筛选（清理过期会话、验证有效会话）
+  @@index([userId, expiresAt])
   @@map("sessions")
 }
 
 model Account {
-  id                     String    @id @default(uuid()) @db.Uuid
-  accountId              String    @map("account_id") @db.Text
-  providerId             String    @map("provider_id") @db.Text
-  userId                 String    @map("user_id") @db.Uuid
-  user                   User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken            String?   @map("access_token") @db.Text
-  refreshToken           String?   @map("refresh_token") @db.Text
-  idToken                String?   @map("id_token") @db.Text
-  accessTokenExpiresAt   DateTime? @map("access_token_expires_at")
-  refreshTokenExpiresAt  DateTime? @map("refresh_token_expires_at")
+  id                    String    @id @default(uuid()) @db.Uuid
+  accountId             String    @map("account_id") @db.Text
+  providerId            String    @map("provider_id") @db.Text
+  userId                String    @map("user_id") @db.Uuid
+  user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  accessToken           String?   @map("access_token") @db.Text
+  refreshToken          String?   @map("refresh_token") @db.Text
+  idToken               String?   @map("id_token") @db.Text
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
   scope                 String?   @db.Text
-  password               String?   @db.Text
-  createdAt              DateTime  @default(now()) @map("created_at")
-  updatedAt              DateTime  @updatedAt @map("updated_at")
+  password              String?   @db.Text
+  createdAt             DateTime  @default(now()) @map("created_at")
+  updatedAt             DateTime  @updatedAt @map("updated_at")
 
   @@index([userId])
   @@map("accounts")
@@ -234,20 +251,56 @@ model Verification {
 }
 
 model Subscription {
-  id                String   @id @default(uuid()) @db.Uuid
-  workspaceId       String   @map("workspace_id") @db.Uuid
-  stripeCustomerId  String?  @map("stripe_customer_id") @db.VarChar(255)
-  stripeSubId       String?  @map("stripe_sub_id") @db.VarChar(255)
-  quantity          Int      @default(1)
-  status            String   @default("active") @db.VarChar(20) // active, past_due, canceled, trialing, incomplete
-  currentPeriodEnd  DateTime? @map("current_period_end")
-  canceledAt        DateTime? @map("canceled_at")
-  createdAt         DateTime @default(now()) @map("created_at")
-  updatedAt         DateTime @updatedAt @map("updated_at")
+  id               String    @id @default(uuid()) @db.Uuid
+  workspaceId      String    @map("workspace_id") @db.Uuid
+  stripeCustomerId String?   @map("stripe_customer_id") @db.VarChar(255)
+  stripeSubId      String?   @map("stripe_sub_id") @db.VarChar(255)
+  quantity         Int       @default(1)
+  status           String    @default("active") @db.VarChar(20) // active, past_due, canceled, trialing, incomplete
+  currentPeriodEnd DateTime? @map("current_period_end")
+  canceledAt       DateTime? @map("canceled_at")
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId])
   @@index([stripeCustomerId])
   @@map("subscriptions")
+}
+
+// ─── 分析事件（P2 数据埋点：注册/激活/留存/转化漏斗）──
+
+/**
+ * 分析事件表：客户端批量上报，服务端按工作区隔离。
+ *
+ * 设计权衡：
+ *  - 不在事件写入路径走 RLS（事件写入用 runWithAuthOp("provision") 逃生口 + 显式 workspace_id），
+ *    因为事件可能在 wid 上下文建立之前发生（如 register）。
+ *  - 读取（analytics/overview）走 RLS，仅 owner/admin 可见。
+ *  - props 用 Json 而非 JsonB：写入少、读取多，Json 行内存储读取更快；
+ *    且事件 props 体量小（<1KB），不需要 JsonB 的 GIN 索引。
+ *  - 不存 PII（邮箱/姓名），仅存匿名化 props（taskId/role/plan 等）。
+ */
+model AnalyticsEvent {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String?  @map("user_id") @db.Uuid // register 前的事件可为空
+  workspaceId String?  @map("workspace_id") @db.Uuid // 全局事件（register）可为空
+  name        String   @db.VarChar(64) // register, login, create_task, invite_member, create_decision, ...
+  props       Json     @default("{}")
+  sessionId   String?  @map("session_id") @db.VarChar(64) // 匿名会话 ID，用于漏斗关联
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // 漏斗分析：按事件名 + 时间范围扫描
+  @@index([name, createdAt])
+  // 用户时间线：按用户 + 时间倒序
+  @@index([userId, createdAt])
+  // 工作区聚合：按工作区 + 时间范围
+  @@index([workspaceId, createdAt])
+  // 会话关联：按会话 ID 重建漏斗
+  @@index([sessionId, createdAt])
+  @@map("analytics_events")
 }

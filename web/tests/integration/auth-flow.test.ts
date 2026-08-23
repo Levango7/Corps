@@ -4,7 +4,7 @@ import {
   TEST_PASSWORD,
   uniqueEmail,
   registerUser,
-  loginUser,
+
   authHeader,
   cookieHeader,
 } from "../helpers";
@@ -59,14 +59,14 @@ describe("认证全流程：注册 → 登录 → 刷新 → 登出", () => {
     // Assert - cookie 属性
     const parsed = parseCookie(accessTokenCookie!);
     expect(parsed.attrs.httponly).toBe("true");
-    expect(parsed.attrs.samesite).toBe("Lax");
+    expect(parsed.attrs.samesite?.toLowerCase()).toBe("lax");
     expect(parsed.attrs.path).toBe("/");
     expect(parsed.value.length).toBeGreaterThan(10); // JWT 非空
   });
 
   it("登录返回 200 并下发新的 access_token cookie", async () => {
     // Arrange - 先注册
-    const email = uniqueEmail("flow-login");
+
     await registerUser({ prefix: "flow-login" });
     // 用同邮箱注册会失败，改用 registerUser 返回的邮箱重新登录
     const reg = await registerUser({ prefix: "flow-login2" });

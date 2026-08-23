@@ -7,6 +7,21 @@
  *
  * setToken/clearToken 保留为 no-op，仅为向后兼容尚未迁移的调用方，不再做任何实际存储。
  */
+
+/** 后端统一响应信封：{ code, message, data } */
+interface ApiResponse<T = unknown> {
+  code: number;
+  message: string;
+  data: T | null;
+}
+
+/** refresh 端点路径（Better Auth 会话 cookie 轮换 access_token cookie） */
+const REFRESH_ENDPOINT = "/api/v1/auth/refresh";
+/** JSON Content-Type 常量，避免魔法字符串 */
+const JSON_CONTENT_TYPE = "application/json";
+/** 401 时未能在刷新后恢复身份的错误信息 */
+const UNAUTHORIZED_MESSAGE = "unauthorized";
+
 export function setToken(_t: string) {
   /* no-op：token 由服务端 httpOnly cookie 托管 */
 }
@@ -25,7 +40,7 @@ export function clearToken() {
  */
 export async function api<T = unknown>(path: string, opts: RequestInit = {}): Promise<T> {
   const headers = new Headers(opts.headers);
-  if (!headers.has("Content-Type") && opts.body) headers.set("Content-Type", "application/json");
+  if (!headers.has("Content-Type") && opts.body) headers.set("Content-Type", JSON_CONTENT_TYPE);
 
   const doFetch = (h: Headers) => fetch(path, { ...opts, headers: h, credentials: "include" });
 
@@ -33,7 +48,7 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
 
   if (res.status === 401) {
     // access token cookie 过期：用 Better Auth 会话 cookie 轮换，新 access_token cookie 由服务端下发
-    const refreshed = await fetch("/api/v1/auth/refresh", {
+    const refreshed = await fetch(REFRESH_ENDPOINT, {
       method: "POST",
       credentials: "include",
     });
@@ -41,13 +56,13 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
       // cookie 已更新，直接重试原请求
       res = await doFetch(headers);
     } else {
-      throw new Error("unauthorized");
+      throw new Error(UNAUTHORIZED_MESSAGE);
     }
   }
 
-  const json = await res
+  const json: ApiResponse = await res
     .json()
-    .catch(() => ({ code: res.status, message: res.statusText, data: null }));
+    .catch((): ApiResponse => ({ code: res.status, message: res.statusText, data: null }));
   if (!res.ok) {
     throw new Error(json?.message || `请求失败 (${res.status})`);
   }

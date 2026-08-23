@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { BASE, registerUser, authHeader, createTask, TEST_PASSWORD } from "../helpers";
+import { BASE, registerUser, authHeader, createTask } from "../helpers";
 
 /**
  * 任务 CRUD 集成测试

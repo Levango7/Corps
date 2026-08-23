@@ -2,7 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import { verifyAccessToken, type JWTPayload } from "./jwt";
-import { NextRequest, NextResponse } from "next/server";
+import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 
@@ -32,10 +32,6 @@ export const auth = betterAuth({
 });
 
 // ─── 工作区上下文中间件（读取 wid 访问令牌，驱动 RLS）──
-
-export interface AuthenticatedRequest extends NextRequest {
-  auth?: JWTPayload;
-}
 
 export async function authenticate(req: NextRequest): Promise<JWTPayload | null> {
   // 优先从 httpOnly cookie 读取 access token（Web 端主路径，XSS 无法窃取）
@@ -72,21 +68,6 @@ export async function getWorkspaceContext(
   if (!member) return null;
 
   return { payload, member };
-}
-
-export function requireRole(allowed: string[]) {
-  return function (req: NextRequest, context: { params: Promise<{ wid: string }> }) {
-    return async () => {
-      const ctx = await getWorkspaceContext(req, (await context.params).wid);
-      if (!ctx) {
-        return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
-      }
-      if (!allowed.includes(ctx.member.role)) {
-        return NextResponse.json({ code: 403, message: "Forbidden" }, { status: 403 });
-      }
-      return null;
-    };
-  };
 }
 
 type Tx = Prisma.TransactionClient;

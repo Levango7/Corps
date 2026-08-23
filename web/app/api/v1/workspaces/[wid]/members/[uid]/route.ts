@@ -18,7 +18,14 @@ export async function PATCH(
     );
   }
 
-  const { role } = roleSchema.parse(await req.json());
+  const parsedRole = roleSchema.safeParse(await req.json());
+  if (!parsedRole.success) {
+    return NextResponse.json(
+      { code: 400, message: "Validation error", errors: parsedRole.error.errors },
+      { status: 400 },
+    );
+  }
+  const { role } = parsedRole.data;
 
   const outcome = await runWithWorkspace(
     wid,

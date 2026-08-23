@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const inviteSchema = z.object({ email: z.string().email() });
 
@@ -110,6 +111,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     } catch (emailError) {
       console.error("[invite] sendInviteEmail failed:", emailError);
     }
+
+    // P2 数据埋点：invite_member 事件（不阻塞主流程）
+    await prisma.analyticsEvent
+      .create({
+        data: {
+          id: randomUUID(),
+          userId: ctx.payload.sub,
+          workspaceId: wid,
+          name: "invite_member",
+          props: { role: "member" },
+        },
+      })
+      .catch(() => {
+        /* 埋点失败不影响主流程 */
+      });
 
     return NextResponse.json({ code: 201, data: result.member }, { status: 201 });
   } catch (error) {

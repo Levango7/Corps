@@ -1,13 +1,46 @@
+# 依赖与构建产物（构建时重新生成）
 node_modules
 .next
+coverage
+*.tsbuildinfo
+
+# 版本控制
 .git
-*.md
-.env*
+.gitignore
+
+# 环境变量文件（运行时通过 docker-compose/env 注入）
+.env
+.env.local
+.env*.local
+.env*.example
+
+# Docker 自身文件（避免递归包含）
 Dockerfile
 .dockerignore
 docker-compose.yml
-docker
+
+# 测试与脚本
 tests
 e2e-test.sh
-coverage
-*.tsbuildinfo
+e2e-test-full.sh
+run-itests.cmd
+vitest.config.ts
+
+# 日志与临时文件
+*.log
+*.txt
+dev-*.log
+next-dev-test.log
+
+# 文档（构建不需要）
+*.md
+README.md
+
+# IDE / OS
+.DS_Store
+.vscode
+.idea
+
+# docker 子目录中的 init-rls.sql（仅 db 容器使用，app 镜像不需要）
+# 但保留 entrypoint.sh（Dockerfile 显式 COPY）
+docker/init-rls.sql

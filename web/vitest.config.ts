@@ -5,12 +5,13 @@ import path from "path";
 export default defineConfig({
   plugins: [react()],
   test: {
-    // 集成测试是纯 API 测试（fetch localhost），无需 DOM
+    // 集成测试是纯 API 测试（fetch localhost），无需 DOM；
+    // 组件单元测试通过文件顶部 `// @vitest-environment jsdom` 注释按需切换到 jsdom。
     environment: "node",
     setupFiles: ["./tests/setup.ts"],
     globals: true,
-    // 仅收集 tests/ 下的测试，避免误抓 app/ 中的 *.test.ts 当作用例
-    include: ["tests/**/*.test.ts"],
+    // 收集 tests/ 下的测试：工具函数用例 .test.ts，组件用例 .test.tsx
+    include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
     // 集成测试需要起 Next dev server + DB 往返，给足超时余量
     testTimeout: 15_000,
     hookTimeout: 30_000,
@@ -24,7 +25,7 @@ export default defineConfig({
       // 后续可逐步提高 thresholds.lines/branches/functions/statements
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
-      include: ["app/api/**/*.ts", "lib/**/*.ts"],
+      include: ["app/api/**/*.ts", "lib/**/*.ts", "components/**/*.tsx"],
       exclude: ["**/*.config.*", "**/node_modules/**"],
     },
   },

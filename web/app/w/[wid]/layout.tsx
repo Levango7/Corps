@@ -9,34 +9,22 @@ import {
   Users,
   Settings,
   CreditCard,
-  ChevronLeft,
-  ChevronRight,
-  Moon,
-  Sun,
-  Monitor,
   Search,
   Menu,
-  X,
   ChevronsUpDown,
   Check,
   LogOut,
   CheckSquare,
   FileText,
-  Bell,
+  BarChart3,
 } from "lucide-react";
-import { api, setToken } from "@/lib/api";
+import { api } from "@/lib/api";
+import { setWorkspaceContext, track } from "@/lib/analytics";
 import CommandPalette from "@/components/CommandPalette";
+import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
+import { ThemeToggle, type ThemePref, readThemePref, resolveTheme, applyTheme } from "@/components/ThemeToggle";
+import type { WorkspaceSummary } from "@/lib/types";
 
-interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  role: string;
-}
-
-type ThemePref = "system" | "light" | "dark";
-
-const THEME_KEY = "corps_theme";
 const SIDEBAR_KEY = "corps_sidebar_collapsed";
 
 export default function WorkspaceLayout({
@@ -46,11 +34,10 @@ export default function WorkspaceLayout({
   children: React.ReactNode;
   params: Promise<{ wid: string }>;
 }) {
-  const [workspaces, setWorkspaces] = useState<Workspace[]>([]);
-  const [workspace, setWorkspace] = useState<Workspace | null>(null);
+  const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
+  const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [collapsed, setCollapsed] = useState(false);
   const [themePref, setThemePref] = useState<ThemePref>("system");
-  const [, setResolvedDark] = useState(false);
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [switcherHighlight, setSwitcherHighlight] = useState(-1);
   const [cmdOpen, setCmdOpen] = useState(false);
@@ -68,23 +55,18 @@ export default function WorkspaceLayout({
   const pathname = usePathname();
   const { wid } = use(params);
 
+  // ─── 初始化：主题 + 侧栏折叠 + 工作区列表 + 埋点 ───
   useEffect(() => {
-    // 主题：与设置页共用 corps_theme（light | dark | system）
-    const stored = localStorage.getItem(THEME_KEY);
-    const pref: ThemePref = stored === "light" || stored === "dark" ? stored : "system";
-    const resolved =
-      pref === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : pref;
+    const pref = readThemePref();
     setThemePref(pref);
-    setResolvedDark(resolved === "dark");
-    document.documentElement.setAttribute("data-theme", resolved);
+    document.documentElement.setAttribute("data-theme", resolveTheme(pref));
 
     if (localStorage.getItem(SIDEBAR_KEY) === "true") setCollapsed(true);
 
-    api<Workspace[]>("/api/v1/workspaces")
+    setWorkspaceContext(wid);
+    track("page_view", { path: pathname });
+
+    api<WorkspaceSummary[]>("/api/v1/workspaces")
       .then((ws) => {
         setWorkspaces(ws);
         const cur = ws.find((w) => w.id === wid);
@@ -92,7 +74,7 @@ export default function WorkspaceLayout({
         else router.push("/auth/login");
       })
       .catch(() => router.push("/auth/login"));
-  }, [wid, router]);
+  }, [wid, router, pathname]);
 
   useEffect(() => {
     api<{ name: string | null; email: string; image: string | null }>("/api/v1/users/me")
@@ -100,7 +82,7 @@ export default function WorkspaceLayout({
       .catch(() => {});
   }, []);
 
-  // 通知未读数：每 30 秒轮询；依赖 pathname 使路由切换时立即刷新一次
+  // 通知未读数：每 30 秒轮询
   useEffect(() => {
     let active = true;
     function fetchCount() {
@@ -118,6 +100,7 @@ export default function WorkspaceLayout({
     };
   }, [wid, pathname]);
 
+  // ─── 全局键盘 + 外部点击 ───
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
@@ -143,7 +126,7 @@ export default function WorkspaceLayout({
     };
   }, []);
 
-  // 移动端抽屉 focus trap：打开时聚焦首个可聚焦元素，Tab 到末尾回弹首元素
+  // 移动端抽屉 focus trap
   useEffect(() => {
     if (!drawerOpen || !drawerRef.current) return;
     const node = drawerRef.current;
@@ -175,46 +158,33 @@ export default function WorkspaceLayout({
     return () => node.removeEventListener("keydown", onTab);
   }, [drawerOpen]);
 
-  // 工作区切换下拉：打开时高亮当前工作区并聚焦列表，支持 ↑↓ Enter 键盘导航
+  // 工作区切换下拉：打开时高亮当前
   useEffect(() => {
     if (!switcherOpen) return;
     setSwitcherHighlight(workspaces.findIndex((w) => w.id === wid));
-    // 等待 DOM 渲染后聚焦列表容器，使 onKeyDown 能接收键盘事件
     const id = requestAnimationFrame(() => {
       switcherListRef.current?.focus();
     });
     return () => cancelAnimationFrame(id);
   }, [switcherOpen, workspaces, wid]);
 
+  // ─── 回调 ───
   function toggleSidebar() {
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem(SIDEBAR_KEY, String(next));
   }
 
-  function toggleTheme() {
-    // 三态循环：system → light → dark → system
-    const order: ThemePref[] = ["system", "light", "dark"];
-    const idx = order.indexOf(themePref);
-    const next = order[(idx + 1) % order.length];
-    const resolved =
-      next === "system"
-        ? window.matchMedia("(prefers-color-scheme: dark)").matches
-          ? "dark"
-          : "light"
-        : next;
+  function handleThemeChange(next: ThemePref) {
     setThemePref(next);
-    setResolvedDark(resolved === "dark");
-    document.documentElement.setAttribute("data-theme", resolved);
-    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
   }
 
   async function switchWorkspace(targetId: string) {
     setSwitcherOpen(false);
     if (targetId === wid) return;
+    track("workspace_switch", { from: wid, to: targetId });
     try {
-      // 换工作区必须换 wid 令牌，否则 RLS 上下文仍指向旧工作区
-      // access_token 由服务端以 httpOnly cookie 下发，前端无需读取响应体中的 token
       await api("/api/v1/auth/refresh", {
         method: "POST",
         body: JSON.stringify({ workspaceId: targetId }),
@@ -235,10 +205,10 @@ export default function WorkspaceLayout({
     );
   }
 
-  // 导航分组：工作区组（主体）+ 管理组（底部，带小字标题分隔）
-  const navGroups = [
+  // 导航分组
+  const navGroups: NavGroup[] = [
     {
-      label: null as string | null,
+      label: null,
       items: [
         { href: `/w/${wid}`, label: "概览", icon: LayoutDashboard, exact: true },
         { href: `/w/${wid}/board`, label: "看板", icon: Kanban, exact: false },
@@ -247,10 +217,11 @@ export default function WorkspaceLayout({
       ],
     },
     {
-      label: "管理" as string | null,
+      label: "管理",
       items: [
         { href: `/w/${wid}/members`, label: "成员", icon: Users, exact: false },
         { href: `/w/${wid}/billing`, label: "计费", icon: CreditCard, exact: false },
+        { href: `/w/${wid}/analytics`, label: "分析", icon: BarChart3, exact: false },
         { href: `/w/${wid}/settings`, label: "设置", icon: Settings, exact: false },
       ],
     },
@@ -258,21 +229,12 @@ export default function WorkspaceLayout({
 
   const notifHref = `/w/${wid}/notifications`;
   const notifActive = pathname.startsWith(notifHref);
-
-  const themeIcon =
-    themePref === "system" ? (
-      <Monitor size={18} />
-    ) : themePref === "light" ? (
-      <Sun size={18} />
-    ) : (
-      <Moon size={18} />
-    );
   const themeLabel = themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色";
 
   return (
     <div className="min-h-screen flex flex-col">
+      {/* ─── 顶栏 ─── */}
       <header className="h-[var(--topbar-h)] px-[var(--space-4)] border-b border-[var(--shell-edge)] bg-[var(--shell-topbar)] flex items-center gap-[var(--space-3)] sticky top-0 z-[var(--z-sticky)]">
-        {/* 汉堡菜单：< lg 显示，≥ lg 隐藏 */}
         <button
           onClick={() => setDrawerOpen(true)}
           className="lg:hidden p-[var(--space-2)] -ml-[var(--space-1)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
@@ -281,6 +243,7 @@ export default function WorkspaceLayout({
           <Menu size={18} />
         </button>
 
+        {/* 工作区切换器 */}
         <div className="flex items-center gap-[var(--space-2)] relative" ref={switcherRef}>
           <Link
             href={`/w/${wid}`}
@@ -345,8 +308,8 @@ export default function WorkspaceLayout({
           )}
         </div>
 
+        {/* 搜索 */}
         <div className="flex-1 flex items-center justify-center">
-          {/* ≥ md：完整搜索框 */}
           <button
             onClick={() => setCmdOpen(true)}
             className="hidden md:flex items-center gap-[var(--space-2)] px-[var(--space-3)] h-8 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--muted)] text-[length:var(--text-sm)] hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)] w-[var(--search-w-sm)] lg:w-[var(--search-w-lg)]"
@@ -357,7 +320,6 @@ export default function WorkspaceLayout({
               ⌘K
             </kbd>
           </button>
-          {/* < md：搜索图标按钮，触发命令面板 */}
           <button
             onClick={() => setCmdOpen(true)}
             className="md:hidden p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
@@ -367,15 +329,9 @@ export default function WorkspaceLayout({
           </button>
         </div>
 
+        {/* 右侧：主题 + 用户 + 退出 */}
         <div className="flex items-center gap-[var(--space-1)] ml-auto">
-          <button
-            onClick={toggleTheme}
-            className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-            aria-label={`切换主题（当前：${themeLabel}）`}
-            title={themeLabel}
-          >
-            {themeIcon}
-          </button>
+          <ThemeToggle pref={themePref} onChange={handleThemeChange} />
           <span
             className="hidden md:inline text-[length:var(--text-xs)] text-[var(--meta)] select-none"
             aria-hidden="true"
@@ -426,80 +382,22 @@ export default function WorkspaceLayout({
       </header>
 
       <div className="flex flex-1 overflow-hidden">
-        {/* 桌面端侧栏 (≥ lg)：固定显示，可折叠（保留当前行为） */}
+        {/* 桌面端侧栏 (≥ lg) */}
         <aside
           className={`hidden lg:flex bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] flex-col transition-[width] duration-[var(--motion-base)] ease-[var(--ease-standard)] ${
             collapsed ? "w-[var(--sidebar-w-collapsed)]" : "w-[var(--sidebar-w)]"
           }`}
         >
-          <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
-            {navGroups.map((group, gi) => (
-              <div key={gi} className="space-y-[var(--space-1)]">
-                {group.label && !collapsed && (
-                  <div className="text-[length:var(--text-xs)] text-[var(--meta)] px-[var(--space-3)] pt-[var(--space-4)] pb-[var(--space-1)]">
-                    {group.label}
-                  </div>
-                )}
-                {group.label && collapsed && (
-                  <div className="px-[var(--space-2)] pt-[var(--space-2)]">
-                    <div className="h-px bg-[var(--shell-edge)]" />
-                  </div>
-                )}
-                {group.items.map(({ href, label, icon: Icon, exact }) => {
-                  const active = exact ? pathname === href : pathname.startsWith(href);
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      aria-current={active ? "page" : undefined}
-                      className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                        active
-                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                          : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                      } ${collapsed ? "justify-center px-0" : ""}`}
-                      title={collapsed ? label : undefined}
-                    >
-                      <Icon size={18} className="shrink-0" />
-                      {!collapsed && <span className="truncate">{label}</span>}
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-
-          {/* 通知入口：固定在侧栏底部，带未读 badge */}
-          <div className="px-[var(--space-2)] pt-[var(--space-1)]">
-            <Link
-              href={notifHref}
-              aria-current={notifActive ? "page" : undefined}
-              className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                notifActive
-                  ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                  : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-              } ${collapsed ? "justify-center px-0" : ""}`}
-              title={collapsed ? "通知" : undefined}
-            >
-              <Bell size={18} className="shrink-0" />
-              {!collapsed && <span className="truncate">通知</span>}
-              {!collapsed && unreadCount > 0 && (
-                <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-white text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-              {collapsed && unreadCount > 0 && (
-                <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" />
-              )}
-            </Link>
-          </div>
-
-          <button
-            onClick={toggleSidebar}
-            className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
-            aria-label={collapsed ? "展开侧栏" : "折叠侧栏"}
-          >
-            {collapsed ? <ChevronRight size={16} /> : <ChevronLeft size={16} />}
-          </button>
+          <SidebarNav
+            groups={navGroups}
+            pathname={pathname}
+            collapsed={collapsed}
+            notifHref={notifHref}
+            notifActive={notifActive}
+            unreadCount={unreadCount}
+            onToggleCollapse={toggleSidebar}
+            mode="desktop"
+          />
         </aside>
 
         <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-[var(--space-4)] lg:p-[var(--space-6)]">
@@ -507,9 +405,8 @@ export default function WorkspaceLayout({
         </main>
       </div>
 
-      {/* 移动端抽屉 (< lg)：overlay + 滑入动画，独立于桌面端折叠状态 */}
+      {/* 移动端抽屉 (< lg) */}
       <div className="lg:hidden">
-        {/* 背景蒙层：点击关闭 */}
         <div
           className={`fixed inset-0 bg-[var(--overlay)] z-[var(--z-modal)] transition-opacity duration-[var(--motion-base)] ${
             drawerOpen ? "opacity-100" : "opacity-0 pointer-events-none"
@@ -517,7 +414,6 @@ export default function WorkspaceLayout({
           onClick={() => setDrawerOpen(false)}
           aria-hidden={!drawerOpen}
         />
-        {/* 抽屉：从左侧滑入 */}
         <aside
           ref={drawerRef}
           className={`fixed inset-y-0 left-0 w-[var(--sidebar-w-mobile)] h-full bg-[var(--shell-sidebar)] border-r border-[var(--shell-edge)] z-[var(--z-modal)] transform transition-transform duration-[var(--motion-base)] ease-[var(--ease-standard)] flex flex-col ${
@@ -528,64 +424,17 @@ export default function WorkspaceLayout({
           aria-modal={drawerOpen ? "true" : undefined}
           aria-label="导航菜单"
         >
-          <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
-            {navGroups.map((group, gi) => (
-              <div key={gi} className="space-y-[var(--space-1)]">
-                {group.label && (
-                  <div className="text-[length:var(--text-xs)] text-[var(--meta)] px-[var(--space-3)] pt-[var(--space-4)] pb-[var(--space-1)]">
-                    {group.label}
-                  </div>
-                )}
-                {group.items.map(({ href, label, icon: Icon, exact }) => {
-                  const active = exact ? pathname === href : pathname.startsWith(href);
-                  return (
-                    <Link
-                      key={href}
-                      href={href}
-                      aria-current={active ? "page" : undefined}
-                      onClick={() => setDrawerOpen(false)}
-                      className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                        active
-                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                          : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                      }`}
-                    >
-                      <Icon size={18} className="shrink-0" />
-                      <span className="truncate">{label}</span>
-                    </Link>
-                  );
-                })}
-              </div>
-            ))}
-          </nav>
-          {/* 通知入口：底部，带未读 badge */}
-          <div className="px-[var(--space-2)] pt-[var(--space-1)]">
-            <Link
-              href={notifHref}
-              aria-current={notifActive ? "page" : undefined}
-              onClick={() => setDrawerOpen(false)}
-              className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                notifActive
-                  ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                  : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-              }`}
-            >
-              <Bell size={18} className="shrink-0" />
-              <span className="truncate">通知</span>
-              {unreadCount > 0 && (
-                <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-white text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
-                  {unreadCount > 99 ? "99+" : unreadCount}
-                </span>
-              )}
-            </Link>
-          </div>
-          <button
-            onClick={() => setDrawerOpen(false)}
-            className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
-            aria-label="关闭侧栏"
-          >
-            <X size={16} />
-          </button>
+          <SidebarNav
+            groups={navGroups}
+            pathname={pathname}
+            collapsed={false}
+            notifHref={notifHref}
+            notifActive={notifActive}
+            unreadCount={unreadCount}
+            onNavigate={() => setDrawerOpen(false)}
+            onClose={() => setDrawerOpen(false)}
+            mode="mobile"
+          />
         </aside>
       </div>
 

@@ -1,29 +1,28 @@
 "use client";
 
+/**
+ * 成员管理 · /w/[wid]/members
+ *
+ * 重构后职责：
+ *  - 状态管理（members / meta / invite 表单）
+ *  - 数据加载 + 邀请/移除/改角色
+ *  - 编排子组件（MemberList / MemberSkeleton / EmptyState）
+ *
+ * 重构前桌面行布局 + 移动卡片布局两套几乎完全相同的渲染逻辑，
+ * 合并为单套响应式 MemberList + MemberRow，消除重复。
+ */
+
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   UserPlus,
   Trash2,
   Users,
-  Shield,
-  ShieldCheck,
-  User as UserIcon,
   CheckCircle2,
 } from "lucide-react";
 import { api } from "@/lib/api";
-
-type Role = "owner" | "admin" | "member";
-
-interface Member {
-  id: string;
-  email: string;
-  name: string | null;
-  image: string | null;
-  role: Role;
-  isSelf: boolean;
-  joinedAt: string;
-}
+import type { Member, Role } from "@/lib/types";
+import { ROLE_META } from "@/lib/task-meta";
 
 interface WorkspaceMeta {
   name: string;
@@ -31,12 +30,6 @@ interface WorkspaceMeta {
   memberCount: number;
   role: Role;
 }
-
-const ROLE_META: Record<Role, { label: string; icon: typeof UserIcon }> = {
-  owner: { label: "拥有者", icon: ShieldCheck },
-  admin: { label: "管理员", icon: Shield },
-  member: { label: "成员", icon: UserIcon },
-};
 
 function Avatar({ m }: { m: Member }) {
   return (
@@ -132,7 +125,6 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const seatsUsed = meta?.memberCount ?? members.length;
   const seatsTotal = meta?.seatLimit ?? 0;
   const seatsFull = seatsTotal > 0 && seatsUsed >= seatsTotal;
-  // 只有自己一人（无其他成员）时进入空状态；加载失败 members 为空不触发
   const onlySelf = members.length <= 1 && members.some((m) => m.isSelf);
 
   return (
@@ -214,37 +206,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       )}
 
       {loading ? (
-        <>
-          {/* 桌面端骨架（行布局） */}
-          <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] divide-y divide-[var(--border-soft)]">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3 px-4 py-3">
-                <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
-                <div className="flex-1 space-y-2">
-                  <div className="h-4 w-32 rounded bg-[var(--surface-2)] animate-pulse" />
-                  <div className="h-3 w-48 rounded bg-[var(--surface-2)] animate-pulse" />
-                </div>
-              </div>
-            ))}
-          </div>
-          {/* 移动端骨架（卡片布局） */}
-          <div className="md:hidden flex flex-col gap-2">
-            {Array.from({ length: 4 }).map((_, i) => (
-              <div
-                key={i}
-                className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
-                  <div className="flex-1 space-y-2">
-                    <div className="h-4 w-32 rounded bg-[var(--surface-2)] animate-pulse" />
-                    <div className="h-3 w-48 rounded bg-[var(--surface-2)] animate-pulse" />
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </>
+        <MemberSkeleton />
       ) : onlySelf ? (
         <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] px-4 py-12 text-center">
           <div className="flex justify-center mb-4">
@@ -258,140 +220,218 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           </p>
         </div>
       ) : (
-        <>
-          {/* 桌面端行布局（≥ md） */}
-          <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] divide-y divide-[var(--border-soft)]">
-            {members.map((m) => {
-              const meta2 = ROLE_META[m.role];
-              const Icon = meta2.icon;
-              const editable = canManage && m.role !== "owner" && !m.isSelf;
-              return (
-                <div key={m.id} className="flex items-center gap-3 px-4 py-3">
-                  <Avatar m={m} />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
-                        {m.name || m.email.split("@")[0]}
-                      </span>
-                      {m.isSelf && (
-                        <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
-                          你
-                        </span>
-                      )}
-                    </div>
-                    <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
-                      {m.email}
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-1">
-                    {editable ? (
-                      <div className="flex items-center gap-1">
-                        <select
-                          value={m.role}
-                          onChange={(e) => changeRole(m.id, e.target.value as Role)}
-                          className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-                        >
-                          <option value="member">成员</option>
-                          <option value="admin">管理员</option>
-                        </select>
-                        {/* 拥有者角色只能通过转让工作区变更，不在此选择器内 */}
-                        {m.role !== "owner" && (
-                          <span className="hidden sm:inline text-[length:var(--text-xs)] text-[var(--meta)]">
-                            不能授予/收回拥有者
-                          </span>
-                        )}
-                      </div>
-                    ) : (
-                      <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                        <Icon size={16} className="text-[var(--muted)]" />
-                        {meta2.label}
-                      </span>
-                    )}
-                    {editable && (
-                      <button
-                        onClick={() => remove(m.id, m.name || m.email)}
-                        className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
-                        aria-label={`移除 ${m.name || m.email}`}
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          {/* 移动端卡片列表（< md） */}
-          <div className="md:hidden flex flex-col gap-2">
-            {members.map((m) => {
-              const meta2 = ROLE_META[m.role];
-              const Icon = meta2.icon;
-              const editable = canManage && m.role !== "owner" && !m.isSelf;
-              return (
-                <div
-                  key={m.id}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <Avatar m={m} />
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
-                          {m.name || m.email.split("@")[0]}
-                        </span>
-                        {m.isSelf && (
-                          <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
-                            你
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
-                          {m.email}
-                        </span>
-                        {!editable && (
-                          <span className="flex items-center gap-1 shrink-0 text-[length:var(--text-xs)] text-[var(--fg-2)]">
-                            <Icon size={12} className="text-[var(--muted)]" />
-                            {meta2.label}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                  {editable && (
-                    <div className="mt-3 flex flex-col items-stretch gap-2">
-                      <select
-                        value={m.role}
-                        onChange={(e) => changeRole(m.id, e.target.value as Role)}
-                        className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-                      >
-                        <option value="member">成员</option>
-                        <option value="admin">管理员</option>
-                      </select>
-                      <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                        拥有者不可在此更改
-                      </span>
-                      <button
-                        onClick={() => remove(m.id, m.name || m.email)}
-                        className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
-                        aria-label={`移除 ${m.name || m.email}`}
-                      >
-                        <Trash2 size={16} />
-                        <span>移除</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </>
+        <MemberList
+          members={members}
+          canManage={canManage}
+          onChangeRole={changeRole}
+          onRemove={remove}
+        />
       )}
 
       <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
         邀请前对方需先在 corps 注册账号。拥有者不可被移除或降级；转让拥有者权限需在设置中操作。
       </p>
     </div>
+  );
+}
+
+// ─── 成员列表（响应式：≥ md 行布局，< md 卡片布局） ─────────
+
+interface MemberListProps {
+  members: Member[];
+  canManage: boolean;
+  onChangeRole: (uid: string, role: Role) => Promise<void>;
+  onRemove: (uid: string, label: string) => Promise<void>;
+}
+
+function MemberList({ members, canManage, onChangeRole, onRemove }: MemberListProps) {
+  return (
+    <>
+      {/* ≥ md：行布局 */}
+      <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] divide-y divide-[var(--border-soft)]">
+        {members.map((m) => (
+          <MemberRow
+            key={m.id}
+            m={m}
+            canManage={canManage}
+            onChangeRole={onChangeRole}
+            onRemove={onRemove}
+            layout="row"
+          />
+        ))}
+      </div>
+
+      {/* < md：卡片布局 */}
+      <div className="md:hidden flex flex-col gap-2">
+        {members.map((m) => (
+          <div
+            key={m.id}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3"
+          >
+            <MemberRow
+              m={m}
+              canManage={canManage}
+              onChangeRole={onChangeRole}
+              onRemove={onRemove}
+              layout="card"
+            />
+          </div>
+        ))}
+      </div>
+    </>
+  );
+}
+
+interface MemberRowProps {
+  m: Member;
+  canManage: boolean;
+  onChangeRole: (uid: string, role: Role) => Promise<void>;
+  onRemove: (uid: string, label: string) => Promise<void>;
+  layout: "row" | "card";
+}
+
+/** 单个成员行/卡片：共用渲染，layout 控制排列。 */
+function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowProps) {
+  const meta = ROLE_META[m.role];
+  const Icon = meta.icon;
+  const editable = canManage && m.role !== "owner" && !m.isSelf;
+  const label = m.name || m.email;
+
+  if (layout === "row") {
+    return (
+      <div className="flex items-center gap-3 px-4 py-3">
+        <Avatar m={m} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+              {m.name || m.email.split("@")[0]}
+            </span>
+            {m.isSelf && (
+              <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
+                你
+              </span>
+            )}
+          </div>
+          <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">{m.email}</div>
+        </div>
+        <div className="flex items-center gap-1">
+          {editable ? (
+            <select
+              value={m.role}
+              onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
+              className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <option value="member">成员</option>
+              <option value="admin">管理员</option>
+            </select>
+          ) : (
+            <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">
+              <Icon size={16} className="text-[var(--muted)]" />
+              {meta.label}
+            </span>
+          )}
+          {editable && (
+            <button
+              onClick={() => onRemove(m.id, label)}
+              className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+              aria-label={`移除 ${label}`}
+            >
+              <Trash2 size={16} />
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // card 布局
+  return (
+    <div>
+      <div className="flex items-center gap-3">
+        <Avatar m={m} />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2">
+            <span className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+              {m.name || m.email.split("@")[0]}
+            </span>
+            {m.isSelf && (
+              <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
+                你
+              </span>
+            )}
+          </div>
+          <div className="flex items-center gap-2 mt-0.5">
+            <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
+              {m.email}
+            </span>
+            {!editable && (
+              <span className="flex items-center gap-1 shrink-0 text-[length:var(--text-xs)] text-[var(--fg-2)]">
+                <Icon size={12} className="text-[var(--muted)]" />
+                {meta.label}
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+      {editable && (
+        <div className="mt-3 flex flex-col items-stretch gap-2">
+          <select
+            value={m.role}
+            onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
+            className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            <option value="member">成员</option>
+            <option value="admin">管理员</option>
+          </select>
+          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+            拥有者不可在此更改
+          </span>
+          <button
+            onClick={() => onRemove(m.id, label)}
+            className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+            aria-label={`移除 ${label}`}
+          >
+            <Trash2 size={16} />
+            <span>移除</span>
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─── 骨架（响应式） ─────────────────────────────────────
+
+function MemberSkeleton() {
+  return (
+    <>
+      <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] divide-y divide-[var(--border-soft)]">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="flex items-center gap-3 px-4 py-3">
+            <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
+            <div className="flex-1 space-y-2">
+              <div className="h-4 w-32 rounded bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-3 w-48 rounded bg-[var(--surface-2)] animate-pulse" />
+            </div>
+          </div>
+        ))}
+      </div>
+      <div className="md:hidden flex flex-col gap-2">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div
+            key={i}
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
+              <div className="flex-1 space-y-2">
+                <div className="h-4 w-32 rounded bg-[var(--surface-2)] animate-pulse" />
+                <div className="h-3 w-48 rounded bg-[var(--surface-2)] animate-pulse" />
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </>
   );
 }

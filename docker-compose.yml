@@ -1,0 +1,83 @@
+# =============================================================================
+# Corps 生产部署 docker-compose
+# 用法：
+#   1. 复制 .env.example 为 .env，填入真实密钥
+#   2. docker compose up -d --build
+#   3. 访问 http://localhost:3000
+# =============================================================================
+# 注意：此文件位于项目根目录，构建上下文为 ./web
+# =============================================================================
+
+services:
+  # ─── PostgreSQL 16 数据库 ──────────────────────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: corps-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cde5c8ed4f42f7bf880d0e46}
+      POSTGRES_DB: ${POSTGRES_DB:-corps}
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      # 仅首次启动时执行（创建 RLS 辅助函数 schema）
+      - ./web/docker/init-rls.sql:/docker-entrypoint-initdb.d/01-init-rls.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-corps}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks:
+      - corps-net
+
+  # ─── Next.js 应用 ──────────────────────────────────────────────────────────
+  app:
+    build:
+      context: ./web
+      dockerfile: Dockerfile
+    image: corps-web:latest
+    container_name: corps-app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # 数据库连接（容器内通过 service name 'db' 解析）
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-cde5c8ed4f42f7bf880d0e46}@db:5432/${POSTGRES_DB:-corps}?schema=public
+      # 认证密钥（必须为强随机值）
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      # 应用 URL
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      # Stripe（可选，未配置时计费页隐藏升级入口）
+      STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
+      STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
+      STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      # 邮件（可选）
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      EMAIL_FROM: ${EMAIL_FROM:-}
+      # RLS 运行时角色密码（可选，仅 RLS 加固模式使用）
+      CORPS_APP_PASSWORD: ${CORPS_APP_PASSWORD:-}
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+    networks:
+      - corps-net
+
+volumes:
+  postgres_data:
+    name: corps-postgres-data
+
+networks:
+  corps-net:
+    name: corps-network
+    driver: bridge

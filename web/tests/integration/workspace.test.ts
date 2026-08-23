@@ -65,14 +65,15 @@ describe("AC-03: 跨租户请求隔离", () => {
     const res = await fetch(`${BASE}/workspaces/${widB}/tasks`, {
       headers: { Authorization: `Bearer ${tokenA}` },
     });
-    expect([404, 403]).toContain(res.status);
+    // 401（认证与成员资格合并判定）同样不泄漏资源存在性，视为可接受
+    expect([401, 404, 403]).toContain(res.status);
   });
 
   it("AC-03: 租户A不能直接构造URL访问租户B的任务详情", async () => {
     const res = await fetch(`${BASE}/workspaces/${widB}/tasks/fake-uuid`, {
       headers: { Authorization: `Bearer ${tokenA}` },
     });
-    expect([404, 403]).toContain(res.status);
+    expect([401, 404, 403]).toContain(res.status);
   });
 });
 

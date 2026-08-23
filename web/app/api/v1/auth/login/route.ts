@@ -3,6 +3,7 @@ import { auth, runWithAuthOp } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
+import { randomUUID } from "crypto";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -56,6 +57,21 @@ export async function POST(req: NextRequest) {
 
     await prisma.user.update({ where: { id: baUser.id }, data: { lastLoginAt: new Date() } });
 
+    // P2 数据埋点：login_success 事件（不阻塞主流程，失败静默）
+    await prisma.analyticsEvent
+      .create({
+        data: {
+          id: randomUUID(),
+          userId: baUser.id,
+          workspaceId: primary?.id ?? null,
+          name: "login_success",
+          props: { workspaceCount: workspaces.length },
+        },
+      })
+      .catch(() => {
+        /* 埋点失败不影响登录主流程 */
+      });
+
     const response = NextResponse.json({
       code: 200,
       data: {
@@ -64,15 +80,15 @@ export async function POST(req: NextRequest) {
 
       },
     });
+    // 统一通过原始 set-cookie 头下发（先 access_token 再透传 Better Auth 会话 cookie）。
+    // 不能混用 response.cookies.set()——会覆盖手工 append 的 BA 会话 cookie，
+    // 导致 refresh 无法读取会话。
+    const secureAttr = process.env.NODE_ENV === "production" ? "; Secure" : "";
+    response.headers.append(
+      "set-cookie",
+      `access_token=${accessToken}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${60 * 15}${secureAttr}`,
+    );
     baRes.headers.getSetCookie?.().forEach((c) => response.headers.append("set-cookie", c));
-    // 下发 httpOnly access_token cookie（Web 端自动随请求发送，XSS 不可读）
-    response.cookies.set("access_token", accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 15, // 15 分钟，与 JWT access token 过期一致
-    });
     return response;
   } catch (error) {
     if (error instanceof z.ZodError) {

@@ -1,181 +1,59 @@
 "use client";
 
-import { use, useEffect, useRef, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
-import {
-  Plus,
-  GripVertical,
-  Kanban,
-  List,
-  ChevronUp,
-  ChevronDown,
-  AlertCircle,
-} from "lucide-react";
+/**
+ * 任务看板 · /w/[wid]/board
+ *
+ * 重构后职责：
+ *  - 状态管理（tasks / view / 拖拽 / 多选 / 分页）
+ *  - 数据加载 + 乐观更新
+ *  - 编排子组件（BoardColumn / ListTable / ListCards / ViewToggle / BatchToolbar）
+ *
+ * 拆分前 751 行，拆分后主组件 ~280 行，子组件在 board-parts.tsx。
+ * 共享类型/常量/工具从 lib/types、lib/task-meta、lib/format import，消除重复。
+ */
+
+import { use, useEffect, useRef, useState } from "react";
+
+import { Plus, AlertCircle, CheckSquare } from "lucide-react";
 import { api } from "@/lib/api";
+import { track } from "@/lib/analytics";
 import NewTaskDialog from "@/components/NewTaskDialog";
-import { Skeleton } from "@/components/Skeleton";
+import { ViewToggle } from "@/components/ViewToggle";
+import { BatchToolbar } from "@/components/BatchToolbar";
+import {
+  BoardColumn,
+  ListTable,
+  ListCards,
+  BoardSkeleton,
+  BoardEmptyState,
+  type DragStart,
+} from "@/components/board-parts";
+import type { Task, Status, Priority } from "@/lib/types";
+import { COLUMNS } from "@/lib/task-meta";
+import type { ViewMode } from "@/components/types";
 
-interface Task {
-  id: string;
-  title: string;
-  description?: string;
-  status: "todo" | "in_progress" | "review" | "done";
-  priority: "low" | "medium" | "high" | "urgent";
-  assignee?: { id: string; name: string; email: string };
-  dueDate?: string;
-  sortOrder?: number;
-  createdAt: string;
-  updatedAt: string;
-}
-
-type ViewMode = "board" | "list";
-
-const COLUMNS: { id: Task["status"]; title: string; color: string }[] = [
-  { id: "todo", title: "待办", color: "var(--status-todo)" },
-  { id: "in_progress", title: "进行中", color: "var(--status-doing)" },
-  { id: "review", title: "评审", color: "var(--warn)" },
-  { id: "done", title: "已完成", color: "var(--status-done)" },
-];
-
-/** 优先级左侧色条颜色：low 透明（占位保持卡片左缘对齐），其余用语义色。 */
-const PRIORITY_BAR_COLORS: Record<Task["priority"], string> = {
-  low: "transparent",
-  medium: "var(--muted)",
-  high: "var(--warn)",
-  urgent: "var(--danger)",
-};
-
-const PRIORITY_LABELS: Record<Task["priority"], string> = {
-  low: "低",
-  medium: "中",
-  high: "高",
-  urgent: "紧急",
-};
-
-const STATUS_LABELS: Record<Task["status"], string> = {
-  todo: "待办",
-  in_progress: "进行中",
-  review: "评审",
-  done: "已完成",
-};
-
-/**
- * 状态徽章样式：用 color-mix 替代 `${color}20` alpha 拼接。
- * alpha 拼接在 var(--token) 上无效（var 不能与十六进制透明度后缀组合），
- * color-mix 是 W3C 标准方案，且能随主题切换自动重算。
- */
-const STATUS_BADGE_STYLES: Record<Task["status"], { background: string; color: string }> = {
-  todo: {
-    background: "color-mix(in srgb, var(--status-todo) 12%, transparent)",
-    color: "var(--status-todo)",
-  },
-  in_progress: {
-    background: "color-mix(in srgb, var(--status-doing) 12%, transparent)",
-    color: "var(--status-doing)",
-  },
-  review: { background: "color-mix(in srgb, var(--warn) 14%, transparent)", color: "var(--warn)" },
-  done: {
-    background: "color-mix(in srgb, var(--status-done) 12%, transparent)",
-    color: "var(--status-done)",
-  },
-};
-
-/**
- * 优先级徽章样式：用 color-mix 替代 `${color}20` alpha 拼接。
- * 复用语义色映射，避免引入不存在的 --priority-* token。
- */
-const PRIORITY_BADGE_STYLES: Record<Task["priority"], { background: string; color: string }> = {
-  low: { background: "color-mix(in srgb, var(--meta) 12%, transparent)", color: "var(--meta)" },
-  medium: {
-    background: "color-mix(in srgb, var(--muted) 12%, transparent)",
-    color: "var(--muted)",
-  },
-  high: { background: "color-mix(in srgb, var(--warn) 14%, transparent)", color: "var(--warn)" },
-  urgent: {
-    background: "color-mix(in srgb, var(--danger) 12%, transparent)",
-    color: "var(--danger)",
-  },
-};
-
-/**
- * 计算把 taskId 移到 column 列 targetIndex 位置时所需的 sortOrder。
- * 采用前后邻居中值法：列首 → 首元素 -1；列尾 → 末元素 +1；中间 → (prev + next) / 2。
- */
-function computeSortOrder(
-  tasks: Task[],
-  column: Task["status"],
-  targetIndex: number,
-  excludeId: string,
-): number {
-  const columnTasks = tasks
-    .filter((t) => t.status === column && t.id !== excludeId)
-    .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-
-  if (columnTasks.length === 0) return 0;
-  if (targetIndex <= 0) return (columnTasks[0].sortOrder ?? 0) - 1;
-  if (targetIndex >= columnTasks.length) {
-    return (columnTasks[columnTasks.length - 1].sortOrder ?? 0) + 1;
-  }
-  const prev = columnTasks[targetIndex - 1];
-  const next = columnTasks[targetIndex];
-  return ((prev.sortOrder ?? 0) + (next.sortOrder ?? 0)) / 2;
-}
-
-/**
- * 把截止日期格式化为相对时间："今天" / "明天" / "N 天后" / "逾期 N 天"。
- * 以日期（00:00）粒度比较，避免时区与时分秒抖动。
- */
-function formatRelativeDueDate(dueDate: string): {
-  text: string;
-  tone: "overdue" | "today" | "normal";
-} {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { text: `逾期 ${-diffDays} 天`, tone: "overdue" };
-  if (diffDays === 0) return { text: "今天", tone: "today" };
-  if (diffDays === 1) return { text: "明天", tone: "normal" };
-  return { text: `${diffDays} 天后`, tone: "normal" };
-}
-
-/** 生成专业任务 ID：CORP-XXXX（大写 mono），如 CORP-4A2B。 */
-function formatTaskId(id: string): string {
-  return `CORP-${id.slice(0, 4).toUpperCase()}`;
-}
-
-/** 截止时间标签：inline=true 用于单行内（"· 3天后"），否则独立一行。 */
-function DueTag({ dueDate, inline = false }: { dueDate: string; inline?: boolean }) {
-  const due = formatRelativeDueDate(dueDate);
-  const toneClass =
-    due.tone === "overdue"
-      ? "text-[var(--danger)]"
-      : due.tone === "today"
-        ? "text-[var(--warn)]"
-        : "text-[var(--muted)]";
-  if (inline) return <span className={toneClass}>· {due.text}</span>;
-  return <p className={`text-xs mt-1 ${toneClass}`}>{due.text}</p>;
-}
+const LIST_PAGE_SIZE = 50;
 
 export default function BoardPage({ params }: { params: Promise<{ wid: string }> }) {
+  const { wid } = use(params);
+
+
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [view, setView] = useState<ViewMode>("board");
   // < md 单列选择器当前选中列
   const [activeColumn, setActiveColumn] = useState<Task["status"]>("todo");
-  // 拖拽视觉反馈：当前正在拖拽的任务 id
+  // 拖拽视觉反馈
   const [draggingId, setDraggingId] = useState<string | null>(null);
-  // 拖拽失败错误提示（5 秒后自动清除）
   const [dragError, setDragError] = useState<string | null>(null);
-  // 列表视图分页：每页 50 条，仅当总数 > 50 时启用分页控件
+  // 列表视图分页
   const [listPage, setListPage] = useState(1);
-  const LIST_PAGE_SIZE = 50;
-  // 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转
-  const dragStartRef = useRef<{ x: number; y: number } | null>(null);
-  const { wid } = use(params);
-  const router = useRouter();
+  // 多选模式（P2 批量操作）
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+
+  const dragStartRef = useRef<DragStart>(null);
 
   useEffect(() => {
     api<Task[]>(`/api/v1/workspaces/${wid}/tasks`)
@@ -192,39 +70,40 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     }
   }
 
-  /**
-   * 同列内拖拽排序：把 taskId 移到 column 列的 targetIndex 位置。
-   * 跨列拖拽也复用此函数（同时改 status + sortOrder）。
-   * 乐观更新：先改本地 tasks，再 PATCH 后端。
-   */
-  async function handleReorder(taskId: string, targetIndex: number, column: Task["status"]) {
+  // ─── 拖拽排序 ───────────────────────────────────────────
+
+  function computeSortOrder(tasks: Task[], column: Status, targetIndex: number, excludeId: string): number {
+    const columnTasks = tasks
+      .filter((t) => t.status === column && t.id !== excludeId)
+      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+    if (columnTasks.length === 0) return 0;
+    if (targetIndex <= 0) return (columnTasks[0].sortOrder ?? 0) - 1;
+    if (targetIndex >= columnTasks.length) {
+      return (columnTasks[columnTasks.length - 1].sortOrder ?? 0) + 1;
+    }
+    const prev = columnTasks[targetIndex - 1];
+    const next = columnTasks[targetIndex];
+    return ((prev.sortOrder ?? 0) + (next.sortOrder ?? 0)) / 2;
+  }
+
+  async function handleReorder(taskId: string, targetIndex: number, column: Status) {
     if (!tasks.some((t) => t.id === taskId)) return;
-
     const newSortOrder = computeSortOrder(tasks, column, targetIndex, taskId);
-    const newStatus = column;
-
-    // 乐观更新：仅改被拖动任务的 status + sortOrder，渲染时按列分组并按 sortOrder 排序
     setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: newStatus, sortOrder: newSortOrder } : t)),
+      prev.map((t) => (t.id === taskId ? { ...t, status: column, sortOrder: newSortOrder } : t)),
     );
-
     try {
       await api(`/api/v1/workspaces/${wid}/tasks/${taskId}`, {
         method: "PATCH",
-        body: JSON.stringify({ status: newStatus, sortOrder: newSortOrder }),
+        body: JSON.stringify({ status: column, sortOrder: newSortOrder }),
       });
     } catch {
-      // 乐观更新失败：回滚到服务端最新状态，并提示用户
       setDragError("移动失败，已恢复");
       await load();
       setTimeout(() => setDragError(null), 5000);
     }
   }
 
-  /**
-   * 移动端上下移动按钮：在同列内把 taskId 上移/下移一步。
-   * 触摸设备不支持 HTML5 DnD，提供显式按钮作为替代方案。
-   */
   async function moveTaskByStep(taskId: string, delta: -1 | 1) {
     const task = tasks.find((t) => t.id === taskId);
     if (!task) return;
@@ -238,154 +117,74 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     await handleReorder(taskId, targetIndex, task.status);
   }
 
-  /** 拖到某个任务卡片上：插入到该任务的位置（之前） */
   async function handleDropOnTask(sourceTaskId: string, targetTaskId: string) {
     if (sourceTaskId === targetTaskId) return;
     const target = tasks.find((t) => t.id === targetTaskId);
     if (!target) return;
-
     const column = target.status;
-    // 计算 target 在目标列中的位置（排除 source）
     const columnTasksExcl = tasks
       .filter((t) => t.status === column && t.id !== sourceTaskId)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     const targetIndex = columnTasksExcl.findIndex((t) => t.id === targetTaskId);
     if (targetIndex < 0) return;
-
     await handleReorder(sourceTaskId, targetIndex, column);
   }
 
-  /** 拖到列空白处：移到该列末尾 */
-  async function handleDropOnColumn(sourceTaskId: string, targetStatus: Task["status"]) {
+  async function handleDropOnColumn(sourceTaskId: string, targetStatus: Status) {
     if (!tasks.some((t) => t.id === sourceTaskId)) return;
-
     const columnTasksExcl = tasks
       .filter((t) => t.status === targetStatus && t.id !== sourceTaskId)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
     await handleReorder(sourceTaskId, columnTasksExcl.length, targetStatus);
   }
 
-  /**
-   * 渲染单个看板列（列头 + 任务卡片列表）。
-   * 单列选择器（< md）与多列布局（md 水平滚动 / lg 4 列网格）共用此渲染。
-   * 列根元素带 min-w-[260px] flex-shrink-0 以支撑 md 水平滚动；lg 下 lg:min-w-0 让 grid 列自由收缩。
-   */
-  const renderColumn = (column: (typeof COLUMNS)[number], columnTasks: Task[]): ReactNode => (
-    <div
-      key={column.id}
-      className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
-      onDragOver={(e) => e.preventDefault()}
-      onDrop={(e) => {
-        const taskId = e.dataTransfer.getData("text/plain");
-        if (taskId) handleDropOnColumn(taskId, column.id);
-      }}
-    >
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
-        <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-        <span className="font-medium text-[var(--fg)]">{column.title}</span>
-        <span className="ml-auto text-xs text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
-          {columnTasks.length}
-        </span>
-      </div>
+  // ─── 多选 + 批量操作（P2） ───────────────────────────────
 
-      <div className="space-y-2">
-        {columnTasks.map((task) => (
-          <div
-            key={task.id}
-            draggable
-            role="button"
-            tabIndex={0}
-            onClick={(e) => {
-              // 拖拽与点击冲突：若拖拽距离 > 5px，视为拖拽而非点击，不触发跳转
-              const start = dragStartRef.current;
-              if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5) {
-                return;
-              }
-              router.push(`/w/${wid}/task/${task.id}`);
-            }}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                router.push(`/w/${wid}/task/${task.id}`);
-              }
-            }}
-            className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
-              draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
-            }`}
-            style={{
-              borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
-            }}
-            onDragStart={(e) => {
-              e.dataTransfer.setData("text/plain", task.id);
-              dragStartRef.current = { x: e.clientX, y: e.clientY };
-              setDraggingId(task.id);
-            }}
-            onDragEnd={() => {
-              setDraggingId(null);
-              dragStartRef.current = null;
-            }}
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              e.stopPropagation();
-              const sourceId = e.dataTransfer.getData("text/plain");
-              if (sourceId) handleDropOnTask(sourceId, task.id);
-            }}
-          >
-            <div className="flex items-start gap-2">
-              <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2 mb-1">
-                  <span className="text-[length:var(--text-xs)] font-mono text-[var(--muted)]">
-                    {formatTaskId(task.id)}
-                  </span>
-                </div>
-                <p className="text-[length:var(--text-sm)] font-medium text-[var(--fg)] truncate">
-                  {task.title}
-                </p>
-                {task.dueDate && <DueTag dueDate={task.dueDate} />}
-                {task.assignee && (
-                  <div className="flex items-center gap-1 mt-2">
-                    <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
-                      {task.assignee.name?.[0]}
-                    </div>
-                    <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
-                      {task.assignee.name}
-                    </span>
-                  </div>
-                )}
-              </div>
-              {/* 移动端上下移动按钮：触摸设备不支持 HTML5 DnD，提供显式按钮 */}
-              <div className="md:hidden flex flex-col gap-0.5 shrink-0 -mr-1">
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveTaskByStep(task.id, -1);
-                  }}
-                  className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
-                  aria-label="上移"
-                >
-                  <ChevronUp size={14} />
-                </button>
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    moveTaskByStep(task.id, 1);
-                  }}
-                  className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
-                  aria-label="下移"
-                >
-                  <ChevronDown size={14} />
-                </button>
-              </div>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
+  function toggleSelect(id: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
 
-  /** 列表视图排序：先按状态列顺序，再按 sortOrder。 */
+  function clearSelection() {
+    setSelectedIds(new Set());
+    setSelectionMode(false);
+  }
+
+  async function handleBatchUpdate(patch: { status?: Status; priority?: Priority }) {
+    const ids = Array.from(selectedIds);
+    const resp = await api<{ updated: number; skipped: number }>(
+      `/api/v1/workspaces/${wid}/tasks/batch`,
+      {
+        method: "POST",
+        body: JSON.stringify({ ids, action: "update", ...patch }),
+      },
+    );
+    track("task_status_change", { batch: true, count: resp.updated, ...patch });
+    await load();
+    clearSelection();
+    return resp;
+  }
+
+  async function handleBatchDelete() {
+    const ids = Array.from(selectedIds);
+    const resp = await api<{ deleted: number; skipped: number }>(
+      `/api/v1/workspaces/${wid}/tasks/batch`,
+      {
+        method: "POST",
+        body: JSON.stringify({ ids, action: "delete" }),
+      },
+    );
+    await load();
+    clearSelection();
+    return resp;
+  }
+
+  // ─── 列表视图排序 + 分页 ─────────────────────────────────
+
   const sortedListTasks = tasks.slice().sort((a, b) => {
     const sa = COLUMNS.findIndex((c) => c.id === a.status);
     const sb = COLUMNS.findIndex((c) => c.id === b.status);
@@ -393,10 +192,6 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     return (a.sortOrder ?? 0) - (b.sortOrder ?? 0);
   });
 
-  /**
-   * 列表视图分页：每页 LIST_PAGE_SIZE 条。
-   * safePage 防止删除任务后当前页越界（如总数从 51 变 50 时回退到第 1 页）。
-   */
   const listTotalPages = Math.max(1, Math.ceil(sortedListTasks.length / LIST_PAGE_SIZE));
   const safeListPage = Math.min(listPage, listTotalPages);
   const paginatedListTasks = sortedListTasks.slice(
@@ -405,327 +200,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   );
   const showListPagination = sortedListTasks.length > LIST_PAGE_SIZE;
 
-  let content: ReactNode;
-
-  if (loading) {
-    // 看板骨架：标题行 + 4 列占位，每列 3 张卡片占位，避免加载完成时布局跳动
-    content = (
-      <div aria-busy="true" aria-live="polite">
-        {/* 标题行 */}
-        <div className="flex items-center justify-between mb-6 gap-3">
-          <div>
-            <Skeleton className="h-7 w-28 mb-2" />
-            <Skeleton className="h-4 w-20" />
-          </div>
-          <div className="flex items-center gap-3">
-            <Skeleton className="h-8 w-20 rounded-[var(--radius-md)]" />
-            <Skeleton className="h-8 w-24 rounded-[var(--radius-md)]" />
-          </div>
-        </div>
-        {/* 4 列骨架：md 水平滚动 / lg 4 列网格，与正式布局一致 */}
-        <div className="flex overflow-x-auto gap-4 pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
-          {COLUMNS.map((col) => (
-            <div
-              key={col.id}
-              className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
-            >
-              {/* 列头 */}
-              <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
-                <Skeleton className="w-2 h-2 rounded-full" />
-                <Skeleton className="h-4 w-14" />
-                <Skeleton className="ml-auto h-5 w-8 rounded-full" />
-              </div>
-              {/* 3 张卡片占位 */}
-              <div className="space-y-2">
-                {Array.from({ length: 3 }).map((_, i) => (
-                  <div
-                    key={i}
-                    className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5"
-                  >
-                    <Skeleton className="h-3 w-16 mb-2" />
-                    <Skeleton className="h-4 w-full mb-1" style={{ maxWidth: `${70 + i * 8}%` }} />
-                    <Skeleton className="h-3 w-20 mt-2" />
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    );
-  } else if (tasks.length === 0) {
-    content = (
-      <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
-        <Kanban size={48} className="mb-4 opacity-40" />
-        <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">
-          还没有任务
-        </p>
-        <p className="text-[length:var(--text-sm)] mb-4">创建第一个任务，开始跟踪进度</p>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
-        >
-          <Plus size={16} />
-          新建任务
-        </button>
-      </div>
-    );
-  } else {
-    content = (
-      <div>
-        <div className="flex items-center justify-between mb-6 gap-3">
-          <div>
-            <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">
-              任务看板
-            </h1>
-            <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
-              {tasks.length} 个任务
-            </p>
-          </div>
-          <div className="flex items-center gap-3">
-            {/* 视图切换 < sm：仅图标按钮组 */}
-            <div className="sm:hidden inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]" role="group" aria-label="视图切换">
-              <button
-                onClick={() => setView("board")}
-                aria-pressed={view === "board"}
-                className={`p-2 rounded-[var(--radius-sm)] transition-colors ${
-                  view === "board"
-                    ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-                    : "text-[var(--muted)] hover:text-[var(--fg)]"
-                }`}
-                aria-label="看板视图"
-              >
-                <Kanban size={16} />
-              </button>
-              <button
-                onClick={() => setView("list")}
-                aria-pressed={view === "list"}
-                className={`p-2 rounded-[var(--radius-sm)] transition-colors ${
-                  view === "list"
-                    ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-                    : "text-[var(--muted)] hover:text-[var(--fg)]"
-                }`}
-                aria-label="列表视图"
-              >
-                <List size={16} />
-              </button>
-            </div>
-            {/* 视图切换 ≥ sm：toggle 按钮组（看板 | 列表） */}
-            <div className="hidden sm:inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]" role="group" aria-label="视图切换">
-              <button
-                onClick={() => setView("board")}
-                aria-pressed={view === "board"}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
-                  view === "board"
-                    ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-                    : "text-[var(--muted)] hover:text-[var(--fg)]"
-                }`}
-                aria-label="看板视图"
-              >
-                <Kanban size={16} />
-                看板
-              </button>
-              <button
-                onClick={() => setView("list")}
-                aria-pressed={view === "list"}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
-                  view === "list"
-                    ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-                    : "text-[var(--muted)] hover:text-[var(--fg)]"
-                }`}
-                aria-label="列表视图"
-              >
-                <List size={16} />
-                列表
-              </button>
-            </div>
-            <button
-              onClick={() => setShowNew(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
-            >
-              <Plus size={16} />
-              新建任务
-            </button>
-          </div>
-        </div>
-
-        {view === "board" ? (
-          <>
-            {/* < md：单列选择器（4 个 tab），只显示选中列，任务全宽 */}
-            <div className="md:hidden">
-              <div className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)] mb-4 w-full">
-                {COLUMNS.map((col) => (
-                  <button
-                    key={col.id}
-                    onClick={() => setActiveColumn(col.id)}
-                    aria-pressed={activeColumn === col.id}
-                    className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
-                      activeColumn === col.id
-                        ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-                        : "text-[var(--muted)] hover:text-[var(--fg)]"
-                    }`}
-                  >
-                    <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
-                    {col.title}
-                  </button>
-                ))}
-              </div>
-              {renderColumn(
-                COLUMNS.find((c) => c.id === activeColumn)!,
-                tasks
-                  .filter((t) => t.status === activeColumn)
-                  .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
-              )}
-            </div>
-
-            {/* md：4 列水平滚动（每列 min-w-[260px]）；lg：4 列网格 */}
-            <div className="hidden md:block">
-              <div className="flex overflow-x-auto gap-4 pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
-                {COLUMNS.map((column) =>
-                  renderColumn(
-                    column,
-                    tasks
-                      .filter((t) => t.status === column.id)
-                      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0)),
-                  ),
-                )}
-              </div>
-            </div>
-          </>
-        ) : (
-          <>
-            {/* < md：卡片列表（纵向排列，紧凑卡片） */}
-            <div className="md:hidden space-y-2">
-              {paginatedListTasks.map((task) => (
-                <div
-                  key={task.id}
-                  role="button"
-                  tabIndex={0}
-                  onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      router.push(`/w/${wid}/task/${task.id}`);
-                    }
-                  }}
-                  className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-3 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-                  style={{
-                    borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
-                  }}
-                >
-                  <div className="flex items-start justify-between gap-2 mb-1.5">
-                    <p className="text-sm font-medium text-[var(--fg)] truncate flex-1">
-                      {task.title}
-                    </p>
-                    <span
-                      className="text-xs px-1.5 py-0.5 rounded shrink-0"
-                      style={STATUS_BADGE_STYLES[task.status]}
-                    >
-                      {STATUS_LABELS[task.status]}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-                    <span className="font-mono">{formatTaskId(task.id)}</span>
-                    {task.dueDate && <DueTag dueDate={task.dueDate} inline />}
-                    {task.assignee && (
-                      <div className="ml-auto flex items-center gap-1">
-                        <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-xs flex items-center justify-center shrink-0">
-                          {task.assignee.name?.[0]}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* ≥ md：表格形式，紧凑行高 h-10，行 hover 用 --surface-2 */}
-            <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-                    <th className="font-medium px-4 h-10">标题</th>
-                    <th className="font-medium px-4 h-10">负责人</th>
-                    <th className="font-medium px-4 h-10">优先级</th>
-                    <th className="font-medium px-4 h-10">状态</th>
-                    <th className="font-medium px-4 h-10">截止日期</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {paginatedListTasks.map((task) => (
-                    <tr
-                      key={task.id}
-                      role="button"
-                      tabIndex={0}
-                      onClick={() => router.push(`/w/${wid}/task/${task.id}`)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter" || e.key === " ") {
-                          e.preventDefault();
-                          router.push(`/w/${wid}/task/${task.id}`);
-                        }
-                      }}
-                      className="border-b border-[var(--border)] last:border-b-0 cursor-pointer hover:bg-[var(--surface-2)] transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-                    >
-                      <td className="px-4 h-10 text-[var(--fg)] font-medium truncate max-w-xs">
-                        {task.title}
-                      </td>
-                      <td className="px-4 h-10 text-[var(--muted)]">
-                        {task.assignee?.name ?? "—"}
-                      </td>
-                      <td className="px-4 h-10">
-                        <span
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={PRIORITY_BADGE_STYLES[task.priority]}
-                        >
-                          {PRIORITY_LABELS[task.priority]}
-                        </span>
-                      </td>
-                      <td className="px-4 h-10">
-                        <span
-                          className="text-xs px-1.5 py-0.5 rounded"
-                          style={STATUS_BADGE_STYLES[task.status]}
-                        >
-                          {STATUS_LABELS[task.status]}
-                        </span>
-                      </td>
-                      <td className="px-4 h-10 text-[var(--muted)]">
-                        {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {/* 列表视图分页：仅当总数 > 50 时显示，上一页/下一页 + 页码 */}
-            {showListPagination && (
-              <div className="flex items-center justify-center gap-3 mt-4 text-[length:var(--text-sm)] text-[var(--muted)]">
-                <button
-                  onClick={() => setListPage((p) => Math.max(1, p - 1))}
-                  disabled={safeListPage <= 1}
-                  className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  aria-label="上一页"
-                >
-                  上一页
-                </button>
-                <span className="tabular-nums text-[var(--fg-2)]">
-                  {safeListPage} / {listTotalPages}
-                </span>
-                <button
-                  onClick={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
-                  disabled={safeListPage >= listTotalPages}
-                  className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-                  aria-label="下一页"
-                >
-                  下一页
-                </button>
-              </div>
-            )}
-          </>
-        )}
-      </div>
-    );
-  }
+  // ─── 渲染 ───────────────────────────────────────────────
 
   return (
     <>
@@ -744,8 +219,236 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           <span className="text-[length:var(--text-sm)] font-medium">{dragError}</span>
         </div>
       )}
-      {content}
+
+      {loading ? (
+        <BoardSkeleton />
+      ) : tasks.length === 0 ? (
+        <BoardEmptyState onCreate={() => setShowNew(true)} />
+      ) : (
+        <div>
+          {/* 标题行 + 操作 */}
+          <div className="flex items-center justify-between mb-6 gap-3">
+            <div>
+              <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">
+                任务看板
+              </h1>
+              <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
+                {tasks.length} 个任务
+                {selectionMode && ` · 已选 ${selectedIds.size}`}
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <ViewToggle view={view} onChange={setView} />
+              {/* 多选切换按钮 */}
+              <button
+                onClick={() => {
+                  setSelectionMode((v) => !v);
+                  if (selectionMode) setSelectedIds(new Set());
+                }}
+                aria-pressed={selectionMode}
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-sm transition-colors ${
+                  selectionMode
+                    ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                    : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--fg)]"
+                }`}
+                aria-label="多选模式"
+              >
+                <CheckSquare size={16} />
+                <span className="hidden sm:inline">多选</span>
+              </button>
+              <button
+                onClick={() => setShowNew(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
+              >
+                <Plus size={16} />
+                新建任务
+              </button>
+            </div>
+          </div>
+
+          {view === "board" ? (
+            <BoardView
+              wid={wid}
+              tasks={tasks}
+              activeColumn={activeColumn}
+              setActiveColumn={setActiveColumn}
+              draggingId={draggingId}
+              setDraggingId={setDraggingId}
+              dragStartRef={dragStartRef}
+              selectedIds={selectedIds}
+              selectionMode={selectionMode}
+              onToggleSelect={toggleSelect}
+              onReorder={handleReorder}
+              onDropOnTask={handleDropOnTask}
+              onDropOnColumn={handleDropOnColumn}
+              onMoveByStep={moveTaskByStep}
+            />
+          ) : (
+            <ListView
+              wid={wid}
+              paginatedTasks={paginatedListTasks}
+              selectedIds={selectedIds}
+              selectionMode={selectionMode}
+              onToggleSelect={toggleSelect}
+              showListPagination={showListPagination}
+              safeListPage={safeListPage}
+              listTotalPages={listTotalPages}
+              onPrevPage={() => setListPage((p) => Math.max(1, p - 1))}
+              onNextPage={() => setListPage((p) => Math.min(listTotalPages, p + 1))}
+            />
+          )}
+        </div>
+      )}
+
       <NewTaskDialog wid={wid} open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
+
+      {/* P2 批量操作工具栏 */}
+      <BatchToolbar
+        selectedIds={Array.from(selectedIds)}
+        onClear={clearSelection}
+        onUpdate={handleBatchUpdate}
+        onDelete={handleBatchDelete}
+      />
+    </>
+  );
+}
+
+// ─── 看板视图 ─────────────────────────────────────────────
+
+interface BoardViewProps {
+  wid: string;
+  tasks: Task[];
+  activeColumn: Status;
+  setActiveColumn: (s: Status) => void;
+  draggingId: string | null;
+  setDraggingId: (id: string | null) => void;
+  dragStartRef: React.RefObject<DragStart>;
+  selectedIds: Set<string>;
+  selectionMode: boolean;
+  onToggleSelect: (id: string) => void;
+  onReorder: (taskId: string, targetIndex: number, column: Status) => Promise<void>;
+  onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
+  onDropOnColumn: (sourceId: string, status: Status) => Promise<void>;
+  onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
+}
+
+function BoardView(props: BoardViewProps) {
+  const { tasks, activeColumn, setActiveColumn } = props;
+  return (
+    <>
+      {/* < md：单列选择器 */}
+      <div className="md:hidden">
+        <div className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)] mb-4 w-full">
+          {COLUMNS.map((col) => (
+            <button
+              key={col.id}
+              onClick={() => setActiveColumn(col.id)}
+              aria-pressed={activeColumn === col.id}
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
+                activeColumn === col.id
+                  ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
+                  : "text-[var(--muted)] hover:text-[var(--fg)]"
+              }`}
+            >
+              <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
+              {col.title}
+            </button>
+          ))}
+        </div>
+        <BoardColumn
+          column={COLUMNS.find((c) => c.id === activeColumn)!}
+          columnTasks={tasks
+            .filter((t) => t.status === activeColumn)
+            .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))}
+          {...props}
+        />
+      </div>
+
+      {/* md：4 列水平滚动；lg：4 列网格 */}
+      <div className="hidden md:block">
+        <div className="flex overflow-x-auto gap-4 pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+          {COLUMNS.map((column) => (
+            <BoardColumn
+              key={column.id}
+              column={column}
+              columnTasks={tasks
+                .filter((t) => t.status === column.id)
+                .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0))}
+              {...props}
+            />
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+// ─── 列表视图 ─────────────────────────────────────────────
+
+interface ListViewProps {
+  wid: string;
+  paginatedTasks: Task[];
+  selectedIds: Set<string>;
+  selectionMode: boolean;
+  onToggleSelect: (id: string) => void;
+  showListPagination: boolean;
+  safeListPage: number;
+  listTotalPages: number;
+  onPrevPage: () => void;
+  onNextPage: () => void;
+}
+
+function ListView(props: ListViewProps) {
+  const {
+    paginatedTasks,
+    selectedIds,
+    selectionMode,
+    onToggleSelect,
+    showListPagination,
+    safeListPage,
+    listTotalPages,
+    onPrevPage,
+    onNextPage,
+  } = props;
+  return (
+    <>
+      <ListCards
+        tasks={paginatedTasks}
+        wid={props.wid}
+        selectedIds={selectedIds}
+        selectionMode={selectionMode}
+        onToggleSelect={onToggleSelect}
+      />
+      <ListTable
+        tasks={paginatedTasks}
+        wid={props.wid}
+        selectedIds={selectedIds}
+        selectionMode={selectionMode}
+        onToggleSelect={onToggleSelect}
+      />
+      {showListPagination && (
+        <div className="flex items-center justify-center gap-3 mt-4 text-[length:var(--text-sm)] text-[var(--muted)]">
+          <button
+            onClick={onPrevPage}
+            disabled={safeListPage <= 1}
+            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="上一页"
+          >
+            上一页
+          </button>
+          <span className="tabular-nums text-[var(--fg-2)]">
+            {safeListPage} / {listTotalPages}
+          </span>
+          <button
+            onClick={onNextPage}
+            disabled={safeListPage >= listTotalPages}
+            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+            aria-label="下一页"
+          >
+            下一页
+          </button>
+        </div>
+      )}
     </>
   );
 }

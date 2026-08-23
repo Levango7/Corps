@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions — 决策记录（版本倒序，最新在前） */
 export async function GET(
@@ -84,6 +86,21 @@ export async function POST(
     });
 
     if (!decision) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+
+    // P2 数据埋点：create_decision 事件（不阻塞主流程）
+    await prisma.analyticsEvent
+      .create({
+        data: {
+          id: randomUUID(),
+          userId: ctx.payload.sub,
+          workspaceId: wid,
+          name: "create_decision",
+          props: { taskId: id, version: decision.version },
+        },
+      })
+      .catch(() => {
+        /* 埋点失败不影响主流程 */
+      });
 
     return NextResponse.json({ code: 201, data: decision }, { status: 201 });
   } catch (error) {

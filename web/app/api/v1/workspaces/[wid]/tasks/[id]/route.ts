@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { randomUUID } from "crypto";
+import { prisma } from "@/lib/prisma";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -109,6 +111,23 @@ export async function PATCH(
         { code: 400, message: "被指派人必须是当前工作区成员" },
         { status: 400 },
       );
+    }
+
+    // P2 数据埋点：task_status_change 事件（仅当 status 变更时）
+    if (validated.status !== undefined) {
+      await prisma.analyticsEvent
+        .create({
+          data: {
+            id: randomUUID(),
+            userId: ctx.payload.sub,
+            workspaceId: wid,
+            name: "task_status_change",
+            props: { taskId: id, to: validated.status },
+          },
+        })
+        .catch(() => {
+          /* 埋点失败不影响主流程 */
+        });
     }
 
     return NextResponse.json({ code: 200, data: result.task });

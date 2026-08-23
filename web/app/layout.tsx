@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -15,7 +16,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         {/* eslint-disable-next-line @next/next/no-sync-scripts */}
         <script src="/theme-init.js" />
       </head>
-      <body>{children}</body>
+      <body>
+        {/* Web Vitals 采集：渲染 null，仅挂载监控钩子。 */}
+        <WebVitalsReporter />
+        {children}
+      </body>
     </html>
   );
 }

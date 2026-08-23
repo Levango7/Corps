@@ -39,16 +39,13 @@ export interface InviteEmailParams {
 export async function sendInviteEmail(params: InviteEmailParams): Promise<void> {
   const { to, workspaceName, inviterName } = params;
 
+  // 注意：NODE_ENV 必须在函数内部动态读取（不能提到模块顶层常量），
+  // 否则测试中通过 beforeEach 后设置 process.env.NODE_ENV 将不生效。
+  // 生产模式且配置了 SMTP_HOST 时走"已发送"日志；否则走开发调试日志（含完整参数）。
+  // 两种模式均用 console.log 占位，待接入真实邮件 API（见上方 TODO）
   if (process.env.NODE_ENV === "production" && process.env.SMTP_HOST) {
-    // 生产模式：暂用 console.log 占位，标记 TODO
-    // TODO(prod): 替换为真实邮件 API 调用（见上方文档注释）
-    console.log(
-      `[email] invite sent to ${to} for workspace ${workspaceName} by ${inviterName}`,
-    );
+    console.log(`[email] invite sent to ${to} for workspace ${workspaceName} by ${inviterName}`);
   } else {
-    // 开发模式：输出完整内容便于调试
-    console.log(
-      `[email-dev] invite: to=${to}, workspace=${workspaceName}, inviter=${inviterName}`,
-    );
+    console.log(`[email-dev] invite: to=${to}, workspace=${workspaceName}, inviter=${inviterName}`);
   }
 }
