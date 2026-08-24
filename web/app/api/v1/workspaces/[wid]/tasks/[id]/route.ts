@@ -56,6 +56,16 @@ export async function PATCH(
     const body = await req.json();
     const validated = updateTaskSchema.parse(body);
 
+    // 改 assignee 需要 admin/owner 权限（与 batch 对齐）
+    if (validated.assigneeId !== undefined) {
+      if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
+        return NextResponse.json(
+          { code: 403, message: "仅管理员可指派任务" },
+          { status: 403 },
+        );
+      }
+    }
+
     const result = await runWithWorkspace(
       wid,
       async (tx) => {

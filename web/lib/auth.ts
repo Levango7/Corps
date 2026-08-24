@@ -29,6 +29,12 @@ export const auth = betterAuth({
     // 强制生成 PostgreSQL 兼容的 UUID v4。
     generateId: () => randomUUID(),
   },
+  // T2.5：Better Auth 内置限流（login/register/refresh 等端点）
+  rateLimit: {
+    enabled: process.env.RATE_LIMIT_DISABLED !== "1",
+    window: 60, // 60 秒窗口
+    max: 10, // 每窗口最多 10 次请求
+  },
 });
 
 // ─── 工作区上下文中间件（读取 wid 访问令牌，驱动 RLS）──

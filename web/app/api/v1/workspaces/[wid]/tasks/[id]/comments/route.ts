@@ -27,7 +27,7 @@ export async function GET(
 
 const createCommentSchema = z.object({
   body: z.string().min(1).max(10000),
-  mentions: z.array(z.string()).optional(),
+  mentions: z.array(z.string().uuid()).optional(),
 });
 
 export async function POST(
@@ -61,8 +61,20 @@ export async function POST(
       });
 
       // A-3: 通知 —— mention 通知（每个被提及的用户，排除评论作者自己）
+      // T2.8：过滤非本工作区成员，防止向外部用户发送通知
       const mentions = validated.mentions ?? [];
-      for (const mentionedUserId of mentions) {
+      const validMentions: string[] = [];
+      if (mentions.length > 0) {
+        const members = await tx.member.findMany({
+          where: { workspaceId: wid, userId: { in: mentions } },
+          select: { userId: true },
+        });
+        const memberSet = new Set(members.map((m) => m.userId));
+        for (const uid of mentions) {
+          if (memberSet.has(uid)) validMentions.push(uid);
+        }
+      }
+      for (const mentionedUserId of validMentions) {
         if (mentionedUserId && mentionedUserId !== ctx.payload.sub) {
           await tx.notification.create({
             data: {

@@ -35,7 +35,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     return NextResponse.json({ code: 200, data: { url: portal.url } });
   } catch (error) {
     console.error("Billing portal error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ code: 500, message }, { status: 500 });
+    return NextResponse.json({ code: 500, message: "计费服务暂时不可用，请稍后重试" }, { status: 500 });
   }
 }

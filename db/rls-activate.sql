@@ -43,7 +43,7 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'members','tasks','comments','decisions','decision_versions',
-    'subscriptions','notifications','workspaces','invitations','analytics_events'
+    'subscriptions','notifications','workspaces','invitations','analytics_events',
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);

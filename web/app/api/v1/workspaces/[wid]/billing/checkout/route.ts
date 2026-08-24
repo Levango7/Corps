@@ -52,9 +52,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 
-  const body = checkoutSchema.parse(await req.json().catch(() => ({})));
-  const priceId = body.priceId ?? STRIPE_PRICE_ID;
-  if (!priceId) {
+  const priceIdDefault = STRIPE_PRICE_ID;
+  if (!priceIdDefault) {
     return NextResponse.json(
       { code: 400, message: "STRIPE_PRICE_ID 未配置（请在环境变量设置测试价格 ID）" },
       { status: 400 },
@@ -62,6 +61,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   }
 
   try {
+    const body = checkoutSchema.parse(await req.json().catch(() => ({})));
+    const priceId = body.priceId ?? priceIdDefault;
     const stripe = requireStripe();
     const { workspace, subscription } = await runWithWorkspace(
       wid,
@@ -101,7 +102,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     return NextResponse.json({ code: 200, data: { url: session.url } });
   } catch (error) {
     console.error("Billing checkout error:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
-    return NextResponse.json({ code: 500, message }, { status: 500 });
+    return NextResponse.json({ code: 500, message: "计费服务暂时不可用，请稍后重试" }, { status: 500 });
   }
 }

@@ -181,8 +181,10 @@ export function rateLimit(key: string, rule: RateLimitRule): RateLimitResult {
   return hitMemoryStore(key, rule.max, rule.windowMs);
 }
 
-/** 从请求中提取客户端标识：x-forwarded-for 的第一个 IP；缺失则 "local" */
+/** 从请求中提取客户端标识：优先 x-real-ip（反向代理写入），回退 x-forwarded-for；缺失则 "local" */
 export function clientKey(req: NextRequest): string {
+  const realIp = req.headers.get("x-real-ip");
+  if (realIp) return realIp.trim();
   const xff = req.headers.get("x-forwarded-for");
   if (!xff) return "local";
   const first = xff.split(",")[0]?.trim();

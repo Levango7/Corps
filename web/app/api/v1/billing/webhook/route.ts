@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { runWithAuthOp } from "@/lib/auth";
 import { FREE_SEAT_LIMIT, requireStripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
+import { prisma } from "@/lib/prisma";
 
 function asString(v: string | { id: string } | null | undefined): string | undefined {
   if (!v) return undefined;
@@ -30,6 +31,17 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : "Invalid signature";
     console.error("Webhook signature error:", message);
     return NextResponse.json({ code: 400, message: `Webhook Error: ${message}` }, { status: 400 });
+  }
+
+  // T2.7 Webhook 幂等：同一条 Stripe 事件不重复处理
+  // INSERT ON CONFLICT DO NOTHING —— 若已处理过则 affected rows = 0，跳过后续逻辑
+  const inserted = await prisma.processedStripeEvent.create({
+    data: { id: event.id },
+    select: { id: true },
+  }).catch(() => null);
+  if (!inserted) {
+    // 已处理过（幂等命中），返回 200 让 Stripe 停止重试
+    return NextResponse.json({ code: 200, data: { received: true, duplicate: true } });
   }
 
   try {

@@ -2,7 +2,7 @@
 -- corps — 数据库 Schema 镜像（由 prisma migrate diff 生成，勿手动编辑）
 --
 -- 生成命令：
---   npx prisma migrate diff --from-empty ^
+--   npx prisma migrate diff --from-empty \
 --     --to-schema-datamodel web/prisma/schema.prisma --script > db/schema.sql
 --
 -- 更新时机：schema.prisma 有结构变更时重新生成并提交。
@@ -23,9 +23,9 @@ CREATE TABLE "public"."users" (
     "email_verified" BOOLEAN NOT NULL DEFAULT false,
     "avatar_url" TEXT,
     "password_hash" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
-    "last_login_at" TIMESTAMP(3),
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
+    "last_login_at" TIMESTAMPTZ,
 
     CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
@@ -38,8 +38,8 @@ CREATE TABLE "public"."workspaces" (
     "owner_id" UUID NOT NULL,
     "plan" VARCHAR(20) NOT NULL DEFAULT 'free',
     "seat_limit" INTEGER NOT NULL DEFAULT 10,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "workspaces_pkey" PRIMARY KEY ("id")
 );
@@ -50,8 +50,8 @@ CREATE TABLE "public"."members" (
     "workspace_id" UUID NOT NULL,
     "role" VARCHAR(20) NOT NULL DEFAULT 'member',
     "invited_by" UUID,
-    "joined_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "invited_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "joined_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "invited_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "members_pkey" PRIMARY KEY ("user_id","workspace_id")
 );
@@ -64,9 +64,9 @@ CREATE TABLE "public"."invitations" (
     "token_hash" VARCHAR(64) NOT NULL,
     "role" VARCHAR(20) NOT NULL DEFAULT 'member',
     "invited_by" UUID NOT NULL,
-    "expires_at" TIMESTAMP(3) NOT NULL,
-    "accepted_at" TIMESTAMP(3),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "expires_at" TIMESTAMPTZ NOT NULL,
+    "accepted_at" TIMESTAMPTZ,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "invitations_pkey" PRIMARY KEY ("id")
 );
@@ -80,11 +80,11 @@ CREATE TABLE "public"."tasks" (
     "status" VARCHAR(20) NOT NULL DEFAULT 'todo',
     "priority" VARCHAR(20) NOT NULL DEFAULT 'medium',
     "assignee_id" UUID,
-    "due_date" TIMESTAMP(3),
+    "due_date" TIMESTAMPTZ,
     "sort_order" DOUBLE PRECISION NOT NULL DEFAULT 0,
     "created_by" UUID,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "tasks_pkey" PRIMARY KEY ("id")
 );
@@ -97,8 +97,8 @@ CREATE TABLE "public"."comments" (
     "author_id" UUID,
     "body" TEXT NOT NULL,
     "mentions" TEXT[] DEFAULT ARRAY[]::TEXT[],
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "comments_pkey" PRIMARY KEY ("id")
 );
@@ -112,7 +112,7 @@ CREATE TABLE "public"."notifications" (
     "entity_id" UUID NOT NULL,
     "entity_title" VARCHAR(255) NOT NULL,
     "read" BOOLEAN NOT NULL DEFAULT false,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
 );
@@ -125,8 +125,8 @@ CREATE TABLE "public"."decisions" (
     "markdown" TEXT NOT NULL,
     "version" INTEGER NOT NULL DEFAULT 1,
     "author_id" UUID,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "decisions_pkey" PRIMARY KEY ("id")
 );
@@ -139,7 +139,7 @@ CREATE TABLE "public"."decision_versions" (
     "markdown" TEXT NOT NULL,
     "version" INTEGER NOT NULL,
     "author_id" UUID,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "decision_versions_pkey" PRIMARY KEY ("id")
 );
@@ -147,10 +147,10 @@ CREATE TABLE "public"."decision_versions" (
 -- CreateTable
 CREATE TABLE "public"."sessions" (
     "id" UUID NOT NULL,
-    "expires_at" TIMESTAMP(3) NOT NULL,
+    "expires_at" TIMESTAMPTZ NOT NULL,
     "token" TEXT NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
     "ip_address" VARCHAR(45),
     "user_agent" VARCHAR(500),
     "user_id" UUID NOT NULL,
@@ -167,12 +167,12 @@ CREATE TABLE "public"."accounts" (
     "access_token" TEXT,
     "refresh_token" TEXT,
     "id_token" TEXT,
-    "access_token_expires_at" TIMESTAMP(3),
-    "refresh_token_expires_at" TIMESTAMP(3),
+    "access_token_expires_at" TIMESTAMPTZ,
+    "refresh_token_expires_at" TIMESTAMPTZ,
     "scope" TEXT,
     "password" TEXT,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "accounts_pkey" PRIMARY KEY ("id")
 );
@@ -182,9 +182,9 @@ CREATE TABLE "public"."verifications" (
     "id" UUID NOT NULL,
     "identifier" TEXT NOT NULL,
     "value" TEXT NOT NULL,
-    "expires_at" TIMESTAMP(3) NOT NULL,
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "expires_at" TIMESTAMPTZ NOT NULL,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "verifications_pkey" PRIMARY KEY ("id")
 );
@@ -197,12 +197,20 @@ CREATE TABLE "public"."subscriptions" (
     "stripe_sub_id" VARCHAR(255),
     "quantity" INTEGER NOT NULL DEFAULT 1,
     "status" VARCHAR(20) NOT NULL DEFAULT 'active',
-    "current_period_end" TIMESTAMP(3),
-    "canceled_at" TIMESTAMP(3),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    "updated_at" TIMESTAMP(3) NOT NULL,
+    "current_period_end" TIMESTAMPTZ,
+    "canceled_at" TIMESTAMPTZ,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMPTZ NOT NULL,
 
     CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."processed_stripe_events" (
+    "id" VARCHAR(255) NOT NULL,
+    "received_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "processed_stripe_events_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -213,7 +221,7 @@ CREATE TABLE "public"."analytics_events" (
     "name" VARCHAR(64) NOT NULL,
     "props" JSONB NOT NULL DEFAULT '{}',
     "session_id" VARCHAR(64),
-    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "created_at" TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "analytics_events_pkey" PRIMARY KEY ("id")
 );
@@ -223,9 +231,6 @@ CREATE UNIQUE INDEX "users_email_key" ON "public"."users"("email");
 
 -- CreateIndex
 CREATE UNIQUE INDEX "workspaces_slug_key" ON "public"."workspaces"("slug");
-
--- CreateIndex
-CREATE INDEX "workspaces_slug_idx" ON "public"."workspaces"("slug");
 
 -- CreateIndex
 CREATE INDEX "workspaces_owner_id_idx" ON "public"."workspaces"("owner_id");

@@ -86,9 +86,9 @@ export default function WorkspaceLayout({
   useEffect(() => {
     let active = true;
     function fetchCount() {
-      api<{ count: number }>(`/api/v1/workspaces/${wid}/notifications?count=true`)
+      api<{ unread: number }>(`/api/v1/workspaces/${wid}/notifications?count=true`)
         .then((res) => {
-          if (active) setUnreadCount(res.count ?? 0);
+          if (active) setUnreadCount(res.unread ?? 0);
         })
         .catch(() => {});
     }

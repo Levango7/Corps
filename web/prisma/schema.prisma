@@ -20,9 +20,9 @@ model User {
   image         String?   @map("avatar_url") @db.Text
   // Better Auth 存储密码哈希（默认字段名 password，映射到 password_hash 列）
   password      String?   @map("password_hash") @db.Text
-  createdAt     DateTime  @default(now()) @map("created_at")
-  updatedAt     DateTime  @updatedAt @map("updated_at")
-  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt     DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
+  lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
 
   members          Member[]
   tasks            Task[]            @relation("TaskAssignee")
@@ -46,8 +46,8 @@ model Workspace {
   ownerId   String   @map("owner_id") @db.Uuid
   plan      String   @default("free") @db.VarChar(20) // free, starter, pro, enterprise
   seatLimit Int      @default(10) @map("seat_limit")
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt DateTime @updatedAt @db.Timestamptz @map("updated_at") 
 
   owner            User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   members          Member[]
@@ -60,7 +60,6 @@ model Workspace {
   subscriptions    Subscription?
   analyticsEvents  AnalyticsEvent[]
 
-  @@index([slug])
   @@index([ownerId])
   @@map("workspaces")
 }
@@ -70,8 +69,8 @@ model Member {
   workspaceId String   @map("workspace_id") @db.Uuid
   role        String   @default("member") @db.VarChar(20) // owner, admin, member
   invitedBy   String?  @map("invited_by") @db.Uuid
-  joinedAt    DateTime @default(now()) @map("joined_at")
-  invitedAt   DateTime @default(now()) @map("invited_at")
+  joinedAt    DateTime @default(now()) @db.Timestamptz @map("joined_at") 
+  invitedAt   DateTime @default(now()) @db.Timestamptz @map("invited_at") 
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -94,9 +93,9 @@ model Invitation {
   tokenHash   String    @unique @map("token_hash") @db.VarChar(64)
   role        String    @default("member") @db.VarChar(20)
   invitedBy   String    @map("invited_by") @db.Uuid
-  expiresAt   DateTime  @map("expires_at")
-  acceptedAt  DateTime? @map("accepted_at")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  expiresAt   DateTime  @map("expires_at") @db.Timestamptz
+  acceptedAt  DateTime? @map("accepted_at") @db.Timestamptz
+  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at") 
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -113,11 +112,11 @@ model Task {
   status      String    @default("todo") @db.VarChar(20) // todo, in_progress, review, done
   priority    String    @default("medium") @db.VarChar(20) // low, medium, high, urgent
   assigneeId  String?   @map("assignee_id") @db.Uuid
-  dueDate     DateTime? @map("due_date")
+  dueDate     DateTime? @map("due_date") @db.Timestamptz
   sortOrder   Float     @default(0) @map("sort_order")
   createdBy   String?   @map("created_by") @db.Uuid
-  createdAt   DateTime  @default(now()) @map("created_at")
-  updatedAt   DateTime  @updatedAt @map("updated_at")
+  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   assignee  User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -146,8 +145,8 @@ model Comment {
   authorId    String?  @map("author_id") @db.Uuid
   body        String   @db.Text
   mentions    String[] @default([])
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at") 
 
   task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -170,7 +169,7 @@ model Notification {
   entityId    String   @map("entity_id") @db.Uuid // 关联的任务 ID
   entityTitle String   @map("entity_title") @db.VarChar(255) // 冗余存储任务标题
   read        Boolean  @default(false)
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -193,8 +192,8 @@ model Decision {
   markdown    String   @db.Text
   version     Int      @default(1)
   authorId    String?  @map("author_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
-  updatedAt   DateTime @updatedAt @map("updated_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at") 
 
   task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
   workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -219,7 +218,7 @@ model DecisionVersion {
   markdown    String   @db.Text
   version     Int
   authorId    String?  @map("author_id") @db.Uuid
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
 
   decision  Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -233,10 +232,10 @@ model DecisionVersion {
 
 model Session {
   id        String   @id @default(uuid()) @db.Uuid
-  expiresAt DateTime @map("expires_at")
+  expiresAt DateTime @map("expires_at") @db.Timestamptz
   token     String   @unique @map("token") @db.Text
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt DateTime @updatedAt @db.Timestamptz @map("updated_at") 
   ipAddress String?  @map("ip_address") @db.VarChar(45)
   userAgent String?  @map("user_agent") @db.VarChar(500)
   userId    String   @map("user_id") @db.Uuid
@@ -256,12 +255,12 @@ model Account {
   accessToken           String?   @map("access_token") @db.Text
   refreshToken          String?   @map("refresh_token") @db.Text
   idToken               String?   @map("id_token") @db.Text
-  accessTokenExpiresAt  DateTime? @map("access_token_expires_at")
-  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at")
+  accessTokenExpiresAt  DateTime? @map("access_token_expires_at") @db.Timestamptz
+  refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz
   scope                 String?   @db.Text
   password              String?   @db.Text
-  createdAt             DateTime  @default(now()) @map("created_at")
-  updatedAt             DateTime  @updatedAt @map("updated_at")
+  createdAt             DateTime  @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt             DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
 
   @@index([userId])
   @@map("accounts")
@@ -271,9 +270,9 @@ model Verification {
   id         String   @id @default(uuid()) @db.Uuid
   identifier String   @db.Text
   value      String   @db.Text
-  expiresAt  DateTime @map("expires_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  expiresAt  DateTime @map("expires_at") @db.Timestamptz
+  createdAt  DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt  DateTime @updatedAt @db.Timestamptz @map("updated_at") 
 
   @@map("verifications")
 }
@@ -285,16 +284,25 @@ model Subscription {
   stripeSubId      String?   @map("stripe_sub_id") @db.VarChar(255)
   quantity         Int       @default(1)
   status           String    @default("active") @db.VarChar(20) // active, past_due, canceled, trialing, incomplete
-  currentPeriodEnd DateTime? @map("current_period_end")
-  canceledAt       DateTime? @map("canceled_at")
-  createdAt        DateTime  @default(now()) @map("created_at")
-  updatedAt        DateTime  @updatedAt @map("updated_at")
+  currentPeriodEnd DateTime? @map("current_period_end") @db.Timestamptz
+  canceledAt       DateTime? @map("canceled_at") @db.Timestamptz
+  createdAt        DateTime  @default(now()) @db.Timestamptz @map("created_at") 
+  updatedAt        DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
   @@unique([workspaceId])
   @@index([stripeCustomerId])
   @@map("subscriptions")
+}
+
+// ─── Webhook 幂等（审计 T2.7：Stripe 重复事件检测）──
+
+model ProcessedStripeEvent {
+  id         String   @id @db.VarChar(255) // stripe event ID (evt_xxx)
+  receivedAt DateTime @default(now()) @db.Timestamptz @map("received_at")
+
+  @@map("processed_stripe_events")
 }
 
 // ─── 分析事件（P2 数据埋点：注册/激活/留存/转化漏斗）──
@@ -317,7 +325,7 @@ model AnalyticsEvent {
   name        String   @db.VarChar(64) // register, login, create_task, invite_member, create_decision, ...
   props       Json     @default("{}")
   sessionId   String?  @map("session_id") @db.VarChar(64) // 匿名会话 ID，用于漏斗关联
-  createdAt   DateTime @default(now()) @map("created_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
 
   user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

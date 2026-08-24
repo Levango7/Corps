@@ -15,6 +15,18 @@ interface ApiResponse<T = unknown> {
   data: T | null;
 }
 
+/** T2.9：结构化 API 错误类，携带 HTTP status + 业务 code，便于调用方做分支判断 */
+export class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+    public code: number,
+  ) {
+    super(message);
+    this.name = "ApiError";
+  }
+}
+
 /** refresh 端点路径（Better Auth 会话 cookie 轮换 access_token cookie） */
 const REFRESH_ENDPOINT = "/api/v1/auth/refresh";
 /** JSON Content-Type 常量，避免魔法字符串 */
@@ -56,7 +68,7 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
       // cookie 已更新，直接重试原请求
       res = await doFetch(headers);
     } else {
-      throw new Error(UNAUTHORIZED_MESSAGE);
+      throw new ApiError(UNAUTHORIZED_MESSAGE, 401, 401);
     }
   }
 
@@ -64,7 +76,7 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
     .json()
     .catch((): ApiResponse => ({ code: res.status, message: res.statusText, data: null }));
   if (!res.ok) {
-    throw new Error(json?.message || `请求失败 (${res.status})`);
+    throw new ApiError(json?.message || `请求失败 (${res.status})`, res.status, json?.code ?? res.status);
   }
   return json.data as T;
 }
