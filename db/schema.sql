@@ -1,347 +1,387 @@
 -- ============================================================================
--- Corps — Canonical Deploy DDL + Row Level Security
--- Companion to: web/prisma/schema.prisma  (THE schema authority)
+-- corps — 数据库 Schema 镜像（由 prisma migrate diff 生成，勿手动编辑）
 --
--- ── SOURCE OF TRUTH ─────────────────────────────────────────────────────────
---   * web/prisma/schema.prisma is the single source of truth for tables/columns.
---     Schema changes happen there (prisma db push / migrate), NEVER here first.
---   * This file mirrors that schema 1:1 and additionally owns what Prisma does
---     NOT manage: runtime roles, RLS policies, engine grants. Re-run the RLS
---     section after adding a new tenant table.
---   * Historical note: an earlier revision of this file described a custom-auth
---     design (argon2id + refresh-hash sessions + no Better Auth tables) that was
---     never deployed. That design is obsolete; do not resurrect it from VCS.
+-- 生成命令：
+--   npx prisma migrate diff --from-empty ^
+--     --to-schema-datamodel web/prisma/schema.prisma --script > db/schema.sql
 --
--- ── ACTIVATION (production hardening, opt-in) ───────────────────────────────
---   RLS below binds ONLY when the app connects through a NON-owner role:
---     1. psql -c "CREATE ROLE corps_app LOGIN PASSWORD '<secret>' NOINHERIT;"
---        (freshly created roles cannot bypass RLS and own no tables)
---     2. Apply this file's DDL + RLS sections as the migration/owner user.
---     3. Point DATABASE_URL at corps_app.
---   In dev (connecting as the table owner / superuser) PostgreSQL bypasses RLS,
---   which keeps local workflows simple. AC-04's engine-level guarantee holds
---   only under the corps_app connection — integration tests assert the
---   application-level equivalent instead (see tests/integration/workspace.test.ts).
+-- 更新时机：schema.prisma 有结构变更时重新生成并提交。
 --
---   Escape hatch contract (app.auth_op GUC, transaction-scoped):
---     'login'     member/workspace listing for an authenticated user (uid set)
---     'provision' creating the first workspace + owner member at register
---     'webhook'   Stripe webhook writes keyed by stripe ids, not wid
---   Set via lib/auth.ts helpers runWithAuthOp() / runWithWorkspace().
+-- RLS 定义（策略、FORCE ROW LEVEL SECURITY）不在本文件中，而是在：
+--   db/rls-activate.sql
+-- 该脚本由 entrypoint.sh 在 RLS_ACTIVATE=true 时自动执行。
 -- ============================================================================
 
--- ---------------------------------------------------------------------------
--- 0. ROLES (idempotent)
---    app_migrator : runs migrations / this file. Not used at runtime.
---    corps_app    : recommended runtime connection role (NOINHERIT, no table
---                   ownership ⇒ cannot disable or bypass RLS).
--- ---------------------------------------------------------------------------
-DO $$
-BEGIN
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'app_migrator') THEN
-    CREATE ROLE app_migrator WITH LOGIN PASSWORD 'CHANGE_ME_MIGRATOR';
-  END IF;
-  IF NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'corps_app') THEN
-    CREATE ROLE corps_app WITH LOGIN PASSWORD 'CHANGE_ME_APP' NOINHERIT;
-  END IF;
-END
-$$;
+-- CreateSchema
+CREATE SCHEMA IF NOT EXISTS "public";
 
-ALTER ROLE corps_app NOBYPASSRLS;
-ALTER ROLE corps_app NOSUPERUSER;
-ALTER ROLE corps_app NOINHERIT;
+-- CreateTable
+CREATE TABLE "public"."users" (
+    "id" UUID NOT NULL,
+    "name" VARCHAR(100),
+    "email" VARCHAR(255) NOT NULL,
+    "email_verified" BOOLEAN NOT NULL DEFAULT false,
+    "avatar_url" TEXT,
+    "password_hash" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "last_login_at" TIMESTAMP(3),
 
-GRANT CONNECT ON DATABASE postgres TO corps_app;
-GRANT USAGE ON SCHEMA public TO corps_app;
-
--- ===========================================================================
--- 2. TABLES (mirror of web/prisma/schema.prisma — do not diverge)
--- ===========================================================================
-
--- users — global identity, owned by Better Auth (no RLS: managed wholesale)
-CREATE TABLE IF NOT EXISTS users (
-  id             uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name           varchar(100),
-  email          varchar(255) NOT NULL UNIQUE,
-  email_verified boolean      NOT NULL DEFAULT false,
-  avatar_url     text,
-  password_hash  text,                          -- Better Auth hasher output
-  created_at     timestamptz  NOT NULL DEFAULT now(),
-  updated_at     timestamptz  NOT NULL DEFAULT now(),
-  last_login_at  timestamptz
+    CONSTRAINT "users_pkey" PRIMARY KEY ("id")
 );
 
--- workspaces — tenant ROOT
-CREATE TABLE IF NOT EXISTS workspaces (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  name       varchar(100) NOT NULL,
-  slug       varchar(50)  NOT NULL UNIQUE,
-  owner_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  plan       varchar(20)  NOT NULL DEFAULT 'free' CHECK (plan IN ('free','starter','pro','enterprise')),
-  seat_limit integer      NOT NULL DEFAULT 10 CHECK (seat_limit >= 1 AND seat_limit <= 1000),
-  created_at timestamptz  NOT NULL DEFAULT now(),
-  updated_at timestamptz  NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_workspaces_owner_id ON workspaces(owner_id);
+-- CreateTable
+CREATE TABLE "public"."workspaces" (
+    "id" UUID NOT NULL,
+    "name" VARCHAR(100) NOT NULL,
+    "slug" VARCHAR(50) NOT NULL,
+    "owner_id" UUID NOT NULL,
+    "plan" VARCHAR(20) NOT NULL DEFAULT 'free',
+    "seat_limit" INTEGER NOT NULL DEFAULT 10,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
--- members — RBAC source of truth. PK column order mirrors @@id([userId, workspaceId])
-CREATE TABLE IF NOT EXISTS members (
-  user_id      uuid NOT NULL REFERENCES users(id)      ON DELETE CASCADE,
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  role         varchar(20) NOT NULL DEFAULT 'member' CHECK (role IN ('owner','admin','member')),
-  invited_by   uuid,
-  joined_at    timestamptz NOT NULL DEFAULT now(),
-  invited_at   timestamptz NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id, workspace_id)
-);
-CREATE INDEX IF NOT EXISTS idx_members_workspace_id ON members(workspace_id);
-CREATE INDEX IF NOT EXISTS idx_members_user_id      ON members(user_id);
-
--- tasks — kanban card
-CREATE TABLE IF NOT EXISTS tasks (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  title       varchar(255) NOT NULL,
-  description text,
-  status      varchar(20) NOT NULL DEFAULT 'todo'
-                CHECK (status IN ('todo','in_progress','review','done')),
-  priority    varchar(20) NOT NULL DEFAULT 'medium'
-                CHECK (priority IN ('low','medium','high','urgent')),
-  assignee_id uuid REFERENCES users(id) ON DELETE SET NULL,
-  due_date    timestamptz,
-  sort_order  double precision NOT NULL DEFAULT 0,
-  created_by  uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_tasks_workspace_status ON tasks(workspace_id, status);
-CREATE INDEX IF NOT EXISTS idx_tasks_workspace_created ON tasks(workspace_id, created_at);
-CREATE INDEX IF NOT EXISTS idx_tasks_assignee_id      ON tasks(assignee_id);
-
--- comments — task-scoped discussion
-CREATE TABLE IF NOT EXISTS comments (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id     uuid NOT NULL REFERENCES tasks(id)      ON DELETE CASCADE,
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  author_id   uuid NOT NULL REFERENCES users(id)      ON DELETE CASCADE,
-  body        text NOT NULL,
-  mentions    text[] NOT NULL DEFAULT '{}',
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_comments_task_id      ON comments(task_id);
-CREATE INDEX IF NOT EXISTS idx_comments_workspace_id ON comments(workspace_id);
-
--- decisions — task-linked decision record (Markdown). version bumps on edit.
-CREATE TABLE IF NOT EXISTS decisions (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  task_id     uuid NOT NULL REFERENCES tasks(id)      ON DELETE CASCADE,
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  markdown    text NOT NULL,
-  version     integer NOT NULL DEFAULT 1 CHECK (version >= 1),
-  author_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  timestamptz NOT NULL DEFAULT now(),
-  updated_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_decisions_task_id      ON decisions(task_id);
-CREATE INDEX IF NOT EXISTS idx_decisions_workspace_id ON decisions(workspace_id);
-
--- decision_versions — immutable history (AC-10)
-CREATE TABLE IF NOT EXISTS decision_versions (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  decision_id uuid NOT NULL REFERENCES decisions(id)  ON DELETE CASCADE,
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  markdown    text NOT NULL,
-  version     integer NOT NULL CHECK (version >= 1),
-  author_id   uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_decision_versions_dec ON decision_versions(decision_id);
-CREATE INDEX IF NOT EXISTS idx_decision_versions_ws  ON decision_versions(workspace_id);
-
--- subscriptions — Stripe subscription per workspace
-CREATE TABLE IF NOT EXISTS subscriptions (
-  id                 uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id       uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  stripe_customer_id varchar(255),
-  stripe_sub_id      varchar(255),
-  quantity           integer NOT NULL DEFAULT 1,
-  status             varchar(20) NOT NULL DEFAULT 'active'
-                       CHECK (status IN ('active','past_due','canceled','trialing','incomplete')),
-  current_period_end timestamptz,
-  canceled_at        timestamptz,
-  created_at         timestamptz NOT NULL DEFAULT now(),
-  updated_at         timestamptz NOT NULL DEFAULT now(),
-  UNIQUE (workspace_id)
-);
-CREATE INDEX IF NOT EXISTS idx_subscriptions_stripe_customer ON subscriptions(stripe_customer_id);
-
--- notifications — workspace-scoped user notifications (通知中心)
-CREATE TABLE IF NOT EXISTS notifications (
-  id          uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  workspace_id uuid NOT NULL REFERENCES workspaces(id) ON DELETE CASCADE,
-  user_id     uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  type        varchar(30) NOT NULL,
-  entity_id   uuid NOT NULL,
-  entity_title varchar(255) NOT NULL,
-  read        boolean NOT NULL DEFAULT false,
-  created_at  timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_notifications_ws_user_read ON notifications(workspace_id, user_id, read);
-CREATE INDEX IF NOT EXISTS idx_notifications_ws_created   ON notifications(workspace_id, created_at);
-
--- sessions — Better Auth session store (no RLS: identity domain, app-layer gated)
-CREATE TABLE IF NOT EXISTS sessions (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  expires_at timestamptz NOT NULL,
-  token      text NOT NULL UNIQUE,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now(),
-  ip_address varchar(45),
-  user_agent varchar(500),
-  user_id    uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE
-);
-CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
-
--- accounts — Better Auth linked OAuth credentials
-CREATE TABLE IF NOT EXISTS accounts (
-  id                      uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  account_id              text NOT NULL,
-  provider_id             text NOT NULL,
-  user_id                 uuid NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  access_token            text,
-  refresh_token           text,
-  id_token                text,
-  access_token_expires_at timestamptz,
-  refresh_token_expires_at timestamptz,
-  scope                   text,
-  password                text,
-  created_at              timestamptz NOT NULL DEFAULT now(),
-  updated_at              timestamptz NOT NULL DEFAULT now()
-);
-CREATE INDEX IF NOT EXISTS idx_accounts_user_id ON accounts(user_id);
-
--- verifications — Better Auth verification tokens
-CREATE TABLE IF NOT EXISTS verifications (
-  id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-  identifier text NOT NULL,
-  value      text NOT NULL,
-  expires_at timestamptz NOT NULL,
-  created_at timestamptz NOT NULL DEFAULT now(),
-  updated_at timestamptz NOT NULL DEFAULT now()
+    CONSTRAINT "workspaces_pkey" PRIMARY KEY ("id")
 );
 
--- ===========================================================================
--- 4. ROW LEVEL SECURITY — engine-enforced tenant isolation (see header:
---    binds only when the app connects via corps_app, not as table owner).
---    Identity tables (users/accounts/sessions/verifications) are intentionally
---    excluded: Better Auth manages them wholesale and they carry no tenant key.
--- ===========================================================================
+-- CreateTable
+CREATE TABLE "public"."members" (
+    "user_id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "role" VARCHAR(20) NOT NULL DEFAULT 'member',
+    "invited_by" UUID,
+    "joined_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "invited_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-ALTER TABLE members           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE tasks             ENABLE ROW LEVEL SECURITY;
-ALTER TABLE comments          ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decisions         ENABLE ROW LEVEL SECURITY;
-ALTER TABLE decision_versions ENABLE ROW LEVEL SECURITY;
-ALTER TABLE subscriptions     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE notifications     ENABLE ROW LEVEL SECURITY;
-ALTER TABLE workspaces        ENABLE ROW LEVEL SECURITY;
+    CONSTRAINT "members_pkey" PRIMARY KEY ("user_id","workspace_id")
+);
 
--- Unset GUC ⇒ comparison against NULL ⇒ no rows: missing context is a hard DENY.
-CREATE POLICY p_members_rls ON members
-  FOR ALL
-  USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
-    OR (current_setting('app.auth_op', true) = 'login'
-        AND user_id = current_setting('app.user_id', true)::uuid)
-    OR (current_setting('app.auth_op', true) = 'provision'
-        AND user_id = current_setting('app.user_id', true)::uuid)
-  )
-  WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
-    OR (current_setting('app.auth_op', true) = 'login'
-        AND user_id = current_setting('app.user_id', true)::uuid)
-    OR (current_setting('app.auth_op', true) = 'provision'
-        AND user_id = current_setting('app.user_id', true)::uuid)
-  );
+-- CreateTable
+CREATE TABLE "public"."invitations" (
+    "id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "email" VARCHAR(255) NOT NULL,
+    "token_hash" VARCHAR(64) NOT NULL,
+    "role" VARCHAR(20) NOT NULL DEFAULT 'member',
+    "invited_by" UUID NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "accepted_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
-CREATE POLICY p_tasks_rls ON tasks
-  FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+    CONSTRAINT "invitations_pkey" PRIMARY KEY ("id")
+);
 
-CREATE POLICY p_comments_rls ON comments
-  FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+-- CreateTable
+CREATE TABLE "public"."tasks" (
+    "id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "title" VARCHAR(255) NOT NULL,
+    "description" TEXT,
+    "status" VARCHAR(20) NOT NULL DEFAULT 'todo',
+    "priority" VARCHAR(20) NOT NULL DEFAULT 'medium',
+    "assignee_id" UUID,
+    "due_date" TIMESTAMP(3),
+    "sort_order" DOUBLE PRECISION NOT NULL DEFAULT 0,
+    "created_by" UUID,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-CREATE POLICY p_decisions_rls ON decisions
-  FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+    CONSTRAINT "tasks_pkey" PRIMARY KEY ("id")
+);
 
-CREATE POLICY p_decision_versions_rls ON decision_versions
-  FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+-- CreateTable
+CREATE TABLE "public"."comments" (
+    "id" UUID NOT NULL,
+    "task_id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "author_id" UUID,
+    "body" TEXT NOT NULL,
+    "mentions" TEXT[] DEFAULT ARRAY[]::TEXT[],
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
-CREATE POLICY p_subscriptions_rls ON subscriptions
-  FOR ALL
-  USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
-    OR current_setting('app.auth_op', true) = 'webhook'
-  )
-  WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
-    OR current_setting('app.auth_op', true) = 'webhook'
-  );
+    CONSTRAINT "comments_pkey" PRIMARY KEY ("id")
+);
 
-CREATE POLICY p_notifications_rls ON notifications
-  FOR ALL
-  USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
-    AND user_id = current_setting('app.user_id', true)::uuid
-  )
-  WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
-    AND user_id = current_setting('app.user_id', true)::uuid
-  );
+-- CreateTable
+CREATE TABLE "public"."notifications" (
+    "id" UUID NOT NULL,
+    "user_id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "type" VARCHAR(30) NOT NULL,
+    "entity_id" UUID NOT NULL,
+    "entity_title" VARCHAR(255) NOT NULL,
+    "read" BOOLEAN NOT NULL DEFAULT false,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
--- workspaces: readable via membership; writable by owner, with narrow
--- provision (register/create-workspace) and webhook (plan sync) hatches.
-CREATE POLICY p_workspaces_select ON workspaces
-  FOR SELECT
-  USING (
-    id IN (
-      SELECT m.workspace_id FROM members m
-      WHERE m.user_id = current_setting('app.user_id', true)::uuid
-    )
-  );
+    CONSTRAINT "notifications_pkey" PRIMARY KEY ("id")
+);
 
-CREATE POLICY p_workspaces_write ON workspaces
-  FOR ALL
-  USING (
-    owner_id = current_setting('app.user_id', true)::uuid
-    OR current_setting('app.auth_op', true) IN ('provision', 'webhook')
-  )
-  WITH CHECK (
-    owner_id = current_setting('app.user_id', true)::uuid
-    OR (current_setting('app.auth_op', true) = 'provision'
-        AND owner_id = current_setting('app.user_id', true)::uuid)
-    OR current_setting('app.auth_op', true) = 'webhook'
-  );
+-- CreateTable
+CREATE TABLE "public"."decisions" (
+    "id" UUID NOT NULL,
+    "task_id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "markdown" TEXT NOT NULL,
+    "version" INTEGER NOT NULL DEFAULT 1,
+    "author_id" UUID,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
 
--- ===========================================================================
--- 5. GRANTS — runtime role gets DML only; it owns nothing and cannot disable RLS.
--- ===========================================================================
-GRANT SELECT, INSERT, UPDATE, DELETE
-  ON ALL TABLES IN SCHEMA public
-  TO corps_app;
+    CONSTRAINT "decisions_pkey" PRIMARY KEY ("id")
+);
 
--- ===========================================================================
--- ===== DOWN (rollback) =====
---   DROP TABLE IF EXISTS verifications, accounts, sessions, subscriptions,
---     decision_versions, decisions, comments, tasks, members, workspaces,
---     users CASCADE;
---   DROP POLICY IF EXISTS ... (policies drop with their tables);
--- ===========================================================================
+-- CreateTable
+CREATE TABLE "public"."decision_versions" (
+    "id" UUID NOT NULL,
+    "decision_id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "markdown" TEXT NOT NULL,
+    "version" INTEGER NOT NULL,
+    "author_id" UUID,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "decision_versions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."sessions" (
+    "id" UUID NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "token" TEXT NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+    "ip_address" VARCHAR(45),
+    "user_agent" VARCHAR(500),
+    "user_id" UUID NOT NULL,
+
+    CONSTRAINT "sessions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."accounts" (
+    "id" UUID NOT NULL,
+    "account_id" TEXT NOT NULL,
+    "provider_id" TEXT NOT NULL,
+    "user_id" UUID NOT NULL,
+    "access_token" TEXT,
+    "refresh_token" TEXT,
+    "id_token" TEXT,
+    "access_token_expires_at" TIMESTAMP(3),
+    "refresh_token_expires_at" TIMESTAMP(3),
+    "scope" TEXT,
+    "password" TEXT,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "accounts_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."verifications" (
+    "id" UUID NOT NULL,
+    "identifier" TEXT NOT NULL,
+    "value" TEXT NOT NULL,
+    "expires_at" TIMESTAMP(3) NOT NULL,
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "verifications_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."subscriptions" (
+    "id" UUID NOT NULL,
+    "workspace_id" UUID NOT NULL,
+    "stripe_customer_id" VARCHAR(255),
+    "stripe_sub_id" VARCHAR(255),
+    "quantity" INTEGER NOT NULL DEFAULT 1,
+    "status" VARCHAR(20) NOT NULL DEFAULT 'active',
+    "current_period_end" TIMESTAMP(3),
+    "canceled_at" TIMESTAMP(3),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updated_at" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "subscriptions_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "public"."analytics_events" (
+    "id" UUID NOT NULL,
+    "user_id" UUID,
+    "workspace_id" UUID,
+    "name" VARCHAR(64) NOT NULL,
+    "props" JSONB NOT NULL DEFAULT '{}',
+    "session_id" VARCHAR(64),
+    "created_at" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "analytics_events_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateIndex
+CREATE UNIQUE INDEX "users_email_key" ON "public"."users"("email");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "workspaces_slug_key" ON "public"."workspaces"("slug");
+
+-- CreateIndex
+CREATE INDEX "workspaces_slug_idx" ON "public"."workspaces"("slug");
+
+-- CreateIndex
+CREATE INDEX "workspaces_owner_id_idx" ON "public"."workspaces"("owner_id");
+
+-- CreateIndex
+CREATE INDEX "members_workspace_id_idx" ON "public"."members"("workspace_id");
+
+-- CreateIndex
+CREATE INDEX "members_user_id_idx" ON "public"."members"("user_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "invitations_token_hash_key" ON "public"."invitations"("token_hash");
+
+-- CreateIndex
+CREATE INDEX "invitations_workspace_id_email_idx" ON "public"."invitations"("workspace_id", "email");
+
+-- CreateIndex
+CREATE INDEX "invitations_email_idx" ON "public"."invitations"("email");
+
+-- CreateIndex
+CREATE INDEX "tasks_workspace_id_status_idx" ON "public"."tasks"("workspace_id", "status");
+
+-- CreateIndex
+CREATE INDEX "tasks_workspace_id_created_at_idx" ON "public"."tasks"("workspace_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "tasks_workspace_id_assignee_id_idx" ON "public"."tasks"("workspace_id", "assignee_id");
+
+-- CreateIndex
+CREATE INDEX "tasks_workspace_id_sort_order_idx" ON "public"."tasks"("workspace_id", "sort_order");
+
+-- CreateIndex
+CREATE INDEX "tasks_assignee_id_idx" ON "public"."tasks"("assignee_id");
+
+-- CreateIndex
+CREATE INDEX "comments_task_id_created_at_idx" ON "public"."comments"("task_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "comments_workspace_id_idx" ON "public"."comments"("workspace_id");
+
+-- CreateIndex
+CREATE INDEX "notifications_user_id_workspace_id_idx" ON "public"."notifications"("user_id", "workspace_id");
+
+-- CreateIndex
+CREATE INDEX "notifications_workspace_id_idx" ON "public"."notifications"("workspace_id");
+
+-- CreateIndex
+CREATE INDEX "notifications_workspace_id_user_id_read_idx" ON "public"."notifications"("workspace_id", "user_id", "read");
+
+-- CreateIndex
+CREATE INDEX "notifications_workspace_id_created_at_idx" ON "public"."notifications"("workspace_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "decisions_task_id_version_idx" ON "public"."decisions"("task_id", "version");
+
+-- CreateIndex
+CREATE INDEX "decisions_workspace_id_idx" ON "public"."decisions"("workspace_id");
+
+-- CreateIndex
+CREATE INDEX "decision_versions_decision_id_idx" ON "public"."decision_versions"("decision_id");
+
+-- CreateIndex
+CREATE INDEX "decision_versions_workspace_id_idx" ON "public"."decision_versions"("workspace_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "sessions_token_key" ON "public"."sessions"("token");
+
+-- CreateIndex
+CREATE INDEX "sessions_user_id_expires_at_idx" ON "public"."sessions"("user_id", "expires_at");
+
+-- CreateIndex
+CREATE INDEX "accounts_user_id_idx" ON "public"."accounts"("user_id");
+
+-- CreateIndex
+CREATE INDEX "subscriptions_stripe_customer_id_idx" ON "public"."subscriptions"("stripe_customer_id");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "subscriptions_workspace_id_key" ON "public"."subscriptions"("workspace_id");
+
+-- CreateIndex
+CREATE INDEX "analytics_events_name_created_at_idx" ON "public"."analytics_events"("name", "created_at");
+
+-- CreateIndex
+CREATE INDEX "analytics_events_user_id_created_at_idx" ON "public"."analytics_events"("user_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "analytics_events_workspace_id_created_at_idx" ON "public"."analytics_events"("workspace_id", "created_at");
+
+-- CreateIndex
+CREATE INDEX "analytics_events_session_id_created_at_idx" ON "public"."analytics_events"("session_id", "created_at");
+
+-- AddForeignKey
+ALTER TABLE "public"."workspaces" ADD CONSTRAINT "workspaces_owner_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."members" ADD CONSTRAINT "members_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."members" ADD CONSTRAINT "members_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."invitations" ADD CONSTRAINT "invitations_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."tasks" ADD CONSTRAINT "tasks_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."tasks" ADD CONSTRAINT "tasks_assignee_id_fkey" FOREIGN KEY ("assignee_id") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."tasks" ADD CONSTRAINT "tasks_created_by_fkey" FOREIGN KEY ("created_by") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."comments" ADD CONSTRAINT "comments_task_id_fkey" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."comments" ADD CONSTRAINT "comments_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."comments" ADD CONSTRAINT "comments_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."notifications" ADD CONSTRAINT "notifications_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."notifications" ADD CONSTRAINT "notifications_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."decisions" ADD CONSTRAINT "decisions_task_id_fkey" FOREIGN KEY ("task_id") REFERENCES "public"."tasks"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."decisions" ADD CONSTRAINT "decisions_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."decisions" ADD CONSTRAINT "decisions_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."decision_versions" ADD CONSTRAINT "decision_versions_decision_id_fkey" FOREIGN KEY ("decision_id") REFERENCES "public"."decisions"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."decision_versions" ADD CONSTRAINT "decision_versions_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."decision_versions" ADD CONSTRAINT "decision_versions_author_id_fkey" FOREIGN KEY ("author_id") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."sessions" ADD CONSTRAINT "sessions_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."accounts" ADD CONSTRAINT "accounts_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."subscriptions" ADD CONSTRAINT "subscriptions_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."analytics_events" ADD CONSTRAINT "analytics_events_user_id_fkey" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "public"."analytics_events" ADD CONSTRAINT "analytics_events_workspace_id_fkey" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE CASCADE ON UPDATE CASCADE;

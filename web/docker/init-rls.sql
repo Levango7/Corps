@@ -13,7 +13,7 @@ RETURNS void AS $$
 BEGIN
   SET LOCAL app.workspace_id = wid;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql ;
 
 -- Verify current workspace (for debugging)
 CREATE OR REPLACE FUNCTION app.get_workspace_id()
@@ -22,5 +22,5 @@ BEGIN
   RETURN current_setting('app.workspace_id', true)::uuid;
 EXCEPTION WHEN others THEN RETURN NULL;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql ;
 
