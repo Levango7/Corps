@@ -21,11 +21,9 @@
 -- ===========================================================================
 
 -- ─── 1. 运行时角色 ─────────────────────────────────────────────────────────
-SELECT 'CREATE ROLE corps_app NOLOGIN'
+SELECT 'CREATE ROLE corps_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS'
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'corps_app')\gexec
-ALTER ROLE corps_app WITH LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE
-  NOREPLICATION NOBYPASSRLS;
-ALTER ROLE corps_app PASSWORD :'app_password';
+ALTER ROLE corps_app SET PASSWORD :'app_password';
 
 -- ─── 2. 授权（含未来表的默认权限）─────────────────────────────────────────
 GRANT USAGE ON SCHEMA public TO corps_app;

@@ -30,6 +30,7 @@ import {
   AtSign,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
 
@@ -761,10 +762,10 @@ export default function TaskDetailPage({
             </div>
             <input
               type="date"
-              value={task.dueDate ? task.dueDate.slice(0, 10) : ""}
+              value={task.dueDate ? toLocalDateString(new Date(task.dueDate)) : ""}
               onChange={(e) =>
                 patch({
-                  dueDate: e.target.value ? new Date(e.target.value).toISOString() : null,
+                  dueDate: e.target.value ? localDateToISOString(e.target.value) : null,
                 })
               }
               className={fieldControl}

@@ -115,7 +115,7 @@ export function SidebarNav({
           <Bell size={18} className="shrink-0" />
           {!(mode === "desktop" && collapsed) && <span className="truncate">通知</span>}
           {!(mode === "desktop" && collapsed) && unreadCount > 0 && (
-            <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-white text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
+            <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}

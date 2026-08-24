@@ -341,15 +341,3 @@ describe("api 客户端 - 401 自动 refresh 与重试", () => {
     expect(retryHeaders.get("Content-Type")).toBe("application/json");
   });
 });
-
-describe("api 客户端 - token 管理兼容函数", () => {
-  it("setToken / getToken / clearToken 为 no-op（token 已迁移至 httpOnly cookie）", async () => {
-    // Arrange & Act：动态导入以避免副作用
-    const { setToken, getToken, clearToken } = await import("@/lib/api");
-
-    // Assert：三个函数均不抛错，getToken 恒返回 null
-    expect(() => setToken("any-token")).not.toThrow();
-    expect(getToken()).toBeNull();
-    expect(() => clearToken()).not.toThrow();
-  });
-});

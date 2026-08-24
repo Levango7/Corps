@@ -4,8 +4,6 @@
  * access token 已迁移至 httpOnly cookie（由服务端 login/register/refresh 端点设置）。
  * JavaScript 无法读取，浏览器随同源请求自动发送（credentials: "include"），
  * 从而消除 XSS 窃取 token 的风险。
- *
- * setToken/clearToken 保留为 no-op，仅为向后兼容尚未迁移的调用方，不再做任何实际存储。
  */
 
 /** 后端统一响应信封：{ code, message, data } */
@@ -33,17 +31,6 @@ const REFRESH_ENDPOINT = "/api/v1/auth/refresh";
 const JSON_CONTENT_TYPE = "application/json";
 /** 401 时未能在刷新后恢复身份的错误信息 */
 const UNAUTHORIZED_MESSAGE = "unauthorized";
-
-export function setToken(_t: string) {
-  /* no-op：token 由服务端 httpOnly cookie 托管 */
-}
-export function getToken(): string | null {
-  /* no-op：httpOnly cookie 对 JavaScript 不可读，统一返回 null */
-  return null;
-}
-export function clearToken() {
-  /* no-op：退出时调 /api/auth/sign-out 由服务端清 cookie */
-}
 
 /**
  * 统一 API 客户端：依赖 httpOnly access_token cookie（浏览器自动随请求发送），

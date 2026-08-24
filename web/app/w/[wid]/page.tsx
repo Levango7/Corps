@@ -247,7 +247,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
           </span>
           {/* 移动端（< sm）查看全部逾期任务链接 */}
           <Link
-            href={`/w/${wid}/board?status=overdue`}
+            href={`/w/${wid}/board`}
             className="sm:hidden ml-auto text-[var(--accent)] hover:underline"
           >
             查看全部

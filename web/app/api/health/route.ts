@@ -11,12 +11,14 @@ export async function GET() {
   // Promise.race：DB 探测与 2 秒超时赛跑，防止 DB 挂起时 healthcheck 长时间阻塞
   const TIMEOUT_MS = 2_000;
   try {
+    let timer: ReturnType<typeof setTimeout>;
     await Promise.race([
       prisma.$queryRaw`SELECT 1`,
-      new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error("Database probe timeout")), TIMEOUT_MS),
-      ),
+      new Promise<never>((_, reject) => {
+        timer = setTimeout(() => reject(new Error("Database probe timeout")), TIMEOUT_MS);
+      }),
     ]);
+    clearTimeout(timer!);
     return NextResponse.json({
       code: 200,
       data: {

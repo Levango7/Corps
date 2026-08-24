@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Loader2, Flag, Calendar } from "lucide-react";
 import { api } from "@/lib/api";
+import { toLocalDateString, localDateToISOString } from "@/lib/date";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -134,7 +135,7 @@ export default function NewTaskDialog({
           status,
           priority,
           assigneeId: assigneeId || undefined,
-          dueDate: dueDate ? new Date(dueDate).toISOString() : undefined,
+          dueDate: dueDate ? localDateToISOString(dueDate) : undefined,
         }),
       });
       onCreated?.(created);
@@ -267,7 +268,7 @@ export default function NewTaskDialog({
               </label>
               <input
                 type="date"
-                min={new Date().toISOString().split("T")[0]}
+                min={toLocalDateString(new Date())}
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
                 className={fieldControl}

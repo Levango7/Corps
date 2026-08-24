@@ -2,14 +2,10 @@ import jwt, { type JwtPayload, type VerifyOptions } from "jsonwebtoken";
 
 const ISSUER = process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
 
-/** access token 有效期：15 分钟（与 refresh token 的 7d 配合，平衡安全与可用性） */
+/** access token 有效期：15 分钟 */
 const ACCESS_TOKEN_TTL = "15m" as const;
-/** refresh token 有效期：7 天 */
-const REFRESH_TOKEN_TTL = "7d" as const;
 
-/** 环境变量名常量，避免魔法字符串散落 */
 const ENV_JWT_ACCESS_SECRET = "JWT_ACCESS_SECRET";
-const ENV_JWT_REFRESH_SECRET = "JWT_REFRESH_SECRET";
 
 /**
  * 密钥缺失时直接抛错（不回退到默认值）：
@@ -31,13 +27,6 @@ export interface JWTPayload {
   exp: number;
 }
 
-export interface RefreshTokenPayload {
-  sub: string;
-  jti: string;
-  iat: number;
-  exp: number;
-}
-
 /**
  * 类型守卫：收窄 jwt.verify 的返回值（JwtPayload | string）到 JwtPayload。
  * jwt.verify 在签名有效但 payload 为字符串时返回 string，此时视为非法业务 token。
@@ -50,14 +39,6 @@ export async function signAccessToken(payload: Omit<JWTPayload, "iat" | "exp">):
   return jwt.sign(payload, requireSecret(ENV_JWT_ACCESS_SECRET), {
     issuer: ISSUER,
     expiresIn: ACCESS_TOKEN_TTL,
-  });
-}
-
-export async function signRefreshToken(
-  payload: Omit<RefreshTokenPayload, "iat" | "exp">,
-): Promise<string> {
-  return jwt.sign(payload, requireSecret(ENV_JWT_REFRESH_SECRET), {
-    expiresIn: REFRESH_TOKEN_TTL,
   });
 }
 
@@ -81,9 +62,6 @@ function verifyToken<T extends JwtPayload>(
 export async function verifyAccessToken(token: string): Promise<JWTPayload | null> {
   return verifyToken<JWTPayload>(token, requireSecret(ENV_JWT_ACCESS_SECRET), {
     issuer: ISSUER,
+    algorithms: ["HS256"],
   });
-}
-
-export async function verifyRefreshToken(token: string): Promise<RefreshTokenPayload | null> {
-  return verifyToken<RefreshTokenPayload>(token, requireSecret(ENV_JWT_REFRESH_SECRET));
 }
