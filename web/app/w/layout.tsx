@@ -5,6 +5,10 @@ export function generateMetadata() {
   };
 }
 
-export default function WorkspaceRoot() {
-  return null;
+export default function WorkspaceRoot({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return <>{children}</>;
 }

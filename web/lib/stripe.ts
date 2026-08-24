@@ -15,3 +15,6 @@ export function requireStripe(): Stripe {
 
 export const STRIPE_PRICE_ID = process.env.STRIPE_PRICE_ID;
 export const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
+
+// free 档席位上限（与 Workspace.seatLimit 默认值保持一致；审计 F-11 订阅取消时回落到此档）
+export const FREE_SEAT_LIMIT = 10;

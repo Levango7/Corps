@@ -115,13 +115,14 @@ model Task {
   assigneeId  String?   @map("assignee_id") @db.Uuid
   dueDate     DateTime? @map("due_date")
   sortOrder   Float     @default(0) @map("sort_order")
-  createdBy   String    @map("created_by") @db.Uuid
+  createdBy   String?   @map("created_by") @db.Uuid
   createdAt   DateTime  @default(now()) @map("created_at")
   updatedAt   DateTime  @updatedAt @map("updated_at")
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   assignee  User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
-  creator   User       @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: Cascade)
+  // 创建者注销后任务保留，creator 置空（审计 D3：防跨工作区级联销毁）
+  creator   User?      @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   comments  Comment[]
   decisions Decision[]
 
@@ -142,7 +143,7 @@ model Comment {
   id          String   @id @default(uuid()) @db.Uuid
   taskId      String   @map("task_id") @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
-  authorId    String   @map("author_id") @db.Uuid
+  authorId    String?  @map("author_id") @db.Uuid
   body        String   @db.Text
   mentions    String[] @default([])
   createdAt   DateTime @default(now()) @map("created_at")
@@ -150,7 +151,8 @@ model Comment {
 
   task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  // 作者注销后评论保留（审计 D3）
+  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   // 任务详情页：按时间顺序加载评论（覆盖索引前缀）
   @@index([taskId, createdAt])
@@ -190,13 +192,14 @@ model Decision {
   workspaceId String   @map("workspace_id") @db.Uuid
   markdown    String   @db.Text
   version     Int      @default(1)
-  authorId    String   @map("author_id") @db.Uuid
+  authorId    String?  @map("author_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
   updatedAt   DateTime @updatedAt @map("updated_at")
 
   task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
   workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  author    User              @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  // 作者注销后决策保留（审计 D3）
+  author    User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
   versions  DecisionVersion[]
 
   // 任务决策按版本号定位（覆盖索引前缀兼容单 taskId 查询）
@@ -215,12 +218,13 @@ model DecisionVersion {
   workspaceId String   @map("workspace_id") @db.Uuid
   markdown    String   @db.Text
   version     Int
-  authorId    String   @map("author_id") @db.Uuid
+  authorId    String?  @map("author_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at")
 
   decision  Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  author    User      @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  // 作者注销后版本留痕保留（审计 D3）
+  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
 
   @@index([decisionId])
   @@index([workspaceId])

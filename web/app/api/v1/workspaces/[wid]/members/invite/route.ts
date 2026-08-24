@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContext, runWithSeatCheck } from "@/lib/auth";
+import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
 import { z } from "zod";
@@ -33,8 +34,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       const tokenHash = createHash("sha256").update(token).digest("hex");
       const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
-      const result = await runWithWorkspace(
+      const result = await runWithSeatCheck(
         wid,
+        ctx.payload.sub,
         async (tx) => {
           // SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务（同直加路径的席位保护）
           await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
@@ -88,7 +90,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             inviterName: inviter?.name ?? inviter?.email ?? "",
           };
         },
-        ctx.payload.sub,
       );
 
       if (result.full) {
@@ -124,13 +125,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
 
     // 席位检查 + 建成员在同一 RLS 事务内完成，避免并发邀请绕过 seatLimit
-    const result = await runWithWorkspace(
+    const result = await runWithSeatCheck(
       wid,
+      ctx.payload.sub,
       async (tx) => {
         // A-6: SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务，
         // 避免两个事务同时读到 memberCount < seatLimit 后都创建成员导致超限。
-        // 注：workspaces 表受 RLS 保护，事务内已注入 app.workspace_id / app.user_id，
-        // 当前工作区行对成员可见，FOR UPDATE 不会与 RLS 冲突。
+        // 注：seat 上下文（wid+uid+op）使 workspaces 的 SELECT/UPDATE 策略放行该行锁。
         await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
 
         const workspace = await tx.workspace.findUnique({ where: { id: wid } });
@@ -181,7 +182,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           inviterName: inviter?.name ?? inviter?.email ?? "",
         };
       },
-      ctx.payload.sub,
     );
 
     if (result.full) {
@@ -206,19 +206,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
 
     // P2 数据埋点：invite_member 事件（不阻塞主流程）
-    await prisma.analyticsEvent
-      .create({
-        data: {
-          id: randomUUID(),
-          userId: ctx.payload.sub,
-          workspaceId: wid,
-          name: "invite_member",
-          props: { role: "member" },
-        },
-      })
-      .catch(() => {
-        /* 埋点失败不影响主流程 */
-      });
+    await trackServerEvent({
+      userId: ctx.payload.sub,
+      workspaceId: wid,
+      name: "invite_member",
+      props: { role: "member" },
+    });
 
     return NextResponse.json({ code: 201, data: result.member }, { status: 201 });
   } catch (error) {

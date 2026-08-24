@@ -72,7 +72,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     markdown: d.markdown,
     version: d.version,
     authorId: d.authorId,
-    authorName: d.author.name ?? "",
+    // 作者注销后为 null，前端已有「未知作者」兜底
+    authorName: d.author?.name ?? "",
     createdAt: d.createdAt,
     updatedAt: d.updatedAt,
   }));

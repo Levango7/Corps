@@ -91,12 +91,19 @@ export async function DELETE(
         stripeSubId = subscription.stripeSubId;
       }
       const remain = await tx.member.count({ where: { workspaceId: wid } });
+      // 审计 F-11：Stripe quantity 同步口径为"购买的席位数"(seatLimit)，而非当前人数——
+      // 移除成员不应缩水已购买的席位
+      const ws = await tx.workspace.findUnique({
+        where: { id: wid },
+        select: { seatLimit: true },
+      });
       return {
         notFound: false as const,
         isOwner: false as const,
         stripeCustomerId,
         stripeSubId,
         remain,
+        seatLimit: ws?.seatLimit ?? null,
       };
     },
     ctx.payload.sub,
@@ -113,9 +120,11 @@ export async function DELETE(
       const { requireStripe } = await import("@/lib/stripe");
       const stripe = requireStripe();
       const sub = await stripe.subscriptions.retrieve(outcome.stripeSubId);
-      await stripe.subscriptions.update(outcome.stripeSubId, {
-        items: [{ id: sub.items.data[0].id, quantity: outcome.remain }],
-      });
+      if (outcome.seatLimit != null) {
+        await stripe.subscriptions.update(outcome.stripeSubId, {
+          items: [{ id: sub.items.data[0].id, quantity: outcome.seatLimit }],
+        });
+      }
     } catch {
       /* Stripe 同步失败不阻断本地移除 */
     }

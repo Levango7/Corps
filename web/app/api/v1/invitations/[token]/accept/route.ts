@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, authenticate, runWithWorkspace } from "@/lib/auth";
+import { auth, authenticate, runWithAuthOp, runWithSeatCheck } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { createHash } from "crypto";
 
@@ -42,10 +42,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     const { token } = await params;
     const tokenHash = createHash("sha256").update(token).digest("hex");
 
-    const invitation = await prisma.invitation.findUnique({
-      where: { tokenHash },
-      include: { workspace: { select: { id: true, name: true } } },
-    });
+    // 审计 T1.2：invitations 表已纳入 RLS，按 token 取邀请走受控 invite 逃生口
+    const invitation = await runWithAuthOp("invite", (tx) =>
+      tx.invitation.findUnique({
+        where: { tokenHash },
+        include: { workspace: { select: { id: true, name: true } } },
+      }),
+    );
     if (!invitation) {
       return NextResponse.json({ code: 404, message: "Invitation not found" }, { status: 404 });
     }
@@ -65,8 +68,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     }
 
     const wid = invitation.workspaceId;
-    const result = await runWithWorkspace(
+    // 审计 T1.2：seat 上下文（wid+uid+op）允许 FOR UPDATE 锁定工作区行做席位串行化
+    const result = await runWithSeatCheck(
       wid,
+      user.id,
       async (tx) => {
         // SELECT FOR UPDATE 锁定 workspace 行，串行化并发接受事务（席位保护）
         await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
@@ -107,7 +112,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
         return { full: false as const, role };
       },
-      user.id,
     );
 
     if (result.full) {

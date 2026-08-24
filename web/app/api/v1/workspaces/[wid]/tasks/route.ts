@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { trackServerEvent } from "@/lib/analytics-server";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { prisma } from "@/lib/prisma";
@@ -93,24 +94,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
 
     // P2 数据埋点：create_task 事件（不阻塞主流程）
-    await prisma.analyticsEvent
-      .create({
-        data: {
-          id: randomUUID(),
-          userId: ctx.payload.sub,
-          workspaceId: wid,
-          name: "create_task",
-          props: {
-            priority: validated.priority,
-            status: validated.status,
-            hasAssignee: !!validated.assigneeId,
-            hasDueDate: !!validated.dueDate,
-          },
-        },
-      })
-      .catch(() => {
-        /* 埋点失败不影响主流程 */
-      });
+    await trackServerEvent({
+      userId: ctx.payload.sub,
+      workspaceId: wid,
+      name: "create_task",
+      props: {
+        priority: validated.priority,
+        status: validated.status,
+        hasAssignee: !!validated.assigneeId,
+        hasDueDate: !!validated.dueDate,
+      },
+    });
 
     return NextResponse.json({ code: 201, data: task.task }, { status: 201 });
   } catch (error) {

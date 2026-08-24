@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { trackServerEvent } from "@/lib/analytics-server";
 import { requireStripe, STRIPE_PRICE_ID } from "@/lib/stripe";
 import { z } from "zod";
 import { randomUUID } from "crypto";
@@ -90,19 +91,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     });
 
     // P2 数据埋点：billing_checkout 事件（不阻塞主流程）
-    await prisma.analyticsEvent
-      .create({
-        data: {
-          id: randomUUID(),
-          userId: ctx.payload.sub,
-          workspaceId: wid,
-          name: "billing_checkout",
-          props: { seatLimit: workspace?.seatLimit ?? 1 },
-        },
-      })
-      .catch(() => {
-        /* 埋点失败不影响主流程 */
-      });
+    await trackServerEvent({
+      userId: ctx.payload.sub,
+      workspaceId: wid,
+      name: "billing_checkout",
+      props: { seatLimit: workspace?.seatLimit ?? 1 },
+    });
 
     return NextResponse.json({ code: 200, data: { url: session.url } });
   } catch (error) {

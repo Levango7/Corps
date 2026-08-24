@@ -26,7 +26,7 @@ interface Decision {
   taskTitle: string;
   markdown: string;
   version: number;
-  authorId: string;
+  authorId: string | null;
   authorName: string;
   createdAt: string;
   updatedAt: string;

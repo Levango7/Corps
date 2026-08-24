@@ -72,10 +72,19 @@ export async function getWorkspaceContext(
 
 type Tx = Prisma.TransactionClient;
 
+// 审计 F-07/T3.7：GUC key 白名单映射到固定 SQL，杜绝 $executeRawUnsafe 拼接模式
+const GUC_SQL: Record<string, string> = {
+  auth_op: "SELECT set_config('app.auth_op', $1, true)",
+  user_id: "SELECT set_config('app.user_id', $1, true)",
+  workspace_id: "SELECT set_config('app.workspace_id', $1, true)",
+};
+
 async function setGucs(tx: Tx, gucs: Record<string, string | undefined>) {
   for (const [key, value] of Object.entries(gucs)) {
     if (value === undefined) continue;
-    await tx.$executeRawUnsafe(`SELECT set_config('app.${key}', $1, true)`, value);
+    const sql = GUC_SQL[key];
+    if (!sql) throw new Error(`未知的 RLS GUC key: ${key}`);
+    await tx.$executeRawUnsafe(sql, value);
   }
 }
 
@@ -94,16 +103,29 @@ export async function withGuc<T>(
 }
 
 /**
- * 认证流程专用逃逸通道（login / provision / webhook）。
- * 对应 db/schema.sql 中各 RLS 策略的 `app.auth_op` 逃生口：
+ * 认证流程专用逃逸通道（login / provision / webhook / invite）。
+ * 对应 db/rls-activate.sql 中各 RLS 策略的 `app.auth_op` 逃生口：
  * 这些流程发生在用户身份或工作区上下文建立之前/之外，策略按 op 白名单放行。
  */
 export function runWithAuthOp<T>(
-  op: "login" | "provision" | "webhook",
+  op: "login" | "provision" | "webhook" | "invite",
   fn: (tx: Tx) => Promise<T>,
   userId?: string,
 ): Promise<T> {
   return withGuc({ auth_op: op, user_id: userId }, fn);
+}
+
+/**
+ * 席位记账专用上下文（审计 T1.2）：workspace_id + user_id + auth_op='seat' 三 GUC 齐备，
+ * 允许对工作区行执行 SELECT ... FOR UPDATE（串行化并发邀请/接受，防席位超卖），
+ * 同时保持其余表的常规租户隔离。仅用于邀请/接受流程的席位保护段。
+ */
+export function runWithSeatCheck<T>(
+  wid: string,
+  userId: string,
+  fn: (tx: Tx) => Promise<T>,
+): Promise<T> {
+  return withGuc({ workspace_id: wid, user_id: userId, auth_op: "seat" }, fn);
 }
 
 /**

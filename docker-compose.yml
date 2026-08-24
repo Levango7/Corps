@@ -49,8 +49,13 @@ services:
       db:
         condition: service_healthy
     environment:
-      # 数据库连接（容器内通过 service name 'db' 解析；密码同样强制注入无回退）
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-corps}?schema=public
+      # ── 数据库双连接（审计 F-01/T1.2：应用不再以 postgres 超管运行）──
+      # 运行时连接 = corps_app 最小权限角色（受 FORCE RLS 约束）
+      DATABASE_URL: postgresql://corps_app:${CORPS_APP_PASSWORD:?请在 .env 中设置 CORPS_APP_PASSWORD（openssl rand -hex 16）}@db:5432/${POSTGRES_DB:-corps}?schema=public
+      # 属主连接 = 仅用于容器启动时的 migrate deploy 与 rls-activate.sql，不参与业务请求
+      DATABASE_OWNER_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-corps}?schema=public
+      # 默认开启 RLS 加固；显式置 false 可退回非加固模式（不推荐）
+      RLS_ACTIVATE: ${RLS_ACTIVATE:-true}
       # 认证密钥（必须为强随机值）
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
@@ -64,10 +69,13 @@ services:
       # 邮件（可选）
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
-      # RLS 运行时角色密码（可选，仅 RLS 加固模式使用）
-      CORPS_APP_PASSWORD: ${CORPS_APP_PASSWORD:-}
+      # RLS 运行时角色密码（RLS_ACTIVATE=true 时必填，见 .env.example 生成命令）
+      CORPS_APP_PASSWORD: ${CORPS_APP_PASSWORD:?请在 .env 中设置 CORPS_APP_PASSWORD}
     ports:
       - "3000:3000"
+    volumes:
+      # RLS 激活脚本（entrypoint 在 RLS_ACTIVATE=true 时执行）
+      - ./db/rls-activate.sql:/app/db/rls-activate.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 15s

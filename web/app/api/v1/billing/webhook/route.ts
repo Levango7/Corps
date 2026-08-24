@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Stripe from "stripe";
 import { runWithAuthOp } from "@/lib/auth";
-import { requireStripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
+import { FREE_SEAT_LIMIT, requireStripe, STRIPE_WEBHOOK_SECRET } from "@/lib/stripe";
 
 function asString(v: string | { id: string } | null | undefined): string | undefined {
   if (!v) return undefined;
@@ -48,7 +48,21 @@ export async function POST(req: NextRequest) {
               where: { id: wid },
               select: { id: true },
             });
-            if (!workspace) return;
+            if (!workspace) {
+              console.error(
+                `[stripe-webhook] checkout.session.completed 指向不存在的工作区，已忽略: event=${event.id} wid=${wid}`,
+              );
+              return;
+            }
+
+            // 审计 F-11：从订阅项取真实购买席位数，闭环写回 seatLimit
+            let quantity = 1;
+            try {
+              const full = await requireStripe().subscriptions.retrieve(subId);
+              quantity = full.items?.data?.[0]?.quantity ?? 1;
+            } catch (e) {
+              console.error(`[stripe-webhook] 订阅详情拉取失败 event=${event.id}:`, e);
+            }
 
             await tx.subscription.upsert({
               where: { workspaceId: wid },
@@ -57,13 +71,25 @@ export async function POST(req: NextRequest) {
                 stripeCustomerId: customerId,
                 stripeSubId: subId,
                 status: "active",
-                quantity: 1,
+                quantity,
               },
-              update: { stripeCustomerId: customerId, stripeSubId: subId, status: "active" },
+              update: {
+                stripeCustomerId: customerId,
+                stripeSubId: subId,
+                status: "active",
+                quantity,
+              },
             });
-            // plan 枚举与 schema CHECK / openapi 保持一致：付费即 pro
-            await tx.workspace.update({ where: { id: wid }, data: { plan: "pro" } });
+            // plan 枚举与 schema CHECK / openapi 保持一致：付费即 pro；席位上限同步为购买数
+            await tx.workspace.update({
+              where: { id: wid },
+              data: { plan: "pro", seatLimit: quantity },
+            });
           });
+        } else {
+          console.error(
+            `[stripe-webhook] checkout.session.completed 缺失关键 metadata，无法激活订阅: event=${event.id}`,
+          );
         }
         break;
       }
@@ -104,7 +130,8 @@ export async function POST(req: NextRequest) {
                   sub.status === "canceled" ? new Date() : undefined,
               },
             });
-            // A-7: 订阅进入 canceled 状态时同步降级 workspace.plan 为 free
+            // A-7: 订阅进入 canceled 状态时同步降级 workspace.plan 为 free，
+            // 席位上限回落到 free 档（审计 F-11：计费口径闭环）
             if (sub.status === "canceled") {
               const subscription = await tx.subscription.findFirst({
                 where: { stripeSubId: subId },
@@ -113,8 +140,23 @@ export async function POST(req: NextRequest) {
               if (subscription) {
                 await tx.workspace.update({
                   where: { id: subscription.workspaceId },
-                  data: { plan: "free" },
+                  data: { plan: "free", seatLimit: FREE_SEAT_LIMIT },
                 });
+              }
+            } else {
+              // 审计 F-11：订阅变更（升降级/数量调整）时同步 seatLimit 为最新购买数
+              const newQty = sub.items?.data?.[0]?.quantity;
+              if (typeof newQty === "number") {
+                const subscription = await tx.subscription.findFirst({
+                  where: { stripeSubId: subId },
+                  select: { workspaceId: true },
+                });
+                if (subscription) {
+                  await tx.workspace.update({
+                    where: { id: subscription.workspaceId },
+                    data: { seatLimit: newQty },
+                  });
+                }
               }
             }
           });

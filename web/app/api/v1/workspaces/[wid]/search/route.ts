@@ -81,7 +81,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         decisions: decisions.map((d) => ({
           id: d.id,
           kind: "decision" as const,
-          title: `决策 v${d.version} · ${d.author.name || d.author.email}`,
+          title: `决策 v${d.version} · ${(d.author ? (d.author.name || d.author.email) : "已注销用户")}`,
           snippet: d.markdown.slice(0, 120),
           taskId: d.taskId,
           href: `/w/${wid}/task/${d.taskId}`,

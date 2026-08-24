@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, runWithAuthOp } from "@/lib/auth";
+import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { signAccessToken } from "@/lib/jwt";
@@ -91,19 +92,12 @@ export async function POST(req: NextRequest) {
     const accessToken = await signAccessToken({ sub: baUser.id, wid: workspace.id, role: "owner" });
 
     // 4) P2 数据埋点：register_success 事件（不阻塞主流程，失败静默）
-    await prisma.analyticsEvent
-      .create({
-        data: {
-          id: randomUUID(),
-          userId: baUser.id,
-          workspaceId: workspace.id,
-          name: "register_success",
-          props: { plan: "free", seatLimit: 10 },
-        },
-      })
-      .catch(() => {
-        /* 埋点失败不影响注册主流程 */
-      });
+    await trackServerEvent({
+      userId: baUser.id,
+      workspaceId: workspace.id,
+      name: "register_success",
+      props: { plan: "free", seatLimit: 10 },
+    });
 
     const response = NextResponse.json(
       {
