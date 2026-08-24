@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { randomBytes } from "crypto";
 
 /**
  * CSRF 基线防护（Spec §152）：
@@ -31,6 +32,16 @@ function isAllowed(req: NextRequest): boolean {
   return false;
 }
 
+/**
+ * T3.6：生成 per-request nonce 并注入 CSP 头。
+ * nonce 通过 Base64 编码，32 字节随机，满足 CSP Level 3 规范。
+ * style-src 保留 unsafe-inline（Tailwind 运行时注入 inline style），
+ * script-src 保留 unsafe-inline（Next.js hydration 脚本无法逐一加 nonce）。
+ */
+function generateNonce(): string {
+  return randomBytes(16).toString("base64");
+}
+
 export function middleware(req: NextRequest) {
   if (!isAllowed(req)) {
     return NextResponse.json(
@@ -38,16 +49,39 @@ export function middleware(req: NextRequest) {
       { status: 403 },
     );
   }
-  return NextResponse.next();
+
+  const nonce = generateNonce();
+  const res = NextResponse.next();
+  res.headers.set("x-nonce", nonce);
+
+  const csp = [
+    "default-src 'self'",
+    `script-src 'self' 'unsafe-inline' 'nonce-${nonce}'`,
+    `style-src 'self' 'unsafe-inline' 'nonce-${nonce}'`,
+    "img-src 'self' data: https:",
+    "font-src 'self' data:",
+    "connect-src 'self'",
+    "frame-ancestors 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join("; ");
+  res.headers.set("Content-Security-Policy", csp);
+
+  // HSTS：仅生产环境启用（localhost/127.0.0.1 不加，避免开发困扰）
+  const host = req.headers.get("host") ?? "";
+  if (!host.startsWith("localhost") && !host.startsWith("127.0.0.1")) {
+    res.headers.set("Strict-Transport-Security", "max-age=63072000; includeSubDomains");
+  }
+
+  return res;
 }
 
 export const config = {
   /**
-   * CSRF 校验范围：
+   * CSRF 校验范围（扩大至全站以覆盖 CSP）：
    *  - /api/v1/:path* — 业务 API
-   *  - /api/auth/:path* — Better Auth 会话端点（signIn/signUp/signOut 等），
-   *    同样是写请求入口，必须纳入 Origin 校验，否则攻击者可跨站
-   *    直接打 Better Auth 端点绕过业务层防线。
+   *  - /api/auth/:path* — Better Auth 会话端点
+   *  - /(.* ) — 所有页面路由（CSP nonce 注入）
    */
-  matcher: ["/api/v1/:path*", "/api/auth/:path*"],
+  matcher: ["/api/v1/:path*", "/api/auth/:path*", "/(.*)"],
 };

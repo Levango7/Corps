@@ -52,20 +52,25 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   // 多选模式（P2 批量操作）
   const [selectionMode, setSelectionMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [error, setError] = useState<string | null>(null);
 
   const dragStartRef = useRef<DragStart>(null);
+  // T3.3：拖拽请求序号，防止旧请求覆盖新状态
+  const dragSeqRef = useRef(0);
 
   useEffect(() => {
     api<Task[]>(`/api/v1/workspaces/${wid}/tasks`)
-      .then(setTasks)
-      .catch(() => setTasks([]))
+      .then((data) => { setError(null); setTasks(data); })
+      .catch((e) => { setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试"); setTasks([]); })
       .finally(() => setLoading(false));
   }, [wid]);
 
   async function load() {
     try {
+      setError(null);
       setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks`));
-    } catch {
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试");
       setTasks([]);
     }
   }
@@ -89,6 +94,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   async function handleReorder(taskId: string, targetIndex: number, column: Status) {
     if (!tasks.some((t) => t.id === taskId)) return;
     const newSortOrder = computeSortOrder(tasks, column, targetIndex, taskId);
+    const seq = ++dragSeqRef.current;
     setTasks((prev) =>
       prev.map((t) => (t.id === taskId ? { ...t, status: column, sortOrder: newSortOrder } : t)),
     );
@@ -98,9 +104,12 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         body: JSON.stringify({ status: column, sortOrder: newSortOrder }),
       });
     } catch {
-      setDragError("移动失败，已恢复");
-      await load();
-      setTimeout(() => setDragError(null), 5000);
+      // 仅当没有更新的拖拽操作时才回滚
+      if (seq === dragSeqRef.current) {
+        setDragError("移动失败，已恢复");
+        await load();
+        setTimeout(() => setDragError(null), 5000);
+      }
     }
   }
 
@@ -217,6 +226,13 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         >
           <AlertCircle size={16} className="shrink-0" />
           <span className="text-[length:var(--text-sm)] font-medium">{dragError}</span>
+        </div>
+      )}
+
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
+          <span>{error}</span>
+          <button onClick={() => { setError(null); load(); }} className="text-red-600 underline hover:text-red-800">重试</button>
         </div>
       )}
 

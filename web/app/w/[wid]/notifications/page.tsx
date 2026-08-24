@@ -97,14 +97,17 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [marking, setMarking] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     try {
+      setError(null);
       const res = await api<{ notifications: Notification[] }>(
         `/api/v1/workspaces/${wid}/notifications`,
       );
       setAll(res?.notifications ?? []);
-    } catch {
+    } catch (e) {
+      setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试");
       setAll([]);
     } finally {
       setLoaded(true);
@@ -221,7 +224,14 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       ) : visible.length === 0 ? (
         <EmptyState filter={filter} />
       ) : (
-        <ul className="flex flex-col gap-[var(--space-3)]">
+        <>
+          {error && (
+            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
+              <span>{error}</span>
+              <button onClick={() => { setError(null); load(); }} className="text-red-600 underline hover:text-red-800">重试</button>
+            </div>
+          )}
+          <ul className="flex flex-col gap-[var(--space-3)]">
           {visible.map((n) => {
             const meta = TYPE_META[n.type];
             const Icon = meta.icon;
@@ -262,6 +272,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
             );
           })}
         </ul>
+        </>
       )}
     </div>
   );

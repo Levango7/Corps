@@ -49,22 +49,8 @@ const nextConfig: NextConfig = {
             key: "Referrer-Policy",
             value: "strict-origin-when-cross-origin",
           },
-          // Next.js 运行时需要内联脚本/样式（hydration 与主题引导），
-          // 故允许 self + unsafe-inline；外部资源默认全部拒绝。
-          {
-            key: "Content-Security-Policy",
-            value: [
-              "default-src 'self'",
-              "script-src 'self' 'unsafe-inline'",
-              "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: https:",
-              "font-src 'self' data:",
-              "connect-src 'self'",
-              "frame-ancestors 'none'",
-              "base-uri 'self'",
-              "form-action 'self'",
-            ].join("; "),
-          },
+          // CSP 已迁移至 middleware.ts（per-request nonce 动态生成），
+          // 此处不再设置静态 CSP 头。
           {
             key: "Permissions-Policy",
             value: "camera=(), microphone=(), geolocation=()",

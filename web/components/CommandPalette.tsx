@@ -89,10 +89,13 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     }
     // 防抖期间：尚未发出请求
     setIsSearching(false);
+    const controller = new AbortController();
     const timer = setTimeout(() => {
       // 请求发出
       setIsSearching(true);
-      api<SearchResults>(`/api/v1/workspaces/${wid}/search?q=${encodeURIComponent(q)}`)
+      api<SearchResults>(`/api/v1/workspaces/${wid}/search?q=${encodeURIComponent(q)}`, {
+        signal: controller.signal,
+      })
         .then((data) => {
           setResults({
             tasks: (data?.tasks ?? []).map((t) => ({
@@ -115,7 +118,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         })
         .catch(() => setResults({ tasks: [], decisions: [] }));
     }, 300);
-    return () => clearTimeout(timer);
+    return () => { clearTimeout(timer); controller.abort(); };
   }, [query, wid]);
 
   const items = useMemo<CmdItem[]>(() => {

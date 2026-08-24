@@ -110,6 +110,8 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
 
   // 页码（从 1 开始），搜索条件变化时重置
   const pageRef = useRef(1);
+  // T3.2：AbortController 用于取消上一次未完成的搜索请求
+  const abortRef = useRef<AbortController | null>(null);
 
   const base = `/api/v1/workspaces/${wid}/decisions`;
 
@@ -124,13 +126,19 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       if (!append) setLoading(true);
       else setLoadingMore(true);
       setError("");
+      // 取消上一次未完成的请求
+      abortRef.current?.abort();
+      const controller = new AbortController();
+      abortRef.current = controller;
       try {
         const params = new URLSearchParams({
           page: String(page),
           limit: String(PAGE_SIZE),
         });
         if (q.trim()) params.set("q", q.trim());
-        const resp = await api<DecisionsResp>(`${base}?${params.toString()}`);
+        const resp = await api<DecisionsResp>(`${base}?${params.toString()}`, {
+          signal: controller.signal,
+        });
         setTotal(resp.total);
         setDecisions((prev) => (append ? [...prev, ...resp.decisions] : resp.decisions));
       } catch (e) {
@@ -163,10 +171,11 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
     }, DEBOUNCE_MS);
   }
 
-  // 卸载时清掉定时器，避免 setState on unmounted
+  // 卸载时清掉定时器和未完成请求，避免 setState on unmounted
   useEffect(() => {
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
+      abortRef.current?.abort();
     };
   }, []);
 
