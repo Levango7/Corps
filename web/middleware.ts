@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { randomBytes } from "crypto";
 
 /**
  * CSRF 基线防护（Spec §152）：
@@ -34,12 +33,13 @@ function isAllowed(req: NextRequest): boolean {
 
 /**
  * T3.6：生成 per-request nonce 并注入 CSP 头。
- * nonce 通过 Base64 编码，32 字节随机，满足 CSP Level 3 规范。
- * style-src 保留 unsafe-inline（Tailwind 运行时注入 inline style），
- * script-src 保留 unsafe-inline（Next.js hydration 脚本无法逐一加 nonce）。
+ * 使用 Web Crypto API（Edge Runtime 兼容），不依赖 Node.js crypto 模块。
+ * nonce 为 Base64 编码的 16 字节随机值，满足 CSP Level 3 规范。
  */
 function generateNonce(): string {
-  return randomBytes(16).toString("base64");
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return btoa(String.fromCharCode(...bytes));
 }
 
 export function middleware(req: NextRequest) {
