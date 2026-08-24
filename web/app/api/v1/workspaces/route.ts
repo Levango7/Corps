@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { authenticate, runWithAuthOp } from "@/lib/auth";
+import { generateSlug } from "@/lib/slug";
 import { z } from "zod";
 
 export async function GET(req: NextRequest) {
@@ -60,7 +61,7 @@ export async function POST(req: NextRequest) {
     const body = await req.json();
     const validated = createWorkspaceSchema.parse(body);
 
-    const slug = validated.name.toLowerCase().replace(/\s+/g, "-").slice(0, 50);
+    const slug = await generateSlug(validated.name);
 
     // 建工作区 + owner 成员单事务，走 provision 逃生口（RLS 启用后仍可写）
     const {

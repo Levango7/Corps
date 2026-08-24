@@ -99,7 +99,7 @@ model Invitation {
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
-  @@index([workspaceId, email])
+  @@unique([workspaceId, email], name: "uq_invitations_pending", where: "accepted_at IS NULL")
   @@index([email])
   @@map("invitations")
 }

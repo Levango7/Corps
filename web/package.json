@@ -2,6 +2,7 @@
   "name": "corps-web",
   "version": "0.1.0",
   "private": true,
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
     "predev": "node -e \"require('fs').copyFileSync('../design/design-tokens.css','app/design-tokens.css')\"",
     "dev": "next dev --turbopack",

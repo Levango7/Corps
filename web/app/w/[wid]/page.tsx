@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { STATUS_META } from "@/lib/task-meta";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import Onboarding from "@/components/Onboarding";
 import { TaskListSkeleton, StatCardSkeleton } from "@/components/Skeleton";
@@ -32,12 +33,6 @@ interface Task {
 }
 
 // 概览页三张统计卡：进行中 = in_progress + review 合并计数
-const STATUS_META: Record<Status, { label: string; icon: typeof Circle; color: string }> = {
-  todo: { label: "待办", icon: Circle, color: "var(--status-todo)" },
-  in_progress: { label: "进行中", icon: CircleDot, color: "var(--status-doing)" },
-  review: { label: "评审", icon: CircleDot, color: "var(--warn)" },
-  done: { label: "已完成", icon: CheckCircle2, color: "var(--status-done)" },
-};
 
 const STAT_CARDS: {
   key: "todo" | "doing" | "done";

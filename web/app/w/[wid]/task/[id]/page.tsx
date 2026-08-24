@@ -30,6 +30,7 @@ import {
   AtSign,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -79,12 +80,6 @@ interface DecisionVersion {
   author: Person;
 }
 
-const STATUS_META: Record<Status, { label: string; icon: typeof Circle; color: string }> = {
-  todo: { label: "待办", icon: Circle, color: "var(--status-todo)" },
-  in_progress: { label: "进行中", icon: CircleDot, color: "var(--status-doing)" },
-  review: { label: "评审", icon: CircleDot, color: "var(--status-warn)" },
-  done: { label: "已完成", icon: CheckCircle2, color: "var(--status-done)" },
-};
 
 const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
   low: { label: "低", color: "var(--meta)" },

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, runWithAuthOp } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
+import { generateSlug } from "@/lib/slug";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { signAccessToken } from "@/lib/jwt";
@@ -54,29 +55,10 @@ export async function POST(req: NextRequest) {
     }
 
     // 2) 创建首个工作区 + owner 成员（单事务，走 provision 逃生口）
-    // slug 仅保留 URL 安全字符；中文名等清洗后为空时回退到 "ws"
-    const baseSlug =
-      validated.workspaceName
-        .toLowerCase()
-        .replace(/\s+/g, "-")
-        .replace(/[^a-z0-9-]/g, "")
-        .replace(/-+/g, "-")
-        .replace(/^-|-$/g, "")
-        .slice(0, 40) || "ws";
+    const slug = await generateSlug(validated.workspaceName);
     const { workspace } = await runWithAuthOp(
       "provision",
       async (tx) => {
-        // slug 有全局唯一约束：冲突时追加短随机后缀，最多重试 5 次；
-        // 并发窗口内的残余碰撞由 DB unique 约束兜底（事务整体回滚，前端可安全重试）
-        let slug = baseSlug;
-        for (let attempt = 0; attempt < 5; attempt++) {
-          const exists = await tx.workspace.findUnique({
-            where: { slug },
-            select: { id: true },
-          });
-          if (!exists) break;
-          slug = `${baseSlug}-${Math.random().toString(36).slice(2, 6)}`;
-        }
         const ws = await tx.workspace.create({
           data: { name: validated.workspaceName, slug, ownerId: baUser.id },
         });

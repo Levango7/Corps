@@ -127,6 +127,37 @@ docker tag <registry>/corps-web:<prev-sha> corps-web:latest
 
 ---
 
+## 4.5 备份与恢复
+
+### 备份脚本
+
+`scripts/backup-db.sh`：pg_dump + gzip + 保留 N 天轮转。
+
+```bash
+DATABASE_URL="postgresql://postgres:xxx@localhost:5432/corps" \
+BACKUP_DIR="/data/backups" \
+RETENTION_DAYS=7 \
+bash scripts/backup-db.sh
+```
+
+### cron 示例（每天凌晨 3 点）
+
+```bash
+0 3 * * * DATABASE_URL="postgresql://..." BACKUP_DIR="/data/backups" RETENTION_DAYS=7 bash /app/scripts/backup-db.sh >> /var/log/backup.log 2>&1
+```
+
+### 恢复步骤
+
+```bash
+gunzip -c /data/backups/corps_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
+```
+
+### RPO 声明
+
+逻辑备份（pg_dump），非 WAL 连续归档。RPO ≈ 备份间隔（默认 24 小时），不保证零数据丢失。
+
+---
+
 ## 5. 安全事项（2026-08-24 泄密轮换要求）
 
 2026-08-24 发现示例密码 `cde5c8ed4f42f7bf880d0e46` 曾随 `.env.example` 与

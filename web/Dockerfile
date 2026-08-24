@@ -29,15 +29,13 @@ RUN ENGINES_DIR=$(find node_modules -path "*/@prisma/engines" -type d 2>/dev/nul
     && if [ -n "$ENGINES_DIR" ]; then \
       mkdir -p .next/standalone/node_modules/@prisma/engines \
       && cp -rL "$ENGINES_DIR"/* .next/standalone/node_modules/@prisma/engines/; \
-    fi \
-    || true
+    fi
 # 同样复制 prisma client 的生成产物（.prisma/client 包含引擎 .node）
 RUN CLIENT_DIR=$(find node_modules -path "*/.prisma/client" -type d 2>/dev/null | head -1) \
     && if [ -n "$CLIENT_DIR" ]; then \
       mkdir -p .next/standalone/node_modules/.prisma/client \
       && cp -rL "$CLIENT_DIR"/* .next/standalone/node_modules/.prisma/client/; \
-    fi \
-    || true
+    fi
 
 # ===== 阶段3: 运行 =====
 FROM node:22-alpine AS runner
