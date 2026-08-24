@@ -19,7 +19,12 @@ export async function GET() {
     ]);
     return NextResponse.json({
       code: 200,
-      data: { status: "ok", db: "up" },
+      data: {
+        status: "ok",
+        db: "up",
+        // 进程运行秒数：供监控判断进程是否频繁重启（如 OOM/崩溃循环）
+        uptimeSec: Math.round(process.uptime()),
+      },
     });
   } catch (error) {
     console.error("[GET /api/health] database probe failed:", error);

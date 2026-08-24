@@ -132,19 +132,19 @@ describe("checkRateLimit - 路由层封装", () => {
     });
   }
 
-  it("RATE_LIMIT_DISABLED=1 时直接返回 null（禁用限流）", () => {
+  it("RATE_LIMIT_DISABLED=1 时直接返回 null（禁用限流）", async () => {
     process.env.RATE_LIMIT_DISABLED = "1";
     const req = makeReq("9.9.9.9");
     // 即使远超 max，也必须放行（返回 null）
     for (let i = 0; i < RULE.max + 5; i++) {
-      expect(checkRateLimit(req, "login-disabled-test", RULE)).toBeNull();
+      await expect(checkRateLimit(req, "login-disabled-test", RULE)).resolves.toBeNull();
     }
   });
 
-  it("未超限时返回 null（放行）", () => {
+  it("未超限时返回 null（放行）", async () => {
     delete process.env.RATE_LIMIT_DISABLED;
     const req = makeReq(`8.8.8.${Math.floor(Math.random() * 200) + 1}`);
-    expect(checkRateLimit(req, "login-check-ok", RULE)).toBeNull();
+    await expect(checkRateLimit(req, "login-check-ok", RULE)).resolves.toBeNull();
   });
 
   it("超限时返回 429 响应并带 Retry-After 头与中文 message", async () => {
@@ -154,11 +154,11 @@ describe("checkRateLimit - 路由层封装", () => {
 
     // 耗尽配额
     for (let i = 0; i < RULE.max; i++) {
-      expect(checkRateLimit(req, bucket, RULE)).toBeNull();
+      await expect(checkRateLimit(req, bucket, RULE)).resolves.toBeNull();
     }
 
     // 第 max+1 次：429
-    const res = checkRateLimit(req, bucket, RULE);
+    const res = await checkRateLimit(req, bucket, RULE);
     expect(res).not.toBeNull();
     expect(res!.status).toBe(429);
     expect(res!.headers.get("retry-after")).toBeTruthy();

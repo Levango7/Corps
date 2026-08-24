@@ -13,7 +13,7 @@ const loginSchema = z.object({
 
 export async function POST(req: NextRequest) {
   // 限流：单 IP 每分钟最多 10 次，防撞库 / 暴力破解
-  const limited = checkRateLimit(req, "login", { windowMs: 60_000, max: 10 });
+  const limited = await checkRateLimit(req, "login", { windowMs: 60_000, max: 10 });
   if (limited) return limited;
 
   try {

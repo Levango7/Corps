@@ -3,9 +3,13 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
 import { z } from "zod";
-import { randomUUID } from "crypto";
+import { createHash, randomBytes, randomUUID } from "crypto";
 
 const inviteSchema = z.object({ email: z.string().email() });
+
+/** 邀请有效期：7 天 */
+const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
+
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -23,10 +27,99 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     const invitedUser = await prisma.user.findUnique({ where: { email } });
     if (!invitedUser) {
-      // MVP：受邀人需已有 corps 账户（闭环 beta）。未注册返回明确提示。
+      // 未注册用户：创建 pending invitation 并返回一次性邀请链接（不再 422）。
+      // token 明文只在本次响应中出现一次；库中仅存 sha256 哈希，泄露库也无法伪造链接。
+      const token = randomBytes(32).toString("hex");
+      const tokenHash = createHash("sha256").update(token).digest("hex");
+      const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
+
+      const result = await runWithWorkspace(
+        wid,
+        async (tx) => {
+          // SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务（同直加路径的席位保护）
+          await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
+
+          const workspace = await tx.workspace.findUnique({ where: { id: wid } });
+          const memberCount = await tx.member.count({ where: { workspaceId: wid } });
+
+          // AC-08 席位上限：达 seatLimit 时拦截并提示升级
+          if (workspace && memberCount >= workspace.seatLimit) {
+            return { full: true as const, seatLimit: workspace.seatLimit };
+          }
+
+          // 同一 (workspace, email) 已有未接受且未过期的邀请 → 复用该记录，
+          // 覆盖新 token 并延长过期时间（旧链接随之失效）
+          const pending = await tx.invitation.findFirst({
+            where: {
+              workspaceId: wid,
+              email,
+              acceptedAt: null,
+              expiresAt: { gt: new Date() },
+            },
+          });
+
+          if (pending) {
+            await tx.invitation.update({
+              where: { id: pending.id },
+              data: { tokenHash, expiresAt, invitedBy: ctx.payload.sub },
+            });
+          } else {
+            await tx.invitation.create({
+              data: {
+                workspaceId: wid,
+                email,
+                tokenHash,
+                role: "member",
+                invitedBy: ctx.payload.sub,
+                expiresAt,
+              },
+            });
+          }
+
+          // 查询邀请人姓名和工作区名称（用于邀请邮件）
+          const inviter = await tx.user.findUnique({
+            where: { id: ctx.payload.sub },
+            select: { name: true, email: true },
+          });
+
+          return {
+            full: false as const,
+            workspaceName: workspace?.name ?? "",
+            inviterName: inviter?.name ?? inviter?.email ?? "",
+          };
+        },
+        ctx.payload.sub,
+      );
+
+      if (result.full) {
+        return NextResponse.json(
+          { code: 402, message: "席位已满，请升级套餐以邀请更多成员", seatLimit: result.seatLimit },
+          { status: 402 },
+        );
+      }
+
+      // 发送邀请邮件（失败不阻断邀请，仅记录日志）
+      try {
+        await sendInviteEmail({
+          to: email,
+          workspaceName: result.workspaceName,
+          inviterName: result.inviterName,
+        });
+      } catch (emailError) {
+        console.error("[invite] sendInviteEmail failed:", emailError);
+      }
+
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       return NextResponse.json(
-        { code: 422, message: "该邮箱尚未注册 corps，请先邀请对方注册" },
-        { status: 422 },
+        {
+          code: 201,
+          data: {
+            pending: true,
+            email,
+            inviteUrl: `${appUrl}/auth/signup?invite=${token}`,
+          },
+        },
+        { status: 201 },
       );
     }
 

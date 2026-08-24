@@ -20,6 +20,7 @@ spec/SPEC.md                      # MVP规格契约（锁定版）
 api/openapi.yaml                  # API契约（25路径）
 db/schema.sql                     # 9表+RLS策略
 docs/decisions/                   # ADR-001 ~ ADR-005（架构决策记录）
+docs/runbook-monitoring.md        # 监控手册（分层监控现状/告警策略/smoke 处置流程）
 ```
 
 ### 后端工程（本次落地，28个文件）

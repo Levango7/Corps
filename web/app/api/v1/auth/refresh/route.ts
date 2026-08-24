@@ -8,7 +8,7 @@ const refreshSchema = z.object({ workspaceId: z.string().uuid().optional() });
 
 export async function POST(req: NextRequest) {
   // 限流：单 IP 每分钟最多 60 次（正常前端轮换频率远低于此，仅拦异常刷接口）
-  const limited = checkRateLimit(req, "refresh", { windowMs: 60_000, max: 60 });
+  const limited = await checkRateLimit(req, "refresh", { windowMs: 60_000, max: 60 });
   if (limited) return limited;
 
   try {

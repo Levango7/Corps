@@ -90,7 +90,9 @@ stripe trigger checkout.session.completed
 | PATCH            | /api/v1/workspaces/:wid/tasks/:id/decisions/:did | 编辑决策（版本 +1，baseVersion 乐观并发）      |
 | GET              | /api/v1/workspaces/:wid/tasks/:id/decisions/:did/versions | 决策版本历史（倒序）                   |
 | GET              | /api/v1/workspaces/:wid/members             | 成员列表（含 isSelf）                               |
-| POST             | /api/v1/workspaces/:wid/members/invite      | 邀请成员（需对方已注册）                            |
+| POST             | /api/v1/workspaces/:wid/members/invite      | 邀请成员（已注册直加；未注册返回 pending 邀请链接）  |
+| GET              | /api/v1/invitations/:token                  | 邀请公开预览（无需认证；404/410 失效态）             |
+| POST             | /api/v1/invitations/:token/accept           | 接受邀请（需登录且邮箱匹配；席位校验、幂等消费）     |
 | PATCH/DELETE     | /api/v1/workspaces/:wid/members/:uid        | 变更角色（admin/member，owner 不可改）/ 移除成员    |
 | GET/PATCH        | /api/v1/workspaces/:wid/notifications       | 通知列表（?unread&count）/ 标记已读（单条或全部）   |
 | GET              | /api/v1/workspaces/:wid/analytics/overview  | 分析概览：漏斗/每日趋势/Top 事件（owner/admin）     |

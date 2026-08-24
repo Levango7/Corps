@@ -10,7 +10,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    This contract currently defines 25 paths (updated 2026-08-24).
+    This contract currently defines 27 paths (updated 2026-08-27).
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:
@@ -697,6 +697,86 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # ===========================================================================
+  # INVITATIONS（邀请未注册用户）
+  # ===========================================================================
+  /api/v1/invitations/{token}:
+    get:
+      tags: [members]
+      summary: Preview an invitation (public)
+      description: >
+        Public endpoint (no auth): resolves the sha256 hash of the plaintext token
+        and returns the workspace name, inviter, masked email and expiry for the
+        signup page. Unknown token → 404; already accepted or expired → 410.
+      operationId: previewInvitation
+      security: []
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      workspaceName: { type: string }
+                      inviterName: { type: string }
+                      emailMasked: { type: string, example: 'jo***@example.com' }
+                      expiresAt: { type: string, format: date-time }
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Invitation already accepted or expired
+
+  /api/v1/invitations/{token}/accept:
+    post:
+      tags: [members]
+      summary: Accept an invitation
+      description: >
+        Requires auth (Better Auth session or Bearer JWT). The logged-in user's email
+        must match the invited email (case-insensitive) → otherwise 403. Joins the
+        workspace inside a seat-checked RLS transaction (seat limit exceeded → 402);
+        idempotent if the user is already a member. Consumed invitation → 410.
+      operationId: acceptInvitation
+      parameters:
+        - name: token
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Invitation accepted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      workspaceId: { type: string, format: uuid }
+                      workspaceName: { type: string }
+                      role: { type: string, enum: [admin, member] }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '410':
+          description: Invitation already accepted or expired
 
   # ===========================================================================
   # COMMENTS

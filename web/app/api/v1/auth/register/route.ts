@@ -15,7 +15,7 @@ const registerSchema = z.object({
 
 export async function POST(req: NextRequest) {
   // 限流：单 IP 每小时最多 10 次，防批量注册 / 垃圾账号
-  const limited = checkRateLimit(req, "register", { windowMs: 3_600_000, max: 10 });
+  const limited = await checkRateLimit(req, "register", { windowMs: 3_600_000, max: 10 });
   if (limited) return limited;
 
   try {

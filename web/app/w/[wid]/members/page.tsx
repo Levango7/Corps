@@ -19,6 +19,7 @@ import {
   Trash2,
   Users,
   CheckCircle2,
+  Link2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Member, Role } from "@/lib/types";
@@ -46,6 +47,8 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const [email, setEmail] = useState("");
   const [error, setError] = useState("");
   const [inviteSuccess, setInviteSuccess] = useState("");
+  /** 未注册邮箱邀请时后端返回的可分享链接（pending 分支） */
+  const [inviteLink, setInviteLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -71,6 +74,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   async function invite() {
     setError("");
     setInviteSuccess("");
+    setInviteLink("");
     if (busy) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
@@ -79,18 +83,43 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     }
     setBusy(true);
     try {
-      await api(`/api/v1/workspaces/${wid}/members/invite`, {
+      const res = await api<{
+        pending: boolean;
+        email: string;
+        inviteUrl?: string;
+      } | null>(`/api/v1/workspaces/${wid}/members/invite`, {
         method: "POST",
         body: JSON.stringify({ email: email.trim() }),
       });
-      setEmail("");
-      setInviteSuccess("已发送邀请邮件");
-      setTimeout(() => setInviteSuccess(""), 3000);
+      if (res?.pending && res.inviteUrl) {
+        // 未注册用户：展示可分享的邀请链接（后端已尝试发邮件，此处兜底手动分享）
+        setInviteSuccess(`已为 ${res.email} 创建邀请（7 天有效），可复制链接发给对方`);
+        setInviteLink(res.inviteUrl);
+      } else {
+        // 已注册用户：直接加入工作区
+        setEmail("");
+        setInviteSuccess("已发送邀请邮件");
+      }
+      setTimeout(() => {
+        setInviteSuccess("");
+        setInviteLink("");
+      }, 8000);
       await load();
     } catch (e) {
       setError(e instanceof Error ? e.message : "邀请失败");
     } finally {
       setBusy(false);
+    }
+  }
+
+  /** 复制邀请链接到剪贴板，失败时降级为选中提示 */
+  async function copyInviteLink() {
+    if (!inviteLink) return;
+    try {
+      await navigator.clipboard.writeText(inviteLink);
+      setInviteSuccess("链接已复制到剪贴板");
+    } catch {
+      setInviteSuccess("复制失败，请手动选择并复制上方链接");
     }
   }
 
@@ -174,7 +203,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && invite()}
-              placeholder="输入已注册的邮箱地址"
+              placeholder="输入邮箱地址（未注册也可邀请）"
               className="w-full sm:w-auto sm:flex-1 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
             <button
@@ -189,7 +218,23 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           {inviteSuccess && (
             <div className="mb-4 flex items-start gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-sm)]">
               <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-[var(--success)]" />
-              <span>{inviteSuccess}</span>
+              <div className="min-w-0">
+                <span>{inviteSuccess}</span>
+                {inviteLink && (
+                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
+                    <code className="flex-1 min-w-0 truncate px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--surface-3)] text-[length:var(--text-xs)] text-[var(--fg-2)]">
+                      {inviteLink}
+                    </code>
+                    <button
+                      onClick={copyInviteLink}
+                      className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                    >
+                      <Link2 size={12} />
+                      复制链接
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </>
@@ -229,7 +274,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       )}
 
       <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
-        邀请前对方需先在 corps 注册账号。拥有者不可被移除或降级；转让拥有者权限需在设置中操作。
+        未注册的同事会收到一条 7 天有效的专属邀请链接，注册后自动加入。拥有者不可被移除或降级；转让拥有者权限需在设置中操作。
       </p>
     </div>
   );

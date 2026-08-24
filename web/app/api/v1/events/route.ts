@@ -58,7 +58,7 @@ const batchSchema = z.object({
 
 export async function POST(req: NextRequest) {
   // 限流：单 IP 每分钟最多 120 次（批量上报场景放宽，仍拦异常洪泛）
-  const limited = checkRateLimit(req, "events", { windowMs: 60_000, max: 120 });
+  const limited = await checkRateLimit(req, "events", { windowMs: 60_000, max: 120 });
   if (limited) return limited;
 
   try {

@@ -123,6 +123,90 @@ jobs:
             rm -f next-dev.pid
           fi
 
+  # E2E 生产构建验证：集成测试此前只在 next dev（dev server）上运行过，
+  # 本 job 用 npx next build + next start 对生产构建产物做端到端验证，
+  # 弥补"dev server 通过 ≠ 生产构建可用"的缺口（如 standalone/turbopack 差异、
+  # 生产模式下的环境变量与路由行为）。
+  e2e:
+    name: E2E (production build)
+    needs: [lint, test]
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: corps_test
+        ports:
+          - 5432:5432
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npx prisma generate
+      # 生产方式应用迁移，与 test job 一致
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+      - name: Build production bundle
+        run: npx next build
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+          JWT_ACCESS_SECRET: ci-test-access-secret
+          JWT_REFRESH_SECRET: ci-test-refresh-secret
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - name: Start production server and wait for readiness
+        shell: bash
+        run: |
+          nohup npx next start -p 3000 > next-start.log 2>&1 &
+          echo $! > next.pid
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:3000/api/health > /dev/null; then
+              echo "production server ready"
+              break
+            fi
+            sleep 2
+          done
+          curl -sf http://localhost:3000/api/health > /dev/null || { cat next-start.log; exit 1; }
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+          JWT_ACCESS_SECRET: ci-test-access-secret
+          JWT_REFRESH_SECRET: ci-test-refresh-secret
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # 集成测试同源高频请求会被限流拦截，测试环境关闭限流
+          RATE_LIMIT_DISABLED: "1"
+      - name: Run integration tests against production build
+        run: npx vitest run tests/integration
+        env:
+          TEST_BASE_URL: http://localhost:3000/api/v1
+          RATE_LIMIT_DISABLED: "1"
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+          JWT_ACCESS_SECRET: ci-test-access-secret
+          JWT_REFRESH_SECRET: ci-test-refresh-secret
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - name: Stop production server
+        if: always()
+        shell: bash
+        run: |
+          if [ -f next.pid ]; then
+            kill "$(cat next.pid)" 2>/dev/null || true
+            rm -f next.pid
+          fi
+
   build:
     name: Build
     needs: [lint, test, audit]

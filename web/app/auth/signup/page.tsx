@@ -1,9 +1,16 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Loader2, AlertCircle } from "lucide-react";
+import { Loader2, AlertCircle, UserPlus } from "lucide-react";
+
+interface InvitePreview {
+  workspaceName: string;
+  inviterName: string;
+  emailMasked: string;
+  expiresAt: string;
+}
 
 export default function SignupPage() {
   const [email, setEmail] = useState("");
@@ -13,6 +20,55 @@ export default function SignupPage() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const router = useRouter();
+
+  // ─── 邀请链接支持（?invite=<token>）─────────────────────────────
+  const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
+  const [inviteError, setInviteError] = useState("");
+
+  useEffect(() => {
+    // 用 window.location.search 而非 useSearchParams，避免静态预渲染时的 Suspense 约束
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token) return;
+    let cancelled = false;
+    fetch(`/api/v1/invitations/${encodeURIComponent(token)}`)
+      .then(async (res) => {
+        if (!res.ok) {
+          throw new Error(res.status === 410 ? "该邀请已失效或已被使用" : "邀请链接无效");
+        }
+        const json = await res.json();
+        if (!cancelled) setInvitePreview(json.data as InvitePreview);
+      })
+      .catch((e: unknown) => {
+        if (!cancelled) setInviteError(e instanceof Error ? e.message : "邀请链接无效");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  /** 注册成功且带邀请 token 时：接受邀请加入对方工作区；失败返回 null 不阻断注册流程 */
+  async function acceptInvitation(): Promise<string | null> {
+    const token = new URLSearchParams(window.location.search).get("invite");
+    if (!token) return null;
+    try {
+      const res = await fetch(`/api/v1/invitations/${encodeURIComponent(token)}/accept`, {
+        method: "POST",
+        credentials: "include",
+      });
+      if (res.ok) {
+        const json = await res.json();
+        return (json.data as { workspaceId: string }).workspaceId ?? null;
+      }
+      setError(
+        res.status === 402
+          ? "该工作区席位已满，未能自动加入，请联系管理员"
+          : "自动加入工作区失败，可稍后在成员页重新获取邀请",
+      );
+    } catch {
+      setError("自动加入工作区失败，可稍后在成员页重新获取邀请");
+    }
+    return null;
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -39,7 +95,9 @@ export default function SignupPage() {
         return;
       }
 
-      router.push(`/w/${data.data.workspace.id}`);
+      // 带邀请 token：先接受邀请加入对方工作区；否则进入自己刚创建的工作区
+      const invitedWid = await acceptInvitation();
+      router.push(`/w/${invitedWid ?? data.data.workspace.id}`);
     } catch {
       setError("网络异常，请检查连接后重试");
       setBusy(false);
@@ -84,6 +142,27 @@ export default function SignupPage() {
           一分钟建好，之后再邀请同事。
         </p>
       </div>
+
+      {/* 邀请上下文提示（仅带 ?invite= 链接时出现） */}
+      {(invitePreview || inviteError) && (
+        <div
+          className={`mb-[var(--space-4)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] ${
+            invitePreview
+              ? "bg-[var(--success-soft)] text-[var(--success-fg)]"
+              : "bg-[var(--warn-soft)] text-[var(--warn-fg)]"
+          }`}
+        >
+          <UserPlus size={16} className="shrink-0 mt-0.5" />
+          {invitePreview ? (
+            <span>
+              <strong>{invitePreview.inviterName}</strong> 邀请你加入「
+              {invitePreview.workspaceName}」（{invitePreview.emailMasked}）。注册后将自动加入。
+            </span>
+          ) : (
+            <span>{inviteError}</span>
+          )}
+        </div>
+      )}
 
       <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-8 shadow-[var(--elev-sm)] border border-[var(--border)]">
         {error && (

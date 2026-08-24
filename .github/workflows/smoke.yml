@@ -1,0 +1,59 @@
+# =============================================================================
+# 定时 smoke 监控：每 15 分钟探测生产/staging 的 /api/health
+#
+# 启用方式：仓库 Settings → Secrets and variables → Actions → Variables
+# 新增变量 SMOKE_TARGET_URL（如 https://corps.example.com），未配置时
+# 整个 job 自动跳过，不会产生噪音失败。
+# 探测失败时 job 失败，GitHub 会向 watch 该仓库的用户 / 工作流触发者
+# 发送默认邮件告警（Actions failure notification）。
+# =============================================================================
+name: Smoke
+
+on:
+  schedule:
+    # 每 15 分钟一次
+    - cron: "*/15 * * * *"
+  workflow_dispatch:
+
+jobs:
+  smoke-test:
+    name: Smoke test (/api/health)
+    runs-on: ubuntu-latest
+    # 未配置目标 URL 时整 job 跳过：在 repo Settings→Variables 配置后启用
+    if: vars.SMOKE_TARGET_URL != ''
+    steps:
+      - name: GET /api/health and validate payload
+        shell: bash
+        run: |
+          TARGET="${{ vars.SMOKE_TARGET_URL }}"
+          HTTP_CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 10 "$TARGET/api/health")
+          echo "HTTP $HTTP_CODE from $TARGET/api/health"
+          cat /tmp/health.json || true
+
+          # 校验 1：HTTP 状态码必须为 200
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "::error::smoke 失败：/api/health 返回 HTTP $HTTP_CODE（期望 200）"
+            exit 1
+          fi
+
+          # 校验 2：响应 JSON data.status == "ok" && data.db == "up"
+          STATUS=$(jq -r '.data.status // empty' /tmp/health.json)
+          DB=$(jq -r '.data.db // empty' /tmp/health.json)
+          if [ "$STATUS" != "ok" ] || [ "$DB" != "up" ]; then
+            echo "::error::smoke 失败：data.status=$STATUS data.db=$DB（期望 status=ok 且 db=up，说明 DB 探测未通过或应用降级）"
+            exit 1
+          fi
+          echo "smoke 通过：应用存活且数据库可达"
+
+      - name: 失败时的排查与配置指引
+        if: failure()
+        shell: bash
+        run: |
+          echo "::error::Smoke 告警处置指引 ——"
+          echo "1) 查看告警：GitHub Actions 默认会向 watch 本仓库的用户及"
+          echo "   触发该工作流的提交者发送失败邮件通知（Settings → Notifications）；"
+          echo "   本页可查看完整日志判断是 HTTP 非 200 还是 db=down。"
+          echo "2) 启用/修改监控目标：Settings → Secrets and variables → Actions"
+          echo "   → Variables → 新增/更新 SMOKE_TARGET_URL（生产或 staging 的根地址）。"
+          echo "3) 处置流程见 docs/runbook-monitoring.md §5：先 curl /api/health"
+          echo "   区分 db down 与 app down，再按 runbook-deploy.md §4 回滚 DB 或重启应用。"
