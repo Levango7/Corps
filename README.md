@@ -4,7 +4,7 @@
 
 ---
 
-## 资产总览（51个文件，33个源码文件）
+## 资产总览（60+文件，40+源码文件）
 
 ### 设计阶段（4轮迭代定稿）
 ```
@@ -17,9 +17,9 @@ design/
 ### 规格阶段（Phase 0-2）
 ```
 spec/SPEC.md                      # MVP规格契约（锁定版）
-api/openapi.yaml                  # API契约（25路径）
-db/schema.sql                     # 9表+RLS策略
-docs/decisions/                   # ADR-001 ~ ADR-005（架构决策记录）
+api/openapi.yaml                  # API契约（27路径）
+db/schema.sql                     # 15表+RLS策略（含 Better Auth 内部表与审计表）
+docs/decisions/                   # ADR-001 ~ ADR-006（架构决策记录）
 docs/runbook-monitoring.md        # 监控手册（分层监控现状/告警策略/smoke 处置流程）
 ```
 
@@ -27,8 +27,8 @@ docs/runbook-monitoring.md        # 监控手册（分层监控现状/告警策�
 ```
 web/
 ├── package.json                  # Next.js 16 + Prisma 6 + Better Auth + lucide-react
-├── prisma/schema.prisma          # 9表模型（Workspace/User/Member/Task/Comment/Decision/Session/Subscription）
-├── docker-compose.yml            # PostgreSQL 18.4 + RLS初始化
+├── prisma/schema.prisma          # 15表模型（含 BA 内部表 + ProcessedStripeEvent + AnalyticsEvent）
+├── docker-compose.yml            # PostgreSQL 18 + RLS初始化
 ├── docker/init-rls.sql           # SET LOCAL app.workspace_id 注入
 ├── lib/
 │   ├── prisma.ts                 # 单例Prisma客户端
@@ -39,7 +39,7 @@ web/
 │   ├── globals.css               # CSS变量（对齐design-tokens.css）
 │   ├── auth/login/signup/        # 登录注册页
 │   ├── w/[wid]/board/members/settings/  # 工作区页面
-│   └── api/v1/                   # 18个Route Handler
+│   └── api/v1/                   # 31个Route Handler（27 API路径）
 └── README.md
 ```
 
@@ -121,7 +121,7 @@ USING (workspace_id = current_setting('app.workspace_id')::uuid)
 | 前端 | Next.js + React | 16.2.6 / 19.2.0 |
 | CSS | Tailwind CSS | 4.1.8 |
 | ORM | Prisma | 6.15.0 |
-| DB | PostgreSQL | 18.4（RLS）。注：docker-compose 镜像当前为 postgres:16-alpine，CI 测试库为 postgres:18，16→18 升级注意事项见 docs/runbook-deploy.md |
+| DB | PostgreSQL | 18（RLS）。dev 容器 corps-postgres（5432），root compose corps-db（5433） |
 | 认证 | Better Auth（scrypt，偏差见 ADR-004/OPEN-DECISIONS） | 1.3.28 |
 | 计费 | Stripe（Checkout/Portal/Webhook） | 18.3.0 |
 | wid 令牌 | jsonwebtoken（15min access / 7d refresh） | 9.0.2 |

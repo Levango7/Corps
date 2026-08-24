@@ -14,6 +14,7 @@
 | ADR-003 | 计费方案（Stripe） | `ADR-003-计费方案.md` | — | — |
 | ADR-004 | Better Auth 认证重建 | `ADR-004-BetterAuth认证重建.md` | scrypt 偏差已 RESOLVED（2026-08-24 Spec §4 对齐） | 原 `ADR-002.md`，与技术栈选型 ADR-002 编号冲突，2026-08-24 重编号为 ADR-004 |
 | ADR-005 | Stripe 计费接入（实现） | `ADR-005-Stripe计费接入.md` | 端点路径迁至 `/workspaces/{wid}/billing/*` | 原 `ADR-003.md`，与计费方案 ADR-003 编号冲突，2026-08-24 重编号为 ADR-005 |
+| ADR-006 | RLS 激活机制与 op 信任模型 | `ADR-006-RLS激活机制与op信任模型.md` | — | 2026-08-24 审计修复新增 |
 
 阅读顺序：按编号顺序通读；ADR-004/ADR-005 分别是 ADR-002（技术栈）/ADR-003（计费方案）
 在实现层面的落地决策。

@@ -17,14 +17,14 @@
 | 运行时 | React | 19.2.0 |
 | CSS | Tailwind CSS | 4.1.8 |
 | ORM | Prisma | 6.15.0 |
-| 数据库 | PostgreSQL | 18.4 (RLS) |
+| 数据库 | PostgreSQL | 18 (RLS) |
 | 密码哈希 | scrypt（Better Auth 默认） | 随 better-auth 1.3.28 |
 | 图标 | lucide-react | 0.513.0 |
 | 校验 | zod | 3.24.4 |
 
 ---
 
-## 二、资产清单（51个文件）
+## 二、资产清单（60+文件）
 
 ### 设计阶段（已完成）
 | 文件 | 说明 |
@@ -37,9 +37,9 @@
 | 文件 | 说明 |
 |------|------|
 | `spec/SPEC.md` | MVP规格契约（P0/P1功能、API端点、验收标准） |
-| `api/openapi.yaml` | 18个端点OpenAPI定义 |
-| `db/schema.sql` | 9表DDL+RLS策略 |
-| `docs/decisions/ADR-*.md` | 架构决策记录（3份） |
+| `api/openapi.yaml` | 27个端点OpenAPI定义 |
+| `db/schema.sql` | 15表DDL+RLS策略（含迁移排序修正） |
+| `docs/decisions/ADR-*.md` | 架构决策记录（6份，含 ADR-006 RLS 信任模型） |
 
 ### 后端工程（本次落地，28个文件）
 ```
@@ -48,8 +48,8 @@ web/
 ├── tsconfig.json               # TypeScript严格模式
 ├── next.config.ts              # 安全头+standalone输出
 ├── tailwind.config.ts          # Tailwind v4配置
-├── prisma/schema.prisma        # 9表模型+索引
-├── docker-compose.yml          # PostgreSQL 18.4容器
+├── prisma/schema.prisma        # 15表模型+索引
+├── docker-compose.yml          # PostgreSQL 18容器
 ├── docker/init-rls.sql         # RLS上下文函数
 ├── lib/
 │   ├── prisma.ts               # 单例Prisma客户端
@@ -60,7 +60,7 @@ web/
 │   ├── globals.css             # CSS变量（对齐design-tokens）
 │   ├── auth/login/signup/      # 登录注册页
 │   ├── w/[wid]/board/members/settings/  # 工作区页面
-│   └── api/v1/                 # 18个Route Handler
+│   └── api/v1/                 # 31个Route Handler（27 API路径）
 └── README.md
 ```
 

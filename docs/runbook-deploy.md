@@ -196,3 +196,49 @@ PG16 数据目录格式，PostgreSQL 主版本的数据目录不兼容，**不�
   应先 `pg_dump` 导出、升级后再导入，或使用 `pg_upgrade` 流程（生产环境不适用
   本节简化做法）。
 - 参考：CI 的 test job 已经运行在 PostgreSQL 18 服务容器上，应用侧兼容性已有回归覆盖。
+
+---
+
+## 7. 生产加固必选步骤
+
+部署到生产环境前，以下步骤**必须全部完成**（非可选）：
+
+### 7.1 密钥轮换
+
+所有密钥必须在首次部署前生成全新值（见 §5 泄密轮换要求）。
+
+### 7.2 RLS 激活
+
+```bash
+# entrypoint.sh 在 RLS_ACTIVATE=true 时自动执行，手动激活：
+docker exec -i corps-postgres psql -U postgres -d corps \
+  -v app_password="$CORPS_APP_PASSWORD" \
+  -f /path/to/db/rls-activate.sql
+```
+
+验证：
+```bash
+# 确认 RLS 已启用
+docker exec corps-postgres psql -U postgres -d corps -c \
+  "SELECT tablename, relrowsecurity FROM pg_class c
+   JOIN pg_tables t ON c.relname = t.tablename
+   WHERE t.schemaname='public' AND relrowsecurity=true;"
+```
+
+### 7.3 HSTS 边缘确认
+
+middleware.ts 已在非 localhost 环境自动注入 `Strict-Transport-Security` 头。确认反向代理（Nginx/Cloudflare）未覆盖此头。
+
+### 7.4 CSP nonce 验证
+
+```bash
+curl -sI https://your-domain.com/ | grep -i content-security-policy
+# 应包含 nonce-xxxxx
+```
+
+### 7.5 备份 cron 落地
+
+```bash
+# 每日 02:00 备份，保留 7 天
+0 2 * * * /opt/corps/scripts/backup-db.sh "$DATABASE_URL" /opt/corps/backups 7 >> /var/log/corps-backup.log 2>&1
+```
