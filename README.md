@@ -1,6 +1,6 @@
 # corps 团队 SaaS - 项目落地
 
-**项目路径**: `F:\Agent\workbuddy\workspace\corps\`
+**项目路径**: `F:\Nexus\corps\`
 
 ---
 
@@ -17,9 +17,9 @@ design/
 ### 规格阶段（Phase 0-2）
 ```
 spec/SPEC.md                      # MVP规格契约（锁定版）
-api/openapi.yaml                  # 18端点API契约
+api/openapi.yaml                  # API契约（25路径）
 db/schema.sql                     # 9表+RLS策略
-docs/decisions/ADR-{001,002,003}.md  # 架构决策记录
+docs/decisions/                   # ADR-001 ~ ADR-005（架构决策记录）
 ```
 
 ### 后端工程（本次落地，28个文件）
@@ -48,14 +48,15 @@ web/
 
 ```powershell
 # 1. 安装依赖
-cd F:\Agent\workbuddy\workspace\corps\web
-npm install --legacy-peer-deps
+cd F:\Nexus\corps\web
+pnpm install --frozen-lockfile
 
-# 2. 启动PostgreSQL
+# 2. 启动PostgreSQL（仓库根目录 docker-compose.yml，容器名 corps-db；
+#    web/docker-compose.yml 的本地开发容器名为 corps-postgres）
 docker-compose up -d
 
 # 3. 等待PG就绪
-docker exec -it corps-postgres pg_isready
+docker exec -it corps-db pg_isready
 
 # 4. 配置环境变量
 copy .env.local.example .env.local
@@ -68,7 +69,7 @@ npx prisma generate
 npx prisma migrate dev --name init
 
 # 7. 启动开发服务器
-npm run dev
+pnpm dev
 ```
 
 访问 http://localhost:3000/auth/signup 完成注册。
@@ -119,8 +120,8 @@ USING (workspace_id = current_setting('app.workspace_id')::uuid)
 | 前端 | Next.js + React | 16.2.6 / 19.2.0 |
 | CSS | Tailwind CSS | 4.1.8 |
 | ORM | Prisma | 6.15.0 |
-| DB | PostgreSQL | 18.4（RLS） |
-| 认证 | Better Auth（scrypt，偏差见 ADR-002/OPEN-DECISIONS） | 1.3.28 |
+| DB | PostgreSQL | 18.4（RLS）。注：docker-compose 镜像当前为 postgres:16-alpine，CI 测试库为 postgres:18，16→18 升级注意事项见 docs/runbook-deploy.md |
+| 认证 | Better Auth（scrypt，偏差见 ADR-004/OPEN-DECISIONS） | 1.3.28 |
 | 计费 | Stripe（Checkout/Portal/Webhook） | 18.3.0 |
 | wid 令牌 | jsonwebtoken（15min access / 7d refresh） | 9.0.2 |
 | 图标 | lucide-react | 0.513.0 |

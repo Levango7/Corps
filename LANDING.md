@@ -1,7 +1,7 @@
 # corps 团队 SaaS - MVP 落地报告
 
 > 落地日期：2026-08-22
-> 项目路径：`F:\Agent\workbuddy\workspace\corps\`
+> 项目路径：`F:\Nexus\corps\`
 
 ---
 
@@ -114,15 +114,15 @@ USING (workspace_id = current_setting('app.workspace_id')::uuid)
 
 ### 步骤1：安装依赖
 ```powershell
-cd F:\Agent\workbuddy\workspace\corps\web
-npm install --legacy-peer-deps
+cd F:\Nexus\corps\web
+pnpm install --frozen-lockfile
 ```
 
 ### 步骤2：启动数据库
 ```powershell
 docker-compose up -d
 # 等待PG就绪（约10秒）
-docker exec -it corps-postgres pg_isready
+docker exec -it corps-db pg_isready
 ```
 
 ### 步骤3：配置环境变量
@@ -148,7 +148,7 @@ npm run dev
 
 ## 六、已知限制
 
-### 沙箱环境限制（本次未解决）
+### 沙箱环境限制（历史记录，2026-08-22 状态）
 - ❌ npm install 被安全策略拦截（trash操作超时）
 - ❌ prisma migrate dev 无法执行（需真实PG连接）
 - ✅ 所有源码文件已完整落盘

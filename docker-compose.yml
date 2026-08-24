@@ -9,19 +9,23 @@
 # =============================================================================
 
 services:
-  # ─── PostgreSQL 16 数据库 ──────────────────────────────────────────────────
+  # ─── PostgreSQL 18 数据库（版本已与 CI、SPEC 对齐，见 docs/runbook-deploy.md §6）───
   db:
-    image: postgres:16-alpine
+    image: postgres:18-alpine
     container_name: corps-db
     restart: unless-stopped
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cde5c8ed4f42f7bf880d0e46}
+      # 无默认值：未在 .env 设置时 compose 直接报错退出，杜绝带着示例密码上线
+      # （历史示例密码曾进版本库，见 docs/runbook-deploy.md §5 密钥轮换要求）
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD（openssl rand -hex 16）}
       POSTGRES_DB: ${POSTGRES_DB:-corps}
     ports:
       - "5433:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # PG18+ 镜像要求数据卷挂载到 /var/lib/postgresql（主版本子目录布局），
+      # 不能沿用 PG16 的 /var/lib/postgresql/data，见 docs/runbook-deploy.md §6
+      - postgres_data:/var/lib/postgresql
       # 仅首次启动时执行（创建 RLS 辅助函数 schema）
       - ./web/docker/init-rls.sql:/docker-entrypoint-initdb.d/01-init-rls.sql:ro
     healthcheck:
@@ -45,8 +49,8 @@ services:
       db:
         condition: service_healthy
     environment:
-      # 数据库连接（容器内通过 service name 'db' 解析）
-      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-cde5c8ed4f42f7bf880d0e46}@db:5432/${POSTGRES_DB:-corps}?schema=public
+      # 数据库连接（容器内通过 service name 'db' 解析；密码同样强制注入无回退）
+      DATABASE_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-corps}?schema=public
       # 认证密钥（必须为强随机值）
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}

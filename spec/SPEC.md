@@ -208,7 +208,7 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 | 日期 | 变更内容 | 原因 | 影响范围 |
 |------|----------|------|----------|
 | 2026-08-19 | 初版 Spec 锁定 | Phase 1 三文档确认 + 用户拍板 4 决策 | 全局 |
-| 2026-08-22 | 认证对齐 Better Auth（ADR-002）：身份/会话由 Better Auth 托管，wid 作用域 JWT（15min）驱动 RLS 保留；密码哈希 scrypt 偏差记入 OPEN-DECISIONS | Spec §4 锁定认证 = Better Auth，原脚手架偏离 | auth 三端点 + lib/auth.ts |
+| 2026-08-22 | 认证对齐 Better Auth（ADR-004）：身份/会话由 Better Auth 托管，wid 作用域 JWT（15min）驱动 RLS 保留；密码哈希 scrypt 偏差记入 OPEN-DECISIONS | Spec §4 锁定认证 = Better Auth，原脚手架偏离 | auth 三端点 + lib/auth.ts |
 | 2026-08-22 | Stripe 计费接入：checkout/portal/status 三端点置于 `/workspaces/:wid/billing/`，webhook 独立于 `/billing/webhook`；席位 quantity 同步 | 用户需求「接入 Better Auth / Stripe 计费」 | billing 路由 + 计费页 |
 | 2026-08-22 | 前端 UI 对齐原型（Task #13）：新建任务详情页/计费页/设置页，重写概览页/外壳/命令面板/登录注册页，零依赖 Markdown 渲染器，新建任务弹窗接入看板与概览 | 用户需求「补齐前端 UI 与原型对齐」 | web/app + web/components |
 | 2026-08-22 | 修复阻断缺陷：登录未存 access token、计费路由缺 [wid] 段、members/layout 自引用循环、schema `@db.JsonArray` 非法注解、`React.use` 未导入、6 处硬编码 text-white、缺失 --shell-*/--accent-ring/--overlay token | 端到端可运行性审查 | 前后端多文件 |
@@ -224,4 +224,4 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 |------|--------|-----------|---------------------|-----------------|------------|---------------|--------|
 | 2026-08-19 | Phase 1 | 国内支付选型（Stripe 跨境 vs 微信/支付宝） | 目标市场中国大陆 | 优先 Stripe 跨境验证，不行则微信/支付宝 | 待 Phase 2 复核合规 | Phase 2 结论 | OPEN |
 | 2026-08-19 | Phase 1 | 付费档具体定价（¥50-80/人/月 锚定 $8-12） | 免费限 10 人已定 | ¥59/人/月 起步档 | 待用户最终确认价目表 | 用户确认 | OPEN |
-| 2026-08-22 | Phase 3 (ADR-002) | 密码哈希 scrypt vs Spec 锁定 argon2id | Better Auth 1.3 稳定版未暴露 argon2 哈希钩子 | MVP 用 scrypt（强度仍够），后续评估自定义 hasher 插件或回退原生 argon2 | Better Auth 上游能力 | 用户拍板或上游支持 | RESOLVED（2026-08-24 Spec 已对齐 scrypt） |
+| 2026-08-22 | Phase 3 (ADR-004) | 密码哈希 scrypt vs Spec 锁定 argon2id | Better Auth 1.3 稳定版未暴露 argon2 哈希钩子 | MVP 用 scrypt（强度仍够），后续评估自定义 hasher 插件或回退原生 argon2 | Better Auth 上游能力 | 用户拍板或上游支持 | RESOLVED（2026-08-24 Spec 已对齐 scrypt） |

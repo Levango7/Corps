@@ -42,5 +42,12 @@ export function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: "/api/v1/:path*",
+  /**
+   * CSRF 校验范围：
+   *  - /api/v1/:path* — 业务 API
+   *  - /api/auth/:path* — Better Auth 会话端点（signIn/signUp/signOut 等），
+   *    同样是写请求入口，必须纳入 Origin 校验，否则攻击者可跨站
+   *    直接打 Better Auth 端点绕过业务层防线。
+   */
+  matcher: ["/api/v1/:path*", "/api/auth/:path*"],
 };

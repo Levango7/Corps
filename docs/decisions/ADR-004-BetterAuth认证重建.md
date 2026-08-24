@@ -1,8 +1,9 @@
-# ADR-002: 采用 Better Auth 重建认证层
+# ADR-004: 采用 Better Auth 重建认证层
 
 - **状态**：Accepted（2026-08-22，用户拍板「Better Auth 管身份 + 保留 wid 令牌」）
+- **编号说明**：原文件名 ADR-002.md，因与技术栈选型 ADR-002 编号冲突，2026-08-24 重编号为 ADR-004
 - **提交**：高见远（首席架构师）｜依据：Spec §4 认证锁定 Better Auth、§10 认证约束
-- **关联**：ADR-003（Stripe 计费）｜OPEN-DECISIONS（argon2id 偏差，2026-08-24 已 RESOLVED — Spec §4 已对齐 scrypt）
+- **关联**：ADR-005（Stripe 计费接入）｜OPEN-DECISIONS（argon2id 偏差，2026-08-24 已 RESOLVED — Spec §4 已对齐 scrypt）
 - **更新**（2026-08-24）：Spec §4/§10 密码哈希已从 argon2id 修正为 scrypt（与 Better Auth 默认一致），OPEN-DECISIONS 状态改为 RESOLVED。本 ADR 历史叙述保留不动。
 
 ---

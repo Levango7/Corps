@@ -19,7 +19,7 @@
 
 ```bash
 cd web
-npm install --legacy-peer-deps
+pnpm install --frozen-lockfile
 ```
 
 关键依赖（package.json 已锁定版本）：`better-auth@1.3.28`、`stripe@18.3.0`、`jsonwebtoken@9.0.2`、`@prisma/client@6.15.0`。
@@ -29,7 +29,9 @@ npm install --legacy-peer-deps
 ```bash
 docker-compose up -d
 # 等待就绪（约 10 秒）
-docker exec -it corps-postgres pg_isready
+docker exec -it corps-db pg_isready
+# 注：仓库根目录 docker-compose.yml 的容器名为 corps-db；
+# web/docker-compose.yml（本地开发）的容器名为 corps-postgres
 ```
 
 ### 3. 配置环境变量
@@ -38,7 +40,7 @@ docker exec -it corps-postgres pg_isready
 cp .env.local.example .env.local
 ```
 
-必填项：`DATABASE_URL`、`JWT_SECRET`、`NEXT_PUBLIC_APP_URL`。
+必填项：`DATABASE_URL`、`JWT_ACCESS_SECRET`、`JWT_REFRESH_SECRET`、`BETTER_AUTH_SECRET`、`NEXT_PUBLIC_APP_URL`。
 计费相关（可选，不配则计费页显示"未配置"提示，不阻断其他功能）：`STRIPE_SECRET_KEY`、`STRIPE_PRICE_ID`、`STRIPE_WEBHOOK_SECRET`。
 
 ### 4. 生成 Prisma Client 并迁移
@@ -74,15 +76,25 @@ stripe trigger checkout.session.completed
 | POST             | /api/v1/auth/register                       | 注册（Better Auth 建户）+ 创建首个工作区 + wid 令牌 |
 | POST             | /api/v1/auth/login                          | 登录 + wid 令牌                                     |
 | POST             | /api/v1/auth/refresh                        | 令牌轮换（可携带 workspaceId 换区）                 |
+| POST             | /api/v1/auth/logout                         | 登出（清除 Better Auth 会话 + access_token cookie） |
+| GET/PATCH        | /api/v1/users/me                            | 当前用户资料（支持 session 或 Bearer JWT 认证）     |
 | GET              | /api/health                                 | 健康检查                                            |
 | GET/POST         | /api/v1/workspaces                          | 工作区列表/创建                                     |
 | GET/PATCH        | /api/v1/workspaces/:wid                     | 工作区详情（含 role）/ 改名改 slug（owner/admin）   |
+| GET              | /api/v1/workspaces/:wid/search?q=           | 工作区内任务/决策搜索（命令面板用）                 |
 | GET/POST         | /api/v1/workspaces/:wid/tasks               | 任务列表/创建                                       |
 | GET/PATCH/DELETE | /api/v1/workspaces/:wid/tasks/:id           | 任务详情/更新/删除                                  |
+| POST             | /api/v1/workspaces/:wid/tasks/batch         | 任务批量操作（改状态/优先级/指派/删除，≤100 条）    |
 | GET/POST         | /api/v1/workspaces/:wid/tasks/:id/comments  | 评论列表/新增                                       |
 | GET/POST         | /api/v1/workspaces/:wid/tasks/:id/decisions | 决策记录（版本自增、只追加）                        |
+| PATCH            | /api/v1/workspaces/:wid/tasks/:id/decisions/:did | 编辑决策（版本 +1，baseVersion 乐观并发）      |
+| GET              | /api/v1/workspaces/:wid/tasks/:id/decisions/:did/versions | 决策版本历史（倒序）                   |
 | GET              | /api/v1/workspaces/:wid/members             | 成员列表（含 isSelf）                               |
 | POST             | /api/v1/workspaces/:wid/members/invite      | 邀请成员（需对方已注册）                            |
+| PATCH/DELETE     | /api/v1/workspaces/:wid/members/:uid        | 变更角色（admin/member，owner 不可改）/ 移除成员    |
+| GET/PATCH        | /api/v1/workspaces/:wid/notifications       | 通知列表（?unread&count）/ 标记已读（单条或全部）   |
+| GET              | /api/v1/workspaces/:wid/analytics/overview  | 分析概览：漏斗/每日趋势/Top 事件（owner/admin）     |
+| POST             | /api/v1/events                              | 客户端批量上报分析事件（白名单事件名，≤50 条）      |
 | GET              | /api/v1/workspaces/:wid/billing/status      | 订阅状态/席位占用                                   |
 | POST             | /api/v1/workspaces/:wid/billing/checkout    | 创建 Stripe Checkout 会话                           |
 | POST             | /api/v1/workspaces/:wid/billing/portal      | 创建 Customer Portal 会话                           |
@@ -130,7 +142,7 @@ web/
 
 **P1 后续迭代**：
 
-- 端到端测试（AC-01 ~ AC-06 自动化）
+- ~~端到端测试（AC-01 ~ AC-06 自动化）~~ 已完成：见 `web/tests/integration` 与 CI 待办项
 - 全局搜索（Cmd+K 当前仅导航）
 - Docker Compose 加入 Redis（缓存）
 
@@ -146,5 +158,5 @@ web/
 
 ## 待办
 
-- [ ] 端到端测试（用户本机 `npm run dev` 后按上方步骤手测核心流程）
+- [x] AC-01 ~ AC-06 自动化集成测试 —— 已实现于 `web/tests/integration`（auth/auth-flow/workspace/rbac/tasks/search/notifications），并已接入 GitHub Actions CI（`pnpm install --frozen-lockfile` → `prisma migrate deploy` → `next dev` → `vitest run`，见 `.github/workflows/ci.yml`）
 - [ ] Docker Compose 加入 Redis（后续缓存）

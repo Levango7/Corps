@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticate, runWithAuthOp, withGuc } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * POST /api/v1/events — 客户端批量上报分析事件。
@@ -56,6 +57,10 @@ const batchSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // 限流：单 IP 每分钟最多 120 次（批量上报场景放宽，仍拦异常洪泛）
+  const limited = checkRateLimit(req, "events", { windowMs: 60_000, max: 120 });
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const validated = batchSchema.parse(body);

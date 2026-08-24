@@ -102,6 +102,8 @@ jobs:
           JWT_REFRESH_SECRET: ci-test-refresh-secret
           BETTER_AUTH_SECRET: ci-test-better-auth-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # 集成测试同源高频请求会被限流拦截，测试环境关闭限流
+          RATE_LIMIT_DISABLED: "1"
       - run: npx vitest run
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
@@ -109,6 +111,8 @@ jobs:
           JWT_REFRESH_SECRET: ci-test-refresh-secret
           BETTER_AUTH_SECRET: ci-test-better-auth-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # 单元/集成测试中触发限流会造成假失败，测试环境关闭限流
+          RATE_LIMIT_DISABLED: "1"
       - name: Stop dev server
         working-directory: web
         shell: bash
@@ -165,6 +169,10 @@ jobs:
           tcb login --secretId "$CLOUDBASE_SECRET_ID" --secretKey "$CLOUDBASE_SECRET_KEY"
           echo "Deploying corps-web:${{ github.sha }} to CloudBase env $CLOUDBASE_ENV_ID"
           # TODO: 根据实际 CloudBase 服务配置调整部署命令
+          # 静默成功即"假绿"：部署命令缺失时必须显式失败，防止误判发布成功
+          echo "ERROR: CloudBase 部署命令尚未配置——此 job 刻意失败以防止假绿。"
+          echo "请按 docs/runbook-deploy.md 补齐部署命令后移除本退出码。"
+          exit 1
 
   deploy-production:
     name: Deploy Production
@@ -190,3 +198,7 @@ jobs:
           tcb login --secretId "$CLOUDBASE_SECRET_ID" --secretKey "$CLOUDBASE_SECRET_KEY"
           echo "Deploying corps-web:${{ github.sha }} to CloudBase env $CLOUDBASE_ENV_ID"
           # TODO: 根据实际 CloudBase 服务配置调整部署命令
+          # 静默成功即"假绿"：部署命令缺失时必须显式失败，防止误判发布成功
+          echo "ERROR: CloudBase 部署命令尚未配置——此 job 刻意失败以防止假绿。"
+          echo "请按 docs/runbook-deploy.md 补齐部署命令后移除本退出码。"
+          exit 1

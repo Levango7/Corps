@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
 import { randomUUID } from "crypto";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -11,6 +12,10 @@ const loginSchema = z.object({
 });
 
 export async function POST(req: NextRequest) {
+  // 限流：单 IP 每分钟最多 10 次，防撞库 / 暴力破解
+  const limited = checkRateLimit(req, "login", { windowMs: 60_000, max: 10 });
+  if (limited) return limited;
+
   try {
     const body = await req.json();
     const validated = loginSchema.parse(body);

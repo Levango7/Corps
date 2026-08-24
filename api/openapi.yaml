@@ -10,6 +10,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
+    This contract currently defines 25 paths (updated 2026-08-24).
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:
@@ -23,17 +24,25 @@ servers:
 
 tags:
   - name: auth
-    description: Registration, login, token refresh
+    description: Registration, login, token refresh, logout
+  - name: users
+    description: Current user profile
   - name: workspaces
-    description: Workspace (tenant) listing and creation
+    description: Workspace (tenant) listing, creation and detail/update
   - name: tasks
-    description: Kanban task CRUD within a workspace
+    description: Kanban task CRUD within a workspace (incl. batch ops)
   - name: members
     description: Workspace membership and role-based access control
   - name: comments
     description: Task-scoped comments with @mentions
   - name: decisions
     description: Task-linked decision records (Markdown, versioned)
+  - name: notifications
+    description: Per-user notification list and read state
+  - name: analytics
+    description: Workspace-level analytics overview (owner/admin)
+  - name: events
+    description: Client analytics event ingestion
   - name: billing
     description: Stripe Checkout / Portal / webhook
 
@@ -137,6 +146,84 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/auth/logout:
+    post:
+      tags: [auth]
+      summary: Logout (clear Better Auth session + access_token cookie)
+      description: >
+        Calls Better Auth signOut (tolerates an already-expired/missing session) and
+        expires the httpOnly `access_token` cookie. Always returns 200. Note: the
+        handler responds with { code, data } only — `message` may be omitted.
+      operationId: logout
+      responses:
+        '200':
+          description: Session cleared
+          headers:
+            Set-Cookie:
+              description: Expired httpOnly access_token cookie (maxAge=0)
+              schema: { type: string }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Null'
+
+  # ===========================================================================
+  # USERS
+  # ===========================================================================
+  /api/v1/users/me:
+    get:
+      tags: [users]
+      summary: Get the current user's profile
+      description: >
+        Resolves the caller via the Better Auth session first, falling back to the
+        Bearer access JWT — both cookie and token authentication are supported.
+      operationId: getCurrentUser
+      responses:
+        '200':
+          description: Current user profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_User'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [users]
+      summary: Update the current user's profile (name / image)
+      description: >
+        Partial update of `name` (1-100 chars) and/or `image` (must be an http(s)
+        URL or null; pseudo-protocols like file:/javascript: are rejected).
+      operationId: updateCurrentUser
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                image:
+                  nullable: true
+                  type: string
+                  format: uri
+                  pattern: '^https?://\\S+$'
+      responses:
+        '200':
+          description: Updated profile
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_User'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # ===========================================================================
   # WORKSPACES
   # ===========================================================================
@@ -175,6 +262,91 @@ paths:
                 $ref: '#/components/schemas/Envelope_Workspace'
         '400':
           $ref: '#/components/responses/BadRequest'
+
+  /api/v1/workspaces/{wid}:
+    get:
+      tags: [workspaces]
+      summary: Workspace detail (settings page / top bar)
+      description: >
+        Returns the workspace profile plus member/task counts and the caller's role.
+        Membership required; unknown-to-caller workspaces resolve to 404 (RLS-filtered).
+      operationId: getWorkspace
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Workspace detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    required: [id, name, slug, plan, seatLimit, memberCount, taskCount, role]
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      slug: { type: string }
+                      plan: { type: string, enum: [free, pro] }
+                      seatLimit: { type: integer }
+                      memberCount: { type: integer }
+                      taskCount: { type: integer }
+                      role: { type: string, enum: [owner, admin, member] }
+                      createdAt: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [workspaces]
+      summary: Rename a workspace and/or change its slug (owner/admin)
+      description: >
+        Owner/Admin only (member → 403). `name` is 2-64 chars; `slug` is 2-48 chars,
+        lowercase letters/digits/hyphens only. Duplicate slug returns 409.
+      operationId: updateWorkspace
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 2
+                  maxLength: 64
+                slug:
+                  type: string
+                  minLength: 2
+                  maxLength: 48
+                  pattern: '^[a-z0-9-]+$'
+      responses:
+        '200':
+          description: Updated workspace
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      name: { type: string }
+                      slug: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
 
   # ===========================================================================
   # SEARCH
@@ -338,6 +510,75 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  /api/v1/workspaces/{wid}/tasks/batch:
+    post:
+      tags: [tasks]
+      summary: Batch update or delete tasks (max 100 ids)
+      description: >
+        action=update applies the provided optional fields (status / priority /
+        assigneeId / dueDate) to all valid ids; action=delete removes them. Ids not
+        belonging to this workspace are reported in `skipped` instead of failing.
+        Changing `assigneeId` requires owner/admin (member → 403); the assignee must
+        be a member of this workspace (400 otherwise).
+      operationId: batchTasks
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ids, action]
+              properties:
+                ids:
+                  type: array
+                  items: { type: string, format: uuid }
+                  minItems: 1
+                  maxItems: 100
+                action:
+                  type: string
+                  enum: [update, delete]
+                status:
+                  type: string
+                  enum: [todo, in_progress, review, done]
+                priority:
+                  type: string
+                  enum: [low, medium, high, urgent]
+                assigneeId:
+                  nullable: true
+                  type: string
+                  format: uuid
+                dueDate:
+                  nullable: true
+                  type: string
+                  format: date-time
+      responses:
+        '200':
+          description: Batch result (partial success)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    required: [updated, deleted, skipped]
+                    properties:
+                      updated: { type: integer }
+                      deleted: { type: integer }
+                      skipped:
+                        type: array
+                        description: Ids not belonging to this workspace.
+                        items: { type: string, format: uuid }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
   # ===========================================================================
   # MEMBERS
   # ===========================================================================
@@ -394,6 +635,47 @@ paths:
           $ref: '#/components/responses/Conflict'
 
   /api/v1/workspaces/{wid}/members/{uid}:
+    patch:
+      tags: [members]
+      summary: Change a member's role (owner/admin)
+      description: >
+        Owner/Admin only (member → 403). Allowed target roles are `admin` / `member`;
+        the workspace owner's role cannot be changed (403). Unknown member → 404.
+      operationId: updateMemberRole
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Uid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [role]
+              properties:
+                role:
+                  type: string
+                  enum: [admin, member]
+      responses:
+        '200':
+          description: Role updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      role: { type: string, enum: [admin, member] }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
     delete:
       tags: [members]
       summary: Remove a member
@@ -539,6 +821,177 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/versions:
+    get:
+      tags: [decisions]
+      summary: Version history of a decision (newest first)
+      description: >
+        Returns all `decision_versions` rows of the decision, ordered by version
+        descending with author info. The decision must belong to the given task and
+        workspace — otherwise 404 (prevents cross-task reads).
+      operationId: listDecisionVersions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/Did'
+      responses:
+        '200':
+          description: Version history
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DecisionVersionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  # ===========================================================================
+  # ANALYTICS & NOTIFICATIONS & EVENTS
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/analytics/overview:
+    get:
+      tags: [analytics]
+      summary: Workspace analytics overview (owner/admin)
+      description: >
+        Owner/Admin only (member → 403). Aggregates the last 14 days of workspace
+        events (RLS-scoped): funnel step user counts with conversion rates,
+        per-day event counts, top-8 event names, total event count and distinct
+        active users.
+      operationId: getAnalyticsOverview
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      range:
+                        type: object
+                        properties:
+                          days: { type: integer, example: 14 }
+                          since: { type: string, format: date-time }
+                      funnel:
+                        type: array
+                        description: register → login → create_task → invite_member → create_decision
+                        items:
+                          type: object
+                          properties:
+                            name: { type: string }
+                            label: { type: string }
+                            users: { type: integer }
+                            rate: { type: integer, description: Conversion vs previous step (%) }
+                      daily:
+                        type: array
+                        items:
+                          type: object
+                          description: '{ date, _total, <eventName>: count }'
+                      topEvents:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            name: { type: string }
+                            count: { type: integer }
+                      totalEvents: { type: integer }
+                      activeUsers: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/workspaces/{wid}/notifications:
+    get:
+      tags: [notifications]
+      summary: List my notifications in this workspace / unread count
+      description: >
+        Returns up to 50 notifications of the caller (createdAt desc), scoped to both
+        user and workspace. Query flags: `unread=true` filters unread only;
+        `count=true` returns `{ unread }` instead of the list.
+      operationId: listNotifications
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: unread
+          in: query
+          schema: { type: string, enum: ['true'] }
+        - name: count
+          in: query
+          schema: { type: string, enum: ['true'] }
+      responses:
+        '200':
+          description: Notification list or unread count
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - type: object
+                    properties:
+                      code: { type: integer, example: 200 }
+                      data:
+                        type: object
+                        properties:
+                          notifications:
+                            type: array
+                            items:
+                              $ref: '#/components/schemas/Notification'
+                  - type: object
+                    properties:
+                      code: { type: integer, example: 200 }
+                      data:
+                        type: object
+                        properties:
+                          unread: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+    patch:
+      tags: [notifications]
+      summary: Mark notifications as read (single or all)
+      description: >
+        Body must provide either `id` (marks that notification, only when it belongs
+        to the caller and this workspace) or `all: true` (marks every unread
+        notification of the caller in this workspace). Otherwise 400.
+      operationId: markNotificationsRead
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [id]
+                  properties:
+                    id: { type: string, format: uuid }
+                - type: object
+                  required: [all]
+                  properties:
+                    all: { type: boolean, enum: [true] }
+      responses:
+        '200':
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      success: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # ===========================================================================
   # BILLING
   # ===========================================================================
@@ -639,6 +1092,90 @@ paths:
         '400':
           $ref: '#/components/responses/BadRequest'
 
+  # ===========================================================================
+  # EVENTS
+  # ===========================================================================
+  /api/v1/events:
+    post:
+      tags: [events]
+      summary: Batch-ingest client analytics events (max 50)
+      description: >
+        Rate-limited to 120 req/min per IP. Events are filtered against a whitelist
+        aligned with the P2 funnel (register_*/login_*/onboarding_*/create_task/
+        invite_member/create_decision/create_comment/task_status_change/page_view/
+        workspace_switch/billing_*); non-whitelisted names are silently dropped.
+        Anonymous events are allowed (userId=null); workspaceId comes from the token
+        unless overridden by the event payload. Props must not contain PII.
+      security:
+        - bearerAuth: []
+        - {}
+      operationId: ingestEvents
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [events]
+              properties:
+                events:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      name: { type: string, maxLength: 64 }
+                      props: { type: object, default: {} }
+                      sessionId: { type: string, maxLength: 64 }
+                      workspaceId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ingestion result ({ accepted } count)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      accepted: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '429':
+          description: Rate limit exceeded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+    get:
+      tags: [events]
+      summary: "[DEV ONLY] List the current user's recent events"
+      description: >
+        Debug helper returning the caller's last 50 events. Disabled in production
+        with 403; use /workspaces/{wid}/analytics/overview there instead.
+      operationId: listMyEvents
+      responses:
+        '200':
+          description: Recent events (dev only)
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Forbidden in production
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
+
 components:
   securitySchemes:
     bearerAuth:
@@ -676,7 +1213,7 @@ components:
       name: uid
       in: path
       required: true
-      description: User id (UUID) of the member to remove.
+      description: User id (UUID) of the member to update or remove.
       schema: { type: string, format: uuid }
     Did:
       name: did
@@ -863,6 +1400,97 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/BillingStatus'
+    Envelope_User:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/User'
+    Envelope_DecisionVersionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DecisionVersion'
+
+    # ---- users ----
+    User:
+      type: object
+      required: [id, email, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        name:
+          nullable: true
+          type: string
+        email:
+          type: string
+          format: email
+        image:
+          nullable: true
+          type: string
+          description: Avatar URL (http(s) only).
+        createdAt:
+          type: string
+          format: date-time
+        lastLoginAt:
+          nullable: true
+          type: string
+          format: date-time
+
+    # ---- notifications ----
+    Notification:
+      type: object
+      properties:
+        id:
+          type: string
+          format: uuid
+        type:
+          type: string
+          example: decision_updated
+        entityId:
+          nullable: true
+          type: string
+          format: uuid
+        entityTitle:
+          nullable: true
+          type: string
+        read:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+
+    # ---- decisions ----
+    DecisionVersion:
+      type: object
+      required: [id, decisionId, markdown, version, authorId, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        decisionId:
+          type: string
+          format: uuid
+        markdown:
+          type: string
+        version:
+          type: integer
+        authorId:
+          type: string
+          format: uuid
+        author:
+          type: object
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+            email: { type: string }
+        createdAt:
+          type: string
+          format: date-time
 
     # ---- auth ----
     RegisterRequest:

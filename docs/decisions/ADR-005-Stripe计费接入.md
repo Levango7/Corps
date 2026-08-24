@@ -1,8 +1,9 @@
-# ADR-003: Stripe 计费接入
+# ADR-005: Stripe 计费接入
 
 - **状态**：Accepted（2026-08-22，用户拍板「测试模式占位开发」）
+- **编号说明**：原文件名 ADR-003.md，因与计费方案 ADR-003 编号冲突，2026-08-24 重编号为 ADR-005
 - **提交**：高见远（首席架构师）｜依据：Spec §2（P1 席位计费雏形）、§5（billing 端点）、§6（subscriptions 表已存在）
-- **关联**：ADR-002（认证）｜OPEN-DECISIONS（国内支付选型）
+- **关联**：ADR-004（Better Auth 认证重建）｜OPEN-DECISIONS（国内支付选型）
 
 ---
 
