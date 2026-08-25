@@ -82,6 +82,16 @@ jobs:
       - run: npx prisma migrate deploy
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+      # ── RLS 引擎级冒烟（AC-04 引擎断言）：以 NOBYPASSRLS 角色直连验证租户隔离 ──
+      # 集成测试走 postgres 超级用户（绕过 RLS），此处补上数据库层的真实强制证明
+      - name: RLS engine-level smoke (db/rls-smoke.sh)
+        working-directory: .
+        shell: bash
+        run: bash db/rls-smoke.sh
+        env:
+          DATABASE_OWNER_URL: postgresql://postgres:test@localhost:5432/corps_test
+          APP_DATABASE_URL: postgresql://corps_app:rls-ci-app-password@localhost:5432/corps_test
+          CORPS_APP_PASSWORD: rls-ci-app-password
       - name: Start app for integration tests
         working-directory: web
         shell: bash

@@ -33,13 +33,15 @@
 | AC-01 | 注册创建账户+工作区+owner+JWT | `tests/integration/auth.test.ts` | ✅ 已写 |
 | AC-02 | 邮箱重复返回 409 | `tests/integration/auth.test.ts` | ✅ 已写 |
 | AC-03 | 跨租户隔离 404/403 | `tests/integration/workspace.test.ts` | ✅ 已写 |
-| AC-04 | RLS 拦截漏写 WHERE | `tests/integration/workspace.test.ts` | ⚠️ 占位 |
-| AC-05 | RBAC Member 403 | `tests/integration/workspace.test.ts` | ⚠️ 占位 |
-| AC-06 | 拖拽乐观更新持久化 | `tests/integration/workspace.test.ts` | ⚠️ 占位 |
+| AC-04 | RLS 拦截漏写 WHERE | `tests/integration/workspace.test.ts` | ✅ 已写实（应用层等价回归） |
+| AC-05 | RBAC Member 403 | `tests/integration/workspace.test.ts` | ✅ 已写实（应用层等价回归） |
+| AC-06 | 拖拽乐观更新持久化 | `tests/integration/workspace.test.ts` | ✅ 已写实（应用层等价回归） |
 | AC-07 | 15分钟内 Onboarding | `components/Onboarding.tsx` | ✅ 已实现 |
 | AC-08 | Stripe quantity 同步 | webhook route | ✅ 已实现 |
 | AC-09 | 扣款失败催缴 | webhook route | ✅ 已实现 |
 | AC-10 | 决策版本留痕+回链 | decisions route + DecisionVersion 模型 | ✅ 已实现 |
+
+> 注：AC-04 引擎层断言因 CI 以 postgres 超级用户跑库（绕过 RLS）无法在 CI 复现，当前为应用层等价回归；引擎级断言由 db/rls-smoke.sh 补充。
 
 ---
 
@@ -112,7 +114,7 @@
 | 项 | 描述 | 优先级 | 整改状态 |
 |----|------|--------|----------|
 | 1 | AC-04/05/06 测试为占位 | P1 | 需真实 PG 连接补齐 |
-| 2 | Token 存储用 localStorage | P0 | 安全审计已记录，待迁移 httpOnly cookie |
+| 2 | Token 存储用 localStorage | P0 | ✅ 已修复——lib/api.ts 全程 httpOnly cookie + credentials include（2026-08-24 审计跟进） |
 | 3 | ADR-003 国内支付 OPEN 项 | P1 | 待用户确认定价后关闭 |
 
 ---
@@ -157,6 +159,8 @@
 ---
 
 ## 7. 综合评分
+
+> ⚠️ 本节评分为 2026-08-23 时点快照，仅反映当时状态，不代表当前代码。
 
 | 维度 | 评分 | 说明 |
 |------|------|------|

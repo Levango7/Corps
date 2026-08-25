@@ -36,6 +36,25 @@ function isAllowed(req: NextRequest): boolean {
  * 使用 Web Crypto API（Edge Runtime 兼容），不依赖 Node.js crypto 模块。
  * nonce 为 Base64 编码的 16 字节随机值，满足 CSP Level 3 规范。
  */
+/**
+ * CORS 白名单（可选启用）：
+ * - 未配置 CORS_ORIGINS 时不回任何 ACAO 头——浏览器默认拦截跨源读取（fail-closed），
+ *   同源前端与 curl/服务间调用不受影响。
+ * - 配置后（逗号分隔的精确 Origin 列表），命中项获得 ACAO 回显 + Vary: Origin；
+ *   OPTIONS 预检短路返回 204（预检响应无需 CSP/nonce）。
+ * 环境变量在函数内动态读取，保证测试中 stubEnv 可生效。
+ */
+function getAllowedOrigin(req: NextRequest): string | null {
+  const origin = req.headers.get("origin");
+  if (!origin) return null;
+  const allowlist = (process.env.CORS_ORIGINS ?? "")
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (allowlist.length === 0) return null;
+  return allowlist.includes(origin) ? origin : null;
+}
+
 function generateNonce(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -43,6 +62,24 @@ function generateNonce(): string {
 }
 
 export function middleware(req: NextRequest) {
+  // CORS 预检短路：204 即满足浏览器要求；白名单命中时附带 CORS 头
+  const corsOrigin = getAllowedOrigin(req);
+  if (req.method === "OPTIONS") {
+    return new NextResponse(null, {
+      status: 204,
+      headers: corsOrigin
+        ? {
+            "Access-Control-Allow-Origin": corsOrigin,
+            "Access-Control-Allow-Methods": "GET, POST, PATCH, PUT, DELETE, OPTIONS",
+            "Access-Control-Allow-Headers": "Content-Type, Authorization",
+            "Access-Control-Allow-Credentials": "true",
+            "Access-Control-Max-Age": "86400",
+            Vary: "Origin",
+          }
+        : { Vary: "Origin" },
+    });
+  }
+
   if (!isAllowed(req)) {
     return NextResponse.json(
       { code: 403, message: "Cross-origin request blocked (CSRF protection)" },
@@ -53,6 +90,13 @@ export function middleware(req: NextRequest) {
   const nonce = generateNonce();
   const res = NextResponse.next();
   res.headers.set("x-nonce", nonce);
+
+  // CORS 响应头：仅对白名单命中的跨源请求回显（同源请求无 Origin，行为不变）
+  if (corsOrigin) {
+    res.headers.set("Access-Control-Allow-Origin", corsOrigin);
+    res.headers.set("Access-Control-Allow-Credentials", "true");
+    res.headers.append("Vary", "Origin");
+  }
 
   const csp = [
     "default-src 'self'",
