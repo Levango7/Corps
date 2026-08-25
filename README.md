@@ -1,6 +1,6 @@
 # corps 团队 SaaS - 项目落地
 
-**项目路径**: `F:\Nexus\corps\`
+**项目路径**: 仓库根目录（克隆后进入仓库所在目录，下文命令均以仓库根为起点）
 
 ---
 
@@ -48,8 +48,8 @@ web/
 ## 立即开始（用户本机执行）
 
 ```powershell
-# 1. 安装依赖
-cd F:\Nexus\corps\web
+# 1. 安装依赖（在仓库根目录执行）
+cd web
 pnpm install --frozen-lockfile
 
 # 2. 启动PostgreSQL（仓库根目录 docker-compose.yml，容器名 corps-db；
