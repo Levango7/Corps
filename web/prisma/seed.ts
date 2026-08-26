@@ -27,6 +27,9 @@ async function ensureUser(email: string, name: string, password: string) {
           userId: existing.id,
           providerId: "credential",
           accountId: email,
+          // Better Auth 1.7.1 account.issuer 为 required；credential provider
+          // 的合成 issuer = createLocalAccountIssuer("credential") = "local:credential"
+          issuer: "local:credential",
           password: hashed,
         },
       });
@@ -48,6 +51,9 @@ async function ensureUser(email: string, name: string, password: string) {
       userId: user.id,
       providerId: "credential",
       accountId: email,
+      // Better Auth 1.7.1 account.issuer 为 required；credential provider
+      // 的合成 issuer = createLocalAccountIssuer("credential") = "local:credential"
+      issuer: "local:credential",
       password: hashedPassword,
     },
   });
