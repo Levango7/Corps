@@ -208,6 +208,15 @@ jobs:
           JWT_REFRESH_SECRET: ci-test-refresh-secret
           BETTER_AUTH_SECRET: ci-test-better-auth-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000
+      - name: Install Playwright Chromium
+        run: npx playwright install chromium --with-deps
+      # 浏览器级真 E2E 冒烟（e2e/smoke.spec.ts）：注册→工作区→新建任务，
+      # 打的是上面已就绪的生产构建 server，补齐"真实浏览器水合与交互"盲区
+      - name: Run browser E2E smoke
+        run: npx playwright test --config playwright.config.ts
+        env:
+          PLAYWRIGHT_BASE_URL: http://localhost:3000
+          RATE_LIMIT_DISABLED: "1"
       - name: Stop production server
         if: always()
         shell: bash

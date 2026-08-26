@@ -7,3 +7,7 @@ node_modules
 *.log
 coverage
 next-env.d.ts
+
+# Playwright
+test-results/
+playwright-report/
