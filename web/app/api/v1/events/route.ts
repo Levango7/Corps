@@ -3,6 +3,7 @@ import { authenticate, runWithAuthOp, withGuc } from "@/lib/auth";
 import { z } from "zod";
 import { randomUUID } from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { ALLOWED_EVENT_NAMES } from "@/lib/analytics-whitelist";
 
 /**
  * POST /api/v1/events — 客户端批量上报分析事件。
@@ -17,33 +18,8 @@ import { checkRateLimit } from "@/lib/rate-limit";
  * P2 数据埋点：注册/激活/留存/转化漏斗。
  */
 
-/** 事件名白名单：与 SPEC P2 漏斗关键路径对齐。 */
-const ALLOWED_EVENT_NAMES = new Set([
-  // 注册激活漏斗
-  "register_view",
-  "register_submit",
-  "register_success",
-  "login_view",
-  "login_submit",
-  "login_success",
-  "onboarding_start",
-  "onboarding_complete",
-  "onboarding_skip",
-  // 核心激活
-  "create_task",
-  "invite_member",
-  "create_decision",
-  "create_comment",
-  "task_status_change",
-  // 留存信号
-  "page_view",
-  "workspace_switch",
-  // 转化
-  "billing_view",
-  "billing_checkout",
-  "billing_success",
-  "billing_cancel",
-]);
+// 白名单已抽至 web/lib/analytics-whitelist.ts 单一事实源（FUNNEL-METRICS §4.3）。
+// 此处直接 import ALLOWED_EVENT_NAMES，避免双源漂移。
 
 const eventSchema = z.object({
   name: z.string().max(64),

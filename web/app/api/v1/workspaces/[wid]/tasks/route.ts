@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
+import { shouldActivate } from "@/lib/analytics-activation";
+import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const createTaskSchema = z.object({
@@ -68,17 +70,27 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           where: { workspaceId: wid },
           _max: { sortOrder: true },
         });
+        const created = await tx.task.create({
+          data: {
+            ...validated,
+            workspaceId: wid,
+            createdBy: ctx.payload.sub,
+            sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+          },
+          include: { assignee: { select: { id: true, name: true, email: true } } },
+        });
+        // P2-1：isFirstTask 与 dupCount 在主事务内用 tx.count 取值
+        // isFirstTask 供 activation 判定复用，避免事务外二次计数竞态
+        // dupCount 在事务内随任务创建一并 count，消除全局实例 RLS 疑问
+        const taskCount = await tx.task.count({ where: { workspaceId: wid } });
+        const dupCount = await tx.analyticsEvent.count({
+          where: { workspaceId: wid, name: "activation_completed" },
+        });
         return {
           invalidAssignee: false as const,
-          task: await tx.task.create({
-            data: {
-              ...validated,
-              workspaceId: wid,
-              createdBy: ctx.payload.sub,
-              sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
-            },
-            include: { assignee: { select: { id: true, name: true, email: true } } },
-          }),
+          task: created,
+          isFirstTask: taskCount === 1,
+          dupCount,
         };
       },
       ctx.payload.sub,
@@ -92,6 +104,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
 
     // P2 数据埋点：create_task 事件（不阻塞主流程）
+    // selfAssigned：AC-07 他派判定（assigneeId === ctx.payload.sub 即自派）
+    const selfAssigned = !!validated.assigneeId && validated.assigneeId === ctx.payload.sub;
     await trackServerEvent({
       userId: ctx.payload.sub,
       workspaceId: wid,
@@ -101,8 +115,51 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         status: validated.status,
         hasAssignee: !!validated.assigneeId,
         hasDueDate: !!validated.dueDate,
+        selfAssigned,
       },
     });
+
+    // 激活判定：主事务提交后、响应返回前；P2-1 整块包 try-catch 失败静默
+    // 条件：isFirstTask && hasAssignee && !selfAssigned && dupCount===0 && minutesSinceRegister ≤ 15
+    // shouldActivate 纯函数见 lib/analytics-activation.ts（供单测布尔矩阵覆盖）
+    try {
+      if (
+        shouldActivate({
+          isFirstTask: task.isFirstTask,
+          assignedToOther: !!validated.assigneeId && !selfAssigned,
+          minutesSinceRegister: 0, // 占位，下方真实计算后重新判定
+          dupCount: task.dupCount,
+        })
+      ) {
+        const user = await prisma.user.findUnique({
+          where: { id: ctx.payload.sub },
+          select: { createdAt: true },
+        });
+        if (user) {
+          const minutesSinceRegister = (Date.now() - user.createdAt.getTime()) / 60_000;
+          if (
+            shouldActivate({
+              isFirstTask: task.isFirstTask,
+              assignedToOther: !!validated.assigneeId && !selfAssigned,
+              minutesSinceRegister,
+              dupCount: task.dupCount,
+            })
+          ) {
+            await trackServerEvent({
+              userId: ctx.payload.sub,
+              workspaceId: wid,
+              name: "activation_completed",
+              props: {
+                taskId: task.task.id,
+                minutesSinceRegister: Math.round(minutesSinceRegister),
+              },
+            });
+          }
+        }
+      }
+    } catch {
+      /* P2-1：判定块任一查询/写入抛错均静默，主接口已 201 不受影响 */
+    }
 
     return NextResponse.json({ code: 201, data: task.task }, { status: 201 });
   } catch (error) {

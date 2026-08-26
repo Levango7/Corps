@@ -2,7 +2,17 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { CreditCard, Check, ExternalLink, Loader2, AlertTriangle, Users, Info } from "lucide-react";
+import Link from "next/link";
+import {
+  CreditCard,
+  Check,
+  ExternalLink,
+  Loader2,
+  AlertTriangle,
+  Users,
+  Info,
+  ArrowRight,
+} from "lucide-react";
 import { api } from "@/lib/api";
 
 type Plan = "free" | "pro";
@@ -132,6 +142,13 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
           按实际席位付费，随时调整人数。
         </p>
+        {/* 互链到 /pricing 定价页（spec §1，当前窗口跳转走 next/link 客户端路由） */}
+        <Link
+          href="/pricing"
+          className="mt-3 inline-flex items-center gap-1 text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
+        >
+          查看完整功能对比 <ArrowRight size={14} aria-hidden="true" />
+        </Link>
       </div>
 
       {justPaid && (

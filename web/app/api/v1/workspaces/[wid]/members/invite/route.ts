@@ -197,11 +197,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
 
     // P2 数据埋点：invite_member 事件（不阻塞主流程）
+    // props 增强（FUNNEL-METRICS §4.2）：channel 恒 "email"（现有唯一发出方式即邮件携带链接）；
+    // seatUsage 从同函数上游 seatCheck 事务已知信息补全（全局 prisma 直查，先例 L28）
+    let seatUsage: { used: number; limit: number } | undefined;
+    try {
+      const ws = await prisma.workspace.findUnique({
+        where: { id: wid },
+        select: { seatLimit: true },
+      });
+      if (ws) {
+        const used = await prisma.member.count({ where: { workspaceId: wid } });
+        seatUsage = { used, limit: ws.seatLimit };
+      }
+    } catch {
+      // seatUsage 查询失败不阻断 invite_member 打点
+    }
     await trackServerEvent({
       userId: ctx.payload.sub,
       workspaceId: wid,
       name: "invite_member",
-      props: { role: "member" },
+      props: {
+        role: "member",
+        channel: "email",
+        ...(seatUsage ? { seatUsage } : {}),
+      },
     });
 
     return NextResponse.json({ code: 201, data: result.member }, { status: 201 });

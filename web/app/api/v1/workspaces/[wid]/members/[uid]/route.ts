@@ -115,18 +115,19 @@ export async function DELETE(
     return NextResponse.json({ code: 403, message: "不能移除工作区拥有者" }, { status: 403 });
   }
 
-  if (outcome.stripeCustomerId && outcome.stripeSubId) {
+  if (outcome.stripeCustomerId && outcome.stripeSubId && outcome.seatLimit != null) {
     try {
-      const { requireStripe } = await import("@/lib/stripe");
-      const stripe = requireStripe();
-      const sub = await stripe.subscriptions.retrieve(outcome.stripeSubId);
-      if (outcome.seatLimit != null) {
-        await stripe.subscriptions.update(outcome.stripeSubId, {
-          items: [{ id: sub.items.data[0].id, quantity: outcome.seatLimit }],
-        });
-      }
+      // AC-08：席位变化同步通道侧订阅 quantity（经 PaymentProvider 抽象，ADR-003 §5）
+      // 审计 F-11：同步口径为"购买的席位数"(seatLimit)，而非当前人数——
+      // 移除成员不应缩水已购买的席位
+      const { getPaymentProvider } = await import("@/lib/payments");
+      const provider = getPaymentProvider();
+      await provider.syncSubscription({
+        providerOrderId: outcome.stripeSubId,
+        seats: outcome.seatLimit,
+      });
     } catch {
-      /* Stripe 同步失败不阻断本地移除 */
+      /* 通道同步失败不阻断本地移除 */
     }
   }
 

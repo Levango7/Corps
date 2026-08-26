@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, authenticate, runWithAuthOp, runWithSeatCheck } from "@/lib/auth";
+import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { createHash } from "crypto";
 
@@ -115,6 +116,28 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         { code: 402, message: "席位已满，请联系工作区管理员升级套餐" },
         { status: 402 },
       );
+    }
+
+    // P2 数据埋点：invite_accepted 事件（FUNNEL-METRICS §3.5）
+    // 幂等保证：invitation.acceptedAt 一次性消费——二次请求在 L55 被 410 拦截，不会重复到达此处。
+    // channel 恒 "link"（Invitation 表无 channel 字段，能到达 accept 端点的唯一载体即邀请链接）。
+    // waitedHours：从 invitation.createdAt 至今的小时差，四舍五入保留 1 位小数。
+    // 失败静默不阻塞主流程。
+    try {
+      const waitedHours =
+        Math.round(((Date.now() - invitation.createdAt.getTime()) / 3_600_000) * 10) / 10;
+      await trackServerEvent({
+        userId: user.id,
+        workspaceId: wid,
+        name: "invite_accepted",
+        props: {
+          inviterUserId: invitation.invitedBy,
+          channel: "link",
+          waitedHours,
+        },
+      });
+    } catch {
+      /* 埋点失败不影响主流程 */
     }
 
     return NextResponse.json({

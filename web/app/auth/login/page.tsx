@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type MouseEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, AlertCircle } from "lucide-react";
+import { track } from "@/lib/analytics";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -127,6 +128,13 @@ export default function LoginPage() {
         <Link
           href="/auth/signup"
           className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
+          onClick={(e: MouseEvent) => {
+            // P2 数据埋点：click_signup（裁决一附属：本期落地范围收敛为 auth/login 页注册链接）
+            // /pricing 来源跳过 click_signup 属预期跳步（见设计文档 §4.2 跳步规则）
+            track("click_signup", { cta: "header", path: "/auth/login" });
+            // 不阻止默认导航
+            void e;
+          }}
         >
           创建一个
         </Link>

@@ -5,6 +5,7 @@ import { generateSlug } from "@/lib/slug";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { signAccessToken } from "@/lib/jwt";
+import { createHash } from "crypto";
 
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -13,6 +14,12 @@ const registerSchema = z.object({
   password: z.string().min(8),
   name: z.string().min(2).max(100).optional(),
   workspaceName: z.string().min(2).max(100),
+  // P2-5：clientSessionId zod 校验 z.string().max(64)，
+  // 对齐 events/route.ts eventSchema.sessionId 与 analytics_events.session_id varchar(64)。
+  clientSessionId: z.string().max(64).optional(),
+  // 邀请 token 上送（裁决四：signup 页读 ?invite= 并随 register 请求上送，
+  // 服务端 sha256 查 invitations.tokenHash 归因 channel="invite"）
+  inviteToken: z.string().max(256).optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -74,11 +81,39 @@ export async function POST(req: NextRequest) {
     const accessToken = await signAccessToken({ sub: baUser.id, wid: workspace.id, role: "owner" });
 
     // 4) P2 数据埋点：register_success 事件（不阻塞主流程，失败静默）
+    //    props 一次成型（裁决四）：{ plan, seatLimit, channel, inviteWorkspaceId?, src?, sessionId? }
+    //    channel 归因：inviteToken 命中 invitations.tokenHash → "invite"，否则 "organic"。
+    //    token 明文不入 props（PII 红线），props 只存枚举与 wid。
+    let channel: "organic" | "invite" = "organic";
+    let inviteWorkspaceId: string | undefined;
+    if (validated.inviteToken) {
+      try {
+        const tokenHash = createHash("sha256").update(validated.inviteToken).digest("hex");
+        const invitation = await prisma.invitation.findUnique({
+          where: { tokenHash },
+          select: { workspaceId: true },
+        });
+        // 命中即归因，不校验 acceptedAt/expiresAt（受邀新用户注册发生在 accept 之前）
+        if (invitation) {
+          channel = "invite";
+          inviteWorkspaceId = invitation.workspaceId;
+        }
+      } catch {
+        // 归因查询失败不阻断注册主流程
+      }
+    }
     await trackServerEvent({
       userId: baUser.id,
       workspaceId: workspace.id,
+      sessionId: validated.clientSessionId,
       name: "register_success",
-      props: { plan: "free", seatLimit: 10 },
+      props: {
+        plan: "free",
+        seatLimit: 10,
+        channel,
+        ...(inviteWorkspaceId ? { inviteWorkspaceId } : {}),
+        ...(validated.inviteToken ? { src: "invite" } : {}),
+      },
     });
 
     const response = NextResponse.json(

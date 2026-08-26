@@ -4,6 +4,7 @@ import { useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Loader2, AlertCircle, UserPlus } from "lucide-react";
+import { track, getSessionId } from "@/lib/analytics";
 
 interface InvitePreview {
   workspaceName: string;
@@ -28,6 +29,9 @@ export default function SignupPage() {
   useEffect(() => {
     // 用 window.location.search 而非 useSearchParams，避免静态预渲染时的 Suspense 约束
     const token = new URLSearchParams(window.location.search).get("invite");
+    // P2 数据埋点：register_view（注册页首次渲染完成）
+    // hasInvite 用于拆分自然注册与邀请注册两条子漏斗
+    track("register_view", { path: "/auth/signup", hasInvite: !!token });
     if (!token) return;
     let cancelled = false;
     fetch(`/api/v1/invitations/${encodeURIComponent(token)}`)
@@ -75,11 +79,24 @@ export default function SignupPage() {
     setError("");
     setBusy(true);
 
+    // P2 数据埋点：register_submit（提交注册表单，含后续校验失败，语义为「尝试提交」）
+    const inviteToken = new URLSearchParams(window.location.search).get("invite");
+    track("register_submit", { hasInvite: !!inviteToken });
+
     try {
+      // 上送 clientSessionId（获客段漏斗按 sessionId 串联）与 inviteToken（归因 channel="invite"）
+      const clientSessionId = getSessionId();
       const res = await fetch("/api/v1/auth/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email, password, name: name || undefined, workspaceName }),
+        body: JSON.stringify({
+          email,
+          password,
+          name: name || undefined,
+          workspaceName,
+          clientSessionId,
+          ...(inviteToken ? { inviteToken } : {}),
+        }),
         credentials: "include",
       });
 

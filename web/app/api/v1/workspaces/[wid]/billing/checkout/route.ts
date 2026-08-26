@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
-import { requireStripe, STRIPE_PRICE_ID } from "@/lib/stripe";
+import { getPaymentProvider, PaymentProviderError } from "@/lib/payments";
 import { z } from "zod";
 
+// P3-2 / 裁决三：checkout/route.ts 归支付线独占。period 字段并入本线交付。
 const checkoutSchema = z.object({
   priceId: z.string().optional(),
   successUrl: z.string().optional(),
   cancelUrl: z.string().optional(),
+  // 计费周期：缺省 monthly（保持存量客户端行为不变）；非法值由 zod 400 兜底（契约③）
+  period: z.enum(["monthly", "yearly"]).optional(),
 });
 
 /**
@@ -54,18 +57,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 
-  const priceIdDefault = STRIPE_PRICE_ID;
-  if (!priceIdDefault) {
-    return NextResponse.json(
-      { code: 400, message: "STRIPE_PRICE_ID 未配置（请在环境变量设置测试价格 ID）" },
-      { status: 400 },
-    );
-  }
-
   try {
     const body = checkoutSchema.parse(await req.json().catch(() => ({})));
-    const priceId = body.priceId ?? priceIdDefault;
-    const stripe = requireStripe();
     const { workspace, subscription } = await runWithWorkspace(
       wid,
       async (tx) => ({
@@ -84,25 +77,44 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     const successUrl = safeRedirectUrl(body.successUrl, defaultSuccessUrl, origin);
     const cancelUrl = safeRedirectUrl(body.cancelUrl, defaultCancelUrl, origin);
 
-    const session = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer: subscription?.stripeCustomerId ?? undefined,
-      line_items: [{ price: priceId, quantity: Math.max(workspace?.seatLimit ?? 1, 1) }],
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-      metadata: { workspaceId: wid },
+    const seats = Math.max(workspace.seatLimit ?? 1, 1);
+    const provider = getPaymentProvider();
+    const result = await provider.createCheckout({
+      workspaceId: wid,
+      seats,
+      period: body.period,
+      priceOverride: body.priceId,
+      successUrl,
+      cancelUrl,
+      providerCustomerId: subscription?.stripeCustomerId ?? undefined,
     });
 
     // P2 数据埋点：billing_checkout 事件（不阻塞主流程）
+    // P3-2：props 扩 period（契约⑥，缺省 monthly 时键仍写出以稳定下游聚合口径）
     await trackServerEvent({
       userId: ctx.payload.sub,
       workspaceId: wid,
       name: "billing_checkout",
-      props: { seatLimit: workspace?.seatLimit ?? 1 },
+      props: { seatLimit: seats, period: body.period ?? "monthly" },
     });
 
-    return NextResponse.json({ code: 200, data: { url: session.url } });
+    return NextResponse.json({ code: 200, data: { url: result.redirectUrl } });
   } catch (error) {
+    // 错误映射：not_configured/unsupported_period → 400；其余 → 500
+    if (error instanceof PaymentProviderError) {
+      if (error.code === "unsupported_period") {
+        return NextResponse.json({ code: 400, message: "年付价格未配置" }, { status: 400 });
+      }
+      if (error.code === "not_configured") {
+        return NextResponse.json({ code: 400, message: error.message }, { status: 400 });
+      }
+    }
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { code: 400, message: "Validation error", errors: error.errors },
+        { status: 400 },
+      );
+    }
     console.error("Billing checkout error:", error);
     return NextResponse.json(
       { code: 500, message: "计费服务暂时不可用，请稍后重试" },

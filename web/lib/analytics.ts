@@ -9,11 +9,15 @@
  *  - sendBeacon 优先：卸载时用 navigator.sendBeacon 避免请求被取消。
  *  - sessionId：localStorage 持久化匿名会话 ID（30 分钟过期），用于漏斗关联。
  *  - 不阻塞主线程：所有写入 fire-and-forget，失败静默。
+ *  - dev 环境对白名单外事件名 console.warn（FUNNEL-METRICS §4.3），生产环境仍由服务端静默丢弃。
+ *  - session_start：新建会话时同步入队一条 session_start 事件（绕开 track 避免递归）。
  *
  * 用法：
  *   import { track } from "@/lib/analytics";
  *   track("create_task", { taskId: "xxx", priority: "high" });
  */
+
+import { ALLOWED_EVENT_NAMES } from "./analytics-whitelist";
 
 const BATCH_SIZE = 20;
 const FLUSH_ENDPOINT = "/api/v1/events";
@@ -32,8 +36,27 @@ const queue: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let initialized = false;
 
-/** 获取或创建匿名会话 ID（30 分钟 TTL）。 */
-function getSessionId(): string {
+/** 公共入队逻辑（自 track() 抽出，供 session_start 同步入队复用，绕开 track 避免递归）。 */
+function enqueue(event: QueuedEvent): void {
+  queue.push(event);
+  if (queue.length >= BATCH_SIZE) {
+    flush();
+  } else if (!flushTimer) {
+    // 5 秒后兜底 flush（避免事件长时间滞留队列）
+    flushTimer = setTimeout(() => {
+      flushTimer = null;
+      flush();
+    }, 5000);
+  }
+}
+
+/**
+ * 获取或创建匿名会话 ID（30 分钟 TTL）。
+ * 公开导出：供客户端页面在提交表单时上送 clientSessionId 给服务端
+ * （register API 接收 clientSessionId 写入 register_success.sessionId，
+ * 漏斗按 sessionId 串联获客段）。新建会话时同步入队 session_start。
+ */
+export function getSessionId(): string {
   try {
     const raw = localStorage.getItem(SESSION_KEY);
     if (raw) {
@@ -52,6 +75,25 @@ function getSessionId(): string {
     localStorage.setItem(SESSION_KEY, JSON.stringify({ sid, ts: Date.now() }));
   } catch {
     // ignore
+  }
+  // 新会话：同步入队 session_start（不经 track，避免递归；失败静默）
+  // SSR 卫语句：getSessionId 仅在 track() 内调用，track 已有 typeof window 卫语句；
+  // 此处再加一道防御以备未来直接调用。
+  if (typeof window !== "undefined") {
+    try {
+      enqueue({
+        name: "session_start",
+        props: {
+          ...(document.referrer ? { referrer: document.referrer } : {}),
+          language: navigator.language,
+          screenW: window.screen.width,
+        },
+        sessionId: sid,
+        ts: Date.now(),
+      });
+    } catch {
+      /* SSR/隐私模式降级：丢事件不抛错 */
+    }
   }
   return sid;
 }
@@ -87,27 +129,21 @@ function ensureInitialized() {
  */
 export function track(name: string, props: Record<string, unknown> = {}): void {
   if (typeof window === "undefined") return;
+  // dev 环境对白名单外事件名 warn，便于排障（生产环境仍由服务端静默丢弃）
+  if (process.env.NODE_ENV !== "production" && !ALLOWED_EVENT_NAMES.has(name)) {
+    console.warn(
+      `[analytics] event "${name}" not in ALLOWED_EVENT_NAMES; will be dropped by server`,
+    );
+  }
   ensureInitialized();
 
-  const event: QueuedEvent = {
+  enqueue({
     name,
     props,
     sessionId: getSessionId(),
     workspaceId: currentWid,
     ts: Date.now(),
-  };
-  queue.push(event);
-
-  // 队列满 → 立即 flush
-  if (queue.length >= BATCH_SIZE) {
-    flush();
-  } else if (!flushTimer) {
-    // 5 秒后兜底 flush（避免事件长时间滞留队列）
-    flushTimer = setTimeout(() => {
-      flushTimer = null;
-      flush();
-    }, 5000);
-  }
+  });
 }
 
 /** 异步 flush：用 fetch POST，失败静默。 */

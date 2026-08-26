@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
-import { STRIPE_PRICE_ID, stripe } from "@/lib/stripe";
+import { getPaymentProviderSafe } from "@/lib/payments";
 
 /** GET /v1/workspaces/{wid}/billing/status — 当前套餐、席位占用与订阅状态 */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -9,6 +9,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
   try {
+    // P3-4：getPaymentProviderSafe 探测 secret + 价格就绪性，
+    // 保持现状 stripeReady = Boolean(stripe && STRIPE_PRICE_ID) 语义
+    const provider = getPaymentProviderSafe();
+    const stripeReady = provider !== null;
+    // D5：portalReady = 通道支持 portal 且 stripeReady（前端据此隐藏「管理订阅」按钮）
+    const portalReady = Boolean(provider?.capabilities.portal && stripeReady);
+
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
@@ -34,13 +41,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         seatsUsed: memberCount,
         role: ctx.member.role,
         // 未配置 Stripe 密钥/价格时，前端隐藏升级入口而不是抛错（本地开发友好）
-        stripeReady: Boolean(stripe && STRIPE_PRICE_ID),
+        stripeReady,
+        // 新增 portalReady：createPortal=null 语义在前端的静态预判（D5）
+        portalReady,
         subscription: subscription
           ? {
               status: subscription.status,
               quantity: subscription.quantity,
               currentPeriodEnd: subscription.currentPeriodEnd,
-              canManage: Boolean(subscription.stripeCustomerId),
+              // 通道无关化：有通道侧订单号且 portalReady 时可管理（字段名不变，语义泛化）
+              canManage: Boolean(subscription.providerOrderId) && portalReady,
             }
           : null,
       },
