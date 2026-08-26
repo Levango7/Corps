@@ -122,3 +122,14 @@ localStorage.setItem("corps_access_token", t);  // ❌ XSS 可达
 | P1 | CSRF Token 机制 | 0.5人天 |
 | P1 | CORS 源限制确认 | 0.2人天 |
 | P2 | 定期安全扫描（Dependabot/Snyk） | 0.5人天 |
+
+---
+
+## Phase 1 渗透测试结论（2026-08-27）
+
+- 94 个 TC 用例执行完毕，78 PASS / 7 FAIL / 7 N/A
+- 无 P0 危急缺陷
+- 2 个 P1 高危（限流 x-real-ip/XFF 伪造绕过）
+- 5 个 P2 中危（REDIS_URL 未配置、预览无限流、RLS 预览 BUG、refresh 无轮换、CSP unsafe-inline 冗余）
+- 1 个 P3 低危活跃（Markdown 协议相对 URL 外跳）
+- 详见 docs/security/PENTEST-REPORT-Phase1.md
