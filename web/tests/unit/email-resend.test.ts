@@ -23,8 +23,12 @@ let errSpy: ReturnType<typeof vi.fn>;
 const fetchMock = vi.fn();
 
 beforeEach(() => {
-  logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined) as unknown as ReturnType<typeof vi.fn>;
-  errSpy = vi.spyOn(console, "error").mockImplementation(() => undefined) as unknown as ReturnType<typeof vi.fn>;
+  logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined) as unknown as ReturnType<
+    typeof vi.fn
+  >;
+  errSpy = vi.spyOn(console, "error").mockImplementation(() => undefined) as unknown as ReturnType<
+    typeof vi.fn
+  >;
   fetchMock.mockReset();
   vi.stubGlobal("fetch", fetchMock);
   vi.stubEnv("RESEND_API_KEY", "re_test_key_123");
@@ -50,7 +54,9 @@ describe("sendInviteEmail - Resend 真实发送路径（RESEND_API_KEY 已配置
     const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
     expect(url).toBe("https://api.resend.com/emails");
     expect(init.method).toBe("POST");
-    expect((init.headers as Record<string, string>)["Authorization"]).toBe("Bearer re_test_key_123");
+    expect((init.headers as Record<string, string>)["Authorization"]).toBe(
+      "Bearer re_test_key_123",
+    );
     const body = JSON.parse(init.body as string) as Record<string, string>;
     expect(body.to).toBe("invitee@example.com");
     expect(body.subject).toContain("张三");
@@ -68,7 +74,10 @@ describe("sendInviteEmail - Resend 真实发送路径（RESEND_API_KEY 已配置
     await sendInviteEmail(makeParams({ inviterName: "<b>Eve</b>", workspaceName: 'A"&B' }));
 
     // Assert
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as Record<string, string>;
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as Record<
+      string,
+      string
+    >;
     expect(body.html).not.toContain("<b>");
     expect(body.html).toContain("&lt;b&gt;");
     expect(body.html).toContain("&quot;");
@@ -103,7 +112,10 @@ describe("sendInviteEmail - Resend 真实发送路径（RESEND_API_KEY 已配置
     await sendInviteEmail(makeParams());
 
     // Assert
-    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as Record<string, string>;
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as Record<
+      string,
+      string
+    >;
     expect(body.from).toBe("noreply@custom.dev");
   });
 

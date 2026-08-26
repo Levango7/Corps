@@ -1,11 +1,6 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { NextRequest } from "next/server";
-import {
-  rateLimit,
-  clientKey,
-  checkRateLimit,
-  type RateLimitRule,
-} from "@/lib/rate-limit";
+import { rateLimit, clientKey, checkRateLimit, type RateLimitRule } from "@/lib/rate-limit";
 
 /**
  * 内存限流器单元测试

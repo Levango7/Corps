@@ -8,15 +8,8 @@
  * 各子组件职责单一，便于测试与复用。
  */
 
-
 import { useRouter } from "next/navigation";
-import {
-  Plus,
-  Kanban,
-  GripVertical,
-  ChevronUp,
-  ChevronDown,
-} from "lucide-react";
+import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
 import { DueTag } from "@/components/DueTag";
 import type { Task } from "@/lib/types";
@@ -65,7 +58,6 @@ export function BoardColumn({
   onDropOnColumn,
   onMoveByStep,
 }: BoardColumnProps) {
-
   return (
     <div
       className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
@@ -185,7 +177,6 @@ function BoardCard({
         if (sourceId) onDropOnTask(sourceId, task.id);
       }}
     >
-
       <div className="flex items-start gap-2">
         {/* 多选模式下显示复选框 */}
         {selectionMode && (
@@ -198,10 +189,7 @@ function BoardCard({
             aria-label={`选择任务 ${task.title}`}
           />
         )}
-        <GripVertical
-          size={14}
-          className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab"
-        />
+        <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
             <span className="text-[length:var(--text-xs)] font-mono text-[var(--muted)]">
@@ -260,7 +248,13 @@ interface ListTableProps {
 }
 
 /** 列表视图表格（≥ md） */
-export function ListTable({ tasks, wid, selectedIds, selectionMode, onToggleSelect }: ListTableProps) {
+export function ListTable({
+  tasks,
+  wid,
+  selectedIds,
+  selectionMode,
+  onToggleSelect,
+}: ListTableProps) {
   const router = useRouter();
   return (
     <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden">
@@ -320,9 +314,7 @@ export function ListTable({ tasks, wid, selectedIds, selectionMode, onToggleSele
                 <td className="px-4 h-10 text-[var(--fg)] font-medium truncate max-w-xs">
                   {task.title}
                 </td>
-                <td className="px-4 h-10 text-[var(--muted)]">
-                  {task.assignee?.name ?? "—"}
-                </td>
+                <td className="px-4 h-10 text-[var(--muted)]">{task.assignee?.name ?? "—"}</td>
                 <td className="px-4 h-10">
                   <span
                     className="text-xs px-1.5 py-0.5 rounded"
@@ -360,7 +352,13 @@ interface ListCardProps {
 }
 
 /** 列表视图卡片（< md） */
-export function ListCards({ tasks, wid, selectedIds, selectionMode, onToggleSelect }: ListCardProps) {
+export function ListCards({
+  tasks,
+  wid,
+  selectedIds,
+  selectionMode,
+  onToggleSelect,
+}: ListCardProps) {
   const router = useRouter();
   return (
     <div className="md:hidden space-y-2">
@@ -407,9 +405,7 @@ export function ListCards({ tasks, wid, selectedIds, selectionMode, onToggleSele
                     aria-label={`选择任务 ${task.title}`}
                   />
                 )}
-                <p className="text-sm font-medium text-[var(--fg)] truncate flex-1">
-                  {task.title}
-                </p>
+                <p className="text-sm font-medium text-[var(--fg)] truncate flex-1">{task.title}</p>
               </div>
               <span
                 className="text-xs px-1.5 py-0.5 rounded shrink-0"

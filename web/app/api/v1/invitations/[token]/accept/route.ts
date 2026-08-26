@@ -69,50 +69,46 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
 
     const wid = invitation.workspaceId;
     // 审计 T1.2：seat 上下文（wid+uid+op）允许 FOR UPDATE 锁定工作区行做席位串行化
-    const result = await runWithSeatCheck(
-      wid,
-      user.id,
-      async (tx) => {
-        // SELECT FOR UPDATE 锁定 workspace 行，串行化并发接受事务（席位保护）
-        await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
+    const result = await runWithSeatCheck(wid, user.id, async (tx) => {
+      // SELECT FOR UPDATE 锁定 workspace 行，串行化并发接受事务（席位保护）
+      await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
 
-        const workspace = await tx.workspace.findUnique({ where: { id: wid } });
-        const memberCount = await tx.member.count({ where: { workspaceId: wid } });
+      const workspace = await tx.workspace.findUnique({ where: { id: wid } });
+      const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 
-        // AC-08 席位上限：达 seatLimit 时拦截并提示升级
-        if (workspace && memberCount >= workspace.seatLimit) {
-          return { full: true as const };
-        }
+      // AC-08 席位上限：达 seatLimit 时拦截并提示升级
+      if (workspace && memberCount >= workspace.seatLimit) {
+        return { full: true as const };
+      }
 
-        // 已是成员则直接标记 accepted 并返回（幂等）
-        const existing = await tx.member.findUnique({
-          where: { userId_workspaceId: { userId: user.id, workspaceId: wid } },
+      // 已是成员则直接标记 accepted 并返回（幂等）
+      const existing = await tx.member.findUnique({
+        where: { userId_workspaceId: { userId: user.id, workspaceId: wid } },
+      });
+
+      let role: string;
+      if (existing) {
+        role = existing.role;
+      } else {
+        const member = await tx.member.create({
+          data: {
+            userId: user.id,
+            workspaceId: wid,
+            role: invitation.role,
+            invitedBy: invitation.invitedBy,
+          },
         });
+        role = member.role;
+      }
 
-        let role: string;
-        if (existing) {
-          role = existing.role;
-        } else {
-          const member = await tx.member.create({
-            data: {
-              userId: user.id,
-              workspaceId: wid,
-              role: invitation.role,
-              invitedBy: invitation.invitedBy,
-            },
-          });
-          role = member.role;
-        }
+      // 标记邀请已被接受（一次性消费）
+      await tx.invitation.update({
+        where: { id: invitation.id },
+        data: { acceptedAt: new Date() },
+      });
 
-        // 标记邀请已被接受（一次性消费）
-        await tx.invitation.update({
-          where: { id: invitation.id },
-          data: { acceptedAt: new Date() },
-        });
-
-        return { full: false as const, role };
-      },
-    );
+      return { full: false as const, role };
+    });
 
     if (result.full) {
       return NextResponse.json(

@@ -71,36 +71,36 @@ stripe trigger checkout.session.completed
 
 ## API 端点（MVP）
 
-| Method           | Path                                        | 功能                                                |
-| ---------------- | ------------------------------------------- | --------------------------------------------------- |
-| POST             | /api/v1/auth/register                       | 注册（Better Auth 建户）+ 创建首个工作区 + wid 令牌 |
-| POST             | /api/v1/auth/login                          | 登录 + wid 令牌                                     |
-| POST             | /api/v1/auth/refresh                        | 令牌轮换（可携带 workspaceId 换区）                 |
-| POST             | /api/v1/auth/logout                         | 登出（清除 Better Auth 会话 + access_token cookie） |
-| GET/PATCH        | /api/v1/users/me                            | 当前用户资料（支持 session 或 Bearer JWT 认证）     |
-| GET              | /api/health                                 | 健康检查                                            |
-| GET/POST         | /api/v1/workspaces                          | 工作区列表/创建                                     |
-| GET/PATCH        | /api/v1/workspaces/:wid                     | 工作区详情（含 role）/ 改名改 slug（owner/admin）   |
-| GET              | /api/v1/workspaces/:wid/search?q=           | 工作区内任务/决策搜索（命令面板用）                 |
-| GET/POST         | /api/v1/workspaces/:wid/tasks               | 任务列表/创建                                       |
-| GET/PATCH/DELETE | /api/v1/workspaces/:wid/tasks/:id           | 任务详情/更新/删除                                  |
-| POST             | /api/v1/workspaces/:wid/tasks/batch         | 任务批量操作（改状态/优先级/指派/删除，≤100 条）    |
-| GET/POST         | /api/v1/workspaces/:wid/tasks/:id/comments  | 评论列表/新增                                       |
-| GET/POST         | /api/v1/workspaces/:wid/tasks/:id/decisions | 决策记录（版本自增、只追加）                        |
-| PATCH            | /api/v1/workspaces/:wid/tasks/:id/decisions/:did | 编辑决策（版本 +1，baseVersion 乐观并发）      |
-| GET              | /api/v1/workspaces/:wid/tasks/:id/decisions/:did/versions | 决策版本历史（倒序）                   |
-| GET              | /api/v1/workspaces/:wid/members             | 成员列表（含 isSelf）                               |
-| POST             | /api/v1/workspaces/:wid/members/invite      | 邀请成员（已注册直加；未注册返回 pending 邀请链接）  |
-| GET              | /api/v1/invitations/:token                  | 邀请公开预览（无需认证；404/410 失效态）             |
-| POST             | /api/v1/invitations/:token/accept           | 接受邀请（需登录且邮箱匹配；席位校验、幂等消费）     |
-| PATCH/DELETE     | /api/v1/workspaces/:wid/members/:uid        | 变更角色（admin/member，owner 不可改）/ 移除成员    |
-| GET/PATCH        | /api/v1/workspaces/:wid/notifications       | 通知列表（?unread&count）/ 标记已读（单条或全部）   |
-| GET              | /api/v1/workspaces/:wid/analytics/overview  | 分析概览：漏斗/每日趋势/Top 事件（owner/admin）     |
-| POST             | /api/v1/events                              | 客户端批量上报分析事件（白名单事件名，≤50 条）      |
-| GET              | /api/v1/workspaces/:wid/billing/status      | 订阅状态/席位占用                                   |
-| POST             | /api/v1/workspaces/:wid/billing/checkout    | 创建 Stripe Checkout 会话                           |
-| POST             | /api/v1/workspaces/:wid/billing/portal      | 创建 Customer Portal 会话                           |
-| POST             | /api/v1/billing/webhook                     | Stripe Webhook（席位同步，独立路径）                |
+| Method           | Path                                                      | 功能                                                |
+| ---------------- | --------------------------------------------------------- | --------------------------------------------------- |
+| POST             | /api/v1/auth/register                                     | 注册（Better Auth 建户）+ 创建首个工作区 + wid 令牌 |
+| POST             | /api/v1/auth/login                                        | 登录 + wid 令牌                                     |
+| POST             | /api/v1/auth/refresh                                      | 令牌轮换（可携带 workspaceId 换区）                 |
+| POST             | /api/v1/auth/logout                                       | 登出（清除 Better Auth 会话 + access_token cookie） |
+| GET/PATCH        | /api/v1/users/me                                          | 当前用户资料（支持 session 或 Bearer JWT 认证）     |
+| GET              | /api/health                                               | 健康检查                                            |
+| GET/POST         | /api/v1/workspaces                                        | 工作区列表/创建                                     |
+| GET/PATCH        | /api/v1/workspaces/:wid                                   | 工作区详情（含 role）/ 改名改 slug（owner/admin）   |
+| GET              | /api/v1/workspaces/:wid/search?q=                         | 工作区内任务/决策搜索（命令面板用）                 |
+| GET/POST         | /api/v1/workspaces/:wid/tasks                             | 任务列表/创建                                       |
+| GET/PATCH/DELETE | /api/v1/workspaces/:wid/tasks/:id                         | 任务详情/更新/删除                                  |
+| POST             | /api/v1/workspaces/:wid/tasks/batch                       | 任务批量操作（改状态/优先级/指派/删除，≤100 条）    |
+| GET/POST         | /api/v1/workspaces/:wid/tasks/:id/comments                | 评论列表/新增                                       |
+| GET/POST         | /api/v1/workspaces/:wid/tasks/:id/decisions               | 决策记录（版本自增、只追加）                        |
+| PATCH            | /api/v1/workspaces/:wid/tasks/:id/decisions/:did          | 编辑决策（版本 +1，baseVersion 乐观并发）           |
+| GET              | /api/v1/workspaces/:wid/tasks/:id/decisions/:did/versions | 决策版本历史（倒序）                                |
+| GET              | /api/v1/workspaces/:wid/members                           | 成员列表（含 isSelf）                               |
+| POST             | /api/v1/workspaces/:wid/members/invite                    | 邀请成员（已注册直加；未注册返回 pending 邀请链接） |
+| GET              | /api/v1/invitations/:token                                | 邀请公开预览（无需认证；404/410 失效态）            |
+| POST             | /api/v1/invitations/:token/accept                         | 接受邀请（需登录且邮箱匹配；席位校验、幂等消费）    |
+| PATCH/DELETE     | /api/v1/workspaces/:wid/members/:uid                      | 变更角色（admin/member，owner 不可改）/ 移除成员    |
+| GET/PATCH        | /api/v1/workspaces/:wid/notifications                     | 通知列表（?unread&count）/ 标记已读（单条或全部）   |
+| GET              | /api/v1/workspaces/:wid/analytics/overview                | 分析概览：漏斗/每日趋势/Top 事件（owner/admin）     |
+| POST             | /api/v1/events                                            | 客户端批量上报分析事件（白名单事件名，≤50 条）      |
+| GET              | /api/v1/workspaces/:wid/billing/status                    | 订阅状态/席位占用                                   |
+| POST             | /api/v1/workspaces/:wid/billing/checkout                  | 创建 Stripe Checkout 会话                           |
+| POST             | /api/v1/workspaces/:wid/billing/portal                    | 创建 Customer Portal 会话                           |
+| POST             | /api/v1/billing/webhook                                   | Stripe Webhook（席位同步，独立路径）                |
 
 ## 项目结构
 

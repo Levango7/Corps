@@ -22,7 +22,13 @@ import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
 import CommandPalette from "@/components/CommandPalette";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
-import { ThemeToggle, type ThemePref, readThemePref, resolveTheme, applyTheme } from "@/components/ThemeToggle";
+import {
+  ThemeToggle,
+  type ThemePref,
+  readThemePref,
+  resolveTheme,
+  applyTheme,
+} from "@/components/ThemeToggle";
 import type { WorkspaceSummary } from "@/lib/types";
 
 const SIDEBAR_KEY = "corps_sidebar_collapsed";

@@ -121,14 +121,12 @@ export async function GET(req: NextRequest) {
   if (!payload) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
   try {
-    const events = await withGuc(
-      { user_id: payload.sub },
-      (tx) =>
-        tx.analyticsEvent.findMany({
-          where: { userId: payload.sub },
-          orderBy: { createdAt: "desc" },
-          take: 50,
-        }),
+    const events = await withGuc({ user_id: payload.sub }, (tx) =>
+      tx.analyticsEvent.findMany({
+        where: { userId: payload.sub },
+        orderBy: { createdAt: "desc" },
+        take: 50,
+      }),
     );
     return NextResponse.json({ code: 200, data: events });
   } catch (error) {

@@ -27,10 +27,7 @@ const FUNNEL_STEPS = [
 const RANGE_DAYS = 14;
 const MS_PER_DAY = 86_400_000;
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
@@ -57,7 +54,6 @@ export async function GET(
                 createdAt: { gte: since },
                 userId: { not: null },
               },
-
             });
             return { name: step.name, label: step.label, users: result.length };
           }),
@@ -103,7 +99,6 @@ export async function GET(
             createdAt: { gte: since },
             userId: { not: null },
           },
-
         });
         const activeUsers = activeUsersAgg.length;
 
@@ -132,9 +127,6 @@ export async function GET(
     });
   } catch (error) {
     console.error("[GET analytics/overview] error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: "服务器内部错误" },
-      { status: 500 },
-    );
+    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
   }
 }

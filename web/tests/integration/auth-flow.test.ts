@@ -4,7 +4,6 @@ import {
   TEST_PASSWORD,
   uniqueEmail,
   registerUser,
-
   authHeader,
   cookieHeader,
 } from "../helpers";

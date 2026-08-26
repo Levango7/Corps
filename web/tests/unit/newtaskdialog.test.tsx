@@ -45,7 +45,9 @@ afterEach(() => {
 });
 
 /** 渲染打开状态的对话框（默认成员列表为空） */
-function renderOpen(props: { members?: Array<{ id: string; name: string | null; email: string }> } = {}) {
+function renderOpen(
+  props: { members?: Array<{ id: string; name: string | null; email: string }> } = {},
+) {
   if (props.members) {
     apiMock.mockResolvedValue(props.members);
   }
@@ -145,9 +147,7 @@ describe("NewTaskDialog - 标题 maxLength 限制", () => {
   it("输入 200 字符时不被截断", () => {
     // Arrange
     renderOpen();
-    const titleInput = screen.getByPlaceholderText(
-      "一句话说清要做什么",
-    ) as HTMLInputElement;
+    const titleInput = screen.getByPlaceholderText("一句话说清要做什么") as HTMLInputElement;
 
     // Act
     const twoHundredChars = "a".repeat(200);
@@ -160,9 +160,7 @@ describe("NewTaskDialog - 标题 maxLength 限制", () => {
   it("描述输入框 maxLength=2000", () => {
     // Arrange & Act
     renderOpen();
-    const descInput = screen.getByPlaceholderText(
-      "背景、验收标准，或粘贴相关链接…",
-    );
+    const descInput = screen.getByPlaceholderText("背景、验收标准，或粘贴相关链接…");
 
     // Assert
     expect(descInput).toHaveAttribute("maxlength", "2000");
@@ -193,9 +191,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("提交成功后调用 onClose 关闭对话框", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ id: "task-1" });
+    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -212,9 +208,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("提交时 api 被以正确的 path 与 body 调用", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ id: "task-1" });
+    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -239,9 +233,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("标题前后空格在提交时被 trim", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ id: "task-1" });
+    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -260,14 +252,10 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("描述非空时包含在提交 body 中", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ id: "task-1" });
+    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
-    const descInput = screen.getByPlaceholderText(
-      "背景、验收标准，或粘贴相关链接…",
-    );
+    const descInput = screen.getByPlaceholderText("背景、验收标准，或粘贴相关链接…");
     const form = screen.getByRole("dialog").querySelector("form")!;
 
     // Act
@@ -284,9 +272,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("描述为空时 body 中 description 为 undefined", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockResolvedValueOnce({ id: "task-1" });
+    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -306,9 +292,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 describe("NewTaskDialog - 提交错误处理", () => {
   it("api 创建失败时显示错误信息且不调用 onCreated", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockRejectedValueOnce(new Error("创建失败：标题重复"));
+    apiMock.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("创建失败：标题重复"));
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -327,9 +311,7 @@ describe("NewTaskDialog - 提交错误处理", () => {
 
   it("错误后提交按钮恢复 enabled（可重试）", async () => {
     // Arrange
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockRejectedValueOnce(new Error("网络错误"));
+    apiMock.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("网络错误"));
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -387,9 +369,7 @@ describe("NewTaskDialog - 关闭与表单清空", () => {
     const { rerender } = render(
       <NewTaskDialog wid={WID} open={true} onClose={onClose} onCreated={onCreated} />,
     );
-    const titleInput = screen.getByPlaceholderText(
-      "一句话说清要做什么",
-    ) as HTMLInputElement;
+    const titleInput = screen.getByPlaceholderText("一句话说清要做什么") as HTMLInputElement;
     fireEvent.change(titleInput, { target: { value: "残留标题" } });
     expect(titleInput.value).toBe("残留标题");
 
@@ -398,17 +378,13 @@ describe("NewTaskDialog - 关闭与表单清空", () => {
     rerender(<NewTaskDialog wid={WID} open={true} onClose={onClose} onCreated={onCreated} />);
 
     // Assert：标题应被重置为空
-    const titleInputAfter = screen.getByPlaceholderText(
-      "一句话说清要做什么",
-    ) as HTMLInputElement;
+    const titleInputAfter = screen.getByPlaceholderText("一句话说清要做什么") as HTMLInputElement;
     expect(titleInputAfter.value).toBe("");
   });
 
   it("重新打开时错误信息被清除", async () => {
     // Arrange：首次渲染触发错误
-    apiMock
-      .mockResolvedValueOnce([])
-      .mockRejectedValueOnce(new Error("首次错误"));
+    apiMock.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("首次错误"));
     const { rerender } = render(
       <NewTaskDialog wid={WID} open={true} onClose={onClose} onCreated={onCreated} />,
     );

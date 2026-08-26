@@ -1,6 +1,5 @@
 import { randomUUID } from "crypto";
 import { runWithAuthOp } from "./auth";
-import { prisma } from "./prisma";
 
 /**
  * 服务端数据埋点（审计 T1.2 配套）：

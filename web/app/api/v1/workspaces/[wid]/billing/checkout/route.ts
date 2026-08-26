@@ -3,8 +3,6 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { requireStripe, STRIPE_PRICE_ID } from "@/lib/stripe";
 import { z } from "zod";
-import { randomUUID } from "crypto";
-import { prisma } from "@/lib/prisma";
 
 const checkoutSchema = z.object({
   priceId: z.string().optional(),
@@ -19,7 +17,11 @@ const checkoutSchema = z.object({
  *   1. NEXT_PUBLIC_APP_URL（生产/预览部署域名）
  *   2. 当前请求的 origin（覆盖 localhost、内网预览等环境）
  */
-function safeRedirectUrl(input: string | undefined, fallback: string, requestOrigin: string): string {
+function safeRedirectUrl(
+  input: string | undefined,
+  fallback: string,
+  requestOrigin: string,
+): string {
   if (!input) return fallback;
   try {
     const parsed = new URL(input);
@@ -102,6 +104,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     return NextResponse.json({ code: 200, data: { url: session.url } });
   } catch (error) {
     console.error("Billing checkout error:", error);
-    return NextResponse.json({ code: 500, message: "计费服务暂时不可用，请稍后重试" }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: "计费服务暂时不可用，请稍后重试" },
+      { status: 500 },
+    );
   }
 }

@@ -87,11 +87,7 @@ export interface DecisionVersion {
 
 /** 通知类型 */
 export type NotificationType =
-  | "mention"
-  | "task_assigned"
-  | "task_updated"
-  | "comment_added"
-  | "decision_updated";
+  "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated";
 
 /** 通知 */
 export interface Notification {

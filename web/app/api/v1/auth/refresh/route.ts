@@ -43,7 +43,6 @@ export async function POST(req: NextRequest) {
     const response = NextResponse.json({
       code: 200,
       data: {
-
         workspace: { id: target.workspaceId, name: target.workspace.name, role: target.role },
       },
     });

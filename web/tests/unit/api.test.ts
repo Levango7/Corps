@@ -146,9 +146,7 @@ describe("api 客户端 - body 处理", () => {
 describe("api 客户端 - 成功响应解包", () => {
   it("返回响应体的 data 字段（信封格式解包）", async () => {
     // Arrange
-    fetchSpy.mockResolvedValue(
-      mockResponse({ code: 0, data: { id: "t-1", title: "测试任务" } }),
-    );
+    fetchSpy.mockResolvedValue(mockResponse({ code: 0, data: { id: "t-1", title: "测试任务" } }));
 
     // Act
     const result = await api<{ id: string; title: string }>("/api/v1/tasks/1");
@@ -170,9 +168,7 @@ describe("api 客户端 - 成功响应解包", () => {
 
   it("data 为数组时返回数组", async () => {
     // Arrange
-    fetchSpy.mockResolvedValue(
-      mockResponse({ code: 0, data: [{ id: "1" }, { id: "2" }] }),
-    );
+    fetchSpy.mockResolvedValue(mockResponse({ code: 0, data: [{ id: "1" }, { id: "2" }] }));
 
     // Act
     const result = await api<Array<{ id: string }>>("/api/v1/tasks");
@@ -290,9 +286,7 @@ describe("api 客户端 - 401 自动 refresh 与重试", () => {
       { status: 401 },
     );
 
-    fetchSpy
-      .mockResolvedValueOnce(unauthorizedResponse)
-      .mockResolvedValueOnce(refreshFailResponse);
+    fetchSpy.mockResolvedValueOnce(unauthorizedResponse).mockResolvedValueOnce(refreshFailResponse);
 
     // Act & Assert
     await expect(api("/api/v1/tasks/1")).rejects.toThrow("unauthorized");
@@ -316,10 +310,7 @@ describe("api 客户端 - 401 自动 refresh 与重试", () => {
 
   it("重试后的请求仍携带原始 headers 与 body", async () => {
     // Arrange
-    const unauthorizedResponse = mockResponse(
-      { code: 401, data: null },
-      { status: 401 },
-    );
+    const unauthorizedResponse = mockResponse({ code: 401, data: null }, { status: 401 });
     const successResponse = mockResponse({ code: 0, data: { ok: true } });
     const refreshResponse = mockResponse({ code: 0, data: null });
 

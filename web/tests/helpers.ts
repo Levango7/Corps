@@ -89,7 +89,10 @@ export async function registerUser(
 /**
  * 登录已存在用户，返回 access token + cookie
  */
-export async function loginUser(email: string, password: string = TEST_PASSWORD): Promise<{
+export async function loginUser(
+  email: string,
+  password: string = TEST_PASSWORD,
+): Promise<{
   user: AuthUser;
   workspaces: Array<{ id: string; name: string; slug: string; role: string }>;
   accessToken: string;
@@ -155,8 +158,24 @@ export async function inviteMember(
 export async function createTask(
   token: string,
   wid: string,
-  payload: { title: string; status?: string; priority?: string; assigneeId?: string; description?: string },
-): Promise<{ status: number; body: { code: number; data?: { id: string; title: string; status: string; priority: string } & Record<string, unknown>; message?: string } }> {
+  payload: {
+    title: string;
+    status?: string;
+    priority?: string;
+    assigneeId?: string;
+    description?: string;
+  },
+): Promise<{
+  status: number;
+  body: {
+    code: number;
+    data?: { id: string; title: string; status: string; priority: string } & Record<
+      string,
+      unknown
+    >;
+    message?: string;
+  };
+}> {
   const res = await fetch(`${BASE}/workspaces/${wid}/tasks`, {
     method: "POST",
     headers: { ...authHeader(token), "Content-Type": "application/json" },

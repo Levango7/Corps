@@ -139,7 +139,11 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
       })
       .catch((e) => {
         if (!cancelled) {
-          setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试");
+          setError(
+            e instanceof Error && e.message.includes("fetch")
+              ? "网络连接失败，请检查网络"
+              : "加载失败，请稍后重试",
+          );
           setTasks([]);
         }
       })
@@ -233,7 +237,14 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
           {error && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
               <span>{error}</span>
-              <button onClick={() => { setError(null); }} className="text-red-600 underline hover:text-red-800">重试</button>
+              <button
+                onClick={() => {
+                  setError(null);
+                }}
+                className="text-red-600 underline hover:text-red-800"
+              >
+                重试
+              </button>
             </div>
           )}
           {visibleGroups.map((group) => {

@@ -138,11 +138,9 @@ export function markdownToPlainText(md: string, limit = SUMMARY_LIMIT): string {
  */
 export type SortKey = "recent" | "due" | "priority";
 
-export function sortTasks<T extends { updatedAt?: string; dueDate?: string | null; priority: string }>(
-  tasks: T[],
-  sortKey: SortKey,
-  priorityOrder: Record<string, number>,
-): T[] {
+export function sortTasks<
+  T extends { updatedAt?: string; dueDate?: string | null; priority: string },
+>(tasks: T[], sortKey: SortKey, priorityOrder: Record<string, number>): T[] {
   const arr = tasks.slice();
   if (sortKey === "due") {
     arr.sort((a, b) => {

@@ -89,9 +89,7 @@ export function SidebarNav({
                   title={mode === "desktop" && collapsed ? label : undefined}
                 >
                   <Icon size={18} className="shrink-0" />
-                  {!(mode === "desktop" && collapsed) && (
-                    <span className="truncate">{label}</span>
-                  )}
+                  {!(mode === "desktop" && collapsed) && <span className="truncate">{label}</span>}
                 </Link>
               );
             })}
@@ -129,13 +127,7 @@ export function SidebarNav({
       <button
         onClick={mode === "desktop" ? onToggleCollapse : onClose}
         className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
-        aria-label={
-          mode === "desktop"
-            ? collapsed
-              ? "展开侧栏"
-              : "折叠侧栏"
-            : "关闭侧栏"
-        }
+        aria-label={mode === "desktop" ? (collapsed ? "展开侧栏" : "折叠侧栏") : "关闭侧栏"}
       >
         {mode === "desktop" ? (
           collapsed ? (

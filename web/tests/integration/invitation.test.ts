@@ -172,4 +172,3 @@ describe("邀请未注册用户完整流程", () => {
     expect(json.message).toContain("请使用受邀邮箱");
   });
 });
-

@@ -53,7 +53,9 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<void> 
       if (!res.ok) {
         throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
       }
-      console.log(`[email] invite sent to ${params.to} for workspace ${params.workspaceName} by ${params.inviterName}`);
+      console.log(
+        `[email] invite sent to ${params.to} for workspace ${params.workspaceName} by ${params.inviterName}`,
+      );
       return;
     } catch (err) {
       console.error("[email] invite send failed (non-blocking):", err);
@@ -64,8 +66,12 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<void> 
   // 占位路径（兼容保留）：NODE_ENV 必须在函数内部动态读取，
   // 否则测试中通过 beforeEach 设置 process.env.NODE_ENV 将不生效。
   if (process.env.NODE_ENV === "production" && process.env.SMTP_HOST) {
-    console.log(`[email] invite sent to ${params.to} for workspace ${params.workspaceName} by ${params.inviterName}`);
+    console.log(
+      `[email] invite sent to ${params.to} for workspace ${params.workspaceName} by ${params.inviterName}`,
+    );
   } else {
-    console.log(`[email-dev] invite: to=${params.to}, workspace=${params.workspaceName}, inviter=${params.inviterName}`);
+    console.log(
+      `[email-dev] invite: to=${params.to}, workspace=${params.workspaceName}, inviter=${params.inviterName}`,
+    );
   }
 }

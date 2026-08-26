@@ -129,9 +129,7 @@ describe("rate-limit - REDIS_URL 多实例共享计数", () => {
       // 降级后的后续请求走内存 Map 计数：换一个新 key 验证完整窗口行为
       // （首次失败请求已占用 "login:5.5.5.5" 的 1 次配额）
       for (let i = 0; i < RULE.max; i++) {
-        await expect(
-          mod.checkRateLimit(makeReq("6.6.6.6"), "login", RULE),
-        ).resolves.toBeNull();
+        await expect(mod.checkRateLimit(makeReq("6.6.6.6"), "login", RULE)).resolves.toBeNull();
       }
       const blocked = await mod.checkRateLimit(makeReq("6.6.6.6"), "login", RULE);
       expect(blocked).not.toBeNull();

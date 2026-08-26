@@ -44,7 +44,13 @@ interface ThemeToggleProps {
 
 export function ThemeToggle({ pref, onChange }: ThemeToggleProps) {
   const icon =
-    pref === "system" ? <Monitor size={18} /> : pref === "light" ? <Sun size={18} /> : <Moon size={18} />;
+    pref === "system" ? (
+      <Monitor size={18} />
+    ) : pref === "light" ? (
+      <Sun size={18} />
+    ) : (
+      <Moon size={18} />
+    );
   const label = pref === "system" ? "跟随系统" : pref === "light" ? "浅色" : "深色";
 
   function toggle() {

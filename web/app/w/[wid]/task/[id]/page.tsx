@@ -23,9 +23,6 @@ import {
   Loader2,
   Plus,
   X,
-  Circle,
-  CircleDot,
-  CheckCircle2,
   History,
   AtSign,
 } from "lucide-react";
@@ -80,7 +77,6 @@ interface DecisionVersion {
   createdAt: string;
   author: Person;
 }
-
 
 const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
   low: { label: "低", color: "var(--meta)" },
@@ -591,7 +587,8 @@ export default function TaskDetailPage({
                         v{d.version}
                       </span>
                       <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                        {(d.author ? (d.author.name || d.author.email) : "已注销用户")} · {relTime(d.createdAt)}
+                        {d.author ? d.author.name || d.author.email : "已注销用户"} ·{" "}
+                        {relTime(d.createdAt)}
                       </span>
                       <button
                         onClick={() => showHistory(d)}
@@ -629,12 +626,12 @@ export default function TaskDetailPage({
                   className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
                   <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-                    {(c.author ? (c.author.name || c.author.email) : "已注销用户")[0]?.toUpperCase()}
+                    {(c.author ? c.author.name || c.author.email : "已注销用户")[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-[var(--space-2)]">
                       <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
-                        {c.author ? (c.author.name || c.author.email.split("@")[0]) : "已注销用户"}
+                        {c.author ? c.author.name || c.author.email.split("@")[0] : "已注销用户"}
                       </span>
                       <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
                         {relTime(c.createdAt)}
@@ -827,7 +824,8 @@ export default function TaskDetailPage({
                         v{v.version}
                       </span>
                       <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                        {(v.author ? (v.author.name || v.author.email) : "已注销用户")} · {relTime(v.createdAt)}
+                        {v.author ? v.author.name || v.author.email : "已注销用户"} ·{" "}
+                        {relTime(v.createdAt)}
                       </span>
                     </header>
                     <div className="px-[var(--space-3)] py-2.5 text-[length:var(--text-sm)]">

@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { z } from "zod";
-import { randomUUID } from "crypto";
-import { prisma } from "@/lib/prisma";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions — 决策记录（版本倒序，最新在前） */
 export async function GET(

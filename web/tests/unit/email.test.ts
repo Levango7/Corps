@@ -18,7 +18,9 @@ import { sendInviteEmail, type InviteEmailParams } from "@/lib/email";
 let logSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined) as unknown as ReturnType<typeof vi.fn>;
+  logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined) as unknown as ReturnType<
+    typeof vi.fn
+  >;
 });
 
 afterEach(() => {
@@ -232,7 +234,7 @@ describe("sendInviteEmail - 发送失败与边界情况", () => {
     // Assert
     expect(logSpy).toHaveBeenCalledTimes(3);
     for (const call of logSpy.mock.calls) {
-      expect((call[0] as string)).toContain("[email-dev]");
+      expect(call[0] as string).toContain("[email-dev]");
     }
   });
 });

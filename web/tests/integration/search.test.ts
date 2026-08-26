@@ -43,7 +43,9 @@ describe("搜索 q 参数 trim", () => {
     // Assert - trim 后匹配到任务
     expect(res.status).toBe(200);
     expect(json.data.tasks.length).toBeGreaterThan(0);
-    expect(json.data.tasks.some((t: { title: string }) => t.title.includes(uniqueKeyword))).toBe(true);
+    expect(json.data.tasks.some((t: { title: string }) => t.title.includes(uniqueKeyword))).toBe(
+      true,
+    );
   });
 });
 
@@ -125,7 +127,10 @@ describe("搜索结果正确性", () => {
   it("命中任务 description", async () => {
     // Arrange
     const keyword = `命中Desc${Date.now()}`;
-    await createTask(token, wid, { title: "描述搜索测试", description: `这是一段含${keyword}的描述` });
+    await createTask(token, wid, {
+      title: "描述搜索测试",
+      description: `这是一段含${keyword}的描述`,
+    });
 
     // Act
     const url = new URL(`${BASE}/workspaces/${wid}/search`);

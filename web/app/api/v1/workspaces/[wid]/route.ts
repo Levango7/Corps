@@ -27,7 +27,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ctx.payload.sub,
     );
 
-    if (!ws) return NextResponse.json({ code: 404, message: "Workspace not found" }, { status: 404 });
+    if (!ws)
+      return NextResponse.json({ code: 404, message: "Workspace not found" }, { status: 404 });
 
     return NextResponse.json({
       code: 200,

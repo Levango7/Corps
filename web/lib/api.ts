@@ -63,7 +63,11 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
     .json()
     .catch((): ApiResponse => ({ code: res.status, message: res.statusText, data: null }));
   if (!res.ok) {
-    throw new ApiError(json?.message || `请求失败 (${res.status})`, res.status, json?.code ?? res.status);
+    throw new ApiError(
+      json?.message || `请求失败 (${res.status})`,
+      res.status,
+      json?.code ?? res.status,
+    );
   }
   return json.data as T;
 }

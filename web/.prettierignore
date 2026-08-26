@@ -1,0 +1,3 @@
+# pnpm-lock.yaml 由 pnpm 生成与管理，不参与 Prettier 格式化：
+# 避免 prettier 重排与 pnpm 原生输出互相覆盖造成无限 diff。
+pnpm-lock.yaml

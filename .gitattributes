@@ -1,0 +1,2 @@
+# Shell 脚本强制 LF：Linux runner 上 bash/heredoc 对 CRLF 与 BOM 敏感
+*.sh text eol=lf

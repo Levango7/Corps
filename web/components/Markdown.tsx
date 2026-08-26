@@ -122,7 +122,7 @@ export default function Markdown({ source }: { source: string }) {
             : level === 3
               ? "var(--text-md)"
               : "var(--text-sm)";
-      const HeadingTag = (`h${level}` as "h1" | "h2" | "h3" | "h4");
+      const HeadingTag = `h${level}` as "h1" | "h2" | "h3" | "h4";
       blocks.push(
         <HeadingTag
           key={key++}

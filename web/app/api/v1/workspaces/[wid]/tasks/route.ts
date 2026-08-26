@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { z } from "zod";
-import { randomUUID } from "crypto";
-import { prisma } from "@/lib/prisma";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),

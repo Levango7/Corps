@@ -152,9 +152,12 @@ describe("任务查询 GET /tasks", () => {
   });
 
   it("GET 不存在的任务 ID 返回 404", async () => {
-    const res = await fetch(`${BASE}/workspaces/${wid}/tasks/00000000-0000-0000-0000-000000000000`, {
-      headers: authHeader(token),
-    });
+    const res = await fetch(
+      `${BASE}/workspaces/${wid}/tasks/00000000-0000-0000-0000-000000000000`,
+      {
+        headers: authHeader(token),
+      },
+    );
     expect(res.status).toBe(404);
   });
 
@@ -169,15 +172,16 @@ describe("任务查询 GET /tasks", () => {
     await createTask(owner.accessToken, owner.workspace.id, { title: "未指派" });
 
     // Act
-    const res = await fetch(
-      `${BASE}/workspaces/${owner.workspace.id}/tasks?assignee=me`,
-      { headers: authHeader(owner.accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${owner.workspace.id}/tasks?assignee=me`, {
+      headers: authHeader(owner.accessToken),
+    });
     const json = await res.json();
 
     // Assert
     expect(res.status).toBe(200);
-    expect(json.data.every((t: { assigneeId?: string }) => t.assigneeId === owner.user.id)).toBe(true);
+    expect(json.data.every((t: { assigneeId?: string }) => t.assigneeId === owner.user.id)).toBe(
+      true,
+    );
     expect(json.data.some((t: { id: string }) => t.id === assignedToMe.body.data!.id)).toBe(true);
   });
 });
@@ -222,11 +226,14 @@ describe("任务更新 PATCH /tasks/:id", () => {
   });
 
   it("PATCH 不存在的任务返回 404", async () => {
-    const res = await fetch(`${BASE}/workspaces/${wid}/tasks/00000000-0000-0000-0000-000000000000`, {
-      method: "PATCH",
-      headers: { ...authHeader(token), "Content-Type": "application/json" },
-      body: JSON.stringify({ title: "不存在" }),
-    });
+    const res = await fetch(
+      `${BASE}/workspaces/${wid}/tasks/00000000-0000-0000-0000-000000000000`,
+      {
+        method: "PATCH",
+        headers: { ...authHeader(token), "Content-Type": "application/json" },
+        body: JSON.stringify({ title: "不存在" }),
+      },
+    );
     expect(res.status).toBe(404);
   });
 
@@ -264,10 +271,13 @@ describe("任务删除 DELETE /tasks/:id", () => {
   });
 
   it("DELETE 不存在的任务返回 404", async () => {
-    const res = await fetch(`${BASE}/workspaces/${wid}/tasks/00000000-0000-0000-0000-000000000000`, {
-      method: "DELETE",
-      headers: authHeader(token),
-    });
+    const res = await fetch(
+      `${BASE}/workspaces/${wid}/tasks/00000000-0000-0000-0000-000000000000`,
+      {
+        method: "DELETE",
+        headers: authHeader(token),
+      },
+    );
     expect(res.status).toBe(404);
   });
 });

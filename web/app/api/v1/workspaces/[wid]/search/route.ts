@@ -26,10 +26,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const q = parsed.data.q.trim();
     // A-9: trim 后若为空字符串（纯空格输入），返回 400 避免匹配全部记录
     if (!q) {
-      return NextResponse.json(
-        { code: 400, message: "参数 q 不能为空或纯空格" },
-        { status: 400 },
-      );
+      return NextResponse.json({ code: 400, message: "参数 q 不能为空或纯空格" }, { status: 400 });
     }
 
     // A-8: parseInt 后可能为 NaN（非数字输入），需兜底为默认值；
@@ -81,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         decisions: decisions.map((d) => ({
           id: d.id,
           kind: "decision" as const,
-          title: `决策 v${d.version} · ${(d.author ? (d.author.name || d.author.email) : "已注销用户")}`,
+          title: `决策 v${d.version} · ${d.author ? d.author.name || d.author.email : "已注销用户"}`,
           snippet: d.markdown.slice(0, 120),
           taskId: d.taskId,
           href: `/w/${wid}/task/${d.taskId}`,

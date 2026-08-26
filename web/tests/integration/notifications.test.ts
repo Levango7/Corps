@@ -72,7 +72,9 @@ async function getNotifications(
   token: string,
   wid: string,
   opts: { unread?: boolean } = {},
-): Promise<Array<{ id: string; type: string; entityId: string; entityTitle: string; read: boolean }>> {
+): Promise<
+  Array<{ id: string; type: string; entityId: string; entityTitle: string; read: boolean }>
+> {
   const url = new URL(`${BASE}/workspaces/${wid}/notifications`);
   if (opts.unread) url.searchParams.set("unread", "true");
   const res = await fetch(url.toString(), { headers: authHeader(token) });
@@ -109,9 +111,7 @@ describe("通知场景：comment mention", () => {
 
     // member 应收到 mention 通知
     const notifs = await getNotifications(fixture.memberToken, fixture.wid, { unread: true });
-    const mentionNotif = notifs.find(
-      (n) => n.type === "mention" && n.entityId === taskId,
-    );
+    const mentionNotif = notifs.find((n) => n.type === "mention" && n.entityId === taskId);
     expect(mentionNotif).toBeDefined();
     expect(mentionNotif!.entityTitle).toBe("评论 mention 测试");
     expect(mentionNotif!.read).toBe(false);
@@ -158,9 +158,7 @@ describe("通知场景：comment_added（任务指派人）", () => {
 
     // Assert - member 收到 comment_added 通知
     const notifs = await getNotifications(fixture.memberToken, fixture.wid, { unread: true });
-    const notif = notifs.find(
-      (n) => n.type === "comment_added" && n.entityId === taskId,
-    );
+    const notif = notifs.find((n) => n.type === "comment_added" && n.entityId === taskId);
     expect(notif).toBeDefined();
   });
 
@@ -203,9 +201,7 @@ describe("通知场景：task_assigned（assignee 变更）", () => {
 
     // Assert - member 收到 task_assigned 通知
     const notifs = await getNotifications(fixture.memberToken, fixture.wid, { unread: true });
-    const notif = notifs.find(
-      (n) => n.type === "task_assigned" && n.entityId === taskId,
-    );
+    const notif = notifs.find((n) => n.type === "task_assigned" && n.entityId === taskId);
     expect(notif).toBeDefined();
     expect(notif!.entityTitle).toBe("待指派任务");
   });
@@ -249,9 +245,7 @@ describe("通知场景：decision_updated（决策创建）", () => {
 
     // Assert - member 收到 decision_updated 通知
     const notifs = await getNotifications(fixture.memberToken, fixture.wid, { unread: true });
-    const notif = notifs.find(
-      (n) => n.type === "decision_updated" && n.entityId === taskId,
-    );
+    const notif = notifs.find((n) => n.type === "decision_updated" && n.entityId === taskId);
     expect(notif).toBeDefined();
   });
 });

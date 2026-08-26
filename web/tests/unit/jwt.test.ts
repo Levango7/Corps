@@ -229,11 +229,10 @@ describe("JWT 工具 - signAccessToken / verifyAccessToken", () => {
 
     it("issuer 不匹配的 token 验证返回 null", async () => {
       // Arrange：用不同 issuer 签发
-      const wrongIssuerToken = jwt.sign(
-        { sub: "u1", wid: "w1", role: "owner" },
-        TEST_SECRET,
-        { issuer: "https://wrong-issuer.example.com", expiresIn: "15m" },
-      );
+      const wrongIssuerToken = jwt.sign({ sub: "u1", wid: "w1", role: "owner" }, TEST_SECRET, {
+        issuer: "https://wrong-issuer.example.com",
+        expiresIn: "15m",
+      });
 
       // Act
       const verified = await verifyAccessToken(wrongIssuerToken);

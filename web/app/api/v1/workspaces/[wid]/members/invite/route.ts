@@ -4,13 +4,12 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
 import { z } from "zod";
-import { createHash, randomBytes, randomUUID } from "crypto";
+import { createHash, randomBytes } from "crypto";
 
 const inviteSchema = z.object({ email: z.string().email() });
 
 /** 邀请有效期：7 天 */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
-
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -34,63 +33,59 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       const tokenHash = createHash("sha256").update(token).digest("hex");
       const expiresAt = new Date(Date.now() + INVITE_TTL_MS);
 
-      const result = await runWithSeatCheck(
-        wid,
-        ctx.payload.sub,
-        async (tx) => {
-          // SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务（同直加路径的席位保护）
-          await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
+      const result = await runWithSeatCheck(wid, ctx.payload.sub, async (tx) => {
+        // SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务（同直加路径的席位保护）
+        await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
 
-          const workspace = await tx.workspace.findUnique({ where: { id: wid } });
-          const memberCount = await tx.member.count({ where: { workspaceId: wid } });
+        const workspace = await tx.workspace.findUnique({ where: { id: wid } });
+        const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 
-          // AC-08 席位上限：达 seatLimit 时拦截并提示升级
-          if (workspace && memberCount >= workspace.seatLimit) {
-            return { full: true as const, seatLimit: workspace.seatLimit };
-          }
+        // AC-08 席位上限：达 seatLimit 时拦截并提示升级
+        if (workspace && memberCount >= workspace.seatLimit) {
+          return { full: true as const, seatLimit: workspace.seatLimit };
+        }
 
-          // 同一 (workspace, email) 已有未接受且未过期的邀请 → 复用该记录，
-          // 覆盖新 token 并延长过期时间（旧链接随之失效）
-          const pending = await tx.invitation.findFirst({
-            where: {
+        // 同一 (workspace, email) 已有未接受且未过期的邀请 → 复用该记录，
+        // 覆盖新 token 并延长过期时间（旧链接随之失效）
+        const pending = await tx.invitation.findFirst({
+          where: {
+            workspaceId: wid,
+            email,
+            acceptedAt: null,
+            expiresAt: { gt: new Date() },
+          },
+        });
+
+        if (pending) {
+          await tx.invitation.update({
+            where: { id: pending.id },
+            data: { tokenHash, expiresAt, invitedBy: ctx.payload.sub },
+          });
+        } else {
+          await tx.invitation.create({
+            data: {
               workspaceId: wid,
               email,
-              acceptedAt: null,
-              expiresAt: { gt: new Date() },
+              tokenHash,
+              role: "member",
+              invitedBy: ctx.payload.sub,
+              expiresAt,
             },
           });
+        }
 
-          if (pending) {
-            await tx.invitation.update({
-              where: { id: pending.id },
-              data: { tokenHash, expiresAt, invitedBy: ctx.payload.sub },
-            });
-          } else {
-            await tx.invitation.create({
-              data: {
-                workspaceId: wid,
-                email,
-                tokenHash,
-                role: "member",
-                invitedBy: ctx.payload.sub,
-                expiresAt,
-              },
-            });
-          }
+        // 查询邀请人姓名和工作区名称（用于邀请邮件）
+        const inviter = await tx.user.findUnique({
+          where: { id: ctx.payload.sub },
+          select: { name: true, email: true },
+        });
 
-          // 查询邀请人姓名和工作区名称（用于邀请邮件）
-          const inviter = await tx.user.findUnique({
-            where: { id: ctx.payload.sub },
-            select: { name: true, email: true },
-          });
-
-          return {
-            full: false as const,
-            workspaceName: workspace?.name ?? "",
-            inviterName: inviter?.name ?? inviter?.email ?? "",
-          };
-        },
-      );
+        return {
+          full: false as const,
+          workspaceName: workspace?.name ?? "",
+          inviterName: inviter?.name ?? inviter?.email ?? "",
+        };
+      });
 
       if (result.full) {
         return NextResponse.json(
@@ -125,64 +120,60 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
 
     // 席位检查 + 建成员在同一 RLS 事务内完成，避免并发邀请绕过 seatLimit
-    const result = await runWithSeatCheck(
-      wid,
-      ctx.payload.sub,
-      async (tx) => {
-        // A-6: SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务，
-        // 避免两个事务同时读到 memberCount < seatLimit 后都创建成员导致超限。
-        // 注：seat 上下文（wid+uid+op）使 workspaces 的 SELECT/UPDATE 策略放行该行锁。
-        await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
+    const result = await runWithSeatCheck(wid, ctx.payload.sub, async (tx) => {
+      // A-6: SELECT FOR UPDATE 锁定 workspace 行，串行化并发邀请事务，
+      // 避免两个事务同时读到 memberCount < seatLimit 后都创建成员导致超限。
+      // 注：seat 上下文（wid+uid+op）使 workspaces 的 SELECT/UPDATE 策略放行该行锁。
+      await tx.$queryRaw`SELECT id FROM workspaces WHERE id = ${wid}::uuid FOR UPDATE`;
 
-        const workspace = await tx.workspace.findUnique({ where: { id: wid } });
-        const memberCount = await tx.member.count({ where: { workspaceId: wid } });
+      const workspace = await tx.workspace.findUnique({ where: { id: wid } });
+      const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 
-        // AC-08 席位上限：达 seatLimit 时拦截并提示升级
-        if (workspace && memberCount >= workspace.seatLimit) {
-          return { full: true as const, seatLimit: workspace.seatLimit };
-        }
+      // AC-08 席位上限：达 seatLimit 时拦截并提示升级
+      if (workspace && memberCount >= workspace.seatLimit) {
+        return { full: true as const, seatLimit: workspace.seatLimit };
+      }
 
-        const existing = await tx.member.findUnique({
-          where: { userId_workspaceId: { userId: invitedUser.id, workspaceId: wid } },
-        });
-        if (existing) {
-          return { duplicate: true as const };
-        }
+      const existing = await tx.member.findUnique({
+        where: { userId_workspaceId: { userId: invitedUser.id, workspaceId: wid } },
+      });
+      if (existing) {
+        return { duplicate: true as const };
+      }
 
-        const member = await tx.member.create({
-          data: {
-            userId: invitedUser.id,
-            workspaceId: wid,
-            role: "member",
-            invitedBy: ctx.payload.sub,
-          },
-          include: { user: { select: { id: true, email: true, name: true, image: true } } },
-        });
+      const member = await tx.member.create({
+        data: {
+          userId: invitedUser.id,
+          workspaceId: wid,
+          role: "member",
+          invitedBy: ctx.payload.sub,
+        },
+        include: { user: { select: { id: true, email: true, name: true, image: true } } },
+      });
 
-        // 查询邀请人姓名和工作区名称（用于邀请邮件）
-        const inviter = await tx.user.findUnique({
-          where: { id: ctx.payload.sub },
-          select: { name: true, email: true },
-        });
-        const ws = await tx.workspace.findUnique({
-          where: { id: wid },
-          select: { name: true },
-        });
+      // 查询邀请人姓名和工作区名称（用于邀请邮件）
+      const inviter = await tx.user.findUnique({
+        where: { id: ctx.payload.sub },
+        select: { name: true, email: true },
+      });
+      const ws = await tx.workspace.findUnique({
+        where: { id: wid },
+        select: { name: true },
+      });
 
-        return {
-          full: false as const,
-          duplicate: false as const,
-          member: {
-            id: member.user.id,
-            email: member.user.email,
-            name: member.user.name,
-            role: member.role,
-          },
-          workspaceName: ws?.name ?? "",
-          inviterName: inviter?.name ?? inviter?.email ?? "",
-        };
-      },
-    );
+      return {
+        full: false as const,
+        duplicate: false as const,
+        member: {
+          id: member.user.id,
+          email: member.user.email,
+          name: member.user.name,
+          role: member.role,
+        },
+        workspaceName: ws?.name ?? "",
+        inviterName: inviter?.name ?? inviter?.email ?? "",
+      };
+    });
 
     if (result.full) {
       return NextResponse.json(

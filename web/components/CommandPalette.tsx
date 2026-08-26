@@ -118,7 +118,10 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         })
         .catch(() => setResults({ tasks: [], decisions: [] }));
     }, 300);
-    return () => { clearTimeout(timer); controller.abort(); };
+    return () => {
+      clearTimeout(timer);
+      controller.abort();
+    };
   }, [query, wid]);
 
   const items = useMemo<CmdItem[]>(() => {

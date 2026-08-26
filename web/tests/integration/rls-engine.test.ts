@@ -70,15 +70,21 @@ suite("RLS 引擎级冒烟（corps_app 直连，AC-04 引擎断言）", () => {
       );
 
       // ① 无 WHERE 全表查询：只可见租户 A 自己的 1 条任务
-      const nAll = await tx.$queryRawUnsafe<{ c: number }[]>(`SELECT count(*)::int AS c FROM tasks`);
+      const nAll = await tx.$queryRawUnsafe<{ c: number }[]>(
+        `SELECT count(*)::int AS c FROM tasks`,
+      );
       expect(nAll[0]!.c).toBe(1);
 
       // ② 跨租户定向读：不可见
-      const nB = await tx.$queryRawUnsafe<{ c: number }[]>(`SELECT count(*)::int AS c FROM tasks WHERE workspace_id='${WB}'`);
+      const nB = await tx.$queryRawUnsafe<{ c: number }[]>(
+        `SELECT count(*)::int AS c FROM tasks WHERE workspace_id='${WB}'`,
+      );
       expect(nB[0]!.c).toBe(0);
 
       // ③ 跨租户写：影响 0 行（RLS 策略静默过滤，不报错——这正是"漏写 WHERE 也安全"的语义）
-      const updated = await tx.$executeRawUnsafe(`UPDATE tasks SET title='hacked' WHERE workspace_id='${WB}'`);
+      const updated = await tx.$executeRawUnsafe(
+        `UPDATE tasks SET title='hacked' WHERE workspace_id='${WB}'`,
+      );
       expect(updated).toBe(0);
     });
 

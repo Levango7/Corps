@@ -90,18 +90,8 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
       {/* 概览卡 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
-        <StatCard
-          icon={Activity}
-          label="事件总数"
-          value={data.totalEvents}
-          color="var(--accent)"
-        />
-        <StatCard
-          icon={Users}
-          label="活跃用户"
-          value={data.activeUsers}
-          color="var(--success)"
-        />
+        <StatCard icon={Activity} label="事件总数" value={data.totalEvents} color="var(--accent)" />
+        <StatCard icon={Users} label="活跃用户" value={data.activeUsers} color="var(--success)" />
         <StatCard
           icon={TrendingUp}
           label="日均事件"
@@ -245,9 +235,7 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
     y: PAD + innerH - (d._total / maxDaily) * innerH,
   }));
 
-  const pathD = points
-    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-    .join(" ");
+  const pathD = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ");
   const areaD = `${pathD} L ${points[points.length - 1].x} ${PAD + innerH} L ${points[0].x} ${PAD + innerH} Z`;
 
   return (
@@ -313,9 +301,7 @@ function ErrorState({ message }: { message: string }) {
           {forbidden ? "需要管理员权限" : "加载失败"}
         </p>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {forbidden
-            ? "仅拥有者或管理员可查看分析数据。"
-            : message || "请稍后重试。"}
+          {forbidden ? "仅拥有者或管理员可查看分析数据。" : message || "请稍后重试。"}
         </p>
       </div>
     </div>

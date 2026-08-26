@@ -33,11 +33,7 @@ export default function RouteError({
       className="min-h-[60vh] flex items-center justify-center px-[var(--space-4)]"
     >
       <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-6)] text-center">
-        <AlertTriangle
-          size={40}
-          className="mx-auto text-[var(--danger)] mb-4"
-          strokeWidth={1.5}
-        />
+        <AlertTriangle size={40} className="mx-auto text-[var(--danger)] mb-4" strokeWidth={1.5} />
         <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] mb-2">
           页面出错了
         </h2>

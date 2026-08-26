@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { z } from "zod";
-import { randomUUID } from "crypto";
-import { prisma } from "@/lib/prisma";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -59,10 +57,7 @@ export async function PATCH(
     // 改 assignee 需要 admin/owner 权限（与 batch 对齐）
     if (validated.assigneeId !== undefined) {
       if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-        return NextResponse.json(
-          { code: 403, message: "仅管理员可指派任务" },
-          { status: 403 },
-        );
+        return NextResponse.json({ code: 403, message: "仅管理员可指派任务" }, { status: 403 });
       }
     }
 

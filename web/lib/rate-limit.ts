@@ -96,11 +96,7 @@ export function isRedisActive(): boolean {
  * 返回本次请求是否放行；被拒时附带 Retry-After 秒数。
  * 注意：key 按 bucket + clientKey 组合为复合键，各端点配额互不影响。
  */
-async function hitStore(
-  key: string,
-  max: number,
-  windowMs: number,
-): Promise<RateLimitResult> {
+async function hitStore(key: string, max: number, windowMs: number): Promise<RateLimitResult> {
   const redis = await getRedisClient();
   if (!redis) return hitMemoryStore(key, max, windowMs);
 

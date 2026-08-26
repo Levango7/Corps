@@ -14,10 +14,7 @@ const nextConfig: NextConfig = {
   // 生产构建移除 console.* 调用，但保留 console.error 以便线上排查。
   // 开发环境 (next dev) 不受影响。
   compiler: {
-    removeConsole:
-      process.env.NODE_ENV === "production"
-        ? { exclude: ["error"] }
-        : false,
+    removeConsole: process.env.NODE_ENV === "production" ? { exclude: ["error"] } : false,
   },
 
   experimental: {
@@ -27,9 +24,7 @@ const nextConfig: NextConfig = {
     // ─── 按需导入优化 ────────────────────────────────────────
     // 对大型桶导出库启用 modularizeImports：仅打包实际用到的图标/工具，
     // 显著缩减客户端 bundle 体积。lucide-react 单独全量导入可达数百 KB。
-    optimizePackageImports: [
-      "lucide-react",
-    ],
+    optimizePackageImports: ["lucide-react"],
   },
 
   async headers() {

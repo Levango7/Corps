@@ -35,10 +35,12 @@ export async function POST(req: NextRequest) {
 
   // T2.7 Webhook 幂等：同一条 Stripe 事件不重复处理
   // INSERT ON CONFLICT DO NOTHING —— 若已处理过则 affected rows = 0，跳过后续逻辑
-  const inserted = await prisma.processedStripeEvent.create({
-    data: { id: event.id },
-    select: { id: true },
-  }).catch(() => null);
+  const inserted = await prisma.processedStripeEvent
+    .create({
+      data: { id: event.id },
+      select: { id: true },
+    })
+    .catch(() => null);
   if (!inserted) {
     // 已处理过（幂等命中），返回 200 让 Stripe 停止重试
     return NextResponse.json({ code: 200, data: { received: true, duplicate: true } });
@@ -138,8 +140,7 @@ export async function POST(req: NextRequest) {
                 status: sub.status ?? "active",
                 quantity: sub.items?.data?.[0]?.quantity ?? 1,
                 currentPeriodEnd: periodEnd ? new Date(periodEnd * 1000) : undefined,
-                canceledAt:
-                  sub.status === "canceled" ? new Date() : undefined,
+                canceledAt: sub.status === "canceled" ? new Date() : undefined,
               },
             });
             // A-7: 订阅进入 canceled 状态时同步降级 workspace.plan 为 free，

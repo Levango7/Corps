@@ -37,7 +37,6 @@ const LIST_PAGE_SIZE = 50;
 export default function BoardPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
 
-
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
@@ -60,8 +59,18 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
 
   useEffect(() => {
     api<Task[]>(`/api/v1/workspaces/${wid}/tasks`)
-      .then((data) => { setError(null); setTasks(data); })
-      .catch((e) => { setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试"); setTasks([]); })
+      .then((data) => {
+        setError(null);
+        setTasks(data);
+      })
+      .catch((e) => {
+        setError(
+          e instanceof Error && e.message.includes("fetch")
+            ? "网络连接失败，请检查网络"
+            : "加载失败，请稍后重试",
+        );
+        setTasks([]);
+      })
       .finally(() => setLoading(false));
   }, [wid]);
 
@@ -70,14 +79,23 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       setError(null);
       setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks`));
     } catch (e) {
-      setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试");
+      setError(
+        e instanceof Error && e.message.includes("fetch")
+          ? "网络连接失败，请检查网络"
+          : "加载失败，请稍后重试",
+      );
       setTasks([]);
     }
   }
 
   // ─── 拖拽排序 ───────────────────────────────────────────
 
-  function computeSortOrder(tasks: Task[], column: Status, targetIndex: number, excludeId: string): number {
+  function computeSortOrder(
+    tasks: Task[],
+    column: Status,
+    targetIndex: number,
+    excludeId: string,
+  ): number {
     const columnTasks = tasks
       .filter((t) => t.status === column && t.id !== excludeId)
       .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
@@ -232,7 +250,15 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       {error && (
         <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
           <span>{error}</span>
-          <button onClick={() => { setError(null); load(); }} className="text-red-600 underline hover:text-red-800">重试</button>
+          <button
+            onClick={() => {
+              setError(null);
+              load();
+            }}
+            className="text-red-600 underline hover:text-red-800"
+          >
+            重试
+          </button>
         </div>
       )}
 

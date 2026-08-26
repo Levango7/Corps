@@ -107,7 +107,11 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       );
       setAll(res?.notifications ?? []);
     } catch (e) {
-      setError(e instanceof Error && e.message.includes("fetch") ? "网络连接失败，请检查网络" : "加载失败，请稍后重试");
+      setError(
+        e instanceof Error && e.message.includes("fetch")
+          ? "网络连接失败，请检查网络"
+          : "加载失败，请稍后重试",
+      );
       setAll([]);
     } finally {
       setLoaded(true);
@@ -228,50 +232,58 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
           {error && (
             <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
               <span>{error}</span>
-              <button onClick={() => { setError(null); load(); }} className="text-red-600 underline hover:text-red-800">重试</button>
+              <button
+                onClick={() => {
+                  setError(null);
+                  load();
+                }}
+                className="text-red-600 underline hover:text-red-800"
+              >
+                重试
+              </button>
             </div>
           )}
           <ul className="flex flex-col gap-[var(--space-3)]">
-          {visible.map((n) => {
-            const meta = TYPE_META[n.type];
-            const Icon = meta.icon;
-            const rel = relativeTime(n.createdAt);
-            return (
-              <li key={n.id}>
-                <button
-                  type="button"
-                  onClick={() => openNotification(n)}
-                  aria-label={`${meta.text(n.entityTitle)}${n.read ? "" : "，未读"}`}
-                  className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
-                    n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
-                  }`}
-                >
-                  <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
-                  <div className="flex-1 min-w-0">
-                    <p
-                      className={`text-[length:var(--text-base)] truncate ${
-                        n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
-                      }`}
-                    >
-                      {meta.text(n.entityTitle)}
-                    </p>
-                    {rel && (
-                      <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
-                        {rel}
+            {visible.map((n) => {
+              const meta = TYPE_META[n.type];
+              const Icon = meta.icon;
+              const rel = relativeTime(n.createdAt);
+              return (
+                <li key={n.id}>
+                  <button
+                    type="button"
+                    onClick={() => openNotification(n)}
+                    aria-label={`${meta.text(n.entityTitle)}${n.read ? "" : "，未读"}`}
+                    className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+                      n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
+                    }`}
+                  >
+                    <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
+                    <div className="flex-1 min-w-0">
+                      <p
+                        className={`text-[length:var(--text-base)] truncate ${
+                          n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
+                        }`}
+                      >
+                        {meta.text(n.entityTitle)}
                       </p>
+                      {rel && (
+                        <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                          {rel}
+                        </p>
+                      )}
+                    </div>
+                    {!n.read && (
+                      <span
+                        className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
+                        aria-hidden="true"
+                      />
                     )}
-                  </div>
-                  {!n.read && (
-                    <span
-                      className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
-                      aria-hidden="true"
-                    />
-                  )}
-                </button>
-              </li>
-            );
-          })}
-        </ul>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
     </div>

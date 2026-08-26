@@ -14,13 +14,7 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import {
-  UserPlus,
-  Trash2,
-  Users,
-  CheckCircle2,
-  Link2,
-} from "lucide-react";
+import { UserPlus, Trash2, Users, CheckCircle2, Link2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Member, Role } from "@/lib/types";
 import { ROLE_META } from "@/lib/task-meta";
@@ -274,7 +268,8 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       )}
 
       <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
-        未注册的同事会收到一条 7 天有效的专属邀请链接，注册后自动加入。拥有者不可被移除或降级；转让拥有者权限需在设置中操作。
+        未注册的同事会收到一条 7
+        天有效的专属邀请链接，注册后自动加入。拥有者不可被移除或降级；转让拥有者权限需在设置中操作。
       </p>
     </div>
   );

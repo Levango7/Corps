@@ -36,12 +36,7 @@ interface BatchToolbarProps {
   canAssign?: boolean;
 }
 
-export function BatchToolbar({
-  selectedIds,
-  onClear,
-  onUpdate,
-  onDelete,
-}: BatchToolbarProps) {
+export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: BatchToolbarProps) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);

@@ -34,7 +34,11 @@ beforeAll(async () => {
   const outsider = await registerUser({ prefix: "rbac-outsider" });
 
   // owner 邀请 admin 和 member 加入工作区（默认 role=member）
-  const inviteAdmin = await inviteMember(owner.accessToken, owner.workspace.id, adminUser.user.email);
+  const inviteAdmin = await inviteMember(
+    owner.accessToken,
+    owner.workspace.id,
+    adminUser.user.email,
+  );
   expect(inviteAdmin.status).toBe(201);
   const inviteMemberRes = await inviteMember(
     owner.accessToken,
@@ -197,28 +201,28 @@ describe("RBAC: 修改成员角色权限", () => {
 
 describe("RBAC: 移除成员权限", () => {
   it("member 移除他人返回 403", async () => {
-    const res = await fetch(
-      `${BASE}/workspaces/${fixture.wid}/members/${fixture.admin.user.id}`,
-      { method: "DELETE", headers: authHeader(fixture.member.accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/members/${fixture.admin.user.id}`, {
+      method: "DELETE",
+      headers: authHeader(fixture.member.accessToken),
+    });
     expect(res.status).toBe(403);
   });
 
   it("不能移除自己", async () => {
     // 用 admin 删自己：admin 有移除权限，才会命中"不能移除自己"守卫返回 400
     // （若用 member，会先被权限检查拦截返回 403，测不到该守卫）
-    const res = await fetch(
-      `${BASE}/workspaces/${fixture.wid}/members/${fixture.admin.user.id}`,
-      { method: "DELETE", headers: authHeader(fixture.admin.accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/members/${fixture.admin.user.id}`, {
+      method: "DELETE",
+      headers: authHeader(fixture.admin.accessToken),
+    });
     expect(res.status).toBe(400);
   });
 
   it("不能移除 owner", async () => {
-    const res = await fetch(
-      `${BASE}/workspaces/${fixture.wid}/members/${fixture.owner.user.id}`,
-      { method: "DELETE", headers: authHeader(fixture.admin.accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/members/${fixture.owner.user.id}`, {
+      method: "DELETE",
+      headers: authHeader(fixture.admin.accessToken),
+    });
     expect(res.status).toBe(403);
   });
 

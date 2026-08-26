@@ -5,7 +5,7 @@ import { generateSlug } from "@/lib/slug";
 import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { signAccessToken } from "@/lib/jwt";
-import { randomUUID } from "crypto";
+
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
@@ -87,7 +87,6 @@ export async function POST(req: NextRequest) {
         data: {
           user: { id: baUser.id, email: baUser.email, name: baUser.name },
           workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
-
         },
       },
       { status: 201 },

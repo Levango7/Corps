@@ -20,7 +20,7 @@ set -euo pipefail
 DB_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 : "${DATABASE_OWNER_URL:?需要 DATABASE_OWNER_URL（超级用户/表属主连接串）}"
 : "${CORPS_APP_PASSWORD:?需要 CORPS_APP_PASSWORD（corps_app 角色密码）}"
-APP_URL="${APP_DATABASE_URL:-postgresql://corps_app:${CORPS_APP_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/${POSTGRES_DB:-corps}"
+APP_URL="${APP_DATABASE_URL:-postgresql://corps_app:${CORPS_APP_PASSWORD}@${DB_HOST:-localhost}:${DB_PORT:-5432}/${POSTGRES_DB:-corps}}"
 
 UA='11111111-1111-4111-8111-aaaaaaaaaaa1'; UB='22222222-2222-4222-8222-bbbbbbbbbbb2'
 WA='33333333-3333-4333-8333-ccccccccccc3'; WB='44444444-4444-4444-8444-dddddddddddd'

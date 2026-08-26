@@ -4,7 +4,7 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
-import { randomUUID } from "crypto";
+
 import { checkRateLimit } from "@/lib/rate-limit";
 
 const loginSchema = z.object({
@@ -76,7 +76,6 @@ export async function POST(req: NextRequest) {
       data: {
         user: { id: baUser.id, email: baUser.email, name: baUser.name },
         workspaces,
-
       },
     });
     // 统一通过原始 set-cookie 头下发（先 access_token 再透传 Better Auth 会话 cookie）。
