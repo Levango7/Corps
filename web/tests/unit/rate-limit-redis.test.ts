@@ -33,6 +33,7 @@ vi.mock("ioredis", () => ({
 const RULE = { windowMs: 60_000, max: 3 };
 
 const ORIGINAL_REDIS_URL = process.env.REDIS_URL;
+const ORIGINAL_RATE_LIMIT_DISABLED = process.env.RATE_LIMIT_DISABLED;
 
 function makeReq(ip: string): NextRequest {
   return new NextRequest("http://localhost/api/v1/auth/login", {
@@ -54,6 +55,9 @@ describe("rate-limit - REDIS_URL 多实例共享计数", () => {
     mockOn.mockReset();
     // 默认按 Redis 模式加载；个别用例可覆盖
     process.env.REDIS_URL = "redis://localhost:6379";
+    // CI 设 RATE_LIMIT_DISABLED=1 关闭限流，但本测试组验证 Redis 路径，
+    // 必须清除该变量，否则 checkRateLimit 直接返回 null，spy 不会被调用。
+    delete process.env.RATE_LIMIT_DISABLED;
   });
 
   afterEach(() => {
@@ -62,6 +66,11 @@ describe("rate-limit - REDIS_URL 多实例共享计数", () => {
       delete process.env.REDIS_URL;
     } else {
       process.env.REDIS_URL = ORIGINAL_REDIS_URL;
+    }
+    if (ORIGINAL_RATE_LIMIT_DISABLED === undefined) {
+      delete process.env.RATE_LIMIT_DISABLED;
+    } else {
+      process.env.RATE_LIMIT_DISABLED = ORIGINAL_RATE_LIMIT_DISABLED;
     }
   });
 

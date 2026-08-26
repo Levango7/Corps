@@ -35,11 +35,14 @@ suite("RLS 引擎级冒烟（corps_app 直连，AC-04 引擎断言）", () => {
     await app.$disconnect();
   });
 
-  // 幂等确保 corps_app 存在且密码与 APP_URL 一致（等价于 rls-activate.sql 第 1 节）
-  const appPassword = decodeURIComponent(new URL(APP_URL!).password);
-  const appName = decodeURIComponent(new URL(APP_URL!).username);
+  // appPassword/appName 延迟到 it() 内计算：describe.skip 回调仍会执行
+  // suite 顶层代码，若在此处 new URL(APP_URL!) 而 APP_URL 为 undefined 会抛
+  // TypeError: Invalid URL（CI 未设 RLS_SMOKE_*_URL 时）。
 
   it("无 WHERE 全表查询仅见本租户；跨租户读不可见、UPDATE 影响 0 行", async () => {
+    // 幂等确保 corps_app 存在且密码与 APP_URL 一致（等价于 rls-activate.sql 第 1 节）
+    const appPassword = decodeURIComponent(new URL(APP_URL!).password);
+    const appName = decodeURIComponent(new URL(APP_URL!).username);
     await owner.$executeRawUnsafe(
       `DO $$ BEGIN
          IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = '${appName}') THEN
