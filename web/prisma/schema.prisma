@@ -250,6 +250,9 @@ model Account {
   id                    String    @id @default(uuid()) @db.Uuid
   accountId             String    @map("account_id") @db.Text
   providerId            String    @map("provider_id") @db.Text
+  // Better Auth 1.7.1 新增字段：标识 account 的签发者（credential 端为 "local:credential"，
+  // OAuth 端为 provider 的 issuer URL）。与 accountId 组成唯一键，区分同一用户在不同 provider 的账户。
+  issuer                String    @map("issuer") @db.Text
   userId                String    @map("user_id") @db.Uuid
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?   @map("access_token") @db.Text
@@ -262,6 +265,7 @@ model Account {
   createdAt             DateTime  @default(now()) @db.Timestamptz @map("created_at") 
   updatedAt             DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
 
+  @@unique([issuer, accountId])
   @@index([userId])
   @@map("accounts")
 }

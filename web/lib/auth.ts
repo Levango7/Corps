@@ -25,9 +25,12 @@ export const auth = betterAuth({
   },
   advanced: {
     useSecureCookies: process.env.NODE_ENV === "production",
-    // Better Auth 默认生成 nanoid 格式 ID，与 Prisma @db.Uuid 不兼容。
+    // Better Auth 1.7.1 从 advanced.database.generateId 读取 ID 生成器（非 advanced.generateId）。
+    // 默认 nanoid 格式 ID 与 Prisma @db.Uuid 不兼容（P2023 invalid UUID），
     // 强制生成 PostgreSQL 兼容的 UUID v4。
-    generateId: () => randomUUID(),
+    database: {
+      generateId: () => randomUUID(),
+    },
   },
   // T2.5：Better Auth 内置限流（login/register/refresh 等端点）
   rateLimit: {
