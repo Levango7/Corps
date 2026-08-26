@@ -39,3 +39,6 @@ web/prisma/migrations/dev.db
 coverage/
 *.tsbuildinfo
 next-env.d.ts
+
+# 本机环境覆盖（端口冲突等机器专属配置，不入库）
+docker-compose.override.yml
