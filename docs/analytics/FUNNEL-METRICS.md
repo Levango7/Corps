@@ -1,7 +1,7 @@
 # corps 漏斗埋点指标体系完善方案（FUNNEL-METRICS）
 
 - **日期**：2026-08-26
-- **状态**：PROPOSED（待用户拍板后进入实施）
+- **状态**：ACCEPTED（2026-08-26 用户拍板通过——北极星 WAW、护栏 H1-H3、9 个新增事件与 props 增强、统计口径修正 D1-D3 全部批准；埋点实施列入开发排期）
 - **维护**：平台能力决策分析师｜依据：SPEC.md §2（P2 数据埋点）、§9 AC-07、现有埋点实现代码
 - **关联**：web/app/api/v1/events/route.ts（事件白名单）、web/lib/analytics.ts（客户端 SDK）、web/lib/analytics-server.ts（服务端打点）、web/app/api/v1/workspaces/[wid]/analytics/overview/route.ts（统计口径）、docs/decisions/ADR-008-国际化方案.md（S1 触发信号依赖本文档的 landing_view）
 
