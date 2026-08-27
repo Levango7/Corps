@@ -201,9 +201,12 @@ describe("认证全流程：注册 → 登录 → 刷新 → 登出", () => {
 });
 
 describe("刷新端点 session token 一次性轮换（TC-AUTH-05）", () => {
-  // dev server 的 NODE_ENV=development → session cookie 名为 better-auth.session_token
-  // （生产为 __Secure-better-auth.session_token，命名规则见 app/api/v1/auth/refresh/route.ts 注释）
-  const SESSION_COOKIE = "better-auth.session_token";
+  // session cookie 名随 NODE_ENV 切换：dev = better-auth.session_token，
+  // production = __Secure-better-auth.session_token（命名规则见 refresh/route.ts sessionCookieName）
+  const SESSION_COOKIE =
+    process.env.NODE_ENV === "production"
+      ? "__Secure-better-auth.session_token"
+      : "better-auth.session_token";
 
   it("每次 refresh 下发新 session token，旧 token 立即失效", async () => {
     // Arrange - 注册拿到 session cookie（注册响应透传 Better Auth 会话 cookie）
