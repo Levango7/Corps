@@ -21,17 +21,15 @@ export async function generateSlug(name: string): Promise<string> {
       .replace(/[^a-z0-9-]/g, "")
       .replace(/-+/g, "-")
       .replace(/^-|-$/g, "")
-      .slice(0, 40) || "ws";
+      .slice(0, 40) || `ws-${Math.random().toString(36).slice(2, 8)}`;
 
   let slug = base;
   for (let attempt = 0; attempt < 5; attempt++) {
-    const exists = await runWithAuthOp(
-      "provision",
-      (tx) =>
-        tx.workspace.findUnique({
-          where: { slug },
-          select: { id: true },
-        }),
+    const exists = await runWithAuthOp("provision", (tx) =>
+      tx.workspace.findUnique({
+        where: { slug },
+        select: { id: true },
+      }),
     );
     if (!exists) return slug;
     slug = `${base}-${Math.random().toString(36).slice(2, 6)}`;

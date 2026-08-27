@@ -91,13 +91,11 @@ export async function POST(req: NextRequest) {
         const tokenHash = createHash("sha256").update(validated.inviteToken).digest("hex");
         // TC-RLS-07：invitations 表 FORCE RLS，注册流程无工作区上下文，
         // 按 tokenHash 归因查询经 invite 受控逃生口读取（直连 prisma 在加固模式下恒返回 null）
-        const invitation = await runWithAuthOp(
-          "invite",
-          (tx) =>
-            tx.invitation.findUnique({
-              where: { tokenHash },
-              select: { workspaceId: true },
-            }),
+        const invitation = await runWithAuthOp("invite", (tx) =>
+          tx.invitation.findUnique({
+            where: { tokenHash },
+            select: { workspaceId: true },
+          }),
         );
         // 命中即归因，不校验 acceptedAt/expiresAt（受邀新用户注册发生在 accept 之前）
         if (invitation) {

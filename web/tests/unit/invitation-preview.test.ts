@@ -23,7 +23,10 @@ import { runWithAuthOp } from "@/lib/auth";
 const mockRunWithAuthOp = runWithAuthOp as unknown as ReturnType<typeof vi.fn>;
 
 /** 每个用例独立的假事务客户端（与 Prisma TransactionClient 调用面一致的最小子集） */
-function makeFakeTx(invitation: unknown, inviter: unknown = { name: "张三", email: "z@corps.test" }) {
+function makeFakeTx(
+  invitation: unknown,
+  inviter: unknown = { name: "张三", email: "z@corps.test" },
+) {
   return {
     invitation: { findUnique: vi.fn().mockResolvedValue(invitation) },
     user: { findUnique: vi.fn().mockResolvedValue(inviter) },
@@ -78,12 +81,17 @@ afterEach(() => {
 describe("GET /api/v1/invitations/[token] 预览", () => {
   it("有效 token → 200，返回掩码邮箱/工作区名，且经 invite 逃生口查询（TC-RLS-07）", async () => {
     const fakeTx = makeFakeTx(validInvitation());
-    mockRunWithAuthOp.mockImplementation(async (op: string, fn: (tx: unknown) => Promise<unknown>) => {
-      expect(op).toBe("invite"); // 必须走 invite 受控逃生口
-      return fn(fakeTx);
-    });
+    mockRunWithAuthOp.mockImplementation(
+      async (op: string, fn: (tx: unknown) => Promise<unknown>) => {
+        expect(op).toBe("invite"); // 必须走 invite 受控逃生口
+        return fn(fakeTx);
+      },
+    );
 
-    const res = await GET(makeReq("tok-abc", `10.80.0.${Math.floor(Math.random() * 200) + 1}`), ctx("tok-abc"));
+    const res = await GET(
+      makeReq("tok-abc", `10.80.0.${Math.floor(Math.random() * 200) + 1}`),
+      ctx("tok-abc"),
+    );
     expect(res.status).toBe(200);
 
     const body = (await res.json()) as {
@@ -102,33 +110,50 @@ describe("GET /api/v1/invitations/[token] 预览", () => {
 
   it("token 不存在 → 404", async () => {
     const fakeTx = makeFakeTx(null);
-    mockRunWithAuthOp.mockImplementation(async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx));
+    mockRunWithAuthOp.mockImplementation(
+      async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx),
+    );
 
-    const res = await GET(makeReq("tok-404", `10.80.1.${Math.floor(Math.random() * 200) + 1}`), ctx("tok-404"));
+    const res = await GET(
+      makeReq("tok-404", `10.80.1.${Math.floor(Math.random() * 200) + 1}`),
+      ctx("tok-404"),
+    );
     expect(res.status).toBe(404);
   });
 
   it("已接受的邀请 → 410", async () => {
     const invitation = { ...validInvitation(), acceptedAt: new Date() };
     const fakeTx = makeFakeTx(invitation);
-    mockRunWithAuthOp.mockImplementation(async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx));
+    mockRunWithAuthOp.mockImplementation(
+      async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx),
+    );
 
-    const res = await GET(makeReq("tok-410a", `10.80.2.${Math.floor(Math.random() * 200) + 1}`), ctx("tok-410a"));
+    const res = await GET(
+      makeReq("tok-410a", `10.80.2.${Math.floor(Math.random() * 200) + 1}`),
+      ctx("tok-410a"),
+    );
     expect(res.status).toBe(410);
   });
 
   it("已过期邀请 → 410", async () => {
     const invitation = { ...validInvitation(), expiresAt: new Date(Date.now() - 1000) };
     const fakeTx = makeFakeTx(invitation);
-    mockRunWithAuthOp.mockImplementation(async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx));
+    mockRunWithAuthOp.mockImplementation(
+      async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx),
+    );
 
-    const res = await GET(makeReq("tok-410b", `10.80.3.${Math.floor(Math.random() * 200) + 1}`), ctx("tok-410b"));
+    const res = await GET(
+      makeReq("tok-410b", `10.80.3.${Math.floor(Math.random() * 200) + 1}`),
+      ctx("tok-410b"),
+    );
     expect(res.status).toBe(410);
   });
 
   it("TC-RATE-07：同一客户端 10 次放行，第 11 次返回 429 且带 Retry-After", async () => {
     const fakeTx = makeFakeTx(validInvitation());
-    mockRunWithAuthOp.mockImplementation(async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx));
+    mockRunWithAuthOp.mockImplementation(
+      async (_op: string, fn: (tx: unknown) => Promise<unknown>) => fn(fakeTx),
+    );
 
     // 固定 XFF：同一客户端标识（bucket invitations:preview，max 10 / 60s）
     const xff = `10.80.4.${Math.floor(Math.random() * 200) + 1}`;

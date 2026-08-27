@@ -171,13 +171,11 @@ export async function POST(req: NextRequest) {
         // 埋点② payment_failed：经 providerOrderId 反查 workspaceId，查不到跳过
         // TC-RLS-07：subscriptions 表 FORCE RLS（p_subscriptions_rls 仅放行 workspace
         // 谓词或 auth_op='webhook'），此处无 workspace 上下文，经 webhook 逃生口读取
-        const sub = await runWithAuthOp(
-          "webhook",
-          (tx) =>
-            tx.subscription.findFirst({
-              where: { stripeSubId: subId },
-              select: { workspaceId: true },
-            }),
+        const sub = await runWithAuthOp("webhook", (tx) =>
+          tx.subscription.findFirst({
+            where: { stripeSubId: subId },
+            select: { workspaceId: true },
+          }),
         );
         if (sub) {
           await trackServerEvent({
@@ -194,13 +192,11 @@ export async function POST(req: NextRequest) {
         // quantity/currentPeriodEnd 已由 customer.subscription.updated 覆盖
         const subId = event.providerOrderId;
         // TC-RLS-07：同上，subscriptions 表 FORCE RLS，经 webhook 逃生口反查 workspaceId
-        const sub = await runWithAuthOp(
-          "webhook",
-          (tx) =>
-            tx.subscription.findFirst({
-              where: { stripeSubId: subId },
-              select: { workspaceId: true },
-            }),
+        const sub = await runWithAuthOp("webhook", (tx) =>
+          tx.subscription.findFirst({
+            where: { stripeSubId: subId },
+            select: { workspaceId: true },
+          }),
         );
         if (sub) {
           // 埋点③ subscription_renewed
