@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { X, Loader2, Flag, Calendar } from "lucide-react";
+import { X, Loader2, Flag, Calendar, Tag, Milestone as MilestoneIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
+import type { Label, Milestone } from "@/lib/types";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -12,6 +14,10 @@ interface Person {
   id: string;
   name: string | null;
   email: string;
+}
+
+interface TaskStub {
+  id: string;
 }
 
 interface TaskStub {
@@ -55,6 +61,10 @@ export default function NewTaskDialog({
   const [assigneeId, setAssigneeId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [members, setMembers] = useState<Person[]>([]);
+  const [labels, setLabels] = useState<Label[]>([]);
+  const [selectedLabelIds, setSelectedLabelIds] = useState<Set<string>>(new Set());
+  const [milestones, setMilestones] = useState<Milestone[]>([]);
+  const [milestoneId, setMilestoneId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -63,17 +73,25 @@ export default function NewTaskDialog({
 
   useEffect(() => {
     if (!open) return;
-    // 重置 + 拉取成员列表供指派
+    // 重置 + 拉取成员/标签/里程碑列表
     setTitle("");
     setDescription("");
     setStatus("todo");
     setPriority("medium");
     setAssigneeId("");
     setDueDate("");
+    setSelectedLabelIds(new Set());
+    setMilestoneId("");
     setError("");
-    api<Person[]>(`/api/v1/workspaces/${wid}/members`)
-      .then(setMembers)
-      .catch(() => setMembers([]));
+    Promise.all([
+      api<Person[]>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
+      api<Label[]>(`/api/v1/workspaces/${wid}/labels`).catch(() => [] as Label[]),
+      api<Milestone[]>(`/api/v1/workspaces/${wid}/milestones`).catch(() => [] as Milestone[]),
+    ]).then(([m, l, ms]) => {
+      setMembers(m);
+      setLabels(l);
+      setMilestones(ms);
+    });
   }, [open, wid]);
 
   useEffect(() => {
@@ -136,6 +154,8 @@ export default function NewTaskDialog({
           priority,
           assigneeId: assigneeId || undefined,
           dueDate: dueDate ? localDateToISOString(dueDate) : undefined,
+          milestoneId: milestoneId || null,
+          labelIds: Array.from(selectedLabelIds),
         }),
       });
       onCreated?.(created);
@@ -275,6 +295,79 @@ export default function NewTaskDialog({
               />
             </div>
           </div>
+
+          {/* 里程碑选择（P4：看板标签/里程碑） */}
+          {milestones.length > 0 && (
+            <div>
+              <label className={fieldLabel}>
+                <MilestoneIcon size={13} />
+                里程碑（可选）
+              </label>
+              <select
+                value={milestoneId}
+                onChange={(e) => setMilestoneId(e.target.value)}
+                className={fieldControl}
+              >
+                <option value="">未归入里程碑</option>
+                {milestones.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name}
+                    {m.dueDate
+                      ? `（${new Date(m.dueDate).toLocaleDateString()}）`
+                      : ""}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
+
+          {/* 标签选择（P4：看板标签/里程碑） */}
+          {labels.length > 0 && (
+            <div>
+              <label className={fieldLabel}>
+                <Tag size={13} />
+                标签（可选，多选）
+              </label>
+              <div className="flex flex-wrap gap-1.5">
+                {labels.map((label) => {
+                  const selected = selectedLabelIds.has(label.id);
+                  return (
+                    <button
+                      key={label.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedLabelIds((prev) => {
+                          const next = new Set(prev);
+                          if (next.has(label.id)) next.delete(label.id);
+                          else next.add(label.id);
+                          return next;
+                        });
+                      }}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded text-[length:var(--text-xs)] font-[var(--weight-medium)] transition-all"
+                      style={{
+                        background: selected
+                          ? `color-mix(in srgb, ${label.color} 18%, transparent)`
+                          : "var(--surface-2)",
+                        color: selected ? label.color : "var(--muted)",
+                        border: selected
+                          ? `1px solid color-mix(in srgb, ${label.color} 40%, transparent)`
+                          : "1px solid var(--border)",
+                      }}
+                      aria-pressed={selected}
+                    >
+                      <span
+                        className="w-1.5 h-1.5 rounded-full"
+                        style={{ background: label.color }}
+                        aria-hidden="true"
+                      />
+                      {label.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
 
           {error && (
             <div className="px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">

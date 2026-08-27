@@ -104,7 +104,11 @@
     "recentlyUpdated": "Recently updated",
     "dueSoon": "Due soon",
     "all": "All",
-    "sortLabel": "Sort by"
+    "sortLabel": "Sort by",
+    "boardTitle": "Task board",
+    "countUnit": "tasks",
+    "selected": "{count} selected",
+    "multiSelect": "Multi-select"
   },
   "time": {
     "justNow": "Just now",
@@ -185,6 +189,8 @@
   "onboarding": {
     "badge": "Onboarding · {current} / {total}",
     "skipAria": "Skip onboarding",
+    "skip": "Skip",
+    "back": "Back",
     "step1": {
       "title": "Welcome to corps",
       "subtitle": "Set up your first task in 60 seconds and start collaborating",
@@ -208,6 +214,13 @@
       "desc2": "Invitees need to register a corps account before accepting.",
       "desc2Highlight": "Note",
       "cta": "Go to members"
+    },
+    "step4": {
+      "title": "All set",
+      "subtitle": "Start your team collaboration journey",
+      "desc1": "You've completed the basic setup. Start creating tasks, inviting members, and recording decisions.",
+      "desc2": "Reach out in settings if you hit any issues — we keep improving.",
+      "cta": "Go to board"
     }
   },
   "pricing": {
@@ -295,5 +308,84 @@
     "ariaLabel": "Switch language",
     "zh": "中文",
     "en": "English"
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Workspace basics and personal display preferences.",
+    "save": "Save changes",
+    "saved": "Saved",
+    "noChanges": "No changes",
+    "profileTitle": "Profile",
+    "profileName": "Name",
+    "profileNamePlaceholder": "Your display name",
+    "profileAvatar": "Avatar URL",
+    "profileAvatarAlt": "Avatar preview",
+    "profileAvatarHint": "Leave empty to use your initial as the default avatar.",
+    "profileAvatarInvalid": "Please enter a valid URL",
+    "workspaceTitle": "Workspace",
+    "workspaceName": "Name",
+    "workspaceNamePlaceholder": "e.g., Growth team",
+    "workspaceSlug": "Slug",
+    "workspaceSlugHint": "Lowercase letters, digits, and hyphens only. Used for external references, globally unique.",
+    "workspaceNoPermission": "Your role is \"Member\". Only owners or admins can edit workspace info.",
+    "defaultViewTitle": "Default task view",
+    "defaultViewHint": "The view shown when entering the workspace. Only affects you.",
+    "viewBoard": "Board",
+    "viewList": "List",
+    "notifTitle": "Notification preferences",
+    "notifHint": "Control which events send you notifications.",
+    "notifEmail": "Email notifications",
+    "notifEmailHint": "Task assignments, due-date reminders, etc. via email",
+    "notifMention": "@mention notifications",
+    "notifMentionHint": "Notify when someone @mentions you in a comment",
+    "appearanceTitle": "Appearance",
+    "appearanceHint": "Only affects your browser, not other teammates.",
+    "overviewTitle": "Overview",
+    "overviewMembers": "Members",
+    "overviewMembersUnit": "",
+    "overviewTasks": "Tasks",
+    "overviewTasksUnit": "",
+    "overviewPlan": "Plan",
+    "overviewCreated": "Created",
+    "overviewWsId": "Workspace ID",
+    "dangerTitle": "Danger zone",
+    "dangerHint": "Deleting the workspace permanently removes all tasks, comments, and decision records, and cannot be undone.",
+    "deleteInit": "Delete workspace",
+    "deleteConfirmHint": "This action cannot be undone. All tasks, comments, and decision records in workspace \"{name}\" will be permanently deleted.",
+    "deleteConfirmLabel": "Type the workspace name \"{name}\" to confirm deletion",
+    "deleteConfirm": "Confirm delete",
+    "deleteCancel": "Cancel",
+    "deleteNameMismatch": "Workspace name does not match",
+    "deleteFailed": "Deletion failed, please retry later"
+  },
+  "label": {
+    "title": "Labels",
+    "create": "New label",
+    "name": "Label name",
+    "color": "Color",
+    "selectLabel": "Select labels",
+    "manage": "Manage labels",
+    "empty": "No labels yet",
+    "nameExists": "Label name already exists"
+  },
+  "milestone": {
+    "title": "Milestone",
+    "create": "New milestone",
+    "name": "Name",
+    "dueDate": "Due date",
+    "description": "Description",
+    "filterLabel": "Milestone",
+    "filterAll": "All",
+    "filterUnassigned": "No milestone",
+    "empty": "No milestones yet",
+    "taskCount": "{count} tasks"
+  },
+  "export": {
+    "title": "Data export",
+    "hint": "Export workspace data as CSV files (UTF-8 BOM included for Excel compatibility).",
+    "tasks": "Export tasks",
+    "decisions": "Export decisions",
+    "tasksFailed": "Failed to export tasks",
+    "decisionsFailed": "Failed to export decisions"
   }
 }

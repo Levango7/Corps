@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { prisma } from "@/lib/prisma";
+import { sendMentionEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/comments — 评论时间线（正序） */
@@ -101,12 +103,55 @@ export async function POST(
         });
       }
 
-      return created;
+      return { created, validMentions, taskTitle: task.title };
     });
 
     if (!comment) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
 
-    return NextResponse.json({ code: 201, data: comment }, { status: 201 });
+    // @提及邮件通知（邮件已配置 + 被提及者非评论作者时，失败不阻塞）
+    if (isEmailConfigured() && comment.validMentions.length > 0) {
+      try {
+        const [mentioner, workspace, mentionedUsers] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: ctx.payload.sub },
+            select: { name: true, email: true },
+          }),
+          prisma.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
+          prisma.user.findMany({
+            where: { id: { in: comment.validMentions } },
+            select: { id: true, name: true, email: true },
+          }),
+        ]);
+        if (mentioner && workspace) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+          const taskUrl = `${appUrl}/w/${wid}/task/${id}`;
+          // 评论摘要：截断到 200 字符以内
+          const snippet =
+            validated.body.length > 200
+              ? `${validated.body.slice(0, 200)}…`
+              : validated.body;
+          await Promise.all(
+            mentionedUsers.map((u) =>
+              sendMentionEmail({
+                to: u.email,
+                mentioneeName: u.name ?? u.email,
+                taskTitle: comment.taskTitle,
+                workspaceName: workspace.name,
+                mentionerName: mentioner.name ?? mentioner.email,
+                commentSnippet: snippet,
+                taskUrl,
+              }).catch((err) =>
+                console.error("[comment] sendMentionEmail failed (non-blocking):", err),
+              ),
+            ),
+          );
+        }
+      } catch (err) {
+        console.error("[comment] post-create mention notify failed (non-blocking):", err);
+      }
+    }
+
+    return NextResponse.json({ code: 201, data: comment.created }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

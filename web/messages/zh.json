@@ -104,7 +104,11 @@
     "recentlyUpdated": "最近更新",
     "dueSoon": "即将到期",
     "all": "全部",
-    "sortLabel": "排序方式"
+    "sortLabel": "排序方式",
+    "boardTitle": "任务看板",
+    "countUnit": "个任务",
+    "selected": "已选 {count}",
+    "multiSelect": "多选"
   },
   "time": {
     "justNow": "刚刚",
@@ -185,6 +189,8 @@
   "onboarding": {
     "badge": "引导 · {current} / {total}",
     "skipAria": "跳过引导",
+    "skip": "跳过",
+    "back": "上一步",
     "step1": {
       "title": "欢迎来到 corps",
       "subtitle": "60 秒完成首个任务，开始你的团队协作",
@@ -208,6 +214,13 @@
       "desc2": "邀请前对方需先在 corps 注册账号。",
       "desc2Highlight": "注意",
       "cta": "去成员页"
+    },
+    "step4": {
+      "title": "一切就绪",
+      "subtitle": "开始你的团队协作之旅",
+      "desc1": "你已完成基础设置，可以开始创建任务、邀请成员、记录决策。",
+      "desc2": "遇到问题随时在设置页反馈，我们会持续改进。",
+      "cta": "进入看板"
     }
   },
   "pricing": {
@@ -295,5 +308,84 @@
     "ariaLabel": "切换语言",
     "zh": "中文",
     "en": "English"
+  },
+  "settings": {
+    "title": "设置",
+    "subtitle": "工作区基础信息与个人显示偏好。",
+    "save": "保存修改",
+    "saved": "已保存",
+    "noChanges": "未做修改",
+    "profileTitle": "个人资料",
+    "profileName": "姓名",
+    "profileNamePlaceholder": "你的显示名称",
+    "profileAvatar": "头像 URL",
+    "profileAvatarAlt": "头像预览",
+    "profileAvatarHint": "留空则使用姓名首字母作为默认头像。",
+    "profileAvatarInvalid": "请输入有效的 URL",
+    "workspaceTitle": "工作区",
+    "workspaceName": "名称",
+    "workspaceNamePlaceholder": "例如：增长组",
+    "workspaceSlug": "标识",
+    "workspaceSlugHint": "仅小写字母、数字与连字符。用于对外引用，全局唯一。",
+    "workspaceNoPermission": "你的角色为「成员」，仅拥有者或管理员可修改工作区信息。",
+    "defaultViewTitle": "默认任务视图",
+    "defaultViewHint": "进入工作区时默认展示的视图，只影响你自己。",
+    "viewBoard": "看板",
+    "viewList": "列表",
+    "notifTitle": "通知偏好",
+    "notifHint": "控制哪些事件会向你发送通知。",
+    "notifEmail": "邮件通知",
+    "notifEmailHint": "任务指派、截止日提醒等通过邮件通知你",
+    "notifMention": "@提及通知",
+    "notifMentionHint": "评论中有人 @提及你时通知",
+    "appearanceTitle": "外观",
+    "appearanceHint": "只影响你自己的浏览器，不改变团队其他成员。",
+    "overviewTitle": "概况",
+    "overviewMembers": "成员",
+    "overviewMembersUnit": "人",
+    "overviewTasks": "任务",
+    "overviewTasksUnit": "条",
+    "overviewPlan": "套餐",
+    "overviewCreated": "创建于",
+    "overviewWsId": "工作区 ID",
+    "dangerTitle": "危险操作",
+    "dangerHint": "删除工作区将永久清除所有任务、评论、决策记录，且不可恢复。",
+    "deleteInit": "删除工作区",
+    "deleteConfirmHint": "此操作不可恢复。工作区「{name}」下的所有任务、评论、决策记录将被永久删除。",
+    "deleteConfirmLabel": "请输入工作区名称「{name}」以确认删除",
+    "deleteConfirm": "确认删除",
+    "deleteCancel": "取消",
+    "deleteNameMismatch": "输入的工作区名称不匹配",
+    "deleteFailed": "删除失败，请稍后重试"
+  },
+  "label": {
+    "title": "标签",
+    "create": "新建标签",
+    "name": "标签名",
+    "color": "颜色",
+    "selectLabel": "选择标签",
+    "manage": "管理标签",
+    "empty": "暂无标签",
+    "nameExists": "标签名已存在"
+  },
+  "milestone": {
+    "title": "里程碑",
+    "create": "新建里程碑",
+    "name": "名称",
+    "dueDate": "截止日期",
+    "description": "描述",
+    "filterLabel": "里程碑",
+    "filterAll": "全部",
+    "filterUnassigned": "未归入里程碑",
+    "empty": "暂无里程碑",
+    "taskCount": "{count} 个任务"
+  },
+  "export": {
+    "title": "数据导出",
+    "hint": "导出工作区数据为 CSV 文件（含 UTF-8 BOM，Excel 中文兼容）。",
+    "tasks": "导出任务",
+    "decisions": "导出决策记录",
+    "tasksFailed": "导出任务失败",
+    "decisionsFailed": "导出决策记录失败"
   }
 }

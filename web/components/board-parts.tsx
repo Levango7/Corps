@@ -12,6 +12,7 @@ import { useRouter } from "next/navigation";
 import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
 import { DueTag } from "@/components/DueTag";
+import { TaskLabels } from "@/components/TaskLabels";
 import type { Task } from "@/lib/types";
 import {
   COLUMNS,
@@ -200,6 +201,7 @@ function BoardCard({
             {task.title}
           </p>
           {task.dueDate && <DueTag dueDate={task.dueDate} />}
+          {task.labels && task.labels.length > 0 && <TaskLabels labels={task.labels} />}
           {task.assignee && (
             <div className="flex items-center gap-1 mt-2">
               <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
@@ -267,6 +269,7 @@ export function ListTable({
             <th className="font-medium px-4 h-10">优先级</th>
             <th className="font-medium px-4 h-10">状态</th>
             <th className="font-medium px-4 h-10">截止日期</th>
+            <th className="font-medium px-4 h-10">标签</th>
           </tr>
         </thead>
         <tbody>
@@ -333,6 +336,13 @@ export function ListTable({
                 </td>
                 <td className="px-4 h-10 text-[var(--muted)]">
                   {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
+                </td>
+                <td className="px-4 h-10">
+                  {task.labels && task.labels.length > 0 ? (
+                    <TaskLabels labels={task.labels} max={2} />
+                  ) : (
+                    <span className="text-[var(--meta)]">—</span>
+                  )}
                 </td>
               </tr>
             );
@@ -425,6 +435,7 @@ export function ListCards({
                 </div>
               )}
             </div>
+            {task.labels && task.labels.length > 0 && <TaskLabels labels={task.labels} />}
           </div>
         );
       })}

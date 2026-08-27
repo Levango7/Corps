@@ -9,11 +9,19 @@ import {
   Sun,
   Moon,
   Monitor,
+  Download,
+  Trash2,
+  Bell,
+  LayoutGrid,
+  List,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { exportTasksCsv, exportDecisionsCsv, type CsvTask, type CsvDecision } from "@/lib/csv-export";
 
 type Role = "owner" | "admin" | "member";
 type ThemePref = "light" | "dark" | "system";
+type DefaultView = "board" | "list";
 
 interface Workspace {
   id: string;
@@ -33,6 +41,11 @@ const THEMES: { id: ThemePref; label: string; icon: typeof Sun }[] = [
   { id: "system", label: "跟随系统", icon: Monitor },
 ];
 
+const VIEWS: { id: DefaultView; icon: typeof LayoutGrid }[] = [
+  { id: "board", icon: LayoutGrid },
+  { id: "list", icon: List },
+];
+
 function applyTheme(pref: ThemePref) {
   const resolved =
     pref === "system"
@@ -45,12 +58,40 @@ function applyTheme(pref: ThemePref) {
   localStorage.setItem("corps_theme", pref);
 }
 
+/** 通知偏好持久化 key */
+const NOTIF_PREF_KEY = "corps_notif_pref";
+/** 默认视图持久化 key */
+const DEFAULT_VIEW_KEY = "corps_default_view";
+
+interface NotifPref {
+  emailEnabled: boolean;
+  mentionEnabled: boolean;
+}
+
+function loadNotifPref(): NotifPref {
+  try {
+    const raw = localStorage.getItem(NOTIF_PREF_KEY);
+    if (raw) return JSON.parse(raw) as NotifPref;
+  } catch {
+    /* ignore */
+  }
+  return { emailEnabled: true, mentionEnabled: true };
+}
+
+function saveNotifPref(pref: NotifPref): void {
+  localStorage.setItem(NOTIF_PREF_KEY, JSON.stringify(pref));
+}
+
 export default function SettingsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+  const t = useTranslations("settings");
+  const tExport = useTranslations("export");
   const [ws, setWs] = useState<Workspace | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
   const [theme, setTheme] = useState<ThemePref>("system");
+  const [defaultView, setDefaultView] = useState<DefaultView>("board");
+  const [notifPref, setNotifPref] = useState<NotifPref>({ emailEnabled: true, mentionEnabled: true });
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -64,6 +105,13 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const [userBusy, setUserBusy] = useState(false);
   const [userSaved, setUserSaved] = useState(false);
   const [userImageError, setUserImageError] = useState("");
+  // CSV 导出状态
+  const [exportingTasks, setExportingTasks] = useState(false);
+  const [exportingDecisions, setExportingDecisions] = useState(false);
+  // 删除工作区确认流程
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [deleteInput, setDeleteInput] = useState("");
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     try {
@@ -80,6 +128,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     load();
     const stored = (localStorage.getItem("corps_theme") as ThemePref | null) ?? "system";
     setTheme(stored);
+    const storedView = (localStorage.getItem(DEFAULT_VIEW_KEY) as DefaultView | null) ?? "board";
+    setDefaultView(storedView);
+    setNotifPref(loadNotifPref());
   }, [load]);
 
   // 加载当前用户资料
@@ -146,9 +197,72 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     }
   }
 
-  function pickTheme(t: ThemePref) {
-    setTheme(t);
-    applyTheme(t);
+  function pickTheme(tp: ThemePref) {
+    setTheme(tp);
+    applyTheme(tp);
+  }
+
+  function pickView(v: DefaultView) {
+    setDefaultView(v);
+    localStorage.setItem(DEFAULT_VIEW_KEY, v);
+  }
+
+  function updateNotifPref(patch: Partial<NotifPref>) {
+    setNotifPref((prev) => {
+      const next = { ...prev, ...patch };
+      saveNotifPref(next);
+      return next;
+    });
+  }
+
+  // CSV 导出：拉取任务列表并导出
+  async function handleExportTasks() {
+    if (exportingTasks || !ws) return;
+    setExportingTasks(true);
+    setError("");
+    try {
+      const tasks = await api<CsvTask[]>(`/api/v1/workspaces/${wid}/tasks`);
+      exportTasksCsv(tasks, ws.slug);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tExport("tasksFailed"));
+    } finally {
+      setExportingTasks(false);
+    }
+  }
+
+  // CSV 导出：拉取决策列表并导出
+  async function handleExportDecisions() {
+    if (exportingDecisions || !ws) return;
+    setExportingDecisions(true);
+    setError("");
+    try {
+      const decisions = await api<CsvDecision[]>(`/api/v1/workspaces/${wid}/decisions`);
+      exportDecisionsCsv(decisions, ws.slug);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tExport("decisionsFailed"));
+    } finally {
+      setExportingDecisions(false);
+    }
+  }
+
+  // 删除工作区（两步确认：勾选确认 + 输入工作区名匹配）
+  async function handleDeleteWorkspace() {
+    if (!ws || deleting) return;
+    if (deleteInput.trim() !== ws.name) {
+      setError(t("deleteNameMismatch"));
+      return;
+    }
+    setDeleting(true);
+    setError("");
+    try {
+      await api(`/api/v1/workspaces/${wid}`, { method: "DELETE" });
+      // 删除成功后跳转到首页
+      window.location.href = "/";
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("deleteFailed"));
+    } finally {
+      setDeleting(false);
+    }
   }
 
   const canEdit = ws ? ["owner", "admin"].includes(ws.role) : false;
@@ -170,11 +284,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           <SettingsIcon size={20} className="text-[var(--muted)]" />
-          设置
+          {t("title")}
         </h1>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          工作区基础信息与个人显示偏好。
-        </p>
+        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
       </div>
 
       {error && (
@@ -187,13 +299,13 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       {/* 个人资料 */}
       <section className={sectionClass}>
         <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
-          个人资料
+          {t("profileTitle")}
         </h2>
 
         <div className="space-y-4">
           <div>
             <label htmlFor="user-name" className={labelClass}>
-              姓名
+              {t("profileName")}
             </label>
             <input
               id="user-name"
@@ -201,13 +313,13 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               value={userName}
               onChange={(e) => setUserName(e.target.value)}
               className={inputClass}
-              placeholder="你的显示名称"
+              placeholder={t("profileNamePlaceholder")}
             />
           </div>
 
           <div>
             <label htmlFor="user-image" className={labelClass}>
-              头像 URL
+              {t("profileAvatar")}
             </label>
             <input
               id="user-image"
@@ -216,7 +328,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               onChange={(e) => setUserImage(e.target.value)}
               onBlur={(e) => {
                 const v = e.target.value.trim();
-                if (v && !/^https?:\/\/.+/i.test(v)) setUserImageError("请输入有效的 URL");
+                if (v && !/^https?:\/\/.+/i.test(v)) setUserImageError(t("profileAvatarInvalid"));
                 else setUserImageError("");
               }}
               className={inputClass}
@@ -232,11 +344,11 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <img
                 src={userImage.trim()}
                 className="mt-2 w-16 h-16 rounded-full border border-[var(--border)] object-cover"
-                alt="头像预览"
+                alt={t("profileAvatarAlt")}
               />
             )}
             <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
-              留空则使用姓名首字母作为默认头像。
+              {t("profileAvatarHint")}
             </p>
           </div>
         </div>
@@ -248,15 +360,15 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
           >
             {userBusy && <Loader2 size={15} className="animate-spin" />}
-            保存修改
+            {t("save")}
           </button>
           {!userDirty && !userBusy && (
-            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">未做修改</span>
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noChanges")}</span>
           )}
           {userSaved && (
             <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">
               <Check size={15} className="text-[var(--success)]" />
-              已保存
+              {t("saved")}
             </span>
           )}
         </div>
@@ -265,13 +377,13 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       {/* 工作区 */}
       <section className={`${sectionClass} mt-5`}>
         <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
-          工作区
+          {t("workspaceTitle")}
         </h2>
 
         <div className="space-y-4">
           <div>
             <label htmlFor="ws-name" className={labelClass}>
-              名称
+              {t("workspaceName")}
             </label>
             <input
               id="ws-name"
@@ -279,13 +391,13 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               onChange={(e) => setName(e.target.value)}
               disabled={!canEdit}
               className={inputClass}
-              placeholder="例如：增长组"
+              placeholder={t("workspaceNamePlaceholder")}
             />
           </div>
 
           <div>
             <label htmlFor="ws-slug" className={labelClass}>
-              标识
+              {t("workspaceSlug")}
             </label>
             <input
               id="ws-slug"
@@ -296,7 +408,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               placeholder="growth-team"
             />
             <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
-              仅小写字母、数字与连字符。用于对外引用，全局唯一。
+              {t("workspaceSlugHint")}
             </p>
           </div>
         </div>
@@ -309,42 +421,120 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
             >
               {busy && <Loader2 size={15} className="animate-spin" />}
-              保存修改
+              {t("save")}
             </button>
             {!dirty && !busy && (
-              <span className="text-[length:var(--text-xs)] text-[var(--meta)]">未做修改</span>
+              <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noChanges")}</span>
             )}
             {saved && (
               <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">
                 <Check size={15} className="text-[var(--success)]" />
-                已保存
+                {t("saved")}
               </span>
             )}
           </div>
         )}
         {!canEdit && ws && (
           <p className="mt-4 pt-4 border-t border-[var(--border-soft)] text-[length:var(--text-xs)] text-[var(--meta)]">
-            你的角色为「成员」，仅拥有者或管理员可修改工作区信息。
+            {t("workspaceNoPermission")}
           </p>
         )}
+      </section>
+
+      {/* 默认任务视图（P4：工作区设置增强） */}
+      <section className={`${sectionClass} mt-5`}>
+        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+          {t("defaultViewTitle")}
+        </h2>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          {t("defaultViewHint")}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {VIEWS.map((v) => {
+            const Icon = v.icon;
+            const active = defaultView === v.id;
+            return (
+              <button
+                key={v.id}
+                onClick={() => pickView(v.id)}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)]"
+                style={{
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "var(--accent-soft)" : "var(--surface)",
+                  color: active ? "var(--accent)" : "var(--fg-2)",
+                }}
+              >
+                <Icon size={16} />
+                <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
+                  {v.id === "board" ? t("viewBoard") : t("viewList")}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 通知偏好（P4：工作区设置增强） */}
+      <section className={`${sectionClass} mt-5`}>
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+          <Bell size={16} className="text-[var(--muted)]" />
+          {t("notifTitle")}
+        </h2>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          {t("notifHint")}
+        </p>
+        <div className="space-y-3">
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div>
+              <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+                {t("notifEmail")}
+              </div>
+              <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
+                {t("notifEmailHint")}
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={notifPref.emailEnabled}
+              onChange={(e) => updateNotifPref({ emailEnabled: e.target.checked })}
+              className="w-4 h-4 accent-[var(--accent)]"
+            />
+          </label>
+          <label className="flex items-center justify-between gap-3 cursor-pointer">
+            <div>
+              <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+                {t("notifMention")}
+              </div>
+              <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
+                {t("notifMentionHint")}
+              </div>
+            </div>
+            <input
+              type="checkbox"
+              checked={notifPref.mentionEnabled}
+              onChange={(e) => updateNotifPref({ mentionEnabled: e.target.checked })}
+              className="w-4 h-4 accent-[var(--accent)]"
+            />
+          </label>
+        </div>
       </section>
 
       {/* 外观 */}
       <section className={`${sectionClass} mt-5`}>
         <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
-          外观
+          {t("appearanceTitle")}
         </h2>
         <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
-          只影响你自己的浏览器，不改变团队其他成员。
+          {t("appearanceHint")}
         </p>
         <div className="flex flex-col sm:flex-row gap-2">
-          {THEMES.map((t) => {
-            const Icon = t.icon;
-            const active = theme === t.id;
+          {THEMES.map((tp) => {
+            const Icon = tp.icon;
+            const active = theme === tp.id;
             return (
               <button
-                key={t.id}
-                onClick={() => pickTheme(t.id)}
+                key={tp.id}
+                onClick={() => pickTheme(tp.id)}
                 className="w-full sm:flex-1 flex flex-col items-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)]"
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
@@ -354,7 +544,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               >
                 <Icon size={18} />
                 <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
-                  {t.label}
+                  {tp.label}
                 </span>
               </button>
             );
@@ -362,18 +552,55 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
         </div>
       </section>
 
+      {/* 数据导出（P4：CSV 导出） */}
+      <section className={`${sectionClass} mt-5`}>
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+          <Download size={16} className="text-[var(--muted)]" />
+          {tExport("title")}
+        </h2>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          {tExport("hint")}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-3">
+          <button
+            onClick={handleExportTasks}
+            disabled={exportingTasks}
+            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
+          >
+            {exportingTasks ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Download size={15} />
+            )}
+            {tExport("tasks")}
+          </button>
+          <button
+            onClick={handleExportDecisions}
+            disabled={exportingDecisions}
+            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
+          >
+            {exportingDecisions ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <Download size={15} />
+            )}
+            {tExport("decisions")}
+          </button>
+        </div>
+      </section>
+
       {/* 概况 */}
       {ws && (
         <section className={`${sectionClass} mt-5`}>
           <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
-            概况
+            {t("overviewTitle")}
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-y-3 sm:gap-x-4 text-[length:var(--text-sm)]">
             {[
-              ["成员", `${ws.memberCount} 人`],
-              ["任务", `${ws.taskCount} 条`],
-              ["套餐", ws.plan],
-              ["创建于", new Date(ws.createdAt).toLocaleDateString("zh-CN")],
+              [t("overviewMembers"), `${ws.memberCount} ${t("overviewMembersUnit")}`],
+              [t("overviewTasks"), `${ws.taskCount} ${t("overviewTasksUnit")}`],
+              [t("overviewPlan"), ws.plan],
+              [t("overviewCreated"), new Date(ws.createdAt).toLocaleDateString("zh-CN")],
             ].map(([k, v]) => (
               <div key={k} className="flex items-baseline justify-between gap-2">
                 <dt className="text-[var(--muted)]">{k}</dt>
@@ -382,7 +609,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             ))}
           </dl>
           <div className="mt-4 pt-4 border-t border-[var(--border-soft)]">
-            <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-1">工作区 ID</div>
+            <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-1">
+              {t("overviewWsId")}
+            </div>
             <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)] text-[var(--fg-2)] break-all">
               {ws.id}
             </code>
@@ -390,15 +619,65 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
         </section>
       )}
 
-      {/* 危险操作 */}
+      {/* 危险操作（P4：删除工作区两步确认流程） */}
       {ws?.role === "owner" && (
         <section className="mt-5 rounded-[var(--radius-lg)] p-4 sm:p-5 border border-[var(--danger)] bg-[var(--danger-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
-            危险操作
+          <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
+            <Trash2 size={16} />
+            {t("dangerTitle")}
           </h2>
-          <p className="text-[length:var(--text-sm)] text-[var(--danger-fg)] opacity-90">
-            删除工作区功能将在后续版本开放。
+          <p className="text-[length:var(--text-sm)] text-[var(--danger-fg)] opacity-90 mb-4">
+            {t("dangerHint")}
           </p>
+
+          {!deleteConfirm ? (
+            <button
+              onClick={() => setDeleteConfirm(true)}
+              className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+            >
+              <Trash2 size={15} />
+              {t("deleteInit")}
+            </button>
+          ) : (
+            <div className="space-y-3">
+              <div className="p-3 rounded-[var(--radius-md)] bg-[var(--danger)] bg-opacity-10 text-[length:var(--text-sm)] text-[var(--danger-fg)]">
+                {t("deleteConfirmHint", { name: ws.name })}
+              </div>
+              <div>
+                <label htmlFor="delete-confirm-input" className={labelClass}>
+                  {t("deleteConfirmLabel", { name: ws.name })}
+                </label>
+                <input
+                  id="delete-confirm-input"
+                  type="text"
+                  value={deleteInput}
+                  onChange={(e) => setDeleteInput(e.target.value)}
+                  className={inputClass}
+                  placeholder={ws.name}
+                  autoComplete="off"
+                />
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleDeleteWorkspace}
+                  disabled={deleting || deleteInput.trim() !== ws.name}
+                  className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--danger)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                >
+                  {deleting && <Loader2 size={15} className="animate-spin" />}
+                  {t("deleteConfirm")}
+                </button>
+                <button
+                  onClick={() => {
+                    setDeleteConfirm(false);
+                    setDeleteInput("");
+                  }}
+                  className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                >
+                  {t("deleteCancel")}
+                </button>
+              </div>
+            </div>
+          )}
         </section>
       )}
     </div>

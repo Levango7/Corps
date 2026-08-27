@@ -39,6 +39,8 @@ export interface Task {
   creator?: Person | null;
   dueDate?: string | null;
   sortOrder?: number;
+  milestoneId?: string | null;
+  labels?: Label[];
   createdAt?: string;
   updatedAt?: string;
 }
@@ -135,4 +137,30 @@ export interface ApiResponse<T = unknown> {
   code: number;
   message: string;
   data: T | null;
+}
+
+// ─── 标签 / 里程碑（P4：看板标签/里程碑）──
+
+/** 任务标签 */
+export interface Label {
+  id: string;
+  name: string;
+  color: string;
+}
+
+/** 任务上的标签摘要（关联表展开后形态） */
+export interface TaskLabel extends Label {
+  /** 关联表主键信息（前端一般不直接用） */
+  taskId: string;
+  labelId: string;
+}
+
+/** 里程碑 */
+export interface Milestone {
+  id: string;
+  name: string;
+  dueDate?: string | null;
+  description?: string | null;
+  createdAt?: string;
+  updatedAt?: string;
 }

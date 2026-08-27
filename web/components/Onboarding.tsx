@@ -1,8 +1,17 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Plus, UserPlus, X, ArrowRight } from "lucide-react";
+import { useTranslations } from "next-intl";
+import {
+  CheckCircle2,
+  Plus,
+  UserPlus,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  PartyPopper,
+} from "lucide-react";
 
 interface OnboardingProps {
   wid: string;
@@ -15,16 +24,19 @@ interface OnboardingProps {
 }
 
 const STORAGE_KEY = "corps_onboarding_completed";
+const TOTAL_STEPS = 4;
 
 /**
  * Onboarding 引导流程（AC-07: 15分钟内完成"创建首个任务并指派"）
  *
- * 三步引导：
+ * 四步引导：
  * 1. 欢迎来到 corps
  * 2. 创建首个任务
  * 3. 邀请团队成员
+ * 4. 完成恭喜
  *
- * 可跳过；完成后 localStorage 标记不再显示。
+ * 支持：跳过 / 返回上一步 / 步骤间过渡动画 / 进度指示器。
+ * 完成后 localStorage 标记不再显示。
  */
 export default function Onboarding({
   wid,
@@ -32,8 +44,10 @@ export default function Onboarding({
   memberCount: _memberCount,
   onDismiss,
 }: OnboardingProps) {
+  const t = useTranslations("onboarding");
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [animDirection, setAnimDirection] = useState<"forward" | "backward">("forward");
   const router = useRouter();
 
   useEffect(() => {
@@ -56,70 +70,101 @@ export default function Onboarding({
   }
 
   function next() {
-    if (step < 2) {
+    setAnimDirection("forward");
+    if (step < TOTAL_STEPS - 1) {
       setStep((s) => s + 1);
     } else {
       complete();
     }
   }
 
+  function back() {
+    setAnimDirection("backward");
+    if (step > 0) {
+      setStep((s) => s - 1);
+    }
+  }
+
   if (!visible) return null;
 
+  // 若用户已创建任务，跳过"创建首个任务"步（step 1 → step 2）
   const effectiveStep = taskCount > 0 && step === 1 ? 2 : step;
 
-  const steps = [
+  interface StepConfig {
+    title: string;
+    subtitle: string;
+    icon: typeof CheckCircle2;
+    content: ReactNode;
+    action: { label: string; href: string | null };
+    /** 是否允许返回上一步 */
+    canBack: boolean;
+  }
+
+  const steps: StepConfig[] = [
     {
-      title: "欢迎来到 corps",
-      subtitle: "60 秒完成首个任务，开始你的团队协作",
+      title: t("step1.title"),
+      subtitle: t("step1.subtitle"),
       icon: CheckCircle2,
       content: (
         <div className="space-y-3">
+          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step1.desc1")}</p>
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            corps 是面向 5-30 人中小团队的轻量协作工具。
-          </p>
-          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">核心闭环</strong>
-            ：讨论结论自动落位成任务与决策记录——不再手动搬运。
+            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">
+              {t("step1.desc2Highlight")}
+            </strong>
+            {t("step1.desc2")}
           </p>
           <div className="mt-4 p-3 bg-[var(--surface-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)]">
-            不为用不上的功能付费——免费层 ≤10 人，¥59/人/月 起步档。
+            {t("step1.tip")}
           </div>
         </div>
       ),
-      action: { label: "开始", href: null as string | null },
+      action: { label: t("step1.cta"), href: null },
+      canBack: false,
     },
     {
-      title: "创建首个任务",
-      subtitle: "把手里最紧的事放进看板",
+      title: t("step2.title"),
+      subtitle: t("step2.subtitle"),
       icon: Plus,
       content: (
         <div className="space-y-3">
-          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            在看板上创建一条任务，填写标题、负责人、截止日期。
-          </p>
-          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            拖拽任务卡可改变状态（待办 → 进行中 → 已完成）。
-          </p>
+          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step2.desc1")}</p>
+          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step2.desc2")}</p>
         </div>
       ),
-      action: { label: "去看板", href: `/w/${wid}/board` },
+      action: { label: t("step2.cta"), href: `/w/${wid}/board` },
+      canBack: true,
     },
     {
-      title: "邀请团队成员",
-      subtitle: "协作从邀请开始",
+      title: t("step3.title"),
+      subtitle: t("step3.subtitle"),
       icon: UserPlus,
       content: (
         <div className="space-y-3">
+          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step3.desc1")}</p>
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            邀请同事加入工作区，分配 Owner/Admin/Member 角色。
-          </p>
-          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">注意</strong>
-            ：邀请前对方需先在 corps 注册账号。
+            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">
+              {t("step3.desc2Highlight")}
+            </strong>
+            {t("step3.desc2")}
           </p>
         </div>
       ),
-      action: { label: "去成员页", href: `/w/${wid}/members` },
+      action: { label: t("step3.cta"), href: `/w/${wid}/members` },
+      canBack: true,
+    },
+    {
+      title: t("step4.title"),
+      subtitle: t("step4.subtitle"),
+      icon: PartyPopper,
+      content: (
+        <div className="space-y-3">
+          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step4.desc1")}</p>
+          <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step4.desc2")}</p>
+        </div>
+      ),
+      action: { label: t("step4.cta"), href: `/w/${wid}/board` },
+      canBack: true,
     },
   ];
 
@@ -133,6 +178,13 @@ export default function Onboarding({
     next();
   }
 
+  // 过渡动画：根据方向选择 key 与动画类
+  const animKey = `step-${effectiveStep}`;
+  const animClass =
+    animDirection === "forward"
+      ? "animate-[onboarding-slide-in_0.3s_ease-out]"
+      : "animate-[onboarding-slide-in-back_0.3s_ease-out]";
+
   return (
     <div
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4"
@@ -144,32 +196,30 @@ export default function Onboarding({
           <div className="flex items-center gap-2">
             <Icon size={20} className="text-[var(--accent)]" />
             <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--muted)]">
-              引导 · {effectiveStep + 1} / 3
+              {t("badge", { current: effectiveStep + 1, total: TOTAL_STEPS })}
             </span>
           </div>
           <button
             onClick={skip}
             className="p-1.5 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-            aria-label="跳过引导"
+            aria-label={t("skipAria")}
           >
             <X size={16} />
           </button>
         </div>
 
-        {/* 内容 */}
-        <div className="px-6 py-6">
+        {/* 内容（带过渡动画） */}
+        <div key={animKey} className={`px-6 py-6 ${animClass}`}>
           <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             {current.title}
           </h2>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-            {current.subtitle}
-          </p>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{current.subtitle}</p>
           <div className="mt-5">{current.content}</div>
         </div>
 
         {/* 进度指示器 */}
         <div className="flex items-center justify-center gap-1.5 px-6 pb-4">
-          {[0, 1, 2].map((i) => (
+          {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
             <div
               key={i}
               className={`h-1.5 rounded-full transition-all duration-[var(--motion-base)] ${
@@ -185,12 +235,25 @@ export default function Onboarding({
 
         {/* 底部操作 */}
         <div className="flex items-center justify-between px-6 py-4 border-t border-[var(--border-soft)] bg-[var(--surface-2)]">
-          <button
-            onClick={skip}
-            className="text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-          >
-            跳过
-          </button>
+          <div className="flex items-center gap-3">
+            {current.canBack && effectiveStep > 0 && (
+              <button
+                onClick={back}
+                className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <ArrowLeft size={15} />
+                {t("back")}
+              </button>
+            )}
+            {(!current.canBack || effectiveStep === 0) && (
+              <button
+                onClick={skip}
+                className="text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+              >
+                {t("skip")}
+              </button>
+            )}
+          </div>
           <button
             onClick={handleAction}
             className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)]"
@@ -200,6 +263,30 @@ export default function Onboarding({
           </button>
         </div>
       </div>
+
+      {/* 关键帧动画定义（内联，避免依赖全局 CSS） */}
+      <style jsx global>{`
+        @keyframes onboarding-slide-in {
+          from {
+            opacity: 0;
+            transform: translateX(24px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+        @keyframes onboarding-slide-in-back {
+          from {
+            opacity: 0;
+            transform: translateX(-24px);
+          }
+          to {
+            opacity: 1;
+            transform: translateX(0);
+          }
+        }
+      `}</style>
     </div>
   );
 }

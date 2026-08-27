@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { shouldActivate } from "@/lib/analytics-activation";
 import { prisma } from "@/lib/prisma";
+import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 
 const createTaskSchema = z.object({
@@ -12,6 +13,8 @@ const createTaskSchema = z.object({
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   assigneeId: z.string().uuid().optional(),
   dueDate: z.string().datetime().optional(),
+  milestoneId: z.string().uuid().nullable().optional(),
+  labelIds: z.array(z.string().uuid()).optional(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -21,15 +24,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
   try {
     // assignee=me：用当前认证用户 ID 过滤 assigneeId；其他值（或缺失）返回所有任务
+    // milestone=ID：按里程碑筛选；milestone=null 表示未归入里程碑的任务
     const url = new URL(req.url);
     const assigneeFilter =
       url.searchParams.get("assignee") === "me" ? { assigneeId: ctx.payload.sub } : {};
+    const milestoneParam = url.searchParams.get("milestone");
+    const milestoneFilter =
+      milestoneParam === null
+        ? {}
+        : milestoneParam === "null"
+          ? { milestoneId: null }
+          : { milestoneId: milestoneParam };
 
     const tasks = await runWithWorkspace(wid, (tx) =>
       tx.task.findMany({
-        where: { workspaceId: wid, ...assigneeFilter },
+        where: { workspaceId: wid, ...assigneeFilter, ...milestoneFilter },
         include: {
           assignee: { select: { id: true, name: true, email: true } },
+          labels: { include: { label: { select: { id: true, name: true, color: true } } } },
           _count: { select: { comments: true } },
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
@@ -38,7 +50,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       }),
     );
 
-    return NextResponse.json({ code: 200, data: tasks });
+    // 展平 labels 形态：Prisma include 返回 [{ label: {... } }]，前端期望 [{ id, name, color }]
+    const flattened = tasks.map((t) => ({
+      ...t,
+      labels: t.labels.map((tl) => tl.label),
+    }));
+
+    return NextResponse.json({ code: 200, data: flattened });
   } catch (error) {
     console.error("[GET tasks] error:", error);
     return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
@@ -66,18 +84,52 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           if (!member) return { invalidAssignee: true as const };
         }
 
+        // 校验 milestoneId 属于当前工作区（防跨租户关联）
+        if (validated.milestoneId) {
+          const ms = await tx.milestone.findFirst({
+            where: { id: validated.milestoneId, workspaceId: wid },
+            select: { id: true },
+          });
+          if (!ms) return { invalidMilestone: true as const };
+        }
+
+        // 校验 labelIds 都属于当前工作区
+        const labelIds = validated.labelIds ?? [];
+        if (labelIds.length > 0) {
+          const validLabels = await tx.label.findMany({
+            where: { id: { in: labelIds }, workspaceId: wid },
+            select: { id: true },
+          });
+          if (validLabels.length !== labelIds.length) {
+            return { invalidLabel: true as const };
+          }
+        }
+
         const maxOrder = await tx.task.aggregate({
           where: { workspaceId: wid },
           _max: { sortOrder: true },
         });
         const created = await tx.task.create({
           data: {
-            ...validated,
+            title: validated.title,
+            description: validated.description,
+            status: validated.status,
+            priority: validated.priority,
+            assigneeId: validated.assigneeId,
+            dueDate: validated.dueDate ? new Date(validated.dueDate) : undefined,
+            milestoneId: validated.milestoneId ?? undefined,
             workspaceId: wid,
             createdBy: ctx.payload.sub,
             sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
+            // 多对多关联：通过 TaskLabel 关联表写入
+            ...(labelIds.length > 0
+              ? { labels: { create: labelIds.map((labelId) => ({ labelId })) } }
+              : {}),
           },
-          include: { assignee: { select: { id: true, name: true, email: true } } },
+          include: {
+            assignee: { select: { id: true, name: true, email: true } },
+            labels: { include: { label: { select: { id: true, name: true, color: true } } } },
+          },
         });
         // P2-1：isFirstTask 与 dupCount 在主事务内用 tx.count 取值
         // isFirstTask 供 activation 判定复用，避免事务外二次计数竞态
@@ -88,6 +140,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         });
         return {
           invalidAssignee: false as const,
+          invalidMilestone: false as const,
+          invalidLabel: false as const,
           task: created,
           isFirstTask: taskCount === 1,
           dupCount,
@@ -101,6 +155,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         { code: 400, message: "被指派人必须是当前工作区成员" },
         { status: 400 },
       );
+    }
+    if (task.invalidMilestone) {
+      return NextResponse.json({ code: 400, message: "里程碑不存在" }, { status: 400 });
+    }
+    if (task.invalidLabel) {
+      return NextResponse.json({ code: 400, message: "标签不存在" }, { status: 400 });
     }
 
     // P2 数据埋点：create_task 事件（不阻塞主流程）
@@ -118,6 +178,33 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         selfAssigned,
       },
     });
+
+    // 任务指派邮件通知（他派且邮件已配置时发送，失败不阻塞）
+    if (validated.assigneeId && !selfAssigned && task.task.assignee?.email) {
+      try {
+        const [assigner, workspace] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: ctx.payload.sub },
+            select: { name: true, email: true },
+          }),
+          prisma.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
+        ]);
+        if (assigner && workspace) {
+          await notifyTaskAssigned({
+            assigneeId: validated.assigneeId,
+            assigneeName: task.task.assignee.name,
+            assigneeEmail: task.task.assignee.email,
+            assignerName: assigner.name ?? assigner.email,
+            taskTitle: task.task.title,
+            workspaceName: workspace.name,
+            wid,
+            taskId: task.task.id,
+          });
+        }
+      } catch (err) {
+        console.error("[tasks] post-create notify failed (non-blocking):", err);
+      }
+    }
 
     // 激活判定：主事务提交后、响应返回前；P2-1 整块包 try-catch 失败静默
     // 条件：isFirstTask && hasAssignee && !selfAssigned && dupCount===0 && minutesSinceRegister ≤ 15
@@ -161,7 +248,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       /* P2-1：判定块任一查询/写入抛错均静默，主接口已 201 不受影响 */
     }
 
-    return NextResponse.json({ code: 201, data: task.task }, { status: 201 });
+    return NextResponse.json({
+      code: 201,
+      data: {
+        ...task.task,
+        labels: task.task.labels.map((tl) => tl.label),
+      },
+    }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -171,5 +264,35 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     console.error("Create task error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+  }
+}
+
+/**
+ * 任务指派邮件通知（尽力而为，失败不阻塞主流程）。
+ * 仅当：被指派人非操作者本人 + 邮件服务已配置 + 被指派人有邮箱时发送。
+ */
+async function notifyTaskAssigned(opts: {
+  assigneeId: string;
+  assigneeName: string | null;
+  assigneeEmail: string;
+  assignerName: string;
+  taskTitle: string;
+  workspaceName: string;
+  wid: string;
+  taskId: string;
+}): Promise<void> {
+  try {
+    if (!isEmailConfigured()) return;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+    await sendTaskAssignedEmail({
+      to: opts.assigneeEmail,
+      assigneeName: opts.assigneeName ?? opts.assigneeEmail,
+      taskTitle: opts.taskTitle,
+      workspaceName: opts.workspaceName,
+      assignerName: opts.assignerName,
+      taskUrl: `${appUrl}/w/${opts.wid}/task/${opts.taskId}`,
+    });
+  } catch (err) {
+    console.error("[tasks] notifyTaskAssigned failed (non-blocking):", err);
   }
 }

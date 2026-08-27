@@ -15,11 +15,13 @@
 import { use, useEffect, useRef, useState } from "react";
 
 import { Plus, AlertCircle, CheckSquare } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import { ViewToggle } from "@/components/ViewToggle";
 import { BatchToolbar } from "@/components/BatchToolbar";
+import { MilestoneFilter } from "@/components/MilestoneFilter";
 import {
   BoardColumn,
   ListTable,
@@ -36,11 +38,14 @@ const LIST_PAGE_SIZE = 50;
 
 export default function BoardPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+  const t = useTranslations("task");
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [showNew, setShowNew] = useState(false);
   const [view, setView] = useState<ViewMode>("board");
+  // 里程碑筛选：'all' | 'null' | milestoneId
+  const [milestoneFilter, setMilestoneFilter] = useState<string>("all");
   // < md 单列选择器当前选中列
   const [activeColumn, setActiveColumn] = useState<Task["status"]>("todo");
   // 拖拽视觉反馈
@@ -58,7 +63,10 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   const dragSeqRef = useRef(0);
 
   useEffect(() => {
-    api<Task[]>(`/api/v1/workspaces/${wid}/tasks`)
+    setLoading(true);
+    const query =
+      milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
+    api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`)
       .then((data) => {
         setError(null);
         setTasks(data);
@@ -72,12 +80,14 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         setTasks([]);
       })
       .finally(() => setLoading(false));
-  }, [wid]);
+  }, [wid, milestoneFilter]);
 
   async function load() {
     try {
       setError(null);
-      setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks`));
+      const query =
+        milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
+      setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`));
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes("fetch")
@@ -269,17 +279,22 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       ) : (
         <div>
           {/* 标题行 + 操作 */}
-          <div className="flex items-center justify-between mb-6 gap-3">
+          <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
             <div>
               <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">
-                任务看板
+                {t("boardTitle")}
               </h1>
               <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
-                {tasks.length} 个任务
-                {selectionMode && ` · 已选 ${selectedIds.size}`}
+                {tasks.length} {t("countUnit")}
+                {selectionMode && ` · ${t("selected", { count: selectedIds.size })}`}
               </p>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-3 flex-wrap">
+              <MilestoneFilter
+                wid={wid}
+                value={milestoneFilter}
+                onChange={setMilestoneFilter}
+              />
               <ViewToggle view={view} onChange={setView} />
               {/* 多选切换按钮 */}
               <button
@@ -293,17 +308,17 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                     ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                     : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--fg)]"
                 }`}
-                aria-label="多选模式"
+                aria-label={t("multiSelect")}
               >
                 <CheckSquare size={16} />
-                <span className="hidden sm:inline">多选</span>
+                <span className="hidden sm:inline">{t("multiSelect")}</span>
               </button>
               <button
                 onClick={() => setShowNew(true)}
                 className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
               >
                 <Plus size={16} />
-                新建任务
+                {t("create")}
               </button>
             </div>
           </div>

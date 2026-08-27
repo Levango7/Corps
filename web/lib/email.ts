@@ -6,6 +6,7 @@
  * 2. 未配置 → 维持占位行为：生产+SMTP_HOST 输出摘要日志，其余输出开发调试日志
  *
  * 设计原则：邮件为"尽力而为"——任何发送失败只记 console.error，绝不阻断业务流程。
+ * 优雅降级：未配置 RESEND_API_KEY 时仅记 DB 通知，不发邮件（调用方负责 DB 通知写入）。
  */
 
 export interface InviteEmailParams {
@@ -14,7 +15,38 @@ export interface InviteEmailParams {
   inviterName: string;
 }
 
-/** HTML 转义（workspaceName/inviterName 为用户可控输入，防邮件内容注入） */
+/** 任务指派通知邮件参数 */
+export interface TaskAssignedEmailParams {
+  to: string;
+  assigneeName: string;
+  taskTitle: string;
+  workspaceName: string;
+  assignerName: string;
+  taskUrl: string;
+}
+
+/** 截止日提醒邮件参数 */
+export interface TaskDueReminderEmailParams {
+  to: string;
+  assigneeName: string;
+  taskTitle: string;
+  workspaceName: string;
+  dueDate: string; // ISO 字符串
+  taskUrl: string;
+}
+
+/** @提及通知邮件参数 */
+export interface MentionEmailParams {
+  to: string;
+  mentioneeName: string;
+  taskTitle: string;
+  workspaceName: string;
+  mentionerName: string;
+  commentSnippet: string; // 评论内容摘要（已截断）
+  taskUrl: string;
+}
+
+/** HTML 转义（用户可控输入，防邮件内容注入） */
 function escapeHtml(s: string): string {
   return s
     .replace(/&/g, "&amp;")
@@ -23,55 +55,212 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
-function renderInviteHtml(params: InviteEmailParams): string {
+/** 邮件基础模板：标题 + 正文 + CTA 链接，简洁风格，无外部 CSS 依赖。 */
+function renderEmailHtml(opts: {
+  title: string;
+  preheader?: string;
+  bodyHtml: string;
+  ctaLabel: string;
+  ctaHref: string;
+}): string {
+  const preheader = opts.preheader
+    ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(opts.preheader)}</div>`
+    : "";
   return (
-    `<p>${escapeHtml(params.inviterName)} 邀请你加入 <strong>` +
-    `${escapeHtml(params.workspaceName)}</strong>。</p>` +
-    `<p>请登录后在目标工作区的成员页接受邀请。</p>`
+    `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">` +
+    `<meta name="viewport" content="width=device-width,initial-scale=1">` +
+    `<title>${escapeHtml(opts.title)}</title></head>` +
+    `<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#0f172a;">` +
+    preheader +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;">` +
+    `<tr><td align="center" style="padding:32px 16px;">` +
+    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">` +
+    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:#0f172a;">${escapeHtml(opts.title)}</h1></td></tr>` +
+    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:#334155;">${opts.bodyHtml}</td></tr>` +
+    `<tr><td style="padding:0 32px 32px;">` +
+    `<a href="${escapeHtml(opts.ctaHref)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(opts.ctaLabel)}</a>` +
+    `</td></tr>` +
+    `<tr><td style="padding:16px 32px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#94a3b8;">corps · 面向中小团队的轻量协作工具</td></tr>` +
+    `</table></td></tr></table></body></html>`
   );
 }
 
-export async function sendInviteEmail(params: InviteEmailParams): Promise<void> {
+function renderInviteHtml(params: InviteEmailParams): string {
+  return renderEmailHtml({
+    title: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
+    preheader: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
+    bodyHtml:
+      `<p style="margin:0 0 12px;">${escapeHtml(params.inviterName)} 邀请你加入 <strong>${escapeHtml(params.workspaceName)}</strong>。</p>` +
+      `<p style="margin:0;">请登录后在目标工作区的成员页接受邀请。</p>`,
+    ctaLabel: "登录 corps",
+    ctaHref: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/login`,
+  });
+}
+
+function renderTaskAssignedHtml(params: TaskAssignedEmailParams): string {
+  return renderEmailHtml({
+    title: `${params.assignerName} 给你指派了任务「${params.taskTitle}」`,
+    preheader: `新任务指派：${params.taskTitle}`,
+    bodyHtml:
+      `<p style="margin:0 0 12px;">${escapeHtml(params.assignerName)} 在 <strong>${escapeHtml(params.workspaceName)}</strong> 中给你指派了一个任务：</p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:#f1f5f9;border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
+      `<p style="margin:0;">点击下方按钮查看任务详情。</p>`,
+    ctaLabel: "查看任务",
+    ctaHref: params.taskUrl,
+  });
+}
+
+function renderTaskDueReminderHtml(params: TaskDueReminderEmailParams): string {
+  const dueText = new Date(params.dueDate).toLocaleDateString("zh-CN", {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  return renderEmailHtml({
+    title: `任务「${params.taskTitle}」明天到期`,
+    preheader: `截止日提醒：${params.taskTitle} 明天到期`,
+    bodyHtml:
+      `<p style="margin:0 0 12px;">你在 <strong>${escapeHtml(params.workspaceName)}</strong> 中负责的任务即将到期：</p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:#fef3c7;border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
+      `<p style="margin:0 0 12px;">截止日期：<strong>${escapeHtml(dueText)}</strong></p>` +
+      `<p style="margin:0;">请尽快处理，避免逾期。</p>`,
+    ctaLabel: "查看任务",
+    ctaHref: params.taskUrl,
+  });
+}
+
+function renderMentionHtml(params: MentionEmailParams): string {
+  return renderEmailHtml({
+    title: `${params.mentionerName} 在「${params.taskTitle}」中提到了你`,
+    preheader: `@提及：${params.mentionerName} 在 ${params.taskTitle} 中提到了你`,
+    bodyHtml:
+      `<p style="margin:0 0 12px;">${escapeHtml(params.mentionerName)} 在 <strong>${escapeHtml(params.workspaceName)}</strong> 的任务评论中提到了你：</p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:#f1f5f9;border-radius:8px;font-size:14px;color:#475569;">${escapeHtml(params.commentSnippet)}</p>` +
+      `<p style="margin:0 0 12px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
+      `<p style="margin:0;">点击下方按钮查看并回复。</p>`,
+    ctaLabel: "查看评论",
+    ctaHref: params.taskUrl,
+  });
+}
+
+/** 邮件是否可用：RESEND_API_KEY 已配置时为 true。调用方可据此决定是否走邮件分支。 */
+export function isEmailConfigured(): boolean {
+  return !!process.env.RESEND_API_KEY;
+}
+
+/**
+ * 通过 Resend HTTP API 发送邮件的底层函数。
+ * 失败尽力而为：任何错误只记 console.error，不抛出。
+ */
+async function sendViaResend(opts: {
+  to: string;
+  subject: string;
+  html: string;
+  logTag: string;
+}): Promise<boolean> {
   const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return false;
 
-  // 优先路径：Resend HTTP API（https://resend.com/docs），失败尽力而为
-  if (apiKey) {
-    try {
-      const res = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          from: process.env.MAIL_FROM ?? "noreply@corps.app",
-          to: params.to,
-          subject: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
-          html: renderInviteHtml(params),
-        }),
-      });
-      if (!res.ok) {
-        throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
-      }
-      console.log(
-        `[email] invite sent to ${params.to} for workspace ${params.workspaceName} by ${params.inviterName}`,
-      );
-      return;
-    } catch (err) {
-      console.error("[email] invite send failed (non-blocking):", err);
-      return;
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: process.env.MAIL_FROM ?? "noreply@corps.app",
+        to: opts.to,
+        subject: opts.subject,
+        html: opts.html,
+      }),
+    });
+    if (!res.ok) {
+      throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     }
+    console.log(`[email] ${opts.logTag} sent to ${opts.to}`);
+    return true;
+  } catch (err) {
+    console.error(`[email] ${opts.logTag} send failed (non-blocking):`, err);
+    return false;
   }
+}
 
-  // 占位路径（兼容保留）：NODE_ENV 必须在函数内部动态读取，
-  // 否则测试中通过 beforeEach 设置 process.env.NODE_ENV 将不生效。
+/** 占位路径：未配置 Resend 时输出日志（生产+SMTP_HOST 输出摘要，其余输出开发调试） */
+function logPlaceholder(tag: string, detail: string): void {
   if (process.env.NODE_ENV === "production" && process.env.SMTP_HOST) {
-    console.log(
-      `[email] invite sent to ${params.to} for workspace ${params.workspaceName} by ${params.inviterName}`,
-    );
+    console.log(`[email] ${tag} sent (${detail})`);
   } else {
-    console.log(
-      `[email-dev] invite: to=${params.to}, workspace=${params.workspaceName}, inviter=${params.inviterName}`,
+    console.log(`[email-dev] ${tag}: ${detail}`);
+  }
+}
+
+export async function sendInviteEmail(params: InviteEmailParams): Promise<void> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
+    html: renderInviteHtml(params),
+    logTag: "invite",
+  });
+  if (!sent) {
+    logPlaceholder(
+      "invite",
+      `to=${params.to}, workspace=${params.workspaceName}, inviter=${params.inviterName}`,
     );
   }
+}
+
+/** 任务指派通知邮件（失败不阻塞，返回是否真实发送） */
+export async function sendTaskAssignedEmail(
+  params: TaskAssignedEmailParams,
+): Promise<boolean> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: `${params.assignerName} 给你指派了任务「${params.taskTitle}」`,
+    html: renderTaskAssignedHtml(params),
+    logTag: "task_assigned",
+  });
+  if (!sent) {
+    logPlaceholder(
+      "task_assigned",
+      `to=${params.to}, task=${params.taskTitle}, assigner=${params.assignerName}`,
+    );
+  }
+  return sent;
+}
+
+/** 截止日提醒邮件（失败不阻塞，返回是否真实发送） */
+export async function sendTaskDueReminderEmail(
+  params: TaskDueReminderEmailParams,
+): Promise<boolean> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: `任务「${params.taskTitle}」明天到期`,
+    html: renderTaskDueReminderHtml(params),
+    logTag: "task_due_reminder",
+  });
+  if (!sent) {
+    logPlaceholder(
+      "task_due_reminder",
+      `to=${params.to}, task=${params.taskTitle}, due=${params.dueDate}`,
+    );
+  }
+  return sent;
+}
+
+/** @提及通知邮件（失败不阻塞，返回是否真实发送） */
+export async function sendMentionEmail(params: MentionEmailParams): Promise<boolean> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: `${params.mentionerName} 在「${params.taskTitle}」中提到了你`,
+    html: renderMentionHtml(params),
+    logTag: "mention",
+  });
+  if (!sent) {
+    logPlaceholder(
+      "mention",
+      `to=${params.to}, task=${params.taskTitle}, mentioner=${params.mentionerName}`,
+    );
+  }
+  return sent;
 }

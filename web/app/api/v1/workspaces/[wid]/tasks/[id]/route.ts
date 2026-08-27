@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
+import { prisma } from "@/lib/prisma";
+import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 
 const updateTaskSchema = z.object({
@@ -127,6 +129,39 @@ export async function PATCH(
         name: "task_status_change",
         props: { taskId: id, to: validated.status },
       });
+    }
+
+    // 任务指派邮件通知（assignee 变更且新 assignee 非操作者本人 + 邮件已配置时，失败不阻塞）
+    if (
+      validated.assigneeId !== undefined &&
+      validated.assigneeId !== null &&
+      validated.assigneeId !== result.task.assigneeId &&
+      validated.assigneeId !== ctx.payload.sub &&
+      result.task.assignee?.email &&
+      isEmailConfigured()
+    ) {
+      try {
+        const [assigner, workspace] = await Promise.all([
+          prisma.user.findUnique({
+            where: { id: ctx.payload.sub },
+            select: { name: true, email: true },
+          }),
+          prisma.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
+        ]);
+        if (assigner && workspace) {
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+          await sendTaskAssignedEmail({
+            to: result.task.assignee.email,
+            assigneeName: result.task.assignee.name ?? result.task.assignee.email,
+            taskTitle: result.task.title,
+            workspaceName: workspace.name,
+            assignerName: assigner.name ?? assigner.email,
+            taskUrl: `${appUrl}/w/${wid}/task/${id}`,
+          });
+        }
+      } catch (err) {
+        console.error("[PATCH task] notifyTaskAssigned failed (non-blocking):", err);
+      }
     }
 
     return NextResponse.json({ code: 200, data: result.task });
