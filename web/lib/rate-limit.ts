@@ -177,14 +177,97 @@ export function rateLimit(key: string, rule: RateLimitRule): RateLimitResult {
   return hitMemoryStore(key, rule.max, rule.windowMs);
 }
 
-/** 从请求中提取客户端标识：优先 x-real-ip（反向代理写入），回退 x-forwarded-for；缺失则 "local" */
+/** 解析点分十进制 IPv4；非法格式返回 null（数值化解析，避免正则壳误判） */
+function parseIpv4Octets(ip: string): [number, number, number, number] | null {
+  const m = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/.exec(ip);
+  if (!m) return null;
+  const octets = [Number(m[1]), Number(m[2]), Number(m[3]), Number(m[4])];
+  return octets.some((o) => Number.isNaN(o) || o > 255)
+    ? null
+    : (octets as [number, number, number, number]);
+}
+
+/**
+ * 私网/环回/链路本地地址判定（含 IPv4-mapped IPv6 形式，如 ::ffff:127.0.0.1）。
+ * socket 对端为此类地址 ⇒ 流量来自反向代理/容器网桥/本机回环，应采信代理头；
+ * 对端为公网地址 ⇒ 客户端直连，代理头不可信。
+ */
+export function isPrivateIp(ip: string): boolean {
+  const normalized = ip.trim().toLowerCase();
+  // IPv6 环回
+  if (normalized === "::1") return true;
+  // IPv6 ULA（fc00::/7，实际分配以 fd 开头）与链路本地（fe80::/10）
+  if (/^f[cd][0-9a-f]{2}:/.test(normalized)) return true;
+  if (/^fe[89ab][0-9a-f]:/.test(normalized)) return true;
+  // 剥离 IPv4-mapped IPv6 前缀后按 IPv4 判断
+  const v4 = normalized.startsWith("::ffff:") ? normalized.slice("::ffff:".length) : normalized;
+  const octets = parseIpv4Octets(v4);
+  if (!octets) return false;
+  const [o1, o2] = octets;
+  return (
+    o1 === 127 || // 环回 127/8
+    o1 === 10 || // 私网 10/8
+    (o1 === 172 && o2 >= 16 && o2 <= 31) || // 私网 172.16/12（数值区间判断，勿仅靠正则壳）
+    (o1 === 192 && o2 === 168) || // 私网 192.168/16
+    (o1 === 169 && o2 === 254) // 链路本地 169.254/16
+  );
+}
+
+/**
+ * 从请求中提取客户端标识（限流计数键），按"可信对端"模型还原真实客户端 IP：
+ *
+ *  ① socket 对端（req.ip）为公网地址 ⇒ 客户端直连、不存在可信代理，
+ *     直接采用 socket 地址，忽略一切客户端可伪造的代理头（修复 TC-RATE-02）；
+ *  ② 对端为私网/环回（反向代理、容器网桥、本机回环）⇒ 采信代理头：
+ *     优先 x-forwarded-for 尾段（可信反代将客户端真实 IP append 到尾部），
+ *     不再取首段——首段可被客户端任意伪造（修复 TC-RATE-03）；
+ *  ③ x-real-ip 次之；
+ *  ④ 兜底 socket 地址；全部缺失（本地开发无代理头）返回 "local"。
+ *
+ * [运行时说明] Next.js 16 的 NextRequest 类型与运行时不再提供 ip 属性
+ * （框架将 socket 对端的可信判定移交部署层）。socketPeerIp 采用运行时安全读取：
+ * 若适配层注入 ip，① 直连公网分支生效；未注入时退化为按 [部署约束] 采信代理头。
+ *
+ * [部署约束] 生产部署必须满足，否则限流键仍可能被伪造：
+ *  1. 所有流量必须经可信反向代理入口（客户端不可绕过代理直连应用）；
+ *  2. 反代将客户端真实 IP append 到 X-Forwarded-For 尾部（而非覆写整串或只信任首段）；
+ *  3. 强制覆写 X-Real-Ip（剥离客户端传入的原始值）。
+ */
 export function clientKey(req: NextRequest): string {
-  const realIp = req.headers.get("x-real-ip");
-  if (realIp) return realIp.trim();
+  const socketIp = socketPeerIp(req);
+
+  // ① 直连公网：只用 socket 地址，伪造头攻击完全失效
+  if (socketIp && !isPrivateIp(socketIp)) return socketIp;
+
+  // ② 私网对端（反代/容器网桥）：取 XFF 尾段（可信代理追加的真实客户端 IP）
   const xff = req.headers.get("x-forwarded-for");
-  if (!xff) return "local";
-  const first = xff.split(",")[0]?.trim();
-  return first || "local";
+  if (xff) {
+    const segments = xff
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    const last = segments[segments.length - 1];
+    if (last) return last;
+  }
+
+  // ③ x-real-ip 次之
+  const realIp = req.headers.get("x-real-ip")?.trim();
+  if (realIp) return realIp;
+
+  // ④ 兜底：socket 地址；再缺失（本地开发无代理头）返回 "local"
+  return socketIp ?? "local";
+}
+
+/**
+ * 运行时安全读取 socket 对端地址：Next.js 16 的 NextRequest 类型声明中已移除 ip，
+ * 但部分适配层/运行环境仍可能注入。此处用最小结构化断言读取，避免类型错误，
+ * 同时保证注入存在时 ① 直连公网判定生效、缺失时优雅退化。
+ */
+function socketPeerIp(req: NextRequest): string | undefined {
+  const maybeIp: unknown = (req as unknown as { ip?: unknown }).ip;
+  if (typeof maybeIp !== "string") return undefined;
+  const first = maybeIp.split(",")[0]?.trim();
+  return first || undefined;
 }
 
 /**

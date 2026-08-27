@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { prisma } from "@/lib/prisma";
+
 import {
   BillingPeriod,
   CheckoutRequest,
@@ -129,17 +129,16 @@ export class StripeProvider implements PaymentProvider {
 
   async createPortal(ctx: PortalContext): Promise<PaymentPortalResult | null> {
     const stripe = this.requireClient();
-    const { workspaceId } = ctx;
+    const { workspaceId, providerCustomerId } = ctx;
 
-    // customer 查询平移进 provider（原 portal/route.ts L16–26）
-    const subscription = await prisma.subscription.findUnique({
-      where: { workspaceId },
-      select: { stripeCustomerId: true },
-    });
-    const customerId = subscription?.stripeCustomerId;
-    if (!customerId) {
+    // M-1（TC-RLS-07 同类）：customer 查询由路由层经 runWithWorkspace 包裹后代查并传入
+    // （原本方法内 prisma.subscription.findUnique 直连，在 RLS_ACTIVATE=true 的
+    // FORCE RLS 下缺 app.workspace_id GUC 恒空 → billing portal 恒 400 no_customer）。
+    // provider 保持零直连：subscriptions 表的一切读写必须携带租户上下文或逃生口。
+    if (!providerCustomerId) {
       throw new PaymentProviderError("尚无 Stripe 客户，请先通过升级完成订阅", "no_customer");
     }
+    const customerId = providerCustomerId;
 
     // return_url 组装：NEXT_PUBLIC_APP_URL 兜底，未配置时退化为相对路径
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;

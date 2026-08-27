@@ -63,6 +63,13 @@ export interface CheckoutResult {
 
 export interface PortalContext {
   workspaceId: string;
+  /**
+   * 已存订阅的通道客户 ID（路由层经 runWithWorkspace 查 subscription 后传入，M-1）。
+   * 与 CheckoutRequest.providerCustomerId 同源同语义：provider 不得自行查库——
+   * subscriptions 表在加固模式（RLS_ACTIVATE=true）带 FORCE RLS，
+   * 无 GUC 上下文的直连查询恒空，会把合法订阅误判为无客户（恒 400 no_customer）。
+   */
+  providerCustomerId?: string;
 }
 
 export interface PaymentPortalResult {

@@ -9,6 +9,24 @@ import { Fragment, type ReactNode } from "react";
  * 保证不会因语法边界产生注入或渲染异常。
  */
 
+/**
+ * 链接 href 白名单（TC-PARSE-03 修复，渗透报告 P3-1）：
+ * 仅放行 http(s) 绝对链接、站内路径与锚点。
+ *
+ * 关键细节 1：站内路径要求 `/` 后跟随非 `/` 字符或立即结束（`\/[^/]|\/$`），
+ * 阻止协议相对 URL（如 `//evil.example/phish`）借 `\/` 分支漏网——
+ * 浏览器会把 `//host/path` 解析为外部站点跳转（钓鱼向量）。
+ *
+ * 关键细节 2：站内路径分支同时排除反斜杠（`\/[^/\]`）。WHATWG URL 解析把
+ * `/\` 视为进入 authority 状态，`/\evil.com` 会被解析为外站 evil.com——
+ * 若放行将形成协议相对 URL 绕过（评审 m-1）。
+ * 合法值不受影响：`/path`、`/`、`#anchor`、`/#anchor`、`https?://…`。
+ *
+ * 该白名单是本组件唯一的 URL 处理点（组件不渲染图片等其他含 URL 元素），
+ * 若未来新增 img 等 URL 处理逻辑，必须复用同一正则。
+ */
+const SAFE_HREF_PATTERN = /^(https?:\/\/|\/[^/\\]|\/$|#)/;
+
 function renderInline(text: string, keyPrefix: string): ReactNode[] {
   const nodes: ReactNode[] = [];
   // 顺序：行内代码 → 链接 → 加粗 → 斜体
@@ -35,7 +53,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       const close = token.indexOf("](");
       const label = token.slice(1, close);
       const href = token.slice(close + 2, -1);
-      const safe = /^(https?:\/\/|\/|#)/.test(href) ? href : "#";
+      const safe = SAFE_HREF_PATTERN.test(href) ? href : "#";
       nodes.push(
         <a
           key={k}

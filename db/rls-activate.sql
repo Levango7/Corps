@@ -50,53 +50,65 @@ END $$;
 
 -- ─── 4. 策略（先删后建，保证幂等且与本文件声明一致）────────────────────────
 
--- members：读 = 本工作区 或 login/provision 时读自己；写 = 本工作区 或注册时的 owner 自插
+-- members：读 = 本工作区 或 login/provision/seat 时读自己；
+-- 插入 = 本工作区 或注册时的 owner 自插；
+-- 更新/删除 = 仅本工作区（角色变更/成员移除全量调用点均经 runWithWorkspace，
+-- 携带 workspace_id 上下文，无 auth_op 场景——不加 op 逃生口，保持最小权限；
+-- UPDATE 的 WITH CHECK 同 USING，防止借 UPDATE 篡改 workspace_id 跨租户挪动）
 DROP POLICY IF EXISTS p_members_rls        ON members;
 DROP POLICY IF EXISTS p_members_select     ON members;
 DROP POLICY IF EXISTS p_members_insert     ON members;
 DROP POLICY IF EXISTS p_members_update     ON members;
 DROP POLICY IF EXISTS p_members_delete     ON members;
 CREATE POLICY p_members_select ON members FOR SELECT USING (
-  workspace_id = current_setting('app.workspace_id', true)::uuid
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
   OR (current_setting('app.auth_op', true) IN ('login', 'provision', 'seat')
-      AND user_id = current_setting('app.user_id', true)::uuid)
+      AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
 );
 CREATE POLICY p_members_insert ON members FOR INSERT WITH CHECK (
-  workspace_id = current_setting('app.workspace_id', true)::uuid
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
   OR (current_setting('app.auth_op', true) = 'provision'
-      AND user_id = current_setting('app.user_id', true)::uuid)
+      AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
+);
+CREATE POLICY p_members_update ON members FOR UPDATE USING (
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+) WITH CHECK (
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+);
+CREATE POLICY p_members_delete ON members FOR DELETE USING (
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
 );
 
 -- tasks / comments / decisions / decision_versions：纯 workspace 谓词
 DROP POLICY IF EXISTS p_tasks_rls ON tasks;
 CREATE POLICY p_tasks_rls ON tasks FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 DROP POLICY IF EXISTS p_comments_rls ON comments;
 CREATE POLICY p_comments_rls ON comments FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 DROP POLICY IF EXISTS p_decisions_rls ON decisions;
 CREATE POLICY p_decisions_rls ON decisions FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 DROP POLICY IF EXISTS p_decision_versions_rls ON decision_versions;
 CREATE POLICY p_decision_versions_rls ON decision_versions FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 -- subscriptions：workspace 谓词 + webhook 逃生口
 DROP POLICY IF EXISTS p_subscriptions_rls ON subscriptions;
 CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
   USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
   )
   WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
   );
 
@@ -104,18 +116,18 @@ CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
 -- 给他人写 mention 通知是合法操作，旧策略的 user_id 条件与之冲突，已移除）
 DROP POLICY IF EXISTS p_notifications_rls ON notifications;
 CREATE POLICY p_notifications_rls ON notifications FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 -- invitations：workspace 谓词 + invite 取件逃生口（按 token 的公开预览/接受前置读取）
 DROP POLICY IF EXISTS p_invitations_rls ON invitations;
 CREATE POLICY p_invitations_rls ON invitations FOR ALL
   USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'invite'
   )
   WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'invite'
   );
 
@@ -123,13 +135,13 @@ CREATE POLICY p_invitations_rls ON invitations FOR ALL
 DROP POLICY IF EXISTS p_analytics_events_rls ON analytics_events;
 CREATE POLICY p_analytics_events_rls ON analytics_events FOR ALL
   USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'provision'
     OR (user_id IS NOT NULL
-        AND user_id = current_setting('app.user_id', true)::uuid)
+        AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
   )
   WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'provision'
   );
 
@@ -144,39 +156,39 @@ DROP POLICY IF EXISTS p_workspaces_delete ON workspaces;
 
 CREATE POLICY p_workspaces_select ON workspaces FOR SELECT USING (
   id IN (SELECT m.workspace_id FROM members m
-         WHERE m.user_id = current_setting('app.user_id', true)::uuid)
-  OR id = current_setting('app.workspace_id', true)::uuid
+         WHERE m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
+  OR id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
   OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'invite')
 );
 
 CREATE POLICY p_workspaces_insert ON workspaces FOR INSERT WITH CHECK (
-  owner_id = current_setting('app.user_id', true)::uuid
+  owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
   OR current_setting('app.auth_op', true) = 'webhook'
   OR (current_setting('app.auth_op', true) = 'provision'
-      AND owner_id = current_setting('app.user_id', true)::uuid)
+      AND owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
 );
 
 CREATE POLICY p_workspaces_update ON workspaces FOR UPDATE
   USING (
-    owner_id = current_setting('app.user_id', true)::uuid
+    owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
     OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'seat')
     OR EXISTS (
       SELECT 1 FROM members m
       WHERE m.workspace_id = id
-        AND m.user_id = current_setting('app.user_id', true)::uuid
+        AND m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
         AND m.role IN ('owner', 'admin')
     )
   )
   WITH CHECK (
-    owner_id = current_setting('app.user_id', true)::uuid
+    owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
     OR EXISTS (
       SELECT 1 FROM members m
       WHERE m.workspace_id = id
-        AND m.user_id = current_setting('app.user_id', true)::uuid
+        AND m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
         AND m.role IN ('owner', 'admin')
     )
   );
 
 CREATE POLICY p_workspaces_delete ON workspaces FOR DELETE
-  USING (owner_id = current_setting('app.user_id', true)::uuid);
+  USING (owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid);

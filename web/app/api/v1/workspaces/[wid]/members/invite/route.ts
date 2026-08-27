@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithSeatCheck } from "@/lib/auth";
+import { getWorkspaceContext, runWithSeatCheck, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
@@ -198,17 +198,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     // P2 数据埋点：invite_member 事件（不阻塞主流程）
     // props 增强（FUNNEL-METRICS §4.2）：channel 恒 "email"（现有唯一发出方式即邮件携带链接）；
-    // seatUsage 从同函数上游 seatCheck 事务已知信息补全（全局 prisma 直查，先例 L28）
+    // seatUsage 取自已验证的工作区上下文。
+    // TC-RLS-07：workspaces / members 均在 RLS 范围（db/rls-activate.sql），全局 prisma
+    // 直查在加固模式下读不到行（seatUsage 恒缺失）。本路由持有 getWorkspaceContext
+    // 验证过的 wid，属常规租户上下文，用 runWithWorkspace 注入 workspace_id + user_id
+    // GUC 走正常租户谓词——而非 runWithAuthOp 逃生口（后者仅限无 wid 上下文的
+    // 公开/系统路径；且 p_members_select 的 provision 分支附 user_id 相等条件，
+    // 用逃生口 count 只能见到本人成员行，seatUsage 数值会失真）。
     let seatUsage: { used: number; limit: number } | undefined;
     try {
-      const ws = await prisma.workspace.findUnique({
-        where: { id: wid },
-        select: { seatLimit: true },
-      });
-      if (ws) {
-        const used = await prisma.member.count({ where: { workspaceId: wid } });
-        seatUsage = { used, limit: ws.seatLimit };
-      }
+      const seatStats = await runWithWorkspace(
+        wid,
+        async (tx) => {
+          const ws = await tx.workspace.findUnique({
+            where: { id: wid },
+            select: { seatLimit: true },
+          });
+          if (!ws) return null;
+          const used = await tx.member.count({ where: { workspaceId: wid } });
+          return { used, limit: ws.seatLimit };
+        },
+        ctx.payload.sub,
+      );
+      if (seatStats) seatUsage = seatStats;
     } catch {
       // seatUsage 查询失败不阻断 invite_member 打点
     }

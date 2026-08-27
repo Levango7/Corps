@@ -172,3 +172,40 @@ describe("邀请未注册用户完整流程", () => {
     expect(json.message).toContain("请使用受邀邮箱");
   });
 });
+
+describe("TC-RLS-07 回归：RLS 加固模式下预览路由", () => {
+  /**
+   * 引擎事实（db/rls-activate.sql）：invitations 表 ENABLE+FORCE RLS，
+   * 运行时角色 corps_app 为 NOBYPASSRLS。预览路由未设 GUC 的直连查询
+   * fail-closed 恒返 null → 404；修复后经 runWithAuthOp("invite") 取件。
+   * 本用例在被测服务以 corps_app 运行时（如 pentest-start.sh）即为端到端回归：
+   * 有效 token 必须返回 200 且字段完整。
+   */
+  it("有效 token 预览 → 200 且字段完整（加固模式 fail-closed 回归锚点）", async () => {
+    const admin = await registerUser({ prefix: "tcrls07-admin" });
+    const guestEmail = uniqueEmail("tcrls07-guest");
+
+    const invited = await inviteUnregistered(admin.accessToken, admin.workspace.id, guestEmail);
+    expect(invited.status).toBe(201);
+    const token = invited.token as string;
+
+    const res = await fetch(`${BASE}/invitations/${token}`);
+    // 修复前（直连 prisma 无 GUC）：加固模式下此处为 404；修复后必须 200
+    expect(res.status).toBe(200);
+
+    const json = (await res.json()) as {
+      code: number;
+      data: {
+        workspaceName: string;
+        inviterName: string;
+        emailMasked: string;
+        expiresAt: string;
+      };
+    };
+    expect(json.code).toBe(200);
+    expect(json.data.workspaceName).toBe(admin.workspace.name);
+    expect(json.data.inviterName).toBeTruthy();
+    expect(json.data.emailMasked).toBe(`${guestEmail.slice(0, 2)}***@${guestEmail.split("@")[1]}`);
+    expect(new Date(json.data.expiresAt).getTime()).toBeGreaterThan(Date.now());
+  });
+});

@@ -33,7 +33,8 @@ async function getUserId(req: NextRequest): Promise<{ id: string; email: string 
  * POST /api/v1/invitations/[token]/accept
  * 受邀人接受邀请：token 有效且登录邮箱与受邀邮箱一致时，
  * 在 RLS 事务内完成席位检查 → 建成员（或幂等复用已有成员身份）→ 标记已接受。
- * 注：invitations 表未启用 RLS，token 校验用 prisma 直查；成员写入走 RLS 事务。
+ * 注：invitations 表已启用 FORCE RLS（db/rls-activate.sql），token 校验经 invite
+ * 受控逃生口（runWithAuthOp("invite")）按 token 读取；成员写入走 seat 上下文 RLS 事务。
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const user = await getUserId(req);

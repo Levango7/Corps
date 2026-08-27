@@ -200,6 +200,161 @@ describe("Markdown 组件 - 链接渲染", () => {
   });
 });
 
+describe("Markdown 组件 - 协议相对 URL 阻止（TC-PARSE-03）", () => {
+  it("协议相对 URL（//evil）被替换为 #，不外跳", () => {
+    // Arrange：浏览器会把 //host/path 解析为外部站点跳转（钓鱼向量）
+    const source = "[点击](//evil.example/phish)";
+
+    // Act
+    const { container } = render(<Markdown source={source} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "#");
+  });
+
+  it("裸双斜杠（//）同样被替换为 #", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source="[x](//)" />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#");
+  });
+
+  it("站内根路径（/）行为不变，保留 href", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source="[首页](/)" />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "/");
+  });
+
+  it("站内路径（/path）行为不变，保留 href 且非 _blank", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source="[仪表盘](/dashboard)" />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "/dashboard");
+    expect(link).not.toHaveAttribute("target", "_blank");
+  });
+
+  it("根路径锚点（/#anchor）行为不变，保留 href", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source="[章节](/#section-2)" />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "/#section-2");
+  });
+
+  it("锚点链接（#anchor）行为不变，保留 href", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source="[锚点](#top)" />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#top");
+  });
+
+  it("http 与 https 绝对链接行为不变，保留 href", () => {
+    // Arrange & Act
+    const { container } = render(
+      <Markdown source={"[a](https://example.com) 与 [b](http://example.org)"} />,
+    );
+
+    // Assert
+    const links = container.querySelectorAll("a");
+    expect(links).toHaveLength(2);
+    expect(links[0]).toHaveAttribute("href", "https://example.com");
+    expect(links[1]).toHaveAttribute("href", "http://example.org");
+  });
+});
+
+describe("Markdown 组件 - 反斜杠绕过阻止（评审 m-1）", () => {
+  // WHATWG URL 解析把 `/\` 视为进入 authority 状态：`/\evil.com` 会被浏览器
+  // 解析为外站 evil.com（协议相对 URL 绕过）。白名单站内路径分支须排除反斜杠。
+
+  it("反斜杠协议相对 URL（/\\evil.com）被替换为 #，不外跳", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[点击](/\\evil.com)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toBeInTheDocument();
+    expect(link).toHaveAttribute("href", "#");
+    expect(link).not.toHaveAttribute("target", "_blank");
+  });
+
+  it("反斜杠协议相对 URL 带路径（/\\evil.com/phish）同样被替换为 #", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[点击](/\\evil.com/phish)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#");
+  });
+
+  it("裸反斜杠开头（\\evil.com）不在白名单内，被替换为 #", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[点击](\\evil.com)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#");
+  });
+
+  it("协议相对 URL（//evil.com）被替换为 #（回归确认既有防护不回退）", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[点击](//evil.com)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#");
+  });
+
+  it("javascript 协议链接被替换为 #（回归确认既有防护不回退）", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[点击](javascript:alert(1))"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#");
+  });
+
+  it("合法站内路径（/settings）行为不变，保留 href 且非 _blank", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[设置](/settings)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "/settings");
+    expect(link).not.toHaveAttribute("target", "_blank");
+  });
+
+  it("合法锚点（#anchor）行为不变，保留 href", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[锚点](#anchor)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "#anchor");
+  });
+
+  it("合法绝对链接（https://example.com）行为不变，保留 href", () => {
+    // Arrange & Act
+    const { container } = render(<Markdown source={"[官网](https://example.com)"} />);
+
+    // Assert
+    const link = container.querySelector("a");
+    expect(link).toHaveAttribute("href", "https://example.com");
+    expect(link).toHaveAttribute("target", "_blank");
+  });
+});
+
 describe("Markdown 组件 - 列表渲染", () => {
   it("无序列表（- 前缀）渲染为 <ul> 含多个 <li>", () => {
     // Arrange

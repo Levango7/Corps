@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { buildCsp } from "./lib/csp";
 
 /**
  * CSRF 基线防护（Spec §152）：
@@ -32,11 +33,6 @@ function isAllowed(req: NextRequest): boolean {
 }
 
 /**
- * T3.6：生成 per-request nonce 并注入 CSP 头。
- * 使用 Web Crypto API（Edge Runtime 兼容），不依赖 Node.js crypto 模块。
- * nonce 为 Base64 编码的 16 字节随机值，满足 CSP Level 3 规范。
- */
-/**
  * CORS 白名单（可选启用）：
  * - 未配置 CORS_ORIGINS 时不回任何 ACAO 头——浏览器默认拦截跨源读取（fail-closed），
  *   同源前端与 curl/服务间调用不受影响。
@@ -55,6 +51,11 @@ function getAllowedOrigin(req: NextRequest): string | null {
   return allowlist.includes(origin) ? origin : null;
 }
 
+/**
+ * T3.6：生成 per-request nonce 并注入 CSP 头。
+ * 使用 Web Crypto API（Edge Runtime 兼容），不依赖 Node.js crypto 模块。
+ * nonce 为 Base64 编码的 16 字节随机值，满足 CSP Level 3 规范。
+ */
 function generateNonce(): string {
   const bytes = new Uint8Array(16);
   crypto.getRandomValues(bytes);
@@ -98,17 +99,9 @@ export function middleware(req: NextRequest) {
     res.headers.append("Vary", "Origin");
   }
 
-  const csp = [
-    "default-src 'self'",
-    `script-src 'self' 'unsafe-inline' 'nonce-${nonce}'`,
-    `style-src 'self' 'unsafe-inline' 'nonce-${nonce}'`,
-    "img-src 'self' data: https:",
-    "font-src 'self' data:",
-    "connect-src 'self'",
-    "frame-ancestors 'none'",
-    "base-uri 'self'",
-    "form-action 'self'",
-  ].join("; ");
+  // CSP 分环境构建（TC-CFG-02 修复）：生产移除 unsafe-inline 收紧为纯 nonce，
+  // 开发保留 unsafe-inline 兼容 HMR。具体策略与取舍见 lib/csp.ts 头注释。
+  const csp = buildCsp(nonce, process.env.NODE_ENV === "production");
   res.headers.set("Content-Security-Policy", csp);
 
   // HSTS：仅生产环境启用（localhost/127.0.0.1 不加，避免开发困扰）

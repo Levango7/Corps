@@ -37,6 +37,23 @@ services:
     networks:
       - corps-net
 
+  # ─── Redis —— 限流共享计数（TC-RATE-05）──────────────────────────────────
+  # web/lib/rate-limit.ts 读取 REDIS_URL 启用 Redis 固定窗口原子计数；
+  # 多实例水平扩容部署时限流配额必须经 Redis 共享，否则各实例独立计数、配额被稀释。
+  # 仅供 app 容器内网访问，不映射宿主机端口。计数键自带 PEXPIRE，无需持久化。
+  redis:
+    image: redis:8-alpine
+    container_name: corps-redis
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
+    networks:
+      - corps-net
+
   # ─── Next.js 应用 ──────────────────────────────────────────────────────────
   app:
     build:
@@ -48,7 +65,12 @@ services:
     depends_on:
       db:
         condition: service_healthy
+      redis:
+        condition: service_healthy
     environment:
+      # ── Redis 共享限流（TC-RATE-05）：多实例共享固定窗口计数，避免配额稀释 ──
+      # 单实例可省略（rate-limit.ts 降级为进程内内存限流）；多实例必须配置共享 Redis
+      REDIS_URL: ${REDIS_URL:-redis://redis:6379}
       # ── 数据库双连接（审计 F-01/T1.2：应用不再以 postgres 超管运行）──
       # 运行时连接 = corps_app 最小权限角色（受 FORCE RLS 约束）
       DATABASE_URL: postgresql://corps_app:${CORPS_APP_PASSWORD:?请在 .env 中设置 CORPS_APP_PASSWORD（openssl rand -hex 16）}@db:5432/${POSTGRES_DB:-corps}?schema=public

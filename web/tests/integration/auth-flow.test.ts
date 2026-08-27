@@ -200,6 +200,69 @@ describe("认证全流程：注册 → 登录 → 刷新 → 登出", () => {
   });
 });
 
+describe("刷新端点 session token 一次性轮换（TC-AUTH-05）", () => {
+  // dev server 的 NODE_ENV=development → session cookie 名为 better-auth.session_token
+  // （生产为 __Secure-better-auth.session_token，命名规则见 app/api/v1/auth/refresh/route.ts 注释）
+  const SESSION_COOKIE = "better-auth.session_token";
+
+  it("每次 refresh 下发新 session token，旧 token 立即失效", async () => {
+    // Arrange - 注册拿到 session cookie（注册响应透传 Better Auth 会话 cookie）
+    const reg = await registerUser({ prefix: "rotate" });
+    const oldSessionCookie = reg.cookies.find((c) => c.startsWith(`${SESSION_COOKIE}=`));
+    expect(oldSessionCookie).toBeDefined();
+    const oldValue = parseCookie(oldSessionCookie!).value;
+    expect(oldValue.length).toBeGreaterThan(10);
+
+    // Act 1 - 用注册 cookie 首次 refresh
+    const res1 = await fetch(`${BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { ...cookieHeader(reg.cookies), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const cookies1 = res1.headers.getSetCookie?.() ?? [];
+
+    // Assert 1 - 200 且 Set-Cookie 含轮换后的新 session token
+    expect(res1.status).toBe(200);
+    const newSessionCookie = cookies1.find((c) => c.startsWith(`${SESSION_COOKIE}=`));
+    expect(newSessionCookie).toBeDefined();
+    const parsedNew = parseCookie(newSessionCookie!);
+    expect(parsedNew.value).not.toBe(oldValue); // 发生了轮换
+    expect(parsedNew.value.length).toBeGreaterThan(10);
+    // cookie 安全属性
+    expect(parsedNew.attrs.httponly).toBe("true");
+    expect(parsedNew.attrs.samesite?.toLowerCase()).toBe("lax");
+    expect(parsedNew.attrs.path).toBe("/");
+    // maxAge=7 天，与 lib/auth.ts session.expiresIn 对齐
+    expect(parsedNew.attrs["max-age"]).toBe(String(60 * 60 * 24 * 7));
+
+    // Act 2 - 用旧 session cookie 再次 refresh → 应 401（DB 中 token 已被覆写）
+    const res2 = await fetch(`${BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { ...cookieHeader(reg.cookies), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    expect(res2.status).toBe(401);
+
+    // Act 3 - 换用新 session cookie refresh → 200（新 token 有效，轮换链可继续）
+    const mergedCookies = [
+      ...reg.cookies.filter((c) => !c.startsWith(`${SESSION_COOKIE}=`)),
+      newSessionCookie!,
+    ];
+    const res3 = await fetch(`${BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { ...cookieHeader(mergedCookies), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+    const cookies3 = res3.headers.getSetCookie?.() ?? [];
+
+    // Assert 3 - 200 且再次轮换（第三次的 token 又不同于第二次）
+    expect(res3.status).toBe(200);
+    const thirdCookie = cookies3.find((c) => c.startsWith(`${SESSION_COOKIE}=`));
+    expect(thirdCookie).toBeDefined();
+    expect(parseCookie(thirdCookie!).value).not.toBe(parsedNew.value);
+  }, 30_000);
+});
+
 describe("认证边界条件", () => {
   it("注册缺少 workspaceName 返回 400", async () => {
     const res = await fetch(`${BASE}/auth/register`, {
