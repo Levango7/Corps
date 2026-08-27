@@ -201,16 +201,17 @@ describe("认证全流程：注册 → 登录 → 刷新 → 登出", () => {
 });
 
 describe("刷新端点 session token 一次性轮换（TC-AUTH-05）", () => {
-  // session cookie 名随 NODE_ENV 切换：dev = better-auth.session_token，
-  // production = __Secure-better-auth.session_token（命名规则见 refresh/route.ts sessionCookieName）
-  const SESSION_COOKIE =
-    process.env.NODE_ENV === "production"
-      ? "__Secure-better-auth.session_token"
-      : "better-auth.session_token";
-
   it("每次 refresh 下发新 session token，旧 token 立即失效", async () => {
     // Arrange - 注册拿到 session cookie（注册响应透传 Better Auth 会话 cookie）
     const reg = await registerUser({ prefix: "rotate" });
+    // session cookie 名随 server NODE_ENV 切换：dev = better-auth.session_token，
+    // production = __Secure-better-auth.session_token。vitest 进程 NODE_ENV="test"
+    // 无法通过 process.env 判断，按注册响应中实际 cookie 存在性检测。
+    const SESSION_COOKIE = reg.cookies.some((c) =>
+      c.startsWith("__Secure-better-auth.session_token="),
+    )
+      ? "__Secure-better-auth.session_token"
+      : "better-auth.session_token";
     const oldSessionCookie = reg.cookies.find((c) => c.startsWith(`${SESSION_COOKIE}=`));
     expect(oldSessionCookie).toBeDefined();
     const oldValue = parseCookie(oldSessionCookie!).value;
