@@ -270,6 +270,14 @@
       "privacy": "Privacy policy"
     },
     "plans": {
+      "heading": "Choose a plan for your team",
+      "periodAriaLabel": "Billing period switcher",
+      "periodMonthly": "Monthly ¥{price}/seat",
+      "periodYearly": "Yearly ¥{price}/seat (save 2 months)",
+      "perSeatMonth": "/seat/mo",
+      "perSeatYear": "/seat/yr",
+      "savePerSeat": "Save ¥{amount}/seat",
+      "footnote": "Alipay / WeChat Pay · international cards · cancel anytime; data stays read-only after downgrade",
       "free": {
         "name": "Free",
         "tagline": "Small teams up to 10, free forever",

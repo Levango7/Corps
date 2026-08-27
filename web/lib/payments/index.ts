@@ -1,5 +1,7 @@
 import type { PaymentProvider, ProviderId } from "./types";
 import { StripeProvider } from "./stripe-provider";
+import { WeChatPayNativeProvider } from "./wechat-provider";
+import { AlipayPageProvider } from "./alipay-provider";
 
 export { FREE_SEAT_LIMIT } from "./stripe-provider";
 export type {
@@ -17,14 +19,20 @@ export type {
 } from "./types";
 // PaymentProviderError / PaymentWebhookError 是 class（值），用 export 导出而非 export type
 export { PaymentProviderError, PaymentWebhookError } from "./types";
+// 通道实现导出（前端轮询等场景需直接拿到实例调用 queryOrder/queryTrade）
+export { StripeProvider } from "./stripe-provider";
+export { WeChatPayNativeProvider } from "./wechat-provider";
+export { AlipayPageProvider } from "./alipay-provider";
 
 /**
  * 通道注册表：id -> 惰性构造器。
- * Phase 1 仅注册 stripe；wechatpay-native / alipay-page 条目 Phase 2 接入时追加，
+ * Phase 2 新增 wechatpay-native / alipay-page（ADR-003 §4 推荐路线），
  * 业务层与本文件之外的一切代码不需要为此改动。
  */
 const registry = new Map<ProviderId, () => PaymentProvider>([
   ["stripe", () => new StripeProvider()],
+  ["wechatpay-native", () => new WeChatPayNativeProvider()],
+  ["alipay-page", () => new AlipayPageProvider()],
 ]);
 
 /** 进程内单例缓存：同一通道复用同一实例（Stripe SDK client 复用连接池） */

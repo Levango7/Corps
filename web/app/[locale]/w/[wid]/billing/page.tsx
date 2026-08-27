@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
@@ -12,10 +12,13 @@ import {
   Users,
   Info,
   ArrowRight,
+  X,
+  Wallet,
 } from "lucide-react";
 import { api } from "@/lib/api";
 
 type Plan = "free" | "pro";
+type PaymentMethod = "card" | "wechat" | "alipay";
 
 interface BillingStatus {
   plan: Plan;
@@ -75,6 +78,12 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState<string | null>(null);
+  // Phase 2：支付方式选择（缺省 card 保持存量行为）
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  // 微信二维码模态框状态
+  const [wechatQr, setWechatQr] = useState<{ url: string; orderId: string } | null>(null);
+  // �轮询定时器引用
+  const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const justPaid = search.get("success") === "1";
   const canceled = search.get("canceled") === "1";
@@ -91,22 +100,88 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
     load();
   }, [load]);
 
+  // 清理轮询定时器
+  useEffect(() => {
+    return () => {
+      if (pollRef.current) clearInterval(pollRef.current);
+    };
+  }, []);
+
   async function upgrade(plan: Plan) {
     setError("");
-    if (!window.confirm("将跳转到 Stripe 完成支付，是否继续？")) return;
+    // 支付方式 → provider 参数映射
+    const providerMap: Record<PaymentMethod, "stripe" | "wechatpay-native" | "alipay-page"> = {
+      card: "stripe",
+      wechat: "wechatpay-native",
+      alipay: "alipay-page",
+    };
+    const provider = providerMap[paymentMethod];
+
+    // 跳转型通道（信用卡/支付宝）需确认；微信扫码弹模态框无需 confirm
+    if (paymentMethod !== "wechat") {
+      const channelLabel = paymentMethod === "card" ? "Stripe" : "支付宝";
+      if (!window.confirm(`将跳转到${channelLabel}完成支付，是否继续？`)) return;
+    }
+
     setBusy(plan);
     try {
-      const { url } = await api<{ url: string }>(`/api/v1/workspaces/${wid}/billing/checkout`, {
+      const resp = await api<{
+        url?: string;
+        qrCodeUrl?: string;
+        providerOrderId?: string;
+        providerId?: string;
+      }>(`/api/v1/workspaces/${wid}/billing/checkout`, {
         method: "POST",
-        body: JSON.stringify({ planId: plan }),
+        body: JSON.stringify({ planId: plan, provider }),
       });
-      if (url) window.location.href = url;
-      else setError("Stripe 未返回结算链接");
+
+      if (resp.qrCodeUrl) {
+        // 微信 Native 支付：显示二维码模态框并轮询订阅状态
+        setWechatQr({ url: resp.qrCodeUrl, orderId: resp.providerOrderId ?? "" });
+        startPolling();
+      } else if (resp.url) {
+        // Stripe / 支付宝：跳转到通道页面
+        window.location.href = resp.url;
+      } else {
+        setError("支付通道未返回结算链接或二维码");
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : "创建结算会话失败");
     } finally {
       setBusy(null);
     }
+  }
+
+  /** 微信支付状态轮询：每 3 秒查一次 status，订阅变 active 即关闭模态框 */
+  function startPolling() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    let attempts = 0;
+    const maxAttempts = 60; // 最长轮询 3 分钟（60 × 3s）
+    pollRef.current = setInterval(async () => {
+      attempts++;
+      if (attempts > maxAttempts) {
+        if (pollRef.current) clearInterval(pollRef.current);
+        setError("支付状态查询超时，如已支付请刷新页面查看");
+        setWechatQr(null);
+        return;
+      }
+      try {
+        const s = await api<BillingStatus>(`/api/v1/workspaces/${wid}/billing/status`);
+        setStatus(s);
+        if (s.plan === "pro" && s.subscription?.status === "active") {
+          if (pollRef.current) clearInterval(pollRef.current);
+          setWechatQr(null);
+        }
+      } catch {
+        // 轮询失败不中断，继续重试
+      }
+    }, 3000);
+  }
+
+  /** 关闭微信二维码模态框并停止轮询 */
+  function closeWechatQr() {
+    if (pollRef.current) clearInterval(pollRef.current);
+    setWechatQr(null);
   }
 
   async function openPortal() {
@@ -265,6 +340,53 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         )}
       </div>
 
+      {/* 支付方式选择（Phase 2：国内支付接入） */}
+      {isOwner && status?.stripeReady && (
+        <div className="mb-5 sm:mb-6 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5">
+          <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">支付方式</div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              onClick={() => setPaymentMethod("card")}
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                paymentMethod === "card"
+                  ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                  : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
+              }`}
+            >
+              <CreditCard size={16} />
+              信用卡
+            </button>
+            <button
+              onClick={() => setPaymentMethod("wechat")}
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                paymentMethod === "wechat"
+                  ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                  : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
+              }`}
+            >
+              <Wallet size={16} />
+              微信支付
+            </button>
+            <button
+              onClick={() => setPaymentMethod("alipay")}
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                paymentMethod === "alipay"
+                  ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                  : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
+              }`}
+            >
+              <Wallet size={16} />
+              支付宝
+            </button>
+          </div>
+          <p className="mt-2 text-[length:var(--text-xs)] text-[var(--meta)]">
+            {paymentMethod === "card" && "通过 Stripe 完成信用卡支付，支持自动续费。"}
+            {paymentMethod === "wechat" && "扫码支付，支付完成后自动激活订阅。不支持自动续费。"}
+            {paymentMethod === "alipay" && "跳转到支付宝完成支付，支付完成后自动激活。不支持自动续费。"}
+          </p>
+        </div>
+      )}
+
       {/* 套餐卡片 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         {PLANS.map((p) => {
@@ -363,6 +485,48 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         <p className="mt-5 text-[length:var(--text-xs)] text-[var(--meta)]">
           只有工作区拥有者可以更改套餐或管理付款方式。
         </p>
+      )}
+
+      {/* 微信支付二维码模态框（Phase 2：Native 扫码支付） */}
+      {wechatQr && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          role="dialog"
+          aria-modal="true"
+          aria-label="微信支付二维码"
+        >
+          <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-6 max-w-sm w-full mx-4">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
+                微信支付
+              </h2>
+              <button
+                onClick={closeWechatQr}
+                className="text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+                aria-label="关闭"
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="flex flex-col items-center">
+              {/* 二维码渲染：使用在线 API 生成（生产环境建议替换为本地 QR 码库） */}
+              <img
+                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(wechatQr.url)}`}
+                alt="微信支付二维码"
+                width={240}
+                height={240}
+                className="rounded-[var(--radius-md)]"
+              />
+              <p className="mt-4 text-[length:var(--text-sm)] text-[var(--fg-2)] text-center">
+                请使用微信扫一扫扫描上方二维码完成支付
+              </p>
+              <div className="mt-3 flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
+                <Loader2 size={12} className="animate-spin" />
+                正在等待支付结果...
+              </div>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

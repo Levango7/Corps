@@ -9,6 +9,12 @@
  *  - 切换器 onChange 时 track("select_billing_period", { period })。
  *  - Pro 卡按钮 / Free 卡按钮均通过 TrackedCta 上报 click_upgrade（source="card"）。
  *
+ * i18n（ADR-008 next-intl）：
+ *  - useTranslations("pricing") 取 pricing 命名空间；NextIntlClientProvider 已在根 layout 注水。
+ *  - 套餐 name/tagline/cta/badge、切换器 label、价格单位、省钱徽标、footnote 走翻译 key。
+ *  - PRICING_PLANS.features（卡内功能列表）为 spec §4.1 逐字冻结产品规格，保持常量直出。
+ *  - 价格数字（monthlyPrice/yearlyPrice）来自常量，经 ICU {price}/{amount} 参数插值进翻译。
+ *
  * 关联：
  *  - docs/design/pricing-page-impl-design.md §3.2/§5.3
  *  - docs/market/pricing-page-spec.md §3.5/§8
@@ -16,6 +22,7 @@
 
 import { useState } from "react";
 import { Check } from "lucide-react";
+import { useTranslations } from "next-intl";
 import {
   PRICING_PLANS,
   YEARLY_MONTHLY_AVERAGE,
@@ -25,12 +32,6 @@ import {
 import { track } from "@/lib/analytics";
 import { TrackedCta } from "./TrackedCta";
 
-/** 切换器分段控件选项。 */
-const PERIOD_OPTIONS: { value: BillingPeriod; label: string }[] = [
-  { value: "monthly", label: "按月付 ¥59/人" },
-  { value: "yearly", label: `按年付 ¥${YEARLY_MONTHLY_AVERAGE.toFixed(1)}/人（省 2 个月）` },
-];
-
 /** CTA 目标基础 URL（spec §1，已适配为 /auth/signup?src=pricing）。 */
 const SIGNUP_BASE = "/auth/signup?src=pricing";
 
@@ -38,6 +39,7 @@ const SIGNUP_BASE = "/auth/signup?src=pricing";
  * 定价卡区块。受控周期 state，默认年付。
  */
 export function PricingSection() {
+  const t = useTranslations("pricing");
   // 默认年付（spec §3.5）
   const [period, setPeriod] = useState<BillingPeriod>("yearly");
 
@@ -49,10 +51,22 @@ export function PricingSection() {
     track("select_billing_period", { period: next });
   }
 
+  // 切换器分段控件选项（label 走翻译，价格经 ICU 参数插值）
+  const periodOptions: { value: BillingPeriod; label: string }[] = [
+    {
+      value: "monthly",
+      label: t("plans.periodMonthly", { price: PRICING_PLANS.pro.monthlyPrice }),
+    },
+    {
+      value: "yearly",
+      label: t("plans.periodYearly", { price: YEARLY_MONTHLY_AVERAGE.toFixed(1) }),
+    },
+  ];
+
   // Pro 当前周期价格
   const proPrice =
     period === "monthly" ? PRICING_PLANS.pro.monthlyPrice : PRICING_PLANS.pro.yearlyPrice;
-  const proUnit = period === "monthly" ? "/人/月" : "/人/年";
+  const proUnit = period === "monthly" ? t("plans.perSeatMonth") : t("plans.perSeatYear");
 
   return (
     <section
@@ -65,16 +79,16 @@ export function PricingSection() {
           id="plans-heading"
           className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] text-center"
         >
-          选择适合团队的方案
+          {t("plans.heading")}
         </h2>
 
         {/* 切换器（分段控件） */}
         <div
           className="mt-6 inline-flex p-1 rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface-2)]"
           role="group"
-          aria-label="计费周期切换"
+          aria-label={t("plans.periodAriaLabel")}
         >
-          {PERIOD_OPTIONS.map((opt) => {
+          {periodOptions.map((opt) => {
             const pressed = opt.value === period;
             return (
               <button
@@ -100,10 +114,11 @@ export function PricingSection() {
         {/* 双卡布局 */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           {/* Free 卡（移动端 order-2，桌面 order-1） */}
-          <FreeCard period={period} className="order-2 md:order-1" />
+          <FreeCard period={period} t={t} className="order-2 md:order-1" />
           {/* Pro 卡（移动端置顶 order-1，桌面 order-2，转化优先 spec §7） */}
           <ProCard
             period={period}
+            t={t}
             proPrice={proPrice}
             proUnit={proUnit}
             className="order-1 md:order-2"
@@ -112,16 +127,27 @@ export function PricingSection() {
 
         {/* 卡片底部辅助行 */}
         <p className="mt-6 text-center text-[length:var(--text-xs)] text-[var(--meta)]">
-          支持支付宝 / 微信扫码 · 外币卡 · 随时取消，降级后数据只读保留
+          {t("plans.footnote")}
         </p>
       </div>
     </section>
   );
 }
 
+/** useTranslations("pricing") 返回的翻译函数类型（透传给子卡片）。 */
+type PricingT = ReturnType<typeof useTranslations>;
+
 /** Free 卡。 */
-function FreeCard({ period, className }: { period: BillingPeriod; className?: string }) {
-  const plan = PRICING_PLANS.free;
+function FreeCard({
+  period,
+  t,
+  className,
+}: {
+  period: BillingPeriod;
+  t: PricingT;
+  className?: string;
+}) {
+  const features = PRICING_PLANS.free.features;
   return (
     <div
       className={
@@ -131,19 +157,23 @@ function FreeCard({ period, className }: { period: BillingPeriod; className?: st
       }
     >
       <h3 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
-        {plan.name}
+        {t("plans.free.name")}
       </h3>
-      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{plan.tagline}</p>
+      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+        {t("plans.free.tagline")}
+      </p>
 
       <div className="mt-4 flex items-baseline gap-1">
         <span className="text-[length:var(--text-4xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           ¥0
         </span>
-        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">/人/月</span>
+        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
+          {t("plans.perSeatMonth")}
+        </span>
       </div>
 
       <ul className="mt-6 space-y-2">
-        {plan.features.map((feat) => (
+        {features.map((feat) => (
           <li
             key={feat}
             className="flex items-start gap-2 text-[length:var(--text-sm)] text-[var(--fg-2)]"
@@ -156,7 +186,7 @@ function FreeCard({ period, className }: { period: BillingPeriod; className?: st
 
       <div className="mt-6">
         <TrackedCta href={SIGNUP_BASE} plan="free" source="card" period={period} variant="ghost">
-          {plan.cta}
+          {t("plans.free.cta")}
         </TrackedCta>
       </div>
     </div>
@@ -166,11 +196,13 @@ function FreeCard({ period, className }: { period: BillingPeriod; className?: st
 /** Pro 卡（推荐档）。 */
 function ProCard({
   period,
+  t,
   proPrice,
   proUnit,
   className,
 }: {
   period: BillingPeriod;
+  t: PricingT;
   proPrice: number;
   proUnit: string;
   className?: string;
@@ -186,13 +218,15 @@ function ProCard({
     >
       {/* 推荐角标 */}
       <span className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--on-accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-        {plan.badge}
+        {t("plans.pro.badge")}
       </span>
 
       <h3 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
-        {plan.name}
+        {t("plans.pro.name")}
       </h3>
-      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{plan.tagline}</p>
+      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+        {t("plans.pro.tagline")}
+      </p>
 
       <div className="mt-4 flex items-baseline gap-1">
         {/* 年付态：显示删除线月付原价 + 省钱徽标 */}
@@ -207,7 +241,7 @@ function ProCard({
         <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{proUnit}</span>
         {period === "yearly" && (
           <span className="ml-2 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-            省 ¥{YEARLY_SAVING_PER_SEAT}/席
+            {t("plans.savePerSeat", { amount: YEARLY_SAVING_PER_SEAT })}
           </span>
         )}
       </div>
@@ -232,7 +266,7 @@ function ProCard({
           period={period}
           variant="primary"
         >
-          {plan.cta}
+          {t("plans.pro.cta")}
         </TrackedCta>
       </div>
     </div>

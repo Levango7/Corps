@@ -270,6 +270,14 @@
       "privacy": "隐私政策"
     },
     "plans": {
+      "heading": "选择适合团队的方案",
+      "periodAriaLabel": "计费周期切换",
+      "periodMonthly": "按月付 ¥{price}/人",
+      "periodYearly": "按年付 ¥{price}/人（省 2 个月）",
+      "perSeatMonth": "/人/月",
+      "perSeatYear": "/人/年",
+      "savePerSeat": "省 ¥{amount}/席",
+      "footnote": "支持支付宝 / 微信扫码 · 外币卡 · 随时取消，降级后数据只读保留",
       "free": {
         "name": "免费版",
         "tagline": "10 人以内小团队，永久免费",

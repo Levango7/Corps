@@ -6,6 +6,12 @@
  *  - 本页不添加 export const revalidate（无效配置，prerender-manifest 实证）。
  *  - 本页零 IO 载渲染保住 LCP 预算；SSG 改造立为后续独立事项。
  *
+ * i18n（ADR-008 next-intl）：
+ *  - 页面位于 [locale] 路由段下，按 locale 取 web/messages/{zh|en}.json 的 pricing 命名空间。
+ *  - 服务端用 getTranslations；客户端子组件 PricingSection 用 useTranslations。
+ *  - PRICING_MATRIX / PRICING_PLANS.features 为 spec §4 逐字冻结产品规格文案，
+ *    保持常量直出（非 UI 框架文案，不进翻译）；其余 UI 文案全部走翻译 key。
+ *
  * 客户端边界（§3.2）：
  *  - 七个静态区块在本文内联（服务端渲染，零 JS）。
  *  - 三个客户端子组件：PricingSection（周期 state）+ PricingViewTracker（view_pricing）+ TrackedCta（click_upgrade）。
@@ -21,6 +27,9 @@
 
 import type { Metadata } from "next";
 import Link from "next/link";
+import { notFound } from "next/navigation";
+import { hasLocale } from "next-intl";
+import { getTranslations, setRequestLocale } from "next-intl/server";
 import {
   GitBranch,
   SquareKanban as KanbanSquare,
@@ -29,25 +38,22 @@ import {
   ArrowRight,
 } from "lucide-react";
 import { PRICING_FAQS, PRICING_MATRIX, FEATURE_COLUMNS, SOCIAL_PROOF } from "@/lib/pricing";
+import { locales } from "@/lib/i18n";
 import { PricingSection } from "@/components/pricing/PricingSection";
 import { PricingViewTracker } from "@/components/pricing/PricingViewTracker";
 import { TrackedCta } from "@/components/pricing/TrackedCta";
 
+/**
+ * 翻译函数结构签名。
+ * next-intl 的 t（getTranslations / useTranslations 返回）兼容此调用形态：
+ *  - t(key) → string
+ *  - t(key, { values }) → string（ICU 参数插值，如 socialProof 的 {teams}）
+ * 服务端 getTranslations 的 t 带命名空间字面量泛型，赋值给此宽签名需一次 `as unknown as`。
+ */
+type TranslateFn = (key: string, values?: Record<string, unknown>) => string;
+
 /** CTA 目标基础 URL（spec §1，已适配为 /auth/signup?src=pricing，见 R1）。 */
 const SIGNUP_BASE = "/auth/signup?src=pricing";
-
-/** SEO metadata（spec §9）。 */
-export const metadata: Metadata = {
-  title: "corps 定价 —— 免费 10 人，Pro ¥59/人/月",
-  description:
-    "以工作区任务看板为锚点，决策记录双向回链任务上下文。15 分钟上手，不为用不上的功能付费。",
-  openGraph: {
-    title: "corps 定价 —— 免费 10 人，Pro ¥59/人/月",
-    description:
-      "以工作区任务看板为锚点，决策记录双向回链任务上下文。15 分钟上手，不为用不上的功能付费。",
-    type: "website",
-  },
-};
 
 /** 功能三栏图标映射（spec §3.4，lucide-react 0.513.0）。 */
 const FEATURE_ICONS = {
@@ -56,8 +62,44 @@ const FEATURE_ICONS = {
   ShieldCheck,
 } as const;
 
+/** 功能三栏 title/body 翻译 key（与 FEATURE_COLUMNS 顺序对齐）。 */
+const FEATURE_TITLE_KEYS = ["features.col1Title", "features.col2Title", "features.col3Title"] as const;
+const FEATURE_BODY_KEYS = ["features.col1Body", "features.col2Body", "features.col3Body"] as const;
+
+/** SEO metadata（spec §9，按 locale 取 pricing.metadata 翻译）。 */
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}): Promise<Metadata> {
+  const { locale } = await params;
+  if (!hasLocale(locales, locale)) return {};
+  const t = await getTranslations({ locale, namespace: "pricing" });
+  const title = t("metadata.title");
+  const description = t("metadata.description");
+  return {
+    title,
+    description,
+    openGraph: { title, description, type: "website" },
+  };
+}
+
 /** 默认导出：定价页服务端组件。 */
-export default function PricingPage() {
+export default async function PricingPage({
+  params,
+}: {
+  params: Promise<{ locale: string }>;
+}) {
+  const { locale } = await params;
+  // 非法 locale 直接 404
+  if (!hasLocale(locales, locale)) notFound();
+  // 启用 RSC 静态渲染注水（next-intl App Router 推荐）
+  setRequestLocale(locale);
+
+  const t = await getTranslations({ locale, namespace: "pricing" });
+  // 转为宽签名传给内联区块（一处断言，避免 7 个子组件各自 getTranslations 的冗余调用）
+  const tt = t as unknown as TranslateFn;
+
   // 社会证明条件渲染（spec §3.3）：paidTeams !== null && paidTeams >= minTeams
   const showSocialProof =
     SOCIAL_PROOF.paidTeams !== null && SOCIAL_PROOF.paidTeams >= SOCIAL_PROOF.minTeams;
@@ -68,31 +110,31 @@ export default function PricingPage() {
       <PricingViewTracker />
 
       {/* ① TopNav */}
-      <TopNav />
+      <TopNav t={tt} />
 
       {/* ② Hero */}
-      <Hero />
+      <Hero t={tt} />
 
       {/* ③ 社会证明条（条件渲染） */}
-      {showSocialProof && <SocialProof />}
+      {showSocialProof && <SocialProof t={tt} />}
 
       {/* ④ 功能三栏 */}
-      <FeatureGrid />
+      <FeatureGrid t={tt} />
 
-      {/* ⑤ 定价卡（client） */}
+      {/* ⑤ 定价卡（client，内部 useTranslations） */}
       <PricingSection />
 
       {/* ⑥ 功能对比表 */}
-      <ComparisonTable />
+      <ComparisonTable t={tt} />
 
       {/* ⑦ FAQ */}
-      <Faq />
+      <Faq t={tt} />
 
       {/* ⑧ 尾部 CTA */}
-      <TailCta />
+      <TailCta t={tt} />
 
       {/* ⑨ Footer */}
-      <Footer />
+      <Footer t={tt} />
     </main>
   );
 }
@@ -101,11 +143,11 @@ export default function PricingPage() {
 // ① TopNav
 // ─────────────────────────────────────────────────────────────────────────────
 
-function TopNav() {
+function TopNav({ t }: { t: TranslateFn }) {
   return (
     <nav
       className="sticky top-0 z-10 h-[var(--topbar-h)] flex items-center justify-between px-[var(--space-8)] md:px-[var(--space-6)] border-b border-[var(--border-soft)] bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-[8px]"
-      aria-label="顶部导航"
+      aria-label={t("nav.ariaLabel")}
     >
       <Link
         href="/pricing"
@@ -120,13 +162,13 @@ function TopNav() {
           className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)]"
           aria-current="page"
         >
-          定价
+          {t("nav.pricing")}
         </Link>
         <Link
           href="/auth/login"
           className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)]"
         >
-          登录
+          {t("nav.login")}
         </Link>
         <TrackedCta
           href={SIGNUP_BASE}
@@ -136,7 +178,7 @@ function TopNav() {
           variant="primary"
           className="inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--on-accent)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
         >
-          免费开始
+          {t("nav.freeStart")}
         </TrackedCta>
       </div>
     </nav>
@@ -147,7 +189,7 @@ function TopNav() {
 // ② Hero
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Hero() {
+function Hero({ t }: { t: TranslateFn }) {
   return (
     <section
       className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)]"
@@ -156,7 +198,7 @@ function Hero() {
       <div className="mx-auto max-w-[var(--container-max)]">
         {/* eyebrow 小标签 */}
         <span className="inline-block px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--eyebrow-bg)] text-[var(--eyebrow-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-          为 5–30 人团队打造
+          {t("hero.eyebrow")}
         </span>
 
         {/* H1 */}
@@ -164,12 +206,12 @@ function Hero() {
           id="hero-heading"
           className="mt-4 text-[length:var(--text-2xl)] md:text-[length:var(--text-3xl)] lg:text-[length:var(--text-4xl)] font-[var(--weight-semibold)] tracking-[var(--tracking-tight)] text-[var(--fg)]"
         >
-          让讨论结论自动落位成任务
+          {t("hero.title")}
         </h1>
 
         {/* 副标 */}
         <p className="mt-4 max-w-[36em] text-[length:var(--text-md)] text-[var(--muted)]">
-          以工作区任务看板为锚点，决策记录双向回链任务上下文。15 分钟上手，不为用不上的功能付费。
+          {t("hero.subtitle")}
         </p>
 
         {/* CTA 组 */}
@@ -181,14 +223,14 @@ function Hero() {
             period="yearly"
             variant="primary"
           >
-            免费开始，最多 10 人
+            {t("hero.ctaPrimary")}
           </TrackedCta>
           {/* 次按钮：锚点平滑滚动至 #plans（零 JS，globals.css html scroll-behavior: smooth） */}
           <a
             href="#plans"
             className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
           >
-            先看看团队能省多少
+            {t("hero.ctaSecondary")}
             <ArrowRight size={16} aria-hidden="true" />
           </a>
         </div>
@@ -201,14 +243,14 @@ function Hero() {
 // ③ 社会证明条（条件渲染，MVP 种子期不显示）
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SocialProof() {
+function SocialProof({ t }: { t: TranslateFn }) {
   // 当前 paidTeams === null → 本组件不会渲染；保留分支结构供未来接通数据
   const teams = SOCIAL_PROOF.paidTeams ?? 0;
   return (
     <section className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]">
       <div className="mx-auto max-w-[var(--container-max)] text-center">
         <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {teams} 个团队正在用 corps 管理决策与任务
+          {t("socialProof", { teams })}
         </p>
       </div>
     </section>
@@ -219,7 +261,7 @@ function SocialProof() {
 // ④ 功能三栏
 // ─────────────────────────────────────────────────────────────────────────────
 
-function FeatureGrid() {
+function FeatureGrid({ t }: { t: TranslateFn }) {
   return (
     <section
       className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]"
@@ -227,21 +269,23 @@ function FeatureGrid() {
     >
       <div className="mx-auto max-w-[var(--container-max)]">
         <h2 id="features-heading" className="sr-only">
-          核心能力
+          {t("features.heading")}
         </h2>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-[var(--space-8)]">
-          {FEATURE_COLUMNS.map((col) => {
+          {FEATURE_COLUMNS.map((col, i) => {
             const Icon = FEATURE_ICONS[col.icon];
             return (
               <div
-                key={col.title}
+                key={col.icon}
                 className="p-[var(--space-8)] rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] hover:shadow-[var(--elev-hover)] transition-shadow duration-[var(--motion-base)] ease-[var(--ease-standard)]"
               >
                 <Icon size={24} className="text-[var(--accent)]" aria-hidden="true" />
                 <h3 className="mt-3 text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
-                  {col.title}
+                  {t(FEATURE_TITLE_KEYS[i])}
                 </h3>
-                <p className="mt-2 text-[length:var(--text-sm)] text-[var(--fg-2)]">{col.body}</p>
+                <p className="mt-2 text-[length:var(--text-sm)] text-[var(--fg-2)]">
+                  {t(FEATURE_BODY_KEYS[i])}
+                </p>
               </div>
             );
           })}
@@ -255,7 +299,7 @@ function FeatureGrid() {
 // ⑥ 功能对比表
 // ─────────────────────────────────────────────────────────────────────────────
 
-function ComparisonTable() {
+function ComparisonTable({ t }: { t: TranslateFn }) {
   return (
     <section
       className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]"
@@ -266,7 +310,7 @@ function ComparisonTable() {
           id="compare-heading"
           className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]"
         >
-          功能对比
+          {t("comparison.heading")}
         </h2>
         {/* 移动端容器 overflow-x-auto，表格 min-w 720px（spec §7） */}
         <div className="mt-6 overflow-x-auto">
@@ -274,13 +318,13 @@ function ComparisonTable() {
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
-                  功能
+                  {t("comparison.feature")}
                 </th>
                 <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
-                  Free
+                  {t("comparison.free")}
                 </th>
                 <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
-                  Pro
+                  {t("comparison.pro")}
                 </th>
               </tr>
             </thead>
@@ -296,7 +340,7 @@ function ComparisonTable() {
   );
 }
 
-/** 对比表分组行（含分组标题行 + 数据行）。 */
+/** 对比表分组行（含分组标题行 + 数据行；cell 文案为 spec §4.2 冻结常量，不走翻译）。 */
 function ComparisonGroup({ group }: { group: (typeof PRICING_MATRIX)[number] }) {
   return (
     <>
@@ -326,7 +370,7 @@ function ComparisonGroup({ group }: { group: (typeof PRICING_MATRIX)[number] }) 
 // ⑦ FAQ
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Faq() {
+function Faq({ t }: { t: TranslateFn }) {
   return (
     <section
       className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]"
@@ -337,14 +381,15 @@ function Faq() {
           id="faq-heading"
           className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]"
         >
-          常见问题
+          {t("faq.heading")}
         </h2>
         <div className="mt-6 max-w-[720px] mx-auto">
           {PRICING_FAQS.map((faq) => (
             // 原生 details/summary（零 JS，键盘可达，spec §3.7）
+            // question/answer 走翻译 key（faq.q{0-5}/a{0-5}），questionId 来自常量保排序与埋点
             <details key={faq.questionId} className="group border-b border-[var(--border-soft)]">
               <summary className="flex items-center justify-between py-[var(--space-4)] px-[var(--space-5)] cursor-pointer text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] list-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] rounded-[var(--radius-md)]">
-                <span>{faq.question}</span>
+                <span>{t(`faq.q${faq.questionId}`)}</span>
                 <ChevronDown
                   size={18}
                   className="text-[var(--muted)] transition-transform duration-[var(--motion-base)] group-open:rotate-180"
@@ -352,7 +397,7 @@ function Faq() {
                 />
               </summary>
               <p className="px-[var(--space-5)] pb-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                {faq.answer}
+                {t(`faq.a${faq.questionId}`)}
               </p>
             </details>
           ))}
@@ -366,7 +411,7 @@ function Faq() {
 // ⑧ 尾部 CTA
 // ─────────────────────────────────────────────────────────────────────────────
 
-function TailCta() {
+function TailCta({ t }: { t: TranslateFn }) {
   return (
     <section
       className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)] bg-[var(--accent-soft)]"
@@ -378,10 +423,10 @@ function TailCta() {
             id="tail-cta-heading"
             className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]"
           >
-            让下一次讨论直接变成任务
+            {t("tailCta.title")}
           </h2>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-            无需信用卡 · 10 人内永久免费
+            {t("tailCta.subtitle")}
           </p>
         </div>
         <TrackedCta
@@ -391,7 +436,7 @@ function TailCta() {
           period="yearly"
           variant="primary"
         >
-          免费开始
+          {t("tailCta.cta")}
         </TrackedCta>
       </div>
     </section>
@@ -402,18 +447,18 @@ function TailCta() {
 // ⑨ Footer
 // ─────────────────────────────────────────────────────────────────────────────
 
-function Footer() {
+function Footer({ t }: { t: TranslateFn }) {
   return (
     <footer className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-6)] border-t border-[var(--border-soft)]">
       <div className="mx-auto max-w-[var(--container-max)] flex flex-wrap items-center justify-between gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
-        <span>© 2026 corps</span>
+        <span>{t("footer.copyright")}</span>
         <div className="flex gap-4">
           {/* TODO(legal): 上线前补齐真实文档链接（spec §3.9 明示 TODO） */}
           <Link href="#" className="hover:text-[var(--fg-2)]">
-            服务条款
+            {t("footer.terms")}
           </Link>
           <Link href="#" className="hover:text-[var(--fg-2)]">
-            隐私政策
+            {t("footer.privacy")}
           </Link>
         </div>
       </div>

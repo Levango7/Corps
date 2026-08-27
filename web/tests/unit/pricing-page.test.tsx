@@ -2,6 +2,9 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, fireEvent, screen } from "@testing-library/react";
+import { NextIntlClientProvider } from "next-intl";
+import { createRequire } from "node:module";
+import type { ReactNode } from "react";
 
 /**
  * /pricing 定价页单元测试
@@ -12,8 +15,18 @@ import { render, fireEvent, screen } from "@testing-library/react";
  *  3. PricingSection 交互测试（默认年付 / 切换 / select_billing_period / click_upgrade）
  *  4. TrackedCta / PricingViewTracker 测试（href / onClick / view_pricing 去重）
  *
+ * i18n 适配：
+ *  - page 为 async 服务端组件，用 getTranslations（next-intl/server）→ 本文件 mock 为
+ *    基于 zh.json pricing 命名空间的 t 函数，渲染时传 params={Promise.resolve({locale:"zh"})}。
+ *  - PricingSection 为客户端组件，用 useTranslations → 用 NextIntlClientProvider 注水 zh messages。
+ *  - 全页面渲染（含 PricingSection）统一包 NextIntlClientProvider 提供上下文。
+ *
  * 运行：pnpm vitest run web/tests/unit/pricing-page.test.tsx
  */
+
+// 同步加载 zh messages（createRequire 在 ESM 测试环境提供 CJS require，eval 阶段执行）
+const requireJson = createRequire(import.meta.url);
+const zhMessages = requireJson("../../messages/zh.json") as { pricing: Record<string, unknown> };
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 常量口径测试（纯 node 环境，无需 jsdom；放此处便于一并运行）
@@ -94,25 +107,69 @@ vi.mock("@/lib/analytics", () => ({
   track: (...args: unknown[]) => trackMock(...args),
 }));
 
+/**
+ * 构造简化翻译函数：按点分 key 取值 + ICU {var} 字面插值。
+ * function 声明被 hoist，可在 vi.mock 工厂（惰性执行）内安全调用。
+ */
+function makeT(msgs: Record<string, unknown>) {
+  return (key: string, values?: Record<string, unknown>): string => {
+    const parts = key.split(".");
+    let val: unknown = parts.reduce<unknown>(
+      (acc, p) => (acc == null ? acc : (acc as Record<string, unknown>)[p]),
+      msgs,
+    );
+    let str = typeof val === "string" ? val : String(val ?? "");
+    if (values) {
+      for (const [k, v] of Object.entries(values)) {
+        str = str.split(`{${k}}`).join(String(v));
+      }
+    }
+    return str;
+  };
+}
+
+// Mock next-intl/server：部分 mock，保留真实 getRequestConfig（lib/i18n.ts 依赖其 default export），
+// 仅覆盖 getTranslations（返回基于 zh.json pricing 的 t）与 setRequestLocale（no-op）。
+// 工厂惰性执行，getTranslations 为 async fn 内部动态 import zh.json（避免 hoisting 读取未初始化变量）。
+vi.mock("next-intl/server", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("next-intl/server")>();
+  return {
+    ...actual,
+    getTranslations: async () => {
+      const zh = (await import("../../messages/zh.json")).default as { pricing: Record<string, unknown> };
+      return makeT(zh.pricing);
+    },
+    setRequestLocale: () => {},
+  };
+});
+
 // ─────────────────────────────────────────────────────────────────────────────
 // 2. 页面骨架渲染测试
 // ─────────────────────────────────────────────────────────────────────────────
 
 import PricingPage from "@/app/[locale]/pricing/page";
 
+/** 渲染整页：await async 服务端组件 + 包 NextIntlClientProvider 供 PricingSection 注水。 */
+async function renderPage() {
+  const ui = await PricingPage({ params: Promise.resolve({ locale: "zh" }) });
+  return render(
+    <NextIntlClientProvider locale="zh" messages={zhMessages}>{ui}</NextIntlClientProvider>,
+  );
+}
+
 describe("页面骨架渲染", () => {
-  it("H1 文案「让讨论结论自动落位成任务」", () => {
+  it("H1 文案「让讨论结论自动落位成任务」", async () => {
     // Act
-    render(<PricingPage />);
+    await renderPage();
     // Assert
     expect(
       screen.getByRole("heading", { level: 1, name: "让讨论结论自动落位成任务" }),
     ).toBeInTheDocument();
   });
 
-  it("FAQ details 元素数量 === 6", () => {
+  it("FAQ details 元素数量 === 6", async () => {
     // Act
-    render(<PricingPage />);
+    await renderPage();
     // Assert
     const faqDetails = screen.getAllByRole("group");
     // details 元素隐式 role=group；过滤掉计费周期切换器（role=group aria-label="计费周期切换"）
@@ -120,33 +177,33 @@ describe("页面骨架渲染", () => {
     expect(faqOnly).toHaveLength(6);
   });
 
-  it("Footer 含「© 2026 corps」", () => {
+  it("Footer 含「© 2026 corps」", async () => {
     // Act
-    const { container } = render(<PricingPage />);
+    const { container } = await renderPage();
     // Assert
     expect(container.textContent).toContain("© 2026 corps");
   });
 
-  it("TopNav「定价」链接带 aria-current=page（当前页高亮）", () => {
+  it("TopNav「定价」链接带 aria-current=page（当前页高亮）", async () => {
     // Act
-    render(<PricingPage />);
+    await renderPage();
     // Assert
     const pricingLinks = screen.getAllByRole("link", { name: "定价" });
     expect(pricingLinks.length).toBeGreaterThanOrEqual(1);
     expect(pricingLinks[0]).toHaveAttribute("aria-current", "page");
   });
 
-  it("对比表分组行数 === 5（PRICING_MATRIX 五分组）", () => {
+  it("对比表分组行数 === 5（PRICING_MATRIX 五分组）", async () => {
     // Act
-    const { container } = render(<PricingPage />);
+    const { container } = await renderPage();
     // Assert：分组标题行用 scope="rowgroup"
     const rowGroups = container.querySelectorAll('th[scope="rowgroup"]');
     expect(rowGroups).toHaveLength(5);
   });
 
-  it("社会证明条 MVP 种子期不渲染（paidTeams=null）", () => {
+  it("社会证明条 MVP 种子期不渲染（paidTeams=null）", async () => {
     // Act
-    const { container } = render(<PricingPage />);
+    const { container } = await renderPage();
     // Assert：不含「正在用 corps 管理决策与任务」文案
     expect(container.textContent).not.toContain("正在用 corps 管理决策与任务");
   });
@@ -158,6 +215,13 @@ describe("页面骨架渲染", () => {
 
 import { PricingSection } from "@/components/pricing/PricingSection";
 
+/** 渲染 PricingSection 并注水 zh messages（useTranslations 依赖 NextIntlClientProvider）。 */
+function renderWithI18n(ui: ReactNode) {
+  return render(
+    <NextIntlClientProvider locale="zh" messages={zhMessages}>{ui}</NextIntlClientProvider>,
+  );
+}
+
 describe("PricingSection 交互", () => {
   beforeEach(() => {
     trackMock.mockClear();
@@ -165,7 +229,7 @@ describe("PricingSection 交互", () => {
 
   it("默认年付态：¥590 可见、删除线 ¥59 原价可见、「省 ¥118/席」徽标可见", () => {
     // Act
-    const { container } = render(<PricingSection />);
+    const { container } = renderWithI18n(<PricingSection />);
     // Assert
     expect(container.textContent).toContain("¥590");
     expect(container.textContent).toContain("¥59"); // 删除线原价
@@ -174,7 +238,7 @@ describe("PricingSection 交互", () => {
 
   it("切换到月付：价格切 ¥59 且徽标消失，并上报 select_billing_period", () => {
     // Arrange
-    const { container } = render(<PricingSection />);
+    const { container } = renderWithI18n(<PricingSection />);
     // Act：点击「按月付」分段控件
     const monthlyBtn = screen.getByRole("button", { name: /按月付/ });
     fireEvent.click(monthlyBtn);
@@ -188,7 +252,7 @@ describe("PricingSection 交互", () => {
 
   it("Pro 卡按钮 click 上报 click_upgrade 且 source===card、period 与当前态一致", () => {
     // Arrange：默认年付
-    render(<PricingSection />);
+    renderWithI18n(<PricingSection />);
     // Act：点击 Pro 卡「升级到 Pro」按钮
     const proBtn = screen.getByRole("link", { name: "升级到 Pro" });
     fireEvent.click(proBtn);
@@ -202,7 +266,7 @@ describe("PricingSection 交互", () => {
 
   it("Free 卡按钮 click 上报 click_upgrade 且 plan===free、source===card", () => {
     // Arrange
-    render(<PricingSection />);
+    renderWithI18n(<PricingSection />);
     // Act：点击 Free 卡「免费开始」按钮（注：TopNav 也有「免费开始」链接，需精确选择 card 内的）
     const freeLinks = screen.getAllByRole("link", { name: "免费开始" });
     // PricingSection 内只有一个 Free 卡按钮
