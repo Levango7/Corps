@@ -31,6 +31,7 @@ model User {
   decisions        Decision[]
   decisionVersions DecisionVersion[]
   notifications    Notification[]
+  messages         Message[]
   ownedWorkspaces  Workspace[]
   sessions         Session[]
   accounts         Account[]
@@ -57,6 +58,7 @@ model Workspace {
   decisions        Decision[]
   decisionVersions DecisionVersion[]
   notifications    Notification[]
+  messages         Message[]
   subscriptions    Subscription?
   analyticsEvents  AnalyticsEvent[]
   labels           Label[]
@@ -129,6 +131,7 @@ model Task {
   milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   comments  Comment[]
   decisions Decision[]
+  messages  Message[]
   labels    TaskLabel[]
 
   // 看板视图：按工作区筛选任务状态列
@@ -227,6 +230,30 @@ model Comment {
   @@index([taskId, createdAt])
   @@index([workspaceId])
   @@map("comments")
+}
+
+// ─── 任务级即时聊天消息（v2 F1：IM 轻沟通 MVP）──
+// 与 Comment（异步评论）区分：Message 是任务上下文内的轻量实时聊天。
+// MVP 采用轮询方案（5s 间隔 + ?since= 游标增量拉取），后续可升级 SSE/WebSocket。
+// RLS 自动覆盖（含 workspaceId），跨工作区请求被拦截。
+
+model Message {
+  id          String   @id @default(uuid()) @db.Uuid
+  taskId      String   @map("task_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  authorId    String?  @map("author_id") @db.Uuid
+  body        String   @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  // 作者注销后消息保留（审计 D3）
+  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  // 任务聊天：按时间顺序加载消息（覆盖索引前缀，兼容增量游标 ?since= 查询）
+  @@index([taskId, createdAt])
+  @@index([workspaceId])
+  @@map("messages")
 }
 
 // ─── 通知（mention / task_assigned / task_updated / comment_added / decision_updated）──

@@ -30,6 +30,7 @@ import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
+import ChatPanel from "@/components/ChatPanel";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -606,6 +607,9 @@ export default function TaskDetailPage({
               </div>
             )}
           </section>
+
+          {/* 聊天（v2 F1：IM 轻沟通 MVP）*/}
+          <ChatPanel wid={wid} taskId={id} />
 
           {/* 评论 */}
           <section className="mt-[var(--space-8)]">

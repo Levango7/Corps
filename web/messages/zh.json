@@ -380,6 +380,13 @@
     "empty": "暂无里程碑",
     "taskCount": "{count} 个任务"
   },
+  "chat": {
+    "title": "聊天",
+    "empty": "还没有消息，发一条开始对话吧。",
+    "placeholder": "发消息…（⌘/Ctrl + Enter 发送）",
+    "send": "发送",
+    "unknownUser": "已注销用户"
+  },
   "export": {
     "title": "数据导出",
     "hint": "导出工作区数据为 CSV 文件（含 UTF-8 BOM，Excel 中文兼容）。",

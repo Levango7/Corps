@@ -380,6 +380,13 @@
     "empty": "No milestones yet",
     "taskCount": "{count} tasks"
   },
+  "chat": {
+    "title": "Chat",
+    "empty": "No messages yet. Start the conversation.",
+    "placeholder": "Send a message… (⌘/Ctrl + Enter to send)",
+    "send": "Send",
+    "unknownUser": "Deleted user"
+  },
   "export": {
     "title": "Data export",
     "hint": "Export workspace data as CSV files (UTF-8 BOM included for Excel compatibility).",
