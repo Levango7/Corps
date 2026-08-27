@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useEffect, useRef, useState } from "react";
-import { useRouter, usePathname } from "next/navigation";
-import Link from "next/link";
+import { useRouter, usePathname, Link } from "@/lib/i18n-navigation";
+import { useTranslations } from "next-intl";
 import {
   LayoutDashboard,
   Kanban,
@@ -29,6 +29,7 @@ import {
   resolveTheme,
   applyTheme,
 } from "@/components/ThemeToggle";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 import type { WorkspaceSummary } from "@/lib/types";
 
 const SIDEBAR_KEY = "corps_sidebar_collapsed";
@@ -60,6 +61,9 @@ export default function WorkspaceLayout({
   const router = useRouter();
   const pathname = usePathname();
   const { wid } = use(params);
+  const t = useTranslations("nav");
+
+
 
   // ─── 初始化：主题 + 侧栏折叠 + 工作区列表 + 埋点 ───
   useEffect(() => {
@@ -205,7 +209,7 @@ export default function WorkspaceLayout({
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--shell-content)]">
         <div className="animate-pulse text-[length:var(--text-sm)] text-[var(--muted)]">
-          正在载入工作区
+          {t("workspace.loading")}
         </div>
       </div>
     );
@@ -216,26 +220,27 @@ export default function WorkspaceLayout({
     {
       label: null,
       items: [
-        { href: `/w/${wid}`, label: "概览", icon: LayoutDashboard, exact: true },
-        { href: `/w/${wid}/board`, label: "看板", icon: Kanban, exact: false },
-        { href: `/w/${wid}/my-tasks`, label: "我的任务", icon: CheckSquare, exact: false },
-        { href: `/w/${wid}/decisions`, label: "决策记录", icon: FileText, exact: false },
+        { href: `/w/${wid}`, label: t("menu.overview"), icon: LayoutDashboard, exact: true },
+        { href: `/w/${wid}/board`, label: t("menu.board"), icon: Kanban, exact: false },
+        { href: `/w/${wid}/my-tasks`, label: t("menu.myTasks"), icon: CheckSquare, exact: false },
+        { href: `/w/${wid}/decisions`, label: t("menu.decisions"), icon: FileText, exact: false },
       ],
     },
     {
-      label: "管理",
+      label: t("menu.admin"),
       items: [
-        { href: `/w/${wid}/members`, label: "成员", icon: Users, exact: false },
-        { href: `/w/${wid}/billing`, label: "计费", icon: CreditCard, exact: false },
-        { href: `/w/${wid}/analytics`, label: "分析", icon: BarChart3, exact: false },
-        { href: `/w/${wid}/settings`, label: "设置", icon: Settings, exact: false },
+        { href: `/w/${wid}/members`, label: t("menu.members"), icon: Users, exact: false },
+        { href: `/w/${wid}/billing`, label: t("menu.billing"), icon: CreditCard, exact: false },
+        { href: `/w/${wid}/analytics`, label: t("menu.analytics"), icon: BarChart3, exact: false },
+        { href: `/w/${wid}/settings`, label: t("menu.settings"), icon: Settings, exact: false },
       ],
     },
   ];
 
   const notifHref = `/w/${wid}/notifications`;
   const notifActive = pathname.startsWith(notifHref);
-  const themeLabel = themePref === "system" ? "跟随系统" : themePref === "light" ? "浅色" : "深色";
+  const themeLabel =
+    themePref === "system" ? t("theme.system") : themePref === "light" ? t("theme.light") : t("theme.dark");
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -244,7 +249,7 @@ export default function WorkspaceLayout({
         <button
           onClick={() => setDrawerOpen(true)}
           className="lg:hidden p-[var(--space-2)] -ml-[var(--space-1)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-          aria-label="打开侧栏"
+          aria-label={t("sidebar.open")}
         >
           <Menu size={18} />
         </button>
@@ -272,7 +277,7 @@ export default function WorkspaceLayout({
               ref={switcherListRef}
               role="listbox"
               tabIndex={-1}
-              aria-label="切换工作区"
+              aria-label={t("workspace.switch")}
               onKeyDown={(e) => {
                 if (workspaces.length === 0) return;
                 if (e.key === "ArrowDown") {
@@ -293,7 +298,7 @@ export default function WorkspaceLayout({
               className="absolute top-full left-0 mt-1.5 w-60 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-[var(--space-1)] z-[var(--z-dropdown)] focus-visible:outline-none"
             >
               <div className="px-[var(--space-3)] py-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
-                切换工作区
+                {t("workspace.switch")}
               </div>
               {workspaces.map((w, i) => (
                 <button
@@ -321,7 +326,7 @@ export default function WorkspaceLayout({
             className="hidden md:flex items-center gap-[var(--space-2)] px-[var(--space-3)] h-8 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--muted)] text-[length:var(--text-sm)] hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)] w-[var(--search-w-sm)] lg:w-[var(--search-w-lg)]"
           >
             <Search size={15} />
-            <span className="flex-1 text-left truncate">搜索任务</span>
+            <span className="flex-1 text-left truncate">{t("search.placeholder")}</span>
             <kbd className="text-[length:var(--text-xs)] text-[var(--meta)] font-[family-name:var(--font-mono)]">
               ⌘K
             </kbd>
@@ -329,14 +334,15 @@ export default function WorkspaceLayout({
           <button
             onClick={() => setCmdOpen(true)}
             className="md:hidden p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-            aria-label="搜索"
+            aria-label={t("search.ariaLabel")}
           >
             <Search size={18} />
           </button>
         </div>
 
-        {/* 右侧：主题 + 用户 + 退出 */}
+        {/* 右侧：语言切换 + 主题 + 用户 + 退出 */}
         <div className="flex items-center gap-[var(--space-1)] ml-auto">
+          <LanguageSwitcher />
           <ThemeToggle pref={themePref} onChange={handleThemeChange} />
           <span
             className="hidden md:inline text-[length:var(--text-xs)] text-[var(--meta)] select-none"
@@ -348,8 +354,8 @@ export default function WorkspaceLayout({
             <Link
               href={`/w/${wid}/settings`}
               className="flex items-center gap-[var(--space-2)] px-[var(--space-2)] rounded-lg hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-              aria-label="个人设置"
-              title="个人设置"
+              aria-label={t("user.profile")}
+              title={t("user.profile")}
             >
               {user.image ? (
                 // eslint-disable-next-line @next/next/no-img-element
@@ -370,7 +376,7 @@ export default function WorkspaceLayout({
           )}
           <button
             onClick={async () => {
-              if (!window.confirm("确定退出登录？")) return;
+              if (!window.confirm(t("user.logoutConfirm"))) return;
               try {
                 await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
               } catch {
@@ -379,8 +385,8 @@ export default function WorkspaceLayout({
               router.push("/auth/login");
             }}
             className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-            aria-label="退出登录"
-            title="退出登录"
+            aria-label={t("user.logout")}
+            title={t("user.logout")}
           >
             <LogOut size={18} />
           </button>
@@ -428,7 +434,7 @@ export default function WorkspaceLayout({
           aria-hidden={!drawerOpen}
           role="dialog"
           aria-modal={drawerOpen ? "true" : undefined}
-          aria-label="导航菜单"
+          aria-label={t("sidebar.navLabel")}
         >
           <SidebarNav
             groups={navGroups}

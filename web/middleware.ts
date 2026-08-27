@@ -1,5 +1,20 @@
 import { NextRequest, NextResponse } from "next/server";
+import createMiddleware from "next-intl/middleware";
 import { buildCsp } from "./lib/csp";
+import { routing } from "./lib/i18n-routing";
+
+/**
+ * next-intl 中间件：locale 检测与重定向（ADR-008 方案 A）。
+ *
+ * 策略（lib/i18n-routing.ts）：
+ *  - localePrefix: as-needed → 默认 zh 不带前缀，en 带 /en
+ *  - localeDetection: true → 从 cookie / Accept-Language 协商
+ *
+ * 与既有 CSRF / CSP / CORS 逻辑组合：
+ *  - 先让 next-intl 处理 locale 协商（可能返回重定向）
+ *  - 若未重定向，继续执行既有安全头注入
+ */
+const intlMiddleware = createMiddleware(routing);
 
 /**
  * CSRF 基线防护（Spec §152）：
@@ -62,7 +77,17 @@ function generateNonce(): string {
   return btoa(String.fromCharCode(...bytes));
 }
 
+/**
+ * 判断请求路径是否属于 API（不参与 locale 协商）。
+ * next-intl matcher 已排除 /api，但此处双重保险。
+ */
+function isApiPath(pathname: string): boolean {
+  return pathname.startsWith("/api");
+}
+
 export function middleware(req: NextRequest) {
+  const pathname = req.nextUrl.pathname;
+
   // CORS 预检短路：204 即满足浏览器要求；白名单命中时附带 CORS 头
   const corsOrigin = getAllowedOrigin(req);
   if (req.method === "OPTIONS") {
@@ -86,6 +111,17 @@ export function middleware(req: NextRequest) {
       { code: 403, message: "Cross-origin request blocked (CSRF protection)" },
       { status: 403 },
     );
+  }
+
+  // ─── next-intl locale 协商（仅对页面路由，API 跳过）───
+  // intlMiddleware 命中时可能返回重定向（如 / → /en）或 next() 注入 locale
+  if (!isApiPath(pathname)) {
+    const intlRes = intlMiddleware(req);
+    // next-intl 返回 NextResponse.next() 时继续追加安全头；
+    // 返回重定向时直接放行（locale 切换优先）
+    if (intlRes instanceof NextResponse && intlRes.headers.has("Location")) {
+      return intlRes;
+    }
   }
 
   const nonce = generateNonce();
@@ -115,10 +151,12 @@ export function middleware(req: NextRequest) {
 
 export const config = {
   /**
-   * CSRF 校验范围（扩大至全站以覆盖 CSP）：
+   * CSRF 校验范围 + locale 协商范围：
    *  - /api/v1/:path* — 业务 API
    *  - /api/auth/:path* — Better Auth 会话端点
-   *  - /(.* ) — 所有页面路由（CSP nonce 注入）
+   *  - /(.* ) — 所有页面路由（CSP nonce 注入 + locale 协商）
+   *
+   * next-intl 会自动忽略 /api 路径，无需在此排除。
    */
-  matcher: ["/api/v1/:path*", "/api/auth/:path*", "/(.*)"],
+  matcher: ["/api/v1/:path*", "/api/auth/:path*", "/((?!api|_next|_vercel|.*\\..*).*)"],
 };

@@ -1,0 +1,291 @@
+{
+  "metadata": {
+    "title": "corps · Team",
+    "description": "Lightweight collaboration SaaS for small and mid-size teams",
+    "workspaceTitle": "corps · Workspace",
+    "workspaceDescription": "Team SaaS — Task board"
+  },
+  "nav": {
+    "workspace": {
+      "switch": "Switch workspace",
+      "current": "Current workspace",
+      "loading": "Loading workspace"
+    },
+    "menu": {
+      "overview": "Overview",
+      "board": "Board",
+      "myTasks": "My tasks",
+      "decisions": "Decisions",
+      "members": "Members",
+      "billing": "Billing",
+      "analytics": "Analytics",
+      "settings": "Settings",
+      "notifications": "Notifications",
+      "admin": "Admin"
+    },
+    "search": {
+      "placeholder": "Search tasks",
+      "shortcut": "⌘K",
+      "ariaLabel": "Search"
+    },
+    "user": {
+      "profile": "Profile settings",
+      "logout": "Sign out",
+      "logoutConfirm": "Sign out?"
+    },
+    "sidebar": {
+      "open": "Open sidebar",
+      "expand": "Expand sidebar",
+      "collapse": "Collapse sidebar",
+      "close": "Close sidebar",
+      "navLabel": "Navigation"
+    },
+    "theme": {
+      "system": "System",
+      "light": "Light",
+      "dark": "Dark"
+    }
+  },
+  "button": {
+    "save": "Save",
+    "cancel": "Cancel",
+    "delete": "Delete",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "create": "Create",
+    "update": "Update",
+    "close": "Close",
+    "retry": "Retry",
+    "refresh": "Refresh page",
+    "back": "Back",
+    "next": "Next",
+    "previous": "Previous",
+    "skip": "Skip",
+    "submit": "Submit",
+    "reset": "Reset",
+    "copyLink": "Copy link",
+    "invite": "Invite",
+    "upgrade": "Upgrade",
+    "viewAll": "View all",
+    "newTask": "New task"
+  },
+  "status": {
+    "todo": "To do",
+    "in_progress": "In progress",
+    "review": "In review",
+    "done": "Done"
+  },
+  "priority": {
+    "low": "Low",
+    "medium": "Medium",
+    "high": "High",
+    "urgent": "Urgent",
+    "label": "Priority"
+  },
+  "task": {
+    "title": "Title",
+    "description": "Description",
+    "descriptionOptional": "Description (optional)",
+    "status": "Status",
+    "assignee": "Assignee",
+    "assigneeOptional": "Assignee (optional)",
+    "unassigned": "Unassigned",
+    "dueDate": "Due date",
+    "dueDateOptional": "Due date (optional)",
+    "titlePlaceholder": "Summarize what needs to be done in one line",
+    "descriptionPlaceholder": "Context, acceptance criteria, or paste related links…",
+    "create": "New task",
+    "createSubmitting": "Creating",
+    "createFailed": "Failed to create",
+    "overdue": "Overdue by {days}d",
+    "dueToday": "Due today",
+    "dueTomorrow": "Due tomorrow",
+    "dueInDays": "In {days}d",
+    "recentlyUpdated": "Recently updated",
+    "dueSoon": "Due soon",
+    "all": "All",
+    "sortLabel": "Sort by"
+  },
+  "time": {
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago"
+  },
+  "empty": {
+    "noTasks": "No tasks in this workspace yet.",
+    "noTasksHint": "Create one on the board and capture your most urgent work.",
+    "noOpenTasks": "No tasks in progress.",
+    "loadingTasks": "Loading tasks",
+    "noComments": "No comments yet",
+    "noDecisions": "No decision records yet",
+    "noMembers": "No members yet",
+    "noNotifications": "No notifications",
+    "noResults": "No matching results"
+  },
+  "error": {
+    "required": "This field is required",
+    "networkError": "Network error, please check your connection and retry",
+    "loadFailed": "Failed to load, please retry shortly",
+    "networkConnectFailed": "Network connection failed, please check your network",
+    "pageError": "Something went wrong",
+    "pageErrorDesc": "An unexpected error occurred while rendering. You can try reloading.",
+    "globalError": "A critical error occurred",
+    "globalErrorDesc": "An unexpected exception occurred while rendering the page. Please retry or refresh.",
+    "errorId": "Error ID: {digest}",
+    "notFound": "Page not found",
+    "notFoundDesc": "The page you are looking for does not exist or has been moved.",
+    "forbidden": "Access forbidden",
+    "internal": "Internal server error"
+  },
+  "auth": {
+    "login": {
+      "title": "Sign in to corps",
+      "subtitle": "Continue your team's work.",
+      "email": "Email",
+      "password": "Password",
+      "submit": "Sign in",
+      "submitting": "Signing in",
+      "failed": "Sign-in failed",
+      "invalidCredentials": "Email or password is incorrect",
+      "noWorkspace": "Your account is not in any workspace. Please ask an admin to invite you.",
+      "signupLink": "No workspace yet?",
+      "signupCta": "Create one"
+    },
+    "signup": {
+      "title": "Create a workspace",
+      "subtitle": "Set up in a minute, invite teammates later.",
+      "workspaceName": "Workspace name",
+      "workspaceNamePlaceholder": "e.g., Growth team",
+      "yourName": "Your name",
+      "yourNameOptional": "optional",
+      "yourNamePlaceholder": "Display name visible to teammates",
+      "email": "Email",
+      "password": "Password",
+      "passwordPlaceholder": "At least 8 characters",
+      "submit": "Create and enter",
+      "submitting": "Creating",
+      "failed": "Failed to create, please retry shortly",
+      "emailExists": "This email is already registered. Sign in directly.",
+      "loginLink": "Already have an account?",
+      "loginCta": "Sign in",
+      "inviteExpired": "This invitation has expired or already been used",
+      "inviteInvalid": "Invalid invitation link",
+      "inviteSeatsFull": "This workspace is out of seats. Please contact the admin.",
+      "inviteJoinFailed": "Failed to join the workspace automatically. You can retry from the members page later.",
+      "invitePreview": "<strong>{inviter}</strong> invited you to join \"{workspace}\" ({email}). You will join automatically after signing up.",
+      "passwordStrength": {
+        "weak": "Weak",
+        "medium": "Fair",
+        "strong": "Strong",
+        "label": "Password strength: {level}"
+      }
+    }
+  },
+  "onboarding": {
+    "badge": "Onboarding · {current} / {total}",
+    "skipAria": "Skip onboarding",
+    "step1": {
+      "title": "Welcome to corps",
+      "subtitle": "Set up your first task in 60 seconds and start collaborating",
+      "desc1": "corps is a lightweight collaboration tool for teams of 5–30.",
+      "desc2": "Discussion conclusions automatically become tasks and decision records — no more manual copying.",
+      "desc2Highlight": "Core loop",
+      "tip": "Pay only for what you use — free tier ≤10 members, Pro starts at ¥59/seat/month.",
+      "cta": "Get started"
+    },
+    "step2": {
+      "title": "Create your first task",
+      "subtitle": "Put your most urgent work on the board",
+      "desc1": "Create a task on the board with a title, assignee, and due date.",
+      "desc2": "Drag a task card to change its status (To do → In progress → Done).",
+      "cta": "Go to board"
+    },
+    "step3": {
+      "title": "Invite teammates",
+      "subtitle": "Collaboration starts with invitations",
+      "desc1": "Invite colleagues to the workspace and assign Owner/Admin/Member roles.",
+      "desc2": "Invitees need to register a corps account before accepting.",
+      "desc2Highlight": "Note",
+      "cta": "Go to members"
+    }
+  },
+  "pricing": {
+    "metadata": {
+      "title": "corps Pricing — Free up to 10, Pro ¥59/seat/month",
+      "description": "Anchored on the workspace task board, with decision records linked back to task context. Up and running in 15 minutes, pay only for what you use."
+    },
+    "nav": {
+      "pricing": "Pricing",
+      "login": "Sign in",
+      "freeStart": "Start for free",
+      "ariaLabel": "Top navigation"
+    },
+    "hero": {
+      "eyebrow": "Built for teams of 5–30",
+      "title": "Turn discussion conclusions into tasks automatically",
+      "subtitle": "Anchored on the workspace task board, with decision records linked back to task context. Up and running in 15 minutes, pay only for what you use.",
+      "ctaPrimary": "Start for free, up to 10 members",
+      "ctaSecondary": "See how much your team can save"
+    },
+    "socialProof": "{teams} teams are using corps to manage decisions and tasks",
+    "features": {
+      "heading": "Core capabilities",
+      "col1Title": "Conclusions land automatically",
+      "col1Body": "Freeze discussion conclusions into decision records with version history and bidirectional links to tasks — no more manual copying.",
+      "col2Title": "Up and running in 15 minutes",
+      "col2Body": "Board/list views with drag-to-change-status and optimistic updates. Cmd+K global search across tasks and decisions.",
+      "col3Title": "Engine-level data isolation",
+      "col3Body": "PostgreSQL row-level security (RLS) enforces multi-tenant isolation. Cross-workspace requests are blocked."
+    },
+    "comparison": {
+      "heading": "Compare features",
+      "feature": "Feature",
+      "free": "Free",
+      "pro": "Pro"
+    },
+    "faq": {
+      "heading": "Frequently asked questions",
+      "q0": "Is the free plan really free forever?",
+      "a0": "Yes. Workspaces with 10 or fewer members are free forever, including task boards, comments, three-tier roles, and Cmd+K search, with no time limit. The only soft limit is that decision records keep the most recent 10 per workspace.",
+      "q1": "What happens when my team exceeds 10 members?",
+      "a1": "When the 11th member accepts an invitation, the system prompts you to upgrade. Upgrading to Pro (¥59/seat/month, or ¥590/seat/year annually) removes the limit. You can also remove or deactivate members to free up seats and stay on the free tier — we never lock your data to force a paid plan.",
+      "q2": "What payment methods are supported? Can I get an invoice?",
+      "a2": "We support Alipay, WeChat Pay, and international cards. At this stage we provide electronic receipts; VAT invoice capability will be available once the domestic entity is ready (expected around general availability). If you need an invoice before purchasing, please contact the support email first.",
+      "q3": "Will I lose my data if I downgrade or cancel?",
+      "a3": "No. After cancellation, the workspace falls back to the free tier. Any excess (such as decision records beyond 10) is preserved as read-only and can be exported at any time. We never delete data.",
+      "q4": "How does seat-based billing work? Will adding members mid-cycle overcharge me?",
+      "a4": "Billing is based on purchased seats, and seat count syncs automatically as members join or leave. New seats added mid-month are prorated for the remaining days — you never pay an extra full month.",
+      "q5": "Can I cancel anytime? What's the refund policy?",
+      "a5": "You can cancel anytime from account settings, and access remains until the end of the current billing cycle. Monthly plans do not offer prorated refunds within the cycle; annual plans are eligible for a full refund within 14 days of purchase if no material usage has occurred."
+    },
+    "tailCta": {
+      "title": "Make the next discussion directly become a task",
+      "subtitle": "No credit card required · Free forever up to 10 members",
+      "cta": "Start for free"
+    },
+    "footer": {
+      "copyright": "© 2026 corps",
+      "terms": "Terms of service",
+      "privacy": "Privacy policy"
+    },
+    "plans": {
+      "free": {
+        "name": "Free",
+        "tagline": "Small teams up to 10, free forever",
+        "cta": "Start for free"
+      },
+      "pro": {
+        "name": "Pro",
+        "tagline": "Unlock the full decision loop",
+        "cta": "Upgrade to Pro",
+        "badge": "Recommended"
+      }
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "Switch language",
+    "zh": "中文",
+    "en": "English"
+  }
+}

@@ -98,7 +98,7 @@ vi.mock("@/lib/analytics", () => ({
 // 2. 页面骨架渲染测试
 // ─────────────────────────────────────────────────────────────────────────────
 
-import PricingPage from "@/app/pricing/page";
+import PricingPage from "@/app/[locale]/pricing/page";
 
 describe("页面骨架渲染", () => {
   it("H1 文案「让讨论结论自动落位成任务」", () => {

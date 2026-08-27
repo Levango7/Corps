@@ -10,6 +10,7 @@
 import Link from "next/link";
 import { ChevronLeft, ChevronRight, Bell, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export interface NavItem {
   href: string;
@@ -52,6 +53,7 @@ export function SidebarNav({
   onClose,
   mode,
 }: SidebarNavProps) {
+  const t = useTranslations("nav");
   return (
     <>
       <nav className="flex-1 overflow-y-auto py-[var(--space-3)] px-[var(--space-2)] space-y-[var(--space-1)]">
@@ -108,10 +110,10 @@ export function SidebarNav({
               ? "bg-[var(--accent-soft)] text-[var(--accent)]"
               : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
           } ${mode === "desktop" && collapsed ? "justify-center px-0" : ""}`}
-          title={mode === "desktop" && collapsed ? "通知" : undefined}
+          title={mode === "desktop" && collapsed ? t("menu.notifications") : undefined}
         >
           <Bell size={18} className="shrink-0" />
-          {!(mode === "desktop" && collapsed) && <span className="truncate">通知</span>}
+          {!(mode === "desktop" && collapsed) && <span className="truncate">{t("menu.notifications")}</span>}
           {!(mode === "desktop" && collapsed) && unreadCount > 0 && (
             <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -127,7 +129,7 @@ export function SidebarNav({
       <button
         onClick={mode === "desktop" ? onToggleCollapse : onClose}
         className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
-        aria-label={mode === "desktop" ? (collapsed ? "展开侧栏" : "折叠侧栏") : "关闭侧栏"}
+        aria-label={mode === "desktop" ? (collapsed ? t("sidebar.expand") : t("sidebar.collapse")) : t("sidebar.close")}
       >
         {mode === "desktop" ? (
           collapsed ? (

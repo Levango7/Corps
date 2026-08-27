@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Loader2, AlertCircle, UserPlus } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { track, getSessionId } from "@/lib/analytics";
 
 interface InvitePreview {
@@ -14,6 +14,8 @@ interface InvitePreview {
 }
 
 export default function SignupPage() {
+  const t = useTranslations("auth.signup");
+  const tError = useTranslations("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
@@ -22,7 +24,7 @@ export default function SignupPage() {
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
-  // ─── 邀请链接支持（?invite=<token>）─────────────────────────────
+  // ─── 邀请链接支持（?invite=<token>）─────────────────────
   const [invitePreview, setInvitePreview] = useState<InvitePreview | null>(null);
   const [inviteError, setInviteError] = useState("");
 
@@ -37,18 +39,18 @@ export default function SignupPage() {
     fetch(`/api/v1/invitations/${encodeURIComponent(token)}`)
       .then(async (res) => {
         if (!res.ok) {
-          throw new Error(res.status === 410 ? "该邀请已失效或已被使用" : "邀请链接无效");
+          throw new Error(res.status === 410 ? t("inviteExpired") : t("inviteInvalid"));
         }
         const json = await res.json();
         if (!cancelled) setInvitePreview(json.data as InvitePreview);
       })
       .catch((e: unknown) => {
-        if (!cancelled) setInviteError(e instanceof Error ? e.message : "邀请链接无效");
+        if (!cancelled) setInviteError(e instanceof Error ? e.message : t("inviteInvalid"));
       });
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [t]);
 
   /** 注册成功且带邀请 token 时：接受邀请加入对方工作区；失败返回 null 不阻断注册流程 */
   async function acceptInvitation(): Promise<string | null> {
@@ -64,12 +66,10 @@ export default function SignupPage() {
         return (json.data as { workspaceId: string }).workspaceId ?? null;
       }
       setError(
-        res.status === 402
-          ? "该工作区席位已满，未能自动加入，请联系管理员"
-          : "自动加入工作区失败，可稍后在成员页重新获取邀请",
+        res.status === 402 ? t("inviteSeatsFull") : t("inviteJoinFailed"),
       );
     } catch {
-      setError("自动加入工作区失败，可稍后在成员页重新获取邀请");
+      setError(t("inviteJoinFailed"));
     }
     return null;
   }
@@ -104,9 +104,7 @@ export default function SignupPage() {
 
       if (!res.ok) {
         setError(
-          res.status === 409
-            ? "该邮箱已注册，直接登录即可"
-            : data.message || "创建失败，请稍后重试",
+          res.status === 409 ? t("emailExists") : data.message || t("failed"),
         );
         setBusy(false);
         return;
@@ -116,7 +114,7 @@ export default function SignupPage() {
       const invitedWid = await acceptInvitation();
       router.push(`/w/${invitedWid ?? data.data.workspace.id}`);
     } catch {
-      setError("网络异常，请检查连接后重试");
+      setError(tError("networkError"));
       setBusy(false);
     }
   }
@@ -141,7 +139,8 @@ export default function SignupPage() {
   }
 
   const strength = getPasswordStrength(password);
-  const strengthLabel = strength === 1 ? "弱" : strength === 2 ? "中" : strength === 3 ? "强" : "";
+  const strengthLabel =
+    strength === 1 ? t("passwordStrength.weak") : strength === 2 ? t("passwordStrength.medium") : strength === 3 ? t("passwordStrength.strong") : "";
   const strengthColor =
     strength === 1
       ? "bg-[var(--danger)]"
@@ -153,10 +152,10 @@ export default function SignupPage() {
     <div className="w-full max-w-sm px-4 sm:px-0">
       <div className="mb-[var(--space-5)] sm:mb-8">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          创建工作区
+          {t("title")}
         </h1>
         <p className="mt-1.5 text-[length:var(--text-sm)] sm:text-[length:var(--text-base)] text-[var(--muted)]">
-          一分钟建好，之后再邀请同事。
+          {t("subtitle")}
         </p>
       </div>
 
@@ -172,8 +171,12 @@ export default function SignupPage() {
           <UserPlus size={16} className="shrink-0 mt-0.5" />
           {invitePreview ? (
             <span>
-              <strong>{invitePreview.inviterName}</strong> 邀请你加入「
-              {invitePreview.workspaceName}」（{invitePreview.emailMasked}）。注册后将自动加入。
+              {t.rich("invitePreview", {
+                inviter: invitePreview.inviterName,
+                workspace: invitePreview.workspaceName,
+                email: invitePreview.emailMasked,
+                strong: (chunks) => <strong>{chunks}</strong>,
+              })}
             </span>
           ) : (
             <span>{inviteError}</span>
@@ -192,7 +195,7 @@ export default function SignupPage() {
         <form onSubmit={handleSubmit} className="space-y-[var(--space-4)]">
           <div>
             <label htmlFor="workspaceName" className={labelClass}>
-              工作区名称
+              {t("workspaceName")}
             </label>
             <input
               id="workspaceName"
@@ -200,7 +203,7 @@ export default function SignupPage() {
               value={workspaceName}
               onChange={(e) => setWorkspaceName(e.target.value)}
               className={inputClass}
-              placeholder="例如：增长组"
+              placeholder={t("workspaceNamePlaceholder")}
               required
               minLength={2}
             />
@@ -210,8 +213,10 @@ export default function SignupPage() {
 
           <div>
             <label htmlFor="name" className={labelClass}>
-              你的名字
-              <span className="ml-1.5 font-[var(--weight-regular)] text-[var(--meta)]">选填</span>
+              {t("yourName")}
+              <span className="ml-1.5 font-[var(--weight-regular)] text-[var(--meta)]">
+                {t("yourNameOptional")}
+              </span>
             </label>
             <input
               id="name"
@@ -220,13 +225,13 @@ export default function SignupPage() {
               value={name}
               onChange={(e) => setName(e.target.value)}
               className={inputClass}
-              placeholder="同事看到的显示名"
+              placeholder={t("yourNamePlaceholder")}
             />
           </div>
 
           <div>
             <label htmlFor="email" className={labelClass}>
-              邮箱
+              {t("email")}
             </label>
             <input
               id="email"
@@ -242,7 +247,7 @@ export default function SignupPage() {
 
           <div>
             <label htmlFor="password" className={labelClass}>
-              密码
+              {t("password")}
             </label>
             <input
               id="password"
@@ -251,14 +256,14 @@ export default function SignupPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className={inputClass}
-              placeholder="至少 8 位"
+              placeholder={t("passwordPlaceholder")}
               required
               minLength={8}
             />
             {strength > 0 && (
               <div
                 className="mt-2 flex items-center gap-1.5"
-                aria-label={`密码强度：${strengthLabel}`}
+                aria-label={t("passwordStrength.label", { level: strengthLabel })}
               >
                 <div className="flex gap-1" aria-hidden="true">
                   <div
@@ -284,18 +289,18 @@ export default function SignupPage() {
             className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
-            {busy ? "正在创建" : "创建并进入"}
+            {busy ? t("submitting") : t("submit")}
           </button>
         </form>
       </div>
 
       <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-        已有账号？{" "}
+        {t("loginLink")}{" "}
         <Link
           href="/auth/login"
           className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2"
         >
-          登录
+          {t("loginCta")}
         </Link>
       </p>
     </div>

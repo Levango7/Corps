@@ -1,0 +1,291 @@
+{
+  "metadata": {
+    "title": "corps · 团队",
+    "description": "面向中小团队的轻量协作 SaaS",
+    "workspaceTitle": "corps · 工作台",
+    "workspaceDescription": "团队 SaaS - 任务看板"
+  },
+  "nav": {
+    "workspace": {
+      "switch": "切换工作区",
+      "current": "当前工作区",
+      "loading": "正在载入工作区"
+    },
+    "menu": {
+      "overview": "概览",
+      "board": "看板",
+      "myTasks": "我的任务",
+      "decisions": "决策记录",
+      "members": "成员",
+      "billing": "计费",
+      "analytics": "分析",
+      "settings": "设置",
+      "notifications": "通知",
+      "admin": "管理"
+    },
+    "search": {
+      "placeholder": "搜索任务",
+      "shortcut": "⌘K",
+      "ariaLabel": "搜索"
+    },
+    "user": {
+      "profile": "个人设置",
+      "logout": "退出登录",
+      "logoutConfirm": "确定退出登录？"
+    },
+    "sidebar": {
+      "open": "打开侧栏",
+      "expand": "展开侧栏",
+      "collapse": "折叠侧栏",
+      "close": "关闭侧栏",
+      "navLabel": "导航菜单"
+    },
+    "theme": {
+      "system": "跟随系统",
+      "light": "浅色",
+      "dark": "深色"
+    }
+  },
+  "button": {
+    "save": "保存",
+    "cancel": "取消",
+    "delete": "删除",
+    "confirm": "确认",
+    "edit": "编辑",
+    "create": "创建",
+    "update": "更新",
+    "close": "关闭",
+    "retry": "重试",
+    "refresh": "刷新页面",
+    "back": "返回",
+    "next": "下一步",
+    "previous": "上一步",
+    "skip": "跳过",
+    "submit": "提交",
+    "reset": "重置",
+    "copyLink": "复制链接",
+    "invite": "邀请",
+    "upgrade": "升级",
+    "viewAll": "查看全部",
+    "newTask": "新建任务"
+  },
+  "status": {
+    "todo": "待办",
+    "in_progress": "进行中",
+    "review": "评审",
+    "done": "已完成"
+  },
+  "priority": {
+    "low": "低",
+    "medium": "中",
+    "high": "高",
+    "urgent": "紧急",
+    "label": "优先级"
+  },
+  "task": {
+    "title": "标题",
+    "description": "描述",
+    "descriptionOptional": "描述（可选）",
+    "status": "状态",
+    "assignee": "负责人",
+    "assigneeOptional": "负责人（可选）",
+    "unassigned": "未指派",
+    "dueDate": "截止日期",
+    "dueDateOptional": "截止日期（可选）",
+    "titlePlaceholder": "一句话说清要做什么",
+    "descriptionPlaceholder": "背景、验收标准，或粘贴相关链接…",
+    "create": "新建任务",
+    "createSubmitting": "创建中",
+    "createFailed": "创建失败",
+    "overdue": "逾期 {days} 天",
+    "dueToday": "今天到期",
+    "dueTomorrow": "明天到期",
+    "dueInDays": "{days} 天后",
+    "recentlyUpdated": "最近更新",
+    "dueSoon": "即将到期",
+    "all": "全部",
+    "sortLabel": "排序方式"
+  },
+  "time": {
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "daysAgo": "{count} 天前"
+  },
+  "empty": {
+    "noTasks": "这个工作区还没有任务。",
+    "noTasksHint": "先在看板建一条，把手里最紧的事放进来。",
+    "noOpenTasks": "当前没有进行中的任务。",
+    "loadingTasks": "正在读取任务",
+    "noComments": "暂无评论",
+    "noDecisions": "暂无决策记录",
+    "noMembers": "暂无成员",
+    "noNotifications": "暂无通知",
+    "noResults": "没有匹配的结果"
+  },
+  "error": {
+    "required": "此项必填",
+    "networkError": "网络异常，请检查连接后重试",
+    "loadFailed": "加载失败，请稍后重试",
+    "networkConnectFailed": "网络连接失败，请检查网络",
+    "pageError": "页面出错了",
+    "pageErrorDesc": "渲染过程中发生了意外错误，可以尝试重新加载。",
+    "globalError": "应用发生严重错误",
+    "globalErrorDesc": "页面渲染时发生未预期的异常，请尝试重试或刷新。",
+    "errorId": "错误编号：{digest}",
+    "notFound": "页面未找到",
+    "notFoundDesc": "你访问的页面不存在或已被移动。",
+    "forbidden": "无权访问",
+    "internal": "服务器内部错误"
+  },
+  "auth": {
+    "login": {
+      "title": "登录 corps",
+      "subtitle": "继续你团队的工作。",
+      "email": "邮箱",
+      "password": "密码",
+      "submit": "登录",
+      "submitting": "正在登录",
+      "failed": "登录失败",
+      "invalidCredentials": "邮箱或密码不正确",
+      "noWorkspace": "账号未加入任何工作区，请联系管理员邀请",
+      "signupLink": "还没有工作区？",
+      "signupCta": "创建一个"
+    },
+    "signup": {
+      "title": "创建工作区",
+      "subtitle": "一分钟建好，之后再邀请同事。",
+      "workspaceName": "工作区名称",
+      "workspaceNamePlaceholder": "例如：增长组",
+      "yourName": "你的名字",
+      "yourNameOptional": "选填",
+      "yourNamePlaceholder": "同事看到的显示名",
+      "email": "邮箱",
+      "password": "密码",
+      "passwordPlaceholder": "至少 8 位",
+      "submit": "创建并进入",
+      "submitting": "正在创建",
+      "failed": "创建失败，请稍后重试",
+      "emailExists": "该邮箱已注册，直接登录即可",
+      "loginLink": "已有账号？",
+      "loginCta": "登录",
+      "inviteExpired": "该邀请已失效或已被使用",
+      "inviteInvalid": "邀请链接无效",
+      "inviteSeatsFull": "该工作区席位已满，未能自动加入，请联系管理员",
+      "inviteJoinFailed": "自动加入工作区失败，可稍后在成员页重新获取邀请",
+      "invitePreview": "<strong>{inviter}</strong> 邀请你加入「{workspace}」（{email}）。注册后将自动加入。",
+      "passwordStrength": {
+        "weak": "弱",
+        "medium": "中",
+        "strong": "强",
+        "label": "密码强度：{level}"
+      }
+    }
+  },
+  "onboarding": {
+    "badge": "引导 · {current} / {total}",
+    "skipAria": "跳过引导",
+    "step1": {
+      "title": "欢迎来到 corps",
+      "subtitle": "60 秒完成首个任务，开始你的团队协作",
+      "desc1": "corps 是面向 5-30 人中小团队的轻量协作工具。",
+      "desc2": "讨论结论自动落位成任务与决策记录——不再手动搬运。",
+      "desc2Highlight": "核心闭环",
+      "tip": "不为用不上的功能付费——免费层 ≤10 人，¥59/人/月 起步档。",
+      "cta": "开始"
+    },
+    "step2": {
+      "title": "创建首个任务",
+      "subtitle": "把手里最紧的事放进看板",
+      "desc1": "在看板上创建一条任务，填写标题、负责人、截止日期。",
+      "desc2": "拖拽任务卡可改变状态（待办 → 进行中 → 已完成）。",
+      "cta": "去看板"
+    },
+    "step3": {
+      "title": "邀请团队成员",
+      "subtitle": "协作从邀请开始",
+      "desc1": "邀请同事加入工作区，分配 Owner/Admin/Member 角色。",
+      "desc2": "邀请前对方需先在 corps 注册账号。",
+      "desc2Highlight": "注意",
+      "cta": "去成员页"
+    }
+  },
+  "pricing": {
+    "metadata": {
+      "title": "corps 定价 —— 免费 10 人，Pro ¥59/人/月",
+      "description": "以工作区任务看板为锚点，决策记录双向回链任务上下文。15 分钟上手，不为用不上的功能付费。"
+    },
+    "nav": {
+      "pricing": "定价",
+      "login": "登录",
+      "freeStart": "免费开始",
+      "ariaLabel": "顶部导航"
+    },
+    "hero": {
+      "eyebrow": "为 5–30 人团队打造",
+      "title": "让讨论结论自动落位成任务",
+      "subtitle": "以工作区任务看板为锚点，决策记录双向回链任务上下文。15 分钟上手，不为用不上的功能付费。",
+      "ctaPrimary": "免费开始，最多 10 人",
+      "ctaSecondary": "先看看团队能省多少"
+    },
+    "socialProof": "{teams} 个团队正在用 corps 管理决策与任务",
+    "features": {
+      "heading": "核心能力",
+      "col1Title": "结论自动落位",
+      "col1Body": "讨论结论一键固化为决策记录，版本留痕、双向回链任务，不再手动搬运",
+      "col2Title": "15 分钟跑起来",
+      "col2Body": "看板/列表双视图 + 拖拽改状态，乐观更新零等待；Cmd+K 全局检索任务与决策",
+      "col3Title": "数据引擎级隔离",
+      "col3Body": "PostgreSQL 行级安全（RLS）强制多租户隔离，跨工作区请求一律拦截"
+    },
+    "comparison": {
+      "heading": "功能对比",
+      "feature": "功能",
+      "free": "Free",
+      "pro": "Pro"
+    },
+    "faq": {
+      "heading": "常见问题",
+      "q0": "免费版真的可以一直用吗？",
+      "a0": "可以。10 人以内的工作区永久免费，包含任务看板、评论、三级角色与 Cmd+K 搜索，不设时间限制。唯一的软限制是决策记录保留最近 10 条。",
+      "q1": "团队超过 10 人怎么办？",
+      "a1": "第 11 位成员接受邀请时系统会提示升级。升级到 Pro（¥59/人/月，年付 ¥590/人/年）即不限人数；也可以移除或停用成员腾出席位继续免费用——我们不会为了逼你付费而锁数据。",
+      "q2": "支持哪些付款方式？可以开发票吗？",
+      "a2": "支持支付宝、微信扫码与外币卡。当前阶段提供电子收据（Receipt）；增值税发票能力将在国内主体就绪后开放（预计公开发布阶段），购买前如有开票刚需请先联系 support 邮箱确认。",
+      "q3": "降级或取消订阅后，我的数据会丢吗？",
+      "a3": "不会。取消后工作区回落到免费版，超额部分（如超出 10 条的决策记录）转为只读保留、随时可导出，绝不删除数据。",
+      "q4": "按席位计费是怎么算的？中途加人会多收钱吗？",
+      "a4": "按\"已购席位数\"计费，成员加入退出自动同步。月中新增席位按剩余天数折算补差价，不多收一个月。",
+      "q5": "可以随时取消吗？退款政策是什么？",
+      "a5": "可以随时在账户设置里取消，取消后当前计费周期结束前仍可用。月付当期不设按天退款；年付订单在购买 14 天内且未产生实质使用的，支持全额退款。"
+    },
+    "tailCta": {
+      "title": "让下一次讨论直接变成任务",
+      "subtitle": "无需信用卡 · 10 人内永久免费",
+      "cta": "免费开始"
+    },
+    "footer": {
+      "copyright": "© 2026 corps",
+      "terms": "服务条款",
+      "privacy": "隐私政策"
+    },
+    "plans": {
+      "free": {
+        "name": "免费版",
+        "tagline": "10 人以内小团队，永久免费",
+        "cta": "免费开始"
+      },
+      "pro": {
+        "name": "专业版 Pro",
+        "tagline": "解锁决策闭环全部能力",
+        "cta": "升级到 Pro",
+        "badge": "推荐"
+      }
+    }
+  },
+  "languageSwitcher": {
+    "ariaLabel": "切换语言",
+    "zh": "中文",
+    "en": "English"
+  }
+}

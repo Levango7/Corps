@@ -1,12 +1,14 @@
 "use client";
 
 import { useState, type FormEvent, type MouseEvent } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Loader2, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { track } from "@/lib/analytics";
 
 export default function LoginPage() {
+  const t = useTranslations("auth.login");
+  const tError = useTranslations("error");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -29,7 +31,7 @@ export default function LoginPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(res.status === 401 ? "邮箱或密码不正确" : data.message || "登录失败");
+        setError(res.status === 401 ? t("invalidCredentials") : data.message || t("failed"));
         setBusy(false);
         return;
       }
@@ -38,12 +40,12 @@ export default function LoginPage() {
       if (first) {
         router.push(`/w/${first.id}`);
       } else {
-        setError("账号未加入任何工作区，请联系管理员邀请");
+        setError(t("noWorkspace"));
         setPassword("");
         setBusy(false);
       }
     } catch {
-      setError("网络异常，请检查连接后重试");
+      setError(tError("networkError"));
       setBusy(false);
     }
   }
@@ -52,10 +54,10 @@ export default function LoginPage() {
     <div className="w-full max-w-sm px-4 sm:px-0">
       <div className="mb-[var(--space-5)] sm:mb-8">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          登录 corps
+          {t("title")}
         </h1>
         <p className="mt-1.5 text-[length:var(--text-sm)] sm:text-[length:var(--text-base)] text-[var(--muted)]">
-          继续你团队的工作。
+          {t("subtitle")}
         </p>
       </div>
 
@@ -76,7 +78,7 @@ export default function LoginPage() {
               htmlFor="email"
               className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
             >
-              邮箱
+              {t("email")}
             </label>
             <input
               id="email"
@@ -91,15 +93,12 @@ export default function LoginPage() {
           </div>
 
           <div>
-            <div className="flex items-baseline justify-between mb-[var(--space-2)]">
-              <label
-                htmlFor="password"
-                className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)]"
-              >
-                密码
-              </label>
-              {/* 忘记密码流程未实现（无 /auth/forgot 路由），上线前不展示死链接 */}
-            </div>
+            <label
+              htmlFor="password"
+              className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
+            >
+              {t("password")}
+            </label>
             <input
               id="password"
               type="password"
@@ -107,7 +106,7 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-[box-shadow,border-color] duration-[var(--motion-fast)] placeholder:text-[var(--meta)]"
-              placeholder="••••••••"
+              placeholder="•••••••"
               required
             />
           </div>
@@ -118,25 +117,24 @@ export default function LoginPage() {
             className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
-            {busy ? "正在登录" : "登录"}
+            {busy ? t("submitting") : t("submit")}
           </button>
         </form>
       </div>
 
       <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-        还没有工作区？{" "}
+        {t("signupLink")}{" "}
         <Link
           href="/auth/signup"
           className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
           onClick={(e: MouseEvent) => {
             // P2 数据埋点：click_signup（裁决一附属：本期落地范围收敛为 auth/login 页注册链接）
-            // /pricing 来源跳过 click_signup 属预期跳步（见设计文档 §4.2 跳步规则）
             track("click_signup", { cta: "header", path: "/auth/login" });
             // 不阻止默认导航
             void e;
           }}
         >
-          创建一个
+          {t("signupCta")}
         </Link>
       </p>
     </div>
