@@ -1,47 +1,36 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
-import { Send, Loader2, MessageCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
-
-interface Person {
-  id: string;
-  name: string | null;
-  email: string;
-  image?: string | null;
-}
-
-interface Message {
-  id: string;
-  body: string;
-  createdAt: string;
-  author: Person | null;
-}
-
-/** 轮询间隔（毫秒）—— MVP 采用轮询方案，后续可升级 SSE */
-const POLL_INTERVAL_MS = 5000;
-/** 消息体最大长度（与 API zod schema 对齐） */
-const MAX_BODY_LENGTH = 10000;
-
-function relTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "刚刚";
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN");
-}
+import type { ChatMessage, Person, AttachmentMeta } from "./chat/types";
+import { useChatStream } from "./chat/useChatStream";
+import { ChatHeader } from "./chat/ChatHeader";
+import { MessageList } from "./chat/MessageList";
+import { MessageInput } from "./chat/MessageInput";
 
 /**
- * 任务级即时聊天面板（v2 F1：IM 轻沟通 MVP）
+ * 任务级即时聊天面板（IM 升级版）
  *
- * 方案：轮询增量拉取（5s 间隔 + ?since= 游标）
- * 升级路径：轮询 → SSE → WebSocket（API 的 ?since= 参数设计兼容无缝升级）
+ * 升级内容：
+ *  - SSE 实时推送替代 5s 轮询（降级时自动回退轮询）
+ *  - 消息已读状态 + 双勾✓✓回执
+ *  - 在线状态指示
+ *  - 文件附件分享（图片预览 + 文档下载）
+ *  - UI 打磨：消息气泡、时间戳分组、滚动动画、未读高亮、消息搜索
+ *
+ * Props 接口保持与旧版兼容：{ wid, taskId }
+ *
+ * 架构：
+ *  - useChatStream(taskId)：SSE 连接管理 + 断线重连 + 降级轮询
+ *  - ChatHeader：标题 + 搜索 + 在线状态栏
+ *  - MessageList：消息列表 + 时间分组 + 滚动 + 未读高亮
+ *  - MessageInput：文件按钮 + 文本框 + 发送按钮
  */
+
+/** 已读标记防抖延迟 */
+const MARK_READ_DEBOUNCE_MS = 1000;
+
 export default function ChatPanel({
   wid,
   taskId,
@@ -51,174 +40,250 @@ export default function ChatPanel({
 }) {
   const t = useTranslations("chat");
   const base = `/api/v1/workspaces/${wid}/tasks/${taskId}/messages`;
+  const streamUrl = `${base}/stream`;
+  const sendUrl = `${base}/send`;
+  const readUrl = `${base}/read`;
+  const uploadUrl = `${base}/attachments`;
+  const membersUrl = `/api/v1/workspaces/${wid}/members`;
 
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [draft, setDraft] = useState("");
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [members, setMembers] = useState<Person[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string>("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
-  const draftRef = useRef<HTMLTextAreaElement>(null);
-  const listRef = useRef<HTMLDivElement>(null);
-  // 增量游标：记录最后一条消息的 createdAt，用于轮询时 ?since= 参数
+  // 未读消息 ID 集合（他人发的、尚未标记已读的）
+  const [unreadIds, setUnreadIds] = useState<Set<string>>(new Set());
+  // 已读标记防抖定时器
+  const markReadTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // 增量游标（用于 SSE 断线重连补偿）
   const sinceRef = useRef<string | null>(null);
-  // 防止 StrictMode 双调用导致重复轮询
-  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // 首次加载全部消息
+  /** 更新增量游标 */
+  const updateCursor = useCallback((createdAt: string) => {
+    const prev = sinceRef.current;
+    if (!prev || new Date(createdAt) > new Date(prev)) {
+      sinceRef.current = createdAt;
+    }
+  }, []);
+
+  /** 首次加载：消息列表 */
   const loadInitial = useCallback(async () => {
     try {
-      const data = await api<Message[]>(base);
-      setMessages(data);
-      if (data.length > 0) {
-        sinceRef.current = data[data.length - 1].createdAt;
+      const msgs = await api<ChatMessage[]>(base);
+      setMessages(msgs);
+      if (msgs.length > 0) {
+        updateCursor(msgs[msgs.length - 1].createdAt);
       }
     } catch {
       // 静默失败，不阻塞页面
     } finally {
       setLoading(false);
     }
-  }, [base]);
+  }, [base, updateCursor]);
 
-  // 增量拉取新消息
-  const pollNew = useCallback(async () => {
-    if (!sinceRef.current) return;
+  /** 加载工作区成员（用于在线状态头像 + 当前用户 ID） */
+  const loadMembers = useCallback(async () => {
     try {
-      const data = await api<Message[]>(`${base}?since=${encodeURIComponent(sinceRef.current)}`);
-      if (data.length > 0) {
-        setMessages((prev) => [...prev, ...data]);
-        sinceRef.current = data[data.length - 1].createdAt;
+      const data = await api<(Person & { isSelf?: boolean })[]>(membersUrl);
+      setMembers(data);
+      // 从 isSelf 字段获取当前用户 ID
+      const self = data.find((m) => m.isSelf);
+      if (self) {
+        setCurrentUserId(self.id);
+        // 计算未读消息（他人发的、没有自己已读记录的）
+        setMessages((prev) => {
+          const unread = new Set<string>();
+          for (const m of prev) {
+            if (m.authorId !== self.id && !(m.reads?.some((r) => r.userId === self.id))) {
+              unread.add(m.id);
+            }
+          }
+          setUnreadIds(unread);
+          return prev;
+        });
       }
     } catch {
-      // 轮询失败静默重试
+      // 静默失败
     }
-  }, [base]);
+  }, [membersUrl]);
 
   useEffect(() => {
     loadInitial();
-  }, [loadInitial]);
+    loadMembers();
+  }, [loadInitial, loadMembers]);
 
-  // 启动轮询
-  useEffect(() => {
-    pollingRef.current = setInterval(pollNew, POLL_INTERVAL_MS);
-    return () => {
-      if (pollingRef.current) clearInterval(pollingRef.current);
-    };
-  }, [pollNew]);
-
-  // 自动滚动到底部（消息变化时）
-  useEffect(() => {
-    const el = listRef.current;
-    if (el) {
-      el.scrollTop = el.scrollHeight;
-    }
-  }, [messages]);
-
-  // 输入框自动高度
-  useEffect(() => {
-    const el = draftRef.current;
-    if (el) {
-      el.style.height = "auto";
-      el.style.height = el.scrollHeight + "px";
-    }
-  }, [draft]);
-
-  async function send() {
-    const trimmed = draft.trim();
-    if (!trimmed || sending) return;
-    setSending(true);
-    try {
-      const created = await api<Message>(base, {
-        method: "POST",
-        body: JSON.stringify({ body: trimmed }),
+  /** SSE onMessage 回调：追加新消息 */
+  const handleNewMessage = useCallback(
+    (message: ChatMessage) => {
+      setMessages((prev) => {
+        // 去重（断线重连补偿可能重复）
+        if (prev.some((m) => m.id === message.id)) return prev;
+        return [...prev, message];
       });
-      setMessages((prev) => [...prev, created]);
-      sinceRef.current = created.createdAt;
-      setDraft("");
-    } catch {
-      // 发送失败：保留草稿让用户重试
-    } finally {
-      setSending(false);
-    }
-  }
+      updateCursor(message.createdAt);
 
-  function handleKeyDown(e: KeyboardEvent<HTMLTextAreaElement>) {
-    if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-      e.preventDefault();
-      send();
+      // 如果是他人消息，加入未读集合
+      if (message.authorId !== currentUserId) {
+        setUnreadIds((prev) => new Set(prev).add(message.id));
+      }
+    },
+    [currentUserId, updateCursor],
+  );
+
+  /** SSE onRead 回调：更新已读回执 */
+  const handleRead = useCallback(
+    (messageId: string, userId: string, readAt: string) => {
+      setMessages((prev) =>
+        prev.map((m) => {
+          if (m.id !== messageId) return m;
+          const reads = m.reads ?? [];
+          // 去重
+          if (reads.some((r) => r.userId === userId)) return m;
+          return { ...m, reads: [...reads, { userId, readAt }] };
+        }),
+      );
+      // 如果是自己已读，从未读集合移除
+      if (userId === currentUserId) {
+        setUnreadIds((prev) => {
+          const next = new Set(prev);
+          next.delete(messageId);
+          return next;
+        });
+      }
+    },
+    [currentUserId],
+  );
+
+  /** SSE 连接 */
+  const { connected, onlineUsers } = useChatStream({
+    streamUrl,
+    pollUrl: base,
+    enabled: !loading,
+    onMessage: handleNewMessage,
+    onRead: handleRead,
+    currentUserId,
+  });
+
+  /** 批量标记未读消息为已读（防抖） */
+  const markUnreadAsRead = useCallback(async () => {
+    if (!currentUserId || unreadIds.size === 0) return;
+    const ids = Array.from(unreadIds);
+    setUnreadIds(new Set()); // 乐观更新
+    try {
+      await api(readUrl, {
+        method: "PATCH",
+        body: JSON.stringify({ messageIds: ids }),
+      });
+    } catch {
+      // 失败回滚
+      setUnreadIds((prev) => new Set([...prev, ...ids]));
     }
-  }
+  }, [currentUserId, unreadIds, readUrl]);
+
+  // 防抖标记已读（消息变化或面板可见时触发）
+  useEffect(() => {
+    if (loading || !currentUserId || unreadIds.size === 0) return;
+    if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
+    markReadTimerRef.current = setTimeout(markUnreadAsRead, MARK_READ_DEBOUNCE_MS);
+    return () => {
+      if (markReadTimerRef.current) clearTimeout(markReadTimerRef.current);
+    };
+  }, [loading, currentUserId, unreadIds, markUnreadAsRead]);
+
+  /** 发送消息 */
+  const handleSend = useCallback(
+    async (body: string, attachments: AttachmentMeta[]) => {
+      if (sending) return;
+      setSending(true);
+      try {
+        const created = await api<ChatMessage>(sendUrl, {
+          method: "POST",
+          body: JSON.stringify({
+            body,
+            attachments: attachments.length > 0 ? attachments : undefined,
+          }),
+        });
+        // 乐观更新（SSE 也会推送，但自己发的消息不等 SSE）
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === created.id)) return prev;
+          return [...prev, created];
+        });
+        updateCursor(created.createdAt);
+      } catch (e) {
+        // 发送失败：抛出让 MessageInput 显示错误
+        throw e;
+      } finally {
+        setSending(false);
+      }
+    },
+    [sending, sendUrl, updateCursor],
+  );
+
+  /** 上传文件 */
+  const handleUploadFile = useCallback(async (file: File): Promise<AttachmentMeta> => {
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(uploadUrl, {
+      method: "POST",
+      body: formData,
+      credentials: "include",
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({ message: "上传失败" }));
+      throw new Error(json.message || `上传失败 (${res.status})`);
+    }
+    const json = await res.json();
+    return json.data as AttachmentMeta;
+  }, [uploadUrl]);
+
+  // 搜索结果计数
+  const searchResultCount = useMemo(() => {
+    if (!searchQuery.trim()) return 0;
+    const q = searchQuery.toLowerCase();
+    return messages.filter((m) => m.body.toLowerCase().includes(q)).length;
+  }, [messages, searchQuery]);
 
   return (
     <section className="mt-[var(--space-6)]">
-      <h2 className="flex items-center gap-[var(--space-2)] mb-[var(--space-3)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
-        <MessageCircle size={16} className="text-[var(--muted)]" />
-        {t("title")}
-        {messages.length > 0 && (
-          <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
-            {messages.length}
-          </span>
-        )}
-      </h2>
+      <ChatHeader
+        messageCount={messages.length}
+        onlineUsers={onlineUsers}
+        members={members}
+        searchQuery={searchQuery}
+        onSearchChange={setSearchQuery}
+        searchOpen={searchOpen}
+        onToggleSearch={() => {
+          setSearchOpen((prev) => !prev);
+          if (searchOpen) setSearchQuery("");
+        }}
+      />
 
-      {/* 消息列表 */}
-      <div
-        ref={listRef}
-        className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] h-[320px] overflow-y-auto space-y-[var(--space-2)]"
-      >
-        {loading ? (
-          <div className="flex items-center justify-center h-full">
-            <Loader2 size={18} className="animate-spin text-[var(--muted)]" />
-          </div>
-        ) : messages.length === 0 ? (
-          <div className="flex items-center justify-center h-full">
-            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("empty")}
-            </p>
-          </div>
-        ) : (
-          messages.map((m) => (
-            <div key={m.id} className="flex gap-[var(--space-2)]">
-              <div className="w-6 h-6 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-                {(m.author ? m.author.name || m.author.email : "?")[0]?.toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-baseline gap-[var(--space-2)]">
-                  <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
-                    {m.author ? m.author.name || m.author.email.split("@")[0] : t("unknownUser")}
-                  </span>
-                  <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                    {relTime(m.createdAt)}
-                  </span>
-                </div>
-                <div className="mt-0.5 text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.6] whitespace-pre-wrap break-words">
-                  {m.body}
-                </div>
-              </div>
-            </div>
-          ))
-        )}
-      </div>
+      {searchOpen && searchQuery.trim() && (
+        <div className="mb-2 text-[length:var(--text-xs)] text-[var(--meta)]">
+          {searchResultCount > 0
+            ? `${searchResultCount} 条结果`
+            : t("noResults")}
+        </div>
+      )}
 
-      {/* 输入区 */}
-      <div className="mt-[var(--space-2)] flex items-end gap-[var(--space-2)]">
-        <textarea
-          ref={draftRef}
-          value={draft}
-          onChange={(e) => setDraft(e.target.value.slice(0, MAX_BODY_LENGTH))}
-          onKeyDown={handleKeyDown}
-          rows={1}
-          placeholder={t("placeholder")}
-          className="flex-1 px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
-        />
-        <button
-          onClick={send}
-          disabled={!draft.trim() || sending}
-          className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
-        >
-          {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-          {t("send")}
-        </button>
-      </div>
+      <MessageList
+        messages={messages}
+        currentUserId={currentUserId}
+        unreadIds={unreadIds}
+        searchQuery={searchQuery}
+        loading={loading}
+        connected={connected}
+      />
+
+      <MessageInput
+        onSend={handleSend}
+        onUploadFile={handleUploadFile}
+        sending={sending}
+        uploadUrl={uploadUrl}
+      />
     </section>
   );
 }

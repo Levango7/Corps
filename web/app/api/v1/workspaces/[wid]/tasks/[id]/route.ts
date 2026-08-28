@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
+import { syncTaskToAllCalendars } from "@/lib/calendar/sync";
 import { z } from "zod";
 
 const updateTaskSchema = z.object({
@@ -162,6 +163,16 @@ export async function PATCH(
       } catch (err) {
         console.error("[PATCH task] notifyTaskAssigned failed (non-blocking):", err);
       }
+    }
+
+    // 日历集成：dueDate 变更时异步触发同步（不阻塞响应）
+    // 同步目标：任务负责人（assignee）的日历连接；无 assignee 时回退到操作者
+    if (validated.dueDate !== undefined) {
+      const syncUserId = result.task.assigneeId ?? ctx.payload.sub;
+      // fire-and-forget：不 await，失败仅记日志，不影响任务更新响应
+      syncTaskToAllCalendars(id, syncUserId).catch((err) => {
+        console.error("[PATCH task] calendar sync failed (non-blocking):", err);
+      });
     }
 
     return NextResponse.json({ code: 200, data: result.task });

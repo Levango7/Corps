@@ -385,7 +385,17 @@
     "empty": "No messages yet. Start the conversation.",
     "placeholder": "Send a message… (⌘/Ctrl + Enter to send)",
     "send": "Send",
-    "unknownUser": "Deleted user"
+    "unknownUser": "Deleted user",
+    "online": "Online",
+    "offline": "Offline",
+    "unread": "Unread",
+    "fileTooLarge": "File size cannot exceed 10MB",
+    "search": "Search messages",
+    "noResults": "No results",
+    "newMessages": "{count} new messages",
+    "loadMore": "Load more",
+    "readBy": "Read by {count} people",
+    "attachFile": "Attach file"
   },
   "export": {
     "title": "Data export",
@@ -394,5 +404,31 @@
     "decisions": "Export decisions",
     "tasksFailed": "Failed to export tasks",
     "decisionsFailed": "Failed to export decisions"
+  },
+  "calendar": {
+    "title": "Calendar integration",
+    "subtitle": "Sync task due dates to external calendars so nothing slips through.",
+    "connectGoogle": "Connect Google",
+    "connectOutlook": "Connect Outlook",
+    "connected": "Connected",
+    "disconnected": "Not connected",
+    "disconnect": "Disconnect",
+    "lastSync": "Last sync",
+    "syncNow": "Sync now",
+    "syncing": "Syncing",
+    "syncSuccess": "Tasks synced",
+    "syncFailed": "Sync failed",
+    "syncedTo": "Synced to {provider}",
+    "syncSettings": "Sync settings",
+    "syncSettingsHint": "Control which tasks sync and how reminders are sent.",
+    "syncDueDateOnly": "Only sync tasks with a due date",
+    "syncDueDateOnlyHint": "Tasks without a due date won't sync to the calendar",
+    "remindOneDay": "Remind 1 day before",
+    "remindOneDayHint": "Send a calendar reminder 1 day before the due date",
+    "remindOneHour": "Remind 1 hour before",
+    "remindOneHourHint": "Send a calendar reminder 1 hour before the due date",
+    "confirmDisconnect": "Disconnect this calendar?",
+    "googleHint": "Sync task due dates to Google Calendar",
+    "outlookHint": "Sync task due dates to Outlook Calendar"
   }
 }

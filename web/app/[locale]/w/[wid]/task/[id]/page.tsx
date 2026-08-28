@@ -31,6 +31,7 @@ import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
+import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -760,6 +761,7 @@ export default function TaskDetailPage({
             <div className={fieldLabel}>
               <Calendar size={13} />
               截止日期
+              {task.dueDate && <CalendarSyncBadge wid={wid} taskId={id} />}
             </div>
             <input
               type="date"

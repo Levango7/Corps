@@ -385,7 +385,17 @@
     "empty": "还没有消息，发一条开始对话吧。",
     "placeholder": "发消息…（⌘/Ctrl + Enter 发送）",
     "send": "发送",
-    "unknownUser": "已注销用户"
+    "unknownUser": "已注销用户",
+    "online": "在线",
+    "offline": "离线",
+    "unread": "未读",
+    "fileTooLarge": "文件大小不能超过 10MB",
+    "search": "搜索消息",
+    "noResults": "无搜索结果",
+    "newMessages": "{count} 条新消息",
+    "loadMore": "加载更多",
+    "readBy": "已由 {count} 人阅读",
+    "attachFile": "添加附件"
   },
   "export": {
     "title": "数据导出",
@@ -394,5 +404,31 @@
     "decisions": "导出决策记录",
     "tasksFailed": "导出任务失败",
     "decisionsFailed": "导出决策记录失败"
+  },
+  "calendar": {
+    "title": "日历集成",
+    "subtitle": "将任务截止日期同步到外部日历，避免遗漏。",
+    "connectGoogle": "连接 Google",
+    "connectOutlook": "连接 Outlook",
+    "connected": "已连接",
+    "disconnected": "未连接",
+    "disconnect": "断开连接",
+    "lastSync": "最后同步",
+    "syncNow": "立即同步",
+    "syncing": "同步中",
+    "syncSuccess": "任务已同步",
+    "syncFailed": "同步失败",
+    "syncedTo": "已同步到 {provider}",
+    "syncSettings": "同步设置",
+    "syncSettingsHint": "控制哪些任务同步以及提醒方式。",
+    "syncDueDateOnly": "仅同步有截止日期的任务",
+    "syncDueDateOnlyHint": "未设置截止日期的任务不会同步到日历",
+    "remindOneDay": "同步前 1 天提醒",
+    "remindOneDayHint": "截止日期前 1 天发送日历提醒",
+    "remindOneHour": "同步前 1 小时提醒",
+    "remindOneHourHint": "截止日期前 1 小时发送日历提醒",
+    "confirmDisconnect": "确定要断开连接吗？",
+    "googleHint": "同步任务截止日期到 Google 日历",
+    "outlookHint": "同步任务截止日期到 Outlook 日历"
   }
 }

@@ -32,10 +32,15 @@ model User {
   decisionVersions DecisionVersion[]
   notifications    Notification[]
   messages         Message[]
+  // IM 升级：消息已读记录 + 聊天在线状态
+  messageReads     MessageRead[]
+  chatPresences    ChatPresence[]
   ownedWorkspaces  Workspace[]
   sessions         Session[]
   accounts         Account[]
   analyticsEvents  AnalyticsEvent[]
+  // 日历集成：用户的外部日历连接（Google/Outlook）
+  calendarConnections CalendarConnection[]
 
   @@map("users")
 }
@@ -132,7 +137,11 @@ model Task {
   comments  Comment[]
   decisions Decision[]
   messages  Message[]
+  // IM 升级：任务内聊天在线状态
+  chatPresences ChatPresence[]
   labels    TaskLabel[]
+  // 日历集成：任务同步到外部日历的事件映射
+  calendarEvents TaskCalendarEvent[]
 
   // 看板视图：按工作区筛选任务状态列
   @@index([workspaceId, status])
@@ -249,11 +258,77 @@ model Message {
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   // 作者注销后消息保留（审计 D3）
   author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  // IM 升级：已读记录 + 文件附件
+  reads       MessageRead[]
+  attachments MessageAttachment[]
 
   // 任务聊天：按时间顺序加载消息（覆盖索引前缀，兼容增量游标 ?since= 查询）
   @@index([taskId, createdAt])
   @@index([workspaceId])
   @@map("messages")
+}
+
+// ─── IM 升级：消息已读记录（v2 F2：已读回执）──
+// 每条 (messageId, userId) 唯一记录一次已读时间戳，用于双勾✓✓回执展示。
+// onDelete: Cascade 跟随消息删除自动清理，避免悬空引用。
+
+model MessageRead {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @map("message_id") @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  readAt    DateTime @default(now()) @db.Timestamptz @map("read_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 同一用户对同一消息只记录一次已读
+  @@unique([messageId, userId])
+  // 按消息查询已读列表（已读回执展示）
+  @@index([messageId])
+  // 按用户查询已读消息（未读计数）
+  @@index([userId])
+  @@map("message_reads")
+}
+
+// ─── IM 升级：消息文件附件（v2 F4：文件分享）──
+// 一条消息可携带多个附件（图片/文档），MVP 本地存储到 web/uploads/。
+// thumbnailUrl 仅图片类型生成，用于聊天内预览；其他类型为 null。
+
+model MessageAttachment {
+  id           String  @id @default(uuid()) @db.Uuid
+  messageId    String  @map("message_id") @db.Uuid
+  fileName     String  @map("file_name") @db.VarChar(255)
+  fileSize     Int     @map("file_size")
+  fileType     String  @map("file_type") @db.VarChar(100) // MIME type
+  url          String  @db.Text // 存储路径（MVP: /uploads/xxx）
+  thumbnailUrl String? @map("thumbnail_url") @db.Text // 图片缩略图路径
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  // 按消息查询附件列表
+  @@index([messageId])
+  @@map("message_attachments")
+}
+
+// ─── IM 升级：聊天在线状态（v2 F3：在线状态指示）──
+// 记录用户在某任务聊天中的最近活跃时间，30 秒心跳更新。
+// 在线判定：now - lastSeen < 60s 视为在线（容忍一次心跳丢失）。
+
+model ChatPresence {
+  id       String   @id @default(uuid()) @db.Uuid
+  taskId   String   @map("task_id") @db.Uuid
+  userId   String   @map("user_id") @db.Uuid
+  lastSeen DateTime @default(now()) @db.Timestamptz @map("last_seen")
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 同一用户在同一任务中只保留一条在线状态
+  @@unique([taskId, userId])
+  // 按任务查询在线成员列表
+  @@index([taskId])
+  @@map("chat_presences")
 }
 
 // ─── 通知（mention / task_assigned / task_updated / comment_added / decision_updated）──
@@ -463,4 +538,52 @@ model AnalyticsEvent {
   // 漏斗分析：按工作区 + 事件名 + 时间范围扫描（复合索引覆盖高频聚合，避免回表）
   @@index([workspaceId, name, createdAt])
   @@map("analytics_events")
+}
+
+// ─── 日历集成（calendar-integration）──
+// 用户的外部日历连接（Google Calendar / Outlook Calendar）。
+// accessToken / refreshToken 用 AES-256-GCM 加密存储（见 web/lib/crypto.ts）。
+// 同一用户同一 provider 只保留一条连接（@@unique([userId, provider])）。
+
+model CalendarConnection {
+  id            String   @id @default(uuid()) @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  provider      String   @db.VarChar(20) // "google" | "outlook"
+  email         String   @db.VarChar(255) // 连接的日历邮箱
+  accessToken   String   @map("access_token") @db.Text // 加密存储
+  refreshToken  String   @map("refresh_token") @db.Text // 加密存储
+  tokenExpiresAt DateTime @map("token_expires_at") @db.Timestamptz
+  calendarId    String   @map("calendar_id") @db.VarChar(255) // 外部日历 ID
+  lastSyncAt    DateTime? @map("last_sync_at") @db.Timestamptz
+  syncStatus    String   @default("idle") @map("sync_status") @db.VarChar(20) // "idle" | "syncing" | "error"
+  syncError     String?  @map("sync_error") @db.Text
+  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt     DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskEvents   TaskCalendarEvent[]
+
+  // 同一用户同一 provider 只保留一条连接
+  @@unique([userId, provider])
+  @@index([userId])
+  @@map("calendar_connections")
+}
+
+// 任务-日历事件映射：记录每个任务在每个连接的外部事件 ID，用于更新/删除同步。
+// onDelete: Cascade 跟随任务/连接删除自动清理，避免悬空引用。
+
+model TaskCalendarEvent {
+  id              String   @id @default(uuid()) @db.Uuid
+  taskId          String   @map("task_id") @db.Uuid
+  connectionId    String   @map("connection_id") @db.Uuid
+  externalEventId String   @map("external_event_id") @db.VarChar(255) // 外部日历事件 ID
+  lastSyncedAt    DateTime @default(now()) @map("last_synced_at") @db.Timestamptz
+
+  task        Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  connection  CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+
+  // 同一任务在同一连接只保留一条事件映射
+  @@unique([taskId, connectionId])
+  @@index([connectionId])
+  @@map("task_calendar_events")
 }
