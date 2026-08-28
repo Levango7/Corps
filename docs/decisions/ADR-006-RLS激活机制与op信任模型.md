@@ -28,9 +28,11 @@ Phase 1 审计要求启用 PostgreSQL Row Level Security（RLS）作为多租户
 | op 值 | 用途 | 策略影响 |
 |--------|------|----------|
 | `provision` | 注册时自动创建 workspace | workspaces_select 放行 |
-| `webhook` | Stripe webhook 跨租户写入 | workspaces_select 放行 |
+| `webhook` | 支付通道回调跨租户写入（Stripe/支付宝/微信） | workspaces_select 放行 |
 | `invite` | 邀请/接受席位 | workspaces_select + members 放行 |
 | `login` | 正常登录 | members SELECT 分支放行 |
+| `seat` | 邀请/接受的席位行锁保护段 | workspaces_select/update + members 放行 |
+| `cron` | 定时作业跨工作区只读扫描（截止日提醒） | tasks SELECT + workspaces_select 放行（2026-08-28 新增；只读，无写路径） |
 
 `op` 由 `lib/auth.ts` 的 `runWithAuthOp()` 设定，值域硬编码白名单，不可由客户端控制。
 
@@ -50,7 +52,11 @@ Phase 1 审计要求启用 PostgreSQL Row Level Security（RLS）作为多租户
 
 ### D5 FORCE ROW LEVEL SECURITY
 
-全部 10 张业务表执行 `FORCE ROW LEVEL SECURITY`，确保表属主（postgres）同样受策略约束，杜绝 `SET ROLE` 绕过。
+全部 14 张业务表执行 `FORCE ROW LEVEL SECURITY`（原 10 张 + v2 扩面的
+labels/milestones/messages/task_labels，2026-08-28 审计 P2-3 修复），
+确保表属主（postgres）同样受策略约束，杜绝 `SET ROLE` 绕过。
+仍未覆盖：message_reads/message_attachments/chat_presences（暂无 API 路由）、
+calendar_connections/task_calendar_events（user 作用域，无 workspace 键）。
 
 ## 后果
 

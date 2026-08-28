@@ -125,7 +125,7 @@ describe("sendInviteEmail - 生产模式（NODE_ENV=production 且配置 SMTP_HO
     expect(output).toContain("张三");
   });
 
-  it("生产日志格式为 'invite sent to {to} for workspace {ws} by {inviter}'", async () => {
+  it("生产日志格式为 'invite sent (to=..., workspace=..., inviter=...)'", async () => {
     // Arrange
     const params = makeParams();
 
@@ -135,7 +135,7 @@ describe("sendInviteEmail - 生产模式（NODE_ENV=production 且配置 SMTP_HO
     // Assert
     const output = logSpy.mock.calls[0][0] as string;
     expect(output).toBe(
-      "[email] invite sent to invitee@example.com for workspace 测试工作区 by 张三",
+      "[email] invite sent (to=invitee@example.com, workspace=测试工作区, inviter=张三)",
     );
   });
 });

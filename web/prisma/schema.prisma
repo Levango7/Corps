@@ -244,7 +244,7 @@ model Comment {
 // ─── 任务级即时聊天消息（v2 F1：IM 轻沟通 MVP）──
 // 与 Comment（异步评论）区分：Message 是任务上下文内的轻量实时聊天。
 // MVP 采用轮询方案（5s 间隔 + ?since= 游标增量拉取），后续可升级 SSE/WebSocket。
-// RLS 自动覆盖（含 workspaceId），跨工作区请求被拦截。
+// messages 已纳入 db/rls-activate.sql 的 FORCE RLS（workspace 谓词，审计 P2-3 修复）。
 
 model Message {
   id          String   @id @default(uuid()) @db.Uuid

@@ -70,6 +70,12 @@ export async function POST(req: NextRequest) {
     switch (event.type) {
       case "checkout.completed": {
         const wid = event.workspaceId;
+        // 到期时间按计费周期推算（初始值；随后由 customer.subscription.updated
+        // 的 subscription.synced 用通道侧真实周期覆盖）
+        const expiresAt =
+          event.period === "yearly"
+            ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         await runWithAuthOp("webhook", async (tx) => {
           // metadata 可能被篡改或指向已删除的工作区：先确认存在再落库
           const workspace = await tx.workspace.findUnique({
@@ -92,6 +98,7 @@ export async function POST(req: NextRequest) {
               providerOrderId: event.providerOrderId,
               status: "active",
               quantity: event.seats,
+              currentPeriodEnd: expiresAt,
             },
             update: {
               stripeCustomerId: event.providerCustomerId,
@@ -100,6 +107,7 @@ export async function POST(req: NextRequest) {
               providerOrderId: event.providerOrderId,
               status: "active",
               quantity: event.seats,
+              currentPeriodEnd: expiresAt,
             },
           });
           // plan 枚举与 schema CHECK / openapi 保持一致：付费即 pro；席位上限同步为购买数
@@ -251,6 +259,13 @@ export async function POST(req: NextRequest) {
     }
   } catch (err) {
     console.error("Webhook handler error:", err);
+    // 处理失败必须回滚幂等占位：占位行在处理前已独立提交，若保留，
+    // Stripe 重试会命中 duplicate 分支返回 200，该支付事件将永久丢失
+    await prisma.processedPaymentEvent
+      .deleteMany({ where: { provider: "stripe", eventId: event.providerEventId } })
+      .catch((delErr) =>
+        console.error("[stripe-webhook] rollback idempotency row failed:", delErr),
+      );
     return NextResponse.json({ code: 500, message: "Handler error" }, { status: 500 });
   }
 

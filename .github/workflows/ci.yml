@@ -133,6 +133,85 @@ jobs:
             rm -f next-dev.pid
           fi
 
+  # 加固模式端到端回归：应用以 corps_app（NOBYPASSRLS 最小权限角色）连接、
+  # 数据库启用 FORCE RLS——与生产 docker-compose 的 RLS_ACTIVATE=true 同构。
+  # 普通集成测试以 postgres 超级用户运行（超级用户绕过 RLS），无法发现
+  # "裸 prisma 查询在加固模式下静默返空" 的缺陷（审计 P1-1 的系统性根因）。
+  test-hardened:
+    name: Test (hardened RLS mode)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: corps_test
+        ports:
+          - 5432:5432
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+      # 幂等应用 RLS 加固（角色/FORCE/策略），与容器 entrypoint 的生产行为一致；
+      # runner 自带 psql（与上方 rls-smoke 步骤同一前提）
+      - name: Activate RLS (db/rls-activate.sql)
+        working-directory: .
+        shell: bash
+        run: |
+          psql -v ON_ERROR_STOP=1 -q \
+            "postgresql://postgres:test@localhost:5432/corps_test" \
+            -v app_password=hardened-ci-app-password \
+            -f db/rls-activate.sql
+      - name: Start app as corps_app (hardened)
+        working-directory: web
+        shell: bash
+        run: |
+          npx next dev -p 3000 > next-dev.log 2>&1 &
+          echo $! > next-dev.pid
+          for i in $(seq 1 60); do
+            if curl -sf http://localhost:3000/api/health > /dev/null; then
+              echo "hardened dev server ready"
+              break
+            fi
+            sleep 2
+          done
+          curl -sf http://localhost:3000/api/health > /dev/null || { cat next-dev.log; exit 1; }
+        env:
+          # 应用以最小权限角色连接（生产同构），RLS 策略真实生效
+          DATABASE_URL: postgresql://corps_app:hardened-ci-app-password@localhost:5432/corps_test
+          JWT_ACCESS_SECRET: ci-test-access-secret
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          RATE_LIMIT_DISABLED: "1"
+      - run: npx vitest run tests/integration
+        env:
+          TEST_BASE_URL: http://localhost:3000/api/v1
+          RATE_LIMIT_DISABLED: "1"
+      - name: Stop dev server
+        working-directory: web
+        shell: bash
+        if: always()
+        run: |
+          if [ -f next-dev.pid ]; then
+            kill "$(cat next-dev.pid)" 2>/dev/null || true
+            rm -f next-dev.pid
+          fi
+
   # E2E 生产构建验证：集成测试此前只在 next dev（dev server）上运行过，
   # 本 job 用 npx next build + next start 对生产构建产物做端到端验证，
   # 弥补"dev server 通过 ≠ 生产构建可用"的缺口（如 standalone/turbopack 差异、
@@ -247,61 +326,42 @@ jobs:
       - run: npx prisma generate
       - run: pnpm run build
 
-  deploy-staging:
-    name: Deploy Staging
-    needs: build
-    # 未配置 CloudBase 环境变量时跳过，避免"假通过"的占位部署
-    if: github.ref == 'refs/heads/main' && vars.CLOUDBASE_ENV_ID != ''
+  # ─── 产物化：构建并发布 Docker 镜像到 GitHub Container Registry（GHCR）───
+  # 取代原 CloudBase 占位部署（此前刻意 exit 1 防假绿）。镜像即部署产物：
+  # 生产服务器 docker pull 后按 docs/runbook-deploy.md 的 compose 编排启动。
+  # 首次发布后如需公开拉取，在 GitHub → Packages → corps-web 中调整可见性。
+  docker-publish:
+    name: Publish image (GHCR)
+    needs: [lint, test, test-hardened, build]
+    if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
-    environment: staging
+    permissions:
+      contents: read
+      packages: write
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
         with:
-          node-version: 22
-      - name: Build Docker image
-        working-directory: web
-        run: docker build -t corps-web:${{ github.sha }} .
-      - name: Deploy to CloudBase
-        env:
-          CLOUDBASE_ENV_ID: ${{ vars.CLOUDBASE_ENV_ID }}
-          CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
-          CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-        run: |
-          npm install -g @cloudbase/cli
-          tcb login --secretId "$CLOUDBASE_SECRET_ID" --secretKey "$CLOUDBASE_SECRET_KEY"
-          echo "Deploying corps-web:${{ github.sha }} to CloudBase env $CLOUDBASE_ENV_ID"
-          # TODO: 根据实际 CloudBase 服务配置调整部署命令
-          # 静默成功即"假绿"：部署命令缺失时必须显式失败，防止误判发布成功
-          echo "ERROR: CloudBase 部署命令尚未配置——此 job 刻意失败以防止假绿。"
-          echo "请按 docs/runbook-deploy.md 补齐部署命令后移除本退出码。"
-          exit 1
-
-  deploy-production:
-    name: Deploy Production
-    needs: build
-    if: startsWith(github.ref, 'refs/tags/v') && vars.CLOUDBASE_ENV_ID != ''
-    runs-on: ubuntu-latest
-    environment: production
-    steps:
-      - uses: actions/checkout@v7
-      - uses: actions/setup-node@v7
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Docker metadata (tags)
+        id: meta
+        uses: docker/metadata-action@v5
         with:
-          node-version: 22
-      - name: Build Docker image
-        working-directory: web
-        run: docker build -t corps-web:${{ github.sha }} .
-      - name: Deploy to CloudBase
-        env:
-          CLOUDBASE_ENV_ID: ${{ vars.CLOUDBASE_ENV_ID }}
-          CLOUDBASE_SECRET_ID: ${{ secrets.CLOUDBASE_SECRET_ID }}
-          CLOUDBASE_SECRET_KEY: ${{ secrets.CLOUDBASE_SECRET_KEY }}
-        run: |
-          npm install -g @cloudbase/cli
-          tcb login --secretId "$CLOUDBASE_SECRET_ID" --secretKey "$CLOUDBASE_SECRET_KEY"
-          echo "Deploying corps-web:${{ github.sha }} to CloudBase env $CLOUDBASE_ENV_ID"
-          # TODO: 根据实际 CloudBase 服务配置调整部署命令
-          # 静默成功即"假绿"：部署命令缺失时必须显式失败，防止误判发布成功
-          echo "ERROR: CloudBase 部署命令尚未配置——此 job 刻意失败以防止假绿。"
-          echo "请按 docs/runbook-deploy.md 补齐部署命令后移除本退出码。"
-          exit 1
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=ref,event=branch
+            type=semver,pattern={{version}}
+            type=semver,pattern={{major}}.{{minor}}
+            type=sha,format=long
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./web
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

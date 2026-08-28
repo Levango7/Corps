@@ -63,7 +63,11 @@ const FEATURE_ICONS = {
 } as const;
 
 /** 功能三栏 title/body 翻译 key（与 FEATURE_COLUMNS 顺序对齐）。 */
-const FEATURE_TITLE_KEYS = ["features.col1Title", "features.col2Title", "features.col3Title"] as const;
+const FEATURE_TITLE_KEYS = [
+  "features.col1Title",
+  "features.col2Title",
+  "features.col3Title",
+] as const;
 const FEATURE_BODY_KEYS = ["features.col1Body", "features.col2Body", "features.col3Body"] as const;
 
 /** SEO metadata（spec §9，按 locale 取 pricing.metadata 翻译）。 */
@@ -85,11 +89,7 @@ export async function generateMetadata({
 }
 
 /** 默认导出：定价页服务端组件。 */
-export default async function PricingPage({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function PricingPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   // 非法 locale 直接 404
   if (!hasLocale(locales, locale)) notFound();
@@ -453,11 +453,11 @@ function Footer({ t }: { t: TranslateFn }) {
       <div className="mx-auto max-w-[var(--container-max)] flex flex-wrap items-center justify-between gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
         <span>{t("footer.copyright")}</span>
         <div className="flex gap-4">
-          {/* TODO(legal): 上线前补齐真实文档链接（spec §3.9 明示 TODO） */}
-          <Link href="#" className="hover:text-[var(--fg-2)]">
+          {/* 法务文档页（审计 TODO(legal) 修复；文档内主体信息待注册后补齐） */}
+          <Link href="/legal/terms" className="hover:text-[var(--fg-2)]">
             {t("footer.terms")}
           </Link>
-          <Link href="#" className="hover:text-[var(--fg-2)]">
+          <Link href="/legal/privacy" className="hover:text-[var(--fg-2)]">
             {t("footer.privacy")}
           </Link>
         </div>

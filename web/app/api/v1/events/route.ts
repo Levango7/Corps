@@ -32,6 +32,9 @@ const batchSchema = z.object({
   events: z.array(eventSchema).min(1).max(50),
 });
 
+// 单条事件 props 的序列化体积上限：超出视为异常/脏数据，整条丢弃
+const MAX_PROPS_BYTES = 4096;
+
 export async function POST(req: NextRequest) {
   // 限流：单 IP 每分钟最多 120 次（批量上报场景放宽，仍拦异常洪泛）
   const limited = await checkRateLimit(req, "events", { windowMs: 60_000, max: 120 });
@@ -44,11 +47,14 @@ export async function POST(req: NextRequest) {
     // 已认证用户从 token 解析 userId；未认证事件允许匿名（userId=null）
     const payload = await authenticate(req);
     const userId = payload?.sub ?? null;
-    // 优先从 token 取 wid；事件自带 workspaceId 用于跨工作区事件（workspace_switch）
+    // 优先从 token 取 wid（服务端签发，可信）；事件自带 workspaceId 仅作候选
     const tokenWid = payload?.wid ?? null;
 
-    // 过滤白名单外事件，避免无效写入
-    const validEvents = validated.events.filter((e) => ALLOWED_EVENT_NAMES.has(e.name));
+    // 过滤白名单外事件 + props 超限事件，避免无效写入
+    const validEvents = validated.events.filter(
+      (e) =>
+        ALLOWED_EVENT_NAMES.has(e.name) && JSON.stringify(e.props ?? {}).length <= MAX_PROPS_BYTES,
+    );
     if (validEvents.length === 0) {
       return NextResponse.json({ code: 200, data: { accepted: 0 } });
     }
@@ -58,10 +64,25 @@ export async function POST(req: NextRequest) {
     const accepted = await runWithAuthOp(
       "provision",
       async (tx) => {
+        // 客户端自带 workspaceId 只在本人确为该工作区成员时采信，
+        // 防止伪造 wid 污染其他工作区的分析数据；未认证事件不带 wid
+        const claimedWids = [
+          ...new Set(validEvents.map((e) => e.workspaceId).filter((v): v is string => Boolean(v))),
+        ];
+        const allowedWids = new Set<string>();
+        if (userId && claimedWids.length > 0) {
+          const memberships = await tx.member.findMany({
+            where: { userId, workspaceId: { in: claimedWids } },
+            select: { workspaceId: true },
+          });
+          for (const m of memberships) allowedWids.add(m.workspaceId);
+        }
+
         const rows = validEvents.map((e) => ({
           id: randomUUID(),
           userId,
-          workspaceId: e.workspaceId ?? tokenWid ?? null,
+          workspaceId:
+            (e.workspaceId && allowedWids.has(e.workspaceId) ? e.workspaceId : tokenWid) ?? null,
           name: e.name,
           props: e.props as object,
           sessionId: e.sessionId ?? null,

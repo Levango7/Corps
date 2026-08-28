@@ -80,6 +80,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   const [busy, setBusy] = useState<string | null>(null);
   // Phase 2：支付方式选择（缺省 card 保持存量行为）
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
+  // 计费周期（pricing-strategy.md：年付 ¥590/人/年，相当于每月 ¥49.2）
+  const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   // 微信二维码模态框状态
   const [wechatQr, setWechatQr] = useState<{ url: string; orderId: string } | null>(null);
   // �轮询定时器引用
@@ -132,7 +134,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         providerId?: string;
       }>(`/api/v1/workspaces/${wid}/billing/checkout`, {
         method: "POST",
-        body: JSON.stringify({ planId: plan, provider }),
+        body: JSON.stringify({ planId: plan, provider, period: billingPeriod }),
       });
 
       if (resp.qrCodeUrl) {
@@ -382,8 +384,35 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           <p className="mt-2 text-[length:var(--text-xs)] text-[var(--meta)]">
             {paymentMethod === "card" && "通过 Stripe 完成信用卡支付，支持自动续费。"}
             {paymentMethod === "wechat" && "扫码支付，支付完成后自动激活订阅。不支持自动续费。"}
-            {paymentMethod === "alipay" && "跳转到支付宝完成支付，支付完成后自动激活。不支持自动续费。"}
+            {paymentMethod === "alipay" &&
+              "跳转到支付宝完成支付，支付完成后自动激活。不支持自动续费。"}
           </p>
+        </div>
+      )}
+
+      {/* 计费周期切换（年付对齐定价页口径：¥590/人/年，立省 ¥118） */}
+      {isOwner && (
+        <div className="mb-4 flex items-center gap-2">
+          <button
+            onClick={() => setBillingPeriod("monthly")}
+            className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              billingPeriod === "monthly"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
+            }`}
+          >
+            月付
+          </button>
+          <button
+            onClick={() => setBillingPeriod("yearly")}
+            className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              billingPeriod === "yearly"
+                ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
+            }`}
+          >
+            年付（省 ¥118/席）
+          </button>
         </div>
       )}
 
@@ -392,6 +421,12 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         {PLANS.map((p) => {
           const current = status?.plan === p.id;
           const upgradable = isOwner && !current && p.id !== "free" && status?.stripeReady;
+          // Pro 卡片价格/单位随计费周期切换；免费档固定 ¥0
+          const price = p.id === "pro" && billingPeriod === "yearly" ? "¥590" : p.price;
+          const unit =
+            p.id === "pro" ? (billingPeriod === "yearly" ? "每人 / 年" : "每人 / 月") : p.unit;
+          const seats =
+            p.id === "pro" && billingPeriod === "yearly" ? "年付折合每月 ¥49.2" : p.seats;
           return (
             <div
               key={p.id}
@@ -411,11 +446,11 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
 
               <div className="mt-3 flex items-baseline gap-1">
                 <span className="text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
-                  {p.price}
+                  {price}
                 </span>
-                <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{p.unit}</span>
+                <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{unit}</span>
               </div>
-              <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">{p.seats}</div>
+              <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">{seats}</div>
 
               <ul className="mt-4 space-y-2 flex-1">
                 {p.features.map((f) => (

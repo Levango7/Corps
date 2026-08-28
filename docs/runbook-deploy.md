@@ -2,44 +2,45 @@
 
 > 基于仓库现状整理：`docker-compose.yml`（根目录，生产部署编排）、`web/Dockerfile`、
 > `.github/workflows/ci.yml`、`db/schema.sql` 头部注释、`.env.example`。
-> 更新日期：2026-08-24。标注 **[占位]** 的命令需运维按实际 CloudBase 产品形态补齐。
+> 更新日期：2026-08-28（部署产物化：CI 发布镜像到 GHCR，取代 CloudBase 占位部署）。
 
 ---
 
 ## 1. 前置条件
 
-### 1.1 CloudBase 环境
+### 1.1 CI 产物（GHCR 镜像，2026-08-28 更新）
 
-- 需要一个 CloudBase 环境（环境 ID 即 CI 变量 `CLOUDBASE_ENV_ID`）。
-- GitHub Actions 的 `deploy-staging` / `deploy-production` job 在 `vars.CLOUDBASE_ENV_ID`
-  未配置时**自动跳过**（避免"假通过"的占位部署）；配置后才会执行。
-- 注意：当前两个 deploy job 的部署步骤**刻意失败**（`exit 1`），提示按本手册补齐部署
-  命令后移除该退出码——在补齐前流水线不会产生真实发布。
+- CI 的 `docker-publish` job 在 push 到 `main` 或打 `v*` tag 时，通过 lint + audit +
+  test + test-hardened + build 全部关卡后，把镜像发布到 GitHub Container Registry：
+  `ghcr.io/<owner>/<repo>`，tag 含分支名（`main`）、语义化版本（`v*` tag）与 commit SHA。
+- 首次发布后镜像默认为 private；如需生产服务器匿名拉取，在
+  GitHub → Packages → corps-web → Package settings 中把可见性改为 public，
+  或为服务器配置 GHCR 的 read 权限 token。
+- 生产环境不再需要 CloudBase 专属 secrets；服务器侧唯一前置是安装 Docker/
+  Docker Compose 并配置 `.env`（§1.2）。
 
 ### 1.2 密钥与环境变量清单（源自 `.env.example` 与 `docker-compose.yml`）
 
 | 变量 | 必填 | 用途 |
 |---|---|---|
 | `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB` | 是 | 数据库初始化（compose 默认值仅为示例，生产必须覆盖） |
-| `DATABASE_URL` | 是 | 应用连接串；compose 内 host 为 service 名 `db`，端口 5432 |
-| `JWT_ACCESS_SECRET` | 是 | wid 作用域 access JWT（15min）签名密钥，`openssl rand -hex 32` |
-| `JWT_REFRESH_SECRET` | 是 | refresh JWT（7d）签名密钥，同上生成 |
-| `BETTER_AUTH_SECRET` | 是 | Better Auth 会话托管密钥，同上生成 |
+| `DATABASE_URL` | 是 | 应用连接串（加固模式为 `corps_app` 角色）；compose 内 host 为 service 名 `db` |
+| `DATABASE_OWNER_URL` | 是 | 属主连接串，仅供容器启动时 migrate deploy + rls-activate.sql |
+| `CORPS_APP_PASSWORD` | 是 | RLS 加固模式运行时角色 `corps_app` 密码（`openssl rand -hex 16`） |
+| `JWT_ACCESS_SECRET` / `BETTER_AUTH_SECRET` | 是 | 认证签名密钥，`openssl rand -hex 32` |
 | `NEXT_PUBLIC_APP_URL` | 是 | 应用对外 URL（生产改为实际域名） |
-| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID` | 否 | 未配置时计费页隐藏升级入口，不阻断其他功能 |
-| `RESEND_API_KEY` / `EMAIL_FROM` | 否 | 邮件服务（Resend） |
-| `CORPS_APP_PASSWORD` | 否 | RLS 加固模式的运行时角色 `corps_app` 密码（见 `db/schema.sql` ACTIVATION 节） |
+| `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID` / `STRIPE_PRICE_ID_YEARLY` | 否 | Stripe（年付需 `STRIPE_PRICE_ID_YEARLY`） |
+| `PAYMENT_PROVIDER` / `ALIPAY_*` / `WECHAT_*` | 否 | 国内支付通道（未配置时前端隐藏入口） |
+| `CRON_SECRET` | 否 | 截止日提醒定时作业的 Bearer 鉴权（需外部调度器每日调用） |
+| `RESEND_API_KEY` / `EMAIL_FROM` | 否 | 邮件服务（Resend），`EMAIL_FROM` 为已验证发件域 |
+| `CORS_ORIGINS` | 否 | 跨源白名单（逗号分隔精确 Origin） |
 
-### 1.3 所需 GitHub secrets / vars
+### 1.3 CI 流水线总览
 
-| 类型 | 名称 | 说明 |
-|---|---|---|
-| vars | `CLOUDBASE_ENV_ID` | CloudBase 环境 ID（staging 与 production 环境各自配置） |
-| secrets | `CLOUDBASE_SECRET_ID` / `CLOUDBASE_SECRET_KEY` | `tcb login` 用的云 API 密钥 |
-
-CI 流水线（`.github/workflows/ci.yml`）：push/PR 到 main 触发 lint + audit + test
-（PostgreSQL 18 service 容器 + `prisma migrate deploy` + vitest 集成测试）+ build；
-build 通过后进入 deploy-staging（main 分支）/ deploy-production（`v*` tag）。
+push/PR 到 main 触发 lint + audit + test（PostgreSQL 18 service + migrate deploy +
+vitest 集成）+ **test-hardened**（应用以 corps_app 最小权限角色连接 + FORCE RLS
+激活后的端到端回归，与生产加固模式同构）+ build；`docker-publish` 仅在 push
+（main / v* tag）且上述全部通过后发布镜像到 GHCR。
 
 ---
 
@@ -66,38 +67,30 @@ build 通过后进入 deploy-staging（main 分支）/ deploy-production（`v*` 
 docker build -t corps-web:<tag> ./web
 ```
 
-CI 中 deploy job 同样以 `docker build -t corps-web:${{ github.sha }} .` 产出镜像
-（tag = commit SHA）。镜像推送/托管方式 **[占位]**：需按实际 CloudBase 产品形态补齐
-（镜像仓库地址、登录凭证与 push 命令）。
+CI 的 `docker-publish` job 使用同样的 `./web` 构建上下文产出镜像并推送到
+GHCR（tag = 分支名 / 语义化版本 / commit SHA，见 §1.1）。
 
 ---
 
 ## 3. 部署步骤
 
-> 以下框架中的 **[占位]** 均需运维按实际使用的 CloudBase 产品形态补齐。
-
 ```bash
 # 1. 准备 .env（cp .env.example .env），填入真实密钥（见 §1.2；勿用示例密码）
-# 2. 构建镜像
-docker build -t corps-web:<tag> ./web
+# 2. 拉取 CI 发布的镜像（或在服务器上本地构建 docker build -t corps-web:<tag> ./web）
+docker pull ghcr.io/<owner>/<repo>:main   # 或 :<version> / :sha-<hash>
 
-# 3. 推送镜像 **[占位]**：登录并 push 到实际镜像仓库
-#    docker login <registry> && docker push <registry>/corps-web:<tag>
+# 3. 启动/更新编排（根目录 docker-compose.yml 会以镜像运行；如需固定 CI 镜像，
+#    把 compose 中 app.build 替换为 image: ghcr.io/<owner>/<repo>:<tag>）
+docker compose up -d --build
 
-# 4. 部署到 CloudBase **[占位]**：按产品形态补齐，例如
-#    - 云托管（CloudBase Run）：tcb run deploy ... 或控制台更新镜像版本
-#    - 或其他容器/主机形态的发布命令
-#    补齐后同步修改 .github/workflows/ci.yml 中两个 deploy job 的 TODO 段落
-#    并移除刻意失败的 exit 1。
-
-# 5. 数据库迁移
+# 4. 数据库迁移
 #    容器 entrypoint 已自动执行 prisma migrate deploy；如需手动执行：
 #    docker exec -it corps-app prisma migrate deploy --schema=/app/prisma/schema.prisma
 
-# 6. （可选）RLS 生产加固：创建非表主角色 corps_app 并将 DATABASE_URL 指向它，
-#    步骤见 db/schema.sql 头部 ACTIVATION 注释。
+# 5. RLS 生产加固：compose 默认 RLS_ACTIVATE=true，entrypoint 自动执行
+#    db/rls-activate.sql（角色/FORCE/策略，含 v2 扩面表）；手动激活见 §7.2
 
-# 7. 健康验证
+# 6. 健康验证
 curl -sf http://<host>:3000/api/health
 ```
 
@@ -110,9 +103,10 @@ curl -sf http://<host>:3000/api/health
 ### 4.1 应用回滚（镜像 tag 回退）
 
 ```bash
-# 回退到上一个已验证的镜像 tag（CI 以 commit SHA 作为 tag）
-docker tag <registry>/corps-web:<prev-sha> corps-web:latest
-# **[占位]**：按实际 CloudBase 产品形态将运行实例指回旧 tag 并重启
+# 回退到上一个已验证的镜像 tag（CI 同时以 commit SHA 打 tag）
+# 在 docker-compose.yml 中把 app 的 image 指回旧 tag（或修改 .env 中的镜像变量）：
+#   image: ghcr.io/<owner>/<repo>:sha-<prev-commit>
+docker compose up -d
 ```
 
 ### 4.2 数据库回滚（注意：Prisma migrate 不自动回滚）

@@ -36,21 +36,62 @@ const onCreated = vi.fn();
 
 beforeEach(() => {
   vi.clearAllMocks();
-  // 默认：拉取成员列表返回空数组
-  apiMock.mockResolvedValue([]);
+  // 默认：按请求路由返回空列表（组件打开时并发拉取 members/labels/milestones 三个列表）
+  apiMock.mockImplementation((path: string, init?: RequestInit) => {
+    if (init?.method === "POST") return Promise.resolve({ id: "task-1" });
+    return Promise.resolve([]);
+  });
 });
 
 afterEach(() => {
   cleanup();
 });
 
+/**
+ * 按请求路由构造 apiMock。
+ * 组件 v2 起打开时并发拉取 members/labels/milestones 三个列表，
+ * 用例不得假设固定调用顺序；POST /tasks 的行为由 opts 显式指定。
+ */
+function routeApi(
+  opts: {
+    members?: unknown;
+    labels?: unknown;
+    milestones?: unknown;
+    post?: unknown;
+    postError?: Error;
+  } = {},
+) {
+  apiMock.mockImplementation((path: string, init?: RequestInit) => {
+    if (init?.method === "POST") {
+      if (opts.postError) return Promise.reject(opts.postError);
+      return Promise.resolve(opts.post ?? { id: "task-1" });
+    }
+    if (path.endsWith("/members")) return Promise.resolve(opts.members ?? []);
+    if (path.endsWith("/labels")) return Promise.resolve(opts.labels ?? []);
+    if (path.endsWith("/milestones")) return Promise.resolve(opts.milestones ?? []);
+    return Promise.resolve([]);
+  });
+}
+
+/** 取提交任务（POST）那次调用的 [path, init]，避免依赖固定调用序号 */
+function findPostCall(): [string, RequestInit] {
+  const call = apiMock.mock.calls.find(
+    ([, init]) => (init as RequestInit | undefined)?.method === "POST",
+  );
+  if (!call) throw new Error("未找到 POST 创建调用");
+  return call as [string, RequestInit];
+}
+
 /** 渲染打开状态的对话框（默认成员列表为空） */
 function renderOpen(
-  props: { members?: Array<{ id: string; name: string | null; email: string }> } = {},
+  props: {
+    members?: Array<{ id: string; name: string | null; email: string }>;
+    labels?: unknown[];
+    milestones?: unknown[];
+  } = {},
 ) {
-  if (props.members) {
-    apiMock.mockResolvedValue(props.members);
-  }
+  // 仅当用例显式提供列表数据时才覆盖 mock，避免冲掉先设置的 POST 桩
+  if (Object.keys(props).length > 0) routeApi(props);
   return render(<NewTaskDialog wid={WID} open={true} onClose={onClose} onCreated={onCreated} />);
 }
 
@@ -171,9 +212,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
   it("提交成功后调用 onCreated 并传入创建结果", async () => {
     // Arrange
     const createdTask = { id: "task-new-001" };
-    apiMock
-      .mockResolvedValueOnce([]) // 初始拉成员
-      .mockResolvedValueOnce(createdTask); // 创建任务
+    routeApi({ post: createdTask });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -191,7 +230,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("提交成功后调用 onClose 关闭对话框", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
+    routeApi({ post: { id: "task-1" } });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -208,7 +247,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("提交时 api 被以正确的 path 与 body 调用", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
+    routeApi({ post: { id: "task-1" } });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -217,12 +256,10 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
     fireEvent.change(titleInput, { target: { value: "带标题的任务" } });
     fireEvent.submit(form);
 
-    // Assert：第二次 api 调用是创建任务
+    // Assert：创建任务那次调用（按 method 定位，不依赖固定序号）
     await waitFor(() => {
-      expect(apiMock).toHaveBeenCalledTimes(2);
-      const createCall = apiMock.mock.calls[1];
-      expect(createCall[0]).toBe(`/api/v1/workspaces/${WID}/tasks`);
-      const init = createCall[1] as RequestInit;
+      const [path, init] = findPostCall();
+      expect(path).toBe(`/api/v1/workspaces/${WID}/tasks`);
       expect(init.method).toBe("POST");
       const body = JSON.parse(init.body as string);
       expect(body.title).toBe("带标题的任务");
@@ -233,7 +270,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
   it("标题前后空格在提交时被 trim", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
+    routeApi({ post: { id: "task-1" } });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -244,15 +281,15 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
     // Assert
     await waitFor(() => {
-      const createCall = apiMock.mock.calls[1];
-      const body = JSON.parse((createCall[1] as RequestInit).body as string);
+      const [, init] = findPostCall();
+      const body = JSON.parse(init.body as string);
       expect(body.title).toBe("带空格的标题");
     });
   });
 
   it("描述非空时包含在提交 body 中", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
+    routeApi({ post: { id: "task-1" } });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const descInput = screen.getByPlaceholderText("背景、验收标准，或粘贴相关链接…");
@@ -265,14 +302,15 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
     // Assert
     await waitFor(() => {
-      const body = JSON.parse((apiMock.mock.calls[1][1] as RequestInit).body as string);
+      const [, init] = findPostCall();
+      const body = JSON.parse(init.body as string);
       expect(body.description).toBe("任务详细描述");
     });
   });
 
   it("描述为空时 body 中 description 为 undefined", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockResolvedValueOnce({ id: "task-1" });
+    routeApi({ post: { id: "task-1" } });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -283,7 +321,8 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 
     // Assert
     await waitFor(() => {
-      const body = JSON.parse((apiMock.mock.calls[1][1] as RequestInit).body as string);
+      const [, init] = findPostCall();
+      const body = JSON.parse(init.body as string);
       expect(body.description).toBeUndefined();
     });
   });
@@ -292,7 +331,7 @@ describe("NewTaskDialog - 正确调用 onCreated 回调", () => {
 describe("NewTaskDialog - 提交错误处理", () => {
   it("api 创建失败时显示错误信息且不调用 onCreated", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("创建失败：标题重复"));
+    routeApi({ postError: new Error("创建失败：标题重复") });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -311,7 +350,7 @@ describe("NewTaskDialog - 提交错误处理", () => {
 
   it("错误后提交按钮恢复 enabled（可重试）", async () => {
     // Arrange
-    apiMock.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("网络错误"));
+    routeApi({ postError: new Error("网络错误") });
     renderOpen();
     const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
     const form = screen.getByRole("dialog").querySelector("form")!;
@@ -384,7 +423,7 @@ describe("NewTaskDialog - 关闭与表单清空", () => {
 
   it("重新打开时错误信息被清除", async () => {
     // Arrange：首次渲染触发错误
-    apiMock.mockResolvedValueOnce([]).mockRejectedValueOnce(new Error("首次错误"));
+    routeApi({ postError: new Error("首次错误") });
     const { rerender } = render(
       <NewTaskDialog wid={WID} open={true} onClose={onClose} onCreated={onCreated} />,
     );
@@ -397,7 +436,7 @@ describe("NewTaskDialog - 关闭与表单清空", () => {
     });
 
     // Act：关闭后重新打开
-    apiMock.mockResolvedValue([]);
+    routeApi();
     rerender(<NewTaskDialog wid={WID} open={false} onClose={onClose} onCreated={onCreated} />);
     rerender(<NewTaskDialog wid={WID} open={true} onClose={onClose} onCreated={onCreated} />);
 
@@ -413,9 +452,6 @@ describe("NewTaskDialog - 成员列表加载", () => {
       { id: "m1", name: "张三", email: "zhang@test.com" },
       { id: "m2", name: null, email: "li@test.com" },
     ];
-    apiMock.mockResolvedValueOnce(members);
-
-    // Act
     renderOpen({ members });
 
     // Assert：等待成员选项出现

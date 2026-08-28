@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
-import { prisma } from "@/lib/prisma";
 import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { syncTaskToAllCalendars } from "@/lib/calendar/sync";
 import { z } from "zod";
@@ -107,7 +106,9 @@ export async function PATCH(
           });
         }
 
-        return { kind: "ok" as const, task };
+        // prevAssigneeId = 更新前的负责人，供事务外邮件分支判定"是否真的改派"。
+        // task 是更新后的行，其 assigneeId 恒等于 validated.assigneeId，不能作比较基准。
+        return { kind: "ok" as const, task, prevAssigneeId: existing.assigneeId };
       },
       ctx.payload.sub,
     );
@@ -136,19 +137,26 @@ export async function PATCH(
     if (
       validated.assigneeId !== undefined &&
       validated.assigneeId !== null &&
-      validated.assigneeId !== result.task.assigneeId &&
+      validated.assigneeId !== result.prevAssigneeId &&
       validated.assigneeId !== ctx.payload.sub &&
       result.task.assignee?.email &&
       isEmailConfigured()
     ) {
       try {
-        const [assigner, workspace] = await Promise.all([
-          prisma.user.findUnique({
-            where: { id: ctx.payload.sub },
-            select: { name: true, email: true },
-          }),
-          prisma.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
-        ]);
+        // workspaces 受 FORCE RLS：加固模式下裸查恒返 null，邮件会被静默跳过，
+        // 故与主事务同样经 runWithWorkspace 注入租户上下文
+        const [assigner, workspace] = await runWithWorkspace(
+          wid,
+          async (tx) =>
+            await Promise.all([
+              tx.user.findUnique({
+                where: { id: ctx.payload.sub },
+                select: { name: true, email: true },
+              }),
+              tx.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
+            ]),
+          ctx.payload.sub,
+        );
         if (assigner && workspace) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
           await sendTaskAssignedEmail({
@@ -204,11 +212,22 @@ export async function DELETE(
     // 先检查任务存在且属于该工作区（防跨租户删除），不存在返回 404 而非 500
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.task.findFirst({ where: { id, workspaceId: wid }, select: { id: true } }),
+      (tx) =>
+        tx.task.findFirst({
+          where: { id, workspaceId: wid },
+          select: { id: true, createdBy: true },
+        }),
       ctx.payload.sub,
     );
     if (!existing) {
       return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    }
+    // 删除权限：任务创建者或 owner/admin（普通成员不能删他人创建的任务）
+    if (existing.createdBy !== ctx.payload.sub && !["owner", "admin"].includes(ctx.member.role)) {
+      return NextResponse.json(
+        { code: 403, message: "仅任务创建者或管理员可删除任务" },
+        { status: 403 },
+      );
     }
 
     await runWithWorkspace(wid, (tx) => tx.task.delete({ where: { id } }), ctx.payload.sub);

@@ -39,8 +39,13 @@ function isAllowed(req: NextRequest): boolean {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL;
     if (appUrl && originHost === new URL(appUrl).host) return true;
-    // 本地开发端口
-    if (originHost === "localhost:3000" || originHost === "127.0.0.1:3000") return true;
+    // 本地开发端口：仅非生产放行（生产放开会给本机 3000 端口上的其他应用留 CSRF 通道）
+    if (
+      process.env.NODE_ENV !== "production" &&
+      (originHost === "localhost:3000" || originHost === "127.0.0.1:3000")
+    ) {
+      return true;
+    }
   } catch {
     /* 非法 Origin 一律拒绝 */
   }
@@ -114,18 +119,22 @@ export function middleware(req: NextRequest) {
   }
 
   // ─── next-intl locale 协商（仅对页面路由，API 跳过）───
-  // intlMiddleware 命中时可能返回重定向（如 / → /en）或 next() 注入 locale
+  // intlMiddleware 命中时可能返回重定向（如 / → /en）；
+  // 非重定向时以其响应为基底追加安全头——next-intl 可能附加的头/cookie（如
+  // NEXT_LOCALE）不会因为另起 NextResponse.next() 而丢失（next-intl 官方模式
+  // 要求返回其产生的响应）
+  let res: NextResponse;
   if (!isApiPath(pathname)) {
     const intlRes = intlMiddleware(req);
-    // next-intl 返回 NextResponse.next() 时继续追加安全头；
-    // 返回重定向时直接放行（locale 切换优先）
     if (intlRes instanceof NextResponse && intlRes.headers.has("Location")) {
       return intlRes;
     }
+    res = intlRes instanceof NextResponse ? intlRes : NextResponse.next();
+  } else {
+    res = NextResponse.next();
   }
 
   const nonce = generateNonce();
-  const res = NextResponse.next();
   res.headers.set("x-nonce", nonce);
 
   // CORS 响应头：仅对白名单命中的跨源请求回显（同源请求无 Origin，行为不变）

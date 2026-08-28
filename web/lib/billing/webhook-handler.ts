@@ -50,6 +50,12 @@ export async function handleBillingEvent(
     switch (event.type) {
       case "checkout.completed": {
         const wid = event.workspaceId;
+        // 到期时间按计费周期推算：Stripe 随后由 subscription.synced 用通道侧
+        // 真实周期覆盖；国内一次性支付则以本值作为到期依据（懒降级）。
+        const expiresAt =
+          event.period === "yearly"
+            ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
+            : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
         await runWithAuthOp("webhook", async (tx) => {
           // metadata 可能被篡改或指向已删除的工作区：先确认存在再落库
           const workspace = await tx.workspace.findUnique({
@@ -72,6 +78,7 @@ export async function handleBillingEvent(
               providerOrderId: event.providerOrderId,
               status: "active",
               quantity: event.seats,
+              currentPeriodEnd: expiresAt,
             },
             update: {
               stripeCustomerId: event.providerCustomerId,
@@ -80,6 +87,7 @@ export async function handleBillingEvent(
               providerOrderId: event.providerOrderId,
               status: "active",
               quantity: event.seats,
+              currentPeriodEnd: expiresAt,
             },
           });
           // plan 枚举与 schema CHECK / openapi 保持一致：付费即 pro；席位上限同步为购买数
@@ -225,6 +233,13 @@ export async function handleBillingEvent(
     }
   } catch (err) {
     console.error(`[${providerId}-webhook] handler error:`, err);
+    // 处理失败必须回滚幂等占位：占位行在处理前已独立提交，若保留，
+    // 通道重试会命中 duplicate 分支返回 200，该支付事件将永久丢失
+    await prisma.processedPaymentEvent
+      .deleteMany({ where: { provider: providerId, eventId: event.providerEventId } })
+      .catch((delErr) =>
+        console.error(`[${providerId}-webhook] rollback idempotency row failed:`, delErr),
+      );
     return NextResponse.json({ code: 500, message: "Handler error" }, { status: 500 });
   }
 

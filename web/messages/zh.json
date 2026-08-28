@@ -154,7 +154,8 @@
       "invalidCredentials": "邮箱或密码不正确",
       "noWorkspace": "账号未加入任何工作区，请联系管理员邀请",
       "signupLink": "还没有工作区？",
-      "signupCta": "创建一个"
+      "signupCta": "创建一个",
+      "forgotLink": "忘记密码？"
     },
     "signup": {
       "title": "创建工作区",
@@ -184,6 +185,30 @@
         "strong": "强",
         "label": "密码强度：{level}"
       }
+    },
+    "forgotPassword": {
+      "title": "重置密码",
+      "subtitle": "输入注册邮箱，我们会发送重置链接。",
+      "email": "邮箱",
+      "submit": "发送重置链接",
+      "submitting": "正在发送",
+      "success": "如果该邮箱已注册，重置链接已发送，请查收邮件（1 小时内有效）。",
+      "failed": "发送失败，请稍后重试",
+      "backToLogin": "返回登录"
+    },
+    "resetPassword": {
+      "title": "设置新密码",
+      "subtitle": "请输入新密码，至少 8 位。",
+      "newPassword": "新密码",
+      "confirmNewPassword": "确认新密码",
+      "submit": "重置密码",
+      "submitting": "正在重置",
+      "success": "密码已重置，请用新密码登录。",
+      "mismatch": "两次输入的密码不一致",
+      "invalidToken": "重置链接无效或已过期，请重新发起",
+      "tokenMissing": "缺少重置令牌，请从邮件中的链接进入",
+      "failed": "重置失败，请稍后重试",
+      "backToLogin": "去登录"
     }
   },
   "onboarding": {
@@ -430,5 +455,10 @@
     "confirmDisconnect": "确定要断开连接吗？",
     "googleHint": "同步任务截止日期到 Google 日历",
     "outlookHint": "同步任务截止日期到 Outlook 日历"
+  },
+  "legal": {
+    "termsTitle": "服务条款",
+    "privacyTitle": "隐私政策",
+    "lastUpdated": "最近更新：2026-08-28"
   }
 }

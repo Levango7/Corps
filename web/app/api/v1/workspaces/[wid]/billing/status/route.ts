@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { getPaymentProviderSafe } from "@/lib/payments";
+import { expireSubscriptionIfDue } from "@/lib/billing/subscription-expiry";
 
 /** GET /v1/workspaces/{wid}/billing/status — 当前套餐、席位占用与订阅状态 */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -9,6 +10,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
   try {
+    // 国内一次性支付的到期懒降级（尽力而为，失败不影响本接口）
+    await expireSubscriptionIfDue(wid);
+
     // P3-4：getPaymentProviderSafe 探测 secret + 价格就绪性，
     // 保持现状 stripeReady = Boolean(stripe && STRIPE_PRICE_ID) 语义
     const provider = getPaymentProviderSafe();

@@ -2,6 +2,7 @@ import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma } from "./prisma";
 import { verifyAccessToken, type JWTPayload } from "./jwt";
+import { sendResetPasswordEmail } from "./email";
 import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
@@ -18,6 +19,17 @@ export const auth = betterAuth({
     enabled: true,
     autoSignIn: true,
     requireEmailVerification: false,
+    // 忘记密码：better-auth 负责 token 生成/校验（/api/auth/request-password-reset、
+    // /api/auth/reset-password），本回调只负责把一次性链接发出去。
+    // 自建链接指向 /auth/reset-password（站内页），不用 better-auth 默认的 /reset-password 路径
+    sendResetPassword: async ({ user, token }) => {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      await sendResetPasswordEmail({
+        to: user.email,
+        resetUrl: `${appUrl}/auth/reset-password?token=${token}`,
+      });
+    },
+    resetPasswordTokenExpiresIn: 60 * 60, // 1 小时
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7,
@@ -112,12 +124,13 @@ export async function withGuc<T>(
 }
 
 /**
- * 认证流程专用逃逸通道（login / provision / webhook / invite）。
+ * 认证/系统作业专用逃逸通道（login / provision / webhook / invite / cron）。
  * 对应 db/rls-activate.sql 中各 RLS 策略的 `app.auth_op` 逃生口：
  * 这些流程发生在用户身份或工作区上下文建立之前/之外，策略按 op 白名单放行。
+ * cron 仅供无工作区上下文的定时作业做跨工作区只读扫描（当前仅截止日提醒）。
  */
 export function runWithAuthOp<T>(
-  op: "login" | "provision" | "webhook" | "invite",
+  op: "login" | "provision" | "webhook" | "invite" | "cron",
   fn: (tx: Tx) => Promise<T>,
   userId?: string,
 ): Promise<T> {

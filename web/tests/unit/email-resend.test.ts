@@ -119,6 +119,39 @@ describe("sendInviteEmail - Resend 真实发送路径（RESEND_API_KEY 已配置
     expect(body.from).toBe("noreply@custom.dev");
   });
 
+  it("EMAIL_FROM 已配置时优先作为发件人地址（docker-compose/.env.example 定义的变量名）", async () => {
+    // Arrange
+    vi.stubEnv("EMAIL_FROM", "noreply@primary.dev");
+    vi.stubEnv("MAIL_FROM", "noreply@legacy.dev");
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+    // Act
+    await sendInviteEmail(makeParams());
+
+    // Assert
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as Record<
+      string,
+      string
+    >;
+    expect(body.from).toBe("noreply@primary.dev");
+  });
+
+  it("仅配置历史变量 MAIL_FROM 时兼容使用（EMAIL_FROM 未设置）", async () => {
+    // Arrange
+    vi.stubEnv("MAIL_FROM", "noreply@legacy.dev");
+    fetchMock.mockResolvedValue(new Response("{}", { status: 200 }));
+
+    // Act
+    await sendInviteEmail(makeParams());
+
+    // Assert
+    const body = JSON.parse((fetchMock.mock.calls[0][1] as RequestInit).body as string) as Record<
+      string,
+      string
+    >;
+    expect(body.from).toBe("noreply@legacy.dev");
+  });
+
   it("RESEND_API_KEY 为空字符串时回退占位路径（不调用 fetch）", async () => {
     // Arrange
     vi.stubEnv("RESEND_API_KEY", "");

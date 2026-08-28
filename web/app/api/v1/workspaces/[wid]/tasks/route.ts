@@ -182,13 +182,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 任务指派邮件通知（他派且邮件已配置时发送，失败不阻塞）
     if (validated.assigneeId && !selfAssigned && task.task.assignee?.email) {
       try {
-        const [assigner, workspace] = await Promise.all([
-          prisma.user.findUnique({
-            where: { id: ctx.payload.sub },
-            select: { name: true, email: true },
-          }),
-          prisma.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
-        ]);
+        // workspaces 受 FORCE RLS：加固模式下裸查恒返 null，邮件会被静默跳过，
+        // 故经 runWithWorkspace 注入租户上下文取操作者/工作区名
+        const [assigner, workspace] = await runWithWorkspace(
+          wid,
+          async (tx) =>
+            await Promise.all([
+              tx.user.findUnique({
+                where: { id: ctx.payload.sub },
+                select: { name: true, email: true },
+              }),
+              tx.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
+            ]),
+          ctx.payload.sub,
+        );
         if (assigner && workspace) {
           await notifyTaskAssigned({
             assigneeId: validated.assigneeId,
@@ -248,13 +255,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       /* P2-1：判定块任一查询/写入抛错均静默，主接口已 201 不受影响 */
     }
 
-    return NextResponse.json({
-      code: 201,
-      data: {
-        ...task.task,
-        labels: task.task.labels.map((tl) => tl.label),
+    return NextResponse.json(
+      {
+        code: 201,
+        data: {
+          ...task.task,
+          labels: task.task.labels.map((tl) => tl.label),
+        },
       },
-    }, { status: 201 });
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

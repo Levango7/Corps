@@ -13,6 +13,21 @@ export interface InviteEmailParams {
   to: string;
   workspaceName: string;
   inviterName: string;
+  /**
+   * 一次性邀请链接（/auth/signup?invite=<token>）。
+   * 提供时 = 邀请未注册用户，CTA 直接指向接受邀请；
+   * 缺省时 = 已注册用户直加，邮件为"已加入"通知而非邀请。
+   */
+  inviteUrl?: string;
+  /** 已注册直加场景的登录入口（可选；缺省回退 /auth/login） */
+  loginUrl?: string;
+}
+
+/** 密码重置邮件参数 */
+export interface ResetPasswordEmailParams {
+  to: string;
+  /** 一次性重置链接（含 token，短期有效） */
+  resetUrl: string;
 }
 
 /** 任务指派通知邮件参数 */
@@ -86,14 +101,21 @@ function renderEmailHtml(opts: {
 }
 
 function renderInviteHtml(params: InviteEmailParams): string {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  // 未注册受邀者：CTA 即接受邀请（token 一次性、7 天有效）；
+  // 已注册直加：无邀请 token，邮件改为"已加入"通知，CTA 指向登录
+  const pending = Boolean(params.inviteUrl);
+  const title = `${params.inviterName} 邀请你加入 ${params.workspaceName}`;
   return renderEmailHtml({
-    title: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
-    preheader: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
-    bodyHtml:
-      `<p style="margin:0 0 12px;">${escapeHtml(params.inviterName)} 邀请你加入 <strong>${escapeHtml(params.workspaceName)}</strong>。</p>` +
-      `<p style="margin:0;">请登录后在目标工作区的成员页接受邀请。</p>`,
-    ctaLabel: "登录 corps",
-    ctaHref: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/login`,
+    title,
+    preheader: title,
+    bodyHtml: pending
+      ? `<p style="margin:0 0 12px;">${escapeHtml(params.inviterName)} 邀请你加入 <strong>${escapeHtml(params.workspaceName)}</strong>。</p>` +
+        `<p style="margin:0;">点击下方按钮设置密码并加入，链接 7 天内有效。</p>`
+      : `<p style="margin:0 0 12px;">${escapeHtml(params.inviterName)} 将你加入了 <strong>${escapeHtml(params.workspaceName)}</strong>。</p>` +
+        `<p style="margin:0;">登录后即可在任务看板中查看并开始协作。</p>`,
+    ctaLabel: pending ? "接受邀请" : "登录 corps",
+    ctaHref: params.inviteUrl ?? params.loginUrl ?? `${appUrl}/auth/login`,
   });
 }
 
@@ -143,6 +165,18 @@ function renderMentionHtml(params: MentionEmailParams): string {
   });
 }
 
+function renderResetPasswordHtml(params: ResetPasswordEmailParams): string {
+  return renderEmailHtml({
+    title: "重置你的 corps 密码",
+    preheader: "密码重置请求：链接 1 小时内有效",
+    bodyHtml:
+      `<p style="margin:0 0 12px;">我们收到了你的密码重置请求。点击下方按钮设置新密码，链接 <strong>1 小时内有效</strong>。</p>` +
+      `<p style="margin:0;color:#64748b;">如果不是你本人操作，可以忽略这封邮件，你的密码不会被更改。</p>`,
+    ctaLabel: "重置密码",
+    ctaHref: params.resetUrl,
+  });
+}
+
 /** 邮件是否可用：RESEND_API_KEY 已配置时为 true。调用方可据此决定是否走邮件分支。 */
 export function isEmailConfigured(): boolean {
   return !!process.env.RESEND_API_KEY;
@@ -169,7 +203,9 @@ async function sendViaResend(opts: {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: process.env.MAIL_FROM ?? "noreply@corps.app",
+        // docker-compose.yml / .env.example 定义的变量名是 EMAIL_FROM；
+        // MAIL_FROM 为历史兼容（email.ts 旧版曾读此名），优先级低于 EMAIL_FROM
+        from: process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app",
         to: opts.to,
         subject: opts.subject,
         html: opts.html,
@@ -202,7 +238,9 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<void> 
     html: renderInviteHtml(params),
     logTag: "invite",
   });
-  if (!sent) {
+  // 已配置 Resend 但发送失败时不再打占位日志：失败已有 console.error，
+  // 再打 "sent" 会造成误导（也符合"失败无成功日志"的测试口径）
+  if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "invite",
       `to=${params.to}, workspace=${params.workspaceName}, inviter=${params.inviterName}`,
@@ -211,16 +249,14 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<void> 
 }
 
 /** 任务指派通知邮件（失败不阻塞，返回是否真实发送） */
-export async function sendTaskAssignedEmail(
-  params: TaskAssignedEmailParams,
-): Promise<boolean> {
+export async function sendTaskAssignedEmail(params: TaskAssignedEmailParams): Promise<boolean> {
   const sent = await sendViaResend({
     to: params.to,
     subject: `${params.assignerName} 给你指派了任务「${params.taskTitle}」`,
     html: renderTaskAssignedHtml(params),
     logTag: "task_assigned",
   });
-  if (!sent) {
+  if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "task_assigned",
       `to=${params.to}, task=${params.taskTitle}, assigner=${params.assignerName}`,
@@ -239,7 +275,7 @@ export async function sendTaskDueReminderEmail(
     html: renderTaskDueReminderHtml(params),
     logTag: "task_due_reminder",
   });
-  if (!sent) {
+  if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "task_due_reminder",
       `to=${params.to}, task=${params.taskTitle}, due=${params.dueDate}`,
@@ -256,11 +292,25 @@ export async function sendMentionEmail(params: MentionEmailParams): Promise<bool
     html: renderMentionHtml(params),
     logTag: "mention",
   });
-  if (!sent) {
+  if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "mention",
       `to=${params.to}, task=${params.taskTitle}, mentioner=${params.mentionerName}`,
     );
   }
   return sent;
+}
+
+/** 密码重置邮件（由 Better Auth 的 sendResetPassword 回调触发，失败不阻塞） */
+export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): Promise<void> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: "重置你的 corps 密码",
+    html: renderResetPasswordHtml(params),
+    logTag: "reset_password",
+  });
+  if (!sent && !isEmailConfigured()) {
+    // 未配置 Resend 时把重置链接打到日志，本地开发仍可走通重置流程
+    logPlaceholder("reset_password", `to=${params.to}, resetUrl=${params.resetUrl}`);
+  }
 }

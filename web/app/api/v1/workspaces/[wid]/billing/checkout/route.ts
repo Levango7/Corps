@@ -1,11 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
-import {
-  getPaymentProvider,
-  PaymentProviderError,
-  ProviderId,
-} from "@/lib/payments";
+import { getPaymentProvider, PaymentProviderError, ProviderId } from "@/lib/payments";
 import { z } from "zod";
 
 // P3-2 / 裁决三：checkout/route.ts 归支付线独占。period 字段并入本线交付。
@@ -67,11 +63,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
   try {
     const body = checkoutSchema.parse(await req.json().catch(() => ({})));
-    const { workspace, subscription } = await runWithWorkspace(
+    const { workspace, subscription, memberCount } = await runWithWorkspace(
       wid,
       async (tx) => ({
         workspace: await tx.workspace.findUnique({ where: { id: wid } }),
         subscription: await tx.subscription.findUnique({ where: { workspaceId: wid } }),
+        memberCount: await tx.member.count({ where: { workspaceId: wid } }),
       }),
       ctx.payload.sub,
     );
@@ -85,7 +82,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     const successUrl = safeRedirectUrl(body.successUrl, defaultSuccessUrl, origin);
     const cancelUrl = safeRedirectUrl(body.cancelUrl, defaultCancelUrl, origin);
 
-    const seats = Math.max(workspace.seatLimit ?? 1, 1);
+    // 计费口径（pricing-strategy.md / FAQ：按"已购席位数"计费）：
+    // 首次购买的席位数 = 当前实际成员数。不能用 seatLimit（免费档固定 10），
+    // 否则 3 人团队升级也会被按 10 席计费。
+    const seats = Math.max(memberCount, 1);
     // Phase 2：provider 参数优先于环境变量；缺省时 getPaymentProvider 读 PAYMENT_PROVIDER
     const provider = getPaymentProvider(body.provider as ProviderId | undefined);
     const result = await provider.createCheckout({

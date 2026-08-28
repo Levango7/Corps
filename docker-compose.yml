@@ -88,6 +88,31 @@ services:
       STRIPE_SECRET_KEY: ${STRIPE_SECRET_KEY:-}
       STRIPE_WEBHOOK_SECRET: ${STRIPE_WEBHOOK_SECRET:-}
       STRIPE_PRICE_ID: ${STRIPE_PRICE_ID:-}
+      # 年付价格：年付 checkout 必需（stripe-provider.ts 未配置直接报错）
+      STRIPE_PRICE_ID_YEARLY: ${STRIPE_PRICE_ID_YEARLY:-}
+      # 国内支付通道（Phase 2）：未配置对应密钥时 isConfigured=false，前端隐藏入口；
+      # PAYMENT_PROVIDER 决定 checkout 未显式传 provider 时的默认通道
+      PAYMENT_PROVIDER: ${PAYMENT_PROVIDER:-}
+      WECHAT_APP_ID: ${WECHAT_APP_ID:-}
+      WECHAT_MCH_ID: ${WECHAT_MCH_ID:-}
+      WECHAT_API_KEY: ${WECHAT_API_KEY:-}
+      WECHAT_CERT_SERIAL_NO: ${WECHAT_CERT_SERIAL_NO:-}
+      WECHAT_PRICE_CENTS_MONTHLY: ${WECHAT_PRICE_CENTS_MONTHLY:-}
+      WECHAT_PRICE_CENTS_YEARLY: ${WECHAT_PRICE_CENTS_YEARLY:-}
+      WECHAT_NOTIFY_URL: ${WECHAT_NOTIFY_URL:-}
+      WECHAT_API_BASE: ${WECHAT_API_BASE:-}
+      ALIPAY_APP_ID: ${ALIPAY_APP_ID:-}
+      ALIPAY_PRIVATE_KEY: ${ALIPAY_PRIVATE_KEY:-}
+      ALIPAY_PUBLIC_KEY: ${ALIPAY_PUBLIC_KEY:-}
+      ALIPAY_PRICE_CENTS_MONTHLY: ${ALIPAY_PRICE_CENTS_MONTHLY:-}
+      ALIPAY_PRICE_CENTS_YEARLY: ${ALIPAY_PRICE_CENTS_YEARLY:-}
+      ALIPAY_NOTIFY_URL: ${ALIPAY_NOTIFY_URL:-}
+      ALIPAY_GATEWAY: ${ALIPAY_GATEWAY:-}
+      # 跨源白名单（可选；未配置时不回 ACAO 头，浏览器 fail-closed）
+      CORS_ORIGINS: ${CORS_ORIGINS:-}
+      # 定时作业鉴权：截止日提醒 /api/cron/due-reminders 需外部调度器携带
+      # Authorization: Bearer ${CRON_SECRET} 调用（本编排不含调度器，需自行配置 cron）
+      CRON_SECRET: ${CRON_SECRET:-}
       # 邮件（可选）
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { runWithAuthOp } from "@/lib/auth";
 import { sendTaskDueReminderEmail, isEmailConfigured } from "@/lib/email";
 
 /**
@@ -17,10 +17,7 @@ export async function GET(req: NextRequest) {
   // 鉴权：CRON_SECRET 必须配置且匹配
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return NextResponse.json(
-      { code: 500, message: "CRON_SECRET not configured" },
-      { status: 500 },
-    );
+    return NextResponse.json({ code: 500, message: "CRON_SECRET not configured" }, { status: 500 });
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
@@ -41,17 +38,21 @@ export async function GET(req: NextRequest) {
     const from = new Date(now + 18 * 60 * 60 * 1000);
     const to = new Date(now + 30 * 60 * 60 * 1000);
 
-    const tasks = await prisma.task.findMany({
-      where: {
-        dueDate: { gte: from, lt: to },
-        status: { not: "done" },
-        assigneeId: { not: null },
-      },
-      include: {
-        assignee: { select: { id: true, name: true, email: true } },
-        workspace: { select: { id: true, name: true } },
-      },
-    });
+    // tasks/workspaces 受 FORCE RLS：加固模式下裸查恒返 0 行且无任何报错
+    // （健康假象），必须经 cron 逃生口做跨工作区只读扫描（db/rls-activate.sql）
+    const tasks = await runWithAuthOp("cron", async (tx) =>
+      tx.task.findMany({
+        where: {
+          dueDate: { gte: from, lt: to },
+          status: { not: "done" },
+          assigneeId: { not: null },
+        },
+        include: {
+          assignee: { select: { id: true, name: true, email: true } },
+          workspace: { select: { id: true, name: true } },
+        },
+      }),
+    );
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     let sent = 0;

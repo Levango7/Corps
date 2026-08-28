@@ -111,6 +111,15 @@ export default function LoginPage() {
             />
           </div>
 
+          <div className="flex justify-end">
+            <Link
+              href="/auth/forgot-password"
+              className="text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:underline underline-offset-2"
+            >
+              {t("forgotLink")}
+            </Link>
+          </div>
+
           <button
             type="submit"
             disabled={busy}

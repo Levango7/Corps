@@ -15,9 +15,10 @@
 --   （lib/auth.ts 的 withGuc 白名单）设置，客户端不可控。op 枚举：
 --     login     登录/刷新时按 user_id 读自己的成员关系
 --     provision 注册/建工作区/服务端埋点写入
---     webhook   Stripe 回调（订阅与计划同步）
+--     webhook   支付通道回调（订阅与计划同步）
 --     invite    按 token 读取邀请（公开预览/接受前的取件）
 --     seat      邀请/接受的席位保护段（wid+uid 齐备，允许 FOR UPDATE 行锁）
+--     cron      定时作业跨工作区只读扫描（当前仅截止日提醒；无写入路径）
 -- ===========================================================================
 
 -- ─── 1. 运行时角色 ─────────────────────────────────────────────────────────
@@ -41,7 +42,8 @@ DECLARE t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY[
     'members','tasks','comments','decisions','decision_versions',
-    'subscriptions','notifications','workspaces','invitations','analytics_events'
+    'subscriptions','notifications','workspaces','invitations','analytics_events',
+    'labels','milestones','messages','task_labels'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -79,11 +81,47 @@ CREATE POLICY p_members_delete ON members FOR DELETE USING (
   workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
 );
 
--- tasks / comments / decisions / decision_versions：纯 workspace 谓词
+-- tasks / comments / decisions / decision_versions：纯 workspace 谓词。
+-- tasks 的 SELECT 另放行 cron 系统作业（截止日提醒需跨工作区扫描），
+-- 写操作不设逃生口（cron 作业只读）。
 DROP POLICY IF EXISTS p_tasks_rls ON tasks;
 CREATE POLICY p_tasks_rls ON tasks FOR ALL
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
+CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
+  USING (current_setting('app.auth_op', true) = 'cron');
+
+-- v2 扩面（审计 P2-3）：labels / milestones / messages / task_labels 均带 workspace_id
+-- 且全部读写路由经 runWithWorkspace（GUC 事务），套用与 tasks 相同的纯租户谓词。
+-- 仍不在清单：message_reads / message_attachments / chat_presences（暂无 API 路由）、
+-- calendar_connections / task_calendar_events（user 作用域，无 workspace 键，另议）。
+DROP POLICY IF EXISTS p_labels_rls ON labels;
+CREATE POLICY p_labels_rls ON labels FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_milestones_rls ON milestones;
+CREATE POLICY p_milestones_rls ON milestones FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_messages_rls ON messages;
+CREATE POLICY p_messages_rls ON messages FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_task_labels_rls ON task_labels;
+CREATE POLICY p_task_labels_rls ON task_labels FOR ALL
+  USING (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
 
 DROP POLICY IF EXISTS p_comments_rls ON comments;
 CREATE POLICY p_comments_rls ON comments FOR ALL
@@ -158,7 +196,7 @@ CREATE POLICY p_workspaces_select ON workspaces FOR SELECT USING (
   id IN (SELECT m.workspace_id FROM members m
          WHERE m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
   OR id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
-  OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'invite')
+  OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'invite', 'cron')
 );
 
 CREATE POLICY p_workspaces_insert ON workspaces FOR INSERT WITH CHECK (

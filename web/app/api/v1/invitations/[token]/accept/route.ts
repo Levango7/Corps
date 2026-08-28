@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, authenticate, runWithAuthOp, runWithSeatCheck } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
+import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-policy";
 import { createHash } from "crypto";
 
 /**
@@ -78,9 +79,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       const workspace = await tx.workspace.findUnique({ where: { id: wid } });
       const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 
-      // AC-08 席位上限：达 seatLimit 时拦截并提示升级
-      if (workspace && memberCount >= workspace.seatLimit) {
-        return { full: true as const };
+      // AC-08 席位门控（分套餐策略，见 lib/billing/seat-policy.ts）：
+      // free 达上限拦截；pro+Stripe 自动扩席放行；pro+国内通道拦截提示增购
+      let autoExpand = false;
+      if (workspace) {
+        const gate = await evaluateSeatGate(tx, wid, workspace, memberCount);
+        if (gate.full) {
+          return { full: true as const, plan: gate.plan };
+        }
+        autoExpand = gate.autoExpand;
       }
 
       // 已是成员则直接标记 accepted 并返回（幂等）
@@ -109,14 +116,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
         data: { acceptedAt: new Date() },
       });
 
-      return { full: false as const, role };
+      return { full: false as const, autoExpand, role };
     });
 
     if (result.full) {
       return NextResponse.json(
-        { code: 402, message: "席位已满，请联系工作区管理员升级套餐" },
+        {
+          code: 402,
+          message:
+            result.plan === "pro"
+              ? "席位已满，请联系工作区管理员增购或续费套餐"
+              : "席位已满，请联系工作区管理员升级套餐",
+        },
         { status: 402 },
       );
+    }
+
+    // Pro + Stripe：接受加入后自动扩席（seatLimit 跟随人数 + 通道侧 quantity）
+    if (result.autoExpand) {
+      await expandProSeatsAfterJoin(wid);
     }
 
     // P2 数据埋点：invite_accepted 事件（FUNNEL-METRICS §3.5）

@@ -35,12 +35,20 @@ export async function PATCH(
       });
       if (!target) return { notFound: true as const };
       if (target.role === "owner") return { isOwner: true as const };
+      // 治理：变更其他 admin 的角色需要 owner（admin 不得互改）
+      if (target.role === "admin" && ctx.member.role !== "owner") {
+        return { notAdminPrivilege: true as const };
+      }
 
       await tx.member.update({
         where: { userId_workspaceId: { userId: uid, workspaceId: wid } },
         data: { role },
       });
-      return { notFound: false as const, isOwner: false as const };
+      return {
+        notFound: false as const,
+        isOwner: false as const,
+        notAdminPrivilege: false as const,
+      };
     },
     ctx.payload.sub,
   );
@@ -49,6 +57,9 @@ export async function PATCH(
     return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
   if (outcome.isOwner) {
     return NextResponse.json({ code: 403, message: "不能修改拥有者角色" }, { status: 403 });
+  }
+  if (outcome.notAdminPrivilege) {
+    return NextResponse.json({ code: 403, message: "仅拥有者可变更管理员角色" }, { status: 403 });
   }
 
   return NextResponse.json({ code: 200, data: { id: uid, role } });
@@ -79,6 +90,10 @@ export async function DELETE(
       });
       if (!target) return { notFound: true as const };
       if (target.role === "owner") return { isOwner: true as const };
+      // 治理：移除其他 admin 需要 owner（admin 不得互删）
+      if (target.role === "admin" && ctx.member.role !== "owner") {
+        return { notAdminPrivilege: true as const };
+      }
 
       await tx.member.delete({ where: { userId_workspaceId: { userId: uid, workspaceId: wid } } });
 
@@ -100,6 +115,7 @@ export async function DELETE(
       return {
         notFound: false as const,
         isOwner: false as const,
+        notAdminPrivilege: false as const,
         stripeCustomerId,
         stripeSubId,
         remain,
@@ -113,6 +129,9 @@ export async function DELETE(
     return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
   if (outcome.isOwner) {
     return NextResponse.json({ code: 403, message: "不能移除工作区拥有者" }, { status: 403 });
+  }
+  if (outcome.notAdminPrivilege) {
+    return NextResponse.json({ code: 403, message: "仅拥有者可移除管理员" }, { status: 403 });
   }
 
   if (outcome.stripeCustomerId && outcome.stripeSubId && outcome.seatLimit != null) {

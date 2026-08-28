@@ -154,7 +154,8 @@
       "invalidCredentials": "Email or password is incorrect",
       "noWorkspace": "Your account is not in any workspace. Please ask an admin to invite you.",
       "signupLink": "No workspace yet?",
-      "signupCta": "Create one"
+      "signupCta": "Create one",
+      "forgotLink": "Forgot password?"
     },
     "signup": {
       "title": "Create a workspace",
@@ -184,6 +185,30 @@
         "strong": "Strong",
         "label": "Password strength: {level}"
       }
+    },
+    "forgotPassword": {
+      "title": "Reset your password",
+      "subtitle": "Enter your email and we'll send you a reset link.",
+      "email": "Email",
+      "submit": "Send reset link",
+      "submitting": "Sending",
+      "success": "If this email is registered, a reset link has been sent. Please check your inbox (valid for 1 hour).",
+      "failed": "Failed to send, please retry shortly",
+      "backToLogin": "Back to sign in"
+    },
+    "resetPassword": {
+      "title": "Set a new password",
+      "subtitle": "Enter your new password (at least 8 characters).",
+      "newPassword": "New password",
+      "confirmNewPassword": "Confirm new password",
+      "submit": "Reset password",
+      "submitting": "Resetting",
+      "success": "Password updated. Please sign in with your new password.",
+      "mismatch": "Passwords do not match",
+      "invalidToken": "This reset link is invalid or expired. Please request a new one.",
+      "tokenMissing": "Missing reset token. Please use the link from the email.",
+      "failed": "Failed to reset, please retry shortly",
+      "backToLogin": "Go to sign in"
     }
   },
   "onboarding": {
@@ -430,5 +455,10 @@
     "confirmDisconnect": "Disconnect this calendar?",
     "googleHint": "Sync task due dates to Google Calendar",
     "outlookHint": "Sync task due dates to Outlook Calendar"
+  },
+  "legal": {
+    "termsTitle": "Terms of Service",
+    "privacyTitle": "Privacy Policy",
+    "lastUpdated": "Last updated: 2026-08-28"
   }
 }

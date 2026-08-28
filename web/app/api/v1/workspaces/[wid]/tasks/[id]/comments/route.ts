@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { sendMentionEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 
@@ -111,25 +110,30 @@ export async function POST(
     // @提及邮件通知（邮件已配置 + 被提及者非评论作者时，失败不阻塞）
     if (isEmailConfigured() && comment.validMentions.length > 0) {
       try {
-        const [mentioner, workspace, mentionedUsers] = await Promise.all([
-          prisma.user.findUnique({
-            where: { id: ctx.payload.sub },
-            select: { name: true, email: true },
-          }),
-          prisma.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
-          prisma.user.findMany({
-            where: { id: { in: comment.validMentions } },
-            select: { id: true, name: true, email: true },
-          }),
-        ]);
+        // workspaces 受 FORCE RLS：加固模式下裸查恒返 null，提及邮件会被静默跳过，
+        // 故经 runWithWorkspace 注入租户上下文取提及者/工作区名（users 表不受 RLS，同事务查询无碍）
+        const [mentioner, workspace, mentionedUsers] = await runWithWorkspace(
+          wid,
+          async (tx) =>
+            await Promise.all([
+              tx.user.findUnique({
+                where: { id: ctx.payload.sub },
+                select: { name: true, email: true },
+              }),
+              tx.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
+              tx.user.findMany({
+                where: { id: { in: comment.validMentions } },
+                select: { id: true, name: true, email: true },
+              }),
+            ]),
+          ctx.payload.sub,
+        );
         if (mentioner && workspace) {
           const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
           const taskUrl = `${appUrl}/w/${wid}/task/${id}`;
           // 评论摘要：截断到 200 字符以内
           const snippet =
-            validated.body.length > 200
-              ? `${validated.body.slice(0, 200)}…`
-              : validated.body;
+            validated.body.length > 200 ? `${validated.body.slice(0, 200)}…` : validated.body;
           await Promise.all(
             mentionedUsers.map((u) =>
               sendMentionEmail({

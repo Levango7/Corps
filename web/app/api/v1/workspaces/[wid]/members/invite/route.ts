@@ -3,6 +3,8 @@ import { getWorkspaceContext, runWithSeatCheck, runWithWorkspace } from "@/lib/a
 import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
+import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-policy";
+import { expireSubscriptionIfDue } from "@/lib/billing/subscription-expiry";
 import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
 
@@ -22,6 +24,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 
+  // 国内一次性支付的到期懒降级（尽力而为）：先落到位，再做席位门控判定
+  await expireSubscriptionIfDue(wid);
+
   try {
     const { email } = inviteSchema.parse(await req.json());
 
@@ -40,11 +45,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         const workspace = await tx.workspace.findUnique({ where: { id: wid } });
         const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 
-        // AC-08 席位上限：达 seatLimit 时拦截并提示升级
-        if (workspace && memberCount >= workspace.seatLimit) {
-          return { full: true as const, seatLimit: workspace.seatLimit };
+        // AC-08 席位门控（分套餐策略，见 lib/billing/seat-policy.ts）：
+        // free 达上限拦截；pro+Stripe 自动扩席放行；pro+国内通道拦截提示增购
+        if (workspace) {
+          const gate = await evaluateSeatGate(tx, wid, workspace, memberCount);
+          if (gate.full) {
+            return { full: true as const, plan: gate.plan, seatLimit: gate.seatLimit };
+          }
         }
-
         // 同一 (workspace, email) 已有未接受且未过期的邀请 → 复用该记录，
         // 覆盖新 token 并延长过期时间（旧链接随之失效）
         const pending = await tx.invitation.findFirst({
@@ -89,10 +97,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
       if (result.full) {
         return NextResponse.json(
-          { code: 402, message: "席位已满，请升级套餐以邀请更多成员", seatLimit: result.seatLimit },
+          {
+            code: 402,
+            message:
+              result.plan === "pro"
+                ? "席位已满，请增购或续费套餐后邀请更多成员"
+                : "席位已满，请升级套餐以邀请更多成员",
+            seatLimit: result.seatLimit,
+          },
           { status: 402 },
         );
       }
+
+      // 一次性邀请链接：token 明文只在此处与响应中出现，邮件必须携带，
+      // 否则未注册受邀者无法完成接受流程（accept 接口按 token 取件）
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const inviteUrl = `${appUrl}/auth/signup?invite=${token}`;
 
       // 发送邀请邮件（失败不阻断邀请，仅记录日志）
       try {
@@ -100,19 +120,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           to: email,
           workspaceName: result.workspaceName,
           inviterName: result.inviterName,
+          inviteUrl,
         });
       } catch (emailError) {
         console.error("[invite] sendInviteEmail failed:", emailError);
       }
 
-      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       return NextResponse.json(
         {
           code: 201,
           data: {
             pending: true,
             email,
-            inviteUrl: `${appUrl}/auth/signup?invite=${token}`,
+            inviteUrl,
           },
         },
         { status: 201 },
@@ -129,9 +149,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       const workspace = await tx.workspace.findUnique({ where: { id: wid } });
       const memberCount = await tx.member.count({ where: { workspaceId: wid } });
 
-      // AC-08 席位上限：达 seatLimit 时拦截并提示升级
-      if (workspace && memberCount >= workspace.seatLimit) {
-        return { full: true as const, seatLimit: workspace.seatLimit };
+      // AC-08 席位门控（分套餐策略，见 lib/billing/seat-policy.ts）
+      let autoExpand = false;
+      if (workspace) {
+        const gate = await evaluateSeatGate(tx, wid, workspace, memberCount);
+        if (gate.full) {
+          return { full: true as const, plan: gate.plan, seatLimit: gate.seatLimit };
+        }
+        autoExpand = gate.autoExpand;
       }
 
       const existing = await tx.member.findUnique({
@@ -164,6 +189,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       return {
         full: false as const,
         duplicate: false as const,
+        // pro+Stripe 门控放行时需在事务外扩席（seatLimit+通道侧 quantity）
+        autoExpand,
         member: {
           id: member.user.id,
           email: member.user.email,
@@ -177,7 +204,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     if (result.full) {
       return NextResponse.json(
-        { code: 402, message: "席位已满，请升级套餐以邀请更多成员", seatLimit: result.seatLimit },
+        {
+          code: 402,
+          message:
+            result.plan === "pro"
+              ? "席位已满，请增购或续费套餐后邀请更多成员"
+              : "席位已满，请升级套餐以邀请更多成员",
+          seatLimit: result.seatLimit,
+        },
         { status: 402 },
       );
     }
@@ -185,12 +219,20 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       return NextResponse.json({ code: 409, message: "该用户已是成员" }, { status: 409 });
     }
 
+    // Pro + Stripe：加入后自动扩席（seatLimit 跟随人数 + 通道侧 quantity 按比例计费）
+    if (result.autoExpand) {
+      await expandProSeatsAfterJoin(wid);
+    }
+
     // A-15: 发送邀请邮件（失败不阻断邀请，仅记录日志）
+    // 已注册用户被直加为成员（无邀请 token），邮件为"已加入"通知
     try {
+      const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
       await sendInviteEmail({
         to: result.member.email,
         workspaceName: result.workspaceName,
         inviterName: result.inviterName,
+        loginUrl: `${appUrl}/auth/login`,
       });
     } catch (emailError) {
       console.error("[invite] sendInviteEmail failed:", emailError);
