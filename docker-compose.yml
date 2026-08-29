@@ -123,6 +123,8 @@ services:
     volumes:
       # RLS 激活脚本（entrypoint 在 RLS_ACTIVATE=true 时执行）
       - ./db/rls-activate.sql:/app/db/rls-activate.sql:ro
+      # IM 附件持久化：容器重建不丢已上传文件（无此卷重启即清空 uploads/）
+      - uploads_data:/app/uploads
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 15s
@@ -135,6 +137,8 @@ services:
 volumes:
   postgres_data:
     name: corps-postgres-data
+  uploads_data:
+    name: corps-uploads-data
 
 networks:
   corps-net:

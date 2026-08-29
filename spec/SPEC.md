@@ -36,10 +36,10 @@
 
 | 不做的功能 | 原因 | 何时考虑 |
 |------------|------|----------|
-| IM / 实时聊天流（WebSocket） | 实时通信子系统吞预算，且"抢结论"比"抢沟通"更有差异化 | v2，作为任务上下文的轻沟通延伸 |
+| IM / 实时聊天流（WebSocket） | 实时通信子系统吞预算；v2 已以轻量 SSE 方案落地（2026-08-29 纳入交付范围，提交 367b9c1），不再列入"不做"项 | 已交付 |
 | 富文本实时协同编辑（CRDT/OT） | Yjs/Automerge+presence 数月投入，非切片核心 | v2，决策记录升级为协同 |
 | 视频 / 语音 | 非核心，重度投入 | 远期 |
-| 日历 | Google/Outlook 生态壁垒 + RRULE 深坑 | v2 |
+| 日历 | Google/Outlook 生态壁垒；v2 已以 OAuth2(PKCE)+截止日任务同步落地（2026-08-29 纳入交付范围），RRULE 复杂规则暂不实现 | 已交付（RRULE 除外） |
 | AI 智能助手 | 无数据、无算力预算、非核心 | 有数据积累后 |
 | 自定义域名多租户 | DNS/SSL 自动化复杂度高 | scale-out |
 | 企业微信/钉钉/SSO/SAML | 企业版路径 | 企业版 |
@@ -214,6 +214,7 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 | 2026-08-22 | 修复阻断缺陷：登录未存 access token、计费路由缺 [wid] 段、members/layout 自引用循环、schema `@db.JsonArray` 非法注解、`React.use` 未导入、6 处硬编码 text-white、缺失 --shell-*/--accent-ring/--overlay token | 端到端可运行性审查 | 前后端多文件 |
 | 2026-08-22 | 新增依赖 jsonwebtoken@9.0.2（lib/jwt.ts 引用但 package.json 缺失，运行时阻断） | tsc 全量核查发现 | package.json |
 | 2026-08-22 | 品牌与路径统一为 corps：`collab-saas-mvp` → `corps`（文档路径引用），`Corps` → `corps`（全部 UI/文档，含小写统一） | 用户指令「全部统一成 corps」 | 全部 .md/.tsx/.ts/.html |
+| 2026-08-29 | 审计修复：IM/日历纳入交付范围（§3）、附件租户隔离（MessageAttachment.workspaceId + RLS + 下载鉴权）、SSE 连接泄漏修复、JWT wid 守卫、verify-production.sh 重写、i18n 补全（attachmentFallback 等） | 2026-08-29 全仓审查发现 P0/P1 缺陷 | Spec §3/§13 + openapi + db/rls-activate.sql |
 | 2026-08-24 | 文档对齐实际实现：密码哈希 argon2id → scrypt（与 Better Auth 默认一致）；移动端 App "何时考虑" P1 → v2 晚期（与 ROADMAP 一致）；定价 Pro 层 31+人 → 11–30人高级功能档（与产品定位 5–30人一致）；DESIGN.md 日历标注为 v2 占位（与 SPEC §3 一致） | Task #72 文档一致性修复 | SPEC.md + pricing-strategy.md + DESIGN.md + 审计/安全/竞品文档 |
 
 ---

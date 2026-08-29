@@ -117,15 +117,17 @@
     "daysAgo": "{count}d ago"
   },
   "empty": {
-    "noTasks": "No tasks in this workspace yet.",
-    "noTasksHint": "Create one on the board and capture your most urgent work.",
-    "noOpenTasks": "No tasks in progress.",
     "loadingTasks": "Loading tasks",
     "noComments": "No comments yet",
     "noDecisions": "No decision records yet",
     "noMembers": "No members yet",
     "noNotifications": "No notifications",
-    "noResults": "No matching results"
+    "noNotificationsHint": "You'll be reminded here when someone @mentions you, assigns a task, or updates a decision",
+    "noOpenTasks": "No tasks in progress.",
+    "noResults": "No matching results",
+    "noTasks": "No tasks in this workspace yet.",
+    "noTasksHint": "Create one on the board and capture your most urgent work.",
+    "noUnreadNotifications": "No unread notifications"
   },
   "error": {
     "required": "This field is required",
@@ -406,21 +408,22 @@
     "taskCount": "{count} tasks"
   },
   "chat": {
-    "title": "Chat",
+    "attachFile": "Attach file",
+    "attachmentFallback": "Attachment",
     "empty": "No messages yet. Start the conversation.",
-    "placeholder": "Send a message… (⌘/Ctrl + Enter to send)",
-    "send": "Send",
-    "unknownUser": "Deleted user",
-    "online": "Online",
-    "offline": "Offline",
-    "unread": "Unread",
     "fileTooLarge": "File size cannot exceed 10MB",
-    "search": "Search messages",
-    "noResults": "No results",
-    "newMessages": "{count} new messages",
     "loadMore": "Load more",
+    "newMessages": "{count} new messages",
+    "noResults": "No results",
+    "offline": "Offline",
+    "online": "Online",
+    "placeholder": "Send a message… (⌘/Ctrl + Enter to send)",
     "readBy": "Read by {count} people",
-    "attachFile": "Attach file"
+    "search": "Search messages",
+    "send": "Send",
+    "title": "Chat",
+    "unknownUser": "Deleted user",
+    "unread": "Unread"
   },
   "export": {
     "title": "Data export",

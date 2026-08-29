@@ -236,3 +236,40 @@ curl -sI https://your-domain.com/ | grep -i content-security-policy
 # 每日 02:00 备份，保留 7 天
 0 2 * * * /opt/corps/scripts/backup-db.sh "$DATABASE_URL" /opt/corps/backups 7 >> /var/log/corps-backup.log 2>&1
 ```
+
+### 7.6 反向代理与 HTTPS 前置要求（审计 2026-08-29）
+
+限流器（`web/lib/rate-limit.ts`）采用"可信对端"模型还原客户端 IP：
+- socket 对端为公网地址 → 直接采信 socket 地址，忽略一切代理头；
+- socket 对端为私网/容器网桥 → 采信 `X-Forwarded-For` **尾段** 与 `X-Real-Ip`。
+
+**生产必须满足（否则限流键可被伪造头绕过）：**
+1. 所有流量经可信反向代理入口（客户端不可绕过代理直连应用）；
+2. 反代将客户端真实 IP **append 到 X-Forwarded-For 尾部**（而非覆写整串）；
+3. 强制覆写 `X-Real-Ip`（剥离客户端传入值）。
+
+Nginx 参考：
+
+```nginx
+proxy_set_header X-Real-IP $remote_addr;
+proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+```
+
+同时：`NEXT_PUBLIC_APP_URL` 生产必须为 `https://` 地址（middleware 的 HSTS 与 secure cookie 均依赖 HTTPS 前置）。compose 默认 `3000:3000` 为全网卡暴露，上线前应收敛为 `127.0.0.1:3000:3000` 仅由反代访问。
+
+### 7.7 IM 附件存储（uploads 持久卷）
+
+- `docker-compose.yml` 的 app 服务挂载命名卷 `uploads_data`（`corps-uploads-data`）到 `/app/uploads`。
+- **不要移除该挂载**：重建容器若不挂卷，`uploads/` 落到容器可写层，重启即清空，而 DB 中的 `message_attachments` 记录仍指向这些文件 → 下载 404。
+- 备份：`docker run --rm -v corps-uploads-data:/data -v /opt/corps/backups:/backup alpine tar czf /backup/uploads-$(date +%Y%m%d).tgz -C /data .`
+- 升级路径：对象存储（S3/OSS）签名 URL 重定向，见 `app/api/uploads/[...path]/route.ts` 头注释。
+
+### 7.8 附件孤儿文件清理
+
+未发送消息的附件（上传后未 send）不会被下载端点服务（无 `message_attachments` 记录 → 404），但仍占用磁盘。运维侧定期清理（示例：清理 90 天前的文件，执行前先人工比对 DB 记录）：
+
+```bash
+find /opt/corps/uploads -type f -mtime +90 -delete
+```
+
+> 注意：`/opt/corps/uploads` 为卷挂载点示例，实际路径以 `docker volume inspect corps-uploads-data` 为准。

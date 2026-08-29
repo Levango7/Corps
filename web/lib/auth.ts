@@ -75,6 +75,12 @@ export async function getWorkspaceContext(
   const payload = await authenticate(req);
   if (!payload) return null;
 
+  // wid 守卫：token 签发时绑定了工作区（login 后的 access token 均带 wid），
+  // URL wid 与之不一致即拒绝（防 token 被拿去访问另一工作区的端点——成员
+  // 查询本身会被 RLS 拦，但这里在打开任何事务前短路，零 DB 副作用）。
+  // 旧 token / Bearer 场景可能不带 wid，跳过守卫走正常成员资格校验。
+  if (payload.wid && payload.wid !== wid) return null;
+
   // 成员资格查询同样走 RLS 事务（注入 app.workspace_id / app.user_id）：
   // 即使未来对 members 表启用行级安全，这条路径也不会被策略误杀。
   const member = await runWithWorkspace(

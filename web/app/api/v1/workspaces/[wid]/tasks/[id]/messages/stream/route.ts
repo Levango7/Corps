@@ -140,15 +140,23 @@ export async function GET(
 
       // 4. 空闲超时自动断开
       const idleTimeout = setTimeout(() => {
+        // 审计修复（2026-08-29）：生产者侧 controller.close() 不会触发底层源的
+        // cancel() 回调，必须在此显式执行 cleanup 才能释放 listener/定时器/presence。
+        const fn = cleanup;
+        fn?.();
+      }, IDLE_TIMEOUT_MS);
+
+      // 5. 注册清理函数：取消订阅 + 清除定时器 + 广播离线
+      cleanup = () => {
+        // 幂等：cancel() 与 idleTimeout 谁先到谁执行，后到者直接跳过
+        const fn = cleanup;
+        cleanup = null;
+        if (!fn) return;
         try {
           controller.close();
         } catch {
           // 已关闭
         }
-      }, IDLE_TIMEOUT_MS);
-
-      // 5. 注册清理函数：取消订阅 + 清除定时器 + 广播离线
-      cleanup = () => {
         chatEvents.off(channel, listener);
         clearInterval(heartbeat);
         clearTimeout(idleTimeout);

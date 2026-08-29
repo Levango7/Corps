@@ -46,6 +46,18 @@ tags:
   - name: billing
     description: Stripe Checkout / Portal / webhook
 
+  - name: system
+    description: System endpoints (health / cron / uploads)
+  - name: uploads
+    description: File attachment serving
+  - name: labels
+    description: Workspace task labels
+  - name: milestones
+    description: Workspace milestones
+  - name: messages
+    description: Task-scoped realtime chat (IM)
+  - name: calendar
+    description: External calendar integration (Google/Outlook)
 security:
   - bearerAuth: []
 
@@ -1256,8 +1268,186 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
 
+  # ===========================================================================
+  # SYSTEM / UPLOADS
+  # ===========================================================================
+  /api/health:
+    get:
+      tags: [system]
+      summary: Liveness + DB readiness probe
+      responses:
+        '200': { description: App alive and database reachable }
+  /api/cron/due-reminders:
+    get:
+      tags: [system]
+      summary: Send due-task reminder emails (daily cron, Bearer CRON_SECRET)
+      security:
+        - cronSecret: []
+      responses:
+        '200': { description: Reminder job summary }
+        '401': { description: Missing/invalid CRON_SECRET }
+  /api/uploads/{path+}:
+    get:
+      tags: [uploads]
+      summary: Serve an uploaded attachment (login + tenant membership required)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: path
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: File bytes }
+        '401': { description: Not authenticated }
+        '403': { description: Not a member of the attachment workspace }
+        '404': { description: Attachment not found or orphaned }
+  # ===========================================================================
+  # LABELS / MILESTONES
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/labels:
+    get:
+      tags: [labels]
+      summary: List workspace labels
+      responses:
+        '200': { description: Label list }
+        '401': { description: Unauthorized }
+    post:
+      tags: [labels]
+      summary: Create label (owner/admin)
+      responses:
+        '201': { description: Created }
+        '403': { description: Forbidden }
+  /api/v1/workspaces/{wid}/milestones:
+    get:
+      tags: [milestones]
+      summary: List workspace milestones
+      responses:
+        '200': { description: Milestone list }
+        '401': { description: Unauthorized }
+    post:
+      tags: [milestones]
+      summary: Create milestone (owner/admin)
+      responses:
+        '201': { description: Created }
+        '403': { description: Forbidden }
+  # ===========================================================================
+  # MESSAGES (IM)
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/tasks/{id}/messages:
+    get:
+      tags: [messages]
+      summary: List task chat messages (cursor ?since=)
+      responses:
+        '200': { description: Message list }
+        '401': { description: Unauthorized }
+    post:
+      tags: [messages]
+      summary: Create message (legacy, no SSE emit)
+      responses:
+        '201': { description: Created }
+  /api/v1/workspaces/{wid}/tasks/{id}/messages/send:
+    post:
+      tags: [messages]
+      summary: Send message with SSE broadcast
+      responses:
+        '201': { description: Created with SSE emit }
+        '400': { description: Validation error }
+        '404': { description: Task not found }
+  /api/v1/workspaces/{wid}/tasks/{id}/messages/read:
+    patch:
+      tags: [messages]
+      summary: Mark messages as read (read receipts)
+      responses:
+        '200': { description: Updated }
+  /api/v1/workspaces/{wid}/tasks/{id}/messages/stream:
+    get:
+      tags: [messages]
+      summary: SSE realtime event stream (message/read/presence/ping)
+      responses:
+        '200': { description: text/event-stream }
+        '401': { description: Unauthorized }
+  /api/v1/workspaces/{wid}/tasks/{id}/messages/attachments:
+    post:
+      tags: [messages]
+      summary: Upload file attachment (multipart, <=10MB)
+      responses:
+        '201': { description: Attachment metadata }
+        '400': { description: Missing/invalid file }
+        '404': { description: Task not found }
+  # ===========================================================================
+  # CALENDAR
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/calendar/status:
+    get:
+      tags: [calendar]
+      summary: Calendar sync status for workspace members
+      responses:
+        '200': { description: Status map }
+        '401': { description: Unauthorized }
+  /api/v1/workspaces/{wid}/calendar/sync:
+    post:
+      tags: [calendar]
+      summary: Trigger calendar sync for current user
+      responses:
+        '200': { description: Sync accepted }
+        '401': { description: Unauthorized }
+  /api/v1/auth/calendar/connect/{provider}:
+    get:
+      tags: [calendar]
+      summary: Start OAuth flow (redirect to provider)
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [google, outlook] }
+      responses:
+        '302': { description: Redirect to provider }
+  /api/v1/auth/calendar/{provider}/callback:
+    get:
+      tags: [calendar]
+      summary: OAuth callback (code exchange + token storage)
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [google, outlook] }
+      responses:
+        '302': { description: Redirect back to calendar settings }
+        '400': { description: Invalid state/code }
+  /api/v1/auth/calendar/disconnect/{provider}:
+    delete:
+      tags: [calendar]
+      summary: Disconnect calendar provider
+      parameters:
+        - name: provider
+          in: path
+          required: true
+          schema: { type: string, enum: [google, outlook] }
+      responses:
+        '200': { description: Disconnected }
+  # ===========================================================================
+  # DOMESTIC PAYMENT WEBHOOKS
+  # ===========================================================================
+  /api/v1/billing/webhook/alipay:
+    post:
+      tags: [billing]
+      summary: Alipay payment callback (signature verified)
+      responses:
+        '200': { description: Accepted }
+        '400': { description: Signature error }
+  /api/v1/billing/webhook/wechat:
+    post:
+      tags: [billing]
+      summary: WeChat Pay V3 callback (HMAC-SHA256 verified)
+      responses:
+        '200': { description: Accepted (code=0) }
+        '400': { description: Signature error }
 components:
   securitySchemes:
+    cronSecret:
+      type: http
+      scheme: bearer
     bearerAuth:
       type: http
       scheme: bearer

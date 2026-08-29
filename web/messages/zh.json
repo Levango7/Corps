@@ -117,15 +117,17 @@
     "daysAgo": "{count} 天前"
   },
   "empty": {
-    "noTasks": "这个工作区还没有任务。",
-    "noTasksHint": "先在看板建一条，把手里最紧的事放进来。",
-    "noOpenTasks": "当前没有进行中的任务。",
     "loadingTasks": "正在读取任务",
     "noComments": "暂无评论",
     "noDecisions": "暂无决策记录",
     "noMembers": "暂无成员",
     "noNotifications": "暂无通知",
-    "noResults": "没有匹配的结果"
+    "noNotificationsHint": "当有人 @你、分配任务或更新决策时，会在这里提醒你",
+    "noOpenTasks": "当前没有进行中的任务。",
+    "noResults": "没有匹配的结果",
+    "noTasks": "这个工作区还没有任务。",
+    "noTasksHint": "先在看板建一条，把手里最紧的事放进来。",
+    "noUnreadNotifications": "没有未读通知"
   },
   "error": {
     "required": "此项必填",
@@ -406,21 +408,22 @@
     "taskCount": "{count} 个任务"
   },
   "chat": {
-    "title": "聊天",
+    "attachFile": "添加附件",
+    "attachmentFallback": "附件",
     "empty": "还没有消息，发一条开始对话吧。",
-    "placeholder": "发消息…（⌘/Ctrl + Enter 发送）",
-    "send": "发送",
-    "unknownUser": "已注销用户",
-    "online": "在线",
-    "offline": "离线",
-    "unread": "未读",
     "fileTooLarge": "文件大小不能超过 10MB",
-    "search": "搜索消息",
-    "noResults": "无搜索结果",
-    "newMessages": "{count} 条新消息",
     "loadMore": "加载更多",
+    "newMessages": "{count} 条新消息",
+    "noResults": "无搜索结果",
+    "offline": "离线",
+    "online": "在线",
+    "placeholder": "发消息…（⌘/Ctrl + Enter 发送）",
     "readBy": "已由 {count} 人阅读",
-    "attachFile": "添加附件"
+    "search": "搜索消息",
+    "send": "发送",
+    "title": "聊天",
+    "unknownUser": "已注销用户",
+    "unread": "未读"
   },
   "export": {
     "title": "数据导出",

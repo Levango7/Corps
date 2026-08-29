@@ -28,7 +28,11 @@ import { z } from "zod";
 
 const attachmentSchema = z.object({
   fileName: z.string().max(255),
-  fileSize: z.number().int().positive().max(10 * 1024 * 1024),
+  fileSize: z
+    .number()
+    .int()
+    .positive()
+    .max(10 * 1024 * 1024),
   fileType: z.string().max(100),
   url: z.string(),
   thumbnailUrl: z.string().nullable().optional(),
@@ -66,11 +70,15 @@ export async function POST(
             workspaceId: wid,
             authorId: ctx.payload.sub,
             body: validated.body,
-            // 同时创建附件记录（如果有）
+            // 同时创建附件记录（如果有）——写入租户归属（workspaceId），
+            // 下载端点据此做归属校验（20260831000000 迁移配套）
             ...(validated.attachments && validated.attachments.length > 0
               ? {
                   attachments: {
                     create: validated.attachments.map((a) => ({
+                      // 租户归属用关系 connect（Prisma checked 嵌套 create 类型要求关系
+                      // 而非标量 workspaceId；RLS 谓词与下载归属校验均依赖该列）
+                      workspace: { connect: { id: wid } },
                       fileName: a.fileName,
                       fileSize: a.fileSize,
                       fileType: a.fileType,

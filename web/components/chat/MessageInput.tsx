@@ -67,7 +67,13 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
       setUploading(true);
       try {
         const meta = await onUploadFile(file);
-        setPendingAttachments((prev) => [...prev, meta]);
+        // 图片附件：未发送前用本地 Blob URL 预览。下载端点要求附件已关联消息
+        // （孤儿文件 404），直接请求服务器 URL 会裂图；发送后记录自带服务器 url。
+        const previewMeta =
+          file.type.startsWith("image/") && meta.thumbnailUrl
+            ? { ...meta, thumbnailUrl: URL.createObjectURL(file) }
+            : meta;
+        setPendingAttachments((prev) => [...prev, previewMeta]);
       } catch (err) {
         setError(err instanceof Error ? err.message : "上传失败");
       } finally {
@@ -79,7 +85,13 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
 
   /** 移除待发送附件 */
   const removeAttachment = useCallback((index: number) => {
-    setPendingAttachments((prev) => prev.filter((_, i) => i !== index));
+    setPendingAttachments((prev) => {
+      const removed = prev[index];
+      if (removed?.thumbnailUrl?.startsWith("blob:")) {
+        URL.revokeObjectURL(removed.thumbnailUrl);
+      }
+      return prev.filter((_, i) => i !== index);
+    });
   }, []);
 
   /** 发送 */
@@ -88,12 +100,15 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
     if ((!trimmed && pendingAttachments.length === 0) || sending) return;
 
     // 有附件但无文本时，使用附件名作为 body（满足 API body min(1) 约束）
-    const body = trimmed || (pendingAttachments.length > 0 ? "📎" : "");
+    const body = trimmed || (pendingAttachments.length > 0 ? t("attachmentFallback") : "");
 
     await onSend(body, pendingAttachments);
+    pendingAttachments.forEach((a) => {
+      if (a.thumbnailUrl?.startsWith("blob:")) URL.revokeObjectURL(a.thumbnailUrl);
+    });
     setDraft("");
     setPendingAttachments([]);
-  }, [draft, pendingAttachments, sending, onSend]);
+  }, [draft, pendingAttachments, sending, onSend, t]);
 
   /** 键盘事件 */
   const handleKeyDown = useCallback(

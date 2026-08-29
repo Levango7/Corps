@@ -43,7 +43,7 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'members','tasks','comments','decisions','decision_versions',
     'subscriptions','notifications','workspaces','invitations','analytics_events',
-    'labels','milestones','messages','task_labels'
+    'labels','milestones','messages','message_attachments','task_labels'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -93,9 +93,11 @@ DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
 CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
   USING (current_setting('app.auth_op', true) = 'cron');
 
--- v2 扩面（审计 P2-3）：labels / milestones / messages / task_labels 均带 workspace_id
--- 且全部读写路由经 runWithWorkspace（GUC 事务），套用与 tasks 相同的纯租户谓词。
--- 仍不在清单：message_reads / message_attachments / chat_presences（暂无 API 路由）、
+-- v2 扩面（审计 P2-3）：labels / milestones / messages / message_attachments / task_labels
+-- 均带 workspace_id 且全部读写路由经 runWithWorkspace（GUC 事务），套用与 tasks
+-- 相同的纯租户谓词。message_attachments 自 20260831000000 迁移补列后纳入 FORCE RLS，
+-- 下载归属定位走下方 cron SELECT 逃生口。
+-- 仍不在清单：message_reads / chat_presences（暂无直接 API 路由）、
 -- calendar_connections / task_calendar_events（user 作用域，无 workspace 键，另议）。
 DROP POLICY IF EXISTS p_labels_rls ON labels;
 CREATE POLICY p_labels_rls ON labels FOR ALL
@@ -111,6 +113,18 @@ DROP POLICY IF EXISTS p_messages_rls ON messages;
 CREATE POLICY p_messages_rls ON messages FOR ALL
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_message_attachments_rls ON message_attachments;
+CREATE POLICY p_message_attachments_rls ON message_attachments FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- 附件下载归属定位逃生口：/api/uploads/* 以 runWithAuthOp("cron") 只读定位附件的
+-- workspace_id（仅 select workspace_id，不返回文件内容），故 cron op 下放行 SELECT。
+-- 与 p_tasks_cron_select 同源同约束（CRON_SECRET 为唯一防线）；写操作无逃生口。
+DROP POLICY IF EXISTS p_message_attachments_cron_select ON message_attachments;
+CREATE POLICY p_message_attachments_cron_select ON message_attachments FOR SELECT
+  USING (current_setting('app.auth_op', true) = 'cron');
 
 DROP POLICY IF EXISTS p_task_labels_rls ON task_labels;
 CREATE POLICY p_task_labels_rls ON task_labels FOR ALL
