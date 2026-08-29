@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Loader2, Flag, Calendar, Tag, Milestone as MilestoneIcon } from "lucide-react";
-import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import type { Label, Milestone } from "@/lib/types";
@@ -312,9 +311,7 @@ export default function NewTaskDialog({
                 {milestones.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}
-                    {m.dueDate
-                      ? `（${new Date(m.dueDate).toLocaleDateString()}）`
-                      : ""}
+                    {m.dueDate ? `（${new Date(m.dueDate).toLocaleDateString()}）` : ""}
                   </option>
                 ))}
               </select>
@@ -367,7 +364,6 @@ export default function NewTaskDialog({
               </div>
             </div>
           )}
-
 
           {error && (
             <div className="px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">

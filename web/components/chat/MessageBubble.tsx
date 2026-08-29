@@ -2,7 +2,7 @@
 
 import { Check, CheckCheck, FileText, Download } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { ChatMessage, Person, MessageAttachment } from "./types";
+import type { ChatMessage, MessageAttachment } from "./types";
 
 /**
  * 单条消息气泡
@@ -98,9 +98,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
               : "bg-[var(--surface-2)] text-[var(--fg-2)]"
           }`}
         >
-          {message.body && (
-            <span>{highlightText(message.body, searchQuery)}</span>
-          )}
+          {message.body && <span>{highlightText(message.body, searchQuery)}</span>}
           {/* 附件列表 */}
           {message.attachments && message.attachments.length > 0 && (
             <div className={`mt-1 space-y-1 ${message.body ? "pt-1" : ""}`}>

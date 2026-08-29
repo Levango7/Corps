@@ -13,18 +13,8 @@
 import { prisma } from "@/lib/prisma";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { refreshAccessToken, revokeToken } from "./oauth";
-import {
-  createGoogleEvent,
-  deleteGoogleEvent,
-  getPrimaryCalendarId as getGooglePrimaryCalendarId,
-  updateGoogleEvent,
-} from "./google-client";
-import {
-  createOutlookEvent,
-  deleteOutlookEvent,
-  getPrimaryCalendarId as getOutlookPrimaryCalendarId,
-  updateOutlookEvent,
-} from "./outlook-client";
+import { createGoogleEvent, deleteGoogleEvent, updateGoogleEvent } from "./google-client";
+import { createOutlookEvent, deleteOutlookEvent, updateOutlookEvent } from "./outlook-client";
 import type { CalendarProvider } from "./config";
 
 /** 同步 debounce 窗口：5 分钟 */
@@ -85,13 +75,23 @@ async function ensureFreshAccessToken(connectionId: string): Promise<{
     });
     return {
       accessToken,
-      connection: { id: conn.id, provider: conn.provider, calendarId: conn.calendarId, refreshToken: conn.refreshToken },
+      connection: {
+        id: conn.id,
+        provider: conn.provider,
+        calendarId: conn.calendarId,
+        refreshToken: conn.refreshToken,
+      },
     };
   }
 
   return {
     accessToken,
-    connection: { id: conn.id, provider: conn.provider, calendarId: conn.calendarId, refreshToken: conn.refreshToken },
+    connection: {
+      id: conn.id,
+      provider: conn.provider,
+      calendarId: conn.calendarId,
+      refreshToken: conn.refreshToken,
+    },
   };
 }
 
@@ -153,7 +153,11 @@ export async function syncTaskToCalendar(
         if (provider === "google") {
           await deleteGoogleEvent(accessToken, connection.calendarId, eventMapping.externalEventId);
         } else {
-          await deleteOutlookEvent(accessToken, connection.calendarId, eventMapping.externalEventId);
+          await deleteOutlookEvent(
+            accessToken,
+            connection.calendarId,
+            eventMapping.externalEventId,
+          );
         }
         await prisma.taskCalendarEvent.delete({ where: { id: eventMapping.id } });
       }
@@ -169,9 +173,19 @@ export async function syncTaskToCalendar(
       if (eventMapping) {
         // 更新
         if (provider === "google") {
-          await updateGoogleEvent(accessToken, connection.calendarId, eventMapping.externalEventId, eventOpts);
+          await updateGoogleEvent(
+            accessToken,
+            connection.calendarId,
+            eventMapping.externalEventId,
+            eventOpts,
+          );
         } else {
-          await updateOutlookEvent(accessToken, connection.calendarId, eventMapping.externalEventId, eventOpts);
+          await updateOutlookEvent(
+            accessToken,
+            connection.calendarId,
+            eventMapping.externalEventId,
+            eventOpts,
+          );
         }
         await prisma.taskCalendarEvent.update({
           where: { id: eventMapping.id },
@@ -199,10 +213,12 @@ export async function syncTaskToCalendar(
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     // 标记同步失败
-    await prisma.calendarConnection.update({
-      where: { id: connectionId },
-      data: { syncStatus: "error", syncError: message },
-    }).catch(() => {});
+    await prisma.calendarConnection
+      .update({
+        where: { id: connectionId },
+        data: { syncStatus: "error", syncError: message },
+      })
+      .catch(() => {});
     return { success: false, error: message, syncedConnections: 0 };
   }
 }
@@ -296,7 +312,10 @@ export async function syncTaskWithRetry(
 }
 
 /** 断开连接：撤销 OAuth token + 删除连接记录（级联删除事件映射） */
-export async function disconnectCalendar(userId: string, provider: CalendarProvider): Promise<void> {
+export async function disconnectCalendar(
+  userId: string,
+  provider: CalendarProvider,
+): Promise<void> {
   const conn = await prisma.calendarConnection.findUnique({
     where: { userId_provider: { userId, provider } },
     select: { id: true, accessToken: true },

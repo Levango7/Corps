@@ -61,11 +61,7 @@ function relTime(iso: string | null): string {
   return `${day} 天前`;
 }
 
-export default function CalendarSettingsPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default function CalendarSettingsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const t = useTranslations("calendar");
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
@@ -80,9 +76,10 @@ export default function CalendarSettingsPage({
     remindOneHour: false,
   });
   // 回调参数（连接成功/失败）
-  const [callbackMsg, setCallbackMsg] = useState<{ kind: "success" | "error"; text: string } | null>(
-    null,
-  );
+  const [callbackMsg, setCallbackMsg] = useState<{
+    kind: "success" | "error";
+    text: string;
+  } | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -170,8 +167,6 @@ export default function CalendarSettingsPage({
     }
   }
 
-  const inputClass =
-    "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
   const sectionClass =
     "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
 
@@ -186,9 +181,7 @@ export default function CalendarSettingsPage({
           <CalendarIcon size={20} className="text-[var(--muted)]" />
           {t("title")}
         </h1>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("subtitle")}
-        </p>
+        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
       </div>
 
       {error && (
@@ -276,7 +269,11 @@ export default function CalendarSettingsPage({
                     disabled={syncing}
                     className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                   >
-                    {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                    {syncing ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={15} />
+                    )}
                     {t("syncNow")}
                   </button>
                   <button
@@ -295,9 +292,7 @@ export default function CalendarSettingsPage({
               </div>
             ) : (
               <div className="space-y-2">
-                <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-                  {t("googleHint")}
-                </p>
+                <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("googleHint")}</p>
                 <button
                   onClick={() => handleConnect("google")}
                   className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
@@ -347,7 +342,11 @@ export default function CalendarSettingsPage({
                     disabled={syncing}
                     className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                   >
-                    {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                    {syncing ? (
+                      <Loader2 size={15} className="animate-spin" />
+                    ) : (
+                      <RefreshCw size={15} />
+                    )}
                     {t("syncNow")}
                   </button>
                   <button
@@ -446,7 +445,11 @@ export default function CalendarSettingsPage({
                   disabled={syncing}
                   className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                 >
-                  {syncing ? <Loader2 size={15} className="animate-spin" /> : <RefreshCw size={15} />}
+                  {syncing ? (
+                    <Loader2 size={15} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={15} />
+                  )}
                   {t("syncNow")}
                 </button>
               </div>

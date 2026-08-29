@@ -35,7 +35,7 @@ export async function expireSubscriptionIfDue(wid: string): Promise<void> {
         where: { id: wid },
         data: { plan: "free", seatLimit: FREE_SEAT_LIMIT },
       });
-      console.log(
+      console.warn(
         `[subscription-expiry] 国内订阅到期，已降级 wid=${wid} periodEnd=${sub.currentPeriodEnd.toISOString()}`,
       );
     });

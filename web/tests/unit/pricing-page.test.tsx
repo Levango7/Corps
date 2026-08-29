@@ -114,7 +114,7 @@ vi.mock("@/lib/analytics", () => ({
 function makeT(msgs: Record<string, unknown>) {
   return (key: string, values?: Record<string, unknown>): string => {
     const parts = key.split(".");
-    let val: unknown = parts.reduce<unknown>(
+    const val: unknown = parts.reduce<unknown>(
       (acc, p) => (acc == null ? acc : (acc as Record<string, unknown>)[p]),
       msgs,
     );
@@ -136,7 +136,9 @@ vi.mock("next-intl/server", async (importOriginal) => {
   return {
     ...actual,
     getTranslations: async () => {
-      const zh = (await import("../../messages/zh.json")).default as { pricing: Record<string, unknown> };
+      const zh = (await import("../../messages/zh.json")).default as {
+        pricing: Record<string, unknown>;
+      };
       return makeT(zh.pricing);
     },
     setRequestLocale: () => {},
@@ -153,7 +155,9 @@ import PricingPage from "@/app/[locale]/pricing/page";
 async function renderPage() {
   const ui = await PricingPage({ params: Promise.resolve({ locale: "zh" }) });
   return render(
-    <NextIntlClientProvider locale="zh" messages={zhMessages}>{ui}</NextIntlClientProvider>,
+    <NextIntlClientProvider locale="zh" messages={zhMessages}>
+      {ui}
+    </NextIntlClientProvider>,
   );
 }
 
@@ -218,7 +222,9 @@ import { PricingSection } from "@/components/pricing/PricingSection";
 /** 渲染 PricingSection 并注水 zh messages（useTranslations 依赖 NextIntlClientProvider）。 */
 function renderWithI18n(ui: ReactNode) {
   return render(
-    <NextIntlClientProvider locale="zh" messages={zhMessages}>{ui}</NextIntlClientProvider>,
+    <NextIntlClientProvider locale="zh" messages={zhMessages}>
+      {ui}
+    </NextIntlClientProvider>,
   );
 }
 

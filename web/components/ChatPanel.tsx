@@ -31,13 +31,7 @@ import { MessageInput } from "./chat/MessageInput";
 /** 已读标记防抖延迟 */
 const MARK_READ_DEBOUNCE_MS = 1000;
 
-export default function ChatPanel({
-  wid,
-  taskId,
-}: {
-  wid: string;
-  taskId: string;
-}) {
+export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string }) {
   const t = useTranslations("chat");
   const base = `/api/v1/workspaces/${wid}/tasks/${taskId}/messages`;
   const streamUrl = `${base}/stream`;
@@ -97,7 +91,7 @@ export default function ChatPanel({
         setMessages((prev) => {
           const unread = new Set<string>();
           for (const m of prev) {
-            if (m.authorId !== self.id && !(m.reads?.some((r) => r.userId === self.id))) {
+            if (m.authorId !== self.id && !m.reads?.some((r) => r.userId === self.id)) {
               unread.add(m.id);
             }
           }
@@ -212,9 +206,6 @@ export default function ChatPanel({
           return [...prev, created];
         });
         updateCursor(created.createdAt);
-      } catch (e) {
-        // 发送失败：抛出让 MessageInput 显示错误
-        throw e;
       } finally {
         setSending(false);
       }
@@ -223,21 +214,24 @@ export default function ChatPanel({
   );
 
   /** 上传文件 */
-  const handleUploadFile = useCallback(async (file: File): Promise<AttachmentMeta> => {
-    const formData = new FormData();
-    formData.append("file", file);
-    const res = await fetch(uploadUrl, {
-      method: "POST",
-      body: formData,
-      credentials: "include",
-    });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({ message: "上传失败" }));
-      throw new Error(json.message || `上传失败 (${res.status})`);
-    }
-    const json = await res.json();
-    return json.data as AttachmentMeta;
-  }, [uploadUrl]);
+  const handleUploadFile = useCallback(
+    async (file: File): Promise<AttachmentMeta> => {
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch(uploadUrl, {
+        method: "POST",
+        body: formData,
+        credentials: "include",
+      });
+      if (!res.ok) {
+        const json = await res.json().catch(() => ({ message: "上传失败" }));
+        throw new Error(json.message || `上传失败 (${res.status})`);
+      }
+      const json = await res.json();
+      return json.data as AttachmentMeta;
+    },
+    [uploadUrl],
+  );
 
   // 搜索结果计数
   const searchResultCount = useMemo(() => {
@@ -263,9 +257,7 @@ export default function ChatPanel({
 
       {searchOpen && searchQuery.trim() && (
         <div className="mb-2 text-[length:var(--text-xs)] text-[var(--meta)]">
-          {searchResultCount > 0
-            ? `${searchResultCount} 条结果`
-            : t("noResults")}
+          {searchResultCount > 0 ? `${searchResultCount} 条结果` : t("noResults")}
         </div>
       )}
 

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { ChatStreamEvent, ChatMessage, PresenceUser } from "./types";
+import type { ChatStreamEvent, ChatMessage } from "./types";
 
 /**
  * IM 升级：SSE 聊天流连接 Hook
@@ -169,10 +169,7 @@ export function useChatStream({
 
         // 指数退避重连
         const attempts = reconnectAttemptsRef.current++;
-        const delay = Math.min(
-          RECONNECT_BASE_DELAY_MS * 2 ** attempts,
-          RECONNECT_MAX_DELAY_MS,
-        );
+        const delay = Math.min(RECONNECT_BASE_DELAY_MS * 2 ** attempts, RECONNECT_MAX_DELAY_MS);
         setTimeout(() => connect(), delay);
       };
     } catch {
