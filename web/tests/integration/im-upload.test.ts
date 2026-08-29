@@ -65,8 +65,16 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  // 清理真实写入 web/uploads/ 的文件（force 容忍文件已不存在）
-  await Promise.all(uploadedPaths.map((p) => fs.rm(p, { force: true })));
+  // 清理真实写入 web/uploads/ 的文件。
+  // 清理失败不应让套件失败：文件可能已不存在，或部分沙箱/CI runner 会拦截
+  // fs.rm（如回收站包装不可用），业务断言已在用例内完成，此处静默跳过。
+  for (const p of uploadedPaths) {
+    try {
+      await fs.rm(p, { force: true });
+    } catch {
+      // 忽略清理失败
+    }
+  }
 });
 
 describe("IM 附件上传 / 下载（租户隔离 + 鉴权）", () => {
