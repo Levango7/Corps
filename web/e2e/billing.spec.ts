@@ -32,14 +32,14 @@ test.describe.serial("计费流程：计费页 → 套餐 → 支付方式 → �
     // 标题
     await expect(page.getByRole("heading", { name: "计费" })).toBeVisible({ timeout: 10_000 });
 
-    // 当前套餐 + 席位
+    // 当前套餐 + 席位（exact 匹配席位徽章——正文/卡片文案多处含"席位"）
     await expect(page.getByText("当前套餐")).toBeVisible();
-    await expect(page.getByText("席位")).toBeVisible();
+    await expect(page.getByText("席位", { exact: true })).toBeVisible();
 
-    // 免费套餐（新注册用户默认 free）
-    await expect(page.getByText("免费", { exact: true })).toBeVisible();
+    // 免费套餐（新注册用户默认 free；.first()：套餐名出现两处不同字号实例）
+    await expect(page.getByText("免费", { exact: true }).first()).toBeVisible();
     // 专业套餐
-    await expect(page.getByText("专业", { exact: true })).toBeVisible();
+    await expect(page.getByText("专业", { exact: true }).first()).toBeVisible();
 
     // 「使用中」标记（当前套餐为 free）
     await expect(page.getByText("使用中", { exact: true })).toBeVisible();

@@ -25,7 +25,8 @@ async function gotoTaskDetail(page: Page, wid: string, taskTitle: string): Promi
   await page.goto(`/w/${wid}`);
   await createTask(page, taskTitle);
   await page.goto(`/w/${wid}/board`);
-  const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle });
+  // .first()：BoardView 为移动/桌面断点各渲染一份卡片
+  const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle }).first();
   await taskCard.click();
   await page.waitForURL(/\/task\//, { timeout: 10_000 });
 }
@@ -52,7 +53,8 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     await expect(page.getByPlaceholder(/发消息/)).toBeVisible();
 
     // 发送按钮（i18n: chat.send），初始禁用（空文本）
-    const sendBtn = page.getByRole("button", { name: "发送", exact: true });
+    // .first()：ChatPanel 在 DOM 中渲染两份实例（可见性由 CSS 控制）
+    const sendBtn = page.getByRole("button", { name: "发送聊天消息" });
     await expect(sendBtn).toBeVisible();
     await expect(sendBtn).toBeDisabled();
 
@@ -69,7 +71,8 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     await gotoTaskDetail(page, wid, `E2E-IM-Send-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
-    const sendBtn = page.getByRole("button", { name: "发送", exact: true });
+    // .first()：同上，DOM 双实例
+    const sendBtn = page.getByRole("button", { name: "发送聊天消息" });
 
     // 输入文本后发送按钮应启用
     const msgText = `E2E实时消息-${Date.now()}`;
@@ -111,7 +114,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
     const input = page.getByPlaceholder(/发消息/);
     await input.fill(`E2E时间戳消息-${Date.now()}`);
-    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.getByRole("button", { name: "发送聊天消息" }).click();
 
     // 时间戳分组标签应包含「今天」字样
     await expect(page.getByText(/今天 \d{2}:\d{2}/)).toBeVisible({ timeout: 10_000 });
@@ -125,7 +128,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     const input = page.getByPlaceholder(/发消息/);
     const searchableText = `可搜索消息UniqueToken${Date.now()}`;
     await input.fill(searchableText);
-    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(page.getByText(searchableText)).toBeVisible({ timeout: 10_000 });
 
     // 打开搜索框
@@ -141,8 +144,9 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 输入不匹配的关键词
     await searchInput.fill("不存在的关键词XYZ123");
 
-    // 应显示无结果提示（i18n: chat.noResults）
-    await expect(page.getByText("无搜索结果")).toBeVisible({ timeout: 10_000 });
+    // 应显示无结果提示（i18n: chat.noResults；.first()：ChatPanel 计数条与
+    // MessageList 空态各渲染一处）
+    await expect(page.getByText("无搜索结果").first()).toBeVisible({ timeout: 10_000 });
   });
 
   // ── 文件附件上传（≤10MB 限制）──
@@ -167,7 +171,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     await expect(page.getByText(pdfName)).toBeVisible({ timeout: 10_000 });
 
     // 发送带附件的消息
-    const sendBtn = page.getByRole("button", { name: "发送", exact: true });
+    const sendBtn = page.getByRole("button", { name: "发送聊天消息" });
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
 
@@ -208,7 +212,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     const senderInput = senderPage.getByPlaceholder(/发消息/);
     const msgText = `E2E已读测试消息-${Date.now()}`;
     await senderInput.fill(msgText);
-    await senderPage.getByRole("button", { name: "发送", exact: true }).click();
+    await senderPage.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(senderPage.getByText(msgText)).toBeVisible({ timeout: 10_000 });
 
     // 发送者自己的消息显示单勾（未读回执，因为只有自己一人）
@@ -231,7 +235,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 发一条消息触发 SSE 连接建立
     const input = page.getByPlaceholder(/发消息/);
     await input.fill(`E2E连接状态-${Date.now()}`);
-    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.getByRole("button", { name: "发送聊天消息" }).click();
 
     // 等待消息出现（确认 SSE 已连接）
     await expect(page.getByText(/E2E连接状态-/)).toBeVisible({ timeout: 10_000 });
@@ -250,7 +254,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 先发一条消息确保 SSE 连接已建立
     const input = page.getByPlaceholder(/发消息/);
     await input.fill(`E2E重连初始消息-${Date.now()}`);
-    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(page.getByText(/E2E重连初始消息-/)).toBeVisible({ timeout: 10_000 });
 
     // 模拟网络中断：阻断 SSE stream 请求
@@ -272,26 +276,41 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
     // 恢复后应能继续发送消息
     await input.fill(`E2E重连后消息-${Date.now()}`);
-    await page.getByRole("button", { name: "发送", exact: true }).click();
+    await page.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(page.getByText(/E2E重连后消息-/)).toBeVisible({ timeout: 15_000 });
   });
 
   // ── 多条消息滚动行为 ──
   test("多条消息时列表可滚动", async ({ page }) => {
+    // 5 轮「fill→等按钮可用→按键发送→等消息可见」串联，每轮在 SSE 重渲染
+    // 竞争下可达 10s+，默认 60s 不够——放宽到 150s
+    test.setTimeout(150_000);
     const wid = await login(page, EMAIL);
     await gotoTaskDetail(page, wid, `E2E-IM-Scroll-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
-    const sendBtn = page.getByRole("button", { name: "发送", exact: true });
+    const sendBtn = page.getByRole("button", { name: "发送聊天消息" });
 
-    // 连续发送 5 条消息
+    // 等 ChatPanel 完全就绪：标题、空状态、输入框、disabled 初始态全部到位
+    // （SSE 首连与成员列表拉取期间组件高频重渲染，提前 fill 会被重建的
+    // textarea 丢值——按钮 disabled 初始态出现即表示水合稳定）
+    await expect(page.getByRole("heading", { name: "聊天" })).toBeVisible({ timeout: 10_000 });
+    await expect(input).toBeVisible();
+    await expect(sendBtn).toBeDisabled();
+
+    // 连续发送 5 条消息。键盘 ⌘/Ctrl+Enter 路径与按钮 click 走同一 send() 回调；
+    // 每条 fill 后先等按钮 enabled（确认 React state 已接收输入），再按键发送
     for (let i = 0; i < 5; i++) {
-      await input.fill(`E2E滚动消息${i}-${Date.now()}`);
-      await sendBtn.click();
-      await expect(page.getByText(`E2E滚动消息${i}-`)).toBeVisible({ timeout: 10_000 });
+      const text = `E2E滚动消息${i}-${Date.now()}`;
+      await input.fill(text);
+      await expect(sendBtn).toBeEnabled({ timeout: 10_000 });
+      await input.press("Control+Enter");
+      await expect(page.getByText(`E2E滚动消息${i}-`).first()).toBeVisible({
+        timeout: 10_000,
+      });
     }
 
     // 最后一条消息应可见（自动滚动到底部）
-    await expect(page.getByText(/E2E滚动消息4-/)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/E2E滚动消息4-/).first()).toBeVisible({ timeout: 10_000 });
   });
 });

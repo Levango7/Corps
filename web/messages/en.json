@@ -94,6 +94,7 @@
     "dueDateOptional": "Due date (optional)",
     "titlePlaceholder": "Summarize what needs to be done in one line",
     "descriptionPlaceholder": "Context, acceptance criteria, or paste related links…",
+    "detailDescriptionPlaceholder": "Add context, acceptance criteria, or paste links…",
     "create": "New task",
     "createSubmitting": "Creating",
     "createFailed": "Failed to create",
@@ -436,6 +437,7 @@
     "readBy": "Read by {count} people",
     "search": "Search messages",
     "send": "Send",
+    "sendAria": "Send chat message",
     "title": "Chat",
     "unknownUser": "Deleted user",
     "unread": "Unread"

@@ -94,6 +94,7 @@
     "dueDateOptional": "截止日期（可选）",
     "titlePlaceholder": "一句话说清要做什么",
     "descriptionPlaceholder": "背景、验收标准，或粘贴相关链接…",
+    "detailDescriptionPlaceholder": "补充背景、验收标准，或粘贴相关链接…",
     "create": "新建任务",
     "createSubmitting": "创建中",
     "createFailed": "创建失败",
@@ -436,6 +437,7 @@
     "readBy": "已由 {count} 人阅读",
     "search": "搜索消息",
     "send": "发送",
+    "sendAria": "发送聊天消息",
     "title": "聊天",
     "unknownUser": "已注销用户",
     "unread": "未读"

@@ -36,8 +36,10 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await page.goto(`/w/${wid}/board`);
     await expect(page.getByRole("heading", { name: "任务看板" })).toBeVisible({ timeout: 10_000 });
 
-    // 任务应出现在「待办」列
-    await expect(page.getByText(taskTitle, { exact: true })).toBeVisible({ timeout: 10_000 });
+    // 任务应出现在「待办」列（.first()：BoardView 为移动/桌面断点各渲染一份卡片）
+    await expect(page.getByText(taskTitle, { exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   // ── 拖拽看板列 ──
@@ -49,32 +51,39 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await page.goto(`/w/${wid}`);
     await createTask(page, taskTitle);
     await page.goto(`/w/${wid}/board`);
-    await expect(page.getByText(taskTitle, { exact: true })).toBeVisible({ timeout: 10_000 });
+    // （.first()：移动/桌面断点各渲染一份卡片）
+    await expect(page.getByText(taskTitle, { exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
-    // 定位任务卡（draggable div 包含标题）
-    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle });
+    // 定位任务卡（draggable div 包含标题；.first()：移动/桌面断点各渲染一份卡片）
+    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle }).first();
 
-    // 定位「进行中」列头（drop 事件在列容器冒泡）
-    const inProgressColumn = page.getByText("进行中", { exact: true });
+    // 定位「进行中」列容器为拖放目标（data-column 属性定位——
+    // 列名文本与移动端列选择器按钮同名，纯文本匹配歧义）
+    const inProgressColumn = page.locator('[data-column="in_progress"]');
 
     // 执行拖拽
     await taskCard.dragTo(inProgressColumn);
 
     // 验证任务已移至「进行中」列：该列计数应 ≥1，且任务卡仍可见
-    await expect(page.getByText(taskTitle, { exact: true })).toBeVisible({ timeout: 10_000 });
+    // （.first()：移动/桌面断点各渲染一份卡片）
+    await expect(page.getByText(taskTitle, { exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
-    // 切到列表视图验证状态变更（列表视图显示状态列）
-    // 点任务卡进入详情页，确认状态已变为 in_progress
-    await taskCard.click();
-    await page.waitForURL(/\/w\/[0-9a-f-]{36}\/task\//, { timeout: 10_000 });
-
-    // 详情页状态 select 应为「进行中」
-    const statusSelect = page.locator("select").first();
-    await expect(statusSelect).toHaveValue("in_progress");
+    // 验证任务已移至「进行中」列：任务卡应出现在 data-column="in_progress"
+    // 容器内（拖放 drop 直接改 status，此断言即状态变更的成功证明；
+    // 详情页导航行为已由「任务详情页」测试覆盖，不在此重复脆弱的二次点击）
+    await expect(
+      page.locator('[data-column="in_progress"]').getByText(taskTitle, { exact: true }),
+    ).toBeVisible({ timeout: 10_000 });
   });
 
   // ── 任务详情编辑 + 评论 + 决策 ──
   test("任务详情页：编辑标题/描述 + 发表评论 + 创建决策", async ({ page }) => {
+    // 编辑+失焦保存、描述、评论（@提及候选）、决策创建四段串联——放宽总超时
+    test.setTimeout(120_000);
     const wid = await login(page, email);
     const taskTitle = `E2E详情任务-${Date.now()}`;
 
@@ -83,8 +92,8 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await createTask(page, taskTitle);
     await page.goto(`/w/${wid}/board`);
 
-    // 点任务卡进入详情页
-    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle });
+    // 点任务卡进入详情页（.first()：移动/桌面断点双渲染）
+    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle }).first();
     await taskCard.click();
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 
@@ -106,7 +115,8 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     const commentArea = page.getByPlaceholder(/写下你的想法/);
     const commentText = `E2E评论-${Date.now()}`;
     await commentArea.fill(commentText);
-    await page.getByRole("button", { name: "发送" }).click();
+    // exact：页面同时有聊天"发送聊天消息"按钮（aria-label 前缀匹配会撞车）
+    await page.getByRole("button", { name: "发送", exact: true }).click();
 
     // 评论应出现在讨论区
     await expect(page.getByText(commentText)).toBeVisible({ timeout: 10_000 });

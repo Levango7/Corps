@@ -271,7 +271,11 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     await page.getByRole("button", { name: "创建", exact: true }).click();
 
     await page.goto(`/w/${wid}/board`);
-    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: "E2E日历徽章任务" });
+    // .first()：BoardView 为移动/桌面断点各渲染一份卡片
+    const taskCard = page
+      .locator('div[draggable="true"]')
+      .filter({ hasText: "E2E日历徽章任务" })
+      .first();
     await taskCard.click();
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 

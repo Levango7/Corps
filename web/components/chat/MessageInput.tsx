@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type KeyboardEvent } from "react";
 import { Send, Loader2, Paperclip, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { AttachmentMeta } from "./types";
@@ -12,6 +12,10 @@ import type { AttachmentMeta } from "./types";
  * - 文本框：自动高度，⌘/Ctrl + Enter 发送
  * - 发送按钮：禁用状态（空文本 + 无附件时）
  * - 待发送附件预览：图片缩略图 / 文件名 + 移除按钮
+ *
+ * memo：ChatPanel 每收到一条 SSE 推送就重渲染整棵树；不隔离时 textarea
+ * 会随之重建，用户正在输入的 draft 被受控 value 重置（输入吞字）。
+ * props 均为稳定的回调/标量，memo 可安全跳过无关重渲染。
  */
 
 interface MessageInputProps {
@@ -30,7 +34,7 @@ const MAX_BODY_LENGTH = 10000;
 /** 最大文件大小：10MB */
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProps) {
+function MessageInputImpl({ onSend, onUploadFile, sending }: MessageInputProps) {
   const t = useTranslations("chat");
   const [draft, setDraft] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentMeta[]>([]);
@@ -108,6 +112,9 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
     });
     setDraft("");
     setPendingAttachments([]);
+    // 非受控回写：textarea 不绑 value（见下方 JSX 注释），发送后直接清 DOM 值。
+    // 此处在 await 后同步清，避免 React 滞后渲染用旧 draft 竞争覆盖用户输入
+    if (draftRef.current) draftRef.current.value = "";
   }, [draft, pendingAttachments, sending, onSend, t]);
 
   /** 键盘事件 */
@@ -185,10 +192,11 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
           accept="image/jpeg,image/png,image/gif,image/webp,application/pdf,.doc,.docx,.xls,.xlsx,.zip"
         />
 
-        {/* 文本框 */}
+        {/* 文本框：非受控（不绑 value）。受控 value 在 SSE 高频推送的滞后渲染
+            中会用旧 draft 覆盖用户刚输入的文本（发送后 300ms 内的渲染即复现）；
+            非受控 + onChange 同步 draft state（仅用于 canSend 判定）消除该竞争 */}
         <textarea
           ref={draftRef}
-          value={draft}
           onChange={(e) => setDraft(e.target.value.slice(0, MAX_BODY_LENGTH))}
           onKeyDown={handleKeyDown}
           rows={1}
@@ -196,10 +204,11 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
           className="flex-1 px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
         />
 
-        {/* 发送按钮 */}
+        {/* 发送按钮（aria-label 区分评论表单的"发送"按钮——两者同页面共存） */}
         <button
           onClick={send}
           disabled={!canSend}
+          aria-label={t("sendAria")}
           className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
         >
           {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
@@ -209,3 +218,5 @@ export function MessageInput({ onSend, onUploadFile, sending }: MessageInputProp
     </div>
   );
 }
+
+export const MessageInput = memo(MessageInputImpl);

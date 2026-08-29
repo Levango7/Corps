@@ -42,7 +42,10 @@ export function LanguageSwitcher() {
         <button
           key={loc}
           onClick={() => switchTo(loc)}
-          aria-label={t("ariaLabel")}
+          // 无障碍名 = "切换语言：<语言>"。aria-label 会覆盖按钮文本作为
+          // accessible name——不带语言名时 zh/en 两个按钮同名，屏幕阅读器
+          // 与 getByRole 定位均无法区分
+          aria-label={`${t("ariaLabel")}：${localeNames[loc]}`}
           aria-current={loc === currentLocale ? "true" : undefined}
           className={`px-1.5 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
             loc === currentLocale

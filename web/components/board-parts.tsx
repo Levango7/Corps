@@ -62,6 +62,9 @@ export function BoardColumn({
 }: BoardColumnProps) {
   return (
     <div
+      // data-column：E2E 拖拽 drop 目标定位（移动端列选择器按钮与桌面列头同名，
+      // 纯文本匹配在 BoardView 双渲染下有歧义）
+      data-column={column.id}
       className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
       onDragOver={(e) => e.preventDefault()}
       onDrop={(e) => {

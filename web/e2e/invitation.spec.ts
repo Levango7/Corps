@@ -39,7 +39,8 @@ test.describe.serial("邀请流程：管理员邀请 → 成员接受 → 加入
     await expect(inviteInput).toBeVisible();
 
     await inviteInput.fill(inviteeEmail);
-    await page.getByRole("button", { name: "邀请" }).click();
+    // exact：页面另有一个工作区切换按钮名含"邀请"字样
+    await page.getByRole("button", { name: "邀请", exact: true }).click();
 
     // 邀请成功提示（未注册用户：展示可分享的邀请链接）
     await expect(page.getByText(/已为.*创建邀请/)).toBeVisible({ timeout: 10_000 });

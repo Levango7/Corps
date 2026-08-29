@@ -188,9 +188,14 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
   }, [loading, currentUserId, unreadIds, markUnreadAsRead]);
 
   /** 发送消息 */
+  // 依赖不含 sending：sending 变化会重建此回调 → MessageInput（memo）随之
+  // 重渲染 → 发送期间受控 textarea 被 React 回写清空，用户/测试正在输入的
+  // 文本丢失。防重入用 ref 判定，回调引用保持稳定。
+  const sendingRef = useRef(false);
   const handleSend = useCallback(
     async (body: string, attachments: AttachmentMeta[]) => {
-      if (sending) return;
+      if (sendingRef.current) return;
+      sendingRef.current = true;
       setSending(true);
       try {
         const created = await api<ChatMessage>(sendUrl, {
@@ -207,10 +212,11 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
         });
         updateCursor(created.createdAt);
       } finally {
+        sendingRef.current = false;
         setSending(false);
       }
     },
-    [sending, sendUrl, updateCursor],
+    [sendUrl, updateCursor],
   );
 
   /** 上传文件 */

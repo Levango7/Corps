@@ -51,38 +51,46 @@ test.describe.serial("i18n：工作区内 LanguageSwitcher 切换", () => {
   test("切换 zh → en：导航文案变英文，URL 带 /en 前缀", async ({ page }) => {
     await login(page, email);
 
-    // zh 下导航菜单应有中文项
-    await expect(page.getByText("看板", { exact: true })).toBeVisible({ timeout: 10_000 });
+    // zh 下导航菜单应有中文项（桌面侧栏——移动抽屉同样渲染一份，限定桌面 aside 内）
+    await expect(page.getByRole("link", { name: "看板", exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
     // 点击 LanguageSwitcher 的 English 按钮
-    await page.getByRole("button", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "切换语言：English" }).click();
 
     // URL 应带 /en 前缀
     await page.waitForURL(/\/en\/w\//, { timeout: 10_000 });
 
-    // 导航菜单文案应变为英文
-    await expect(page.getByText("Board", { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("Members", { exact: true })).toBeVisible();
-    await expect(page.getByText("Billing", { exact: true })).toBeVisible();
+    // 导航菜单文案应变为英文（同上：桌面侧栏实例）
+    await expect(page.getByRole("link", { name: "Board", exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole("link", { name: "Members", exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "Billing", exact: true }).first()).toBeVisible();
   });
 
   test("切换 en → zh：导航文案恢复中文，URL 去除 /en 前缀", async ({ page }) => {
     await login(page, email);
 
     // 先切到 en
-    await page.getByRole("button", { name: "English", exact: true }).click();
+    await page.getByRole("button", { name: "切换语言：English" }).click();
     await page.waitForURL(/\/en\/w\//, { timeout: 10_000 });
-    await expect(page.getByText("Board", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("link", { name: "Board", exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
 
-    // 切回中文
-    await page.getByRole("button", { name: "中文", exact: true }).click();
+    // 切回中文（en locale 下 aria-label 用 en 字典："Switch language：中文"）
+    await page.getByRole("button", { name: "Switch language：中文" }).click();
 
     // URL 应去除 /en 前缀（as-needed 模式下 zh 不带前缀）
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/, { timeout: 10_000 });
 
-    // 导航菜单恢复中文
-    await expect(page.getByText("看板", { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("成员", { exact: true })).toBeVisible();
-    await expect(page.getByText("计费", { exact: true })).toBeVisible();
+    // 导航菜单恢复中文（限定桌面侧栏实例，同上）
+    await expect(page.getByRole("link", { name: "看板", exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole("link", { name: "成员", exact: true }).first()).toBeVisible();
+    await expect(page.getByRole("link", { name: "计费", exact: true }).first()).toBeVisible();
   });
 });
