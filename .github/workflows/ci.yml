@@ -23,7 +23,9 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts：pnpm 11 默认拦截依赖构建脚本并使 install 退出非零
+      # （ERR_PNPM_IGNORED_BUILDS：@parcel/watcher、@swc/core 等），与 web/Dockerfile 同方案
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx eslint .
       - run: npx prettier --check .
 
@@ -45,7 +47,9 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts：pnpm 11 默认拦截依赖构建脚本并使 install 退出非零
+      # （ERR_PNPM_IGNORED_BUILDS：@parcel/watcher、@swc/core 等），与 web/Dockerfile 同方案
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       # 仅审计生产依赖；--audit-level=high 表示 high/critical 漏洞会让命令退出非 0
       # moderate/low 漏洞会打印但不影响退出码，避免过度阻塞迭代
       - name: Audit production deps (high/critical block CI)
@@ -76,7 +80,9 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts：pnpm 11 默认拦截依赖构建脚本并使 install 退出非零
+      # （ERR_PNPM_IGNORED_BUILDS：@parcel/watcher、@swc/core 等），与 web/Dockerfile 同方案
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       # 应用 Prisma 迁移（生产方式，验证 migrations 目录完整性）
       - run: npx prisma migrate deploy
@@ -162,7 +168,9 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts：pnpm 11 默认拦截依赖构建脚本并使 install 退出非零
+      # （ERR_PNPM_IGNORED_BUILDS：@parcel/watcher、@swc/core 等），与 web/Dockerfile 同方案
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       - run: npx prisma migrate deploy
         env:
@@ -242,7 +250,9 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts：pnpm 11 默认拦截依赖构建脚本并使 install 退出非零
+      # （ERR_PNPM_IGNORED_BUILDS：@parcel/watcher、@swc/core 等），与 web/Dockerfile 同方案
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       # 生产方式应用迁移，与 test job 一致
       - run: npx prisma migrate deploy
@@ -322,7 +332,9 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      - run: pnpm install --frozen-lockfile
+      # --ignore-scripts：pnpm 11 默认拦截依赖构建脚本并使 install 退出非零
+      # （ERR_PNPM_IGNORED_BUILDS：@parcel/watcher、@swc/core 等），与 web/Dockerfile 同方案
+      - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       - run: pnpm run build
 
