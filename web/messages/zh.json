@@ -499,5 +499,17 @@
   "command": {
     "searchPlaceholder": "搜索任务 / 决策，或跳转页面",
     "clearSearch": "清除搜索"
+  },
+  "billing": {
+    "currentPlan": "当前套餐",
+    "justPaid": "支付成功，订阅生效中。刷新页面可查看最新状态。",
+    "loadingStatus": "正在加载计费状态…",
+    "paymentMethod": "支付方式",
+    "wechatQrAria": "微信支付二维码"
+  },
+  "notifications": {
+    "filterAria": "按状态筛选通知",
+    "noNotifications": "暂无通知",
+    "noUnreadNotifications": "没有未读通知"
   }
 }

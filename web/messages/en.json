@@ -499,5 +499,17 @@
   "command": {
     "searchPlaceholder": "Search tasks / decisions, or jump to a page",
     "clearSearch": "Clear search"
+  },
+  "billing": {
+    "currentPlan": "Current plan",
+    "justPaid": "Payment successful, subscription active. Refresh to see the latest status.",
+    "loadingStatus": "Loading billing status…",
+    "paymentMethod": "Payment method",
+    "wechatQrAria": "WeChat Pay QR code"
+  },
+  "notifications": {
+    "filterAria": "Filter notifications by status",
+    "noNotifications": "No notifications yet",
+    "noUnreadNotifications": "No unread notifications"
   }
 }

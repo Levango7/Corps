@@ -88,8 +88,9 @@ test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () 
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 20_000 });
 
     // 概览页三张统计卡：待办 / 进行中 / 已完成
-    await expect(page.getByText("待办")).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("进行中")).toBeVisible();
-    await expect(page.getByText("已完成")).toBeVisible();
+    // exact 匹配统计卡标签——空状态文案（"当前没有进行中的任务。"）也含"进行中"
+    await expect(page.getByText("待办", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText("进行中", { exact: true })).toBeVisible();
+    await expect(page.getByText("已完成", { exact: true })).toBeVisible();
   });
 });
