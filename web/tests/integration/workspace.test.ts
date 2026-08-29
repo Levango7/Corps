@@ -190,6 +190,21 @@ describe("AC-05: RBAC 权限控制", () => {
       },
       body: JSON.stringify({ email: dMember.data.user.email }),
     });
+
+    // member 重新登录并显式选择 owner 的工作区（login 的 wid 参数）：
+    // access token 绑定所选 wid（getWorkspaceContext 的 wid 守卫要求 token wid
+    // 与 URL wid 一致），否则默认绑定 member 注册时创建的自有工作区，会被 401 短路
+    const rMemberRelogin = await fetch(`${BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: dMember.data.user.email,
+        password: "Test123456!",
+        wid,
+      }),
+    });
+    expect(rMemberRelogin.ok).toBe(true);
+    memberToken = extractAccessToken(rMemberRelogin);
   });
 
   it("Member角色调用移除成员接口应返回 403", async () => {

@@ -37,7 +37,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
 
   // 3. 归属定位：仅已关联消息的附件可下载（孤儿文件 404）
   const fileUrl = `/uploads/${relativePath}`;
-  const att = await runWithAuthOp("cron", (tx) =>
+  const att: { workspaceId: string } | null = await runWithAuthOp("cron", (tx) =>
     tx.messageAttachment.findFirst({
       where: { url: fileUrl },
       select: { workspaceId: true },
@@ -48,11 +48,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   }
 
   // 4. 租户校验：请求者必须是附件所属工作区的成员
+  // （泛型显式标注：闭包内多级可选链推断会退化为 {}，导致 att.workspaceId 类型丢失）
+  const wid = att.workspaceId;
   const member = await runWithWorkspace(
-    att.workspaceId,
+    wid,
     (tx) =>
       tx.member.findFirst({
-        where: { userId: payload.sub, workspaceId: att.workspaceId },
+        where: { userId: payload.sub, workspaceId: wid },
         select: { userId: true },
       }),
     payload.sub,

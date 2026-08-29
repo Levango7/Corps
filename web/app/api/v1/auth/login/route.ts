@@ -10,6 +10,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 const loginSchema = z.object({
   email: z.string().email(),
   password: z.string(),
+  // 可选：登录时选择的工作区（多工作区用户切换场景）。access token 的 wid 绑定
+  // 到该工作区；缺省取第一个（保持存量行为）。非成员工作区返回 403。
+  wid: z.string().uuid().optional(),
 });
 
 export async function POST(req: NextRequest) {
@@ -54,7 +57,18 @@ export async function POST(req: NextRequest) {
       role: m.role,
     }));
 
-    const primary = workspaces[0];
+    // 指定了 wid 时校验成员资格并绑定该工作区；否则默认第一个（存量行为）
+    let primary = workspaces[0];
+    if (validated.wid) {
+      const selected = workspaces.find((w) => w.id === validated.wid);
+      if (!selected) {
+        return NextResponse.json(
+          { code: 403, message: "Not a member of this workspace" },
+          { status: 403 },
+        );
+      }
+      primary = selected;
+    }
     const accessToken = await signAccessToken({
       sub: baUser.id,
       wid: primary?.id || "",
