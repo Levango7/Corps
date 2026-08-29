@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { useTranslations } from "next-intl";
 
 /** 漏斗单步结果（与 lib/analytics-funnel.ts StepResult 对齐）。 */
 interface FunnelStep {
@@ -87,6 +88,7 @@ interface OverviewData {
 export default function AnalyticsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const [data, setData] = useState<OverviewData | null>(null);
+  const t = useTranslations("analytics");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
@@ -151,12 +153,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
             周起始 {data.waw.weekStart}（周一 00:00 UTC+8）
           </div>
         </div>
-        <StatCard
-          icon={Activity}
-          label="事件总数"
-          value={data.totalEvents}
-          color="var(--accent)"
-        />
+        <StatCard icon={Activity} label="事件总数" value={data.totalEvents} color="var(--accent)" />
         <StatCard
           icon={Users}
           label="核心活跃"
@@ -167,36 +164,26 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
       {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） */}
       <div className="grid grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
-        <StatCard
-          icon={Layers}
-          label="会话数"
-          value={data.sessions}
-          color="var(--accent)"
-        />
+        <StatCard icon={Layers} label="会话数" value={data.sessions} color="var(--accent)" />
         <StatCard
           icon={TrendingUp}
           label="日均事件"
           value={Math.round(data.totalEvents / data.range.days)}
           color="var(--warn)"
         />
-        <StatCard
-          icon={Users}
-          label="活跃用户"
-          value={data.activeUsers}
-          color="var(--muted)"
-        />
+        <StatCard icon={Users} label="活跃用户" value={data.activeUsers} color="var(--muted)" />
       </div>
 
       {/* 获客段漏斗 */}
       <FunnelSection
-        title="获客段漏斗"
+        title={t("acquisitionFunnel")}
         description="landing_view → click_signup → register_submit → register_success（按 sessionId 串联）"
         steps={data.funnel.acquisition}
       />
 
       {/* 激活段漏斗 */}
       <FunnelSection
-        title="激活段漏斗"
+        title={t("activationFunnel")}
         description="register_success → create_task → activation_completed（按 userId 串联，15 分钟窗口）"
         steps={data.funnel.activation}
         className="mb-[var(--space-5)]"
@@ -216,9 +203,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
                 key={key}
                 className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-3 text-center"
               >
-                <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-1">
-                  {label}
-                </div>
+                <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-1">{label}</div>
                 <div className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums">
                   {r ? `${r.rate}%` : "—"}
                 </div>
@@ -230,8 +215,8 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           })}
         </div>
         <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
-          D_n 回访率 ＝ 注册后第 n 个 Asia/Shanghai 自然日产生 ≥1 次核心行为的用户数 ÷
-          注册满 n 天的用户数。
+          D_n 回访率 ＝ 注册后第 n 个 Asia/Shanghai 自然日产生 ≥1 次核心行为的用户数 ÷ 注册满 n
+          天的用户数。
         </p>
       </section>
 
@@ -378,6 +363,8 @@ function FunnelSection({
  */
 function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: number }) {
   const W = 600;
+  const t = useTranslations("analytics");
+
   const H = 160;
   const PAD = 24;
   const innerW = W - PAD * 2;
@@ -398,7 +385,7 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
         viewBox={`0 0 ${W} ${H}`}
         className="w-full h-auto min-w-[400px]"
         role="img"
-        aria-label="每日事件趋势折线图"
+        aria-label={t("trendChartAria")}
       >
         {/* 网格线 */}
         {[0, 0.25, 0.5, 0.75, 1].map((t) => (

@@ -9,6 +9,7 @@
 
 import { Kanban, List } from "lucide-react";
 import type { ViewMode } from "./types";
+import { useTranslations } from "next-intl";
 
 interface ViewToggleProps {
   view: ViewMode;
@@ -16,11 +17,12 @@ interface ViewToggleProps {
 }
 
 export function ViewToggle({ view, onChange }: ViewToggleProps) {
+  const t = useTranslations("task");
   return (
     <div
       className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]"
       role="group"
-      aria-label="视图切换"
+      aria-label={t("viewAria")}
     >
       <button
         onClick={() => onChange("board")}
@@ -30,10 +32,10 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
             ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
             : "text-[var(--muted)] hover:text-[var(--fg)]"
         }`}
-        aria-label="看板视图"
+        aria-label={t("boardViewAria")}
       >
         <Kanban size={16} />
-        <span className="hidden sm:inline">看板</span>
+        <span className="hidden sm:inline">{t("boardView")}</span>
       </button>
       <button
         onClick={() => onChange("list")}
@@ -43,10 +45,10 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
             ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
             : "text-[var(--muted)] hover:text-[var(--fg)]"
         }`}
-        aria-label="列表视图"
+        aria-label={t("listViewAria")}
       >
         <List size={16} />
-        <span className="hidden sm:inline">列表</span>
+        <span className="hidden sm:inline">{t("listView")}</span>
       </button>
     </div>
   );

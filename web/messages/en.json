@@ -108,7 +108,22 @@
     "boardTitle": "Task board",
     "countUnit": "tasks",
     "selected": "{count} selected",
-    "multiSelect": "Multi-select"
+    "multiSelect": "Multi-select",
+    "prevPage": "Previous",
+    "nextPage": "Next",
+    "sortAria": "Sort by",
+    "sortRecent": "Recently updated",
+    "sortDue": "Due date",
+    "sortPriority": "Priority",
+    "priority": "Priority",
+    "delete": "Delete",
+    "cancel": "Cancel",
+    "label": "Label",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "etc": "…",
+    "boardView": "Board",
+    "listView": "List"
   },
   "time": {
     "justNow": "Just now",
@@ -463,5 +478,26 @@
     "termsTitle": "Terms of Service",
     "privacyTitle": "Privacy Policy",
     "lastUpdated": "Last updated: 2026-08-28"
+  },
+  "analytics": {
+    "acquisitionFunnel": "Acquisition funnel",
+    "activationFunnel": "Activation funnel"
+  },
+  "decisions": {
+    "searchPlaceholder": "Search decisions…",
+    "clearSearch": "Clear search",
+    "loadMore": "Load more",
+    "noResultsMatch": "No matching decisions found",
+    "tryDifferentKeyword": "Try a different keyword"
+  },
+  "members": {
+    "invitePlaceholder": "Enter email (unregistered users can be invited)",
+    "roleMember": "Member",
+    "roleAdmin": "Admin",
+    "remove": "Remove"
+  },
+  "command": {
+    "searchPlaceholder": "Search tasks / decisions, or jump to a page",
+    "clearSearch": "Clear search"
   }
 }

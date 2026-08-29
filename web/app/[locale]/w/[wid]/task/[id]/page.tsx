@@ -32,6 +32,7 @@ import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
+import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -106,6 +107,8 @@ export default function TaskDetailPage({
 }) {
   const { wid, id } = use(params);
   const router = useRouter();
+  const t = useTranslations("task");
+  const tButton = useTranslations("button");
 
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -476,7 +479,7 @@ export default function TaskDetailPage({
                 if (descDraft !== (task.description ?? "")) patch({ description: descDraft });
               }}
               rows={4}
-              placeholder="补充背景、验收标准，或粘贴相关链接…"
+              placeholder={t("detailDescriptionPlaceholder")}
               className="mt-[var(--space-3)] w-full resize-y bg-transparent text-[length:var(--text-base)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
             />
 
@@ -551,7 +554,7 @@ export default function TaskDetailPage({
                     {decisionDraft.trim() ? (
                       <Markdown source={decisionDraft} />
                     ) : (
-                      <span className="text-[var(--meta)]">暂无内容可预览</span>
+                      <span className="text-[var(--meta)]">{t("noPreviewContent")}</span>
                     )}
                   </div>
                 )}
@@ -594,7 +597,7 @@ export default function TaskDetailPage({
                       </span>
                       <button
                         onClick={() => showHistory(d)}
-                        aria-label="版本历史"
+                        aria-label={t("versionHistory")}
                         className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
                       >
                         <History size={14} />
@@ -742,13 +745,13 @@ export default function TaskDetailPage({
           </div>
 
           <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
-            <div className={fieldLabel}>负责人</div>
+            <div className={fieldLabel}>{t("assignee")}</div>
             <select
               value={task.assignee?.id ?? ""}
               onChange={(e) => patch({ assigneeId: e.target.value || null })}
               className={fieldControl}
             >
-              <option value="">未指派</option>
+              <option value="">{t("unassigned")}</option>
               {members.map((m) => (
                 <option key={m.id} value={m.id}>
                   {m.name || m.email}
@@ -790,7 +793,7 @@ export default function TaskDetailPage({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="版本历史"
+          aria-label={t("versionHistory")}
           className="fixed inset-0 z-[var(--z-modal)] flex items-end sm:items-center justify-center bg-[var(--overlay)]"
           onClick={() => setHistoryFor(null)}
         >
@@ -805,7 +808,7 @@ export default function TaskDetailPage({
               </h3>
               <button
                 onClick={() => setHistoryFor(null)}
-                aria-label="关闭"
+                aria-label={tButton("close")}
                 className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
               >
                 <X size={15} />
@@ -818,7 +821,7 @@ export default function TaskDetailPage({
                   <div className="h-20 w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
                 </div>
               ) : versions.length === 0 ? (
-                <p className="text-[length:var(--text-sm)] text-[var(--muted)]">暂无历史版本。</p>
+                <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noHistory")}</p>
               ) : (
                 versions.map((v) => (
                   <article
@@ -850,7 +853,7 @@ export default function TaskDetailPage({
         <div
           role="dialog"
           aria-modal="true"
-          aria-label="确认操作"
+          aria-label={t("confirmAria")}
           className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
           onClick={() => setConfirmOpen(false)}
         >

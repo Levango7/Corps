@@ -18,6 +18,7 @@ import { UserPlus, Trash2, Users, CheckCircle2, Link2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Member, Role } from "@/lib/types";
 import { ROLE_META } from "@/lib/task-meta";
+import { useTranslations } from "next-intl";
 
 interface WorkspaceMeta {
   name: string;
@@ -36,6 +37,8 @@ function Avatar({ m }: { m: Member }) {
 
 export default function MembersPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+
+  const t = useTranslations("members");
   const [members, setMembers] = useState<Member[]>([]);
   const [meta, setMeta] = useState<WorkspaceMeta | null>(null);
   const [email, setEmail] = useState("");
@@ -197,7 +200,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && invite()}
-              placeholder="输入邮箱地址（未注册也可邀请）"
+              placeholder={t("invitePlaceholder")}
               className="w-full sm:w-auto sm:flex-1 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
             <button
@@ -333,6 +336,8 @@ interface MemberRowProps {
 /** 单个成员行/卡片：共用渲染，layout 控制排列。 */
 function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowProps) {
   const meta = ROLE_META[m.role];
+  const t = useTranslations("members");
+
   const Icon = meta.icon;
   const editable = canManage && m.role !== "owner" && !m.isSelf;
   const label = m.name || m.email;
@@ -361,8 +366,8 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
               onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
               className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
-              <option value="member">成员</option>
-              <option value="admin">管理员</option>
+              <option value="member">{t("roleMember")}</option>
+              <option value="admin">{t("roleAdmin")}</option>
             </select>
           ) : (
             <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">
@@ -420,8 +425,8 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
             className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           >
-            <option value="member">成员</option>
-            <option value="admin">管理员</option>
+            <option value="member">{t("roleMember")}</option>
+            <option value="admin">{t("roleAdmin")}</option>
           </select>
           <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
             拥有者不可在此更改
@@ -432,7 +437,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             aria-label={`移除 ${label}`}
           >
             <Trash2 size={16} />
-            <span>移除</span>
+            <span>{t("remove")}</span>
           </button>
         </div>
       )}

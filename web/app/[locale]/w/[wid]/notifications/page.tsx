@@ -36,6 +36,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { useTranslations } from "next-intl";
 
 type NotificationType =
   "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated";
@@ -94,6 +95,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
   const router = useRouter();
 
   const [all, setAll] = useState<Notification[]>([]);
+  const tNotif = useTranslations("notifications");
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [marking, setMarking] = useState(false);
@@ -190,7 +192,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       <div className="flex items-center justify-between mb-[var(--space-4)] gap-[var(--space-3)]">
         <div
           role="tablist"
-          aria-label="通知筛选"
+          aria-label={tNotif("filterAria")}
           className="inline-flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)]"
         >
           {(["all", "unread"] as const).map((f) => (
@@ -318,18 +320,21 @@ function NotificationListSkeleton({ count = 6 }: { count?: number }) {
 
 /** 空状态：筛选未读无结果用精简文案，全列表空用引导文案 */
 function EmptyState({ filter }: { filter: Filter }) {
+  const t = useTranslations("empty");
   if (filter === "unread") {
     return (
       <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
         <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">没有未读通知</p>
+        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
+          {t("noUnreadNotifications")}
+        </p>
       </div>
     );
   }
   return (
     <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
       <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">暂无通知</p>
+      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("noNotifications")}</p>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
         当有人 @你、分配任务或更新决策时，会在这里提醒你
       </p>

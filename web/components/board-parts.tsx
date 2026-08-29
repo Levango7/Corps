@@ -23,6 +23,7 @@ import {
   PRIORITY_BADGE_STYLES,
 } from "@/lib/task-meta";
 import { formatTaskId } from "@/lib/format";
+import { useTranslations } from "next-intl";
 
 /** 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转 */
 export type DragStart = { x: number; y: number } | null;
@@ -126,6 +127,8 @@ function BoardCard({
   onMoveByStep,
 }: BoardCardProps) {
   const router = useRouter();
+  const t = useTranslations("task");
+
   return (
     <div
       draggable={!selectionMode}
@@ -221,7 +224,7 @@ function BoardCard({
               onMoveByStep(task.id, -1);
             }}
             className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
-            aria-label="上移"
+            aria-label={t("moveUp")}
           >
             <ChevronUp size={14} />
           </button>
@@ -231,7 +234,7 @@ function BoardCard({
               onMoveByStep(task.id, 1);
             }}
             className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
-            aria-label="下移"
+            aria-label={t("moveDown")}
           >
             <ChevronDown size={14} />
           </button>
@@ -257,6 +260,7 @@ export function ListTable({
   selectionMode,
   onToggleSelect,
 }: ListTableProps) {
+  const t = useTranslations("task");
   const router = useRouter();
   return (
     <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden">
@@ -264,12 +268,12 @@ export function ListTable({
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
             {selectionMode && <th className="font-medium px-4 h-10 w-10" />}
-            <th className="font-medium px-4 h-10">标题</th>
-            <th className="font-medium px-4 h-10">负责人</th>
-            <th className="font-medium px-4 h-10">优先级</th>
-            <th className="font-medium px-4 h-10">状态</th>
-            <th className="font-medium px-4 h-10">截止日期</th>
-            <th className="font-medium px-4 h-10">标签</th>
+            <th className="font-medium px-4 h-10">{t("title")}</th>
+            <th className="font-medium px-4 h-10">{t("assignee")}</th>
+            <th className="font-medium px-4 h-10">{t("priority")}</th>
+            <th className="font-medium px-4 h-10">{t("status")}</th>
+            <th className="font-medium px-4 h-10">{t("dueDate")}</th>
+            <th className="font-medium px-4 h-10">{t("label")}</th>
           </tr>
         </thead>
         <tbody>
@@ -489,11 +493,14 @@ export function BoardSkeleton() {
 
 /** 空状态：工作区无任务时引导创建。 */
 export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
+  const tEmpty = useTranslations("empty");
   return (
     <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
       <Kanban size={48} className="mb-4 opacity-40" />
-      <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">还没有任务</p>
-      <p className="text-[length:var(--text-sm)] mb-4">创建第一个任务，开始跟踪进度</p>
+      <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">
+        {tEmpty("noTasks")}
+      </p>
+      <p className="text-[length:var(--text-sm)] mb-4">{tEmpty("noTasksHint")}</p>
       <button
         onClick={onCreate}
         className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"

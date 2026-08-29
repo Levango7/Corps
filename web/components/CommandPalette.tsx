@@ -15,6 +15,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useTranslations } from "next-intl";
 
 interface CmdItem {
   id: string;
@@ -66,6 +67,7 @@ function highlight(text: string, query: string) {
 }
 
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
+  const t = useTranslations("command");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ tasks: CmdItem[]; decisions: CmdItem[] }>({
     tasks: [],
@@ -202,7 +204,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     <div
       role="dialog"
       aria-modal="true"
-      aria-label="命令面板"
+      aria-label={t("ariaLabel")}
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4"
       style={{ background: "var(--overlay)" }}
       onClick={onClose}
@@ -218,7 +220,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="搜索任务 / 决策，或跳转页面"
+            placeholder={t("searchPlaceholder")}
             className="flex-1 bg-transparent outline-none text-[length:var(--text-md)] text-[var(--fg)] placeholder:text-[var(--meta)]"
           />
           {query && (
@@ -229,7 +231,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
                 inputRef.current?.focus();
               }}
               className="w-6 h-6 flex items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] shrink-0"
-              aria-label="清除搜索"
+              aria-label={t("clearSearch")}
             >
               <X size={16} />
             </button>

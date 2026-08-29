@@ -5,6 +5,7 @@ import Link from "next/link";
 import { ClipboardList, ChevronDown, SearchX } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { useTranslations } from "next-intl";
 
 interface Task {
   id: string;
@@ -121,6 +122,8 @@ function sortTasks(tasks: Task[], sortKey: SortKey): Task[] {
 
 export default function MyTasksPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+
+  const t = useTranslations("task");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -211,12 +214,12 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
           <select
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
-            aria-label="排序方式"
+            aria-label={t("sortAria")}
             className="appearance-none text-[length:var(--text-sm)] text-[var(--fg-2)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)] pl-3 pr-8 py-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
-            <option value="recent">最近更新</option>
-            <option value="due">截止日期</option>
-            <option value="priority">优先级</option>
+            <option value="recent">{t("sortRecent")}</option>
+            <option value="due">{t("sortDue")}</option>
+            <option value="priority">{t("sortPriority")}</option>
           </select>
           <ChevronDown
             size={14}
@@ -340,10 +343,11 @@ function TaskCard({ task, href }: { task: Task; href: string }) {
 
 /** 空状态：当前用户没有任何被分配的任务 */
 function EmptyState() {
+  const tEmpty = useTranslations("empty");
   return (
     <div className="flex flex-col items-center justify-center text-center px-[var(--space-4)] py-[var(--space-12)]">
       <ClipboardList size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">暂无任务</p>
+      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{tEmpty("noTasks")}</p>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
         还没有任务分配给你，去看板认领一个吧。
       </p>
@@ -353,10 +357,11 @@ function EmptyState() {
 
 /** 筛选后无结果：有任务但当前筛选条件下无匹配 */
 function NoResultState() {
+  const tEmpty = useTranslations("empty");
   return (
     <div className="flex flex-col items-center justify-center text-center px-[var(--space-4)] py-[var(--space-12)]">
       <SearchX size={40} className="text-[var(--muted)] opacity-40 mb-3" strokeWidth={1.5} />
-      <p className="text-[length:var(--text-sm)] text-[var(--muted)]">没有符合条件的任务</p>
+      <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{tEmpty("noTasksMatch")}</p>
     </div>
   );
 }

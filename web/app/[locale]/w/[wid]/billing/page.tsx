@@ -16,6 +16,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useTranslations } from "next-intl";
 
 type Plan = "free" | "pro";
 type PaymentMethod = "card" | "wechat" | "alipay";
@@ -74,6 +75,9 @@ const SUB_STATUS_LABEL: Record<string, { label: string; tone: "ok" | "warn" | "m
 
 export default function BillingPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+
+  const t = useTranslations("billing");
+  const tButton = useTranslations("button");
   const search = useSearchParams();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [error, setError] = useState("");
@@ -231,7 +235,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {justPaid && (
         <div className="mb-4 flex items-start gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-sm)]">
           <Check size={16} className="shrink-0 mt-0.5 text-[var(--success)]" />
-          <span>支付已提交。订阅状态由 Stripe 回调确认，稍后刷新即可看到最新结果。</span>
+          <span>{t("justPaid")}</span>
         </div>
       )}
       {canceled && (
@@ -249,7 +253,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {/* 当前状态 */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-5 sm:mb-6">
         {!status ? (
-          <div className="space-y-3" aria-busy="true" aria-label="正在读取账单状态">
+          <div className="space-y-3" aria-busy="true" aria-label={t("loadingStatus")}>
             <div className="space-y-1.5">
               <div className="h-3 w-16 rounded bg-[var(--surface-2)] animate-pulse" />
               <div className="h-5 w-28 rounded bg-[var(--surface-2)] animate-pulse" />
@@ -263,7 +267,9 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         ) : (
           <div className="flex flex-col sm:flex-row sm:flex-wrap sm:items-start sm:justify-between gap-4">
             <div>
-              <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-1">当前套餐</div>
+              <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-1">
+                {t("currentPlan")}
+              </div>
               <div className="flex items-center gap-2">
                 <span className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
                   {PLANS.find((p) => p.id === status.plan)?.name ?? status.plan}
@@ -345,7 +351,9 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {/* 支付方式选择（Phase 2：国内支付接入） */}
       {isOwner && status?.stripeReady && (
         <div className="mb-5 sm:mb-6 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5">
-          <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">支付方式</div>
+          <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">
+            {t("paymentMethod")}
+          </div>
           <div className="flex flex-wrap gap-2">
             <button
               onClick={() => setPaymentMethod("card")}
@@ -528,7 +536,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
           role="dialog"
           aria-modal="true"
-          aria-label="微信支付二维码"
+          aria-label={t("wechatQrAria")}
         >
           <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-6 max-w-sm w-full mx-4">
             <div className="flex items-center justify-between mb-4">
@@ -538,7 +546,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={closeWechatQr}
                 className="text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-                aria-label="关闭"
+                aria-label={tButton("close")}
               >
                 <X size={20} />
               </button>

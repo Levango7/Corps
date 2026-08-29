@@ -64,8 +64,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
 
   useEffect(() => {
     setLoading(true);
-    const query =
-      milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
+    const query = milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
     api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`)
       .then((data) => {
         setError(null);
@@ -85,8 +84,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   async function load() {
     try {
       setError(null);
-      const query =
-        milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
+      const query = milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
       setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`));
     } catch (e) {
       setError(
@@ -290,11 +288,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </p>
             </div>
             <div className="flex items-center gap-3 flex-wrap">
-              <MilestoneFilter
-                wid={wid}
-                value={milestoneFilter}
-                onChange={setMilestoneFilter}
-              />
+              <MilestoneFilter wid={wid} value={milestoneFilter} onChange={setMilestoneFilter} />
               <ViewToggle view={view} onChange={setView} />
               {/* 多选切换按钮 */}
               <button
@@ -456,6 +450,7 @@ interface ListViewProps {
 }
 
 function ListView(props: ListViewProps) {
+  const t = useTranslations("task");
   const {
     paginatedTasks,
     selectedIds,
@@ -489,7 +484,7 @@ function ListView(props: ListViewProps) {
             onClick={onPrevPage}
             disabled={safeListPage <= 1}
             className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            aria-label="上一页"
+            aria-label={t("prevPage")}
           >
             上一页
           </button>
@@ -500,7 +495,7 @@ function ListView(props: ListViewProps) {
             onClick={onNextPage}
             disabled={safeListPage >= listTotalPages}
             className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-            aria-label="下一页"
+            aria-label={t("nextPage")}
           >
             下一页
           </button>

@@ -19,6 +19,7 @@ import Link from "next/link";
 import { FileText, Search, Loader2, ChevronRight, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { useTranslations } from "next-intl";
 
 interface Decision {
   id: string;
@@ -97,6 +98,7 @@ function markdownToPlainText(md: string, limit = SUMMARY_LIMIT): string {
 export default function DecisionsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
 
+  const t = useTranslations("decisions");
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -223,15 +225,15 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
             type="text"
             value={inputValue}
             onChange={(e) => handleSearchChange(e.target.value)}
-            placeholder="搜索决策内容…"
-            aria-label="搜索决策"
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("searchAria")}
             className="w-full h-10 pl-9 pr-9 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
           />
           {inputValue && (
             <button
               type="button"
               onClick={handleClearSearch}
-              aria-label="清空搜索"
+              aria-label={t("clearSearch")}
               className="absolute right-[var(--space-2)] top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)]"
             >
               <X size={14} />
@@ -345,7 +347,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                     加载中
                   </>
                 ) : (
-                  <>加载更多</>
+                  <>{t("loadMore")}</>
                 )}
               </button>
             </div>
@@ -406,6 +408,8 @@ function DecisionsSkeleton({ count = 4 }: { count?: number }) {
  *  - 工作区无决策：FileText 图标 + 「暂无决策记录」+ 引导文案
  */
 function EmptyState({ searching }: { searching: boolean }) {
+  const t = useTranslations("decisions");
+  const tEmpty = useTranslations("empty");
   if (searching) {
     return (
       <div className="px-[var(--space-4)] py-[var(--space-12)] flex flex-col items-center text-center">
@@ -414,8 +418,10 @@ function EmptyState({ searching }: { searching: boolean }) {
           className="text-[var(--muted)] opacity-40 mb-[var(--space-3)]"
           strokeWidth={1.5}
         />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">没有找到匹配的决策记录</p>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">换个关键词试试</p>
+        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("noResultsMatch")}</p>
+        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+          {t("tryDifferentKeyword")}
+        </p>
       </div>
     );
   }
@@ -426,7 +432,7 @@ function EmptyState({ searching }: { searching: boolean }) {
         className="text-[var(--muted)] opacity-40 mb-[var(--space-4)]"
         strokeWidth={1.5}
       />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">暂无决策记录</p>
+      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{tEmpty("noDecisions")}</p>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
         在任务详情中记录决策后，会在这里展示
       </p>

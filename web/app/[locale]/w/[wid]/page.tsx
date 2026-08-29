@@ -17,6 +17,7 @@ import { STATUS_META } from "@/lib/task-meta";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import Onboarding from "@/components/Onboarding";
 import { TaskListSkeleton, StatCardSkeleton } from "@/components/Skeleton";
+import { useTranslations } from "next-intl";
 
 // 与后端枚举严格一致（tasks 表 CHECK：todo/in_progress/review/done）
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -106,6 +107,8 @@ function relativeTime(iso?: string) {
 
 export default function HomePage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+
+  const t = useTranslations("task");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -255,7 +258,9 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                 </Link>
               </span>
             ))}
-            {overdue.length > 3 && <span className="text-[var(--meta)] ml-1 shrink-0">等</span>}
+            {overdue.length > 3 && (
+              <span className="text-[var(--meta)] ml-1 shrink-0">{t("etc")}</span>
+            )}
           </span>
           {/* 移动端（< sm）查看全部逾期任务链接 */}
           <Link
@@ -277,12 +282,12 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             <select
               value={sortKey}
               onChange={(e) => setSortKey(e.target.value as "recent" | "due" | "priority")}
-              aria-label="排序方式"
+              aria-label={t("sortAria")}
               className="text-[length:var(--text-sm)] text-[var(--fg-2)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)] px-2 py-1 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
             >
-              <option value="recent">最近更新</option>
-              <option value="due">即将到期</option>
-              <option value="priority">优先级</option>
+              <option value="recent">{t("sortRecent")}</option>
+              <option value="due">{t("sortDue")}</option>
+              <option value="priority">{t("sortPriority")}</option>
             </select>
             <Link
               href={`/w/${wid}/board`}

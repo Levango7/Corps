@@ -1443,6 +1443,28 @@ paths:
       responses:
         '200': { description: Accepted (code=0) }
         '400': { description: Signature error }
+  /api/v1/workspaces/{wid}/tasks/{id}:
+    get:
+      tags: [tasks]
+      summary: Get task detail (incl. assignee/labels/counts)
+      responses:
+        '200': { description: Task detail }
+        '401': { description: Unauthorized }
+        '404': { description: Task not found }
+  /api/v1/workspaces/{wid}/tasks/{id}/comments:
+    get:
+      tags: [comments]
+      summary: List task comments
+      responses:
+        '200': { description: Comment list }
+        '401': { description: Unauthorized }
+  /api/v1/workspaces/{wid}/tasks/{id}/calendar-sync:
+    get:
+      tags: [calendar]
+      summary: Get calendar sync state for a task
+      responses:
+        '200': { description: Sync state }
+        '401': { description: Unauthorized }
 components:
   securitySchemes:
     cronSecret:

@@ -108,7 +108,22 @@
     "boardTitle": "任务看板",
     "countUnit": "个任务",
     "selected": "已选 {count}",
-    "multiSelect": "多选"
+    "multiSelect": "多选",
+    "prevPage": "上一页",
+    "nextPage": "下一页",
+    "sortAria": "排序方式",
+    "sortRecent": "最近更新",
+    "sortDue": "截止日期",
+    "sortPriority": "优先级",
+    "priority": "优先级",
+    "delete": "删除",
+    "cancel": "取消",
+    "label": "标签",
+    "moveUp": "上移",
+    "moveDown": "下移",
+    "etc": "等",
+    "boardView": "看板",
+    "listView": "列表"
   },
   "time": {
     "justNow": "刚刚",
@@ -463,5 +478,26 @@
     "termsTitle": "服务条款",
     "privacyTitle": "隐私政策",
     "lastUpdated": "最近更新：2026-08-28"
+  },
+  "analytics": {
+    "acquisitionFunnel": "获客段漏斗",
+    "activationFunnel": "激活段漏斗"
+  },
+  "decisions": {
+    "searchPlaceholder": "搜索决策内容…",
+    "clearSearch": "清空搜索",
+    "loadMore": "加载更多",
+    "noResultsMatch": "没有找到匹配的决策记录",
+    "tryDifferentKeyword": "换个关键词试试"
+  },
+  "members": {
+    "invitePlaceholder": "输入邮箱地址（未注册也可邀请）",
+    "roleMember": "成员",
+    "roleAdmin": "管理员",
+    "remove": "移除"
+  },
+  "command": {
+    "searchPlaceholder": "搜索任务 / 决策，或跳转页面",
+    "clearSearch": "清除搜索"
   }
 }

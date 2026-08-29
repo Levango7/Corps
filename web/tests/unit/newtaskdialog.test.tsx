@@ -24,6 +24,30 @@ import { render, screen, fireEvent, waitFor, cleanup } from "@testing-library/re
 const { apiMock } = vi.hoisted(() => ({
   apiMock: vi.fn(),
 }));
+// i18n mock：useTranslations 按 zh.json 展平查表返回真实中文（t(key) → 中文），
+// NextIntlClientProvider 退化为透传。render/rerender 均无需包 provider。
+const { zhFlat } = vi.hoisted(() => {
+  const req = process.getBuiltinModule("module").createRequire(
+    process.cwd() + "/tests/unit/newtaskdialog.test.tsx",
+  );
+  const zh = req("../../messages/zh.json");
+  const flat: Record<string, string> = {};
+  const walk = (o: unknown, p = "") => {
+    if (typeof o !== "object" || o === null) return;
+    for (const [k, v] of Object.entries(o)) {
+      const np = p ? `${p}.${k}` : k;
+      if (typeof v === "object" && v !== null) walk(v, np);
+      else flat[np] = String(v);
+    }
+  };
+  walk(zh, "");
+  return { zhFlat: flat };
+});
+vi.mock("next-intl", () => ({
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTranslations: (ns: string) => (key: string) => zhFlat[`${ns}.${key}`] ?? key,
+}));
+
 vi.mock("@/lib/api", () => ({
   api: apiMock,
 }));

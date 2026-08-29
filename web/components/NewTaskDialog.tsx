@@ -5,6 +5,7 @@ import { X, Loader2, Flag, Calendar, Tag, Milestone as MilestoneIcon } from "luc
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import type { Label, Milestone } from "@/lib/types";
+import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -54,6 +55,9 @@ export default function NewTaskDialog({
   onCreated?: (t: TaskStub) => void;
 }) {
   const [title, setTitle] = useState("");
+  const t = useTranslations("task");
+  const tButton = useTranslations("button");
+  const tMilestone = useTranslations("milestone");
   const [description, setDescription] = useState("");
   const [status, setStatus] = useState<Status>("todo");
   const [priority, setPriority] = useState<Priority>("medium");
@@ -191,7 +195,7 @@ export default function NewTaskDialog({
             type="button"
             onClick={onClose}
             className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-            aria-label="关闭"
+            aria-label={tButton("close")}
           >
             <X size={16} />
           </button>
@@ -208,7 +212,7 @@ export default function NewTaskDialog({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
-              placeholder="一句话说清要做什么"
+              placeholder={t("titlePlaceholder")}
               className={`${fieldControl} h-10`}
               aria-required="true"
             />
@@ -225,14 +229,14 @@ export default function NewTaskDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
               maxLength={2000}
-              placeholder="背景、验收标准，或粘贴相关链接…"
+              placeholder={t("descriptionPlaceholder")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={fieldLabel}>状态</label>
+              <label className={fieldLabel}>{t("status")}</label>
               <select
                 value={status}
                 onChange={(e) => setStatus(e.target.value as Status)}
@@ -266,13 +270,13 @@ export default function NewTaskDialog({
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <label className={fieldLabel}>负责人（可选）</label>
+              <label className={fieldLabel}>{t("assigneeOptional")}</label>
               <select
                 value={assigneeId}
                 onChange={(e) => setAssigneeId(e.target.value)}
                 className={fieldControl}
               >
-                <option value="">未指派</option>
+                <option value="">{t("unassigned")}</option>
                 {members.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name || m.email}
@@ -307,7 +311,7 @@ export default function NewTaskDialog({
                 onChange={(e) => setMilestoneId(e.target.value)}
                 className={fieldControl}
               >
-                <option value="">未归入里程碑</option>
+                <option value="">{tMilestone("filterUnassigned")}</option>
                 {milestones.map((m) => (
                   <option key={m.id} value={m.id}>
                     {m.name}

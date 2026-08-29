@@ -19,6 +19,7 @@ import { useState } from "react";
 import { X, Trash2, Loader2, CircleDot, Flag, ChevronDown } from "lucide-react";
 import type { Status, Priority } from "@/lib/types";
 import { STATUS_LABELS, PRIORITY_LABELS, STATUS_META, PRIORITY_COLORS } from "@/lib/task-meta";
+import { useTranslations } from "next-intl";
 
 interface BatchToolbarProps {
   /** 已选任务 ID 列表 */
@@ -37,6 +38,7 @@ interface BatchToolbarProps {
 }
 
 export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: BatchToolbarProps) {
+  const t = useTranslations("task");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
@@ -89,7 +91,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
   return (
     <div
       role="toolbar"
-      aria-label="批量操作工具栏"
+      aria-label={t("batchToolbarAria")}
       className="fixed bottom-4 left-1/2 -translate-x-1/2 z-[var(--z-sticky)] flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
     >
       {/* 选中计数 */}
@@ -109,11 +111,11 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
           }}
           disabled={busy}
           className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
-          aria-label="批量改状态"
+          aria-label={t("batchStatusAria")}
           aria-expanded={statusOpen}
         >
           <CircleDot size={14} />
-          <span className="hidden sm:inline">状态</span>
+          <span className="hidden sm:inline">{t("status")}</span>
           <ChevronDown size={12} className="text-[var(--meta)]" />
         </button>
         {statusOpen && (
@@ -149,11 +151,11 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
           }}
           disabled={busy}
           className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
-          aria-label="批量改优先级"
+          aria-label={t("batchPriorityAria")}
           aria-expanded={priorityOpen}
         >
           <Flag size={14} />
-          <span className="hidden sm:inline">优先级</span>
+          <span className="hidden sm:inline">{t("priority")}</span>
           <ChevronDown size={12} className="text-[var(--meta)]" />
         </button>
         {priorityOpen && (
@@ -181,10 +183,10 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
         onClick={handleDelete}
         disabled={busy}
         className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors"
-        aria-label="批量删除"
+        aria-label={t("batchDeleteAria")}
       >
         <Trash2 size={14} />
-        <span className="hidden sm:inline">删除</span>
+        <span className="hidden sm:inline">{t("delete")}</span>
       </button>
 
       {/* 分隔符 */}
@@ -195,10 +197,10 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
         onClick={onClear}
         disabled={busy}
         className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 transition-colors"
-        aria-label="取消选择"
+        aria-label={t("clearSelectionAria")}
       >
         <X size={14} />
-        <span className="hidden sm:inline">取消</span>
+        <span className="hidden sm:inline">{t("cancel")}</span>
       </button>
 
       {/* 加载指示器 */}
