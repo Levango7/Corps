@@ -149,7 +149,9 @@ export function verifyState(state: string, maxAgeSeconds = 600): CalendarStatePa
   const b = Buffer.from(expected);
   if (a.length !== b.length || !timingSafeEqual(a, b)) return null;
   try {
-    const payload = JSON.parse(Buffer.from(body, "base64url").toString("utf8")) as CalendarStatePayload;
+    const payload = JSON.parse(
+      Buffer.from(body, "base64url").toString("utf8"),
+    ) as CalendarStatePayload;
     // 校验基本字段 + 时效
     if (typeof payload.userId !== "string" || typeof payload.verifier !== "string") return null;
     if (Date.now() / 1000 - payload.iat > maxAgeSeconds) return null;

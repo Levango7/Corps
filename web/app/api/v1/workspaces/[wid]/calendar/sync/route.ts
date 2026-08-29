@@ -6,10 +6,7 @@ import { syncAllTasks } from "@/lib/calendar/sync";
  * POST /api/v1/workspaces/{wid}/calendar/sync
  * 手动触发同步：将该用户的所有有截止日期的任务同步到所有已连接日历。
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });

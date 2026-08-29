@@ -26,7 +26,6 @@ const PASSWORD = "e2e-auth-passw0rd";
 test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () => {
   const email = uniqueEmail();
 
-
   test("注册页渲染完整表单（水合完成，字段可交互）", async ({ page }) => {
     await page.goto("/auth/signup");
 
@@ -49,7 +48,6 @@ test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () 
     // 注册成功 → 客户端路由到 /w/<uuid>
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 20_000 });
     await expect(page).toHaveURL(/\/w\/[0-9a-f-]{36}/i);
-
 
     // 工作区首页应显示「概览」标题
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });

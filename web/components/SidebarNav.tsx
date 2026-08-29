@@ -113,7 +113,9 @@ export function SidebarNav({
           title={mode === "desktop" && collapsed ? t("menu.notifications") : undefined}
         >
           <Bell size={18} className="shrink-0" />
-          {!(mode === "desktop" && collapsed) && <span className="truncate">{t("menu.notifications")}</span>}
+          {!(mode === "desktop" && collapsed) && (
+            <span className="truncate">{t("menu.notifications")}</span>
+          )}
           {!(mode === "desktop" && collapsed) && unreadCount > 0 && (
             <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
               {unreadCount > 99 ? "99+" : unreadCount}
@@ -129,7 +131,13 @@ export function SidebarNav({
       <button
         onClick={mode === "desktop" ? onToggleCollapse : onClose}
         className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
-        aria-label={mode === "desktop" ? (collapsed ? t("sidebar.expand") : t("sidebar.collapse")) : t("sidebar.close")}
+        aria-label={
+          mode === "desktop"
+            ? collapsed
+              ? t("sidebar.expand")
+              : t("sidebar.collapse")
+            : t("sidebar.close")
+        }
       >
         {mode === "desktop" ? (
           collapsed ? (

@@ -34,9 +34,7 @@ export function TaskLabels({ labels, max = 3 }: { labels: Label[]; max?: number 
         </span>
       ))}
       {overflow > 0 && (
-        <span className="text-[length:var(--text-xs)] text-[var(--meta)] px-1">
-          +{overflow}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--meta)] px-1">+{overflow}</span>
       )}
     </div>
   );

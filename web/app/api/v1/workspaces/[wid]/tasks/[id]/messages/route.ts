@@ -25,29 +25,33 @@ export async function GET(
   // 防止无效日期导致全表扫描
   const sinceValid = since && !Number.isNaN(since.getTime()) ? since : null;
 
-  const messages = await runWithWorkspace(wid, async (tx) => {
-    if (sinceValid) {
-      // 增量拉取：since 之后的所有消息（正序）
-      return tx.message.findMany({
-        where: {
-          taskId: id,
-          task: { workspaceId: wid },
-          createdAt: { gt: sinceValid },
-        },
+  const messages = await runWithWorkspace(
+    wid,
+    async (tx) => {
+      if (sinceValid) {
+        // 增量拉取：since 之后的所有消息（正序）
+        return tx.message.findMany({
+          where: {
+            taskId: id,
+            task: { workspaceId: wid },
+            createdAt: { gt: sinceValid },
+          },
+          include: { author: { select: { id: true, name: true, email: true, image: true } } },
+          orderBy: { createdAt: "asc" },
+          take: 200,
+        });
+      }
+      // 首次加载：取最近 200 条后反转为正序时间线
+      const rows = await tx.message.findMany({
+        where: { taskId: id, task: { workspaceId: wid } },
         include: { author: { select: { id: true, name: true, email: true, image: true } } },
-        orderBy: { createdAt: "asc" },
+        orderBy: { createdAt: "desc" },
         take: 200,
       });
-    }
-    // 首次加载：取最近 200 条后反转为正序时间线
-    const rows = await tx.message.findMany({
-      where: { taskId: id, task: { workspaceId: wid } },
-      include: { author: { select: { id: true, name: true, email: true, image: true } } },
-      orderBy: { createdAt: "desc" },
-      take: 200,
-    });
-    return rows.reverse();
-  }, ctx.payload.sub);
+      return rows.reverse();
+    },
+    ctx.payload.sub,
+  );
 
   return NextResponse.json({ code: 200, data: messages });
 }
@@ -75,39 +79,43 @@ export async function POST(
   try {
     const validated = createMessageSchema.parse(await req.json());
 
-    const result = await runWithWorkspace(wid, async (tx) => {
-      // 校验任务确实属于本工作区（防跨租户写入）
-      const task = await tx.task.findFirst({
-        where: { id, workspaceId: wid },
-        select: { id: true, assigneeId: true, title: true },
-      });
-      if (!task) return null;
-
-      const created = await tx.message.create({
-        data: {
-          taskId: id,
-          workspaceId: wid,
-          authorId: ctx.payload.sub,
-          body: validated.body,
-        },
-        include: { author: { select: { id: true, name: true, email: true, image: true } } },
-      });
-
-      // 通知任务指派人有新聊天消息（排除发送者自己）
-      if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
-        await tx.notification.create({
-          data: {
-            userId: task.assigneeId,
-            workspaceId: wid,
-            type: "comment_added",
-            entityId: id,
-            entityTitle: task.title,
-          },
+    const result = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        // 校验任务确实属于本工作区（防跨租户写入）
+        const task = await tx.task.findFirst({
+          where: { id, workspaceId: wid },
+          select: { id: true, assigneeId: true, title: true },
         });
-      }
+        if (!task) return null;
 
-      return created;
-    }, ctx.payload.sub);
+        const created = await tx.message.create({
+          data: {
+            taskId: id,
+            workspaceId: wid,
+            authorId: ctx.payload.sub,
+            body: validated.body,
+          },
+          include: { author: { select: { id: true, name: true, email: true, image: true } } },
+        });
+
+        // 通知任务指派人有新聊天消息（排除发送者自己）
+        if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
+          await tx.notification.create({
+            data: {
+              userId: task.assigneeId,
+              workspaceId: wid,
+              type: "comment_added",
+              entityId: id,
+              entityTitle: task.title,
+            },
+          });
+        }
+
+        return created;
+      },
+      ctx.payload.sub,
+    );
 
     if (!result) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
 

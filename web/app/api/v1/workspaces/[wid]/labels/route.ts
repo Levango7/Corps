@@ -40,9 +40,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: "Only owner/admin can create labels" }, {
-      status: 403,
-    });
+    return NextResponse.json(
+      { code: 403, message: "Only owner/admin can create labels" },
+      {
+        status: 403,
+      },
+    );
   }
 
   try {

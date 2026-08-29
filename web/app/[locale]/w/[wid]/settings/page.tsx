@@ -17,7 +17,12 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { exportTasksCsv, exportDecisionsCsv, type CsvTask, type CsvDecision } from "@/lib/csv-export";
+import {
+  exportTasksCsv,
+  exportDecisionsCsv,
+  type CsvTask,
+  type CsvDecision,
+} from "@/lib/csv-export";
 
 type Role = "owner" | "admin" | "member";
 type ThemePref = "light" | "dark" | "system";
@@ -91,7 +96,10 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const [slug, setSlug] = useState("");
   const [theme, setTheme] = useState<ThemePref>("system");
   const [defaultView, setDefaultView] = useState<DefaultView>("board");
-  const [notifPref, setNotifPref] = useState<NotifPref>({ emailEnabled: true, mentionEnabled: true });
+  const [notifPref, setNotifPref] = useState<NotifPref>({
+    emailEnabled: true,
+    mentionEnabled: true,
+  });
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -363,7 +371,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             {t("save")}
           </button>
           {!userDirty && !userBusy && (
-            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noChanges")}</span>
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+              {t("noChanges")}
+            </span>
           )}
           {userSaved && (
             <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">
@@ -424,7 +434,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               {t("save")}
             </button>
             {!dirty && !busy && (
-              <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noChanges")}</span>
+              <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                {t("noChanges")}
+              </span>
             )}
             {saved && (
               <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">
@@ -480,9 +492,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <Bell size={16} className="text-[var(--muted)]" />
           {t("notifTitle")}
         </h2>
-        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
-          {t("notifHint")}
-        </p>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">{t("notifHint")}</p>
         <div className="space-y-3">
           <label className="flex items-center justify-between gap-3 cursor-pointer">
             <div>
@@ -558,9 +568,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <Download size={16} className="text-[var(--muted)]" />
           {tExport("title")}
         </h2>
-        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
-          {tExport("hint")}
-        </p>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">{tExport("hint")}</p>
         <div className="flex flex-col sm:flex-row gap-3">
           <button
             onClick={handleExportTasks}

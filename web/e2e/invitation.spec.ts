@@ -64,9 +64,7 @@ test.describe.serial("邀请流程：管理员邀请 → 成员接受 → 加入
     await inviteePage.goto(fullUrl);
 
     // 注册页应显示邀请上下文提示
-    await expect(
-      inviteePage.getByText(/邀请你加入/),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(inviteePage.getByText(/邀请你加入/)).toBeVisible({ timeout: 10_000 });
 
     // 用被邀请邮箱注册（工作区名可不填，因为带邀请 token 时注册后加入对方工作区）
     // 注意：signup 页工作区名必填，填一个临时名（注册后会被邀请覆盖跳转）
@@ -84,9 +82,9 @@ test.describe.serial("邀请流程：管理员邀请 → 成员接受 → 加入
     expect(finalUrl).toContain(ownerWorkspaceId);
 
     // 验证能进入工作区首页
-    await expect(
-      inviteePage.getByRole("heading", { name: "概览" }),
-    ).toBeVisible({ timeout: 10_000 });
+    await expect(inviteePage.getByRole("heading", { name: "概览" })).toBeVisible({
+      timeout: 10_000,
+    });
 
     await inviteeContext.close();
   });

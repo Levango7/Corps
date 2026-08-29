@@ -84,19 +84,13 @@ export async function POST(
 
     // 校验文件大小
     if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { code: 400, message: "文件大小不能超过 10MB" },
-        { status: 400 },
-      );
+      return NextResponse.json({ code: 400, message: "文件大小不能超过 10MB" }, { status: 400 });
     }
 
     // 校验文件类型
     const ext = ALLOWED_TYPES[file.type];
     if (!ext) {
-      return NextResponse.json(
-        { code: 400, message: "不支持的文件类型" },
-        { status: 400 },
-      );
+      return NextResponse.json({ code: 400, message: "不支持的文件类型" }, { status: 400 });
     }
 
     // 确保上传目录存在

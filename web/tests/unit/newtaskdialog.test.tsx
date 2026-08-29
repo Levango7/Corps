@@ -27,9 +27,9 @@ const { apiMock } = vi.hoisted(() => ({
 // i18n mock：useTranslations 按 zh.json 展平查表返回真实中文（t(key) → 中文），
 // NextIntlClientProvider 退化为透传。render/rerender 均无需包 provider。
 const { zhFlat } = vi.hoisted(() => {
-  const req = process.getBuiltinModule("module").createRequire(
-    process.cwd() + "/tests/unit/newtaskdialog.test.tsx",
-  );
+  const req = process
+    .getBuiltinModule("module")
+    .createRequire(process.cwd() + "/tests/unit/newtaskdialog.test.tsx");
   const zh = req("../../messages/zh.json");
   const flat: Record<string, string> = {};
   const walk = (o: unknown, p = "") => {

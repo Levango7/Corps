@@ -52,9 +52,7 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await expect(page.getByText(taskTitle, { exact: true })).toBeVisible({ timeout: 10_000 });
 
     // 定位任务卡（draggable div 包含标题）
-    const taskCard = page
-      .locator('div[draggable="true"]')
-      .filter({ hasText: taskTitle });
+    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle });
 
     // 定位「进行中」列头（drop 事件在列容器冒泡）
     const inProgressColumn = page.getByText("进行中", { exact: true });
@@ -86,9 +84,7 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await page.goto(`/w/${wid}/board`);
 
     // 点任务卡进入详情页
-    const taskCard = page
-      .locator('div[draggable="true"]')
-      .filter({ hasText: taskTitle });
+    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle });
     await taskCard.click();
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 

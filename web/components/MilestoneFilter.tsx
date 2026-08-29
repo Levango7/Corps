@@ -39,7 +39,7 @@ export function MilestoneFilter({
       ? t("filterAll")
       : value === "null"
         ? t("filterUnassigned")
-        : milestones.find((m) => m.id === value)?.name ?? t("filterAll");
+        : (milestones.find((m) => m.id === value)?.name ?? t("filterAll"));
 
   return (
     <div className="relative">
@@ -71,7 +71,9 @@ export function MilestoneFilter({
                 setOpen(false);
               }}
               className={`w-full text-left px-3 py-1.5 text-[length:var(--text-sm)] hover:bg-[var(--surface-2)] transition-colors ${
-                value === "all" ? "text-[var(--accent)] font-[var(--weight-medium)]" : "text-[var(--fg-2)]"
+                value === "all"
+                  ? "text-[var(--accent)] font-[var(--weight-medium)]"
+                  : "text-[var(--fg-2)]"
               }`}
             >
               {t("filterAll")}
@@ -84,7 +86,9 @@ export function MilestoneFilter({
                 setOpen(false);
               }}
               className={`w-full text-left px-3 py-1.5 text-[length:var(--text-sm)] hover:bg-[var(--surface-2)] transition-colors ${
-                value === "null" ? "text-[var(--accent)] font-[var(--weight-medium)]" : "text-[var(--fg-2)]"
+                value === "null"
+                  ? "text-[var(--accent)] font-[var(--weight-medium)]"
+                  : "text-[var(--fg-2)]"
               }`}
             >
               {t("filterUnassigned")}

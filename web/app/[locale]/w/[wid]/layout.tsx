@@ -63,8 +63,6 @@ export default function WorkspaceLayout({
   const { wid } = use(params);
   const t = useTranslations("nav");
 
-
-
   // ─── 初始化：主题 + 侧栏折叠 + 工作区列表 + 埋点 ───
   useEffect(() => {
     const pref = readThemePref();
@@ -240,7 +238,11 @@ export default function WorkspaceLayout({
   const notifHref = `/w/${wid}/notifications`;
   const notifActive = pathname.startsWith(notifHref);
   const themeLabel =
-    themePref === "system" ? t("theme.system") : themePref === "light" ? t("theme.light") : t("theme.dark");
+    themePref === "system"
+      ? t("theme.system")
+      : themePref === "light"
+        ? t("theme.light")
+        : t("theme.dark");
 
   return (
     <div className="min-h-screen flex flex-col">

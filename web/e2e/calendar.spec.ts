@@ -148,9 +148,15 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     });
 
     // 三个复选框（i18n: calendar.syncDueDateOnly / remindOneDay / remindOneHour）
-    const syncDueCheckbox = page.locator("label", { hasText: "仅同步有截止日期的任务" }).locator('input[type="checkbox"]');
-    const remindDayCheckbox = page.locator("label", { hasText: "同步前 1 天提醒" }).locator('input[type="checkbox"]');
-    const remindHourCheckbox = page.locator("label", { hasText: "同步前 1 小时提醒" }).locator('input[type="checkbox"]');
+    const syncDueCheckbox = page
+      .locator("label", { hasText: "仅同步有截止日期的任务" })
+      .locator('input[type="checkbox"]');
+    const remindDayCheckbox = page
+      .locator("label", { hasText: "同步前 1 天提醒" })
+      .locator('input[type="checkbox"]');
+    const remindHourCheckbox = page
+      .locator("label", { hasText: "同步前 1 小时提醒" })
+      .locator('input[type="checkbox"]');
 
     // 默认值：syncDueDateOnly=true, remindOneDay=true, remindOneHour=false
     await expect(syncDueCheckbox).toBeChecked();

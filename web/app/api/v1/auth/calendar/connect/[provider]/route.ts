@@ -18,10 +18,7 @@ import {
  * 查询参数：
  *  - wid：回跳工作区 ID（授权完成后回到 /w/{wid}/settings/calendar）
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ provider: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
 
   // 校验 provider

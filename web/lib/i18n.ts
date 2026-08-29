@@ -19,7 +19,6 @@
 import { getRequestConfig } from "next-intl/server";
 import { hasLocale } from "next-intl";
 
-
 /** 应用支持的 locale 列表（ADR-008 §3.1）。 */
 export const locales = ["zh", "en"] as const;
 

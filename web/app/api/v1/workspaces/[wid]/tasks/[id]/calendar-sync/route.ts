@@ -39,11 +39,15 @@ export async function GET(
     });
 
     const providers = events.map((e) => e.connection.provider);
-    const lastSyncedAt = events.length > 0
-      ? events.reduce((latest, e) =>
-          e.lastSyncedAt > latest ? e.lastSyncedAt : latest, events[0].lastSyncedAt
-        ).toISOString()
-      : null;
+    const lastSyncedAt =
+      events.length > 0
+        ? events
+            .reduce(
+              (latest, e) => (e.lastSyncedAt > latest ? e.lastSyncedAt : latest),
+              events[0].lastSyncedAt,
+            )
+            .toISOString()
+        : null;
     const hasError = events.some((e) => e.connection.syncStatus === "error");
 
     const status: TaskSyncStatus = {

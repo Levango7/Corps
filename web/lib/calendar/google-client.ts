@@ -59,9 +59,7 @@ function buildEventBody(opts: CreateEventOptions): GoogleCalendarEvent {
   const due = new Date(opts.dueDate);
   const dateStr = due.toISOString().slice(0, 10);
   // 次日作为结束日期（Google 全天事件 end 是排他日期）
-  const endDate = new Date(due.getTime() + 24 * 60 * 60 * 1000)
-    .toISOString()
-    .slice(0, 10);
+  const endDate = new Date(due.getTime() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
   const reminders =
     opts.reminderMinutes && opts.reminderMinutes.length > 0

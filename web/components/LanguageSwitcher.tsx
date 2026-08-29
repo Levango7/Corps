@@ -37,11 +37,7 @@ export function LanguageSwitcher() {
 
   return (
     <div className="flex items-center gap-1">
-      <Languages
-        size={16}
-        className="text-[var(--meta)] mr-0.5"
-        aria-hidden="true"
-      />
+      <Languages size={16} className="text-[var(--meta)] mr-0.5" aria-hidden="true" />
       {locales.map((loc) => (
         <button
           key={loc}

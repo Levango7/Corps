@@ -22,13 +22,7 @@ interface TaskSyncStatus {
  *  - 同步失败：红色 ✗ + tooltip 显示错误
  *  - 同步中：spinner
  */
-export default function CalendarSyncBadge({
-  wid,
-  taskId,
-}: {
-  wid: string;
-  taskId: string;
-}) {
+export default function CalendarSyncBadge({ wid, taskId }: { wid: string; taskId: string }) {
   const t = useTranslations("calendar");
   const [status, setStatus] = useState<TaskSyncStatus | null>(null);
   const [loading, setLoading] = useState(true);
@@ -82,11 +76,7 @@ export default function CalendarSyncBadge({
   const tooltip = t("syncedTo", { provider: providerLabel });
 
   return (
-    <span
-      className="inline-flex items-center cursor-help"
-      title={tooltip}
-      aria-label={tooltip}
-    >
+    <span className="inline-flex items-center cursor-help" title={tooltip} aria-label={tooltip}>
       <Calendar size={14} className="text-[var(--meta)]" />
       <Check size={12} className="text-[var(--success)] -ml-1" />
     </span>

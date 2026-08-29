@@ -51,15 +51,18 @@ export async function getPrimaryCalendarId(accessToken: string): Promise<string>
 function buildEventBody(opts: CreateEventOptions): OutlookCalendarEvent {
   const due = new Date(opts.dueDate);
   // 全天事件：start = 当天 00:00 UTC，end = 次日 00:00 UTC
-  const startIso = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate())).toISOString();
+  const startIso = new Date(
+    Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate()),
+  ).toISOString();
   const endIso = new Date(
     Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate() + 1),
   ).toISOString();
 
   // Outlook 单事件只支持一个 reminderMinutesBeforeStart；取最早的提醒
-  const reminder = opts.reminderMinutes && opts.reminderMinutes.length > 0
-    ? Math.min(...opts.reminderMinutes)
-    : 1440; // 默认提前 1 天
+  const reminder =
+    opts.reminderMinutes && opts.reminderMinutes.length > 0
+      ? Math.min(...opts.reminderMinutes)
+      : 1440; // 默认提前 1 天
 
   return {
     subject: opts.title,

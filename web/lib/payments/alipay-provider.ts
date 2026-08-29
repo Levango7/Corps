@@ -47,8 +47,7 @@ const ALIPAY_PRICE_CENTS_YEARLY = process.env.ALIPAY_PRICE_CENTS_YEARLY;
 const ALIPAY_NOTIFY_URL = process.env.ALIPAY_NOTIFY_URL;
 
 /** 支付宝网关。沙箱：https://openapi-sandbox.dl.alipaydev.com/gateway.do */
-const ALIPAY_GATEWAY =
-  process.env.ALIPAY_GATEWAY ?? "https://openapi.alipay.com/gateway.do";
+const ALIPAY_GATEWAY = process.env.ALIPAY_GATEWAY ?? "https://openapi.alipay.com/gateway.do";
 
 /** 月付单价（分）：环境变量优先，缺省 5900 = ¥59（ADR-003 定价） */
 const PRICE_MONTHLY_CENTS = Number(ALIPAY_PRICE_CENTS_MONTHLY ?? 5900);
@@ -96,11 +95,7 @@ function rsa2Sign(privateKeyPem: string, data: string): string {
  * RSA2 验签：用支付宝公钥验证签名。
  * 常量时间比较防时序攻击（crypto.verify 内部已做）。
  */
-function rsa2Verify(
-  publicKeyPem: string,
-  data: string,
-  signatureBase64: string,
-): boolean {
+function rsa2Verify(publicKeyPem: string, data: string, signatureBase64: string): boolean {
   try {
     const verify = crypto.createVerify("RSA-SHA256");
     verify.update(data, "utf8");
@@ -159,9 +154,7 @@ export class AlipayPageProvider implements PaymentProvider {
    * 是否已配置就绪：APP_ID + 私钥 + 公钥齐备。
    */
   get isConfigured(): boolean {
-    return Boolean(
-      ALIPAY_APP_ID && this.privateKeyPem && this.publicKeyPem,
-    );
+    return Boolean(ALIPAY_APP_ID && this.privateKeyPem && this.publicKeyPem);
   }
 
   /** 配置校验 */
@@ -207,9 +200,7 @@ export class AlipayPageProvider implements PaymentProvider {
     const outTradeNo = generateOutTradeNo();
     // passback_params 透传业务上下文（回调时返回）；支付宝上限 512 字符
     // 使用 URL 编码避免特殊字符问题
-    const passbackParams = encodeURIComponent(
-      `${req.workspaceId}|${req.seats}|${period}`,
-    );
+    const passbackParams = encodeURIComponent(`${req.workspaceId}|${req.seats}|${period}`);
 
     const notifyUrl = this.resolveNotifyUrl();
     // 支付宝要求 return_url 与 notify_url 同域名且已报备
@@ -310,18 +301,14 @@ export class AlipayPageProvider implements PaymentProvider {
 
     const notifyId = params.get("notify_id"); // 通知 ID（幂等用）
     if (!outTradeNo || !notifyId) {
-      console.error(
-        `[alipay-webhook] 缺失 out_trade_no 或 notify_id，无法处理`,
-      );
+      console.error(`[alipay-webhook] 缺失 out_trade_no 或 notify_id，无法处理`);
       return null;
     }
 
     // 仅处理交易成功状态
     // TRADE_FINISHED（交易完成，不可退款）与 TRADE_SUCCESS（交易支付成功）均视为成功
     if (tradeStatus !== "TRADE_SUCCESS" && tradeStatus !== "TRADE_FINISHED") {
-      console.warn(
-        `[alipay-webhook] 非成功状态，跳过: status=${tradeStatus} order=${outTradeNo}`,
-      );
+      console.warn(`[alipay-webhook] 非成功状态，跳过: status=${tradeStatus} order=${outTradeNo}`);
       return null;
     }
 
@@ -396,10 +383,7 @@ export class AlipayPageProvider implements PaymentProvider {
         headers: { Accept: "application/json" },
       });
       if (!res.ok) {
-        throw new PaymentProviderError(
-          `支付宝查单 HTTP 失败: ${res.status}`,
-          "channel_error",
-        );
+        throw new PaymentProviderError(`支付宝查单 HTTP 失败: ${res.status}`, "channel_error");
       }
       const resp = (await res.json()) as {
         alipay_trade_query_response: {

@@ -16,7 +16,6 @@ import { uniqueEmail, registerAndLogin, login } from "./helpers";
 
 const email = uniqueEmail("e2e-i18n");
 
-
 test.describe("i18n：登录页文案对比（zh vs en）", () => {
   test("默认 locale（zh）登录页显示中文", async ({ page }) => {
     await page.goto("/auth/login");

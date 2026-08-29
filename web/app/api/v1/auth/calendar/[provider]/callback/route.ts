@@ -22,10 +22,7 @@ import { getPrimaryCalendarId as getOutlookPrimaryCalendarId } from "@/lib/calen
  *  5. 加密存储 token，upsert CalendarConnection（同 userId+provider 唯一）
  *  6. 重定向回 /w/{wid}/settings/calendar
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ provider: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
   const { provider } = await params;
   const url = new URL(req.url);
   const code = url.searchParams.get("code");

@@ -79,15 +79,9 @@ export function ChatHeader({
       {/* 在线状态栏 */}
       {onlineMembers.length > 0 && (
         <div className="flex items-center gap-[var(--space-2)] flex-wrap">
-          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("online")}
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("online")}</span>
           {onlineMembers.slice(0, 5).map((m) => (
-            <div
-              key={m.id}
-              className="relative shrink-0"
-              title={m.name || m.email}
-            >
+            <div key={m.id} className="relative shrink-0" title={m.name || m.email}>
               <div className="w-6 h-6 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)] overflow-hidden">
                 {m.image ? (
                   // eslint-disable-next-line @next/next/no-img-element

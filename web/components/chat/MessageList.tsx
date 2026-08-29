@@ -170,15 +170,11 @@ export function MessageList({
           </div>
         ) : !hasMessages ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("empty")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("empty")}</p>
           </div>
         ) : searchQuery.trim() && !hasFilteredMessages ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("noResults")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noResults")}</p>
           </div>
         ) : (
           filteredGroups.map((group, gi) => (

@@ -65,9 +65,7 @@ export default function SignupPage() {
         const json = await res.json();
         return (json.data as { workspaceId: string }).workspaceId ?? null;
       }
-      setError(
-        res.status === 402 ? t("inviteSeatsFull") : t("inviteJoinFailed"),
-      );
+      setError(res.status === 402 ? t("inviteSeatsFull") : t("inviteJoinFailed"));
     } catch {
       setError(t("inviteJoinFailed"));
     }
@@ -103,9 +101,7 @@ export default function SignupPage() {
       const data = await res.json();
 
       if (!res.ok) {
-        setError(
-          res.status === 409 ? t("emailExists") : data.message || t("failed"),
-        );
+        setError(res.status === 409 ? t("emailExists") : data.message || t("failed"));
         setBusy(false);
         return;
       }
@@ -140,7 +136,13 @@ export default function SignupPage() {
 
   const strength = getPasswordStrength(password);
   const strengthLabel =
-    strength === 1 ? t("passwordStrength.weak") : strength === 2 ? t("passwordStrength.medium") : strength === 3 ? t("passwordStrength.strong") : "";
+    strength === 1
+      ? t("passwordStrength.weak")
+      : strength === 2
+        ? t("passwordStrength.medium")
+        : strength === 3
+          ? t("passwordStrength.strong")
+          : "";
   const strengthColor =
     strength === 1
       ? "bg-[var(--danger)]"

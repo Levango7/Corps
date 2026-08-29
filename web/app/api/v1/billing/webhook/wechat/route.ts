@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getPaymentProvider,
-  PaymentProviderError,
-  PaymentWebhookError,
-} from "@/lib/payments";
+import { getPaymentProvider, PaymentProviderError, PaymentWebhookError } from "@/lib/payments";
 import { handleBillingEvent } from "@/lib/billing/webhook-handler";
 
 /**

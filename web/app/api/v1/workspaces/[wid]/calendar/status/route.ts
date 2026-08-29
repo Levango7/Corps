@@ -16,10 +16,7 @@ interface ConnectionStatus {
  * GET /api/v1/workspaces/{wid}/calendar/status
  * 获取当前用户的日历连接状态 + 同步状态（用于设置页面渲染）。
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });

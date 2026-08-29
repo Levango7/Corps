@@ -49,8 +49,7 @@ const WECHAT_PRICE_CENTS_YEARLY = process.env.WECHAT_PRICE_CENTS_YEARLY;
 const WECHAT_NOTIFY_URL = process.env.WECHAT_NOTIFY_URL;
 
 /** 微信支付 V3 网关。沙箱可经 WECHAT_API_BASE 覆盖（环境隔离） */
-const WECHAT_API_BASE =
-  process.env.WECHAT_API_BASE ?? "https://api.mch.weixin.qq.com";
+const WECHAT_API_BASE = process.env.WECHAT_API_BASE ?? "https://api.mch.weixin.qq.com";
 
 /** 月付单价（分）：环境变量优先，缺省 5900 = ¥59（ADR-003 定价） */
 const PRICE_MONTHLY_CENTS = Number(WECHAT_PRICE_CENTS_MONTHLY ?? 5900);
@@ -100,11 +99,7 @@ function aesGcmDecrypt(
   // GCM 模式最后 16 字节为 authTag
   const authTag = ciphertext.subarray(ciphertext.length - 16);
   const encrypted = ciphertext.subarray(0, ciphertext.length - 16);
-  const decipher = crypto.createDecipheriv(
-    "aes-256-gcm",
-    keyBuf,
-    Buffer.from(nonce, "utf8"),
-  );
+  const decipher = crypto.createDecipheriv("aes-256-gcm", keyBuf, Buffer.from(nonce, "utf8"));
   decipher.setAuthTag(authTag);
   if (associatedData) {
     decipher.setAAD(Buffer.from(associatedData, "utf8"));
@@ -129,11 +124,7 @@ function generateNonce(): string {
  * 构造微信 V3 请求签名串并生成 Authorization 头。
  * 签名串格式：HTTP方法\nURL路径\n时间戳\n随机串\n请求体\n
  */
-function buildAuthHeader(
-  method: string,
-  urlPath: string,
-  body: string,
-): string {
+function buildAuthHeader(method: string, urlPath: string, body: string): string {
   if (!WECHAT_APP_ID || !WECHAT_MCH_ID || !WECHAT_API_KEY || !WECHAT_CERT_SERIAL_NO) {
     throw new PaymentProviderError(
       "微信支付配置不完整（需 WECHAT_APP_ID / WECHAT_MCH_ID / WECHAT_API_KEY / WECHAT_CERT_SERIAL_NO）",
@@ -226,9 +217,7 @@ export class WeChatPayNativeProvider implements PaymentProvider {
    * getPaymentProviderSafe 据此返回 null，前端隐藏微信支付入口。
    */
   get isConfigured(): boolean {
-    return Boolean(
-      WECHAT_APP_ID && WECHAT_MCH_ID && WECHAT_API_KEY && WECHAT_CERT_SERIAL_NO,
-    );
+    return Boolean(WECHAT_APP_ID && WECHAT_MCH_ID && WECHAT_API_KEY && WECHAT_CERT_SERIAL_NO);
   }
 
   /** 配置校验：未配置时抛 not_configured */

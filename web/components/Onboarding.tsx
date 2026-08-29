@@ -3,15 +3,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import {
-  CheckCircle2,
-  Plus,
-  UserPlus,
-  X,
-  ArrowRight,
-  ArrowLeft,
-  PartyPopper,
-} from "lucide-react";
+import { CheckCircle2, Plus, UserPlus, X, ArrowRight, ArrowLeft, PartyPopper } from "lucide-react";
 
 interface OnboardingProps {
   wid: string;
@@ -213,7 +205,9 @@ export default function Onboarding({
           <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             {current.title}
           </h2>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{current.subtitle}</p>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+            {current.subtitle}
+          </p>
           <div className="mt-5">{current.content}</div>
         </div>
 
