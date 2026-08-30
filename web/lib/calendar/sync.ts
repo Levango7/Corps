@@ -10,8 +10,7 @@
  *  - 数据隐私：只同步标题 + 截止日期 + 任务链接，不同步任务正文
  */
 
-import { prisma } from "@/lib/prisma";
-import { runWithAuthOp } from "@/lib/auth";
+import { runWithAuthOp, withGuc } from "@/lib/auth";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { refreshAccessToken, revokeToken } from "./oauth";
 import { createGoogleEvent, deleteGoogleEvent, updateGoogleEvent } from "./google-client";
@@ -39,17 +38,21 @@ async function ensureFreshAccessToken(connectionId: string): Promise<{
   accessToken: string;
   connection: { id: string; provider: string; calendarId: string; refreshToken: string };
 }> {
-  const conn = await prisma.calendarConnection.findUnique({
-    where: { id: connectionId },
-    select: {
-      id: true,
-      provider: true,
-      calendarId: true,
-      accessToken: true,
-      refreshToken: true,
-      tokenExpiresAt: true,
-    },
-  });
+  // calendar_connections 受 FORCE RLS（user_id 谓词 + calendar 逃生口）：
+  // 同步作业按连接 id 定位，经 calendar op 放行
+  const conn = await runWithAuthOp("calendar", (tx) =>
+    tx.calendarConnection.findUnique({
+      where: { id: connectionId },
+      select: {
+        id: true,
+        provider: true,
+        calendarId: true,
+        accessToken: true,
+        refreshToken: true,
+        tokenExpiresAt: true,
+      },
+    }),
+  );
   if (!conn) throw new Error("日历连接不存在");
 
   let accessToken = decrypt(conn.accessToken);
@@ -66,14 +69,16 @@ async function ensureFreshAccessToken(connectionId: string): Promise<{
     const newRefreshToken = refreshed.refresh_token
       ? encrypt(refreshed.refresh_token)
       : conn.refreshToken;
-    await prisma.calendarConnection.update({
-      where: { id: connectionId },
-      data: {
-        accessToken: encrypt(refreshed.access_token),
-        refreshToken: newRefreshToken,
-        tokenExpiresAt: newExpiresAt,
-      },
-    });
+    await runWithAuthOp("calendar", (tx) =>
+      tx.calendarConnection.update({
+        where: { id: connectionId },
+        data: {
+          accessToken: encrypt(refreshed.access_token),
+          refreshToken: newRefreshToken,
+          tokenExpiresAt: newExpiresAt,
+        },
+      }),
+    );
     return {
       accessToken,
       connection: {
@@ -127,31 +132,37 @@ export async function syncTaskToCalendar(
     );
     if (!task) return { success: true, syncedConnections: 0 };
 
-    // debounce 检查
+    // debounce 检查（task_calendar_events 受 FORCE RLS，calendar op 放行）
     if (!opts.force) {
-      const existing = await prisma.taskCalendarEvent.findUnique({
-        where: { taskId_connectionId: { taskId, connectionId } },
-        select: { lastSyncedAt: true },
-      });
+      const existing = await runWithAuthOp("calendar", (tx) =>
+        tx.taskCalendarEvent.findUnique({
+          where: { taskId_connectionId: { taskId, connectionId } },
+          select: { lastSyncedAt: true },
+        }),
+      );
       if (existing && Date.now() - existing.lastSyncedAt.getTime() < SYNC_DEBOUNCE_MS) {
         return { success: true, syncedConnections: 0 };
       }
     }
 
     // 标记同步中
-    await prisma.calendarConnection.update({
-      where: { id: connectionId },
-      data: { syncStatus: "syncing", syncError: null },
-    });
+    await runWithAuthOp("calendar", (tx) =>
+      tx.calendarConnection.update({
+        where: { id: connectionId },
+        data: { syncStatus: "syncing", syncError: null },
+      }),
+    );
 
     const { accessToken, connection } = await ensureFreshAccessToken(connectionId);
     const provider = connection.provider as CalendarProvider;
     const taskUrl = buildTaskUrl(task.workspaceId, taskId);
 
     // 查询已有事件映射
-    const eventMapping = await prisma.taskCalendarEvent.findUnique({
-      where: { taskId_connectionId: { taskId, connectionId } },
-    });
+    const eventMapping = await runWithAuthOp("calendar", (tx) =>
+      tx.taskCalendarEvent.findUnique({
+        where: { taskId_connectionId: { taskId, connectionId } },
+      }),
+    );
 
     if (!task.dueDate) {
       // 截止日期被移除 → 删除外部事件
@@ -165,7 +176,9 @@ export async function syncTaskToCalendar(
             eventMapping.externalEventId,
           );
         }
-        await prisma.taskCalendarEvent.delete({ where: { id: eventMapping.id } });
+        await runWithAuthOp("calendar", (tx) =>
+          tx.taskCalendarEvent.delete({ where: { id: eventMapping.id } }),
+        );
       }
     } else {
       // 有截止日期 → 创建或更新
@@ -193,38 +206,46 @@ export async function syncTaskToCalendar(
             eventOpts,
           );
         }
-        await prisma.taskCalendarEvent.update({
-          where: { id: eventMapping.id },
-          data: { lastSyncedAt: new Date() },
-        });
+        await runWithAuthOp("calendar", (tx) =>
+          tx.taskCalendarEvent.update({
+            where: { id: eventMapping.id },
+            data: { lastSyncedAt: new Date() },
+          }),
+        );
       } else {
         // 创建
         const externalEventId =
           provider === "google"
             ? await createGoogleEvent(accessToken, connection.calendarId, eventOpts)
             : await createOutlookEvent(accessToken, connection.calendarId, eventOpts);
-        await prisma.taskCalendarEvent.create({
-          data: { taskId, connectionId, externalEventId },
-        });
+        await runWithAuthOp("calendar", (tx) =>
+          tx.taskCalendarEvent.create({
+            data: { taskId, connectionId, externalEventId },
+          }),
+        );
       }
     }
 
     // 标记同步成功
-    await prisma.calendarConnection.update({
-      where: { id: connectionId },
-      data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
-    });
+    await runWithAuthOp("calendar", (tx) =>
+      tx.calendarConnection.update({
+        where: { id: connectionId },
+        data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
+      }),
+    );
 
     return { success: true, syncedConnections: 1 };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
     // 标记同步失败
-    await prisma.calendarConnection
-      .update({
-        where: { id: connectionId },
-        data: { syncStatus: "error", syncError: message },
-      })
-      .catch(() => {});
+    await runWithAuthOp("calendar", (tx) =>
+      tx.calendarConnection
+        .update({
+          where: { id: connectionId },
+          data: { syncStatus: "error", syncError: message },
+        })
+        .catch(() => {}),
+    ).catch(() => {});
     return { success: false, error: message, syncedConnections: 0 };
   }
 }
@@ -238,10 +259,12 @@ export async function syncTaskToAllCalendars(
   userId: string,
   opts: { force?: boolean } = {},
 ): Promise<SyncResult> {
-  const connections = await prisma.calendarConnection.findMany({
-    where: { userId },
-    select: { id: true },
-  });
+  // calendar_connections 受 FORCE RLS（user_id / calendar op）：同步作业经逃生口
+  const connections = await runWithAuthOp(
+    "calendar",
+    (tx) => tx.calendarConnection.findMany({ where: { userId }, select: { id: true } }),
+    userId,
+  );
   if (connections.length === 0) return { success: true, syncedConnections: 0 };
 
   let synced = 0;
@@ -266,10 +289,11 @@ export async function syncTaskToAllCalendars(
  * 用于手动触发"立即同步"。
  */
 export async function syncAllTasks(userId: string): Promise<SyncResult> {
-  const connections = await prisma.calendarConnection.findMany({
-    where: { userId },
-    select: { id: true },
-  });
+  const connections = await runWithAuthOp(
+    "calendar",
+    (tx) => tx.calendarConnection.findMany({ where: { userId }, select: { id: true } }),
+    userId,
+  );
   if (connections.length === 0) return { success: true, syncedConnections: 0 };
 
   // 只同步有截止日期的任务（同上：tasks 受 FORCE RLS，经 calendar 逃生口只读扫描）
@@ -324,10 +348,13 @@ export async function disconnectCalendar(
   userId: string,
   provider: CalendarProvider,
 ): Promise<void> {
-  const conn = await prisma.calendarConnection.findUnique({
-    where: { userId_provider: { userId, provider } },
-    select: { id: true, accessToken: true },
-  });
+  // calendar_connections 受 FORCE RLS（user_id 谓词）：disconnect 路由已认证本人
+  const conn = await withGuc({ user_id: userId }, (tx) =>
+    tx.calendarConnection.findUnique({
+      where: { userId_provider: { userId, provider } },
+      select: { id: true, accessToken: true },
+    }),
+  );
   if (!conn) return;
 
   // 撤销 token（失败不阻塞）
@@ -339,5 +366,7 @@ export async function disconnectCalendar(
   }
 
   // 删除连接记录（级联删除 TaskCalendarEvent）
-  await prisma.calendarConnection.delete({ where: { id: conn.id } });
+  await withGuc({ user_id: userId }, (tx) =>
+    tx.calendarConnection.delete({ where: { id: conn.id } }),
+  );
 }

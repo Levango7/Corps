@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { syncTaskToAllCalendars } from "@/lib/calendar/sync";
+import { deleteTaskFiles } from "@/lib/uploads-cleanup";
 import { z } from "zod";
 
 const updateTaskSchema = z.object({
@@ -230,6 +231,9 @@ export async function DELETE(
       );
     }
 
+    // DB 级联删除前清理附件磁盘文件（message_attachments 行随级联消失，
+    // 之后将无从定位文件；尽力而为，失败不阻断删除）
+    await deleteTaskFiles(id);
     await runWithWorkspace(wid, (tx) => tx.task.delete({ where: { id } }), ctx.payload.sub);
 
     return NextResponse.json({ code: 200, data: null });

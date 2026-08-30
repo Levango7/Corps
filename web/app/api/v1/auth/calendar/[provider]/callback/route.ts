@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
+import { withGuc } from "@/lib/auth";
 import { encrypt } from "@/lib/crypto";
 import { verifyState, type CalendarProvider } from "@/lib/calendar/config";
 import {
@@ -68,6 +68,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
         `${redirectTarget}?error=${encodeURIComponent("未获取到 refresh_token，请重新授权")}`,
       );
     }
+    // TS 收窄保真：闭包内（withGuc 回调）无法继承上方判空，保存到 const
+    const accessToken = tokenRes.access_token;
+    const refreshToken = tokenRes.refresh_token;
 
     // 2. 获取用户邮箱 + 默认日历 ID
     let email: string;
@@ -82,31 +85,34 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
       calendarId = await getOutlookPrimaryCalendarId(tokenRes.access_token);
     }
 
-    // 3. 加密存储 token，upsert 连接记录
+    // 3. 加密存储 token，upsert 连接记录（calendar_connections 受 FORCE RLS
+    //    user_id 谓词：state 已验证的授权用户本人，经 withGuc 注入 user_id）
     const tokenExpiresAt = new Date(Date.now() + tokenRes.expires_in * 1000);
-    await prisma.calendarConnection.upsert({
-      where: {
-        userId_provider: { userId: statePayload.userId, provider: p },
-      },
-      create: {
-        userId: statePayload.userId,
-        provider: p,
-        email,
-        accessToken: encrypt(tokenRes.access_token),
-        refreshToken: encrypt(tokenRes.refresh_token),
-        tokenExpiresAt,
-        calendarId,
-      },
-      update: {
-        email,
-        accessToken: encrypt(tokenRes.access_token),
-        refreshToken: encrypt(tokenRes.refresh_token),
-        tokenExpiresAt,
-        calendarId,
-        syncStatus: "idle",
-        syncError: null,
-      },
-    });
+    await withGuc({ user_id: statePayload.userId }, (tx) =>
+      tx.calendarConnection.upsert({
+        where: {
+          userId_provider: { userId: statePayload.userId, provider: p },
+        },
+        create: {
+          userId: statePayload.userId,
+          provider: p,
+          email,
+          accessToken: encrypt(accessToken),
+          refreshToken: encrypt(refreshToken),
+          tokenExpiresAt,
+          calendarId,
+        },
+        update: {
+          email,
+          accessToken: encrypt(accessToken),
+          refreshToken: encrypt(refreshToken),
+          tokenExpiresAt,
+          calendarId,
+          syncStatus: "idle",
+          syncError: null,
+        },
+      }),
+    );
 
     // 4. 重定向回设置页（带 success 标记）
     return NextResponse.redirect(`${redirectTarget}?connected=${p}`);

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace, withGuc } from "@/lib/auth";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { chatEvents, chatChannel, emitChatEvent, type ChatEvent } from "@/lib/chat-events";
-import { prisma } from "@/lib/prisma";
 
 /**
  * GET /v1/workspaces/{wid}/tasks/{id}/messages/stream — SSE 实时推送
@@ -41,6 +41,12 @@ export async function GET(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
+  // SSE 连接建立限流（审计 P2）：每客户端每分钟最多 20 次连接建立——
+  // 正常使用（断线重连）远低于此，但可防单客户端灌大量长连接占句柄。
+  // 心跳/空闲断开只兜底泄漏，不约束连接建立频率。
+  const limited = await checkRateLimit(req, "sse", { windowMs: 60_000, max: 20 });
+  if (limited) return limited;
+
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {
@@ -88,16 +94,17 @@ export async function GET(
     }
   }
 
-  // 标记当前用户在线（upsert ChatPresence）
-  await prisma.chatPresence
-    .upsert({
+  // 标记当前用户在线（upsert ChatPresence；经 GUC 短事务——chat_presences
+  // 受 FORCE RLS，按 task→workspace 关联套租户谓词）
+  await withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
+    tx.chatPresence.upsert({
       where: { taskId_userId: { taskId: id, userId } },
       create: { taskId: id, userId },
       update: { lastSeen: new Date() },
-    })
-    .catch(() => {
-      // 在线状态写入失败不阻塞 SSE 连接（容错降级）
-    });
+    }),
+  ).catch(() => {
+    // 在线状态写入失败不阻塞 SSE 连接（容错降级）
+  });
 
   // 广播当前用户上线
   emitChatEvent(id, { type: "presence", taskId: id, userId, online: true });
@@ -129,13 +136,13 @@ export async function GET(
         } catch {
           // 流已关闭
         }
-        // 刷新在线状态（容错）
-        prisma.chatPresence
-          .update({
+        // 刷新在线状态（容错；同上经 GUC 短事务——心跳回调不可持长事务）
+        withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
+          tx.chatPresence.update({
             where: { taskId_userId: { taskId: id, userId } },
             data: { lastSeen: new Date() },
-          })
-          .catch(() => {});
+          }),
+        ).catch(() => {});
       }, HEARTBEAT_INTERVAL_MS);
 
       // 4. 空闲超时自动断开
@@ -160,10 +167,10 @@ export async function GET(
         chatEvents.off(channel, listener);
         clearInterval(heartbeat);
         clearTimeout(idleTimeout);
-        // 广播离线并清理在线状态记录（异步，不阻塞）
-        prisma.chatPresence
-          .delete({ where: { taskId_userId: { taskId: id, userId } } })
-          .catch(() => {});
+        // 广播离线并清理在线状态记录（异步，不阻塞；经 GUC 短事务）
+        withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
+          tx.chatPresence.delete({ where: { taskId_userId: { taskId: id, userId } } }),
+        ).catch(() => {});
         emitChatEvent(id, { type: "presence", taskId: id, userId, online: false });
       };
     },

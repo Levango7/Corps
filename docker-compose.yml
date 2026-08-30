@@ -81,7 +81,6 @@ services:
       # 认证密钥（必须为强随机值）
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
-      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
       # 应用 URL
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       # Stripe（可选，未配置时计费页隐藏升级入口）

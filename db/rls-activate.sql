@@ -44,7 +44,8 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'members','tasks','comments','decisions','decision_versions',
     'subscriptions','notifications','workspaces','invitations','analytics_events',
-    'labels','milestones','messages','message_attachments','task_labels'
+    'labels','milestones','messages','message_attachments','task_labels',
+    'chat_presences','message_reads','calendar_connections','task_calendar_events'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -107,6 +108,7 @@ CREATE POLICY p_tasks_calendar_select ON tasks FOR SELECT
 -- 下载归属定位走下方 cron SELECT 逃生口。
 -- 仍不在清单：message_reads / chat_presences（暂无直接 API 路由）、
 -- calendar_connections / task_calendar_events（user 作用域，无 workspace 键，另议）。
+-- ↓ 2026-08-30 更新：上段说明作废——四表已按下述策略收编（见各自策略块）。
 DROP POLICY IF EXISTS p_labels_rls ON labels;
 CREATE POLICY p_labels_rls ON labels FOR ALL
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
@@ -143,6 +145,61 @@ CREATE POLICY p_task_labels_rls ON task_labels FOR ALL
   WITH CHECK (
     task_id IN (SELECT t.id FROM tasks t
                 WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
+
+-- ─── 2026-08-30 四表收编（审计 P2 + 决策 A 体验优先版）──────────────────────
+-- chat_presences / message_reads：与 messages 同域（经 task/message 关联套租户）。
+-- 调用点（stream/read 路由）已持 wid 上下文，改走 runWithWorkspace 注入 GUC。
+DROP POLICY IF EXISTS p_chat_presences_rls ON chat_presences;
+CREATE POLICY p_chat_presences_rls ON chat_presences FOR ALL
+  USING (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
+
+DROP POLICY IF EXISTS p_message_reads_rls ON message_reads;
+CREATE POLICY p_message_reads_rls ON message_reads FOR ALL
+  USING (
+    message_id IN (SELECT m.id FROM messages m
+                   WHERE m.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    message_id IN (SELECT m.id FROM messages m
+                   WHERE m.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
+
+-- calendar_connections：用户私有连接数据（OAuth token），无 workspace 键——
+-- 按 user_id 谓词：本人（app.user_id）或 calendar 逃生口（同步系统作业）可见。
+-- 调用点：status 路由本人查询（user_id GUC）、sync.ts 跨工作区作业（calendar op）、
+-- callback upsert（connect 时已有认证 user_id——经 login/provision op 的 user_id 分支）。
+DROP POLICY IF EXISTS p_calendar_connections_rls ON calendar_connections;
+CREATE POLICY p_calendar_connections_rls ON calendar_connections FOR ALL
+  USING (
+    user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    OR current_setting('app.auth_op', true) = 'calendar'
+  )
+  WITH CHECK (
+    user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    OR current_setting('app.auth_op', true) = 'calendar'
+  );
+
+-- task_calendar_events：任务↔连接映射，经 task 的 workspace 关联套租户；
+-- 同步作业（calendar op）需读写映射行 → calendar 逃生口覆盖 FOR ALL。
+DROP POLICY IF EXISTS p_task_calendar_events_rls ON task_calendar_events;
+CREATE POLICY p_task_calendar_events_rls ON task_calendar_events FOR ALL
+  USING (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+    OR current_setting('app.auth_op', true) = 'calendar'
+  )
+  WITH CHECK (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+    OR current_setting('app.auth_op', true) = 'calendar'
   );
 
 DROP POLICY IF EXISTS p_comments_rls ON comments;

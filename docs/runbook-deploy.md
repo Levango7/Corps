@@ -163,7 +163,6 @@ gunzip -c /data/backups/corps_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
   示例占位值：
   - `POSTGRES_PASSWORD`
   - `JWT_ACCESS_SECRET`
-  - `JWT_REFRESH_SECRET`
   - `BETTER_AUTH_SECRET`
   - 如使用 RLS 加固模式，一并轮换 `CORPS_APP_PASSWORD`
 - 生成方式：`openssl rand -hex 32`；密钥仅经 GitHub secrets / 部署平台环境变量注入，

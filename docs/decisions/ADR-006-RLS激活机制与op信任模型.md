@@ -53,11 +53,14 @@ Phase 1 审计要求启用 PostgreSQL Row Level Security（RLS）作为多租户
 
 ### D5 FORCE ROW LEVEL SECURITY
 
-全部 14 张业务表执行 `FORCE ROW LEVEL SECURITY`（原 10 张 + v2 扩面的
-labels/milestones/messages/task_labels，2026-08-28 审计 P2-3 修复），
-确保表属主（postgres）同样受策略约束，杜绝 `SET ROLE` 绕过。
-仍未覆盖：message_reads/message_attachments/chat_presences（暂无 API 路由）、
-calendar_connections/task_calendar_events（user 作用域，无 workspace 键）。
+全部 19 张业务表执行 `FORCE ROW LEVEL SECURITY`（原 10 张 + v2 扩面的
+labels/milestones/messages/message_attachments/task_labels，2026-08-30 二次
+扩面的 chat_presences/message_reads/calendar_connections/task_calendar_events——
+决策 A 体验优先版：chat 两表按 task/message 关联套租户谓词，日历两表按
+user_id 谓词 + calendar 逃生口），确保表属主（postgres）同样受策略约束，
+杜绝 `SET ROLE` 绕过。
+仍未覆盖：无（19 张全部业务表收编完毕；users/sessions/accounts/verifications
+为 Better Auth 身份域豁免，见 D3）。
 
 ## 后果
 
