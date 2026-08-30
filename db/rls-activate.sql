@@ -18,7 +18,8 @@
 --     webhook   支付通道回调（订阅与计划同步）
 --     invite    按 token 读取邀请（公开预览/接受前的取件）
 --     seat      邀请/接受的席位保护段（wid+uid 齐备，允许 FOR UPDATE 行锁）
---     cron      定时作业跨工作区只读扫描（当前仅截止日提醒；无写入路径）
+--     cron      定时作业跨工作区只读扫描（截止日提醒；无写入路径）
+--     calendar  日历同步跨工作区只读扫描（任务定位/用户截止日任务扫描；无写入路径）
 -- ===========================================================================
 
 -- ─── 1. 运行时角色 ─────────────────────────────────────────────────────────
@@ -82,8 +83,8 @@ CREATE POLICY p_members_delete ON members FOR DELETE USING (
 );
 
 -- tasks / comments / decisions / decision_versions：纯 workspace 谓词。
--- tasks 的 SELECT 另放行 cron 系统作业（截止日提醒需跨工作区扫描），
--- 写操作不设逃生口（cron 作业只读）。
+-- tasks 的 SELECT 另放行 cron / calendar 系统作业（截止日提醒与日历同步均需
+-- 跨工作区只读扫描），写操作不设逃生口（两类作业均只读）。
 DROP POLICY IF EXISTS p_tasks_rls ON tasks;
 CREATE POLICY p_tasks_rls ON tasks FOR ALL
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
@@ -92,6 +93,13 @@ CREATE POLICY p_tasks_rls ON tasks FOR ALL
 DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
 CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
   USING (current_setting('app.auth_op', true) = 'cron');
+
+-- 日历同步逃生口（审计 P1-A）：lib/calendar/sync.ts 按 taskId 定位任务 /
+-- 按用户扫描有截止日的任务，属用户级跨工作区只读作业——与 cron 同信任
+-- 级别、同只读约束（授权发起自登录用户的 OAuth 连接，见 ADR-006）。
+DROP POLICY IF EXISTS p_tasks_calendar_select ON tasks;
+CREATE POLICY p_tasks_calendar_select ON tasks FOR SELECT
+  USING (current_setting('app.auth_op', true) = 'calendar');
 
 -- v2 扩面（审计 P2-3）：labels / milestones / messages / message_attachments / task_labels
 -- 均带 workspace_id 且全部读写路由经 runWithWorkspace（GUC 事务），套用与 tasks

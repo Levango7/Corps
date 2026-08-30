@@ -29,12 +29,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const state = url.searchParams.get("state");
   const errorParam = url.searchParams.get("error");
 
-  // OAuth provider 返回的 error（用户拒绝授权等）
+  // OAuth provider 返回的 error（用户拒绝授权等）。
+  // state 若仍可解析则回跳该用户的日历设置页（缺 wid 前缀会落到 404——
+  // state 携带发起授权时的 wid）；解析失败（state 被篡改/缺失）回退无前缀路径
   if (errorParam) {
     const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    return NextResponse.redirect(
-      `${appUrl}/settings/calendar?error=${encodeURIComponent(errorParam)}`,
-    );
+    const statePayload = state ? verifyState(state) : null;
+    const target = statePayload
+      ? `${appUrl}/w/${statePayload.wid}/settings/calendar`
+      : `${appUrl}/settings/calendar`;
+    return NextResponse.redirect(`${target}?error=${encodeURIComponent(errorParam)}`);
   }
 
   if (!code || !state) {

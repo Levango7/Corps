@@ -113,6 +113,16 @@ services:
       # 定时作业鉴权：截止日提醒 /api/cron/due-reminders 需外部调度器携带
       # Authorization: Bearer ${CRON_SECRET} 调用（本编排不含调度器，需自行配置 cron）
       CRON_SECRET: ${CRON_SECRET:-}
+      # 日历集成（可选；CALENDAR_CRYPTO_KEY 生产必填——见 web/lib/crypto.ts，
+      # 缺失时生产启动即抛错；其余未配置时设置页隐藏连接入口）
+      CALENDAR_CRYPTO_KEY: ${CALENDAR_CRYPTO_KEY:-}
+      CALENDAR_STATE_SECRET: ${CALENDAR_STATE_SECRET:-}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      GOOGLE_REDIRECT_URI: ${GOOGLE_REDIRECT_URI:-}
+      OUTLOOK_CLIENT_ID: ${OUTLOOK_CLIENT_ID:-}
+      OUTLOOK_CLIENT_SECRET: ${OUTLOOK_CLIENT_SECRET:-}
+      OUTLOOK_REDIRECT_URI: ${OUTLOOK_REDIRECT_URI:-}
       # 邮件（可选）
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}

@@ -32,6 +32,8 @@
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID` / `STRIPE_PRICE_ID_YEARLY` | 否 | Stripe（年付需 `STRIPE_PRICE_ID_YEARLY`） |
 | `PAYMENT_PROVIDER` / `ALIPAY_*` / `WECHAT_*` | 否 | 国内支付通道（未配置时前端隐藏入口） |
 | `CRON_SECRET` | 否 | 截止日提醒定时作业的 Bearer 鉴权（需外部调度器每日调用） |
+| `CALENDAR_CRYPTO_KEY` | 启用日历时必填 | OAuth token AES-256-GCM 加密主密钥（`openssl rand -hex 32`）；生产缺失时启动即抛错（见 web/lib/crypto.ts） |
+| `CALENDAR_STATE_SECRET` / `GOOGLE_*` / `OUTLOOK_*` | 否 | 日历集成 OAuth2（state 签名密钥缺省回退 JWT_ACCESS_SECRET；client 未配置时设置页隐藏连接入口） |
 | `RESEND_API_KEY` / `EMAIL_FROM` | 否 | 邮件服务（Resend），`EMAIL_FROM` 为已验证发件域 |
 | `CORS_ORIGINS` | 否 | 跨源白名单（逗号分隔精确 Origin） |
 

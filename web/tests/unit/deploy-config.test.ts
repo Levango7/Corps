@@ -74,3 +74,32 @@ describe(".env.example REDIS_URL 条目（TC-RATE-05）", () => {
     expect(envExample).toMatch(/Redis/i);
   });
 });
+
+describe("docker-compose 日历集成环境变量（审计 P1-B 防复发）", () => {
+  // .env.example 中定义的服务端可选变量必须在 compose 的 app environment 透传——
+  // 历史：支付类、CRON_SECRET、日历类 env 三次同类缺口（详见 ADR-006 关联审计）。
+  // 新增服务端环境变量时同步维护此清单。
+  const calendarEnvVars = [
+    "CALENDAR_CRYPTO_KEY",
+    "CALENDAR_STATE_SECRET",
+    "GOOGLE_CLIENT_ID",
+    "GOOGLE_CLIENT_SECRET",
+    "GOOGLE_REDIRECT_URI",
+    "OUTLOOK_CLIENT_ID",
+    "OUTLOOK_CLIENT_SECRET",
+    "OUTLOOK_REDIRECT_URI",
+  ];
+
+  it("compose app 服务透传全部日历集成变量", () => {
+    const app = serviceBlock("app");
+    for (const v of calendarEnvVars) {
+      expect(app, `compose 缺 ${v}`).toMatch(new RegExp(`${v}:`));
+    }
+  });
+
+  it(".env.example 与 compose 的日历变量名一一对应", () => {
+    for (const v of calendarEnvVars) {
+      expect(envExample, `.env.example 缺 ${v}`).toMatch(new RegExp(`^${v}=`, "m"));
+    }
+  });
+});

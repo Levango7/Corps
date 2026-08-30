@@ -11,6 +11,7 @@
  */
 
 import { prisma } from "@/lib/prisma";
+import { runWithAuthOp } from "@/lib/auth";
 import { decrypt, encrypt } from "@/lib/crypto";
 import { refreshAccessToken, revokeToken } from "./oauth";
 import { createGoogleEvent, deleteGoogleEvent, updateGoogleEvent } from "./google-client";
@@ -115,10 +116,15 @@ export async function syncTaskToCalendar(
   opts: { force?: boolean } = {},
 ): Promise<SyncResult> {
   try {
-    const task = await prisma.task.findUnique({
-      where: { id: taskId },
-      select: { id: true, title: true, dueDate: true, workspaceId: true },
-    });
+    // tasks 表 FORCE RLS（db/rls-activate.sql）：裸 prisma.task 直查在加固模式下
+    // 恒返 null → 同步静默跳过（审计 P1-A）。经 calendar 逃生口做跨工作区只读
+    // 定位（同步属用户级系统作业，与 cron 截止日提醒同信任级别）。
+    const task = await runWithAuthOp("calendar", (tx) =>
+      tx.task.findUnique({
+        where: { id: taskId },
+        select: { id: true, title: true, dueDate: true, workspaceId: true },
+      }),
+    );
     if (!task) return { success: true, syncedConnections: 0 };
 
     // debounce 检查
@@ -266,14 +272,16 @@ export async function syncAllTasks(userId: string): Promise<SyncResult> {
   });
   if (connections.length === 0) return { success: true, syncedConnections: 0 };
 
-  // 只同步有截止日期的任务
-  const tasks = await prisma.task.findMany({
-    where: {
-      assigneeId: userId,
-      dueDate: { not: null },
-    },
-    select: { id: true },
-  });
+  // 只同步有截止日期的任务（同上：tasks 受 FORCE RLS，经 calendar 逃生口只读扫描）
+  const tasks = await runWithAuthOp("calendar", (tx) =>
+    tx.task.findMany({
+      where: {
+        assigneeId: userId,
+        dueDate: { not: null },
+      },
+      select: { id: true },
+    }),
+  );
 
   let synced = 0;
   let lastError: string | undefined;

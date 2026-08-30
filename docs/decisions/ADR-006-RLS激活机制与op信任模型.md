@@ -33,6 +33,7 @@ Phase 1 审计要求启用 PostgreSQL Row Level Security（RLS）作为多租户
 | `login` | 正常登录 | members SELECT 分支放行 |
 | `seat` | 邀请/接受的席位行锁保护段 | workspaces_select/update + members 放行 |
 | `cron` | 定时作业跨工作区只读扫描（截止日提醒） | tasks SELECT + workspaces_select 放行（2026-08-28 新增；只读，无写路径） |
+| `calendar` | 日历同步跨工作区只读扫描（任务定位/用户截止日任务扫描，lib/calendar/sync.ts） | tasks SELECT 放行（2026-08-30 新增，审计 P1-A；只读，无写路径。授权发起自登录用户的 OAuth 连接，与 cron 同信任级别） |
 
 `op` 由 `lib/auth.ts` 的 `runWithAuthOp()` 设定，值域硬编码白名单，不可由客户端控制。
 

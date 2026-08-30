@@ -130,13 +130,13 @@ export async function withGuc<T>(
 }
 
 /**
- * 认证/系统作业专用逃逸通道（login / provision / webhook / invite / cron）。
+ * 认证/系统作业专用逃逸通道（login / provision / webhook / invite / cron / calendar）。
  * 对应 db/rls-activate.sql 中各 RLS 策略的 `app.auth_op` 逃生口：
  * 这些流程发生在用户身份或工作区上下文建立之前/之外，策略按 op 白名单放行。
- * cron 仅供无工作区上下文的定时作业做跨工作区只读扫描（当前仅截止日提醒）。
+ * cron/calendar 仅供跨工作区只读扫描类系统作业（截止日提醒 / 日历同步）。
  */
 export function runWithAuthOp<T>(
-  op: "login" | "provision" | "webhook" | "invite" | "cron",
+  op: "login" | "provision" | "webhook" | "invite" | "cron" | "calendar",
   fn: (tx: Tx) => Promise<T>,
   userId?: string,
 ): Promise<T> {
