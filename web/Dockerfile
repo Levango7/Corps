@@ -6,7 +6,10 @@
 FROM node:22-alpine AS deps
 WORKDIR /app
 RUN corepack enable pnpm
-COPY package.json pnpm-lock.yaml ./
+# pnpm-workspace.yaml 必须与 lockfile 一同进入构建：其 overrides 参与了
+# lockfile 的生成（ERR_PNPM_LOCKFILE_CONFIG_MISMATCH：缺它时 package.json
+# 的 overrides 与 lockfile 记录不一致，frozen install 拒绝执行）
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 COPY prisma ./prisma
 # pnpm 11 默认会拒绝运行 prisma/esbuild/sharp 等的构建脚本并报错；
 # 用 --ignore-scripts 跳过所有构建脚本，后面手动 prisma generate 生成客户端。
