@@ -57,4 +57,7 @@ export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
   "view_pricing",
   "select_billing_period",
   "click_upgrade",
+  // ─── 阶段 2-2 筛选与自定义视图（看板体验线消费）───
+  "filter_applied",
+  "view_saved",
 ]);

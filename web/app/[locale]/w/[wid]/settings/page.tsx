@@ -14,9 +14,11 @@ import {
   Bell,
   LayoutGrid,
   List,
+  UserX,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import type { DeletionPreview as AccountDeletionPreview } from "@/lib/account-deletion";
 import {
   exportTasksCsv,
   exportDecisionsCsv,
@@ -91,6 +93,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const { wid } = use(params);
   const t = useTranslations("settings");
   const tExport = useTranslations("export");
+  const tAccount = useTranslations("accountDeletion");
   const [ws, setWs] = useState<Workspace | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -270,6 +273,43 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       setError(e instanceof Error ? e.message : t("deleteFailed"));
     } finally {
       setDeleting(false);
+    }
+  }
+
+  // ─── 删除账户（阶段 2-3）：预览 + 邮箱确认 ───────────────────────
+  const [accountDeleteOpen, setAccountDeleteOpen] = useState(false);
+  const [accountPreview, setAccountPreview] = useState<AccountDeletionPreview | null>(null);
+  const [accountPreviewLoading, setAccountPreviewLoading] = useState(false);
+  const [accountDeleteInput, setAccountDeleteInput] = useState("");
+  const [accountDeleting, setAccountDeleting] = useState(false);
+
+  async function loadAccountPreview() {
+    setAccountPreviewLoading(true);
+    setAccountPreview(null);
+    try {
+      setAccountPreview(await api<AccountDeletionPreview>("/api/v1/users/me/account"));
+    } catch {
+      setAccountPreview(null); // 展示 previewFailed 提示，不阻断删除流程
+    } finally {
+      setAccountPreviewLoading(false);
+    }
+  }
+
+  async function handleDeleteAccount() {
+    if (accountDeleting) return;
+    setAccountDeleting(true);
+    setError("");
+    try {
+      // 请求体带邮箱做服务端二次确认；不匹配服务端拒绝（400）
+      await api("/api/v1/users/me/account", {
+        method: "DELETE",
+        body: JSON.stringify({ confirmEmail: accountDeleteInput.trim() }),
+      });
+      // 账户已删（cookie 已过期）：整页跳转登录页
+      window.location.href = "/auth/login";
+    } catch (e) {
+      setError(e instanceof Error ? e.message : tAccount("failed"));
+      setAccountDeleting(false);
     }
   }
 
@@ -688,6 +728,133 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           )}
         </section>
       )}
+
+      {/* 删除账户（阶段 2-3：隐私政策"账户设置里可删除"承诺兑现）
+          用户级操作（影响所有工作区），三步：展开 → 预览 → 输入邮箱确认删除 */}
+      <section className="mt-5 rounded-[var(--radius-lg)] p-4 sm:p-5 border border-[var(--danger)] bg-[var(--danger-soft)]">
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
+          <UserX size={16} />
+          {tAccount("title")}
+        </h2>
+        <p className="text-[length:var(--text-sm)] text-[var(--danger-fg)] opacity-90 mb-4">
+          {tAccount("hint")}
+        </p>
+
+        {!accountDeleteOpen ? (
+          <button
+            onClick={() => {
+              setAccountDeleteOpen(true);
+              loadAccountPreview();
+            }}
+            className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+          >
+            <UserX size={15} />
+            {tAccount("init")}
+          </button>
+        ) : (
+          <div className="space-y-3">
+            {/* 数据预览 */}
+            {accountPreviewLoading ? (
+              <div className="flex items-center gap-2 text-[length:var(--text-sm)] text-[var(--fg-2)]">
+                <Loader2 size={15} className="animate-spin" />
+                {tAccount("previewLoading")}
+              </div>
+            ) : accountPreview ? (
+              <div className="space-y-2 p-3 rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)]">
+                {accountPreview.ownedWorkspaces.length > 0 && (
+                  <div>
+                    <p className="text-[var(--danger-fg)] font-[var(--weight-medium)]">
+                      {tAccount("previewOwned", { count: accountPreview.ownedWorkspaces.length })}
+                    </p>
+                    <ul className="mt-1 space-y-0.5 text-[var(--fg-2)]">
+                      {accountPreview.ownedWorkspaces.map((w) => (
+                        <li key={w.id}>
+                          · {w.name}（{w.memberCount} {tAccount("previewMembers")}，{" "}
+                          {tAccount("previewWillDelete")}）
+                        </li>
+                      ))}
+                    </ul>
+                    {accountPreview.stats.ownedTasks > 0 && (
+                      <p className="mt-1 text-[var(--muted)] text-[length:var(--text-xs)]">
+                        {tAccount("previewStats", {
+                          tasks: accountPreview.stats.ownedTasks,
+                          decisions: accountPreview.stats.ownedDecisions,
+                          messages: accountPreview.stats.messages,
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
+                {accountPreview.joinedWorkspaces.length > 0 && (
+                  <div>
+                    <p className="text-[var(--fg)]">
+                      {tAccount("previewJoined", {
+                        count: accountPreview.joinedWorkspaces.length,
+                      })}
+                    </p>
+                    <ul className="mt-1 space-y-0.5 text-[var(--muted)]">
+                      {accountPreview.joinedWorkspaces.map((w) => (
+                        <li key={w.id}>
+                          · {w.name}（{w.role}）
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {accountPreview.activeSubscription && (
+                  <p className="text-[var(--danger-fg)]">
+                    {tAccount("previewSubscription", {
+                      provider: accountPreview.activeSubscription.provider ?? "-",
+                    })}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="p-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg-2)]">
+                {tAccount("previewFailed")}
+              </div>
+            )}
+
+            {/* 邮箱确认 */}
+            <div className="p-3 rounded-[var(--radius-md)] bg-[var(--danger)] bg-opacity-10 text-[length:var(--text-sm)] text-[var(--danger-fg)]">
+              {tAccount("confirmHint")}
+            </div>
+            <div>
+              <label htmlFor="account-delete-input" className={labelClass}>
+                {tAccount("confirmLabel")}
+              </label>
+              <input
+                id="account-delete-input"
+                type="email"
+                value={accountDeleteInput}
+                onChange={(e) => setAccountDeleteInput(e.target.value)}
+                className={inputClass}
+                placeholder={tAccount("confirmPlaceholder")}
+                autoComplete="off"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={handleDeleteAccount}
+                disabled={accountDeleting || !accountDeleteInput.includes("@")}
+                className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+              >
+                {accountDeleting && <Loader2 size={15} className="animate-spin" />}
+                {tAccount("confirm")}
+              </button>
+              <button
+                onClick={() => {
+                  setAccountDeleteOpen(false);
+                  setAccountDeleteInput("");
+                }}
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              >
+                {tAccount("cancel")}
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
     </div>
   );
 }

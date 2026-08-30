@@ -4,16 +4,17 @@ import { describe, it, expect } from "vitest";
  * analytics-whitelist 单元测试
  *
  * 验证：
- *  - 导出集合内容快照（含 32 名：20 旧 + 9 新 + 3 spec §8）
+ *  - 导出集合内容快照（含 34 名：20 旧 + 9 新 + 3 spec §8 + 2 筛选视图）
  *  - 无重复
  *  - 9 个新增事件名均在集合内
  *  - spec §8 三事件（定价线消费）均在集合内
+ *  - 筛选与自定义视图两事件（阶段 2-2）均在集合内
  */
 import { ALLOWED_EVENT_NAMES } from "@/lib/analytics-whitelist";
 
 describe("analytics-whitelist", () => {
-  it("含 32 名（20 旧 + 9 新 + 3 spec §8，集成验证补齐定价线三事件）", () => {
-    expect(ALLOWED_EVENT_NAMES.size).toBe(32);
+  it("含 34 名（20 旧 + 9 新 + 3 spec §8 + 2 筛选视图）", () => {
+    expect(ALLOWED_EVENT_NAMES.size).toBe(34);
   });
 
   it("9 个新增事件名均在集合内", () => {

@@ -314,3 +314,37 @@ export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): 
     logPlaceholder("reset_password", `to=${params.to}, resetUrl=${params.resetUrl}`);
   }
 }
+
+/** 账户删除通知邮件参数 */
+export interface AccountDeletedEmailParams {
+  to: string;
+  /** 随账户一并删除的自有工作区数 */
+  deletedWorkspaces: number;
+}
+
+function renderAccountDeletedHtml(params: AccountDeletedEmailParams): string {
+  return renderEmailHtml({
+    title: "你的 corps 账户已删除",
+    preheader: "账户删除确认通知",
+    bodyHtml:
+      `<p style="margin:0 0 12px;">我们确认你的 corps 账户及关联数据已删除完毕。</p>` +
+      `<p style="margin:0 0 12px;">随账户一并删除的<b>自有工作区</b>共 ${params.deletedWorkspaces} 个（含其任务、决策、聊天与附件记录）；你曾作为成员加入的其他工作区不受影响，仅移除了你的成员身份。</p>` +
+      `<p style="margin:0;">如果这是误操作或你有任何疑问，请在 7 天内联系支持邮箱——部分数据可能仍有备份可恢复（见隐私政策）。</p>`,
+    // 账户已删，没有站内页面可跳——CTA 去登录页（重新注册入口）
+    ctaLabel: "重新访问 corps",
+    ctaHref: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/login`,
+  });
+}
+
+/** 账户删除通知邮件（阶段 2-3；尽力而为，失败不阻塞删除主流程） */
+export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams): Promise<void> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: "你的 corps 账户已删除",
+    html: renderAccountDeletedHtml(params),
+    logTag: "account_deleted",
+  });
+  if (!sent && !isEmailConfigured()) {
+    logPlaceholder("account_deleted", `to=${params.to}, ws=${params.deletedWorkspaces}`);
+  }
+}

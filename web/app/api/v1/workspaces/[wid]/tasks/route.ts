@@ -23,11 +23,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
 
   try {
-    // assignee=me：用当前认证用户 ID 过滤 assigneeId；其他值（或缺失）返回所有任务
-    // milestone=ID：按里程碑筛选；milestone=null 表示未归入里程碑的任务
+    // 筛选参数（阶段 2-2 筛选与自定义视图）：
+    //  - assignee=me 按当前用户过滤；assignee=<uuid> 按指定成员过滤
+    //  - milestone=ID / milestone=null（未归入里程碑）
+    //  - status=<todo|in_progress|review|done>；priority=<low|medium|high|urgent>
+    //  - label=<uuid>（多标签以逗号分隔：label=a,b —— 命中任一即可，OR 语义）
+    //  - q=<关键词>：标题/描述 ilike 模糊搜索（复用搜索索引）
     const url = new URL(req.url);
+    const assigneeParam = url.searchParams.get("assignee");
     const assigneeFilter =
-      url.searchParams.get("assignee") === "me" ? { assigneeId: ctx.payload.sub } : {};
+      assigneeParam === "me"
+        ? { assigneeId: ctx.payload.sub }
+        : assigneeParam
+          ? { assigneeId: assigneeParam }
+          : {};
     const milestoneParam = url.searchParams.get("milestone");
     const milestoneFilter =
       milestoneParam === null
@@ -35,10 +44,35 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         : milestoneParam === "null"
           ? { milestoneId: null }
           : { milestoneId: milestoneParam };
+    const statusParam = url.searchParams.get("status");
+    const statusFilter = statusParam ? { status: statusParam } : {};
+    const priorityParam = url.searchParams.get("priority");
+    const priorityFilter = priorityParam ? { priority: priorityParam } : {};
+    const labelParam = url.searchParams.get("label");
+    const labelFilter = labelParam
+      ? { labels: { some: { labelId: { in: labelParam.split(",").filter(Boolean) } } } }
+      : {};
+    const qParam = url.searchParams.get("q");
+    const qFilter = qParam
+      ? {
+          OR: [
+            { title: { contains: qParam, mode: "insensitive" as const } },
+            { description: { contains: qParam, mode: "insensitive" as const } },
+          ],
+        }
+      : {};
 
     const tasks = await runWithWorkspace(wid, (tx) =>
       tx.task.findMany({
-        where: { workspaceId: wid, ...assigneeFilter, ...milestoneFilter },
+        where: {
+          workspaceId: wid,
+          ...assigneeFilter,
+          ...milestoneFilter,
+          ...statusFilter,
+          ...priorityFilter,
+          ...labelFilter,
+          ...qFilter,
+        },
         include: {
           assignee: { select: { id: true, name: true, email: true } },
           labels: { include: { label: { select: { id: true, name: true, color: true } } } },

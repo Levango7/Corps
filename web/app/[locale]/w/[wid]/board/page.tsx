@@ -18,6 +18,12 @@ import { Plus, AlertCircle, CheckSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
+import {
+  TaskFilterBar,
+  EMPTY_FILTER,
+  filterToQuery,
+  type TaskFilter,
+} from "@/components/TaskFilterBar";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import { ViewToggle } from "@/components/ViewToggle";
 import { BatchToolbar } from "@/components/BatchToolbar";
@@ -46,6 +52,16 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   const [view, setView] = useState<ViewMode>("board");
   // 里程碑筛选：'all' | 'null' | milestoneId
   const [milestoneFilter, setMilestoneFilter] = useState<string>("all");
+  // 筛选与自定义视图（阶段 2-2）
+  const [taskFilter, setTaskFilter] = useState<TaskFilter>(EMPTY_FILTER);
+  const [isPro, setIsPro] = useState(false);
+  const [filterMembers, setFilterMembers] = useState<
+    Array<{ id: string; name: string | null; email: string }>
+  >([]);
+  const [filterLabels, setFilterLabels] = useState<
+    Array<{ id: string; name: string; color: string }>
+  >([]);
+  const [currentUserId, setCurrentUserId] = useState("");
   // < md 单列选择器当前选中列
   const [activeColumn, setActiveColumn] = useState<Task["status"]>("todo");
   // 拖拽视觉反馈
@@ -62,9 +78,42 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   // T3.3：拖拽请求序号，防止旧请求覆盖新状态
   const dragSeqRef = useRef(0);
 
+  // 筛选/视图辅助数据 + 当前用户（一次性拉取；members 含本人用于负责人下拉）
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [status, members, labels, me] = await Promise.all([
+          api<{ plan: string }>(`/api/v1/workspaces/${wid}/billing/status`),
+          api<Array<{ id: string; name: string | null; email: string }>>(
+            `/api/v1/workspaces/${wid}/members`,
+          ),
+          api<Array<{ id: string; name: string; color: string }>>(
+            `/api/v1/workspaces/${wid}/labels`,
+          ),
+          api<{ user: { id: string } }>("/api/v1/users/me"),
+        ]);
+        if (cancelled) return;
+        setIsPro(status.plan === "pro");
+        setFilterMembers(members);
+        setFilterLabels(labels);
+        setCurrentUserId(me.user.id);
+      } catch {
+        // 辅助数据失败不阻断看板：筛选器降级为仅状态/负责人（plan 默认 free）
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [wid]);
+
   useEffect(() => {
     setLoading(true);
-    const query = milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
+    // milestone 与筛选器 query 合并（两者独立语义：AND）
+    const msQuery = milestoneFilter !== "all" ? `milestone=${milestoneFilter}` : "";
+    const fq = filterToQuery(taskFilter);
+    const query =
+      msQuery || fq ? `?${[msQuery, fq.replace(/^\?/, "")].filter(Boolean).join("&")}` : "";
     api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`)
       .then((data) => {
         setError(null);
@@ -79,12 +128,15 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         setTasks([]);
       })
       .finally(() => setLoading(false));
-  }, [wid, milestoneFilter]);
+  }, [wid, milestoneFilter, taskFilter]);
 
   async function load() {
     try {
       setError(null);
-      const query = milestoneFilter !== "all" ? `?milestone=${milestoneFilter}` : "";
+      const msQuery = milestoneFilter !== "all" ? `milestone=${milestoneFilter}` : "";
+      const fq = filterToQuery(taskFilter);
+      const query =
+        msQuery || fq ? `?${[msQuery, fq.replace(/^\?/, "")].filter(Boolean).join("&")}` : "";
       setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`));
     } catch (e) {
       setError(
@@ -316,6 +368,17 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
             </div>
           </div>
+
+          {/* 筛选与自定义视图（阶段 2-2：Pro 卖点兑现） */}
+          <TaskFilterBar
+            value={taskFilter}
+            onChange={(f) => setTaskFilter(f)}
+            isPro={isPro}
+            members={filterMembers}
+            labels={filterLabels}
+            userId={currentUserId}
+            wid={wid}
+          />
 
           {view === "board" ? (
             <BoardView
