@@ -2,21 +2,23 @@
 
 > 基于仓库现状整理：`docker-compose.yml`（根目录，生产部署编排）、`web/Dockerfile`、
 > `.github/workflows/ci.yml`、`db/schema.sql` 头部注释、`.env.example`。
-> 更新日期：2026-08-28（部署产物化：CI 发布镜像到 GHCR，取代 CloudBase 占位部署）。
+> 更新日期：2026-08-31（v0.2.0 发版：镜像公开拉取、compose 内置 cron 调度容器）。
 
 ---
 
 ## 1. 前置条件
 
-### 1.1 CI 产物（GHCR 镜像，2026-08-28 更新）
+### 1.1 CI 产物（GHCR 镜像，2026-08-31 更新）
 
 - CI 的 `docker-publish` job 在 push 到 `main` 或打 `v*` tag 时，通过 lint + audit +
   test + test-hardened + build 全部关卡后，把镜像发布到 GitHub Container Registry：
-  `ghcr.io/<owner>/<repo>`，tag 含分支名（`main`）、语义化版本（`v*` tag）与 commit SHA。
-- 首次发布后镜像默认为 private；如需生产服务器匿名拉取，在
-  GitHub → Packages → corps-web → Package settings 中把可见性改为 public，
-  或为服务器配置 GHCR 的 read 权限 token。
-- 生产环境不再需要 CloudBase 专属 secrets；服务器侧唯一前置是安装 Docker/
+  `ghcr.io/<owner>/<repo>`，tag 含分支名（`main`）、语义化版本（`v*` tag，如
+  `v0.2.0` → `:0.2.0` 与 `:0.2`）与 commit SHA（`sha-<hash>`）。
+- 镜像已设为 **public**，生产服务器可匿名拉取：
+  `docker pull ghcr.io/levango7/corps:0.2.0`。
+  如需收回公开性，在 GitHub → Packages → corps → Package settings 调整可见性；
+  私有镜像则需为服务器配置 GHCR read 权限 token。
+- 生产环境不需要 CI 侧额外 secrets；服务器侧唯一前置是安装 Docker/
   Docker Compose 并配置 `.env`（§1.2）。
 
 ### 1.2 密钥与环境变量清单（源自 `.env.example` 与 `docker-compose.yml`）
@@ -31,7 +33,8 @@
 | `NEXT_PUBLIC_APP_URL` | 是 | 应用对外 URL（生产改为实际域名） |
 | `STRIPE_SECRET_KEY` / `STRIPE_WEBHOOK_SECRET` / `STRIPE_PRICE_ID` / `STRIPE_PRICE_ID_YEARLY` | 否 | Stripe（年付需 `STRIPE_PRICE_ID_YEARLY`） |
 | `PAYMENT_PROVIDER` / `ALIPAY_*` / `WECHAT_*` | 否 | 国内支付通道（未配置时前端隐藏入口） |
-| `CRON_SECRET` | 否 | 截止日提醒定时作业的 Bearer 鉴权（需外部调度器每日调用） |
+| `CRON_SECRET` | 启用 cron 容器时必填 | 定时作业 Bearer 鉴权（compose `cron` 服务自动调度：due-reminders 每日、cleanup-uploads 每周一） |
+| `CRON_TZ` | 否 | cron 调度时区，默认 UTC（北京时间填 `Asia/Shanghai`） |
 | `CALENDAR_CRYPTO_KEY` | 启用日历时必填 | OAuth token AES-256-GCM 加密主密钥（`openssl rand -hex 32`）；生产缺失时启动即抛错（见 web/lib/crypto.ts） |
 | `CALENDAR_STATE_SECRET` / `GOOGLE_*` / `OUTLOOK_*` | 否 | 日历集成 OAuth2（state 签名密钥缺省回退 JWT_ACCESS_SECRET；client 未配置时设置页隐藏连接入口） |
 | `RESEND_API_KEY` / `EMAIL_FROM` | 否 | 邮件服务（Resend），`EMAIL_FROM` 为已验证发件域 |
@@ -95,6 +98,50 @@ docker compose up -d --build
 # 6. 健康验证
 curl -sf http://<host>:3000/api/health
 ```
+
+### 3.1 cron 调度容器（2026-08-31 新增）
+
+compose 编排内置 `cron` 服务（`corps-cron` 容器），复用 app 镜像以
+busybox crond 运行调度（无需外部 crontab）：
+
+- **计划**：due-reminders 每天 `01:00`（CRON_TZ 时区，默认 UTC=北京时间 09:00）、
+  cleanup-uploads 每周一 `04:00`；通过内网 `http://app:3000/api/cron/*` 调用，
+  Bearer 鉴权用 `CRON_SECRET`。
+- **启动顺序**：`depends_on: app(service_healthy)`——app 健康后 cron 才启动，
+  避免启动期空调用。
+- **前置**：`.env` 中必须设置 `CRON_SECRET`（未设置时 cron 容器启动即报错退出，
+  app 的 cron 路由也拒绝服务）；时区按需设 `CRON_TZ=Asia/Shanghai`。
+- **日志**：`docker logs corps-cron`（crond notice 级 + 每次调用的 HTTP 响应尾行）。
+
+```bash
+# 只重启调度容器（app 不动）
+docker compose up -d cron
+```
+
+---
+
+## 3.2 发版流程（tag → CI → GHCR）
+
+1. 更新 `web/package.json` version 与 `CHANGELOG.md`（Keep a Changelog 惯例），
+   提交 push 到 main，等 CI 全绿。
+2. 打 annotated tag 并推送：
+
+   ```bash
+   git tag -a v0.2.0 -m "v0.2.0：双语 i18n / 国内支付 / 筛选视图 / 账户删除 / 安全收口"
+   git push origin v0.2.0
+   ```
+
+3. tag push 触发全量 CI（lint/audit/test/test-hardened/build/e2e），全绿后
+   `docker-publish` 向 GHCR 发布三个 tag：`:0.2.0`、`:0.2`、`:sha-<hash>`。
+   **注意**：ci.yml 的 `on.push.tags: ["v*"]` 是 tag 触发的前提（v0.2.0 时修复，
+   此前缺声明导致打 tag 后 CI 静默不跑）。
+4. 生产升级到该版本：
+
+   ```bash
+   docker pull ghcr.io/levango7/corps:0.2.0
+   # compose 中 app.image 指向该 tag 后：
+   docker compose up -d
+   ```
 
 ---
 

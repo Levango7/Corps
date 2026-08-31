@@ -3,6 +3,9 @@ name: CI
 on:
   push:
     branches: [main]
+    # v* tag 触发发版流水线：docker-publish 的 semver 规则（v0.2.0 → :0.2.0/:0.2）
+    # 依赖 tag push 事件；此前缺此声明，打 tag 后 CI 静默不跑、镜像无版本 tag
+    tags: ["v*"]
   pull_request:
     branches: [main]
 

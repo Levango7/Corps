@@ -109,8 +109,8 @@ services:
       ALIPAY_GATEWAY: ${ALIPAY_GATEWAY:-}
       # 跨源白名单（可选；未配置时不回 ACAO 头，浏览器 fail-closed）
       CORS_ORIGINS: ${CORS_ORIGINS:-}
-      # 定时作业鉴权：截止日提醒 /api/cron/due-reminders 需外部调度器携带
-      # Authorization: Bearer ${CRON_SECRET} 调用（本编排不含调度器，需自行配置 cron）
+      # 定时作业鉴权：cron 调度容器（下方 cron 服务）与本服务共用，
+      # 调用 /api/cron/* 时携带 Authorization: Bearer ${CRON_SECRET}
       CRON_SECRET: ${CRON_SECRET:-}
       # 日历集成（可选；CALENDAR_CRYPTO_KEY 生产必填——见 web/lib/crypto.ts，
       # 缺失时生产启动即抛错；其余未配置时设置页隐藏连接入口）
@@ -140,6 +140,27 @@ services:
       timeout: 5s
       retries: 5
       start_period: 40s
+    networks:
+      - corps-net
+
+  # ─── cron 调度容器（复用 app 镜像，busybox crond）───────────────────────
+  # 职责：定时调用两个 cron 路由——due-reminders 每天 01:00（CRON_TZ 时区，
+  # 默认 UTC=北京时间 09:00）、cleanup-uploads 每周一 04:00。两者均以
+  # CRON_SECRET Bearer 鉴权（与 app 的 /api/cron/* 路由约定一致）。
+  # 独立容器而非嵌入 app：调度崩溃独立重启、日志分离、app 扩缩容互不影响。
+  cron:
+    image: corps-web:latest
+    container_name: corps-cron
+    restart: unless-stopped
+    entrypoint: ["/app/entrypoint-cron.sh"]
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      # 定时作业鉴权（与 app 共用同一密钥；未设置时容器启动即报错退出）
+      CRON_SECRET: ${CRON_SECRET:-}
+      # 调度时区（可选，默认 UTC；北京时间填 Asia/Shanghai）
+      CRON_TZ: ${CRON_TZ:-UTC}
     networks:
       - corps-net
 

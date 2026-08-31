@@ -75,6 +75,40 @@ describe(".env.example REDIS_URL 条目（TC-RATE-05）", () => {
   });
 });
 
+describe("docker-compose cron 调度服务（阶段3：compose 编排内置调度器）", () => {
+  it("存在 cron 服务且复用 app 镜像（corps-web:latest，不新增构建产物）", () => {
+    const cron = serviceBlock("cron");
+    expect(cron, "未找到 cron 服务块").not.toBe("");
+    expect(cron).toMatch(/image:\s*corps-web:latest/);
+    expect(cron).not.toMatch(/build:/);
+  });
+
+  it("cron 以独立入口脚本启动（entrypoint-cron.sh）且随服务重启", () => {
+    const cron = serviceBlock("cron");
+    expect(cron).toMatch(/entrypoint:\s*\[?"?\/app\/entrypoint-cron\.sh/);
+    expect(cron).toMatch(/restart:\s*unless-stopped/);
+  });
+
+  it("cron 依赖 app 健康后启动（避免 app 未就绪期空调用）", () => {
+    const cron = serviceBlock("cron");
+    expect(cron).toMatch(/depends_on:/);
+    const depIdx = cron.indexOf("depends_on:");
+    const depBlock = cron.slice(depIdx, depIdx + 120);
+    expect(depBlock).toMatch(/app:/);
+    expect(depBlock).toMatch(/condition:\s*service_healthy/);
+  });
+
+  it("cron 透传 CRON_SECRET 与 CRON_TZ", () => {
+    const cron = serviceBlock("cron");
+    expect(cron).toMatch(/CRON_SECRET:\s*\$\{CRON_SECRET:-\}/);
+    expect(cron).toMatch(/CRON_TZ:\s*\$\{CRON_TZ:-UTC\}/);
+  });
+
+  it(".env.example 含 CRON_TZ 条目（时区可配置）", () => {
+    expect(envExample).toMatch(/^CRON_TZ=/m);
+  });
+});
+
 describe("docker-compose 日历集成环境变量（审计 P1-B 防复发）", () => {
   // .env.example 中定义的服务端可选变量必须在 compose 的 app environment 透传——
   // 历史：支付类、CRON_SECRET、日历类 env 三次同类缺口（详见 ADR-006 关联审计）。

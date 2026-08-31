@@ -67,7 +67,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
 
 # 入口脚本：先执行 prisma migrate deploy，再启动 Next.js
 COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
-RUN chmod +x ./entrypoint.sh
+# cron 调度入口（compose 的 cron 服务复用本镜像，entrypoint 指到此脚本）
+COPY --chown=nextjs:nodejs docker/entrypoint-cron.sh ./entrypoint-cron.sh
+RUN chmod +x ./entrypoint.sh ./entrypoint-cron.sh
 
 # 声明运行时需要的环境变量（仅文档作用，仍需在 docker run/compose 中提供）
 ENV DATABASE_URL=""
