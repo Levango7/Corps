@@ -56,10 +56,7 @@ interface MessageGroup {
   messages: ChatMessage[];
 }
 
-function groupByTime(
-  messages: ChatMessage[],
-  t: TimeT,
-): MessageGroup[] {
+function groupByTime(messages: ChatMessage[], t: TimeT): MessageGroup[] {
   const groups: MessageGroup[] = [];
   let currentGroup: MessageGroup | null = null;
   let prevTime: number | null = null;

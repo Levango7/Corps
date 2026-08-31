@@ -78,7 +78,10 @@ export function formatRelativeDueDate(
  * 概览页 dueMeta：返回文案 + 颜色 token。
  * 与 formatRelativeDueDate 互补：前者用于看板/我的任务（tone 三态），后者用于概览（多档颜色）。
  */
-export function dueMeta(iso?: string | null, t: TimeT = zhT): {
+export function dueMeta(
+  iso?: string | null,
+  t: TimeT = zhT,
+): {
   text: string;
   color: string;
 } | null {
@@ -87,7 +90,8 @@ export function dueMeta(iso?: string | null, t: TimeT = zhT): {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const days = Math.round((d.getTime() - today.getTime()) / MS_PER_DAY);
-  if (days < 0) return { text: t("overdueDays", { count: Math.abs(days) }), color: "var(--danger)" };
+  if (days < 0)
+    return { text: t("overdueDays", { count: Math.abs(days) }), color: "var(--danger)" };
   if (days === 0) return { text: t("dueTodaySuffix"), color: "var(--warn)" };
   if (days === 1) return { text: t("dueTomorrowSuffix"), color: "var(--warn)" };
   if (days <= 7) return { text: t("dueInDays", { count: days }), color: "var(--muted)" };
