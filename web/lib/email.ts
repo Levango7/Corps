@@ -214,7 +214,7 @@ async function sendViaResend(opts: {
     if (!res.ok) {
       throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     }
-    console.log(`[email] ${opts.logTag} sent to ${opts.to}`);
+    console.info(`[email] ${opts.logTag} sent to ${opts.to}`);
     return true;
   } catch (err) {
     console.error(`[email] ${opts.logTag} send failed (non-blocking):`, err);
@@ -225,9 +225,9 @@ async function sendViaResend(opts: {
 /** 占位路径：未配置 Resend 时输出日志（生产+SMTP_HOST 输出摘要，其余输出开发调试） */
 function logPlaceholder(tag: string, detail: string): void {
   if (process.env.NODE_ENV === "production" && process.env.SMTP_HOST) {
-    console.log(`[email] ${tag} sent (${detail})`);
+    console.info(`[email] ${tag} sent (${detail})`);
   } else {
-    console.log(`[email-dev] ${tag}: ${detail}`);
+    console.info(`[email-dev] ${tag}: ${detail}`);
   }
 }
 

@@ -5,10 +5,10 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
  *
  * 覆盖 web/lib/email.ts 的 sendInviteEmail：
  *  - 正确拼接邮件内容（开发模式 / 生产模式）
- *  - 处理发送失败情况（当前实现为 console.log 占位，不抛错）
+ *  - 处理发送失败情况（当前实现为 console.info 占位，不抛错）
  *  - 环境变量缺失时的行为（NODE_ENV / SMTP_HOST 组合）
  *
- * 通过 vi.spyOn(console, "log") 捕获输出，不依赖真实 SMTP 服务。
+ * 通过 vi.spyOn(console, "info") 捕获输出，不依赖真实 SMTP 服务。
  * 用 vi.stubEnv 安全修改环境变量（绕过 @types/node 的 readonly 限制），
  * afterEach 中 vi.unstubAllEnvs 自动恢复。
  */
@@ -18,7 +18,7 @@ import { sendInviteEmail, type InviteEmailParams } from "@/lib/email";
 let logSpy: ReturnType<typeof vi.fn>;
 
 beforeEach(() => {
-  logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined) as unknown as ReturnType<
+  logSpy = vi.spyOn(console, "info").mockImplementation(() => undefined) as unknown as ReturnType<
     typeof vi.fn
   >;
 });
@@ -190,7 +190,7 @@ describe("sendInviteEmail - 发送失败与边界情况", () => {
     setEnv("SMTP_HOST", undefined);
   });
 
-  it("当前实现不会抛错（console.log 占位，尽力而为语义）", async () => {
+  it("当前实现不会抛错（console.info 占位，尽力而为语义）", async () => {
     // Arrange
     const params = makeParams();
 
@@ -256,14 +256,14 @@ describe("sendInviteEmail - 返回值与副作用", () => {
     expect(result).toBeUndefined();
   });
 
-  it("仅调用 console.log 一次，无其他副作用", async () => {
+  it("仅调用 console.info 一次，无其他副作用", async () => {
     // Arrange
     const params = makeParams();
 
     // Act
     await sendInviteEmail(params);
 
-    // Assert：恰好一次 console.log
+    // Assert：恰好一次 console.info
     expect(logSpy).toHaveBeenCalledTimes(1);
   });
 });

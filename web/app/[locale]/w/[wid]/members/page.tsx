@@ -39,6 +39,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const { wid } = use(params);
 
   const t = useTranslations("members");
+  const tButton = useTranslations("button");
   const [members, setMembers] = useState<Member[]>([]);
   const [meta, setMeta] = useState<WorkspaceMeta | null>(null);
   const [email, setEmail] = useState("");
@@ -58,7 +59,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       setMembers(list);
       setMeta(ws);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -75,7 +76,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     if (busy) return;
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email.trim())) {
-      setError("请输入有效的邮箱地址");
+      setError(t("invalidEmail"));
       return;
     }
     setBusy(true);
@@ -90,12 +91,12 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       });
       if (res?.pending && res.inviteUrl) {
         // 未注册用户：展示可分享的邀请链接（后端已尝试发邮件，此处兜底手动分享）
-        setInviteSuccess(`已为 ${res.email} 创建邀请（7 天有效），可复制链接发给对方`);
+        setInviteSuccess(t("inviteCreated", { email: res.email }));
         setInviteLink(res.inviteUrl);
       } else {
         // 已注册用户：直接加入工作区
         setEmail("");
-        setInviteSuccess("已发送邀请邮件");
+        setInviteSuccess(t("inviteSent"));
       }
       setTimeout(() => {
         setInviteSuccess("");
@@ -103,7 +104,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       }, 8000);
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "邀请失败");
+      setError(e instanceof Error ? e.message : t("inviteFailed"));
     } finally {
       setBusy(false);
     }
@@ -114,25 +115,25 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     if (!inviteLink) return;
     try {
       await navigator.clipboard.writeText(inviteLink);
-      setInviteSuccess("链接已复制到剪贴板");
+      setInviteSuccess(t("copied"));
     } catch {
-      setInviteSuccess("复制失败，请手动选择并复制上方链接");
+      setInviteSuccess(t("copyFailed"));
     }
   }
 
   async function remove(uid: string, label: string) {
-    if (!window.confirm(`确定移除「${label}」？此操作不可撤销。`)) return;
+    if (!window.confirm(t("removeConfirm", { name: label }))) return;
     setError("");
     try {
       await api(`/api/v1/workspaces/${wid}/members/${uid}`, { method: "DELETE" });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "移除失败");
+      setError(e instanceof Error ? e.message : t("removeFailed"));
     }
   }
 
   async function changeRole(uid: string, role: Role) {
-    if (!window.confirm("确定更改该成员角色？")) return;
+    if (!window.confirm(t("roleChangeConfirm"))) return;
     setError("");
     setMembers((prev) => prev.map((m) => (m.id === uid ? { ...m, role } : m)));
     try {
@@ -142,7 +143,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "修改失败");
+      setError(e instanceof Error ? e.message : t("roleChangeFailed"));
       await load();
     }
   }
@@ -159,16 +160,14 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         <div>
           <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
             <Users size={20} className="text-[var(--muted)]" />
-            成员
+            {t("title")}
           </h1>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-            管理谁能进入这个工作区，以及他们能做什么。
-          </p>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
         </div>
         {seatsTotal > 0 && (
           <div className="w-full sm:w-auto sm:text-right sm:shrink-0 order-first sm:order-none mb-4 sm:mb-0">
             <div className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-              席位 {seatsUsed} / {seatsTotal}
+              {t("seatsCount", { used: seatsUsed, total: seatsTotal })}
             </div>
             <div className="mt-1.5 w-full sm:w-28 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden">
               <div
@@ -209,7 +208,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
               className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
             >
               <UserPlus size={16} />
-              邀请
+              {tButton("invite")}
             </button>
           </div>
           {inviteSuccess && (
@@ -227,7 +226,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                       className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
                     >
                       <Link2 size={12} />
-                      复制链接
+                      {t("copyLink")}
                     </button>
                   </div>
                 )}
@@ -239,11 +238,11 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
 
       {seatsFull && canManage && (
         <div className="mb-6 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
-          席位已用满。前往{" "}
+          {t("seatsFullPrefix")}{" "}
           <Link href={`/w/${wid}/billing`} className="underline underline-offset-2">
-            计费
+            {t("seatsFullBillingLink")}
           </Link>{" "}
-          增加席位后可继续邀请。
+          {t("seatsFullSuffix")}
         </div>
       )}
 
@@ -255,11 +254,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
             <UserPlus size={48} className="text-[var(--muted)] opacity-40" />
           </div>
           <p className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)]">
-            还没有其他成员
+            {t("emptyTitle")}
           </p>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-            邀请队友加入工作区，开始协作
-          </p>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyDesc")}</p>
         </div>
       ) : (
         <MemberList
@@ -270,10 +267,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         />
       )}
 
-      <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
-        未注册的同事会收到一条 7
-        天有效的专属邀请链接，注册后自动加入。拥有者不可被移除或降级；转让拥有者权限需在设置中操作。
-      </p>
+      <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">{t("inviteNote")}</p>
     </div>
   );
 }
@@ -337,6 +331,7 @@ interface MemberRowProps {
 function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowProps) {
   const meta = ROLE_META[m.role];
   const t = useTranslations("members");
+  const tRole = useTranslations("role");
 
   const Icon = meta.icon;
   const editable = canManage && m.role !== "owner" && !m.isSelf;
@@ -353,7 +348,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             </span>
             {m.isSelf && (
               <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
-                你
+                {t("you")}
               </span>
             )}
           </div>
@@ -372,14 +367,14 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           ) : (
             <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">
               <Icon size={16} className="text-[var(--muted)]" />
-              {meta.label}
+              {tRole(meta.labelKey)}
             </span>
           )}
           {editable && (
             <button
               onClick={() => onRemove(m.id, label)}
               className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
-              aria-label={`移除 ${label}`}
+              aria-label={t("remove") + " " + label}
             >
               <Trash2 size={16} />
             </button>
@@ -401,7 +396,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             </span>
             {m.isSelf && (
               <span className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
-                你
+                {t("you")}
               </span>
             )}
           </div>
@@ -412,7 +407,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             {!editable && (
               <span className="flex items-center gap-1 shrink-0 text-[length:var(--text-xs)] text-[var(--fg-2)]">
                 <Icon size={12} className="text-[var(--muted)]" />
-                {meta.label}
+                {tRole(meta.labelKey)}
               </span>
             )}
           </div>
@@ -429,12 +424,12 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             <option value="admin">{t("roleAdmin")}</option>
           </select>
           <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            拥有者不可在此更改
+            {t("ownerNotEditable")}
           </span>
           <button
             onClick={() => onRemove(m.id, label)}
             className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
-            aria-label={`移除 ${label}`}
+            aria-label={t("remove") + " " + label}
           >
             <Trash2 size={16} />
             <span>{t("remove")}</span>

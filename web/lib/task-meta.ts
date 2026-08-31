@@ -7,6 +7,9 @@
  * （review 在 board 用 var(--warn)，在 task 详情页用 var(--status-warn) 不存在）。
  *
  * 统一从此处 import，确保跨页一致。所有色值走 var(--token)，无裸 hex。
+ *
+ * i18n（阶段 2-6）：label/title 均为 messages 的翻译 key（status/priority/role
+ * 命名空间），渲染处用 useTranslations 包一层——本文件只存 key 不存文案。
  */
 
 import {
@@ -21,27 +24,27 @@ import {
 import type { Status, Priority, Role } from "./types";
 
 /** 状态元数据：图标 + 中文标签 + 主色 token。 */
-export const STATUS_META: Record<Status, { label: string; icon: LucideIcon; color: string }> = {
-  todo: { label: "待办", icon: Circle, color: "var(--status-todo)" },
-  in_progress: { label: "进行中", icon: CircleDot, color: "var(--status-doing)" },
-  review: { label: "评审", icon: CircleDot, color: "var(--warn)" },
-  done: { label: "已完成", icon: CheckCircle2, color: "var(--status-done)" },
+export const STATUS_META: Record<Status, { labelKey: string; icon: LucideIcon; color: string }> = {
+  todo: { labelKey: "todo", icon: Circle, color: "var(--status-todo)" },
+  in_progress: { labelKey: "in_progress", icon: CircleDot, color: "var(--status-doing)" },
+  review: { labelKey: "review", icon: CircleDot, color: "var(--warn)" },
+  done: { labelKey: "done", icon: CheckCircle2, color: "var(--status-done)" },
 };
 
 /** 状态中文标签（无图标场景） */
-export const STATUS_LABELS: Record<Status, string> = {
-  todo: "待办",
-  in_progress: "进行中",
-  review: "评审",
-  done: "已完成",
+export const STATUS_LABEL_KEYS: Record<Status, string> = {
+  todo: "todo",
+  in_progress: "in_progress",
+  review: "review",
+  done: "done",
 };
 
 /** 优先级中文标签 */
-export const PRIORITY_LABELS: Record<Priority, string> = {
-  low: "低",
-  medium: "中",
-  high: "高",
-  urgent: "紧急",
+export const PRIORITY_LABEL_KEYS: Record<Priority, string> = {
+  low: "low",
+  medium: "medium",
+  high: "high",
+  urgent: "urgent",
 };
 
 /** 优先级主色 token（用于图标/色条） */
@@ -116,11 +119,11 @@ export const PRIORITY_BADGE_STYLES: Record<Priority, { background: string; color
 };
 
 /** 看板列定义：顺序即渲染顺序。 */
-export const COLUMNS: { id: Status; title: string; color: string }[] = [
-  { id: "todo", title: "待办", color: "var(--status-todo)" },
-  { id: "in_progress", title: "进行中", color: "var(--status-doing)" },
-  { id: "review", title: "评审", color: "var(--warn)" },
-  { id: "done", title: "已完成", color: "var(--status-done)" },
+export const COLUMNS: { id: Status; titleKey: string; color: string }[] = [
+  { id: "todo", titleKey: "todo", color: "var(--status-todo)" },
+  { id: "in_progress", titleKey: "in_progress", color: "var(--status-doing)" },
+  { id: "review", titleKey: "review", color: "var(--warn)" },
+  { id: "done", titleKey: "done", color: "var(--status-done)" },
 ];
 
 /** 状态分组（与 COLUMNS 同源，my-tasks 页用） */
@@ -129,41 +132,41 @@ export const STATUS_GROUPS = COLUMNS;
 /** 顶部状态筛选项：比分组多一个「全部」。 */
 export const STATUS_FILTERS: {
   id: "all" | Status;
-  title: string;
+  titleKey: string;
   color?: string;
 }[] = [
-  { id: "all", title: "全部" },
-  { id: "todo", title: "待办", color: "var(--status-todo)" },
-  { id: "in_progress", title: "进行中", color: "var(--status-doing)" },
-  { id: "review", title: "评审", color: "var(--warn)" },
-  { id: "done", title: "已完成", color: "var(--status-done)" },
+  { id: "all", titleKey: "all" },
+  { id: "todo", titleKey: "todo", color: "var(--status-todo)" },
+  { id: "in_progress", titleKey: "in_progress", color: "var(--status-doing)" },
+  { id: "review", titleKey: "review", color: "var(--warn)" },
+  { id: "done", titleKey: "done", color: "var(--status-done)" },
 ];
 
 /** 概览页统计卡：进行中 = in_progress + review 合并计数。 */
 export const STAT_CARDS: {
   key: "todo" | "doing" | "done";
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   color: string;
   match: (s: Status) => boolean;
 }[] = [
   {
     key: "todo",
-    label: "待办",
+    labelKey: "todo",
     icon: Circle,
     color: "var(--status-todo)",
     match: (s) => s === "todo",
   },
   {
     key: "doing",
-    label: "进行中",
+    labelKey: "in_progress",
     icon: CircleDot,
     color: "var(--status-doing)",
     match: (s) => s === "in_progress" || s === "review",
   },
   {
     key: "done",
-    label: "已完成",
+    labelKey: "done",
     icon: CheckCircle2,
     color: "var(--status-done)",
     match: (s) => s === "done",
@@ -171,8 +174,8 @@ export const STAT_CARDS: {
 ];
 
 /** 角色元数据：图标 + 中文标签。 */
-export const ROLE_META: Record<Role, { label: string; icon: LucideIcon }> = {
-  owner: { label: "拥有者", icon: ShieldCheck },
-  admin: { label: "管理员", icon: Shield },
-  member: { label: "成员", icon: UserIcon },
+export const ROLE_META: Record<Role, { labelKey: string; icon: LucideIcon }> = {
+  owner: { labelKey: "owner", icon: ShieldCheck },
+  admin: { labelKey: "admin", icon: Shield },
+  member: { labelKey: "member", icon: UserIcon },
 };

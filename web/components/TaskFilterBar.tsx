@@ -118,7 +118,6 @@ export function TaskFilterBar({
         isPro,
       });
     }
-    // eslint-disable-next-line -- activeCount/isPro 由 value 派生，勿入 deps
   }, [value]);
 
   const active = !isEmptyFilter(value);

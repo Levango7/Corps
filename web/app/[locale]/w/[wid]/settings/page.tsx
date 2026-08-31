@@ -42,10 +42,10 @@ interface Workspace {
   role: Role;
 }
 
-const THEMES: { id: ThemePref; label: string; icon: typeof Sun }[] = [
-  { id: "light", label: "浅色", icon: Sun },
-  { id: "dark", label: "深色", icon: Moon },
-  { id: "system", label: "跟随系统", icon: Monitor },
+const THEMES: { id: ThemePref; labelKey: string; icon: typeof Sun }[] = [
+  { id: "light", labelKey: "themeLight", icon: Sun },
+  { id: "dark", labelKey: "themeDark", icon: Moon },
+  { id: "system", labelKey: "themeSystem", icon: Monitor },
 ];
 
 const VIEWS: { id: DefaultView; icon: typeof LayoutGrid }[] = [
@@ -94,6 +94,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const t = useTranslations("settings");
   const tExport = useTranslations("export");
   const tAccount = useTranslations("accountDeletion");
+  const tTheme = useTranslations("theme");
+  const tErr = useTranslations("error");
   const [ws, setWs] = useState<Workspace | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -131,7 +133,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       setName(data.name);
       setSlug(data.slug);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     }
   }, [wid]);
 
@@ -178,7 +180,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       setUserSaved(true);
       setTimeout(() => setUserSaved(false), 2400);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败");
+      setError(e instanceof Error ? e.message : tErr("saveFailed"));
     } finally {
       setUserBusy(false);
     }
@@ -202,7 +204,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       await load();
       setTimeout(() => setSaved(false), 2400);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败");
+      setError(e instanceof Error ? e.message : tErr("saveFailed"));
     } finally {
       setBusy(false);
     }
@@ -594,7 +596,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               >
                 <Icon size={18} />
                 <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
-                  {tp.label}
+                  {tTheme(tp.labelKey)}
                 </span>
               </button>
             );

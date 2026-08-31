@@ -8,6 +8,7 @@
  */
 
 import { Moon, Sun, Monitor } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export type ThemePref = "system" | "light" | "dark";
 
@@ -43,6 +44,7 @@ interface ThemeToggleProps {
 }
 
 export function ThemeToggle({ pref, onChange }: ThemeToggleProps) {
+  const tTheme = useTranslations("theme");
   const icon =
     pref === "system" ? (
       <Monitor size={18} />
@@ -51,7 +53,8 @@ export function ThemeToggle({ pref, onChange }: ThemeToggleProps) {
     ) : (
       <Moon size={18} />
     );
-  const label = pref === "system" ? "跟随系统" : pref === "light" ? "浅色" : "深色";
+  const label =
+    pref === "system" ? tTheme("system") : pref === "light" ? tTheme("light") : tTheme("dark");
 
   function toggle() {
     const idx = THEME_ORDER.indexOf(pref);
@@ -63,7 +66,7 @@ export function ThemeToggle({ pref, onChange }: ThemeToggleProps) {
     <button
       onClick={toggle}
       className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-      aria-label={`切换主题（当前：${label}）`}
+      aria-label={tTheme("toggleAria", { label })}
       title={label}
     >
       {icon}

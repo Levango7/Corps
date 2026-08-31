@@ -21,29 +21,8 @@ interface Task {
 type StatusFilter = "all" | Task["status"];
 type SortKey = "recent" | "due" | "priority";
 
-/** 状态分组：颜色与 board 页对齐（review 用 --warn）。 */
-const STATUS_GROUPS: { id: Task["status"]; title: string; color: string }[] = [
-  { id: "todo", title: "待办", color: "var(--status-todo)" },
-  { id: "in_progress", title: "进行中", color: "var(--status-doing)" },
-  { id: "review", title: "审核", color: "var(--warn)" },
-  { id: "done", title: "已完成", color: "var(--status-done)" },
-];
-
-/** 顶部状态筛选项：比分组多一个「全部」。 */
-const STATUS_FILTERS: { id: StatusFilter; title: string; color?: string }[] = [
-  { id: "all", title: "全部" },
-  { id: "todo", title: "待办", color: "var(--status-todo)" },
-  { id: "in_progress", title: "进行中", color: "var(--status-doing)" },
-  { id: "review", title: "审核", color: "var(--warn)" },
-  { id: "done", title: "已完成", color: "var(--status-done)" },
-];
-
-const STATUS_LABELS: Record<Task["status"], string> = {
-  todo: "待办",
-  in_progress: "进行中",
-  review: "审核",
-  done: "已完成",
-};
+// 状态分组/筛选项/标签：走共享 lib/task-meta（阶段 2-6 i18n——titleKey 经 tStatus 渲染）
+import { STATUS_FILTERS, STATUS_LABEL_KEYS, COLUMNS as STATUS_GROUPS } from "@/lib/task-meta";
 
 /**
  * 状态徽章：用 color-mix 替代 `${color}20` alpha 拼接。
@@ -79,24 +58,8 @@ const PRIORITY_BAR_COLORS: Record<Task["priority"], string> = {
 /** 优先级排序权重：urgent > high > medium > low */
 const PRIORITY_ORDER: Record<Task["priority"], number> = { urgent: 0, high: 1, medium: 2, low: 3 };
 
-/**
- * 截止日期相对格式化："今天" / "明天" / "N 天后" / "已逾期 N 天"。
- * 以日期（00:00）粒度比较，避免时区与时分秒抖动。
- */
-function formatRelativeDueDate(dueDate: string): {
-  text: string;
-  tone: "overdue" | "today" | "normal";
-} {
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-  const due = new Date(dueDate);
-  due.setHours(0, 0, 0, 0);
-  const diffDays = Math.round((due.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-  if (diffDays < 0) return { text: `已逾期 ${-diffDays} 天`, tone: "overdue" };
-  if (diffDays === 0) return { text: "今天", tone: "today" };
-  if (diffDays === 1) return { text: "明天", tone: "normal" };
-  return { text: `${diffDays} 天后`, tone: "normal" };
-}
+// formatRelativeDueDate：走共享 lib/format.ts（tTime 注入渲染当前语言）
+import { formatRelativeDueDate as sharedFormatRelativeDueDate } from "@/lib/format";
 
 /**
  * 分组内排序：
@@ -124,6 +87,9 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
   const { wid } = use(params);
 
   const t = useTranslations("task");
+  const tStatus = useTranslations("status");
+  const tErr = useTranslations("error");
+  const tNav = useTranslations("nav");
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
@@ -144,8 +110,8 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
         if (!cancelled) {
           setError(
             e instanceof Error && e.message.includes("fetch")
-              ? "网络连接失败，请检查网络"
-              : "加载失败，请稍后重试",
+              ? tErr("networkConnectFailed")
+              : tErr("loadFailed"),
           );
           setTasks([]);
         }
@@ -176,10 +142,10 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
       {/* 标题区 */}
       <div className="mb-[var(--space-6)]">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          我的任务
+          {tNav("menu.myTasks")}
         </h1>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {loading ? "正在读取任务" : `共 ${tasks.length} 个任务`}
+          {loading ? t("loading") : t("myTasksCount", { count: tasks.length })}
         </p>
       </div>
 
@@ -204,7 +170,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                     style={{ background: f.color }}
                   />
                 )}
-                {f.title}
+                {tStatus(f.titleKey)}
               </button>
             ))}
           </div>
@@ -246,7 +212,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 }}
                 className="text-red-600 underline hover:text-red-800"
               >
-                重试
+                {tErr("retry")}
               </button>
             </div>
           )}
@@ -260,7 +226,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
             return (
               <StatusGroup
                 key={group.id}
-                title={group.title}
+                title={tStatus(group.titleKey)}
                 color={group.color}
                 count={groupTasks.length}
               >
@@ -306,7 +272,9 @@ function StatusGroup({
 
 /** 任务卡片：左侧 4px 优先级色条 + 标题 + 右侧截止日期与状态 badge */
 function TaskCard({ task, href }: { task: Task; href: string }) {
-  const due = task.dueDate ? formatRelativeDueDate(task.dueDate) : null;
+  const tStatus = useTranslations("status");
+  const tTime = useTranslations("time");
+  const due = task.dueDate ? sharedFormatRelativeDueDate(task.dueDate, tTime) : null;
   return (
     <Link
       href={href}
@@ -335,7 +303,7 @@ function TaskCard({ task, href }: { task: Task; href: string }) {
         className="shrink-0 text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
         style={STATUS_BADGE_STYLES[task.status]}
       >
-        {STATUS_LABELS[task.status]}
+        {tStatus(STATUS_LABEL_KEYS[task.status])}
       </span>
     </Link>
   );
@@ -349,7 +317,7 @@ function EmptyState() {
       <ClipboardList size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
       <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{tEmpty("noTasks")}</p>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-        还没有任务分配给你，去看板认领一个吧。
+        {tEmpty("noTasksForYou")}
       </p>
     </div>
   );

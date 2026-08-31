@@ -5,12 +5,13 @@ import { Loader2, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage } from "./types";
 import { MessageBubble } from "./MessageBubble";
+import type { TimeT } from "@/lib/format";
 
 /**
  * 消息列表
  *
  * - 时间戳分组：相邻时间段之间显示时间分隔线（如"今天 14:30"）
- * - 滚动行为：新消息到达时，如果在底部自动滚动；否则显示"N 条新消息"浮窗
+ * - 滚动行为：新消息到达时，如果在底部自动滚动；否则显示t("newMessages", { n: (count) })浮窗
  * - 未读高亮：未读消息左侧 3px 色条
  * - 搜索高亮：匹配消息高亮显示
  * - 空状态：显示"还没有消息"提示
@@ -34,8 +35,8 @@ interface MessageListProps {
 /** 时间分组阈值：相邻消息间隔超过 5 分钟显示时间分隔线 */
 const TIME_GROUP_THRESHOLD_MS = 5 * 60 * 1000;
 
-/** 格式化时间戳分组标签 */
-function formatTimeGroup(iso: string): string {
+/** 格式化时间戳分组标签（t 由调用方注入——模块级函数不可用 hook） */
+function formatTimeGroup(iso: string, t: TimeT): string {
   const date = new Date(iso);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -44,8 +45,8 @@ function formatTimeGroup(iso: string): string {
   const isYesterday = date.toDateString() === yesterday.toDateString();
 
   const time = date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
-  if (isToday) return `今天 ${time}`;
-  if (isYesterday) return `昨天 ${time}`;
+  if (isToday) return t("today", { time });
+  if (isYesterday) return t("yesterday", { time });
   return `${date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })} ${time}`;
 }
 
@@ -55,7 +56,10 @@ interface MessageGroup {
   messages: ChatMessage[];
 }
 
-function groupByTime(messages: ChatMessage[]): MessageGroup[] {
+function groupByTime(
+  messages: ChatMessage[],
+  t: TimeT,
+): MessageGroup[] {
   const groups: MessageGroup[] = [];
   let currentGroup: MessageGroup | null = null;
   let prevTime: number | null = null;
@@ -67,7 +71,7 @@ function groupByTime(messages: ChatMessage[]): MessageGroup[] {
       prevTime === null ||
       msgTime - prevTime > TIME_GROUP_THRESHOLD_MS
     ) {
-      currentGroup = { timeLabel: formatTimeGroup(msg.createdAt), messages: [msg] };
+      currentGroup = { timeLabel: formatTimeGroup(msg.createdAt, t), messages: [msg] };
       groups.push(currentGroup);
     } else {
       currentGroup.messages.push(msg);
@@ -93,7 +97,7 @@ export function MessageList({
   const isAtBottomRef = useRef(true);
 
   // 按时间分组
-  const groups = useMemo(() => groupByTime(messages), [messages]);
+  const groups = useMemo(() => groupByTime(messages, t), [messages, t]);
 
   // 搜索过滤
   const filteredGroups = useMemo(() => {
@@ -139,7 +143,7 @@ export function MessageList({
         // 在底部，自动滚动
         scrollToBottom();
       } else {
-        // 不在底部，显示"N 条新消息"浮窗
+        // 不在底部，显示t("newMessages", { n: (count) })浮窗
         setNewMessagesCount((prev) => prev + diff);
         setShowNewMessages(true);
       }
@@ -200,7 +204,7 @@ export function MessageList({
         )}
       </div>
 
-      {/* "N 条新消息"浮窗 */}
+      {/* t("newMessages", { n: (count) })浮窗 */}
       {showNewMessages && newMessagesCount > 0 && (
         <button
           onClick={() => {

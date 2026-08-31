@@ -99,7 +99,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
         if (!cancelled) setData(d);
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : "加载失败");
+        if (!cancelled) setError(e instanceof Error ? e.message : t("loadFailed"));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -118,9 +118,9 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
   // 留存观察点顺序（FUNNEL-METRICS §3.3）
   const retentionPoints = [
-    { key: "d1", label: "次日" },
-    { key: "d7", label: "7 日" },
-    { key: "d30", label: "30 日" },
+    { key: "d1", labelKey: "retentionD1" },
+    { key: "d7", labelKey: "retentionD7" },
+    { key: "d30", labelKey: "retentionD30" },
   ] as const;
 
   return (
@@ -129,10 +129,10 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       <div className="mb-[var(--space-6)]">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           <BarChart3 size={20} className="text-[var(--muted)]" />
-          分析
+          {t("title")}
         </h1>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          最近 {data.range.days} 天的用户行为漏斗与趋势。
+          {t("subtitle", { days: data.range.days })}
         </p>
       </div>
 
@@ -142,21 +142,24 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
         <div className="col-span-2 sm:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
           <div className="flex items-center gap-2 mb-2">
             <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
-            <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-              WAW 周活跃工作区
-            </span>
+            <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{t("wawTitle")}</span>
           </div>
           <div className="text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
             {data.waw.users}
           </div>
           <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">
-            周起始 {data.waw.weekStart}（周一 00:00 UTC+8）
+            {t("wawWeekStart", { date: data.waw.weekStart })}
           </div>
         </div>
-        <StatCard icon={Activity} label="事件总数" value={data.totalEvents} color="var(--accent)" />
+        <StatCard
+          icon={Activity}
+          label={t("totalEvents")}
+          value={data.totalEvents}
+          color="var(--accent)"
+        />
         <StatCard
           icon={Users}
-          label="核心活跃"
+          label={t("coreActive")}
           value={data.coreActiveUsers}
           color="var(--success)"
         />
@@ -164,27 +167,32 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
       {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） */}
       <div className="grid grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
-        <StatCard icon={Layers} label="会话数" value={data.sessions} color="var(--accent)" />
+        <StatCard icon={Layers} label={t("sessions")} value={data.sessions} color="var(--accent)" />
         <StatCard
           icon={TrendingUp}
-          label="日均事件"
+          label={t("dailyAvgEvents")}
           value={Math.round(data.totalEvents / data.range.days)}
           color="var(--warn)"
         />
-        <StatCard icon={Users} label="活跃用户" value={data.activeUsers} color="var(--muted)" />
+        <StatCard
+          icon={Users}
+          label={t("activeUsers")}
+          value={data.activeUsers}
+          color="var(--muted)"
+        />
       </div>
 
       {/* 获客段漏斗 */}
       <FunnelSection
         title={t("acquisitionFunnel")}
-        description="landing_view → click_signup → register_submit → register_success（按 sessionId 串联）"
+        description={t("acquisitionDesc")}
         steps={data.funnel.acquisition}
       />
 
       {/* 激活段漏斗 */}
       <FunnelSection
         title={t("activationFunnel")}
-        description="register_success → create_task → activation_completed（按 userId 串联，15 分钟窗口）"
+        description={t("activationDesc")}
         steps={data.funnel.activation}
         className="mb-[var(--space-5)]"
       />
@@ -193,17 +201,19 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)]">
         <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
           <Repeat size={16} className="text-[var(--muted)]" />
-          留存回访率
+          {t("retentionTitle")}
         </h2>
         <div className="grid grid-cols-3 gap-[var(--space-3)]">
-          {retentionPoints.map(({ key, label }) => {
+          {retentionPoints.map(({ key, labelKey }) => {
             const r = data.retention[key];
             return (
               <div
                 key={key}
                 className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-3 text-center"
               >
-                <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-1">{label}</div>
+                <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-1">
+                  {t(labelKey)}
+                </div>
                 <div className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums">
                   {r ? `${r.rate}%` : "—"}
                 </div>
@@ -215,19 +225,18 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           })}
         </div>
         <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
-          D_n 回访率 ＝ 注册后第 n 个 Asia/Shanghai 自然日产生 ≥1 次核心行为的用户数 ÷ 注册满 n
-          天的用户数。
+          {t("retentionFormula")}
         </p>
       </section>
 
       {/* 趋势线 */}
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)]">
         <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
-          每日事件趋势
+          {t("dailyTrendTitle")}
         </h2>
         {data.daily.length === 0 ? (
           <p className="text-[length:var(--text-sm)] text-[var(--muted)] py-8 text-center">
-            暂无数据
+            {t("noData")}
           </p>
         ) : (
           <DailyTrendChart daily={data.daily} maxDaily={maxDaily} />
@@ -237,11 +246,11 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       {/* Top 事件 */}
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5">
         <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
-          热门事件
+          {t("topEventsTitle")}
         </h2>
         {data.topEvents.length === 0 ? (
           <p className="text-[length:var(--text-sm)] text-[var(--muted)] py-8 text-center">
-            暂无数据
+            {t("noData")}
           </p>
         ) : (
           <ul className="space-y-2">
@@ -429,6 +438,7 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
 
 /** 错误状态：403 时提示权限不足。 */
 function ErrorState({ message }: { message: string }) {
+  const t = useTranslations("analytics");
   const forbidden = /403|Forbidden/i.test(message);
   return (
     <div className="max-w-2xl mx-auto">
@@ -439,10 +449,10 @@ function ErrorState({ message }: { message: string }) {
           strokeWidth={1.5}
         />
         <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-          {forbidden ? "需要管理员权限" : "加载失败"}
+          {forbidden ? t("needAdmin") : t("loadFailed")}
         </p>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {forbidden ? "仅拥有者或管理员可查看分析数据。" : message || "请稍后重试。"}
+          {forbidden ? t("needAdminDesc") : message || t("retryLater")}
         </p>
       </div>
     </div>

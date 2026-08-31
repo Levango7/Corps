@@ -45,6 +45,8 @@ const LIST_PAGE_SIZE = 50;
 export default function BoardPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const t = useTranslations("task");
+  const tErr = useTranslations("error");
+  const tButton = useTranslations("button");
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -122,8 +124,8 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       .catch((e) => {
         setError(
           e instanceof Error && e.message.includes("fetch")
-            ? "网络连接失败，请检查网络"
-            : "加载失败，请稍后重试",
+            ? tErr("networkConnectFailed")
+            : tErr("loadFailed"),
         );
         setTasks([]);
       })
@@ -141,8 +143,8 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes("fetch")
-          ? "网络连接失败，请检查网络"
-          : "加载失败，请稍后重试",
+          ? tErr("networkConnectFailed")
+          : tErr("loadFailed"),
       );
       setTasks([]);
     }
@@ -184,7 +186,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     } catch {
       // 仅当没有更新的拖拽操作时才回滚
       if (seq === dragSeqRef.current) {
-        setDragError("移动失败，已恢复");
+        setDragError(t("dragFailed"));
         await load();
         setTimeout(() => setDragError(null), 5000);
       }
@@ -317,7 +319,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
             }}
             className="text-red-600 underline hover:text-red-800"
           >
-            重试
+            {tButton("retry")}
           </button>
         </div>
       )}
@@ -448,6 +450,8 @@ interface BoardViewProps {
 
 function BoardView(props: BoardViewProps) {
   const { tasks, activeColumn, setActiveColumn } = props;
+  // 看板列名翻译（阶段 2-6 i18n：COLUMNS.titleKey 经 status ns 渲染）
+  const tStatus = useTranslations("status");
   return (
     <>
       {/* < md：单列选择器 */}
@@ -465,7 +469,7 @@ function BoardView(props: BoardViewProps) {
               }`}
             >
               <div className="w-1.5 h-1.5 rounded-full" style={{ background: col.color }} />
-              {col.title}
+              {tStatus(col.titleKey)}
             </button>
           ))}
         </div>
@@ -549,7 +553,7 @@ function ListView(props: ListViewProps) {
             className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label={t("prevPage")}
           >
-            上一页
+            {t("prevPage")}
           </button>
           <span className="tabular-nums text-[var(--fg-2)]">
             {safeListPage} / {listTotalPages}
@@ -560,7 +564,7 @@ function ListView(props: ListViewProps) {
             className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
             aria-label={t("nextPage")}
           >
-            下一页
+            {t("nextPage")}
           </button>
         </div>
       )}

@@ -23,7 +23,7 @@ let errSpy: ReturnType<typeof vi.fn>;
 const fetchMock = vi.fn();
 
 beforeEach(() => {
-  logSpy = vi.spyOn(console, "log").mockImplementation(() => undefined) as unknown as ReturnType<
+  logSpy = vi.spyOn(console, "info").mockImplementation(() => undefined) as unknown as ReturnType<
     typeof vi.fn
   >;
   errSpy = vi.spyOn(console, "error").mockImplementation(() => undefined) as unknown as ReturnType<

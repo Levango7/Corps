@@ -25,6 +25,7 @@
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import { relativeTime as sharedRelativeTime } from "@/lib/format";
 import {
   AtSign,
   UserPlus,
@@ -53,7 +54,8 @@ interface Notification {
 type Filter = "all" | "unread";
 
 /**
- * 通知类型元数据：图标 + 图标色 + 文案模板。
+ * 通知类型元数据：图标 + 图标色 + 文案 key（阶段 2-6 i18n：模板经
+ * notifications ns 的 key 渲染，title 由调用方以 values 注入）。
  *
  * 颜色映射（遵循设计规范，已对齐项目实际 token）：
  *  - mention         → AtSign        · var(--accent)   （提到我）
@@ -62,33 +64,16 @@ type Filter = "all" | "unread";
  *  - comment_added   → MessageSquare · var(--warn)     （规范写 var(--warning)，项目 token 为 --warn）
  *  - decision_updated→ FileText      · var(--fg-2)     （决策更新）
  */
-const TYPE_META: Record<
-  NotificationType,
-  { icon: typeof AtSign; color: string; text: (title: string) => string }
-> = {
-  mention: { icon: AtSign, color: "var(--accent)", text: (t) => `${t} 中提到了你` },
-  task_assigned: { icon: UserPlus, color: "var(--success)", text: (t) => `你被分配到任务 ${t}` },
-  task_updated: { icon: RefreshCw, color: "var(--accent)", text: (t) => `任务 ${t} 已更新` },
-  comment_added: { icon: MessageSquare, color: "var(--warn)", text: (t) => `${t} 有新评论` },
-  decision_updated: { icon: FileText, color: "var(--fg-2)", text: (t) => `${t} 的决策已更新` },
-};
+const TYPE_META: Record<NotificationType, { icon: typeof AtSign; color: string; textKey: string }> =
+  {
+    mention: { icon: AtSign, color: "var(--accent)", textKey: "mentionText" },
+    task_assigned: { icon: UserPlus, color: "var(--success)", textKey: "assignedText" },
+    task_updated: { icon: RefreshCw, color: "var(--accent)", textKey: "updatedText" },
+    comment_added: { icon: MessageSquare, color: "var(--warn)", textKey: "commentText" },
+    decision_updated: { icon: FileText, color: "var(--fg-2)", textKey: "decisionText" },
+  };
 
-/** 相对时间戳：刚刚 / N 分钟前 / N 小时前 / N 天前 / 月-日（与概览页一致） */
-function relativeTime(iso?: string): string | null {
-  if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return null;
-  const diff = Math.max(0, Date.now() - then);
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "刚刚";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
-}
+// 相对时间戳：共享 format.ts（阶段 2-6 i18n——经 useTranslations("time") 输出当前语言）
 
 export default function NotificationsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
@@ -96,6 +81,9 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
 
   const [all, setAll] = useState<Notification[]>([]);
   const tNotif = useTranslations("notifications");
+  const tTime = useTranslations("time");
+  const tErr = useTranslations("error");
+  const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
   const [marking, setMarking] = useState(false);
@@ -111,8 +99,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes("fetch")
-          ? "网络连接失败，请检查网络"
-          : "加载失败，请稍后重试",
+          ? tErr("networkConnectFailed")
+          : tErr("loadFailed"),
       );
       setAll([]);
     } finally {
@@ -175,12 +163,12 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       <header className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div className="flex items-center gap-[var(--space-3)]">
           <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-            通知中心
+            {tNotif("title")}
           </h1>
           {loaded && unreadCount > 0 && (
             <span
               className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)] tabular-nums"
-              aria-label={`${unreadCount} 条未读`}
+              aria-label={tNotif("unreadCount", { count: unreadCount })}
             >
               {unreadCount}
             </span>
@@ -207,7 +195,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                   : "text-[var(--muted)] hover:text-[var(--fg-2)]"
               }`}
             >
-              {f === "all" ? "全部" : "未读"}
+              {f === "all" ? tNotif("all") : tNotif("unread")}
             </button>
           ))}
         </div>
@@ -219,7 +207,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
             className="flex items-center gap-1.5 h-8 px-3 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             <CheckCheck size={14} />
-            全部已读
+            {tNotif("markAllRead")}
           </button>
         )}
       </div>
@@ -241,7 +229,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 }}
                 className="text-red-600 underline hover:text-red-800"
               >
-                重试
+                {tErr("retry")}
               </button>
             </div>
           )}
@@ -250,12 +238,13 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
               const meta = TYPE_META[n.type];
               const Icon = meta.icon;
               const rel = relativeTime(n.createdAt);
+              const text = tNotif(meta.textKey, { title: n.entityTitle });
               return (
                 <li key={n.id}>
                   <button
                     type="button"
                     onClick={() => openNotification(n)}
-                    aria-label={`${meta.text(n.entityTitle)}${n.read ? "" : "，未读"}`}
+                    aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
                     className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
                       n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
                     }`}
@@ -267,7 +256,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                           n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
                         }`}
                       >
-                        {meta.text(n.entityTitle)}
+                        {text}
                       </p>
                       {rel && (
                         <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
@@ -335,9 +324,7 @@ function EmptyState({ filter }: { filter: Filter }) {
     <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
       <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
       <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("noNotifications")}</p>
-      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-        当有人 @你、分配任务或更新决策时，会在这里提醒你
-      </p>
+      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyHint")}</p>
     </div>
   );
 }

@@ -15,6 +15,7 @@
  */
 
 import { useEffect } from "react";
+import { useTranslations } from "next-intl";
 import "./globals.css";
 
 export default function GlobalError({
@@ -24,6 +25,9 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
+  const t = useTranslations("error");
+  const tButton = useTranslations("button");
+
   useEffect(() => {
     console.error("[global-error] 全局错误边界捕获：", error);
   }, [error]);
@@ -78,7 +82,7 @@ export default function GlobalError({
               margin: "0 0 0.5rem",
             }}
           >
-            应用发生严重错误
+            {t("fatalError")}
           </h2>
           <p
             style={{
@@ -87,7 +91,7 @@ export default function GlobalError({
               margin: "0 0 0.25rem",
             }}
           >
-            页面渲染时发生未预期的异常，请尝试重试或刷新。
+            {t("fatalErrorDesc")}
           </p>
           {error.digest && (
             <p
@@ -99,7 +103,7 @@ export default function GlobalError({
                 wordBreak: "break-all",
               }}
             >
-              错误编号：{error.digest}
+              {t("errorId", { digest: error.digest })}
             </p>
           )}
           <div
@@ -129,7 +133,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              重试
+              {tButton("retry")}
             </button>
             <button
               type="button"
@@ -148,7 +152,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              刷新页面
+              {tButton("refresh")}
             </button>
           </div>
         </div>

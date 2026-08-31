@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { dueMeta as sharedDueMeta, relativeTime as sharedRelativeTime } from "@/lib/format";
 import { STATUS_META } from "@/lib/task-meta";
 import NewTaskDialog from "@/components/NewTaskDialog";
 import Onboarding from "@/components/Onboarding";
@@ -34,31 +35,32 @@ interface Task {
 }
 
 // 概览页三张统计卡：进行中 = in_progress + review 合并计数
+// labelKey 经 t() 渲染（阶段 2-6 i18n）
 
 const STAT_CARDS: {
   key: "todo" | "doing" | "done";
-  label: string;
+  labelKey: "statTodo" | "statDoing" | "statDone";
   icon: typeof Circle;
   color: string;
   match: (s: Status) => boolean;
 }[] = [
   {
     key: "todo",
-    label: "待办",
+    labelKey: "statTodo",
     icon: Circle,
     color: "var(--status-todo)",
     match: (s) => s === "todo",
   },
   {
     key: "doing",
-    label: "进行中",
+    labelKey: "statDoing",
     icon: CircleDot,
     color: "var(--status-doing)",
     match: (s) => s === "in_progress" || s === "review",
   },
   {
     key: "done",
-    label: "已完成",
+    labelKey: "statDone",
     icon: CheckCircle2,
     color: "var(--status-done)",
     match: (s) => s === "done",
@@ -72,43 +74,19 @@ const PRIORITY_COLOR: Record<Priority, string> = {
   urgent: "var(--danger)",
 };
 
-function dueMeta(iso?: string | null) {
-  if (!iso) return null;
-  const d = new Date(iso);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const days = Math.round((d.getTime() - today.getTime()) / 86400000);
-  if (days < 0) return { text: `逾期 ${Math.abs(days)} 天`, color: "var(--danger)" };
-  if (days === 0) return { text: "今天到期", color: "var(--warn)" };
-  if (days === 1) return { text: "明天到期", color: "var(--warn)" };
-  if (days <= 7) return { text: `${days} 天后`, color: "var(--muted)" };
-  return {
-    text: d.toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" }),
-    color: "var(--meta)",
-  };
-}
-
-/** 相对时间戳：刚刚 / N 分钟前 / N 小时前 / N 天前 / 月-日 */
-function relativeTime(iso?: string) {
-  if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return null;
-  const diff = Math.max(0, Date.now() - then);
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "刚刚";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
-}
+// dueMeta / relativeTime：走共享 lib/format.ts（阶段 2-6 i18n，tTime 注入）
 
 export default function HomePage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
 
   const t = useTranslations("task");
+  const tButton = useTranslations("button");
+  const tTime = useTranslations("time");
+  const tErr = useTranslations("error");
+  const tNav = useTranslations("nav");
+  const tEmpty = useTranslations("empty");
+  const dueMeta = (iso?: string | null) => sharedDueMeta(iso, tTime);
+  const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [showNew, setShowNew] = useState(false);
@@ -125,8 +103,8 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes("fetch")
-          ? "网络连接失败，请检查网络"
-          : "加载失败，请稍后重试",
+          ? tErr("networkConnectFailed")
+          : tErr("loadFailed"),
       );
       setTasks([]);
     } finally {
@@ -172,14 +150,18 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       <div className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>
           <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-            概览
+            {tNav("menu.overview")}
           </h1>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
             {loaded
               ? openTasks.length === 0
-                ? "当前没有进行中的任务。"
-                : `${openTasks.length} 条任务未完成${overdue.length > 0 ? `，其中 ${overdue.length} 条已逾期` : ""}。`
-              : "正在读取任务"}
+                ? t("overviewEmpty")
+                : t("overviewProgress", {
+                    open: openTasks.length,
+                    overdue:
+                      overdue.length > 0 ? t("overviewOverduePart", { count: overdue.length }) : "",
+                  })
+              : t("loading")}
           </p>
         </div>
         <button
@@ -187,7 +169,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
           className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
         >
           <Plus size={16} />
-          新建任务
+          {t("create")}
         </button>
       </div>
 
@@ -207,7 +189,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                 <div className="flex items-center gap-2">
                   <Icon size={16} style={{ color: card.color }} />
                   <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                    {card.label}
+                    {t(card.labelKey)}
                   </span>
                   <ArrowRight
                     size={14}
@@ -233,7 +215,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             }}
             className="text-red-600 underline hover:text-red-800"
           >
-            重试
+            {tButton("retry")}
           </button>
         </div>
       )}
@@ -243,7 +225,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
         <div className="mb-[var(--space-6)] flex items-center gap-2.5 bg-[var(--danger-soft)] border-l-2 border-[var(--danger)] rounded-[var(--radius-md)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)]">
           <CalendarClock size={15} className="shrink-0 text-[var(--danger)]" />
           <span className="shrink-0 font-[var(--weight-medium)] text-[var(--danger-fg)]">
-            已逾期 {overdue.length} 条
+            {t("overdueCount", { count: overdue.length })}
           </span>
           <span className="hidden sm:inline shrink-0 text-[var(--meta)]">·</span>
           <span className="hidden sm:flex flex-1 min-w-0 items-center gap-0.5 text-[var(--fg-2)] overflow-hidden">
@@ -267,7 +249,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             href={`/w/${wid}/board`}
             className="sm:hidden ml-auto text-[var(--accent)] hover:underline"
           >
-            查看全部
+            {t("viewAll")}
           </Link>
         </div>
       )}
@@ -275,7 +257,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)]">
         <header className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
-            最近更新
+            {t("recentTitle")}
           </h2>
           <div className="flex items-center gap-[var(--space-3)]">
             {/* 排序下拉：最近更新 / 即将到期 / 优先级 */}
@@ -293,7 +275,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
               href={`/w/${wid}/board`}
               className="flex items-center gap-1 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
             >
-              全部
+              {t("allTasks")}
               <ArrowRight size={14} />
             </Link>
           </div>
@@ -309,17 +291,17 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
               strokeWidth={1.5}
             />
             <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-              这个工作区还没有任务。
+              {tEmpty("noTasksYet")}
             </p>
             <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-              先在看板建一条，把手里最紧的事放进来。
+              {tEmpty("noTasksHint")}
             </p>
             <button
               onClick={() => setShowNew(true)}
               className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
             >
               <Plus size={15} />
-              新建任务
+              {t("create")}
             </button>
           </div>
         ) : (

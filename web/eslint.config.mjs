@@ -28,7 +28,7 @@ export default [
       "@typescript-eslint/explicit-function-return-type": "off",
 
       // 通用
-      "no-console": ["warn", { allow: ["warn", "error"] }],
+      "no-console": ["warn", { allow: ["warn", "error", "info"] }],
       "no-debugger": "error",
       "prefer-const": "error",
     },

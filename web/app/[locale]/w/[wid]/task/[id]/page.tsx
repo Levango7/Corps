@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
+import { relTime as sharedRelTime } from "@/lib/format";
 import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
@@ -81,24 +82,14 @@ interface DecisionVersion {
   author: Person;
 }
 
-const PRIORITY_META: Record<Priority, { label: string; color: string }> = {
-  low: { label: "低", color: "var(--meta)" },
-  medium: { label: "中", color: "var(--muted)" },
-  high: { label: "高", color: "var(--warn)" },
-  urgent: { label: "紧急", color: "var(--danger)" },
+const PRIORITY_META: Record<Priority, { labelKey: string; color: string }> = {
+  low: { labelKey: "low", color: "var(--meta)" },
+  medium: { labelKey: "medium", color: "var(--muted)" },
+  high: { labelKey: "high", color: "var(--warn)" },
+  urgent: { labelKey: "urgent", color: "var(--danger)" },
 };
 
-function relTime(iso: string) {
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "刚刚";
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN");
-}
+// relTime：走共享 lib/format.ts（tTime 注入渲染当前语言，见组件内适配）
 
 export default function TaskDetailPage({
   params,
@@ -109,6 +100,11 @@ export default function TaskDetailPage({
   const router = useRouter();
   const t = useTranslations("task");
   const tButton = useTranslations("button");
+  const tStatus = useTranslations("status");
+  const tErr = useTranslations("error");
+  const tPriority = useTranslations("priority");
+  const tTime = useTranslations("time");
+  const relTime = (iso: string) => sharedRelTime(iso, tTime);
 
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
@@ -215,7 +211,7 @@ export default function TaskDetailPage({
       setDecisions(d);
       setMembers(m);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : tErr("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -236,7 +232,7 @@ export default function TaskDetailPage({
       setTask((prev) => (prev ? { ...prev, ...updated } : updated));
       setDirty(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败");
+      setError(e instanceof Error ? e.message : tErr("saveFailed"));
       await load();
     }
   }
@@ -255,7 +251,7 @@ export default function TaskDetailPage({
       setDraft("");
       setMentionOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "发送失败");
+      setError(e instanceof Error ? e.message : tErr("sendFailed"));
     } finally {
       setSending(false);
     }
@@ -346,7 +342,7 @@ export default function TaskDetailPage({
       setDecisionDraft("");
       setDecisionOpen(false);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "保存失败");
+      setError(e instanceof Error ? e.message : tErr("saveFailed"));
     }
   }
 
@@ -370,7 +366,7 @@ export default function TaskDetailPage({
       await api(`${base}/tasks/${id}`, { method: "DELETE" });
       router.push(`/w/${wid}/board`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "删除失败");
+      setError(e instanceof Error ? e.message : tErr("deleteFailed"));
     }
   }
 
@@ -406,13 +402,13 @@ export default function TaskDetailPage({
   if (!task) {
     return (
       <div className="max-w-2xl mx-auto py-[var(--space-16)] text-center">
-        <p className="text-[var(--fg-2)]">{error || "任务不存在或已被删除。"}</p>
+        <p className="text-[var(--fg-2)]">{error || t("notFound")}</p>
         <Link
           href={`/w/${wid}/board`}
           className="inline-flex items-center gap-1.5 mt-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--accent)] hover:underline underline-offset-2"
         >
           <ArrowLeft size={14} />
-          返回看板
+          {t("backToBoard")}
         </Link>
       </div>
     );
@@ -432,14 +428,14 @@ export default function TaskDetailPage({
           className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
         >
           <ArrowLeft size={16} />
-          看板
+          {t("boardLink")}
         </Link>
         <button
           onClick={removeTask}
           className="inline-flex items-center justify-center gap-1.5 min-w-[32px] px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
         >
           <Trash2 size={15} />
-          删除
+          {tButton("delete")}
         </button>
       </div>
 
@@ -484,7 +480,7 @@ export default function TaskDetailPage({
             />
 
             <div className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
-              失焦自动保存
+              {t("autosave")}
             </div>
           </div>
 
@@ -493,7 +489,7 @@ export default function TaskDetailPage({
             <div className="flex items-center justify-between mb-[var(--space-3)]">
               <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
                 <FileText size={16} className="text-[var(--muted)]" />
-                决策记录
+                {t("decisionsTitle")}
                 {decisions.length > 0 && (
                   <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
                     {decisions.length}
@@ -505,7 +501,7 @@ export default function TaskDetailPage({
                 className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
               >
                 {decisionOpen ? <X size={15} /> : <Plus size={15} />}
-                {decisionOpen ? "取消" : "记一条"}
+                {decisionOpen ? tButton("cancel") : t("addDecision")}
               </button>
             </div>
 
@@ -523,7 +519,7 @@ export default function TaskDetailPage({
                         : "text-[var(--muted)] hover:text-[var(--fg-2)]"
                     }`}
                   >
-                    编辑
+                    {t("editTab")}
                   </button>
                   <button
                     type="button"
@@ -535,7 +531,7 @@ export default function TaskDetailPage({
                         : "text-[var(--muted)] hover:text-[var(--fg-2)]"
                     }`}
                   >
-                    预览
+                    {t("previewTab")}
                   </button>
                 </div>
 
@@ -544,9 +540,7 @@ export default function TaskDetailPage({
                     value={decisionDraft}
                     onChange={(e) => setDecisionDraft(e.target.value)}
                     rows={6}
-                    placeholder={
-                      "## 决定\n采用方案 B。\n\n## 理由\n- 迁移成本更低\n- 与现有权限模型兼容"
-                    }
+                    placeholder={t("decisionTemplate")}
                     className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
                   />
                 ) : (
@@ -561,14 +555,14 @@ export default function TaskDetailPage({
 
                 <div className="flex items-center justify-between mt-[var(--space-3)] pt-[var(--space-3)] border-t border-[var(--border-soft)]">
                   <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                    支持 Markdown · 每次保存生成新版本，历史不会被覆盖
+                    {t("decisionHint")}
                   </span>
                   <button
                     onClick={addDecision}
                     disabled={!decisionDraft.trim()}
                     className="h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
                   >
-                    保存为 v{(decisions[0]?.version ?? 0) + 1}
+                    {t("saveAsVersion", { version: (decisions[0]?.version ?? 0) + 1 })}
                   </button>
                 </div>
               </div>
@@ -577,7 +571,7 @@ export default function TaskDetailPage({
             {decisions.length === 0 && !decisionOpen ? (
               <div className="px-[var(--space-4)] py-[var(--space-8)] rounded-[var(--radius-lg)] border border-dashed border-[var(--border)] text-center">
                 <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-                  还没有决策记录。把「为什么这么定」写下来，新同事不用再问一遍。
+                  {t("decisionsEmpty")}
                 </p>
               </div>
             ) : (
@@ -592,7 +586,7 @@ export default function TaskDetailPage({
                         v{d.version}
                       </span>
                       <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                        {d.author ? d.author.name || d.author.email : "已注销用户"} ·{" "}
+                        {d.author ? d.author.name || d.author.email : t("deletedUser")} ·{" "}
                         {relTime(d.createdAt)}
                       </span>
                       <button
@@ -619,7 +613,7 @@ export default function TaskDetailPage({
           <section className="mt-[var(--space-8)]">
             <h2 className="flex items-center gap-[var(--space-2)] mb-[var(--space-3)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
               <MessageSquare size={16} className="text-[var(--muted)]" />
-              讨论
+              {t("discussionTitle")}
               {comments.length > 0 && (
                 <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
                   {comments.length}
@@ -634,12 +628,16 @@ export default function TaskDetailPage({
                   className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
                   <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-                    {(c.author ? c.author.name || c.author.email : "已注销用户")[0]?.toUpperCase()}
+                    {(c.author
+                      ? c.author.name || c.author.email
+                      : t("deletedUser"))[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-[var(--space-2)]">
                       <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
-                        {c.author ? c.author.name || c.author.email.split("@")[0] : "已注销用户"}
+                        {c.author
+                          ? c.author.name || c.author.email.split("@")[0]
+                          : t("deletedUser")}
                       </span>
                       <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
                         {relTime(c.createdAt)}
@@ -665,11 +663,7 @@ export default function TaskDetailPage({
                     setTimeout(() => setMentionOpen(false), 150);
                   }}
                   rows={2}
-                  placeholder={
-                    isMobile
-                      ? "写下你的想法…（@ 提及，⌘+Enter 发送）"
-                      : "写下你的想法…（@ 提及成员，⌘/Ctrl + Enter 发送）"
-                  }
+                  placeholder={isMobile ? t("commentPlaceholderMobile") : t("commentPlaceholder")}
                   className="w-full px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-base)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
                 />
                 {mentionOpen && mentionCandidates.length > 0 && (
@@ -698,7 +692,7 @@ export default function TaskDetailPage({
                 className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
               >
                 {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
-                发送
+                {t("send")}
               </button>
             </div>
           </section>
@@ -711,7 +705,7 @@ export default function TaskDetailPage({
           <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
             <div className={fieldLabel}>
               <StatusIcon size={13} style={{ color: STATUS_META[task.status].color }} />
-              状态
+              {t("fieldStatus")}
             </div>
             <select
               value={task.status}
@@ -720,7 +714,7 @@ export default function TaskDetailPage({
             >
               {(Object.keys(STATUS_META) as Status[]).map((s) => (
                 <option key={s} value={s}>
-                  {STATUS_META[s].label}
+                  {tStatus(STATUS_META[s].labelKey)}
                 </option>
               ))}
             </select>
@@ -729,7 +723,7 @@ export default function TaskDetailPage({
           <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
             <div className={fieldLabel}>
               <Flag size={13} style={{ color: PRIORITY_META[task.priority].color }} />
-              优先级
+              {t("fieldPriority")}
             </div>
             <select
               value={task.priority}
@@ -738,7 +732,7 @@ export default function TaskDetailPage({
             >
               {(Object.keys(PRIORITY_META) as Priority[]).map((p) => (
                 <option key={p} value={p}>
-                  {PRIORITY_META[p].label}
+                  {tPriority(PRIORITY_META[p].labelKey)}
                 </option>
               ))}
             </select>
@@ -763,7 +757,7 @@ export default function TaskDetailPage({
           <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
             <div className={fieldLabel}>
               <Calendar size={13} />
-              截止日期
+              {t("fieldDueDate")}
               {task.dueDate && <CalendarSyncBadge wid={wid} taskId={id} />}
             </div>
             <input
@@ -779,9 +773,11 @@ export default function TaskDetailPage({
           </div>
 
           <div className="col-span-2 md:col-span-auto w-full basis-full lg:basis-auto pt-[var(--space-3)] border-t border-[var(--border-soft)] space-y-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
-            <div>创建者 {task.creator?.name || task.creator?.email || "—"}</div>
-            <div>创建于 {new Date(task.createdAt).toLocaleString("zh-CN")}</div>
-            <div>更新于 {relTime(task.updatedAt)}</div>
+            <div>{t("creator", { name: task.creator?.name || task.creator?.email || "—" })}</div>
+            <div>{t("createdAt", { date: new Date(task.createdAt).toLocaleString() })}</div>
+            <div>
+              {t("updatedAt")} {relTime(task.updatedAt)}
+            </div>
           </div>
         </aside>
       </div>
@@ -804,7 +800,7 @@ export default function TaskDetailPage({
             <header className="flex items-center justify-between px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border-soft)] sticky top-0 bg-[var(--surface)]">
               <h3 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
                 <History size={16} className="text-[var(--muted)]" />
-                版本历史 · v{historyFor.version}
+                {t("versionHistoryTitle", { version: historyFor.version })}
               </h3>
               <button
                 onClick={() => setHistoryFor(null)}
@@ -833,7 +829,7 @@ export default function TaskDetailPage({
                         v{v.version}
                       </span>
                       <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                        {v.author ? v.author.name || v.author.email : "已注销用户"} ·{" "}
+                        {v.author ? v.author.name || v.author.email : t("deletedUser")} ·{" "}
                         {relTime(v.createdAt)}
                       </span>
                     </header>
@@ -862,10 +858,10 @@ export default function TaskDetailPage({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
-              确认删除
+              {t("confirmDeleteTitle")}
             </h3>
             <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.6] mb-[var(--space-5)]">
-              确认删除任务「{task.title}」？删除后无法恢复，评论与决策记录会一并删除。
+              {t("confirmDeleteTask", { title: task.title })}
             </p>
             <div className="flex items-center justify-end gap-[var(--space-2)]">
               <button
@@ -873,7 +869,7 @@ export default function TaskDetailPage({
                 onClick={() => setConfirmOpen(false)}
                 className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
               >
-                取消
+                {tButton("cancel")}
               </button>
               <button
                 type="button"
@@ -883,7 +879,7 @@ export default function TaskDetailPage({
                 }}
                 className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 transition-opacity duration-[var(--motion-fast)]"
               >
-                确认删除
+                {t("confirmDelete")}
               </button>
             </div>
           </div>

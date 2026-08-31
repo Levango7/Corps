@@ -17,8 +17,8 @@ import type { Task } from "@/lib/types";
 import {
   COLUMNS,
   PRIORITY_BAR_COLORS,
-  PRIORITY_LABELS,
-  STATUS_LABELS,
+  PRIORITY_LABEL_KEYS,
+  STATUS_LABEL_KEYS,
   STATUS_BADGE_STYLES,
   PRIORITY_BADGE_STYLES,
 } from "@/lib/task-meta";
@@ -60,6 +60,7 @@ export function BoardColumn({
   onDropOnColumn,
   onMoveByStep,
 }: BoardColumnProps) {
+  const tStatus = useTranslations("status");
   return (
     <div
       // data-column：E2E 拖拽 drop 目标定位（移动端列选择器按钮与桌面列头同名，
@@ -74,7 +75,7 @@ export function BoardColumn({
     >
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
         <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-        <span className="font-medium text-[var(--fg)]">{column.title}</span>
+        <span className="font-medium text-[var(--fg)]">{tStatus(column.titleKey)}</span>
         <span className="ml-auto text-xs text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
           {columnTasks.length}
         </span>
@@ -193,7 +194,7 @@ function BoardCard({
             onChange={() => onToggleSelect(task.id)}
             onClick={(e) => e.stopPropagation()}
             className="mt-0.5 shrink-0 accent-[var(--accent)]"
-            aria-label={`选择任务 ${task.title}`}
+            aria-label={t("selectTask", { title: task.title })}
           />
         )}
         <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
@@ -264,6 +265,8 @@ export function ListTable({
   onToggleSelect,
 }: ListTableProps) {
   const t = useTranslations("task");
+  const tStatus = useTranslations("status");
+  const tPriority = useTranslations("priority");
   const router = useRouter();
   return (
     <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden">
@@ -317,7 +320,7 @@ export function ListTable({
                       onChange={() => onToggleSelect(task.id)}
                       onClick={(e) => e.stopPropagation()}
                       className="accent-[var(--accent)]"
-                      aria-label={`选择任务 ${task.title}`}
+                      aria-label={t("selectTask", { title: task.title })}
                     />
                   </td>
                 )}
@@ -330,7 +333,7 @@ export function ListTable({
                     className="text-xs px-1.5 py-0.5 rounded"
                     style={PRIORITY_BADGE_STYLES[task.priority]}
                   >
-                    {PRIORITY_LABELS[task.priority]}
+                    {tPriority(PRIORITY_LABEL_KEYS[task.priority])}
                   </span>
                 </td>
                 <td className="px-4 h-10">
@@ -338,7 +341,7 @@ export function ListTable({
                     className="text-xs px-1.5 py-0.5 rounded"
                     style={STATUS_BADGE_STYLES[task.status]}
                   >
-                    {STATUS_LABELS[task.status]}
+                    {tStatus(STATUS_LABEL_KEYS[task.status])}
                   </span>
                 </td>
                 <td className="px-4 h-10 text-[var(--muted)]">
@@ -377,6 +380,8 @@ export function ListCards({
   onToggleSelect,
 }: ListCardProps) {
   const router = useRouter();
+  const t = useTranslations("task");
+  const tStatus = useTranslations("status");
   return (
     <div className="md:hidden space-y-2">
       {tasks.map((task) => {
@@ -419,7 +424,7 @@ export function ListCards({
                     checked={selected}
                     onChange={() => onToggleSelect(task.id)}
                     className="shrink-0 accent-[var(--accent)]"
-                    aria-label={`选择任务 ${task.title}`}
+                    aria-label={t("selectTask", { title: task.title })}
                   />
                 )}
                 <p className="text-sm font-medium text-[var(--fg)] truncate flex-1">{task.title}</p>
@@ -428,7 +433,7 @@ export function ListCards({
                 className="text-xs px-1.5 py-0.5 rounded shrink-0"
                 style={STATUS_BADGE_STYLES[task.status]}
               >
-                {STATUS_LABELS[task.status]}
+                {tStatus(STATUS_LABEL_KEYS[task.status])}
               </span>
             </div>
             <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
@@ -497,6 +502,7 @@ export function BoardSkeleton() {
 /** 空状态：工作区无任务时引导创建。 */
 export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
   const tEmpty = useTranslations("empty");
+  const tStatus = useTranslations("status");
   return (
     <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
       <Kanban size={48} className="mb-4 opacity-40" />
@@ -509,7 +515,7 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
         className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
       >
         <Plus size={16} />
-        新建任务
+        {tStatus("newTask")}
       </button>
     </div>
   );

@@ -24,18 +24,18 @@ interface TaskStub {
   id: string;
 }
 
-const STATUS_OPTS: { value: Status; label: string }[] = [
-  { value: "todo", label: "待办" },
-  { value: "in_progress", label: "进行中" },
-  { value: "review", label: "评审" },
-  { value: "done", label: "已完成" },
+const STATUS_OPTS: { value: Status; labelKey: string }[] = [
+  { value: "todo", labelKey: "todo" },
+  { value: "in_progress", labelKey: "in_progress" },
+  { value: "review", labelKey: "review" },
+  { value: "done", labelKey: "done" },
 ];
 
-const PRIORITY_OPTS: { value: Priority; label: string; color: string }[] = [
-  { value: "low", label: "低", color: "var(--meta)" },
-  { value: "medium", label: "中", color: "var(--muted)" },
-  { value: "high", label: "高", color: "var(--warn)" },
-  { value: "urgent", label: "紧急", color: "var(--danger)" },
+const PRIORITY_OPTS: { value: Priority; labelKey: string; color: string }[] = [
+  { value: "low", labelKey: "low", color: "var(--meta)" },
+  { value: "medium", labelKey: "medium", color: "var(--muted)" },
+  { value: "high", labelKey: "high", color: "var(--warn)" },
+  { value: "urgent", labelKey: "urgent", color: "var(--danger)" },
 ];
 
 const fieldLabel =
@@ -56,6 +56,8 @@ export default function NewTaskDialog({
 }) {
   const [title, setTitle] = useState("");
   const t = useTranslations("task");
+  const tStatus = useTranslations("status");
+  const tPriority = useTranslations("priority");
   const tButton = useTranslations("button");
   const tMilestone = useTranslations("milestone");
   const [description, setDescription] = useState("");
@@ -164,7 +166,7 @@ export default function NewTaskDialog({
       onCreated?.(created);
       onClose();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "创建失败");
+      setError(err instanceof Error ? err.message : t("createFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -189,7 +191,7 @@ export default function NewTaskDialog({
             id="new-task-title"
             className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]"
           >
-            新建任务
+            {t("dialogTitle")}
           </h2>
           <button
             type="button"
@@ -204,7 +206,7 @@ export default function NewTaskDialog({
         <form onSubmit={submit} className="px-4 sm:px-5 py-4 space-y-4">
           <div>
             <label className={fieldLabel} htmlFor="nt-title">
-              标题
+              {t("fieldTitle")}
             </label>
             <input
               id="nt-title"
@@ -220,7 +222,7 @@ export default function NewTaskDialog({
 
           <div>
             <label className={fieldLabel} htmlFor="nt-desc">
-              描述（可选）
+              {t("fieldDescOptional")}
             </label>
             <textarea
               ref={descRef}
@@ -244,7 +246,7 @@ export default function NewTaskDialog({
               >
                 {STATUS_OPTS.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {tStatus(o.labelKey)}
                   </option>
                 ))}
               </select>
@@ -252,7 +254,7 @@ export default function NewTaskDialog({
             <div>
               <label className={fieldLabel}>
                 <Flag size={13} />
-                优先级
+                {t("fieldPriority")}
               </label>
               <select
                 value={priority}
@@ -261,7 +263,7 @@ export default function NewTaskDialog({
               >
                 {PRIORITY_OPTS.map((o) => (
                   <option key={o.value} value={o.value}>
-                    {o.label}
+                    {tPriority(o.labelKey)}
                   </option>
                 ))}
               </select>
@@ -287,7 +289,7 @@ export default function NewTaskDialog({
             <div>
               <label className={fieldLabel}>
                 <Calendar size={13} />
-                截止日期（可选）
+                {t("fieldDueOptional")}
               </label>
               <input
                 type="date"
@@ -304,7 +306,7 @@ export default function NewTaskDialog({
             <div>
               <label className={fieldLabel}>
                 <MilestoneIcon size={13} />
-                里程碑（可选）
+                {t("fieldMilestoneOptional")}
               </label>
               <select
                 value={milestoneId}
@@ -327,7 +329,7 @@ export default function NewTaskDialog({
             <div>
               <label className={fieldLabel}>
                 <Tag size={13} />
-                标签（可选，多选）
+                {t("fieldLabelsOptional")}
               </label>
               <div className="flex flex-wrap gap-1.5">
                 {labels.map((label) => {
@@ -381,7 +383,7 @@ export default function NewTaskDialog({
               onClick={onClose}
               className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             >
-              取消
+              {tButton("cancel")}
             </button>
             <button
               type="submit"
@@ -389,7 +391,7 @@ export default function NewTaskDialog({
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
-              创建
+              {t("actionCreate")}
             </button>
           </div>
         </form>

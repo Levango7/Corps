@@ -1,7 +1,10 @@
-export function generateMetadata() {
+export async function generateMetadata({ params }: { params: Promise<{ locale: string }> }) {
+  const { locale } = await params;
+  const { getTranslations } = await import("next-intl/server");
+  const t = await getTranslations({ locale, namespace: "nav" });
   return {
-    title: "corps · 工作台",
-    description: "团队 SaaS - 任务看板",
+    title: t("metaWorkspaceTitle"),
+    description: t("metaWorkspaceDesc"),
   };
 }
 

@@ -79,7 +79,7 @@ function MessageInputImpl({ onSend, onUploadFile, sending }: MessageInputProps) 
             : meta;
         setPendingAttachments((prev) => [...prev, previewMeta]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "上传失败");
+        setError(err instanceof Error ? err.message : t("uploadFailed"));
       } finally {
         setUploading(false);
       }

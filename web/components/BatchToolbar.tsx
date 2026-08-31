@@ -18,7 +18,12 @@
 import { useState } from "react";
 import { X, Trash2, Loader2, CircleDot, Flag, ChevronDown } from "lucide-react";
 import type { Status, Priority } from "@/lib/types";
-import { STATUS_LABELS, PRIORITY_LABELS, STATUS_META, PRIORITY_COLORS } from "@/lib/task-meta";
+import {
+  STATUS_LABEL_KEYS,
+  PRIORITY_LABEL_KEYS,
+  STATUS_META,
+  PRIORITY_COLORS,
+} from "@/lib/task-meta";
 import { useTranslations } from "next-intl";
 
 interface BatchToolbarProps {
@@ -39,6 +44,8 @@ interface BatchToolbarProps {
 
 export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: BatchToolbarProps) {
   const t = useTranslations("task");
+  const tStatus = useTranslations("status");
+  const tPriority = useTranslations("priority");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
@@ -54,7 +61,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
     try {
       await onUpdate({ status });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "批量更新失败");
+      setError(e instanceof Error ? e.message : t("batchUpdateFailed"));
     } finally {
       setBusy(false);
     }
@@ -68,7 +75,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
     try {
       await onUpdate({ priority });
     } catch (e) {
-      setError(e instanceof Error ? e.message : "批量更新失败");
+      setError(e instanceof Error ? e.message : t("batchUpdateFailed"));
     } finally {
       setBusy(false);
     }
@@ -76,13 +83,13 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
 
   async function handleDelete() {
     if (busy) return;
-    if (!window.confirm(`确定删除选中的 ${selectedIds.length} 个任务？此操作不可撤销。`)) return;
+    if (!window.confirm(t("batchDeleteConfirm", { count: selectedIds.length }))) return;
     setBusy(true);
     setError("");
     try {
       await onDelete();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "批量删除失败");
+      setError(e instanceof Error ? e.message : t("batchDeleteFailed"));
     } finally {
       setBusy(false);
     }
@@ -123,7 +130,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
             role="menu"
             className="absolute bottom-full left-0 mb-2 w-36 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-1 z-[var(--z-dropdown)]"
           >
-            {(Object.keys(STATUS_LABELS) as Status[]).map((s) => {
+            {(Object.keys(STATUS_LABEL_KEYS) as Status[]).map((s) => {
               const meta = STATUS_META[s];
               const Icon = meta.icon;
               return (
@@ -134,7 +141,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                   className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   <Icon size={14} style={{ color: meta.color }} />
-                  {STATUS_LABELS[s]}
+                  {tStatus(STATUS_LABEL_KEYS[s])}
                 </button>
               );
             })}
@@ -163,7 +170,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
             role="menu"
             className="absolute bottom-full left-0 mb-2 w-32 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-1 z-[var(--z-dropdown)]"
           >
-            {(Object.keys(PRIORITY_LABELS) as Priority[]).map((p) => (
+            {(Object.keys(PRIORITY_LABEL_KEYS) as Priority[]).map((p) => (
               <button
                 key={p}
                 role="menuitem"
@@ -171,7 +178,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                 className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
               >
                 <Flag size={14} style={{ color: PRIORITY_COLORS[p] }} />
-                {PRIORITY_LABELS[p]}
+                {tPriority(PRIORITY_LABEL_KEYS[p])}
               </button>
             ))}
           </div>

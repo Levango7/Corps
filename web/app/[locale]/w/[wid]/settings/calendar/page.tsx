@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { relTime as sharedRelTime } from "@/lib/format";
 
 /** 连接状态 */
 interface ConnectionStatus {
@@ -48,22 +49,11 @@ function saveSyncSettings(s: SyncSettings): void {
   localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(s));
 }
 
-/** 相对时间格式化 */
-function relTime(iso: string | null): string {
-  if (!iso) return "—";
-  const diff = Date.now() - new Date(iso).getTime();
-  const min = Math.floor(diff / 60000);
-  if (min < 1) return "刚刚";
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  return `${day} 天前`;
-}
-
 export default function CalendarSettingsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const t = useTranslations("calendar");
+  const tTime = useTranslations("time");
+  const relTime = (iso: string | null) => (iso ? sharedRelTime(iso, tTime) : "—");
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -88,7 +78,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
       );
       setConnections(data.connections);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -136,7 +126,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
       await api(`/api/v1/auth/calendar/disconnect/${provider}`, { method: "DELETE" });
       await load();
     } catch (e) {
-      setError(e instanceof Error ? e.message : "断开失败");
+      setError(e instanceof Error ? e.message : t("disconnectFailed"));
     } finally {
       setDisconnecting(null);
     }
@@ -161,7 +151,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
       await load();
       setTimeout(() => setSyncMsg(null), 3000);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "同步失败");
+      setError(e instanceof Error ? e.message : t("syncFailed"));
     } finally {
       setSyncing(false);
     }

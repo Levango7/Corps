@@ -230,8 +230,8 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
         credentials: "include",
       });
       if (!res.ok) {
-        const json = await res.json().catch(() => ({ message: "上传失败" }));
-        throw new Error(json.message || `上传失败 (${res.status})`);
+        const json = await res.json().catch(() => ({ message: t("uploadFailed") }));
+        throw new Error(json.message || `t("uploadFailed") (${res.status})`);
       }
       const json = await res.json();
       return json.data as AttachmentMeta;
@@ -263,7 +263,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
 
       {searchOpen && searchQuery.trim() && (
         <div className="mb-2 text-[length:var(--text-xs)] text-[var(--meta)]">
-          {searchResultCount > 0 ? `${searchResultCount} 条结果` : t("noResults")}
+          {searchResultCount > 0 ? t("resultCount", { count: searchResultCount }) : t("noResults")}
         </div>
       )}
 

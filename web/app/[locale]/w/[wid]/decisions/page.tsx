@@ -20,6 +20,7 @@ import { FileText, Search, Loader2, ChevronRight, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import { useTranslations } from "next-intl";
+import { relativeTime as sharedRelativeTime } from "@/lib/format";
 
 interface Decision {
   id: string;
@@ -42,25 +43,7 @@ const PAGE_SIZE = 20;
 const SUMMARY_LIMIT = 200;
 const DEBOUNCE_MS = 300;
 
-/**
- * 相对时间戳：刚刚 / N 分钟前 / N 小时前 / N 天前 / 月-日
- * 与概览页 relativeTime 保持一致风格。
- */
-function relativeTime(iso?: string): string | null {
-  if (!iso) return null;
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return null;
-  const diff = Math.max(0, Date.now() - then);
-  const sec = Math.floor(diff / 1000);
-  if (sec < 60) return "刚刚";
-  const min = Math.floor(sec / 60);
-  if (min < 60) return `${min} 分钟前`;
-  const hr = Math.floor(min / 60);
-  if (hr < 24) return `${hr} 小时前`;
-  const day = Math.floor(hr / 24);
-  if (day < 30) return `${day} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
-}
+// 相对时间戳：走共享 format.ts（阶段 2-6 i18n——经 useTranslations("time") 输出当前语言）
 
 /**
  * 将 markdown 转为纯文本并截取前 N 字符作为摘要。
@@ -99,6 +82,8 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
   const { wid } = use(params);
 
   const t = useTranslations("decisions");
+  const tTime = useTranslations("time");
+  const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -144,7 +129,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
         setTotal(resp.total);
         setDecisions((prev) => (append ? [...prev, ...resp.decisions] : resp.decisions));
       } catch (e) {
-        setError(e instanceof Error ? e.message : "加载失败");
+        setError(e instanceof Error ? e.message : t("loadFailed"));
         if (!append) setDecisions([]);
       } finally {
         setLoading(false);
@@ -207,10 +192,10 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       {/* ── 标题栏 ── */}
       <div className="mb-[var(--space-6)]">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          决策记录
+          {t("title")}
         </h1>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {loading ? "正在读取决策" : `共 ${total} 条决策记录`}
+          {loading ? t("loading") : t("count", { count: total })}
         </p>
       </div>
 
@@ -243,7 +228,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
         {/* 结果计数：搜索时显示，避免与标题栏 total 重复 */}
         {isSearching && !loading && (
           <p className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
-            匹配 {decisions.length} / {total} 条
+            {t("matchCount", { matched: decisions.length, total })}
           </p>
         )}
       </div>
@@ -294,7 +279,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                         href={`/w/${wid}/task/${d.taskId}`}
                         className="flex items-center gap-1 min-w-0 flex-1 text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
                       >
-                        <span className="truncate">{d.taskTitle || "未命名任务"}</span>
+                        <span className="truncate">{d.taskTitle || t("unnamedTask")}</span>
                         <ChevronRight size={13} className="shrink-0 text-[var(--meta)]" />
                       </Link>
                       <span className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--border)] text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--fg-2)]">
@@ -307,13 +292,13 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                       {summary ? (
                         <p className="whitespace-pre-wrap break-words">{summary}</p>
                       ) : (
-                        <span className="text-[var(--meta)]">（无内容）</span>
+                        <span className="text-[var(--meta)]">{t("noContent")}</span>
                       )}
                     </div>
 
                     {/* 底部：作者 + 创建时间 + 更新时间 */}
                     <footer className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2 border-t border-[var(--border-soft)] text-[length:var(--text-xs)] text-[var(--meta)]">
-                      <span className="truncate">{d.authorName || "未知作者"}</span>
+                      <span className="truncate">{d.authorName || t("unknownAuthor")}</span>
                       {createdRel && (
                         <>
                           <span className="shrink-0">·</span>
@@ -323,7 +308,9 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                       {isUpdated && updatedRel && (
                         <>
                           <span className="shrink-0">·</span>
-                          <span className="shrink-0 tabular-nums">更新于 {updatedRel}</span>
+                          <span className="shrink-0 tabular-nums">
+                            {t("updatedAtRel", { time: updatedRel })}
+                          </span>
                         </>
                       )}
                     </footer>
@@ -344,7 +331,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                 {loadingMore ? (
                   <>
                     <Loader2 size={14} className="animate-spin" />
-                    加载中
+                    {t("loadingMore")}
                   </>
                 ) : (
                   <>{t("loadMore")}</>
@@ -434,7 +421,7 @@ function EmptyState({ searching }: { searching: boolean }) {
       />
       <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{tEmpty("noDecisions")}</p>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-        在任务详情中记录决策后，会在这里展示
+        {tEmpty("noDecisionsHint")}
       </p>
     </div>
   );

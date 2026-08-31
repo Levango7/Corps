@@ -36,41 +36,50 @@ interface BillingStatus {
   } | null;
 }
 
+// 套餐卡数据（阶段 2-6 i18n）：nameKey/unitKey/seatsKey/features/details 均为 billing ns
+// 翻译 key，渲染处经 t() 解析；price 保持字面量（币种格式随通道不同）。
 const PLANS: {
   id: Plan;
-  name: string;
+  nameKey: string;
   price: string;
-  unit: string;
-  seats: string;
+  unitKey: string;
+  seatsKey: string;
   features: string[];
   details: string[];
 }[] = [
   {
     id: "free",
-    name: "免费",
+    nameKey: "planFree",
     price: "¥0",
-    unit: "永久",
-    seats: "最多 10 人",
-    features: ["任务看板", "评论与 @提醒", "决策记录（最近 10 条）"],
-    details: ["最多 10 人席位", "决策记录上限 10 条", "基础导出", "社区支持"],
+    unitKey: "unitForever",
+    seatsKey: "seatsFree",
+    features: ["featBoard", "featComments", "featDecisions10"],
+    details: ["detailSeats10", "detailDecisions10", "detailBasicExport", "detailCommunity"],
   },
   {
     id: "pro",
-    name: "专业",
+    nameKey: "planPro",
     price: "¥59",
-    unit: "每人 / 月",
-    seats: "按席位计费",
-    features: ["无限决策记录", "任务筛选与视图", "邮件通知", "导出 CSV"],
-    details: ["无限决策记录", "任务筛选与视图", "邮件通知", "导出 CSV", "按席位计费", "邮件支持"],
+    unitKey: "unitPerSeatMonth",
+    seatsKey: "seatsPerSeat",
+    features: ["featUnlimitedDecisions", "featFilterViews", "featEmail", "featCsv"],
+    details: [
+      "featUnlimitedDecisions",
+      "featFilterViews",
+      "featEmail",
+      "featCsv",
+      "seatsPerSeat",
+      "featEmailSupport",
+    ],
   },
 ];
 
-const SUB_STATUS_LABEL: Record<string, { label: string; tone: "ok" | "warn" | "muted" }> = {
-  active: { label: "订阅生效中", tone: "ok" },
-  trialing: { label: "试用中", tone: "ok" },
-  past_due: { label: "支付失败，服务未中断", tone: "warn" },
-  canceled: { label: "已取消", tone: "muted" },
-  incomplete: { label: "待完成支付", tone: "warn" },
+const SUB_STATUS_LABEL: Record<string, { labelKey: string; tone: "ok" | "warn" | "muted" }> = {
+  active: { labelKey: "subActive", tone: "ok" },
+  trialing: { labelKey: "subTrialing", tone: "ok" },
+  past_due: { labelKey: "subPastDue", tone: "warn" },
+  canceled: { labelKey: "subCanceled", tone: "muted" },
+  incomplete: { labelKey: "subIncomplete", tone: "warn" },
 };
 
 export default function BillingPage({ params }: { params: Promise<{ wid: string }> }) {
@@ -98,7 +107,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
     try {
       setStatus(await api<BillingStatus>(`/api/v1/workspaces/${wid}/billing/status`));
     } catch (e) {
-      setError(e instanceof Error ? e.message : "加载失败");
+      setError(e instanceof Error ? e.message : t("loadFailed"));
     }
   }, [wid]);
 
@@ -125,8 +134,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
 
     // 跳转型通道（信用卡/支付宝）需确认；微信扫码弹模态框无需 confirm
     if (paymentMethod !== "wechat") {
-      const channelLabel = paymentMethod === "card" ? "Stripe" : "支付宝";
-      if (!window.confirm(`将跳转到${channelLabel}完成支付，是否继续？`)) return;
+      const channelLabel = paymentMethod === "card" ? "Stripe" : t("alipay");
+      if (!window.confirm(t("payRedirectConfirm", { channel: channelLabel }))) return;
     }
 
     setBusy(plan);
@@ -149,10 +158,10 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         // Stripe / 支付宝：跳转到通道页面
         window.location.href = resp.url;
       } else {
-        setError("支付通道未返回结算链接或二维码");
+        setError(t("payNoResult"));
       }
     } catch (e) {
-      setError(e instanceof Error ? e.message : "创建结算会话失败");
+      setError(e instanceof Error ? e.message : t("payCreateFailed"));
     } finally {
       setBusy(null);
     }
@@ -167,7 +176,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       attempts++;
       if (attempts > maxAttempts) {
         if (pollRef.current) clearInterval(pollRef.current);
-        setError("支付状态查询超时，如已支付请刷新页面查看");
+        setError(t("payPollTimeout"));
         setWechatQr(null);
         return;
       }
@@ -199,7 +208,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       });
       if (url) window.location.href = url;
     } catch (e) {
-      setError(e instanceof Error ? e.message : "打开账单门户失败");
+      setError(e instanceof Error ? e.message : t("portalFailed"));
     } finally {
       setBusy(null);
     }
@@ -218,17 +227,15 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           <CreditCard size={20} className="text-[var(--muted)]" />
-          计费
+          {t("title")}
         </h1>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          按实际席位付费，随时调整人数。
-        </p>
+        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
         {/* 互链到 /pricing 定价页（spec §1，当前窗口跳转走 next/link 客户端路由） */}
         <Link
           href="/pricing"
           className="mt-3 inline-flex items-center gap-1 text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
         >
-          查看完整功能对比 <ArrowRight size={14} aria-hidden="true" />
+          {t("viewFullComparison")} <ArrowRight size={14} aria-hidden="true" />
         </Link>
       </div>
 
@@ -240,7 +247,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       )}
       {canceled && (
         <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--fg-2)] text-[length:var(--text-sm)] border border-[var(--border)]">
-          已取消本次结算，套餐未变更。
+          {t("checkoutCanceled")}
         </div>
       )}
       {error && (
@@ -272,7 +279,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               </div>
               <div className="flex items-center gap-2">
                 <span className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
-                  {PLANS.find((p) => p.id === status.plan)?.name ?? status.plan}
+                  {t(PLANS.find((p) => p.id === status.plan)?.nameKey ?? "planFree")}
                 </span>
                 {subMeta && (
                   <span
@@ -292,13 +299,15 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                             : "var(--muted)",
                     }}
                   >
-                    {subMeta.label}
+                    {t(subMeta.labelKey)}
                   </span>
                 )}
               </div>
               {sub?.currentPeriodEnd && (
                 <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">
-                  当前周期至 {new Date(sub.currentPeriodEnd).toLocaleDateString("zh-CN")}
+                  {t("currentPeriodEnd", {
+                    date: new Date(sub.currentPeriodEnd).toLocaleDateString(),
+                  })}
                 </div>
               )}
             </div>
@@ -306,7 +315,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <div>
               <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1">
                 <Users size={13} />
-                席位
+                {t("seats")}
               </div>
               <div className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums">
                 {seatsUsed}
@@ -341,7 +350,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 ) : (
                   <ExternalLink size={15} />
                 )}
-                管理账单
+                {t("manageBilling")}
               </button>
             )}
           </div>
@@ -364,7 +373,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               }`}
             >
               <CreditCard size={16} />
-              信用卡
+              {t("methodCard")}
             </button>
             <button
               onClick={() => setPaymentMethod("wechat")}
@@ -375,7 +384,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               }`}
             >
               <Wallet size={16} />
-              微信支付
+              {t("methodWechat")}
             </button>
             <button
               onClick={() => setPaymentMethod("alipay")}
@@ -386,14 +395,13 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               }`}
             >
               <Wallet size={16} />
-              支付宝
+              {t("methodAlipay")}
             </button>
           </div>
           <p className="mt-2 text-[length:var(--text-xs)] text-[var(--meta)]">
-            {paymentMethod === "card" && "通过 Stripe 完成信用卡支付，支持自动续费。"}
-            {paymentMethod === "wechat" && "扫码支付，支付完成后自动激活订阅。不支持自动续费。"}
-            {paymentMethod === "alipay" &&
-              "跳转到支付宝完成支付，支付完成后自动激活。不支持自动续费。"}
+            {paymentMethod === "card" && t("descCard")}
+            {paymentMethod === "wechat" && t("descWechat")}
+            {paymentMethod === "alipay" && t("descAlipay")}
           </p>
         </div>
       )}
@@ -409,7 +417,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
             }`}
           >
-            月付
+            {t("periodMonthly")}
           </button>
           <button
             onClick={() => setBillingPeriod("yearly")}
@@ -419,7 +427,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
             }`}
           >
-            年付（省 ¥118/席）
+            {t("periodYearly")}
           </button>
         </div>
       )}
@@ -432,9 +440,13 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           // Pro 卡片价格/单位随计费周期切换；免费档固定 ¥0
           const price = p.id === "pro" && billingPeriod === "yearly" ? "¥590" : p.price;
           const unit =
-            p.id === "pro" ? (billingPeriod === "yearly" ? "每人 / 年" : "每人 / 月") : p.unit;
+            p.id === "pro"
+              ? billingPeriod === "yearly"
+                ? t("unitPerSeatYear")
+                : t("unitPerSeatMonth")
+              : t(p.unitKey);
           const seats =
-            p.id === "pro" && billingPeriod === "yearly" ? "年付折合每月 ¥49.2" : p.seats;
+            p.id === "pro" && billingPeriod === "yearly" ? t("yearlyAvg") : t(p.seatsKey);
           return (
             <div
               key={p.id}
@@ -443,11 +455,11 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             >
               <div className="flex items-baseline justify-between">
                 <span className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
-                  {p.name}
+                  {t(p.nameKey)}
                 </span>
                 {current && (
                   <span className="px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-                    当前
+                    {t("currentBadge")}
                   </span>
                 )}
               </div>
@@ -467,7 +479,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                     className="flex items-start gap-2 text-[length:var(--text-sm)] text-[var(--fg-2)]"
                   >
                     <Check size={14} className="shrink-0 mt-0.5 text-[var(--success)]" />
-                    {f}
+                    {t(f)}
                   </li>
                 ))}
               </ul>
@@ -475,7 +487,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
-                title={!upgradable ? "Stripe 未配置或非拥有者" : undefined}
+                title={!upgradable ? t("upgradeDisabledTitle") : undefined}
                 className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
                 style={{
                   background: upgradable ? "var(--accent)" : "var(--surface-2)",
@@ -483,12 +495,18 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 }}
               >
                 {busy === p.id && <Loader2 size={15} className="animate-spin" />}
-                {current ? "使用中" : p.id === "free" ? "包含在内" : upgradable ? "升级" : "不可用"}
+                {current
+                  ? t("inUse")
+                  : p.id === "free"
+                    ? t("included")
+                    : upgradable
+                      ? tButton("upgrade")
+                      : t("unavailable")}
               </button>
 
               <details className="mt-3 group">
                 <summary className="cursor-pointer text-[length:var(--text-xs)] text-[var(--meta)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] select-none">
-                  查看完整对比
+                  {t("fullComparison")}
                 </summary>
                 <ul className="mt-2 space-y-1.5">
                   {p.details.map((d) => (
@@ -497,7 +515,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                       className="flex items-start gap-1.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
                     >
                       <Check size={12} className="shrink-0 mt-0.5 text-[var(--success)]" />
-                      {d}
+                      {t(d)}
                     </li>
                   ))}
                 </ul>
@@ -511,7 +529,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         <div className="mt-5 flex items-start gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--fg-2)] text-[length:var(--text-sm)]">
           <Info size={16} className="shrink-0 mt-0.5 text-[var(--muted)]" />
           <span>
-            当前环境未配置 Stripe 测试密钥（
+            {t("stripeNotConfiguredPrefix")}
             <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">
               STRIPE_SECRET_KEY
             </code>
@@ -519,14 +537,14 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">
               STRIPE_PRICE_ID
             </code>
-            ），升级入口已隐藏。配置后刷新即可启用。
+            {t("stripeNotConfiguredSuffix")}
           </span>
         </div>
       )}
 
       {status && !isOwner && (
         <p className="mt-5 text-[length:var(--text-xs)] text-[var(--meta)]">
-          只有工作区拥有者可以更改套餐或管理付款方式。
+          {t("ownerOnlyNotice")}
         </p>
       )}
 
@@ -541,7 +559,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-6 max-w-sm w-full mx-4">
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
-                微信支付
+                {t("wechatPayTitle")}
               </h2>
               <button
                 onClick={closeWechatQr}
@@ -553,19 +571,20 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             </div>
             <div className="flex flex-col items-center">
               {/* 二维码渲染：使用在线 API 生成（生产环境建议替换为本地 QR 码库） */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- 外部二维码服务，next/image 无法代理 */}
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(wechatQr.url)}`}
-                alt="微信支付二维码"
+                alt={t("wechatQr")}
                 width={240}
                 height={240}
                 className="rounded-[var(--radius-md)]"
               />
               <p className="mt-4 text-[length:var(--text-sm)] text-[var(--fg-2)] text-center">
-                请使用微信扫一扫扫描上方二维码完成支付
+                {t("wechatScanHint")}
               </p>
               <div className="mt-3 flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
                 <Loader2 size={12} className="animate-spin" />
-                正在等待支付结果...
+                {t("waitingPayment")}
               </div>
             </div>
           </div>

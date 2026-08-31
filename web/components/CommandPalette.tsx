@@ -19,10 +19,16 @@ import { useTranslations } from "next-intl";
 
 interface CmdItem {
   id: string;
-  title: string;
+  /** 渲染文案：搜索结果为原文；导航项走 titleKey（此时 title 可缺省） */
+  title?: string;
+  /** 导航项的翻译 key（阶段 2-6 i18n）：title 为原始 key、显示经 tNav(title) */
+  titleKey?: string;
   kind: "task" | "nav" | "decision";
   href: string;
   icon: typeof FileText;
+  /** 分组提示翻译 key（nav.menu.*） */
+  hintKey?: string;
+  /** hintKey 渲染出的分组文案缓存（搜索结果注入时填充） */
   hint?: string;
 }
 
@@ -68,6 +74,7 @@ function highlight(text: string, query: string) {
 
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
   const t = useTranslations("command");
+  const tNav = useTranslations("nav");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<{ tasks: CmdItem[]; decisions: CmdItem[] }>({
     tasks: [],
@@ -106,7 +113,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
               kind: "task" as const,
               href: `/w/${wid}/task/${t.id}`,
               icon: CheckSquare,
-              hint: "任务",
+              hintKey: "nav.menu.board",
             })),
             decisions: (data?.decisions ?? []).map((d) => ({
               id: d.id,
@@ -114,7 +121,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
               kind: "decision" as const,
               href: d.href,
               icon: FileText,
-              hint: "决策",
+              hintKey: "nav.menu.decisions",
             })),
           });
         })
@@ -128,19 +135,37 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
 
   const items = useMemo<CmdItem[]>(() => {
     const navItems: CmdItem[] = [
-      { id: "nav-home", title: "概览", kind: "nav", href: `/w/${wid}`, icon: LayoutDashboard },
-      { id: "nav-board", title: "看板", kind: "nav", href: `/w/${wid}/board`, icon: Kanban },
-      { id: "nav-members", title: "成员", kind: "nav", href: `/w/${wid}/members`, icon: Users },
+      {
+        id: "nav-home",
+        titleKey: "nav.menu.overview",
+        kind: "nav",
+        href: `/w/${wid}`,
+        icon: LayoutDashboard,
+      },
+      {
+        id: "nav-board",
+        titleKey: "nav.menu.board",
+        kind: "nav",
+        href: `/w/${wid}/board`,
+        icon: Kanban,
+      },
+      {
+        id: "nav-members",
+        titleKey: "nav.menu.members",
+        kind: "nav",
+        href: `/w/${wid}/members`,
+        icon: Users,
+      },
       {
         id: "nav-billing",
-        title: "计费",
+        titleKey: "nav.menu.billing",
         kind: "nav",
         href: `/w/${wid}/billing`,
         icon: CreditCard,
       },
       {
         id: "nav-settings",
-        title: "设置",
+        titleKey: "nav.menu.settings",
         kind: "nav",
         href: `/w/${wid}/settings`,
         icon: Settings,
@@ -244,7 +269,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         <ul ref={listRef} className="max-h-[var(--cmd-palette-max-h)] overflow-y-auto py-1.5">
           {items.length === 0 && (
             <li className="px-4 py-8 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-              {query.trim() ? (isSearching ? "正在搜索…" : "输入以搜索…") : "没有可显示的项"}
+              {query.trim() ? (isSearching ? t("searching") : t("typeToSearch")) : t("noItems")}
             </li>
           )}
           {items.map((item, idx) => {
@@ -258,12 +283,12 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
               <Fragment key={item.id}>
                 {showTaskHeader && (
                   <li className="px-4 pt-2 pb-1 text-[length:var(--text-xs)] text-[var(--meta)] uppercase tracking-wide">
-                    任务
+                    {tNav("menu.board")}
                   </li>
                 )}
                 {showDecisionHeader && (
                   <li className="px-4 pt-2 pb-1 text-[length:var(--text-xs)] text-[var(--meta)] uppercase tracking-wide">
-                    决策
+                    {tNav("menu.decisions")}
                   </li>
                 )}
                 <li>
@@ -280,11 +305,14 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
                       className={`shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--meta)]"}`}
                     />
                     <span className="flex-1 text-left truncate">
-                      {highlight(item.title, query.trim())}
+                      {highlight(
+                        item.titleKey ? tNav(item.titleKey) : (item.title ?? ""),
+                        query.trim(),
+                      )}
                     </span>
-                    {item.hint && (
+                    {item.hintKey && (
                       <span className="text-[length:var(--text-xs)] text-[var(--meta)] shrink-0">
-                        {item.hint}
+                        {tNav(item.hintKey)}
                       </span>
                     )}
                     {active && <CornerDownLeft size={13} className="text-[var(--meta)] shrink-0" />}
@@ -296,9 +324,9 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         </ul>
 
         <div className="flex items-center gap-2 sm:gap-4 px-4 h-9 border-t border-[var(--border-soft)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
-          <span>↑↓ 选择</span>
-          <span>Enter 打开</span>
-          <span className="ml-auto tabular-nums">{items.length} 项</span>
+          <span>{t("kbdSelect")}</span>
+          <span>{t("kbdOpen")}</span>
+          <span className="ml-auto tabular-nums">{t("itemCount", { count: items.length })}</span>
         </div>
       </div>
     </div>
