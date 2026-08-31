@@ -62,6 +62,9 @@ services:
     image: corps-web:latest
     container_name: corps-app
     restart: unless-stopped
+    # 镜像层 ENTRYPOINT 元数据在 v0.2.0 镜像中已破损（commit 时丢失），
+    # 此处显式覆盖为 Dockerfile 默认入口；下一版本构建会修镜像元数据
+    entrypoint: ["/app/entrypoint.sh"]
     depends_on:
       db:
         condition: service_healthy
@@ -134,6 +137,10 @@ services:
       - ./db/rls-activate.sql:/app/db/rls-activate.sql:ro
       # IM 附件持久化：容器重建不丢已上传文件（无此卷重启即清空 uploads/）
       - uploads_data:/app/uploads
+      # v0.2.0 镜像内置 entrypoint.sh 存在 CRLF（Windows 检出污染）+ prisma 6 --url
+      # 不可用问题，本地挂载仓库 LF 干净版 + 显式 ENTRYPOINT 数组覆盖镜像破损元数据
+      - ./web/docker/entrypoint.sh:/app/entrypoint.sh:ro
+      - ./web/docker/entrypoint-cron.sh:/app/entrypoint-cron.sh:ro
     healthcheck:
       test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:3000/api/health || exit 1"]
       interval: 15s
