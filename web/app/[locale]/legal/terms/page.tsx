@@ -6,7 +6,7 @@ import { locales } from "@/lib/i18n";
 
 /**
  * /legal/terms 服务条款 —— 静态法务文档页（审计缺口：付费 SaaS 无法律文本）。
- * 内容为通用 SaaS 条款基线；【待补】占位处需在主体注册完成后填入真实信息。
+ * 内容为通用 SaaS 条款基线；真实联系信息已填入（个人开发者运营，winger35@163.com）。
  * 法务文本与 UI 框架文案不同，保持页面内双语直出（同 lib/pricing.ts 的冻结文案模式）。
  */
 
@@ -33,7 +33,7 @@ const ZH: Section[] = [
     body: [
       "免费版供 10 人以内工作区永久免费使用。专业版（Pro）按席位订阅计费，价格以定价页公示为准；年付享有折扣。",
       "订阅可随时取消，取消后当前计费周期结束前仍可使用。月付当期不设按天退款；年付订单在购买 14 天内且未产生实质使用的，支持全额退款（退款请联系客服邮箱处理）。",
-      "当前阶段提供电子收据；增值税发票能力将在国内主体就绪后开放。",
+      "当前阶段提供电子收据；增值税发票能力将在具备开票资质后开放（如长期无法提供，以电子收据作为支付凭证）。",
     ],
   },
   {
@@ -69,7 +69,7 @@ const ZH: Section[] = [
   {
     heading: "九、联系与争议",
     body: [
-      "对本条款有任何疑问，请联系：【待补：客服邮箱】。本条款适用中华人民共和国法律（不含港澳台地区法律）。因本条款产生的争议，双方协商不成的，提交被告住所地有管辖权的人民法院解决。",
+      "对本条款有任何疑问，或需要退款协助，请联系：winger35@163.com。本服务由个人开发者运营；本条款适用中华人民共和国法律（不含港澳台地区法律）。因本条款产生的争议，双方协商不成的，提交被告住所地有管辖权的人民法院解决。",
     ],
   },
 ];
@@ -92,7 +92,7 @@ const EN: Section[] = [
     body: [
       "The Free plan is free for workspaces of up to 10 members. The Pro plan is billed per seat as published on the pricing page; annual billing receives a discount.",
       "You may cancel at any time and keep access until the end of the current billing period. Monthly payments are non-refundable pro rata; annual orders are fully refundable within 14 days of purchase if substantially unused (contact support).",
-      "Electronic receipts are provided at this stage; VAT invoicing will be available once our local entity is established.",
+      "Electronic receipts are provided at this stage; VAT invoicing will be available once we are qualified to issue them (if that never becomes possible, electronic receipts serve as proof of payment).",
     ],
   },
   {
@@ -128,7 +128,7 @@ const EN: Section[] = [
   {
     heading: "9. Contact & Disputes",
     body: [
-      "Questions about these Terms: [TBD: support email]. These Terms are governed by the laws of the People's Republic of China (excluding Hong Kong, Macao and Taiwan). Disputes unresolved through negotiation shall be brought to a competent court at the defendant's domicile.",
+      "Questions about these Terms, or refund assistance: winger35@163.com. The Service is operated by an individual developer; these Terms are governed by the laws of the People's Republic of China (excluding Hong Kong, Macao and Taiwan). Disputes unresolved through negotiation shall be brought to a competent court at the defendant's domicile.",
     ],
   },
 ];
