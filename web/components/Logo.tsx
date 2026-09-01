@@ -27,9 +27,9 @@ export const Logo: FC<LogoProps> = ({
         role="img"
         style={{ flexShrink: 0 }}
       >
-        <rect x={0} y={s - m} width={m} height={m} rx={r} fill="var(--primary)" />
-        <rect x={o} y={s - m - o} width={m} height={m} rx={r} fill="var(--primary)" opacity={0.65} />
-        <rect x={o * 1.8} y={s - m - o * 2} width={m} height={m} rx={r} fill="var(--primary)" opacity={0.35} />
+        <rect x={0} y={s - m} width={m} height={m} rx={r} fill="var(--accent)" />
+        <rect x={o} y={s - m - o} width={m} height={m} rx={r} fill="var(--accent)" opacity={0.65} />
+        <rect x={o * 1.8} y={s - m - o * 2} width={m} height={m} rx={r} fill="var(--accent)" opacity={0.35} />
       </svg>
       {withText && (
         <span className="font-[var(--weight-semibold)] text-[length:var(--text-md)] text-[var(--fg)] tracking-[-0.01em]">
