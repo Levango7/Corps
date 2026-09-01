@@ -250,6 +250,7 @@
     "errorId": "错误编号：{digest}",
     "notFound": "页面未找到",
     "notFoundDesc": "你访问的页面不存在或已被移动。",
+    "notFoundAction": "返回首页",
     "forbidden": "无权访问",
     "internal": "服务器内部错误",
     "retry": "重试",

@@ -250,6 +250,7 @@
     "errorId": "Error ID: {digest}",
     "notFound": "Page not found",
     "notFoundDesc": "The page you are looking for does not exist or has been moved.",
+    "notFoundAction": "Back to Home",
     "forbidden": "Access forbidden",
     "internal": "Internal server error",
     "retry": "Retry",
