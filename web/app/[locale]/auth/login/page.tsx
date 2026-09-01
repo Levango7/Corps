@@ -52,11 +52,11 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
-      <h1 className="mb-6 text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-        登录账号
-      </h1>
-
       <div className="card-lift bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
+        {/* 卡片内顶部居中标题 */}
+        <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          登录
+        </h1>
         {error && (
           <div
             className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] border"
