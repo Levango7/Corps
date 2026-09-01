@@ -329,6 +329,7 @@
     }
   },
   "onboarding": {
+    "openGuide": "打开新手引导",
     "badge": "引导 · {current} / {total}",
     "skipAria": "跳过引导",
     "skip": "跳过",

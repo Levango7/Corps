@@ -15,16 +15,13 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[26rem] h-[26rem] rounded-full bg-[var(--surface)] opacity-[0.5] blur-[90px]" />
       </div>
 
-      {/* 品牌标志 */}
-      <div className="relative mb-10">
-        <a href="/" className="inline-flex items-center gap-3" aria-label="corps">
+      {/* 品牌标志 —— Logo 组件本身含 SVG + "corps" 文字,不要外层再包一个 corps */}
+      <div className="relative mb-8 text-center">
+        <a href="/" aria-label="corps" className="inline-flex">
           <Logo size={44} />
-          <span className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-            corps
-          </span>
         </a>
-        <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)] max-w-[24ch]">
-          面向中小团队的轻量协作 SaaS
+        <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)]">
+          面向中小团队的轻量协作平台
         </p>
       </div>
 

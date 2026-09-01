@@ -39,6 +39,8 @@ export default function Onboarding({
   const t = useTranslations("onboarding");
   const [step, setStep] = useState(0);
   const [visible, setVisible] = useState(false);
+  // 展开态：仅当用户点击小气泡后才显示完整模态卡片,默认只显示小气泡
+  const [expanded, setExpanded] = useState(false);
   const [animDirection, setAnimDirection] = useState<"forward" | "backward">("forward");
   const router = useRouter();
 
@@ -49,9 +51,17 @@ export default function Onboarding({
     }
   }, [taskCount]);
 
+  function dismissForever() {
+    localStorage.setItem(STORAGE_KEY, "true");
+    setVisible(false);
+    setExpanded(false);
+    onDismiss();
+  }
+
   function complete() {
     localStorage.setItem(STORAGE_KEY, "true");
     setVisible(false);
+    setExpanded(false);
     onDismiss();
   }
 
@@ -77,7 +87,38 @@ export default function Onboarding({
     }
   }
 
+function BubbleIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+      <path d="M8 4.5v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+      <circle cx="8" cy="11" r="0.9" fill="currentColor" />
+    </svg>
+  );
+}
+
   if (!visible) return null;
+
+  // 折叠态:右下角小气泡,不挡视图,用户点开才进入模态引导
+  if (!expanded) {
+    return (
+      <div className="fixed bottom-4 right-4 z-40">
+        <button
+          onClick={() => setExpanded(true)}
+          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+          aria-label={t("openGuide")}
+        >
+          <BubbleIcon />
+          <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
+            {t("step1.title")}
+          </span>
+          <span className="ml-1 text-[length:var(--text-xs)] opacity-80">
+            1/4
+          </span>
+        </button>
+      </div>
+    );
+  }
 
   // 若用户已创建任务，跳过"创建首个任务"步（step 1 → step 2）
   const effectiveStep = taskCount > 0 && step === 1 ? 2 : step;
@@ -192,7 +233,7 @@ export default function Onboarding({
             </span>
           </div>
           <button
-            onClick={skip}
+            onClick={() => setExpanded(false)}
             className="p-1.5 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
             aria-label={t("skipAria")}
           >

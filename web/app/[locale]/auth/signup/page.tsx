@@ -152,14 +152,9 @@ export default function SignupPage() {
 
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
-      <div className="mb-[var(--space-5)] sm:mb-8">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          {t("title")}
-        </h1>
-        <p className="mt-1.5 text-[length:var(--text-sm)] sm:text-[length:var(--text-base)] text-[var(--muted)]">
-          {t("subtitle")}
-        </p>
-      </div>
+      <h1 className="mb-6 text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        创建工作区
+      </h1>
 
       {/* 邀请上下文提示（仅带 ?invite= 链接时出现） */}
       {(invitePreview || inviteError) && (
@@ -187,12 +182,6 @@ export default function SignupPage() {
       )}
 
       <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
-        {/* 产品标识 */}
-        <div className="mb-6 text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-            corps 注册
-          </span>
-        </div>
         {error && (
           <div className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />

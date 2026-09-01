@@ -52,22 +52,11 @@ export default function LoginPage() {
 
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
-      <div className="mb-[var(--space-5)] sm:mb-8">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          {t("title")}
-        </h1>
-        <p className="mt-1.5 text-[length:var(--text-sm)] sm:text-[length:var(--text-base)] text-[var(--muted)]">
-          {t("subtitle")}
-        </p>
-      </div>
+      <h1 className="mb-6 text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        登录账号
+      </h1>
 
       <div className="card-lift bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
-        {/* 产品标识 */}
-        <div className="mb-6 text-center">
-          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-            corps 登录
-          </span>
-        </div>
         {error && (
           <div
             className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] border"
@@ -137,19 +126,18 @@ export default function LoginPage() {
         </form>
       </div>
 
-      <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-        {t("signupLink")}{" "}
+      <div className="mt-6 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+        还没有账号?{" "}
         <Link
           href="/auth/signup"
-          className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
+          className="font-[var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2"
           onClick={() => {
-            // P2 数据埋点：click_signup（裁决一附属：本期落地范围收敛为 auth/login 页注册链接）
-            track("click_signup", { cta: "header", path: "/auth/login" });
+            track("click_signup", { cta: "card_footer", path: "/auth/login" });
           }}
         >
-          {t("signupCta")}
+          免费注册
         </Link>
-      </p>
+      </div>
     </div>
   );
 }
