@@ -62,10 +62,12 @@ describe("buildCsp 生产环境（isProd=true）", () => {
 describe("buildCsp 开发环境（isProd=false）", () => {
   const csp = buildCsp(NONCE, false);
 
-  it("script-src 保留 unsafe-inline（HMR/dev 内联脚本兼容）", () => {
+  it("script-src 保留 unsafe-inline + unsafe-eval（HMR 兼容 + React dev eval 调用）", () => {
     const d = directiveOf(csp, "script-src");
-    expect(d).toBe(`script-src 'self' 'unsafe-inline' 'nonce-${NONCE}'`);
+    expect(d).toBe(`script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${NONCE}'`);
     expect(d).toContain("'unsafe-inline'");
+    // React 16+ dev mode 启动时调用 eval() 做堆栈重组，dev 环境必须放行
+    expect(d).toContain("'unsafe-eval'");
   });
 
   it("style-src 保留 unsafe-inline", () => {

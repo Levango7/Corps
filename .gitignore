@@ -61,3 +61,5 @@ _demo_*.js
 *.patch
 Dockerfile.hotfix
 .dockerignore.bak
+# 审计文档
+docs/audit/
