@@ -1,4 +1,4 @@
-﻿/**
+/**
  * /pricing 定价页路由入口 —— 服务端组件外壳 + 九区块静态骨架。
  *
  * 渲染模式（docs/design/pricing-page-impl-design.md 第4章）：

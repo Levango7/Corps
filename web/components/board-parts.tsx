@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 /**
  * 看板页内部子组件 —— 从 board/page.tsx 拆分。
