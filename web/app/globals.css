@@ -124,6 +124,30 @@ svg {
 }
 
 /* ----------------------------------------------------------------------------
+ * 认证页（登录/注册）底布特效
+ * 背景渐变 + 细网格纹理：以外部 CSS 类实现（inline style 被 CSP style-src 拦截）
+ * -------------------------------------------------------------------------- */
+
+/* 浅蓝渐变底布（surface-calm → shell-content），告别纯白 */
+.auth-bg {
+  background: linear-gradient(
+    165deg,
+    var(--surface-calm) 0%,
+    var(--shell-content) 62%,
+    var(--shell-content) 100%
+  );
+}
+
+/* 细网格纹理（径向淡出，避免满屏压迫） */
+.auth-grid {
+  background-image: linear-gradient(var(--border-soft) 1px, transparent 1px),
+    linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
+  background-size: 44px 44px;
+  -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 32%, black 25%, transparent 72%);
+  mask-image: radial-gradient(ellipse 80% 60% at 50% 32%, black 25%, transparent 72%);
+}
+
+/* ----------------------------------------------------------------------------
  * 微交互动效
  * 在受控组件上附加，提升操作手感。
  * -------------------------------------------------------------------------- */
