@@ -123,10 +123,17 @@ export async function withGuc<T>(
   gucs: Record<string, string | undefined>,
   fn: (tx: Tx) => Promise<T>,
 ): Promise<T> {
-  return prisma.$transaction(async (tx) => {
-    await setGucs(tx, gucs);
-    return fn(tx);
-  });
+  // 交互式事务独占一个池连接。Prisma 默认 maxWait=2000ms 在并发请求
+  // 集中、连接池需渐进建立新连接时会过早超时（P2028，见 __prisma_pool_conc.cjs
+  // 实测：并发 8 事务约需 2.4s 才能全部拿到连接）。显式放宽 maxWait 与
+  // timeout，保证高并发下事务能排队拿到连接而非直接失败。
+  return prisma.$transaction(
+    async (tx) => {
+      await setGucs(tx, gucs);
+      return fn(tx);
+    },
+    { maxWait: 10_000, timeout: 20_000 },
+  );
 }
 
 /**
