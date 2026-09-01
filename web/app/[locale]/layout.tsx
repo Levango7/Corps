@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
+import ClientLayout from "@/components/ClientLayout";
 import { PublicPageTracker } from "@/lib/analytics-attribution";
 import { locales, type Locale, localeToBcp47 } from "@/lib/i18n";
 
@@ -26,6 +27,7 @@ export async function generateMetadata({
   return {
     title: t("title"),
     description: t("description"),
+    icons: { icon: "/favicon.svg" },
   };
 }
 

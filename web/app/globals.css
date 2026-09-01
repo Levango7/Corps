@@ -122,3 +122,153 @@ svg {
     scroll-behavior: auto !important;
   }
 }
+
+/* ----------------------------------------------------------------------------
+ * 微交互动效
+ * 在受控组件上附加，提升操作手感。
+ * -------------------------------------------------------------------------- */
+
+/* 按钮按压反馈 */
+.btn-press {
+  transition: transform var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+}
+.btn-press:active {
+  transform: scale(0.97);
+}
+
+/* 卡片悬停微抬升 */
+.card-lift {
+  transition: transform var(--motion-base) ease, box-shadow var(--motion-base) ease;
+}
+.card-lift:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-md);
+}
+.card-lift:active {
+  transform: translateY(0);
+}
+
+/* 聚焦环（统一 focus-visible 样式） */
+.focus-ring {
+  outline: none;
+}
+.focus-ring:focus-visible {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-ring);
+  border-radius: var(--radius-md);
+}
+
+/* 淡入动画 */
+.fade-in {
+  animation: fadeIn var(--motion-enter) ease-out both;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* ----------------------------------------------------------------------------
+ * 自定义滚动条
+ * 薄、半透明、圆角——融入现代 UI。
+ * -------------------------------------------------------------------------- */
+
+/* 主流浏览器（Chromium / WebKit） */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--muted);
+}
+
+/* 侧栏 / 看板列专用：更细的滚动条 */
+.sidebar-scroll::-webkit-scrollbar,
+.board-scroll::-webkit-scrollbar {
+  width: 4px;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb,
+.board-scroll::-webkit-scrollbar-thumb {
+  background: transparent;
+}
+.sidebar-scroll:hover::-webkit-scrollbar-thumb,
+.board-scroll:hover::-webkit-scrollbar-thumb {
+  background: var(--border);
+}
+
+/* Firefox 滚动条 */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
+/* ----------------------------------------------------------------------------
+ * 骨架屏动画
+ * 用于 Skeleton 组件的脉冲效果。
+ * -------------------------------------------------------------------------- */
+
+.skeleton-pulse {
+  animation: skeletonPulse 1.5s ease-in-out infinite;
+}
+@keyframes skeletonPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ----------------------------------------------------------------------------
+ * 页面过渡动画
+ * 用于页面/区块入场。
+ * -------------------------------------------------------------------------- */
+
+.page-enter {
+  animation: pageEnter var(--motion-enter) ease-out both;
+}
+@keyframes pageEnter {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------------------------------------------------------------------
+ * 命令面板 / 模态入场动画
+ * -------------------------------------------------------------------------- */
+
+.modal-enter {
+  animation: modalEnter 200ms ease-out both;
+}
+@keyframes modalEnter {
+  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
+  to   { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+.modal-overlay {
+  animation: overlayFade 200ms ease-out both;
+}
+@keyframes overlayFade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* ----------------------------------------------------------------------------
+ * 空状态配图（纯 CSS 装饰）
+ * 用于列表/看板空状态时的视觉提示。
+ * -------------------------------------------------------------------------- */
+
+.empty-state-dot {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto;
+}
+.empty-state-dot svg {
+  width: 24px;
+  height: 24px;
+  color: var(--meta);
+}

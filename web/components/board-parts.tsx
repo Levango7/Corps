@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 /**
  * 看板页内部子组件 —— 从 board/page.tsx 拆分。
@@ -8,6 +8,7 @@
  * 各子组件职责单一，便于测试与复用。
  */
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
@@ -60,14 +61,16 @@ export function BoardColumn({
   onDropOnColumn,
   onMoveByStep,
 }: BoardColumnProps) {
+  const [dragOver, setDragOver] = useState(false);
   const tStatus = useTranslations("status");
   return (
     <div
       // data-column：E2E 拖拽 drop 目标定位（移动端列选择器按钮与桌面列头同名，
       // 纯文本匹配在 BoardView 双渲染下有歧义）
       data-column={column.id}
-      className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
-      onDragOver={(e) => e.preventDefault()}
+      className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
+      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
         const taskId = e.dataTransfer.getData("text/plain");
         if (taskId) onDropOnColumn(taskId, column.id);
@@ -130,6 +133,7 @@ function BoardCard({
   onDropOnTask,
   onMoveByStep,
 }: BoardCardProps) {
+  const [dragOverCard, setDragOverCard] = useState(false);
   const router = useRouter();
   const t = useTranslations("task");
 
@@ -177,12 +181,14 @@ function BoardCard({
         setDraggingId(null);
         dragStartRef.current = null;
       }}
-      onDragOver={(e) => e.preventDefault()}
+      onDragOver={(e) => { e.preventDefault(); setDragOverCard(true); }}
+      onDragLeave={() => setDragOverCard(false)}
       onDrop={(e) => {
         e.preventDefault();
         e.stopPropagation();
         const sourceId = e.dataTransfer.getData("text/plain");
         if (sourceId) onDropOnTask(sourceId, task.id);
+        setDragOverCard(false);
       }}
     >
       <div className="flex items-start gap-2">
@@ -379,6 +385,7 @@ export function ListCards({
   selectionMode,
   onToggleSelect,
 }: ListCardProps) {
+  const [dragOverCard, setDragOverCard] = useState(false);
   const router = useRouter();
   const t = useTranslations("task");
   const tStatus = useTranslations("status");
@@ -505,14 +512,16 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
   const tStatus = useTranslations("status");
   return (
     <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
-      <Kanban size={48} className="mb-4 opacity-40" />
+      <div className="empty-state-dot mb-4">
+        <Kanban size={24} />
+      </div>
       <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">
         {tEmpty("noTasks")}
       </p>
       <p className="text-[length:var(--text-sm)] mb-4">{tEmpty("noTasksHint")}</p>
       <button
         onClick={onCreate}
-        className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
+        className="btn-press flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
       >
         <Plus size={16} />
         {tStatus("newTask")}

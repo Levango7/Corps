@@ -1,6 +1,7 @@
-"use client";
+﻿"use client";
 
 import { use, useEffect, useRef, useState } from "react";
+import { Logo } from "@/components/Logo";
 import { useRouter, usePathname, Link } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import {

@@ -1,4 +1,4 @@
-/**
+﻿/**
  * /pricing 定价页路由入口 —— 服务端组件外壳 + 九区块静态骨架。
  *
  * 渲染模式（docs/design/pricing-page-impl-design.md 第4章）：
@@ -176,7 +176,7 @@ function TopNav({ t }: { t: TranslateFn }) {
           source="nav"
           period="yearly"
           variant="primary"
-          className="inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--on-accent)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
+          className="btn-press inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--on-accent)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
         >
           {t("nav.freeStart")}
         </TrackedCta>
@@ -192,10 +192,51 @@ function TopNav({ t }: { t: TranslateFn }) {
 function Hero({ t }: { t: TranslateFn }) {
   return (
     <section
-      className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)]"
+      className="relative overflow-hidden px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)]"
       aria-labelledby="hero-heading"
     >
-      <div className="mx-auto max-w-[var(--container-max)]">
+      {/* 背景装饰 SVG —— 抽象几何形状，纯装饰 aria-hidden */}
+      <div className="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+        {/* 右上角大圆环 */}
+        <svg
+          className="absolute -top-24 -right-24 w-96 h-96 opacity-[0.04]"
+          viewBox="0 0 400 400"
+          fill="none"
+        >
+          <circle cx="200" cy="200" r="180" stroke="var(--accent)" strokeWidth="2" />
+          <circle cx="200" cy="200" r="120" stroke="var(--accent)" strokeWidth="1.5" />
+          <circle cx="200" cy="200" r="60" stroke="var(--accent)" strokeWidth="1" />
+        </svg>
+        {/* 左下角小圆点群 */}
+        <svg
+          className="absolute -bottom-8 -left-8 w-40 h-40 opacity-[0.06]"
+          viewBox="0 0 160 160"
+          fill="var(--accent)"
+        >
+          <circle cx="20" cy="20" r="4" />
+          <circle cx="60" cy="40" r="6" />
+          <circle cx="100" cy="20" r="3" />
+          <circle cx="40" cy="80" r="5" />
+          <circle cx="80" cy="100" r="4" />
+          <circle cx="120" cy="60" r="2" />
+          <circle cx="20" cy="120" r="3" />
+          <circle cx="140" cy="120" r="5" />
+        </svg>
+        {/* 中间偏右的菱形网格 */}
+        <svg
+          className="absolute top-1/3 right-1/4 w-32 h-32 opacity-[0.03]"
+          viewBox="0 0 120 120"
+          fill="none"
+          stroke="var(--accent)"
+          strokeWidth="1"
+        >
+          <path d="M60 10L110 60L60 110L10 60Z" />
+          <path d="M60 30L90 60L60 90L30 60Z" />
+          <path d="M60 50L70 60L60 70L50 60Z" />
+        </svg>
+      </div>
+
+      <div className="relative mx-auto max-w-[var(--container-max)]">
         {/* eyebrow 小标签 */}
         <span className="inline-block px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--eyebrow-bg)] text-[var(--eyebrow-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
           {t("hero.eyebrow")}
@@ -228,7 +269,7 @@ function Hero({ t }: { t: TranslateFn }) {
           {/* 次按钮：锚点平滑滚动至 #plans（零 JS，globals.css html scroll-behavior: smooth） */}
           <a
             href="#plans"
-            className="inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+            className="btn-press inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
           >
             {t("hero.ctaSecondary")}
             <ArrowRight size={16} aria-hidden="true" />
@@ -277,7 +318,7 @@ function FeatureGrid({ t }: { t: TranslateFn }) {
             return (
               <div
                 key={col.icon}
-                className="p-[var(--space-8)] rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] hover:shadow-[var(--elev-hover)] transition-shadow duration-[var(--motion-base)] ease-[var(--ease-standard)]"
+                className="card-lift p-[var(--space-8)] rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] hover:shadow-[var(--elev-hover)] transition-shadow duration-[var(--motion-base)] ease-[var(--ease-standard)]"
               >
                 <Icon size={24} className="text-[var(--accent)]" aria-hidden="true" />
                 <h3 className="mt-3 text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">

@@ -230,12 +230,12 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
       role="dialog"
       aria-modal="true"
       aria-label={t("ariaLabel")}
-      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4"
+      className="modal-overlay fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4"
       style={{ background: "var(--overlay)" }}
       onClick={onClose}
     >
       <div
-        className="w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden"
+        className="modal-enter w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[var(--border-soft)]">
