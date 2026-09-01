@@ -187,6 +187,12 @@ export default function SignupPage() {
       )}
 
       <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
+        {/* 产品标识 */}
+        <div className="mb-6 text-center">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+            corps 注册
+          </span>
+        </div>
         {error && (
           <div className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
             <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />

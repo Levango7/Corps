@@ -62,6 +62,12 @@ export default function LoginPage() {
       </div>
 
       <div className="card-lift bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
+        {/* 产品标识 */}
+        <div className="mb-6 text-center">
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+            corps 登录
+          </span>
+        </div>
         {error && (
           <div
             className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] border"
@@ -78,7 +84,7 @@ export default function LoginPage() {
               htmlFor="email"
               className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
             >
-              {t("email")}
+              邮箱/用户名
             </label>
             <input
               id="email"
@@ -87,7 +93,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-[box-shadow,border-color] duration-[var(--motion-fast)] placeholder:text-[var(--meta)]"
-              placeholder="you@company.com"
+              placeholder="你的邮箱或用户名"
               required
             />
           </div>

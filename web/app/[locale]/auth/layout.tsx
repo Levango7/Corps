@@ -16,10 +16,16 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
       </div>
 
       {/* 品牌标志 */}
-      <div className="relative mb-8">
-        <a href="/" className="inline-flex items-center gap-2" aria-label="corps">
-          <Logo size={28} />
+      <div className="relative mb-10">
+        <a href="/" className="inline-flex items-center gap-3" aria-label="corps">
+          <Logo size={44} />
+          <span className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+            corps
+          </span>
         </a>
+        <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)] max-w-[24ch]">
+          面向中小团队的轻量协作 SaaS
+        </p>
       </div>
 
       {/* 表单卡片容器 */}
