@@ -260,10 +260,12 @@
     "fatalErrorDesc": "页面渲染时发生未预期的异常，请尝试重试或刷新。"
   },
   "auth": {
+    "tagline": "面向中小团队的轻量协作平台",
     "login": {
       "title": "登录 corps",
       "subtitle": "继续你团队的工作。",
       "email": "邮箱",
+      "emailPlaceholder": "你的邮箱",
       "password": "密码",
       "submit": "登录",
       "submitting": "正在登录",

@@ -260,10 +260,12 @@
     "fatalErrorDesc": "An unexpected error occurred while rendering the page. Try again or refresh."
   },
   "auth": {
+    "tagline": "Lightweight collaboration for small teams",
     "login": {
       "title": "Sign in to corps",
       "subtitle": "Continue your team's work.",
       "email": "Email",
+      "emailPlaceholder": "Your email",
       "password": "Password",
       "submit": "Sign in",
       "submitting": "Signing in",

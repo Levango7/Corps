@@ -1,6 +1,10 @@
+import { getTranslations } from "next-intl/server";
 import { Logo } from "@/components/Logo";
+import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const t = await getTranslations("auth");
+
   return (
     <div className="auth-bg relative min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
       {/* 背景特效层 —— 细网格 + 光晕，纯装饰 aria-hidden */}
@@ -15,13 +19,18 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
         <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[26rem] h-[26rem] rounded-full bg-[var(--surface)] opacity-[0.5] blur-[90px]" />
       </div>
 
+      {/* 语言切换器 —— 右上角 */}
+      <div className="absolute top-4 right-4 z-10">
+        <LanguageSwitcher />
+      </div>
+
       {/* 品牌标志 —— Logo 组件本身含 SVG + "corps" 文字,不要外层再包一个 corps */}
       <div className="relative mb-8 text-center">
         <a href="/" aria-label="corps" className="inline-flex">
           <Logo size={44} />
         </a>
         <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)]">
-          面向中小团队的轻量协作平台
+          {t("tagline")}
         </p>
       </div>
 

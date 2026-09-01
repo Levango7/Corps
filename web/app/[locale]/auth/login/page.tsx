@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, type FormEvent } from "react";
 import { useRouter, Link } from "@/lib/i18n-navigation";
@@ -55,7 +55,7 @@ export default function LoginPage() {
       <div className="card-lift bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
         {/* 卡片内顶部居中标题 */}
         <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          登录
+          {t("title")}
         </h1>
         {error && (
           <div
@@ -73,7 +73,7 @@ export default function LoginPage() {
               htmlFor="email"
               className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
             >
-              邮箱/用户名
+              {t("email")}
             </label>
             <input
               id="email"
@@ -82,7 +82,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-[box-shadow,border-color] duration-[var(--motion-fast)] placeholder:text-[var(--meta)]"
-              placeholder="你的邮箱或用户名"
+              placeholder={t("emailPlaceholder")}
               required
             />
           </div>
@@ -126,17 +126,17 @@ export default function LoginPage() {
         </form>
       </div>
 
-      <div className="mt-6 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-        还没有账号?{" "}
-        <Link
-          href="/auth/signup"
-          className="font-[var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2"
-          onClick={() => {
-            track("click_signup", { cta: "card_footer", path: "/auth/login" });
-          }}
-        >
-          免费注册
-        </Link>
+        <div className="mt-6 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+          {t("signupLink")}{" "}
+          <Link
+            href="/auth/signup"
+            className="font-[var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2"
+            onClick={() => {
+              track("click_signup", { cta: "card_footer", path: "/auth/login" });
+            }}
+          >
+            {t("signupCta")}
+          </Link>
       </div>
     </div>
   );
