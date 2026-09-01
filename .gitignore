@@ -1,4 +1,4 @@
-# Dependencies
+﻿# Dependencies
 node_modules/
 .pnp
 .pnp.js
@@ -42,3 +42,22 @@ next-env.d.ts
 
 # 本机环境覆盖（端口冲突等机器专属配置，不入库）
 docker-compose.override.yml
+# 构建中间产物（全量拷贝自 web/ 的有害构建上下文，已废弃）
+build-tmp/
+
+# AI 工具/自动化工作目录
+.workbuddy/
+workbuddy/
+.trash-*/
+
+# 编辑器/IDE 配置碎片
+.codeartsdoer/
+.zcode/
+
+# 临时诊断脚本
+_cmp_*.js
+_check_*.js
+_demo_*.js
+*.patch
+Dockerfile.hotfix
+.dockerignore.bak

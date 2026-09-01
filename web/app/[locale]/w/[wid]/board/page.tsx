@@ -310,14 +310,22 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       )}
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
+        <div
+          className="mb-4 rounded-lg p-3 text-sm flex items-center justify-between"
+          style={{
+            background: "color-mix(in srgb, var(--danger) 10%, transparent)",
+            border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)",
+            color: "var(--danger)",
+          }}
+        >
           <span>{error}</span>
           <button
             onClick={() => {
               setError(null);
               load();
             }}
-            className="text-red-600 underline hover:text-red-800"
+            style={{ color: "var(--danger)" }}
+            className="underline hover:opacity-80"
           >
             {tButton("retry")}
           </button>

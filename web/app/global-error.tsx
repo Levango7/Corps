@@ -3,20 +3,54 @@
 /**
  * 全局 Error Boundary · app/global-error.tsx
  *
- * Next.js App Router 最高级别错误边界，捕获 root layout（app/layout.tsx）
- * 渲染时抛出的未处理异常。当 root layout 出错时，整个 html/body 由本组件替换，
- * 因此必须自带 <html> 与 <body> 标签，并手动导入全局样式（globals.css）。
+ * Next.js App Router 最高级别错误边界，捕获 root layout 渲染时抛出的未处理异常。
+ * 当 root layout 出错时，整个 html/body 由本组件替换，因此必须自带 <html> 与
+ * <body> 标签，并手动导入全局样式（globals.css）。
  *
  * - error：捕获到的错误对象（含 Next.js 注入的 digest）
  * - reset：重置错误边界，重新渲染 root layout
+ *
+ * ⚠️ 重要约束：本组件在 React 树中位于 root layout **之上**，
+ * 而 NextIntlClientProvider 挂载在 app/[locale]/layout.tsx（本项目无 app/layout.tsx，
+ * 根布局即 [locale]/layout.tsx）。因此这里 **不能使用 useTranslations()** ——
+ * 一旦调用就会抛
+ *   "Failed to call `useTranslations` because the context from
+ *    `NextIntlClientProvider` was not found."
+ * 导致兜底错误页自身崩溃、用户看到纯白屏，错误边界彻底失效。
+ *
+ * 故本文件改为零依赖的内置文案：不 import next-intl，不依赖任何 Context/Provider。
+ * 修改本文件时请保持这一约束，勿改回 useTranslations。
+ *
+ * 语言策略：SSR 阶段固定输出默认 locale（zh，与项目 localePrefix: "as-needed" 的
+ * 默认语言一致）；hydrate 后再按浏览器语言切换到 en。html 标签上的
+ * suppressHydrationWarning 用于容忍这一切换带来的差异。
  *
  * 样式策略：root layout 出错时 Tailwind 全局 CSS 可能尚未就绪，
  * 故使用内联样式 + 系统字体栈 + 安全色值，确保任何场景下都能渲染可读的错误页。
  */
 
-import { useEffect } from "react";
-import { useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import "./globals.css";
+
+/** 错误页兜底文案（与 messages/{zh,en}.json 的 error.* / button.* 保持一致） */
+const COPY = {
+  zh: {
+    fatalError: "应用发生严重错误",
+    fatalErrorDesc: "页面渲染时发生未预期的异常，请尝试重试或刷新。",
+    errorId: (digest: string) => `错误编号：${digest}`,
+    retry: "重试",
+    refresh: "刷新页面",
+  },
+  en: {
+    fatalError: "A critical error occurred",
+    fatalErrorDesc: "An unexpected error occurred while rendering the page. Try again or refresh.",
+    errorId: (digest: string) => `Error ID: ${digest}`,
+    retry: "Retry",
+    refresh: "Refresh page",
+  },
+} as const;
+
+type Lang = keyof typeof COPY;
 
 export default function GlobalError({
   error,
@@ -25,15 +59,24 @@ export default function GlobalError({
   error: Error & { digest?: string };
   reset: () => void;
 }) {
-  const t = useTranslations("error");
-  const tButton = useTranslations("button");
+  // SSR 与首次渲染固定为默认 locale，避免服务端/客户端不一致
+  const [lang, setLang] = useState<Lang>("zh");
 
   useEffect(() => {
     console.error("[global-error] 全局错误边界捕获：", error);
   }, [error]);
 
+  // navigator 仅在客户端可用，故放在 useEffect 中读取
+  useEffect(() => {
+    if (typeof navigator !== "undefined" && navigator.language.toLowerCase().startsWith("en")) {
+      setLang("en");
+    }
+  }, []);
+
+  const c = COPY[lang];
+
   return (
-    <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
+    <html lang={lang === "zh" ? "zh-CN" : "en"} data-theme="light" suppressHydrationWarning>
       <body
         style={{
           margin: 0,
@@ -82,7 +125,7 @@ export default function GlobalError({
               margin: "0 0 0.5rem",
             }}
           >
-            {t("fatalError")}
+            {c.fatalError}
           </h2>
           <p
             style={{
@@ -91,7 +134,7 @@ export default function GlobalError({
               margin: "0 0 0.25rem",
             }}
           >
-            {t("fatalErrorDesc")}
+            {c.fatalErrorDesc}
           </p>
           {error.digest && (
             <p
@@ -103,7 +146,7 @@ export default function GlobalError({
                 wordBreak: "break-all",
               }}
             >
-              {t("errorId", { digest: error.digest })}
+              {c.errorId(error.digest)}
             </p>
           )}
           <div
@@ -133,7 +176,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              {tButton("retry")}
+              {c.retry}
             </button>
             <button
               type="button"
@@ -152,7 +195,7 @@ export default function GlobalError({
                 cursor: "pointer",
               }}
             >
-              {tButton("refresh")}
+              {c.refresh}
             </button>
           </div>
         </div>

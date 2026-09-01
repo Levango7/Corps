@@ -20,10 +20,6 @@ interface TaskStub {
   id: string;
 }
 
-interface TaskStub {
-  id: string;
-}
-
 const STATUS_OPTS: { value: Status; labelKey: string }[] = [
   { value: "todo", labelKey: "todo" },
   { value: "in_progress", labelKey: "in_progress" },

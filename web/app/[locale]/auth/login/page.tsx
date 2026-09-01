@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent, type MouseEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -136,11 +136,9 @@ export default function LoginPage() {
         <Link
           href="/auth/signup"
           className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
-          onClick={(e: MouseEvent) => {
+          onClick={() => {
             // P2 数据埋点：click_signup（裁决一附属：本期落地范围收敛为 auth/login 页注册链接）
             track("click_signup", { cta: "header", path: "/auth/login" });
-            // 不阻止默认导航
-            void e;
           }}
         >
           {t("signupCta")}

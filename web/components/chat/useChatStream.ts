@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ChatStreamEvent, ChatMessage } from "./types";
 
 /**
@@ -248,15 +248,16 @@ export function useChatStream({
   }, [connect]);
 
   // 过滤掉自己的 presence（不显示自己在线）
-  const filteredOnlineUsers = useRef(onlineUsers);
-  filteredOnlineUsers.current = currentUserId
-    ? new Set([...onlineUsers].filter((id) => id !== currentUserId))
-    : onlineUsers;
+  const filteredOnlineUsers = useMemo(
+    () =>
+      currentUserId ? new Set([...onlineUsers].filter((id) => id !== currentUserId)) : onlineUsers,
+    [onlineUsers, currentUserId],
+  );
 
   return {
     connected,
     fallback,
-    onlineUsers: filteredOnlineUsers.current,
+    onlineUsers: filteredOnlineUsers,
     reconnect,
   };
 }
