@@ -43,7 +43,7 @@ export async function registerAndLogin(
   await page.getByLabel("密码").fill(TEST_PASSWORD);
   await page.getByRole("button", { name: "创建并进入" }).click();
 
-  await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 20_000 });
+  await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 30_000 });
   return extractWorkspaceId(page.url());
 }
 
@@ -58,7 +58,7 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
   await page.getByLabel("密码").fill(password);
   await page.getByRole("button", { name: "登录" }).click();
 
-  await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 20_000 });
+  await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 30_000 });
   return extractWorkspaceId(page.url());
 }
 

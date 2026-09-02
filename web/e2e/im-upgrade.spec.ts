@@ -26,7 +26,11 @@ async function gotoTaskDetail(page: Page, wid: string, taskTitle: string): Promi
   await createTask(page, taskTitle);
   await page.goto(`/w/${wid}/board`);
   // .first()：BoardView 为移动/桌面断点各渲染一份卡片
-  const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle }).first();
+  const taskCard = page
+    .locator('div[draggable="true"]')
+    .filter({ hasText: taskTitle })
+    .filter({ visible: true })
+    .first();
   await taskCard.click();
   await page.waitForURL(/\/task\//, { timeout: 10_000 });
 }

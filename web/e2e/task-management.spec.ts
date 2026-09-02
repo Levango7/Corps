@@ -37,7 +37,9 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await expect(page.getByRole("heading", { name: "任务看板" })).toBeVisible({ timeout: 10_000 });
 
     // 任务应出现在「待办」列（.first()：BoardView 为移动/桌面断点各渲染一份卡片）
-    await expect(page.getByText(taskTitle, { exact: true }).first()).toBeVisible({
+    await expect(
+      page.getByText(taskTitle, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
@@ -52,12 +54,18 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await createTask(page, taskTitle);
     await page.goto(`/w/${wid}/board`);
     // （.first()：移动/桌面断点各渲染一份卡片）
-    await expect(page.getByText(taskTitle, { exact: true }).first()).toBeVisible({
+    await expect(
+      page.getByText(taskTitle, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
 
     // 定位任务卡（draggable div 包含标题；.first()：移动/桌面断点各渲染一份卡片）
-    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle }).first();
+    const taskCard = page
+      .locator('div[draggable="true"]')
+      .filter({ hasText: taskTitle })
+      .filter({ visible: true })
+      .first();
 
     // 定位「进行中」列容器为拖放目标（data-column 属性定位——
     // 列名文本与移动端列选择器按钮同名，纯文本匹配歧义）
@@ -68,7 +76,9 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
 
     // 验证任务已移至「进行中」列：该列计数应 ≥1，且任务卡仍可见
     // （.first()：移动/桌面断点各渲染一份卡片）
-    await expect(page.getByText(taskTitle, { exact: true }).first()).toBeVisible({
+    await expect(
+      page.getByText(taskTitle, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
 
@@ -93,7 +103,11 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await page.goto(`/w/${wid}/board`);
 
     // 点任务卡进入详情页（.first()：移动/桌面断点双渲染）
-    const taskCard = page.locator('div[draggable="true"]').filter({ hasText: taskTitle }).first();
+    const taskCard = page
+      .locator('div[draggable="true"]')
+      .filter({ hasText: taskTitle })
+      .filter({ visible: true })
+      .first();
     await taskCard.click();
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 
