@@ -36,8 +36,9 @@ import path from "path";
  * 简化 MVP：本端点存储文件并返回元数据，前端调用 send 端点时附带 file 元数据。
  */
 
-/** 最大文件大小：10MB */
-const MAX_FILE_SIZE = 10 * 1024 * 1024;
+/** 附件单文件上限：免费版 10MB，Pro 50MB（v2 定价，2026-09-02 拍板） */
+const MAX_FILE_SIZE_FREE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_PRO = 50 * 1024 * 1024;
 
 /** 允许的文件类型（MIME type → 扩展名） */
 const ALLOWED_TYPES: Record<string, string> = {
@@ -82,9 +83,23 @@ export async function POST(
       return NextResponse.json({ code: 400, message: "缺少文件" }, { status: 400 });
     }
 
-    // 校验文件大小
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json({ code: 400, message: "文件大小不能超过 10MB" }, { status: 400 });
+    // 附件上限按套餐区分：免费版 10MB，Pro 50MB（v2 定价）
+    const activeSub = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.subscription.findFirst({
+          where: { workspaceId: wid, status: "active" },
+          select: { id: true },
+        }),
+      ctx.payload.sub,
+    );
+    const maxSize = activeSub ? MAX_FILE_SIZE_PRO : MAX_FILE_SIZE_FREE;
+    if (file.size > maxSize) {
+      const limitMB = maxSize / (1024 * 1024);
+      const message = activeSub
+        ? `文件大小不能超过 ${limitMB}MB`
+        : `免费版附件单文件最大 10MB，升级 Pro 可到 50MB`;
+      return NextResponse.json({ code: 400, message }, { status: 400 });
     }
 
     // 校验文件类型

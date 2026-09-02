@@ -371,7 +371,7 @@ function ComparisonTable({ t }: { t: TranslateFn }) {
             </thead>
             <tbody>
               {PRICING_MATRIX.map((group) => (
-                <ComparisonGroup key={group.group} group={group} />
+                <ComparisonGroup key={group.group} group={group} t={t} />
               ))}
             </tbody>
           </table>
@@ -381,8 +381,18 @@ function ComparisonTable({ t }: { t: TranslateFn }) {
   );
 }
 
-/** 对比表分组行（含分组标题行 + 数据行；cell 文案为 spec §4.2 冻结常量，不走翻译）。 */
-function ComparisonGroup({ group }: { group: (typeof PRICING_MATRIX)[number] }) {
+/** 对比表分组行（含分组标题行 + 数据行；group/feature 为 pricing.matrix.* 翻译键，
+ *  单元格短语经 matrixCells 取当前语言（最近 10 条/无限 等））。
+ *  单元格中的 ✅/—/数字/价格字面量语言无关直出。 */
+function ComparisonGroup({ group, t }: { group: (typeof PRICING_MATRIX)[number]; t: TranslateFn }) {
+  /** 单元格短语按语言解析：命中已知短语 key 时走翻译，否则原样输出（✅/—/数字等） */
+  function cellText(value: string): string {
+    if (value === "最近 10 条/工作区") return t("matrixCells.decisionLimitFree");
+    if (value === "无限") return t("matrixCells.unlimited");
+    if (value === "≤10 人") return t("matrixCells.seatLimitFree");
+    if (value === "不限（产品定位服务 5–30 人）") return t("matrixCells.seatUnlimited");
+    return value;
+  }
   return (
     <>
       {/* 分组标题行（spec §4.2 用 surface-2 背景） */}
@@ -392,15 +402,15 @@ function ComparisonGroup({ group }: { group: (typeof PRICING_MATRIX)[number] }) 
           className="py-2 px-[var(--space-4)] text-left font-[var(--weight-semibold)] text-[var(--fg)]"
           scope="rowgroup"
         >
-          {group.group}
+          {t(group.group)}
         </th>
       </tr>
       {/* 数据行 */}
       {group.rows.map((row) => (
         <tr key={row.feature} className="border-b border-[var(--border-soft)]">
-          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{row.feature}</td>
-          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{row.free}</td>
-          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{row.pro}</td>
+          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{t(row.feature)}</td>
+          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{cellText(row.free)}</td>
+          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{cellText(row.pro)}</td>
         </tr>
       ))}
     </>

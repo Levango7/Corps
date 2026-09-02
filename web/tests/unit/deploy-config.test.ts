@@ -107,6 +107,13 @@ describe("docker-compose cron 调度服务（阶段3：compose 编排内置调�
   it(".env.example 含 CRON_TZ 条目（时区可配置）", () => {
     expect(envExample).toMatch(/^CRON_TZ=/m);
   });
+
+  it("entrypoint-cron.sh 计划表含全部三个 cron 路由（due-reminders / weekly-digest / cleanup-uploads）", () => {
+    const cronSh = readFileSync(resolve(REPO_ROOT, "web/docker/entrypoint-cron.sh"), "utf8");
+    expect(cronSh).toMatch(/\/api\/cron\/due-reminders/);
+    expect(cronSh).toMatch(/\/api\/cron\/weekly-digest/);
+    expect(cronSh).toMatch(/\/api\/cron\/cleanup-uploads/);
+  });
 });
 
 describe("docker-compose 日历集成环境变量（审计 P1-B 防复发）", () => {

@@ -34,41 +34,50 @@ export const PRICING_PLANS = {
     tagline: "10 人以内小团队，永久免费",
     cta: "免费开始",
     features: [
-      "任务看板（看板/列表双视图 + 拖拽改状态）",
-      "任务详情（负责人 / 截止日 / 优先级 / 状态）",
-      "成员邀请 + Owner/Admin/Member 三级角色",
-      "任务评论 + @提及提醒",
-      "决策记录（每个工作区最近 10 条）",
-      "Cmd+K 全局搜索（任务 + 决策记录）",
-      "社区支持",
+      "features.free.f01",
+      "features.free.f02",
+      "features.free.f03",
+      "features.free.f04",
+      "features.free.f05",
+      "features.free.f06",
+      "features.free.f07",
+      "features.free.f08",
+      "features.free.f09",
+      "features.free.f10",
+      "features.free.f11",
+      "features.free.f12",
+      "features.free.f13",
+      "features.free.f14",
     ],
   },
   pro: {
     name: "专业版 Pro",
-    monthlyPrice: 59,
-    yearlyPrice: 590,
-    tagline: "解锁决策闭环全部能力",
+    monthlyPrice: 29.9,
+    yearlyPrice: 299,
+    tagline: "决策闭环不限量，团队扩容无上限",
     cta: "升级到 Pro",
     badge: "推荐",
     features: [
-      "免费版全部能力",
-      "无限决策记录 + 版本留痕 + 任务双向回链",
-      "任务筛选与自定义视图",
-      "CSV 导出（任务与决策记录）",
-      "邮件通知（指派 / 截止日 / @提及）",
-      "优先邮件支持（1 个工作日内响应）",
+      "features.pro.p00",
+      "features.pro.p01",
+      "features.pro.p02",
+      "features.pro.p03",
+      "features.pro.p04",
+      "features.pro.p05",
+      "features.pro.p06",
+      "features.pro.p07",
     ],
   },
 } as const;
 
 /**
  * 年付派生数字（由月付 × 12 − 年付计算得出，非硬编码）。
- *  - yearlyMonthlyAverage: 年付折算月均价 49.2（590 / 12）
- *  - yearlySavingPerSeat: 每席每年省 118（59 × 12 − 590）
+ *  - yearlyMonthlyAverage: 年付折算月均价 24.9（299 / 12）
+ *  - yearlySavingPerSeat: 每席每年省 59.8（29.9 × 12 − 299）
  */
-export const YEARLY_MONTHLY_AVERAGE = PRICING_PLANS.pro.yearlyPrice / 12; // 49.166... → 展示时 toFixed(1) = 49.2
+export const YEARLY_MONTHLY_AVERAGE = PRICING_PLANS.pro.yearlyPrice / 12; // 24.9166... → 展示时 toFixed(1) = 24.9
 export const YEARLY_SAVING_PER_SEAT =
-  PRICING_PLANS.pro.monthlyPrice * 12 - PRICING_PLANS.pro.yearlyPrice; // 118
+  PRICING_PLANS.pro.monthlyPrice * 12 - PRICING_PLANS.pro.yearlyPrice; // 59.8
 
 /**
  * 社会证明条开关常量（spec §3.3 条件渲染）。
@@ -103,7 +112,7 @@ export const PRICING_FAQS: PricingFaq[] = [
     questionId: 1,
     question: "团队超过 10 人怎么办？",
     answer:
-      "第 11 位成员接受邀请时系统会提示升级。升级到 Pro（¥59/人/月，年付 ¥590/人/年）即不限人数；也可以移除或停用成员腾出席位继续免费用——我们不会为了逼你付费而锁数据。",
+      "第 11 位成员接受邀请时系统会提示升级。升级到 Pro（¥29.9/人/月，年付 ¥299/人/年）即不限人数；也可以移除或停用成员腾出席位继续免费用——我们不会为了逼你付费而锁数据。",
   },
   {
     questionId: 2,
@@ -145,54 +154,71 @@ export interface PricingMatrixGroup {
 }
 
 /**
- * 功能对比表数据（spec §4.2 逐字冻结）。
- * 五分组：任务协作 / 决策记录 / 搜索与导出 / 团队与安全 / 席位计费。
+ * 功能对比表数据（v2 定价方案，2026-09-02 用户拍板）。
+ * 七分组；group/feature 为 pricing.matrix.* 翻译键（zh/en 双语渲染），
+ * free/pro 单元格为展示字面量（✅/—/短语，单元格短语经 ComparisonGroup 上下文注入语言）。
  */
 export const PRICING_MATRIX: PricingMatrixGroup[] = [
   {
-    group: "任务协作",
+    group: "matrix.g1",
     rows: [
-      { feature: "任务看板 / 列表双视图 + 拖拽改状态", free: "✅", pro: "✅" },
+      { feature: "matrix.r01", free: "✅", pro: "✅" },
+      { feature: "matrix.r02", free: "✅", pro: "✅" },
+      { feature: "matrix.r03", free: "✅", pro: "✅" },
+      { feature: "matrix.r04", free: "✅", pro: "✅" },
+      { feature: "matrix.r05", free: "✅", pro: "✅" },
+      { feature: "matrix.r06", free: "—", pro: "✅" },
+    ],
+  },
+  {
+    group: "matrix.g2",
+    rows: [
+      { feature: "matrix.r07", free: "最近 10 条/工作区", pro: "无限" },
+      { feature: "matrix.r08", free: "—", pro: "✅" },
+    ],
+  },
+  {
+    group: "matrix.g3",
+    rows: [
+      { feature: "matrix.r09", free: "✅", pro: "✅" },
+      { feature: "matrix.r10", free: "✅", pro: "✅" },
+      { feature: "matrix.r11", free: "✅", pro: "✅" },
+      { feature: "matrix.r12", free: "—", pro: "✅" },
+    ],
+  },
+  {
+    group: "matrix.g4",
+    rows: [
+      { feature: "matrix.r13", free: "✅", pro: "✅" },
+      { feature: "matrix.r14", free: "—", pro: "✅" },
+    ],
+  },
+  {
+    group: "matrix.g5",
+    rows: [
+      { feature: "matrix.r15", free: "✅", pro: "✅" },
+      { feature: "matrix.r16", free: "✅", pro: "✅" },
+      { feature: "matrix.r17", free: "✅", pro: "✅" },
+    ],
+  },
+  {
+    group: "matrix.g6",
+    rows: [
       {
-        feature: "任务详情字段（负责人/截止日/优先级/状态机）",
-        free: "✅",
-        pro: "✅",
-      },
-      { feature: "评论 + @提及通知", free: "✅", pro: "✅（升级为邮件通知）" },
-      { feature: "任务筛选与自定义视图", free: "—", pro: "✅" },
-    ],
-  },
-  {
-    group: "决策记录",
-    rows: [
-      { feature: "决策记录数量", free: "最近 10 条/工作区", pro: "无限" },
-      { feature: "版本留痕 + 任务双向回链", free: "—", pro: "✅" },
-    ],
-  },
-  {
-    group: "搜索与导出",
-    rows: [
-      { feature: "Cmd+K 全局搜索（任务 + 决策）", free: "✅", pro: "✅" },
-      { feature: "CSV 导出", free: "—", pro: "✅" },
-    ],
-  },
-  {
-    group: "团队与安全",
-    rows: [
-      {
-        feature: "成员规模",
+        feature: "matrix.r18",
         free: "≤10 人",
         pro: "不限（产品定位服务 5–30 人）",
       },
-      { feature: "Owner/Admin/Member 三级 RBAC", free: "✅", pro: "✅" },
-      { feature: "多租户引擎级隔离（PostgreSQL RLS）", free: "✅", pro: "✅" },
+      { feature: "matrix.r19", free: "✅", pro: "✅" },
+      { feature: "matrix.r20", free: "✅", pro: "✅" },
     ],
   },
   {
-    group: "席位计费",
+    group: "matrix.g7",
     rows: [
-      { feature: "成员变更自动同步席位数量", free: "—", pro: "✅" },
-      { feature: "价格", free: "¥0", pro: "¥59/人/月 或 ¥590/人/年" },
+      { feature: "matrix.r21", free: "10MB", pro: "50MB" },
+      { feature: "matrix.r22", free: "—", pro: "✅" },
+      { feature: "matrix.r23", free: "¥0", pro: "¥29.9/人/月 或 ¥299/人/年" },
     ],
   },
 ];

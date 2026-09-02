@@ -179,7 +179,7 @@ function FreeCard({
             className="flex items-start gap-2 text-[length:var(--text-sm)] text-[var(--fg-2)]"
           >
             <Check size={16} className="shrink-0 mt-0.5 text-[var(--success)]" aria-hidden="true" />
-            <span>{feat}</span>
+            <span>{t(feat)}</span>
           </li>
         ))}
       </ul>
@@ -241,7 +241,7 @@ function ProCard({
         <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{proUnit}</span>
         {period === "yearly" && (
           <span className="ml-2 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
-            {t("plans.savePerSeat", { amount: YEARLY_SAVING_PER_SEAT })}
+            {t("plans.savePerSeat", { amount: YEARLY_SAVING_PER_SEAT.toFixed(1) })}
           </span>
         )}
       </div>
@@ -253,7 +253,7 @@ function ProCard({
             className="flex items-start gap-2 text-[length:var(--text-sm)] text-[var(--fg-2)]"
           >
             <Check size={16} className="shrink-0 mt-0.5 text-[var(--success)]" aria-hidden="true" />
-            <span>{feat}</span>
+            <span>{t(feat)}</span>
           </li>
         ))}
       </ul>

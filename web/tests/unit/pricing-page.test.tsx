@@ -43,24 +43,24 @@ import {
 } from "@/lib/pricing";
 
 describe("常量口径", () => {
-  it("PRICING_PLANS.free 月付为 0、features 长度 7", () => {
+  it("PRICING_PLANS.free 月付为 0、features 长度 14", () => {
     // Assert
     expect(PRICING_PLANS.free.monthlyPrice).toBe(0);
-    expect(PRICING_PLANS.free.features).toHaveLength(7);
+    expect(PRICING_PLANS.free.features).toHaveLength(14);
   });
 
-  it("PRICING_PLANS.pro 月付 59、年付 590、features 长度 6", () => {
+  it("PRICING_PLANS.pro 月付 29.9、年付 299、features 长度 8", () => {
     // Assert
-    expect(PRICING_PLANS.pro.monthlyPrice).toBe(59);
-    expect(PRICING_PLANS.pro.yearlyPrice).toBe(590);
-    expect(PRICING_PLANS.pro.features).toHaveLength(6);
+    expect(PRICING_PLANS.pro.monthlyPrice).toBe(29.9);
+    expect(PRICING_PLANS.pro.yearlyPrice).toBe(299);
+    expect(PRICING_PLANS.pro.features).toHaveLength(8);
   });
 
-  it("年付派生：月均价 49.2（toFixed(1)）、每席每年省 118（59×12−590）", () => {
+  it("年付派生：月均价 24.9（toFixed(1)）、每席每年省 59.8（29.9×12−299）", () => {
     // Assert
-    expect(YEARLY_MONTHLY_AVERAGE.toFixed(1)).toBe("49.2");
-    expect(YEARLY_SAVING_PER_SEAT).toBe(59 * 12 - 590);
-    expect(YEARLY_SAVING_PER_SEAT).toBe(118);
+    expect(YEARLY_MONTHLY_AVERAGE.toFixed(1)).toBe("24.9");
+    expect(YEARLY_SAVING_PER_SEAT).toBeCloseTo(29.9 * 12 - 299, 1);
+    expect(YEARLY_SAVING_PER_SEAT).toBeCloseTo(59.8, 1);
   });
 
   it("PRICING_FAQS 长度 6 且 questionId 连续 0–5", () => {
@@ -69,15 +69,17 @@ describe("常量口径", () => {
     expect(PRICING_FAQS.map((f) => f.questionId)).toEqual([0, 1, 2, 3, 4, 5]);
   });
 
-  it("PRICING_MATRIX 五分组", () => {
+  it("PRICING_MATRIX 七分组", () => {
     // Assert
-    expect(PRICING_MATRIX).toHaveLength(5);
+    expect(PRICING_MATRIX).toHaveLength(7);
     expect(PRICING_MATRIX.map((g) => g.group)).toEqual([
-      "任务协作",
-      "决策记录",
-      "搜索与导出",
-      "团队与安全",
-      "席位计费",
+      "matrix.g1",
+      "matrix.g2",
+      "matrix.g3",
+      "matrix.g4",
+      "matrix.g5",
+      "matrix.g6",
+      "matrix.g7",
     ]);
   });
 
@@ -197,12 +199,12 @@ describe("页面骨架渲染", () => {
     expect(pricingLinks[0]).toHaveAttribute("aria-current", "page");
   });
 
-  it("对比表分组行数 === 5（PRICING_MATRIX 五分组）", async () => {
+  it("对比表分组行数 === 7（PRICING_MATRIX 七分组）", async () => {
     // Act
     const { container } = await renderPage();
     // Assert：分组标题行用 scope="rowgroup"
     const rowGroups = container.querySelectorAll('th[scope="rowgroup"]');
-    expect(rowGroups).toHaveLength(5);
+    expect(rowGroups).toHaveLength(7);
   });
 
   it("社会证明条 MVP 种子期不渲染（paidTeams=null）", async () => {
@@ -233,23 +235,23 @@ describe("PricingSection 交互", () => {
     trackMock.mockClear();
   });
 
-  it("默认年付态：¥590 可见、删除线 ¥59 原价可见、「省 ¥118/席」徽标可见", () => {
+  it("默认年付态：¥299 可见、删除线 ¥29.9 原价可见、「省 ¥59.8/席」徽标可见", () => {
     // Act
     const { container } = renderWithI18n(<PricingSection />);
     // Assert
-    expect(container.textContent).toContain("¥590");
-    expect(container.textContent).toContain("¥59"); // 删除线原价
-    expect(container.textContent).toContain("省 ¥118/席");
+    expect(container.textContent).toContain("¥299");
+    expect(container.textContent).toContain("¥29.9"); // 删除线原价
+    expect(container.textContent).toContain("省 ¥59.8/席");
   });
 
-  it("切换到月付：价格切 ¥59 且徽标消失，并上报 select_billing_period", () => {
+  it("切换到月付：价格切 ¥29.9 且徽标消失，并上报 select_billing_period", () => {
     // Arrange
     const { container } = renderWithI18n(<PricingSection />);
     // Act：点击「按月付」分段控件
     const monthlyBtn = screen.getByRole("button", { name: /按月付/ });
     fireEvent.click(monthlyBtn);
     // Assert：年付徽标消失（不再含「省 ¥118/席」）
-    expect(container.textContent).not.toContain("省 ¥118/席");
+    expect(container.textContent).not.toContain("省 ¥59.8/席");
     // Assert：select_billing_period 上报 period=monthly
     expect(trackMock).toHaveBeenCalledWith("select_billing_period", {
       period: "monthly",

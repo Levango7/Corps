@@ -53,19 +53,33 @@ const PLANS: {
     price: "¥0",
     unitKey: "unitForever",
     seatsKey: "seatsFree",
-    features: ["featBoard", "featComments", "featDecisions10"],
+    features: [
+      "featBoard",
+      "featComments",
+      "featIm",
+      "featDecisions10",
+      "featCalendar",
+      "featNotif",
+    ],
     details: ["detailSeats10", "detailDecisions10", "detailBasicExport", "detailCommunity"],
   },
   {
     id: "pro",
     nameKey: "planPro",
-    price: "¥59",
+    price: "¥29.9",
     unitKey: "unitPerSeatMonth",
     seatsKey: "seatsPerSeat",
-    features: ["featUnlimitedDecisions", "featFilterViews", "featEmail", "featCsv"],
+    features: [
+      "featUnlimitedDecisions",
+      "featFilterViews",
+      "featAttachments50",
+      "featEmail",
+      "featCsv",
+    ],
     details: [
       "featUnlimitedDecisions",
       "featFilterViews",
+      "featAttachments50",
       "featEmail",
       "featCsv",
       "seatsPerSeat",
@@ -93,7 +107,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   const [busy, setBusy] = useState<string | null>(null);
   // Phase 2：支付方式选择（缺省 card 保持存量行为）
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
-  // 计费周期（pricing-strategy.md：年付 ¥590/人/年，相当于每月 ¥49.2）
+  // 计费周期（v2 定价：年付 ¥299/人/年，相当于每月 ¥24.9）
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   // 微信二维码模态框状态
   const [wechatQr, setWechatQr] = useState<{ url: string; orderId: string } | null>(null);
@@ -406,7 +420,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         </div>
       )}
 
-      {/* 计费周期切换（年付对齐定价页口径：¥590/人/年，立省 ¥118） */}
+      {/* 计费周期切换（年付对齐定价页口径：¥299/人/年，立省 ¥59.8） */}
       {isOwner && (
         <div className="mb-4 flex items-center gap-2">
           <button
@@ -438,7 +452,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           const current = status?.plan === p.id;
           const upgradable = isOwner && !current && p.id !== "free" && status?.stripeReady;
           // Pro 卡片价格/单位随计费周期切换；免费档固定 ¥0
-          const price = p.id === "pro" && billingPeriod === "yearly" ? "¥590" : p.price;
+          const price = p.id === "pro" && billingPeriod === "yearly" ? "¥299" : p.price;
           const unit =
             p.id === "pro"
               ? billingPeriod === "yearly"

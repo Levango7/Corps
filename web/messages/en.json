@@ -371,7 +371,7 @@
   },
   "pricing": {
     "metadata": {
-      "title": "corps Pricing — Free up to 10, Pro ¥59/seat/month",
+      "title": "corps Pricing — Free up to 10, Pro ¥29.9/seat/month",
       "description": "Anchored on the workspace task board, with decision records linked back to task context. Up and running in 15 minutes, pay only for what you use."
     },
     "nav": {
@@ -389,13 +389,32 @@
     },
     "socialProof": "{teams} teams are using corps to manage decisions and tasks",
     "features": {
-      "heading": "Core capabilities",
-      "col1Title": "Conclusions land automatically",
-      "col1Body": "Freeze discussion conclusions into decision records with version history and bidirectional links to tasks — no more manual copying.",
-      "col2Title": "Up and running in 15 minutes",
-      "col2Body": "Board/list views with drag-to-change-status and optimistic updates. Cmd+K global search across tasks and decisions.",
-      "col3Title": "Engine-level data isolation",
-      "col3Body": "PostgreSQL row-level security (RLS) enforces multi-tenant isolation. Cross-workspace requests are blocked."
+      "free": {
+        "f01": "Task board (kanban & list views, drag to change status)",
+        "f02": "Task details (assignee, due date, priority, status, labels, milestones)",
+        "f03": "Member invites + Owner/Admin/Member roles",
+        "f04": "Task comments + @mention alerts",
+        "f05": "In-task chat with attachments & realtime push",
+        "f06": "Decision records (latest 10 per workspace, with version history)",
+        "f07": "Notification center (assignments, mentions, decision updates)",
+        "f08": "Calendar sync (Google / Outlook due dates)",
+        "f09": "Cmd+K global search (tasks + decisions)",
+        "f10": "Batch actions (multi-select move, assign, delete)",
+        "f11": "Chinese & English UI",
+        "f12": "Dark mode",
+        "f13": "Responsive UI (full-featured on mobile web)",
+        "f14": "No data lock-in (read-only access & export after downgrade)"
+      },
+      "pro": {
+        "p00": "Everything in Free",
+        "p01": "Unlimited seats (teams of 11+)",
+        "p02": "Unlimited decision records + version history + bidirectional task links",
+        "p03": "Task filters & saved custom views",
+        "p04": "Bigger attachments (10MB → 50MB per file)",
+        "p05": "CSV export (tasks + decisions)",
+        "p06": "Email notifications (assignments, due dates, mentions + weekly digest)",
+        "p07": "Priority email support (1 business day)"
+      }
     },
     "comparison": {
       "heading": "Compare features",
@@ -408,7 +427,7 @@
       "q0": "Is the free plan really free forever?",
       "a0": "Yes. Workspaces with 10 or fewer members are free forever, including task boards, comments, three-tier roles, and Cmd+K search, with no time limit. The only soft limit is that decision records keep the most recent 10 per workspace.",
       "q1": "What happens when my team exceeds 10 members?",
-      "a1": "When the 11th member accepts an invitation, the system prompts you to upgrade. Upgrading to Pro (¥59/seat/month, or ¥590/seat/year annually) removes the limit. You can also remove or deactivate members to free up seats and stay on the free tier — we never lock your data to force a paid plan.",
+      "a1": "When the 11th member accepts the invite, you'll be asked to upgrade. Pro (¥29.9/seat/month, or ¥299/seat/year) removes the limit. You can also remove members to stay free — we never lock your data to force an upgrade.",
       "q2": "What payment methods are supported? Can I get an invoice?",
       "a2": "We support Alipay, WeChat Pay, and international cards. At this stage we provide electronic receipts; VAT invoice capability will be available once the domestic entity is ready (expected around general availability). If you need an invoice before purchasing, please contact the support email first.",
       "q3": "Will I lose my data if I downgrade or cancel?",
@@ -448,6 +467,44 @@
         "cta": "Upgrade to Pro",
         "badge": "Recommended"
       }
+    },
+    "matrix": {
+      "g1": "Task collaboration",
+      "g2": "Decision records",
+      "g3": "Notifications & calendar",
+      "g4": "Search & export",
+      "g5": "Experience",
+      "g6": "Team & security",
+      "g7": "Data & billing",
+      "r01": "Kanban & list views + drag to change status",
+      "r02": "Task fields (assignee / due date / priority / status / labels / milestones)",
+      "r03": "Comments + @mentions",
+      "r04": "In-task chat (attachments + realtime push)",
+      "r05": "Batch actions (multi-select move / assign / delete)",
+      "r06": "Task filters & saved custom views",
+      "r07": "Number of decision records",
+      "r08": "Version history + bidirectional task links",
+      "r09": "Notification center (assignments / mentions / decision updates)",
+      "r10": "Calendar sync (Google / Outlook)",
+      "r11": "Email notifications (assignments / due dates / mentions)",
+      "r12": "Weekly task digest email",
+      "r13": "Cmd+K global search (tasks + decisions)",
+      "r14": "CSV export",
+      "r15": "Chinese & English UI",
+      "r16": "Dark mode",
+      "r17": "Responsive mobile UI",
+      "r18": "Team size",
+      "r19": "Owner/Admin/Member RBAC",
+      "r20": "Engine-level multi-tenant isolation (PostgreSQL RLS)",
+      "r21": "Attachment size per file",
+      "r22": "Auto-sync seat count on member changes",
+      "r23": "Price"
+    },
+    "matrixCells": {
+      "decisionLimitFree": "Latest 10 / workspace",
+      "unlimited": "Unlimited",
+      "seatLimitFree": "Up to 10",
+      "seatUnlimited": "Unlimited (product focus: teams of 5–30)"
     }
   },
   "languageSwitcher": {
@@ -716,7 +773,7 @@
     "featDecisions10": "Decisions (last 10)",
     "featUnlimitedDecisions": "Unlimited decisions",
     "featFilterViews": "Task filters & saved views",
-    "featEmail": "Email notifications",
+    "featEmail": "Email notifications (assignments / due dates / mentions + weekly digest)",
     "featCsv": "CSV export",
     "featEmailSupport": "Email support",
     "detailSeats10": "Up to 10 seats",
@@ -738,7 +795,7 @@
     "descCard": "Pay by card via Stripe. Auto-renewal supported.",
     "descWechat": "Scan to pay; subscription activates automatically. No auto-renewal.",
     "descAlipay": "Redirect to Alipay to pay; activates on completion. No auto-renewal.",
-    "yearlyAvg": "≈ ¥49.2/month billed yearly",
+    "yearlyAvg": "≈ ¥24.9/month billed yearly",
     "upgradeDisabledTitle": "Stripe not configured or not owner",
     "inUse": "Current plan",
     "wechatQr": "WeChat Pay QR code",
@@ -754,7 +811,7 @@
     "methodWechat": "WeChat Pay",
     "methodAlipay": "Alipay",
     "periodMonthly": "Monthly",
-    "periodYearly": "Yearly (save ¥118/seat)",
+    "periodYearly": "Yearly (save ¥59.8/seat)",
     "currentBadge": "Current",
     "included": "Included",
     "unavailable": "Unavailable",
@@ -764,7 +821,11 @@
     "ownerOnlyNotice": "Only the workspace owner can change plans or manage payment methods.",
     "wechatPayTitle": "WeChat Pay",
     "wechatScanHint": "Scan the QR code above with WeChat to complete the payment",
-    "waitingPayment": "Waiting for payment result..."
+    "waitingPayment": "Waiting for payment result...",
+    "featIm": "In-task chat with attachments",
+    "featCalendar": "Calendar sync (Google / Outlook)",
+    "featNotif": "Notification center (assignments / mentions)",
+    "featAttachments50": "Bigger attachments (10MB → 50MB per file)"
   },
   "notifications": {
     "filterAria": "Filter notifications by status",

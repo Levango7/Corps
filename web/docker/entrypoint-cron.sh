@@ -37,6 +37,8 @@ cat > "${CRONTAB_FILE}" <<EOF
 # corps cron 调度（时区 ${CRON_TZ}）
 # 截止日提醒：每天 01:00（默认 UTC，即北京时间 09:00）
 0 1 * * * wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/due-reminders" 2>&1 | tail -1 >> /proc/1/fd/1
+# 每周任务摘要（Pro）：每周一 02:00（默认 UTC，即北京时间周一 10:00）
+0 2 * * 1 wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/weekly-digest" 2>&1 | tail -1 >> /proc/1/fd/1
 # IM 附件孤儿清理：每周一 04:00（幂等，重复跑无害）
 0 4 * * 1 wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/cleanup-uploads" 2>&1 | tail -1 >> /proc/1/fd/1
 EOF

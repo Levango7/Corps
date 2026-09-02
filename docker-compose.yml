@@ -151,9 +151,9 @@ services:
       - corps-net
 
   # ─── cron 调度容器（复用 app 镜像，busybox crond）───────────────────────
-  # 职责：定时调用两个 cron 路由——due-reminders 每天 01:00（CRON_TZ 时区，
-  # 默认 UTC=北京时间 09:00）、cleanup-uploads 每周一 04:00。两者均以
-  # CRON_SECRET Bearer 鉴权（与 app 的 /api/cron/* 路由约定一致）。
+  # 职责：定时调用三个 cron 路由——due-reminders 每天 01:00、weekly-digest
+  # 每周一 02:00、cleanup-uploads 每周一 04:00（均为 CRON_TZ 时区，默认 UTC）。
+  # 三者均以 CRON_SECRET Bearer 鉴权（与 app 的 /api/cron/* 路由约定一致）。
   # 独立容器而非嵌入 app：调度崩溃独立重启、日志分离、app 扩缩容互不影响。
   cron:
     image: corps-web:latest
