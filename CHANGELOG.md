@@ -2,6 +2,23 @@
 
 本文件记录 corps 的版本变更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 惯例，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.2.1] - 2026-09-02
+
+关键修复版本：解决 0.2.0 生产镜像全站无样式的问题。
+
+### Fixed
+
+- **生产构建全站样式缺失（0.2.0 最严重缺陷）**：`next build` 生产路径不自动接入 `@tailwindcss/postcss`（dev 会），导致镜像内 CSS 仅剩 ~6.5KB design-tokens 变量、所有 Tailwind 工具类缺失，UI 布局崩坏。补 `postcss.config.mjs` 显式接入后产物 CSS ~60KB（fecc6ca）。
+- **生产构建登录页中英混排**：0.2.0 镜像打包时 i18n 提取尚未完成，登录表单 label 为"翻译 + 硬编码中文"残留（如 "Email密码"式混排）。0.2.1 打包自 i18n 收口后的完整源码（94ebdad）。
+- **E2E 假阳性暴露并修复**：CSS 修复让 `md:hidden` 真正生效后，BoardView 移动/桌面双渲染中 `.first()` 命中隐藏移动副本的 7 处定位器失效——统一加 `filter({ visible: true })`（b8d4030）；登录导航超时 20s→30s 抗抖动。
+- **entrypoint 生产兼容**：prisma 6 移除 `--url` 参数改环境变量注入；psql 缺失时降级告警而非启动失败（6a0c0bd）。
+- **compose app 服务显式 ENTRYPOINT** 覆盖 0.2.0 镜像破损元数据（2f7a6ac 前后修复）。
+
+### Added
+
+- 完成上一批 UI 半成品接线：ClientLayout（Toast 容器 + 入场动画）挂载、顶栏 Logo 组件化、看板拖放目标高亮（2e7c808）。
+- CI workflow_dispatch 手动触发、GitHub Pages 展示页配置（178a894/2d587dd）。
+
 ## [0.2.0] - 2026-08-31
 
 首个对外发布版本。相对 0.1.0（内部开发版），聚焦三件事：双语国际化、商业化闭环（国内支付 + 筛选/视图 Pro 功能 + 账户删除）、安全加固收口。
