@@ -336,6 +336,46 @@ function renderAccountDeletedHtml(params: AccountDeletedEmailParams): string {
   });
 }
 
+/** 每周摘要的任务列表行（标题 + 截止日 + 链接） */
+function digestTaskRows(tasks: WeeklyDigestEmailParams["overdueTasks"], warn: boolean): string {
+  if (tasks.length === 0) return "";
+  const color = warn ? "#fef3c7" : "#eef2ff";
+  return tasks
+    .slice(0, 10)
+    .map(
+      (t) =>
+        `<p style="margin:0 0 8px;padding:10px 14px;background:${color};border-radius:8px;font-size:14px;">` +
+        `<strong>${escapeHtml(t.title)}</strong> · ${new Date(t.dueDate).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}</p>`,
+    )
+    .join("");
+}
+
+/** 每周任务摘要邮件 HTML */
+function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
+  const name = escapeHtml(params.memberName || "同事");
+  const hasAny = params.overdueTasks.length > 0 || params.upcomingTasks.length > 0;
+  return renderEmailHtml({
+    title: `本周任务摘要 · ${escapeHtml(params.workspaceName)}`,
+    preheader: `逾期 ${params.overdueTasks.length} 项，本周到期 ${params.upcomingTasks.length} 项`,
+    bodyHtml:
+      `<p style="margin:0 0 12px;">${name}，这是你在 <strong>${escapeHtml(params.workspaceName)}</strong> 的每周任务摘要：</p>` +
+      (params.overdueTasks.length > 0
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:#b45309;">已逾期（${params.overdueTasks.length}）</p>` +
+          digestTaskRows(params.overdueTasks, true)
+        : "") +
+      (params.upcomingTasks.length > 0
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:#4263eb;">未来 7 天到期（${params.upcomingTasks.length}）</p>` +
+          digestTaskRows(params.upcomingTasks, false)
+        : "") +
+      (!hasAny
+        ? `<p style="margin:0 0 12px;">你负责的任务没有逾期项，未来 7 天也没有到期任务——干得漂亮。</p>`
+        : "") +
+      `<p style="margin:16px 0 0;color:#6b7280;font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>`,
+    ctaLabel: "打开工作区",
+    ctaHref: params.workspaceUrl,
+  });
+}
+
 /** 账户删除通知邮件（阶段 2-3；尽力而为，失败不阻塞删除主流程） */
 export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams): Promise<void> {
   const sent = await sendViaResend({
@@ -347,4 +387,36 @@ export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams)
   if (!sent && !isEmailConfigured()) {
     logPlaceholder("account_deleted", `to=${params.to}, ws=${params.deletedWorkspaces}`);
   }
+}
+
+// ─── 每周任务摘要（Pro 功能，v2 定价 2026-09-02）───────────────────────────
+
+/** 每周任务摘要邮件参数 */
+export interface WeeklyDigestEmailParams {
+  to: string;
+  memberName: string;
+  workspaceName: string;
+  /** 已逾期任务（未完成且截止日已过） */
+  overdueTasks: { title: string; dueDate: string; taskUrl: string }[];
+  /** 未来 7 天到期任务 */
+  upcomingTasks: { title: string; dueDate: string; taskUrl: string }[];
+  /** 工作区首页链接 */
+  workspaceUrl: string;
+}
+
+/** 每周任务摘要邮件（失败不阻塞，返回是否真实发送） */
+export async function sendWeeklyDigestEmail(params: WeeklyDigestEmailParams): Promise<boolean> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: `本周任务摘要：${params.workspaceName}（逾期 ${params.overdueTasks.length} · 本周到期 ${params.upcomingTasks.length}）`,
+    html: renderWeeklyDigestHtml(params),
+    logTag: "weekly_digest",
+  });
+  if (!sent && !isEmailConfigured()) {
+    logPlaceholder(
+      "weekly_digest",
+      `to=${params.to}, overdue=${params.overdueTasks.length}, upcoming=${params.upcomingTasks.length}`,
+    );
+  }
+  return sent;
 }
