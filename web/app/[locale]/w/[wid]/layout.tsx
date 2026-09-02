@@ -263,7 +263,7 @@ export default function WorkspaceLayout({
             href={`/w/${wid}`}
             className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]"
           >
-            corps
+            <Logo size={22} />
           </Link>
           <span className="text-[var(--border)] select-none">/</span>
           <button

@@ -24,10 +24,10 @@ export function buildCsp(nonce: string, isProd: boolean): string {
     // 生产：纯 nonce（移除 unsafe-inline）；开发：保留 unsafe-inline（HMR 兼容）
     isProd
       ? `script-src 'self' 'nonce-${nonce}'`
-      // 开发环境额外放开 'unsafe-eval'：React 16+ dev mode 启动时调用 eval()
-      // 做错误堆栈重组,被 CSP 拦截会刷控制台错误（不影响功能但污染日志）。
-      // 仅开发环境放行,生产环境绝不能加 'unsafe-eval'（XSS 大开）。
-      : `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${nonce}'`,
+      : // 开发环境额外放开 'unsafe-eval'：React 16+ dev mode 启动时调用 eval()
+        // 做错误堆栈重组,被 CSP 拦截会刷控制台错误（不影响功能但污染日志）。
+        // 仅开发环境放行,生产环境绝不能加 'unsafe-eval'（XSS 大开）。
+        `script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${nonce}'`,
     isProd
       ? `style-src 'self' 'nonce-${nonce}'`
       : `style-src 'self' 'unsafe-inline' 'nonce-${nonce}'`,

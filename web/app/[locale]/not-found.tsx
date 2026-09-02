@@ -16,11 +16,7 @@ import { AlertTriangle, Home } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "@/lib/i18n-navigation";
 
-export default async function LocaleNotFound({
-  params,
-}: {
-  params: Promise<{ locale: string }>;
-}) {
+export default async function LocaleNotFound({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   // 启用 RSC 静态渲染注水（next-intl App Router 推荐）
   setRequestLocale(locale);
@@ -37,17 +33,11 @@ export default async function LocaleNotFound({
         <div className="flex justify-center mb-5">
           <Logo size={32} />
         </div>
-        <AlertTriangle
-          size={40}
-          className="mx-auto text-[var(--danger)] mb-4"
-          strokeWidth={1.5}
-        />
+        <AlertTriangle size={40} className="mx-auto text-[var(--danger)] mb-4" strokeWidth={1.5} />
         <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] mb-2">
           {t("notFound")}
         </h2>
-        <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-1">
-          {t("notFoundDesc")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-1">{t("notFoundDesc")}</p>
         <div className="flex items-center justify-center gap-[var(--space-2)] mt-5">
           <Link
             href="/auth/login"

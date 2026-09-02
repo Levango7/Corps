@@ -1,4 +1,5 @@
 import { getTranslations } from "next-intl/server";
+import { Link } from "@/lib/i18n-navigation";
 import { Logo } from "@/components/Logo";
 import { LanguageSwitcher } from "@/components/LanguageSwitcher";
 
@@ -26,12 +27,10 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
 
       {/* 品牌标志 —— Logo 组件本身含 SVG + "corps" 文字,不要外层再包一个 corps */}
       <div className="relative mb-8 text-center">
-        <a href="/" aria-label="corps" className="inline-flex">
+        <Link href="/" aria-label="corps" className="inline-flex">
           <Logo size={44} />
-        </a>
-        <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("tagline")}
-        </p>
+        </Link>
+        <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)]">{t("tagline")}</p>
       </div>
 
       {/* 表单卡片容器 */}

@@ -126,17 +126,17 @@ export default function LoginPage() {
         </form>
       </div>
 
-        <div className="mt-6 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("signupLink")}{" "}
-          <Link
-            href="/auth/signup"
-            className="font-[var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2"
-            onClick={() => {
-              track("click_signup", { cta: "card_footer", path: "/auth/login" });
-            }}
-          >
-            {t("signupCta")}
-          </Link>
+      <div className="mt-6 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+        {t("signupLink")}{" "}
+        <Link
+          href="/auth/signup"
+          className="font-[var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2"
+          onClick={() => {
+            track("click_signup", { cta: "card_footer", path: "/auth/login" });
+          }}
+        >
+          {t("signupCta")}
+        </Link>
       </div>
     </div>
   );

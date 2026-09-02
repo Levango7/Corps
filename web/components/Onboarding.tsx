@@ -51,13 +51,6 @@ export default function Onboarding({
     }
   }, [taskCount]);
 
-  function dismissForever() {
-    localStorage.setItem(STORAGE_KEY, "true");
-    setVisible(false);
-    setExpanded(false);
-    onDismiss();
-  }
-
   function complete() {
     localStorage.setItem(STORAGE_KEY, "true");
     setVisible(false);
@@ -87,15 +80,15 @@ export default function Onboarding({
     }
   }
 
-function BubbleIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
-      <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
-      <path d="M8 4.5v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-      <circle cx="8" cy="11" r="0.9" fill="currentColor" />
-    </svg>
-  );
-}
+  function BubbleIcon() {
+    return (
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M8 4.5v4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+        <circle cx="8" cy="11" r="0.9" fill="currentColor" />
+      </svg>
+    );
+  }
 
   if (!visible) return null;
 
@@ -112,9 +105,7 @@ function BubbleIcon() {
           <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
             {t("step1.title")}
           </span>
-          <span className="ml-1 text-[length:var(--text-xs)] opacity-80">
-            1/4
-          </span>
+          <span className="ml-1 text-[length:var(--text-xs)] opacity-80">1/4</span>
         </button>
       </div>
     );

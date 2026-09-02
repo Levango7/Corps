@@ -66,7 +66,8 @@ export default async function LocaleLayout({
           <WebVitalsReporter />
           {/* P2 数据埋点：公开页曝光归因（landing_view），渲染 null，仅挂载追踪钩子。 */}
           <PublicPageTracker />
-          {children}
+          {/* ClientLayout：Toast 容器 + 页面入场动画（客户端壳） */}
+          <ClientLayout>{children}</ClientLayout>
         </body>
       </html>
     </NextIntlClientProvider>

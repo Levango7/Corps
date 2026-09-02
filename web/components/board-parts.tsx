@@ -69,7 +69,10 @@ export function BoardColumn({
       // 纯文本匹配在 BoardView 双渲染下有歧义）
       data-column={column.id}
       className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
-      onDragOver={(e) => { e.preventDefault(); setDragOver(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOver(true);
+      }}
       onDragLeave={() => setDragOver(false)}
       onDrop={(e) => {
         const taskId = e.dataTransfer.getData("text/plain");
@@ -168,7 +171,9 @@ function BoardCard({
       }}
       className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
         draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
-      } ${selected ? "ring-2 ring-[var(--accent)]" : ""}`}
+      } ${selected ? "ring-2 ring-[var(--accent)]" : ""} ${
+        dragOverCard ? "ring-2 ring-[var(--accent-ring)]" : ""
+      }`}
       style={{
         borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
       }}
@@ -181,7 +186,10 @@ function BoardCard({
         setDraggingId(null);
         dragStartRef.current = null;
       }}
-      onDragOver={(e) => { e.preventDefault(); setDragOverCard(true); }}
+      onDragOver={(e) => {
+        e.preventDefault();
+        setDragOverCard(true);
+      }}
       onDragLeave={() => setDragOverCard(false)}
       onDrop={(e) => {
         e.preventDefault();
@@ -385,7 +393,6 @@ export function ListCards({
   selectionMode,
   onToggleSelect,
 }: ListCardProps) {
-  const [dragOverCard, setDragOverCard] = useState(false);
   const router = useRouter();
   const t = useTranslations("task");
   const tStatus = useTranslations("status");

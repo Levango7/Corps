@@ -140,7 +140,8 @@ svg {
 
 /* 细网格纹理（径向淡出，避免满屏压迫） */
 .auth-grid {
-  background-image: linear-gradient(var(--border-soft) 1px, transparent 1px),
+  background-image:
+    linear-gradient(var(--border-soft) 1px, transparent 1px),
     linear-gradient(90deg, var(--border-soft) 1px, transparent 1px);
   background-size: 44px 44px;
   -webkit-mask-image: radial-gradient(ellipse 80% 60% at 50% 32%, black 25%, transparent 72%);
@@ -154,7 +155,9 @@ svg {
 
 /* 按钮按压反馈 */
 .btn-press {
-  transition: transform var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
+  transition:
+    transform var(--motion-fast) ease,
+    box-shadow var(--motion-fast) ease;
 }
 .btn-press:active {
   transform: scale(0.97);
@@ -162,7 +165,9 @@ svg {
 
 /* 卡片悬停微抬升 */
 .card-lift {
-  transition: transform var(--motion-base) ease, box-shadow var(--motion-base) ease;
+  transition:
+    transform var(--motion-base) ease,
+    box-shadow var(--motion-base) ease;
 }
 .card-lift:hover {
   transform: translateY(-1px);
@@ -177,7 +182,9 @@ svg {
   outline: none;
 }
 .focus-ring:focus-visible {
-  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--accent-ring);
+  box-shadow:
+    0 0 0 2px var(--bg),
+    0 0 0 4px var(--accent-ring);
   border-radius: var(--radius-md);
 }
 
@@ -186,8 +193,14 @@ svg {
   animation: fadeIn var(--motion-enter) ease-out both;
 }
 @keyframes fadeIn {
-  from { opacity: 0; transform: translateY(4px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 /* ----------------------------------------------------------------------------
  * 自定义滚动条
@@ -239,8 +252,13 @@ svg {
   animation: skeletonPulse 1.5s ease-in-out infinite;
 }
 @keyframes skeletonPulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.4; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
 }
 
 /* ----------------------------------------------------------------------------
@@ -252,8 +270,14 @@ svg {
   animation: pageEnter var(--motion-enter) ease-out both;
 }
 @keyframes pageEnter {
-  from { opacity: 0; transform: translateY(8px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ----------------------------------------------------------------------------
@@ -264,16 +288,26 @@ svg {
   animation: modalEnter 200ms ease-out both;
 }
 @keyframes modalEnter {
-  from { opacity: 0; transform: scale(0.96) translateY(-4px); }
-  to   { opacity: 1; transform: scale(1) translateY(0); }
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 .modal-overlay {
   animation: overlayFade 200ms ease-out both;
 }
 @keyframes overlayFade {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 /* ----------------------------------------------------------------------------

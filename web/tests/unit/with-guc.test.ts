@@ -134,9 +134,9 @@ describe("withGuc - GUC 注入语义", () => {
   });
 
   it("未知 GUC key 抛出错误（白名单约束，防 SQL 拼接注入）", async () => {
-    await expect(
-      withGuc({ evil_key: "x" } as never, async () => null),
-    ).rejects.toThrow("未知的 RLS GUC key: evil_key");
+    await expect(withGuc({ evil_key: "x" } as never, async () => null)).rejects.toThrow(
+      "未知的 RLS GUC key: evil_key",
+    );
     // 抛错前不执行任何注入
     expect(txMock.$executeRawUnsafe).not.toHaveBeenCalled();
   });
