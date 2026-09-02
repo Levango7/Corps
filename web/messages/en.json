@@ -389,6 +389,13 @@
     },
     "socialProof": "{teams} teams are using corps to manage decisions and tasks",
     "features": {
+      "heading": "Core capabilities",
+      "col1Title": "Conclusions land automatically",
+      "col1Body": "Freeze discussion conclusions into decision records with version history and bidirectional links to tasks — no more manual copying.",
+      "col2Title": "Up and running in 15 minutes",
+      "col2Body": "Board/list views with drag-to-change-status and optimistic updates. Cmd+K global search across tasks and decisions.",
+      "col3Title": "Engine-level data isolation",
+      "col3Body": "PostgreSQL row-level security (RLS) enforces multi-tenant isolation. Cross-workspace requests are blocked.",
       "free": {
         "f01": "Task board (kanban & list views, drag to change status)",
         "f02": "Task details (assignee, due date, priority, status, labels, milestones)",
