@@ -25,6 +25,7 @@ import {
   X,
   History,
   AtSign,
+  AlertTriangle,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
@@ -33,6 +34,7 @@ import { STATUS_META } from "@/lib/task-meta";
 import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
+import { SubtaskSection } from "@/components/SubtaskSection";
 import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -56,6 +58,21 @@ interface Task {
   creator: Person | null;
   createdAt: string;
   updatedAt: string;
+  blocked: boolean;
+  blockedReason: string | null;
+  children: SubtaskItem[];
+}
+
+interface SubtaskItem {
+  id: string;
+  title: string;
+  status: Status;
+  priority: Priority;
+  blocked: boolean;
+  blockedReason: string | null;
+  assigneeId: string | null;
+  dueDate: string | null;
+  createdAt: string;
 }
 
 interface Comment {
@@ -484,6 +501,9 @@ export default function TaskDetailPage({
             </div>
           </div>
 
+          {/* 子任务（v0.4.0 队列第 1 项） */}
+          <SubtaskSection wid={wid} taskId={id} subtasks={task.children ?? []} onChanged={load} />
+
           {/* 决策记录 */}
           <section id="decisions" className="mt-[var(--space-6)] scroll-mt-[var(--topbar-h)]">
             <div className="flex items-center justify-between mb-[var(--space-3)]">
@@ -770,6 +790,49 @@ export default function TaskDetailPage({
               }
               className={fieldControl}
             />
+          </div>
+
+          {/* 阻塞标记（v0.4.0：问题/依赖卡住时标记，附原因） */}
+          <div className="col-span-2 md:col-span-auto w-full">
+            <div className={fieldLabel}>
+              <AlertTriangle size={13} />
+              {t("blockedLabel")}
+            </div>
+            {task.blocked ? (
+              <div className="space-y-1.5">
+                <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-xs)]">
+                  <AlertTriangle size={12} />
+                  {t("blockedBadge")}
+                </div>
+                <input
+                  type="text"
+                  defaultValue={task.blockedReason ?? ""}
+                  placeholder={t("blockedReasonPlaceholder")}
+                  maxLength={500}
+                  onBlur={(e) => {
+                    const reason = e.target.value.trim() || null;
+                    if (reason !== (task.blockedReason ?? null)) {
+                      patch({ blockedReason: reason });
+                    }
+                  }}
+                  className={fieldControl}
+                />
+                <button
+                  onClick={() => patch({ blocked: false, blockedReason: null })}
+                  className="text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:underline underline-offset-2"
+                >
+                  {t("blockedClear")}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => patch({ blocked: true })}
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <AlertTriangle size={13} />
+                {t("blockedMark")}
+              </button>
+            )}
           </div>
 
           <div className="col-span-2 md:col-span-auto w-full basis-full lg:basis-auto pt-[var(--space-3)] border-t border-[var(--border-soft)] space-y-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">

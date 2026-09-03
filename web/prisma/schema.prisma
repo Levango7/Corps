@@ -130,6 +130,11 @@ model Task {
   createdBy   String?   @map("created_by") @db.Uuid
   // 里程碑归属（可选）：null 表示未归入任何里程碑
   milestoneId String?   @map("milestone_id") @db.Uuid
+  // 子任务：父任务 ID（自关联，仅一层——父级本身不能是子任务，API 层强制）
+  parentId    String?   @map("parent_id") @db.Uuid
+  // 阻塞标记：任务被问题/依赖卡住时置 true，附原因说明
+  blocked       Boolean @default(false)
+  blockedReason String? @map("blocked_reason") @db.VarChar(500)
   createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at") 
   updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
 
@@ -138,6 +143,9 @@ model Task {
   // 创建者注销后任务保留，creator 置空（审计 D3：防跨工作区级联销毁）
   creator   User?      @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: SetNull)
   milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  // 子任务自关联：父任务删除时子任务一并删除（子任务语义上从属于父任务）
+  parent    Task?      @relation("TaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Task[]     @relation("TaskChildren")
   comments  Comment[]
   decisions Decision[]
   messages  Message[]
@@ -157,6 +165,8 @@ model Task {
   @@index([workspaceId, sortOrder])
   // 里程碑筛选：按工作区 + 里程碑高效分页
   @@index([workspaceId, milestoneId])
+  // 子任务列表：按父任务取子任务（任务详情页子任务区）
+  @@index([parentId])
   // 看板列内拖拽排序：按工作区 + 状态 + 排序值高效查询
   // 覆盖看板页「按列分组 + 列内按 sortOrder 排序」高频查询，避免回表 + 两次索引扫描
   @@index([workspaceId, status, sortOrder])

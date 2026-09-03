@@ -15,6 +15,9 @@ const createTaskSchema = z.object({
   dueDate: z.string().datetime().optional(),
   milestoneId: z.string().uuid().nullable().optional(),
   labelIds: z.array(z.string().uuid()).optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  blocked: z.boolean().optional(),
+  blockedReason: z.string().max(500).nullable().optional(),
 });
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -66,6 +69,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       tx.task.findMany({
         where: {
           workspaceId: wid,
+          // 列表/看板只返回顶层任务；子任务由任务详情 children 关联获取
+          parentId: null,
           ...assigneeFilter,
           ...milestoneFilter,
           ...statusFilter,
@@ -76,7 +81,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         include: {
           assignee: { select: { id: true, name: true, email: true } },
           labels: { include: { label: { select: { id: true, name: true, color: true } } } },
-          _count: { select: { comments: true } },
+          _count: { select: { comments: true, children: true } },
+          // 子任务完成数（进度汇总 3/5 的分子）
+          children: { where: { status: "done" }, select: { id: true } },
         },
         orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
         // 上限保护：看板场景单工作区任务量可控；游标分页列入 v2（见 API-DESIGN-GUIDE）
@@ -84,10 +91,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       }),
     );
 
-    // 展平 labels 形态：Prisma include 返回 [{ label: {... } }]，前端期望 [{ id, name, color }]
+    // 展平 labels 形态 + 子任务进度（subtaskTotal/subtaskDone 替换 children 数组）
     const flattened = tasks.map((t) => ({
       ...t,
       labels: t.labels.map((tl) => tl.label),
+      subtaskTotal: t._count.children,
+      subtaskDone: t.children.length,
+      children: undefined,
     }));
 
     return NextResponse.json({ code: 200, data: flattened });
@@ -139,6 +149,16 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           }
         }
 
+        // 校验 parentId：父任务必须同工作区存在，且父级本身不能是子任务（仅一层层级）
+        if (validated.parentId) {
+          const parent = await tx.task.findFirst({
+            where: { id: validated.parentId, workspaceId: wid },
+            select: { id: true, parentId: true },
+          });
+          if (!parent) return { invalidParent: "notFound" as const };
+          if (parent.parentId) return { invalidParent: "nested" as const };
+        }
+
         const maxOrder = await tx.task.aggregate({
           where: { workspaceId: wid },
           _max: { sortOrder: true },
@@ -152,6 +172,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             assigneeId: validated.assigneeId,
             dueDate: validated.dueDate ? new Date(validated.dueDate) : undefined,
             milestoneId: validated.milestoneId ?? undefined,
+            parentId: validated.parentId ?? undefined,
+            blocked: validated.blocked ?? false,
+            blockedReason: validated.blockedReason ?? undefined,
             workspaceId: wid,
             createdBy: ctx.payload.sub,
             sortOrder: (maxOrder._max.sortOrder ?? -1) + 1,
@@ -176,6 +199,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           invalidAssignee: false as const,
           invalidMilestone: false as const,
           invalidLabel: false as const,
+          invalidParent: false as const,
           task: created,
           isFirstTask: taskCount === 1,
           dupCount,
@@ -195,6 +219,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     if (task.invalidLabel) {
       return NextResponse.json({ code: 400, message: "标签不存在" }, { status: 400 });
+    }
+    if (task.invalidParent === "notFound") {
+      return NextResponse.json({ code: 400, message: "父任务不存在" }, { status: 400 });
+    }
+    if (task.invalidParent === "nested") {
+      return NextResponse.json(
+        { code: 400, message: "仅支持一层子任务（父级本身不能是子任务）" },
+        { status: 400 },
+      );
     }
 
     // P2 数据埋点：create_task 事件（不阻塞主流程）

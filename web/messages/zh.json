@@ -208,7 +208,17 @@
     "fieldDueOptional": "截止日期（可选）",
     "fieldMilestoneOptional": "里程碑（可选）",
     "fieldLabelsOptional": "标签（可选，多选）",
-    "actionCreate": "创建"
+    "actionCreate": "创建",
+    "subtaskTitle": "子任务",
+    "subtaskPlaceholder": "添加子任务…",
+    "subtaskAdd": "添加",
+    "subtaskAddFailed": "添加子任务失败",
+    "subtaskToggle": "切换完成状态：{title}",
+    "blockedLabel": "阻塞",
+    "blockedBadge": "已阻塞",
+    "blockedMark": "标记为阻塞",
+    "blockedClear": "清除阻塞标记",
+    "blockedReasonPlaceholder": "阻塞原因（可选）…"
   },
   "time": {
     "justNow": "刚刚",

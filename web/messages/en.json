@@ -208,7 +208,17 @@
     "fieldDueOptional": "Due date (optional)",
     "fieldMilestoneOptional": "Milestone (optional)",
     "fieldLabelsOptional": "Labels (optional, multi-select)",
-    "actionCreate": "Create"
+    "actionCreate": "Create",
+    "subtaskTitle": "Subtasks",
+    "subtaskPlaceholder": "Add a subtask…",
+    "subtaskAdd": "Add",
+    "subtaskAddFailed": "Failed to add subtask",
+    "subtaskToggle": "Toggle done: {title}",
+    "blockedLabel": "Blocked",
+    "blockedBadge": "Blocked",
+    "blockedMark": "Mark as blocked",
+    "blockedClear": "Clear blocked flag",
+    "blockedReasonPlaceholder": "Blocker reason (optional)…"
   },
   "time": {
     "justNow": "Just now",

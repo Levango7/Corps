@@ -43,6 +43,25 @@ export interface Task {
   labels?: Label[];
   createdAt?: string;
   updatedAt?: string;
+  /** 阻塞标记（v0.4.0 队列：问题/依赖卡住） */
+  blocked?: boolean;
+  blockedReason?: string | null;
+  /** 子任务进度汇总（列表接口注入；无子任务时 total=0） */
+  subtaskTotal?: number;
+  subtaskDone?: number;
+}
+
+/** 子任务（任务详情 children 关联形态） */
+export interface Subtask {
+  id: string;
+  title: string;
+  status: Status;
+  priority: Priority;
+  blocked: boolean;
+  blockedReason: string | null;
+  assigneeId: string | null;
+  dueDate: string | null;
+  createdAt: string;
 }
 
 /** 任务详情形态：description 必有，assignee/creator 完整。 */
@@ -53,6 +72,7 @@ export interface TaskDetail extends Task {
   dueDate: string | null;
   createdAt: string;
   updatedAt: string;
+  children?: Subtask[];
 }
 
 /** 评论 */

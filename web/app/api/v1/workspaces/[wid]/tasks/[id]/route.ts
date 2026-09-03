@@ -14,6 +14,8 @@ const updateTaskSchema = z.object({
   assigneeId: z.string().uuid().nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
   sortOrder: z.number().optional(),
+  blocked: z.boolean().optional(),
+  blockedReason: z.string().max(500).nullable().optional(),
 });
 
 /** GET /v1/workspaces/{wid}/tasks/{id} — 任务详情（详情页首屏） */
@@ -32,6 +34,21 @@ export async function GET(
         include: {
           assignee: { select: { id: true, name: true, email: true, image: true } },
           creator: { select: { id: true, name: true, email: true } },
+          // 子任务列表（任务详情页子任务区；按创建时间正序）
+          children: {
+            select: {
+              id: true,
+              title: true,
+              status: true,
+              priority: true,
+              blocked: true,
+              blockedReason: true,
+              assigneeId: true,
+              dueDate: true,
+              createdAt: true,
+            },
+            orderBy: { createdAt: "asc" },
+          },
         },
       }),
     );

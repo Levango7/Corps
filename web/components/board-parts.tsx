@@ -10,7 +10,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown } from "lucide-react";
+import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
 import { DueTag } from "@/components/DueTag";
 import { TaskLabels } from "@/components/TaskLabels";
@@ -221,7 +221,36 @@ function BoardCard({
           <p className="text-[length:var(--text-sm)] font-medium text-[var(--fg)] truncate">
             {task.title}
           </p>
-          {task.dueDate && <DueTag dueDate={task.dueDate} />}
+          <div className="flex items-center gap-1.5 flex-wrap">
+            {task.dueDate && <DueTag dueDate={task.dueDate} />}
+            {/* 子任务进度徽标（v0.4.0：有子任务的父任务显示 done/total） */}
+            {(task.subtaskTotal ?? 0) > 0 && (
+              <span className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                <span className="inline-block w-8 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden align-middle">
+                  <span
+                    className="block h-full rounded-full"
+                    style={{
+                      width: `${Math.round(((task.subtaskDone ?? 0) / (task.subtaskTotal ?? 1)) * 100)}%`,
+                      background:
+                        (task.subtaskDone ?? 0) === (task.subtaskTotal ?? 0)
+                          ? "var(--success)"
+                          : "var(--accent)",
+                    }}
+                  />
+                </span>
+                {task.subtaskDone}/{task.subtaskTotal}
+              </span>
+            )}
+            {/* 阻塞徽标 */}
+            {task.blocked && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-xs)]"
+                title={task.blockedReason ?? undefined}
+              >
+                <AlertTriangle size={11} />
+              </span>
+            )}
+          </div>
           {task.labels && task.labels.length > 0 && <TaskLabels labels={task.labels} />}
           {task.assignee && (
             <div className="flex items-center gap-1 mt-2">
