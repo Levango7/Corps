@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
+import { Mermaid } from "@/components/Mermaid";
 
 /**
  * 极简 Markdown 渲染器（零依赖，不使用 dangerouslySetInnerHTML）。
@@ -103,6 +104,11 @@ export default function Markdown({ source }: { source: string }) {
         i++;
       }
       i++; // 跳过收尾 ```
+      // mermaid 代码块 → 图表渲染（v0.4.0 队列第 3 项；决策/文档/评论三处通用）
+      if (lang === "mermaid" && buf.length > 0) {
+        blocks.push(<Mermaid key={key++} code={buf.join("\n")} />);
+        continue;
+      }
       blocks.push(
         <pre
           key={key++}
