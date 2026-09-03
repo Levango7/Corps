@@ -137,6 +137,9 @@ export default function TaskDetailPage({
   const [decisionOpen, setDecisionOpen] = useState(false);
   // 决策编辑/预览切换：edit=编辑 textarea，preview=渲染 markdown
   const [decisionMode, setDecisionMode] = useState<"edit" | "preview">("edit");
+  // 打印模式：true 时挂载 .print-area（导出 PDF 专用），afterprint 后卸载——
+  // 平时 DOM 中不存在打印内容，避免 getByText 多元素歧义（E2E strict violation 修复）
+  const [printMode, setPrintMode] = useState(false);
 
   const [titleDraft, setTitleDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
@@ -519,7 +522,9 @@ export default function TaskDetailPage({
               </h2>
               <div className="flex items-center gap-2">
                 <button
-                  onClick={() => window.print()}
+                  onClick={() => {
+                    setPrintMode(true);
+                  }}
                   disabled={decisions.length === 0}
                   title={t("exportPdfHint")}
                   className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
@@ -639,21 +644,37 @@ export default function TaskDetailPage({
           </section>
 
           {/* 打印专用容器（导出 PDF）：屏幕隐藏，打印时仅此区可见 */}
-          <div className="hidden print:block print-area" aria-hidden="true">
-            <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-4">
-              {task.title} · {t("decisionsTitle")}
-            </h1>
-            {decisions.map((d) => (
-              <section key={d.id} className="mb-8">
-                <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-2">
-                  v{d.version} · {d.author.name || d.author.email} ·{" "}
-                  {new Date(d.createdAt).toLocaleString()}
-                </p>
-                <Markdown source={d.markdown} />
-              </section>
-            ))}
-            {decisions.length === 0 && <p>—</p>}
-          </div>
+          {printMode && (
+            <div
+              className="hidden print:block print-area"
+              aria-hidden="true"
+              ref={(el) => {
+                // 挂载即触发打印；afterprint 卸载 printMode（容器随条件渲染移除）
+                if (el) {
+                  requestAnimationFrame(() => window.print());
+                  const off = () => {
+                    setPrintMode(false);
+                    window.removeEventListener("afterprint", off);
+                  };
+                  window.addEventListener("afterprint", off);
+                }
+              }}
+            >
+              <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-4">
+                {task.title} · {t("decisionsTitle")}
+              </h1>
+              {decisions.map((d) => (
+                <section key={d.id} className="mb-8">
+                  <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-2">
+                    v{d.version} · {d.author.name || d.author.email} ·{" "}
+                    {new Date(d.createdAt).toLocaleString()}
+                  </p>
+                  <Markdown source={d.markdown} />
+                </section>
+              ))}
+              {decisions.length === 0 && <p>—</p>}
+            </div>
+          )}
 
           {/* 聊天（v2 F1：IM 轻沟通 MVP）*/}
           <ChatPanel wid={wid} taskId={id} />
