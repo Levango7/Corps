@@ -104,6 +104,7 @@ const GUC_SQL: Record<string, string> = {
   auth_op: "SELECT set_config('app.auth_op', $1, true)",
   user_id: "SELECT set_config('app.user_id', $1, true)",
   workspace_id: "SELECT set_config('app.workspace_id', $1, true)",
+  public_token: "SELECT set_config('app.public_token', $1, true)",
 };
 
 async function setGucs(tx: Tx, gucs: Record<string, string | undefined>) {
@@ -175,4 +176,17 @@ export async function runWithWorkspace<T>(
   userId?: string,
 ): Promise<T> {
   return withGuc({ workspace_id: wid, user_id: userId }, fn);
+}
+
+/**
+ * 公开分享文档只读上下文：把 URL 中的 share_token 注入 app.public_token，
+ * documents 表的 p_documents_share_select 策略仅放行 token 相等的行
+ * （FORCE RLS 不绕过，NULL token 永不匹配）。仅限 /api/documents/share/[token]
+ * 公开读路径使用，无写入能力。
+ */
+export function runWithShareToken<T>(
+  token: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return withGuc({ public_token: token }, fn);
 }

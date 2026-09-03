@@ -11,8 +11,8 @@
 --   3. 全部租户表 ENABLE + FORCE ROW LEVEL SECURITY（FORCE 堵 owner 旁路）
 --   4. 策略定义（与应用层对齐，见 ADR-006 的 op 信任模型）
 --
--- 信任模型：app.auth_op / app.user_id / app.workspace_id 三个 GUC 仅由服务端代码
---   （lib/auth.ts 的 withGuc 白名单）设置，客户端不可控。op 枚举：
+-- 信任模型：app.auth_op / app.user_id / app.workspace_id / app.public_token 四个 GUC
+--   仅由服务端代码（lib/auth.ts 的 withGuc 白名单）设置，客户端不可控。op 枚举：
 --     login     登录/刷新时按 user_id 读自己的成员关系
 --     provision 注册/建工作区/服务端埋点写入
 --     webhook   支付通道回调（订阅与计划同步）
@@ -20,6 +20,8 @@
 --     seat      邀请/接受的席位保护段（wid+uid 齐备，允许 FOR UPDATE 行锁）
 --     cron      定时作业跨工作区只读扫描（截止日提醒；无写入路径）
 --     calendar  日历同步跨工作区只读扫描（任务定位/用户截止日任务扫描；无写入路径）
+--   public_token 不属于 op 枚举：documents 公开分享读按 share_token 与之相等放行
+--   （p_documents_share_select，仅 SELECT），token 本身 192 位熵不可猜。
 -- ===========================================================================
 
 -- ─── 1. 运行时角色 ─────────────────────────────────────────────────────────
@@ -45,7 +47,8 @@ BEGIN
     'members','tasks','comments','decisions','decision_versions',
     'subscriptions','notifications','workspaces','invitations','analytics_events',
     'labels','milestones','messages','message_attachments','task_labels',
-    'chat_presences','message_reads','calendar_connections','task_calendar_events'
+    'chat_presences','message_reads','calendar_connections','task_calendar_events',
+    'documents'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -200,6 +203,22 @@ CREATE POLICY p_task_calendar_events_rls ON task_calendar_events FOR ALL
     task_id IN (SELECT t.id FROM tasks t
                 WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
     OR current_setting('app.auth_op', true) = 'calendar'
+  );
+
+-- documents（v0.4.0 文档中心）：workspace 谓词 + 公开分享只读逃生口。
+-- /api/documents/share/[token] 无登录态，经 runWithShareToken 注入 app.public_token，
+-- share_token 与之相等的行才可读（NULL 永不匹配：未分享/草稿天然隔离）；
+-- 写操作仅 workspace 谓词，无逃生口。
+DROP POLICY IF EXISTS p_documents_rls ON documents;
+CREATE POLICY p_documents_rls ON documents FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_documents_share_select ON documents;
+CREATE POLICY p_documents_share_select ON documents FOR SELECT
+  USING (
+    share_token IS NOT NULL
+    AND share_token = NULLIF(current_setting('app.public_token', true), '')
   );
 
 DROP POLICY IF EXISTS p_comments_rls ON comments;

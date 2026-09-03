@@ -3,8 +3,14 @@
 
 -- -- PostgreSQL database dump --  \restrict DuB0QouDvyyebyUUPZ1OlDz8PxiEdzVlk2GnqoQymvnheZ1cDHpw7W442EsAKwc  -- Dumped from database version 18.6 -- Dumped by pg_dump version 18.6  SET statement_timeout = 0; SET lock_timeout = 0; SET idle_in_transaction_session_timeout = 0; SET transaction_timeout = 0; SET client_encoding = 'UTF8'; SET standard_conforming_strings = on; SELECT pg_catalog.set_config('search_path', '', false); SET check_function_bodies = false; SET xmloption = content; SET client_min_messages = warning; SET row_security = off;  -- -- Name: app; Type: SCHEMA; Schema: -; Owner: - --  CREATE SCHEMA app;   -- -- Name: pg_trgm; Type: EXTENSION; Schema: -; Owner: - --  CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;   -- -- Name: get_workspace_id(); Type: FUNCTION; Schema: app; Owner: - --  CREATE FUNCTION app.get_workspace_id() RETURNS uuid     LANGUAGE plpgsql SECURITY DEFINER     AS $$ BEGIN   RETURN current_setting('app.workspace_id', true)::uuid; EXCEPTION WHEN others THEN RETURN NULL; END; $$;   -- -- Name: set_workspace_id(uuid); Type: FUNCTION; Schema: app; Owner: - --  CREATE FUNCTION app.set_workspace_id(wid uuid) RETURNS void     LANGUAGE plpgsql SECURITY DEFINER     AS $$ BEGIN   SET LOCAL app.workspace_id = wid; END; $$;   SET default_tablespace = '';  SET default_table_access_method = heap;  -- -- Name: _prisma_migrations; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public._prisma_migrations (     id character varying(36) NOT NULL,     checksum character varying(64) NOT NULL,     finished_at timestamp with time zone,     migration_name character varying(255) NOT NULL,     logs text,     rolled_back_at timestamp with time zone,     started_at timestamp with time zone DEFAULT now() NOT NULL,     applied_steps_count integer DEFAULT 0 NOT NULL );   -- -- Name: accounts; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.accounts (     id uuid DEFAULT gen_random_uuid() NOT NULL,     account_id text NOT NULL,     provider_id text NOT NULL,     user_id uuid NOT NULL,     access_token text,     refresh_token text,     id_token text,     access_token_expires_at timestamp with time zone,     refresh_token_expires_at timestamp with time zone,     scope text,     password text,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL );   -- -- Name: analytics_events; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.analytics_events (     id uuid DEFAULT gen_random_uuid() NOT NULL,     user_id uuid,     workspace_id uuid,     name character varying(64) NOT NULL,     props json DEFAULT '{}'::json NOT NULL,     session_id character varying(64),     created_at timestamp with time zone DEFAULT now() NOT NULL );   -- -- Name: comments; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.comments (     id uuid DEFAULT gen_random_uuid() NOT NULL,     task_id uuid NOT NULL,     workspace_id uuid NOT NULL,     author_id uuid,     body text NOT NULL,     mentions text[] DEFAULT '{}'::text[] NOT NULL,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL );   -- -- Name: decision_versions; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.decision_versions (     id uuid DEFAULT gen_random_uuid() NOT NULL,     decision_id uuid NOT NULL,     workspace_id uuid NOT NULL,     markdown text NOT NULL,     version integer NOT NULL,     author_id uuid,     created_at timestamp with time zone DEFAULT now() NOT NULL,     CONSTRAINT decision_versions_version_check CHECK ((version >= 1)) );   -- -- Name: decisions; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.decisions (     id uuid DEFAULT gen_random_uuid() NOT NULL,     task_id uuid NOT NULL,     workspace_id uuid NOT NULL,     markdown text NOT NULL,     version integer DEFAULT 1 NOT NULL,     author_id uuid,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL,     CONSTRAINT decisions_version_check CHECK ((version >= 1)) );   -- -- Name: invitations; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.invitations (     id uuid DEFAULT gen_random_uuid() NOT NULL,     workspace_id uuid NOT NULL,     email character varying(255) NOT NULL,     token_hash character varying(64) NOT NULL,     role character varying(20) DEFAULT 'member'::character varying NOT NULL,     invited_by uuid NOT NULL,     expires_at timestamp with time zone NOT NULL,     accepted_at timestamp with time zone,     created_at timestamp with time zone DEFAULT now() NOT NULL );   -- -- Name: members; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.members (     user_id uuid NOT NULL,     workspace_id uuid NOT NULL,     role character varying(20) DEFAULT 'member'::character varying NOT NULL,     invited_by uuid,     joined_at timestamp with time zone DEFAULT now() NOT NULL,     invited_at timestamp with time zone DEFAULT now() NOT NULL,     CONSTRAINT members_role_check CHECK (((role)::text = ANY ((ARRAY['owner'::character varying, 'admin'::character varying, 'member'::character varying])::text[]))) );   -- -- Name: notifications; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.notifications (     id uuid DEFAULT gen_random_uuid() NOT NULL,     workspace_id uuid NOT NULL,     user_id uuid NOT NULL,     type character varying(30) NOT NULL,     entity_id uuid NOT NULL,     entity_title character varying(255) NOT NULL,     read boolean DEFAULT false NOT NULL,     created_at timestamp with time zone DEFAULT now() NOT NULL );   -- -- Name: processed_stripe_events; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.processed_stripe_events (     id character varying(255) NOT NULL,     received_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL );   -- -- Name: processed_payment_events; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.processed_payment_events (     provider character varying(20) NOT NULL,     event_id character varying(255) NOT NULL,     received_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL );   -- -- Name: sessions; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.sessions (     id uuid DEFAULT gen_random_uuid() NOT NULL,     expires_at timestamp with time zone NOT NULL,     token text NOT NULL,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL,     ip_address character varying(45),     user_agent character varying(500),     user_id uuid NOT NULL );   -- -- Name: subscriptions; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.subscriptions (     id uuid DEFAULT gen_random_uuid() NOT NULL,     workspace_id uuid NOT NULL,     stripe_customer_id character varying(255),     stripe_sub_id character varying(255),     provider character varying(20),     provider_order_id character varying(255),     quantity integer DEFAULT 1 NOT NULL,     status character varying(20) DEFAULT 'active'::character varying NOT NULL,     current_period_end timestamp with time zone,     canceled_at timestamp with time zone,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL,     CONSTRAINT subscriptions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'past_due'::character varying, 'canceled'::character varying, 'trialing'::character varying, 'incomplete'::character varying])::text[]))) );   -- -- Name: tasks; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.tasks (     id uuid DEFAULT gen_random_uuid() NOT NULL,     workspace_id uuid NOT NULL,     title character varying(255) NOT NULL,     description text,     status character varying(20) DEFAULT 'todo'::character varying NOT NULL,     priority character varying(20) DEFAULT 'medium'::character varying NOT NULL,     assignee_id uuid,     due_date timestamp with time zone,     sort_order double precision DEFAULT 0 NOT NULL,     created_by uuid,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL,     CONSTRAINT tasks_priority_check CHECK (((priority)::text = ANY ((ARRAY['low'::character varying, 'medium'::character varying, 'high'::character varying, 'urgent'::character varying])::text[]))),     CONSTRAINT tasks_status_check CHECK (((status)::text = ANY ((ARRAY['todo'::character varying, 'in_progress'::character varying, 'review'::character varying, 'done'::character varying])::text[]))) );   -- -- Name: users; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.users (     id uuid DEFAULT gen_random_uuid() NOT NULL,     name character varying(100),     email character varying(255) NOT NULL,     email_verified boolean DEFAULT false NOT NULL,     avatar_url text,     password_hash text,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL,     last_login_at timestamp with time zone );   -- -- Name: verifications; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.verifications (     id uuid DEFAULT gen_random_uuid() NOT NULL,     identifier text NOT NULL,     value text NOT NULL,     expires_at timestamp with time zone NOT NULL,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL );   -- -- Name: workspaces; Type: TABLE; Schema: public; Owner: - --  CREATE TABLE public.workspaces (     id uuid DEFAULT gen_random_uuid() NOT NULL,     name character varying(100) NOT NULL,     slug character varying(50) NOT NULL,     owner_id uuid NOT NULL,     plan character varying(20) DEFAULT 'free'::character varying NOT NULL,     seat_limit integer DEFAULT 10 NOT NULL,     created_at timestamp with time zone DEFAULT now() NOT NULL,     updated_at timestamp with time zone DEFAULT now() NOT NULL,     CONSTRAINT workspaces_plan_check CHECK (((plan)::text = ANY ((ARRAY['free'::character varying, 'starter'::character varying, 'pro'::character varying, 'enterprise'::character varying])::text[]))),     CONSTRAINT workspaces_seat_limit_check CHECK (((seat_limit >= 1) AND (seat_limit <= 1000))) );   -- -- Name: _prisma_migrations _prisma_migrations_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public._prisma_migrations     ADD CONSTRAINT _prisma_migrations_pkey PRIMARY KEY (id);   -- -- Name: accounts accounts_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.accounts     ADD CONSTRAINT accounts_pkey PRIMARY KEY (id);   -- -- Name: analytics_events analytics_events_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.analytics_events     ADD CONSTRAINT analytics_events_pkey PRIMARY KEY (id);   -- -- Name: comments comments_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.comments     ADD CONSTRAINT comments_pkey PRIMARY KEY (id);   -- -- Name: decision_versions decision_versions_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decision_versions     ADD CONSTRAINT decision_versions_pkey PRIMARY KEY (id);   -- -- Name: decisions decisions_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decisions     ADD CONSTRAINT decisions_pkey PRIMARY KEY (id);   -- -- Name: invitations invitations_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.invitations     ADD CONSTRAINT invitations_pkey PRIMARY KEY (id);   -- -- Name: members members_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.members     ADD CONSTRAINT members_pkey PRIMARY KEY (user_id, workspace_id);   -- -- Name: notifications notifications_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.notifications     ADD CONSTRAINT notifications_pkey PRIMARY KEY (id);   -- -- Name: processed_stripe_events processed_stripe_events_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.processed_stripe_events     ADD CONSTRAINT processed_stripe_events_pkey PRIMARY KEY (id);   -- -- Name: processed_payment_events processed_payment_events_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.processed_payment_events     ADD CONSTRAINT processed_payment_events_pkey PRIMARY KEY (provider, event_id);   -- -- Name: sessions sessions_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.sessions     ADD CONSTRAINT sessions_pkey PRIMARY KEY (id);   -- -- Name: subscriptions subscriptions_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.subscriptions     ADD CONSTRAINT subscriptions_pkey PRIMARY KEY (id);   -- -- Name: tasks tasks_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.tasks     ADD CONSTRAINT tasks_pkey PRIMARY KEY (id);   -- -- Name: users users_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.users     ADD CONSTRAINT users_pkey PRIMARY KEY (id);   -- -- Name: verifications verifications_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.verifications     ADD CONSTRAINT verifications_pkey PRIMARY KEY (id);   -- -- Name: workspaces workspaces_pkey; Type: CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.workspaces     ADD CONSTRAINT workspaces_pkey PRIMARY KEY (id);   -- -- Name: accounts_user_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX accounts_user_id_idx ON public.accounts USING btree (user_id);   -- -- Name: analytics_events_name_created_at_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX analytics_events_name_created_at_idx ON public.analytics_events USING btree (name, created_at);   -- -- Name: analytics_events_session_id_created_at_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX analytics_events_session_id_created_at_idx ON public.analytics_events USING btree (session_id, created_at);   -- -- Name: analytics_events_user_id_created_at_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX analytics_events_user_id_created_at_idx ON public.analytics_events USING btree (user_id, created_at);   -- -- Name: analytics_events_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX analytics_events_workspace_id_created_at_idx ON public.analytics_events USING btree (workspace_id, created_at);   -- -- Name: comments_task_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX comments_task_id_idx ON public.comments USING btree (task_id);   -- -- Name: comments_workspace_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX comments_workspace_id_idx ON public.comments USING btree (workspace_id);   -- -- Name: decision_versions_decision_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX decision_versions_decision_id_idx ON public.decision_versions USING btree (decision_id);   -- -- Name: decision_versions_workspace_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX decision_versions_workspace_id_idx ON public.decision_versions USING btree (workspace_id);   -- -- Name: decisions_task_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX decisions_task_id_idx ON public.decisions USING btree (task_id);   -- -- Name: decisions_workspace_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX decisions_workspace_id_idx ON public.decisions USING btree (workspace_id);   -- -- Name: idx_decisions_markdown_trgm; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX idx_decisions_markdown_trgm ON public.decisions USING gin (markdown public.gin_trgm_ops);   -- -- Name: idx_tasks_description_trgm; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX idx_tasks_description_trgm ON public.tasks USING gin (description public.gin_trgm_ops);   -- -- Name: idx_tasks_title_trgm; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX idx_tasks_title_trgm ON public.tasks USING gin (title public.gin_trgm_ops);   -- -- Name: invitations_email_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX invitations_email_idx ON public.invitations USING btree (email);   -- -- Name: invitations_token_hash_key; Type: INDEX; Schema: public; Owner: - --  CREATE UNIQUE INDEX invitations_token_hash_key ON public.invitations USING btree (token_hash);   -- -- Name: members_user_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX members_user_id_idx ON public.members USING btree (user_id);   -- -- Name: members_workspace_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX members_workspace_id_idx ON public.members USING btree (workspace_id);   -- -- Name: notifications_user_id_workspace_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX notifications_user_id_workspace_id_idx ON public.notifications USING btree (user_id, workspace_id);   -- -- Name: notifications_workspace_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX notifications_workspace_id_idx ON public.notifications USING btree (workspace_id);   -- -- Name: notifications_workspace_id_user_id_read_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX notifications_workspace_id_user_id_read_idx ON public.notifications USING btree (workspace_id, user_id, read);   -- -- Name: sessions_token_key; Type: INDEX; Schema: public; Owner: - --  CREATE UNIQUE INDEX sessions_token_key ON public.sessions USING btree (token);   -- -- Name: sessions_user_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX sessions_user_id_idx ON public.sessions USING btree (user_id);   -- -- Name: subscriptions_stripe_customer_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX subscriptions_stripe_customer_id_idx ON public.subscriptions USING btree (stripe_customer_id);   -- -- Name: subscriptions_workspace_id_key; Type: INDEX; Schema: public; Owner: - --  CREATE UNIQUE INDEX subscriptions_workspace_id_key ON public.subscriptions USING btree (workspace_id);   -- -- Name: tasks_assignee_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX tasks_assignee_id_idx ON public.tasks USING btree (assignee_id);   -- -- Name: tasks_workspace_id_created_at_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX tasks_workspace_id_created_at_idx ON public.tasks USING btree (workspace_id, created_at);   -- -- Name: tasks_workspace_id_status_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX tasks_workspace_id_status_idx ON public.tasks USING btree (workspace_id, status);   -- -- Name: uq_invitations_pending; Type: INDEX; Schema: public; Owner: - --  CREATE UNIQUE INDEX uq_invitations_pending ON public.invitations USING btree (workspace_id, email) WHERE (accepted_at IS NULL);   -- -- Name: users_email_key; Type: INDEX; Schema: public; Owner: - --  CREATE UNIQUE INDEX users_email_key ON public.users USING btree (email);   -- -- Name: workspaces_owner_id_idx; Type: INDEX; Schema: public; Owner: - --  CREATE INDEX workspaces_owner_id_idx ON public.workspaces USING btree (owner_id);   -- -- Name: workspaces_slug_key; Type: INDEX; Schema: public; Owner: - --  CREATE UNIQUE INDEX workspaces_slug_key ON public.workspaces USING btree (slug);   -- -- Name: accounts accounts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.accounts     ADD CONSTRAINT accounts_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;   -- -- Name: analytics_events analytics_events_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.analytics_events     ADD CONSTRAINT analytics_events_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE SET NULL;   -- -- Name: analytics_events analytics_events_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.analytics_events     ADD CONSTRAINT analytics_events_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: comments comments_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.comments     ADD CONSTRAINT comments_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;   -- -- Name: comments comments_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.comments     ADD CONSTRAINT comments_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;   -- -- Name: comments comments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.comments     ADD CONSTRAINT comments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: decision_versions decision_versions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decision_versions     ADD CONSTRAINT decision_versions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;   -- -- Name: decision_versions decision_versions_decision_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decision_versions     ADD CONSTRAINT decision_versions_decision_id_fkey FOREIGN KEY (decision_id) REFERENCES public.decisions(id) ON DELETE CASCADE;   -- -- Name: decision_versions decision_versions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decision_versions     ADD CONSTRAINT decision_versions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: decisions decisions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decisions     ADD CONSTRAINT decisions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON DELETE SET NULL;   -- -- Name: decisions decisions_task_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decisions     ADD CONSTRAINT decisions_task_id_fkey FOREIGN KEY (task_id) REFERENCES public.tasks(id) ON DELETE CASCADE;   -- -- Name: decisions decisions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.decisions     ADD CONSTRAINT decisions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: invitations invitations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.invitations     ADD CONSTRAINT invitations_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: members members_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.members     ADD CONSTRAINT members_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;   -- -- Name: members members_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.members     ADD CONSTRAINT members_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: notifications notifications_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.notifications     ADD CONSTRAINT notifications_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;   -- -- Name: notifications notifications_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.notifications     ADD CONSTRAINT notifications_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: sessions sessions_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.sessions     ADD CONSTRAINT sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES public.users(id) ON DELETE CASCADE;   -- -- Name: subscriptions subscriptions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.subscriptions     ADD CONSTRAINT subscriptions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: tasks tasks_assignee_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.tasks     ADD CONSTRAINT tasks_assignee_id_fkey FOREIGN KEY (assignee_id) REFERENCES public.users(id) ON DELETE SET NULL;   -- -- Name: tasks tasks_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.tasks     ADD CONSTRAINT tasks_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON DELETE SET NULL;   -- -- Name: tasks tasks_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.tasks     ADD CONSTRAINT tasks_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON DELETE CASCADE;   -- -- Name: workspaces workspaces_owner_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: - --  ALTER TABLE ONLY public.workspaces     ADD CONSTRAINT workspaces_owner_id_fkey FOREIGN KEY (owner_id) REFERENCES public.users(id) ON DELETE CASCADE;   -- -- PostgreSQL database dump complete --  \unrestrict DuB0QouDvyyebyUUPZ1OlDz8PxiEdzVlk2GnqoQymvnheZ1cDHpw7W442EsAKwc 
 
+> 注：上方 pg_dump 部分为 2026-08-25 快照，晚于该日期新增的迁移
+> （labels/milestones/messages/chat_presences/message_reads/calendar 系列、documents）
+> 未包含在内。表结构权威 = web/prisma/schema.prisma + web/prisma/migrations/；
+> RLS 权威 = 下方 rls-activate.sql（entrypoint 实际执行的就是它，守卫测试亦以它为准）。
+> 待办：待全套迁移齐备后用 pg_dump --schema-only 重新生成 dump 部分。
+
 -- ============================================================================
--- RLS 激活与策略（来自 db/rls-activate.sql）
+-- RLS 激活与策略（来自 db/rls-activate.sql，2026-09-03 同步版）
 -- ============================================================================
 
 -- ===========================================================================
@@ -20,19 +26,23 @@
 --   3. 全部租户表 ENABLE + FORCE ROW LEVEL SECURITY（FORCE 堵 owner 旁路）
 --   4. 策略定义（与应用层对齐，见 ADR-006 的 op 信任模型）
 --
--- 信任模型：app.auth_op / app.user_id / app.workspace_id 三个 GUC 仅由服务端代码
---   （lib/auth.ts 的 withGuc 白名单）设置，客户端不可控。op 枚举：
+-- 信任模型：app.auth_op / app.user_id / app.workspace_id / app.public_token 四个 GUC
+--   仅由服务端代码（lib/auth.ts 的 withGuc 白名单）设置，客户端不可控。op 枚举：
 --     login     登录/刷新时按 user_id 读自己的成员关系
 --     provision 注册/建工作区/服务端埋点写入
---     webhook   Stripe 回调（订阅与计划同步）
+--     webhook   支付通道回调（订阅与计划同步）
 --     invite    按 token 读取邀请（公开预览/接受前的取件）
 --     seat      邀请/接受的席位保护段（wid+uid 齐备，允许 FOR UPDATE 行锁）
+--     cron      定时作业跨工作区只读扫描（截止日提醒；无写入路径）
+--     calendar  日历同步跨工作区只读扫描（任务定位/用户截止日任务扫描；无写入路径）
+--   public_token 不属于 op 枚举：documents 公开分享读按 share_token 与之相等放行
+--   （p_documents_share_select，仅 SELECT），token 本身 192 位熵不可猜。
 -- ===========================================================================
 
 -- ─── 1. 运行时角色 ─────────────────────────────────────────────────────────
 SELECT 'CREATE ROLE corps_app LOGIN NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION NOBYPASSRLS'
 WHERE NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'corps_app')\gexec
-ALTER ROLE corps_app SET PASSWORD :'app_password';
+ALTER ROLE corps_app WITH PASSWORD :'app_password';
 
 -- ─── 2. 授权（含未来表的默认权限）─────────────────────────────────────────
 GRANT USAGE ON SCHEMA public TO corps_app;
@@ -51,6 +61,9 @@ BEGIN
   FOREACH t IN ARRAY ARRAY[
     'members','tasks','comments','decisions','decision_versions',
     'subscriptions','notifications','workspaces','invitations','analytics_events',
+    'labels','milestones','messages','message_attachments','task_labels',
+    'chat_presences','message_reads','calendar_connections','task_calendar_events',
+    'documents'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -59,53 +72,194 @@ END $$;
 
 -- ─── 4. 策略（先删后建，保证幂等且与本文件声明一致）────────────────────────
 
--- members：读 = 本工作区 或 login/provision 时读自己；写 = 本工作区 或注册时的 owner 自插
+-- members：读 = 本工作区 或 login/provision/seat 时读自己；
+-- 插入 = 本工作区 或注册时的 owner 自插；
+-- 更新/删除 = 仅本工作区（角色变更/成员移除全量调用点均经 runWithWorkspace，
+-- 携带 workspace_id 上下文，无 auth_op 场景——不加 op 逃生口，保持最小权限；
+-- UPDATE 的 WITH CHECK 同 USING，防止借 UPDATE 篡改 workspace_id 跨租户挪动）
 DROP POLICY IF EXISTS p_members_rls        ON members;
 DROP POLICY IF EXISTS p_members_select     ON members;
 DROP POLICY IF EXISTS p_members_insert     ON members;
 DROP POLICY IF EXISTS p_members_update     ON members;
 DROP POLICY IF EXISTS p_members_delete     ON members;
 CREATE POLICY p_members_select ON members FOR SELECT USING (
-  workspace_id = current_setting('app.workspace_id', true)::uuid
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
   OR (current_setting('app.auth_op', true) IN ('login', 'provision', 'seat')
-      AND user_id = current_setting('app.user_id', true)::uuid)
+      AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
 );
 CREATE POLICY p_members_insert ON members FOR INSERT WITH CHECK (
-  workspace_id = current_setting('app.workspace_id', true)::uuid
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
   OR (current_setting('app.auth_op', true) = 'provision'
-      AND user_id = current_setting('app.user_id', true)::uuid)
+      AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
+);
+CREATE POLICY p_members_update ON members FOR UPDATE USING (
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+) WITH CHECK (
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+);
+CREATE POLICY p_members_delete ON members FOR DELETE USING (
+  workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
 );
 
--- tasks / comments / decisions / decision_versions：纯 workspace 谓词
+-- tasks / comments / decisions / decision_versions：纯 workspace 谓词。
+-- tasks 的 SELECT 另放行 cron / calendar 系统作业（截止日提醒与日历同步均需
+-- 跨工作区只读扫描），写操作不设逃生口（两类作业均只读）。
 DROP POLICY IF EXISTS p_tasks_rls ON tasks;
 CREATE POLICY p_tasks_rls ON tasks FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
+CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
+  USING (current_setting('app.auth_op', true) = 'cron');
+
+-- 日历同步逃生口（审计 P1-A）：lib/calendar/sync.ts 按 taskId 定位任务 /
+-- 按用户扫描有截止日的任务，属用户级跨工作区只读作业——与 cron 同信任
+-- 级别、同只读约束（授权发起自登录用户的 OAuth 连接，见 ADR-006）。
+DROP POLICY IF EXISTS p_tasks_calendar_select ON tasks;
+CREATE POLICY p_tasks_calendar_select ON tasks FOR SELECT
+  USING (current_setting('app.auth_op', true) = 'calendar');
+
+-- v2 扩面（审计 P2-3）：labels / milestones / messages / message_attachments / task_labels
+-- 均带 workspace_id 且全部读写路由经 runWithWorkspace（GUC 事务），套用与 tasks
+-- 相同的纯租户谓词。message_attachments 自 20260831000000 迁移补列后纳入 FORCE RLS，
+-- 下载归属定位走下方 cron SELECT 逃生口。
+-- 仍不在清单：message_reads / chat_presences（暂无直接 API 路由）、
+-- calendar_connections / task_calendar_events（user 作用域，无 workspace 键，另议）。
+-- ↓ 2026-08-30 更新：上段说明作废——四表已按下述策略收编（见各自策略块）。
+DROP POLICY IF EXISTS p_labels_rls ON labels;
+CREATE POLICY p_labels_rls ON labels FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_milestones_rls ON milestones;
+CREATE POLICY p_milestones_rls ON milestones FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_messages_rls ON messages;
+CREATE POLICY p_messages_rls ON messages FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_message_attachments_rls ON message_attachments;
+CREATE POLICY p_message_attachments_rls ON message_attachments FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- 附件下载归属定位逃生口：/api/uploads/* 以 runWithAuthOp("cron") 只读定位附件的
+-- workspace_id（仅 select workspace_id，不返回文件内容），故 cron op 下放行 SELECT。
+-- 与 p_tasks_cron_select 同源同约束（CRON_SECRET 为唯一防线）；写操作无逃生口。
+DROP POLICY IF EXISTS p_message_attachments_cron_select ON message_attachments;
+CREATE POLICY p_message_attachments_cron_select ON message_attachments FOR SELECT
+  USING (current_setting('app.auth_op', true) = 'cron');
+
+DROP POLICY IF EXISTS p_task_labels_rls ON task_labels;
+CREATE POLICY p_task_labels_rls ON task_labels FOR ALL
+  USING (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
+
+-- ─── 2026-08-30 四表收编（审计 P2 + 决策 A 体验优先版）──────────────────────
+-- chat_presences / message_reads：与 messages 同域（经 task/message 关联套租户）。
+-- 调用点（stream/read 路由）已持 wid 上下文，改走 runWithWorkspace 注入 GUC。
+DROP POLICY IF EXISTS p_chat_presences_rls ON chat_presences;
+CREATE POLICY p_chat_presences_rls ON chat_presences FOR ALL
+  USING (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
+
+DROP POLICY IF EXISTS p_message_reads_rls ON message_reads;
+CREATE POLICY p_message_reads_rls ON message_reads FOR ALL
+  USING (
+    message_id IN (SELECT m.id FROM messages m
+                   WHERE m.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    message_id IN (SELECT m.id FROM messages m
+                   WHERE m.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );
+
+-- calendar_connections：用户私有连接数据（OAuth token），无 workspace 键——
+-- 按 user_id 谓词：本人（app.user_id）或 calendar 逃生口（同步系统作业）可见。
+-- 调用点：status 路由本人查询（user_id GUC）、sync.ts 跨工作区作业（calendar op）、
+-- callback upsert（connect 时已有认证 user_id——经 login/provision op 的 user_id 分支）。
+DROP POLICY IF EXISTS p_calendar_connections_rls ON calendar_connections;
+CREATE POLICY p_calendar_connections_rls ON calendar_connections FOR ALL
+  USING (
+    user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    OR current_setting('app.auth_op', true) = 'calendar'
+  )
+  WITH CHECK (
+    user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    OR current_setting('app.auth_op', true) = 'calendar'
+  );
+
+-- task_calendar_events：任务↔连接映射，经 task 的 workspace 关联套租户；
+-- 同步作业（calendar op）需读写映射行 → calendar 逃生口覆盖 FOR ALL。
+DROP POLICY IF EXISTS p_task_calendar_events_rls ON task_calendar_events;
+CREATE POLICY p_task_calendar_events_rls ON task_calendar_events FOR ALL
+  USING (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+    OR current_setting('app.auth_op', true) = 'calendar'
+  )
+  WITH CHECK (
+    task_id IN (SELECT t.id FROM tasks t
+                WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+    OR current_setting('app.auth_op', true) = 'calendar'
+  );
+
+-- documents（v0.4.0 文档中心）：workspace 谓词 + 公开分享只读逃生口。
+-- /api/documents/share/[token] 无登录态，经 runWithShareToken 注入 app.public_token，
+-- share_token 与之相等的行才可读（NULL 永不匹配：未分享/草稿天然隔离）；
+-- 写操作仅 workspace 谓词，无逃生口。
+DROP POLICY IF EXISTS p_documents_rls ON documents;
+CREATE POLICY p_documents_rls ON documents FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_documents_share_select ON documents;
+CREATE POLICY p_documents_share_select ON documents FOR SELECT
+  USING (
+    share_token IS NOT NULL
+    AND share_token = NULLIF(current_setting('app.public_token', true), '')
+  );
 
 DROP POLICY IF EXISTS p_comments_rls ON comments;
 CREATE POLICY p_comments_rls ON comments FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 DROP POLICY IF EXISTS p_decisions_rls ON decisions;
 CREATE POLICY p_decisions_rls ON decisions FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 DROP POLICY IF EXISTS p_decision_versions_rls ON decision_versions;
 CREATE POLICY p_decision_versions_rls ON decision_versions FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 -- subscriptions：workspace 谓词 + webhook 逃生口
 DROP POLICY IF EXISTS p_subscriptions_rls ON subscriptions;
 CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
   USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
   )
   WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
   );
 
@@ -113,18 +267,18 @@ CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
 -- 给他人写 mention 通知是合法操作，旧策略的 user_id 条件与之冲突，已移除）
 DROP POLICY IF EXISTS p_notifications_rls ON notifications;
 CREATE POLICY p_notifications_rls ON notifications FOR ALL
-  USING (workspace_id = current_setting('app.workspace_id', true)::uuid)
-  WITH CHECK (workspace_id = current_setting('app.workspace_id', true)::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 -- invitations：workspace 谓词 + invite 取件逃生口（按 token 的公开预览/接受前置读取）
 DROP POLICY IF EXISTS p_invitations_rls ON invitations;
 CREATE POLICY p_invitations_rls ON invitations FOR ALL
   USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'invite'
   )
   WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'invite'
   );
 
@@ -132,13 +286,13 @@ CREATE POLICY p_invitations_rls ON invitations FOR ALL
 DROP POLICY IF EXISTS p_analytics_events_rls ON analytics_events;
 CREATE POLICY p_analytics_events_rls ON analytics_events FOR ALL
   USING (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'provision'
     OR (user_id IS NOT NULL
-        AND user_id = current_setting('app.user_id', true)::uuid)
+        AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
   )
   WITH CHECK (
-    workspace_id = current_setting('app.workspace_id', true)::uuid
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'provision'
   );
 
@@ -153,39 +307,39 @@ DROP POLICY IF EXISTS p_workspaces_delete ON workspaces;
 
 CREATE POLICY p_workspaces_select ON workspaces FOR SELECT USING (
   id IN (SELECT m.workspace_id FROM members m
-         WHERE m.user_id = current_setting('app.user_id', true)::uuid)
-  OR id = current_setting('app.workspace_id', true)::uuid
-  OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'invite')
+         WHERE m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
+  OR id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+  OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'invite', 'cron')
 );
 
 CREATE POLICY p_workspaces_insert ON workspaces FOR INSERT WITH CHECK (
-  owner_id = current_setting('app.user_id', true)::uuid
+  owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
   OR current_setting('app.auth_op', true) = 'webhook'
   OR (current_setting('app.auth_op', true) = 'provision'
-      AND owner_id = current_setting('app.user_id', true)::uuid)
+      AND owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
 );
 
 CREATE POLICY p_workspaces_update ON workspaces FOR UPDATE
   USING (
-    owner_id = current_setting('app.user_id', true)::uuid
+    owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
     OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'seat')
     OR EXISTS (
       SELECT 1 FROM members m
       WHERE m.workspace_id = id
-        AND m.user_id = current_setting('app.user_id', true)::uuid
+        AND m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
         AND m.role IN ('owner', 'admin')
     )
   )
   WITH CHECK (
-    owner_id = current_setting('app.user_id', true)::uuid
+    owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'webhook'
     OR EXISTS (
       SELECT 1 FROM members m
       WHERE m.workspace_id = id
-        AND m.user_id = current_setting('app.user_id', true)::uuid
+        AND m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
         AND m.role IN ('owner', 'admin')
     )
   );
 
 CREATE POLICY p_workspaces_delete ON workspaces FOR DELETE
-  USING (owner_id = current_setting('app.user_id', true)::uuid);
+  USING (owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid);

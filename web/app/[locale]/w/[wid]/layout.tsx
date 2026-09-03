@@ -223,6 +223,7 @@ export default function WorkspaceLayout({
         { href: `/w/${wid}/board`, label: t("menu.board"), icon: Kanban, exact: false },
         { href: `/w/${wid}/my-tasks`, label: t("menu.myTasks"), icon: CheckSquare, exact: false },
         { href: `/w/${wid}/decisions`, label: t("menu.decisions"), icon: FileText, exact: false },
+        { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
       ],
     },
     {

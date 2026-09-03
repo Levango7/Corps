@@ -16,8 +16,6 @@
  * 已知安全豁免（白名单，逐条注明理由）：
  *  - 测试文件（tests/、e2e/）：不经生产 RLS 路径
  *  - lib/prisma.ts：客户端定义本身
- *  - lib/calendar/sync.ts 的 calendarConnection/taskCalendarEvent：user 作用域表，
- *    不在 RLS 15 表清单（决策 A 前的临时豁免——决策 A 落地后应移除本行）
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
@@ -27,7 +25,7 @@ import { fileURLToPath } from "url";
 const HERE = dirname(fileURLToPath(import.meta.url));
 const WEB_ROOT = join(HERE, "../..");
 
-/** rls-activate.sql 15 表对应的 Prisma 模型名（schema.prisma 单数驼峰命名） */
+/** rls-activate.sql 全部租户表对应的 Prisma 模型名（schema.prisma 单数驼峰命名） */
 const RLS_MODELS = new Set([
   "Member", // members
   "Task", // tasks
@@ -44,10 +42,21 @@ const RLS_MODELS = new Set([
   "Message", // messages
   "MessageAttachment", // message_attachments
   "TaskLabel", // task_labels
+  "ChatPresence", // chat_presences
+  "MessageRead", // message_reads
+  "CalendarConnection", // calendar_connections
+  "TaskCalendarEvent", // task_calendar_events
+  "Document", // documents
 ]);
 
 /** GUC helper 的调用特征（裸调用若出现在这些调用的实参内即视为已包裹） */
-const GUC_HELPERS = ["runWithWorkspace", "runWithAuthOp", "runWithSeatCheck", "withGuc"];
+const GUC_HELPERS = [
+  "runWithWorkspace",
+  "runWithAuthOp",
+  "runWithSeatCheck",
+  "runWithShareToken",
+  "withGuc",
+];
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir)) {
@@ -103,7 +112,7 @@ function scanFile(file: string): string[] {
   return violations;
 }
 
-describe("RLS 裸查防复发（受 FORCE RLS 的 15 表禁止裸 prisma 直调）", () => {
+describe("RLS 裸查防复发（受 FORCE RLS 的租户表禁止裸 prisma 直调）", () => {
   it("app/api 与 lib 下无未包裹的受 RLS 模型直调", () => {
     const files = [
       ...walk(join(WEB_ROOT, "app/api"), []),

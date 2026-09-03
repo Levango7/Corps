@@ -21,7 +21,8 @@
       "analytics": "分析",
       "settings": "设置",
       "notifications": "通知",
-      "admin": "管理"
+      "admin": "管理",
+      "documents": "文档中心"
     },
     "search": {
       "placeholder": "搜索任务",
@@ -875,5 +876,40 @@
     "themeLight": "浅色",
     "themeDark": "深色",
     "themeSystem": "跟随系统"
+  },
+  "document": {
+    "listTitle": "文档中心",
+    "newDocument": "新建文档",
+    "searchPlaceholder": "搜索文档…",
+    "clearSearch": "清除搜索",
+    "emptyState": "还没有文档，从新建一份开始吧",
+    "noSearchResults": "没有匹配的文档",
+    "loading": "加载中…",
+    "untitledDoc": "未命名文档",
+    "createFailed": "创建文档失败",
+    "loadFailed": "加载失败",
+    "saveFailed": "保存失败",
+    "shareFailed": "分享操作失败",
+    "titlePlaceholder": "文档标题",
+    "markdownPlaceholder": "在这里写 Markdown……支持 **粗体** *斜体* - 列表、>引用、```代码``` 与 mermaid 图",
+    "autosaveHint": "自动保存：失焦后写入。点击右上角「发布」生成分享版本。",
+    "backToList": "返回列表",
+    "editMode": "编辑",
+    "previewMode": "预览",
+    "publish": "发布",
+    "share": "生成分享链接",
+    "unshare": "取消分享",
+    "shareUrl": "分享链接",
+    "copy": "复制",
+    "publishedBadge": "已发布",
+    "draftBadge": "草稿",
+    "updatedAt": "更新于 {date}",
+    "authorLabel": "作者",
+    "workspaceLabel": "工作区",
+    "publishedAt": "发布于 {date}",
+    "shareInvalid": "分享链接无效或文档尚未发布",
+    "unknownAuthor": "未知",
+    "footerHint": "由 {product} 提供，团队轻量协作",
+    "publicTitle": "{title} · corps 文档"
   }
 }

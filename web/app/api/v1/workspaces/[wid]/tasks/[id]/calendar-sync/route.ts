@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 
 /** 任务同步状态响应 */
 interface TaskSyncStatus {
@@ -28,15 +27,21 @@ export async function GET(
 
   try {
     // 查询该任务的所有事件映射 + 对应连接的 provider + 同步状态
-    const events = await prisma.taskCalendarEvent.findMany({
-      where: { taskId: id },
-      select: {
-        lastSyncedAt: true,
-        connection: {
-          select: { provider: true, syncStatus: true },
-        },
-      },
-    });
+    // （task_calendar_events 受 FORCE RLS，必须经 GUC 事务读取，否则加固模式静默空）
+    const events = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.taskCalendarEvent.findMany({
+          where: { taskId: id },
+          select: {
+            lastSyncedAt: true,
+            connection: {
+              select: { provider: true, syncStatus: true },
+            },
+          },
+        }),
+      ctx.payload.sub,
+    );
 
     const providers = events.map((e) => e.connection.provider);
     const lastSyncedAt =
