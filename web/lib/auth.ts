@@ -179,6 +179,17 @@ export async function runWithWorkspace<T>(
 }
 
 /**
+ * 在已开启的 GUC 事务内追加注入 GUC（事务结束自动复位）。
+ * 用于上下文取决于事务内先读出的数据行的场景——如公开分享流：先凭 token 读出
+ * 文档行，再按行上的 workspace_id 放行工作区行的读取。key 仍受 GUC_SQL 白名单约束。
+ */
+export async function setTxGuc(tx: Tx, key: string, value: string): Promise<void> {
+  const sql = GUC_SQL[key];
+  if (!sql) throw new Error(`未知的 RLS GUC key: ${key}`);
+  await tx.$executeRawUnsafe(sql, value);
+}
+
+/**
  * 公开分享文档只读上下文：把 URL 中的 share_token 注入 app.public_token，
  * documents 表的 p_documents_share_select 策略仅放行 token 相等的行
  * （FORCE RLS 不绕过，NULL token 永不匹配）。仅限 /api/documents/share/[token]
