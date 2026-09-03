@@ -330,3 +330,61 @@ svg {
   height: 24px;
   color: var(--meta);
 }
+
+/* ----------------------------------------------------------------------------
+ * 打印 / 导出 PDF（v0.4.0 队列第 4 项）
+ * 方案：visibility 隐藏应用 chrome（侧栏/顶栏/按钮），仅 .print-area 可见；
+ * 调用方在页面内渲染 .print-area（平时 display:none，打印态显示）。
+ * 深色主题打印时强制浅色 token（省墨且可读）。
+ * -------------------------------------------------------------------------- */
+
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  .print-area,
+  .print-area * {
+    visibility: visible;
+  }
+  .print-area {
+    position: absolute;
+    inset: 0 auto auto 0;
+    width: 100%;
+    padding: 24px;
+    background: #ffffff;
+    color: #111111;
+  }
+  /* 打印输出强制浅色 token（深色主题下 Markdown/表格仍可读） */
+  .print-area {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --surface-2: #f6f6f4;
+    --surface-3: #eeeeea;
+    --fg: #111111;
+    --fg-2: #333333;
+    --muted: #555555;
+    --meta: #666666;
+    --border: #dddddd;
+    --border-soft: #eeeeee;
+    --accent: #4263eb;
+    --accent-soft: #ebeefb;
+    --success: #15803d;
+    --warn: #b45309;
+    --danger: #b91c1c;
+    --danger-soft: #fee2e2;
+    --danger-fg: #b91c1c;
+    --success-fg: #15803d;
+    --warn-fg: #b45309;
+  }
+  /* 打印时避免内容被分页截断 */
+  .print-area pre,
+  .print-area blockquote,
+  .print-area table {
+    break-inside: avoid;
+  }
+  .print-area h1,
+  .print-area h2,
+  .print-area h3 {
+    break-after: avoid;
+  }
+}

@@ -26,6 +26,7 @@ import {
   History,
   AtSign,
   AlertTriangle,
+  Download,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
@@ -516,13 +517,24 @@ export default function TaskDetailPage({
                   </span>
                 )}
               </h2>
-              <button
-                onClick={() => setDecisionOpen((v) => !v)}
-                className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
-              >
-                {decisionOpen ? <X size={15} /> : <Plus size={15} />}
-                {decisionOpen ? tButton("cancel") : t("addDecision")}
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  disabled={decisions.length === 0}
+                  title={t("exportPdfHint")}
+                  className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                >
+                  <Download size={15} />
+                  {t("exportPdf")}
+                </button>
+                <button
+                  onClick={() => setDecisionOpen((v) => !v)}
+                  className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                >
+                  {decisionOpen ? <X size={15} /> : <Plus size={15} />}
+                  {decisionOpen ? tButton("cancel") : t("addDecision")}
+                </button>
+              </div>
             </div>
 
             {decisionOpen && (
@@ -625,6 +637,23 @@ export default function TaskDetailPage({
               </div>
             )}
           </section>
+
+          {/* 打印专用容器（导出 PDF）：屏幕隐藏，打印时仅此区可见 */}
+          <div className="hidden print:block print-area" aria-hidden="true">
+            <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-4">
+              {task.title} · {t("decisionsTitle")}
+            </h1>
+            {decisions.map((d) => (
+              <section key={d.id} className="mb-8">
+                <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-2">
+                  v{d.version} · {d.author.name || d.author.email} ·{" "}
+                  {new Date(d.createdAt).toLocaleString()}
+                </p>
+                <Markdown source={d.markdown} />
+              </section>
+            ))}
+            {decisions.length === 0 && <p>—</p>}
+          </div>
 
           {/* 聊天（v2 F1：IM 轻沟通 MVP）*/}
           <ChatPanel wid={wid} taskId={id} />

@@ -15,7 +15,7 @@
 import { useState, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
-import { Loader2, Share2, X, Globe, Eye } from "lucide-react";
+import { Loader2, Share2, X, Globe, Eye, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 
@@ -173,6 +173,14 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             </button>
           )}
           <button
+            onClick={() => window.print()}
+            title={t("exportPdfHint")}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+          >
+            <Download size={14} />
+            {t("exportPdf")}
+          </button>
+          <button
             onClick={() => save({ publish: true })}
             disabled={busy !== null}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
@@ -222,7 +230,17 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
       {error && <p className="mt-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
-      <p className="mt-3 text-[length:var(--text-xs)] text-[var(--muted)]">{t("autosaveHint")}</p>
+      <p className="mt-3 text-[length:var(--text-xs)] text-[var(--muted)] print:hidden">
+        {t("autosaveHint")}
+      </p>
+      {/* 打印专用容器（导出 PDF）：屏幕隐藏，打印时仅此区可见 */}
+      <div className="hidden print:block print-area" aria-hidden="true">
+        <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-2">{title}</h1>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          corps · {new Date().toLocaleString()}
+        </p>
+        <Markdown source={markdown} />
+      </div>
     </div>
   );
 }

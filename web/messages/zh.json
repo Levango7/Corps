@@ -219,7 +219,9 @@
     "blockedBadge": "已阻塞",
     "blockedMark": "标记为阻塞",
     "blockedClear": "清除阻塞标记",
-    "blockedReasonPlaceholder": "阻塞原因（可选）…"
+    "blockedReasonPlaceholder": "阻塞原因（可选）…",
+    "exportPdf": "导出 PDF",
+    "exportPdfHint": "将本任务的决策记录导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）"
   },
   "time": {
     "justNow": "刚刚",
@@ -910,6 +912,8 @@
     "shareInvalid": "分享链接无效或文档尚未发布",
     "unknownAuthor": "未知",
     "footerHint": "由 {product} 提供，团队轻量协作",
-    "publicTitle": "{title} · corps 文档"
+    "publicTitle": "{title} · corps 文档",
+    "exportPdf": "导出 PDF",
+    "exportPdfHint": "将文档导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）"
   }
 }

@@ -219,7 +219,9 @@
     "blockedBadge": "Blocked",
     "blockedMark": "Mark as blocked",
     "blockedClear": "Clear blocked flag",
-    "blockedReasonPlaceholder": "Blocker reason (optional)…"
+    "blockedReasonPlaceholder": "Blocker reason (optional)…",
+    "exportPdf": "Export PDF",
+    "exportPdfHint": "Export this task decision records as PDF (choose Save as PDF in the print dialog)"
   },
   "time": {
     "justNow": "Just now",
@@ -910,6 +912,8 @@
     "shareInvalid": "分享链接无效或文档尚未发布",
     "unknownAuthor": "未知",
     "footerHint": "由 {product} 提供，团队轻量协作",
-    "publicTitle": "{title} · corps 文档"
+    "publicTitle": "{title} · corps 文档",
+    "exportPdf": "Export PDF",
+    "exportPdfHint": "Export this document as PDF (choose Save as PDF in the print dialog)"
   }
 }
