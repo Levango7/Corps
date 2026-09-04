@@ -37,7 +37,7 @@
     "next-intl": "^4.14.1",
     "react": "19.2.8",
     "react-dom": "19.2.8",
-    "stripe": "18.3.0",
+    "stripe": "22.6.0",
     "tailwindcss": "4.3.3",
     "zod": "3.24.4"
   },
