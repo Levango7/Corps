@@ -60,7 +60,11 @@ jobs:
       # audit 失败时打印完整 advisory 列表（定位阻断漏洞名）
       - name: Audit details on failure
         if: failure()
-        run: pnpm audit --prod --json > audit-failed.json; node -e "const j=require('./audit-failed.json'); const a=j.advisories||{}; Object.values(a).forEach(v=>console.log(v.severity, v.module_name, v.title, v.url))" || true
+        shell: bash
+        run: |
+          set +e
+          pnpm audit --prod --json > audit-failed.json
+          node -e "const j=require('./audit-failed.json'); const a=j.advisories||{}; for (const k of Object.keys(a)) { const v=a[k]; console.log(String(v.severity).toUpperCase(), v.module_name, String(v.title).slice(0,140), v.url) }"
 
   test:
     name: Test
