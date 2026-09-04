@@ -221,7 +221,11 @@
     "blockedClear": "Clear blocked flag",
     "blockedReasonPlaceholder": "Blocker reason (optional)…",
     "exportPdf": "Export PDF",
-    "exportPdfHint": "Export this task decision records as PDF (choose Save as PDF in the print dialog)"
+    "exportPdfHint": "Export this task decision records as PDF (choose Save as PDF in the print dialog)",
+    "shareLabel": "Public share",
+    "shareGenerate": "Create share link",
+    "shareCopy": "Copy",
+    "shareRevoke": "Revoke"
   },
   "time": {
     "justNow": "Just now",
@@ -915,5 +919,52 @@
     "publicTitle": "{title} · corps 文档",
     "exportPdf": "Export PDF",
     "exportPdfHint": "Export this document as PDF (choose Save as PDF in the print dialog)"
+  },
+  "editor": {
+    "bold": "Bold",
+    "italic": "Italic",
+    "inlineCode": "Inline code",
+    "heading": "Heading",
+    "bulletList": "Bullet list",
+    "numberedList": "Numbered list",
+    "quote": "Quote",
+    "codeBlock": "Code block",
+    "table": "Table",
+    "mermaid": "Mermaid diagram",
+    "templateCompare": "Compare options",
+    "templateRetro": "Incident retro",
+    "templateProposal": "Proposal",
+    "templateInsert": "Insert template",
+    "toolbarAria": "Markdown toolbar",
+    "placeholderText": "text"
+  },
+  "attachment": {
+    "previewAria": "Preview: {name}",
+    "download": "Download",
+    "close": "Close",
+    "noInlinePreview": "This file type does not support inline preview"
+  },
+  "taskShare": {
+    "invalid": "Share link invalid or revoked",
+    "workspaceLabel": "Workspace",
+    "statusLabel": "Status",
+    "priorityLabel": "Priority",
+    "dueLabel": "Due date",
+    "assigneeLabel": "Assignee",
+    "subtasksLabel": "Subtasks",
+    "footerHint": "Read-only share by {product}",
+    "updatedAt": "Updated {date}",
+    "status": {
+      "todo": "To do",
+      "in_progress": "In progress",
+      "review": "In review",
+      "done": "Done"
+    },
+    "priority": {
+      "low": "Low",
+      "medium": "Medium",
+      "high": "High",
+      "urgent": "Urgent"
+    }
   }
 }

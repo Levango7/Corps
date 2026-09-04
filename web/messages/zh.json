@@ -221,7 +221,11 @@
     "blockedClear": "清除阻塞标记",
     "blockedReasonPlaceholder": "阻塞原因（可选）…",
     "exportPdf": "导出 PDF",
-    "exportPdfHint": "将本任务的决策记录导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）"
+    "exportPdfHint": "将本任务的决策记录导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）",
+    "shareLabel": "公开分享",
+    "shareGenerate": "生成分享链接",
+    "shareCopy": "复制",
+    "shareRevoke": "撤销"
   },
   "time": {
     "justNow": "刚刚",
@@ -915,5 +919,52 @@
     "publicTitle": "{title} · corps 文档",
     "exportPdf": "导出 PDF",
     "exportPdfHint": "将文档导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）"
+  },
+  "editor": {
+    "bold": "粗体",
+    "italic": "斜体",
+    "inlineCode": "行内代码",
+    "heading": "标题",
+    "bulletList": "无序列表",
+    "numberedList": "有序列表",
+    "quote": "引用",
+    "codeBlock": "代码块",
+    "table": "表格",
+    "mermaid": "Mermaid 图",
+    "templateCompare": "方案对比",
+    "templateRetro": "事故复盘",
+    "templateProposal": "立项决议",
+    "templateInsert": "插入模板",
+    "toolbarAria": "Markdown 工具栏",
+    "placeholderText": "文本"
+  },
+  "attachment": {
+    "previewAria": "预览：{name}",
+    "download": "下载",
+    "close": "关闭",
+    "noInlinePreview": "该文件类型不支持内联预览"
+  },
+  "taskShare": {
+    "invalid": "分享链接无效或已被撤销",
+    "workspaceLabel": "工作区",
+    "statusLabel": "状态",
+    "priorityLabel": "优先级",
+    "dueLabel": "截止日",
+    "assigneeLabel": "负责人",
+    "subtasksLabel": "子任务",
+    "footerHint": "由 {product} 提供的只读分享",
+    "updatedAt": "更新于 {date}",
+    "status": {
+      "todo": "待办",
+      "in_progress": "进行中",
+      "review": "评审",
+      "done": "已完成"
+    },
+    "priority": {
+      "low": "低",
+      "medium": "中",
+      "high": "高",
+      "urgent": "紧急"
+    }
   }
 }

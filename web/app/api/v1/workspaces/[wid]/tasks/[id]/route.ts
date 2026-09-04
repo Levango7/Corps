@@ -16,6 +16,8 @@ const updateTaskSchema = z.object({
   sortOrder: z.number().optional(),
   blocked: z.boolean().optional(),
   blockedReason: z.string().max(500).nullable().optional(),
+  /** 公开分享 token（v0.4 队列第 6 项）：传 "rotate" 生成新 token，null 取消分享 */
+  shareToken: z.string().max(64).nullable().optional(),
 });
 
 /** GET /v1/workspaces/{wid}/tasks/{id} — 任务详情（详情页首屏） */
@@ -100,9 +102,21 @@ export async function PATCH(
           if (!member) return { kind: "invalidAssignee" as const };
         }
 
+        // 分享 token 特殊语义："rotate" 生成新随机 token；null 取消；undefined 不动
+        let shareTokenValue: string | null | undefined = undefined;
+        if (validated.shareToken === "rotate") {
+          const { randomBytes } = await import("crypto");
+          shareTokenValue = randomBytes(24).toString("base64url");
+        } else if (validated.shareToken !== undefined) {
+          shareTokenValue = validated.shareToken;
+        }
+
         const task = await tx.task.update({
           where: { id },
-          data: validated,
+          data: {
+            ...validated,
+            shareToken: shareTokenValue,
+          },
           include: { assignee: { select: { id: true, name: true, email: true } } },
         });
 

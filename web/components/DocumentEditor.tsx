@@ -12,12 +12,13 @@
  * - 分享：生成 token 后展示完整 URL + 复制按钮；可一键关闭分享。
  */
 
-import { useState, useTransition } from "react";
+import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
 import { Loader2, Share2, X, Globe, Eye, Download } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
+import { MarkdownToolbar } from "@/components/MarkdownToolbar";
 
 interface DocumentEditorProps {
   wid: string;
@@ -36,6 +37,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const router = useRouter();
   const [title, setTitle] = useState(initial.title);
   const [markdown, setMarkdown] = useState(initial.markdown);
+  const editorRef = useRef<HTMLTextAreaElement>(null);
   const [shareToken, setShareToken] = useState(initial.shareToken);
   const [publishedAt, setPublishedAt] = useState(initial.publishedAt);
   const [shareUrl, setShareUrl] = useState<string | null>(
@@ -219,13 +221,19 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           <Markdown source={markdown} />
         </div>
       ) : (
-        <textarea
-          value={markdown}
-          onChange={(e) => setMarkdown(e.target.value)}
-          onBlur={() => save()}
-          placeholder={t("markdownPlaceholder")}
-          className="w-full h-[60vh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
-        />
+        <>
+          <div className="mb-2">
+            <MarkdownToolbar textareaRef={editorRef} value={markdown} onChange={setMarkdown} />
+          </div>
+          <textarea
+            ref={editorRef}
+            value={markdown}
+            onChange={(e) => setMarkdown(e.target.value)}
+            onBlur={() => save()}
+            placeholder={t("markdownPlaceholder")}
+            className="w-full h-[60vh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
+          />
+        </>
       )}
 
       {error && <p className="mt-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}

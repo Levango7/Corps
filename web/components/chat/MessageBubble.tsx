@@ -1,5 +1,8 @@
 "use client";
 
+import { useState } from "react";
+import { AttachmentPreviewModal } from "@/components/AttachmentPreviewModal";
+
 import { Check, CheckCheck, FileText, Download } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage, MessageAttachment } from "./types";
@@ -55,6 +58,11 @@ function highlightText(text: string, query: string): React.ReactNode {
 }
 
 export function MessageBubble({ message, currentUserId, unread, searchQuery }: MessageBubbleProps) {
+  const [previewAttachment, setPreviewAttachment] = useState<{
+    url: string;
+    fileName: string;
+    fileType: string;
+  } | null>(null);
   const t = useTranslations("chat");
   const isOwn = message.authorId === currentUserId;
   const author = message.author;
@@ -108,9 +116,11 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
                   <a
                     key={att.id}
                     href={att.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block rounded-[var(--radius-sm)] overflow-hidden hover:opacity-90 transition-opacity"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPreviewAttachment(att);
+                    }}
+                    className="block rounded-[var(--radius-sm)] overflow-hidden hover:opacity-90 transition-opacity cursor-zoom-in"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -124,8 +134,10 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
                   <a
                     key={att.id}
                     href={att.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      setPreviewAttachment(att);
+                    }}
                     download={att.fileName}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] border ${
                       isOwn
@@ -158,6 +170,10 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
           </span>
         )}
       </div>
+      <AttachmentPreviewModal
+        attachment={previewAttachment}
+        onClose={() => setPreviewAttachment(null)}
+      />
     </div>
   );
 }

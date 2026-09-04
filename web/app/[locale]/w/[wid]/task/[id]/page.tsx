@@ -27,6 +27,7 @@ import {
   AtSign,
   AlertTriangle,
   Download,
+  Share2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
@@ -36,6 +37,7 @@ import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 import { SubtaskSection } from "@/components/SubtaskSection";
+import { MarkdownToolbar } from "@/components/MarkdownToolbar";
 import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -61,6 +63,8 @@ interface Task {
   updatedAt: string;
   blocked: boolean;
   blockedReason: string | null;
+  /** 公开分享 token（null=未分享；本地推导只读外链） */
+  shareToken: string | null;
   children: SubtaskItem[];
 }
 
@@ -135,11 +139,20 @@ export default function TaskDetailPage({
   const [sending, setSending] = useState(false);
   const [decisionDraft, setDecisionDraft] = useState("");
   const [decisionOpen, setDecisionOpen] = useState(false);
+  // 决策编辑器 textarea ref（MarkdownToolbar 定位光标用）
+  const decisionEditorRef = useRef<HTMLTextAreaElement>(null);
   // 决策编辑/预览切换：edit=编辑 textarea，preview=渲染 markdown
   const [decisionMode, setDecisionMode] = useState<"edit" | "preview">("edit");
   // 打印模式：true 时挂载 .print-area（导出 PDF 专用），afterprint 后卸载——
   // 平时 DOM 中不存在打印内容，避免 getByText 多元素歧义（E2E strict violation 修复）
   const [printMode, setPrintMode] = useState(false);
+  // 任务公开分享（v0.4 队列第 6 项）：shareToken 由 GET 详情返回，本地推导 URL
+  const [taskShareUrl, setTaskShareUrl] = useState<string | null>(null);
+  useEffect(() => {
+    setTaskShareUrl(
+      task?.shareToken ? `${window.location.origin}/tasks/share/${task.shareToken}` : null,
+    );
+  }, [task?.shareToken]);
 
   const [titleDraft, setTitleDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
@@ -573,13 +586,21 @@ export default function TaskDetailPage({
                 </div>
 
                 {decisionMode === "edit" ? (
-                  <textarea
-                    value={decisionDraft}
-                    onChange={(e) => setDecisionDraft(e.target.value)}
-                    rows={6}
-                    placeholder={t("decisionTemplate")}
-                    className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
-                  />
+                  <>
+                    <MarkdownToolbar
+                      textareaRef={decisionEditorRef}
+                      value={decisionDraft}
+                      onChange={setDecisionDraft}
+                    />
+                    <textarea
+                      ref={decisionEditorRef}
+                      value={decisionDraft}
+                      onChange={(e) => setDecisionDraft(e.target.value)}
+                      rows={6}
+                      placeholder={t("decisionTemplate")}
+                      className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
+                    />
+                  </>
                 ) : (
                   <div className="min-h-[120px] px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border-soft)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.7] overflow-y-auto">
                     {decisionDraft.trim() ? (
@@ -885,6 +906,47 @@ export default function TaskDetailPage({
             )}
           </div>
 
+          {/* 公开分享（v0.4 队列第 6 项）：只读外链给工作区外的人看 */}
+          <div className="col-span-2 md:col-span-auto w-full">
+            <div className={fieldLabel}>
+              <Share2 size={13} />
+              {t("shareLabel")}
+            </div>
+            {taskShareUrl ? (
+              <div className="flex items-center gap-2">
+                <input
+                  type="text"
+                  readOnly
+                  value={taskShareUrl}
+                  onFocus={(e) => e.target.select()}
+                  className={
+                    fieldControl +
+                    " text-[length:var(--text-xs)] font-[family-name:var(--font-mono)]"
+                  }
+                />
+                <button
+                  onClick={() => navigator.clipboard.writeText(taskShareUrl).catch(() => {})}
+                  className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+                >
+                  {t("shareCopy")}
+                </button>
+                <button
+                  onClick={() => patch({ shareToken: null })}
+                  className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--danger)] transition-colors"
+                >
+                  {t("shareRevoke")}
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={() => patch({ shareToken: "rotate" })}
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+              >
+                <Share2 size={13} />
+                {t("shareGenerate")}
+              </button>
+            )}
+          </div>
           <div className="col-span-2 md:col-span-auto w-full basis-full lg:basis-auto pt-[var(--space-3)] border-t border-[var(--border-soft)] space-y-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
             <div>{t("creator", { name: task.creator?.name || task.creator?.email || "—" })}</div>
             <div>{t("createdAt", { date: new Date(task.createdAt).toLocaleString() })}</div>
