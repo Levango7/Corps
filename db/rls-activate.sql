@@ -97,6 +97,12 @@ CREATE POLICY p_tasks_rls ON tasks FOR ALL
 DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
 CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
   USING (current_setting('app.auth_op', true) = 'cron');
+-- 任务公开只读分享（v0.4 队列第 6 项）：仅放行 share_token 与 GUC 相等的行
+CREATE POLICY p_tasks_share_select ON tasks FOR SELECT
+  USING (
+    task_share_token IS NOT NULL
+    AND task_share_token = NULLIF(current_setting('app.public_token', true), '')
+  );
 
 -- 日历同步逃生口（审计 P1-A）：lib/calendar/sync.ts 按 taskId 定位任务 /
 -- 按用户扫描有截止日的任务，属用户级跨工作区只读作业——与 cron 同信任
