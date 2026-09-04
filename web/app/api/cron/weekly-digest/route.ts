@@ -5,7 +5,8 @@ import { sendWeeklyDigestEmail, isEmailConfigured } from "@/lib/email";
 /**
  * GET /api/cron/weekly-digest — 每周任务摘要邮件（Pro 功能，v2 定价 2026-09-02）
  *
- * 范围：仅 plan=pro（active 订阅）的工作区。
+ * 范围：仅 plan=pro（active 订阅）的工作区。另附本周运营漏斗数据
+ * （注册/激活/活跃/任务创建计数）——owner 无需打开分析页即可在邮件里看到大盘。
  * 内容：向每位成员发送其负责任务的摘要——已逾期（未完成且截止日已过）+
  *       未来 7 天到期。无任何相关任务的成员不发送。
  *
@@ -46,9 +47,29 @@ export async function GET(req: NextRequest) {
       let sent = 0;
       let skipped = 0;
 
+      // 本周运营埋点（供邮件漏斗段，逐工作区取）：Asia/Shanghai 最近 7 天窗口
+      const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      // 本周大盘（跨 Pro 工作区累计，响应内附带方便 curl 验证）
+      const totals = { registers: 0, activations: 0, taskCreates: 0, pageViews: 0 };
+
       for (const sub of proWorkspaces) {
         const wid = sub.workspaceId;
         const wsName = sub.workspace.name;
+
+        const countEvent = async (eventName: string) =>
+          tx.analyticsEvent.count({
+            where: { workspaceId: wid, name: eventName, createdAt: { gte: weekStart } },
+          });
+        const [registers, activations, taskCreates, pageViews] = await Promise.all([
+          countEvent("register_success"),
+          countEvent("activation_completed"),
+          countEvent("create_task"),
+          countEvent("page_view"),
+        ]);
+        totals.registers += registers;
+        totals.activations += activations;
+        totals.taskCreates += taskCreates;
+        totals.pageViews += pageViews;
 
         // 2) 该工作区全部成员（带用户邮箱与显示名）
         const members = await tx.member.findMany({
@@ -101,13 +122,19 @@ export async function GET(req: NextRequest) {
               taskUrl: `${appUrl}/w/${wid}/task/${t.id}`,
             })),
             workspaceUrl: `${appUrl}/w/${wid}`,
+            weeklyStats: { registers, activations, taskCreates, pageViews },
           });
           if (ok) sent++;
           else skipped++;
         }
       }
 
-      return { sent, skipped, proWorkspaces: proWorkspaces.length };
+      return {
+        sent,
+        skipped,
+        proWorkspaces: proWorkspaces.length,
+        stats: totals,
+      };
     });
 
     return NextResponse.json({ code: 200, data: result });

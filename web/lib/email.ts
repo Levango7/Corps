@@ -370,7 +370,12 @@ function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
       (!hasAny
         ? `<p style="margin:0 0 12px;">你负责的任务没有逾期项，未来 7 天也没有到期任务——干得漂亮。</p>`
         : "") +
-      `<p style="margin:16px 0 0;color:#6b7280;font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>`,
+      `<p style="margin:16px 0 0;color:#6b7280;font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>` +
+      (params.weeklyStats
+        ? `<p style="margin:20px 0 6px;font-weight:600;color:#4263eb;">本周大盘</p>` +
+          `<p style="margin:0 0 12px;padding:10px 14px;background:#eef2ff;border-radius:8px;font-size:13px;">` +
+          `注册 ${params.weeklyStats.registers} · 激活 ${params.weeklyStats.activations} · 建任务 ${params.weeklyStats.taskCreates} · 浏览 ${params.weeklyStats.pageViews}</p>`
+        : ""),
     ctaLabel: "打开工作区",
     ctaHref: params.workspaceUrl,
   });
@@ -400,6 +405,8 @@ export interface WeeklyDigestEmailParams {
   overdueTasks: { title: string; dueDate: string; taskUrl: string }[];
   /** 未来 7 天到期任务 */
   upcomingTasks: { title: string; dueDate: string; taskUrl: string }[];
+  /** 本周运营漏斗（可选：不传则邮件中不渲染该段） */
+  weeklyStats?: { registers: number; activations: number; taskCreates: number; pageViews: number };
   /** 工作区首页链接 */
   workspaceUrl: string;
 }
