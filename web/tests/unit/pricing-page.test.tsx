@@ -43,10 +43,10 @@ import {
 } from "@/lib/pricing";
 
 describe("常量口径", () => {
-  it("PRICING_PLANS.free 月付为 0、features 长度 14", () => {
+  it("PRICING_PLANS.free 月付为 0、features 长度 21", () => {
     // Assert
     expect(PRICING_PLANS.free.monthlyPrice).toBe(0);
-    expect(PRICING_PLANS.free.features).toHaveLength(14);
+    expect(PRICING_PLANS.free.features).toHaveLength(21);
   });
 
   it("PRICING_PLANS.pro 月付 29.9、年付 299、features 长度 8", () => {

@@ -427,7 +427,14 @@
         "f11": "Chinese & English UI",
         "f12": "Dark mode",
         "f13": "Responsive UI (full-featured on mobile web)",
-        "f14": "No data lock-in (read-only access & export after downgrade)"
+        "f14": "No data lock-in (read-only access & export after downgrade)",
+        "f15": "Subtask breakdown with done/total progress bars on parent cards",
+        "f16": "Blocked flags with reason notes (flag tasks stuck on dependencies)",
+        "f17": "Document center (workspace-level Markdown docs + public read-only share links)",
+        "f18": "Mermaid diagram rendering (flowcharts / sequence / mindmaps, in decisions and docs)",
+        "f19": "Markdown toolbar & decision templates (compare options / incident retro / proposal)",
+        "f20": "In-chat attachment preview (image lightbox / inline PDF)",
+        "f21": "One-click PDF export for tasks and decision records"
       },
       "pro": {
         "p00": "Everything in Free",

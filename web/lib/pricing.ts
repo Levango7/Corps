@@ -48,6 +48,13 @@ export const PRICING_PLANS = {
       "features.free.f12",
       "features.free.f13",
       "features.free.f14",
+      "features.free.f15",
+      "features.free.f16",
+      "features.free.f17",
+      "features.free.f18",
+      "features.free.f19",
+      "features.free.f20",
+      "features.free.f21",
     ],
   },
   pro: {
