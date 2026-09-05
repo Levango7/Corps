@@ -48,11 +48,11 @@ export async function PATCH(
           select: { role: true, userId: true },
         });
         if (!target) return { kind: "notFound" as const };
-        if (target.role === "owner") {
-          return { kind: "ownerImmutable" as const };
-        }
         if (target.userId === ctx.payload.sub) {
           return { kind: "selfForbidden" as const };
+        }
+        if (target.role === "owner") {
+          return { kind: "ownerImmutable" as const };
         }
         // admin 不能改 admin（互改），只有 owner 可以改 admin
         if (target.role === "admin" && ctx.member.role !== "owner") {

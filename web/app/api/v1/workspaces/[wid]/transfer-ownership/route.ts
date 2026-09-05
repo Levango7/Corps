@@ -5,7 +5,6 @@
 // 经 getWorkspaceContext 验证，足够本地演示）
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
-import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 
 const schema = z.object({
@@ -48,25 +47,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
         });
         if (!newOwner) return { kind: "notMember" as const };
 
-        // 原子事务：先升级新 owner（保持原 owner 一行不变——FK 只能有一个 owner 不可
-        // 直接交换），升级完后由原 owner 降级
-        const updated = await prisma.$transaction(async (ttx) => {
-          await ttx.member.update({
-            where: { userId_workspaceId: { userId: body.newOwnerUserId, workspaceId: wid } },
-            data: { role: "owner" },
-          });
-          await ttx.member.update({
-            where: { userId_workspaceId: { userId: ctx.payload.sub, workspaceId: wid } },
-            data: { role: "admin" },
-          });
-          // 工作区表 ownerId 同步
-          await ttx.workspace.update({
-            where: { id: wid },
-            data: { ownerId: body.newOwnerUserId },
-          });
-          return { ok: true };
+        // 已在 runWithWorkspace 事务内（RLS GUC 已注入）：按顺序更新，任何一步
+        // 抛错都整体回滚，不需要再包 prisma.$transaction（嵌套事务会被 Prisma 拒绝）。
+        await tx.member.update({
+          where: { userId_workspaceId: { userId: body.newOwnerUserId, workspaceId: wid } },
+          data: { role: "owner" },
         });
-        return { kind: "ok" as const, updated };
+        await tx.member.update({
+          where: { userId_workspaceId: { userId: ctx.payload.sub, workspaceId: wid } },
+          data: { role: "admin" },
+        });
+        await tx.workspace.update({
+          where: { id: wid },
+          data: { ownerId: body.newOwnerUserId },
+        });
+        return { kind: "ok" as const };
       },
       ctx.payload.sub,
     );
