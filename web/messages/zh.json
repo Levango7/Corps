@@ -9,7 +9,9 @@
     "workspace": {
       "switch": "切换工作区",
       "current": "当前工作区",
-      "loading": "正在载入工作区"
+      "loading": "正在载入工作区",
+      "manage": "管理工作区（成员/角色/危险区）",
+      "create": "创建新工作区"
     },
     "menu": {
       "overview": "概览",

@@ -9,7 +9,9 @@
     "workspace": {
       "switch": "Switch workspace",
       "current": "Current workspace",
-      "loading": "Loading workspace"
+      "loading": "Loading workspace",
+      "manage": "Manage workspace (members, roles, danger zone)",
+      "create": "Create new workspace"
     },
     "menu": {
       "overview": "Overview",
