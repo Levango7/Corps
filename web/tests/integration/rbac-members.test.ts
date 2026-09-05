@@ -45,7 +45,7 @@ describe("RBAC：成员角色改 (PATCH /members/{userId})", () => {
     });
     const lj = await list.json();
     // 找出非 owner 的成员 id
-    memberId = (lj.data || []).find((m: any) => m.user.id !== ownerId)?.user?.id;
+    memberId = (lj.data || []).find((m: { user?: { id?: string } }) => m.user?.id !== ownerId)?.user?.id;
   });
 
   it("owner 可将 member 升为 admin", async () => {
