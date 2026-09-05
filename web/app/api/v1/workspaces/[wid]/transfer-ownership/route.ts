@@ -12,18 +12,12 @@ const schema = z.object({
   newOwnerUserId: z.string().uuid(),
 });
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (ctx.member.role !== "owner") {
-    return NextResponse.json(
-      { code: 403, message: "仅所有者可转让所有权" },
-      { status: 403 },
-    );
+    return NextResponse.json({ code: 403, message: "仅所有者可转让所有权" }, { status: 403 });
   }
 
   let body: z.infer<typeof schema>;
@@ -41,10 +35,7 @@ export async function PATCH(
 
   // 不能转给自己
   if (body.newOwnerUserId === ctx.payload.sub) {
-    return NextResponse.json(
-      { code: 400, message: "已经是所有者，无需转让" },
-      { status: 400 },
-    );
+    return NextResponse.json({ code: 400, message: "已经是所有者，无需转让" }, { status: 400 });
   }
 
   try {
@@ -81,10 +72,7 @@ export async function PATCH(
     );
 
     if (result.kind === "notMember") {
-      return NextResponse.json(
-        { code: 400, message: "被转让用户不是工作区成员" },
-        { status: 400 },
-      );
+      return NextResponse.json({ code: 400, message: "被转让用户不是工作区成员" }, { status: 400 });
     }
     return NextResponse.json({ code: 200, data: { ok: true } });
   } catch (error) {
