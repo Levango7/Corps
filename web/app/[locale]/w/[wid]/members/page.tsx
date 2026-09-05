@@ -148,6 +148,32 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     }
   }
 
+  // 转让所有权：owner-only
+  const [transferOpen, setTransferOpen] = useState(false);
+  const [transferTarget, setTransferTarget] = useState("");
+  const [transferBusy, setTransferBusy] = useState(false);
+
+  async function handleTransfer() {
+    if (transferBusy || !transferTarget) return;
+    setError("");
+    setTransferBusy(true);
+    try {
+      await api(`/api/v1/workspaces/${wid}/transfer-ownership`, {
+        method: "PATCH",
+        body: JSON.stringify({ newOwnerUserId: transferTarget }),
+      });
+      setTransferOpen(false);
+      setTransferTarget("");
+      setInviteSuccess(t("transferSuccess"));
+      setTimeout(() => setInviteSuccess(""), 5000);
+      await load();
+    } catch (e) {
+      setError(e instanceof Error ? e.message : t("transferFailed"));
+    } finally {
+      setTransferBusy(false);
+    }
+  }
+
   const canManage = meta ? ["owner", "admin"].includes(meta.role) : false;
   const seatsUsed = meta?.memberCount ?? members.length;
   const seatsTotal = meta?.seatLimit ?? 0;
@@ -244,6 +270,71 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           </Link>{" "}
           {t("seatsFullSuffix")}
         </div>
+      )}
+
+      {/* 转让所有权：owner only */}
+      {meta?.role === "owner" && (
+        <section className="mb-6 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
+          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+            {t("transfer")}
+          </h2>
+          <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">
+            {t("transferHint")}
+          </p>
+          {!transferOpen ? (
+            <button
+              onClick={() => setTransferOpen(true)}
+              disabled={members.filter((m) => !m.isSelf && m.role !== "owner").length === 0}
+              className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+            >
+              {t("transfer")}
+            </button>
+          ) : (
+            <div className="space-y-2">
+              <select
+                value={transferTarget}
+                onChange={(e) => setTransferTarget(e.target.value)}
+                className="w-full h-9 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+              >
+                <option value="">{t("transferSelect")}</option>
+                {members
+                  .filter((m) => !m.isSelf && m.role !== "owner")
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name || m.email}（{m.role}）
+                    </option>
+                  ))}
+              </select>
+              <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                {t("transferConfirmHint")}
+              </p>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={handleTransfer}
+                  disabled={transferBusy || !transferTarget}
+                  className="h-9 px-3 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+                >
+                  {t("transferConfirm")}
+                </button>
+                <button
+                  onClick={() => {
+                    setTransferOpen(false);
+                    setTransferTarget("");
+                  }}
+                  disabled={transferBusy}
+                  className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+                >
+                  {t("transferCancel")}
+                </button>
+              </div>
+            </div>
+          )}
+          {members.filter((m) => !m.isSelf && m.role !== "owner").length === 0 && (
+            <p className="mt-2 text-[length:var(--text-xs)] text-[var(--meta)]">
+              {t("transferEmptyList")}
+            </p>
+          )}
+        </section>
       )}
 
       {loading ? (

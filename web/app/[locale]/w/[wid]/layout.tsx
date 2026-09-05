@@ -18,6 +18,7 @@ import {
   CheckSquare,
   FileText,
   BarChart3,
+  Plus,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
@@ -48,6 +49,10 @@ export default function WorkspaceLayout({
   const [themePref, setThemePref] = useState<ThemePref>("system");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [switcherHighlight, setSwitcherHighlight] = useState(-1);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [createName, setCreateName] = useState("");
+  const [createBusy, setCreateBusy] = useState(false);
+  const [createErr, setCreateErr] = useState("");
   const [cmdOpen, setCmdOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -214,6 +219,41 @@ export default function WorkspaceLayout({
     );
   }
 
+  // 顶部工作区下拉里的"创建工作区"：POST /api/v1/workspaces → 刷新并重定向到新工作区
+  async function createWorkspace() {
+    if (createBusy) return;
+    const name = createName.trim();
+    if (name.length < 2) {
+      setCreateErr(t("workspace.createTooShort"));
+      return;
+    }
+    setCreateBusy(true);
+    setCreateErr("");
+    try {
+      const created = await api<{ id: string }>("/api/v1/workspaces", {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
+      setCreateOpen(false);
+      setCreateName("");
+      setSwitcherOpen(false);
+      track("workspace_create", { from: wid });
+      // 新 workspace 的 owner JWT 需重新签发，再跳过去
+      try {
+        await api("/api/v1/auth/refresh", {
+          method: "POST",
+          body: JSON.stringify({ workspaceId: created.id }),
+        });
+      } catch {
+        /* 失败忽略，稍后目标页 401 兜底 */
+      }
+      router.push(`/w/${created.id}`);
+    } catch (e) {
+      setCreateErr(e instanceof Error ? e.message : t("workspace.createFailed"));
+      setCreateBusy(false);
+    }
+  }
+
   // 导航分组
   const navGroups: NavGroup[] = [
     {
@@ -319,6 +359,82 @@ export default function WorkspaceLayout({
                   {w.id === wid && <Check size={14} className="text-[var(--accent)] shrink-0" />}
                 </button>
               ))}
+
+              <div className="my-1 border-t border-[var(--border-soft)]" />
+
+              {/* 管理工作区 — 直达 /settings 页 */}
+              <Link
+                href={`/w/${wid}/settings`}
+                onClick={() => setSwitcherOpen(false)}
+                className="flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <Settings size={14} className="text-[var(--muted)]" />
+                <span className="flex-1 text-left truncate">{t("workspace.manage")}</span>
+              </Link>
+
+              {/* 创建工作区 — 展开为 inline 表单 */}
+              {!createOpen ? (
+                <button
+                  onClick={() => {
+                    setCreateOpen(true);
+                    setCreateErr("");
+                  }}
+                  className="w-full flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                >
+                  <Plus size={14} className="text-[var(--muted)]" />
+                  <span className="flex-1 text-left truncate">{t("workspace.create")}</span>
+                </button>
+              ) : (
+                <div className="px-[var(--space-3)] py-2">
+                  <input
+                    autoFocus
+                    type="text"
+                    value={createName}
+                    onChange={(e) => setCreateName(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void createWorkspace();
+                      } else if (e.key === "Escape") {
+                        e.preventDefault();
+                        setCreateOpen(false);
+                        setCreateName("");
+                        setCreateErr("");
+                      }
+                    }}
+                    placeholder={t("workspace.createPlaceholder")}
+                    disabled={createBusy}
+                    className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+                  />
+                  {createErr && (
+                    <p className="mt-1 text-[length:var(--text-xs)] text-[var(--danger-fg)]">
+                      {createErr}
+                    </p>
+                  )}
+                  <div className="mt-2 flex items-center justify-end gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCreateOpen(false);
+                        setCreateName("");
+                        setCreateErr("");
+                      }}
+                      disabled={createBusy}
+                      className="h-7 px-2.5 text-[length:var(--text-xs)] text-[var(--fg-2)] rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)]"
+                    >
+                      {t("workspace.createCancel")}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void createWorkspace()}
+                      disabled={createBusy || createName.trim().length < 2}
+                      className="h-7 px-3 text-[length:var(--text-xs)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-sm)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {createBusy ? t("workspace.creating") : t("workspace.createConfirm")}
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>
