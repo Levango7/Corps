@@ -1,129 +1,82 @@
-# corps 团队 SaaS - 项目落地
+# corps — 讨论结论自动落位成任务
 
-**项目路径**: 仓库根目录（克隆后进入仓库所在目录，下文命令均以仓库根为起点）
+面向 **5–30 人中小团队**的轻量协作 SaaS：以工作区任务看板为锚点，让每一次讨论的结论自动固化为**决策记录**（版本留痕、双向回链任务）——"为什么这么定"永远可查，不再散落在聊天记录里。
 
----
-
-## 资产总览（60+文件，40+源码文件）
-
-### 设计阶段（4轮迭代定稿）
-```
-design/
-├── prototype/index.html          # 高保真原型（15页，全交互）
-├── design-tokens.css             # Token系统（双主题+三层背景）
-└── DESIGN.md                     # 设计系统文档
-```
-
-### 规格阶段（Phase 0-2）
-```
-spec/SPEC.md                      # MVP规格契约（锁定版）
-api/openapi.yaml                  # API契约（27路径）
-db/schema.sql                     # 15表+RLS策略（含 Better Auth 内部表与审计表）
-docs/decisions/                   # ADR-001 ~ ADR-006（架构决策记录）
-docs/runbook-monitoring.md        # 监控手册（分层监控现状/告警策略/smoke 处置流程）
-```
-
-### 后端工程（本次落地，28个文件）
-```
-web/
-├── package.json                  # Next.js 16 + Prisma 6 + Better Auth + lucide-react
-├── prisma/schema.prisma          # 15表模型（含 BA 内部表 + ProcessedStripeEvent + AnalyticsEvent）
-├── docker-compose.yml            # PostgreSQL 18 + RLS初始化
-├── docker/init-rls.sql           # SET LOCAL app.workspace_id 注入
-├── lib/
-│   ├── prisma.ts                 # 单例Prisma客户端
-│   ├── jwt.ts                    # access(15min) + refresh(7d)
-
-│   └── auth.ts                   # 认证中间件 + RBAC守卫
-├── app/
-│   ├── globals.css               # CSS变量（对齐design-tokens.css）
-│   ├── auth/login/signup/        # 登录注册页
-│   ├── w/[wid]/board/members/settings/  # 工作区页面
-│   └── api/v1/                   # 31个Route Handler（27 API路径）
-└── README.md
-```
+> 15 分钟上手 · 中英双语 · 免费版 10 人全功能
 
 ---
 
-## 立即开始（用户本机执行）
+## 为什么是 corps
 
-```powershell
-# 1. 安装依赖（在仓库根目录执行）
+小团队的日常：会上结论都说清了，会后还得有人手动把结论搬进任务工具，搬着搬着"为什么这么定"就再也找不到了。约 1/4 的任务因为这个流程断裂而超期。
+
+corps 把这个断点补上：
+
+| 能力 | 说明 |
+|---|---|
+| **决策记录** | 每条任务可携带"为什么这么定"——markdown + Mermaid 图表（流程图/时序图/思维导图），版本留痕，双向回链 |
+| **子任务 + 阻塞** | 大任务拆子任务，父任务看板卡自动显示 done/total 进度条；被依赖卡住的任务标红写原因 |
+| **文档中心** | 团队公约 / 新人手册沉淀（与决策正交），支持**公开只读分享链接**——发给客户、外包不用拉进工作区 |
+| **任务内轻沟通 IM** | 附件上传、实时推送、已读回执；附件点击直接预览（图片放大 / PDF 内嵌） |
+| **一键导出 PDF** | 任务决策记录与文档导出为排版良好的 PDF（打印 CSS 方案，深色主题自动浅色输出） |
+| **Markdown 工具栏 + 模板库** | 粗体/表格/代码块一键插入；三个决策模板（方案对比 / 事故复盘 / 立项决议） |
+| **中英双语** | 全站 UI 完整双语，`/en` 前缀路由 + 一键切换 |
+
+**全部 Free 可用（21 项）** · Pro ¥29.9/人/月解锁无限席位、附件 50MB、每周任务摘要邮件。
+
+## 工程上的硬承诺
+
+- **数据库引擎级租户隔离**：19 张业务表全部 FORCE ROW LEVEL SECURITY，跨工作区请求在 PostgreSQL 层被直接拦截——不靠应用代码自觉
+- **CI 七道关卡**：lint / 安全审计 / 单测 / **加固模式回归**（以最小权限角色 + RLS 激活跑全量集成测试）/ 生产构建 / 浏览器 E2E / 镜像发布——每个 commit 都过
+- **可复现的部署**：镜像发布到 GHCR，`docker compose up -d` 一键起全栈（app + PostgreSQL + Redis + cron 调度器）
+
+## 快速开始（自部署）
+
+```bash
+# 1. 准备 .env（参考 .env.example，必填项见 docs/runbook-deploy.md）
+cp .env.example .env
+
+# 2. 拉取官方镜像并启动全栈
+docker pull ghcr.io/levango7/corps:latest
+docker compose up -d
+
+# 3. 健康检查
+curl http://localhost:3000/api/health
+```
+
+本地开发：
+
+```bash
 cd web
-pnpm install --frozen-lockfile
-
-# 2. 启动PostgreSQL（仓库根目录 docker-compose.yml，容器名 corps-db；
-#    web/docker-compose.yml 的本地开发容器名为 corps-postgres）
-docker-compose up -d
-
-# 3. 等待PG就绪
-docker exec -it corps-db pg_isready
-
-# 4. 配置环境变量
-copy .env.local.example .env.local
-# 修改 .env.local 中的密码
-
-# 5. 生成 Prisma Client（必须，否则 tsc/运行时报 PrismaClient 未生成）
-npx prisma generate
-
-# 6. 运行迁移
-npx prisma migrate dev --name init
-
-# 7. 启动开发服务器
-pnpm dev
+pnpm install
+cp .env.local.example .env.local   # 修改密码
+npx prisma generate && npx prisma migrate dev
+pnpm dev                           # http://localhost:3000
 ```
 
-访问 http://localhost:3000/auth/signup 完成注册。
-完整步骤（含 Stripe 本地联调）见 `web/README.md`。
+## 技术栈
+
+Next.js 16（App Router / Turbopack）· React 19 · Tailwind CSS 4 · Prisma 6 · PostgreSQL 18（RLS）· Better Auth · next-intl · mermaid · Stripe / 微信 / 支付宝三通道
+
+## 仓库结构
+
+```
+web/          # Next.js 应用（app/ + components/ + lib/ + prisma/）
+db/           # rls-activate.sql（加固模式一键激活）
+docs/         # ADR 决策记录 / runbook / 市场与定价文档
+design/       # 设计系统（design-tokens.css 双主题）
+e2e/          # Playwright 浏览器级测试（58 项）
+.github/      # CI 七关卡 workflow
+```
+
+## 链接
+
+- **在线体验**：部署中（v0.4.0 已发布）
+- **变更日志**：[CHANGELOG.md](./CHANGELOG.md)
+- **部署手册**：[docs/runbook-deploy.md](./docs/runbook-deploy.md)
+- **镜像**：`docker pull ghcr.io/levango7/corps:0.4.0`
+- **定价**：内置定价页（Free 21 项 / Pro ¥29.9）
 
 ---
 
-## 核心流程（端到端）
-
-```
-注册 → 自动创建Workspace(owner) → 进入看板 → 拖拽任务改状态
-     ↓
-POST /api/v1/auth/register        返回 access+refresh JWT
-POST /api/v1/workspaces           创建新工作区
-GET  /api/v1/workspaces/:wid/tasks  查询任务列表
-PATCH /api/v1/workspaces/:wid/tasks/:id  更新状态（拖拽）
-```
-
----
-
-## 多租户隔离（RLS）
-
-```sql
--- 请求级注入 workspace context
-SET LOCAL app.workspace_id = <JWT.wid>;
-
--- 所有业务表强制过滤
-USING (workspace_id = current_setting('app.workspace_id')::uuid)
-```
-
----
-
-## 待办（后续迭代）
-
-- [x] 前端 UI 对齐设计原型（Calm Precision 设计系统）—— 2026-08-22 完成
-- [x] Better Auth 集成（身份/会话托管，wid JWT 驱动 RLS）—— 2026-08-22 完成
-- [x] Stripe 计费（Checkout/Portal/Webhook 席位同步）—— 2026-08-22 完成
-- [x] 任务详情 + 评论 + 决策记录完整实现 —— 2026-08-22 完成
-- [ ] 端到端测试（本机 `npm run dev` 后手测，见 web/README.md 验证步骤）
-- [ ] CloudBase 部署配置
-
----
-
-## 技术栈锁定
-
-| 层 | 技术 | 版本 |
-|----|------|------|
-| 前端 | Next.js + React | 16.2.6 / 19.2.0 |
-| CSS | Tailwind CSS | 4.1.8 |
-| ORM | Prisma | 6.15.0 |
-| DB | PostgreSQL | 18（RLS）。dev 容器 corps-postgres（5432），root compose corps-db（5433） |
-| 认证 | Better Auth（scrypt，偏差见 ADR-004/OPEN-DECISIONS） | 1.3.28 |
-| 计费 | Stripe（Checkout/Portal/Webhook） | 18.3.0 |
-| wid 令牌 | jsonwebtoken（15min access / 7d refresh） | 9.0.2 |
-| 图标 | lucide-react | 0.513.0 |
-| 校验 | zod | 3.24.4 |
+*个人开发者长期项目 · 安全问题请通过 GitHub Security Advisories 报告*
