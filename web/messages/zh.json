@@ -551,6 +551,7 @@
   },
   "languageSwitcher": {
     "ariaLabel": "切换语言",
+    "label": "语言",
     "zh": "中文",
     "en": "English"
   },
@@ -924,7 +925,8 @@
     "toggleAria": "切换主题（当前：{label}）",
     "themeLight": "浅色",
     "themeDark": "深色",
-    "themeSystem": "跟随系统"
+    "themeSystem": "跟随系统",
+    "sectionTitle": "主题"
   },
   "document": {
     "listTitle": "文档中心",

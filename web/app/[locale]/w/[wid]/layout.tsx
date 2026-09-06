@@ -14,7 +14,6 @@ import {
   Menu,
   ChevronsUpDown,
   Check,
-  LogOut,
   CheckSquare,
   FileText,
   BarChart3,
@@ -26,14 +25,8 @@ import { setWorkspaceContext, track } from "@/lib/analytics";
 import { listFavorites, type FavoriteEntry } from "@/lib/favorites";
 import CommandPalette from "@/components/CommandPalette";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
-import {
-  ThemeToggle,
-  type ThemePref,
-  readThemePref,
-  resolveTheme,
-  applyTheme,
-} from "@/components/ThemeToggle";
-import { LanguageSwitcher } from "@/components/LanguageSwitcher";
+import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
+import { UserMenu } from "@/components/UserMenu";
 import type { WorkspaceSummary } from "@/lib/types";
 
 const SIDEBAR_KEY = "corps_sidebar_collapsed";
@@ -48,7 +41,6 @@ export default function WorkspaceLayout({
   const [workspaces, setWorkspaces] = useState<WorkspaceSummary[]>([]);
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
   const [collapsed, setCollapsed] = useState(false);
-  const [themePref, setThemePref] = useState<ThemePref>("system");
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const [switcherHighlight, setSwitcherHighlight] = useState(-1);
   const [createOpen, setCreateOpen] = useState(false);
@@ -76,9 +68,8 @@ export default function WorkspaceLayout({
 
   // ─── 初始化：主题 + 侧栏折叠 + 工作区列表 + 埋点 ───
   useEffect(() => {
-    const pref = readThemePref();
-    setThemePref(pref);
-    document.documentElement.setAttribute("data-theme", resolveTheme(pref));
+    // 主题持久化：UserMenu 接管下拉展示，这里只负责挂载时把存好的主题写到 DOM
+    document.documentElement.setAttribute("data-theme", resolveTheme(readThemePref()));
 
     if (localStorage.getItem(SIDEBAR_KEY) === "true") setCollapsed(true);
 
@@ -202,11 +193,6 @@ export default function WorkspaceLayout({
     const next = !collapsed;
     setCollapsed(next);
     localStorage.setItem(SIDEBAR_KEY, String(next));
-  }
-
-  function handleThemeChange(next: ThemePref) {
-    setThemePref(next);
-    applyTheme(next);
   }
 
   async function switchWorkspace(targetId: string) {
@@ -489,50 +475,23 @@ export default function WorkspaceLayout({
           </button>
         </div>
 
-        {/* 右侧：语言切换 + 主题 + 用户 + 退出 */}
+        {/* 右侧：通知 → 用户下拉（内含设置/语言/主题/退出） */}
         <div className="flex items-center gap-[var(--space-1)] ml-auto">
-          <LanguageSwitcher />
-          <ThemeToggle pref={themePref} onChange={handleThemeChange} />
           {user && (
-            <Link
-              href={`/w/${wid}/settings`}
-              className="flex items-center gap-[var(--space-2)] px-[var(--space-2)] rounded-lg hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-              aria-label={t("user.profile")}
-              title={t("user.profile")}
-            >
-              {user.image ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={user.image}
-                  alt={user.name ?? user.email}
-                  className="w-7 h-7 rounded-full object-cover"
-                />
-              ) : (
-                <div className="w-7 h-7 rounded-full bg-[var(--surface-3)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)] text-[var(--fg-2)]">
-                  {(user.name ?? user.email)[0].toUpperCase()}
-                </div>
-              )}
-              <span className="hidden sm:inline text-[length:var(--text-sm)] text-[var(--fg-2)] max-w-[100px] truncate">
-                {user.name ?? user.email.split("@")[0]}
-              </span>
-            </Link>
+            <UserMenu
+              user={user}
+              wid={wid}
+              onLogout={async () => {
+                if (!window.confirm(t("user.logoutConfirm"))) return;
+                try {
+                  await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
+                } catch {
+                  /* 即使 logout 请求失败也跳转 */
+                }
+                router.push("/auth/login");
+              }}
+            />
           )}
-          <button
-            onClick={async () => {
-              if (!window.confirm(t("user.logoutConfirm"))) return;
-              try {
-                await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
-              } catch {
-                // 即使 logout 请求失败也跳转
-              }
-              router.push("/auth/login");
-            }}
-            className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-            aria-label={t("user.logout")}
-            title={t("user.logout")}
-          >
-            <LogOut size={18} />
-          </button>
         </div>
       </header>
 
