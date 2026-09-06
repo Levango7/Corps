@@ -752,7 +752,17 @@
     "noContent": "(no content)",
     "updatedAtRel": "Updated {time}",
     "loadingMore": "Loading",
-    "emptyHint": "Record decisions in task details and they will show up here"
+    "emptyHint": "Record decisions in task details and they will show up here",
+    "aiExtract": "AI Extract",
+    "aiDialogTitle": "AI Decision Extraction",
+    "aiClose": "Close",
+    "aiSourceLabel": "Paste meeting notes / discussion / chat (at least 10 chars)",
+    "aiSourcePlaceholder": "Paste the discussion here. AI will extract the title and key conclusions as an editable markdown draft.",
+    "aiSourceTooShort": "Please paste at least 10 characters for the AI to extract effectively",
+    "aiGenerate": "Extract",
+    "aiReGenerate": "Regenerate",
+    "aiCopy": "Copy markdown",
+    "aiFailed": "Extraction failed. Please try again."
   },
   "members": {
     "invitePlaceholder": "Enter email (unregistered users can be invited)",

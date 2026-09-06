@@ -752,7 +752,17 @@
     "noContent": "（无内容）",
     "updatedAtRel": "更新于 {time}",
     "loadingMore": "加载中",
-    "emptyHint": "在任务详情中记录决策后，会在这里展示"
+    "emptyHint": "在任务详情中记录决策后，会在这里展示",
+    "aiExtract": "AI 提炼",
+    "aiDialogTitle": "AI 决策提炼",
+    "aiClose": "关闭",
+    "aiSourceLabel": "粘贴会议记录、讨论串或聊天内容（10 字以上）",
+    "aiSourcePlaceholder": "把讨论记录粘贴到这里。AI 会提炼标题和关键结论，生成可编辑的 markdown 草稿。",
+    "aiSourceTooShort": "请粘贴至少 10 字，AI 才能提炼有效内容",
+    "aiGenerate": "提炼",
+    "aiReGenerate": "重新生成",
+    "aiCopy": "复制 Markdown",
+    "aiFailed": "提炼失败，请稍后重试"
   },
   "members": {
     "invitePlaceholder": "输入邮箱地址（未注册也可邀请）",

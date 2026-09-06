@@ -16,7 +16,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { FileText, Search, Loader2, ChevronRight, X } from "lucide-react";
+import { FileText, Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import { useTranslations } from "next-intl";
@@ -101,6 +101,52 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
   const abortRef = useRef<AbortController | null>(null);
 
   const base = `/api/v1/workspaces/${wid}/decisions`;
+
+  // AI 提炼对话框状态
+  const [aiOpen, setAiOpen] = useState(false);
+  const [aiSource, setAiSource] = useState("");
+  const [aiBusy, setAiBusy] = useState(false);
+  const [aiResult, setAiResult] = useState<{ title: string; markdown: string } | null>(null);
+  const [aiErr, setAiErr] = useState("");
+
+  async function handleExtract() {
+    if (aiBusy) return;
+    if (aiSource.trim().length < 10) {
+      setAiErr(t("aiSourceTooShort"));
+      return;
+    }
+    setAiBusy(true);
+    setAiErr("");
+    setAiResult(null);
+    try {
+      const j = await api<{ title: string; markdown: string }>(`${base}/extract`, {
+        method: "POST",
+        body: JSON.stringify({ sourceText: aiSource }),
+      });
+      setAiResult(j);
+    } catch (e) {
+      setAiErr(e instanceof Error ? e.message : t("aiFailed"));
+    } finally {
+      setAiBusy(false);
+    }
+  }
+
+  async function copyAiMarkdown() {
+    if (!aiResult) return;
+    try {
+      await navigator.clipboard.writeText(aiResult.markdown);
+    } catch {
+      /* 静默——用户可手动选择 */
+    }
+  }
+
+  function closeAi() {
+    if (aiBusy) return;
+    setAiOpen(false);
+    setAiSource("");
+    setAiResult(null);
+    setAiErr("");
+  }
 
   /**
    * 拉取决策列表。
@@ -190,13 +236,22 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
   return (
     <div className="max-w-[800px] mx-auto">
       {/* ── 标题栏 ── */}
-      <div className="mb-[var(--space-6)]">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
-          {t("title")}
-        </h1>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {loading ? t("loading") : t("count", { count: total })}
-        </p>
+      <div className="mb-[var(--space-6)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+            {t("title")}
+          </h1>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+            {loading ? t("loading") : t("count", { count: total })}
+          </p>
+        </div>
+        <button
+          onClick={() => setAiOpen(true)}
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0"
+        >
+          <Sparkles size={14} />
+          {t("aiExtract")}
+        </button>
       </div>
 
       {/* ── 搜索栏 ── */}
@@ -340,6 +395,85 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
             </div>
           )}
         </>
+      )}
+
+      {/* AI 提炼对话框：粘贴原始讨论 → 生成 markdown 草稿 → 复制后到任务详情粘贴 */}
+      {aiOpen && (
+        <div
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/40 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("aiDialogTitle")}
+          onClick={(e) => {
+            if (e.target === e.currentTarget) closeAi();
+          }}
+        >
+          <div className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden max-h-[85vh] flex flex-col">
+            <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between">
+              <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] flex items-center gap-2">
+                <Sparkles size={16} className="text-[var(--accent)]" />
+                {t("aiDialogTitle")}
+              </h2>
+              <button
+                onClick={closeAi}
+                aria-label={t("aiClose")}
+                className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)]"
+              >
+                <X size={16} />
+              </button>
+            </div>
+            <div className="px-4 py-3 overflow-y-auto flex-1">
+              <label className="block text-[length:var(--text-xs)] text-[var(--muted)] mb-1.5">
+                {t("aiSourceLabel")}
+              </label>
+              <textarea
+                value={aiSource}
+                onChange={(e) => setAiSource(e.target.value)}
+                placeholder={t("aiSourcePlaceholder")}
+                rows={8}
+                className="w-full px-3 py-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y font-[family-name:var(--font-mono)]"
+              />
+              {aiErr && (
+                <p className="mt-2 text-[length:var(--text-xs)] text-[var(--danger-fg)]">{aiErr}</p>
+              )}
+              {aiResult && (
+                <div className="mt-4 border border-[var(--border)] rounded-[var(--radius-md)] overflow-hidden">
+                  <div className="px-3 py-2 bg-[var(--surface-2)] flex items-center justify-between gap-2">
+                    <span className="text-[length:var(--text-xs)] font-[var(--weight-medium)] text-[var(--fg-2)] truncate">
+                      {aiResult.title}
+                    </span>
+                    <button
+                      onClick={copyAiMarkdown}
+                      className="inline-flex items-center gap-1 px-2 h-7 text-[length:var(--text-xs)] text-[var(--fg-2)] rounded-[var(--radius-sm)] border border-[var(--border)] hover:bg-[var(--surface)]"
+                    >
+                      <ClipboardCopy size={12} />
+                      {t("aiCopy")}
+                    </button>
+                  </div>
+                  <pre className="px-3 py-2 text-[length:var(--text-xs)] text-[var(--fg-2)] overflow-x-auto whitespace-pre-wrap break-words">
+                    {aiResult.markdown}
+                  </pre>
+                </div>
+              )}
+            </div>
+            <div className="px-4 py-3 border-t border-[var(--border-soft)] flex items-center justify-end gap-2">
+              <button
+                onClick={closeAi}
+                className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)]"
+              >
+                {t("aiClose")}
+              </button>
+              <button
+                onClick={handleExtract}
+                disabled={aiBusy || aiSource.trim().length < 10}
+                className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {aiBusy && <Loader2 size={14} className="animate-spin" />}
+                {aiResult ? t("aiReGenerate") : t("aiGenerate")}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
