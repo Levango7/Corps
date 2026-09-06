@@ -19,9 +19,11 @@ import {
   FileText,
   BarChart3,
   Plus,
+  Star,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
+import { listFavorites, type FavoriteEntry } from "@/lib/favorites";
 import CommandPalette from "@/components/CommandPalette";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import {
@@ -56,6 +58,9 @@ export default function WorkspaceLayout({
   const [cmdOpen, setCmdOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // 星标（我的收藏）：这是 localStorage 数据，无服务端，
+  // 跨 workspace 记录但当前页面仅展示当前 wid 下的条目
+  const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
   const [user, setUser] = useState<{
     name: string | null;
     email: string;
@@ -182,6 +187,16 @@ export default function WorkspaceLayout({
     return () => cancelAnimationFrame(id);
   }, [switcherOpen, workspaces, wid]);
 
+  // 星标：挂载时读一次 + 同 tab localStorage 变化时刷新（自定义事件）
+  useEffect(() => {
+    function syncFavorites() {
+      setFavorites(listFavorites());
+    }
+    syncFavorites();
+    window.addEventListener("corps:favorites-changed", syncFavorites);
+    return () => window.removeEventListener("corps:favorites-changed", syncFavorites);
+  }, []);
+
   // ─── 回调 ───
   function toggleSidebar() {
     const next = !collapsed;
@@ -266,6 +281,24 @@ export default function WorkspaceLayout({
         { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
       ],
     },
+    // "我的星标"：localStorage 收藏的任务。当前工作区下最多展示 5 条；
+    // 没有则整个分组隐藏，避免噪音
+    ...(favorites.filter((f) => f.workspaceId === wid).length > 0
+      ? [
+          {
+            label: t("menu.favorites"),
+            items: favorites
+              .filter((f) => f.workspaceId === wid)
+              .slice(0, 5)
+              .map((f) => ({
+                href: `/w/${f.workspaceId}/task/${f.taskId}`,
+                label: f.title,
+                icon: Star,
+                exact: false,
+              })),
+          },
+        ]
+      : []),
     {
       label: t("menu.admin"),
       items: [

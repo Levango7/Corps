@@ -30,7 +30,8 @@
       "settings": "设置",
       "notifications": "通知",
       "admin": "管理",
-      "documents": "文档中心"
+      "documents": "文档中心",
+      "favorites": "我的星标"
     },
     "search": {
       "placeholder": "搜索任务",
@@ -100,6 +101,8 @@
     "descriptionOptional": "描述（可选）",
     "status": "状态",
     "assignee": "负责人",
+    "star": "收藏此任务",
+    "unstar": "取消收藏",
     "assigneeOptional": "负责人（可选）",
     "unassigned": "未指派",
     "dueDate": "截止日期",

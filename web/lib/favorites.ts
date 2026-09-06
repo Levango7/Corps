@@ -34,6 +34,8 @@ export function listFavorites(): FavoriteEntry[] {
 function save(entries: FavoriteEntry[]): void {
   try {
     localStorage.setItem(KEY, JSON.stringify(entries));
+    // 同 tab 自定义事件让 layout 重新拉
+    window.dispatchEvent(new CustomEvent("corps:favorites-changed"));
   } catch {
     /* storage 超限时静默（不可能超过几十 K） */
   }

@@ -28,11 +28,13 @@ import {
   AlertTriangle,
   Download,
   Share2,
+  Star,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { relTime as sharedRelTime } from "@/lib/format";
 import { STATUS_META } from "@/lib/task-meta";
+import { isFavorite, toggleFavorite } from "@/lib/favorites";
 import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
@@ -157,6 +159,22 @@ export default function TaskDetailPage({
   const [titleDraft, setTitleDraft] = useState("");
   const [descDraft, setDescDraft] = useState("");
   const [dirty, setDirty] = useState(false);
+
+  // 星标（本地 localStorage，便携收藏） — 初次挂载 + task 加载完成后同步
+  const [starred, setStarred] = useState(false);
+  useEffect(() => {
+    if (task) setStarred(isFavorite(task.id));
+  }, [task]);
+
+  function onToggleFavorite() {
+    if (!task) return;
+    const now = toggleFavorite({
+      taskId: task.id,
+      workspaceId: wid,
+      title: task.title,
+    });
+    setStarred(now);
+  }
 
   // ── 自定义确认弹窗（替代 window.confirm）──
   // 待执行操作以 ref 持有（函数引用不应放进 useState，避免 React 反模式）
@@ -483,21 +501,36 @@ export default function TaskDetailPage({
         {/* ── 主列 ── */}
         <div className="min-w-0">
           <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-5)]">
-            <textarea
-              ref={titleRef}
-              value={titleDraft}
-              onChange={(e) => {
-                setTitleDraft(e.target.value);
-                setDirty(true);
-              }}
-              onBlur={() => {
-                if (dirty && titleDraft.trim() && titleDraft !== task.title) {
-                  patch({ title: titleDraft.trim() });
-                }
-              }}
-              rows={1}
-              className="w-full overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
-            />
+            <div className="flex items-start gap-[var(--space-2)]">
+              <textarea
+                ref={titleRef}
+                value={titleDraft}
+                onChange={(e) => {
+                  setTitleDraft(e.target.value);
+                  setDirty(true);
+                }}
+                onBlur={() => {
+                  if (dirty && titleDraft.trim() && titleDraft !== task.title) {
+                    patch({ title: titleDraft.trim() });
+                  }
+                }}
+                rows={1}
+                className="flex-1 overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
+              />
+              <button
+                type="button"
+                onClick={onToggleFavorite}
+                aria-label={starred ? t("unstar") : t("star")}
+                title={starred ? t("unstar") : t("star")}
+                className="shrink-0 mt-1 p-1.5 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)]"
+              >
+                {starred ? (
+                  <Star size={18} className="text-[var(--warn)] fill-[var(--warn)]" />
+                ) : (
+                  <Star size={18} className="text-[var(--meta)]" />
+                )}
+              </button>
+            </div>
 
             <textarea
               value={descDraft}

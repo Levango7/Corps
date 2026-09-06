@@ -30,7 +30,8 @@
       "settings": "Settings",
       "notifications": "Notifications",
       "admin": "Admin",
-      "documents": "Documents"
+      "documents": "Documents",
+      "favorites": "My starred"
     },
     "search": {
       "placeholder": "Search tasks",
@@ -100,6 +101,8 @@
     "descriptionOptional": "Description (optional)",
     "status": "Status",
     "assignee": "Assignee",
+    "star": "Star this task",
+    "unstar": "Remove star",
     "assigneeOptional": "Assignee (optional)",
     "unassigned": "Unassigned",
     "dueDate": "Due date",
