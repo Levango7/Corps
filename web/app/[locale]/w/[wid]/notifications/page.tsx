@@ -51,7 +51,23 @@ interface Notification {
   createdAt: string;
 }
 
-type Filter = "all" | "unread";
+type Filter = "all" | "unread" | "mention" | "assigned";
+
+const FILTER_TABS: { id: Filter; labelKey: string }[] = [
+  { id: "all", labelKey: "filterAll" },
+  { id: "unread", labelKey: "filterUnread" },
+  { id: "mention", labelKey: "filterMention" },
+  { id: "assigned", labelKey: "filterAssigned" },
+];
+
+/** 过滤条件：哪些 type 对应到各 tab */
+function matchFilter(n: Notification, f: Filter): boolean {
+  if (f === "all") return true;
+  if (f === "unread") return !n.read;
+  if (f === "mention") return n.type === "mention";
+  if (f === "assigned") return n.type === "task_assigned";
+  return true;
+}
 
 /**
  * 通知类型元数据：图标 + 图标色 + 文案 key（阶段 2-6 i18n：模板经
@@ -116,7 +132,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
 
   // 当前筛选下的可见列表，按 createdAt 降序
   const visible = useMemo(() => {
-    const list = filter === "unread" ? all.filter((n) => !n.read) : all;
+    const list = all.filter((n) => matchFilter(n, filter));
     return [...list].sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   }, [all, filter]);
 
@@ -183,19 +199,19 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
           aria-label={tNotif("filterAria")}
           className="inline-flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)]"
         >
-          {(["all", "unread"] as const).map((f) => (
+          {FILTER_TABS.map((tab) => (
             <button
-              key={f}
+              key={tab.id}
               role="tab"
-              aria-selected={filter === f}
-              onClick={() => setFilter(f)}
+              aria-selected={filter === tab.id}
+              onClick={() => setFilter(tab.id)}
               className={`px-3 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none ${
-                filter === f
+                filter === tab.id
                   ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                   : "text-[var(--muted)] hover:text-[var(--fg-2)]"
               }`}
             >
-              {f === "all" ? tNotif("all") : tNotif("unread")}
+              {tNotif(tab.labelKey)}
             </button>
           ))}
         </div>
@@ -307,7 +323,7 @@ function NotificationListSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
-/** 空状态：筛选未读无结果用精简文案，全列表空用引导文案 */
+/** 空状态：按不同 filter 给不同提示 */
 function EmptyState({ filter }: { filter: Filter }) {
   const t = useTranslations("empty");
   if (filter === "unread") {
@@ -316,6 +332,26 @@ function EmptyState({ filter }: { filter: Filter }) {
         <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
         <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
           {t("noUnreadNotifications")}
+        </p>
+      </div>
+    );
+  }
+  if (filter === "mention") {
+    return (
+      <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
+        <AtSign size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
+        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
+          {t("noMentionNotifications")}
+        </p>
+      </div>
+    );
+  }
+  if (filter === "assigned") {
+    return (
+      <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
+        <UserPlus size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
+        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
+          {t("noAssignedNotifications")}
         </p>
       </div>
     );

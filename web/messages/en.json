@@ -899,6 +899,12 @@
     "unreadCount": "{count} unread",
     "all": "All",
     "unreadSuffix": ", unread",
+    "filterAll": "All",
+    "filterUnread": "Unread",
+    "filterMention": "@Mentions",
+    "filterAssigned": "Assigned to me",
+    "noMentionNotifications": "No mentions yet",
+    "noAssignedNotifications": "No tasks assigned to you yet",
     "title": "Notifications",
     "markAllRead": "Mark all read",
     "emptyHint": "When someone @mentions you, assigns a task, or updates a decision, you will be notified here"
