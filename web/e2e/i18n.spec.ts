@@ -42,7 +42,7 @@ test.describe("i18n：登录页文案对比（zh vs en）", () => {
   });
 });
 
-test.describe.serial("i18n：工作区内 LanguageSwitcher 切换", () => {
+test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
   test("注册并进入工作区（zh）", async ({ page }) => {
     await registerAndLogin(page, email, "E2E语言工作区");
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
@@ -56,8 +56,10 @@ test.describe.serial("i18n：工作区内 LanguageSwitcher 切换", () => {
       timeout: 10_000,
     });
 
-    // 点击 LanguageSwitcher 的 English 按钮
-    await page.getByRole("button", { name: "切换语言：English" }).click();
+    // 点 UserMenu 头像按钮展开下拉（zh: "个人设置"）
+    await page.getByRole("button", { name: "个人设置" }).click();
+    // 再点下拉内的 English 选项
+    await page.getByRole("button", { name: "English", exact: true }).click();
 
     // URL 应带 /en 前缀
     await page.waitForURL(/\/en\/w\//, { timeout: 10_000 });
@@ -74,14 +76,16 @@ test.describe.serial("i18n：工作区内 LanguageSwitcher 切换", () => {
     await login(page, email);
 
     // 先切到 en
-    await page.getByRole("button", { name: "切换语言：English" }).click();
+    await page.getByRole("button", { name: "个人设置" }).click();
+    await page.getByRole("button", { name: "English", exact: true }).click();
     await page.waitForURL(/\/en\/w\//, { timeout: 10_000 });
     await expect(page.getByRole("link", { name: "Board", exact: true }).first()).toBeVisible({
       timeout: 10_000,
     });
 
-    // 切回中文（en locale 下 aria-label 用 en 字典："Switch language：中文"）
-    await page.getByRole("button", { name: "Switch language：中文" }).click();
+    // 切回中文：en locale 下 UserMenu trigger 文案为 "Profile settings"
+    await page.getByRole("button", { name: "Profile settings" }).click();
+    await page.getByRole("button", { name: "中文", exact: true }).click();
 
     // URL 应去除 /en 前缀（as-needed 模式下 zh 不带前缀）
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/, { timeout: 10_000 });
