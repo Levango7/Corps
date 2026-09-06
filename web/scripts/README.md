@@ -14,6 +14,7 @@ cd web && node scripts/responsive-shots.mjs
 ## scripts/layout-audit.mjs
 
 程序化布局崩点审计（不依赖人眼看截图），三档视口 × 6 页面：
+
 - 横向溢出（元素超出视口且不在滚动容器内）
 - 可交互元素重叠（button/link/input 两两相交）
 - 触控目标过小（高度 < 20px 的 button/a）
