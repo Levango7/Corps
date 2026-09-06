@@ -273,7 +273,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             </select>
             <Link
               href={`/w/${wid}/board`}
-              className="flex items-center gap-1 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+              className="flex items-center gap-1 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] py-1 -my-1 px-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               {t("allTasks")}
               <ArrowRight size={14} />
