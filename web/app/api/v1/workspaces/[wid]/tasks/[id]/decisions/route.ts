@@ -85,7 +85,11 @@ export async function POST(
       return created;
     });
 
-    if (!decision) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+    if (!decision)
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
 
     // P2 数据埋点：create_decision 事件（不阻塞主流程）
     await trackServerEvent({

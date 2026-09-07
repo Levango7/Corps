@@ -70,7 +70,10 @@ export async function PATCH(
     );
 
     if (result.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "memberNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "memberNotFound") },
+        { status: 404 },
+      );
     }
     if (result.kind === "ownerImmutable") {
       return NextResponse.json(
@@ -79,10 +82,16 @@ export async function PATCH(
       );
     }
     if (result.kind === "selfForbidden") {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "cannotChangeOwnRole") }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "cannotChangeOwnRole") },
+        { status: 400 },
+      );
     }
     if (result.kind === "notAdminPrivilege") {
-      return NextResponse.json({ code: 403, message: apiMsg(req, "onlyOwnerChangeAdmin") }, { status: 403 });
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "onlyOwnerChangeAdmin") },
+        { status: 403 },
+      );
     }
     return NextResponse.json({ code: 200, data: result.updated });
   } catch (error) {
@@ -99,10 +108,16 @@ export async function DELETE(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember") }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember") },
+      { status: 403 },
+    );
   }
   if (userId === ctx.payload.sub) {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "cannotRemoveSelf") }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "cannotRemoveSelf") },
+      { status: 400 },
+    );
   }
 
   const outcome = await runWithWorkspace(
@@ -145,13 +160,22 @@ export async function DELETE(
   );
 
   if (outcome.kind === "notFound") {
-    return NextResponse.json({ code: 404, message: apiMsg(req, "memberNotFound") }, { status: 404 });
+    return NextResponse.json(
+      { code: 404, message: apiMsg(req, "memberNotFound") },
+      { status: 404 },
+    );
   }
   if (outcome.kind === "isOwner") {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "cannotRemoveOwner") }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "cannotRemoveOwner") },
+      { status: 403 },
+    );
   }
   if (outcome.kind === "notAdminPrivilege") {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "onlyOwnerRemoveAdmin") }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "onlyOwnerRemoveAdmin") },
+      { status: 403 },
+    );
   }
 
   if (outcome.stripeCustomerId && outcome.stripeSubId && outcome.seatLimit != null) {

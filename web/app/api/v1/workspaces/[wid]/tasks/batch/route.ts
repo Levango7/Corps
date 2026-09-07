@@ -39,7 +39,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 改 assignee 需要 admin/owner 权限（与单条 PATCH 对齐）
     if (body.action === "update" && body.assigneeId !== undefined) {
       if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-        return NextResponse.json({ code: 403, message: apiMsg(req, "onlyAdminBatchAssign") }, { status: 403 });
+        return NextResponse.json(
+          { code: 403, message: apiMsg(req, "onlyAdminBatchAssign") },
+          { status: 403 },
+        );
       }
     }
 

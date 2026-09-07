@@ -78,7 +78,10 @@ export async function PATCH(
     });
 
     if ("notFound" in result) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "decisionNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "decisionNotFound") },
+        { status: 404 },
+      );
     }
     if ("conflict" in result) {
       return NextResponse.json(

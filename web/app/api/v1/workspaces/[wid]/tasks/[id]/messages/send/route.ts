@@ -115,7 +115,11 @@ export async function POST(
       ctx.payload.sub,
     );
 
-    if (!result) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+    if (!result)
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
 
     // emit SSE 事件：推送新消息给所有在线订阅者
     emitChatEvent(id, { type: "message", message: result });

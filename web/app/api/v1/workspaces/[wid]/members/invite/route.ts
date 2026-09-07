@@ -217,7 +217,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
     if (result.duplicate) {
-      return NextResponse.json({ code: 409, message: apiMsg(req, "userAlreadyMember") }, { status: 409 });
+      return NextResponse.json(
+        { code: 409, message: apiMsg(req, "userAlreadyMember") },
+        { status: 409 },
+      );
     }
 
     // Pro + Stripe：加入后自动扩席（seatLimit 跟随人数 + 通道侧 quantity 按比例计费）
@@ -287,6 +290,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
     console.error("[invite member] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

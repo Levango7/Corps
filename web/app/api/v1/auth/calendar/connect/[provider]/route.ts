@@ -26,7 +26,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   try {
     getProviderConfig(provider);
   } catch {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "unsupportedCalendarProvider") }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "unsupportedCalendarProvider") },
+      { status: 400 },
+    );
   }
   const p = provider as CalendarProvider;
 

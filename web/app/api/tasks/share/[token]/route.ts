@@ -67,12 +67,18 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     });
 
     if (!data) {
-      return NextResponse.json({ code: 404, message: apiMsg(_req, "shareLinkInvalidRevoked") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(_req, "shareLinkInvalidRevoked") },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ code: 200, data });
   } catch (error) {
     console.error("[GET share task] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(_req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(_req, "internalError") },
+      { status: 500 },
+    );
   }
 }

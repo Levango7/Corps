@@ -27,12 +27,18 @@ export async function GET(
     );
 
     if (!doc) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "documentNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "documentNotFound") },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ code: 200, data: doc });
   } catch (error) {
     console.error("[GET document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 
@@ -98,7 +104,10 @@ export async function PATCH(
     );
 
     if (updated.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "documentNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "documentNotFound") },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ code: 200, data: updated.doc });
   } catch (error) {
@@ -109,7 +118,10 @@ export async function PATCH(
       );
     }
     console.error("[PATCH document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 
@@ -138,11 +150,17 @@ export async function DELETE(
     );
 
     if (deleted.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "documentNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "documentNotFound") },
+        { status: 404 },
+      );
     }
     return NextResponse.json({ code: 200, data: { id, deleted: true } });
   } catch (error) {
     console.error("[DELETE document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

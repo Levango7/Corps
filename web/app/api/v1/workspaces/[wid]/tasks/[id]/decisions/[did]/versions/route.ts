@@ -27,7 +27,10 @@ export async function GET(
   });
 
   if (versions === null) {
-    return NextResponse.json({ code: 404, message: apiMsg(req, "decisionNotFound") }, { status: 404 });
+    return NextResponse.json(
+      { code: 404, message: apiMsg(req, "decisionNotFound") },
+      { status: 404 },
+    );
   }
 
   return NextResponse.json({ code: 200, data: versions });

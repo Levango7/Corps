@@ -44,7 +44,10 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[GET workspaces] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 

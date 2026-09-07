@@ -45,7 +45,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
     }),
   );
   if (!att) {
-    return NextResponse.json({ code: 404, message: apiMsg(req, "attachmentNotFound") }, { status: 404 });
+    return NextResponse.json(
+      { code: 404, message: apiMsg(req, "attachmentNotFound") },
+      { status: 404 },
+    );
   }
 
   // 4. 租户校验：请求者必须是附件所属工作区的成员

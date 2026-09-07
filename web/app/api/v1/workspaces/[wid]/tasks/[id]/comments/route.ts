@@ -106,7 +106,11 @@ export async function POST(
       return { created, validMentions, taskTitle: task.title };
     });
 
-    if (!comment) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+    if (!comment)
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
 
     // @提及邮件通知（邮件已配置 + 被提及者非评论作者时，失败不阻塞）
     if (isEmailConfigured() && comment.validMentions.length > 0) {

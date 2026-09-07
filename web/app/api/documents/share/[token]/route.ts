@@ -66,6 +66,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     return NextResponse.json({ code: 200, data: doc });
   } catch (error) {
     console.error("[GET share document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(_req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(_req, "internalError") },
+      { status: 500 },
+    );
   }
 }

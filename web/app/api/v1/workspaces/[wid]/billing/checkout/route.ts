@@ -74,7 +74,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       ctx.payload.sub,
     );
     if (!workspace) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "workspaceNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "workspaceNotFound") },
+        { status: 404 },
+      );
     }
     const origin = new URL(req.url).origin;
     const defaultSuccessUrl = `${origin}/w/${wid}/billing?success=1&session_id={CHECKOUT_SESSION_ID}`;
@@ -131,7 +134,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 错误映射：not_configured/unsupported_period → 400；其余 → 500
     if (error instanceof PaymentProviderError) {
       if (error.code === "unsupported_period") {
-        return NextResponse.json({ code: 400, message: apiMsg(req, "yearlyPriceNotConfigured") }, { status: 400 });
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "yearlyPriceNotConfigured") },
+          { status: 400 },
+        );
       }
       if (error.code === "not_configured") {
         return NextResponse.json({ code: 400, message: error.message }, { status: 400 });

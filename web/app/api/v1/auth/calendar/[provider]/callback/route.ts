@@ -43,19 +43,28 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   }
 
   if (!code || !state) {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "calendarMissingParams") }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "calendarMissingParams") },
+      { status: 400 },
+    );
   }
 
   // 校验 provider
   if (provider !== "google" && provider !== "outlook") {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "unsupportedCalendarProvider") }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "unsupportedCalendarProvider") },
+      { status: 400 },
+    );
   }
   const p = provider as CalendarProvider;
 
   // 验证 state 签名 + 提取载荷
   const statePayload = verifyState(state);
   if (!statePayload) {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "calendarStateInvalid") }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "calendarStateInvalid") },
+      { status: 400 },
+    );
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

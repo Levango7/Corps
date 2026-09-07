@@ -118,7 +118,11 @@ export async function POST(
       ctx.payload.sub,
     );
 
-    if (!result) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+    if (!result)
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
 
     return NextResponse.json({ code: 201, data: result }, { status: 201 });
   } catch (error) {

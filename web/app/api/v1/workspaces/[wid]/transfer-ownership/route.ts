@@ -17,7 +17,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (ctx.member.role !== "owner") {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "onlyOwnerTransfer") }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "onlyOwnerTransfer") },
+      { status: 403 },
+    );
   }
 
   let body: z.infer<typeof schema>;
@@ -68,7 +71,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
 
     if (result.kind === "notMember") {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "transfereeNotMember") }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "transfereeNotMember") },
+        { status: 400 },
+      );
     }
     return NextResponse.json({ code: 200, data: { ok: true } });
   } catch (error) {

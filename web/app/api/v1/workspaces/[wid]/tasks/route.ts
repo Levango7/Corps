@@ -104,7 +104,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: flattened });
   } catch (error) {
     console.error("[GET tasks] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 
@@ -216,13 +219,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
     if (task.invalidMilestone) {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "milestoneNotFound") }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "milestoneNotFound") },
+        { status: 400 },
+      );
     }
     if (task.invalidLabel) {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "labelNotFound") }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "labelNotFound") },
+        { status: 400 },
+      );
     }
     if (task.invalidParent === "notFound") {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "parentTaskNotFound") }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "parentTaskNotFound") },
+        { status: 400 },
+      );
     }
     if (task.invalidParent === "nested") {
       return NextResponse.json(

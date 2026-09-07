@@ -56,12 +56,19 @@ export async function GET(
       }),
     );
 
-    if (!task) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+    if (!task)
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
 
     return NextResponse.json({ code: 200, data: task });
   } catch (error) {
     console.error("[GET task] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 
@@ -80,7 +87,10 @@ export async function PATCH(
     // 改 assignee 需要 admin/owner 权限（与 batch 对齐）
     if (validated.assigneeId !== undefined) {
       if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-        return NextResponse.json({ code: 403, message: apiMsg(req, "onlyAdminAssign") }, { status: 403 });
+        return NextResponse.json(
+          { code: 403, message: apiMsg(req, "onlyAdminAssign") },
+          { status: 403 },
+        );
       }
     }
 
@@ -147,7 +157,10 @@ export async function PATCH(
     );
 
     if (result.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
     }
     if (result.kind === "invalidAssignee") {
       return NextResponse.json(
@@ -226,7 +239,10 @@ export async function PATCH(
     }
     // P2025: 记录不存在（并发删除场景）
     if ((error as { code?: string }).code === "P2025") {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
     }
     console.error("Update task error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
@@ -253,7 +269,10 @@ export async function DELETE(
       ctx.payload.sub,
     );
     if (!existing) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
     }
     // 删除权限：任务创建者或 owner/admin（普通成员不能删他人创建的任务）
     if (existing.createdBy !== ctx.payload.sub && !["owner", "admin"].includes(ctx.member.role)) {
@@ -272,9 +291,15 @@ export async function DELETE(
   } catch (error) {
     // P2025: 记录不存在（并发删除场景）
     if ((error as { code?: string }).code === "P2025") {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
     }
     console.error("[DELETE task] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
