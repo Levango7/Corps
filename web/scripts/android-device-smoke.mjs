@@ -44,24 +44,30 @@ try {
     : { ws: "Workspace name", email: "Email", pwd: "Password", submit: "Create and enter" };
   console.log("signup locale:", isZh ? "zh" : "en");
 
-  // 注册走 API 直调（context.request 与页面共享 cookie 存储）而非 UI 表单：
-  // 云模拟器上 UI 表单层变量太多；本档验证目标是渲染布局不是注册 UX。
-  // 超时给 120s：dev server（Turbopack）首次编译 register 路由 + better-auth
-  // 慢操作在冷启动下远超默认 30s（七轮实测 POST 发出后 30s 无响应）
+  // 注册走页面内 fetch（page.evaluate）而非 context.request 代理：
+  // context.request 在云模拟器 Chrome（113 UA）上 POST 发出后响应永远
+  // 不返回（宿主侧同 API 1.5s 即返，八轮实测 120s 超时）——代理通道问题。
+  // 页面内 fetch 走 Chrome 自身网络栈 + credentials 同源 cookie 自动带
   const email = `android-ci-${Date.now()}@example.com`;
   const wsName = `安卓云${Date.now() % 100000}`;
-  const regRes = await context.request.post(`${BASE}/api/v1/auth/register`, {
-    data: { email, password: PASSWORD, workspaceName: wsName },
-    timeout: 120_000,
-  });
-  console.log("register api:", regRes.status());
-  if (regRes.status() !== 201) {
-    const body = await regRes.text();
-    throw new Error(`register failed ${regRes.status()}: ${body.slice(0, 300)}`);
+  const reg = await page.evaluate(
+    async ({ url, body }) => {
+      const res = await fetch(`${url}/api/v1/auth/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+        credentials: "include",
+      });
+      return { status: res.status, json: await res.json().catch(() => null) };
+    },
+    { url: BASE, body: { email, password: PASSWORD, workspaceName: wsName } },
+  );
+  console.log("register api:", reg.status);
+  if (reg.status !== 201 || !reg.json?.data?.workspace?.id) {
+    throw new Error(`register failed ${reg.status}: ${JSON.stringify(reg.json).slice(0, 300)}`);
   }
-  const regJson = await regRes.json();
-  const wid = regJson.data.workspace.id;
-  // 带 cookie 跳工作区（context.request 与浏览器共享 cookie jar）
+  const wid = reg.json.data.workspace.id;
+  // 带 cookie 跳工作区（evaluate 的 fetch 已在页面域种下会话 cookie）
   await page.goto(`${BASE}/w/${wid}`);
   await page.waitForLoadState("networkidle");
   // 断言真的进了工作区（未跳回 auth）
