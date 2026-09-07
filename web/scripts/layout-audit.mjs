@@ -4,11 +4,17 @@
 //  2) 文本截断（scrollWidth > clientWidth 且非刻意的 truncate）
 //  3) 可交互元素重叠（button/input/select 相交）
 //  4) 触控目标过小（< 24px 高或宽的按钮，仅移动档）
+// 双引擎：chromium + webkit（Safari 近似——无 Mac/iPhone 时的日常替代，
+// 注意：WebKit 引擎近似渲染，不覆盖真机触摸/安全区/滚动回弹）。
 // 输出文本报告；dev server 须在 localhost:3000。
-import { chromium } from "@playwright/test";
+import { chromium, webkit } from "@playwright/test";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PASSWORD = "Test1234!";
+const ENGINES = [
+  { id: "chromium", name: "chromium", launch: () => chromium.launch() },
+  { id: "webkit", name: "webkit(safari近似)", launch: () => webkit.launch() },
+];
 const VIEWPORTS = [
   { name: "pc", width: 1440, height: 900 },
   { name: "ipad", width: 768, height: 1024 },
@@ -77,7 +83,12 @@ const AUDIT = `() => {
 
 async function registerAndLogin(page, email) {
   await page.goto(`${BASE}/auth/signup`);
-  await page.getByLabel("工作区名称").fill(`布局审计${Date.now() % 10000}`);
+  // WebKit 坑：fill() 对 React 受控 type=text 输入框在 WebKit 下不触发
+  // onChange（值填不进 state，原生校验拦截提交）。pressSequentially 逐字符
+  // 模拟真实按键在两个引擎下都可靠；email/password 不受影响但统一用。
+  const ws = page.getByLabel("工作区名称");
+  await ws.click();
+  await ws.pressSequentially(`布局审计${Date.now() % 10000}`, { delay: 20 });
   await page.getByLabel("邮箱").fill(email);
   await page.getByLabel("密码").fill(PASSWORD);
   await page.getByRole("button", { name: "创建并进入" }).click();
@@ -85,60 +96,74 @@ async function registerAndLogin(page, email) {
 }
 
 async function main() {
-  const browser = await chromium.launch();
   const report = [];
 
-  for (const vp of VIEWPORTS) {
-    const email = `audit-${vp.name}-${Date.now()}@example.com`;
-    const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
-    const page = await ctx.newPage();
+  for (const engine of ENGINES) {
+    let browser;
     try {
-      await registerAndLogin(page, email);
-      const wid = page.url().match(/\/w\/([0-9a-f-]{36})/)?.[1];
-      const pages = [
-        ["/", "概览"],
-        ["/board", "看板"],
-        ["/decisions", "决策"],
-        ["/notifications", "通知"],
-        ["/members", "成员"],
-        ["/settings", "设置"],
-      ];
-      for (const [p, label] of pages) {
-        await page.goto(`${BASE}/w/${wid}${p}`);
-        await page.waitForLoadState("networkidle");
-        // 字符串形式的 evaluate 在此 playwright 版本返回 undefined，
-        // 用函数形式包装：页面内 eval(AUDIT 源码) 拿结果
-        const issues = await page.evaluate((src) => {
-          try {
-            const fn = eval(src);
-            return fn();
-          } catch (e) {
-            return [{ kind: "audit-error", desc: String(e && e.message).slice(0, 200) }];
-          }
-        }, AUDIT);
-        // 去重 + 截断
-        const seen = new Set();
-        const uniq = issues.filter((i) => {
-          const k = i.kind + "|" + i.desc;
-          if (seen.has(k)) return false;
-          seen.add(k);
-          return true;
-        });
-        report.push(`\n=== ${vp.name} ${label} (${uniq.length} issues) ===`);
-        uniq
-          .slice(0, 12)
-          .forEach((i) =>
-            report.push(
-              `  ${i.kind}: ${i.desc}${i.right ? ` right=${i.right}/${i.vw}` : ""}${i.h ? ` h=${i.h}px` : ""}`,
-            ),
-          );
-      }
+      browser = await engine.launch();
     } catch (e) {
-      report.push(`\n=== ${vp.name} 失败: ${e.message.split("\n")[0]} ===`);
+      report.push(`\n=== ${engine.name} 引擎启动失败: ${e.message.split("\n")[0]} ===`);
+      continue;
     }
-    await ctx.close();
+
+    for (const vp of VIEWPORTS) {
+      const email = `audit-${engine.id}-${vp.name}-${Date.now()}@example.com`;
+      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+      const page = await ctx.newPage();
+      try {
+        await registerAndLogin(page, email);
+        const wid = page.url().match(/\/w\/([0-9a-f-]{36})/)?.[1];
+        // 注册成功但认证链（refresh/cookie 落定）在 WebKit 下偶尔未完成——
+        // 立即 goto 会被工作区 layout 的 401 兜底跳 /auth/login 顶掉导航。
+        // 等概览页渲染出内容再继续，规避竞态。
+        await page.waitForLoadState("networkidle");
+        await page.waitForTimeout(1500);
+        const pages = [
+          ["/", "概览"],
+          ["/board", "看板"],
+          ["/decisions", "决策"],
+          ["/notifications", "通知"],
+          ["/members", "成员"],
+          ["/settings", "设置"],
+        ];
+        for (const [p, label] of pages) {
+          await page.goto(`${BASE}/w/${wid}${p}`);
+          await page.waitForLoadState("networkidle");
+          // 字符串形式的 evaluate 在此 playwright 版本返回 undefined，
+          // 用函数形式包装：页面内 eval(AUDIT 源码) 拿结果
+          const issues = await page.evaluate((src) => {
+            try {
+              const fn = eval(src);
+              return fn();
+            } catch (e) {
+              return [{ kind: "audit-error", desc: String(e && e.message).slice(0, 200) }];
+            }
+          }, AUDIT);
+          // 去重 + 截断
+          const seen = new Set();
+          const uniq = (issues || []).filter((i) => {
+            const k = i.kind + "|" + i.desc;
+            if (seen.has(k)) return false;
+            seen.add(k);
+            return true;
+          });
+          report.push(`\n=== ${engine.name} ${vp.name} ${label} (${uniq.length} issues) ===`);
+          uniq
+            .slice(0, 12)
+            .forEach((i) =>
+              report.push(
+                `  ${i.kind}: ${i.desc}${i.right ? ` right=${i.right}/${i.vw}` : ""}${i.h ? ` h=${i.h}px` : ""}`,
+              ),
+            );
+        }
+      } catch (e) {
+        report.push(`\n=== ${engine.name} ${vp.name} 失败: ${e.message.split("\n")[0]} ===`);
+      }
+      await ctx.close();
+    }
+    await browser.close();
   }
-  await browser.close();
   console.log(report.join("\n"));
 }
 
