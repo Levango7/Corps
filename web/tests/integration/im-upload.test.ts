@@ -88,7 +88,9 @@ describe("IM 附件上传 / 下载（租户隔离 + 鉴权）", () => {
   it("登录后上传附件（multipart png）返回 201", async () => {
     const form = new FormData();
     const pngBytes = Buffer.from(PNG_1PX_BASE64, "base64");
-    form.append("file", new Blob([pngBytes], { type: "image/png" }), "test.png");
+    // @types/node 24 收紧了 Buffer 泛型（ArrayBufferLike ≠ ArrayBuffer），
+    // 需显式转成 Uint8Array 视图才能赋给 BlobPart
+    form.append("file", new Blob([new Uint8Array(pngBytes)], { type: "image/png" }), "test.png");
 
     const res = await fetch(`${BASE}/workspaces/${wid}/tasks/${taskId}/messages/attachments`, {
       method: "POST",
