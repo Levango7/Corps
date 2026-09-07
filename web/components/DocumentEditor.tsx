@@ -15,10 +15,10 @@
 import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
-import { Loader2, Share2, X, Globe, Eye, Download } from "lucide-react";
+import { Loader2, Share2, X, Globe, Eye, Download, Columns2 } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
-import { MarkdownToolbar } from "@/components/MarkdownToolbar";
+import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 
 interface DocumentEditorProps {
   wid: string;
@@ -44,9 +44,18 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
     initial.shareToken ? `${window.location.origin}/documents/share/${initial.shareToken}` : null,
   );
   const [preview, setPreview] = useState(false);
+  /** 分屏模式（v0.6）：编辑与预览并排实时渲染（Obsidian 式），与单页切换互斥 */
+  const [split, setSplit] = useState(false);
   const [busy, setBusy] = useState<"save" | "publish" | "share" | null>(null);
   const [error, setError] = useState("");
   const [, startTransition] = useTransition();
+
+  // Typora 式快捷键层（Ctrl+B/I/K、列表续行、Tab 缩进）——与工具栏共用实现
+  const handleKeyDown = useEditorKeys({
+    textareaRef: editorRef,
+    value: markdown,
+    onChange: setMarkdown,
+  });
 
   async function save(opts: { publish?: boolean } = {}) {
     if (busy) return;
@@ -155,6 +164,22 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             <Eye size={14} />
             {preview ? t("editMode") : t("previewMode")}
           </button>
+          <button
+            onClick={() => {
+              setSplit((v) => !v);
+              setPreview(false);
+            }}
+            aria-pressed={split}
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors ${
+              split
+                ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
+                : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
+            }`}
+            title={t("splitHint")}
+          >
+            <Columns2 size={14} />
+            {t("splitMode")}
+          </button>
           {shareToken ? (
             <button
               onClick={unshare}
@@ -215,10 +240,30 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         </div>
       )}
 
-      {/* 编辑/预览 */}
+      {/* 编辑/预览/分屏 */}
       {preview ? (
         <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-6)] min-h-[60vh]">
           <Markdown source={markdown} />
+        </div>
+      ) : split ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
+          <div>
+            <div className="mb-2">
+              <MarkdownToolbar textareaRef={editorRef} value={markdown} onChange={setMarkdown} />
+            </div>
+            <textarea
+              ref={editorRef}
+              value={markdown}
+              onChange={(e) => setMarkdown(e.target.value)}
+              onKeyDown={handleKeyDown}
+              onBlur={() => save()}
+              placeholder={t("markdownPlaceholder")}
+              className="w-full h-[60vh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
+            />
+          </div>
+          <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] min-h-[60vh] overflow-y-auto lg:max-h-[calc(60vh+2rem)]">
+            <Markdown source={markdown} />
+          </div>
         </div>
       ) : (
         <>
@@ -229,6 +274,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             ref={editorRef}
             value={markdown}
             onChange={(e) => setMarkdown(e.target.value)}
+            onKeyDown={handleKeyDown}
             onBlur={() => save()}
             placeholder={t("markdownPlaceholder")}
             className="w-full h-[60vh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
@@ -238,9 +284,18 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
       {error && <p className="mt-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
-      <p className="mt-3 text-[length:var(--text-xs)] text-[var(--muted)] print:hidden">
-        {t("autosaveHint")}
-      </p>
+      <div className="mt-3 flex items-center justify-between gap-3 print:hidden">
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("autosaveHint")}</p>
+        {/* 字数统计（v0.6）：去 Markdown 标记后的近似可读字数 */}
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+          {t("wordCount", {
+            count: markdown
+              .replace(/[#>*`\-_|~[\]()]/g, " ")
+              .split(/\s+/)
+              .filter(Boolean).length,
+          })}
+        </p>
+      </div>
       {/* 打印专用容器（导出 PDF）：屏幕隐藏，打印时仅此区可见 */}
       <div className="hidden print:block print-area" aria-hidden="true">
         <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-2">{title}</h1>

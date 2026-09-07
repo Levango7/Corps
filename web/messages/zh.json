@@ -963,7 +963,10 @@
     "footerHint": "由 {product} 提供，团队轻量协作",
     "publicTitle": "{title} · corps 文档",
     "exportPdf": "导出 PDF",
-    "exportPdfHint": "将文档导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）"
+    "exportPdfHint": "将文档导出为 PDF（浏览器打印对话框中选择「另存为 PDF」）",
+    "splitMode": "分屏",
+    "splitHint": "编辑与预览并排实时渲染",
+    "wordCount": "{count} 字"
   },
   "editor": {
     "bold": "粗体",
@@ -981,7 +984,22 @@
     "templateProposal": "立项决议",
     "templateInsert": "插入模板",
     "toolbarAria": "Markdown 工具栏",
-    "placeholderText": "文本"
+    "placeholderText": "文本",
+    "link": "链接",
+    "linkText": "链接文字",
+    "tableTemplate": "| 列A | 列B |\n| --- | --- |\n|  |  |\n",
+    "diagramMenu": "插入图表",
+    "diagramMenuHint": "Mermaid 图表",
+    "diagramMindmap": "思维导图",
+    "diagramFlow": "流程图",
+    "diagramSequence": "时序图",
+    "diagramGantt": "甘特图",
+    "diagramPie": "饼图",
+    "diagramQuadrant": "四象限",
+    "shortcutsHint": "Ctrl+B/I/K · 列表 Enter 续行",
+    "tplCompare": "## 方案对比\n\n**背景：**\n\n**方案 A：**\n- 优点：\n- 缺点：\n\n**方案 B：**\n- 优点：\n- 缺点：\n\n**结论：** 选择方案 __，因为 __\n",
+    "tplRetro": "## 事故复盘\n\n**影响：**\n\n**时间线：**\n- \n\n**根因：**\n\n**改进项：**\n- [ ] \n",
+    "tplProposal": "## 立项决议\n\n**目标：**\n\n**范围：**\n- 包含：\n- 不包含：\n\n**负责人与排期：**\n\n**决议：**\n"
   },
   "attachment": {
     "previewAria": "预览：{name}",

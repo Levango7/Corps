@@ -39,7 +39,7 @@ import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 import { SubtaskSection } from "@/components/SubtaskSection";
-import { MarkdownToolbar } from "@/components/MarkdownToolbar";
+import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -143,6 +143,12 @@ export default function TaskDetailPage({
   const [decisionOpen, setDecisionOpen] = useState(false);
   // 决策编辑器 textarea ref（MarkdownToolbar 定位光标用）
   const decisionEditorRef = useRef<HTMLTextAreaElement>(null);
+  // 决策编辑器快捷键层（v0.6：与文档编辑器共用 Typora 式按键处理）
+  const decisionKeyDown = useEditorKeys({
+    textareaRef: decisionEditorRef,
+    value: decisionDraft,
+    onChange: setDecisionDraft,
+  });
   // 决策编辑/预览切换：edit=编辑 textarea，preview=渲染 markdown
   const [decisionMode, setDecisionMode] = useState<"edit" | "preview">("edit");
   // 打印模式：true 时挂载 .print-area（导出 PDF 专用），afterprint 后卸载——
@@ -629,6 +635,7 @@ export default function TaskDetailPage({
                       ref={decisionEditorRef}
                       value={decisionDraft}
                       onChange={(e) => setDecisionDraft(e.target.value)}
+                      onKeyDown={decisionKeyDown}
                       rows={6}
                       placeholder={t("decisionTemplate")}
                       className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"

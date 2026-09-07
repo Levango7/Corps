@@ -963,7 +963,10 @@
     "footerHint": "由 {product} 提供，团队轻量协作",
     "publicTitle": "{title} · corps 文档",
     "exportPdf": "Export PDF",
-    "exportPdfHint": "Export this document as PDF (choose Save as PDF in the print dialog)"
+    "exportPdfHint": "Export this document as PDF (choose Save as PDF in the print dialog)",
+    "splitMode": "Split",
+    "splitHint": "Live side-by-side preview",
+    "wordCount": "{count} words"
   },
   "editor": {
     "bold": "Bold",
@@ -981,7 +984,22 @@
     "templateProposal": "Proposal",
     "templateInsert": "Insert template",
     "toolbarAria": "Markdown toolbar",
-    "placeholderText": "text"
+    "placeholderText": "text",
+    "link": "Link",
+    "linkText": "link text",
+    "tableTemplate": "| Col A | Col B |\n| --- | --- |\n|  |  |\n",
+    "diagramMenu": "Insert diagram",
+    "diagramMenuHint": "Mermaid diagrams",
+    "diagramMindmap": "Mind map",
+    "diagramFlow": "Flowchart",
+    "diagramSequence": "Sequence",
+    "diagramGantt": "Gantt",
+    "diagramPie": "Pie chart",
+    "diagramQuadrant": "Quadrant",
+    "shortcutsHint": "Ctrl+B/I/K · Enter continues lists",
+    "tplCompare": "## Compare options\n\n**Context:**\n\n**Option A:**\n- Pros:\n- Cons:\n\n**Option B:**\n- Pros:\n- Cons:\n\n**Decision:** choose __ because __\n",
+    "tplRetro": "## Incident retro\n\n**Impact:**\n\n**Timeline:**\n- \n\n**Root cause:**\n\n**Action items:**\n- [ ] \n",
+    "tplProposal": "## Proposal\n\n**Goal:**\n\n**Scope:**\n- In:\n- Out:\n\n**Owner & schedule:**\n\n**Decision:**\n"
   },
   "attachment": {
     "previewAria": "Preview: {name}",

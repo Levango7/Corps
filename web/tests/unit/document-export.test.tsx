@@ -97,7 +97,8 @@ describe("DocumentEditor - 导出 PDF", () => {
   it("自动保存提示不参与打印输出（print:hidden）", () => {
     render(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
     const hint = screen.getByText("自动保存");
-    expect(hint.className).toContain("print:hidden");
+    // v0.6：提示与字数统计同排容器（flex div 带 print:hidden），断言落在共同父级
+    expect(hint.closest(".print\\:hidden")).not.toBeNull();
   });
 
   it("导出按钮不触发 api 调用（打印纯前端，无需保存）", () => {
