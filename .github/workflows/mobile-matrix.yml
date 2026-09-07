@@ -35,13 +35,25 @@ jobs:
           node-version: 22
           cache: "pnpm"
           cache-dependency-path: web/pnpm-lock.yaml
-      # macOS runner 无 service container 支持：用 container action 起 PG
-      - uses: ikalnytskyi/postgresql-action@v1
-        with:
-          postgresql version: "18"
-          postgresql db: corps_test
-          postgresql user: postgres
-          postgresql password: test
+      # macOS runner 无 service container 支持，且原用的
+      # ikalnytskyi/postgresql-action 已下架（首跑 Set up 失败根因）——
+      # 改 Homebrew 直装 + brew services 起库（runner 预装 brew）
+      - name: Install & start PostgreSQL (Homebrew)
+        shell: bash
+        run: |
+          brew install postgresql@18
+          brew services start postgresql@18
+          # brew 装的 PG 需显式建库与设密（默认 trust 本机免密，但连接串带密）
+          /opt/homebrew/opt/postgresql@18/bin/createuser -s postgres || true
+          /opt/homebrew/opt/postgresql@18/bin/psql -U $(whoami) postgres \
+            -c "ALTER USER postgres PASSWORD 'test';" || true
+          /opt/homebrew/opt/postgresql@18/bin/createdb -U $(whoami) corps_test || true
+          # brew services 是异步的，轮询直到 5432 真正可连
+          for i in $(seq 1 30); do
+            /opt/homebrew/opt/postgresql@18/bin/pg_isready -h localhost -p 5432 && break
+            sleep 2
+          done
+          /opt/homebrew/opt/postgresql@18/bin/pg_isready -h localhost -p 5432
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx prisma generate
       - run: npx prisma migrate deploy
@@ -138,8 +150,9 @@ jobs:
           disable-animations: true
           script: |
             set -e
-            cd web
-            # 模拟器 boot 后 Chrome 起来需要一点时间；轮询直到 _android 能连
+            # emulator-runner 的 script 在仓库根执行；首跑证明 cd 相对路径
+            # 在其 sh 逐行模式下不可靠，用 GITHUB_WORKSPACE 绝对路径
+            cd "$GITHUB_WORKSPACE/web"
             npx playwright install chromium
             node scripts/android-device-smoke.mjs
       - name: Upload Android screenshots
