@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { getPaymentProvider, PaymentProviderError, ProviderId } from "@/lib/payments";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 // P3-2 / 裁决三：checkout/route.ts 归支付线独占。period 字段并入本线交付。
 // Phase 2：新增 provider 参数支持通道选择（stripe/wechatpay-native/alipay-page）。
@@ -73,7 +74,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       ctx.payload.sub,
     );
     if (!workspace) {
-      return NextResponse.json({ code: 404, message: "工作区不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "workspaceNotFound") }, { status: 404 });
     }
     const origin = new URL(req.url).origin;
     const defaultSuccessUrl = `${origin}/w/${wid}/billing?success=1&session_id={CHECKOUT_SESSION_ID}`;
@@ -130,7 +131,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 错误映射：not_configured/unsupported_period → 400；其余 → 500
     if (error instanceof PaymentProviderError) {
       if (error.code === "unsupported_period") {
-        return NextResponse.json({ code: 400, message: "年付价格未配置" }, { status: 400 });
+        return NextResponse.json({ code: 400, message: apiMsg(req, "yearlyPriceNotConfigured") }, { status: 400 });
       }
       if (error.code === "not_configured") {
         return NextResponse.json({ code: 400, message: error.message }, { status: 400 });
@@ -144,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     console.error("Billing checkout error:", error);
     return NextResponse.json(
-      { code: 500, message: "计费服务暂时不可用，请稍后重试" },
+      { code: 500, message: apiMsg(req, "billingUnavailable") },
       { status: 500 },
     );
   }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { sendMentionEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/comments — 评论时间线（正序） */
 export async function GET(
@@ -105,7 +106,7 @@ export async function POST(
       return { created, validMentions, taskTitle: task.title };
     });
 
-    if (!comment) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    if (!comment) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
 
     // @提及邮件通知（邮件已配置 + 被提及者非评论作者时，失败不阻塞）
     if (isEmailConfigured() && comment.validMentions.length > 0) {

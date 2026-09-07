@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * POST /v1/workspaces/{wid}/tasks/{id}/messages/attachments — 上传文件附件
@@ -80,7 +81,7 @@ export async function POST(
     const formData = await req.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ code: 400, message: "缺少文件" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "missingFile") }, { status: 400 });
     }
 
     // 附件上限按套餐区分：免费版 10MB，Pro 50MB（v2 定价）
@@ -105,7 +106,7 @@ export async function POST(
     // 校验文件类型
     const ext = ALLOWED_TYPES[file.type];
     if (!ext) {
-      return NextResponse.json({ code: 400, message: "不支持的文件类型" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "unsupportedFileType") }, { status: 400 });
     }
 
     // 确保上传目录存在
@@ -143,7 +144,7 @@ export async function POST(
     if (!taskExists) {
       // 清理已写入的文件
       await fs.unlink(savedPath).catch(() => {});
-      return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
     }
 
     return NextResponse.json({ code: 201, data: meta }, { status: 201 });

@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 const updateSchema = z.object({
   role: z.enum(["admin", "member"]),
@@ -21,7 +22,7 @@ export async function PATCH(
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: "仅管理员或所有者可改成员角色" },
+      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerChangeRole") },
       { status: 403 },
     );
   }
@@ -36,7 +37,7 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: "请求体无效" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody") }, { status: 400 });
   }
 
   try {
@@ -69,24 +70,24 @@ export async function PATCH(
     );
 
     if (result.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "memberNotFound") }, { status: 404 });
     }
     if (result.kind === "ownerImmutable") {
       return NextResponse.json(
-        { code: 403, message: "不能修改所有者的角色，请先转让所有权" },
+        { code: 403, message: apiMsg(req, "ownerRoleImmutable") },
         { status: 403 },
       );
     }
     if (result.kind === "selfForbidden") {
-      return NextResponse.json({ code: 400, message: "不能修改自己的角色" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "cannotChangeOwnRole") }, { status: 400 });
     }
     if (result.kind === "notAdminPrivilege") {
-      return NextResponse.json({ code: 403, message: "仅所有者可变更管理员角色" }, { status: 403 });
+      return NextResponse.json({ code: 403, message: apiMsg(req, "onlyOwnerChangeAdmin") }, { status: 403 });
     }
     return NextResponse.json({ code: 200, data: result.updated });
   } catch (error) {
     console.error("[PATCH member] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -98,10 +99,10 @@ export async function DELETE(
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: "仅管理员或所有者可移除成员" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember") }, { status: 403 });
   }
   if (userId === ctx.payload.sub) {
-    return NextResponse.json({ code: 400, message: "不能移除自己" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "cannotRemoveSelf") }, { status: 400 });
   }
 
   const outcome = await runWithWorkspace(
@@ -144,13 +145,13 @@ export async function DELETE(
   );
 
   if (outcome.kind === "notFound") {
-    return NextResponse.json({ code: 404, message: "成员不存在" }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "memberNotFound") }, { status: 404 });
   }
   if (outcome.kind === "isOwner") {
-    return NextResponse.json({ code: 403, message: "不能移除工作区拥有者" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "cannotRemoveOwner") }, { status: 403 });
   }
   if (outcome.kind === "notAdminPrivilege") {
-    return NextResponse.json({ code: 403, message: "仅拥有者可移除管理员" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "onlyOwnerRemoveAdmin") }, { status: 403 });
   }
 
   if (outcome.stripeCustomerId && outcome.stripeSubId && outcome.seatLimit != null) {

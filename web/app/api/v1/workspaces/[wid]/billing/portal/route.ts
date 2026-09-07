@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { getPaymentProvider, PaymentProviderError } from "@/lib/payments";
+import { apiMsg } from "@/lib/api-messages";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -37,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 它是为 PAYMENT_PROVIDER 切换后的部署形态准备的。
     if (result === null) {
       return NextResponse.json(
-        { code: 501, message: "当前支付通道不支持自助管理" },
+        { code: 501, message: apiMsg(req, "portalNotSupported") },
         { status: 501 },
       );
     }
@@ -53,7 +54,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     console.error("Billing portal error:", error);
     return NextResponse.json(
-      { code: 500, message: "计费服务暂时不可用，请稍后重试" },
+      { code: 500, message: apiMsg(req, "billingUnavailable") },
       { status: 500 },
     );
   }

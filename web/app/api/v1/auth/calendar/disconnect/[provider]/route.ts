@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticate } from "@/lib/auth";
 import { disconnectCalendar } from "@/lib/calendar/sync";
 import type { CalendarProvider } from "@/lib/calendar/config";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * DELETE /api/v1/auth/calendar/disconnect/[provider]
@@ -21,7 +22,7 @@ export async function DELETE(
 
   // 校验 provider
   if (provider !== "google" && provider !== "outlook") {
-    return NextResponse.json({ code: 400, message: "不支持的日历 provider" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "unsupportedCalendarProvider") }, { status: 400 });
   }
   const p = provider as CalendarProvider;
 

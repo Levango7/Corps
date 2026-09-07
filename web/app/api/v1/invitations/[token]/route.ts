@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { createHash } from "crypto";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/v1/invitations/[token]
@@ -49,7 +50,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     const { invitation, inviter } = result;
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json(
-        { code: 410, message: "该邀请已失效（已接受或已过期）" },
+        { code: 410, message: apiMsg(req, "invitationInvalid") },
         { status: 410 },
       );
     }
@@ -69,6 +70,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     });
   } catch (error) {
     console.error("[invitation preview] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions/{did}/versions — 某条决策的版本历史（版本倒序） */
 export async function GET(
@@ -26,7 +27,7 @@ export async function GET(
   });
 
   if (versions === null) {
-    return NextResponse.json({ code: 404, message: "决策不存在" }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "decisionNotFound") }, { status: 404 });
   }
 
   return NextResponse.json({ code: 200, data: versions });

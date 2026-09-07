@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /v1/workspaces/{wid}/tasks/{id}/messages — 任务聊天消息历史
@@ -117,7 +118,7 @@ export async function POST(
       ctx.payload.sub,
     );
 
-    if (!result) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    if (!result) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
 
     return NextResponse.json({ code: 201, data: result }, { status: 201 });
   } catch (error) {

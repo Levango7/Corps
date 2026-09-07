@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions — 决策记录（版本倒序，最新在前） */
 export async function GET(
@@ -84,7 +85,7 @@ export async function POST(
       return created;
     });
 
-    if (!decision) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    if (!decision) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
 
     // P2 数据埋点：create_decision 事件（不阻塞主流程）
     await trackServerEvent({

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithShareToken, setTxGuc } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/tasks/share/{token} — 任务公开只读分享（无需登录）。
@@ -66,12 +67,12 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     });
 
     if (!data) {
-      return NextResponse.json({ code: 404, message: "分享链接无效或已被撤销" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(_req, "shareLinkInvalidRevoked") }, { status: 404 });
     }
 
     return NextResponse.json({ code: 200, data });
   } catch (error) {
     console.error("[GET share task] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(_req, "internalError") }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithShareToken, setTxGuc } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/documents/share/{token} — 公开分享链接（无需登录）
@@ -57,7 +58,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 
     if (!doc || !doc.publishedMarkdown) {
       return NextResponse.json(
-        { code: 404, message: "分享链接无效或文档尚未发布" },
+        { code: 404, message: apiMsg(_req, "shareLinkInvalidUnpublished") },
         { status: 404 },
       );
     }
@@ -65,6 +66,6 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     return NextResponse.json({ code: 200, data: doc });
   } catch (error) {
     console.error("[GET share document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(_req, "internalError") }, { status: 500 });
   }
 }

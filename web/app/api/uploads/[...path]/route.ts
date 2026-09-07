@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { authenticate, runWithAuthOp, runWithWorkspace } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/uploads/[...path] — 服务上传的文件（鉴权版）
@@ -44,7 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
     }),
   );
   if (!att) {
-    return NextResponse.json({ code: 404, message: "附件不存在" }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "attachmentNotFound") }, { status: 404 });
   }
 
   // 4. 租户校验：请求者必须是附件所属工作区的成员
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
       },
     });
   } catch {
-    return NextResponse.json({ code: 404, message: "文件不存在" }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "fileNotFound") }, { status: 404 });
   }
 }
 

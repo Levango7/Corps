@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * POST /api/v1/workspaces/:wid/tasks/batch — 任务批量操作。
@@ -38,7 +39,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 改 assignee 需要 admin/owner 权限（与单条 PATCH 对齐）
     if (body.action === "update" && body.assigneeId !== undefined) {
       if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-        return NextResponse.json({ code: 403, message: "仅管理员可批量指派任务" }, { status: 403 });
+        return NextResponse.json({ code: 403, message: apiMsg(req, "onlyAdminBatchAssign") }, { status: 403 });
       }
     }
 

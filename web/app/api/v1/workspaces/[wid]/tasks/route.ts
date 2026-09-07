@@ -5,6 +5,7 @@ import { shouldActivate } from "@/lib/analytics-activation";
 import { prisma } from "@/lib/prisma";
 import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
@@ -103,7 +104,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: flattened });
   } catch (error) {
     console.error("[GET tasks] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -210,22 +211,22 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     if (task.invalidAssignee) {
       return NextResponse.json(
-        { code: 400, message: "被指派人必须是当前工作区成员" },
+        { code: 400, message: apiMsg(req, "assigneeNotMember") },
         { status: 400 },
       );
     }
     if (task.invalidMilestone) {
-      return NextResponse.json({ code: 400, message: "里程碑不存在" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "milestoneNotFound") }, { status: 400 });
     }
     if (task.invalidLabel) {
-      return NextResponse.json({ code: 400, message: "标签不存在" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "labelNotFound") }, { status: 400 });
     }
     if (task.invalidParent === "notFound") {
-      return NextResponse.json({ code: 400, message: "父任务不存在" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "parentTaskNotFound") }, { status: 400 });
     }
     if (task.invalidParent === "nested") {
       return NextResponse.json(
-        { code: 400, message: "仅支持一层子任务（父级本身不能是子任务）" },
+        { code: 400, message: apiMsg(req, "subtaskOneLevelOnly") },
         { status: 400 },
       );
     }

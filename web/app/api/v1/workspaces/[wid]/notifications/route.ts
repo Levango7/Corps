@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * 通知 API（Spec：协作平台通知中心）
@@ -56,18 +57,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: { notifications } });
   } catch (error) {
     console.error("[GET notifications] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
-const patchSchema = z
-  .object({
-    id: z.string().uuid().optional(),
-    all: z.boolean().optional(),
-  })
-  .refine((v) => v.all === true || !!v.id, {
-    message: "必须提供 id 或 all=true",
-  });
+const patchSchema = z.object({
+  id: z.string().uuid().optional(),
+  all: z.boolean().optional(),
+});
 
 /** PATCH /v1/workspaces/{wid}/notifications — 标记已读 */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -77,6 +74,14 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 
   try {
     const validated = patchSchema.parse(await req.json());
+    // refine 检查移到 handler：refine 的 message 在模块级 schema 中无法访问
+    // 请求语言（apiMsg 需要 req），故在 req 可用处校验并本地化
+    if (validated.all !== true && !validated.id) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "notificationsNeedIdOrAll") },
+        { status: 400 },
+      );
+    }
     const userId = ctx.payload.sub;
 
     const where =
@@ -95,7 +100,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "invalidParams") },
         { status: 400 },
       );
     }

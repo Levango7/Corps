@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { authenticate, runWithAuthOp } from "@/lib/auth";
 import { generateSlug } from "@/lib/slug";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 export async function GET(req: NextRequest) {
   const auth = await authenticate(req);
@@ -43,7 +44,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error) {
     console.error("[GET workspaces] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 

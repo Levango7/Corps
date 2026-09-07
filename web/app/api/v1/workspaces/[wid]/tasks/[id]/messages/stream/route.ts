@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace, withGuc } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { apiMsg } from "@/lib/api-messages";
 import {
   chatEvents,
   chatChannel,
@@ -67,7 +68,7 @@ export async function GET(
     ctx.payload.sub,
   );
   if (!taskExists) {
-    return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
   }
 
   const userId = ctx.payload.sub;
@@ -122,7 +123,7 @@ export async function GET(
   // await 之后：acquire 与流建立之间不再有失败路径，额度不会泄漏。
   if (!tryAcquireSseSlot(userId)) {
     return NextResponse.json(
-      { code: 429, message: "并发连接过多，请关闭其他标签页后重试" },
+      { code: 429, message: apiMsg(req, "tooManySseConnections") },
       { status: 429 },
     );
   }

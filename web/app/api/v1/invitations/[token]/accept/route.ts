@@ -4,6 +4,7 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-policy";
 import { createHash } from "crypto";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * 获取当前用户 ID：优先 Better Auth session，回退到 JWT access_token。
@@ -57,7 +58,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     }
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json(
-        { code: 410, message: "该邀请已失效（已接受或已过期）" },
+        { code: 410, message: apiMsg(req, "invitationInvalid") },
         { status: 410 },
       );
     }
@@ -65,7 +66,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     // 邮箱必须与当前登录用户完全一致（大小写不敏感），防止转发链接给他人顶替
     if (invitation.email.toLowerCase() !== user.email.toLowerCase()) {
       return NextResponse.json(
-        { code: 403, message: "请使用受邀邮箱注册/登录后再接受邀请" },
+        { code: 403, message: apiMsg(req, "invitationEmailMismatch") },
         { status: 403 },
       );
     }
@@ -165,6 +166,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     });
   } catch (error) {
     console.error("[invitation accept] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

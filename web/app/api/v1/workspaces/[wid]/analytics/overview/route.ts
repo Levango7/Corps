@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { shanghaiDay, shanghaiWeekKey, CORE_EVENTS } from "@/lib/analytics-time";
 import { matchFunnel, type FunnelEvent } from "@/lib/analytics-funnel";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/v1/workspaces/:wid/analytics/overview — 工作区分析概览。
@@ -211,6 +212,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
   } catch (error) {
     console.error("[GET analytics/overview] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

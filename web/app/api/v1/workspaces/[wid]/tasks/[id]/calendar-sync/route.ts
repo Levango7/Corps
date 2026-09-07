@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /** 任务同步状态响应 */
 interface TaskSyncStatus {
@@ -65,6 +66,6 @@ export async function GET(
     return NextResponse.json({ code: 200, data: status });
   } catch (error) {
     console.error("[task calendar-sync] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, withGuc } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /** 连接状态响应 */
 interface ConnectionStatus {
@@ -53,6 +54,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: { connections: status } });
   } catch (error) {
     console.error("[calendar status] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

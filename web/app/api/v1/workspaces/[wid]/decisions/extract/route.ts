@@ -8,6 +8,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({
   sourceText: z.string().min(10).max(20_000),
@@ -67,7 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   // 仅 member 及以上；viewer 也不可调用（前端也不应出现入口）
   if (!["owner", "admin", "member"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: "无权限" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "noPermission") }, { status: 403 });
   }
 
   let body: z.infer<typeof schema>;
@@ -80,7 +81,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: "请求体无效" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody") }, { status: 400 });
   }
 
   // 规则提炼：分行→关键词命中优先→markdown 模板化输出

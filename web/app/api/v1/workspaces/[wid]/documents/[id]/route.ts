@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { randomBytes } from "crypto";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /v1/workspaces/{wid}/documents/{id} — 文档详情（编辑视图）
@@ -26,12 +27,12 @@ export async function GET(
     );
 
     if (!doc) {
-      return NextResponse.json({ code: 404, message: "文档不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "documentNotFound") }, { status: 404 });
     }
     return NextResponse.json({ code: 200, data: doc });
   } catch (error) {
     console.error("[GET document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -97,7 +98,7 @@ export async function PATCH(
     );
 
     if (updated.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: "文档不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "documentNotFound") }, { status: 404 });
     }
     return NextResponse.json({ code: 200, data: updated.doc });
   } catch (error) {
@@ -108,7 +109,7 @@ export async function PATCH(
       );
     }
     console.error("[PATCH document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -137,11 +138,11 @@ export async function DELETE(
     );
 
     if (deleted.kind === "notFound") {
-      return NextResponse.json({ code: 404, message: "文档不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "documentNotFound") }, { status: 404 });
     }
     return NextResponse.json({ code: 200, data: { id, deleted: true } });
   } catch (error) {
     console.error("[DELETE document] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({
   newOwnerUserId: z.string().uuid(),
@@ -16,7 +17,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (ctx.member.role !== "owner") {
-    return NextResponse.json({ code: 403, message: "仅所有者可转让所有权" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "onlyOwnerTransfer") }, { status: 403 });
   }
 
   let body: z.infer<typeof schema>;
@@ -29,12 +30,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: "请求体无效" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody") }, { status: 400 });
   }
 
   // 不能转给自己
   if (body.newOwnerUserId === ctx.payload.sub) {
-    return NextResponse.json({ code: 400, message: "已经是所有者，无需转让" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "alreadyOwner") }, { status: 400 });
   }
 
   try {
@@ -67,11 +68,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
 
     if (result.kind === "notMember") {
-      return NextResponse.json({ code: 400, message: "被转让用户不是工作区成员" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "transfereeNotMember") }, { status: 400 });
     }
     return NextResponse.json({ code: 200, data: { ok: true } });
   } catch (error) {
     console.error("[PATCH transfer] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

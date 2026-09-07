@@ -9,6 +9,7 @@ import {
 } from "@/lib/calendar/oauth";
 import { getPrimaryCalendarId as getGooglePrimaryCalendarId } from "@/lib/calendar/google-client";
 import { getPrimaryCalendarId as getOutlookPrimaryCalendarId } from "@/lib/calendar/outlook-client";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/v1/auth/calendar/[provider]/callback
@@ -42,19 +43,19 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   }
 
   if (!code || !state) {
-    return NextResponse.json({ code: 400, message: "缺少 code 或 state 参数" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "calendarMissingParams") }, { status: 400 });
   }
 
   // 校验 provider
   if (provider !== "google" && provider !== "outlook") {
-    return NextResponse.json({ code: 400, message: "不支持的日历 provider" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "unsupportedCalendarProvider") }, { status: 400 });
   }
   const p = provider as CalendarProvider;
 
   // 验证 state 签名 + 提取载荷
   const statePayload = verifyState(state);
   if (!statePayload) {
-    return NextResponse.json({ code: 400, message: "state 验证失败" }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "calendarStateInvalid") }, { status: 400 });
   }
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";

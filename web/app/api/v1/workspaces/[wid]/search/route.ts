@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 const querySchema = z.object({
   q: z.string().min(1).max(200),
@@ -20,13 +21,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       limit: url.searchParams.get("limit"),
     });
     if (!parsed.success) {
-      return NextResponse.json({ code: 400, message: "参数 q 必填" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "searchQueryRequired") }, { status: 400 });
     }
 
     const q = parsed.data.q.trim();
     // A-9: trim 后若为空字符串（纯空格输入），返回 400 避免匹配全部记录
     if (!q) {
-      return NextResponse.json({ code: 400, message: "参数 q 不能为空或纯空格" }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "searchQueryBlank") }, { status: 400 });
     }
 
     // A-8: parseInt 后可能为 NaN（非数字输入），需兜底为默认值；
@@ -87,6 +88,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
   } catch (error) {
     console.error("[GET search] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

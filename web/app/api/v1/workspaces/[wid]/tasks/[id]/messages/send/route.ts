@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { emitChatEvent } from "@/lib/chat-events";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * POST /v1/workspaces/{wid}/tasks/{id}/messages/send — 发送聊天消息（含 SSE 推送）
@@ -114,7 +115,7 @@ export async function POST(
       ctx.payload.sub,
     );
 
-    if (!result) return NextResponse.json({ code: 404, message: "任务不存在" }, { status: 404 });
+    if (!result) return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
 
     // emit SSE 事件：推送新消息给所有在线订阅者
     emitChatEvent(id, { type: "message", message: result });

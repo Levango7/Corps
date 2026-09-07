@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, authenticate } from "@/lib/auth";
 import { z } from "zod";
 import { previewAccountDeletion, deleteAccount } from "@/lib/account-deletion";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * 账户删除端点组（阶段 2-3：隐私政策"删除账户"承诺兑现）。
@@ -37,7 +38,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: preview });
   } catch (error) {
     console.error("[deletion-preview] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -62,7 +63,7 @@ export async function DELETE(req: NextRequest) {
     // 邮箱二次确认（大小写不敏感）：不匹配即 400，绝不删除
     if (body.confirmEmail.toLowerCase() !== email.toLowerCase()) {
       return NextResponse.json(
-        { code: 400, message: "确认邮箱与账户邮箱不一致，已取消删除" },
+        { code: 400, message: apiMsg(req, "accountEmailMismatch") },
         { status: 400 },
       );
     }
@@ -92,6 +93,6 @@ export async function DELETE(req: NextRequest) {
       );
     }
     console.error("[delete-account] error:", error);
-    return NextResponse.json({ code: 500, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 const updateDecisionSchema = z.object({
   markdown: z.string().min(1).max(50000),
@@ -77,7 +78,7 @@ export async function PATCH(
     });
 
     if ("notFound" in result) {
-      return NextResponse.json({ code: 404, message: "决策不存在" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "decisionNotFound") }, { status: 404 });
     }
     if ("conflict" in result) {
       return NextResponse.json(

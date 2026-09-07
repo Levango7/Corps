@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * 标签 API · /api/v1/workspaces/{wid}/labels
@@ -72,7 +73,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     // P2002：唯一约束冲突（同工作区标签名重复）
     if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json({ code: 409, message: "标签名已存在" }, { status: 409 });
+      return NextResponse.json({ code: 409, message: apiMsg(req, "labelNameExists") }, { status: 409 });
     }
     console.error("[POST label] error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });

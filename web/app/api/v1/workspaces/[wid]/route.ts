@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 /** GET /v1/workspaces/{wid} — 工作区详情（设置页 / 顶栏读取） */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
   } catch (error) {
     console.error("[GET workspace] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -67,7 +68,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: "仅所有者或管理员可修改工作区" },
+      { code: 403, message: apiMsg(req, "onlyOwnerOrAdminUpdateWorkspace") },
       { status: 403 },
     );
   }
@@ -95,7 +96,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       );
     }
     if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json({ code: 409, message: "该标识已被占用" }, { status: 409 });
+      return NextResponse.json({ code: 409, message: apiMsg(req, "slugTaken") }, { status: 409 });
     }
     console.error("Update workspace error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });

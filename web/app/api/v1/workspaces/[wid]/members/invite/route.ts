@@ -7,6 +7,7 @@ import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-po
 import { expireSubscriptionIfDue } from "@/lib/billing/subscription-expiry";
 import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
+import { apiMsg } from "@/lib/api-messages";
 
 const inviteSchema = z.object({ email: z.string().email() });
 
@@ -216,7 +217,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
     if (result.duplicate) {
-      return NextResponse.json({ code: 409, message: "该用户已是成员" }, { status: 409 });
+      return NextResponse.json({ code: 409, message: apiMsg(req, "userAlreadyMember") }, { status: 409 });
     }
 
     // Pro + Stripe：加入后自动扩席（seatLimit 跟随人数 + 通道侧 quantity 按比例计费）
@@ -281,11 +282,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, data: null, message: "请求参数无效", errors: error.errors },
+        { code: 400, data: null, message: apiMsg(req, "invalidParams"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("[invite member] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: "服务器内部错误" }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
