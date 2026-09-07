@@ -34,13 +34,22 @@ page.on("pageerror", (e) => pageErrors.push(String(e).slice(0, 200)));
 
 try {
   await page.goto(`${BASE}/auth/signup`);
-  await page.getByLabel("工作区名称").pressSequentially(`安卓云${Date.now() % 100000}`, {
+  await page.waitForLoadState("networkidle");
+  // 模拟器系统 locale 不可靠（-prop persist.sys.* 在 API34 上不生效，
+  // Chrome 按语言协商可能渲染 zh 或 en 页）——脚本层双语兜底：先探测
+  // 页面语言再选 label，比调模拟器设置稳得多
+  const isZh = await page.getByLabel("工作区名称").count();
+  const L = isZh
+    ? { ws: "工作区名称", email: "邮箱", pwd: "密码", submit: "创建并进入" }
+    : { ws: "Workspace name", email: "Email", pwd: "Password", submit: "Create and enter" };
+  console.log("signup locale:", isZh ? "zh" : "en");
+  await page.getByLabel(L.ws).pressSequentially(`安卓云${Date.now() % 100000}`, {
     delay: 30,
   });
-  await page.getByLabel("邮箱").fill(`android-ci-${Date.now()}@example.com`);
-  await page.getByLabel("密码").fill(PASSWORD);
+  await page.getByLabel(L.email).fill(`android-ci-${Date.now()}@example.com`);
+  await page.getByLabel(L.pwd).fill(PASSWORD);
   await page.screenshot({ path: `${SHOTS}/01-signup.png` });
-  await page.getByRole("button", { name: "创建并进入" }).click();
+  await page.getByRole("button", { name: L.submit }).click();
   await page.waitForURL(/\/w\//, { timeout: 60_000 });
   const wid = page.url().match(/\/w\/([0-9a-f-]{36})/)[1];
 
