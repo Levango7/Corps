@@ -24,12 +24,12 @@
 ### Fixed
 
 - **RBAC 三处修正**：runWithWorkspace 已内包 prisma.$transaction，transfer 内再嵌事务会被 Prisma 6 拒绝（改为直接在 tx 内顺序 update，原子性不变）；成员 PATCH 顺序改为先 self 后 ownerImmutable（owner 改自己曾被误拦为 403）；admin 改 member 角色放行。
+- **SSE 单用户并发连接硬上限**：连接建立限流（20 次/分钟）只约束建立频率不约束存活数，单用户理论上可累积约百条长连接占句柄。补 per-user 计数（上限 5，多端登录正常值 1-3），超限返回 429；额度获取放在最后一个可能抛错的 await 之后，不留泄漏路径。
 - 概览页"全部 →"链接触控目标 20px → 28px（负 margin 补偿，视觉不变）。
 - 迁移幂等化：invitations 部分唯一索引加 IF NOT EXISTS（prisma migrate deploy 不校验已应用迁移 checksum，编辑对 deploy 安全）。
 
 ### 已知遗留
 
-- SSE 每分钟限流（20 次）已有，单用户并发连接硬上限待补。
 - API 路由 JSON message 中文残留约百处（英文用户报错提示仍中文，分批收口中）。
 
 ## [0.4.0] - 2026-09-03

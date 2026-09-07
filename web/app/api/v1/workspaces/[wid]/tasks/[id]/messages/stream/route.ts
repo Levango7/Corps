@@ -1,7 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace, withGuc } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { chatEvents, chatChannel, emitChatEvent, type ChatEvent } from "@/lib/chat-events";
+import {
+  chatEvents,
+  chatChannel,
+  emitChatEvent,
+  tryAcquireSseSlot,
+  releaseSseSlot,
+  type ChatEvent,
+} from "@/lib/chat-events";
 
 /**
  * GET /v1/workspaces/{wid}/tasks/{id}/messages/stream — SSE 实时推送
@@ -109,6 +116,17 @@ export async function GET(
   // 广播当前用户上线
   emitChatEvent(id, { type: "presence", taskId: id, userId, online: true });
 
+  // 单用户并发连接硬上限（审计遗留收口）：限流只约束建立频率（20 次/分），
+  // 不约束同时存活数——不拦的话单用户可累积约百条长连接占句柄。
+  // 多端登录正常值 1-3（PC/手机/平板），5 留余量。放在最后一个可能抛错的
+  // await 之后：acquire 与流建立之间不再有失败路径，额度不会泄漏。
+  if (!tryAcquireSseSlot(userId)) {
+    return NextResponse.json(
+      { code: 429, message: "并发连接过多，请关闭其他标签页后重试" },
+      { status: 429 },
+    );
+  }
+
   // cleanup 闭包：cancel 回调通过外层变量引用，确保正确释放资源
   let cleanup: (() => void) | null = null;
 
@@ -167,6 +185,7 @@ export async function GET(
         chatEvents.off(channel, listener);
         clearInterval(heartbeat);
         clearTimeout(idleTimeout);
+        releaseSseSlot(userId);
         // 广播离线并清理在线状态记录（异步，不阻塞；经 GUC 短事务）
         withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
           tx.chatPresence.delete({ where: { taskId_userId: { taskId: id, userId } } }),

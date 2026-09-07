@@ -19,6 +19,30 @@ export const chatEvents = new EventEmitter();
 // 同一任务可能有多端订阅，移除默认 10 监听器上限
 chatEvents.setMaxListeners(0);
 
+/**
+ * 单用户并发 SSE 连接计数（审计遗留：连接建立限流已有，但缺并发硬上限——
+ * 按每分钟 20 次建立 × 5 分钟空闲存活，单用户理论上可累积约百条长连接占句柄）。
+ * key=userId，value=当前活跃连接数。多端登录场景正常值 1-3（PC + 手机 + 平板），
+ * 上限取 5 留足余量；超出返回 429 由调用方拒绝连接。
+ */
+const MAX_SSE_PER_USER = 5;
+const sseConnections = new Map<string, number>();
+
+/** 该用户是否还有 SSE 连接额度（未达并发上限） */
+export function tryAcquireSseSlot(userId: string): boolean {
+  const current = sseConnections.get(userId) ?? 0;
+  if (current >= MAX_SSE_PER_USER) return false;
+  sseConnections.set(userId, current + 1);
+  return true;
+}
+
+/** 释放一个 SSE 连接额度（断开时调用，与 acquire 配对） */
+export function releaseSseSlot(userId: string): void {
+  const current = sseConnections.get(userId) ?? 0;
+  if (current <= 1) sseConnections.delete(userId);
+  else sseConnections.set(userId, current - 1);
+}
+
 /** 事件通道命名：`chat:${taskId}` */
 export function chatChannel(taskId: string): string {
   return `chat:${taskId}`;
