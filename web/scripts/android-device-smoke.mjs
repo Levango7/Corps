@@ -45,13 +45,14 @@ try {
   console.log("signup locale:", isZh ? "zh" : "en");
 
   // 注册走 API 直调（context.request 与页面共享 cookie 存储）而非 UI 表单：
-  // 六轮实测 UI 表单提交在云模拟器 Chrome 上被拦（导航跳回 signup?），
-  // UI 层变量太多（React 受控/原生提交/CSRF 面窄）；本档的验证目标是
-  // 渲染布局，不是注册 UX——API 注册 + 页面验证会话跳转即可
+  // 云模拟器上 UI 表单层变量太多；本档验证目标是渲染布局不是注册 UX。
+  // 超时给 120s：dev server（Turbopack）首次编译 register 路由 + better-auth
+  // 慢操作在冷启动下远超默认 30s（七轮实测 POST 发出后 30s 无响应）
   const email = `android-ci-${Date.now()}@example.com`;
   const wsName = `安卓云${Date.now() % 100000}`;
   const regRes = await context.request.post(`${BASE}/api/v1/auth/register`, {
     data: { email, password: PASSWORD, workspaceName: wsName },
+    timeout: 120_000,
   });
   console.log("register api:", regRes.status());
   if (regRes.status() !== 201) {

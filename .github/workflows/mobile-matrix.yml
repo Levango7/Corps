@@ -135,6 +135,13 @@ jobs:
             sleep 2
           done
           curl -sf http://localhost:3000/api/health > /dev/null || { cat next-dev.log; exit 1; }
+          # 预热注册路由：Turbopack 冷编译 register + better-auth 首次调用
+          # 可能远超 30s（七轮实测 POST 30s 无响应的根因）——模拟器开跑前
+          # 在宿主侧先打一次，让编译发生在等待窗口内
+          curl -s -X POST http://localhost:3000/api/v1/auth/register \
+            -H "Content-Type: application/json" \
+            -d '{"email":"warmup-'$GITHUB_RUN_ID'@example.com","password":"Warmup123!","workspaceName":"warmup"}' \
+            -o /dev/null -w "register warmup: %{http_code} in %{time_total}s\n" --max-time 180
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
           JWT_ACCESS_SECRET: ci-and-access-secret
@@ -150,11 +157,11 @@ jobs:
         with:
           api-level: 34
           arch: x86_64
-          # Google APIs 镜像（非 AOSP）含系统 Chrome——真 Chrome 才是本档意义
+          # Google APIs 镜像（非 AOSP）含系统 Chrome——真 Chrome 才是本档意义。
+          # 注意：-prop 只支持 qemu.* 属性（emulator 明确警告），系统 locale
+          # 强制不了——语言兜底在 smoke 脚本层做（双语 label 探测）
           target: google_apis
-          # 启动时强制中文 locale（避免 Chrome 默认 en-US 导致中文选择器失效，
-          # 这正是本地 Firefox 曾遇的坑；模拟器 Chrome 也会按语言协商渲染英文页）
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -prop persist.sys.locale=zh-CN -prop persist.sys.language=zh -prop persist.sys.country=CN
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
           disable-animations: true
           script: |
             # emulator-runner 的 script 逐行独立 /bin/sh -c 执行——上一行的
