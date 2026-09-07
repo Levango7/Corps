@@ -149,7 +149,9 @@ jobs:
           arch: x86_64
           # Google APIs 镜像（非 AOSP）含系统 Chrome——真 Chrome 才是本档意义
           target: google_apis
-          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          # 启动时强制中文 locale（避免 Chrome 默认 en-US 导致中文选择器失效，
+          # 这正是本地 Firefox 曾遇的坑；模拟器 Chrome 也会按语言协商渲染英文页）
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect -prop persist.sys.locale=zh-CN -prop persist.sys.language=zh -prop persist.sys.country=CN
           disable-animations: true
           script: |
             # emulator-runner 的 script 逐行独立 /bin/sh -c 执行——上一行的
