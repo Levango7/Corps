@@ -140,7 +140,10 @@ jobs:
           JWT_ACCESS_SECRET: ci-and-access-secret
           JWT_REFRESH_SECRET: ci-and-refresh-secret
           BETTER_AUTH_SECRET: ci-and-better-auth-secret
-          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # 关键：模拟器从 10.0.2.2:3000 访问宿主——APP_URL 必须与实际访问源
+          # 一致，否则注册/登录后 cookie 域不匹配、会话种不上（五轮实测：
+          # 提交注册后跳回 signup 页的根因）
+          NEXT_PUBLIC_APP_URL: http://10.0.2.2:3000
           RATE_LIMIT_DISABLED: "1"
       - name: Run Android emulator + Playwright device smoke
         uses: reactivecircus/android-emulator-runner@v2
