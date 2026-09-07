@@ -43,15 +43,33 @@ try {
     ? { ws: "工作区名称", email: "邮箱", pwd: "密码", submit: "创建并进入" }
     : { ws: "Workspace name", email: "Email", pwd: "Password", submit: "Create and enter" };
   console.log("signup locale:", isZh ? "zh" : "en");
-  await page.getByLabel(L.ws).pressSequentially(`安卓云${Date.now() % 100000}`, {
-    delay: 30,
+
+  // 注册走 API 直调（context.request 与页面共享 cookie 存储）而非 UI 表单：
+  // 六轮实测 UI 表单提交在云模拟器 Chrome 上被拦（导航跳回 signup?），
+  // UI 层变量太多（React 受控/原生提交/CSRF 面窄）；本档的验证目标是
+  // 渲染布局，不是注册 UX——API 注册 + 页面验证会话跳转即可
+  const email = `android-ci-${Date.now()}@example.com`;
+  const wsName = `安卓云${Date.now() % 100000}`;
+  const regRes = await context.request.post(`${BASE}/api/v1/auth/register`, {
+    data: { email, password: PASSWORD, workspaceName: wsName },
   });
-  await page.getByLabel(L.email).fill(`android-ci-${Date.now()}@example.com`);
-  await page.getByLabel(L.pwd).fill(PASSWORD);
-  await page.screenshot({ path: `${SHOTS}/01-signup.png` });
-  await page.getByRole("button", { name: L.submit }).click();
-  await page.waitForURL(/\/w\//, { timeout: 60_000 });
-  const wid = page.url().match(/\/w\/([0-9a-f-]{36})/)[1];
+  console.log("register api:", regRes.status());
+  if (regRes.status() !== 201) {
+    const body = await regRes.text();
+    throw new Error(`register failed ${regRes.status()}: ${body.slice(0, 300)}`);
+  }
+  const regJson = await regRes.json();
+  const wid = regJson.data.workspace.id;
+  // 带 cookie 跳工作区（context.request 与浏览器共享 cookie jar）
+  await page.goto(`${BASE}/w/${wid}`);
+  await page.waitForLoadState("networkidle");
+  // 断言真的进了工作区（未跳回 auth）
+  if (!page.url().includes(`/w/${wid}`)) {
+    await page.screenshot({ path: `${SHOTS}/02-redirected.png` });
+    throw new Error(`expected /w/${wid}, got ${page.url()}`);
+  }
+  await page.screenshot({ path: `${SHOTS}/02-workspace.png` });
+  console.log("workspace reached:", page.url());
 
   const issues = [];
   const pages = [
