@@ -1,0 +1,167 @@
+name: Mobile Matrix (Cloud)
+
+# ─── 云端移动端矩阵（2026-09-08）：无本地硬件条件的三平台云化 ───
+#
+# 平台策略（详见 docs/platform-verification.md §云矩阵）：
+#  - iOS/Safari：macos-latest runner（公开仓库免费，预装 Xcode）跑真 WebKit
+#    layout-audit——本仓库 Android/iOS 真机全靠云，webkit 档从"近似"升"真机"
+#  - Android：ubuntu-latest + KVM + android-emulator-runner 官方 action，
+#    模拟器内真实系统 Chrome 由 Playwright _android 驱动（等价 USB+inspect）
+#  - HarmonyOS：无公共 CI 云（DevEco 模拟器需嵌套虚拟化，CI 不给），引擎层
+#    ArkWeb=Chromium 已由现有 chromium 档覆盖，真机层走华为云远程真机（手动）
+#
+# 触发：手动 + 每周一 04:00 UTC（北京周一 12:00）——移动端回归是低频档，
+# 不挂 push（避免每 commit +15 分钟 CI；主链路仍由 ci.yml 保障）
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 4 * * 1"
+
+jobs:
+  ios-safari:
+    name: iOS Safari (macOS WebKit)
+    runs-on: macos-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      # macOS runner 无 service container 支持：用 container action 起 PG
+      - uses: ikalnytskyi/postgresql-action@v1
+        with:
+          postgresql version: "18"
+          postgresql db: corps_test
+          postgresql user: postgres
+          postgresql password: test
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+      - name: Start dev server
+        shell: bash
+        run: |
+          npx next dev -p 3000 > next-dev.log 2>&1 &
+          echo $! > next-dev.pid
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 2
+          done
+          curl -sf http://localhost:3000/api/health > /dev/null || { cat next-dev.log; exit 1; }
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+          JWT_ACCESS_SECRET: ci-mac-access-secret
+          JWT_REFRESH_SECRET: ci-mac-refresh-secret
+          BETTER_AUTH_SECRET: ci-mac-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          RATE_LIMIT_DISABLED: "1"
+      # macos runner 预装 Playwright 依赖基本齐，--with-deps 兜底系统库
+      - run: npx playwright install webkit --with-deps
+      # 只跑 webkit 档（AUDIT_ENGINES 过滤）：macOS 上这是真 Safari 引擎，
+      # 不再是本地 Windows 的"近似"——本 job 存在的全部意义
+      - name: Run layout-audit (webkit, real Safari engine)
+        run: node scripts/layout-audit.mjs
+        env:
+          BASE_URL: http://localhost:3000
+          AUDIT_ENGINES: webkit
+      - name: Stop dev server
+        if: always()
+        shell: bash
+        run: |
+          [ -f next-dev.pid ] && kill "$(cat next-dev.pid)" 2>/dev/null || true
+
+  android-chrome:
+    name: Android Chrome (cloud emulator)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: npx prisma generate
+      - run: npx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+        # PG 用 service container（ubuntu 支持）
+      # KVM 加速验证（无 KVM 时模拟器慢 10 倍且常超时，宁可早失败信息也清晰）
+      - name: Enable KVM group perms
+        shell: bash
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' \
+            | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+          ls -l /dev/kvm
+      - name: Start dev server (host loopback for emulator 10.0.2.2)
+        shell: bash
+        run: |
+          npx next dev -p 3000 > next-dev.log 2>&1 &
+          echo $! > next-dev.pid
+          for i in $(seq 1 60); do
+            curl -sf http://localhost:3000/api/health > /dev/null && break
+            sleep 2
+          done
+          curl -sf http://localhost:3000/api/health > /dev/null || { cat next-dev.log; exit 1; }
+        env:
+          DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
+          JWT_ACCESS_SECRET: ci-and-access-secret
+          JWT_REFRESH_SECRET: ci-and-refresh-secret
+          BETTER_AUTH_SECRET: ci-and-better-auth-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          RATE_LIMIT_DISABLED: "1"
+      - name: Run Android emulator + Playwright device smoke
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          # Google APIs 镜像（非 AOSP）含系统 Chrome——真 Chrome 才是本档意义
+          target: google_apis
+          emulator-options: -no-window -no-audio -no-boot-anim -gpu swiftshader_indirect
+          disable-animations: true
+          script: |
+            set -e
+            cd web
+            # 模拟器 boot 后 Chrome 起来需要一点时间；轮询直到 _android 能连
+            npx playwright install chromium
+            node scripts/android-device-smoke.mjs
+      - name: Upload Android screenshots
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-shots
+          path: web/shots-android/
+          retention-days: 7
+      - name: Stop dev server
+        if: always()
+        shell: bash
+        run: |
+          [ -f next-dev.pid ] && kill "$(cat next-dev.pid)" 2>/dev/null || true
+
+    # Android job 的 PG service container（放 job 级）
+    services:
+      postgres:
+        image: postgres:18
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: test
+          POSTGRES_DB: corps_test
+        ports:
+          - 5432:5432

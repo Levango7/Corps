@@ -11,11 +11,16 @@ import { chromium, firefox, webkit } from "@playwright/test";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PASSWORD = "Test1234!";
-const ENGINES = [
+// 全引擎矩阵（本地默认）。CI 的 macOS job 用 AUDIT_ENGINES=webkit 只跑
+// Safari 档（其余引擎在 ubuntu CI 已覆盖，macOS 分钟数是稀缺资源）。
+const ALL_ENGINES = [
   { id: "chromium", name: "chromium", launch: () => chromium.launch() },
   { id: "firefox", name: "firefox", launch: () => firefox.launch() },
   { id: "webkit", name: "webkit(safari近似)", launch: () => webkit.launch() },
 ];
+const ENGINES = process.env.AUDIT_ENGINES
+  ? ALL_ENGINES.filter((e) => process.env.AUDIT_ENGINES.split(",").includes(e.id))
+  : ALL_ENGINES;
 const VIEWPORTS = [
   { name: "pc", width: 1440, height: 900 },
   { name: "ipad", width: 768, height: 1024 },

@@ -92,10 +92,59 @@ console 报错）：
 `web/scripts/README.md` 的响应式配方复现修复，修复后三引擎 layout-audit
 回归（54/54 基线不得破）。
 
-## 升级路径（约束变化时）
+## 云矩阵（2026-09-08 增补：三平台全云化）
 
-- **有 Mac**：iOS 模拟器 + Safari 真机调试（防御层的 env() / dvh / 橡皮筋
-  全部可实测，防御条目逐项打勾）
-- **有预算**：BrowserStack/App Live 云真机——iOS/旧 Android 碎片档一次覆盖
-- **鸿蒙重点验证**：DevEco 模拟器（Windows 可跑）里跑 Web 版，重点看
-  软键盘与返回手势——这两处华为定制与原生 Android 差异最大
+> 仓库 public 的决定性红利：**GitHub Actions macOS runner 对公开仓库免费**
+> （预装 Xcode），Ubuntu runner 支持 KVM——三平台里两个全自动云化，
+> 唯鸿蒙因华为生态封闭只能半自动。
+
+### iOS（object-c 档）——macOS 云 runner，全自动
+
+`.github/workflows/mobile-matrix.yml` 的 `ios-safari` job：
+
+- `runs-on: macos-latest`（免费、预装 Xcode；未来做 React Native/原生
+  iOS 构建也在这台 runner 上 `xcodebuild`）
+- 跑 `layout-audit.mjs` 的 **webkit 档**（`AUDIT_ENGINES=webkit`）——
+  macOS 上 WebKit 就是**真 Safari 引擎**，不再是 Windows 本地的"近似"。
+  webkit 档从 54/54 里的三引擎之一，升级为真机级验证
+- macOS runner 不支持 service container，PG 用 `ikalnytskyi/postgresql-action`
+- 触发：手动（workflow_dispatch）+ 每周一 04:00 UTC 定时回归
+
+### Android——Ubuntu 云模拟器，全自动
+
+同 workflow 的 `android-chrome` job：
+
+- `ubuntu-latest` + KVM（打开 /dev/kvm group 权限——GitHub 给 Ubuntu
+  runner 透传 KVM，这是本地 Docker 给不了的）
+- `reactivecircus/android-emulator-runner` 起 API 34 x86_64 模拟器
+  （google_apis 镜像含**系统 Chrome**）
+- `scripts/android-device-smoke.mjs`：Playwright `_android` API 驱动模拟器
+  内真实 Chrome（等价 USB + chrome://inspect 的云版本）——注册→工作区→
+  四页溢出检测→未捕获 JS 异常→截图 artifact（shots-android/）
+- 模拟器经 `10.0.2.2`（AOSP 对宿主 loopback 的固定别名）访问 dev server
+
+### HarmonyOS——无公共 CI 云，半自动
+
+华为生态封闭是客观约束：DevEco 模拟器要嵌套虚拟化（云 CI 不给 KVM 套娃），
+ArkTS 工具链没有 macOS/Linux 云镜像。分两层处置：
+
+- **引擎层（可自动，已覆盖）**：HarmonyOS NEXT 的 ArkWeb 内核是 Chromium
+  系——渲染/布局结论由现有 chromium 档（本地 + CI E2E）大体覆盖
+- **真机层（手动，唯一路径）**：华为云远程真机（`developer.huawei.com` →
+  云真机，免费额度按次计）——浏览器打开远端鸿蒙设备，输入局域网可达的
+  部署地址（staging 或内网穿透）人工过一遍软键盘/返回手势/多任务三项
+  华为定制差异。需要华为开发者账号实名（一次性）
+
+### 触发与节奏
+
+```bash
+# 手动触发（push 后首次建议立即跑一次验证流水线本身）
+gh workflow run "Mobile Matrix (Cloud)"    # 或网页 Actions 页面点 Run
+
+# 定时：每周一 04:00 UTC（北京 12:00）双 job 回归
+```
+
+失败处理：iOS 挂了→按 layout-audit 报告的 file:line 修复后本地 webkit 档
+复现；Android 挂了→下载 shots-android artifact 看截图，本地 Android 真机
+（platform-verification.md 清单）复现修复。两个 job 都不阻塞主 CI
+（ci.yml 不依赖 mobile-matrix），移动端回归是独立低频档。
