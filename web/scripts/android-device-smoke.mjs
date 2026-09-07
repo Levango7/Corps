@@ -34,7 +34,8 @@ page.on("pageerror", (e) => pageErrors.push(String(e).slice(0, 200)));
 
 try {
   await page.goto(`${BASE}/auth/signup`);
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(3000);
   // 模拟器系统 locale 不可靠（-prop persist.sys.* 在 API34 上不生效，
   // Chrome 按语言协商可能渲染 zh 或 en 页）——脚本层双语兜底：先探测
   // 页面语言再选 label，比调模拟器设置稳得多
@@ -69,7 +70,8 @@ try {
   const wid = reg.json.data.workspace.id;
   // 带 cookie 跳工作区（evaluate 的 fetch 已在页面域种下会话 cookie）
   await page.goto(`${BASE}/w/${wid}`);
-  await page.waitForLoadState("networkidle");
+  await page.waitForLoadState("domcontentloaded");
+  await page.waitForTimeout(3000);
   // 断言真的进了工作区（未跳回 auth）
   if (!page.url().includes(`/w/${wid}`)) {
     await page.screenshot({ path: `${SHOTS}/02-redirected.png` });
@@ -87,7 +89,8 @@ try {
   ];
   for (const [p, label] of pages) {
     await page.goto(`${BASE}/w/${wid}${p}`);
-    await page.waitForLoadState("networkidle");
+    await page.waitForLoadState("domcontentloaded");
+    await page.waitForTimeout(3000);
     const bad = await page.evaluate(() => {
       const vw = document.documentElement.clientWidth;
       const out = [];
