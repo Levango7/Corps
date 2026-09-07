@@ -4,15 +4,16 @@
 //  2) 文本截断（scrollWidth > clientWidth 且非刻意的 truncate）
 //  3) 可交互元素重叠（button/input/select 相交）
 //  4) 触控目标过小（< 24px 高或宽的按钮，仅移动档）
-// 双引擎：chromium + webkit（Safari 近似——无 Mac/iPhone 时的日常替代，
-// 注意：WebKit 引擎近似渲染，不覆盖真机触摸/安全区/滚动回弹）。
+// 三引擎：chromium + firefox + webkit（Safari 近似——无 Mac/iPhone 时的
+// 日常替代，注意：WebKit 引擎近似渲染，不覆盖真机触摸/安全区/滚动回弹）。
 // 输出文本报告；dev server 须在 localhost:3000。
-import { chromium, webkit } from "@playwright/test";
+import { chromium, firefox, webkit } from "@playwright/test";
 
 const BASE = process.env.BASE_URL || "http://localhost:3000";
 const PASSWORD = "Test1234!";
 const ENGINES = [
   { id: "chromium", name: "chromium", launch: () => chromium.launch() },
+  { id: "firefox", name: "firefox", launch: () => firefox.launch() },
   { id: "webkit", name: "webkit(safari近似)", launch: () => webkit.launch() },
 ];
 const VIEWPORTS = [
@@ -109,7 +110,12 @@ async function main() {
 
     for (const vp of VIEWPORTS) {
       const email = `audit-${engine.id}-${vp.name}-${Date.now()}@example.com`;
-      const ctx = await browser.newContext({ viewport: { width: vp.width, height: vp.height } });
+      // Firefox 默认 locale 是 en-US，页面渲染成英文导致中文选择器全落空
+      // （Chromium/WebKit 在本机会继承系统中文）。显式钉死，三引擎行为一致。
+      const ctx = await browser.newContext({
+        viewport: { width: vp.width, height: vp.height },
+        locale: "zh-CN",
+      });
       const page = await ctx.newPage();
       try {
         await registerAndLogin(page, email);
