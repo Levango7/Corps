@@ -2,6 +2,36 @@
 
 本文件记录 corps 的版本变更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 惯例，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.5.0] - 2026-09-07
+
+协作体验与响应式质量版本：成员治理（RBAC 修补 + 所有权转让）、个人效率入口（星标/通知细分/AI 提炼草稿）、顶栏信息架构收口、三引擎响应式基线。
+
+### Added
+
+- **成员角色管理 + 所有权转让**：成员页支持修改角色（admin/member，owner 不可改）、移除成员；工作区所有权可转让给其他成员（owner only，转让者降为 admin）——退出/解散场景不再需要联系支持。历史遗留的 `[uid]` 路由已删除合并进 `[userId]`（Next.js 同路径双 slug 冲突）。
+- **星标收藏（favorites v1）**：任务详情星标按钮 + 侧栏"我的星标"分组，本地存储（localStorage `corps_favorites_v1`），跨设备同步留待 v2（届时引入 task_favorites 表 + RLS + 迁移）。
+- **AI 决策提炼（规则版 v1）**：决策页"提炼"按钮——粘贴会议记录/长讨论，返回四段式结构化 markdown 草稿（关键结论/原始讨论节选/AI 提醒），不接真 LLM（端点形状已稳定，后续可换 DashScope/DeepSeek）。
+- **通知中心收件箱 tabs**：All / Unread / @我 / 分配给我四个 tab，每个 tab 独立空状态——邮箱式的细分过滤。
+- **顶栏搜索框显眼化**：accent ring + 独立 ⌘K chip，搜索从"能用"变"想用"。
+- **响应式布局审计脚本（scripts/layout-audit.mjs）**：程序化布局崩点检测（横向溢出/元素重叠/触控目标 <20px），chromium + firefox + webkit 三引擎 × 3 视口 × 6 页 = 54 组合基线全零；替代人眼看截图的回归方式。
+
+### Changed
+
+- **顶栏头像升级为统一 UserMenu dropdown**：主题切换/语言切换/退出整合进头像下拉菜单，移除三个独立按钮——顶栏从 5 个交互元素收敛到 2 个（工作区下拉 + 头像菜单）。
+- **Free 功能清单 14 → 21 项**：v0.4.0 新功能（子任务/文档中心/Mermaid/PDF 导出等）诚实列入 Free 清单。
+- README 首屏重写：一句话定位 + 21 项亮点 + 快速开始；新增 issue 模板。
+
+### Fixed
+
+- **RBAC 三处修正**：runWithWorkspace 已内包 prisma.$transaction，transfer 内再嵌事务会被 Prisma 6 拒绝（改为直接在 tx 内顺序 update，原子性不变）；成员 PATCH 顺序改为先 self 后 ownerImmutable（owner 改自己曾被误拦为 403）；admin 改 member 角色放行。
+- 概览页"全部 →"链接触控目标 20px → 28px（负 margin 补偿，视觉不变）。
+- 迁移幂等化：invitations 部分唯一索引加 IF NOT EXISTS（prisma migrate deploy 不校验已应用迁移 checksum，编辑对 deploy 安全）。
+
+### 已知遗留
+
+- SSE 每分钟限流（20 次）已有，单用户并发连接硬上限待补。
+- API 路由 JSON message 中文残留约百处（英文用户报错提示仍中文，分批收口中）。
+
 ## [0.4.0] - 2026-09-03
 
 任务执行与知识沉淀大版本：7 项功能全部围绕"决策→任务"闭环，Free 用户即可用。
