@@ -69,6 +69,22 @@ body {
   padding: 0;
 }
 
+/* ----------------------------------------------------------------------------
+ * 移动端防御层（无 iOS 真机条件下的代码级兜底，2026-09-08）
+ * 覆盖 webkit 引擎近似不到的 iOS/Android 真机坑：
+ *  1) 橡皮筋滚动链：overscroll-behavior 阻断 body 级回弹与滚动链外溢
+ *     （iOS 橡皮筋 + Android 边缘光晕都吃这条）。
+ *  2) iOS 聚焦 <16px 输入框自动放大页面：输入类控件最小 16px（可访问性
+ *     缩放已放开——viewport 不设 maximumScale，靠字号根治而非禁缩放）。
+ *  3) tap 高亮灰块（iOS）与点击延迟残影（旧 Android）：透明化。
+ *  4) safe-area 工具类：刘海/手势条避让。viewport-fit=cover 时内容延伸到
+ *     系统栏之下，需要避让的容器用 .pt-safe/.pb-safe/.px-safe（env() 在
+ *     非 cover 或桌面恒为 0，零副作用）。
+ * ------------------------------------------------------------------------- */
+html {
+  overscroll-behavior: none;
+}
+
 body {
   font-family: var(--font-sans);
   font-size: var(--text-base);
@@ -77,6 +93,28 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* iOS 聚焦自动放大防御：输入控件字号不小于 16px（含小屏覆盖的表单场景） */
+@media (max-width: 767px) {
+  input,
+  select,
+  textarea {
+    font-size: max(1rem, 1em);
+  }
+}
+
+/* safe-area 工具类（viewport-fit=cover 前提；桌面/横屏无刘海时 env() 为 0） */
+.pt-safe {
+  padding-top: env(safe-area-inset-top, 0px);
+}
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.px-safe {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
 }
 
 button,
@@ -103,6 +141,14 @@ ol {
   list-style: none;
   margin: 0;
   padding: 0;
+}
+
+/* 移动端文本选择体验：输入框可选，正文不误选（长按 iOS 放大镜/Android 选择手柄） */
+input,
+textarea,
+select {
+  -webkit-user-select: text;
+  user-select: text;
 }
 
 img,

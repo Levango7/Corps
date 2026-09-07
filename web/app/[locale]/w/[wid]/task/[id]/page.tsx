@@ -1005,7 +1005,7 @@ export default function TaskDetailPage({
           role="dialog"
           aria-modal="true"
           aria-label={t("versionHistory")}
-          className="fixed inset-0 z-[var(--z-modal)] flex items-end sm:items-center justify-center bg-[var(--overlay)]"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-end sm:items-center justify-center bg-[var(--overlay)] pb-safe"
           onClick={() => setHistoryFor(null)}
         >
           <div

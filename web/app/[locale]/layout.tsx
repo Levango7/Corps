@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import { NextIntlClientProvider, hasLocale } from "next-intl";
@@ -9,6 +9,23 @@ import { PublicPageTracker } from "@/lib/analytics-attribution";
 import { locales, type Locale, localeToBcp47 } from "@/lib/i18n";
 
 import "../globals.css";
+
+/**
+ * 移动端视口（Next.js Viewport export 是正道，勿手写 meta 标签）：
+ *  - viewport-fit=cover：内容延伸到刘海/手势条之下（safe-area 工具类的前提，
+ *    env(safe-area-inset-*) 只在 cover 下非零）——无 iOS 真机时的代码级防御。
+ *  - interactive-widget=resizes-content：软键盘弹出时收缩布局视口而非遮挡
+ *    （Android Chrome 同样受益；默认 resizes-visual 只压 visual viewport，
+ *    底部固定按钮会被键盘盖住的场景靠它修）。
+ *  - maximumScale 不设 1：允许缩放是可访问性红线（iOS 输入聚焦自动放大已用
+ *    16px 字号在 CSS 层防御，不靠禁缩放）。
+ */
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
+  interactiveWidget: "resizes-content",
+};
 
 /** 静态生成所有支持的 locale。 */
 export function generateStaticParams() {
