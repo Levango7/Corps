@@ -15,10 +15,11 @@
 import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
-import { Loader2, Share2, X, Globe, Eye, Download, Columns2 } from "lucide-react";
+import { Loader2, Share2, X, Globe, Eye, Download, Columns2, Zap } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
+import { QuickDiagram } from "@/components/QuickDiagram";
 
 interface DocumentEditorProps {
   wid: string;
@@ -34,6 +35,7 @@ interface DocumentEditorProps {
 
 export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const t = useTranslations("document");
+  const tDiagram = useTranslations("diagramQuick");
   const router = useRouter();
   const [title, setTitle] = useState(initial.title);
   const [markdown, setMarkdown] = useState(initial.markdown);
@@ -56,6 +58,13 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
     value: markdown,
     onChange: setMarkdown,
   });
+  /** 快速图表对话框：插入 ```mermaid 块到正文（追加到末尾，编辑器语义里"出一张图"） */
+  const [quickDiagramOpen, setQuickDiagramOpen] = useState(false);
+
+  function insertDiagramBlock(block: string) {
+    const sep = markdown.endsWith("\n") || markdown === "" ? "" : "\n\n";
+    setMarkdown(markdown + sep + block);
+  }
 
   async function save(opts: { publish?: boolean } = {}) {
     if (busy) return;
@@ -180,6 +189,15 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             <Columns2 size={14} />
             {t("splitMode")}
           </button>
+          {/* 快速图表：不进正文也能出图，确认后一键插入（v0.6 增补） */}
+          <button
+            onClick={() => setQuickDiagramOpen(true)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+            title={tDiagram("title")}
+          >
+            <Zap size={14} />
+            <span className="hidden sm:inline">{tDiagram("title")}</span>
+          </button>
           {shareToken ? (
             <button
               onClick={unshare}
@@ -283,6 +301,13 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       )}
 
       {error && <p className="mt-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
+
+      {/* 快速图表对话框（编辑模式下从顶栏唤起） */}
+      <QuickDiagram
+        open={quickDiagramOpen}
+        onClose={() => setQuickDiagramOpen(false)}
+        onInsert={insertDiagramBlock}
+      />
 
       <div className="mt-3 flex items-center justify-between gap-3 print:hidden">
         <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("autosaveHint")}</p>

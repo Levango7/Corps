@@ -21,6 +21,7 @@
 
 import { useState, type RefObject, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
+import { DIAGRAM_TEMPLATES } from "@/components/QuickDiagram";
 import {
   Bold,
   Italic,
@@ -203,46 +204,24 @@ export function useEditorKeys(props: {
   };
 }
 
-/** mermaid 图表模板（v0.6 图表下拉）——每个模板插入即可渲染 */
+/** mermaid 图表模板（v0.6 图表下拉）——唯一事实源在 QuickDiagram 导出的
+ *  DIAGRAM_TEMPLATES（下拉与快图对话框共用，防双源漂移）；
+ *  key 与 i18n 键 editor.diagram<Key> 对应 */
 function diagramTemplates(t: ReturnType<typeof useTranslations>) {
-  return [
-    {
-      key: "mindmap",
-      icon: Network,
-      label: t("diagramMindmap"),
-      code: "mindmap\n  root((主题))\n    一级分支\n      二级要点\n    另一分支\n",
-    },
-    {
-      key: "flow",
-      icon: GitFork,
-      label: t("diagramFlow"),
-      code: "graph TD\n  A[开始] --> B{判断}\n  B -- 是 --> C[执行]\n  B -- 否 --> D[结束]\n",
-    },
-    {
-      key: "sequence",
-      icon: MessagesSquare,
-      label: t("diagramSequence"),
-      code: "sequenceDiagram\n  participant U as 用户\n  participant S as 系统\n  U->>S: 请求\n  S-->>U: 响应\n",
-    },
-    {
-      key: "gantt",
-      icon: BarChart3,
-      label: t("diagramGantt"),
-      code: "gantt\n  title 排期\n  dateFormat YYYY-MM-DD\n  section 阶段一\n  调研 :a1, 2026-01-01, 7d\n  开发 :after a1, 10d\n",
-    },
-    {
-      key: "pie",
-      icon: PieChart,
-      label: t("diagramPie"),
-      code: 'pie showData\n  title 占比\n  "A" : 55\n  "B" : 30\n  "C" : 15\n',
-    },
-    {
-      key: "quadrant",
-      icon: LayoutGrid,
-      label: t("diagramQuadrant"),
-      code: "quadrantChart\n  title 优先级矩阵\n  x-axis 低成本 --> 高成本\n  y-axis 低收益 --> 高收益\n  任务A: [0.7, 0.8]\n  任务B: [0.3, 0.35]\n",
-    },
-  ];
+  const icons = {
+    mindmap: Network,
+    flow: GitFork,
+    sequence: MessagesSquare,
+    gantt: BarChart3,
+    pie: PieChart,
+    quadrant: LayoutGrid,
+  } as const;
+  return DIAGRAM_TEMPLATES.map((d) => ({
+    key: d.key,
+    icon: icons[d.key as keyof typeof icons],
+    label: t("diagram" + d.key.charAt(0).toUpperCase() + d.key.slice(1)),
+    code: d.code,
+  }));
 }
 
 export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolbarProps) {

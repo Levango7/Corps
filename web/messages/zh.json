@@ -999,7 +999,8 @@
     "shortcutsHint": "Ctrl+B/I/K · 列表 Enter 续行",
     "tplCompare": "## 方案对比\n\n**背景：**\n\n**方案 A：**\n- 优点：\n- 缺点：\n\n**方案 B：**\n- 优点：\n- 缺点：\n\n**结论：** 选择方案 __，因为 __\n",
     "tplRetro": "## 事故复盘\n\n**影响：**\n\n**时间线：**\n- \n\n**根因：**\n\n**改进项：**\n- [ ] \n",
-    "tplProposal": "## 立项决议\n\n**目标：**\n\n**范围：**\n- 包含：\n- 不包含：\n\n**负责人与排期：**\n\n**决议：**\n"
+    "tplProposal": "## 立项决议\n\n**目标：**\n\n**范围：**\n- 包含：\n- 不包含：\n\n**负责人与排期：**\n\n**决议：**\n",
+    "close": "关闭"
   },
   "attachment": {
     "previewAria": "预览：{name}",
@@ -1029,5 +1030,14 @@
       "high": "高",
       "urgent": "紧急"
     }
+  },
+  "diagramQuick": {
+    "title": "快速图表",
+    "codeLabel": "Mermaid 代码",
+    "emptyPreview": "输入代码后此处实时预览",
+    "hint": "渲染即所得；插入后仍可在正文编辑代码",
+    "copy": "复制代码",
+    "copied": "已复制",
+    "insert": "插入正文"
   }
 }

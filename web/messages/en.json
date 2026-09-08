@@ -999,7 +999,8 @@
     "shortcutsHint": "Ctrl+B/I/K · Enter continues lists",
     "tplCompare": "## Compare options\n\n**Context:**\n\n**Option A:**\n- Pros:\n- Cons:\n\n**Option B:**\n- Pros:\n- Cons:\n\n**Decision:** choose __ because __\n",
     "tplRetro": "## Incident retro\n\n**Impact:**\n\n**Timeline:**\n- \n\n**Root cause:**\n\n**Action items:**\n- [ ] \n",
-    "tplProposal": "## Proposal\n\n**Goal:**\n\n**Scope:**\n- In:\n- Out:\n\n**Owner & schedule:**\n\n**Decision:**\n"
+    "tplProposal": "## Proposal\n\n**Goal:**\n\n**Scope:**\n- In:\n- Out:\n\n**Owner & schedule:**\n\n**Decision:**\n",
+    "close": "Close"
   },
   "attachment": {
     "previewAria": "Preview: {name}",
@@ -1029,5 +1030,14 @@
       "high": "High",
       "urgent": "Urgent"
     }
+  },
+  "diagramQuick": {
+    "title": "Quick diagram",
+    "codeLabel": "Mermaid code",
+    "emptyPreview": "Live preview appears here as you type",
+    "hint": "What you see is what you get; the code stays editable in the document",
+    "copy": "Copy code",
+    "copied": "Copied",
+    "insert": "Insert"
   }
 }

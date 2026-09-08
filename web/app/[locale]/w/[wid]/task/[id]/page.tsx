@@ -29,6 +29,7 @@ import {
   Download,
   Share2,
   Star,
+  Zap,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
@@ -40,6 +41,7 @@ import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 import { SubtaskSection } from "@/components/SubtaskSection";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
+import { QuickDiagram } from "@/components/QuickDiagram";
 import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -127,6 +129,7 @@ export default function TaskDetailPage({
   const tStatus = useTranslations("status");
   const tErr = useTranslations("error");
   const tPriority = useTranslations("priority");
+  const tQuick = useTranslations("diagramQuick");
   const tTime = useTranslations("time");
   const relTime = (iso: string) => sharedRelTime(iso, tTime);
 
@@ -149,6 +152,12 @@ export default function TaskDetailPage({
     value: decisionDraft,
     onChange: setDecisionDraft,
   });
+  /** 快速图表对话框（v0.6 增补）：插入 ```mermaid 块到决策草稿末尾 */
+  const [quickDiagramOpen, setQuickDiagramOpen] = useState(false);
+  function insertDiagramToDecision(block: string) {
+    const sep = decisionDraft.endsWith("\n") || decisionDraft === "" ? "" : "\n\n";
+    setDecisionDraft(decisionDraft + sep + block);
+  }
   // 决策编辑/预览切换：edit=编辑 textarea，preview=渲染 markdown
   const [decisionMode, setDecisionMode] = useState<"edit" | "preview">("edit");
   // 打印模式：true 时挂载 .print-area（导出 PDF 专用），afterprint 后卸载——
@@ -626,11 +635,24 @@ export default function TaskDetailPage({
 
                 {decisionMode === "edit" ? (
                   <>
-                    <MarkdownToolbar
-                      textareaRef={decisionEditorRef}
-                      value={decisionDraft}
-                      onChange={setDecisionDraft}
-                    />
+                    <div className="flex items-center gap-[var(--space-2)]">
+                      <MarkdownToolbar
+                        textareaRef={decisionEditorRef}
+                        value={decisionDraft}
+                        onChange={setDecisionDraft}
+                      />
+                      {/* 快速图表入口（v0.6 增补）：出一张图插入决策草稿 */}
+                      <button
+                        type="button"
+                        onClick={() => setQuickDiagramOpen(true)}
+                        title={tQuick("title")}
+                        aria-label={tQuick("title")}
+                        className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"
+                      >
+                        <Zap size={13} />
+                        <span className="hidden sm:inline">{tQuick("title")}</span>
+                      </button>
+                    </div>
                     <textarea
                       ref={decisionEditorRef}
                       value={decisionDraft}
@@ -1100,6 +1122,13 @@ export default function TaskDetailPage({
           </div>
         </div>
       )}
+
+      {/* 快速图表对话框（决策区入口唤起） */}
+      <QuickDiagram
+        open={quickDiagramOpen}
+        onClose={() => setQuickDiagramOpen(false)}
+        onInsert={insertDiagramToDecision}
+      />
     </div>
   );
 }
