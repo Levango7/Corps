@@ -131,7 +131,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 key={f.id}
                 onClick={() => setStatusFilter(f.id)}
                 aria-pressed={statusFilter === f.id}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] whitespace-nowrap transition-colors duration-[var(--motion-fast)] ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] whitespace-nowrap transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                   statusFilter === f.id
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)] font-[var(--weight-medium)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -183,7 +183,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 onClick={() => {
                   setError(null);
                 }}
-                className="text-[var(--danger)] underline hover:text-[var(--danger-fg)]"
+                className="text-[var(--danger)] underline hover:text-[var(--danger-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {tErr("retry")}
               </button>

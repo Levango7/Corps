@@ -213,6 +213,7 @@ export default function TaskDetailPage({
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   // ── 视口尺寸（< sm 视为移动端，用于评论 placeholder 缩短）──
+  // 639px = Tailwind sm 断点(640px) - 1，即 max-width:639px 等价于 < sm(640px)
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
     const mq = window.matchMedia("(max-width: 639px)");
@@ -461,7 +462,7 @@ export default function TaskDetailPage({
 
   if (loading) {
     return (
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-[var(--container-max)] mx-auto">
         {/* 返回栏骨架 */}
         <div className="mb-[var(--space-5)] h-8 w-24 rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
         {/* 标题 + 描述骨架 */}
@@ -504,7 +505,7 @@ export default function TaskDetailPage({
     "w-full h-8 px-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-colors duration-[var(--motion-fast)]";
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       <div className="flex items-center justify-between mb-[var(--space-5)]">
         <Link
           href={`/w/${wid}/board`}
@@ -516,7 +517,7 @@ export default function TaskDetailPage({
         <button
           onClick={removeTask}
           disabled={deleting}
-          className="inline-flex items-center justify-center gap-1.5 min-w-[32px] px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+          className="inline-flex items-center justify-center gap-1.5 min-w-[32px] px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           {deleting ? (
             <Loader2 size={15} className="animate-spin" />
@@ -558,7 +559,7 @@ export default function TaskDetailPage({
                 onClick={onToggleFavorite}
                 aria-label={starred ? t("unstar") : t("star")}
                 title={starred ? t("unstar") : t("star")}
-                className="shrink-0 mt-1 p-1.5 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)]"
+                className="shrink-0 mt-1 p-1.5 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {starred ? (
                   <Star size={18} className="text-[var(--warn)] fill-[var(--warn)]" />
@@ -616,14 +617,14 @@ export default function TaskDetailPage({
                   }}
                   disabled={decisions.length === 0}
                   title={t("exportPdfHint")}
-                  className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                  className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   <Download size={15} />
                   {t("exportPdf")}
                 </button>
                 <button
                   onClick={() => setDecisionOpen((v) => !v)}
-                  className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                  className="inline-flex items-center gap-1.5 px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {decisionOpen ? <X size={15} /> : <Plus size={15} />}
                   {decisionOpen ? tButton("cancel") : t("addDecision")}
@@ -708,7 +709,7 @@ export default function TaskDetailPage({
                   <button
                     onClick={addDecision}
                     disabled={!decisionDraft.trim() || decisionSaving}
-                    className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+                    className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                   >
                     {decisionSaving ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -743,7 +744,7 @@ export default function TaskDetailPage({
                       <button
                         onClick={() => showHistory(d)}
                         aria-label={t("versionHistory")}
-                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                       >
                         <History size={14} />
                       </button>
@@ -873,7 +874,7 @@ export default function TaskDetailPage({
               <button
                 onClick={addComment}
                 disabled={!draft.trim() || sending}
-                className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 {t("send")}
@@ -1082,7 +1083,7 @@ export default function TaskDetailPage({
               <button
                 onClick={() => setHistoryFor(null)}
                 aria-label={tButton("close")}
-                className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <X size={15} />
               </button>
@@ -1144,7 +1145,7 @@ export default function TaskDetailPage({
               <button
                 type="button"
                 onClick={() => setConfirmOpen(false)}
-                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {tButton("cancel")}
               </button>
@@ -1155,7 +1156,7 @@ export default function TaskDetailPage({
                   setConfirmOpen(false);
                 }}
                 disabled={deleting}
-                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)]"
+                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--accent-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {deleting ? (
                   <Loader2 size={14} className="animate-spin" />

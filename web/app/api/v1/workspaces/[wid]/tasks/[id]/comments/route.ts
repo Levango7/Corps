@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { sendMentionEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { handlePrismaError } from "@/lib/prisma-error";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/comments — 评论时间线（正序） */
 export async function GET(
@@ -28,10 +29,7 @@ export async function GET(
     return NextResponse.json({ code: 200, data: comments });
   } catch (error) {
     console.error("[GET comments] error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: apiMsg(req, "internalError") },
-      { status: 500 },
-    );
+    return handlePrismaError(error, req);
   }
 }
 
@@ -177,9 +175,6 @@ export async function POST(
       );
     }
     console.error("Create comment error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: apiMsg(req, "internalError") },
-      { status: 500 },
-    );
+    return handlePrismaError(error, req);
   }
 }

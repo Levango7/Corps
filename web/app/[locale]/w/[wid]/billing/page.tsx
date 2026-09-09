@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState, useRef } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import {
   CreditCard,
@@ -98,6 +98,7 @@ const SUB_STATUS_LABEL: Record<string, { labelKey: string; tone: "ok" | "warn" |
 
 export default function BillingPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+  const router = useRouter();
 
   const t = useTranslations("billing");
   const tButton = useTranslations("button");
@@ -170,7 +171,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         startPolling();
       } else if (resp.url) {
         // Stripe / 支付宝：跳转到通道页面
-        window.location.href = resp.url;
+        router.push(resp.url);
       } else {
         setError(t("payNoResult"));
       }
@@ -220,7 +221,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       const { url } = await api<{ url: string }>(`/api/v1/workspaces/${wid}/billing/portal`, {
         method: "POST",
       });
-      if (url) window.location.href = url;
+      if (url) router.push(url);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("portalFailed"));
     } finally {
@@ -276,12 +277,12 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         {!status ? (
           <div className="space-y-3" aria-busy="true" aria-label={t("loadingStatus")}>
             <div className="space-y-1.5">
-              <div className="h-3 w-16 rounded bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-5 w-28 rounded bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-3 w-16 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-5 w-28 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
             </div>
             <div className="space-y-1.5">
-              <div className="h-3 w-12 rounded bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-5 w-20 rounded bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-3 w-12 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-5 w-20 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
               <div className="h-1 w-32 rounded-full bg-[var(--surface-2)] animate-pulse" />
             </div>
           </div>
@@ -357,7 +358,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={openPortal}
                 disabled={busy === "portal"}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {busy === "portal" ? (
                   <Loader2 size={15} className="animate-spin" />
@@ -427,8 +428,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {isOwner && (
         <div className="mb-4 flex items-center gap-2">
           <button
-            onClick={() => setBillingPeriod("monthly")}
-            className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              onClick={() => setBillingPeriod("monthly")}
+              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "monthly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -437,8 +438,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             {t("periodMonthly")}
           </button>
           <button
-            onClick={() => setBillingPeriod("yearly")}
-            className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              onClick={() => setBillingPeriod("yearly")}
+              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "yearly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -505,7 +506,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
                 title={!upgradable ? t("upgradeDisabledTitle") : undefined}
-                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60"
+                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 style={{
                   background: upgradable ? "var(--accent)" : "var(--surface-2)",
                   color: upgradable ? "var(--accent-fg)" : "var(--meta)",
@@ -580,7 +581,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               </h2>
               <button
                 onClick={closeWechatQr}
-                className="text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+                className="text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 aria-label={tButton("close")}
               >
                 <X size={20} />

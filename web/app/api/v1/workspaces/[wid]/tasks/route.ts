@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { handlePrismaError } from "@/lib/prisma-error";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
@@ -52,7 +53,7 @@ const MAX_TAKE = 500;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     // 筛选参数（阶段 2-2 筛选与自定义视图）：
@@ -76,7 +77,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors },
+        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
         { status: 400 },
       );
     }
@@ -168,17 +169,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
   } catch (error) {
     console.error("[GET tasks] error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: apiMsg(req, "internalError") },
-      { status: 500 },
-    );
+    return handlePrismaError(error, req);
   }
 }
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const body = await req.json();
@@ -278,31 +276,31 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     if (task.invalidAssignee) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "assigneeNotMember") },
+        { code: 400, message: apiMsg(req, "assigneeNotMember"), data: null },
         { status: 400 },
       );
     }
     if (task.invalidMilestone) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "milestoneNotFound") },
+        { code: 400, message: apiMsg(req, "milestoneNotFound"), data: null },
         { status: 400 },
       );
     }
     if (task.invalidLabel) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "labelNotFound") },
+        { code: 400, message: apiMsg(req, "labelNotFound"), data: null },
         { status: 400 },
       );
     }
     if (task.invalidParent === "notFound") {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "parentTaskNotFound") },
+        { code: 400, message: apiMsg(req, "parentTaskNotFound"), data: null },
         { status: 400 },
       );
     }
     if (task.invalidParent === "nested") {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "subtaskOneLevelOnly") },
+        { code: 400, message: apiMsg(req, "subtaskOneLevelOnly"), data: null },
         { status: 400 },
       );
     }
@@ -412,12 +410,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     console.error("Create task error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return handlePrismaError(error, req);
   }
 }
 

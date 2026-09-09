@@ -41,19 +41,24 @@ import { apiMsg } from "@/lib/api-messages";
 const MAX_FILE_SIZE_FREE = 10 * 1024 * 1024;
 const MAX_FILE_SIZE_PRO = 50 * 1024 * 1024;
 
-/** 允许的文件类型（MIME type → 扩展名） */
-const ALLOWED_TYPES: Record<string, string> = {
-  "image/jpeg": "jpg",
-  "image/png": "png",
-  "image/gif": "gif",
-  "image/webp": "webp",
-  "application/pdf": "pdf",
-  "application/msword": "doc",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
-  "application/vnd.ms-excel": "xls",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
-  "application/zip": "zip",
+/**
+ * 允许的文件类型（MIME type → 允许的扩展名列表）。
+ * M5 修复：同时校验 MIME type 和文件名扩展名，防止仅改 MIME type 绕过校验。
+ * 同一 MIME type 可对应多个扩展名（如 image/jpeg → jpg/jpeg）。
+ */
+const ALLOWED_TYPES: Record<string, string[]> = {
+  "image/jpeg": ["jpg", "jpeg"],
+  "image/png": ["png"],
+  "image/gif": ["gif"],
+  "image/webp": ["webp"],
+  "application/pdf": ["pdf"],
+  "application/msword": ["doc"],
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": ["docx"],
+  "application/vnd.ms-excel": ["xls"],
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": ["xlsx"],
+  "application/zip": ["zip"],
 };
+
 
 /** 图片 MIME type 集合 */
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
@@ -102,14 +107,25 @@ export async function POST(
       return NextResponse.json({ code: 400, message }, { status: 400 });
     }
 
-    // 校验文件类型
-    const ext = ALLOWED_TYPES[file.type];
-    if (!ext) {
+    // 校验文件类型（M5 修复：MIME type + 文件名扩展名双重校验，防绕过）
+    const allowedExts = ALLOWED_TYPES[file.type];
+    if (!allowedExts) {
       return NextResponse.json(
         { code: 400, message: apiMsg(req, "unsupportedFileType") },
         { status: 400 },
       );
     }
+    // M5 修复：从文件名提取扩展名，校验与 MIME type 一致
+    // 防止攻击者仅伪造 MIME type 而文件名用可执行扩展名（如 image/jpeg + evil.php）
+    const fileExt = path.extname(file.name).toLowerCase().replace(/^\./, "");
+    if (!fileExt || !allowedExts.includes(fileExt)) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "unsupportedFileType") },
+        { status: 400 },
+      );
+    }
+    // 存储用扩展名：取该 MIME type 的主扩展名（数组第一项），保证一致性
+    const ext = allowedExts[0];
 
     // 确保上传目录存在
     await fs.mkdir(UPLOAD_DIR, { recursive: true });

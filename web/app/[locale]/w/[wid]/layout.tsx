@@ -216,7 +216,7 @@ export default function WorkspaceLayout({
 
   if (!workspace) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--shell-content)]">
+      <div className="min-h-dvh flex items-center justify-center bg-[var(--shell-content)]">
         <div className="animate-pulse text-[length:var(--text-sm)] text-[var(--muted)]">
           {t("workspace.loading")}
         </div>
@@ -304,7 +304,7 @@ export default function WorkspaceLayout({
   const notifActive = pathname.startsWith(notifHref);
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-dvh flex flex-col">
       {/* ─── 顶栏 ─── */}
       <header className="h-[var(--topbar-h)] px-[var(--space-4)] border-b border-[var(--shell-edge)] bg-[var(--shell-topbar)] flex items-center gap-[var(--space-3)] sticky top-0 z-[var(--z-sticky)]">
         <button

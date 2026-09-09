@@ -148,7 +148,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
   const sections = locale === "en" ? EN : ZH;
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--fg)]">
+    <main className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
       <article className="mx-auto max-w-[720px] px-[var(--space-6)] py-[var(--space-20)]">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)]">
           {t("privacyTitle")}

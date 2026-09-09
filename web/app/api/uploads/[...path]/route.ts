@@ -37,11 +37,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   }
 
   // 3. 归属定位：仅已关联消息的附件可下载（孤儿文件 404）
+  //    M6 修复：同时取 fileName 用于 Content-Disposition 下载头
   const fileUrl = `/uploads/${relativePath}`;
-  const att: { workspaceId: string } | null = await runWithAuthOp("cron", (tx) =>
+  const att: { workspaceId: string; fileName: string } | null = await runWithAuthOp("cron", (tx) =>
     tx.messageAttachment.findFirst({
       where: { url: fileUrl },
-      select: { workspaceId: true },
+      select: { workspaceId: true, fileName: true },
     }),
   );
   if (!att) {
@@ -73,9 +74,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
     const ext = path.extname(resolved).toLowerCase();
     const contentType = EXT_TO_MIME[ext] ?? "application/octet-stream";
 
+    // M6 修复：设置 Content-Disposition 强制下载，避免浏览器内联显示（尤其 HTML/SVG 可 XSS）
+    // 同时支持 ASCII 和非 ASCII 文件名（RFC 5987）：
+    //   Content-Disposition: attachment; filename="ascii.txt"; filename*=UTF-8''%E4%B8%AD%E6%96%87.txt
+    const fileName = att.fileName;
+    const asciiSafe = fileName.replace(/[^\x20-\x7E]/g, "").replace(/"/g, '\\"');
+    const encodedName = encodeURIComponent(fileName);
+    const contentDisposition = `attachment; filename="${asciiSafe}"; filename*=UTF-8''${encodedName}`;
+
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         "Content-Type": contentType,
+        "Content-Disposition": contentDisposition,
         "Cache-Control": "private, max-age=86400",
       },
     });

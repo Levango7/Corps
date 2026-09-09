@@ -28,18 +28,54 @@ export const chatEvents = new EventEmitter();
 chatEvents.setMaxListeners(0);
 
 /**
- * 多实例部署运行时警告（DL-6）：
+ * 多实例部署运行时警告（DL-6 + M8 修复：完善检测，纳入 Redis 配置检查）：
  *  如果检测到可能的多实例部署环境（如 PM2 cluster 模式、K8s 多 Pod），
  *  输出警告提醒开发者消息总线仅在单实例内有效。
  *  检测依据：PM2 实例 > 1 或 K8s 环境变量指示多副本。
+ *
+ *  M8 修复：在多实例检测基础上，额外检查 REDIS_URL 配置：
+ *   - 多实例 + 无 REDIS_URL → 严重警告（消息将丢失，必须升级 Redis Pub/Sub）
+ *   - 多实例 + 有 REDIS_URL → 警告（Redis 已配置但 chat-events 仍用 EventEmitter，
+ *     需要将本模块升级为 Redis Pub/Sub 才能跨实例传递消息）
+ *   - 单实例 + 无 REDIS_URL → 正常，不警告（EventEmitter 单实例内有效）
+ *   - 生产环境 + 无任何实例标志 + 无 REDIS_URL → info 提示（可能漏配实例标志，
+ *     提醒若未来扩容到多实例需先接入 Redis）
  */
 if (process.env.NODE_ENV === "production") {
   const pm2Instances = parseInt(process.env.PM2_INSTANCES ?? "1", 10);
   const k8sReplicas = parseInt(process.env.K8S_REPLICAS ?? "1", 10);
-  if (pm2Instances > 1 || k8sReplicas > 1) {
-    console.warn(
-      "[chat-events] ⚠️ 检测到多实例部署环境，IM 事件总线（EventEmitter）仅在单实例内有效。" +
-        "多实例间消息将丢失。请升级为 Redis Pub/Sub（见文件头注释升级路径）。",
+  const hasRedis = !!process.env.REDIS_URL;
+  const isMultiInstance = pm2Instances > 1 || k8sReplicas > 1;
+
+  if (isMultiInstance) {
+    if (!hasRedis) {
+      // 多实例 + 无 Redis：消息必然丢失，严重警告
+      console.warn(
+        "[chat-events] 🔴 严重：检测到多实例部署环境（PM2_INSTANCES=" +
+          pm2Instances +
+          ", K8S_REPLICAS=" +
+          k8sReplicas +
+          "）且未配置 REDIS_URL。IM 事件总线（EventEmitter）仅在单实例内有效，" +
+          "多实例间消息将丢失。必须配置 REDIS_URL 并将本模块升级为 Redis Pub/Sub" +
+          "（见文件头注释升级路径）。",
+      );
+    } else {
+      // 多实例 + 有 Redis：Redis 已配置但本模块仍用 EventEmitter，需代码升级
+      console.warn(
+        "[chat-events] ⚠️ 检测到多实例部署环境（PM2_INSTANCES=" +
+          pm2Instances +
+          ", K8S_REPLICAS=" +
+          k8sReplicas +
+          "），REDIS_URL 已配置但 chat-events 仍使用进程内 EventEmitter。" +
+          "多实例间消息将丢失。请将本模块升级为 Redis Pub/Sub 以利用已有 Redis" +
+          "（见文件头注释升级路径）。",
+      );
+    }
+  } else if (!hasRedis) {
+    // 单实例 + 无 Redis：可能漏配实例标志，info 提示
+    console.info(
+      "[chat-events] ℹ️ 单实例模式运行，未配置 REDIS_URL。当前 EventEmitter 总线可用。" +
+        "若未来扩容到多实例，请先接入 Redis Pub/Sub（见文件头注释升级路径）。",
     );
   }
 }

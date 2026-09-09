@@ -81,11 +81,11 @@ export default function GlobalError({
       <body
         style={{
           margin: 0,
-          minHeight: "100vh",
+          minHeight: "100dvh",
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "1rem",
+          padding: "var(--space-4)",
           fontFamily: '"Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif',
           background: "var(--bg)",
           color: "var(--fg)",
@@ -97,9 +97,9 @@ export default function GlobalError({
             width: "100%",
             background: "var(--surface)",
             border: "1px solid var(--border)",
-            borderRadius: "12px",
+            borderRadius: "var(--radius-lg)",
             boxShadow: "var(--elev-sm)",
-            padding: "1.5rem",
+            padding: "var(--space-6)",
             textAlign: "center",
           }}
         >
@@ -112,7 +112,7 @@ export default function GlobalError({
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
-            style={{ margin: "0 auto 1rem", display: "block" }}
+            style={{ margin: "0 auto var(--space-4)", display: "block" }}
             aria-hidden="true"
           >
             <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z" />
@@ -121,18 +121,18 @@ export default function GlobalError({
           </svg>
           <h2
             style={{
-              fontSize: "1.25rem",
-              fontWeight: 600,
-              margin: "0 0 0.5rem",
+              fontSize: "var(--text-xl)",
+              fontWeight: "var(--weight-semibold)",
+              margin: "0 0 var(--space-2)",
             }}
           >
             {c.fatalError}
           </h2>
           <p
             style={{
-              fontSize: "0.875rem",
+              fontSize: "var(--text-base)",
               color: "var(--muted)",
-              margin: "0 0 0.25rem",
+              margin: "0 0 var(--space-1)",
             }}
           >
             {c.fatalErrorDesc}
@@ -140,10 +140,10 @@ export default function GlobalError({
           {error.digest && (
             <p
               style={{
-                fontSize: "0.75rem",
+                fontSize: "var(--text-xs)",
                 color: "var(--meta)",
                 fontFamily: "monospace",
-                margin: "0 0 1rem",
+                margin: "0 0 var(--space-4)",
                 wordBreak: "break-all",
               }}
             >
@@ -155,8 +155,8 @@ export default function GlobalError({
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
-              gap: "0.5rem",
-              marginTop: "1.25rem",
+              gap: "var(--space-2)",
+              marginTop: "var(--space-5)",
             }}
           >
             <button
@@ -167,13 +167,13 @@ export default function GlobalError({
                 alignItems: "center",
                 gap: "0.375rem",
                 height: "2.25rem",
-                padding: "0 1rem",
+                padding: "0 var(--space-4)",
                 background: "var(--accent)",
                 color: "var(--accent-fg)",
                 border: "none",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: 500,
+                borderRadius: "var(--radius-sm)",
+                fontSize: "var(--text-base)",
+                fontWeight: "var(--weight-medium)",
                 cursor: "pointer",
               }}
             >
@@ -186,13 +186,13 @@ export default function GlobalError({
                 display: "inline-flex",
                 alignItems: "center",
                 height: "2.25rem",
-                padding: "0 1rem",
+                padding: "0 var(--space-4)",
                 background: "transparent",
                 color: "var(--fg-2)",
                 border: "1px solid var(--border)",
-                borderRadius: "8px",
-                fontSize: "0.875rem",
-                fontWeight: 500,
+                borderRadius: "var(--radius-sm)",
+                fontSize: "var(--text-base)",
+                fontWeight: "var(--weight-medium)",
                 cursor: "pointer",
               }}
             >

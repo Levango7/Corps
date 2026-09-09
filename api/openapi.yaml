@@ -382,7 +382,7 @@ paths:
           schema: { type: string, minLength: 1, maxLength: 200 }
         - name: limit
           in: query
-          schema: { type: integer, default: 20, maximum: 50 }
+          schema: { type: integer, default: 20, maximum: 100 }
       responses:
         '200':
           description: Matching tasks and decisions
@@ -691,7 +691,7 @@ paths:
         '409':
           $ref: '#/components/responses/Conflict'
 
-  /api/v1/workspaces/{wid}/members/{uid}:
+  /api/v1/workspaces/{wid}/members/{userId}:
     patch:
       tags: [members]
       summary: Change a member's role (owner/admin)
@@ -701,7 +701,7 @@ paths:
       operationId: updateMemberRole
       parameters:
         - $ref: '#/components/parameters/Wid'
-        - $ref: '#/components/parameters/Uid'
+        - $ref: '#/components/parameters/UserId'
       requestBody:
         required: true
         content:
@@ -740,7 +740,7 @@ paths:
       operationId: removeMember
       parameters:
         - $ref: '#/components/parameters/Wid'
-        - $ref: '#/components/parameters/Uid'
+        - $ref: '#/components/parameters/UserId'
       responses:
         '200':
           description: Member removed
@@ -1165,8 +1165,12 @@ paths:
                 $ref: '#/components/schemas/Envelope_Checkout'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '501':
+          $ref: '#/components/responses/PaymentNotConfigured'
 
   /api/v1/workspaces/{wid}/billing/status:
     get:
@@ -1185,10 +1189,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_BillingStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '501':
+          $ref: '#/components/responses/PaymentNotConfigured'
 
   /api/v1/workspaces/{wid}/billing/portal:
     post:
@@ -1209,8 +1217,12 @@ paths:
                 $ref: '#/components/schemas/Envelope_Checkout'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '501':
+          $ref: '#/components/responses/PaymentNotConfigured'
 
   /api/v1/billing/webhook:
     post:
@@ -1303,13 +1315,23 @@ paths:
       operationId: listMyEvents
       responses:
         '200':
-          description: Recent events (dev only)
+          description: Recent events wrapped in the uniform envelope (dev only)
           content:
             application/json:
               schema:
-                type: array
-                items:
-                  type: object
+                type: object
+                required: [code]
+                properties:
+                  code:
+                    type: integer
+                    description: Business status code, mirrors HTTP status code.
+                    example: 200
+                  data:
+                    type: array
+                    description: The caller's last 50 analytics events.
+                    items:
+                      type: object
+                      description: Analytics event record (dev only).
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -2093,8 +2115,8 @@ components:
       required: true
       description: Task id (UUID).
       schema: { type: string, format: uuid }
-    Uid:
-      name: uid
+    UserId:
+      name: userId
       in: path
       required: true
       description: User id (UUID) of the member to update or remove.
@@ -2157,6 +2179,16 @@ components:
             code: 409
             data: null
             message: "email already registered"
+    PaymentNotConfigured:
+      description: Payment provider not configured (501)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 501
+            data: null
+            message: "payment provider not configured"
 
   schemas:
     # ---- uniform envelope ----
@@ -2548,7 +2580,7 @@ components:
         title:
           type: string
           minLength: 1
-          maxLength: 200
+          maxLength: 255
         description:
           type: string
           maxLength: 5000
@@ -2576,7 +2608,7 @@ components:
         title:
           type: string
           minLength: 1
-          maxLength: 200
+          maxLength: 255
         description:
           type: string
           maxLength: 5000
@@ -2666,7 +2698,7 @@ components:
         body:
           type: string
           minLength: 1
-          maxLength: 5000
+          maxLength: 10000
         mentions:
           type: array
           items:
@@ -2728,17 +2760,34 @@ components:
         cancelUrl:
           type: string
           format: uri
+        period:
+          type: string
+          enum: [monthly, yearly]
+          description: Billing cycle. Defaults to monthly when omitted; invalid values are rejected with 400.
+        provider:
+          type: string
+          enum: [stripe, wechatpay-native, alipay-page]
+          description: Payment channel. Defaults to env PAYMENT_PROVIDER when omitted; explicit value overrides the default for frontend payment-method selection.
     CheckoutSession:
       type: object
-      required: [url]
       properties:
         url:
           type: string
           format: uri
-          description: Redirect URL to Stripe Checkout (or Billing Portal).
+          description: Redirect URL for Stripe Checkout / Alipay gateway / Billing Portal. Present for stripe and alipay-page channels; absent for wechatpay-native (use qrCodeUrl instead).
+        qrCodeUrl:
+          type: string
+          description: WeChat Pay code_url for QR rendering. Present for the wechatpay-native channel; absent for stripe and alipay-page.
+        providerOrderId:
+          type: string
+          description: Channel-side order/session identifier created by the payment provider.
+        providerId:
+          type: string
+          enum: [stripe, wechatpay-native, alipay-page]
+          description: Payment channel that handled this checkout session.
     BillingStatus:
       type: object
-      required: [plan, seatLimit, memberCount, subscription]
+      required: [plan, seatLimit, memberCount, seatsUsed, role, stripeReady, portalReady, subscription]
       properties:
         plan:
           type: string
@@ -2751,6 +2800,16 @@ components:
           description: Current active member count.
         seatsUsed:
           type: integer
+          description: Alias of memberCount; seats currently consumed.
+        role:
+          type: string
+          description: Caller's membership role in this workspace (e.g. owner/admin/member).
+        stripeReady:
+          type: boolean
+          description: Whether a payment provider is configured and its price is ready (hides upgrade entry when false).
+        portalReady:
+          type: boolean
+          description: Whether the channel supports a customer portal and stripeReady is true (hides "manage subscription" button when false).
         subscription:
           nullable: true
           type: object
@@ -2766,4 +2825,4 @@ components:
               format: date-time
             canManage:
               type: boolean
-              description: true when a Stripe customer exists (Portal available).
+              description: true when a provider-side order exists and portalReady (Portal available).

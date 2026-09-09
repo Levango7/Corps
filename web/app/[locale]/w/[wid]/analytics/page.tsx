@@ -397,13 +397,13 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
         aria-label={t("trendChartAria")}
       >
         {/* 网格线 */}
-        {[0, 0.25, 0.5, 0.75, 1].map((t) => (
+        {[0, 0.25, 0.5, 0.75, 1].map((ratio) => (
           <line
-            key={t}
+            key={ratio}
             x1={PAD}
             x2={W - PAD}
-            y1={PAD + innerH * t}
-            y2={PAD + innerH * t}
+            y1={PAD + innerH * ratio}
+            y2={PAD + innerH * ratio}
             stroke="var(--border)"
             strokeWidth={1}
           />

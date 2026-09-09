@@ -39,14 +39,14 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
       <div
-        className="fixed bottom-4 right-4 pb-safe z-50 flex flex-col gap-2 pointer-events-none"
+        className="fixed bottom-4 right-4 pb-safe z-[var(--z-toast)] flex flex-col gap-2 pointer-events-none"
         aria-live="polite"
         aria-label={tToast("regionLabel")}
       >
         {toasts.map((t) => (
           <div
             key={t.id}
-            className="fade-in pointer-events-auto flex items-start gap-3 max-w-sm px-4 py-3 rounded-lg shadow-lg border cursor-pointer"
+            className="fade-in pointer-events-auto flex items-start gap-3 max-w-sm px-4 py-3 rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             style={{
               background:
                 t.type === "success"
@@ -69,9 +69,9 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             onClick={() => remove(t.id)}
             role="alert"
           >
-            <span className="text-sm flex-1">{t.message}</span>
+            <span className="text-[length:var(--text-sm)] flex-1">{t.message}</span>
             <button
-              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-xs"
+              className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-[length:var(--text-xs)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
               onClick={(e) => {
                 e.stopPropagation();
                 remove(t.id);

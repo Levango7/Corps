@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { handlePrismaError } from "@/lib/prisma-error";
 
 const querySchema = z.object({
   q: z.string().min(1).max(200),
@@ -12,7 +13,7 @@ const querySchema = z.object({
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const url = new URL(req.url);
@@ -22,7 +23,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "searchQueryRequired") },
+        { code: 400, message: apiMsg(req, "searchQueryRequired"), data: null },
         { status: 400 },
       );
     }
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     // A-9: trim 后若为空字符串（纯空格输入），返回 400 避免匹配全部记录
     if (!q) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "searchQueryBlank") },
+        { code: 400, message: apiMsg(req, "searchQueryBlank"), data: null },
         { status: 400 },
       );
     }
@@ -94,9 +95,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
   } catch (error) {
     console.error("[GET search] error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: apiMsg(req, "internalError") },
-      { status: 500 },
-    );
+    return handlePrismaError(error, req);
   }
 }

@@ -27,7 +27,7 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
       <button
         onClick={() => onChange("board")}
         aria-pressed={view === "board"}
-        className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-sm transition-colors ${
+        className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors ${
           view === "board"
             ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
             : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -40,7 +40,7 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
       <button
         onClick={() => onChange("list")}
         aria-pressed={view === "list"}
-        className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-sm transition-colors ${
+        className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors ${
           view === "list"
             ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
             : "text-[var(--muted)] hover:text-[var(--fg)]"

@@ -111,6 +111,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
 
   async function handleDelete() {
     if (busy) return;
+    // 保留 window.confirm：批量删除需等待用户确认结果后再决定是否执行，
+    // 替换为异步自定义确认对话框需引入额外状态机且阻塞后续流程，风险较大。
     if (!window.confirm(t("batchDeleteConfirm", { count: selectedIds.length }))) return;
     setBusy(true);
     setError("");
@@ -146,7 +148,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
             setPriorityOpen(false);
           }}
           disabled={busy}
-          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
+          title={busy ? t("batchUpdateFailed") : undefined}
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           aria-label={t("batchStatusAria")}
           aria-expanded={statusOpen}
         >
@@ -168,7 +171,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                   role="menuitem"
                   onClick={() => handleStatus(s)}
                   disabled={busy}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
+                  title={busy ? t("batchUpdateFailed") : undefined}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 >
                   <Icon size={14} style={{ color: meta.color }} />
                   {tStatus(STATUS_LABEL_KEYS[s])}
@@ -187,7 +191,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
             setStatusOpen(false);
           }}
           disabled={busy}
-          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
+          title={busy ? t("batchUpdateFailed") : undefined}
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           aria-label={t("batchPriorityAria")}
           aria-expanded={priorityOpen}
         >
@@ -206,7 +211,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                 role="menuitem"
                 onClick={() => handlePriority(p)}
                 disabled={busy}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
+                title={busy ? t("batchUpdateFailed") : undefined}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               >
                 <Flag size={14} style={{ color: PRIORITY_COLORS[p] }} />
                 {tPriority(PRIORITY_LABEL_KEYS[p])}
@@ -220,7 +226,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       <button
         onClick={handleDelete}
         disabled={busy}
-        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors"
+        title={busy ? t("batchDeleteFailed") : undefined}
+        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         aria-label={t("batchDeleteAria")}
       >
         <Trash2 size={14} />
@@ -234,7 +241,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       <button
         onClick={onClear}
         disabled={busy}
-        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 transition-colors"
+        title={busy ? t("batchUpdateFailed") : undefined}
+        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         aria-label={t("clearSelectionAria")}
       >
         <X size={14} />
@@ -246,7 +254,16 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
 
       {/* 错误提示 */}
       {error && (
-        <span className="text-[length:var(--text-xs)] text-[var(--danger)] ml-1">{error}</span>
+        <span className="flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--danger)] ml-1">
+          <span>{error}</span>
+          <button
+            onClick={() => setError("")}
+            className="shrink-0 opacity-60 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
+            aria-label={t("cancel")}
+          >
+            <X size={12} />
+          </button>
+        </span>
       )}
     </div>
   );

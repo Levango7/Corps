@@ -310,8 +310,8 @@ export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): 
     logTag: "reset_password",
   });
   if (!sent && !isEmailConfigured()) {
-    // 未配置 Resend 时把重置链接打到日志，本地开发仍可走通重置流程
-    logPlaceholder("reset_password", `to=${params.to}, resetUrl=${params.resetUrl}`);
+    // 未配置 Resend 时仅记录收件人（S12：不记录 resetUrl/token，避免日志泄露凭据）
+    logPlaceholder("reset_password", `to=${params.to}`);
   }
 }
 

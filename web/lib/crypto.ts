@@ -21,9 +21,16 @@ const KEY_LENGTH = 32;
 /** 缺省密钥环境变量名 */
 const ENV_CRYPTO_KEY = "CALENDAR_CRYPTO_KEY";
 
+/** M7 修复：开发环境固定密钥警告只输出一次（避免每次加密/解密重复日志） */
+let devKeyWarningShown = false;
+
 /**
  * 解析主密钥：优先用环境变量 CALENDAR_CRYPTO_KEY，
  * 开发环境未配置时退化为固定测试密钥（仅 dev/test 可用，生产必须配置）。
+ *
+ * M7 修复：开发环境使用固定密钥时输出明确警告日志，提醒开发者配置环境变量，
+ * 避免固定密钥意外泄露到生产环境（如 Docker 镜像构建时未注入密钥）。
+ * 生产环境未配置时直接抛错（启动即失败，fail-fast）。
  */
 function getMasterKey(): Buffer {
   const raw = process.env[ENV_CRYPTO_KEY];
@@ -34,9 +41,19 @@ function getMasterKey(): Buffer {
     if (buf.length === KEY_LENGTH) return buf;
     throw new Error(`CALENDAR_CRYPTO_KEY 长度无效（期望 ${KEY_LENGTH} 字节，实际 ${buf.length}）`);
   }
-  // 开发环境回退：用确定性测试密钥（绝不用于生产）
+  // 生产环境：必须配置，fail-fast
   if (process.env.NODE_ENV === "production") {
     throw new Error(`生产环境必须配置 ${ENV_CRYPTO_KEY}（openssl rand -hex 32）`);
+  }
+  // M7 修复：开发环境回退到固定测试密钥时，输出明确警告日志（仅一次）
+  // 提醒开发者配置环境变量，避免固定密钥意外带入生产
+  if (!devKeyWarningShown) {
+    devKeyWarningShown = true;
+    console.warn(
+      `[crypto] ⚠️ ${ENV_CRYPTO_KEY} 未配置，开发环境使用固定测试密钥。` +
+        "此密钥仅限 dev/test 使用，绝不用于生产。请配置环境变量：" +
+        `export ${ENV_CRYPTO_KEY}="$(openssl rand -hex 32)"`,
+    );
   }
   return Buffer.alloc(KEY_LENGTH, 7); // dev/test 固定密钥
 }

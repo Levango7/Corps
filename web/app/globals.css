@@ -330,7 +330,7 @@ svg {
  * -------------------------------------------------------------------------- */
 
 .modal-enter {
-  animation: modalEnter 200ms ease-out both;
+  animation: modalEnter var(--motion-slow) ease-out both;
 }
 @keyframes modalEnter {
   from {
@@ -344,7 +344,7 @@ svg {
 }
 
 .modal-overlay {
-  animation: overlayFade 200ms ease-out both;
+  animation: overlayFade var(--motion-slow) ease-out both;
 }
 @keyframes overlayFade {
   from {

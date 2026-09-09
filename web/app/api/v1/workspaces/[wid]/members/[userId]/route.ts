@@ -7,8 +7,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+
 import { apiMsg } from "@/lib/api-messages";
+import { handlePrismaError } from "@/lib/prisma-error";
 
 const updateSchema = z.object({
   role: z.enum(["admin", "member"]),
@@ -20,10 +21,10 @@ export async function PATCH(
 ) {
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerChangeRole") },
+      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerChangeRole"), data: null },
       { status: 403 },
     );
   }
@@ -34,11 +35,11 @@ export async function PATCH(
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody") }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
   }
 
   try {
@@ -72,39 +73,32 @@ export async function PATCH(
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "memberNotFound") },
+        { code: 404, message: apiMsg(req, "memberNotFound"), data: null },
         { status: 404 },
       );
     }
     if (result.kind === "ownerImmutable") {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "ownerRoleImmutable") },
+        { code: 403, message: apiMsg(req, "ownerRoleImmutable"), data: null },
         { status: 403 },
       );
     }
     if (result.kind === "selfForbidden") {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "cannotChangeOwnRole") },
+        { code: 400, message: apiMsg(req, "cannotChangeOwnRole"), data: null },
         { status: 400 },
       );
     }
     if (result.kind === "notAdminPrivilege") {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "onlyOwnerChangeAdmin") },
+        { code: 403, message: apiMsg(req, "onlyOwnerChangeAdmin"), data: null },
         { status: 403 },
       );
     }
     return NextResponse.json({ code: 200, data: result.updated });
   } catch (error) {
-    // P2025: 记录不存在（并发删除场景）→ 404
-    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
-      return NextResponse.json(
-        { code: 404, message: apiMsg(req, "memberNotFound") },
-        { status: 404 },
-      );
-    }
     console.error("[PATCH member] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return handlePrismaError(error, req);
   }
 }
 
@@ -114,90 +108,95 @@ export async function DELETE(
 ) {
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember") },
+      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember"), data: null },
       { status: 403 },
     );
   }
   if (userId === ctx.payload.sub) {
     return NextResponse.json(
-      { code: 400, message: apiMsg(req, "cannotRemoveSelf") },
+      { code: 400, message: apiMsg(req, "cannotRemoveSelf"), data: null },
       { status: 400 },
     );
   }
 
-  const outcome = await runWithWorkspace(
-    wid,
-    async (tx) => {
-      const target = await tx.member.findUnique({
-        where: { userId_workspaceId: { userId, workspaceId: wid } },
-        select: { role: true },
-      });
-      if (!target) return { kind: "notFound" as const };
-      if (target.role === "owner") return { kind: "isOwner" as const };
-      if (target.role === "admin" && ctx.member.role !== "owner") {
-        return { kind: "notAdminPrivilege" as const };
-      }
+  try {
+    const outcome = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        const target = await tx.member.findUnique({
+          where: { userId_workspaceId: { userId, workspaceId: wid } },
+          select: { role: true },
+        });
+        if (!target) return { kind: "notFound" as const };
+        if (target.role === "owner") return { kind: "isOwner" as const };
+        if (target.role === "admin" && ctx.member.role !== "owner") {
+          return { kind: "notAdminPrivilege" as const };
+        }
 
-      await tx.member.delete({
-        where: { userId_workspaceId: { userId, workspaceId: wid } },
-      });
+        await tx.member.delete({
+          where: { userId_workspaceId: { userId, workspaceId: wid } },
+        });
 
-      // AC-08 席位变更同步订阅侧 quantity
-      const subscription = await tx.subscription.findUnique({ where: { workspaceId: wid } });
-      let stripeCustomerId: string | null = null;
-      let stripeSubId: string | null = null;
-      if (subscription?.stripeCustomerId && subscription?.stripeSubId) {
-        stripeCustomerId = subscription.stripeCustomerId;
-        stripeSubId = subscription.stripeSubId;
-      }
-      const ws = await tx.workspace.findUnique({
-        where: { id: wid },
-        select: { seatLimit: true },
-      });
-      return {
-        kind: "ok" as const,
-        stripeCustomerId,
-        stripeSubId,
-        seatLimit: ws?.seatLimit ?? null,
-      };
-    },
-    ctx.payload.sub,
-  );
-
-  if (outcome.kind === "notFound") {
-    return NextResponse.json(
-      { code: 404, message: apiMsg(req, "memberNotFound") },
-      { status: 404 },
+        // AC-08 席位变更同步订阅侧 quantity
+        const subscription = await tx.subscription.findUnique({ where: { workspaceId: wid } });
+        let stripeCustomerId: string | null = null;
+        let stripeSubId: string | null = null;
+        if (subscription?.stripeCustomerId && subscription?.stripeSubId) {
+          stripeCustomerId = subscription.stripeCustomerId;
+          stripeSubId = subscription.stripeSubId;
+        }
+        const ws = await tx.workspace.findUnique({
+          where: { id: wid },
+          select: { seatLimit: true },
+        });
+        return {
+          kind: "ok" as const,
+          stripeCustomerId,
+          stripeSubId,
+          seatLimit: ws?.seatLimit ?? null,
+        };
+      },
+      ctx.payload.sub,
     );
-  }
-  if (outcome.kind === "isOwner") {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "cannotRemoveOwner") },
-      { status: 403 },
-    );
-  }
-  if (outcome.kind === "notAdminPrivilege") {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerRemoveAdmin") },
-      { status: 403 },
-    );
-  }
 
-  if (outcome.stripeCustomerId && outcome.stripeSubId && outcome.seatLimit != null) {
-    try {
-      const { getPaymentProvider } = await import("@/lib/payments");
-      const provider = getPaymentProvider();
-      await provider.syncSubscription({
-        providerOrderId: outcome.stripeSubId,
-        seats: outcome.seatLimit,
-      });
-    } catch {
-      /* 侧通道同步失败不阻断本地移除 */
+    if (outcome.kind === "notFound") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "memberNotFound"), data: null },
+        { status: 404 },
+      );
     }
-  }
+    if (outcome.kind === "isOwner") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "cannotRemoveOwner"), data: null },
+        { status: 403 },
+      );
+    }
+    if (outcome.kind === "notAdminPrivilege") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "onlyOwnerRemoveAdmin"), data: null },
+        { status: 403 },
+      );
+    }
 
-  return NextResponse.json({ code: 200, data: null });
+    if (outcome.stripeCustomerId && outcome.stripeSubId && outcome.seatLimit != null) {
+      try {
+        const { getPaymentProvider } = await import("@/lib/payments");
+        const provider = getPaymentProvider();
+        await provider.syncSubscription({
+          providerOrderId: outcome.stripeSubId,
+          seats: outcome.seatLimit,
+        });
+      } catch {
+        /* 侧通道同步失败不阻断本地移除 */
+      }
+    }
+
+    return NextResponse.json({ code: 200, data: null });
+  } catch (error) {
+    console.error("[DELETE member] error:", error);
+    return handlePrismaError(error, req);
+  }
 }

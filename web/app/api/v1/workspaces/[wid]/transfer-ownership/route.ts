@@ -1,16 +1,20 @@
 // PATCH /api/v1/workspaces/{wid}/transfer-ownership — 转让所有权（owner only）
 // 业务规则：被转让人必须是 admin 或 member；转让后原 owner 自动降为 admin
-// 二次确认字段 currentOwnerPassword（暂以“知道即有权限”占位——完整方案需要
-// 让原 owner 在转出前重新输密码，未来加二次确认。现用 admin 身份确认接口已
-// 经 getWorkspaceContext 验证，足够本地演示）
+// 安全（M4 修复）：转让所有权前要求原 owner 二次确认密码，防止会话被劫持后
+//   恶意转让。使用 better-auth/crypto 的 verifyPassword 校验密码哈希，
+//   与登录认证同源同算法（scrypt）。OAuth 用户（无密码）放行——其登录本身
+//   已经过外部 provider 二次认证，session 劫持风险等价于密码场景。
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { verifyPassword } from "better-auth/crypto";
 import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({
   newOwnerUserId: z.string().uuid(),
+  // M4 修复：二次确认密码（有密码账户必填，OAuth 账户可省略）
+  password: z.string().optional(),
 });
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -41,6 +45,38 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   if (body.newOwnerUserId === ctx.payload.sub) {
     return NextResponse.json({ code: 400, message: apiMsg(req, "alreadyOwner") }, { status: 400 });
   }
+
+  // M4 修复：二次密码确认——防止会话被劫持后恶意转让所有权
+  // 查询当前 owner 的密码哈希（users 表不在 RLS 清单，经 login op 读取）
+  const ownerAccount = await runWithAuthOp(
+    "login",
+    (tx) =>
+      tx.user.findUnique({
+        where: { id: ctx.payload.sub },
+        select: { password: true },
+      }),
+    ctx.payload.sub,
+  );
+  if (ownerAccount?.password) {
+    // 有密码账户：必须验证密码
+    if (!body.password) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "invalidCredentials") },
+        { status: 400 },
+      );
+    }
+    const passwordOk = await verifyPassword({
+      hash: ownerAccount.password,
+      password: body.password,
+    });
+    if (!passwordOk) {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "invalidCredentials") },
+        { status: 403 },
+      );
+    }
+  }
+  // OAuth 用户（password 为 null）：放行，其登录已经过外部 provider 认证
 
   try {
     const result = await runWithWorkspace(

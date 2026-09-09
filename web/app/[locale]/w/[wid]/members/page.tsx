@@ -13,7 +13,7 @@
  */
 
 import { use, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import { UserPlus, Trash2, Users, CheckCircle2, Link2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Member, Role } from "@/lib/types";
@@ -226,12 +226,12 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && invite()}
               placeholder={t("invitePlaceholder")}
-              className="w-full sm:w-auto sm:flex-1 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+              className="w-full sm:w-auto sm:flex-1 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 placeholder:text-[var(--meta)]"
             />
             <button
               onClick={invite}
               disabled={busy || seatsFull}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <UserPlus size={16} />
               {tButton("invite")}
@@ -249,7 +249,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                     </code>
                     <button
                       onClick={copyInviteLink}
-                      className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
+                      className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                     >
                       <Link2 size={12} />
                       {t("copyLink")}
@@ -265,7 +265,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       {seatsFull && canManage && (
         <div className="mb-6 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
           {t("seatsFullPrefix")}{" "}
-          <Link href={`/w/${wid}/billing`} className="underline underline-offset-2">
+          <Link href={`/w/${wid}/billing`} className="underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
             {t("seatsFullBillingLink")}
           </Link>{" "}
           {t("seatsFullSuffix")}
@@ -285,7 +285,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
             <button
               onClick={() => setTransferOpen(true)}
               disabled={members.filter((m) => !m.isSelf && m.role !== "owner").length === 0}
-              className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+              className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               {t("transfer")}
             </button>
@@ -294,7 +294,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
               <select
                 value={transferTarget}
                 onChange={(e) => setTransferTarget(e.target.value)}
-                className="w-full h-9 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                className="w-full h-9 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <option value="">{t("transferSelect")}</option>
                 {members
@@ -312,7 +312,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                 <button
                   onClick={handleTransfer}
                   disabled={transferBusy || !transferTarget}
-                  className="h-9 px-3 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+                  className="h-9 px-3 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {t("transferConfirm")}
                 </button>
@@ -322,7 +322,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                     setTransferTarget("");
                   }}
                   disabled={transferBusy}
-                  className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] disabled:opacity-50"
+                  className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {t("transferCancel")}
                 </button>
@@ -450,7 +450,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             <select
               value={m.role}
               onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
-              className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+              className="h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <option value="member">{t("roleMember")}</option>
               <option value="admin">{t("roleAdmin")}</option>
@@ -464,7 +464,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           {editable && (
             <button
               onClick={() => onRemove(m.id, label)}
-              className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+              className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               aria-label={t("remove") + " " + label}
             >
               <Trash2 size={16} />
@@ -509,7 +509,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           <select
             value={m.role}
             onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
-            className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             <option value="member">{t("roleMember")}</option>
             <option value="admin">{t("roleAdmin")}</option>
@@ -519,7 +519,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           </span>
           <button
             onClick={() => onRemove(m.id, label)}
-            className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+            className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("remove") + " " + label}
           >
             <Trash2 size={16} />
@@ -541,8 +541,8 @@ function MemberSkeleton() {
           <div key={i} className="flex items-center gap-3 px-4 py-3">
             <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
             <div className="flex-1 space-y-2">
-              <div className="h-4 w-32 rounded bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-3 w-48 rounded bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-4 w-32 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
+              <div className="h-3 w-48 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
             </div>
           </div>
         ))}

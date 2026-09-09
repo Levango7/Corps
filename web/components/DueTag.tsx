@@ -26,5 +26,5 @@ export function DueTag({ dueDate, inline = false }: DueTagProps) {
         ? "text-[var(--warn)]"
         : "text-[var(--muted)]";
   if (inline) return <span className={toneClass}>· {due.text}</span>;
-  return <p className={`text-xs mt-1 ${toneClass}`}>{due.text}</p>;
+  return <p className={`text-[length:var(--text-xs)] mt-1 ${toneClass}`}>{due.text}</p>;
 }

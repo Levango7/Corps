@@ -247,7 +247,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
         </div>
         <button
           onClick={() => setAiOpen(true)}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           <Sparkles size={14} />
           {t("aiExtract")}
@@ -274,7 +274,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               type="button"
               onClick={handleClearSearch}
               aria-label={t("clearSearch")}
-              className="absolute right-[var(--space-2)] top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-6 h-6 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)]"
+              className="absolute right-[var(--space-2)] top-1/2 -translate-y-1/2 inline-flex items-center justify-center w-[var(--icon-lg)] h-[var(--icon-lg)] rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <X size={14} />
             </button>
@@ -381,7 +381,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="inline-flex items-center gap-2 h-9 px-5 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:border-[var(--muted)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
+                className="inline-flex items-center gap-2 h-9 px-5 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:border-[var(--muted)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {loadingMore ? (
                   <>
@@ -417,7 +417,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               <button
                 onClick={closeAi}
                 aria-label={t("aiClose")}
-                className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)]"
+                className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <X size={16} />
               </button>
@@ -444,7 +444,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                     </span>
                     <button
                       onClick={copyAiMarkdown}
-                      className="inline-flex items-center gap-1 px-2 h-7 text-[length:var(--text-xs)] text-[var(--fg-2)] rounded-[var(--radius-sm)] border border-[var(--border)] hover:bg-[var(--surface)]"
+                      className="inline-flex items-center gap-1 px-2 h-7 text-[length:var(--text-xs)] text-[var(--fg-2)] rounded-[var(--radius-sm)] border border-[var(--border)] hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                     >
                       <ClipboardCopy size={12} />
                       {t("aiCopy")}
@@ -459,14 +459,14 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
             <div className="px-4 py-3 border-t border-[var(--border-soft)] flex items-center justify-end gap-2">
               <button
                 onClick={closeAi}
-                className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)]"
+                className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {t("aiClose")}
               </button>
               <button
                 onClick={handleExtract}
                 disabled={aiBusy || aiSource.trim().length < 10}
-                className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {aiBusy && <Loader2 size={14} className="animate-spin" />}
                 {aiResult ? t("aiReGenerate") : t("aiGenerate")}

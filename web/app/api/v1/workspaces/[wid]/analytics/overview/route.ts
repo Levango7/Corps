@@ -43,6 +43,15 @@ const MS_PER_DAY = 86_400_000;
 /** D_n 回访观察点（FUNNEL-METRICS §3.3）。 */
 const RETENTION_POINTS = [1, 7, 30] as const;
 
+/**
+ * 单次查询事件上限（M1 修复：防全量加载导致 OOM / 长事务）。
+ * 14 天窗口期下 10_000 条覆盖绝大多数工作区；超出时仅最近 10_000 条参与聚合，
+ * totalEvents 仍走独立 count 查询保证准确（不受 take 截断影响）。
+ * 调用方可通过 ?limit= 调高（上限 50_000），用于高流量工作区按需放宽。
+ */
+const DEFAULT_EVENT_LIMIT = 10_000;
+const MAX_EVENT_LIMIT = 50_000;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
@@ -53,13 +62,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden") }, { status: 403 });
   }
 
+  // M1 修复：支持 ?limit= 查询参数按需放宽事件拉取上限
+  const limitParam = Number.parseInt(req.nextUrl.searchParams.get("limit") ?? "", 10);
+  const eventLimit =
+    Number.isFinite(limitParam) && limitParam > 0
+      ? Math.min(limitParam, MAX_EVENT_LIMIT)
+      : DEFAULT_EVENT_LIMIT;
+
   try {
     const since = new Date(Date.now() - RANGE_DAYS * MS_PER_DAY);
 
     const data = await runWithWorkspace(
       wid,
       async (tx) => {
-        // 一次拉取窗口内全量事件，内存聚合（容量估算 §6.5 支撑）
+        // 拉取窗口内事件（M1 修复：加 take 上限，防大数据量全量加载导致性能退化和 OOM）。
+        // totalEvents 走下方独立 count 查询保证准确，不受 take 截断影响。
         const allEvents = await tx.analyticsEvent.findMany({
           where: { workspaceId: wid, createdAt: { gte: since } },
           select: {
@@ -69,6 +86,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
             sessionId: true,
           },
           orderBy: { createdAt: "asc" },
+          take: eventLimit,
         });
 
         // ─── D2 两段序列化漏斗 ───
@@ -126,7 +144,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           .sort((a, b) => b.count - a.count)
           .slice(0, 8);
 
-        const totalEvents = allEvents.length;
+        // M1 修复：totalEvents 走独立 count 查询，不受 take 截断影响（准确总量）
+        const totalEvents = await tx.analyticsEvent.count({
+          where: { workspaceId: wid, createdAt: { gte: since } },
+        });
+        const eventsTruncated = totalEvents > allEvents.length;
 
         // ─── D3 修复：activeUsers 过渡保留 + coreActiveUsers 严格口径 ───
         // activeUsers（过渡期双发，面板切换完成后移除）：14 天任意事件去重 userId
@@ -193,6 +215,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           daily,
           topEvents,
           totalEvents,
+          // M1 修复：暴露截断标志，前端可提示"数据量过大，仅展示最近 N 条"
+          eventsTruncated,
+          eventSampleSize: allEvents.length,
           activeUsers,
           coreActiveUsers,
           waw: { weekStart: weekStartKey, users: wawUsers },

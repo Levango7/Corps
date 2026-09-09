@@ -16,7 +16,8 @@ import {
   List,
   UserX,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
+import { useRouter } from "@/lib/i18n-navigation";
 import { api } from "@/lib/api";
 import type { DeletionPreview as AccountDeletionPreview } from "@/lib/account-deletion";
 import {
@@ -99,6 +100,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const tAccount = useTranslations("accountDeletion");
   const tTheme = useTranslations("theme");
   const tErr = useTranslations("error");
+  const router = useRouter();
+  const locale = useLocale();
   const [ws, setWs] = useState<Workspace | null>(null);
   const [name, setName] = useState("");
   const [slug, setSlug] = useState("");
@@ -111,6 +114,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const [error, setError] = useState("");
   const [saved, setSaved] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [loading, setLoading] = useState(true);
   // 个人资料
   const [userName, setUserName] = useState("");
   const [userImage, setUserImage] = useState("");
@@ -141,7 +145,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   }, [wid]);
 
   useEffect(() => {
-    load();
+    setLoading(true);
+    load().finally(() => setLoading(false));
     const stored = (localStorage.getItem("corps_theme") as ThemePref | null) ?? "system";
     setTheme(stored);
     const storedView = (localStorage.getItem(DEFAULT_VIEW_KEY) as DefaultView | null) ?? "board";
@@ -273,7 +278,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     try {
       await api(`/api/v1/workspaces/${wid}`, { method: "DELETE" });
       // 删除成功后跳转到首页
-      window.location.href = "/";
+      router.push("/");
     } catch (e) {
       setError(e instanceof Error ? e.message : t("deleteFailed"));
     } finally {
@@ -311,7 +316,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
         body: JSON.stringify({ confirmEmail: accountDeleteInput.trim() }),
       });
       // 账户已删（cookie 已过期）：整页跳转登录页
-      window.location.href = "/auth/login";
+      router.push("/auth/login");
     } catch (e) {
       setError(e instanceof Error ? e.message : tAccount("failed"));
       setAccountDeleting(false);
@@ -325,8 +330,17 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     (userName.trim() !== (userInitial.name ?? "") ||
       userImage.trim() !== (userInitial.image ?? ""));
 
+  // 初始加载：显示居中 spinner，避免空表单闪烁
+  if (loading) {
+    return (
+      <div className="max-w-2xl mx-auto flex items-center justify-center py-[var(--space-16)]">
+        <Loader2 size={24} className="animate-spin text-[var(--muted)]" />
+      </div>
+    );
+  }
+
   const inputClass =
-    "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:bg-[var(--surface-2)] disabled:text-[var(--muted)] placeholder:text-[var(--meta)]";
+    "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 disabled:bg-[var(--surface-2)] disabled:text-[var(--muted)] placeholder:text-[var(--meta)]";
   const labelClass =
     "block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-1.5";
   const sectionClass =
@@ -410,7 +424,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <button
             onClick={saveUserProfile}
             disabled={!userDirty || userBusy}
-            className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {userBusy && <Loader2 size={15} className="animate-spin" />}
             {t("save")}
@@ -473,7 +487,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             <button
               onClick={save}
               disabled={!dirty || busy}
-              className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
+              className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               {busy && <Loader2 size={15} className="animate-spin" />}
               {t("save")}
@@ -514,7 +528,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <button
                 key={v.id}
                 onClick={() => pickView(v.id)}
-                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)]"
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
                   background: active ? "var(--accent-soft)" : "var(--surface)",
@@ -590,7 +604,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <button
                 key={tp.id}
                 onClick={() => pickTheme(tp.id)}
-                className="w-full sm:flex-1 flex flex-col items-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)]"
+                className="w-full sm:flex-1 flex flex-col items-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
                   background: active ? "var(--accent-soft)" : "var(--surface)",
@@ -618,7 +632,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <button
             onClick={handleExportTasks}
             disabled={exportingTasks}
-            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {exportingTasks ? (
               <Loader2 size={15} className="animate-spin" />
@@ -630,7 +644,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <button
             onClick={handleExportDecisions}
             disabled={exportingDecisions}
-            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5"
+            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {exportingDecisions ? (
               <Loader2 size={15} className="animate-spin" />
@@ -653,7 +667,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               [t("overviewMembers"), `${ws.memberCount} ${t("overviewMembersUnit")}`],
               [t("overviewTasks"), `${ws.taskCount} ${t("overviewTasksUnit")}`],
               [t("overviewPlan"), ws.plan],
-              [t("overviewCreated"), new Date(ws.createdAt).toLocaleDateString("zh-CN")],
+              [t("overviewCreated"), new Date(ws.createdAt).toLocaleDateString(locale)],
             ].map(([k, v]) => (
               <div key={k} className="flex items-baseline justify-between gap-2">
                 <dt className="text-[var(--muted)]">{k}</dt>
@@ -686,14 +700,14 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           {!deleteConfirm ? (
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+              className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <Trash2 size={15} />
               {t("deleteInit")}
             </button>
           ) : (
             <div className="space-y-3">
-              <div className="p-3 rounded-[var(--radius-md)] bg-[var(--danger)] bg-opacity-10 text-[length:var(--text-sm)] text-[var(--danger-fg)]">
+              <div className="p-3 rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[length:var(--text-sm)] text-[var(--danger-fg)]">
                 {t("deleteConfirmHint", { name: ws.name })}
               </div>
               <div>
@@ -714,7 +728,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                 <button
                   onClick={handleDeleteWorkspace}
                   disabled={deleting || deleteInput.trim() !== ws.name}
-                  className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--danger)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                  className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--danger)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {deleting && <Loader2 size={15} className="animate-spin" />}
                   {t("deleteConfirm")}
@@ -724,7 +738,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                     setDeleteConfirm(false);
                     setDeleteInput("");
                   }}
-                  className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                  className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {t("deleteCancel")}
                 </button>
@@ -751,7 +765,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               setAccountDeleteOpen(true);
               loadAccountPreview();
             }}
-            className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+            className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             <UserX size={15} />
             {tAccount("init")}
@@ -821,7 +835,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             )}
 
             {/* 邮箱确认 */}
-            <div className="p-3 rounded-[var(--radius-md)] bg-[var(--danger)] bg-opacity-10 text-[length:var(--text-sm)] text-[var(--danger-fg)]">
+            <div className="p-3 rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] text-[length:var(--text-sm)] text-[var(--danger-fg)]">
               {tAccount("confirmHint")}
             </div>
             <div>
@@ -842,7 +856,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <button
                 onClick={handleDeleteAccount}
                 disabled={accountDeleting || !accountDeleteInput.includes("@")}
-                className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {accountDeleting && <Loader2 size={15} className="animate-spin" />}
                 {tAccount("confirm")}

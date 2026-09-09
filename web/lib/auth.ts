@@ -1,6 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { prisma } from "./prisma";
+import { prisma, withDbRetry } from "./prisma";
 import { verifyAccessToken, type JWTPayload } from "./jwt";
 import { sendResetPasswordEmail } from "./email";
 import { NextRequest } from "next/server";
@@ -128,12 +128,18 @@ export async function withGuc<T>(
   // 集中、连接池需渐进建立新连接时会过早超时（P2028，见 __prisma_pool_conc.cjs
   // 实测：并发 8 事务约需 2.4s 才能全部拿到连接）。显式放宽 maxWait 与
   // timeout，保证高并发下事务能排队拿到连接而非直接失败。
-  return prisma.$transaction(
-    async (tx) => {
-      await setGucs(tx, gucs);
-      return fn(tx);
-    },
-    { maxWait: 10_000, timeout: 20_000 },
+  // S11：用 withDbRetry 包装 $transaction，在 P1001/P1002（DB 不可达/冷启动）
+  // 连接级错误时自动指数退避重试，业务错误（如 P2002）不重试直接抛出。
+  // 因 withGuc 是 runWithWorkspace/runWithAuthOp/runWithSeatCheck/runWithShareToken
+  // 的共同底层，此处集成后所有经这些包装器的 DB 操作均自动获得重试能力。
+  return withDbRetry(() =>
+    prisma.$transaction(
+      async (tx) => {
+        await setGucs(tx, gucs);
+        return fn(tx);
+      },
+      { maxWait: 10_000, timeout: 20_000 },
+    ),
   );
 }
 

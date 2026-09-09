@@ -81,8 +81,8 @@ export function BoardColumn({
     >
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
         <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-        <span className="font-medium text-[var(--fg)]">{tStatus(column.titleKey)}</span>
-        <span className="ml-auto text-xs text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
+        <span className="font-[var(--weight-medium)] text-[var(--fg)]">{tStatus(column.titleKey)}</span>
+        <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
           {columnTasks.length}
         </span>
       </div>
@@ -214,11 +214,11 @@ function BoardCard({
         <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2 mb-1">
-            <span className="text-[length:var(--text-xs)] font-mono text-[var(--muted)]">
+            <span className="text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--muted)]">
               {formatTaskId(task.id)}
             </span>
           </div>
-          <p className="text-[length:var(--text-sm)] font-medium text-[var(--fg)] truncate">
+          <p className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
             {task.title}
           </p>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -270,7 +270,7 @@ function BoardCard({
               e.stopPropagation();
               onMoveByStep(task.id, -1);
             }}
-            className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
+            className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             aria-label={t("moveUp")}
           >
             <ChevronUp size={14} />
@@ -280,7 +280,7 @@ function BoardCard({
               e.stopPropagation();
               onMoveByStep(task.id, 1);
             }}
-            className="p-1 rounded hover:bg-[var(--surface-2)] text-[var(--muted)]"
+            className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             aria-label={t("moveDown")}
           >
             <ChevronDown size={14} />
@@ -313,16 +313,16 @@ export function ListTable({
   const router = useRouter();
   return (
     <div className="hidden md:block bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden">
-      <table className="w-full text-sm">
+      <table className="w-full text-[length:var(--text-sm)]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-            {selectionMode && <th className="font-medium px-4 h-10 w-10" />}
-            <th className="font-medium px-4 h-10">{t("title")}</th>
-            <th className="font-medium px-4 h-10">{t("assignee")}</th>
-            <th className="font-medium px-4 h-10">{t("priority")}</th>
-            <th className="font-medium px-4 h-10">{t("status")}</th>
-            <th className="font-medium px-4 h-10">{t("dueDate")}</th>
-            <th className="font-medium px-4 h-10">{t("label")}</th>
+            {selectionMode && <th className="font-[var(--weight-medium)] px-4 h-10 w-10" />}
+            <th className="font-[var(--weight-medium)] px-4 h-10">{t("title")}</th>
+            <th className="font-[var(--weight-medium)] px-4 h-10">{t("assignee")}</th>
+            <th className="font-[var(--weight-medium)] px-4 h-10">{t("priority")}</th>
+            <th className="font-[var(--weight-medium)] px-4 h-10">{t("status")}</th>
+            <th className="font-[var(--weight-medium)] px-4 h-10">{t("dueDate")}</th>
+            <th className="font-[var(--weight-medium)] px-4 h-10">{t("label")}</th>
           </tr>
         </thead>
         <tbody>
@@ -367,13 +367,13 @@ export function ListTable({
                     />
                   </td>
                 )}
-                <td className="px-4 h-10 text-[var(--fg)] font-medium truncate max-w-xs">
+                <td className="px-4 h-10 text-[var(--fg)] font-[var(--weight-medium)] truncate max-w-xs">
                   {task.title}
                 </td>
                 <td className="px-4 h-10 text-[var(--muted)]">{task.assignee?.name ?? "—"}</td>
                 <td className="px-4 h-10">
                   <span
-                    className="text-xs px-1.5 py-0.5 rounded"
+                    className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
                     style={PRIORITY_BADGE_STYLES[task.priority]}
                   >
                     {tPriority(PRIORITY_LABEL_KEYS[task.priority])}
@@ -381,7 +381,7 @@ export function ListTable({
                 </td>
                 <td className="px-4 h-10">
                   <span
-                    className="text-xs px-1.5 py-0.5 rounded"
+                    className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
                     style={STATUS_BADGE_STYLES[task.status]}
                   >
                     {tStatus(STATUS_LABEL_KEYS[task.status])}
@@ -470,21 +470,21 @@ export function ListCards({
                     aria-label={t("selectTask", { title: task.title })}
                   />
                 )}
-                <p className="text-sm font-medium text-[var(--fg)] truncate flex-1">{task.title}</p>
+                <p className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] truncate flex-1">{task.title}</p>
               </div>
               <span
-                className="text-xs px-1.5 py-0.5 rounded shrink-0"
+                className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)] shrink-0"
                 style={STATUS_BADGE_STYLES[task.status]}
               >
                 {tStatus(STATUS_LABEL_KEYS[task.status])}
               </span>
             </div>
-            <div className="flex items-center gap-2 text-xs text-[var(--muted)]">
-              <span className="font-mono">{formatTaskId(task.id)}</span>
+            <div className="flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)]">
+              <span className="font-[family-name:var(--font-mono)]">{formatTaskId(task.id)}</span>
               {task.dueDate && <DueTag dueDate={task.dueDate} inline />}
               {task.assignee && (
                 <div className="ml-auto flex items-center gap-1">
-                  <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-xs flex items-center justify-center shrink-0">
+                  <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
                     {task.assignee.name?.[0]}
                   </div>
                 </div>
@@ -551,13 +551,13 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
       <div className="empty-state-dot mb-4">
         <Kanban size={24} />
       </div>
-      <p className="text-[length:var(--text-lg)] font-medium mb-2 text-[var(--fg-2)]">
+      <p className="text-[length:var(--text-lg)] font-[var(--weight-medium)] mb-2 text-[var(--fg-2)]">
         {tEmpty("noTasks")}
       </p>
       <p className="text-[length:var(--text-sm)] mb-4">{tEmpty("noTasksHint")}</p>
       <button
         onClick={onCreate}
-        className="btn-press flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors"
+        className="btn-press flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       >
         <Plus size={16} />
         {tStatus("newTask")}

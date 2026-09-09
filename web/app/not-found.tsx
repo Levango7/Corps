@@ -20,7 +20,7 @@ import "./globals.css";
 export default function GlobalNotFound() {
   return (
     <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
-      <body className="min-h-screen flex items-center justify-center bg-[var(--bg)] text-[var(--fg)] px-[var(--space-4)]">
+      <body className="min-h-dvh flex items-center justify-center bg-[var(--bg)] text-[var(--fg)] px-[var(--space-4)]">
         <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-6)] text-center">
           {/* 品牌 Logo */}
           <div className="flex justify-center mb-5">

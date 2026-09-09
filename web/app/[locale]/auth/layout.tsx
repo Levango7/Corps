@@ -7,7 +7,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
   const t = await getTranslations("auth");
 
   return (
-    <div className="auth-bg relative min-h-screen flex flex-col items-center justify-center p-4 overflow-hidden">
+    <div className="auth-bg relative min-h-dvh flex flex-col items-center justify-center p-4 overflow-hidden">
       {/* 背景特效层 —— 细网格 + 光晕，纯装饰 aria-hidden */}
       <div className="absolute inset-0 pointer-events-none select-none" aria-hidden="true">
         {/* 细网格纹理（径向淡出，避免满屏压迫） */}

@@ -255,7 +255,7 @@ CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
   );
 
 -- notifications：拆分 SELECT / INSERT / UPDATE / DELETE 策略（DL-17，P3：
--- RLS 缺 user_id 纵深防御）。
+-- RLS 缺 user_id 纵深防御；M2 审计确认 user_id 容错处理已正确实现）。
 --
 -- 背景：原策略 p_notifications_rls（FOR ALL）仅按 workspace 判定，应用层
 -- WHERE 负责"看自己的"。风险：应用层若遗漏 user_id 过滤，用户可读他人通知。
@@ -268,8 +268,10 @@ CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
 --  - UPDATE：workspace + user_id（用户只能改自己的通知，如标记已读）
 --  - DELETE：workspace + user_id（用户只能删自己的通知）
 --
--- user_id 容错模式：NULLIF(current_setting('app.user_id', true), '') IS NULL
--- → app.user_id 未设置时放行（向后兼容）；设置后按 user_id 隔离（纵深防御）。
+-- user_id 容错模式（M2 确认正确）：NULLIF(current_setting('app.user_id', true), '') IS NULL
+-- → app.user_id 未设置时放行（向后兼容，覆盖 login/provision 等受信系统 op
+--    经 runWithAuthOp 调用但未传 userId 的场景）；设置后按 user_id 隔离（纵深防御）。
+-- 审计结论（M2）：四策略 user_id 谓词均已正确包含容错分支，无需进一步修改。
 DROP POLICY IF EXISTS p_notifications_rls ON notifications;
 DROP POLICY IF EXISTS p_notifications_select ON notifications;
 DROP POLICY IF EXISTS p_notifications_insert ON notifications;

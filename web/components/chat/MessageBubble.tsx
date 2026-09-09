@@ -48,7 +48,7 @@ function highlightText(text: string, query: string): React.ReactNode {
   const parts = text.split(regex);
   return parts.map((part, i) =>
     regex.test(part) ? (
-      <mark key={i} className="bg-[var(--accent-soft)] text-[var(--accent-fg)] rounded-sm px-0.5">
+      <mark key={i} className="bg-[var(--accent-soft)] text-[var(--accent-fg)] rounded-[var(--radius-sm)] px-0.5">
         {part}
       </mark>
     ) : (
@@ -120,7 +120,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
                       e.preventDefault();
                       setPreviewAttachment(att);
                     }}
-                    className="block rounded-[var(--radius-sm)] overflow-hidden hover:opacity-90 transition-opacity cursor-zoom-in"
+                    className="block rounded-[var(--radius-sm)] overflow-hidden hover:opacity-90 transition-opacity cursor-zoom-in focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                   >
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
@@ -141,14 +141,14 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
                     download={att.fileName}
                     className={`flex items-center gap-2 px-2.5 py-1.5 rounded-[var(--radius-sm)] border ${
                       isOwn
-                        ? "border-[var(--accent-fg)]/20 bg-[var(--accent-fg)]/10"
+                        ? "border-[color-mix(in_srgb,var(--accent-fg)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent-fg)_10%,transparent)]"
                         : "border-[var(--border)] bg-[var(--surface-3)]"
-                    } hover:opacity-80 transition-opacity min-w-[200px]`}
+                    } hover:opacity-80 transition-opacity min-w-[200px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]`}
                   >
                     <FileText size={16} className="shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-xs font-medium truncate">{att.fileName}</div>
-                      <div className="text-[10px] opacity-70">{formatFileSize(att.fileSize)}</div>
+                      <div className="text-[length:var(--text-xs)] font-[var(--weight-medium)] truncate">{att.fileName}</div>
+                      <div className="text-[length:var(--text-xs)] opacity-70">{formatFileSize(att.fileSize)}</div>
                     </div>
                     <Download size={14} className="shrink-0 opacity-70" />
                   </a>

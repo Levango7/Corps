@@ -105,7 +105,7 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
     SOCIAL_PROOF.paidTeams !== null && SOCIAL_PROOF.paidTeams >= SOCIAL_PROOF.minTeams;
 
   return (
-    <main className="min-h-screen bg-[var(--bg)] text-[var(--fg)]">
+    <main className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
       {/* 客户端副作用：view_pricing 埋点（渲染 null） */}
       <PricingViewTracker />
 
@@ -146,12 +146,12 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
 function TopNav({ t }: { t: TranslateFn }) {
   return (
     <nav
-      className="sticky top-0 z-10 h-[var(--topbar-h)] flex items-center justify-between px-[var(--space-8)] md:px-[var(--space-6)] border-b border-[var(--border-soft)] bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-[8px]"
+      className="sticky top-0 z-10 h-[var(--topbar-h)] flex items-center justify-between px-[var(--space-6)] md:px-[var(--space-8)] border-b border-[var(--border-soft)] bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-[8px]"
       aria-label={t("nav.ariaLabel")}
     >
       <Link
         href="/pricing"
-        className="text-[length:var(--text-base)] font-[var(--weight-semibold)] text-[var(--fg)]"
+        className="text-[length:var(--text-base)] font-[var(--weight-semibold)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
       >
         corps
       </Link>
@@ -159,17 +159,33 @@ function TopNav({ t }: { t: TranslateFn }) {
         {/* 当前页高亮 --accent（静态已知事实，无需 usePathname） */}
         <Link
           href="/pricing"
-          className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)]"
+          className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           aria-current="page"
         >
           {t("nav.pricing")}
         </Link>
         <Link
           href="/auth/login"
-          className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)]"
+          className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           {t("nav.login")}
         </Link>
+        {/* 移动端导航入口（与桌面端选项一致，仅断点不同） */}
+        <div className="flex md:hidden items-center gap-3">
+          <Link
+            href="/pricing"
+            className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            aria-current="page"
+          >
+            {t("nav.pricing")}
+          </Link>
+          <Link
+            href="/auth/login"
+            className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
+            {t("nav.login")}
+          </Link>
+        </div>
         <TrackedCta
           href={SIGNUP_BASE}
           plan="free"
@@ -192,7 +208,7 @@ function TopNav({ t }: { t: TranslateFn }) {
 function Hero({ t }: { t: TranslateFn }) {
   return (
     <section
-      className="relative overflow-hidden px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)]"
+      className="relative overflow-hidden px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--space-20)]"
       aria-labelledby="hero-heading"
     >
       {/* 背景装饰 SVG —— 抽象几何形状，纯装饰 aria-hidden */}
@@ -288,7 +304,7 @@ function SocialProof({ t }: { t: TranslateFn }) {
   // 当前 paidTeams === null → 本组件不会渲染；保留分支结构供未来接通数据
   const teams = SOCIAL_PROOF.paidTeams ?? 0;
   return (
-    <section className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]">
+    <section className="px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--section-y)]">
       <div className="mx-auto max-w-[var(--container-max)] text-center">
         <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
           {t("socialProof", { teams })}
@@ -305,7 +321,7 @@ function SocialProof({ t }: { t: TranslateFn }) {
 function FeatureGrid({ t }: { t: TranslateFn }) {
   return (
     <section
-      className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]"
+      className="px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--section-y)]"
       aria-labelledby="features-heading"
     >
       <div className="mx-auto max-w-[var(--container-max)]">
@@ -343,7 +359,7 @@ function FeatureGrid({ t }: { t: TranslateFn }) {
 function ComparisonTable({ t }: { t: TranslateFn }) {
   return (
     <section
-      className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]"
+      className="px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--section-y)]"
       aria-labelledby="compare-heading"
     >
       <div className="mx-auto max-w-[var(--container-max)]">
@@ -424,7 +440,7 @@ function ComparisonGroup({ group, t }: { group: (typeof PRICING_MATRIX)[number];
 function Faq({ t }: { t: TranslateFn }) {
   return (
     <section
-      className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--section-y)]"
+      className="px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--section-y)]"
       aria-labelledby="faq-heading"
     >
       <div className="mx-auto max-w-[var(--container-max)]">
@@ -465,7 +481,7 @@ function Faq({ t }: { t: TranslateFn }) {
 function TailCta({ t }: { t: TranslateFn }) {
   return (
     <section
-      className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)] bg-[var(--accent-soft)]"
+      className="px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--space-20)] bg-[var(--accent-soft)]"
       aria-labelledby="tail-cta-heading"
     >
       <div className="mx-auto max-w-[var(--container-max)] flex flex-col md:flex-row items-start md:items-center justify-between gap-[var(--space-4)]">
@@ -500,15 +516,15 @@ function TailCta({ t }: { t: TranslateFn }) {
 
 function Footer({ t }: { t: TranslateFn }) {
   return (
-    <footer className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-6)] border-t border-[var(--border-soft)]">
+    <footer className="px-[var(--space-6)] md:px-[var(--space-8)] py-[var(--space-6)] border-t border-[var(--border-soft)]">
       <div className="mx-auto max-w-[var(--container-max)] flex flex-wrap items-center justify-between gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
         <span>{t("footer.copyright")}</span>
         <div className="flex gap-4">
           {/* 法务文档页（审计 TODO(legal) 修复；文档内主体信息待注册后补齐） */}
-          <Link href="/legal/terms" className="hover:text-[var(--fg-2)]">
+          <Link href="/legal/terms" className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
             {t("footer.terms")}
           </Link>
-          <Link href="/legal/privacy" className="hover:text-[var(--fg-2)]">
+          <Link href="/legal/privacy" className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
             {t("footer.privacy")}
           </Link>
         </div>
