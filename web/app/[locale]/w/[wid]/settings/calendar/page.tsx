@@ -165,7 +165,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
   const hasAnyConnection = connections.some((c) => c.connected);
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="mx-auto max-w-[var(--container-max)]">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           <CalendarIcon size={20} className="text-[var(--muted)]" />

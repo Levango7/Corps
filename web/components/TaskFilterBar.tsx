@@ -227,7 +227,7 @@ export function TaskFilterBar({
                 }
                 className={`px-2 h-7 rounded-full text-[length:var(--text-xs)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
                   selected
-                    ? "text-white"
+                    ? "text-[var(--accent-fg)]"
                     : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
                 }`}
                 style={selected ? { background: l.color } : undefined}

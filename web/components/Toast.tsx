@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { useTranslations } from "next-intl";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -19,6 +20,7 @@ const ToastContext = createContext<ToastContextValue | null>(null);
 let _id = 0;
 
 export function ToastProvider({ children }: { children: ReactNode }) {
+  const tToast = useTranslations("toast");
   const [toasts, setToasts] = useState<Toast[]>([]);
 
   const addToast = useCallback((type: ToastType, message: string) => {
@@ -39,7 +41,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       <div
         className="fixed bottom-4 right-4 pb-safe z-50 flex flex-col gap-2 pointer-events-none"
         aria-live="polite"
-        aria-label="Notifications"
+        aria-label={tToast("regionLabel")}
       >
         {toasts.map((t) => (
           <div
@@ -48,21 +50,21 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             style={{
               background:
                 t.type === "success"
-                  ? "#f0fdf4"
+                  ? "var(--success-soft)"
                   : t.type === "error"
-                    ? "#fef2f2"
+                    ? "var(--danger-soft)"
                     : t.type === "warning"
-                      ? "#fffbeb"
-                      : "#ffffff",
-              borderColor: "#e5e7eb",
+                      ? "var(--warn-soft)"
+                      : "var(--surface)",
+              borderColor: "var(--border)",
               color:
                 t.type === "success"
-                  ? "#166534"
+                  ? "var(--success)"
                   : t.type === "error"
-                    ? "#991b1b"
+                    ? "var(--danger)"
                     : t.type === "warning"
-                      ? "#92400e"
-                      : "#111827",
+                      ? "var(--warn)"
+                      : "var(--fg)",
             }}
             onClick={() => remove(t.id)}
             role="alert"
@@ -74,7 +76,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 e.stopPropagation();
                 remove(t.id);
               }}
-              aria-label="Close"
+              aria-label={tToast("close")}
             >
               &#x2715;
             </button>

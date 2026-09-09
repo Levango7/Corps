@@ -181,7 +181,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const onlySelf = members.length <= 1 && members.some((m) => m.isSelf);
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-[var(--container-max)]">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
         <div>
           <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">

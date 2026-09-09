@@ -19,42 +19,50 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
-  const sinceParam = req.nextUrl.searchParams.get("since");
-  const since = sinceParam ? new Date(sinceParam) : null;
-  // 防止无效日期导致全表扫描
-  const sinceValid = since && !Number.isNaN(since.getTime()) ? since : null;
+  try {
+    const sinceParam = req.nextUrl.searchParams.get("since");
+    const since = sinceParam ? new Date(sinceParam) : null;
+    // 防止无效日期导致全表扫描
+    const sinceValid = since && !Number.isNaN(since.getTime()) ? since : null;
 
-  const messages = await runWithWorkspace(
-    wid,
-    async (tx) => {
-      if (sinceValid) {
-        // 增量拉取：since 之后的所有消息（正序）
-        return tx.message.findMany({
-          where: {
-            taskId: id,
-            task: { workspaceId: wid },
-            createdAt: { gt: sinceValid },
-          },
+    const messages = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        if (sinceValid) {
+          // 增量拉取：since 之后的所有消息（正序）
+          return tx.message.findMany({
+            where: {
+              taskId: id,
+              task: { workspaceId: wid },
+              createdAt: { gt: sinceValid },
+            },
+            include: { author: { select: { id: true, name: true, email: true, image: true } } },
+            orderBy: { createdAt: "asc" },
+            take: 200,
+          });
+        }
+        // 首次加载：取最近 200 条后反转为正序时间线
+        const rows = await tx.message.findMany({
+          where: { taskId: id, task: { workspaceId: wid } },
           include: { author: { select: { id: true, name: true, email: true, image: true } } },
-          orderBy: { createdAt: "asc" },
+          orderBy: { createdAt: "desc" },
           take: 200,
         });
-      }
-      // 首次加载：取最近 200 条后反转为正序时间线
-      const rows = await tx.message.findMany({
-        where: { taskId: id, task: { workspaceId: wid } },
-        include: { author: { select: { id: true, name: true, email: true, image: true } } },
-        orderBy: { createdAt: "desc" },
-        take: 200,
-      });
-      return rows.reverse();
-    },
-    ctx.payload.sub,
-  );
+        return rows.reverse();
+      },
+      ctx.payload.sub,
+    );
 
-  return NextResponse.json({ code: 200, data: messages });
+    return NextResponse.json({ code: 200, data: messages });
+  } catch (error) {
+    console.error("[GET messages] error:", error);
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
+  }
 }
 
 const createMessageSchema = z.object({
@@ -75,7 +83,7 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const validated = createMessageSchema.parse(await req.json());
@@ -128,11 +136,11 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
     console.error("Create message error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

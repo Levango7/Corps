@@ -20,6 +20,8 @@
 | 任务评论 + @提及 | P1 | ✅ |
 | 设计系统（Calm Precision + 双主题） | — | ✅ |
 | 前端 UI 对齐原型 | P1 | ✅ |
+| IM 实时消息（SSE + 已读 + 附件） | P1 | ✅ |
+| 日历集成（Google/Outlook OAuth2 + 截止日同步） | P1 | ✅ |
 
 ---
 
@@ -40,7 +42,7 @@
 | Prisma-SQL 同步 | P0 | 0.2周 |
 
 **依赖条件**：
-- CloudBase Staging 环境就绪
+- GHCR Docker Staging 环境就绪
 - PostgreSQL 18.4 Staging 实例
 
 ---
@@ -61,7 +63,7 @@
 **依赖条件**：
 - ADR-003 OPEN项关闭（国内支付选型确认）
 - 定价方案用户确认
-- CloudBase Production 环境就绪
+- GHCR Docker Production 环境就绪
 
 ---
 
@@ -71,9 +73,7 @@
 
 | 功能 | 何时考虑 | 触发条件 |
 |------|----------|----------|
-| IM / 轻沟通延伸 | v2 早期 | 用户反馈"任务上下文需要快速轻沟通" |
 | 决策记录协同编辑（CRDT/OT） | v2 中期 | 活跃团队 ≥50 且决策记录编辑频率 ≥5次/天/团队 |
-| 日历集成（Google/Outlook） | v2 中期 | 日历功能需求 ≥20% 用户反馈 |
 | 企业微信/钉钉/SSO/SAML | 企业版 | 企业客户 ≥3 家且合同签定 |
 | AI 智能助手 | 远期 | 数据积累 ≥1000团队 + 有算力预算 |
 | 移动端/桌面端原生 App | v2 晚期 | 移动端 Web DAU ≥30% |
@@ -97,5 +97,5 @@ M1(MVP)          M2(Beta)          M3(GA)           v2
 | 假设 | 风险 | 缓解 |
 |------|------|------|
 | Stripe 跨境可用作 MVP 计费 | 中国监管/结算受阻 | PaymentProvider 抽象已预留，可切换微信/支付宝 |
-| CloudBase 国内部署可行 | 供应商依赖 | 保留 Docker Compose 本地方案 |
+| GHCR Docker 部署可行 | — | Docker Compose 本地方案 + GHCR 镜像分发 |
 | 种子用户通过产品社区获取 | 用户获取慢 | 免费层降低门槛 + 邀请病毒传播 |

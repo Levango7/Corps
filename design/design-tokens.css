@@ -100,6 +100,9 @@
   --warn-soft:    color-mix(in srgb, var(--warn) 14%, transparent);
   --danger-soft:  color-mix(in srgb, var(--danger) 12%, transparent);
 
+  /* —— 强调成功色（用于 IM 已读回执、在线状态点等强调场景）—— */
+  --accent-success: var(--success);
+
   /* —— 任务状态/优先级点色（C-extension，复用语义色）—— */
   --status-todo-fg:  var(--muted);
   --status-doing-fg: var(--accent);
@@ -152,7 +155,7 @@
   --space-2:  8px;
   --space-3:  12px;
   --space-4:  16px;
-  --space-5:  22px;
+  --space-5:  20px;
   --space-6:  24px;
   --space-8:  32px;
   --space-10: 40px;

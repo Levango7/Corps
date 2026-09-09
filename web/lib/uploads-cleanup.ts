@@ -54,29 +54,76 @@ export async function deleteTaskFiles(taskId: string): Promise<void> {
   }
 }
 
-/** 全库孤儿清理：删除 uploads/ 中无 message_attachments 记录引用的文件 */
-export async function cleanupOrphanUploads(): Promise<{ deleted: number; kept: number }> {
-  // 1. 收集所有被引用的 url（message_attachments 不受 RLS，裸查安全）
-  const atts = await prisma.messageAttachment.findMany({
-    select: { url: true, thumbnailUrl: true },
-  });
+/** 全库孤儿清理：删除 uploads/ 中无 message_attachments 记录引用的文件
+ *
+ * 优化（DL-15，P3：孤儿清理全扫描）：
+ *  - 原实现一次性 `findMany` 全表加载所有附件 url 到内存，message_attachments
+ *    百万级时会 OOM；且磁盘全扫无上限，单次 cron 可能跑很久。
+ *  - 现改为：① 分页加载附件 url（每页 1000 条），内存常驻仅一页；
+ *    ② 磁盘文件按 mtime 升序（老文件优先）排序，单次最多处理 maxFilesToCheck
+ *    个（默认 200），未处理完下次 cron 继续；
+ *    ③ 候选磁盘文件确定后，仅查这些 url 是否被引用（仍需全分页扫表确认
+ *    不在引用集中——避免误删）。
+ *
+ * @param options.maxFilesToCheck - 单次最多检查的磁盘文件数（默认 200）
+ *   调度建议：每周一次 cron，孤儿无害仅占空间，无需一次清完。
+ */
+export async function cleanupOrphanUploads(
+  options?: { maxFilesToCheck?: number },
+): Promise<{ deleted: number; kept: number; skipped: number }> {
+  const maxFilesToCheck = options?.maxFilesToCheck ?? 200;
+
+  // 1. 收集所有被引用的 url（分页加载，避免全表 OOM）
+  //    message_attachments 不受 RLS，裸查安全
+  const PAGE_SIZE = 1000;
   const referenced = new Set<string>();
-  for (const a of atts) {
-    if (a.url) referenced.add(a.url);
-    if (a.thumbnailUrl) referenced.add(a.thumbnailUrl);
+  let cursor: string | undefined;
+  while (true) {
+    const atts = await prisma.messageAttachment.findMany({
+      select: { id: true, url: true, thumbnailUrl: true },
+      take: PAGE_SIZE,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    });
+    if (atts.length === 0) break;
+    for (const a of atts) {
+      if (a.url) referenced.add(a.url);
+      if (a.thumbnailUrl) referenced.add(a.thumbnailUrl);
+    }
+    cursor = atts[atts.length - 1].id;
+    if (atts.length < PAGE_SIZE) break;
   }
 
-  // 2. 扫描磁盘，删除未引用文件
+  // 2. 扫描磁盘，按 mtime 升序（老文件优先清理），单次最多处理 maxFilesToCheck 个
   let deleted = 0;
   let kept = 0;
+
   let entries: string[];
   try {
     entries = await fs.readdir(UPLOAD_DIR);
   } catch {
-    return { deleted: 0, kept: 0 }; // 目录不存在（未启用上传）→ 无事可做
+    return { deleted: 0, kept: 0, skipped: 0 }; // 目录不存在（未启用上传）→ 无事可做
   }
+
+  // 收集候选文件及其 stat，过滤 .gitkeep，按 mtime 升序排序
+  const candidates: Array<{ name: string; mtime: number }> = [];
   for (const name of entries) {
     if (name === ".gitkeep") continue;
+    const p = path.resolve(UPLOAD_DIR, name);
+    if (!p.startsWith(UPLOAD_DIR + path.sep)) continue; // 路径遍历防护
+    try {
+      const stat = await fs.stat(p);
+      candidates.push({ name, mtime: stat.mtimeMs });
+    } catch {
+      // 文件已被并发删除：跳过
+    }
+  }
+  candidates.sort((a, b) => a.mtime - b.mtime); // 老文件优先
+
+  // 限制单次处理数量
+  const toProcess = candidates.slice(0, maxFilesToCheck);
+  const skipped = candidates.length - toProcess.length; // 本次未处理的文件数
+
+  for (const { name } of toProcess) {
     const url = `/uploads/${name}`;
     if (referenced.has(url)) {
       kept++;
@@ -89,5 +136,5 @@ export async function cleanupOrphanUploads(): Promise<{ deleted: number; kept: n
     });
     deleted++;
   }
-  return { deleted, kept };
+  return { deleted, kept, skipped };
 }

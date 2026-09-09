@@ -75,7 +75,7 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const formData = await req.formData();
@@ -96,10 +96,9 @@ export async function POST(
     );
     const maxSize = activeSub ? MAX_FILE_SIZE_PRO : MAX_FILE_SIZE_FREE;
     if (file.size > maxSize) {
-      const limitMB = maxSize / (1024 * 1024);
       const message = activeSub
-        ? `文件大小不能超过 ${limitMB}MB`
-        : `免费版附件单文件最大 10MB，升级 Pro 可到 50MB`;
+        ? apiMsg(req, "fileSizeExceededPro")
+        : apiMsg(req, "fileSizeExceededFree");
       return NextResponse.json({ code: 400, message }, { status: 400 });
     }
 
@@ -156,6 +155,6 @@ export async function POST(
     return NextResponse.json({ code: 201, data: meta }, { status: 201 });
   } catch (error) {
     console.error("Upload attachment error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

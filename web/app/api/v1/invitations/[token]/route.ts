@@ -45,7 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     });
 
     if (!result) {
-      return NextResponse.json({ code: 404, message: "Invitation not found" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "invitationNotFound") }, { status: 404 });
     }
     const { invitation, inviter } = result;
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {

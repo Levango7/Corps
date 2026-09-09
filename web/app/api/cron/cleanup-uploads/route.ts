@@ -21,8 +21,8 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const { deleted, kept } = await cleanupOrphanUploads();
-    return NextResponse.json({ code: 200, data: { deleted, kept } });
+    const { deleted, kept, skipped } = await cleanupOrphanUploads();
+    return NextResponse.json({ code: 200, data: { deleted, kept, skipped } });
   } catch (error) {
     console.error("[cron cleanup-uploads] error:", error);
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });

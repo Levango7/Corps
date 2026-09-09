@@ -18,7 +18,7 @@ const NOTIFICATION_LIMIT = 50;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const url = new URL(req.url);
@@ -73,7 +73,7 @@ const patchSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const validated = patchSchema.parse(await req.json());
@@ -108,6 +108,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       );
     }
     console.error("Patch notification error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

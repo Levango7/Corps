@@ -11,20 +11,28 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
-  const comments = await runWithWorkspace(wid, async (tx) => {
-    const rows = await tx.comment.findMany({
-      where: { taskId: id, task: { workspaceId: wid } },
-      include: { author: { select: { id: true, name: true, email: true, image: true } } },
-      orderBy: { createdAt: "desc" },
-      // 上限保护：取最近 200 条后反转为正序时间线；游标分页列入 v2
-      take: 200,
+  try {
+    const comments = await runWithWorkspace(wid, async (tx) => {
+      const rows = await tx.comment.findMany({
+        where: { taskId: id, task: { workspaceId: wid } },
+        include: { author: { select: { id: true, name: true, email: true, image: true } } },
+        orderBy: { createdAt: "desc" },
+        // 上限保护：取最近 200 条后反转为正序时间线；游标分页列入 v2
+        take: 200,
+      });
+      return rows.reverse();
     });
-    return rows.reverse();
-  });
 
-  return NextResponse.json({ code: 200, data: comments });
+    return NextResponse.json({ code: 200, data: comments });
+  } catch (error) {
+    console.error("[GET comments] error:", error);
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
+  }
 }
 
 const createCommentSchema = z.object({
@@ -38,7 +46,7 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const validated = createCommentSchema.parse(await req.json());
@@ -164,11 +172,14 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
     console.error("Create comment error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

@@ -217,7 +217,7 @@ function ProCard({
       }
     >
       {/* 推荐角标 */}
-      <span className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--on-accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+      <span className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
         {t("plans.pro.badge")}
       </span>
 

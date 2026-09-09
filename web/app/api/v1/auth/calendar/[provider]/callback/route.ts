@@ -75,7 +75,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     const tokenRes = await exchangeCodeForToken(p, code, statePayload.verifier);
     if (!tokenRes.refresh_token) {
       return NextResponse.redirect(
-        `${redirectTarget}?error=${encodeURIComponent("未获取到 refresh_token，请重新授权")}`,
+        `${redirectTarget}?error=${encodeURIComponent(apiMsg(req, "refreshTokenMissing"))}`,
       );
     }
     // TS 收窄保真：闭包内（withGuc 回调）无法继承上方判空，保存到 const
@@ -127,7 +127,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     // 4. 重定向回设置页（带 success 标记）
     return NextResponse.redirect(`${redirectTarget}?connected=${p}`);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "授权回调失败";
+    const message = error instanceof Error ? error.message : apiMsg(req, "calendarCallbackFailed");
     return NextResponse.redirect(`${redirectTarget}?error=${encodeURIComponent(message)}`);
   }
 }

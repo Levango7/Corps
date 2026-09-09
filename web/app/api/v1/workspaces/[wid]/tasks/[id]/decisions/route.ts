@@ -11,17 +11,26 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
-  const decisions = await runWithWorkspace(wid, (tx) =>
-    tx.decision.findMany({
-      where: { taskId: id, task: { workspaceId: wid } },
-      include: { author: { select: { id: true, name: true, email: true } } },
-      orderBy: { version: "desc" },
-    }),
-  );
+  // API-015：补 try-catch，避免 runWithWorkspace 抛错变成未处理异常
+  try {
+    const decisions = await runWithWorkspace(wid, (tx) =>
+      tx.decision.findMany({
+        where: { taskId: id, task: { workspaceId: wid } },
+        include: { author: { select: { id: true, name: true, email: true } } },
+        orderBy: { version: "desc" },
+      }),
+    );
 
-  return NextResponse.json({ code: 200, data: decisions });
+    return NextResponse.json({ code: 200, data: decisions });
+  } catch (error) {
+    console.error("[GET task decisions] error:", error);
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
+  }
 }
 
 const createDecisionSchema = z.object({
@@ -34,7 +43,7 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const validated = createDecisionSchema.parse(await req.json());
@@ -103,11 +112,14 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
     console.error("Create decision error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

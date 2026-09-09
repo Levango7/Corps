@@ -1,6 +1,53 @@
 // This is your Prisma schema file
 // Learn more: https://pris.ly/d/prisma-schema
 
+// ─── 软删除策略规划（DL-13，P3：文档说明）────────────────────────────
+//
+// 当前状态：**无软删除**——所有删除均为物理删除（DELETE），删除后数据不可恢复。
+// User/Workspace/Task/Document/Decision 等核心实体删除后直接从表中消失，
+// 仅通过 schema 级联（onDelete: Cascade/SetNull）维护引用完整性。
+//
+// 规划方向（后续迭代引入，不在本次 P3 范围内实现）：
+//
+// 1. **可选字段方案**（推荐）：在关键模型上添加 `deletedAt DateTime?` 字段：
+//    ```prisma
+//    model Task {
+//      ...
+//      deletedAt DateTime? @map("deleted_at") @db.Timestamptz
+//      @@index([workspaceId, deletedAt])  // 软删除过滤索引
+//    }
+//    ```
+//    - Prisma 默认不过滤 null，添加字段后现有查询不受影响（向后兼容）
+//    - 需要数据库迁移（ALTER TABLE ADD COLUMN，可安全在线执行）
+//    - 删除操作改为 `update({ deletedAt: new Date() })`，查询加 `where: { deletedAt: null }`
+//
+// 2. **适用范围**（按数据恢复价值排序）：
+//    - Task：用户误删任务是高频客诉，软删除 + 30 天回收站
+//    - Document：团队知识沉淀，误删影响大
+//    - Workspace：整租户删除，软删除 + 保留期便于误删恢复
+//    - Decision / DecisionVersion：版本留痕已部分覆盖，可选
+//    - Message / Comment：IM 场景删除即删除，不需要软删除
+//
+// 3. **查询改造**：引入 Prisma middleware 或显式 where 扩展：
+//    ```ts
+//    prisma.task.findMany({ where: { deletedAt: null, ... } })
+//    ```
+//    或用 Prisma Client Extensions（$extends）自动注入软删除过滤。
+//
+// 4. **清理策略**：定时任务（cron）清理 deletedAt 超过保留期的记录：
+//    ```ts
+//    await prisma.task.deleteMany({ where: { deletedAt: { lt: thirtyDaysAgo } } })
+//    ```
+//
+// 5. **风险**：
+//    - 唯一约束需改为 partial index（WHERE deleted_at IS NULL）避免软删除行占位
+//    - RLS 策略需同步加 deleted_at IS NULL 谓词
+//    - 现有查询全部需加 deletedAt: null 过滤，改造量大
+//
+// 当前不引入的原因：P3 优先级，软删除是系统级变更（涉及查询、索引、RLS、
+// 唯一约束），需在 P2 周期统一评估。当前物理删除 + schema 级联在功能上
+// 完备，仅缺少"误删恢复"能力，可通过定期备份 + 按需恢复兜底。
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -574,6 +621,22 @@ model ProcessedStripeEvent {
  *  - props 用 Json 而非 JsonB：写入少、读取多，Json 行内存储读取更快；
  *    且事件 props 体量小（<1KB），不需要 JsonB 的 GIN 索引。
  *  - 不存 PII（邮箱/姓名），仅存匿名化 props（taskId/role/plan 等）。
+ *
+ * ─── GIN 索引策略（DL-16，P3：文档说明）────────────────────────────
+ * 当前 props 为 JSON 类型，无 GIN 索引。查询均按 name/userId/workspaceId/
+ * sessionId + createdAt 走 B-tree 索引，不做 props 内部字段过滤。
+ *
+ * 若后续需要按 props 内部字段查询（如按 props.taskId 筛选事件），需：
+ *  1. 将 props 从 JSON 改为 JSONB（ALTER TABLE ... ALTER COLUMN props
+ *     TYPE JSONB USING props::JSONB；在线可执行，但大表会锁表，需 pg_repack）
+ *  2. 创建 GIN 索引：
+ *     - 全字段：CREATE INDEX ... ON analytics_events USING GIN (props);
+ *     - 路径表达式：CREATE INDEX ... ON analytics_events USING GIN ((props->>'taskId'));
+ *  3. Prisma schema 改为 `props JsonB @default("{}")`（Prisma 已支持 JsonB）
+ *
+ * 当前不引入的原因：无 props 内部字段查询需求，所有查询走 B-tree 索引即可。
+ * 引入 GIN 会增加写入开销（每次写入需更新 GIN 倒排索引）与存储成本。
+ * 参考迁移 SQL 见 db/jsonb-gin-index-reference.sql（不自动执行）。
  */
 model AnalyticsEvent {
   id          String   @id @default(uuid()) @db.Uuid

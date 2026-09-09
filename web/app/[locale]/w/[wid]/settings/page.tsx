@@ -53,6 +53,9 @@ const VIEWS: { id: DefaultView; icon: typeof LayoutGrid }[] = [
   { id: "list", icon: List },
 ];
 
+/** 主题切换过渡时长（与 --motion-slow 对齐，避免硬编码） */
+const THEME_TRANSITION_MS = 220;
+
 function applyTheme(pref: ThemePref) {
   const resolved =
     pref === "system"
@@ -60,7 +63,7 @@ function applyTheme(pref: ThemePref) {
         ? "dark"
         : "light"
       : pref;
-  document.documentElement.style.transition = "background-color 0.2s";
+  document.documentElement.style.transition = `background-color ${THEME_TRANSITION_MS}ms`;
   document.documentElement.setAttribute("data-theme", resolved);
   localStorage.setItem("corps_theme", pref);
 }

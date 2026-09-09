@@ -254,12 +254,64 @@ CREATE POLICY p_subscriptions_rls ON subscriptions FOR ALL
     OR current_setting('app.auth_op', true) = 'webhook'
   );
 
--- notifications：只按 workspace 判定（应用层 WHERE 负责“看自己的”；
--- 给他人写 mention 通知是合法操作，旧策略的 user_id 条件与之冲突，已移除）
+-- notifications：拆分 SELECT / INSERT / UPDATE / DELETE 策略（DL-17，P3：
+-- RLS 缺 user_id 纵深防御）。
+--
+-- 背景：原策略 p_notifications_rls（FOR ALL）仅按 workspace 判定，应用层
+-- WHERE 负责"看自己的"。风险：应用层若遗漏 user_id 过滤，用户可读他人通知。
+--
+-- 权衡：给他人写 mention 通知是合法操作（INSERT 行的 user_id 是接收者而非
+-- 当前用户），故 INSERT 不能加 user_id 谓词。拆分策略：
+--  - SELECT：workspace + user_id（纵深防御；app.user_id 未设置时容错放行，
+--    向后兼容现有未传 userId 的 runWithWorkspace 调用）
+--  - INSERT：仅 workspace（系统给他人写 mention 通知）
+--  - UPDATE：workspace + user_id（用户只能改自己的通知，如标记已读）
+--  - DELETE：workspace + user_id（用户只能删自己的通知）
+--
+-- user_id 容错模式：NULLIF(current_setting('app.user_id', true), '') IS NULL
+-- → app.user_id 未设置时放行（向后兼容）；设置后按 user_id 隔离（纵深防御）。
 DROP POLICY IF EXISTS p_notifications_rls ON notifications;
-CREATE POLICY p_notifications_rls ON notifications FOR ALL
-  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+DROP POLICY IF EXISTS p_notifications_select ON notifications;
+DROP POLICY IF EXISTS p_notifications_insert ON notifications;
+DROP POLICY IF EXISTS p_notifications_update ON notifications;
+DROP POLICY IF EXISTS p_notifications_delete ON notifications;
+
+CREATE POLICY p_notifications_select ON notifications FOR SELECT
+  USING (
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+    AND (
+      NULLIF(current_setting('app.user_id', true), '') IS NULL
+      OR user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    )
+  );
+
+CREATE POLICY p_notifications_insert ON notifications FOR INSERT
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+CREATE POLICY p_notifications_update ON notifications FOR UPDATE
+  USING (
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+    AND (
+      NULLIF(current_setting('app.user_id', true), '') IS NULL
+      OR user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    )
+  )
+  WITH CHECK (
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+    AND (
+      NULLIF(current_setting('app.user_id', true), '') IS NULL
+      OR user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    )
+  );
+
+CREATE POLICY p_notifications_delete ON notifications FOR DELETE
+  USING (
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+    AND (
+      NULLIF(current_setting('app.user_id', true), '') IS NULL
+      OR user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+    )
+  );
 
 -- invitations：workspace 谓词 + invite 取件逃生口（按 token 的公开预览/接受前置读取）
 DROP POLICY IF EXISTS p_invitations_rls ON invitations;

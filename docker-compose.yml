@@ -81,9 +81,10 @@ services:
       DATABASE_OWNER_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-corps}?schema=public
       # 默认开启 RLS 加固；显式置 false 可退回非加固模式（不推荐）
       RLS_ACTIVATE: ${RLS_ACTIVATE:-true}
-      # 认证密钥（必须为强随机值）
-      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET}
+      # 认证密钥（必须为强随机值；未设置或为空时 compose 直接报错退出，
+      # 杜绝带着空签名密钥启动导致 JWT 可被伪造——见 docs/runbook-deploy.md §5）
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?请在 .env 中设置 BETTER_AUTH_SECRET（openssl rand -hex 32）}
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?请在 .env 中设置 JWT_ACCESS_SECRET（openssl rand -hex 32）}
       # 应用 URL
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       # Stripe（可选，未配置时计费页隐藏升级入口）

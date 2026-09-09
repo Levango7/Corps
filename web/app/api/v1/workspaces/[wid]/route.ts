@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 /** GET /v1/workspaces/{wid} — 工作区详情（设置页 / 顶栏读取） */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const ws = await runWithWorkspace(
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
 
     if (!ws)
-      return NextResponse.json({ code: 404, message: "Workspace not found" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "workspaceNotFound") }, { status: 404 });
 
     return NextResponse.json({
       code: 200,
@@ -68,7 +69,7 @@ const updateWorkspaceSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerOrAdminUpdateWorkspace") },
@@ -94,14 +95,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
     if ((error as { code?: string }).code === "P2002") {
       return NextResponse.json({ code: 409, message: apiMsg(req, "slugTaken") }, { status: 409 });
     }
+    // P2025: 记录不存在（并发删除场景）→ 404
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "workspaceNotFound") },
+        { status: 404 },
+      );
+    }
     console.error("Update workspace error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

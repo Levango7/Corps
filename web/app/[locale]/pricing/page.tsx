@@ -176,7 +176,7 @@ function TopNav({ t }: { t: TranslateFn }) {
           source="nav"
           period="yearly"
           variant="primary"
-          className="btn-press inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--on-accent)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
+          className="btn-press inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
         >
           {t("nav.freeStart")}
         </TrackedCta>
@@ -256,7 +256,7 @@ function Hero({ t }: { t: TranslateFn }) {
         </p>
 
         {/* CTA 组 */}
-        <div className="mt-6 flex flex-col sm:flex-row gap-3">
+        <div className="mt-[var(--space-6)] flex flex-col sm:flex-row gap-[var(--space-3)]">
           <TrackedCta
             href={SIGNUP_BASE}
             plan="free"
@@ -354,8 +354,8 @@ function ComparisonTable({ t }: { t: TranslateFn }) {
           {t("comparison.heading")}
         </h2>
         {/* 移动端容器 overflow-x-auto，表格 min-w 720px（spec §7） */}
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-[720px] text-[length:var(--text-sm)]">
+        <div className="mt-[var(--space-6)] overflow-x-auto -mx-[var(--space-4)] px-[var(--space-4)] md:mx-0 md:px-0">
+          <table className="w-full min-w-[720px] text-[length:var(--text-sm)] border-collapse">
             <thead>
               <tr className="border-b border-[var(--border)]">
                 <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
@@ -434,7 +434,7 @@ function Faq({ t }: { t: TranslateFn }) {
         >
           {t("faq.heading")}
         </h2>
-        <div className="mt-6 max-w-[720px] mx-auto">
+        <div className="mt-[var(--space-6)] max-w-[720px] mx-auto">
           {PRICING_FAQS.map((faq) => (
             // 原生 details/summary（零 JS，键盘可达，spec §3.7）
             // question/answer 走翻译 key（faq.q{0-5}/a{0-5}），questionId 来自常量保排序与埋点
@@ -468,7 +468,7 @@ function TailCta({ t }: { t: TranslateFn }) {
       className="px-[var(--space-8)] md:px-[var(--space-6)] py-[var(--space-20)] bg-[var(--accent-soft)]"
       aria-labelledby="tail-cta-heading"
     >
-      <div className="mx-auto max-w-[var(--container-max)] flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="mx-auto max-w-[var(--container-max)] flex flex-col md:flex-row items-start md:items-center justify-between gap-[var(--space-4)]">
         <div>
           <h2
             id="tail-cta-heading"

@@ -1,6 +1,7 @@
-# Spec - 团队（corps）v0.1.0
+# Spec - 团队（corps）v0.6.0
 
 > 生成日期：2026-08-19
+> 最后更新：2026-09-09（v0.6.0 文档对齐）
 > 基于：PRD v1（许清楚） + 架构文档 v1（高见远） + UIUX 文档 v1（颜好看）
 > 状态：已确认（用户 2026-08-19 拍板 4 项决策）
 > 决策日志：
@@ -50,8 +51,8 @@
 
 | 层 | 技术 | 实际版本 | 锁定原因 |
 |----|------|----------|----------|
-| 前端 | Next.js (App Router) + React | next@16.2.6 / react@19.2 | Web 优先 + 多租户 SaaS 部署成熟 + 单语言贯通前后端 |
-| 前端 UI | Tailwind CSS + Radix UI | tailwindcss@4 / radix-ui 最新稳定 | 无样式可访问原语 + Token 映射反硬编码 |
+| 前端 | Next.js (App Router) + React | next@16.3.3 / react@19.2.8 | Web 优先 + 多租户 SaaS 部署成熟 + 单语言贯通前后端 |
+| 前端 UI | Tailwind CSS + Radix UI | tailwindcss@4.3.3 / radix-ui 最新稳定 | 无样式可访问原语 + Token 映射反硬编码 |
 | 图标 | Lucide (lucide-react) | 钉确切版本（非 ^/latest） | P0 锁定一套 SVG，禁 emoji/禁混用 |
 | 后端 | Next.js Route Handlers（全栈起步） | 同前端 | 最小部署目标、最快跑通 |
 | 后端生长 | NestJS (Fastify) | @nestjs/core@11 | 多端/AI 出现时抽独立 API，复用 TS DTO+Prisma |
@@ -60,7 +61,7 @@
 | 认证 | Better Auth | better-auth 最新稳定 | TS 原生、sessions/MFA/多租户(orgs)插件、Prisma 适配器 |
 | 密码 | scrypt（Better Auth 默认） | — | Better Auth 1.3 稳定版未暴露 argon2 钩子；scrypt 强度仍够，argon2id 作为后续升级项见 OPEN-DECISIONS |
 | 计费 | Stripe | stripe 最新稳定 | Checkout/Portal/webhook 成熟，中国市场用 Stripe 跨境或替换方案待定 |
-| 部署 | 腾讯云 CloudBase + 国内 CDN | — | 目标市场中国大陆，国内直连最优 |
+| 部署 | GitHub Container Registry (GHCR) + Docker Compose | — | 容器化部署，GHCR 镜像分发 + Docker Compose 本地/自托管 |
 | 认证令牌 | access JWT 15min + refresh 不透明串 7d 轮换 | — | 满足"JWT 15min access + 7d refresh" |
 
 > 多租户隔离：共享 Schema + `workspace_id` + PostgreSQL RLS。RLS 在引擎层强制，即使应用漏写 WHERE 也不跨租户泄漏。
@@ -129,6 +130,12 @@
 | 任务详情 | /w/:wid/task/:id | 详情 + 评论 + 决策记录 | tasks/:id, comments, decisions | 同上 |
 | 成员管理 | /w/:wid/members | 邀请 + 角色 | members | 同上 |
 | 计费 | /w/:wid/billing | 套餐 + Portal 入口 | billing/* | 同上 |
+| 分析概览 | /w/:wid/analytics | 统计图表 + 趋势 | analytics/* | 同上 |
+| 决策列表 | /w/:wid/decisions | 决策列表 + 筛选 | decisions | 同上 |
+| 文档 | /w/:wid/documents | 文档管理 | documents | 同上 |
+| 我的任务 | /w/:wid/my-tasks | 跨工作区个人任务 | tasks | 同上 |
+| 通知 | /w/:wid/notifications | 通知列表 + 标记已读 | notifications | 同上 |
+| 设置 | /w/:wid/settings | 工作区设置 | workspaces/:wid | 同上 |
 
 ## 8. 设计 Token（锁定）
 
@@ -216,6 +223,7 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 | 2026-08-22 | 品牌与路径统一为 corps：`collab-saas-mvp` → `corps`（文档路径引用），`Corps` → `corps`（全部 UI/文档，含小写统一） | 用户指令「全部统一成 corps」 | 全部 .md/.tsx/.ts/.html |
 | 2026-08-29 | 审计修复：IM/日历纳入交付范围（§3）、附件租户隔离（MessageAttachment.workspaceId + RLS + 下载鉴权）、SSE 连接泄漏修复、JWT wid 守卫、verify-production.sh 重写、i18n 补全（attachmentFallback 等） | 2026-08-29 全仓审查发现 P0/P1 缺陷 | Spec §3/§13 + openapi + db/rls-activate.sql |
 | 2026-08-24 | 文档对齐实际实现：密码哈希 argon2id → scrypt（与 Better Auth 默认一致）；移动端 App "何时考虑" P1 → v2 晚期（与 ROADMAP 一致）；定价 Pro 层 31+人 → 11–30人高级功能档（与产品定位 5–30人一致）；DESIGN.md 日历标注为 v2 占位（与 SPEC §3 一致） | Task #72 文档一致性修复 | SPEC.md + pricing-strategy.md + DESIGN.md + 审计/安全/竞品文档 |
+| 2026-09-09 | v0.6.0 文档对齐：版本号同步 package.json（next 16.3.3 / react 19.2.8 / tailwind 4.3.3 / better-auth 1.7.2）；部署方案更新为 GHCR + Docker；§7 页面清单补齐已落地页面 | 五维度审查发现文档与实现版本号偏差 | SPEC.md 全文 |
 
 ---
 

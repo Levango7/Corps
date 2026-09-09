@@ -310,9 +310,10 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
       - name: Install Playwright Chromium
         run: npx playwright install chromium --with-deps
-      # 浏览器级真 E2E 冒烟（e2e/smoke.spec.ts）：注册→工作区→新建任务，
-      # 打的是上面已就绪的生产构建 server，补齐"真实浏览器水合与交互"盲区
-      - name: Run browser E2E smoke
+      # 浏览器级真 E2E：playwright.config.ts 的 testDir:"./e2e" 未限定 testMatch，
+      # 故运行 e2e/ 下全部用例（非仅 smoke）。打的是上面已就绪的生产构建 server，
+      # 补齐"真实浏览器水合与交互"盲区
+      - name: Run browser E2E tests
         run: npx playwright test --config playwright.config.ts
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
@@ -325,6 +326,21 @@ jobs:
             kill "$(cat next.pid)" 2>/dev/null || true
             rm -f next.pid
           fi
+      # E2E 失败时上传 Playwright 产物（trace/screenshot/HTML 报告/JSON 报告），
+      # 便于离线定位浏览器级失败。playwright.config.ts: trace=retain-on-failure，
+      # outputDir 默认 test-results/，HTML 报告默认 playwright-report/，JSON 报告 pw-report.json。
+      # working-directory=web，故产物在 web/ 下；if: failure() 确保仅失败时上传，节省存储。
+      - name: Upload Playwright artifacts
+        uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            web/test-results/
+            web/playwright-report/
+            web/pw-report.json
+          retention-days: 7
+          if-no-files-found: warn
 
   build:
     name: Build
@@ -355,7 +371,7 @@ jobs:
   # 首次发布后如需公开拉取，在 GitHub → Packages → corps-web 中调整可见性。
   docker-publish:
     name: Publish image (GHCR)
-    needs: [lint, test, test-hardened, build]
+    needs: [lint, test, test-hardened, build, e2e]
     if: github.event_name == 'push' && (github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/v'))
     runs-on: ubuntu-latest
     permissions:

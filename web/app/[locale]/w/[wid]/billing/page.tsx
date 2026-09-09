@@ -237,7 +237,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   const seatLimit = status?.seatLimit ?? 0;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           <CreditCard size={20} className="text-[var(--muted)]" />
@@ -377,10 +377,11 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           <div className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">
             {t("paymentMethod")}
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2" role="group" aria-label={t("paymentMethod")}>
             <button
               onClick={() => setPaymentMethod("card")}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              aria-pressed={paymentMethod === "card"}
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 paymentMethod === "card"
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -391,7 +392,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             </button>
             <button
               onClick={() => setPaymentMethod("wechat")}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              aria-pressed={paymentMethod === "wechat"}
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 paymentMethod === "wechat"
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -402,7 +404,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             </button>
             <button
               onClick={() => setPaymentMethod("alipay")}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+              aria-pressed={paymentMethod === "alipay"}
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 paymentMethod === "alipay"
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -565,7 +568,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {/* 微信支付二维码模态框（Phase 2：Native 扫码支付） */}
       {wechatQr && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)]"
           role="dialog"
           aria-modal="true"
           aria-label={t("wechatQrAria")}

@@ -1,5 +1,8 @@
 # UI 与原型对齐缺口报告（corps v0.1.0）
 
+> [!IMPORTANT] 历史快照声明（2026-09-09）
+> 本报告反映 v0.1.0（2026-08-19）时点的 UI 对齐缺口。此后前端 UI 已全面对齐原型（见 SPEC.md §13 变更记录 2026-08-22 条目），报告中列出的 P0 缺口（工作区 Home、任务详情、成员管理、计费、Shell 补齐等）均已实现。§四中 `board.tsx` 硬编码 `#DC3D4A` 已改为 `var(--danger)`。本文件仅作历史参考，不代表当前代码状态。
+
 - **提交**：颜好看（UI/UX 设计师）｜依据：`design/prototype/index.html`、`design/design-tokens.json`、`design/DESIGN.md`
 - **设计语言**：Calm Precision（Notion 留白 + Linear 精度 + Stripe 克制）｜图标库：lucide-react（16/20/24/32，2px stroke，禁 emoji）
 

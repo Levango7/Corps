@@ -297,7 +297,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         <div
           role="alert"
           aria-live="assertive"
-          className="mb-4 flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border"
+          className="mb-[var(--space-4)] flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border"
           style={{
             background: "color-mix(in srgb, var(--danger) 10%, transparent)",
             borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)",
@@ -305,13 +305,13 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           }}
         >
           <AlertCircle size={16} className="shrink-0" />
-          <span className="text-[length:var(--text-sm)] font-medium">{dragError}</span>
+          <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">{dragError}</span>
         </div>
       )}
 
       {error && (
         <div
-          className="mb-4 rounded-lg p-3 text-sm flex items-center justify-between"
+          className="mb-[var(--space-4)] rounded-[var(--radius-md)] p-3 text-[length:var(--text-sm)] flex items-center justify-between"
           style={{
             background: "color-mix(in srgb, var(--danger) 10%, transparent)",
             border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)",
@@ -339,9 +339,9 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       ) : (
         <div>
           {/* 标题行 + 操作 */}
-          <div className="flex items-center justify-between mb-6 gap-3 flex-wrap">
+          <div className="flex items-center justify-between mb-[var(--space-6)] gap-[var(--space-3)] flex-wrap">
             <div>
-              <h1 className="text-[length:var(--text-2xl)] font-semibold text-[var(--fg)] mb-1">
+              <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
                 {t("boardTitle")}
               </h1>
               <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
@@ -349,7 +349,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                 {selectionMode && ` · ${t("selected", { count: selectedIds.size })}`}
               </p>
             </div>
-            <div className="flex items-center gap-3 flex-wrap">
+            <div className="flex items-center gap-[var(--space-3)] flex-wrap">
               <MilestoneFilter wid={wid} value={milestoneFilter} onChange={setMilestoneFilter} />
               <ViewToggle view={view} onChange={setView} />
               {/* 多选切换按钮 */}
@@ -359,7 +359,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   if (selectionMode) setSelectedIds(new Set());
                 }}
                 aria-pressed={selectionMode}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-sm transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors ${
                   selectionMode
                     ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                     : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--fg)]"
@@ -464,13 +464,13 @@ function BoardView(props: BoardViewProps) {
     <>
       {/* < md：单列选择器 */}
       <div className="md:hidden">
-        <div className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)] mb-4 w-full">
+        <div className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)] mb-[var(--space-4)] w-full">
           {COLUMNS.map((col) => (
             <button
               key={col.id}
               onClick={() => setActiveColumn(col.id)}
               aria-pressed={activeColumn === col.id}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-sm transition-colors ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors ${
                 activeColumn === col.id
                   ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                   : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -492,7 +492,7 @@ function BoardView(props: BoardViewProps) {
 
       {/* md：4 列水平滚动；lg：4 列网格 */}
       <div className="hidden md:block">
-        <div className="flex overflow-x-auto gap-4 pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+        <div className="flex overflow-x-auto gap-[var(--space-4)] pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
           {COLUMNS.map((column) => (
             <BoardColumn
               key={column.id}
@@ -554,7 +554,7 @@ function ListView(props: ListViewProps) {
         onToggleSelect={onToggleSelect}
       />
       {showListPagination && (
-        <div className="flex items-center justify-center gap-3 mt-4 text-[length:var(--text-sm)] text-[var(--muted)]">
+        <div className="flex items-center justify-center gap-[var(--space-3)] mt-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--muted)]">
           <button
             onClick={onPrevPage}
             disabled={safeListPage <= 1}

@@ -152,6 +152,24 @@ export function runWithAuthOp<T>(
 }
 
 /**
+ * runWithAuthOp 的事务内变体：在已开启的交互式事务 tx 上注入 auth_op GUC 后执行 fn，
+ * 不创建新事务。用于需要将幂等占位与业务处理合并到同一事务的场景（如 webhook 原子化，
+ * DL-1）：外层 prisma.$transaction 包裹占位插入 + 本函数执行的业务落库，任一失败整体回滚。
+ *
+ * 与 runWithAuthOp 的区别：runWithAuthOp 自建 prisma.$transaction（Prisma 交互式事务
+ * 不可嵌套），本函数复用调用方传入的 tx。GUC 通过 SET LOCAL 设置，随外层事务结束复位。
+ */
+export async function runWithAuthOpTx<T>(
+  tx: Tx,
+  op: "login" | "provision" | "webhook" | "invite" | "cron" | "calendar",
+  fn: (tx: Tx) => Promise<T>,
+  userId?: string,
+): Promise<T> {
+  await setGucs(tx, { auth_op: op, user_id: userId });
+  return fn(tx);
+}
+
+/**
  * 席位记账专用上下文（审计 T1.2）：workspace_id + user_id + auth_op='seat' 三 GUC 齐备，
  * 允许对工作区行执行 SELECT ... FOR UPDATE（串行化并发邀请/接受，防席位超卖），
  * 同时保持其余表的常规租户隔离。仅用于邀请/接受流程的席位保护段。

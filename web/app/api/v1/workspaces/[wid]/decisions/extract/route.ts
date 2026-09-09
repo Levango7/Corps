@@ -65,7 +65,7 @@ function pickTitle(lines: string[]): string {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   // 仅 member 及以上；viewer 也不可调用（前端也不应出现入口）
   if (!["owner", "admin", "member"].includes(ctx.member.role)) {
     return NextResponse.json({ code: 403, message: apiMsg(req, "noPermission") }, { status: 403 });
@@ -77,7 +77,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: e.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }

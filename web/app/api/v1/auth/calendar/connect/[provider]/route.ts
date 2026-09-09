@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   // 鉴权：必须登录
   const payload = await authenticate(req);
   if (!payload) {
-    return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   }
 
   // 读取回跳 wid（查询参数优先，缺省用 token 中的 wid）
@@ -63,7 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     const authorizeUrl = buildAuthorizeUrl(p, { state, challenge, redirectUri });
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
-    const message = error instanceof Error ? error.message : "授权发起失败";
+    const message = error instanceof Error ? error.message : apiMsg(req, "calendarConnectFailed");
     return NextResponse.json({ code: 500, message }, { status: 500 });
   }
 }

@@ -71,10 +71,10 @@ e2e/          # Playwright 浏览器级测试（58 项）
 
 ## 链接
 
-- **在线体验**：部署中（v0.4.0 已发布）
+- **在线体验**：部署中（v0.6.0 已发布）
 - **变更日志**：[CHANGELOG.md](./CHANGELOG.md)
 - **部署手册**：[docs/runbook-deploy.md](./docs/runbook-deploy.md)
-- **镜像**：`docker pull ghcr.io/levango7/corps:0.4.0`
+- **镜像**：`docker pull ghcr.io/levango7/corps:0.6.0`
 - **定价**：内置定价页（Free 21 项 / Pro ¥29.9）
 
 ---

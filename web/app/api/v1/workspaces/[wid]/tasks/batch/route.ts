@@ -31,7 +31,7 @@ const batchSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const body = batchSchema.parse(await req.json());
@@ -68,7 +68,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             select: { userId: true },
           });
           if (!member) {
-            return { error: "被指派人必须是当前工作区成员" as const };
+            return { error: apiMsg(req, "assigneeNotMember") };
           }
         }
 
@@ -85,7 +85,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         if (body.status !== undefined) patchData.status = body.status;
         if (body.priority !== undefined) patchData.priority = body.priority;
         if (body.assigneeId !== undefined) patchData.assigneeId = body.assigneeId;
-        if (body.dueDate !== undefined) patchData.dueDate = body.dueDate;
+        if (body.dueDate !== undefined) patchData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
 
         if (Object.keys(patchData).length === 0) {
           return { updated: 0, deleted: 0, skipped };
@@ -108,11 +108,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("[POST tasks/batch] error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

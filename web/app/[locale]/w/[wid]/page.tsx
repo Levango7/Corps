@@ -206,14 +206,14 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       )}
 
       {error && (
-        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
+        <div className="mb-4 rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-3 text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
           <span>{error}</span>
           <button
             onClick={() => {
               setError(null);
               load();
             }}
-            className="text-red-600 underline hover:text-red-800"
+            className="text-[var(--danger)] underline hover:text-[var(--danger-fg)]"
           >
             {tButton("retry")}
           </button>

@@ -21,10 +21,38 @@ const createTaskSchema = z.object({
   blockedReason: z.string().max(500).nullable().optional(),
 });
 
+/**
+ * GET 列表筛选 searchParams 校验（B1）：
+ *  - assignee: "me" 或 UUID
+ *  - milestone: "null"（未归入里程碑）或 UUID
+ *  - status/priority: 枚举值
+ *  - label: 逗号分隔的 UUID 列表
+ *  - q: 关键词
+ *  - view: board | list（对齐 openapi）
+ *  - page/pageSize: 分页参数（DL-8）
+ * 校验失败返回 400，避免非法值（如非 UUID 的 assignee）触发 Prisma 500。
+ */
+const listTasksQuerySchema = z.object({
+  status: z.enum(["todo", "in_progress", "review", "done"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  assignee: z.union([z.literal("me"), z.string().uuid()]).optional(),
+  milestone: z.union([z.literal("null"), z.string().uuid()]).optional(),
+  label: z.string().optional(),
+  q: z.string().optional(),
+  view: z.enum(["board", "list"]).optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+});
+
+// 分页默认值与上限（DL-8）
+const DEFAULT_PAGE = 1;
+const DEFAULT_PAGE_SIZE = 50;
+const MAX_TAKE = 500;
+
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     // 筛选参数（阶段 2-2 筛选与自定义视图）：
@@ -34,29 +62,52 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     //  - label=<uuid>（多标签以逗号分隔：label=a,b —— 命中任一即可，OR 语义）
     //  - q=<关键词>：标题/描述 ilike 模糊搜索（复用搜索索引）
     const url = new URL(req.url);
-    const assigneeParam = url.searchParams.get("assignee");
+    // B1：searchParams 经 zod 校验，非法值（如非 UUID 的 assignee）返回 400 而非 Prisma 500
+    const parsed = listTasksQuerySchema.safeParse({
+      status: url.searchParams.get("status") ?? undefined,
+      priority: url.searchParams.get("priority") ?? undefined,
+      assignee: url.searchParams.get("assignee") ?? undefined,
+      milestone: url.searchParams.get("milestone") ?? undefined,
+      label: url.searchParams.get("label") ?? undefined,
+      q: url.searchParams.get("q") ?? undefined,
+      view: url.searchParams.get("view") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors },
+        { status: 400 },
+      );
+    }
+    // DL-8：分页参数解析（未传时使用默认值，始终返回 pagination 元信息）
+    const page = parsed.data.page ?? DEFAULT_PAGE;
+    const pageSize = parsed.data.pageSize ?? DEFAULT_PAGE_SIZE;
+    const skip = (page - 1) * pageSize;
+    const take = Math.min(pageSize, MAX_TAKE);
+    const assigneeParam = parsed.data.assignee;
     const assigneeFilter =
       assigneeParam === "me"
         ? { assigneeId: ctx.payload.sub }
         : assigneeParam
           ? { assigneeId: assigneeParam }
           : {};
-    const milestoneParam = url.searchParams.get("milestone");
+    const milestoneParam = parsed.data.milestone;
     const milestoneFilter =
-      milestoneParam === null
+      milestoneParam === undefined
         ? {}
         : milestoneParam === "null"
           ? { milestoneId: null }
           : { milestoneId: milestoneParam };
-    const statusParam = url.searchParams.get("status");
+    const statusParam = parsed.data.status;
     const statusFilter = statusParam ? { status: statusParam } : {};
-    const priorityParam = url.searchParams.get("priority");
+    const priorityParam = parsed.data.priority;
     const priorityFilter = priorityParam ? { priority: priorityParam } : {};
-    const labelParam = url.searchParams.get("label");
+    const labelParam = parsed.data.label;
     const labelFilter = labelParam
       ? { labels: { some: { labelId: { in: labelParam.split(",").filter(Boolean) } } } }
       : {};
-    const qParam = url.searchParams.get("q");
+    const qParam = parsed.data.q;
     const qFilter = qParam
       ? {
           OR: [
@@ -66,30 +117,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         }
       : {};
 
-    const tasks = await runWithWorkspace(wid, (tx) =>
-      tx.task.findMany({
-        where: {
-          workspaceId: wid,
-          // 列表/看板只返回顶层任务；子任务由任务详情 children 关联获取
-          parentId: null,
-          ...assigneeFilter,
-          ...milestoneFilter,
-          ...statusFilter,
-          ...priorityFilter,
-          ...labelFilter,
-          ...qFilter,
-        },
-        include: {
-          assignee: { select: { id: true, name: true, email: true } },
-          labels: { include: { label: { select: { id: true, name: true, color: true } } } },
-          _count: { select: { comments: true, children: true } },
-          // 子任务完成数（进度汇总 3/5 的分子）
-          children: { where: { status: "done" }, select: { id: true } },
-        },
-        orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
-        // 上限保护：看板场景单工作区任务量可控；游标分页列入 v2（见 API-DESIGN-GUIDE）
-        take: 500,
-      }),
+    // DL-8：统一 where 子句，findMany 与 count 共用，保证 totalCount 与列表一致
+    const listWhere = {
+      workspaceId: wid,
+      // 列表/看板只返回顶层任务；子任务由任务详情 children 关联获取
+      parentId: null,
+      ...assigneeFilter,
+      ...milestoneFilter,
+      ...statusFilter,
+      ...priorityFilter,
+      ...labelFilter,
+      ...qFilter,
+    };
+
+    const [tasks, totalCount] = await runWithWorkspace(wid, (tx) =>
+      Promise.all([
+        tx.task.findMany({
+          where: listWhere,
+          include: {
+            assignee: { select: { id: true, name: true, email: true } },
+            labels: { include: { label: { select: { id: true, name: true, color: true } } } },
+            _count: { select: { comments: true, children: true } },
+            // 子任务完成数（进度汇总 3/5 的分子）
+            children: { where: { status: "done" }, select: { id: true } },
+          },
+          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          // DL-8：分页 skip/take；take 已在上方被 MAX_TAKE(500) 兜底
+          skip,
+          take,
+        }),
+        tx.task.count({ where: listWhere }),
+      ]),
     );
 
     // 展平 labels 形态 + 子任务进度（subtaskTotal/subtaskDone 替换 children 数组）
@@ -101,7 +159,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       children: undefined,
     }));
 
-    return NextResponse.json({ code: 200, data: flattened });
+    // DL-8：返回分页元信息（page/pageSize/totalCount/totalPages）
+    const totalPages = Math.ceil(totalCount / pageSize);
+    return NextResponse.json({
+      code: 200,
+      data: flattened,
+      pagination: { page, pageSize, totalCount, totalPages },
+    });
   } catch (error) {
     console.error("[GET tasks] error:", error);
     return NextResponse.json(
@@ -114,7 +178,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const body = await req.json();
@@ -348,12 +412,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("Create task error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 

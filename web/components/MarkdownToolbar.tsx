@@ -21,7 +21,7 @@
 
 import { useState, type RefObject, type KeyboardEvent } from "react";
 import { useTranslations } from "next-intl";
-import { DIAGRAM_TEMPLATES } from "@/components/QuickDiagram";
+import { DIAGRAM_KEYS, getDiagramCode } from "@/components/QuickDiagram";
 import {
   Bold,
   Italic,
@@ -205,7 +205,7 @@ export function useEditorKeys(props: {
 }
 
 /** mermaid 图表模板（v0.6 图表下拉）——唯一事实源在 QuickDiagram 导出的
- *  DIAGRAM_TEMPLATES（下拉与快图对话框共用，防双源漂移）；
+ *  DIAGRAM_KEYS + getDiagramCode（下拉与快图对话框共用，防双源漂移）；
  *  key 与 i18n 键 editor.diagram<Key> 对应 */
 function diagramTemplates(t: ReturnType<typeof useTranslations>) {
   const icons = {
@@ -216,11 +216,11 @@ function diagramTemplates(t: ReturnType<typeof useTranslations>) {
     pie: PieChart,
     quadrant: LayoutGrid,
   } as const;
-  return DIAGRAM_TEMPLATES.map((d) => ({
-    key: d.key,
-    icon: icons[d.key as keyof typeof icons],
-    label: t("diagram" + d.key.charAt(0).toUpperCase() + d.key.slice(1)),
-    code: d.code,
+  return DIAGRAM_KEYS.map((key) => ({
+    key,
+    icon: icons[key as keyof typeof icons],
+    label: t("diagram" + key.charAt(0).toUpperCase() + key.slice(1)),
+    code: getDiagramCode(key, t),
   }));
 }
 

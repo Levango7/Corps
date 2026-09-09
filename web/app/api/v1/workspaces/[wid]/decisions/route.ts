@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * 决策列表 API（跨任务聚合）
@@ -12,7 +13,8 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 20;
-const MAX_LIMIT = 100;
+// API-013：对齐 openapi（limit maximum: 50），原值 100 与 spec 不一致
+const MAX_LIMIT = 50;
 
 function parsePagination(url: URL) {
   const pageRaw = Number(url.searchParams.get("page"));
@@ -29,54 +31,62 @@ function parsePagination(url: URL) {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
-  const url = new URL(req.url);
-  const q = url.searchParams.get("q")?.trim() || "";
-  const { limit, skip } = parsePagination(url);
+  try {
+    const url = new URL(req.url);
+    const q = url.searchParams.get("q")?.trim() || "";
+    const { limit, skip } = parsePagination(url);
 
-  // 公共 where 子句：限定工作区 + 可选 markdown ilike
-  const where = {
-    workspaceId: wid,
-    ...(q ? { markdown: { contains: q, mode: "insensitive" as const } } : {}),
-  };
+    // 公共 where 子句：限定工作区 + 可选 markdown ilike
+    const where = {
+      workspaceId: wid,
+      ...(q ? { markdown: { contains: q, mode: "insensitive" as const } } : {}),
+    };
 
-  const [total, rows] = await runWithWorkspace(wid, (tx) =>
-    Promise.all([
-      tx.decision.count({ where }),
-      tx.decision.findMany({
-        where,
-        select: {
-          id: true,
-          markdown: true,
-          version: true,
-          createdAt: true,
-          updatedAt: true,
-          taskId: true,
-          authorId: true,
-          task: { select: { title: true } },
-          author: { select: { name: true } },
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-    ]),
-  );
+    const [total, rows] = await runWithWorkspace(wid, (tx) =>
+      Promise.all([
+        tx.decision.count({ where }),
+        tx.decision.findMany({
+          where,
+          select: {
+            id: true,
+            markdown: true,
+            version: true,
+            createdAt: true,
+            updatedAt: true,
+            taskId: true,
+            authorId: true,
+            task: { select: { title: true } },
+            author: { select: { name: true } },
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+      ]),
+    );
 
-  // 拍平为前端期望的 taskTitle / authorName 字段
-  const decisions = rows.map((d) => ({
-    id: d.id,
-    taskId: d.taskId,
-    taskTitle: d.task.title,
-    markdown: d.markdown,
-    version: d.version,
-    authorId: d.authorId,
-    // 作者注销后为 null，前端已有「未知作者」兜底
-    authorName: d.author?.name ?? "",
-    createdAt: d.createdAt,
-    updatedAt: d.updatedAt,
-  }));
+    // 拍平为前端期望的 taskTitle / authorName 字段
+    const decisions = rows.map((d) => ({
+      id: d.id,
+      taskId: d.taskId,
+      taskTitle: d.task.title,
+      markdown: d.markdown,
+      version: d.version,
+      authorId: d.authorId,
+      // 作者注销后为 null，前端已有「未知作者」兜底
+      authorName: d.author?.name ?? "",
+      createdAt: d.createdAt,
+      updatedAt: d.updatedAt,
+    }));
 
-  return NextResponse.json({ code: 200, data: { decisions, total } });
+    return NextResponse.json({ code: 200, data: { decisions, total } });
+  } catch (error) {
+    console.error("[GET decisions] error:", error);
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
+  }
 }

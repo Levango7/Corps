@@ -44,63 +44,114 @@ export async function GET(req: NextRequest) {
         select: { workspaceId: true, workspace: { select: { id: true, name: true } } },
       });
 
-      let sent = 0;
-      let skipped = 0;
+      const totals = { registers: 0, activations: 0, taskCreates: 0, pageViews: 0 };
+      if (proWorkspaces.length === 0) {
+        return { sent: 0, skipped: 0, proWorkspaces: 0, stats: totals };
+      }
 
+      const workspaceIds = proWorkspaces.map((s) => s.workspaceId);
       // 本周运营埋点（供邮件漏斗段，逐工作区取）：Asia/Shanghai 最近 7 天窗口
       const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-      // 本周大盘（跨 Pro 工作区累计，响应内附带方便 curl 验证）
-      const totals = { registers: 0, activations: 0, taskCreates: 0, pageViews: 0 };
+
+      // 2) 一次性聚合本周运营埋点（按 workspaceId + name 分组，替代逐工作区 4 次 count）
+      const eventAgg = await tx.analyticsEvent.groupBy({
+        by: ["workspaceId", "name"],
+        where: {
+          workspaceId: { in: workspaceIds },
+          createdAt: { gte: weekStart },
+          name: { in: ["register_success", "activation_completed", "create_task", "page_view"] },
+        },
+        _count: { _all: true },
+      });
+      // 构建 workspaceId -> 埋点计数 映射
+      const statsByWs = new Map<
+        string,
+        { registers: number; activations: number; taskCreates: number; pageViews: number }
+      >();
+      for (const agg of eventAgg) {
+        if (!agg.workspaceId) continue;
+        let s = statsByWs.get(agg.workspaceId);
+        if (!s) {
+          s = { registers: 0, activations: 0, taskCreates: 0, pageViews: 0 };
+          statsByWs.set(agg.workspaceId, s);
+        }
+        switch (agg.name) {
+          case "register_success": s.registers = agg._count._all; break;
+          case "activation_completed": s.activations = agg._count._all; break;
+          case "create_task": s.taskCreates = agg._count._all; break;
+          case "page_view": s.pageViews = agg._count._all; break;
+        }
+      }
+
+      // 3) 一次性查询所有 Pro 工作区的成员（带用户邮箱与显示名），按 workspaceId 分组
+      const allMembers = await tx.member.findMany({
+        where: { workspaceId: { in: workspaceIds } },
+        include: { user: { select: { id: true, email: true, name: true } } },
+      });
+      const membersByWs = new Map<string, typeof allMembers>();
+      for (const m of allMembers) {
+        let arr = membersByWs.get(m.workspaceId);
+        if (!arr) {
+          arr = [];
+          membersByWs.set(m.workspaceId, arr);
+        }
+        arr.push(m);
+      }
+
+      // 4) 一次性查询所有 Pro 工作区所有成员的未完成任务（逾期 + 未来 7 天到期），
+      //    替代逐成员 2 次 findMany。按 dueDate asc 排序后内存分组，各组取前 10。
+      const allAssigneeIds = allMembers.map((m) => m.userId);
+      const allTasks = await tx.task.findMany({
+        where: {
+          workspaceId: { in: workspaceIds },
+          assigneeId: { in: allAssigneeIds },
+          status: { not: "done" },
+          dueDate: { not: null },
+          OR: [
+            { dueDate: { lt: now } },
+            { dueDate: { gte: now, lte: weekAhead } },
+          ],
+        },
+        select: { id: true, title: true, dueDate: true, workspaceId: true, assigneeId: true },
+        orderBy: { dueDate: "asc" },
+      });
+      // 按 (workspaceId:assigneeId) 分组，再分 overdue / upcoming，各取前 10
+      type TaskLite = { id: string; title: string; dueDate: Date | null };
+      const tasksByKey = new Map<string, { overdue: TaskLite[]; upcoming: TaskLite[] }>();
+      for (const t of allTasks) {
+        const aid = t.assigneeId;
+        if (!aid || !t.dueDate) continue;
+        const key = `${t.workspaceId}:${aid}`;
+        let grp = tasksByKey.get(key);
+        if (!grp) {
+          grp = { overdue: [], upcoming: [] };
+          tasksByKey.set(key, grp);
+        }
+        if (t.dueDate < now) {
+          if (grp.overdue.length < 10) grp.overdue.push(t);
+        } else if (t.dueDate >= now && t.dueDate <= weekAhead) {
+          if (grp.upcoming.length < 10) grp.upcoming.push(t);
+        }
+      }
+
+      let sent = 0;
+      let skipped = 0;
 
       for (const sub of proWorkspaces) {
         const wid = sub.workspaceId;
         const wsName = sub.workspace.name;
+        const wsStats = statsByWs.get(wid) ?? { registers: 0, activations: 0, taskCreates: 0, pageViews: 0 };
+        totals.registers += wsStats.registers;
+        totals.activations += wsStats.activations;
+        totals.taskCreates += wsStats.taskCreates;
+        totals.pageViews += wsStats.pageViews;
 
-        const countEvent = async (eventName: string) =>
-          tx.analyticsEvent.count({
-            where: { workspaceId: wid, name: eventName, createdAt: { gte: weekStart } },
-          });
-        const [registers, activations, taskCreates, pageViews] = await Promise.all([
-          countEvent("register_success"),
-          countEvent("activation_completed"),
-          countEvent("create_task"),
-          countEvent("page_view"),
-        ]);
-        totals.registers += registers;
-        totals.activations += activations;
-        totals.taskCreates += taskCreates;
-        totals.pageViews += pageViews;
-
-        // 2) 该工作区全部成员（带用户邮箱与显示名）
-        const members = await tx.member.findMany({
-          where: { workspaceId: wid },
-          include: { user: { select: { id: true, email: true, name: true } } },
-        });
-
+        const members = membersByWs.get(wid) ?? [];
         for (const m of members) {
-          // 3) 该成员名下未完成任务：逾期 + 未来 7 天到期
-          const overdue = await tx.task.findMany({
-            where: {
-              workspaceId: wid,
-              assigneeId: m.userId,
-              status: { not: "done" },
-              dueDate: { not: null, lt: now },
-            },
-            select: { id: true, title: true, dueDate: true },
-            orderBy: { dueDate: "asc" },
-            take: 10,
-          });
-          const upcoming = await tx.task.findMany({
-            where: {
-              workspaceId: wid,
-              assigneeId: m.userId,
-              status: { not: "done" },
-              dueDate: { not: null, gte: now, lte: weekAhead },
-            },
-            select: { id: true, title: true, dueDate: true },
-            orderBy: { dueDate: "asc" },
-            take: 10,
-          });
+          const key = `${wid}:${m.userId}`;
+          const grp = tasksByKey.get(key);
+          const overdue = grp?.overdue ?? [];
+          const upcoming = grp?.upcoming ?? [];
 
           if (overdue.length === 0 && upcoming.length === 0) {
             skipped++;
@@ -122,7 +173,7 @@ export async function GET(req: NextRequest) {
               taskUrl: `${appUrl}/w/${wid}/task/${t.id}`,
             })),
             workspaceUrl: `${appUrl}/w/${wid}`,
-            weeklyStats: { registers, activations, taskCreates, pageViews },
+            weeklyStats: wsStats,
           });
           if (ok) sent++;
           else skipped++;

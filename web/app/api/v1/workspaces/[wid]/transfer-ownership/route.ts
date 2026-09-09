@@ -6,6 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({
@@ -15,7 +16,7 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerTransfer") },
@@ -29,7 +30,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: e.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
@@ -78,6 +79,13 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     }
     return NextResponse.json({ code: 200, data: { ok: true } });
   } catch (error) {
+    // P2025: 记录不存在（member/workspace 并发删除场景）→ 404
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "workspaceNotFound") },
+        { status: 404 },
+      );
+    }
     console.error("[PATCH transfer] error:", error);
     return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }

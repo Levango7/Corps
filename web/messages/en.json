@@ -236,7 +236,9 @@
     "shareLabel": "Public share",
     "shareGenerate": "Create share link",
     "shareCopy": "Copy",
-    "shareRevoke": "Revoke"
+    "shareCopied": "Copied",
+    "shareRevoke": "Revoke",
+    "saving": "Saving…"
   },
   "time": {
     "justNow": "Just now",
@@ -952,6 +954,8 @@
     "unshare": "取消分享",
     "shareUrl": "分享链接",
     "copy": "复制",
+    "copied": "Copied",
+    "saving": "Saving…",
     "publishedBadge": "已发布",
     "draftBadge": "草稿",
     "updatedAt": "更新于 {date}",
@@ -1000,7 +1004,13 @@
     "tplCompare": "## Compare options\n\n**Context:**\n\n**Option A:**\n- Pros:\n- Cons:\n\n**Option B:**\n- Pros:\n- Cons:\n\n**Decision:** choose __ because __\n",
     "tplRetro": "## Incident retro\n\n**Impact:**\n\n**Timeline:**\n- \n\n**Root cause:**\n\n**Action items:**\n- [ ] \n",
     "tplProposal": "## Proposal\n\n**Goal:**\n\n**Scope:**\n- In:\n- Out:\n\n**Owner & schedule:**\n\n**Decision:**\n",
-    "close": "Close"
+    "close": "Close",
+    "diagramMindmapCode": "mindmap\n  root((Topic))\n    Branch one\n      Sub point\n    Branch two\n",
+    "diagramFlowCode": "graph TD\n  A[Start] --> B{Decision}\n  B -- Yes --> C[Execute]\n  B -- No --> D[End]\n",
+    "diagramSequenceCode": "sequenceDiagram\n  participant U as User\n  participant S as System\n  U->>S: Request\n  S-->>U: Response\n",
+    "diagramGanttCode": "gantt\n  title Schedule\n  dateFormat YYYY-MM-DD\n  section Phase 1\n  Research :a1, 2026-01-01, 7d\n  Dev :after a1, 10d\n",
+    "diagramPieCode": "pie showData\n  title Proportion\n  \"A\" : 55\n  \"B\" : 30\n  \"C\" : 15\n",
+    "diagramQuadrantCode": "quadrantChart\n  title Priority matrix\n  x-axis Low cost --> High cost\n  y-axis Low gain --> High gain\n  Task A: [0.7, 0.8]\n  Task B: [0.3, 0.35]\n"
   },
   "attachment": {
     "previewAria": "Preview: {name}",
@@ -1039,5 +1049,9 @@
     "copy": "Copy code",
     "copied": "Copied",
     "insert": "Insert"
+  },
+  "toast": {
+    "regionLabel": "Notifications",
+    "close": "Close"
   }
 }

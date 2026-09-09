@@ -46,11 +46,11 @@ const RETENTION_POINTS = [1, 7, 30] as const;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   // 仅 owner/admin 可见分析数据
   if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-    return NextResponse.json({ code: 403, message: "Forbidden" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden") }, { status: 403 });
   }
 
   try {

@@ -1,0 +1,50 @@
+-- ============================================================================
+-- JSONB + GIN 索引参考迁移（DL-16，P3：文档说明，不自动执行）
+-- ============================================================================
+--
+-- 背景：analytics_events.props 当前为 JSON 类型，无 GIN 索引。所有查询按
+-- name/userId/workspaceId/sessionId + createdAt 走 B-tree 索引，不做 props
+-- 内部字段过滤。本文件为后续引入 props 内部字段查询时的参考迁移 SQL。
+--
+-- 适用场景（满足任一才需执行）：
+--  1. 需要按 props 内部字段筛选事件（如 WHERE props->>'taskId' = 'xxx'）
+--  2. 需要按 props 内部字段聚合（如按 props.role 分组统计）
+--  3. props 体量增长到需要 JsonB 的 TOAST 存储优化
+--
+-- 执行前检查：
+--  1. 确认 analytics_events 表数据量——大表 ALTER TYPE 会锁表，需在低峰期
+--     执行或用 pg_repack 在线转换
+--  2. 确认所有写入路径兼容 JSONB（Prisma Json 类型同时支持 JSON/JSONB，
+--     应用层无需改动；但若有裸 SQL 写入需检查）
+--  3. 同步更新 schema.prisma：props Json → props JsonB
+--
+-- 预期收益：
+--  - GIN 索引加速 props 内部字段查询 10-100x（取决于选择性）
+--  - JSONB 存储更紧凑（去重键、二进制格式）
+--
+-- 风险：
+--  - 写入开销增加 ~10-20%（GIN 倒排索引维护）
+--  - 存储增加（GIN 索引本身占空间）
+--  - 大表 ALTER TYPE 锁表（需 pg_repack 或低峰期）
+-- ============================================================================
+
+-- 步骤 1：将 props 从 JSON 转为 JSONB（在线转换，大表需 pg_repack）
+-- ALTER TABLE "analytics_events"
+--   ALTER COLUMN "props" TYPE JSONB USING "props"::JSONB;
+
+-- 步骤 2a：全字段 GIN 索引（支持任意 props 键查询）
+-- CREATE INDEX "analytics_events_props_gin" ON "analytics_events" USING GIN ("props");
+
+-- 步骤 2b：路径表达式 GIN 索引（仅支持指定路径，更省空间）
+-- CREATE INDEX "analytics_events_props_task_id_gin"
+--   ON "analytics_events" USING GIN (("props"->>'taskId'));
+-- CREATE INDEX "analytics_events_props_role_gin"
+--   ON "analytics_events" USING GIN (("props"->>'role'));
+
+-- 步骤 3：同步更新 schema.prisma
+--   model AnalyticsEvent {
+--     ...
+--     props JsonB @default("{}")  // 原: Json
+--     ...
+--   }
+-- 然后运行 npx prisma migrate dev --name jsonb_gin_index_on_analytics_props

@@ -3,10 +3,18 @@ import { EventEmitter } from "events";
 /**
  * IM 升级：聊天实时事件总线（单实例 pub/sub）
  *
- * MVP 方案：使用 Node.js 内置 EventEmitter 在同一进程内做 pub/sub。
- * 适用场景：单实例部署（PM2 fork 模式 / Docker 单容器）。
- * 升级路径：替换为 Redis Pub/Sub 即可支持多实例水平扩展，
+ * ⚠️ 单实例限制（DL-6）：
+ *  本模块使用 Node.js 内置 EventEmitter，仅在单进程内传递事件。
+ *  多实例部署（PM2 cluster / Docker 多容器 / K8s 多 Pod）时，
+ *  不同实例的订阅者无法收到彼此 emit 的事件，消息将丢失。
+ *
+ *  当前适用场景：单实例部署（PM2 fork 模式 / Docker 单容器 / K8s 单 Pod）。
+ *
+ *  升级路径：替换为 Redis Pub/Sub 即可支持多实例水平扩展，
  *           接口（emit/on）保持不变，调用方无需改动。
+ *           引入 ioredis 依赖，将 chatEvents 替换为 Redis 客户端，
+ *           emitChatEvent → redis.publish(channel, JSON.stringify(event))，
+ *           订阅端 → redis.subscribe(channel) + message 事件反序列化。
  *
  * 事件命名空间：`chat:${taskId}`，按任务隔离事件流。
  * 事件类型：
@@ -18,6 +26,23 @@ import { EventEmitter } from "events";
 export const chatEvents = new EventEmitter();
 // 同一任务可能有多端订阅，移除默认 10 监听器上限
 chatEvents.setMaxListeners(0);
+
+/**
+ * 多实例部署运行时警告（DL-6）：
+ *  如果检测到可能的多实例部署环境（如 PM2 cluster 模式、K8s 多 Pod），
+ *  输出警告提醒开发者消息总线仅在单实例内有效。
+ *  检测依据：PM2 实例 > 1 或 K8s 环境变量指示多副本。
+ */
+if (process.env.NODE_ENV === "production") {
+  const pm2Instances = parseInt(process.env.PM2_INSTANCES ?? "1", 10);
+  const k8sReplicas = parseInt(process.env.K8S_REPLICAS ?? "1", 10);
+  if (pm2Instances > 1 || k8sReplicas > 1) {
+    console.warn(
+      "[chat-events] ⚠️ 检测到多实例部署环境，IM 事件总线（EventEmitter）仅在单实例内有效。" +
+        "多实例间消息将丢失。请升级为 Redis Pub/Sub（见文件头注释升级路径）。",
+    );
+  }
+}
 
 /**
  * 单用户并发 SSE 连接计数（审计遗留：连接建立限流已有，但缺并发硬上限——

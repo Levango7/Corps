@@ -12,7 +12,7 @@ const querySchema = z.object({
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const url = new URL(req.url);
@@ -85,7 +85,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         decisions: decisions.map((d) => ({
           id: d.id,
           kind: "decision" as const,
-          title: `决策 v${d.version} · ${d.author ? d.author.name || d.author.email : "已注销用户"}`,
+          title: `决策 v${d.version} · ${d.author ? d.author.name || d.author.email : apiMsg(req, "userDeactivated")}`,
           snippet: d.markdown.slice(0, 120),
           taskId: d.taskId,
           href: `/w/${wid}/task/${d.taskId}`,

@@ -253,7 +253,7 @@ PG16 数据目录格式，PostgreSQL 主版本的数据目录不兼容，**不�
 
 ```bash
 # entrypoint.sh 在 RLS_ACTIVATE=true 时自动执行，手动激活：
-docker exec -i corps-postgres psql -U postgres -d corps \
+docker exec -i corps-db psql -U postgres -d corps \
   -v app_password="$CORPS_APP_PASSWORD" \
   -f /path/to/db/rls-activate.sql
 ```
@@ -261,7 +261,7 @@ docker exec -i corps-postgres psql -U postgres -d corps \
 验证：
 ```bash
 # 确认 RLS 已启用
-docker exec corps-postgres psql -U postgres -d corps -c \
+docker exec corps-db psql -U postgres -d corps -c \
   "SELECT tablename, relrowsecurity FROM pg_class c
    JOIN pg_tables t ON c.relname = t.tablename
    WHERE t.schemaname='public' AND relrowsecurity=true;"

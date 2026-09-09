@@ -23,6 +23,10 @@ export const API_MESSAGES = {
   internalError: { zh: "服务器内部错误", en: "Internal server error" },
   invalidBody: { zh: "请求体无效", en: "Invalid request body" },
   invalidParams: { zh: "请求参数无效", en: "Invalid request parameters" },
+  unauthorized: { zh: "未授权", en: "Unauthorized" },
+  forbidden: { zh: "禁止访问", en: "Forbidden" },
+  validationFailed: { zh: "参数校验失败", en: "Validation failed" },
+  validationError: { zh: "参数校验错误", en: "Validation error" },
 
   /* ── 资源不存在 ── */
   taskNotFound: { zh: "任务不存在", en: "Task not found" },
@@ -35,6 +39,7 @@ export const API_MESSAGES = {
   workspaceNotFound: { zh: "工作区不存在", en: "Workspace not found" },
   attachmentNotFound: { zh: "附件不存在", en: "Attachment not found" },
   fileNotFound: { zh: "文件不存在", en: "File not found" },
+  userNotFound: { zh: "用户不存在", en: "User not found" },
 
   /* ── 任务 ── */
   assigneeNotMember: {
@@ -102,6 +107,25 @@ export const API_MESSAGES = {
     zh: "请使用受邀邮箱注册/登录后再接受邀请",
     en: "Please sign up or sign in with the invited email before accepting",
   },
+  invitationNotFound: { zh: "邀请不存在", en: "Invitation not found" },
+
+  /* ── 席位门控 ── */
+  seatsFullRenew: {
+    zh: "席位已满，请增购或续费套餐后邀请更多成员",
+    en: "Seats are full. Purchase more seats or renew your plan to invite more members",
+  },
+  seatsFullUpgrade: {
+    zh: "席位已满，请升级套餐以邀请更多成员",
+    en: "Seats are full. Upgrade your plan to invite more members",
+  },
+  seatsFullContactRenew: {
+    zh: "席位已满，请联系工作区管理员增购或续费套餐",
+    en: "Seats are full. Contact the workspace admin to purchase more seats or renew the plan",
+  },
+  seatsFullContactUpgrade: {
+    zh: "席位已满，请联系工作区管理员升级套餐",
+    en: "Seats are full. Contact the workspace admin to upgrade the plan",
+  },
 
   /* ── 分享（任务/文档公开只读）── */
   shareLinkInvalidUnpublished: {
@@ -149,6 +173,14 @@ export const API_MESSAGES = {
     zh: "不支持的文件类型",
     en: "Unsupported file type",
   },
+  fileSizeExceededPro: {
+    zh: "文件大小不能超过 50MB",
+    en: "File size cannot exceed 50MB",
+  },
+  fileSizeExceededFree: {
+    zh: "免费版附件单文件最大 10MB，升级 Pro 可到 50MB",
+    en: "Free plan attachments are limited to 10MB; upgrade to Pro for up to 50MB",
+  },
 
   /* ── SSE ── */
   tooManySseConnections: {
@@ -166,11 +198,89 @@ export const API_MESSAGES = {
     en: "Missing code or state parameter",
   },
   calendarStateInvalid: { zh: "state 验证失败", en: "State validation failed" },
+  calendarCallbackFailed: { zh: "授权回调失败", en: "Authorization callback failed" },
+  calendarConnectFailed: { zh: "授权发起失败", en: "Failed to initiate authorization" },
+  calendarDisconnectFailed: { zh: "断开连接失败", en: "Failed to disconnect" },
+  calendarSyncFailed: { zh: "同步失败", en: "Sync failed" },
+  refreshTokenMissing: {
+    zh: "未获取到 refresh_token，请重新授权",
+    en: "Failed to obtain refresh_token; please re-authorize",
+  },
 
   /* ── 账户删除 ── */
   accountEmailMismatch: {
     zh: "确认邮箱与账户邮箱不一致，已取消删除",
     en: "The confirmation email does not match the account email; deletion cancelled",
+  },
+
+  /* ── 认证 ── */
+  invalidCredentials: { zh: "邮箱或密码错误", en: "Invalid credentials" },
+  notMemberOfWorkspace: {
+    zh: "不是该工作区成员",
+    en: "Not a member of this workspace",
+  },
+  emailAlreadyRegistered: { zh: "该邮箱已注册", en: "Email already registered" },
+  noActiveSession: { zh: "无活跃会话", en: "No active session" },
+  noWorkspace: { zh: "无可用工作区", en: "No workspace" },
+  authProviderNoUser: {
+    zh: "认证服务未返回用户",
+    en: "Auth provider returned no user",
+  },
+
+  /* ── 权限（细粒度 403）── */
+  onlyOwnerAdminInvite: {
+    zh: "仅所有者或管理员可邀请",
+    en: "Only the owner or admins can invite",
+  },
+  onlyOwnerAdminCreateLabels: {
+    zh: "仅所有者或管理员可创建标签",
+    en: "Only the owner or admins can create labels",
+  },
+  onlyOwnerAdminCreateMilestones: {
+    zh: "仅所有者或管理员可创建里程碑",
+    en: "Only the owner or admins can create milestones",
+  },
+  onlyOwnerManageBilling: {
+    zh: "仅所有者可管理计费",
+    en: "Only the owner can manage billing",
+  },
+  forbiddenInProduction: {
+    zh: "生产环境禁止此操作",
+    en: "Forbidden in production",
+  },
+
+  /* ── 决策并发 ── */
+  optimisticLockConflict: {
+    zh: "决策已被他人更新，请刷新后重试",
+    en: "The decision has been updated by someone else. Please refresh and retry",
+  },
+
+  /* ── 用户状态 ── */
+  userDeactivated: { zh: "已注销用户", en: "Deactivated user" },
+
+  /* ── Webhook 处理 ── */
+  handlerError: { zh: "处理错误", en: "Handler error" },
+
+  /* ── Prisma 统一错误处理（DL-14）── */
+  prismaUniqueConstraint: {
+    zh: "数据冲突，资源已存在或字段唯一性被破坏",
+    en: "Data conflict; the resource already exists or a unique constraint was violated",
+  },
+  prismaRecordNotFound: {
+    zh: "记录不存在",
+    en: "Record not found",
+  },
+  prismaConnectionFailed: {
+    zh: "数据库连接失败，请稍后重试",
+    en: "Database connection failed; please try again later",
+  },
+  prismaForeignKeyViolation: {
+    zh: "关联数据不存在或冲突",
+    en: "Related data does not exist or conflicts",
+  },
+  prismaConstraintFailed: {
+    zh: "数据约束校验失败",
+    en: "Data constraint validation failed",
   },
 } as const;
 

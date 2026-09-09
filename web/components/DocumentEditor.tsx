@@ -15,7 +15,7 @@
 import { useState, useRef, useTransition } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
-import { Loader2, Share2, X, Globe, Eye, Download, Columns2, Zap } from "lucide-react";
+import { Loader2, Share2, X, Globe, Eye, Download, Columns2, Zap, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
@@ -51,6 +51,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const [busy, setBusy] = useState<"save" | "publish" | "share" | null>(null);
   const [error, setError] = useState("");
   const [, startTransition] = useTransition();
+  // LI-10：复制分享链接成功反馈（短暂打勾替代文案，2s 后恢复）
+  const [copied, setCopied] = useState(false);
 
   // Typora 式快捷键层（Ctrl+B/I/K、列表续行、Tab 缩进）——与工具栏共用实现
   const handleKeyDown = useEditorKeys({
@@ -135,6 +137,18 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
     startTransition(() => router.push(`/w/${wid}/documents`));
   }
 
+  /** LI-10：复制分享链接并给出 2s 视觉反馈 */
+  async function copyShareUrl() {
+    if (!shareUrl) return;
+    try {
+      await navigator.clipboard.writeText(shareUrl);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      /* 剪贴板权限失败静默 */
+    }
+  }
+
   return (
     <div className="max-w-3xl mx-auto px-[var(--space-4)] py-[var(--space-6)]">
       {/* 标题 */}
@@ -150,6 +164,13 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       {/* 工具栏 */}
       <div className="flex items-center justify-between mt-3 mb-4">
         <div className="flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)]">
+          {/* LI-10：自动保存中指示器 */}
+          {busy === "save" && (
+            <span className="inline-flex items-center gap-1">
+              <Loader2 size={12} className="animate-spin" />
+              {t("saving")}
+            </span>
+          )}
           {publishedAt && (
             <span>
               {t("publishedAt", {
@@ -250,10 +271,11 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             className="flex-1 min-w-0 bg-transparent text-[var(--fg-2)] font-[family-name:var(--font-mono)] outline-none truncate"
           />
           <button
-            onClick={() => navigator.clipboard.writeText(shareUrl).catch(() => {})}
-            className="shrink-0 text-[var(--accent)] hover:underline"
+            onClick={copyShareUrl}
+            className="shrink-0 inline-flex items-center gap-1 text-[var(--accent)] hover:underline"
           >
-            {t("copy")}
+            {copied ? <Check size={12} /> : null}
+            {copied ? t("copied") : t("copy")}
           </button>
         </div>
       )}

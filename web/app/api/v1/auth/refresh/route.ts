@@ -5,6 +5,7 @@ import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { apiMsg } from "@/lib/api-messages";
 
 const refreshSchema = z.object({ workspaceId: z.string().uuid().optional() });
 
@@ -74,7 +75,7 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user?.id) {
-      return NextResponse.json({ code: 401, message: "No active session" }, { status: 401 });
+      return NextResponse.json({ code: 401, message: apiMsg(req, "noActiveSession") }, { status: 401 });
     }
 
     const body = await req.json().catch(() => ({}));
@@ -90,7 +91,7 @@ export async function POST(req: NextRequest) {
       session.user.id,
     );
     if (members.length === 0) {
-      return NextResponse.json({ code: 401, message: "No workspace" }, { status: 401 });
+      return NextResponse.json({ code: 401, message: apiMsg(req, "noWorkspace") }, { status: 401 });
     }
 
     const target = members.find((m) => m.workspaceId === workspaceId) ?? members[0];
@@ -154,11 +155,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("Refresh error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

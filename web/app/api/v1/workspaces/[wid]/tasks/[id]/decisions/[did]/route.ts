@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 const updateDecisionSchema = z.object({
@@ -19,7 +20,7 @@ export async function PATCH(
 ) {
   const { wid, id, did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const validated = updateDecisionSchema.parse(await req.json());
@@ -87,7 +88,8 @@ export async function PATCH(
       return NextResponse.json(
         {
           code: 409,
-          message: `决策已被他人更新（当前版本 ${result.currentVersion}），请刷新后重试`,
+          message: apiMsg(req, "optimisticLockConflict"),
+          currentVersion: result.currentVersion,
         },
         { status: 409 },
       );
@@ -97,11 +99,18 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
+    // P2025: 记录不存在（并发删除场景）→ 404
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "decisionNotFound") },
+        { status: 404 },
+      );
+    }
     console.error("Update decision error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

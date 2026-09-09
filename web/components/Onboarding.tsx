@@ -3,7 +3,16 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { CheckCircle2, Plus, UserPlus, X, ArrowRight, ArrowLeft, PartyPopper } from "lucide-react";
+import {
+  CheckCircle2,
+  Plus,
+  UserPlus,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  PartyPopper,
+  Loader2,
+} from "lucide-react";
 
 interface OnboardingProps {
   wid: string;
@@ -42,6 +51,8 @@ export default function Onboarding({
   // 展开态：仅当用户点击小气泡后才显示完整模态卡片,默认只显示小气泡
   const [expanded, setExpanded] = useState(false);
   const [animDirection, setAnimDirection] = useState<"forward" | "backward">("forward");
+  // LI-15：操作进行中（跳转/完成时按钮 loading 反馈，避免重复点击）
+  const [acting, setActing] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -98,7 +109,7 @@ export default function Onboarding({
       <div className="fixed bottom-4 right-4 z-40">
         <button
           onClick={() => setExpanded(true)}
-          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--on-accent)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
           aria-label={t("openGuide")}
         >
           <BubbleIcon />
@@ -196,10 +207,16 @@ export default function Onboarding({
   const Icon = current.icon;
 
   function handleAction() {
+    if (acting) return;
+    setActing(true);
+    // 跳转是异步的，next() 同步；用 rAF 让 loading 态有机会渲染再切步
     if (current.action.href) {
       router.push(current.action.href);
     }
-    next();
+    requestAnimationFrame(() => {
+      next();
+      setActing(false);
+    });
   }
 
   // 过渡动画：根据方向选择 key 与动画类
@@ -282,10 +299,17 @@ export default function Onboarding({
           </div>
           <button
             onClick={handleAction}
-            className="btn-press flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)]"
+            disabled={acting}
+            className="btn-press flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 transition-colors duration-[var(--motion-base)]"
           >
-            {current.action.label}
-            <ArrowRight size={15} />
+            {acting ? (
+              <Loader2 size={15} className="animate-spin" />
+            ) : (
+              <>
+                {current.action.label}
+                <ArrowRight size={15} />
+              </>
+            )}
           </button>
         </div>
       </div>

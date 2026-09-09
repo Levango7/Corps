@@ -236,7 +236,9 @@
     "shareLabel": "公开分享",
     "shareGenerate": "生成分享链接",
     "shareCopy": "复制",
-    "shareRevoke": "撤销"
+    "shareCopied": "已复制",
+    "shareRevoke": "撤销",
+    "saving": "保存中…"
   },
   "time": {
     "justNow": "刚刚",
@@ -952,6 +954,8 @@
     "unshare": "取消分享",
     "shareUrl": "分享链接",
     "copy": "复制",
+    "copied": "已复制",
+    "saving": "保存中…",
     "publishedBadge": "已发布",
     "draftBadge": "草稿",
     "updatedAt": "更新于 {date}",
@@ -1000,7 +1004,13 @@
     "tplCompare": "## 方案对比\n\n**背景：**\n\n**方案 A：**\n- 优点：\n- 缺点：\n\n**方案 B：**\n- 优点：\n- 缺点：\n\n**结论：** 选择方案 __，因为 __\n",
     "tplRetro": "## 事故复盘\n\n**影响：**\n\n**时间线：**\n- \n\n**根因：**\n\n**改进项：**\n- [ ] \n",
     "tplProposal": "## 立项决议\n\n**目标：**\n\n**范围：**\n- 包含：\n- 不包含：\n\n**负责人与排期：**\n\n**决议：**\n",
-    "close": "关闭"
+    "close": "关闭",
+    "diagramMindmapCode": "mindmap\n  root((主题))\n    一级分支\n      二级要点\n    另一分支\n",
+    "diagramFlowCode": "graph TD\n  A[开始] --> B{判断}\n  B -- 是 --> C[执行]\n  B -- 否 --> D[结束]\n",
+    "diagramSequenceCode": "sequenceDiagram\n  participant U as 用户\n  participant S as 系统\n  U->>S: 请求\n  S-->>U: 响应\n",
+    "diagramGanttCode": "gantt\n  title 排期\n  dateFormat YYYY-MM-DD\n  section 阶段一\n  调研 :a1, 2026-01-01, 7d\n  开发 :after a1, 10d\n",
+    "diagramPieCode": "pie showData\n  title 占比\n  \"A\" : 55\n  \"B\" : 30\n  \"C\" : 15\n",
+    "diagramQuadrantCode": "quadrantChart\n  title 优先级矩阵\n  x-axis 低成本 --> 高成本\n  y-axis 低收益 --> 高收益\n  任务A: [0.7, 0.8]\n  任务B: [0.3, 0.35]\n"
   },
   "attachment": {
     "previewAria": "预览：{name}",
@@ -1039,5 +1049,9 @@
     "copy": "复制代码",
     "copied": "已复制",
     "insert": "插入正文"
+  },
+  "toast": {
+    "regionLabel": "通知",
+    "close": "关闭"
   }
 }

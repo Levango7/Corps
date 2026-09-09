@@ -40,7 +40,7 @@ export interface TrackedCtaProps {
 const VARIANT_CLASS: Record<NonNullable<TrackedCtaProps["variant"]>, string> = {
   primary:
     "inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] " +
-    "bg-[var(--accent)] text-[var(--on-accent)] font-[var(--weight-medium)] " +
+    "bg-[var(--accent)] text-[var(--accent-fg)] font-[var(--weight-medium)] " +
     "hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] " +
     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
     "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]",

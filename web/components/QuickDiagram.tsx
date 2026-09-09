@@ -8,7 +8,7 @@
  * （决策记录或文档），或仅复制代码。
  *
  * 设计：
- *  - 图型选择复用 MarkdownToolbar 的六种模板（同一事实源 DIAGRAM_TEMPLATES，
+ *  - 图型选择复用 MarkdownToolbar 的六种模板（同一事实源 DIAGRAM_KEYS + getDiagramCode，
  *    顺带把下拉的模板表从组件里抽出来共享）
  *  - 左码右览（lg+）/上下堆叠（移动端）——移动端是本功能的一等公民
  *  - 预览走 Mermaid 组件（同引擎同主题，渲染即所得）；预览失败显示
@@ -21,33 +21,38 @@ import { useTranslations } from "next-intl";
 import { X, Copy, Check, ArrowDownToLine } from "lucide-react";
 import { Mermaid } from "@/components/Mermaid";
 
-/** 图型模板（与 MarkdownToolbar 图表下拉共享同一事实源） */
-export const DIAGRAM_TEMPLATES: { key: string; code: string }[] = [
-  {
-    key: "mindmap",
-    code: "mindmap\n  root((主题))\n    一级分支\n      二级要点\n    另一分支\n",
-  },
-  {
-    key: "flow",
-    code: "graph TD\n  A[开始] --> B{判断}\n  B -- 是 --> C[执行]\n  B -- 否 --> D[结束]\n",
-  },
-  {
-    key: "sequence",
-    code: "sequenceDiagram\n  participant U as 用户\n  participant S as 系统\n  U->>S: 请求\n  S-->>U: 响应\n",
-  },
-  {
-    key: "gantt",
-    code: "gantt\n  title 排期\n  dateFormat YYYY-MM-DD\n  section 阶段一\n  调研 :a1, 2026-01-01, 7d\n  开发 :after a1, 10d\n",
-  },
-  {
-    key: "pie",
-    code: 'pie showData\n  title 占比\n  "A" : 55\n  "B" : 30\n  "C" : 15\n',
-  },
-  {
-    key: "quadrant",
-    code: "quadrantChart\n  title 优先级矩阵\n  x-axis 低成本 --> 高成本\n  y-axis 低收益 --> 高收益\n  任务A: [0.7, 0.8]\n  任务B: [0.3, 0.35]\n",
-  },
-];
+/** 图型 key 列表（与 MarkdownToolbar 图表下拉共享同一事实源；模板正文走 i18n） */
+export const DIAGRAM_KEYS = [
+  "mindmap",
+  "flow",
+  "sequence",
+  "gantt",
+  "pie",
+  "quadrant",
+] as const;
+
+/** 根据 key 与翻译函数返回 mermaid 模板代码（正文已 i18n，mermaid 语法在消息文件中维护） */
+export function getDiagramCode(
+  key: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
+  switch (key) {
+    case "mindmap":
+      return t("diagramMindmapCode");
+    case "flow":
+      return t("diagramFlowCode");
+    case "sequence":
+      return t("diagramSequenceCode");
+    case "gantt":
+      return t("diagramGanttCode");
+    case "pie":
+      return t("diagramPieCode");
+    case "quadrant":
+      return t("diagramQuadrantCode");
+    default:
+      return "";
+  }
+}
 
 interface QuickDiagramProps {
   /** 打开态由父组件持有 */
@@ -61,21 +66,21 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
   const t = useTranslations("diagramQuick");
   const te = useTranslations("editor");
   const [kind, setKind] = useState("mindmap");
-  const [code, setCode] = useState(DIAGRAM_TEMPLATES[0].code);
+  const [code, setCode] = useState(() => getDiagramCode("mindmap", te));
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
 
   // 切图型 = 重置为该图型模板（未保存的编辑会被覆盖——对话框语义如此）
   function pickKind(k: string) {
     setKind(k);
-    setCode(DIAGRAM_TEMPLATES.find((d) => d.key === k)?.code ?? "");
+    setCode(getDiagramCode(k, te));
   }
 
   // 打开时重置为默认图型；Esc 关闭
   useEffect(() => {
     if (open) {
       setKind("mindmap");
-      setCode(DIAGRAM_TEMPLATES[0].code);
+      setCode(getDiagramCode("mindmap", te));
       setCopied(false);
     }
   }, [open]);
@@ -122,19 +127,19 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
 
         {/* 图型选择 */}
         <div className="flex flex-wrap gap-1.5 px-[var(--space-4)] py-[var(--space-2)] border-b border-[var(--border-soft)]">
-          {DIAGRAM_TEMPLATES.map((d) => (
+          {DIAGRAM_KEYS.map((dKey) => (
             <button
-              key={d.key}
+              key={dKey}
               type="button"
-              onClick={() => pickKind(d.key)}
-              aria-pressed={kind === d.key}
+              onClick={() => pickKind(dKey)}
+              aria-pressed={kind === dKey}
               className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors ${
-                kind === d.key
+                kind === dKey
                   ? "bg-[var(--accent)] text-[var(--accent-fg)] font-[var(--weight-medium)]"
                   : "text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
               }`}
             >
-              {te("diagram" + d.key.charAt(0).toUpperCase() + d.key.slice(1))}
+              {te("diagram" + dKey.charAt(0).toUpperCase() + dKey.slice(1))}
             </button>
           ))}
         </div>

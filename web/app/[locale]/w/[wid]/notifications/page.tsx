@@ -34,6 +34,7 @@ import {
   FileText,
   Bell,
   CheckCheck,
+  Loader2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
@@ -222,7 +223,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
             disabled={marking}
             className="flex items-center gap-1.5 h-8 px-3 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
-            <CheckCheck size={14} />
+            {marking ? <Loader2 size={14} className="animate-spin" /> : <CheckCheck size={14} />}
             {tNotif("markAllRead")}
           </button>
         )}
@@ -236,14 +237,14 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       ) : (
         <>
           {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
+            <div className="mb-4 rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-3 text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
               <span>{error}</span>
               <button
                 onClick={() => {
                   setError(null);
                   load();
                 }}
-                className="text-red-600 underline hover:text-red-800"
+                className="text-[var(--danger)] underline hover:text-[var(--danger-fg)]"
               >
                 {tErr("retry")}
               </button>

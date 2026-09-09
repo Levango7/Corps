@@ -6,10 +6,10 @@ import { apiMsg } from "@/lib/api-messages";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
-      { code: 403, message: "Only owner can manage billing" },
+      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling") },
       { status: 403 },
     );
   }

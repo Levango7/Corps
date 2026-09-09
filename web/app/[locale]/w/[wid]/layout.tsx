@@ -58,6 +58,7 @@ export default function WorkspaceLayout({
     email: string;
     image: string | null;
   } | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
   const switcherRef = useRef<HTMLDivElement>(null);
   const switcherListRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
@@ -88,8 +89,11 @@ export default function WorkspaceLayout({
 
   useEffect(() => {
     api<{ name: string | null; email: string; image: string | null }>("/api/v1/users/me")
-      .then(setUser)
-      .catch(() => {});
+      .then((u) => {
+        setUser(u);
+        setUserLoading(false);
+      })
+      .catch(() => setUserLoading(false));
   }, []);
 
   // 通知未读数：每 30 秒轮询
@@ -477,7 +481,7 @@ export default function WorkspaceLayout({
 
         {/* 右侧：通知 → 用户下拉（内含设置/语言/主题/退出） */}
         <div className="flex items-center gap-[var(--space-1)] ml-auto">
-          {user && (
+          {user ? (
             <UserMenu
               user={user}
               wid={wid}
@@ -491,7 +495,13 @@ export default function WorkspaceLayout({
                 router.push("/auth/login");
               }}
             />
-          )}
+          ) : userLoading ? (
+            <div
+              className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse"
+              aria-busy="true"
+              aria-label={t("workspace.loading")}
+            />
+          ) : null}
         </div>
       </header>
 

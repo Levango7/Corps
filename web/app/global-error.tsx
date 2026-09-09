@@ -26,7 +26,8 @@
  * suppressHydrationWarning 用于容忍这一切换带来的差异。
  *
  * 样式策略：root layout 出错时 Tailwind 全局 CSS 可能尚未就绪，
- * 故使用内联样式 + 系统字体栈 + 安全色值，确保任何场景下都能渲染可读的错误页。
+ * 故使用内联样式 + 系统字体栈 + design token（var(--token)）引用，
+ * 确保任何场景下都能渲染可读的错误页。token 未就绪时回退到浏览器默认值仍可读。
  */
 
 import { useEffect, useState } from "react";
@@ -86,18 +87,18 @@ export default function GlobalError({
           justifyContent: "center",
           padding: "1rem",
           fontFamily: '"Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif',
-          background: "#f7f8f9",
-          color: "#1a2128",
+          background: "var(--bg)",
+          color: "var(--fg)",
         }}
       >
         <div
           style={{
             maxWidth: "28rem",
             width: "100%",
-            background: "#ffffff",
-            border: "1px solid #e3e6e8",
+            background: "var(--surface)",
+            border: "1px solid var(--border)",
             borderRadius: "12px",
-            boxShadow: "0 1px 3px rgba(16,24,29,0.06)",
+            boxShadow: "var(--elev-sm)",
             padding: "1.5rem",
             textAlign: "center",
           }}
@@ -107,7 +108,7 @@ export default function GlobalError({
             height="40"
             viewBox="0 0 24 24"
             fill="none"
-            stroke="#dc2626"
+            stroke="var(--danger)"
             strokeWidth="1.5"
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -130,7 +131,7 @@ export default function GlobalError({
           <p
             style={{
               fontSize: "0.875rem",
-              color: "#6b7280",
+              color: "var(--muted)",
               margin: "0 0 0.25rem",
             }}
           >
@@ -140,7 +141,7 @@ export default function GlobalError({
             <p
               style={{
                 fontSize: "0.75rem",
-                color: "#9ca3af",
+                color: "var(--meta)",
                 fontFamily: "monospace",
                 margin: "0 0 1rem",
                 wordBreak: "break-all",
@@ -167,8 +168,8 @@ export default function GlobalError({
                 gap: "0.375rem",
                 height: "2.25rem",
                 padding: "0 1rem",
-                background: "#2563eb",
-                color: "#ffffff",
+                background: "var(--accent)",
+                color: "var(--accent-fg)",
                 border: "none",
                 borderRadius: "8px",
                 fontSize: "0.875rem",
@@ -187,8 +188,8 @@ export default function GlobalError({
                 height: "2.25rem",
                 padding: "0 1rem",
                 background: "transparent",
-                color: "#374151",
-                border: "1px solid #d1d5db",
+                color: "var(--fg-2)",
+                border: "1px solid var(--border)",
                 borderRadius: "8px",
                 fontSize: "0.875rem",
                 fontWeight: 500,

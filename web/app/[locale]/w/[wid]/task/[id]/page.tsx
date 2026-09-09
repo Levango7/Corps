@@ -139,6 +139,14 @@ export default function TaskDetailPage({
   const [members, setMembers] = useState<Person[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  // LI-6：字段保存中指示（标题/描述/属性 onBlur 触发 patch 时显示）
+  const [saving, setSaving] = useState(false);
+  // LI-8：删除任务进行中（按钮 loading + 禁用）
+  const [deleting, setDeleting] = useState(false);
+  // LI-8：分享链接复制成功反馈
+  const [shareCopied, setShareCopied] = useState(false);
+  // LI-8：决策保存中（addDecision 按钮 loading）
+  const [decisionSaving, setDecisionSaving] = useState(false);
 
   const [draft, setDraft] = useState("");
   const [sending, setSending] = useState(false);
@@ -291,6 +299,7 @@ export default function TaskDetailPage({
   async function patch(data: Partial<Record<string, unknown>>) {
     if (!task) return;
     setTask({ ...task, ...(data as object) } as Task);
+    setSaving(true);
     try {
       const updated = await api<Task>(`${base}/tasks/${id}`, {
         method: "PATCH",
@@ -301,6 +310,8 @@ export default function TaskDetailPage({
     } catch (e) {
       setError(e instanceof Error ? e.message : tErr("saveFailed"));
       await load();
+    } finally {
+      setSaving(false);
     }
   }
 
@@ -399,7 +410,8 @@ export default function TaskDetailPage({
   }
 
   async function addDecision() {
-    if (!decisionDraft.trim()) return;
+    if (!decisionDraft.trim() || decisionSaving) return;
+    setDecisionSaving(true);
     try {
       const created = await api<Decision>(`${base}/tasks/${id}/decisions`, {
         method: "POST",
@@ -410,6 +422,8 @@ export default function TaskDetailPage({
       setDecisionOpen(false);
     } catch (e) {
       setError(e instanceof Error ? e.message : tErr("saveFailed"));
+    } finally {
+      setDecisionSaving(false);
     }
   }
 
@@ -428,12 +442,14 @@ export default function TaskDetailPage({
   }
 
   async function actuallyRemoveTask() {
-    if (!task) return;
+    if (!task || deleting) return;
+    setDeleting(true);
     try {
       await api(`${base}/tasks/${id}`, { method: "DELETE" });
       router.push(`/w/${wid}/board`);
     } catch (e) {
       setError(e instanceof Error ? e.message : tErr("deleteFailed"));
+      setDeleting(false);
     }
   }
 
@@ -499,9 +515,14 @@ export default function TaskDetailPage({
         </Link>
         <button
           onClick={removeTask}
-          className="inline-flex items-center justify-center gap-1.5 min-w-[32px] px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+          disabled={deleting}
+          className="inline-flex items-center justify-center gap-1.5 min-w-[32px] px-2.5 h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
         >
-          <Trash2 size={15} />
+          {deleting ? (
+            <Loader2 size={15} className="animate-spin" />
+          ) : (
+            <Trash2 size={15} />
+          )}
           {tButton("delete")}
         </button>
       </div>
@@ -562,7 +583,14 @@ export default function TaskDetailPage({
             />
 
             <div className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
-              {t("autosave")}
+              {saving ? (
+                <span className="inline-flex items-center gap-1">
+                  <Loader2 size={11} className="animate-spin" />
+                  {t("saving")}
+                </span>
+              ) : (
+                t("autosave")
+              )}
             </div>
           </div>
 
@@ -679,9 +707,12 @@ export default function TaskDetailPage({
                   </span>
                   <button
                     onClick={addDecision}
-                    disabled={!decisionDraft.trim()}
-                    className="h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+                    disabled={!decisionDraft.trim() || decisionSaving}
+                    className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
                   >
+                    {decisionSaving ? (
+                      <Loader2 size={14} className="animate-spin" />
+                    ) : null}
                     {t("saveAsVersion", { version: (decisions[0]?.version ?? 0) + 1 })}
                   </button>
                 </div>
@@ -854,7 +885,7 @@ export default function TaskDetailPage({
         {/* ── 属性栏 ──
             < lg：单栏，置顶，字段水平排列（标签在上、选择器在下）
             ≥ lg：右侧 260px 栏，垂直表单，sticky */}
-        <aside className="order-first lg:order-last lg:sticky lg:top-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] lg:p-[var(--space-4)] grid grid-cols-2 md:flex md:flex-wrap gap-x-[var(--space-5)] gap-y-[var(--space-3)] lg:block lg:space-y-[var(--space-4)] lg:gap-0">
+        <aside className="order-first lg:order-last lg:sticky lg:top-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] lg:p-[var(--space-4)] grid grid-cols-2 md:flex md:flex-wrap gap-x-[var(--space-3)] md:gap-x-[var(--space-5)] gap-y-[var(--space-3)] lg:block lg:space-y-[var(--space-4)] lg:gap-0">
           <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
             <div className={fieldLabel}>
               <StatusIcon size={13} style={{ color: STATUS_META[task.status].color }} />
@@ -987,10 +1018,19 @@ export default function TaskDetailPage({
                   }
                 />
                 <button
-                  onClick={() => navigator.clipboard.writeText(taskShareUrl).catch(() => {})}
+                  onClick={async () => {
+                    if (!taskShareUrl) return;
+                    try {
+                      await navigator.clipboard.writeText(taskShareUrl);
+                      setShareCopied(true);
+                      setTimeout(() => setShareCopied(false), 2000);
+                    } catch {
+                      /* 剪贴板权限失败静默 */
+                    }
+                  }}
                   className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
                 >
-                  {t("shareCopy")}
+                  {shareCopied ? t("shareCopied") : t("shareCopy")}
                 </button>
                 <button
                   onClick={() => patch({ shareToken: null })}
@@ -1114,8 +1154,12 @@ export default function TaskDetailPage({
                   confirmActionRef.current();
                   setConfirmOpen(false);
                 }}
-                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 transition-opacity duration-[var(--motion-fast)]"
+                disabled={deleting}
+                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)]"
               >
+                {deleting ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : null}
                 {t("confirmDelete")}
               </button>
             </div>

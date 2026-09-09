@@ -124,7 +124,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
   ] as const;
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="mx-auto max-w-[var(--container-max)]">
       {/* 标题 */}
       <div className="mb-[var(--space-6)]">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
@@ -166,7 +166,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       </div>
 
       {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） */}
-      <div className="grid grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
         <StatCard icon={Layers} label={t("sessions")} value={data.sessions} color="var(--accent)" />
         <StatCard
           icon={TrendingUp}
@@ -203,7 +203,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           <Repeat size={16} className="text-[var(--muted)]" />
           {t("retentionTitle")}
         </h2>
-        <div className="grid grid-cols-3 gap-[var(--space-3)]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)]">
           {retentionPoints.map(({ key, labelKey }) => {
             const r = data.retention[key];
             return (
@@ -426,7 +426,7 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
               y={H - 4}
               textAnchor="middle"
               className="fill-[var(--meta)]"
-              style={{ fontSize: 10 }}
+              style={{ fontSize: "var(--text-xs)" }}
             >
               {daily[i].date.slice(5)}
             </text>
@@ -462,7 +462,7 @@ function ErrorState({ message }: { message: string }) {
 /** 加载骨架（与新布局对齐：北极星卡 + 概览卡 + 两段漏斗 + 留存 + 趋势 + 热门事件）。 */
 function AnalyticsSkeleton() {
   return (
-    <div className="max-w-4xl mx-auto" aria-busy="true">
+    <div className="mx-auto max-w-[var(--container-max)]" aria-busy="true">
       <div className="mb-[var(--space-6)]">
         <Skeleton className="h-8 w-32 mb-2" />
         <Skeleton className="h-4 w-48" />
@@ -485,7 +485,7 @@ function AnalyticsSkeleton() {
         ))}
       </div>
       {/* 次级概览骨架 */}
-      <div className="grid grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
@@ -517,7 +517,7 @@ function AnalyticsSkeleton() {
       {/* 留存骨架 */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5 mb-[var(--space-5)]">
         <Skeleton className="h-5 w-28 mb-4" />
-        <div className="grid grid-cols-3 gap-[var(--space-3)]">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)]">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-3">
               <Skeleton className="h-3 w-8 mx-auto mb-2" />

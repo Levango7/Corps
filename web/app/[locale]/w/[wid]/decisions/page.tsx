@@ -400,7 +400,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       {/* AI 提炼对话框：粘贴原始讨论 → 生成 markdown 草稿 → 复制后到任务详情粘贴 */}
       {aiOpen && (
         <div
-          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-black/40 px-4"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] px-4"
           role="dialog"
           aria-modal="true"
           aria-label={t("aiDialogTitle")}

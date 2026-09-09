@@ -7,6 +7,7 @@ import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-po
 import { expireSubscriptionIfDue } from "@/lib/billing/subscription-expiry";
 import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 const inviteSchema = z.object({ email: z.string().email() });
@@ -17,10 +18,10 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: "Only owner/admin can invite" },
+      { code: 403, message: apiMsg(req, "onlyOwnerAdminInvite") },
       { status: 403 },
     );
   }
@@ -102,8 +103,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             code: 402,
             message:
               result.plan === "pro"
-                ? "席位已满，请增购或续费套餐后邀请更多成员"
-                : "席位已满，请升级套餐以邀请更多成员",
+                ? apiMsg(req, "seatsFullRenew")
+                : apiMsg(req, "seatsFullUpgrade"),
             seatLimit: result.seatLimit,
           },
           { status: 402 },
@@ -209,8 +210,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           code: 402,
           message:
             result.plan === "pro"
-              ? "席位已满，请增购或续费套餐后邀请更多成员"
-              : "席位已满，请升级套餐以邀请更多成员",
+              ? apiMsg(req, "seatsFullRenew")
+              : apiMsg(req, "seatsFullUpgrade"),
           seatLimit: result.seatLimit,
         },
         { status: 402 },
@@ -287,6 +288,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       return NextResponse.json(
         { code: 400, data: null, message: apiMsg(req, "invalidParams"), errors: error.errors },
         { status: 400 },
+      );
+    }
+    // P2025: 记录不存在（invitation 并发删除场景）→ 404
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "invitationNotFound") },
+        { status: 404 },
       );
     }
     console.error("[invite member] error:", error);

@@ -54,10 +54,10 @@ function safeRedirectUrl(
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
-      { code: 403, message: "Only owner can manage billing" },
+      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling") },
       { status: 403 },
     );
   }
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }

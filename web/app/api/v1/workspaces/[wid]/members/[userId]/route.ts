@@ -7,6 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 const updateSchema = z.object({
@@ -19,7 +20,7 @@ export async function PATCH(
 ) {
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyAdminOrOwnerChangeRole") },
@@ -33,7 +34,7 @@ export async function PATCH(
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: e.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }
@@ -95,6 +96,13 @@ export async function PATCH(
     }
     return NextResponse.json({ code: 200, data: result.updated });
   } catch (error) {
+    // P2025: 记录不存在（并发删除场景）→ 404
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "memberNotFound") },
+        { status: 404 },
+      );
+    }
     console.error("[PATCH member] error:", error);
     return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
@@ -106,7 +114,7 @@ export async function DELETE(
 ) {
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember") },

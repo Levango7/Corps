@@ -58,7 +58,7 @@ export async function GET(
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {
-    return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   }
 
   // 校验任务确实属于本工作区（防跨租户订阅）

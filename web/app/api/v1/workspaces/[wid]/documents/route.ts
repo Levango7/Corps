@@ -12,12 +12,23 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const url = new URL(req.url);
-    const q = url.searchParams.get("q")?.trim() || "";
-    const mine = url.searchParams.get("mine") === "1";
+    // B2：searchParams 经 zod 校验，非法值返回 400
+    const parsed = listDocsQuerySchema.safeParse({
+      q: url.searchParams.get("q") ?? undefined,
+      mine: url.searchParams.get("mine") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors },
+        { status: 400 },
+      );
+    }
+    const q = parsed.data.q?.trim() || "";
+    const mine = parsed.data.mine === "1";
 
     const docs = await runWithWorkspace(wid, (tx) =>
       tx.document.findMany({
@@ -61,11 +72,21 @@ const createDocSchema = z.object({
   markdown: z.string().optional(),
 });
 
+/**
+ * GET 列表 searchParams 校验（B2）：
+ *  - q: 关键词（标题/正文模糊搜索）
+ *  - mine: "1" 表示仅我作为作者的文档
+ */
+const listDocsQuerySchema = z.object({
+  q: z.string().optional(),
+  mine: z.literal("1").optional(),
+});
+
 /** POST /v1/workspaces/{wid}/documents — 新建文档 */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const body = await req.json();
@@ -89,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? "参数校验失败" },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
         { status: 400 },
       );
     }

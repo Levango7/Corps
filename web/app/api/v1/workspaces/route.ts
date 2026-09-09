@@ -7,7 +7,7 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest) {
   const auth = await authenticate(req);
   if (!auth) {
-    return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   }
 
   try {
@@ -58,7 +58,7 @@ const createWorkspaceSchema = z.object({
 export async function POST(req: NextRequest) {
   const auth = await authenticate(req);
   if (!auth) {
-    return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   }
 
   try {
@@ -104,11 +104,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("Create workspace error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

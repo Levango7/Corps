@@ -34,6 +34,8 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  // 正在切换状态的子任务 ID（LI-5：勾选 loading 反馈，避免用户重复点击）
+  const [togglingId, setTogglingId] = useState<string | null>(null);
 
   const done = subtasks.filter((s) => s.status === "done").length;
   const total = subtasks.length;
@@ -59,7 +61,9 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
   }
 
   async function toggleSubtask(st: Subtask) {
+    if (togglingId) return;
     const next = st.status === "done" ? "todo" : "done";
+    setTogglingId(st.id);
     try {
       await api(`/api/v1/workspaces/${wid}/tasks/${st.id}`, {
         method: "PATCH",
@@ -68,6 +72,8 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
       onChanged();
     } catch {
       /* 失败静默——父组件下次刷新会反映真实状态 */
+    } finally {
+      setTogglingId(null);
     }
   }
 
@@ -102,21 +108,31 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
         <ul className="mb-[var(--space-3)] divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
           {subtasks.map((st) => {
             const isDone = st.status === "done";
+            const isToggling = togglingId === st.id;
             return (
               <li
                 key={st.id}
                 className="flex items-center gap-[var(--space-3)] px-[var(--space-3)] py-2"
               >
-                <input
-                  type="checkbox"
-                  checked={isDone}
-                  onChange={() => toggleSubtask(st)}
-                  className="shrink-0 accent-[var(--accent)]"
-                  aria-label={t("subtaskToggle", { title: st.title })}
-                />
+                {isToggling ? (
+                  <Loader2
+                    size={14}
+                    className="shrink-0 animate-spin text-[var(--meta)]"
+                    aria-label={t("subtaskToggle", { title: st.title })}
+                  />
+                ) : (
+                  <input
+                    type="checkbox"
+                    checked={isDone}
+                    onChange={() => toggleSubtask(st)}
+                    className="shrink-0 accent-[var(--accent)]"
+                    aria-label={t("subtaskToggle", { title: st.title })}
+                  />
+                )}
                 <button
                   onClick={() => router.push(`/w/${wid}/task/${st.id}`)}
-                  className={`flex-1 min-w-0 text-left text-[length:var(--text-sm)] truncate hover:text-[var(--accent)] transition-colors ${
+                  disabled={isToggling}
+                  className={`flex-1 min-w-0 text-left text-[length:var(--text-sm)] truncate hover:text-[var(--accent)] transition-colors disabled:opacity-60 ${
                     isDone ? "text-[var(--meta)] line-through" : "text-[var(--fg)]"
                   }`}
                 >

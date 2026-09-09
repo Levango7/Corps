@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext } from "@/lib/auth";
 import { syncAllTasks } from "@/lib/calendar/sync";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * POST /api/v1/workspaces/{wid}/calendar/sync
@@ -9,7 +10,7 @@ import { syncAllTasks } from "@/lib/calendar/sync";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const result = await syncAllTasks(ctx.payload.sub);
@@ -22,7 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "同步失败";
+    const message = error instanceof Error ? error.message : apiMsg(req, "calendarSyncFailed");
     console.error("[calendar sync] error:", error);
     return NextResponse.json({ code: 500, message }, { status: 500 });
   }

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentProvider, PaymentProviderError, PaymentWebhookError } from "@/lib/payments";
 import { handleBillingEvent } from "@/lib/billing/webhook-handler";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * POST /api/v1/billing/webhook/wechat — 微信支付回调（ADR-003 §5 落地要点 3）。
@@ -45,7 +46,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ code: 500, message: err.message }, { status: 500 });
     }
     console.error("[wechat-webhook] parse error:", err);
-    return NextResponse.json({ code: 500, message: "Handler error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError") }, { status: 500 });
   }
 
   // 未知/忽略事件 → 应答 received

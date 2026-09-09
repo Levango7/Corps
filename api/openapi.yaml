@@ -1,7 +1,7 @@
 openapi: 3.0.3
 info:
   title: corps (团队) API
-  version: 1.0.0
+  version: 0.6.0
   description: >
     MVP API for the corps multi-tenant collaboration SaaS. This document is the
     single contract for frontend and backend in Phase 3. All paths are prefixed with
@@ -10,14 +10,14 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    This contract currently defines 27 paths (updated 2026-08-27).
+    This contract currently defines 52 paths (updated 2026-09-09).
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:
   - url: http://localhost:3000
     description: Local development (Next.js Route Handlers)
-  - url: https://{env}.corps.app
-    description: CloudBase deployment
+  - url: https://ghcr.io/{env}/corps
+    description: GHCR Docker deployment
     variables:
       env:
         default: staging
@@ -35,6 +35,8 @@ tags:
     description: Workspace membership and role-based access control
   - name: comments
     description: Task-scoped comments with @mentions
+  - name: documents
+    description: Workspace documents (Markdown draft, publish & share)
   - name: decisions
     description: Task-linked decision records (Markdown, versioned)
   - name: notifications
@@ -130,7 +132,8 @@ paths:
       description: >
         Uses the Better Auth session cookie (7-day) to issue a new 15-min access JWT,
         optionally scoped to a `workspaceId` the user belongs to (defaults to the first).
-        The new token is also set as the httpOnly `access_token` cookie.
+        The new token is set only as the httpOnly `access_token` cookie (not exposed in
+        the response body, to prevent XSS exfiltration).
       security:
         - refreshAuth: []
       operationId: refresh
@@ -426,22 +429,57 @@ paths:
       operationId: listTasks
       parameters:
         - $ref: '#/components/parameters/Wid'
+        - name: assignee
+          in: query
+          schema: { type: string }
+          description: Filter by assignee — "me" for current user, or a member UUID.
+        - name: milestone
+          in: query
+          schema: { type: string }
+          description: Filter by milestone UUID, or "null" for tasks without a milestone.
         - name: status
           in: query
           schema: { type: string, enum: [todo, in_progress, review, done] }
-        - name: assignee_id
+        - name: priority
           in: query
-          schema: { type: string, format: uuid }
+          schema: { type: string, enum: [low, medium, high, urgent] }
+        - name: label
+          in: query
+          schema: { type: string }
+          description: Filter by label UUID(s); comma-separated for OR semantics.
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Fuzzy search across task title and description (case-insensitive).
         - name: view
           in: query
           schema: { type: string, enum: [board, list], default: board }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+          description: Page number for pagination (DL-8).
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+          description: Page size for pagination (DL-8). Upper capped at 500 internally.
       responses:
         '200':
-          description: Task list
+          description: Task list (paginated, DL-8)
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_TaskList'
+                allOf:
+                  - $ref: '#/components/schemas/Envelope_TaskList'
+                  - type: object
+                    properties:
+                      pagination:
+                        type: object
+                        required: [page, pageSize, totalCount, totalPages]
+                        properties:
+                          page: { type: integer, minimum: 1 }
+                          pageSize: { type: integer, minimum: 1 }
+                          totalCount: { type: integer, minimum: 0 }
+                          totalPages: { type: integer, minimum: 0 }
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1299,6 +1337,40 @@ paths:
       responses:
         '200': { description: Reminder job summary }
         '401': { description: Missing/invalid CRON_SECRET }
+  /api/cron/weekly-digest:
+    get:
+      tags: [system]
+      summary: Send weekly task digest emails to Pro workspace members (Bearer CRON_SECRET)
+      description: >
+        Pro feature (v2 pricing 2026-09-02). Scans only workspaces with an active
+        Pro subscription and sends each member a digest of overdue tasks plus tasks
+        due in the next 7 days. Members with no relevant tasks are skipped. Also
+        aggregates weekly operational funnel stats (registers/activations/taskCreates/
+        pageViews) per workspace for the owner. Graceful degradation: when email is
+        not configured, returns sent=0 with reason=email_not_configured.
+        Suggested schedule: Monday 02:00 UTC.
+      security:
+        - cronSecret: []
+      responses:
+        '200':
+          description: Weekly digest job summary (sent/skipped/proWorkspaces/stats)
+        '401': { description: Missing/invalid CRON_SECRET }
+        '500': { description: CRON_SECRET not configured or internal error }
+  /api/cron/cleanup-uploads:
+    get:
+      tags: [system]
+      summary: Remove orphaned IM attachment files not referenced by message_attachments (Bearer CRON_SECRET)
+      description: >
+        Audit P2 cleanup. Compares web/uploads/ against message_attachments url
+        references and deletes on-disk files with no DB record. Idempotent and safe:
+        orphans only waste space. Suggested schedule: weekly.
+      security:
+        - cronSecret: []
+      responses:
+        '200':
+          description: Cleanup summary (deleted/kept counts)
+        '401': { description: Missing/invalid CRON_SECRET }
+        '500': { description: CRON_SECRET not configured or internal error }
   /api/uploads/{path+}:
     get:
       tags: [uploads]
@@ -1315,6 +1387,58 @@ paths:
         '401': { description: Not authenticated }
         '403': { description: Not a member of the attachment workspace }
         '404': { description: Attachment not found or orphaned }
+  /api/tasks/share/{token}:
+    get:
+      tags: [tasks]
+      summary: Public read-only task share (no login required)
+      description: >
+        Resolves a task by its share token (24-byte base64url, 192-bit entropy) and
+        returns title/description/status/priority/dueDate plus subtask progress and
+        assignee display name. Desensitized: never exposes assignee.email, creator,
+        comments, chat messages or attachments. RLS hardened mode reads via
+        app.public_token so FORCE RLS cannot be bypassed. Revoke by PATCHing the
+        task with shareToken=null.
+      security: []
+      operationId: getSharedTask
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Share token (24-byte base64url).
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shared task detail (desensitized, with subtasks + assignee name)
+        '404':
+          description: Share link invalid or revoked
+        '500':
+          description: Internal server error
+  /api/documents/share/{token}:
+    get:
+      tags: [documents]
+      summary: Public read-only document share (no login required)
+      description: >
+        Returns document metadata plus the published snapshot (publishedMarkdown).
+        A document with no publishedMarkdown (never published / draft) returns 404 —
+        drafts are not shareable. Token is 24-byte base64url (192-bit entropy);
+        revoke by PATCHing with shareToken=null. RLS hardened mode reads via
+        app.public_token; field whitelist omits author.email and other sensitive
+        fields.
+      security: []
+      operationId: getSharedDocument
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Share token (24-byte base64url).
+          schema: { type: string }
+      responses:
+        '200':
+          description: Shared document (title + publishedMarkdown + workspace name + author name)
+        '404':
+          description: Share link invalid, revoked, or document never published
+        '500':
+          description: Internal server error
   # ===========================================================================
   # LABELS / MILESTONES
   # ===========================================================================
@@ -1471,6 +1595,8 @@ paths:
         Aggregated decision list for the workspace (all tasks), newest first, paginated.
         Query params: page (default 1), limit (default 20, max 50), q (case-insensitive
         keyword search over markdown content, PostgreSQL ilike semantics).
+        Note: the success response returns { code, data } only — `message` is omitted
+        (Envelope.message is optional for 2xx responses).
       operationId: listWorkspaceDecisions
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -1531,6 +1657,405 @@ paths:
       responses:
         '200': { description: Password updated }
         '400': { description: Invalid or expired token (INVALID_TOKEN) }
+
+  # ===========================================================================
+  # WORKSPACE OWNERSHIP TRANSFER
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/transfer-ownership:
+    patch:
+      tags: [workspaces]
+      summary: Transfer workspace ownership to another member (owner only)
+      description: >
+        Owner-only (non-owner → 403). Body: { newOwnerUserId (UUID) }. The transferee
+        must already be a member of the workspace; otherwise 400 transfereeNotMember.
+        Self-transfer is rejected (400 alreadyOwner). On success the transferee becomes
+        `owner` and the original owner is demoted to `admin`; workspace.ownerId is
+        updated atomically inside the tenant transaction.
+      operationId: transferWorkspaceOwnership
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [newOwnerUserId]
+              properties:
+                newOwnerUserId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Ownership transferred
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      ok: { type: boolean, example: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          description: Internal server error
+
+  # ===========================================================================
+  # WORKSPACE DOCUMENTS
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/documents:
+    get:
+      tags: [documents]
+      summary: List documents in a workspace
+      description: >
+        Returns documents ordered by updatedAt desc (limit 200). Query params:
+        q (case-insensitive keyword search over title / markdown / publishedMarkdown),
+        mine=1 (only documents authored by the caller).
+      operationId: listWorkspaceDocuments
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: q
+          in: query
+          schema: { type: string }
+        - name: mine
+          in: query
+          schema: { type: string, enum: ['1'] }
+      responses:
+        '200':
+          description: Document list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id: { type: string, format: uuid }
+                        title: { type: string }
+                        publishedAt: { type: string, format: date-time, nullable: true }
+                        updatedAt: { type: string, format: date-time }
+                        author:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            name: { type: string }
+                            email: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal server error
+    post:
+      tags: [documents]
+      summary: Create a document in a workspace
+      description: >
+        Body: { title (1-255 chars), markdown? (defaults to empty string) }. Returns
+        the created document with 201.
+      operationId: createWorkspaceDocument
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                markdown: { type: string }
+      responses:
+        '201':
+          description: Document created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 201 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      title: { type: string }
+                      markdown: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal server error
+
+  /api/v1/workspaces/{wid}/documents/{id}:
+    get:
+      tags: [documents]
+      summary: Get a document detail (edit view)
+      description: >
+        Returns the document draft markdown plus publishedMarkdown (if any) and
+        shareToken state for the UI. Membership required; unknown document → 404.
+      operationId: getWorkspaceDocument
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          description: Document id (UUID).
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Document detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      title: { type: string }
+                      markdown: { type: string }
+                      publishedMarkdown: { type: string, nullable: true }
+                      publishedAt: { type: string, format: date-time, nullable: true }
+                      shareToken: { type: string, nullable: true }
+                      author:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          name: { type: string }
+                          email: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Internal server error
+    patch:
+      tags: [documents]
+      summary: Update a document (title / markdown / publish / shareToken)
+      description: >
+        Partial update. Body: { title?, markdown?, publish?, shareToken? }.
+        publish=true snapshots current markdown into publishedMarkdown and stamps
+        publishedAt. shareToken="rotate" generates a new server-side token (old link
+        invalidated); shareToken=null cancels sharing. Unknown document → 404.
+      operationId: updateWorkspaceDocument
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          description: Document id (UUID).
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  minLength: 1
+                  maxLength: 255
+                markdown: { type: string }
+                publish: { type: boolean }
+                shareToken:
+                  type: string
+                  nullable: true
+                  enum: [rotate]
+      responses:
+        '200':
+          description: Document updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      title: { type: string }
+                      markdown: { type: string }
+                      publishedMarkdown: { type: string, nullable: true }
+                      shareToken: { type: string, nullable: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Internal server error
+    delete:
+      tags: [documents]
+      summary: Delete a document
+      description: Removes the document from the workspace. Unknown document → 404.
+      operationId: deleteWorkspaceDocument
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          description: Document id (UUID).
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Document deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean, example: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          description: Internal server error
+
+  # ===========================================================================
+  # DECISION EXTRACT (AI draft)
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/decisions/extract:
+    post:
+      tags: [decisions]
+      summary: Extract a decision draft from source text (rules-based AI)
+      description: >
+        Member and above only (viewer → 403). Body: { sourceText (10-20000 chars) }.
+        Returns a structured decision draft { title, markdown, suggestedTags, provider }.
+        Current implementation is a rules-based template extractor (provider=rules-v1);
+        the backend may swap in a real LLM later without breaking this contract.
+      operationId: extractDecision
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceText]
+              properties:
+                sourceText:
+                  type: string
+                  minLength: 10
+                  maxLength: 20000
+      responses:
+        '200':
+          description: Decision draft extracted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      title: { type: string }
+                      markdown: { type: string }
+                      suggestedTags:
+                        type: array
+                        items: { type: string }
+                      provider: { type: string, example: rules-v1 }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          description: Internal server error
+
+  # ===========================================================================
+  # ACCOUNT DELETION (privacy compliance)
+  # ===========================================================================
+  /api/v1/users/me/account:
+    get:
+      tags: [users]
+      summary: Preview data before account deletion
+      description: >
+        Returns a preview of what will be removed: owned workspaces, joined workspaces,
+        calendar connections, subscriptions and data-volume stats. Used by the
+        "delete account" confirmation dialog.
+      operationId: previewAccountDeletion
+      responses:
+        '200':
+          description: Deletion preview
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    description: Preview of resources that will be deleted.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal server error
+    delete:
+      tags: [users]
+      summary: Delete the current user's account
+      description: >
+        Body: { confirmEmail }. The email must match the account email
+        (case-insensitive); mismatch → 400 accountEmailMismatch and nothing is deleted.
+        On success: owned workspaces are tenant-deleted, joined workspaces only leave
+        membership, calendar tokens revoked, Better Auth session/account purged, and
+        the access_token cookie is expired. A notification email is sent best-effort.
+      operationId: deleteAccount
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [confirmEmail]
+              properties:
+                confirmEmail: { type: string, format: email }
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      deleted: { type: boolean, example: true }
+                      deletedWorkspaces:
+                        type: array
+                        items: { type: string, format: uuid }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          description: Internal server error
 
 components:
   securitySchemes:
@@ -1637,7 +2162,7 @@ components:
     # ---- uniform envelope ----
     Envelope:
       type: object
-      required: [code, message]
+      required: [code]
       properties:
         code:
           type: integer
@@ -1647,6 +2172,7 @@ components:
           nullable: true
         message:
           type: string
+          description: "Human-readable status message. Required for error responses (4xx/5xx), optional for success responses (2xx)."
           example: "ok"
     ErrorEnvelope:
       type: object
@@ -1854,7 +2380,7 @@ components:
     # ---- auth ----
     RegisterRequest:
       type: object
-      required: [email, password, name, workspaceName]
+      required: [email, password, workspaceName]
       properties:
         email:
           type: string
@@ -1866,12 +2392,21 @@ components:
           maxLength: 128
         name:
           type: string
-          minLength: 1
-          maxLength: 80
+          minLength: 2
+          maxLength: 100
+          description: Optional display name; defaults to email local-part when omitted.
         workspaceName:
           type: string
-          minLength: 1
-          maxLength: 80
+          minLength: 2
+          maxLength: 100
+        clientSessionId:
+          type: string
+          maxLength: 64
+          description: Optional client session id for analytics attribution.
+        inviteToken:
+          type: string
+          maxLength: 256
+          description: Optional invite token for channel attribution.
     LoginRequest:
       type: object
       required: [email, password]
@@ -1883,9 +2418,10 @@ components:
           type: string
     # ---- auth responses (cookie-based: refresh token lives in Better Auth
     #      session cookie, never in the response body) ----
+    # accessToken 通过 httpOnly access_token cookie 下发（15 min），不在响应体中暴露（防 XSS 窃取）
     RegisterResponse:
       type: object
-      required: [user, workspace, accessToken]
+      required: [user, workspace]
       properties:
         user:
           type: object
@@ -1901,12 +2437,9 @@ components:
             id: { type: string, format: uuid }
             name: { type: string }
             slug: { type: string }
-        accessToken:
-          type: string
-          description: Workspace-scoped JWT (15 min). Also set as httpOnly access_token cookie.
     LoginResponse:
       type: object
-      required: [user, workspaces, accessToken]
+      required: [user, workspaces]
       properties:
         user:
           type: object
@@ -1925,16 +2458,10 @@ components:
               name: { type: string }
               slug: { type: string }
               role: { type: string, enum: [owner, admin, member] }
-        accessToken:
-          type: string
-          description: JWT scoped to the first workspace. Also set as httpOnly access_token cookie.
     RefreshResponse:
       type: object
-      required: [accessToken, workspace]
+      required: [workspace]
       properties:
-        accessToken:
-          type: string
-          description: New workspace-scoped JWT (15 min).
         workspace:
           type: object
           required: [id, name, role]
@@ -1973,8 +2500,8 @@ components:
       properties:
         name:
           type: string
-          minLength: 1
-          maxLength: 80
+          minLength: 2
+          maxLength: 100
 
     # ---- tasks ----
     Task:

@@ -4,6 +4,7 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
+import { apiMsg } from "@/lib/api-messages";
 
 import { checkRateLimit } from "@/lib/rate-limit";
 
@@ -30,13 +31,13 @@ export async function POST(req: NextRequest) {
       asResponse: true,
     });
     if (!baRes.ok) {
-      const err = await baRes.json().catch(() => ({ code: 401, message: "Invalid credentials" }));
+      const err = await baRes.json().catch(() => ({ code: 401, message: apiMsg(req, "invalidCredentials") }));
       return NextResponse.json(err, { status: baRes.status });
     }
     const baBody = await baRes.json();
     const baUser = baBody.user;
     if (!baUser?.id) {
-      return NextResponse.json({ code: 401, message: "Invalid credentials" }, { status: 401 });
+      return NextResponse.json({ code: 401, message: apiMsg(req, "invalidCredentials") }, { status: 401 });
     }
 
     // 解析工作区列表（含角色）。走 RLS 事务：members 表若启用行级安全，
@@ -63,7 +64,7 @@ export async function POST(req: NextRequest) {
       const selected = workspaces.find((w) => w.id === validated.wid);
       if (!selected) {
         return NextResponse.json(
-          { code: 403, message: "Not a member of this workspace" },
+          { code: 403, message: apiMsg(req, "notMemberOfWorkspace") },
           { status: 403 },
         );
       }
@@ -105,11 +106,11 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("Login error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }

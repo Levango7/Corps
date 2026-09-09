@@ -58,6 +58,12 @@ ENV NODE_ENV=production
 ENV PORT=3000
 ENV HOSTNAME=0.0.0.0
 
+# 安装 postgresql-client：entrypoint.sh 在 RLS_ACTIVATE=true 时需用 psql 执行
+# db/rls-activate.sql（创建 corps_app 角色 + FORCE ROW LEVEL SECURITY）。
+# 缺 psql 会使 entrypoint 跳过激活，corps_app 角色未创建，应用以该角色的
+# DATABASE_URL 启动时连接被拒——P0 生产阻塞。必须在 runner 阶段（USER 切换前）安装。
+RUN apk add --no-cache postgresql-client
+
 # 全局安装 prisma CLI（用于启动时 prisma migrate deploy）
 # pnpm 的符号链接结构使得局部 prisma CLI 难以稳定复制，全局安装最简单可靠
 RUN npm install -g prisma@6.15.0

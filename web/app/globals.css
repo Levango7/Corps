@@ -32,11 +32,10 @@
   --danger-fg: #7f1d1d;
 
   /* —— 任务状态点色背景（看板列色 / 状态标记底色）
-      design-tokens 提供 --status-*-fg 前景色，此处补齐配套背景色，
-      用 var() 引用语义 token，自动跟随主题。 —— */
+      design-tokens 提供 --status-*-fg 前景色 + --status-warn 背景，
+     此处补齐其余配套背景色，用 var() 引用语义 token，自动跟随主题。 —— */
   --status-todo: var(--muted);
   --status-doing: var(--accent);
-  --status-warn: var(--warn);
   --status-done: var(--success);
 
   /* —— 遮罩层（模态/抽屉背景压暗）—— */
@@ -384,7 +383,21 @@ svg {
  * 深色主题打印时强制浅色 token（省墨且可读）。
  * -------------------------------------------------------------------------- */
 
+@page {
+  margin: 16mm 14mm;
+}
+
 @media print {
+  /* 显式移除非打印 chrome 元素（导航/侧栏/对话框等），避免占位；
+     button 不在此列——.print-area 内可能含示例按钮，由 visibility 方案统一控制 */
+  nav,
+  aside,
+  dialog,
+  [role="dialog"],
+  [data-print="hide"] {
+    display: none !important;
+  }
+
   body * {
     visibility: hidden;
   }
@@ -399,6 +412,9 @@ svg {
     padding: 24px;
     background: #ffffff;
     color: #111111;
+    /* 打印字号/行高：pt 单位适配纸张 */
+    font-size: 12pt;
+    line-height: 1.5;
   }
   /* 打印输出强制浅色 token（深色主题下 Markdown/表格仍可读） */
   .print-area {
@@ -425,7 +441,8 @@ svg {
   /* 打印时避免内容被分页截断 */
   .print-area pre,
   .print-area blockquote,
-  .print-area table {
+  .print-area table,
+  .print-area img {
     break-inside: avoid;
   }
   .print-area h1,

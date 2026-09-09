@@ -4,6 +4,7 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-policy";
 import { createHash } from "crypto";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 /**
@@ -40,7 +41,7 @@ async function getUserId(req: NextRequest): Promise<{ id: string; email: string 
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const user = await getUserId(req);
-  if (!user) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!user) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const { token } = await params;
@@ -54,7 +55,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       }),
     );
     if (!invitation) {
-      return NextResponse.json({ code: 404, message: "Invitation not found" }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "invitationNotFound") }, { status: 404 });
     }
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json(
@@ -126,8 +127,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           code: 402,
           message:
             result.plan === "pro"
-              ? "席位已满，请联系工作区管理员增购或续费套餐"
-              : "席位已满，请联系工作区管理员升级套餐",
+              ? apiMsg(req, "seatsFullContactRenew")
+              : apiMsg(req, "seatsFullContactUpgrade"),
         },
         { status: 402 },
       );
@@ -165,6 +166,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       data: { workspaceId: wid, workspaceName: invitation.workspace.name, role: result.role },
     });
   } catch (error) {
+    // P2025: 记录不存在（invitation 并发删除场景）→ 404
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "invitationNotFound") },
+        { status: 404 },
+      );
+    }
     console.error("[invitation accept] error:", error);
     return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }

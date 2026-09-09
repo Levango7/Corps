@@ -15,7 +15,7 @@
  *  - 响应式：< sm 紧凑图标按钮，≥ sm 显示文案
  */
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { X, Trash2, Loader2, CircleDot, Flag, ChevronDown } from "lucide-react";
 import type { Status, Priority } from "@/lib/types";
 import {
@@ -50,6 +50,34 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
   const [error, setError] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
+  // LI-16：下拉菜单外部点击关闭（ref 持有根元素，检测点击是否在容器外）
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  // LI-16：点击工具栏外部关闭所有下拉菜单
+  useEffect(() => {
+    if (!statusOpen && !priorityOpen) return;
+    function onPointerDown(e: PointerEvent) {
+      if (rootRef.current && !rootRef.current.contains(e.target as Node)) {
+        setStatusOpen(false);
+        setPriorityOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [statusOpen, priorityOpen]);
+
+  // LI-16：Escape 键关闭下拉菜单
+  useEffect(() => {
+    if (!statusOpen && !priorityOpen) return;
+    function onKey(e: KeyboardEvent) {
+      if (e.key === "Escape") {
+        setStatusOpen(false);
+        setPriorityOpen(false);
+      }
+    }
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [statusOpen, priorityOpen]);
 
   if (selectedIds.length === 0) return null;
 
@@ -97,9 +125,10 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
 
   return (
     <div
+      ref={rootRef}
       role="toolbar"
       aria-label={t("batchToolbarAria")}
-      className="fixed bottom-4 left-1/2 -translate-x-1/2 pb-safe z-[var(--z-sticky)] flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      className="fixed bottom-4 left-1/2 -translate-x-1/2 pb-safe z-[var(--z-sticky)] flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] max-w-[calc(100vw-2rem)]"
     >
       {/* 选中计数 */}
       <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] tabular-nums px-1">
@@ -138,7 +167,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                   key={s}
                   role="menuitem"
                   onClick={() => handleStatus(s)}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+                  disabled={busy}
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
                 >
                   <Icon size={14} style={{ color: meta.color }} />
                   {tStatus(STATUS_LABEL_KEYS[s])}
@@ -175,7 +205,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                 key={p}
                 role="menuitem"
                 onClick={() => handlePriority(p)}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+                disabled={busy}
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors"
               >
                 <Flag size={14} style={{ color: PRIORITY_COLORS[p] }} />
                 {tPriority(PRIORITY_LABEL_KEYS[p])}

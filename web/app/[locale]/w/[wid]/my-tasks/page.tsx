@@ -21,42 +21,15 @@ interface Task {
 type StatusFilter = "all" | Task["status"];
 type SortKey = "recent" | "due" | "priority";
 
-// 状态分组/筛选项/标签：走共享 lib/task-meta（阶段 2-6 i18n——titleKey 经 tStatus 渲染）
-import { STATUS_FILTERS, STATUS_LABEL_KEYS, COLUMNS as STATUS_GROUPS } from "@/lib/task-meta";
-
-/**
- * 状态徽章：用 color-mix 替代 `${color}20` alpha 拼接。
- * var(--token) 不能与十六进制透明度后缀组合，color-mix 是 W3C 标准方案，且能随主题切换重算。
- */
-const STATUS_BADGE_STYLES: Record<Task["status"], { background: string; color: string }> = {
-  todo: {
-    background: "color-mix(in srgb, var(--status-todo) 12%, transparent)",
-    color: "var(--status-todo)",
-  },
-  in_progress: {
-    background: "color-mix(in srgb, var(--status-doing) 12%, transparent)",
-    color: "var(--status-doing)",
-  },
-  review: { background: "color-mix(in srgb, var(--warn) 14%, transparent)", color: "var(--warn)" },
-  done: {
-    background: "color-mix(in srgb, var(--status-done) 12%, transparent)",
-    color: "var(--status-done)",
-  },
-};
-
-/**
- * 优先级左侧 4px 色条：urgent=红 / high=橙 / medium=蓝 / low=灰。
- * medium 用 --accent（项目里 --status-doing 即 --accent，蓝为品牌色）。
- */
-const PRIORITY_BAR_COLORS: Record<Task["priority"], string> = {
-  low: "var(--muted)",
-  medium: "var(--accent)",
-  high: "var(--warn)",
-  urgent: "var(--danger)",
-};
-
-/** 优先级排序权重：urgent > high > medium > low */
-const PRIORITY_ORDER: Record<Task["priority"], number> = { urgent: 0, high: 1, medium: 2, low: 3 };
+// 状态分组/筛选项/标签/徽章/色条/排序：走共享 lib/task-meta（单一编辑源，消除跨页色值漂移）
+import {
+  STATUS_FILTERS,
+  STATUS_LABEL_KEYS,
+  STATUS_BADGE_STYLES,
+  PRIORITY_BAR_COLORS,
+  PRIORITY_ORDER,
+  COLUMNS as STATUS_GROUPS,
+} from "@/lib/task-meta";
 
 // formatRelativeDueDate：走共享 lib/format.ts（tTime 注入渲染当前语言）
 import { formatRelativeDueDate as sharedFormatRelativeDueDate } from "@/lib/format";
@@ -204,13 +177,13 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
       ) : (
         <div className="space-y-[var(--space-4)]">
           {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700 flex items-center justify-between">
+            <div className="mb-4 rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-3 text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
               <span>{error}</span>
               <button
                 onClick={() => {
                   setError(null);
                 }}
-                className="text-red-600 underline hover:text-red-800"
+                className="text-[var(--danger)] underline hover:text-[var(--danger-fg)]"
               >
                 {tErr("retry")}
               </button>

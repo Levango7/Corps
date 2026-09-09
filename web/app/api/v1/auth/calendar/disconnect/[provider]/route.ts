@@ -17,7 +17,7 @@ export async function DELETE(
   // 鉴权
   const payload = await authenticate(req);
   if (!payload) {
-    return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
   }
 
   // 校验 provider
@@ -33,7 +33,7 @@ export async function DELETE(
     await disconnectCalendar(payload.sub, p);
     return NextResponse.json({ code: 200, data: null });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "断开连接失败";
+    const message = error instanceof Error ? error.message : apiMsg(req, "calendarDisconnectFailed");
     console.error("[calendar disconnect] error:", error);
     return NextResponse.json({ code: 500, message }, { status: 500 });
   }

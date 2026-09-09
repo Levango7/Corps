@@ -4,6 +4,7 @@ import { z } from "zod";
 import { randomUUID } from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ALLOWED_EVENT_NAMES } from "@/lib/analytics-whitelist";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * POST /api/v1/events — 客户端批量上报分析事件。
@@ -97,12 +98,12 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: "Validation error", errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
         { status: 400 },
       );
     }
     console.error("[POST events] error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
 
@@ -112,10 +113,10 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ code: 403, message: "Forbidden in production" }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "forbiddenInProduction") }, { status: 403 });
   }
   const payload = await authenticate(req);
-  if (!payload) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+  if (!payload) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const events = await withGuc({ user_id: payload.sub }, (tx) =>
@@ -128,6 +129,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: events });
   } catch (error) {
     console.error("[GET events] error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
   }
 }
+
