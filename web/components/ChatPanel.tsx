@@ -286,7 +286,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
           {fallback ? t("fallbackPolling") : t("disconnected")}
           <button
             onClick={reconnect}
-            className="ml-auto inline-flex items-center gap-1 px-2 h-7 rounded-[var(--radius-sm)] text-[var(--accent)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            className="ml-auto inline-flex items-center gap-1 px-2 h-7 rounded-[var(--radius-sm)] text-[var(--accent)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             aria-label={t("reconnect")}
           >
             <RefreshCw size={12} />

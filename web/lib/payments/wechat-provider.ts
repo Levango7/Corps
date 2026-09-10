@@ -129,6 +129,11 @@ function rsaSha256Verify(publicKeyPem: string, data: string, signature: string):
   }
 }
 
+// R9D-07 修复：HMAC 回退警告用模块级布尔标志去重，避免每次签名/验签都刷一条
+// 相同的 warn 日志（高频回调场景下日志会被同一条警告淹没）。
+let hmacFallbackSignWarned = false;
+let hmacFallbackVerifyWarned = false;
+
 /**
  * S8 修复：请求签名调度——有 RSA 私钥用 RSA-SHA256，否则回退 HMAC-SHA256。
  * 生产环境必须配置 WECHAT_PRIVATE_KEY_PEM，否则签名无法通过微信 V3 验签。
@@ -138,9 +143,13 @@ function signRequest(data: string): string {
     return rsaSha256Sign(WECHAT_PRIVATE_KEY_PEM, data);
   }
   // HMAC 回退（仅沙箱/测试）：未配置 RSA 私钥时用 APIv3 密钥做 HMAC
-  console.warn(
-    "[wechat] RSA private key not configured, falling back to HMAC. This is only safe for sandbox/testing.",
-  );
+  // R9D-07：模块级布尔标志去重，仅首次回退时警告一次
+  if (!hmacFallbackSignWarned) {
+    hmacFallbackSignWarned = true;
+    console.warn(
+      "[wechat] RSA private key not configured, falling back to HMAC. This is only safe for sandbox/testing.",
+    );
+  }
   if (!WECHAT_API_KEY) {
     throw new PaymentProviderError(
       "微信支付签名密钥未配置（需 WECHAT_PRIVATE_KEY_PEM 用于 RSA-SHA256，或 WECHAT_API_KEY 用于 HMAC 回退）",
@@ -159,9 +168,13 @@ function verifyCallback(data: string, signature: string): boolean {
     return rsaSha256Verify(WECHAT_PLATFORM_PUBLIC_KEY_PEM, data, signature);
   }
   // HMAC 回退（仅沙箱/测试）
-  console.warn(
-    "[wechat] RSA platform public key not configured, falling back to HMAC verify. This is only safe for sandbox/testing.",
-  );
+  // R9D-07：模块级布尔标志去重，仅首次回退时警告一次
+  if (!hmacFallbackVerifyWarned) {
+    hmacFallbackVerifyWarned = true;
+    console.warn(
+      "[wechat] RSA platform public key not configured, falling back to HMAC verify. This is only safe for sandbox/testing.",
+    );
+  }
   if (!WECHAT_API_KEY) return false;
   return hmacSha256Verify(WECHAT_API_KEY, data, signature);
 }

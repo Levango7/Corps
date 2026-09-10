@@ -67,7 +67,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
       onClick={onClose}
     >
       <div
-        className="max-w-[85vw] w-full sm:max-w-3xl max-h-[85vh] flex flex-col rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] overflow-hidden"
+        className="max-w-[85vw] w-full sm:max-w-3xl max-h-[85dvh] flex flex-col rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] overflow-hidden"
         onClick={(e) => e.stopPropagation()}
       >
         {/* 头部：文件名 + 下载 + 关闭 */}
@@ -79,7 +79,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
           <a
             href={attachment.url}
             download={attachment.fileName}
-            className="shrink-0 inline-flex items-center gap-1 px-2 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+            className="shrink-0 inline-flex items-center gap-1 px-2 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             aria-label={t("download")}
           >
             <Download size={13} />
@@ -88,7 +88,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
             ref={closeBtnRef}
             onClick={onClose}
             aria-label={t("close")}
-            className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"
+            className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
           >
             <X size={15} />
           </button>
@@ -107,7 +107,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
             <iframe
               src={attachment.url}
               title={attachment.fileName}
-              className="w-full h-full min-h-[70vh]"
+              className="w-full h-full min-h-[70dvh]"
             />
           ) : (
             <div className="flex flex-col items-center justify-center gap-3 py-16 text-[var(--muted)]">
@@ -116,7 +116,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
               <a
                 href={attachment.url}
                 download={attachment.fileName}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
               >
                 <Download size={14} />
                 {t("download")}

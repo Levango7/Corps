@@ -1,7 +1,7 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
-import { useRouter } from "@/lib/i18n-navigation";
+import { use, useCallback, useEffect, useRef, useState } from "react";
+
 import {
   Calendar as CalendarIcon,
   Check,
@@ -54,7 +54,7 @@ function saveSyncSettings(wid: string, s: SyncSettings): void {
 
 export default function CalendarSettingsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
-  const router = useRouter();
+
   const t = useTranslations("calendar");
   const tTime = useTranslations("time");
   const { toast } = useToast();
@@ -75,6 +75,8 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
     kind: "success" | "error";
     text: string;
   } | null>(null);
+  // R9B-09：存储同步消息自动清除的 timeout ID，组件卸载时清理避免在已卸载组件上 setState
+  const syncMsgTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -108,6 +110,13 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
     }
   }, [load, t, wid]);
 
+  // R9B-09：组件卸载时清理 syncMsg 自动清除的 timeout，避免在已卸载组件上调用 setSyncMsg
+  useEffect(() => {
+    return () => {
+      if (syncMsgTimerRef.current) clearTimeout(syncMsgTimerRef.current);
+    };
+  }, []);
+
   function updateSyncSettings(patch: Partial<SyncSettings>) {
     setSyncSettings((prev) => {
       const next = { ...prev, ...patch };
@@ -118,8 +127,8 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
 
   /** 发起 OAuth 连接 */
   function handleConnect(provider: string) {
-    // 重定向到 OAuth 授权端点
-    router.push(`/api/v1/auth/calendar/connect/${provider}?wid=${encodeURIComponent(wid)}`);
+    // 重定向到 OAuth 授权端点：OAuth 回调需整页跳转，router.push 不会触发浏览器顶层导航
+    window.location.href = `/api/v1/auth/calendar/connect/${provider}?wid=${encodeURIComponent(wid)}`;
   }
 
   /** 断开连接 */
@@ -156,7 +165,12 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
         setSyncMsg({ kind: "error", text: `${t("syncFailed")}: ${res.error ?? ""}` });
       }
       await load();
-      setTimeout(() => setSyncMsg(null), 3000);
+      // R9B-09：清理上一个未触发的 timer，再用 ref 存储新 timer ID，便于组件卸载时清理
+      if (syncMsgTimerRef.current) clearTimeout(syncMsgTimerRef.current);
+      syncMsgTimerRef.current = setTimeout(() => {
+        setSyncMsg(null);
+        syncMsgTimerRef.current = null;
+      }, 3000);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("syncFailed"));
     } finally {

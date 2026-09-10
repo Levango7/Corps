@@ -397,7 +397,7 @@ export function MarkdownToolbar({ textareaRef, value, onChange, disabled }: Mark
                       setDiagramOpen(false);
                       insert("```mermaid\n" + d.code + "```\n");
                     }}
-                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"
+                    className="w-full flex items-center gap-2 px-3 py-1.5 text-left text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
                   >
                     <Icon size={14} className="shrink-0 text-[var(--muted)]" />
                     {d.label}

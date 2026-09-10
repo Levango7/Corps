@@ -69,10 +69,12 @@ export async function withDbRetry<T>(fn: () => Promise<T>): Promise<T> {
       return await fn();
     } catch (error) {
       lastError = error;
-      // 仅在连接级错误重试（P1001: Can't reach database server, P1002: Database kind wrong）
+      // 仅在连接级错误重试（P1001: Can't reach database server, P1002: Database kind wrong,
+      // P1008: Timed out fetching connection from pool——R9D-04 补充，
+      // 连接池耗尽/瞬断同样属于可重试的连接级错误）
       const isConnectionError =
         error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === "P1001" || error.code === "P1002");
+        (error.code === "P1001" || error.code === "P1002" || error.code === "P1008");
       if (!isConnectionError || attempt === DB_RETRY_MAX) {
         throw error;
       }

@@ -158,7 +158,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
             ref={firstFocusableRef}
             onClick={onClose}
             aria-label={te("close") || "Close"}
-            className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"
+            className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
           >
             <X size={16} />
           </button>
@@ -172,7 +172,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
               type="button"
               onClick={() => pickKind(dKey)}
               aria-pressed={kind === dKey}
-              className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors ${
+              className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors duration-[var(--motion-fast)] ${
                 kind === dKey
                   ? "bg-[var(--accent)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)]"
                   : "text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
@@ -219,7 +219,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
                   toast("error", t("copyFailed"));
                 }
               }}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             >
               {copied ? <Check size={14} /> : <Copy size={14} />}
               {copied ? t("copied") : t("copy")}
@@ -232,7 +232,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
                 onClose();
               }}
               disabled={!code.trim()}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
             >
               <ArrowDownToLine size={14} />
               {t("insert")}

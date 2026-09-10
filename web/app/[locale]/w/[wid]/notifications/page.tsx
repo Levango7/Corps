@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
-import { useToast } from "@/components/Toast";
+
 import { useTranslations } from "next-intl";
 
 type NotificationType =
@@ -101,7 +101,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
   const tNotif = useTranslations("notifications");
   const tTime = useTranslations("time");
   const tErr = useTranslations("error");
-  const { toast } = useToast();
+
   const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -171,8 +171,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
         method: "PATCH",
         body: JSON.stringify({ id: n.id }),
       }).catch(() => {
-        // 标记已读失败：提示用户，下次进入页面会重新加载纠正
-        toast("error", tErr("networkConnectFailed"));
+        // 标记已读失败：router.push 已先执行导航，toast 在新页面弹出会误导用户，降级为 console.warn
+        console.warn("openNotification: 标记已读失败，下次进入页面会重新加载纠正");
       });
     }
     const target = `/w/${wid}/task/${n.entityId}`;
@@ -203,7 +203,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
         <div
           role="tablist"
           aria-label={tNotif("filterAria")}
-          className="inline-flex p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)]"
+          className="inline-flex flex-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden p-0.5 bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)]"
         >
           {FILTER_TABS.map((tab) => (
             <button

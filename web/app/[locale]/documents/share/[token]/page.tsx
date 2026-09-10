@@ -50,13 +50,13 @@ function ShareClient({ params }: { params: Promise<{ token: string }> }) {
 
   if (error) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center text-[var(--muted)]">
+      <div className="min-h-[50dvh] flex items-center justify-center text-[var(--muted)]">
         {error}
       </div>
     );
   }
   if (!data) {
-    return <div className="min-h-[50vh]" />;
+    return <div className="min-h-[50dvh]" />;
   }
   return (
     <PublicDocumentView

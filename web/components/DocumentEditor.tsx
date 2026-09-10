@@ -316,7 +316,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
       {/* 编辑/预览/分屏 */}
       {preview ? (
-        <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-6)] min-h-[60vh]">
+        <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-6)] min-h-[60dvh]">
           <Markdown source={markdown} />
         </div>
       ) : split ? (
@@ -332,10 +332,10 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               onKeyDown={handleKeyDown}
               onBlur={() => save()}
               placeholder={t("markdownPlaceholder")}
-              className="w-full h-[60vh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
+              className="w-full h-[60dvh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
             />
           </div>
-          <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] min-h-[60vh] overflow-y-auto lg:max-h-[calc(60vh+2rem)]">
+          <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] min-h-[60dvh] overflow-y-auto lg:max-h-[calc(60dvh+2rem)]">
             <Markdown source={markdown} />
           </div>
         </div>
@@ -351,7 +351,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onKeyDown={handleKeyDown}
             onBlur={() => save()}
             placeholder={t("markdownPlaceholder")}
-            className="w-full h-[60vh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
+            className="w-full h-[60dvh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
           />
         </>
       )}

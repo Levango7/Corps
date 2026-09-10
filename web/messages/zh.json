@@ -651,6 +651,7 @@
     "filterLabel": "里程碑",
     "filterAll": "全部",
     "filterUnassigned": "未归入里程碑",
+    "filterError": "加载失败",
     "empty": "暂无里程碑",
     "taskCount": "{count} 个任务"
   },

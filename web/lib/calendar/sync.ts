@@ -183,7 +183,13 @@ export async function syncTaskToCalendar(
         }),
       );
       if (existing && Date.now() - existing.lastSyncedAt.getTime() < SYNC_DEBOUNCE_MS) {
-        return { success: true, syncedConnections: 0 };
+        // R9D-05 修复：时钟回拨保护——若 lastSyncedAt 在未来（Date.now() < lastSyncedAt），
+        // 差值为负，负数 < SYNC_DEBOUNCE_MS 恒为 true，会导致 debounce 永久跳过同步。
+        // 此处显式判断：差值 < 0（时钟回拨）时不跳过，放行同步。
+        const elapsed = Date.now() - existing.lastSyncedAt.getTime();
+        if (elapsed >= 0 && elapsed < SYNC_DEBOUNCE_MS) {
+          return { success: true, syncedConnections: 0 };
+        }
       }
     }
 
@@ -300,6 +306,11 @@ export async function syncTaskToCalendar(
             );
           } catch (compensateErr) {
             // 补偿也失败：孤儿事件残留，记日志供对账任务清理
+            // R9D-09 / TODO: 需要一个独立的对账任务（reconciliation job）定期扫描
+            //   外部日历事件与本地 task_calendar_events 映射表，清理孤儿事件。
+            //   对账任务应：(1) 按 connectionId 列出外部日历事件；(2) 与本地映射 join；
+            //   (3) 对外部有但本地无的事件，按策略删除或标记待人工处理。
+            //   当前仅记日志，孤儿事件会残留在外部日历中（用户可见但系统不可控）。
             console.error(
               `[calendar-sync] S4 补偿删除外部事件失败，产生孤儿: connectionId=${connectionId} externalEventId=${externalEventId}`,
               compensateErr,
@@ -363,6 +374,15 @@ export async function syncTaskToAllCalendars(
     userId,
   );
   if (connections.length === 0) return { success: true, syncedConnections: 0 };
+  // R9D-14 修复：连接数达到 take 上限时 console.warn，提示可能存在异常数据堆积
+  // （正常单用户连接数 ≤ provider 数 = 2，上限 20 留足余量；达到上限说明
+  // 可能存在历史脏数据或 provider 配置变更后未清理的连接）
+  if (connections.length === SYNC_CONNECTIONS_LIMIT) {
+    console.warn(
+      `[syncTaskToAllCalendars] 用户 ${userId} 的日历连接数达到 take 上限 ` +
+        `${SYNC_CONNECTIONS_LIMIT}，可能存在异常数据堆积，请检查并清理多余连接`,
+    );
+  }
 
   let synced = 0;
   let lastError: string | undefined;

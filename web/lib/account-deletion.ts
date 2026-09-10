@@ -211,7 +211,15 @@ export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces
         userId,
       );
     } catch (err) {
-      console.error("[account-deletion] Failed to delete workspace:", ws.id, err);
+      // R9D-15 修复：步骤3 catch 中添加结构化重试记录——包含 userId、workspaceId、
+      // 错误类型与消息，便于排障时定位哪个工作区删除失败、是否需要人工重试。
+      // 原日志仅打印 ws.id 和 err 对象，缺少 userId 关联与错误结构化信息。
+      console.error(
+        `[account-deletion] 步骤3 删除工作区失败（将跳过，后续步骤4会兜底重试）: ` +
+          `userId=${userId} workspaceId=${ws.id} ` +
+          `errorType=${err instanceof Error ? err.constructor.name : typeof err} ` +
+          `errorMessage=${err instanceof Error ? err.message : String(err)}`,
+      );
     }
   }
 

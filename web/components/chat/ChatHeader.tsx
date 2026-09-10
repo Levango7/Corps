@@ -70,6 +70,14 @@ export function ChatHeader({
           type="text"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
+          onKeyDown={(e) => {
+            // R9B-06：Escape 关闭搜索框并清空
+            if (e.key === "Escape") {
+              e.preventDefault();
+              onSearchChange("");
+              onToggleSearch();
+            }
+          }}
           placeholder={t("search")}
           autoFocus
           className="w-full h-9 px-[var(--space-3)] mb-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"

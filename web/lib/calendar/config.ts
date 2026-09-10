@@ -115,7 +115,17 @@ function getStateSecret(): string {
   const raw = process.env[STATE_ENV_KEY];
   if (raw) return raw;
   // 复用 JWT_ACCESS_SECRET 作为回退（开发环境）
-  return process.env.JWT_ACCESS_SECRET ?? "dev-only-state-secret-do-not-use-in-prod";
+  const fallback = process.env.JWT_ACCESS_SECRET;
+  if (fallback) return fallback;
+  // R9D-01 修复：生产环境环境变量缺失时抛错而非回退硬编码，
+  // 避免生产环境用弱密钥签名 state 导致 CSRF 防护失效。
+  if (process.env.NODE_ENV === "production") {
+    throw new Error(
+      `[calendar/config] 生产环境必须配置 ${STATE_ENV_KEY} 或 JWT_ACCESS_SECRET，` +
+        `当前均未设置——拒绝回退到硬编码弱密钥（CSRF 防护会失效）`,
+    );
+  }
+  return "dev-only-state-secret-do-not-use-in-prod";
 }
 
 /** state 载荷：userId + PKCE verifier + 回跳 wid */
@@ -154,6 +164,9 @@ export function verifyState(state: string, maxAgeSeconds = 600): CalendarStatePa
     ) as CalendarStatePayload;
     // 校验基本字段 + 时效
     if (typeof payload.userId !== "string" || typeof payload.verifier !== "string") return null;
+    // R9D-02 修复：校验 iat 类型，避免 payload.iat 为 undefined/string 时
+    // 算术运算产生 NaN 导致时效判定失效（NaN > maxAgeSeconds 恒为 false，永不过期）
+    if (typeof payload.iat !== "number") return null;
     if (Date.now() / 1000 - payload.iat > maxAgeSeconds) return null;
     return payload;
   } catch {

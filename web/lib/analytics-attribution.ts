@@ -73,13 +73,25 @@ export function captureLandingAttribution(): {
   return props;
 }
 
-/** 模块级 Set 记录已上报 path，SPA 内跳转去重（每 sid 每路径会话内至多一条）。 */
-const reported = new Set<string>();
+/**
+ * R8D-11 / R9D-11 修复：reported 改为 Map<path, timestamp>，按时间戳过期清理。
+ * 原实现用 Set + 10 分钟全量 clear，问题：clear 会把当前会话内已上报的 path 也清掉，
+ * 导致 SPA 内跳回已访问过的公开页时重复打 landing_view 事件（违反"每 sid 每路径会话内
+ * 至多一条"约束）。改为按时间戳过期：仅清理超过 TTL 的条目，近期条目保留，
+ * 既防内存泄漏又不破坏会话内去重语义。
+ */
+const REPORTED_TTL_MS = 30 * 60 * 1000; // 30 分钟过期（与 session TTL 对齐）
+const reported = new Map<string, number>();
 
-// R8D-11：定期清理 reported Set，防止内存泄漏（SPA 长时间运行时 path 不断累积）
+// R8D-11：定期清理 reported Map 中过期条目，防止内存泄漏
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
-    reported.clear();
+    const now = Date.now();
+    for (const [path, ts] of reported) {
+      if (now - ts > REPORTED_TTL_MS) {
+        reported.delete(path);
+      }
+    }
   }, 10 * 60 * 1000).unref?.(); // unref 避免阻止进程退出
 }
 
@@ -93,7 +105,7 @@ export function PublicPageTracker(): null {
   useEffect(() => {
     if (!isPublicRoute(pathname)) return;
     if (reported.has(pathname)) return;
-    reported.add(pathname);
+    reported.set(pathname, Date.now());
     track("landing_view", captureLandingAttribution());
   }, [pathname]);
 

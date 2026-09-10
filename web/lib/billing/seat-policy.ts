@@ -50,8 +50,10 @@ export async function evaluateSeatGate(
  * 尽力而为：通道侧同步失败仅记日志，本地席位口径已生效。
  */
 export async function expandProSeatsAfterJoin(wid: string): Promise<void> {
+  // R9D-08：将 outcome 声明移到 try 外，catch 中可安全引用（可能为 undefined）
+  let outcome: { count: number; provider: string | null; stripeSubId: string | null } | undefined;
   try {
-    const outcome = await runWithWorkspace(wid, async (tx) => {
+    outcome = await runWithWorkspace(wid, async (tx) => {
       const count = await tx.member.count({ where: { workspaceId: wid } });
       await tx.workspace.update({ where: { id: wid }, data: { seatLimit: count } });
       const sub = await tx.subscription.findUnique({
@@ -68,6 +70,13 @@ export async function expandProSeatsAfterJoin(wid: string): Promise<void> {
       });
     }
   } catch (err) {
-    console.error("[seat-policy] expand pro seats failed (non-blocking):", err);
+    // R9D-08 修复：添加结构化日志记录不一致——包含 wid、seatLimit、provider 等上下文，
+    // 便于排障时定位是哪个工作区的席位同步失败。原日志仅打印 err 对象，缺少业务上下文。
+    console.error(
+      `[seat-policy] expand pro seats failed (non-blocking): wid=${wid} ` +
+        `seatLimit=${outcome?.count ?? "unknown"} provider=${outcome?.provider ?? "unknown"} ` +
+        `stripeSubId=${outcome?.stripeSubId ?? "none"}`,
+      err instanceof Error ? err.message : err,
+    );
   }
 }

@@ -414,7 +414,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
             if (e.target === e.currentTarget) closeAi();
           }}
         >
-          <div className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden max-h-[85vh] flex flex-col">
+          <div className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden max-h-[85dvh] flex flex-col">
             <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between">
               <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] flex items-center gap-2">
                 <Sparkles size={16} className="text-[var(--accent)]" />

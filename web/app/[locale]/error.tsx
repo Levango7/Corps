@@ -35,7 +35,7 @@ export default function RouteError({
     <div
       role="alert"
       aria-live="assertive"
-      className="min-h-[60vh] flex items-center justify-center px-[var(--space-4)]"
+      className="min-h-[60dvh] flex items-center justify-center px-[var(--space-4)]"
     >
       <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-6)] text-center">
         <AlertTriangle size={40} className="mx-auto text-[var(--danger)] mb-4" strokeWidth={1.5} />

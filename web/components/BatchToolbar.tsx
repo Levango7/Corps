@@ -195,7 +195,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
           }}
           disabled={busy}
           title={busy ? t("batchUpdateFailed") : undefined}
-          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           aria-label={t("batchStatusAria")}
           aria-expanded={statusOpen}
         >
@@ -218,7 +218,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                   onClick={() => handleStatus(s)}
                   disabled={busy}
                   title={busy ? t("batchUpdateFailed") : undefined}
-                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                  className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 >
                   <Icon size={14} style={{ color: meta.color }} />
                   {tStatus(STATUS_LABEL_KEYS[s])}
@@ -238,7 +238,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
           }}
           disabled={busy}
           title={busy ? t("batchUpdateFailed") : undefined}
-          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+          className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           aria-label={t("batchPriorityAria")}
           aria-expanded={priorityOpen}
         >
@@ -258,7 +258,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
                 onClick={() => handlePriority(p)}
                 disabled={busy}
                 title={busy ? t("batchUpdateFailed") : undefined}
-                className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                className="w-full flex items-center gap-2 px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
               >
                 <Flag size={14} style={{ color: PRIORITY_COLORS[p] }} />
                 {tPriority(PRIORITY_LABEL_KEYS[p])}
@@ -273,9 +273,9 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
         onClick={handleDelete}
         disabled={busy}
         title={busy ? t("batchDeleteFailed") : confirmDelete ? t("batchDeleteConfirm", { count: selectedIds.length }) : undefined}
-        className={`flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+        className={`flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
           confirmDelete
-            ? "bg-[var(--danger)] text-[var(--danger-fg)] font-[weight:var(--weight-medium)] animate-pulse"
+            ? "bg-[var(--danger)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)] animate-pulse"
             : "text-[var(--danger)] hover:bg-[var(--danger-soft)]"
         }`}
         aria-label={t("batchDeleteAria")}
@@ -292,7 +292,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
         onClick={onClear}
         disabled={busy}
         title={busy ? t("batchUpdateFailed") : undefined}
-        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         aria-label={t("clearSelectionAria")}
       >
         <X size={14} />

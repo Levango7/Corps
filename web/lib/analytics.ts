@@ -174,6 +174,7 @@ export async function flush(): Promise<void> {
 
   // M14 修复：封装单次发送，失败时重试 1 次（总共 2 次尝试）
   const MAX_ATTEMPTS = 2;
+  let succeeded = false;
   try {
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
       try {
@@ -189,15 +190,26 @@ export async function flush(): Promise<void> {
           await new Promise((r) => setTimeout(r, 1000));
           continue;
         }
-        return; // 成功或最后一次尝试后返回
+        if (res.ok) succeeded = true;
+        break; // 成功或最后一次尝试后返回
       } catch {
         if (attempt < MAX_ATTEMPTS) {
           // 网络错误：等待 1s 后重试
           await new Promise((r) => setTimeout(r, 1000));
           continue;
         }
-        // 两次均失败：放弃（事件已出队，避免无限累积）
+        // 两次均失败：跳出循环，下方统一处理回队列
       }
+    }
+    // R9D-06 修复：两次尝试均失败时，将 batch unshift 回队列而非丢弃，
+    // 避免网络瞬断导致事件永久丢失。队列有 MAX_QUEUE_SIZE 硬上限防护内存。
+    if (!succeeded) {
+      // unshift 回队列头部，保持事件时序；若队列已满则丢弃尾部最旧事件
+      if (queue.length + batch.length > MAX_QUEUE_SIZE) {
+        const overflow = queue.length + batch.length - MAX_QUEUE_SIZE;
+        queue.splice(Math.max(0, queue.length - overflow), overflow);
+      }
+      queue.unshift(...batch);
     }
   } finally {
     flushing = false;

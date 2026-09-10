@@ -55,12 +55,12 @@ function SharedTaskClient({ params }: { params: Promise<{ token: string }> }) {
 
   if (error) {
     return (
-      <div className="min-h-[50vh] flex items-center justify-center text-[var(--muted)]">
+      <div className="min-h-[50dvh] flex items-center justify-center text-[var(--muted)]">
         {error}
       </div>
     );
   }
-  if (!data) return <div className="min-h-[50vh]" />;
+  if (!data) return <div className="min-h-[50dvh]" />;
 
   const done = data.children.filter((c) => c.status === "done").length;
   const total = data.children.length;

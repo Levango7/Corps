@@ -255,6 +255,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_WorkspaceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [workspaces]
       summary: Create a workspace
@@ -277,6 +279,8 @@ paths:
                 $ref: '#/components/schemas/Envelope_Workspace'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
 
   /api/v1/workspaces/{wid}:
     get:
@@ -314,6 +318,8 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     patch:
       tags: [workspaces]
       summary: Rename a workspace and/or change its slug (owner/admin)
@@ -362,6 +368,8 @@ paths:
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   # ===========================================================================
   # SEARCH
@@ -451,6 +459,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_TaskList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -493,8 +503,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_Task'
-        '401': { description: Unauthorized }
-        '404': { description: Task not found }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     patch:
       tags: [tasks]
       summary: Update a task (includes drag-to-change-status)
@@ -520,10 +534,14 @@ paths:
                 $ref: '#/components/schemas/Envelope_Task'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     delete:
       tags: [tasks]
       summary: Delete a task
@@ -538,10 +556,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_Null'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/tasks/batch:
     post:
@@ -672,6 +694,8 @@ paths:
                 $ref: '#/components/schemas/Envelope_InviteResult'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '402':
           $ref: '#/components/responses/PaymentRequired'
         '403':
@@ -857,7 +881,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_CommentList'
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
     post:
@@ -885,10 +910,14 @@ paths:
                 $ref: '#/components/schemas/Envelope_Comment'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     delete:
       tags: [comments]
       summary: Delete a comment
@@ -1005,10 +1034,14 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_TaskDecisionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [decisions]
       summary: Create a decision record (version 1)
@@ -1034,10 +1067,14 @@ paths:
                 $ref: '#/components/schemas/Envelope_Decision'
         '400':
           $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}:
     # Extension beyond Spec section 5 (GET/POST only) — added so AC-10 editing path
@@ -1347,6 +1384,10 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
         '501':
           $ref: '#/components/responses/PaymentNotConfigured'
 
@@ -1484,6 +1525,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [events]
       summary: "[DEV ONLY] List the current user's recent events"
@@ -1518,6 +1561,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorEnvelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   # ===========================================================================
   # SYSTEM / UPLOADS
@@ -1683,7 +1728,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_LabelList'
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [labels]
       summary: Create label (owner/admin)
@@ -1734,10 +1780,14 @@ paths:
                         code: { type: string }
                         message: { type: string }
                         path: { type: array, items: { type: string } }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
         '409':
           $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
     delete:
       tags: [labels]
       summary: Delete a label (owner/admin)
@@ -1821,7 +1871,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope'
+                $ref: '#/components/schemas/Envelope_Label'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -1849,7 +1899,8 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_MilestoneList'
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [milestones]
       summary: Create milestone (owner/admin)
@@ -1903,8 +1954,12 @@ paths:
                         code: { type: string }
                         message: { type: string }
                         path: { type: array, items: { type: string } }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
     delete:
       tags: [milestones]
       summary: Delete a milestone (owner/admin)
@@ -1988,7 +2043,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope'
+                $ref: '#/components/schemas/Envelope_Milestone'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2012,7 +2067,8 @@ paths:
       summary: List task chat messages (cursor ?since=)
       responses:
         '200': { description: Message list }
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
     post:
       tags: [messages]
       summary: Create message (legacy, no SSE emit)
@@ -2038,7 +2094,8 @@ paths:
       summary: SSE realtime event stream (message/read/presence/ping)
       responses:
         '200': { description: text/event-stream }
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
         '429':
@@ -2060,14 +2117,16 @@ paths:
       summary: Calendar sync status for workspace members
       responses:
         '200': { description: Status map }
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   /api/v1/workspaces/{wid}/calendar/sync:
     post:
       tags: [calendar]
       summary: Trigger calendar sync for current user
       responses:
         '200': { description: Sync accepted }
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/auth/calendar/connect/{provider}:
@@ -2176,11 +2235,12 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_DecisionList'
-        '401': { description: Unauthorized }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
 
-  /api/auth/request-password-reset:
+  /api/v1/auth/request-password-reset:
     post:
       tags: [auth]
       summary: Request a password reset email (Better Auth hosted)
@@ -2203,7 +2263,7 @@ paths:
         '200': { description: Accepted (anti-enumeration) }
         '429': { description: Rate limited }
 
-  /api/auth/reset-password:
+  /api/v1/auth/reset-password:
     post:
       tags: [auth]
       summary: Reset the password with a one-time token (Better Auth hosted)
@@ -2778,7 +2838,24 @@ components:
       content:
         application/json:
           schema:
-            $ref: '#/components/schemas/ErrorEnvelope'
+            type: object
+            required: [code, message]
+            properties:
+              code:
+                type: integer
+                example: 402
+              data:
+                oneOf:
+                  - type: 'null'
+                    description: No seat-limit context available (generic plan-upgrade prompt).
+                  - type: object
+                    properties:
+                      seatLimit:
+                        type: integer
+                        description: Current seat limit of the workspace (when exceeded).
+              message:
+                type: string
+                example: "seats are full; upgrade your plan to invite more members"
           example:
             code: 402
             data: null
@@ -3225,6 +3302,10 @@ components:
           format: email
         password:
           type: string
+        wid:
+          type: string
+          format: uuid
+          description: "工作区ID（可选）"
     # ---- auth responses (cookie-based: refresh token lives in Better Auth
     #      session cookie, never in the response body) ----
     # accessToken 通过 httpOnly access_token cookie 下发（15 min），不在响应体中暴露（防 XSS 窃取）

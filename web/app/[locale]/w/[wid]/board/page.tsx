@@ -349,7 +349,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   if (selectionMode) setSelectedIds(new Set());
                 }}
                 aria-pressed={selectionMode}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                   selectionMode
                     ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                     : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--fg)]"
@@ -361,7 +361,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
               <button
                 onClick={() => setShowNew(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <Plus size={16} />
                 {t("create")}
@@ -460,7 +460,7 @@ function BoardView(props: BoardViewProps) {
               key={col.id}
               onClick={() => setActiveColumn(col.id)}
               aria-pressed={activeColumn === col.id}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                 activeColumn === col.id
                   ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                   : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -548,7 +548,7 @@ function ListView(props: ListViewProps) {
           <button
             onClick={onPrevPage}
             disabled={safeListPage <= 1}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("prevPage")}
           >
             {t("prevPage")}
@@ -559,7 +559,7 @@ function ListView(props: ListViewProps) {
           <button
             onClick={onNextPage}
             disabled={safeListPage >= listTotalPages}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("nextPage")}
           >
             {t("nextPage")}

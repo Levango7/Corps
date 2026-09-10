@@ -677,7 +677,7 @@ export default function TaskDetailPage({
                         onClick={() => setQuickDiagramOpen(true)}
                         title={tQuick("title")}
                         aria-label={tQuick("title")}
-                        className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"
+                        className="shrink-0 inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
                       >
                         <Zap size={13} />
                         <span className="hidden sm:inline">{tQuick("title")}</span>
@@ -1031,13 +1031,13 @@ export default function TaskDetailPage({
                       toast("error", tErr("copyFailed"));
                     }
                   }}
-                  className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+                  className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
                   {shareCopied ? t("shareCopied") : t("shareCopy")}
                 </button>
                 <button
                   onClick={() => patch({ shareToken: null })}
-                  className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--danger)] transition-colors"
+                  className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
                 >
                   {t("shareRevoke")}
                 </button>
@@ -1045,7 +1045,7 @@ export default function TaskDetailPage({
             ) : (
               <button
                 onClick={() => patch({ shareToken: "rotate" })}
-                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+                className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
               >
                 <Share2 size={13} />
                 {t("shareGenerate")}

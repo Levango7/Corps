@@ -26,7 +26,7 @@ export default async function LocaleNotFound({ params }: { params: Promise<{ loc
     <div
       role="alert"
       aria-live="assertive"
-      className="min-h-[60vh] flex items-center justify-center px-[var(--space-4)]"
+      className="min-h-[60dvh] flex items-center justify-center px-[var(--space-4)]"
     >
       <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-6)] text-center">
         {/* 品牌 Logo */}

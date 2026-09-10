@@ -110,10 +110,11 @@ export function MessageList({
   }, [groups, searchQuery, t]);
 
   // 滚动到底部
-  const scrollToBottom = useCallback(() => {
+  // R9B-07：instant=true 时用 auto 行为（无动画），用于首次加载避免平滑滚动闪烁
+  const scrollToBottom = useCallback((instant?: boolean) => {
     const el = listRef.current;
     if (el) {
-      el.scrollTo({ top: el.scrollHeight, behavior: "smooth" });
+      el.scrollTo({ top: el.scrollHeight, behavior: instant ? "auto" : "smooth" });
     }
   }, []);
 
@@ -148,10 +149,12 @@ export function MessageList({
     }
   }, [messages.length, scrollToBottom]);
 
-  // 首次加载滚动到底部
+  // 首次加载滚动到底部（R9B-07：用 instant=true 避免平滑滚动闪烁）
+  const initialScrollDoneRef = useRef(false);
   useEffect(() => {
-    if (!loading && messages.length > 0) {
-      scrollToBottom();
+    if (!loading && messages.length > 0 && !initialScrollDoneRef.current) {
+      initialScrollDoneRef.current = true;
+      scrollToBottom(true);
     }
   }, [loading, messages.length, scrollToBottom]);
 

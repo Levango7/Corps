@@ -194,6 +194,9 @@ export function isEmailConfigured(): boolean {
   return !!process.env.RESEND_API_KEY;
 }
 
+// R9D-13：生产环境 from 缺省值警告去重标志，避免每封邮件都刷一条相同的 warn
+let fromDefaultWarned = false;
+
 /**
  * 通过 Resend HTTP API 发送邮件的底层函数。
  * 失败尽力而为：任何错误只记 console.error，不抛出。
@@ -212,6 +215,25 @@ async function sendViaResend(opts: {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000);
     try {
+      // docker-compose.yml / .env.example 定义的变量名是 EMAIL_FROM；
+      // MAIL_FROM 为历史兼容（email.ts 旧版曾读此名），优先级低于 EMAIL_FROM
+      const from =
+        process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app";
+      // R9D-13 修复：生产环境 from 缺省值（未配置 EMAIL_FROM / MAIL_FROM）时
+      // console.warn，避免生产环境用硬编码 noreply@corps.app 发邮件导致
+      // SPF/DKIM 校验失败、邮件被判垃圾或发件人不可达。模块级标志去重，仅警告一次。
+      if (
+        !fromDefaultWarned &&
+        process.env.NODE_ENV === "production" &&
+        !process.env.EMAIL_FROM &&
+        !process.env.MAIL_FROM
+      ) {
+        fromDefaultWarned = true;
+        console.warn(
+          "[email] 生产环境未配置 EMAIL_FROM / MAIL_FROM，使用缺省发件人 noreply@corps.app，" +
+            "可能导致 SPF/DKIM 校验失败或邮件被判垃圾，请配置 EMAIL_FROM 环境变量",
+        );
+      }
       const res = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -219,9 +241,7 @@ async function sendViaResend(opts: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          // docker-compose.yml / .env.example 定义的变量名是 EMAIL_FROM；
-          // MAIL_FROM 为历史兼容（email.ts 旧版曾读此名），优先级低于 EMAIL_FROM
-          from: process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app",
+          from,
           to: opts.to,
           subject: opts.subject,
           html: opts.html,

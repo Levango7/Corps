@@ -48,6 +48,10 @@ interface WindowEntry {
   windowStart: number;
   /** 窗口内已累计的请求数 */
   count: number;
+  /** R9D-12 修复：该 entry 所属限流规则的窗口时长（ms）。
+   * 清理时用 entry 自身的 windowMs 判断过期，而非当前调用方传入的 windowMs，
+   * 避免跨 bucket（不同 windowMs）混合清理时误删未过期条目或残留已过期条目。 */
+  windowMs: number;
 }
 
 /** 内存上限防护阈值：超过此数量的 key 触发一次过期清扫 */
@@ -209,13 +213,15 @@ function hitMemoryStore(key: string, max: number, windowMs: number): RateLimitRe
   const now = Date.now();
 
   // M-04 修复：O(n) 清理改为定期执行（每 CLEANUP_INTERVAL_MS 一次），
-  // 避免每次请求 size 超上限都触发全量扫描。清理使用各 entry 自身的
-  // windowMs 判断过期（取调用方 windowMs 作为近似——限流规则同一 bucket
-  // 的 windowMs 固定，跨 bucket 差异仅影响清理精度，不影响正确性）。
+  // 避免每次请求 size 超上限都触发全量扫描。
+  // R9D-12 修复：清理时用各 entry 自身的 windowMs 判断过期，而非当前调用方
+  // 传入的 windowMs。原实现用调用方 windowMs 会导致跨 bucket（不同窗口时长）
+  // 混合清理时误判：长窗口的 entry 被短窗口的 windowMs 判为过期而误删，
+  // 或短窗口的 entry 被长窗口的 windowMs 判为未过期而残留。
   if (now - lastCleanup >= CLEANUP_INTERVAL_MS) {
     lastCleanup = now;
     for (const [k, entry] of memoryStore) {
-      if (now - entry.windowStart >= windowMs) {
+      if (now - entry.windowStart >= entry.windowMs) {
         memoryStore.delete(k);
       }
     }
@@ -237,7 +243,8 @@ function hitMemoryStore(key: string, max: number, windowMs: number): RateLimitRe
   const entry = memoryStore.get(key);
   if (!entry || now - entry.windowStart >= windowMs) {
     // 新窗口（或无记录）：重新计数并放行
-    memoryStore.set(key, { windowStart: now, count: 1 });
+    // R9D-12：记录 entry 自身的 windowMs，供清理时按各自窗口判断过期
+    memoryStore.set(key, { windowStart: now, count: 1, windowMs });
     return { ok: true, retryAfterSec: 0 };
   }
 

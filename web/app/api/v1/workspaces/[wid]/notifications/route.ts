@@ -128,7 +128,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "invalidParams"), data: null },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "invalidParams"), data: null, errors: error.errors },
         { status: 400 },
       );
     }
