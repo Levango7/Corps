@@ -75,7 +75,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ]),
     );
 
-    return NextResponse.json({ code: 200, data: { notifications, total, page, limit } });
+    // R8C-06：统一分页响应格式 { code, data: { items, page, limit, total, hasMore } }
+    return NextResponse.json({
+      code: 200,
+      data: { items: notifications, page, limit, total, hasMore: page * limit < total },
+    });
   } catch (error) {
     console.error("[GET notifications] error:", error);
     return NextResponse.json(

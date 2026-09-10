@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
 import { Skeleton } from "@/components/Skeleton";
+import QRCode from "qrcode";
 
 type Plan = "free" | "pro";
 type PaymentMethod = "card" | "wechat" | "alipay";
@@ -111,7 +112,9 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   const [billingPeriod, setBillingPeriod] = useState<"monthly" | "yearly">("monthly");
   // 微信二维码模态框状态
   const [wechatQr, setWechatQr] = useState<{ url: string; orderId: string } | null>(null);
-  // �轮询定时器引用
+  // R8B-06：本地生成的 QR 码 Data URL（替代外部 api.qrserver.com，避免订单 code_url 发送第三方）
+  const [qrDataUrl, setQrDataUrl] = useState<string>("");
+  // 轮询定时器引用
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const justPaid = search.get("success") === "1";
@@ -151,6 +154,17 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       document.body.style.overflow = prevOverflow;
       document.removeEventListener("keydown", onKeyDown);
     };
+  }, [wechatQr]);
+
+  // R8B-06：wechatQr 变化时本地生成 QR 码 Data URL（替代外部 api.qrserver.com）
+  useEffect(() => {
+    if (!wechatQr) {
+      setQrDataUrl("");
+      return;
+    }
+    QRCode.toDataURL(wechatQr.url, { width: 240, margin: 1 })
+      .then(setQrDataUrl)
+      .catch(() => setQrDataUrl(""));
   }, [wechatQr]);
 
   async function upgrade(plan: Plan) {
@@ -608,24 +622,26 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               </button>
             </div>
             <div className="flex flex-col items-center">
-              {/* 二维码渲染：使用在线 API 生成（生产环境建议替换为本地 QR 码库） */}
-              {/* M8 修复：加 referrerPolicy="no-referrer" 防止泄露 referrer；onError 兜底 */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- 外部二维码服务，next/image 无法代理 */}
-              <img
-                src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(wechatQr.url)}`}
-                alt={t("wechatQr")}
-                width={240}
-                height={240}
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-                className="rounded-[var(--radius-md)]"
-                onError={(e) => {
-                  const img = e.currentTarget;
-                  img.style.display = "none";
-                  const fallback = img.nextElementSibling as HTMLElement | null;
-                  if (fallback) fallback.style.display = "block";
-                }}
-              />
+              {/* R8B-06：本地生成 QR 码（qrcode npm 包），避免订单 code_url 发送第三方 API */}
+              {/* M8 修复：保留 onError 兜底；referrerPolicy/crossOrigin 对 Data URL 无害但保留 */}
+              {/* eslint-disable-next-line @next/next/no-img-element -- 本地生成的 QR Data URL，next/image 无需代理 */}
+              {qrDataUrl && (
+                <img
+                  src={qrDataUrl}
+                  alt={t("wechatQr")}
+                  width={240}
+                  height={240}
+                  referrerPolicy="no-referrer"
+                  crossOrigin="anonymous"
+                  className="rounded-[var(--radius-md)]"
+                  onError={(e) => {
+                    const img = e.currentTarget;
+                    img.style.display = "none";
+                    const fallback = img.nextElementSibling as HTMLElement | null;
+                    if (fallback) fallback.style.display = "block";
+                  }}
+                />
+              )}
               {/* QR 加载失败兜底：显示链接文本 */}
               <p
                 className="hidden mt-0 p-4 text-[length:var(--text-sm)] text-[var(--fg-2)] text-center break-all"

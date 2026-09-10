@@ -45,20 +45,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ctx.payload.sub,
     );
 
+    // R8C-06：统一分页响应格式 { code, data: { items, page, limit, total, hasMore } }
     return NextResponse.json({
       code: 200,
-      data: members.map((m) => ({
-        id: m.user.id,
-        email: m.user.email,
-        name: m.user.name,
-        image: m.user.image,
-        role: m.role,
-        isSelf: m.user.id === ctx.payload.sub,
-        joinedAt: m.joinedAt,
-      })),
-      total,
-      page,
-      limit,
+      data: {
+        items: members.map((m) => ({
+          id: m.user.id,
+          email: m.user.email,
+          name: m.user.name,
+          image: m.user.image,
+          role: m.role,
+          isSelf: m.user.id === ctx.payload.sub,
+          joinedAt: m.joinedAt,
+        })),
+        page,
+        limit,
+        total,
+        hasMore: page * limit < total,
+      },
     });
   } catch (error) {
     console.error("[GET members] error:", error);

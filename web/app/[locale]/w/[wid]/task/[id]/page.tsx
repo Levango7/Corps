@@ -278,15 +278,15 @@ export default function TaskDetailPage({
       const [t, c, d, m] = await Promise.all([
         api<Task>(`${base}/tasks/${id}`),
         api<Comment[]>(`${base}/tasks/${id}/comments`),
-        api<Decision[]>(`${base}/tasks/${id}/decisions`),
-        api<Person[]>(`${base}/members`),
+        api<{ items: Decision[]; total: number; hasMore: boolean }>(`${base}/tasks/${id}/decisions`),
+        api<{ items: Person[]; total: number; hasMore: boolean }>(`${base}/members`),
       ]);
       setTask(t);
       setTitleDraft(t.title);
       setDescDraft(t.description ?? "");
       setComments(c);
-      setDecisions(d);
-      setMembers(m);
+      setDecisions(d.items);
+      setMembers(m.items);
     } catch (e) {
       setError(e instanceof Error ? e.message : tErr("loadFailed"));
     } finally {

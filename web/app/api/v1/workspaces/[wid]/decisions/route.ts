@@ -36,7 +36,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   try {
     const url = new URL(req.url);
     const q = url.searchParams.get("q")?.trim() || "";
-    const { limit, skip } = parsePagination(url);
+    const { page, limit, skip } = parsePagination(url);
 
     // 公共 where 子句：限定工作区 + 可选 markdown ilike
     const where = {
@@ -81,7 +81,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       updatedAt: d.updatedAt,
     }));
 
-    return NextResponse.json({ code: 200, data: { decisions, total } });
+    // R8C-06：统一分页响应格式 { code, data: { items, page, limit, total, hasMore } }
+    return NextResponse.json({
+      code: 200,
+      data: { items: decisions, page, limit, total, hasMore: page * limit < total },
+    });
   } catch (error) {
     console.error("[GET decisions] error:", error);
     return NextResponse.json(

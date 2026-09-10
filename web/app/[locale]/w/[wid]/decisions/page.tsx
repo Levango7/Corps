@@ -36,8 +36,11 @@ interface Decision {
 }
 
 interface DecisionsResp {
-  decisions: Decision[];
+  items: Decision[];
+  page: number;
+  limit: number;
   total: number;
+  hasMore: boolean;
 }
 
 const PAGE_SIZE = 20;
@@ -176,7 +179,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
           signal: controller.signal,
         });
         setTotal(resp.total);
-        setDecisions((prev) => (append ? [...prev, ...resp.decisions] : resp.decisions));
+        setDecisions((prev) => (append ? [...prev, ...resp.items] : resp.items));
       } catch (e) {
         setError(e instanceof Error ? e.message : t("loadFailed"));
         if (!append) setDecisions([]);

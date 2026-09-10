@@ -30,7 +30,7 @@ const createTaskSchema = z.object({
  *  - label: 逗号分隔的 UUID 列表
  *  - q: 关键词
  *  - view: board | list（对齐 openapi）
- *  - page/pageSize: 分页参数（DL-8）
+ *  - page/limit: 分页参数（DL-8，R8C-06 统一分页格式）
  * 校验失败返回 400，避免非法值（如非 UUID 的 assignee）触发 Prisma 500。
  */
 const listTasksQuerySchema = z.object({
@@ -42,12 +42,12 @@ const listTasksQuerySchema = z.object({
   q: z.string().optional(),
   view: z.enum(["board", "list"]).optional(),
   page: z.coerce.number().int().min(1).optional(),
-  pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional(),
 });
 
 // 分页默认值与上限（DL-8）
 const DEFAULT_PAGE = 1;
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_LIMIT = 50;
 const MAX_TAKE = 500;
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -73,7 +73,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       q: url.searchParams.get("q") ?? undefined,
       view: url.searchParams.get("view") ?? undefined,
       page: url.searchParams.get("page") ?? undefined,
-      pageSize: url.searchParams.get("pageSize") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -81,11 +81,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         { status: 400 },
       );
     }
-    // DL-8：分页参数解析（未传时使用默认值，始终返回 pagination 元信息）
+    // DL-8：分页参数解析（未传时使用默认值，R8C-06 统一返回 data 内分页元信息）
     const page = parsed.data.page ?? DEFAULT_PAGE;
-    const pageSize = parsed.data.pageSize ?? DEFAULT_PAGE_SIZE;
-    const skip = (page - 1) * pageSize;
-    const take = Math.min(pageSize, MAX_TAKE);
+    const limit = parsed.data.limit ?? DEFAULT_LIMIT;
+    const skip = (page - 1) * limit;
+    const take = Math.min(limit, MAX_TAKE);
     const assigneeParam = parsed.data.assignee;
     const assigneeFilter =
       assigneeParam === "me"
@@ -160,12 +160,16 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       children: undefined,
     }));
 
-    // DL-8：返回分页元信息（page/pageSize/totalCount/totalPages）
-    const totalPages = Math.ceil(totalCount / pageSize);
+    // R8C-06：统一分页响应格式 { code, data: { items, page, limit, total, hasMore } }
     return NextResponse.json({
       code: 200,
-      data: flattened,
-      pagination: { page, pageSize, totalCount, totalPages },
+      data: {
+        items: flattened,
+        page,
+        limit,
+        total: totalCount,
+        hasMore: page * limit < totalCount,
+      },
     });
   } catch (error) {
     console.error("[GET tasks] error:", error);

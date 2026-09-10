@@ -56,10 +56,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const load = useCallback(async () => {
     try {
       const [list, ws] = await Promise.all([
-        api<Member[]>(`/api/v1/workspaces/${wid}/members`),
+        api<{ items: Member[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/members`),
         api<WorkspaceMeta>(`/api/v1/workspaces/${wid}`),
       ]);
-      setMembers(list);
+      setMembers(list.items);
       setMeta(ws);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadFailed"));

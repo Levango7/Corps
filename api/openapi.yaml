@@ -440,28 +440,17 @@ paths:
           in: query
           schema: { type: integer, minimum: 1, default: 1 }
           description: Page number for pagination (DL-8).
-        - name: pageSize
+        - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
           description: Page size for pagination (DL-8). Upper capped at 500 internally.
       responses:
         '200':
-          description: Task list (paginated, DL-8)
+          description: Task list (paginated, DL-8, R8C-06 统一分页格式)
           content:
             application/json:
               schema:
-                allOf:
-                  - $ref: '#/components/schemas/Envelope_TaskList'
-                  - type: object
-                    properties:
-                      pagination:
-                        type: object
-                        required: [page, pageSize, totalCount, totalPages]
-                        properties:
-                          page: { type: integer, minimum: 1 }
-                          pageSize: { type: integer, minimum: 1 }
-                          totalCount: { type: integer, minimum: 0 }
-                          totalPages: { type: integer, minimum: 0 }
+                $ref: '#/components/schemas/Envelope_TaskList'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '500':
@@ -1015,7 +1004,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_DecisionList'
+                $ref: '#/components/schemas/Envelope_TaskDecisionList'
         '403':
           $ref: '#/components/responses/Forbidden'
         '404':
@@ -1227,7 +1216,7 @@ paths:
         and workspace, with pagination. Query flags: `unread=true` filters unread
         only; `count=true` returns `{ unread }` instead of the list. Pagination
         params: page (default 1), limit (default 50, max 100). The list response
-        envelope includes total/page/limit alongside data.notifications.
+        envelope uses the unified R8C-06 shape: data.{items,page,limit,total,hasMore}.
       operationId: listNotifications
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -1255,8 +1244,9 @@ paths:
                       code: { type: integer, example: 200 }
                       data:
                         type: object
+                        required: [items, page, limit, total, hasMore]
                         properties:
-                          notifications:
+                          items:
                             type: array
                             items:
                               $ref: '#/components/schemas/Notification'
@@ -1269,6 +1259,7 @@ paths:
                           limit:
                             type: integer
                             description: Page size used for this query.
+                          hasMore: { type: boolean }
                   - type: object
                     properties:
                       code: { type: integer, example: 200 }
@@ -2297,8 +2288,8 @@ paths:
         Returns documents ordered by updatedAt desc with pagination. Query params:
         q (case-insensitive keyword search over title / markdown / publishedMarkdown),
         mine=1 (only documents authored by the caller),
-        page (default 1), limit (default 50, max 100). Response envelope includes
-        total/page/limit alongside the data array.
+        page (default 1), limit (default 50, max 100). Response envelope uses the
+        unified R8C-06 shape: data.{items,page,limit,total,hasMore}.
       operationId: listWorkspaceDocuments
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -2324,29 +2315,34 @@ paths:
                 properties:
                   code: { type: integer, example: 200 }
                   data:
-                    type: array
-                    items:
-                      type: object
-                      properties:
-                        id: { type: string, format: uuid }
-                        title: { type: string }
-                        publishedAt: { type: string, format: date-time, nullable: true }
-                        updatedAt: { type: string, format: date-time }
-                        author:
+                    type: object
+                    required: [items, page, limit, total, hasMore]
+                    properties:
+                      items:
+                        type: array
+                        items:
                           type: object
                           properties:
                             id: { type: string, format: uuid }
-                            name: { type: string }
-                            email: { type: string }
-                  total:
-                    type: integer
-                    description: Total count of documents matching the query.
-                  page:
-                    type: integer
-                    description: Current page number.
-                  limit:
-                    type: integer
-                    description: Page size used for this query.
+                            title: { type: string }
+                            publishedAt: { type: string, format: date-time, nullable: true }
+                            updatedAt: { type: string, format: date-time }
+                            author:
+                              type: object
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string }
+                                email: { type: string }
+                      total:
+                        type: integer
+                        description: Total count of documents matching the query.
+                      page:
+                        type: integer
+                        description: Current page number.
+                      limit:
+                        type: integer
+                        description: Page size used for this query.
+                      hasMore: { type: boolean }
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -2908,9 +2904,17 @@ components:
         - $ref: '#/components/schemas/Envelope'
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Task'
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Task'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
     Envelope_Member:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -2944,18 +2948,23 @@ components:
         - $ref: '#/components/schemas/Envelope'
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Member'
-        total:
-          type: integer
-          description: Total count of members matching the query.
-        page:
-          type: integer
-          description: Current page number.
-        limit:
-          type: integer
-          description: Page size used for this query.
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Member'
+            page:
+              type: integer
+              description: Current page number.
+            limit:
+              type: integer
+              description: Page size used for this query.
+            total:
+              type: integer
+              description: Total count of members matching the query.
+            hasMore: { type: boolean }
     Envelope_Comment:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -3010,14 +3019,38 @@ components:
       properties:
         data:
           type: object
+          required: [items, page, limit, total, hasMore]
           properties:
-            decisions:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Decision'
+            page:
+              type: integer
+              description: Current page number.
+            limit:
+              type: integer
+              description: Page size used for this query.
+            total:
+              type: integer
+              description: Total count of decisions matching the query.
+            hasMore: { type: boolean }
+    # R8C-06：任务级决策列表（无分页参数，仅 items + total）
+    Envelope_TaskDecisionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items:
               type: array
               items:
                 $ref: '#/components/schemas/Decision'
             total:
               type: integer
-              description: Total count of decisions matching the query.
+              description: Total count of decision records for this task.
     Envelope_Checkout:
       allOf:
         - $ref: '#/components/schemas/Envelope'

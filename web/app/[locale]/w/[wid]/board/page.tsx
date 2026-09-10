@@ -87,7 +87,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       try {
         const [status, members, labels, me] = await Promise.all([
           api<{ plan: string }>(`/api/v1/workspaces/${wid}/billing/status`),
-          api<Array<{ id: string; name: string | null; email: string }>>(
+          api<{ items: Array<{ id: string; name: string | null; email: string }>; total: number; hasMore: boolean }>(
             `/api/v1/workspaces/${wid}/members`,
           ),
           api<Array<{ id: string; name: string; color: string }>>(
@@ -97,7 +97,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         ]);
         if (cancelled) return;
         setIsPro(status.plan === "pro");
-        setFilterMembers(members);
+        setFilterMembers(members.items);
         setFilterLabels(labels);
         setCurrentUserId(me.user.id);
       } catch {
@@ -116,10 +116,10 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     const fq = filterToQuery(taskFilter);
     const query =
       msQuery || fq ? `?${[msQuery, fq.replace(/^\?/, "")].filter(Boolean).join("&")}` : "";
-    api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`)
+    api<{ items: Task[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/tasks${query}`)
       .then((data) => {
         setError(null);
-        setTasks(data);
+        setTasks(data.items);
       })
       .catch((e) => {
         setError(
@@ -139,7 +139,8 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       const fq = filterToQuery(taskFilter);
       const query =
         msQuery || fq ? `?${[msQuery, fq.replace(/^\?/, "")].filter(Boolean).join("&")}` : "";
-      setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks${query}`));
+      const resp = await api<{ items: Task[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/tasks${query}`);
+      setTasks(resp.items);
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes("fetch")

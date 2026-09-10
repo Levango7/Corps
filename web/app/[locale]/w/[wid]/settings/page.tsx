@@ -242,8 +242,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     setExportingTasks(true);
     setError("");
     try {
-      const tasks = await api<CsvTask[]>(`/api/v1/workspaces/${wid}/tasks`);
-      exportTasksCsv(tasks, ws.slug);
+      const resp = await api<{ items: CsvTask[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/tasks`);
+      exportTasksCsv(resp.items, ws.slug);
     } catch (e) {
       setError(e instanceof Error ? e.message : tExport("tasksFailed"));
     } finally {
@@ -257,8 +257,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     setExportingDecisions(true);
     setError("");
     try {
-      const decisions = await api<CsvDecision[]>(`/api/v1/workspaces/${wid}/decisions`);
-      exportDecisionsCsv(decisions, ws.slug);
+      const resp = await api<{ items: CsvDecision[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/decisions`);
+      exportDecisionsCsv(resp.items, ws.slug);
     } catch (e) {
       setError(e instanceof Error ? e.message : tExport("decisionsFailed"));
     } finally {

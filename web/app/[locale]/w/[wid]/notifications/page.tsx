@@ -111,10 +111,10 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
   const load = useCallback(async () => {
     try {
       setError(null);
-      const res = await api<{ notifications: Notification[] }>(
+      const res = await api<{ items: Notification[]; total: number; hasMore: boolean }>(
         `/api/v1/workspaces/${wid}/notifications`,
       );
-      setAll(res?.notifications ?? []);
+      setAll(res?.items ?? []);
     } catch (e) {
       setError(
         e instanceof Error && e.message.includes("fetch")

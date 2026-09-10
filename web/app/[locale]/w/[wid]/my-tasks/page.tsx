@@ -72,13 +72,13 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
   const loadTasks = useCallback(() => {
     setLoading(true);
     let cancelled = false;
-    // 兼容两种响应形态：直接数组（与 /tasks 一致）或 { tasks: [...] }（assignee=me 约定）
-    api<Task[] | { tasks: Task[] }>(`/api/v1/workspaces/${wid}/tasks?assignee=me`)
+    api<{ items: Task[]; total: number; hasMore: boolean }>(
+      `/api/v1/workspaces/${wid}/tasks?assignee=me`,
+    )
       .then((data) => {
         if (cancelled) return;
         setError(null);
-        const list = Array.isArray(data) ? data : (data?.tasks ?? []);
-        setTasks(list);
+        setTasks(data?.items ?? []);
       })
       .catch((e) => {
         if (!cancelled) {
