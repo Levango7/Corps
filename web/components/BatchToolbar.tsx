@@ -58,6 +58,13 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
   // L8 修复：操作前记录焦点，操作完成后恢复到触发按钮（或工具栏根）
   const previousFocusRef = useRef<HTMLElement | null>(null);
 
+  // R8B-01 补丁：组件卸载时清除确认删除定时器，防止内存泄漏
+  useEffect(() => {
+    return () => {
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+    };
+  }, []);
+
   // LI-16：点击工具栏外部关闭所有下拉菜单
   useEffect(() => {
     if (!statusOpen && !priorityOpen) return;
