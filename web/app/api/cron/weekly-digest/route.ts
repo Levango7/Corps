@@ -17,10 +17,12 @@ import { sendWeeklyDigestEmail, isEmailConfigured } from "@/lib/email";
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
+    // TODO: i18n — cron 路由无 req 对象语义，暂用常量字符串；如需本地化可引入 cron 专用消息源
     return NextResponse.json({ code: 500, message: "CRON_SECRET not configured" }, { status: 500 });
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
+    // TODO: i18n — cron 路由无 req 对象语义，暂用常量字符串
     return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
   }
 
@@ -191,6 +193,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: result });
   } catch (error) {
     console.error("[cron weekly-digest] error:", error);
+    // TODO: i18n — cron 路由无 req 对象语义，暂用常量字符串
     return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
   }
 }

@@ -197,6 +197,7 @@
 
   /* —— 布局骨架 —— */
   --container-max: 1280px;
+  --prose-max:    720px;   /* 法务/文档等长文阅读型页面最大宽度 */
   --sidebar-w:     240px;
   --topbar-h:      56px;
   --section-y:     36px;

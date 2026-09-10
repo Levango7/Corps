@@ -149,7 +149,7 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
 
   return (
     <main className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
-      <article className="mx-auto max-w-[720px] px-[var(--space-6)] py-[var(--space-20)]">
+      <article className="mx-auto max-w-[var(--prose-max)] px-[var(--space-6)] py-[var(--space-20)]">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)]">
           {t("privacyTitle")}
         </h1>

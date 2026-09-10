@@ -178,3 +178,138 @@ export async function POST(
     return handlePrismaError(error, req);
   }
 }
+
+const deleteCommentSchema = z.object({
+  commentId: z.string().uuid(),
+});
+
+/**
+ * DELETE /v1/workspaces/{wid}/tasks/{id}/comments — 删除评论
+ * 权限：评论作者本人或工作区 owner/admin
+ */
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; id: string }> },
+) {
+  const { wid, id } = await params;
+  const ctx = await getWorkspaceContext(req, wid);
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+
+  try {
+    const validated = deleteCommentSchema.parse(await req.json());
+
+    const result = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        // 校验评论存在且属于本任务/工作区（防跨租户删除）
+        const comment = await tx.comment.findFirst({
+          where: { id: validated.commentId, taskId: id, workspaceId: wid },
+          select: { id: true, authorId: true },
+        });
+        if (!comment) return { kind: "notFound" as const };
+
+        // 权限：评论作者本人或 owner/admin
+        const isAuthor = comment.authorId === ctx.payload.sub;
+        const isAdmin = ["owner", "admin"].includes(ctx.member.role);
+        if (!isAuthor && !isAdmin) return { kind: "forbidden" as const };
+
+        await tx.comment.delete({ where: { id: validated.commentId } });
+        return { kind: "ok" as const };
+      },
+      ctx.payload.sub,
+    );
+
+    if (result.kind === "notFound") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
+    }
+    if (result.kind === "forbidden") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "noPermission") },
+        { status: 403 },
+      );
+    }
+    return NextResponse.json({ code: 200, data: { id: validated.commentId, deleted: true } });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { status: 400 },
+      );
+    }
+    console.error("[DELETE comment] error:", error);
+    return handlePrismaError(error, req);
+  }
+}
+
+const patchCommentSchema = z.object({
+  commentId: z.string().uuid(),
+  body: z.string().min(1).max(10000),
+});
+
+/**
+ * PATCH /v1/workspaces/{wid}/tasks/{id}/comments — 编辑评论内容
+ * 权限：评论作者本人或工作区 owner/admin
+ */
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; id: string }> },
+) {
+  const { wid, id } = await params;
+  const ctx = await getWorkspaceContext(req, wid);
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+
+  try {
+    const validated = patchCommentSchema.parse(await req.json());
+
+    const result = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        // 校验评论存在且属于本任务/工作区
+        const comment = await tx.comment.findFirst({
+          where: { id: validated.commentId, taskId: id, workspaceId: wid },
+          select: { id: true, authorId: true },
+        });
+        if (!comment) return { kind: "notFound" as const, data: null };
+
+        // 权限：评论作者本人或 owner/admin
+        const isAuthor = comment.authorId === ctx.payload.sub;
+        const isAdmin = ["owner", "admin"].includes(ctx.member.role);
+        if (!isAuthor && !isAdmin) return { kind: "forbidden" as const, data: null };
+
+        const updated = await tx.comment.update({
+          where: { id: validated.commentId },
+          data: { body: validated.body },
+          include: { author: { select: { id: true, name: true, email: true, image: true } } },
+        });
+        return { kind: "ok" as const, data: updated };
+      },
+      ctx.payload.sub,
+    );
+
+    if (result.kind === "notFound") {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { status: 404 },
+      );
+    }
+    if (result.kind === "forbidden") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "noPermission") },
+        { status: 403 },
+      );
+    }
+    return NextResponse.json({ code: 200, data: result.data });
+  } catch (error) {
+    if (error instanceof z.ZodError) {
+      return NextResponse.json(
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { status: 400 },
+      );
+    }
+    console.error("[PATCH comment] error:", error);
+    return handlePrismaError(error, req);
+  }
+}

@@ -10,7 +10,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
-  description: z.string().optional(),
+  description: z.string().max(5000).optional(),
   status: z.enum(["todo", "in_progress", "review", "done"]).default("todo"),
   priority: z.enum(["low", "medium", "high", "urgent"]).default("medium"),
   assigneeId: z.string().uuid().optional(),

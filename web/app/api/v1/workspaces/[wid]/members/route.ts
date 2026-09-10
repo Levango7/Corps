@@ -1,6 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+
+/** 分页查询参数校验：page 默认 1，limit 默认 50，最大 100 */
+const listMembersQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -8,14 +15,33 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
-    const members = await runWithWorkspace(
+    const url = new URL(req.url);
+    const parsed = listMembersQuerySchema.safeParse({
+      page: url.searchParams.get("page") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors },
+        { status: 400 },
+      );
+    }
+    const { page, limit } = parsed.data;
+    const skip = (page - 1) * limit;
+
+    const [members, total] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.member.findMany({
-          where: { workspaceId: wid },
-          include: { user: { select: { id: true, email: true, name: true, image: true } } },
-          orderBy: { joinedAt: "asc" },
-        }),
+      async (tx) =>
+        Promise.all([
+          tx.member.findMany({
+            where: { workspaceId: wid },
+            include: { user: { select: { id: true, email: true, name: true, image: true } } },
+            orderBy: { joinedAt: "asc" },
+            skip,
+            take: limit,
+          }),
+          tx.member.count({ where: { workspaceId: wid } }),
+        ]),
       ctx.payload.sub,
     );
 
@@ -30,6 +56,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         isSelf: m.user.id === ctx.payload.sub,
         joinedAt: m.joinedAt,
       })),
+      total,
+      page,
+      limit,
     });
   } catch (error) {
     console.error("[GET members] error:", error);

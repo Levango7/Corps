@@ -794,6 +794,10 @@ paths:
           $ref: '#/components/responses/NotFound'
         '410':
           description: Invitation already accepted or expired
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorEnvelope'
 
   /api/v1/invitations/{token}/accept:
     post:
@@ -1632,7 +1636,12 @@ paths:
           in: query
           schema: { type: string }
       responses:
-        '200': { description: Paginated decision list (taskTitle/authorName joined) }
+        '200':
+          description: Paginated decision list (taskTitle/authorName joined)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DecisionList'
         '401': { description: Unauthorized }
 
   /api/auth/request-password-reset:
@@ -1705,6 +1714,11 @@ paths:
               required: [newOwnerUserId]
               properties:
                 newOwnerUserId: { type: string, format: uuid }
+                password:
+                  type: string
+                  nullable: true
+                  description: >-
+                    Current owner's password for二次确认（有密码账户必填，OAuth 账户可省略）.
       responses:
         '200':
           description: Ownership transferred
@@ -2302,9 +2316,15 @@ components:
         - $ref: '#/components/schemas/Envelope'
       properties:
         data:
-          type: array
-          items:
-            $ref: '#/components/schemas/Decision'
+          type: object
+          properties:
+            decisions:
+              type: array
+              items:
+                $ref: '#/components/schemas/Decision'
+            total:
+              type: integer
+              description: Total count of decisions matching the query.
     Envelope_Checkout:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -2736,6 +2756,7 @@ components:
         markdown:
           type: string
           minLength: 1
+          maxLength: 50000
     UpdateDecisionRequest:
       type: object
       required: [markdown, baseVersion]

@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState, type ReactNode } from "react";
+import { use, useCallback, useEffect, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { ClipboardList, ChevronDown, SearchX } from "lucide-react";
 import { api } from "@/lib/api";
@@ -69,7 +69,8 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
   const [sortKey, setSortKey] = useState<SortKey>("recent");
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
+  const loadTasks = useCallback(() => {
+    setLoading(true);
     let cancelled = false;
     // 兼容两种响应形态：直接数组（与 /tasks 一致）或 { tasks: [...] }（assignee=me 约定）
     api<Task[] | { tasks: Task[] }>(`/api/v1/workspaces/${wid}/tasks?assignee=me`)
@@ -95,7 +96,11 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
     return () => {
       cancelled = true;
     };
-  }, [wid]);
+  }, [wid, tErr]);
+
+  useEffect(() => {
+    return loadTasks();
+  }, [loadTasks]);
 
   /** 当前筛选下需要展示的状态分组 */
   const visibleGroups =
@@ -111,7 +116,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
     visibleGroups.every((g) => tasks.filter((t) => t.status === g.id).length === 0);
 
   return (
-    <div className="max-w-[800px] mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       {/* 标题区 */}
       <div className="mb-[var(--space-6)]">
         <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
@@ -182,6 +187,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={() => {
                   setError(null);
+                  loadTasks();
                 }}
                 className="text-[var(--danger)] underline hover:text-[var(--danger-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >

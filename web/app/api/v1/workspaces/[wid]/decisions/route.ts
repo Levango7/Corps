@@ -31,7 +31,7 @@ function parsePagination(url: URL) {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, data: null, message: apiMsg(req, "unauthorized") }, { status: 401 });
 
   try {
     const url = new URL(req.url);

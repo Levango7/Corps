@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, type ReactNode } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
@@ -314,29 +314,6 @@ export default function Onboarding({
         </div>
       </div>
 
-      {/* 关键帧动画定义（内联，避免依赖全局 CSS） */}
-      <style jsx global>{`
-        @keyframes onboarding-slide-in {
-          from {
-            opacity: 0;
-            transform: translateX(24px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-        @keyframes onboarding-slide-in-back {
-          from {
-            opacity: 0;
-            transform: translateX(-24px);
-          }
-          to {
-            opacity: 1;
-            transform: translateX(0);
-          }
-        }
-      `}</style>
     </div>
   );
 }

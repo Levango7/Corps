@@ -86,7 +86,7 @@ export default function GlobalError({
           alignItems: "center",
           justifyContent: "center",
           padding: "var(--space-4)",
-          fontFamily: '"Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif',
+          fontFamily: 'var(--font-body, "Inter", "Noto Sans SC", -apple-system, BlinkMacSystemFont, sans-serif)',
           background: "var(--bg)",
           color: "var(--fg)",
         }}

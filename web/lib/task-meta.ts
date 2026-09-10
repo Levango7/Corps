@@ -47,11 +47,11 @@ export const PRIORITY_LABEL_KEYS: Record<Priority, string> = {
   urgent: "urgent",
 };
 
-/** 优先级主色 token（用于图标/色条） */
+/** 优先级主色 token（用于图标/色条）——统一走 --prio-* 语义 token */
 export const PRIORITY_COLORS: Record<Priority, string> = {
-  low: "var(--meta)",
-  medium: "var(--muted)",
-  high: "var(--warn)",
+  low: "var(--prio-low-fg)",
+  medium: "var(--prio-med-fg)",
+  high: "var(--prio-high-fg)",
   urgent: "var(--danger)",
 };
 
@@ -61,8 +61,8 @@ export const PRIORITY_COLORS: Record<Priority, string> = {
  */
 export const PRIORITY_BAR_COLORS: Record<Priority, string> = {
   low: "transparent",
-  medium: "var(--muted)",
-  high: "var(--warn)",
+  medium: "var(--prio-med-fg)",
+  high: "var(--prio-high-fg)",
   urgent: "var(--danger)",
 };
 
@@ -100,17 +100,20 @@ export const STATUS_BADGE_STYLES: Record<Status, { background: string; color: st
 
 /**
  * 优先级徽章样式：用 color-mix 替代 alpha 拼接。
- * 复用语义色映射，避免引入不存在的 --priority-* token。
+ * 统一走 --prio-* 语义 token（urgent 无对应，用 --danger）。
  */
 export const PRIORITY_BADGE_STYLES: Record<Priority, { background: string; color: string }> = {
-  low: { background: "color-mix(in srgb, var(--meta) 12%, transparent)", color: "var(--meta)" },
+  low: {
+    background: "color-mix(in srgb, var(--prio-low-fg) 12%, transparent)",
+    color: "var(--prio-low-fg)",
+  },
   medium: {
-    background: "color-mix(in srgb, var(--muted) 12%, transparent)",
-    color: "var(--muted)",
+    background: "color-mix(in srgb, var(--prio-med-fg) 12%, transparent)",
+    color: "var(--prio-med-fg)",
   },
   high: {
-    background: "color-mix(in srgb, var(--warn) 14%, transparent)",
-    color: "var(--warn)",
+    background: "color-mix(in srgb, var(--prio-high-fg) 14%, transparent)",
+    color: "var(--prio-high-fg)",
   },
   urgent: {
     background: "color-mix(in srgb, var(--danger) 12%, transparent)",

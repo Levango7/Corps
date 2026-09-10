@@ -140,7 +140,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         );
       }
       if (error.code === "not_configured") {
-        return NextResponse.json({ code: 400, message: error.message }, { status: 400 });
+        return NextResponse.json({ code: 501, message: error.message, data: null }, { status: 501 });
       }
     }
     if (error instanceof z.ZodError) {

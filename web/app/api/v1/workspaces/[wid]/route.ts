@@ -95,7 +95,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), errors: error.issues, data: null },
         { status: 400 },
       );
     }

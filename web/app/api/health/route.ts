@@ -34,6 +34,7 @@ export async function GET() {
       {
         code: 503,
         data: { status: "degraded", db: "down" },
+        // TODO: i18n — health 路由无 req 对象，暂用常量字符串；供 Docker healthcheck / CI 解析
         message: "Database unreachable",
       },
       { status: 503 },

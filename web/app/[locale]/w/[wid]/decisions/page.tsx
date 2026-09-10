@@ -234,7 +234,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
   const isEmpty = !loading && decisions.length === 0;
 
   return (
-    <div className="max-w-[800px] mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       {/* ── 标题栏 ── */}
       <div className="mb-[var(--space-6)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">

@@ -20,6 +20,8 @@ export async function GET(
         where: { taskId: id, task: { workspaceId: wid } },
         include: { author: { select: { id: true, name: true, email: true } } },
         orderBy: { version: "desc" },
+        // 上限保护：决策记录只追加不覆盖，取最近 100 个版本
+        take: 100,
       }),
     );
 

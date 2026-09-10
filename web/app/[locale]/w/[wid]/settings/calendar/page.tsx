@@ -1,6 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   Calendar as CalendarIcon,
   Check,
@@ -51,6 +52,7 @@ function saveSyncSettings(s: SyncSettings): void {
 
 export default function CalendarSettingsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
+  const router = useRouter();
   const t = useTranslations("calendar");
   const tTime = useTranslations("time");
   const relTime = (iso: string | null) => (iso ? sharedRelTime(iso, tTime) : "—");
@@ -114,7 +116,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
   /** 发起 OAuth 连接 */
   function handleConnect(provider: string) {
     // 重定向到 OAuth 授权端点
-    window.location.href = `/api/v1/auth/calendar/connect/${provider}?wid=${encodeURIComponent(wid)}`;
+    router.push(`/api/v1/auth/calendar/connect/${provider}?wid=${encodeURIComponent(wid)}`);
   }
 
   /** 断开连接 */

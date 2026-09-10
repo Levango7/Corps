@@ -122,11 +122,15 @@ export async function PATCH(
           shareTokenValue = validated.shareToken;
         }
 
+        // S-1: dueDate 需从 ISO 字符串转为 Date（与 tasks/route.ts:239、tasks/batch/route.ts:88 对齐）
+        // Prisma 期望 dueDate 为 DateTime，直接传字符串会导致类型不匹配。
+        const { dueDate, ...restValidated } = validated;
         const task = await tx.task.update({
           where: { id },
           data: {
-            ...validated,
+            ...restValidated,
             shareToken: shareTokenValue,
+            ...(dueDate !== undefined ? { dueDate: dueDate ? new Date(dueDate) : null } : {}),
           },
           include: { assignee: { select: { id: true, name: true, email: true } } },
         });

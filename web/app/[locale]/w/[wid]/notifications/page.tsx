@@ -24,7 +24,7 @@
  */
 
 import { use, useCallback, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import { relativeTime as sharedRelativeTime } from "@/lib/format";
 import {
   AtSign,
@@ -175,7 +175,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
   }
 
   return (
-    <div className="max-w-[700px] mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       {/* 页头：标题 + 未读计数 badge */}
       <header className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div className="flex items-center gap-[var(--space-3)]">

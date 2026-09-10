@@ -18,6 +18,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
 import { Plus, AlertTriangle, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 import type { Subtask } from "@/lib/types";
 
 interface SubtaskSectionProps {
@@ -31,6 +32,7 @@ interface SubtaskSectionProps {
 export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSectionProps) {
   const t = useTranslations("task");
   const router = useRouter();
+  const { toast } = useToast();
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -70,8 +72,9 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
         body: JSON.stringify({ status: next }),
       });
       onChanged();
-    } catch {
-      /* 失败静默——父组件下次刷新会反映真实状态 */
+    } catch (e) {
+      /* 勾选失败：显示 Toast 错误提示，父组件下次刷新会反映真实状态 */
+      toast("error", e instanceof Error ? e.message : t("subtaskToggleFailed"));
     } finally {
       setTogglingId(null);
     }

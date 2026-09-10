@@ -1,7 +1,7 @@
 "use client";
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import {
   Search,
   LayoutDashboard,
@@ -82,6 +82,8 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   });
   const [cursor, setCursor] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
+  // 搜索失败标记：显示错误提示而非静默清空结果
+  const [searchError, setSearchError] = useState(false);
   const listRef = useRef<HTMLUListElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
@@ -94,10 +96,12 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     if (!q) {
       setResults({ tasks: [], decisions: [] });
       setIsSearching(false);
+      setSearchError(false);
       return;
     }
     // 防抖期间：尚未发出请求
     setIsSearching(false);
+    setSearchError(false);
     const controller = new AbortController();
     const timer = setTimeout(() => {
       // 请求发出
@@ -124,8 +128,14 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
               hintKey: "nav.menu.decisions",
             })),
           });
+          setSearchError(false);
         })
-        .catch(() => setResults({ tasks: [], decisions: [] }));
+        .catch((err: unknown) => {
+          // AbortError 是防抖/卸载触发的取消，不算真实失败
+          if (err instanceof DOMException && err.name === "AbortError") return;
+          setResults({ tasks: [], decisions: [] });
+          setSearchError(true);
+        });
     }, 300);
     return () => {
       clearTimeout(timer);
@@ -268,8 +278,16 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
 
         <ul ref={listRef} className="max-h-[var(--cmd-palette-max-h)] overflow-y-auto py-1.5">
           {items.length === 0 && (
-            <li className="px-4 py-8 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-              {query.trim() ? (isSearching ? t("searching") : t("typeToSearch")) : t("noItems")}
+            <li
+              className={`px-4 py-8 text-center text-[length:var(--text-sm)] ${
+                searchError ? "text-[var(--danger)]" : "text-[var(--muted)]"
+              }`}
+            >
+              {searchError
+                ? t("searchFailed")
+                : query.trim()
+                  ? (isSearching ? t("searching") : t("typeToSearch"))
+                  : t("noItems")}
             </li>
           )}
           {items.map((item, idx) => {

@@ -20,6 +20,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const parsed = listDocsQuerySchema.safeParse({
       q: url.searchParams.get("q") ?? undefined,
       mine: url.searchParams.get("mine") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -29,35 +31,43 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     }
     const q = parsed.data.q?.trim() || "";
     const mine = parsed.data.mine === "1";
+    const { page, limit } = parsed.data;
+    const skip = (page - 1) * limit;
 
-    const docs = await runWithWorkspace(wid, (tx) =>
-      tx.document.findMany({
-        where: {
-          workspaceId: wid,
-          ...(mine && ctx.payload.sub ? { authorId: ctx.payload.sub } : {}),
-          ...(q
-            ? {
-                OR: [
-                  { title: { contains: q, mode: "insensitive" as const } },
-                  { markdown: { contains: q, mode: "insensitive" as const } },
-                  { publishedMarkdown: { contains: q, mode: "insensitive" as const } },
-                ],
-              }
-            : {}),
-        },
-        select: {
-          id: true,
-          title: true,
-          publishedAt: true,
-          updatedAt: true,
-          author: { select: { id: true, name: true, email: true } },
-        },
-        orderBy: [{ updatedAt: "desc" }],
-        take: 200,
-      }),
+    const where = {
+      workspaceId: wid,
+      ...(mine && ctx.payload.sub ? { authorId: ctx.payload.sub } : {}),
+      ...(q
+        ? {
+            OR: [
+              { title: { contains: q, mode: "insensitive" as const } },
+              { markdown: { contains: q, mode: "insensitive" as const } },
+              { publishedMarkdown: { contains: q, mode: "insensitive" as const } },
+            ],
+          }
+        : {}),
+    };
+
+    const [docs, total] = await runWithWorkspace(wid, (tx) =>
+      Promise.all([
+        tx.document.findMany({
+          where,
+          select: {
+            id: true,
+            title: true,
+            publishedAt: true,
+            updatedAt: true,
+            author: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: [{ updatedAt: "desc" }],
+          skip,
+          take: limit,
+        }),
+        tx.document.count({ where }),
+      ]),
     );
 
-    return NextResponse.json({ code: 200, data: docs });
+    return NextResponse.json({ code: 200, data: docs, total, page, limit });
   } catch (error) {
     console.error("[GET documents] error:", error);
     return NextResponse.json(
@@ -76,10 +86,14 @@ const createDocSchema = z.object({
  * GET 列表 searchParams 校验（B2）：
  *  - q: 关键词（标题/正文模糊搜索）
  *  - mine: "1" 表示仅我作为作者的文档
+ *  - page: 页码（默认 1）
+ *  - limit: 每页数量（默认 50，最大 100）
  */
 const listDocsQuerySchema = z.object({
   q: z.string().optional(),
   mine: z.literal("1").optional(),
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 /** POST /v1/workspaces/{wid}/documents — 新建文档 */

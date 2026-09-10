@@ -45,6 +45,8 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [sending, setSending] = useState(false);
   const [loading, setLoading] = useState(true);
+  // 初始加载失败错误提示（替代静默失败）
+  const [loadError, setLoadError] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
 
@@ -71,12 +73,14 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
       if (msgs.length > 0) {
         updateCursor(msgs[msgs.length - 1].createdAt);
       }
-    } catch {
-      // 静默失败，不阻塞页面
+      setLoadError("");
+    } catch (e) {
+      // 初始加载失败：显示错误提示而非静默
+      setLoadError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [base, updateCursor]);
+  }, [base, updateCursor, t]);
 
   /** 加载工作区成员（用于在线状态头像 + 当前用户 ID） */
   const loadMembers = useCallback(async () => {
@@ -264,6 +268,13 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
       {searchOpen && searchQuery.trim() && (
         <div className="mb-2 text-[length:var(--text-xs)] text-[var(--meta)]">
           {searchResultCount > 0 ? t("resultCount", { count: searchResultCount }) : t("noResults")}
+        </div>
+      )}
+
+      {/* 初始加载失败错误提示 */}
+      {loadError && (
+        <div className="mb-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger-soft)] text-[length:var(--text-sm)] text-[var(--danger)]">
+          {loadError}
         </div>
       )}
 

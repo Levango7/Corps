@@ -333,7 +333,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   // 初始加载：显示居中 spinner，避免空表单闪烁
   if (loading) {
     return (
-      <div className="max-w-2xl mx-auto flex items-center justify-center py-[var(--space-16)]">
+      <div className="max-w-[var(--container-max)] mx-auto flex items-center justify-center py-[var(--space-16)]">
         <Loader2 size={24} className="animate-spin text-[var(--muted)]" />
       </div>
     );
@@ -347,7 +347,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
 
   return (
-    <div className="max-w-2xl mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
           <SettingsIcon size={20} className="text-[var(--muted)]" />

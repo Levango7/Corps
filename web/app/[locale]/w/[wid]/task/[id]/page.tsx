@@ -10,8 +10,7 @@ import {
   type ChangeEvent,
   type KeyboardEvent,
 } from "react";
-import { useRouter } from "next/navigation";
-import Link from "next/link";
+import { Link, useRouter } from "@/lib/i18n-navigation";
 import {
   ArrowLeft,
   MessageSquare,
@@ -213,11 +212,11 @@ export default function TaskDetailPage({
   const titleRef = useRef<HTMLTextAreaElement>(null);
 
   // ── 视口尺寸（< sm 视为移动端，用于评论 placeholder 缩短）──
-  // 639px = Tailwind sm 断点(640px) - 1，即 max-width:639px 等价于 < sm(640px)
+  // 640px = Tailwind sm 断点；isMobile = 视口宽度 < 640px
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 639px)");
-    const update = () => setIsMobile(mq.matches);
+    const mq = window.matchMedia("(min-width: 640px)");
+    const update = () => setIsMobile(!mq.matches);
     update();
     mq.addEventListener("change", update);
     return () => mq.removeEventListener("change", update);

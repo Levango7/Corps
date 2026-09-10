@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     const baBody = await baRes.json();
     const baUser = baBody.user;
     if (!baUser?.id) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "invalidCredentials") }, { status: 401 });
+      return NextResponse.json({ code: 401, message: apiMsg(req, "invalidCredentials"), data: null }, { status: 401 });
     }
 
     // 解析工作区列表（含角色）。走 RLS 事务：members 表若启用行级安全，
@@ -111,6 +111,6 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("Login error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

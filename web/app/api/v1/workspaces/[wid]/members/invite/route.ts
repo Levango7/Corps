@@ -10,7 +10,10 @@ import { createHash, randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
-const inviteSchema = z.object({ email: z.string().email() });
+const inviteSchema = z.object({
+  email: z.string().email(),
+  role: z.enum(["admin", "member"]).default("member").optional(),
+});
 
 /** 邀请有效期：7 天 */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
@@ -30,7 +33,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   await expireSubscriptionIfDue(wid);
 
   try {
-    const { email } = inviteSchema.parse(await req.json());
+    const { email, role } = inviteSchema.parse(await req.json());
 
     const invitedUser = await prisma.user.findUnique({ where: { email } });
     if (!invitedUser) {
@@ -77,7 +80,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
               workspaceId: wid,
               email,
               tokenHash,
-              role: "member",
+              role: role ?? "member",
               invitedBy: ctx.payload.sub,
               expiresAt,
             },

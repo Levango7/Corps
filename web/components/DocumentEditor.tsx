@@ -55,6 +55,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const [, startTransition] = useTransition();
   // LI-10：复制分享链接成功反馈（短暂打勾替代文案，2s 后恢复）
   const [copied, setCopied] = useState(false);
+  // 自动保存成功反馈：短暂显示"已保存"提示（2s 后消失）
+  const [savedFlash, setSavedFlash] = useState(false);
 
   // Typora 式快捷键层（Ctrl+B/I/K、列表续行、Tab 缩进）——与工具栏共用实现
   const handleKeyDown = useEditorKeys({
@@ -85,6 +87,11 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       });
       if (opts.publish && res.publishedAt) {
         setPublishedAt(res.publishedAt);
+      }
+      // 自动保存成功：短暂显示"已保存"提示（非发布场景）
+      if (!opts.publish) {
+        setSavedFlash(true);
+        setTimeout(() => setSavedFlash(false), 2000);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("saveFailed"));
@@ -174,6 +181,13 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               {t("saving")}
             </span>
           )}
+          {/* 自动保存成功反馈：短暂显示"已保存"提示 */}
+          {savedFlash && busy !== "save" && (
+            <span className="inline-flex items-center gap-1 text-[var(--success)]">
+              <Check size={12} />
+              {t("saved")}
+            </span>
+          )}
           {publishedAt && (
             <span>
               {t("publishedAt", {
@@ -182,7 +196,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap justify-end">
           <button
             onClick={back}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"

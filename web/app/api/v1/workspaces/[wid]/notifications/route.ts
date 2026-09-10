@@ -12,7 +12,11 @@ import { apiMsg } from "@/lib/api-messages";
  * 数据：通过 runWithWorkspace 注入 RLS 上下文，保证仅访问当前工作区通知。
  */
 
-const NOTIFICATION_LIMIT = 50;
+/** 通知列表分页参数校验：page 默认 1，limit 默认 50，最大 100 */
+const listNotificationsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(50),
+});
 
 /** GET /v1/workspaces/{wid}/notifications */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -37,24 +41,41 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       return NextResponse.json({ code: 200, data: { unread } });
     }
 
-    // 默认：返回通知列表（createdAt 降序，limit 50）
-    const notifications = await runWithWorkspace(wid, (tx) =>
-      tx.notification.findMany({
-        where,
-        select: {
-          id: true,
-          type: true,
-          entityId: true,
-          entityTitle: true,
-          read: true,
-          createdAt: true,
-        },
-        orderBy: { createdAt: "desc" },
-        take: NOTIFICATION_LIMIT,
-      }),
+    // 默认：返回通知列表（createdAt 降序，分页）
+    const parsed = listNotificationsQuerySchema.safeParse({
+      page: url.searchParams.get("page") ?? undefined,
+      limit: url.searchParams.get("limit") ?? undefined,
+    });
+    if (!parsed.success) {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors },
+        { status: 400 },
+      );
+    }
+    const { page, limit } = parsed.data;
+    const skip = (page - 1) * limit;
+
+    const [notifications, total] = await runWithWorkspace(wid, (tx) =>
+      Promise.all([
+        tx.notification.findMany({
+          where,
+          select: {
+            id: true,
+            type: true,
+            entityId: true,
+            entityTitle: true,
+            read: true,
+            createdAt: true,
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        tx.notification.count({ where }),
+      ]),
     );
 
-    return NextResponse.json({ code: 200, data: { notifications } });
+    return NextResponse.json({ code: 200, data: { notifications, total, page, limit } });
   } catch (error) {
     console.error("[GET notifications] error:", error);
     return NextResponse.json(

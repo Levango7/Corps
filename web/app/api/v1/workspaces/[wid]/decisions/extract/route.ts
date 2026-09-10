@@ -85,36 +85,45 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   }
 
   // 规则提炼：分行→关键词命中优先→markdown 模板化输出
-  const lines = body.sourceText.split(/\r?\n/);
-  const title = pickTitle(lines);
-  const keyPoints = pickKeySentences(lines);
+  // 核心业务逻辑用 try-catch 包裹，避免 split/pickTitle/pickKeySentences/markdown 组装抛错变成未处理异常
+  try {
+    const lines = body.sourceText.split(/\r?\n/);
+    const title = pickTitle(lines);
+    const keyPoints = pickKeySentences(lines);
 
-  // 组装 markdown：\<背景 / 结论 / 关键理由 / 下一步行动\> 四段式
-  const markdown = [
-    `# ${title}`,
-    "",
-    "## 关键结论",
-    ...keyPoints.map((s) => `- ${s}`),
-    "",
-    "## 原始讨论（节选）",
-    "",
-    "```",
-    body.sourceText.slice(0, 800),
-    "```",
-    "",
-    "> 本内容由 AI 根据提供的原始讨论提炼，请人工核对后再正式归档。",
-  ].join("\n");
+    // 组装 markdown：\<背景 / 结论 / 关键理由 / 下一步行动\> 四段式
+    const markdown = [
+      `# ${title}`,
+      "",
+      "## 关键结论",
+      ...keyPoints.map((s) => `- ${s}`),
+      "",
+      "## 原始讨论（节选）",
+      "",
+      "```",
+      body.sourceText.slice(0, 800),
+      "```",
+      "",
+      "> 本内容由 AI 根据提供的原始讨论提炼，请人工核对后再正式归档。",
+    ].join("\n");
 
-  return NextResponse.json({
-    code: 200,
-    data: {
-      title,
-      markdown,
-      // 前端 UI 可以根据这些 tag 预填 meta（MVP 暂不渲染）
-      suggestedTags: DECISION_KEYWORDS.filter((k) =>
-        body.sourceText.toLowerCase().includes(k.toLowerCase()),
-      ).slice(0, 5),
-      provider: "rules-v1",
-    },
-  });
+    return NextResponse.json({
+      code: 200,
+      data: {
+        title,
+        markdown,
+        // 前端 UI 可以根据这些 tag 预填 meta（MVP 暂不渲染）
+        suggestedTags: DECISION_KEYWORDS.filter((k) =>
+          body.sourceText.toLowerCase().includes(k.toLowerCase()),
+        ).slice(0, 5),
+        provider: "rules-v1",
+      },
+    });
+  } catch (error) {
+    console.error("[POST decisions/extract] error:", error);
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
+  }
 }

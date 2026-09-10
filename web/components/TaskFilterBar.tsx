@@ -152,7 +152,7 @@ export function TaskFilterBar({
     "h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed";
 
   return (
-    <div className="mb-4 flex flex-wrap items-center gap-2" data-testid="task-filter-bar">
+    <div className="mb-4 flex flex-wrap items-center gap-2 sm:gap-3" data-testid="task-filter-bar">
       <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--muted)]">
         <Filter size={15} />
         {t("title")}

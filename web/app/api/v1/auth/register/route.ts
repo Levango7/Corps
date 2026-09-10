@@ -149,6 +149,6 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("Register error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

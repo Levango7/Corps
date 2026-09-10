@@ -132,7 +132,7 @@ export function DocumentListView({ wid }: { wid: string }) {
                 >
                   <div className="flex items-center gap-2">
                     <FileText size={15} className="shrink-0 text-[var(--muted)]" />
-                    <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-medium text-[var(--fg)] truncate">
+                    <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                       {d.title}
                     </span>
                     {d.publishedAt ? (
