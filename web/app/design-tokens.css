@@ -217,6 +217,7 @@
   --focus-ring: 0 0 0 3px var(--accent-ring);
 
   /* —— 交互态柔和背景（hover 微蓝灰，制造"被托起"的呼吸感）—— */
+  /* Defined for future use; currently hover states use --surface-2 directly */
   --hover-soft: color-mix(in srgb, var(--p-surface-2) 70%, var(--p-accent) 3%);
   /* —— 页面头 eyebrow 小标签（克制的强调色文字）—— */
   --eyebrow-fg: var(--accent);
@@ -265,6 +266,7 @@
   --elev-lg: 0 12px 32px rgba(0,0,0,0.56);
   --elev-hover: 0 6px 18px rgba(0,0,0,0.50), 0 2px 6px rgba(0,0,0,0.36);
 
+  /* Defined for future use; currently hover states use --surface-2 directly */
   --hover-soft: color-mix(in srgb, var(--p-surface-2) 80%, var(--p-accent) 8%);
   --eyebrow-fg: var(--p-accent-dk);
   --eyebrow-bg: color-mix(in srgb, var(--p-accent) 16%, transparent);

@@ -323,7 +323,7 @@ export function TaskFilterBar({
           <button
             onClick={() => setSaveOpen(true)}
             disabled={locked || isEmptyFilter(value)}
-            className="flex items-center gap-1 h-7 px-2 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 h-7 px-2 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title={t("saveViewHint")}
           >
             <Save size={12} />

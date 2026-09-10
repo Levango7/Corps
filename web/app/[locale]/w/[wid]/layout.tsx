@@ -321,7 +321,7 @@ export default function WorkspaceLayout({
         <div className="flex items-center gap-[var(--space-2)] relative" ref={switcherRef}>
           <Link
             href={`/w/${wid}`}
-            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]"
           >
             <Logo size={22} />
           </Link>

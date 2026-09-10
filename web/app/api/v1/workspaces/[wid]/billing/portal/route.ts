@@ -47,7 +47,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     if (error instanceof PaymentProviderError) {
       if (error.code === "no_customer") {
         console.error("[billing portal] no_customer:", error.message);
-        return NextResponse.json({ code: 400, message: apiMsg(req, "billingUnavailable"), data: null }, { status: 400 });
+        return NextResponse.json({ code: 400, message: apiMsg(req, "noCustomerAccount"), data: null }, { status: 400 });
       }
       if (error.code === "not_configured") {
         console.error("[billing portal] not_configured:", error.message);

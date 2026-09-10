@@ -87,7 +87,9 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
               ? tErr("networkConnectFailed")
               : tErr("loadFailed"),
           );
-          setTasks([]);
+          // M-1 修复：不 setTasks([]) — 保留旧数据（首次加载为 [] 初始值），
+          // 让 error UI 可达。原逻辑 setTasks([]) 后 tasks.length===0 恒真，
+          // 进入 EmptyState 分支，错误提示+重试按钮在 else 分支内永不显示。
         }
       })
       .finally(() => {
@@ -119,7 +121,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
     <div className="max-w-[var(--container-max)] mx-auto">
       {/* 标题区 */}
       <div className="mb-[var(--space-6)]">
-        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           {tNav("menu.myTasks")}
         </h1>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -175,6 +177,22 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
       {/* 内容区 */}
       {loading ? (
         <MyTasksSkeleton />
+      ) : error && tasks.length === 0 ? (
+        // M-1 修复：首次加载失败（tasks 仍为 [] 初始值）时显示错误提示+重试按钮。
+        // 原逻辑因 catch 中 setTasks([]) 导致 tasks.length===0 恒真进入 EmptyState，
+        // 错误 UI 被困在 else 分支内不可达。
+        <div className="rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
+          <span>{error}</span>
+          <button
+            onClick={() => {
+              setError(null);
+              loadTasks();
+            }}
+            className="text-[var(--danger)] underline hover:text-[var(--danger-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
+            {tErr("retry")}
+          </button>
+        </div>
       ) : tasks.length === 0 ? (
         <EmptyState />
       ) : filteredEmpty ? (

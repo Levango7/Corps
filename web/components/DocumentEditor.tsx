@@ -182,7 +182,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         onBlur={() => save()}
         maxLength={255}
         placeholder={t("titlePlaceholder")}
-        className="w-full px-0 py-2 bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
+        className="w-full px-0 py-2 bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
       />
 
       {/* 工具栏 */}
@@ -254,7 +254,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             <button
               onClick={unshare}
               disabled={busy !== null}
-              title={busy !== null ? t("saveFailed") : undefined}
+              title={busy !== null ? t("saving") : undefined}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               <X size={14} />
@@ -264,7 +264,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             <button
               onClick={share}
               disabled={busy !== null}
-              title={busy !== null ? t("saveFailed") : undefined}
+              title={busy !== null ? t("saving") : undefined}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               <Share2 size={14} />
@@ -282,7 +282,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           <button
             onClick={() => save({ publish: true })}
             disabled={busy !== null}
-            title={busy !== null ? t("saveFailed") : undefined}
+            title={busy !== null ? t("saving") : undefined}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             {busy === "publish" ? (

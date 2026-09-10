@@ -75,7 +75,7 @@ export function DocumentListView({ wid }: { wid: string }) {
   return (
     <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] py-[var(--space-6)]">
       <div className="flex items-center justify-between mb-[var(--space-5)]">
-        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           {t("listTitle")}
         </h1>
         <button

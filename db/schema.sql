@@ -150,7 +150,9 @@ CREATE TABLE public.calendar_connections (
     sync_status character varying(20) DEFAULT 'idle'::character varying NOT NULL,
     sync_error text,
     created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
-    updated_at timestamp with time zone NOT NULL
+    updated_at timestamp with time zone NOT NULL,
+    CONSTRAINT calendar_connections_provider_check CHECK (((provider)::text = ANY ((ARRAY['google'::character varying, 'outlook'::character varying])::text[]))),
+    CONSTRAINT calendar_connections_sync_status_check CHECK (((sync_status)::text = ANY ((ARRAY['idle'::character varying, 'syncing'::character varying, 'error'::character varying, 'paused'::character varying])::text[])))
 );
 
 
@@ -252,7 +254,8 @@ CREATE TABLE public.invitations (
     invited_by uuid NOT NULL,
     expires_at timestamp with time zone NOT NULL,
     accepted_at timestamp with time zone,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT invitations_role_check CHECK (((role)::text = ANY ((ARRAY['owner'::character varying, 'admin'::character varying, 'member'::character varying])::text[])))
 );
 
 ALTER TABLE ONLY public.invitations FORCE ROW LEVEL SECURITY;
@@ -359,7 +362,8 @@ CREATE TABLE public.notifications (
     entity_id uuid NOT NULL,
     entity_title character varying(255) NOT NULL,
     read boolean DEFAULT false NOT NULL,
-    created_at timestamp with time zone DEFAULT now() NOT NULL
+    created_at timestamp with time zone DEFAULT now() NOT NULL,
+    CONSTRAINT notifications_type_check CHECK (((type)::text = ANY ((ARRAY['task_assigned'::character varying, 'task_updated'::character varying, 'comment_added'::character varying, 'decision_updated'::character varying, 'decision_requested'::character varying, 'decision_resolved'::character varying, 'mention'::character varying, 'system'::character varying])::text[])))
 );
 
 ALTER TABLE ONLY public.notifications FORCE ROW LEVEL SECURITY;
@@ -419,7 +423,8 @@ CREATE TABLE public.subscriptions (
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
     provider character varying(20),
     provider_order_id character varying(255),
-    CONSTRAINT subscriptions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'past_due'::character varying, 'canceled'::character varying, 'trialing'::character varying, 'incomplete'::character varying])::text[])))
+    CONSTRAINT subscriptions_status_check CHECK (((status)::text = ANY ((ARRAY['active'::character varying, 'past_due'::character varying, 'canceled'::character varying, 'trialing'::character varying, 'incomplete'::character varying])::text[]))),
+    CONSTRAINT subscriptions_provider_check CHECK (((provider)::text = ANY ((ARRAY['stripe'::character varying, 'wechatpay-native'::character varying, 'alipay-page'::character varying])::text[])))
 );
 
 ALTER TABLE ONLY public.subscriptions FORCE ROW LEVEL SECURITY;

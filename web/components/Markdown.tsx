@@ -234,7 +234,7 @@ export default function Markdown({ source }: { source: string }) {
       i++;
     }
     blocks.push(
-      <p key={key++} className="my-2 text-[var(--fg-2)] leading-[1.7]">
+      <p key={key++} className="my-2 text-[var(--fg-2)] leading-[var(--leading-relaxed)]">
         {renderInline(buf.join(" "), `p${key}`)}
       </p>,
     );

@@ -391,7 +391,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               selectedIds={selectedIds}
               selectionMode={selectionMode}
               onToggleSelect={toggleSelect}
-              onReorder={handleReorder}
+
               onDropOnTask={handleDropOnTask}
               onDropOnColumn={handleDropOnColumn}
               onMoveByStep={moveTaskByStep}
@@ -439,7 +439,7 @@ interface BoardViewProps {
   selectedIds: Set<string>;
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
-  onReorder: (taskId: string, targetIndex: number, column: Status) => Promise<void>;
+
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onDropOnColumn: (sourceId: string, status: Status) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
@@ -547,7 +547,7 @@ function ListView(props: ListViewProps) {
           <button
             onClick={onPrevPage}
             disabled={safeListPage <= 1}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("prevPage")}
           >
             {t("prevPage")}
@@ -558,7 +558,7 @@ function ListView(props: ListViewProps) {
           <button
             onClick={onNextPage}
             disabled={safeListPage >= listTotalPages}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-40 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("nextPage")}
           >
             {t("nextPage")}

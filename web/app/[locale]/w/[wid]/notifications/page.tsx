@@ -184,7 +184,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       {/* 页头：标题 + 未读计数 badge */}
       <header className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div className="flex items-center gap-[var(--space-3)]">
-          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
             {tNotif("title")}
           </h1>
           {loaded && unreadCount > 0 && (

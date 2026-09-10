@@ -151,7 +151,7 @@ export default function Onboarding({
   // 折叠态:右下角小气泡,不挡视图,用户点开才进入模态引导
   if (!expanded) {
     return (
-      <div className="fixed bottom-20 right-4 z-40">
+      <div className="fixed bottom-20 right-4 z-[var(--z-sticky)]">
         <button
           ref={triggerRef}
           onClick={() => setExpanded(true)}
@@ -304,7 +304,7 @@ export default function Onboarding({
 
         {/* 内容（带过渡动画） */}
         <div key={animKey} className={`px-6 py-6 ${animClass}`}>
-          <h2 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h2 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
             {current.title}
           </h2>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">

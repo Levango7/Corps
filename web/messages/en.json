@@ -359,6 +359,7 @@
       "mismatch": "Passwords do not match",
       "invalidToken": "This reset link is invalid or expired. Please request a new one.",
       "tokenMissing": "Missing reset token. Please use the link from the email.",
+      "requestNewReset": "Request a new reset link",
       "failed": "Failed to reset, please retry shortly",
       "backToLogin": "Go to sign in"
     }
@@ -792,6 +793,7 @@
     "copied": "Link copied to clipboard",
     "copyFailed": "Copy failed — please select and copy the link above manually",
     "removeConfirm": "Remove {name}? This cannot be undone.",
+    "removeConfirmAction": "Confirm removal",
     "removeFailed": "Failed to remove",
     "removeSuccess": "Member removed",
     "roleChangeConfirm": "Change this member's role?",

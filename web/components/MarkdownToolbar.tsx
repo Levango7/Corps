@@ -378,10 +378,10 @@ export function MarkdownToolbar({ textareaRef, value, onChange, disabled }: Mark
         {diagramOpen && (
           <>
             {/* 点击外部关闭 */}
-            <div className="fixed inset-0 z-10" onClick={() => setDiagramOpen(false)} />
+            <div className="fixed inset-0 z-[var(--z-dropdown)]" onClick={() => setDiagramOpen(false)} />
             <div
               role="menu"
-              className="absolute left-0 top-full mt-1 z-20 min-w-40 py-1 rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-md)]"
+              className="absolute left-0 top-full mt-1 z-[var(--z-dropdown)] min-w-40 py-1 rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-md)]"
             >
               <div className="px-3 pt-1.5 pb-1 text-[length:var(--text-xs)] text-[var(--meta)] select-none">
                 {t("diagramMenuHint")}

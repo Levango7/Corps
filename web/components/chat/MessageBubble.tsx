@@ -102,7 +102,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
           </span>
         )}
         <div
-          className={`px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] leading-[1.6] whitespace-pre-wrap break-words ${
+          className={`px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] leading-[var(--leading-relaxed)] whitespace-pre-wrap break-words ${
             isOwn
               ? "bg-[var(--accent)] text-[var(--accent-fg)]"
               : "bg-[var(--surface-2)] text-[var(--fg-2)]"

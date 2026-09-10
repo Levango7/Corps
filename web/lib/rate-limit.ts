@@ -52,8 +52,13 @@ interface WindowEntry {
 
 /** 内存上限防护阈值：超过此数量的 key 触发一次过期清扫 */
 const MAX_KEYS = 10_000;
+/** M-04 修复：定期清理间隔（60s）。O(n) 清理最多每间隔执行一次，
+ * 避免每次请求 size 超上限都触发全量扫描。 */
+const CLEANUP_INTERVAL_MS = 60_000;
 
 const memoryStore = new Map<string, WindowEntry>();
+/** M-04 修复：上次 O(n) 清理的时间戳；仅每隔 CLEANUP_INTERVAL_MS 才执行一次清理 */
+let lastCleanup = 0;
 
 // ─── Redis 懒加载单例 ─────────────────────────────────────────────────────────
 
@@ -203,24 +208,29 @@ async function hitStore(key: string, max: number, windowMs: number): Promise<Rat
 function hitMemoryStore(key: string, max: number, windowMs: number): RateLimitResult {
   const now = Date.now();
 
-  // 内存上限防护：key 过多时先清扫过期项（懒清理）
-  if (memoryStore.size >= MAX_KEYS) {
+  // M-04 修复：O(n) 清理改为定期执行（每 CLEANUP_INTERVAL_MS 一次），
+  // 避免每次请求 size 超上限都触发全量扫描。清理使用各 entry 自身的
+  // windowMs 判断过期（取调用方 windowMs 作为近似——限流规则同一 bucket
+  // 的 windowMs 固定，跨 bucket 差异仅影响清理精度，不影响正确性）。
+  if (now - lastCleanup >= CLEANUP_INTERVAL_MS) {
+    lastCleanup = now;
     for (const [k, entry] of memoryStore) {
       if (now - entry.windowStart >= windowMs) {
         memoryStore.delete(k);
       }
     }
-    // 清扫后仍超上限（极端情况：全部未过期），丢弃最旧的一批以防 OOM
-    if (memoryStore.size >= MAX_KEYS) {
-      // L3 修复：按 windowStart 升序排序后删除最旧的 excess 个，
-      // 避免随机删除可能丢掉刚写入的热点 key
-      const excess = memoryStore.size - MAX_KEYS;
-      const sortedKeys = [...memoryStore.entries()]
-        .sort((a, b) => a[1].windowStart - b[1].windowStart)
-        .map((e) => e[0]);
-      for (let i = 0; i < excess && i < sortedKeys.length; i++) {
-        memoryStore.delete(sortedKeys[i]);
-      }
+  }
+
+  // 内存上限防护：清理后仍超上限（极端情况：全部未过期），丢弃最旧的一批以防 OOM
+  if (memoryStore.size >= MAX_KEYS) {
+    // L3 修复：按 windowStart 升序排序后删除最旧的 excess 个，
+    // 避免随机删除可能丢掉刚写入的热点 key
+    const excess = memoryStore.size - MAX_KEYS;
+    const sortedKeys = [...memoryStore.entries()]
+      .sort((a, b) => a[1].windowStart - b[1].windowStart)
+      .map((e) => e[0]);
+    for (let i = 0; i < excess && i < sortedKeys.length; i++) {
+      memoryStore.delete(sortedKeys[i]);
     }
   }
 

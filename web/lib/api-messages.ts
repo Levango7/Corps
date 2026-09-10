@@ -144,6 +144,14 @@ export const API_MESSAGES = {
     zh: "计费服务暂时不可用，请稍后重试",
     en: "Billing is temporarily unavailable; please try again later",
   },
+  billingNotConfigured: {
+    zh: "支付通道未配置",
+    en: "Payment provider is not configured",
+  },
+  noCustomerAccount: {
+    zh: "未找到客户账户，请先完成支付",
+    en: "No customer account found; please complete checkout first",
+  },
   yearlyPriceNotConfigured: {
     zh: "年付价格未配置",
     en: "Yearly pricing is not configured",
@@ -228,6 +236,7 @@ export const API_MESSAGES = {
     zh: "认证服务未返回用户",
     en: "Auth provider returned no user",
   },
+  registerFailed: { zh: "注册失败", en: "Registration failed" },
 
   /* ── 权限（细粒度 403）── */
   onlyOwnerAdminInvite: {

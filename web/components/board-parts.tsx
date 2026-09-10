@@ -39,7 +39,6 @@ interface BoardColumnProps {
   selectedIds: Set<string>;
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
-  onReorder: (taskId: string, targetIndex: number, column: Task["status"]) => Promise<void>;
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onDropOnColumn: (sourceId: string, status: Task["status"]) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
@@ -56,7 +55,6 @@ export function BoardColumn({
   selectedIds,
   selectionMode,
   onToggleSelect,
-  onReorder,
   onDropOnTask,
   onDropOnColumn,
   onMoveByStep,
@@ -102,7 +100,7 @@ export function BoardColumn({
             selected={selectedIds.has(task.id)}
             selectionMode={selectionMode}
             onToggleSelect={onToggleSelect}
-            onReorder={onReorder}
+
             onDropOnTask={onDropOnTask}
             onMoveByStep={onMoveByStep}
           />
@@ -121,7 +119,7 @@ interface BoardCardProps {
   selected: boolean;
   selectionMode: boolean;
   onToggleSelect: (id: string) => void;
-  onReorder: (taskId: string, targetIndex: number, column: Task["status"]) => Promise<void>;
+
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
 }

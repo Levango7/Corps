@@ -84,6 +84,13 @@ async function isOrphanUnderLock(url: string): Promise<boolean> {
   return runWithAuthOp("cron", async (tx) => {
     // advisory lock：以 url 哈希为键，防止并发清理实例同时操作同一文件
     // pg_advisory_xact_lock 接受 int4 参数；hashtext 返回 int4
+    //
+    // L-01 已知限制：hashtext 返回 int4（32 位），不同 url 可能哈希冲突
+    // 映射到同一 lock key。冲突时两个不同 url 的清理会串行化（等待彼此的
+    // 事务锁释放），降低并发清理吞吐但不会误删——事务内仍有 refCount 检查
+    // 兜底。若未来清理量大需更高并发，可改用两段锁
+    // pg_advisory_xact_lock(hashtext($1)::bigint, hashtext($1 || ':2')::bigint)
+    // 扩展到 64 位 key 空间，冲突概率降至可忽略。
     await tx.$executeRawUnsafe(
       "SELECT pg_advisory_xact_lock(hashtext($1))",
       url,

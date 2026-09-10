@@ -35,6 +35,9 @@ interface QueuedEvent {
 const queue: QueuedEvent[] = [];
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let initialized = false;
+/** M-05 修复：flush 并发锁。visibilitychange 与 enqueue 定时器可能同时触发 flush，
+ * 导致两个并发 fetch 各自 splice 一批事件重复发送。flushing 标志确保同一时刻仅一个 flush 执行。 */
+let flushing = false;
 
 /** 公共入队逻辑（自 track() 抽出，供 session_start 同步入队复用，绕开 track 避免递归）。 */
 function enqueue(event: QueuedEvent): void {
@@ -149,9 +152,13 @@ export function track(name: string, props: Record<string, unknown> = {}): void {
 /**
  * 异步 flush：用 fetch POST，失败简单重试 1 次（M14 修复）。
  * 重试策略：首次失败后等待 1s 重试一次；二次仍失败则放弃（避免无限累积）。
+ * M-05 修复：添加 flushing 锁，防止并发 flush 各自 splice 批次导致重复发送/事件丢失。
  */
 export async function flush(): Promise<void> {
+  // M-05 修复：并发锁——已有 flush 进行中时直接返回，避免重复 splice/发送
+  if (flushing) return;
   if (queue.length === 0) return;
+  flushing = true;
   const batch = queue.splice(0, BATCH_SIZE);
   if (flushTimer) {
     clearTimeout(flushTimer);
@@ -160,29 +167,33 @@ export async function flush(): Promise<void> {
 
   // M14 修复：封装单次发送，失败时重试 1 次（总共 2 次尝试）
   const MAX_ATTEMPTS = 2;
-  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    try {
-      const res = await fetch(FLUSH_ENDPOINT, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ events: batch }),
-        credentials: "include",
-        keepalive: true,
-      });
-      if (!res.ok && attempt < MAX_ATTEMPTS) {
-        // HTTP 错误（非 2xx）：等待 1s 后重试
-        await new Promise((r) => setTimeout(r, 1000));
-        continue;
+  try {
+    for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      try {
+        const res = await fetch(FLUSH_ENDPOINT, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ events: batch }),
+          credentials: "include",
+          keepalive: true,
+        });
+        if (!res.ok && attempt < MAX_ATTEMPTS) {
+          // HTTP 错误（非 2xx）：等待 1s 后重试
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
+        }
+        return; // 成功或最后一次尝试后返回
+      } catch {
+        if (attempt < MAX_ATTEMPTS) {
+          // 网络错误：等待 1s 后重试
+          await new Promise((r) => setTimeout(r, 1000));
+          continue;
+        }
+        // 两次均失败：放弃（事件已出队，避免无限累积）
       }
-      return; // 成功或最后一次尝试后返回
-    } catch {
-      if (attempt < MAX_ATTEMPTS) {
-        // 网络错误：等待 1s 后重试
-        await new Promise((r) => setTimeout(r, 1000));
-        continue;
-      }
-      // 两次均失败：放弃（事件已出队，避免无限累积）
     }
+  } finally {
+    flushing = false;
   }
 }
 

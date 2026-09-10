@@ -156,7 +156,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
             <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
             <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{t("wawTitle")}</span>
           </div>
-          <div className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+          <div className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[var(--tracking-display)]">
             {data.waw.users}
           </div>
           <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">
@@ -316,7 +316,7 @@ function StatCard({
         <Icon size={16} style={{ color }} />
         <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{label}</span>
       </div>
-      <div className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+      <div className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[var(--tracking-display)]">
         {value}
       </div>
     </div>

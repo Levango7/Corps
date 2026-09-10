@@ -49,6 +49,17 @@ interface FreshTokenResult {
  *
  * 局限：仅单进程内有效。多实例部署时需升级为分布式锁（如 Redis SET NX EX）。
  * 当前同步作业经 cron 单实例触发，内存锁足够。
+ *
+ * L-03 多实例升级建议：当水平扩展到多实例（PM2 cluster / K8s 多 Pod）时，
+ * 本内存锁失效——两个实例可能同时刷新同一 token，导致 refresh_token 竞态。
+ * 升级路径：
+ *   1. 将 tokenRefreshLocks 替换为 Redis 分布式锁：
+ *      const lockKey = `calendar:token-refresh:${connectionId}`;
+ *      const acquired = await redis.set(lockKey, '1', 'NX', 'EX', 30); // 30s TTL 防死锁
+ *      if (!acquired) { /* 等待重试或跳过 *\/ }
+ *   2. 或将同步作业改为仅由单实例执行（K8s CronJob + 互斥锁 / Leader Election），
+ *      避免多实例并发触发同步，内存锁即可保持有效。
+ *   3. 配合 REDIS_URL 配置检测：多实例 + 无 Redis 时输出警告（同 chat-events.ts 模式）。
  */
 const tokenRefreshLocks = new Map<string, Promise<FreshTokenResult>>();
 
@@ -304,7 +315,13 @@ export async function syncTaskToCalendar(
     const message = error instanceof Error ? error.message : String(error);
     // M16 修复：截断错误信息到 500 字符，避免过长/敏感信息全量写入 DB
     // （syncError 为 Text 字段可存长文本，但截断防止巨量错误堆栈占空间）
-    const truncatedError = message.slice(0, 500);
+    // S-02 修复：脱敏可能的 token 信息，避免 access_token / refresh_token / Bearer
+    // 凭据泄漏到 syncError 字段（可被日志/监控/DB 备份读取）
+    const sanitizedError = message
+      .replace(/access_token=[^&\s]+/gi, "access_token=***")
+      .replace(/refresh_token=[^&\s]+/gi, "refresh_token=***")
+      .replace(/Bearer\s+[^\s]+/gi, "Bearer ***");
+    const truncatedError = sanitizedError.slice(0, 500);
     // 标记同步失败（错误标记失败不阻塞错误返回）
     await runWithAuthOp("calendar", (tx) =>
       tx.calendarConnection
@@ -401,17 +418,24 @@ export async function syncAllTasks(userId: string): Promise<SyncResult> {
 
   let synced = 0;
   let lastError: string | undefined;
+  // M-03 修复：内层并发分批执行（每批 SYNC_BATCH_SIZE 个连接），
+  // 避免一次性 Promise.all 全部连接触发日历 API 限流（429）。
+  // 外层仍串行遍历 tasks，总并发度 = SYNC_BATCH_SIZE。
+  const SYNC_BATCH_SIZE = 5;
   for (const task of tasks) {
-    // M3 修复：内层循环改为并发（Promise.all），减少总等待时间。
-    // 外层仍串行遍历 tasks，避免一次性并发过多日历 API 请求触发限流。
-    const results = await Promise.all(
-      connections.map((conn) => syncTaskToCalendar(task.id, conn.id, { force: true })),
-    );
-    for (const result of results) {
-      if (result.success) {
-        synced += result.syncedConnections;
-      } else {
-        lastError = result.error;
+    for (let i = 0; i < connections.length; i += SYNC_BATCH_SIZE) {
+      const batch = connections.slice(i, i + SYNC_BATCH_SIZE);
+      // M3 修复：内层分批并发（Promise.all），减少总等待时间同时控制并发度。
+      // 每批最多 SYNC_BATCH_SIZE 个日历 API 请求，避免触发限流。
+      const results = await Promise.all(
+        batch.map((conn) => syncTaskToCalendar(task.id, conn.id, { force: true })),
+      );
+      for (const result of results) {
+        if (result.success) {
+          synced += result.syncedConnections;
+        } else {
+          lastError = result.error;
+        }
       }
     }
   }

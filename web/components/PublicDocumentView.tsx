@@ -35,7 +35,7 @@ export function PublicDocumentView({
   return (
     <article className="max-w-3xl mx-auto px-[var(--space-4)] py-[var(--space-10)]">
       <header className="mb-[var(--space-6)] pb-[var(--space-4)] border-b border-[var(--border-soft)]">
-        <h1 className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           {title}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--text-sm)] text-[var(--muted)]">

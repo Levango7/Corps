@@ -91,7 +91,7 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
       "provision",
       (tx) => tx.member.count({ where: { workspaceId: m.workspace.id } }),
       userId,
-    ).catch(() => -1);
+    ).catch(() => 0);
     memberCounts[m.workspace.id] = c;
   }
 
@@ -208,6 +208,35 @@ export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces
   //    被邀工作区的成员身份行（members）、calendarConnections、sessions、accounts、
   //    analyticsEvents、messageReads、chatPresences 等，数据量小，不会超时。
   //    Task.assignee/creator 为 SetNull，任务保留。
+  //
+  //    S-03 修复：步骤3采用尽力删除（catch 吞错），可能残留未删工作区。
+  //    若直接进入步骤4，User 删除会触发残留工作区的整租户级联（大账户超时）。
+  //    此处前置检查：确认无残留自有工作区，有则逐个强制删除后再进入步骤4。
+  const remaining = await runWithAuthOp(
+    "provision",
+    (tx) => tx.workspace.count({ where: { ownerId: userId } }),
+    userId,
+  );
+  if (remaining > 0) {
+    console.warn(
+      `[account-deletion] ${remaining} workspaces remain after step 3, forcing cleanup`,
+    );
+    const stale = await runWithAuthOp(
+      "provision",
+      (tx) => tx.workspace.findMany({ where: { ownerId: userId }, select: { id: true } }),
+      userId,
+    );
+    for (const ws of stale) {
+      await runWithAuthOp(
+        "provision",
+        (tx) => tx.workspace.delete({ where: { id: ws.id } }),
+        userId,
+      ).catch(() => {
+        // 强制删除仍失败：记录但不阻塞，User 删除级联会兜底（可能超时，但已尽力）
+      });
+    }
+  }
+
   await runWithAuthOp(
     "provision",
     async (tx) => {

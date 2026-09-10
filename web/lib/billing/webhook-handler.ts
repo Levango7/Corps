@@ -85,10 +85,13 @@ export async function handleBillingEvent(
             }
             // 到期时间按计费周期推算：Stripe 随后由 subscription.synced 用通道侧
             // 真实周期覆盖；国内一次性支付则以本值作为到期依据（懒降级）。
+            // M-02 修复：用 Date 构造器按年/月进位精确计算，避免
+            // 365*24*60*60*1000 毫秒累加在夏令时/闰年边界产生偏差。
+            const now = new Date();
             const expiresAt =
               event.period === "yearly"
-                ? new Date(Date.now() + 365 * 24 * 60 * 60 * 1000)
-                : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000);
+                ? new Date(now.getFullYear() + 1, now.getMonth(), now.getDate())
+                : new Date(now.getFullYear(), now.getMonth() + 1, now.getDate());
             await runWithAuthOpTx(tx, "webhook", async (tx2) => {
               // metadata 可能被篡改或指向已删除的工作区：先确认存在再落库
               const workspace = await tx2.workspace.findUnique({

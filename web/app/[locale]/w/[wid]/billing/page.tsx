@@ -499,7 +499,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               </div>
 
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+                <span className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[var(--tracking-display)]">
                   {price}
                 </span>
                 <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{unit}</span>
@@ -522,7 +522,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
                 title={!upgradable ? t("upgradeDisabledTitle") : undefined}
-                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 style={{
                   background: upgradable ? "var(--accent)" : "var(--surface-2)",
                   color: upgradable ? "var(--accent-fg)" : "var(--meta)",
@@ -585,7 +585,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {/* 微信支付二维码模态框（Phase 2：Native 扫码支付） */}
       {wechatQr && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--overlay)]"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)]"
           role="dialog"
           aria-modal="true"
           aria-label={t("wechatQrAria")}

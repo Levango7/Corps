@@ -67,7 +67,7 @@ export default function ResetPasswordPage() {
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
       <div className="mb-[var(--space-5)] sm:mb-8">
-        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           {t("title")}
         </h1>
         <p className="mt-1.5 text-[length:var(--text-sm)] sm:text-[length:var(--text-base)] text-[var(--muted)]">
@@ -96,7 +96,8 @@ export default function ResetPasswordPage() {
               href="/auth/forgot-password"
               className="block w-full h-9 leading-8 text-center border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)]"
             >
-              {t("failed")}
+              {/* M-4 修复：原 t("failed") 语义为"重置失败"，不适合做跳转按钮文案 */}
+              {t("requestNewReset")}
             </Link>
           </div>
         ) : (
@@ -149,7 +150,7 @@ export default function ResetPasswordPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
               >
                 {busy && <Loader2 size={16} className="animate-spin" />}
                 {busy ? t("submitting") : t("submit")}

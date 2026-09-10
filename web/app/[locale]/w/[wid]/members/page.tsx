@@ -431,6 +431,10 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
   const Icon = meta.icon;
   const editable = canManage && m.role !== "owner" && !m.isSelf;
   const label = m.name || m.email;
+  // M-5 修复：内联两步确认替代 window.confirm（阻塞式原生弹窗）。
+  // 第一次点击进入 confirming 态（按钮变红+文案切换），第二次点击执行删除。
+  // 失焦或 3 秒超时自动重置，避免用户误触后卡在确认态。
+  const [confirming, setConfirming] = useState(false);
 
   if (layout === "row") {
     return (
@@ -468,12 +472,22 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           {editable && (
             <button
               onClick={() => {
-                if (window.confirm(t("removeConfirm", { name: label }))) {
+                if (confirming) {
+                  setConfirming(false);
                   onRemove(m.id, label);
+                } else {
+                  setConfirming(true);
+                  setTimeout(() => setConfirming(false), 3000);
                 }
               }}
-              className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-              aria-label={t("remove") + " " + label}
+              onBlur={() => setConfirming(false)}
+              className={`p-2 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+                confirming
+                  ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                  : "hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)]"
+              }`}
+              aria-label={confirming ? t("removeConfirm", { name: label }) : t("remove") + " " + label}
+              title={confirming ? t("removeConfirm", { name: label }) : undefined}
             >
               <Trash2 size={16} />
             </button>
@@ -527,15 +541,25 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           </span>
           <button
             onClick={() => {
-              if (window.confirm(t("removeConfirm", { name: label }))) {
+              if (confirming) {
+                setConfirming(false);
                 onRemove(m.id, label);
+              } else {
+                setConfirming(true);
+                setTimeout(() => setConfirming(false), 3000);
               }
             }}
-            className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-            aria-label={t("remove") + " " + label}
+            onBlur={() => setConfirming(false)}
+            className={`w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              confirming
+                ? "bg-[var(--danger-soft)] text-[var(--danger)]"
+                : "hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)]"
+            }`}
+            aria-label={confirming ? t("removeConfirm", { name: label }) : t("remove") + " " + label}
+            title={confirming ? t("removeConfirm", { name: label }) : undefined}
           >
             <Trash2 size={16} />
-            <span>{t("remove")}</span>
+            <span>{confirming ? t("removeConfirmAction") : t("remove")}</span>
           </button>
         </div>
       )}

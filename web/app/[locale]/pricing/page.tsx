@@ -146,7 +146,7 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
 function TopNav({ t }: { t: TranslateFn }) {
   return (
     <nav
-      className="sticky top-0 z-10 h-[var(--topbar-h)] flex items-center justify-between px-[var(--space-6)] md:px-[var(--space-8)] border-b border-[var(--border-soft)] bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-[8px]"
+      className="sticky top-0 z-[var(--z-dropdown)] h-[var(--topbar-h)] flex items-center justify-between px-[var(--space-6)] md:px-[var(--space-8)] border-b border-[var(--border-soft)] bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-[8px]"
       aria-label={t("nav.ariaLabel")}
     >
       <Link

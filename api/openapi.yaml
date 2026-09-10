@@ -462,10 +462,10 @@ paths:
                           pageSize: { type: integer, minimum: 1 }
                           totalCount: { type: integer, minimum: 0 }
                           totalPages: { type: integer, minimum: 0 }
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [tasks]
       summary: Create a task
@@ -488,10 +488,10 @@ paths:
                 $ref: '#/components/schemas/Envelope_Task'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/tasks/{id}:
     get:
@@ -647,10 +647,10 @@ paths:
                 $ref: '#/components/schemas/Envelope_MemberList'
         '400':
           $ref: '#/components/responses/BadRequest'
-        '403':
-          $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/members/invite:
     post:
@@ -1134,15 +1134,29 @@ paths:
                           days: { type: integer, example: 14 }
                           since: { type: string, format: date-time }
                       funnel:
-                        type: array
-                        description: register → login → create_task → invite_member → create_decision
-                        items:
-                          type: object
-                          properties:
-                            name: { type: string }
-                            label: { type: string }
-                            users: { type: integer }
-                            rate: { type: integer, description: Conversion vs previous step (%) }
+                        type: object
+                        description: Two-stage serialized funnel (acquisition + activation, D2 fix)
+                        properties:
+                          acquisition:
+                            type: array
+                            description: Acquisition funnel steps (grouped by sessionId)
+                            items:
+                              type: object
+                              properties:
+                                name: { type: string }
+                                label: { type: string }
+                                users: { type: integer }
+                                rate: { type: integer, description: Conversion vs previous step (%) }
+                          activation:
+                            type: array
+                            description: Activation funnel steps (grouped by userId)
+                            items:
+                              type: object
+                              properties:
+                                name: { type: string }
+                                label: { type: string }
+                                users: { type: integer }
+                                rate: { type: integer, description: Conversion vs previous step (%) }
                       daily:
                         type: array
                         items:
@@ -1156,7 +1170,39 @@ paths:
                             name: { type: string }
                             count: { type: integer }
                       totalEvents: { type: integer }
+                      eventsTruncated: { type: boolean, description: Whether event sampling was truncated due to limit }
+                      eventSampleSize: { type: integer, description: Number of events actually loaded (may be less than totalEvents) }
                       activeUsers: { type: integer }
+                      coreActiveUsers: { type: integer, description: Distinct users with CORE_EVENTS in the window }
+                      waw:
+                        type: object
+                        description: Weekly active users (current workweek, work-scoped)
+                        properties:
+                          weekStart: { type: string }
+                          users: { type: integer }
+                      retention:
+                        type: object
+                        description: D1/D7/D30 retention rates
+                        properties:
+                          d1:
+                            type: object
+                            properties:
+                              active: { type: integer }
+                              eligible: { type: integer }
+                              rate: { type: integer, description: Retention rate (%) }
+                          d7:
+                            type: object
+                            properties:
+                              active: { type: integer }
+                              eligible: { type: integer }
+                              rate: { type: integer, description: Retention rate (%) }
+                          d30:
+                            type: object
+                            properties:
+                              active: { type: integer }
+                              eligible: { type: integer }
+                              rate: { type: integer, description: Retention rate (%) }
+                      sessions: { type: integer, description: Distinct sessionId count in the window }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -1322,12 +1368,10 @@ paths:
                 $ref: '#/components/schemas/Envelope_BillingStatus'
         '401':
           $ref: '#/components/responses/Unauthorized'
-        '403':
-          $ref: '#/components/responses/Forbidden'
         '404':
           $ref: '#/components/responses/NotFound'
-        '501':
-          $ref: '#/components/responses/PaymentNotConfigured'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/billing/portal:
     post:
@@ -2122,6 +2166,8 @@ paths:
               schema:
                 $ref: '#/components/schemas/Envelope_DecisionList'
         '401': { description: Unauthorized }
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   /api/auth/request-password-reset:
     post:

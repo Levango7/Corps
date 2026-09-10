@@ -51,7 +51,10 @@ export async function POST(req: NextRequest) {
     });
     if (!baRes.ok) {
       const err = await baRes.json().catch(() => ({}));
-      return NextResponse.json(err, { status: baRes.status });
+      return NextResponse.json(
+        { code: baRes.status, message: err?.message || apiMsg(req, "registerFailed"), data: null },
+        { status: baRes.status },
+      );
     }
     const baBody = await baRes.json();
     const baUser = baBody.user;

@@ -86,6 +86,16 @@ if (process.env.NODE_ENV === "production") {
  * 按每分钟 20 次建立 × 5 分钟空闲存活，单用户理论上可累积约百条长连接占句柄）。
  * key=userId，value=当前活跃连接数。多端登录场景正常值 1-3（PC + 手机 + 平板），
  * 上限取 5 留足余量；超出返回 429 由调用方拒绝连接。
+ *
+ * L-02 已知限制：sseConnections 计数依赖客户端在连接断开时调用 releaseSseSlot
+ * 释放额度。若客户端崩溃/网络断开未发送 FIN，或调用方在异常路径漏调 release，
+ * 计数会泄漏（只增不减），最终用户被误限流（达到 MAX_SSE_PER_USER 后拒绝新连接）。
+ *
+ * 当前防护：依赖应用层心跳——SSE 路由发送定期 ping，客户端 pong 超时后路由
+ * 主动关闭连接并调 release。若未来需更强的防护，可添加定期扫描机制：
+ *   - 每 5 分钟扫描 sseConnections，对计数 > 0 的 userId 发心跳探测；
+ *   - 探测无响应的连接标记为僵尸，扣减计数并清理。
+ * 或改为在 sseConnections 中存储最后活跃时间戳，定期清理超时（如 10 分钟无活动）的条目。
  */
 const MAX_SSE_PER_USER = 5;
 const sseConnections = new Map<string, number>();

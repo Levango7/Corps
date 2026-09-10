@@ -241,7 +241,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       {/* ── 标题栏 ── */}
       <div className="mb-[var(--space-6)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
             {t("title")}
           </h1>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -346,7 +346,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                     </header>
 
                     {/* 中间：markdown 内容摘要（纯文本，截取 200 字符） */}
-                    <div className="px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.7]">
+                    <div className="px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[var(--leading-relaxed)]">
                       {summary ? (
                         <p className="whitespace-pre-wrap break-words">{summary}</p>
                       ) : (
@@ -384,7 +384,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="inline-flex items-center gap-2 h-9 px-5 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:border-[var(--muted)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-2 h-9 px-5 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:border-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {loadingMore ? (
                   <>

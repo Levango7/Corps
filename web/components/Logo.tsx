@@ -36,7 +36,7 @@ export const Logo: FC<LogoProps> = ({ withText = true, size = 24, className = ""
         />
       </svg>
       {withText && (
-        <span className="font-[weight:var(--weight-semibold)] text-[length:var(--text-md)] text-[var(--fg)] tracking-[-0.01em]">
+        <span className="font-[weight:var(--weight-semibold)] text-[length:var(--text-md)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           corps
         </span>
       )}

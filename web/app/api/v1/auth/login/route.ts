@@ -31,8 +31,11 @@ export async function POST(req: NextRequest) {
       asResponse: true,
     });
     if (!baRes.ok) {
-      const err = await baRes.json().catch(() => ({ code: 401, message: apiMsg(req, "invalidCredentials"), data: null }));
-      return NextResponse.json(err, { status: baRes.status });
+      const err = await baRes.json().catch(() => ({}));
+      return NextResponse.json(
+        { code: baRes.status, message: err?.message || apiMsg(req, "invalidCredentials"), data: null },
+        { status: baRes.status },
+      );
     }
     const baBody = await baRes.json();
     const baUser = baBody.user;

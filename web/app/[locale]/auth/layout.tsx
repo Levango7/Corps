@@ -21,7 +21,7 @@ export default async function AuthLayout({ children }: { children: React.ReactNo
       </div>
 
       {/* 语言切换器 —— 右上角 */}
-      <div className="absolute top-4 right-4 z-10">
+      <div className="absolute top-4 right-4 z-[var(--z-dropdown)]">
         <LanguageSwitcher />
       </div>
 

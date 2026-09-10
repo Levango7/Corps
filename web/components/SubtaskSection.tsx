@@ -135,7 +135,7 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
                 <button
                   onClick={() => router.push(`/w/${wid}/task/${st.id}`)}
                   disabled={isToggling}
-                  className={`flex-1 min-w-0 text-left text-[length:var(--text-sm)] truncate hover:text-[var(--accent)] transition-colors disabled:opacity-60 ${
+                  className={`flex-1 min-w-0 text-left text-[length:var(--text-sm)] truncate hover:text-[var(--accent)] transition-colors disabled:opacity-50 ${
                     isDone ? "text-[var(--meta)] line-through" : "text-[var(--fg)]"
                   }`}
                 >

@@ -553,7 +553,7 @@ export default function TaskDetailPage({
                   }
                 }}
                 rows={1}
-                className="flex-1 overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
+                className="flex-1 overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[var(--tracking-tight)] leading-snug transition-shadow duration-[var(--motion-fast)]"
               />
               <button
                 type="button"
@@ -581,7 +581,7 @@ export default function TaskDetailPage({
               }}
               rows={4}
               placeholder={t("detailDescriptionPlaceholder")}
-              className="mt-[var(--space-3)] w-full resize-y bg-transparent text-[length:var(--text-base)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
+              className="mt-[var(--space-3)] w-full resize-y bg-transparent text-[length:var(--text-base)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] leading-[var(--leading-relaxed)] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
             />
 
             <div className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
@@ -690,11 +690,11 @@ export default function TaskDetailPage({
                       onKeyDown={decisionKeyDown}
                       rows={6}
                       placeholder={t("decisionTemplate")}
-                      className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[1.7] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
+                      className="w-full resize-y bg-transparent font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] border border-transparent rounded-[var(--radius-sm)] leading-[var(--leading-relaxed)] placeholder:text-[var(--meta)] transition-shadow duration-[var(--motion-fast)]"
                     />
                   </>
                 ) : (
-                  <div className="min-h-[120px] px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border-soft)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.7] overflow-y-auto">
+                  <div className="min-h-[120px] px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border-soft)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[var(--leading-relaxed)] overflow-y-auto">
                     {decisionDraft.trim() ? (
                       <Markdown source={decisionDraft} />
                     ) : (
@@ -829,7 +829,7 @@ export default function TaskDetailPage({
                         {relTime(c.createdAt)}
                       </span>
                     </div>
-                    <div className="mt-0.5 text-[length:var(--text-base)] text-[var(--fg-2)] leading-[1.7] whitespace-pre-wrap break-words">
+                    <div className="mt-0.5 text-[length:var(--text-base)] text-[var(--fg-2)] leading-[var(--leading-relaxed)] whitespace-pre-wrap break-words">
                       {c.body}
                     </div>
                   </div>
@@ -1140,7 +1140,7 @@ export default function TaskDetailPage({
             <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
               {t("confirmDeleteTitle")}
             </h3>
-            <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.6] mb-[var(--space-5)]">
+            <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[var(--leading-relaxed)] mb-[var(--space-5)]">
               {t("confirmDeleteTask", { title: task.title })}
             </p>
             <div className="flex items-center justify-end gap-[var(--space-2)]">

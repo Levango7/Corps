@@ -149,7 +149,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     <div className="max-w-[var(--container-max)] mx-auto">
       <div className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>
-          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
             {tNav("menu.overview")}
           </h1>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -196,7 +196,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                     className="ml-auto text-[var(--meta)] opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-fast)]"
                   />
                 </div>
-                <div className="mt-2 text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+                <div className="mt-2 text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[var(--tracking-display)]">
                   {counts[card.key]}
                 </div>
               </Link>
