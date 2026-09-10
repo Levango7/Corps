@@ -25,6 +25,7 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
       aria-label={t("viewAria")}
     >
       <button
+        type="button"
         onClick={() => onChange("board")}
         aria-pressed={view === "board"}
         className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors ${
@@ -38,6 +39,7 @@ export function ViewToggle({ view, onChange }: ViewToggleProps) {
         <span className="hidden sm:inline">{t("boardView")}</span>
       </button>
       <button
+        type="button"
         onClick={() => onChange("list")}
         aria-pressed={view === "list"}
         className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors ${

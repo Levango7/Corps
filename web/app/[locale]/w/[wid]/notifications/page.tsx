@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import { useTranslations } from "next-intl";
 
 type NotificationType =
@@ -100,6 +101,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
   const tNotif = useTranslations("notifications");
   const tTime = useTranslations("time");
   const tErr = useTranslations("error");
+  const { toast } = useToast();
   const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [loaded, setLoaded] = useState(false);
   const [filter, setFilter] = useState<Filter>("all");
@@ -168,7 +170,10 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       api(`/api/v1/workspaces/${wid}/notifications`, {
         method: "PATCH",
         body: JSON.stringify({ id: n.id }),
-      }).catch(() => {});
+      }).catch(() => {
+        // 标记已读失败：提示用户，下次进入页面会重新加载纠正
+        toast("error", tErr("networkConnectFailed"));
+      });
     }
     const target = `/w/${wid}/task/${n.entityId}`;
     router.push(n.type === "decision_updated" ? `${target}#decisions` : target);

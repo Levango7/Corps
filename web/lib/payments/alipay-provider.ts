@@ -381,36 +381,40 @@ export class AlipayPageProvider implements PaymentProvider {
       // M18 修复：外部 HTTP 调用添加 30s 超时（AbortController）
       const controller = new AbortController();
       const timeoutId = setTimeout(() => controller.abort(), 30_000);
-      const res = await fetch(url.toString(), {
-        method: "GET",
-        headers: { Accept: "application/json" },
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-      if (!res.ok) {
-        throw new PaymentProviderError(`支付宝查单 HTTP 失败: ${res.status}`, "channel_error");
-      }
-      const resp = (await res.json()) as {
-        alipay_trade_query_response: {
-          trade_status?: string;
-          out_trade_no?: string;
-          trade_no?: string;
-          code?: string;
-          msg?: string;
+      try {
+        const res = await fetch(url.toString(), {
+          method: "GET",
+          headers: { Accept: "application/json" },
+          signal: controller.signal,
+        });
+        if (!res.ok) {
+          throw new PaymentProviderError(`支付宝查单 HTTP 失败: ${res.status}`, "channel_error");
+        }
+        const resp = (await res.json()) as {
+          alipay_trade_query_response: {
+            trade_status?: string;
+            out_trade_no?: string;
+            trade_no?: string;
+            code?: string;
+            msg?: string;
+          };
         };
-      };
-      const inner = resp.alipay_trade_query_response;
-      if (inner.code !== "10000") {
-        throw new PaymentProviderError(
-          `支付宝查单业务失败: ${inner.code} ${inner.msg ?? ""}`,
-          "channel_error",
-        );
+        const inner = resp.alipay_trade_query_response;
+        if (inner.code !== "10000") {
+          throw new PaymentProviderError(
+            `支付宝查单业务失败: ${inner.code} ${inner.msg ?? ""}`,
+            "channel_error",
+          );
+        }
+        return {
+          tradeStatus: inner.trade_status ?? "UNKNOWN",
+          outTradeNo: inner.out_trade_no ?? outTradeNo,
+          tradeNo: inner.trade_no,
+        };
+      } finally {
+        // L2 修复：确保超时 timer 在任何情况下都被清理，防止 timer handle 泄漏
+        clearTimeout(timeoutId);
       }
-      return {
-        tradeStatus: inner.trade_status ?? "UNKNOWN",
-        outTradeNo: inner.out_trade_no ?? outTradeNo,
-        tradeNo: inner.trade_no,
-      };
     } catch (err) {
       if (err instanceof PaymentProviderError) throw err;
       throw new PaymentProviderError(

@@ -189,12 +189,18 @@ export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces
   // 3. 逐个删除自有工作区（M3：每租户独立短事务，schema 级联清理该 workspace 全部数据）
   //    Workspace DELETE 策略放行 owner_id = app.user_id；级联删除绕过 RLS（PG 行为）。
   //    每个事务仅处理一个租户的级联数据量，避免大账户单事务超时。
+  //    L5 修复：单个 workspace 删除失败时记录错误但继续删除后续的，
+  //    避免中间失败导致半删除状态（已删的前 N 个 + 未删的剩余）。
   for (const ws of ownedWorkspaces) {
-    await runWithAuthOp(
-      "provision",
-      (tx) => tx.workspace.delete({ where: { id: ws.id } }),
-      userId,
-    );
+    try {
+      await runWithAuthOp(
+        "provision",
+        (tx) => tx.workspace.delete({ where: { id: ws.id } }),
+        userId,
+      );
+    } catch (err) {
+      console.error("[account-deletion] Failed to delete workspace:", ws.id, err);
+    }
   }
 
   // 4. 最终短事务：better-auth 清理 + User 删除

@@ -199,28 +199,32 @@ async function sendViaResend(opts: {
     // M23 修复：外部 HTTP 调用添加 30s 超时（AbortController）
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 30_000);
-    const res = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        // docker-compose.yml / .env.example 定义的变量名是 EMAIL_FROM；
-        // MAIL_FROM 为历史兼容（email.ts 旧版曾读此名），优先级低于 EMAIL_FROM
-        from: process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app",
-        to: opts.to,
-        subject: opts.subject,
-        html: opts.html,
-      }),
-      signal: controller.signal,
-    });
-    clearTimeout(timeoutId);
-    if (!res.ok) {
-      throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+    try {
+      const res = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          // docker-compose.yml / .env.example 定义的变量名是 EMAIL_FROM；
+          // MAIL_FROM 为历史兼容（email.ts 旧版曾读此名），优先级低于 EMAIL_FROM
+          from: process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app",
+          to: opts.to,
+          subject: opts.subject,
+          html: opts.html,
+        }),
+        signal: controller.signal,
+      });
+      if (!res.ok) {
+        throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
+      }
+      console.info(`[email] ${opts.logTag} sent to ${opts.to}`);
+      return true;
+    } finally {
+      // L1 修复：确保超时 timer 在任何情况下都被清理，防止 timer handle 泄漏
+      clearTimeout(timeoutId);
     }
-    console.info(`[email] ${opts.logTag} sent to ${opts.to}`);
-    return true;
   } catch (err) {
     console.error(`[email] ${opts.logTag} send failed (non-blocking):`, err);
     return false;

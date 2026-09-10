@@ -151,11 +151,11 @@ export default function Onboarding({
   // 折叠态:右下角小气泡,不挡视图,用户点开才进入模态引导
   if (!expanded) {
     return (
-      <div className="fixed bottom-4 right-4 z-40">
+      <div className="fixed bottom-20 right-4 z-40">
         <button
           ref={triggerRef}
           onClick={() => setExpanded(true)}
-          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
+          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           aria-label={t("openGuide")}
         >
           <BubbleIcon />

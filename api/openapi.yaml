@@ -1376,7 +1376,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_Null'
+                $ref: '#/components/schemas/Envelope_WebhookReceived'
         '400':
           $ref: '#/components/responses/BadRequest'
 
@@ -1482,7 +1482,37 @@ paths:
       tags: [system]
       summary: Liveness + DB readiness probe
       responses:
-        '200': { description: App alive and database reachable }
+        '200':
+          description: App alive and database reachable
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: "ok" }
+                      db: { type: string, example: "up" }
+                      uptimeSec: { type: integer, description: Process uptime in seconds }
+        # L3：DB 探测失败时实现返回 503 + { status: "degraded", db: "down" }，
+        # 此前 openapi 未定义 503，客户端无法预知降级形状。这里补全契约。
+        '503':
+          description: Database unreachable (degraded)
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [code, message]
+                properties:
+                  code: { type: integer, example: 503 }
+                  data:
+                    type: object
+                    properties:
+                      status: { type: string, example: "degraded" }
+                      db: { type: string, example: "down" }
+                  message: { type: string, example: "Database unreachable" }
   /api/cron/due-reminders:
     get:
       tags: [system]
@@ -2731,12 +2761,44 @@ components:
         message:
           type: string
           example: "invalid or expired access token"
+        # L4：events POST 400 等校验失败响应会附带 zod errors 数组，
+        # 此前未在 ErrorEnvelope 中文档化。这里补为可选字段（未列入 required），
+        # 既覆盖现有带 errors 的 4xx 响应，也不破坏只返回 {code,message,data} 的错误响应。
+        errors:
+          type: array
+          description: >
+            Optional field-level validation errors (e.g. zod issues) for 4xx
+            responses. Absent on non-validation errors.
+          items:
+            type: object
+            description: A single validation issue (path/message/code as produced by zod).
     Envelope_Null:
       allOf:
         - $ref: '#/components/schemas/Envelope'
       properties:
         data:
           nullable: true
+    # L2：Stripe webhook 200 实际返回 { received: true } 或 { received: true, duplicate: true }，
+    # 此前误用 Envelope_Null（data:null），与实现不一致。这里定义专用 envelope，
+    # data 形状为 { received: boolean, duplicate?: boolean }，与 route.ts 两处 200 应答对齐。
+    Envelope_WebhookReceived:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [received]
+          properties:
+            received:
+              type: boolean
+              description: Whether the webhook event was accepted.
+              example: true
+            duplicate:
+              type: boolean
+              description: >
+                Present and true when the event was already processed (idempotent
+                hit via processed_payment_events). Absent on first processing.
+              example: true
     Envelope_RegisterResponse:
       allOf:
         - $ref: '#/components/schemas/Envelope'

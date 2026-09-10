@@ -41,6 +41,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
 
   const t = useTranslations("members");
   const tButton = useTranslations("button");
+  const tRole = useTranslations("role");
   const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [meta, setMeta] = useState<WorkspaceMeta | null>(null);
@@ -123,7 +124,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     }
   }
 
-  async function remove(uid: string, label: string) {
+  async function remove(uid: string, _label: string) {
     setError("");
     try {
       await api(`/api/v1/workspaces/${wid}/members/${uid}`, { method: "DELETE" });
@@ -304,7 +305,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                   .filter((m) => !m.isSelf && m.role !== "owner")
                   .map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name || m.email}（{m.role}）
+                      {m.name || m.email}（{tRole(m.role)}）
                     </option>
                   ))}
               </select>
@@ -466,7 +467,11 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           )}
           {editable && (
             <button
-              onClick={() => onRemove(m.id, label)}
+              onClick={() => {
+                if (window.confirm(t("removeConfirm", { name: label }))) {
+                  onRemove(m.id, label);
+                }
+              }}
               className="p-2 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               aria-label={t("remove") + " " + label}
             >
@@ -521,7 +526,11 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             {t("ownerNotEditable")}
           </span>
           <button
-            onClick={() => onRemove(m.id, label)}
+            onClick={() => {
+              if (window.confirm(t("removeConfirm", { name: label }))) {
+                onRemove(m.id, label);
+              }
+            }}
             className="w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("remove") + " " + label}
           >

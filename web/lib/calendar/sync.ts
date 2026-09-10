@@ -402,8 +402,12 @@ export async function syncAllTasks(userId: string): Promise<SyncResult> {
   let synced = 0;
   let lastError: string | undefined;
   for (const task of tasks) {
-    for (const conn of connections) {
-      const result = await syncTaskToCalendar(task.id, conn.id, { force: true });
+    // M3 修复：内层循环改为并发（Promise.all），减少总等待时间。
+    // 外层仍串行遍历 tasks，避免一次性并发过多日历 API 请求触发限流。
+    const results = await Promise.all(
+      connections.map((conn) => syncTaskToCalendar(task.id, conn.id, { force: true })),
+    );
+    for (const result of results) {
       if (result.success) {
         synced += result.syncedConnections;
       } else {

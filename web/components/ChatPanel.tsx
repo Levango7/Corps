@@ -274,7 +274,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
 
       {/* 初始加载失败错误提示 */}
       {loadError && (
-        <div className="mb-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger-soft)] text-[length:var(--text-sm)] text-[var(--danger)]">
+        <div className="mb-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger)] text-[length:var(--text-sm)] text-[var(--danger)]">
           {loadError}
         </div>
       )}

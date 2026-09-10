@@ -147,7 +147,7 @@ export default function SignupPage() {
     strength === 1
       ? "bg-[var(--danger)]"
       : strength === 2
-        ? "bg-[var(--warning)]"
+        ? "bg-[var(--warn)]"
         : "bg-[var(--success)]";
 
   return (

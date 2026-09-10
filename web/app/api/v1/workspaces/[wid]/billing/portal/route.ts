@@ -38,7 +38,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 它是为 PAYMENT_PROVIDER 切换后的部署形态准备的。
     if (result === null) {
       return NextResponse.json(
-        { code: 501, message: apiMsg(req, "portalNotSupported") },
+        { code: 501, message: apiMsg(req, "portalNotSupported"), data: null },
         { status: 501 },
       );
     }

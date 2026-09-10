@@ -138,6 +138,9 @@ function signRequest(data: string): string {
     return rsaSha256Sign(WECHAT_PRIVATE_KEY_PEM, data);
   }
   // HMAC 回退（仅沙箱/测试）：未配置 RSA 私钥时用 APIv3 密钥做 HMAC
+  console.warn(
+    "[wechat] RSA private key not configured, falling back to HMAC. This is only safe for sandbox/testing.",
+  );
   if (!WECHAT_API_KEY) {
     throw new PaymentProviderError(
       "微信支付签名密钥未配置（需 WECHAT_PRIVATE_KEY_PEM 用于 RSA-SHA256，或 WECHAT_API_KEY 用于 HMAC 回退）",
@@ -156,6 +159,9 @@ function verifyCallback(data: string, signature: string): boolean {
     return rsaSha256Verify(WECHAT_PLATFORM_PUBLIC_KEY_PEM, data, signature);
   }
   // HMAC 回退（仅沙箱/测试）
+  console.warn(
+    "[wechat] RSA platform public key not configured, falling back to HMAC verify. This is only safe for sandbox/testing.",
+  );
   if (!WECHAT_API_KEY) return false;
   return hmacSha256Verify(WECHAT_API_KEY, data, signature);
 }

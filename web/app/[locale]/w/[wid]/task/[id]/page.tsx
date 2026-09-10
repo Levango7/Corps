@@ -1158,7 +1158,7 @@ export default function TaskDetailPage({
                   setConfirmOpen(false);
                 }}
                 disabled={deleting}
-                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] bg-[var(--danger)] text-[var(--accent-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {deleting ? (
                   <Loader2 size={14} className="animate-spin" />

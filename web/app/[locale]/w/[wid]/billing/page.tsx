@@ -18,6 +18,7 @@ import {
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
+import { Skeleton } from "@/components/Skeleton";
 
 type Plan = "free" | "pro";
 type PaymentMethod = "card" | "wechat" | "alipay";
@@ -37,15 +38,15 @@ interface BillingStatus {
   } | null;
 }
 
-// 套餐卡数据（阶段 2-6 i18n）：nameKey/unitKey/seatsKey/features/details 均为 billing ns
+// 套餐卡数据（阶段 2-6 i18n）：nameKey/unitKey/seatsKey/details 均为 billing ns
 // 翻译 key，渲染处经 t() 解析；price 保持字面量（币种格式随通道不同）。
+// M3 修复：移除 features 字段，将 features 内容合并到 details，消除 pro 的数据重复。
 const PLANS: {
   id: Plan;
   nameKey: string;
   price: string;
   unitKey: string;
   seatsKey: string;
-  features: string[];
   details: string[];
 }[] = [
   {
@@ -54,15 +55,18 @@ const PLANS: {
     price: "¥0",
     unitKey: "unitForever",
     seatsKey: "seatsFree",
-    features: [
+    details: [
       "featBoard",
       "featComments",
       "featIm",
       "featDecisions10",
       "featCalendar",
       "featNotif",
+      "detailSeats10",
+      "detailDecisions10",
+      "detailBasicExport",
+      "detailCommunity",
     ],
-    details: ["detailSeats10", "detailDecisions10", "detailBasicExport", "detailCommunity"],
   },
   {
     id: "pro",
@@ -70,13 +74,6 @@ const PLANS: {
     price: "¥29.9",
     unitKey: "unitPerSeatMonth",
     seatsKey: "seatsPerSeat",
-    features: [
-      "featUnlimitedDecisions",
-      "featFilterViews",
-      "featAttachments50",
-      "featEmail",
-      "featCsv",
-    ],
     details: [
       "featUnlimitedDecisions",
       "featFilterViews",
@@ -138,6 +135,23 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       if (pollRef.current) clearInterval(pollRef.current);
     };
   }, []);
+
+  // M7 修复：微信二维码模态框打开时锁定 body 滚动 + Esc 关闭
+  useEffect(() => {
+    if (!wechatQr) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        closeWechatQr();
+      }
+    };
+    document.addEventListener("keydown", onKeyDown);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+    };
+  }, [wechatQr]);
 
   async function upgrade(plan: Plan) {
     setError("");
@@ -279,13 +293,13 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         {!status ? (
           <div className="space-y-3" aria-busy="true" aria-label={t("loadingStatus")}>
             <div className="space-y-1.5">
-              <div className="h-3 w-16 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-5 w-28 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
+              <Skeleton className="h-3 w-16" />
+              <Skeleton className="h-5 w-28" />
             </div>
             <div className="space-y-1.5">
-              <div className="h-3 w-12 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-5 w-20 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
-              <div className="h-1 w-32 rounded-full bg-[var(--surface-2)] animate-pulse" />
+              <Skeleton className="h-3 w-12" />
+              <Skeleton className="h-5 w-20" />
+              <Skeleton className="h-1 w-32 rounded-full" />
             </div>
           </div>
         ) : (
@@ -493,7 +507,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">{seats}</div>
 
               <ul className="mt-4 space-y-2 flex-1">
-                {p.features.map((f) => (
+                {p.details.map((f) => (
                   <li
                     key={f}
                     className="flex items-start gap-2 text-[length:var(--text-sm)] text-[var(--fg-2)]"
@@ -591,14 +605,34 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             </div>
             <div className="flex flex-col items-center">
               {/* 二维码渲染：使用在线 API 生成（生产环境建议替换为本地 QR 码库） */}
+              {/* M8 修复：加 referrerPolicy="no-referrer" 防止泄露 referrer；onError 兜底 */}
               {/* eslint-disable-next-line @next/next/no-img-element -- 外部二维码服务，next/image 无法代理 */}
               <img
                 src={`https://api.qrserver.com/v1/create-qr-code/?size=240x240&data=${encodeURIComponent(wechatQr.url)}`}
                 alt={t("wechatQr")}
                 width={240}
                 height={240}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
                 className="rounded-[var(--radius-md)]"
+                onError={(e) => {
+                  const img = e.currentTarget;
+                  img.style.display = "none";
+                  const fallback = img.nextElementSibling as HTMLElement | null;
+                  if (fallback) fallback.style.display = "block";
+                }}
               />
+              {/* QR 加载失败兜底：显示链接文本 */}
+              <p
+                className="hidden mt-0 p-4 text-[length:var(--text-sm)] text-[var(--fg-2)] text-center break-all"
+                aria-live="polite"
+              >
+                {t("wechatQrFallback")}
+                <br />
+                <code className="font-[family-name:var(--font-mono)] text-[length:var(--text-xs)]">
+                  {wechatQr.url}
+                </code>
+              </p>
               <p className="mt-4 text-[length:var(--text-sm)] text-[var(--fg-2)] text-center">
                 {t("wechatScanHint")}
               </p>

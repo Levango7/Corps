@@ -875,6 +875,7 @@
     "upgradeDisabledTitle": "Stripe not configured or not owner",
     "inUse": "Current plan",
     "wechatQr": "WeChat Pay QR code",
+    "wechatQrFallback": "QR code failed to load. Please open this link in WeChat to scan:",
     "title": "Billing",
     "subtitle": "Pay only for the seats you use. Adjust anytime.",
     "viewFullComparison": "View full feature comparison",

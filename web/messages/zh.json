@@ -875,6 +875,7 @@
     "upgradeDisabledTitle": "Stripe 未配置或非拥有者",
     "inUse": "使用中",
     "wechatQr": "微信支付二维码",
+    "wechatQrFallback": "二维码加载失败，请在微信中打开此链接扫码：",
     "title": "计费",
     "subtitle": "按实际席位付费，随时调整人数。",
     "viewFullComparison": "查看完整功能对比",

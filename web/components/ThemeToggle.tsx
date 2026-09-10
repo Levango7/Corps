@@ -64,6 +64,7 @@ export function ThemeToggle({ pref, onChange }: ThemeToggleProps) {
 
   return (
     <button
+      type="button"
       onClick={toggle}
       className="p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
       aria-label={tTheme("toggleAria", { label })}

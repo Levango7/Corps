@@ -100,7 +100,7 @@ export function PricingSection() {
                   className={
                     "px-4 h-9 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] " +
                     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
-                    "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)] " +
+                    "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] " +
                     (pressed
                       ? "bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]"
                       : "text-[var(--muted)] hover:text-[var(--fg-2)]")

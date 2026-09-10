@@ -50,7 +50,7 @@ function highlightText(text: string, query: string): React.ReactNode {
   const parts = text.split(splitRegex);
   return parts.map((part, i) =>
     testRegex.test(part) ? (
-      <mark key={i} className="bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] rounded-[var(--radius-sm)] px-0.5">
+      <mark key={i} className="bg-[var(--accent-soft)] text-[var(--accent)] rounded-[var(--radius-sm)] px-0.5">
         {part}
       </mark>
     ) : (

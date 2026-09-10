@@ -41,6 +41,7 @@ export function LanguageSwitcher() {
       {locales.map((loc) => (
         <button
           key={loc}
+          type="button"
           onClick={() => switchTo(loc)}
           // 无障碍名 = "切换语言：<语言>"。aria-label 会覆盖按钮文本作为
           // accessible name——不带语言名时 zh/en 两个按钮同名，屏幕阅读器

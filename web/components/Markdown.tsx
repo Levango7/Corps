@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, type ReactNode } from "react";
+import Link from "next/link";
 import { Mermaid } from "@/components/Mermaid";
 
 /**
@@ -55,17 +56,31 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       const label = token.slice(1, close);
       const href = token.slice(close + 2, -1);
       const safe = SAFE_HREF_PATTERN.test(href) ? href : "#";
-      nodes.push(
-        <a
-          key={k}
-          href={safe}
-          target={safe.startsWith("http") ? "_blank" : undefined}
-          rel="noopener noreferrer"
-          className="text-[var(--accent)] hover:underline underline-offset-2"
-        >
-          {label}
-        </a>,
-      );
+      if (safe.startsWith("/")) {
+        // 站内链接：用 next/link 避免全页刷新
+        nodes.push(
+          <Link
+            key={k}
+            href={safe}
+            className="text-[var(--accent)] hover:underline underline-offset-2"
+          >
+            {label}
+          </Link>,
+        );
+      } else {
+        // 外部链接或锚点：用 <a>，外部链接新窗口打开
+        nodes.push(
+          <a
+            key={k}
+            href={safe}
+            target={safe.startsWith("http") ? "_blank" : undefined}
+            rel="noopener noreferrer"
+            className="text-[var(--accent)] hover:underline underline-offset-2"
+          >
+            {label}
+          </a>,
+        );
+      }
     } else if (token.startsWith("**")) {
       nodes.push(
         <strong key={k} className="font-[weight:var(--weight-semibold)] text-[var(--fg)]">

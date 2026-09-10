@@ -189,8 +189,12 @@ export async function cleanupOrphanUploads(
       continue;
     }
 
-    await fs.unlink(p).catch(() => {
-      /* 已被并发删除：幂等 */
+    await fs.unlink(p).catch((err: NodeJS.ErrnoException) => {
+      // L4 修复：只静默 ENOENT（并发删除时文件已被其他进程删除），
+      // 其他错误（EACCES/EPERM 等）记录日志以便排查
+      if (err.code !== "ENOENT") {
+        console.error("[uploads-cleanup] Failed to delete:", p, err);
+      }
     });
     deleted++;
   }

@@ -75,8 +75,17 @@ function startHealthCheck(): void {
   if (healthCheckTimer) return;
   healthCheckTimer = setInterval(async () => {
     if (!degraded || !process.env.REDIS_URL) return;
-    // 复用现有 client（若已断开则 PING 抛错，下次再试）
-    if (!client) return;
+    // M4 修复：client 为 null 时尝试重新初始化（初始化失败后 client 仍为 null）。
+    // getRedisClient 内部有 degraded 守卫会直接返回 null，因此临时重置 degraded
+    // 以允许重新创建连接；若仍失败则恢复 degraded 标记等待下一轮探测。
+    if (!client) {
+      degraded = false;
+      client = await getRedisClient();
+      if (!client) {
+        degraded = true;
+        return;
+      }
+    }
     try {
       const pong = await client.ping();
       if (pong === "PONG") {
@@ -122,7 +131,8 @@ async function getRedisClient(): Promise<Redis | null> {
     // 加载/构造失败同样降级，只报一次
     degraded = true;
     console.error("[rate-limit] Redis 客户端初始化失败，降级为进程内内存限流:", error);
-    // M9 修复：初始化失败时也启动健康检查（client 为 null，检查会等待重连）
+    // M4 修复：初始化失败时也启动健康检查（client 为 null，检查会尝试重连）
+    startHealthCheck();
     return null;
   }
 }
@@ -202,12 +212,14 @@ function hitMemoryStore(key: string, max: number, windowMs: number): RateLimitRe
     }
     // 清扫后仍超上限（极端情况：全部未过期），丢弃最旧的一批以防 OOM
     if (memoryStore.size >= MAX_KEYS) {
+      // L3 修复：按 windowStart 升序排序后删除最旧的 excess 个，
+      // 避免随机删除可能丢掉刚写入的热点 key
       const excess = memoryStore.size - MAX_KEYS;
-      let dropped = 0;
-      for (const k of memoryStore.keys()) {
-        if (dropped >= excess) break;
-        memoryStore.delete(k);
-        dropped++;
+      const sortedKeys = [...memoryStore.entries()]
+        .sort((a, b) => a[1].windowStart - b[1].windowStart)
+        .map((e) => e[0]);
+      for (let i = 0; i < excess && i < sortedKeys.length; i++) {
+        memoryStore.delete(sortedKeys[i]);
       }
     }
   }

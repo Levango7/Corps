@@ -89,11 +89,16 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
   const { wid } = use(params);
   const [data, setData] = useState<OverviewData | null>(null);
   const t = useTranslations("analytics");
+  const tButton = useTranslations("button");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // 重试计数器：递增触发 useEffect 重新加载
+  const [retryCount, setRetryCount] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError("");
     api<OverviewData>(`/api/v1/workspaces/${wid}/analytics/overview`)
       .then((d) => {
         if (!cancelled) setData(d);
@@ -107,10 +112,17 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
     return () => {
       cancelled = true;
     };
-  }, [wid]);
+  }, [wid, retryCount, t]);
 
   if (loading) return <AnalyticsSkeleton />;
-  if (error) return <ErrorState message={error} />;
+  if (error)
+    return (
+      <ErrorState
+        message={error}
+        onRetry={() => setRetryCount((c) => c + 1)}
+        retryLabel={tButton("retry")}
+      />
+    );
   if (!data) return null;
 
   const maxDaily = Math.max(1, ...data.daily.map((d) => d._total));
@@ -392,7 +404,7 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
     <div className="w-full overflow-x-auto">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto min-w-[400px]"
+        className="w-full h-auto"
         role="img"
         aria-label={t("trendChartAria")}
       >
@@ -436,8 +448,16 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
   );
 }
 
-/** 错误状态：403 时提示权限不足。 */
-function ErrorState({ message }: { message: string }) {
+/** 错误状态：403 时提示权限不足；非 403 提供重试按钮。 */
+function ErrorState({
+  message,
+  onRetry,
+  retryLabel,
+}: {
+  message: string;
+  onRetry: () => void;
+  retryLabel: string;
+}) {
   const t = useTranslations("analytics");
   const forbidden = /403|Forbidden/i.test(message);
   return (
@@ -454,6 +474,15 @@ function ErrorState({ message }: { message: string }) {
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
           {forbidden ? t("needAdminDesc") : message || t("retryLater")}
         </p>
+        {!forbidden && (
+          <button
+            type="button"
+            onClick={onRetry}
+            className="mt-4 inline-flex items-center justify-center h-9 px-4 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
+            {retryLabel}
+          </button>
+        )}
       </div>
     </div>
   );

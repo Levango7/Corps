@@ -285,7 +285,7 @@ function Hero({ t }: { t: TranslateFn }) {
           {/* 次按钮：锚点平滑滚动至 #plans（零 JS，globals.css html scroll-behavior: smooth） */}
           <a
             href="#plans"
-            className="btn-press inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
+            className="btn-press inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           >
             {t("hero.ctaSecondary")}
             <ArrowRight size={16} aria-hidden="true" />
@@ -455,7 +455,7 @@ function Faq({ t }: { t: TranslateFn }) {
             // 原生 details/summary（零 JS，键盘可达，spec §3.7）
             // question/answer 走翻译 key（faq.q{0-5}/a{0-5}），questionId 来自常量保排序与埋点
             <details key={faq.questionId} className="group border-b border-[var(--border-soft)]">
-              <summary className="flex items-center justify-between py-[var(--space-4)] px-[var(--space-5)] cursor-pointer text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)] list-none focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)] rounded-[var(--radius-md)]">
+              <summary className="flex items-center justify-between py-[var(--space-4)] px-[var(--space-5)] cursor-pointer text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)] list-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-md)]">
                 <span>{t(`faq.q${faq.questionId}`)}</span>
                 <ChevronDown
                   size={18}

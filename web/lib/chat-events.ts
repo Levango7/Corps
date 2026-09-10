@@ -24,8 +24,9 @@ import { EventEmitter } from "events";
  */
 
 export const chatEvents = new EventEmitter();
-// 同一任务可能有多端订阅，移除默认 10 监听器上限
-chatEvents.setMaxListeners(0);
+// 同一任务可能有多端订阅，设合理上限 100（L6 修复：原 setMaxListeners(0) 无上限，
+// 既允许多端订阅又能在监听器泄漏时触发 MaxListenersExceededWarning 预警）
+chatEvents.setMaxListeners(100);
 
 /**
  * 多实例部署运行时警告（DL-6 + M8 修复：完善检测，纳入 Redis 配置检查）：

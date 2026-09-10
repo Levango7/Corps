@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
       asResponse: true,
     });
     if (!baRes.ok) {
-      const err = await baRes.json().catch(() => ({ code: 401, message: apiMsg(req, "invalidCredentials") }));
+      const err = await baRes.json().catch(() => ({ code: 401, message: apiMsg(req, "invalidCredentials"), data: null }));
       return NextResponse.json(err, { status: baRes.status });
     }
     const baBody = await baRes.json();

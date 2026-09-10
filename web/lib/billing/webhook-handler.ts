@@ -62,7 +62,12 @@ export async function handleBillingEvent(
             data: { provider: providerId, eventId: event.providerEventId },
             select: { eventId: true },
           })
-          .catch(() => null);
+          .catch((err: { code?: string }) => {
+            // L7 修复：只在 P2002（唯一约束冲突）时返回 null 表示重复，
+            // 其他错误重新抛出，避免静默吞掉非幂等性异常
+            if (err.code === "P2002") return null;
+            throw err;
+          });
         if (!inserted) {
           duplicate = true;
           return;
