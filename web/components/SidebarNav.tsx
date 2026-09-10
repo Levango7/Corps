@@ -7,7 +7,7 @@
  * 合并为单套 SidebarNav 实现，通过 collapsed prop 控制折叠形态。
  */
 
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import { ChevronLeft, ChevronRight, Bell, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -83,7 +83,7 @@ export function SidebarNav({
                   href={href}
                   aria-current={active ? "page" : undefined}
                   onClick={onNavigate}
-                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
                     active
                       ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
@@ -105,7 +105,7 @@ export function SidebarNav({
           href={notifHref}
           aria-current={notifActive ? "page" : undefined}
           onClick={onNavigate}
-          className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+          className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
             notifActive
               ? "bg-[var(--accent-soft)] text-[var(--accent)]"
               : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
@@ -117,7 +117,7 @@ export function SidebarNav({
             <span className="truncate">{t("menu.notifications")}</span>
           )}
           {!(mode === "desktop" && collapsed) && unreadCount > 0 && (
-            <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
+            <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
               {unreadCount > 99 ? "99+" : unreadCount}
             </span>
           )}

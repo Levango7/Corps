@@ -18,12 +18,12 @@ export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     // TODO: i18n — cron 路由无 req 对象语义，暂用常量字符串；如需本地化可引入 cron 专用消息源
-    return NextResponse.json({ code: 500, message: "CRON_SECRET not configured" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: "CRON_SECRET not configured", data: null }, { status: 500 });
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
     // TODO: i18n — cron 路由无 req 对象语义，暂用常量字符串
-    return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
+    return NextResponse.json({ code: 401, message: "Unauthorized", data: null }, { status: 401 });
   }
 
   if (!isEmailConfigured()) {
@@ -102,6 +102,8 @@ export async function GET(req: NextRequest) {
 
       // 4) 一次性查询所有 Pro 工作区所有成员的未完成任务（逾期 + 未来 7 天到期），
       //    替代逐成员 2 次 findMany。按 dueDate asc 排序后内存分组，各组取前 10。
+      //    后端B-L3：加 take 上限保护，防止任务量过大时查询超时
+      const DIGEST_TASK_LIMIT = 1000;
       const allAssigneeIds = allMembers.map((m) => m.userId);
       const allTasks = await tx.task.findMany({
         where: {
@@ -116,7 +118,14 @@ export async function GET(req: NextRequest) {
         },
         select: { id: true, title: true, dueDate: true, workspaceId: true, assigneeId: true },
         orderBy: { dueDate: "asc" },
+        take: DIGEST_TASK_LIMIT,
       });
+      if (allTasks.length === DIGEST_TASK_LIMIT) {
+        console.warn(
+          `[cron weekly-digest] 查询到的未完成任务达到 take 上限 ${DIGEST_TASK_LIMIT}，` +
+            `部分成员可能未收到完整摘要`,
+        );
+      }
       // 按 (workspaceId:assigneeId) 分组，再分 overdue / upcoming，各取前 10
       type TaskLite = { id: string; title: string; dueDate: Date | null };
       const tasksByKey = new Map<string, { overdue: TaskLite[]; upcoming: TaskLite[] }>();
@@ -194,6 +203,6 @@ export async function GET(req: NextRequest) {
   } catch (error) {
     console.error("[cron weekly-digest] error:", error);
     // TODO: i18n — cron 路由无 req 对象语义，暂用常量字符串
-    return NextResponse.json({ code: 500, message: "Internal server error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: "Internal server error", data: null }, { status: 500 });
   }
 }

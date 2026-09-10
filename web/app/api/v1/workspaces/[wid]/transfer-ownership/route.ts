@@ -20,10 +20,10 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerTransfer") },
+      { code: 403, message: apiMsg(req, "onlyOwnerTransfer"), data: null },
       { status: 403 },
     );
   }
@@ -34,16 +34,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (e) {
     if (e instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: e.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody") }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
   }
 
   // 不能转给自己
   if (body.newOwnerUserId === ctx.payload.sub) {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "alreadyOwner") }, { status: 400 });
+    return NextResponse.json({ code: 400, message: apiMsg(req, "alreadyOwner"), data: null }, { status: 400 });
   }
 
   // M4 修复：二次密码确认——防止会话被劫持后恶意转让所有权
@@ -61,7 +61,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     // 有密码账户：必须验证密码
     if (!body.password) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "invalidCredentials") },
+        { code: 400, message: apiMsg(req, "invalidCredentials"), data: null },
         { status: 400 },
       );
     }
@@ -71,7 +71,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     });
     if (!passwordOk) {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "invalidCredentials") },
+        { code: 403, message: apiMsg(req, "invalidCredentials"), data: null },
         { status: 403 },
       );
     }
@@ -109,7 +109,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 
     if (result.kind === "notMember") {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "transfereeNotMember") },
+        { code: 400, message: apiMsg(req, "transfereeNotMember"), data: null },
         { status: 400 },
       );
     }
@@ -118,11 +118,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     // P2025: 记录不存在（member/workspace 并发删除场景）→ 404
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound") },
+        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
         { status: 404 },
       );
     }
     console.error("[PATCH transfer] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

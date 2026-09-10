@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter } from "@/lib/i18n-navigation";
 import {
   Calendar as CalendarIcon,
   Check,
@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 import { relTime as sharedRelTime } from "@/lib/format";
 
 /** 连接状态 */
@@ -55,6 +56,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
   const router = useRouter();
   const t = useTranslations("calendar");
   const tTime = useTranslations("time");
+  const { toast } = useToast();
   const relTime = (iso: string | null) => (iso ? sharedRelTime(iso, tTime) : "—");
   const [connections, setConnections] = useState<ConnectionStatus[]>([]);
   const [loading, setLoading] = useState(true);
@@ -121,14 +123,16 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
 
   /** 断开连接 */
   async function handleDisconnect(provider: string) {
-    if (!window.confirm(t("confirmDisconnect"))) return;
     setDisconnecting(provider);
     setError("");
     try {
       await api(`/api/v1/auth/calendar/disconnect/${provider}`, { method: "DELETE" });
       await load();
+      toast("success", t("disconnectSuccess"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("disconnectFailed"));
+      const msg = e instanceof Error ? e.message : t("disconnectFailed");
+      setError(msg);
+      toast("error", msg);
     } finally {
       setDisconnecting(null);
     }
@@ -169,7 +173,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
   return (
     <div className="mx-auto max-w-[var(--container-max)]">
       <div className="mb-6">
-        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <CalendarIcon size={20} className="text-[var(--muted)]" />
           {t("title")}
         </h1>
@@ -226,11 +230,11 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
           {/* Google Calendar 连接卡片 */}
           <section className={sectionClass}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+              <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 Google Calendar
               </h2>
               {googleConn?.connected && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
                   <Check size={12} className="text-[var(--success)]" />
                   {t("connected")}
                 </span>
@@ -259,7 +263,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   <button
                     onClick={handleSyncNow}
                     disabled={syncing}
-                    className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                    className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                   >
                     {syncing ? (
                       <Loader2 size={15} className="animate-spin" />
@@ -271,7 +275,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   <button
                     onClick={() => handleDisconnect("google")}
                     disabled={disconnecting === "google"}
-                    className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                    className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                   >
                     {disconnecting === "google" ? (
                       <Loader2 size={15} className="animate-spin" />
@@ -287,7 +291,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                 <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("googleHint")}</p>
                 <button
                   onClick={() => handleConnect("google")}
-                  className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                  className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                 >
                   <Link2 size={15} />
                   {t("connectGoogle")}
@@ -299,11 +303,11 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
           {/* Outlook Calendar 连接卡片 */}
           <section className={`${sectionClass} mt-5`}>
             <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+              <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 Outlook Calendar
               </h2>
               {outlookConn?.connected && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
                   <Check size={12} className="text-[var(--success)]" />
                   {t("connected")}
                 </span>
@@ -332,7 +336,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   <button
                     onClick={handleSyncNow}
                     disabled={syncing}
-                    className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                    className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                   >
                     {syncing ? (
                       <Loader2 size={15} className="animate-spin" />
@@ -344,7 +348,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   <button
                     onClick={() => handleDisconnect("outlook")}
                     disabled={disconnecting === "outlook"}
-                    className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                    className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                   >
                     {disconnecting === "outlook" ? (
                       <Loader2 size={15} className="animate-spin" />
@@ -362,7 +366,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                 </p>
                 <button
                   onClick={() => handleConnect("outlook")}
-                  className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                  className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                 >
                   <Link2 size={15} />
                   {t("connectOutlook")}
@@ -373,7 +377,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
 
           {/* 同步设置 */}
           <section className={`${sectionClass} mt-5`}>
-            <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+            <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
               {t("syncSettings")}
             </h2>
             <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
@@ -382,7 +386,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
             <div className="space-y-3">
               <label className="flex items-center justify-between gap-3 cursor-pointer">
                 <div>
-                  <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+                  <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                     {t("syncDueDateOnly")}
                   </div>
                   <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
@@ -398,7 +402,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
               </label>
               <label className="flex items-center justify-between gap-3 cursor-pointer">
                 <div>
-                  <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+                  <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                     {t("remindOneDay")}
                   </div>
                   <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
@@ -414,7 +418,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
               </label>
               <label className="flex items-center justify-between gap-3 cursor-pointer">
                 <div>
-                  <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+                  <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                     {t("remindOneHour")}
                   </div>
                   <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
@@ -435,7 +439,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                 <button
                   onClick={handleSyncNow}
                   disabled={syncing}
-                  className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
+                  className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
                 >
                   {syncing ? (
                     <Loader2 size={15} className="animate-spin" />

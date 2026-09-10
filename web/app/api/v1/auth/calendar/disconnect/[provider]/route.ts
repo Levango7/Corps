@@ -23,7 +23,7 @@ export async function DELETE(
   // 校验 provider
   if (provider !== "google" && provider !== "outlook") {
     return NextResponse.json(
-      { code: 400, message: apiMsg(req, "unsupportedCalendarProvider") },
+      { code: 400, message: apiMsg(req, "unsupportedCalendarProvider"), data: null },
       { status: 400 },
     );
   }

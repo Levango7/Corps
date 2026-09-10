@@ -14,7 +14,7 @@
  *  - docs/market/pricing-page-spec.md §8（click_upgrade 事件规格）
  */
 
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import type { ReactNode } from "react";
 import { track } from "@/lib/analytics";
 import type { BillingPeriod, CtaSource, PlanId } from "@/lib/pricing";
@@ -40,13 +40,13 @@ export interface TrackedCtaProps {
 const VARIANT_CLASS: Record<NonNullable<TrackedCtaProps["variant"]>, string> = {
   primary:
     "inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] " +
-    "bg-[var(--accent)] text-[var(--accent-fg)] font-[var(--weight-medium)] " +
+    "bg-[var(--accent)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)] " +
     "hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] " +
     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
     "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]",
   ghost:
     "inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] " +
-    "border border-[var(--border)] text-[var(--fg-2)] font-[var(--weight-medium)] " +
+    "border border-[var(--border)] text-[var(--fg-2)] font-[weight:var(--weight-medium)] " +
     "hover:bg-[var(--surface-2)] hover:text-[var(--fg)] " +
     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
     "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]",

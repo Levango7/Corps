@@ -52,7 +52,7 @@ export default function ForgotPasswordPage() {
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
       <div className="mb-[var(--space-5)] sm:mb-8">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           {t("title")}
         </h1>
         <p className="mt-1.5 text-[length:var(--text-sm)] sm:text-[length:var(--text-base)] text-[var(--muted)]">
@@ -69,7 +69,7 @@ export default function ForgotPasswordPage() {
             </div>
             <Link
               href="/auth/login"
-              className="block w-full h-9 leading-8 text-center border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)]"
+              className="block w-full h-9 leading-8 text-center border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)]"
             >
               {t("backToLogin")}
             </Link>
@@ -86,7 +86,7 @@ export default function ForgotPasswordPage() {
               <div>
                 <label
                   htmlFor="email"
-                  className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
+                  className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
                 >
                   {t("email")}
                 </label>
@@ -104,7 +104,7 @@ export default function ForgotPasswordPage() {
               <button
                 type="submit"
                 disabled={busy}
-                className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
               >
                 {busy && <Loader2 size={16} className="animate-spin" />}
                 {busy ? t("submitting") : t("submit")}
@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
       <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
         <Link
           href="/auth/login"
-          className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
+          className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
         >
           {t("backToLogin")}
         </Link>

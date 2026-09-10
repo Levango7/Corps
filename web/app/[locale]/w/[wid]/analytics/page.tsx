@@ -127,7 +127,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
     <div className="mx-auto max-w-[var(--container-max)]">
       {/* 标题 */}
       <div className="mb-[var(--space-6)]">
-        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <BarChart3 size={20} className="text-[var(--muted)]" />
           {t("title")}
         </h1>
@@ -144,7 +144,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
             <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
             <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{t("wawTitle")}</span>
           </div>
-          <div className="text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+          <div className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
             {data.waw.users}
           </div>
           <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">
@@ -199,7 +199,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
       {/* 留存回访率 */}
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)]">
-        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
           <Repeat size={16} className="text-[var(--muted)]" />
           {t("retentionTitle")}
         </h2>
@@ -214,7 +214,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
                 <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-1">
                   {t(labelKey)}
                 </div>
-                <div className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums">
+                <div className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums">
                   {r ? `${r.rate}%` : "—"}
                 </div>
                 <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
@@ -231,7 +231,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
       {/* 趋势线 */}
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)]">
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
           {t("dailyTrendTitle")}
         </h2>
         {data.daily.length === 0 ? (
@@ -245,7 +245,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
 
       {/* Top 事件 */}
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5">
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
           {t("topEventsTitle")}
         </h2>
         {data.topEvents.length === 0 ? (
@@ -304,7 +304,7 @@ function StatCard({
         <Icon size={16} style={{ color }} />
         <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{label}</span>
       </div>
-      <div className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+      <div className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
         {value}
       </div>
     </div>
@@ -331,7 +331,7 @@ function FunnelSection({
         className ?? ""
       }`}
     >
-      <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+      <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
         <Filter size={16} className="text-[var(--muted)]" />
         {title}
       </h2>
@@ -350,7 +350,7 @@ function FunnelSection({
                     className="absolute inset-y-0 left-0 bg-[var(--accent)] rounded-[var(--radius-sm)] transition-[width] duration-[var(--motion-base)]"
                     style={{ width: `${widthPct}%` }}
                   />
-                  <span className="absolute inset-0 flex items-center px-2 text-[length:var(--text-xs)] font-[var(--weight-medium)] text-[var(--fg)] tabular-nums">
+                  <span className="absolute inset-0 flex items-center px-2 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg)] tabular-nums">
                     {step.users}
                   </span>
                 </div>

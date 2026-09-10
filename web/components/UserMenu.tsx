@@ -12,9 +12,8 @@
  */
 
 import { useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { Link, usePathname, useRouter } from "@/lib/i18n-navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { usePathname, useRouter } from "@/lib/i18n-navigation";
 import { Sun, Moon, Monitor, ChevronDown, Languages, LogOut, Settings } from "lucide-react";
 import { locales, type Locale, localeNames } from "@/lib/i18n";
 import { type ThemePref, readThemePref, applyTheme } from "@/components/ThemeToggle";
@@ -100,7 +99,7 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
             className="w-7 h-7 rounded-full border border-[var(--border)] object-cover"
           />
         ) : (
-          <span className="w-7 h-7 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)] flex items-center justify-center">
+          <span className="w-7 h-7 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] flex items-center justify-center">
             {initial}
           </span>
         )}
@@ -119,7 +118,7 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
         >
           {/* 用户信息 */}
           <div className="px-3 py-2 border-b border-[var(--border-soft)]">
-            <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+            <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
               {user.name || user.email.split("@")[0]}
             </div>
             <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
@@ -149,7 +148,7 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
                   key={loc}
                   onClick={() => switchLocale(loc)}
                   aria-current={loc === currentLocale ? "true" : undefined}
-                  className={`flex-1 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                  className={`flex-1 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
                     loc === currentLocale
                       ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "text-[var(--fg-2)] hover:bg-[var(--surface-2)]"

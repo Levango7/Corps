@@ -12,7 +12,7 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const comments = await runWithWorkspace(wid, async (tx) => {
@@ -44,7 +44,7 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = createCommentSchema.parse(await req.json());
@@ -114,7 +114,7 @@ export async function POST(
 
     if (!comment)
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
 
@@ -170,7 +170,7 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
@@ -193,7 +193,7 @@ export async function DELETE(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = deleteCommentSchema.parse(await req.json());
@@ -221,13 +221,13 @@ export async function DELETE(
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }
     if (result.kind === "forbidden") {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "noPermission") },
+        { code: 403, message: apiMsg(req, "noPermission"), data: null },
         { status: 403 },
       );
     }
@@ -235,7 +235,7 @@ export async function DELETE(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
@@ -259,7 +259,7 @@ export async function PATCH(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = patchCommentSchema.parse(await req.json());
@@ -291,13 +291,13 @@ export async function PATCH(
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }
     if (result.kind === "forbidden") {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "noPermission") },
+        { code: 403, message: apiMsg(req, "noPermission"), data: null },
         { status: 403 },
       );
     }
@@ -305,7 +305,7 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }

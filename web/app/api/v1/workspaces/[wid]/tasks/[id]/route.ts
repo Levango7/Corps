@@ -28,7 +28,7 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const task = await runWithWorkspace(wid, (tx) =>
@@ -58,7 +58,7 @@ export async function GET(
 
     if (!task)
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
 
@@ -78,7 +78,7 @@ export async function PATCH(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const body = await req.json();
@@ -88,7 +88,7 @@ export async function PATCH(
     if (validated.assigneeId !== undefined) {
       if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
         return NextResponse.json(
-          { code: 403, message: apiMsg(req, "onlyAdminAssign") },
+          { code: 403, message: apiMsg(req, "onlyAdminAssign"), data: null },
           { status: 403 },
         );
       }
@@ -162,13 +162,13 @@ export async function PATCH(
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }
     if (result.kind === "invalidAssignee") {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "assigneeNotMember") },
+        { code: 400, message: apiMsg(req, "assigneeNotMember"), data: null },
         { status: 400 },
       );
     }
@@ -237,19 +237,19 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     // P2025: 记录不存在（并发删除场景）
     if ((error as { code?: string }).code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }
     console.error("Update task error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -259,7 +259,7 @@ export async function DELETE(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     // 先检查任务存在且属于该工作区（防跨租户删除），不存在返回 404 而非 500
@@ -274,14 +274,14 @@ export async function DELETE(
     );
     if (!existing) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }
     // 删除权限：任务创建者或 owner/admin（普通成员不能删他人创建的任务）
     if (existing.createdBy !== ctx.payload.sub && !["owner", "admin"].includes(ctx.member.role)) {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "onlyCreatorOrAdminDelete") },
+        { code: 403, message: apiMsg(req, "onlyCreatorOrAdminDelete"), data: null },
         { status: 403 },
       );
     }
@@ -296,7 +296,7 @@ export async function DELETE(
     // P2025: 记录不存在（并发删除场景）
     if ((error as { code?: string }).code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }

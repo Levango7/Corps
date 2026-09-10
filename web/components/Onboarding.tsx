@@ -113,7 +113,7 @@ export default function Onboarding({
           aria-label={t("openGuide")}
         >
           <BubbleIcon />
-          <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
+          <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
             {t("step1.title")}
           </span>
           <span className="ml-1 text-[length:var(--text-xs)] opacity-80">1/4</span>
@@ -144,7 +144,7 @@ export default function Onboarding({
         <div className="space-y-3">
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step1.desc1")}</p>
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">
+            <strong className="text-[var(--fg)] font-[weight:var(--weight-medium)]">
               {t("step1.desc2Highlight")}
             </strong>
             {t("step1.desc2")}
@@ -178,7 +178,7 @@ export default function Onboarding({
         <div className="space-y-3">
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("step3.desc1")}</p>
           <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-            <strong className="text-[var(--fg)] font-[var(--weight-medium)]">
+            <strong className="text-[var(--fg)] font-[weight:var(--weight-medium)]">
               {t("step3.desc2Highlight")}
             </strong>
             {t("step3.desc2")}
@@ -228,15 +228,14 @@ export default function Onboarding({
 
   return (
     <div
-      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4"
-      style={{ background: "var(--overlay)" }}
+      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4 bg-[var(--overlay)]"
     >
       <div className="w-full max-w-[480px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-[var(--elev-lg)] overflow-hidden">
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 h-14 border-b border-[var(--border-soft)]">
           <div className="flex items-center gap-2">
             <Icon size={20} className="text-[var(--accent)]" />
-            <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--muted)]">
+            <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--muted)]">
               {t("badge", { current: effectiveStep + 1, total: TOTAL_STEPS })}
             </span>
           </div>
@@ -251,7 +250,7 @@ export default function Onboarding({
 
         {/* 内容（带过渡动画） */}
         <div key={animKey} className={`px-6 py-6 ${animClass}`}>
-          <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h2 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             {current.title}
           </h2>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -300,7 +299,7 @@ export default function Onboarding({
           <button
             onClick={handleAction}
             disabled={acting}
-            className="btn-press flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 transition-colors duration-[var(--motion-base)]"
+            className="btn-press flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 transition-colors duration-[var(--motion-base)]"
           >
             {acting ? (
               <Loader2 size={15} className="animate-spin" />

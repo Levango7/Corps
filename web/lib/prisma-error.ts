@@ -134,5 +134,5 @@ export function handlePrismaError(
   const message = req
     ? apiMsg(req, msgKey)
     : API_MESSAGES[msgKey].en; // 非路由上下文回退英文
-  return NextResponse.json({ code: status, message, prismaCode: code }, { status });
+  return NextResponse.json({ code: status, message, prismaCode: code, data: null }, { status });
 }

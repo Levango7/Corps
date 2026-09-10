@@ -150,14 +150,14 @@ export default async function PrivacyPage({ params }: { params: Promise<{ locale
   return (
     <main className="min-h-dvh bg-[var(--bg)] text-[var(--fg)]">
       <article className="mx-auto max-w-[var(--prose-max)] px-[var(--space-6)] py-[var(--space-20)]">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)]">
           {t("privacyTitle")}
         </h1>
         <p className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">{t("lastUpdated")}</p>
         <div className="mt-6 space-y-5">
           {sections.map((s) => (
             <section key={s.heading}>
-              <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)]">
+              <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)]">
                 {s.heading}
               </h2>
               {s.body.map((p, i) => (

@@ -58,7 +58,7 @@ export async function GET(
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   }
 
   // 校验任务确实属于本工作区（防跨租户订阅）
@@ -68,7 +68,7 @@ export async function GET(
     ctx.payload.sub,
   );
   if (!taskExists) {
-    return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound") }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound"), data: null }, { status: 404 });
   }
 
   const userId = ctx.payload.sub;
@@ -123,7 +123,7 @@ export async function GET(
   // await 之后：acquire 与流建立之间不再有失败路径，额度不会泄漏。
   if (!tryAcquireSseSlot(userId)) {
     return NextResponse.json(
-      { code: 429, message: apiMsg(req, "tooManySseConnections") },
+      { code: 429, message: apiMsg(req, "tooManySseConnections"), data: null },
       { status: 429 },
     );
   }

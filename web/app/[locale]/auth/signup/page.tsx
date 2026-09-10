@@ -118,7 +118,7 @@ export default function SignupPage() {
   const inputClass =
     "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-[box-shadow,border-color] duration-[var(--motion-fast)] placeholder:text-[var(--meta)]";
   const labelClass =
-    "block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]";
+    "block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]";
 
   // 密码强度：0 空 / 1 弱 / 2 中 / 3 强
   // 弱：纯字母或 <8 位；中：字母+数字 ≥8 位；强：字母+数字+特殊字符 ≥8 位
@@ -180,7 +180,7 @@ export default function SignupPage() {
 
       <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
         {/* 卡片内顶部居中标题 */}
-        <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           {t("title")}
         </h1>
         {error && (
@@ -212,7 +212,7 @@ export default function SignupPage() {
           <div>
             <label htmlFor="name" className={labelClass}>
               {t("yourName")}
-              <span className="ml-1.5 font-[var(--weight-regular)] text-[var(--meta)]">
+              <span className="ml-1.5 font-[weight:var(--weight-regular)] text-[var(--meta)]">
                 {t("yourNameOptional")}
               </span>
             </label>
@@ -284,7 +284,7 @@ export default function SignupPage() {
           <button
             type="submit"
             disabled={busy}
-            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? t("submitting") : t("submit")}
@@ -296,7 +296,7 @@ export default function SignupPage() {
         {t("loginLink")}{" "}
         <Link
           href="/auth/login"
-          className="text-[var(--accent)] font-[var(--weight-medium)] hover:underline underline-offset-2"
+          className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2"
         >
           {t("loginCta")}
         </Link>

@@ -240,8 +240,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
       role="dialog"
       aria-modal="true"
       aria-label={t("ariaLabel")}
-      className="modal-overlay fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4"
-      style={{ background: "var(--overlay)" }}
+      className="modal-overlay fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4 bg-[var(--overlay)]"
       onClick={onClose}
     >
       <div

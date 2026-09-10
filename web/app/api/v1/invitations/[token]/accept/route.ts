@@ -41,7 +41,7 @@ async function getUserId(req: NextRequest): Promise<{ id: string; email: string 
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const user = await getUserId(req);
-  if (!user) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!user) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const { token } = await params;
@@ -55,11 +55,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       }),
     );
     if (!invitation) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "invitationNotFound") }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "invitationNotFound"), data: null }, { status: 404 });
     }
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json(
-        { code: 410, message: apiMsg(req, "invitationInvalid") },
+        { code: 410, message: apiMsg(req, "invitationInvalid"), data: null },
         { status: 410 },
       );
     }
@@ -67,7 +67,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     // 邮箱必须与当前登录用户完全一致（大小写不敏感），防止转发链接给他人顶替
     if (invitation.email.toLowerCase() !== user.email.toLowerCase()) {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "invitationEmailMismatch") },
+        { code: 403, message: apiMsg(req, "invitationEmailMismatch"), data: null },
         { status: 403 },
       );
     }
@@ -128,7 +128,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           message:
             result.plan === "pro"
               ? apiMsg(req, "seatsFullContactRenew")
-              : apiMsg(req, "seatsFullContactUpgrade"),
+              : apiMsg(req, "seatsFullContactUpgrade"), data: null
         },
         { status: 402 },
       );
@@ -169,11 +169,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     // P2025: 记录不存在（invitation 并发删除场景）→ 404
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "invitationNotFound") },
+        { code: 404, message: apiMsg(req, "invitationNotFound"), data: null },
         { status: 404 },
       );
     }
     console.error("[invitation accept] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

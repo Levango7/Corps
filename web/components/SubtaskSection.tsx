@@ -83,10 +83,10 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
   return (
     <section className="mt-[var(--space-6)]" aria-label={t("subtaskTitle")}>
       <div className="flex items-center justify-between mb-[var(--space-3)]">
-        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {t("subtaskTitle")}
           {total > 0 && (
-            <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
+            <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-regular)] text-[var(--meta)]">
               {done}/{total}
             </span>
           )}
@@ -170,7 +170,7 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
         <button
           onClick={addSubtask}
           disabled={!draft.trim() || busy}
-          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           {t("subtaskAdd")}

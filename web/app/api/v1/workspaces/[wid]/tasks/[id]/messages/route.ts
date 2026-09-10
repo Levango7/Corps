@@ -19,7 +19,7 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const sinceParam = req.nextUrl.searchParams.get("since");
@@ -83,7 +83,7 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = createMessageSchema.parse(await req.json());
@@ -128,7 +128,7 @@ export async function POST(
 
     if (!result)
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
 
@@ -136,11 +136,11 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
     console.error("Create message error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

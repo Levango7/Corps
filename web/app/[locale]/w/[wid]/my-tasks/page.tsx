@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState, type ReactNode } from "react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import { ClipboardList, ChevronDown, SearchX } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
@@ -119,7 +119,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
     <div className="max-w-[var(--container-max)] mx-auto">
       {/* 标题区 */}
       <div className="mb-[var(--space-6)]">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           {tNav("menu.myTasks")}
         </h1>
         <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -138,7 +138,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 aria-pressed={statusFilter === f.id}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] whitespace-nowrap transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                   statusFilter === f.id
-                    ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)] font-[var(--weight-medium)]"
+                    ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)] font-[weight:var(--weight-medium)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
                 }`}
               >
@@ -237,7 +237,7 @@ function StatusGroup({
     <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden">
       <header className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-[var(--border-soft)]">
         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {title}
         </h2>
         <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full tabular-nums">

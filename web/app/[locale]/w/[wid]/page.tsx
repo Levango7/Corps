@@ -1,7 +1,7 @@
 "use client";
 
 import { use, useCallback, useEffect, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import {
   Plus,
   CheckCircle2,
@@ -146,10 +146,10 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   const recent = sortedRecent.slice(0, 8);
 
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       <div className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>
-          <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             {tNav("menu.overview")}
           </h1>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -166,7 +166,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
         </div>
         <button
           onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+          className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
         >
           <Plus size={16} />
           {t("create")}
@@ -196,7 +196,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                     className="ml-auto text-[var(--meta)] opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-fast)]"
                   />
                 </div>
-                <div className="mt-2 text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+                <div className="mt-2 text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
                   {counts[card.key]}
                 </div>
               </Link>
@@ -224,7 +224,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       {loaded && overdue.length > 0 && (
         <div className="mb-[var(--space-6)] flex items-center gap-2.5 bg-[var(--danger-soft)] border-l-2 border-[var(--danger)] rounded-[var(--radius-md)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)]">
           <CalendarClock size={15} className="shrink-0 text-[var(--danger)]" />
-          <span className="shrink-0 font-[var(--weight-medium)] text-[var(--danger-fg)]">
+          <span className="shrink-0 font-[weight:var(--weight-medium)] text-[var(--danger-fg)]">
             {t("overdueCount", { count: overdue.length })}
           </span>
           <span className="hidden sm:inline shrink-0 text-[var(--meta)]">·</span>
@@ -256,7 +256,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
 
       <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)]">
         <header className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-[var(--border-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             {t("recentTitle")}
           </h2>
           <div className="flex items-center gap-[var(--space-3)]">
@@ -298,7 +298,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             </p>
             <button
               onClick={() => setShowNew(true)}
-              className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
+              className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
             >
               <Plus size={15} />
               {t("create")}
@@ -357,7 +357,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                     {/* 负责人头像：< sm 隐藏 */}
                     {t.assignee && (
                       <span
-                        className="hidden sm:flex shrink-0 w-6 h-6 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]"
+                        className="hidden sm:flex shrink-0 w-6 h-6 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] items-center justify-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]"
                         title={t.assignee.name || t.assignee.email}
                       >
                         {(t.assignee.name || t.assignee.email)[0]?.toUpperCase()}

@@ -39,7 +39,7 @@ export default function RouteError({
     >
       <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-6)] text-center">
         <AlertTriangle size={40} className="mx-auto text-[var(--danger)] mb-4" strokeWidth={1.5} />
-        <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] mb-2">
+        <h2 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-2">
           {t("pageError")}
         </h2>
         <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-1">
@@ -54,7 +54,7 @@ export default function RouteError({
           <button
             type="button"
             onClick={reset}
-            className="inline-flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="inline-flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             <RefreshCw size={15} />
             {tButton("retry")}
@@ -62,7 +62,7 @@ export default function RouteError({
           <button
             type="button"
             onClick={() => window.location.reload()}
-            className="inline-flex items-center h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="inline-flex items-center h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             {tButton("refresh")}
           </button>

@@ -42,6 +42,7 @@ import { SubtaskSection } from "@/components/SubtaskSection";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 import { QuickDiagram } from "@/components/QuickDiagram";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/Toast";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -130,6 +131,7 @@ export default function TaskDetailPage({
   const tPriority = useTranslations("priority");
   const tQuick = useTranslations("diagramQuick");
   const tTime = useTranslations("time");
+  const { toast } = useToast();
   const relTime = (iso: string) => sharedRelTime(iso, tTime);
 
   const [task, setTask] = useState<Task | null>(null);
@@ -551,7 +553,7 @@ export default function TaskDetailPage({
                   }
                 }}
                 rows={1}
-                className="flex-1 overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
+                className="flex-1 overflow-hidden resize-none bg-transparent text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)] tracking-[-0.01em] leading-snug transition-shadow duration-[var(--motion-fast)]"
               />
               <button
                 type="button"
@@ -600,11 +602,11 @@ export default function TaskDetailPage({
           {/* 决策记录 */}
           <section id="decisions" className="mt-[var(--space-6)] scroll-mt-[var(--topbar-h)]">
             <div className="flex items-center justify-between mb-[var(--space-3)]">
-              <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+              <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <FileText size={16} className="text-[var(--muted)]" />
                 {t("decisionsTitle")}
                 {decisions.length > 0 && (
-                  <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
+                  <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-regular)] text-[var(--meta)]">
                     {decisions.length}
                   </span>
                 )}
@@ -708,7 +710,7 @@ export default function TaskDetailPage({
                   <button
                     onClick={addDecision}
                     disabled={!decisionDraft.trim() || decisionSaving}
-                    className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                    className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                   >
                     {decisionSaving ? (
                       <Loader2 size={14} className="animate-spin" />
@@ -774,7 +776,7 @@ export default function TaskDetailPage({
                 }
               }}
             >
-              <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-4">
+              <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-4">
                 {task.title} · {t("decisionsTitle")}
               </h1>
               {decisions.map((d) => (
@@ -795,11 +797,11 @@ export default function TaskDetailPage({
 
           {/* 评论 */}
           <section className="mt-[var(--space-8)]">
-            <h2 className="flex items-center gap-[var(--space-2)] mb-[var(--space-3)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+            <h2 className="flex items-center gap-[var(--space-2)] mb-[var(--space-3)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
               <MessageSquare size={16} className="text-[var(--muted)]" />
               {t("discussionTitle")}
               {comments.length > 0 && (
-                <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
+                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-regular)] text-[var(--meta)]">
                   {comments.length}
                 </span>
               )}
@@ -811,14 +813,14 @@ export default function TaskDetailPage({
                   key={c.id}
                   className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
-                  <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+                  <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
                     {(c.author
                       ? c.author.name || c.author.email
                       : t("deletedUser"))[0]?.toUpperCase()}
                   </div>
                   <div className="min-w-0 flex-1">
                     <div className="flex items-baseline gap-[var(--space-2)]">
-                      <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+                      <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                         {c.author
                           ? c.author.name || c.author.email.split("@")[0]
                           : t("deletedUser")}
@@ -873,7 +875,7 @@ export default function TaskDetailPage({
               <button
                 onClick={addComment}
                 disabled={!draft.trim() || sending}
-                className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {sending ? <Loader2 size={15} className="animate-spin" /> : <Send size={15} />}
                 {t("send")}
@@ -1025,7 +1027,8 @@ export default function TaskDetailPage({
                       setShareCopied(true);
                       setTimeout(() => setShareCopied(false), 2000);
                     } catch {
-                      /* 剪贴板权限失败静默 */
+                      /* 剪贴板权限失败：提示用户手动复制 */
+                      toast("error", tErr("copyFailed"));
                     }
                   }}
                   className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
@@ -1075,7 +1078,7 @@ export default function TaskDetailPage({
             onClick={(e) => e.stopPropagation()}
           >
             <header className="flex items-center justify-between px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border-soft)] sticky top-0 bg-[var(--surface)]">
-              <h3 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+              <h3 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <History size={16} className="text-[var(--muted)]" />
                 {t("versionHistoryTitle", { version: historyFor.version })}
               </h3>
@@ -1134,7 +1137,7 @@ export default function TaskDetailPage({
             className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] p-[var(--space-5)]"
             onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
+            <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
               {t("confirmDeleteTitle")}
             </h3>
             <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[1.6] mb-[var(--space-5)]">
@@ -1155,7 +1158,7 @@ export default function TaskDetailPage({
                   setConfirmOpen(false);
                 }}
                 disabled={deleting}
-                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] bg-[var(--danger)] text-[var(--accent-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] bg-[var(--danger)] text-[var(--danger-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {deleting ? (
                   <Loader2 size={14} className="animate-spin" />

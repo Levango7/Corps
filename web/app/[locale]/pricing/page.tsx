@@ -26,7 +26,7 @@
  */
 
 import type { Metadata } from "next";
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
@@ -151,7 +151,7 @@ function TopNav({ t }: { t: TranslateFn }) {
     >
       <Link
         href="/pricing"
-        className="text-[length:var(--text-base)] font-[var(--weight-semibold)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+        className="text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
       >
         corps
       </Link>
@@ -159,14 +159,14 @@ function TopNav({ t }: { t: TranslateFn }) {
         {/* 当前页高亮 --accent（静态已知事实，无需 usePathname） */}
         <Link
           href="/pricing"
-          className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          className="hidden md:inline text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           aria-current="page"
         >
           {t("nav.pricing")}
         </Link>
         <Link
           href="/auth/login"
-          className="hidden md:inline text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          className="hidden md:inline text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           {t("nav.login")}
         </Link>
@@ -174,14 +174,14 @@ function TopNav({ t }: { t: TranslateFn }) {
         <div className="flex md:hidden items-center gap-3">
           <Link
             href="/pricing"
-            className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-current="page"
           >
             {t("nav.pricing")}
           </Link>
           <Link
             href="/auth/login"
-            className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {t("nav.login")}
           </Link>
@@ -192,7 +192,7 @@ function TopNav({ t }: { t: TranslateFn }) {
           source="nav"
           period="yearly"
           variant="primary"
-          className="btn-press inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
+          className="btn-press inline-flex items-center justify-center h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
         >
           {t("nav.freeStart")}
         </TrackedCta>
@@ -254,14 +254,14 @@ function Hero({ t }: { t: TranslateFn }) {
 
       <div className="relative mx-auto max-w-[var(--container-max)]">
         {/* eyebrow 小标签 */}
-        <span className="inline-block px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--eyebrow-bg)] text-[var(--eyebrow-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+        <span className="inline-block px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--eyebrow-bg)] text-[var(--eyebrow-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
           {t("hero.eyebrow")}
         </span>
 
         {/* H1 */}
         <h1
           id="hero-heading"
-          className="mt-4 text-[length:var(--text-2xl)] md:text-[length:var(--text-3xl)] lg:text-[length:var(--text-4xl)] font-[var(--weight-semibold)] tracking-[var(--tracking-tight)] text-[var(--fg)]"
+          className="mt-4 text-[length:var(--text-2xl)] md:text-[length:var(--text-3xl)] lg:text-[length:var(--text-4xl)] font-[weight:var(--weight-semibold)] tracking-[var(--tracking-tight)] text-[var(--fg)]"
         >
           {t("hero.title")}
         </h1>
@@ -285,7 +285,7 @@ function Hero({ t }: { t: TranslateFn }) {
           {/* 次按钮：锚点平滑滚动至 #plans（零 JS，globals.css html scroll-behavior: smooth） */}
           <a
             href="#plans"
-            className="btn-press inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+            className="btn-press inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] border border-[var(--border)] text-[var(--fg-2)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
           >
             {t("hero.ctaSecondary")}
             <ArrowRight size={16} aria-hidden="true" />
@@ -337,7 +337,7 @@ function FeatureGrid({ t }: { t: TranslateFn }) {
                 className="card-lift p-[var(--space-8)] rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] hover:shadow-[var(--elev-hover)] transition-shadow duration-[var(--motion-base)] ease-[var(--ease-standard)]"
               >
                 <Icon size={24} className="text-[var(--accent)]" aria-hidden="true" />
-                <h3 className="mt-3 text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
+                <h3 className="mt-3 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                   {t(FEATURE_TITLE_KEYS[i])}
                 </h3>
                 <p className="mt-2 text-[length:var(--text-sm)] text-[var(--fg-2)]">
@@ -365,7 +365,7 @@ function ComparisonTable({ t }: { t: TranslateFn }) {
       <div className="mx-auto max-w-[var(--container-max)]">
         <h2
           id="compare-heading"
-          className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]"
+          className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
         >
           {t("comparison.heading")}
         </h2>
@@ -374,13 +374,13 @@ function ComparisonTable({ t }: { t: TranslateFn }) {
           <table className="w-full min-w-[720px] text-[length:var(--text-sm)] border-collapse">
             <thead>
               <tr className="border-b border-[var(--border)]">
-                <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
+                <th className="py-3 px-[var(--space-4)] text-left font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                   {t("comparison.feature")}
                 </th>
-                <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
+                <th className="py-3 px-[var(--space-4)] text-left font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                   {t("comparison.free")}
                 </th>
-                <th className="py-3 px-[var(--space-4)] text-left font-[var(--weight-medium)] text-[var(--fg-2)]">
+                <th className="py-3 px-[var(--space-4)] text-left font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                   {t("comparison.pro")}
                 </th>
               </tr>
@@ -415,7 +415,7 @@ function ComparisonGroup({ group, t }: { group: (typeof PRICING_MATRIX)[number];
       <tr className="bg-[var(--surface-2)]">
         <th
           colSpan={3}
-          className="py-2 px-[var(--space-4)] text-left font-[var(--weight-semibold)] text-[var(--fg)]"
+          className="py-2 px-[var(--space-4)] text-left font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           scope="rowgroup"
         >
           {t(group.group)}
@@ -446,7 +446,7 @@ function Faq({ t }: { t: TranslateFn }) {
       <div className="mx-auto max-w-[var(--container-max)]">
         <h2
           id="faq-heading"
-          className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]"
+          className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
         >
           {t("faq.heading")}
         </h2>
@@ -455,7 +455,7 @@ function Faq({ t }: { t: TranslateFn }) {
             // 原生 details/summary（零 JS，键盘可达，spec §3.7）
             // question/answer 走翻译 key（faq.q{0-5}/a{0-5}），questionId 来自常量保排序与埋点
             <details key={faq.questionId} className="group border-b border-[var(--border-soft)]">
-              <summary className="flex items-center justify-between py-[var(--space-4)] px-[var(--space-5)] cursor-pointer text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] list-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] rounded-[var(--radius-md)]">
+              <summary className="flex items-center justify-between py-[var(--space-4)] px-[var(--space-5)] cursor-pointer text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)] list-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] rounded-[var(--radius-md)]">
                 <span>{t(`faq.q${faq.questionId}`)}</span>
                 <ChevronDown
                   size={18}
@@ -488,7 +488,7 @@ function TailCta({ t }: { t: TranslateFn }) {
         <div>
           <h2
             id="tail-cta-heading"
-            className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]"
+            className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           >
             {t("tailCta.title")}
           </h2>

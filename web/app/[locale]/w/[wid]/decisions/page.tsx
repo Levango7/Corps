@@ -15,10 +15,11 @@
  */
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
-import Link from "next/link";
+import { Link } from "@/lib/i18n-navigation";
 import { FileText, Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { useToast } from "@/components/Toast";
 import { useTranslations } from "next-intl";
 import { relativeTime as sharedRelativeTime } from "@/lib/format";
 
@@ -83,6 +84,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
 
   const t = useTranslations("decisions");
   const tTime = useTranslations("time");
+  const { toast } = useToast();
   const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [decisions, setDecisions] = useState<Decision[]>([]);
   const [total, setTotal] = useState(0);
@@ -135,8 +137,9 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
     if (!aiResult) return;
     try {
       await navigator.clipboard.writeText(aiResult.markdown);
+      toast("success", t("aiCopySuccess"));
     } catch {
-      /* 静默——用户可手动选择 */
+      toast("error", t("aiCopyFailed"));
     }
   }
 
@@ -238,7 +241,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       {/* ── 标题栏 ── */}
       <div className="mb-[var(--space-6)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             {t("title")}
           </h1>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -247,7 +250,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
         </div>
         <button
           onClick={() => setAiOpen(true)}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           <Sparkles size={14} />
           {t("aiExtract")}
@@ -332,7 +335,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                     <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)]">
                       <Link
                         href={`/w/${wid}/task/${d.taskId}`}
-                        className="flex items-center gap-1 min-w-0 flex-1 text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
+                        className="flex items-center gap-1 min-w-0 flex-1 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
                       >
                         <span className="truncate">{d.taskTitle || t("unnamedTask")}</span>
                         <ChevronRight size={13} className="shrink-0 text-[var(--meta)]" />
@@ -410,7 +413,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
         >
           <div className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden max-h-[85vh] flex flex-col">
             <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between">
-              <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] flex items-center gap-2">
+              <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] flex items-center gap-2">
                 <Sparkles size={16} className="text-[var(--accent)]" />
                 {t("aiDialogTitle")}
               </h2>
@@ -439,7 +442,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               {aiResult && (
                 <div className="mt-4 border border-[var(--border)] rounded-[var(--radius-md)] overflow-hidden">
                   <div className="px-3 py-2 bg-[var(--surface-2)] flex items-center justify-between gap-2">
-                    <span className="text-[length:var(--text-xs)] font-[var(--weight-medium)] text-[var(--fg-2)] truncate">
+                    <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] truncate">
                       {aiResult.title}
                     </span>
                     <button
@@ -466,7 +469,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               <button
                 onClick={handleExtract}
                 disabled={aiBusy || aiSource.trim().length < 10}
-                className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {aiBusy && <Loader2 size={14} className="animate-spin" />}
                 {aiResult ? t("aiReGenerate") : t("aiGenerate")}

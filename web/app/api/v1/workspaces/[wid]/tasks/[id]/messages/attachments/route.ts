@@ -80,13 +80,13 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const formData = await req.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "missingFile") }, { status: 400 });
+      return NextResponse.json({ code: 400, message: apiMsg(req, "missingFile"), data: null }, { status: 400 });
     }
 
     // 附件上限按套餐区分：免费版 10MB，Pro 50MB（v2 定价）
@@ -104,14 +104,14 @@ export async function POST(
       const message = activeSub
         ? apiMsg(req, "fileSizeExceededPro")
         : apiMsg(req, "fileSizeExceededFree");
-      return NextResponse.json({ code: 400, message }, { status: 400 });
+      return NextResponse.json({ code: 400, message, data: null }, { status: 400 });
     }
 
     // 校验文件类型（M5 修复：MIME type + 文件名扩展名双重校验，防绕过）
     const allowedExts = ALLOWED_TYPES[file.type];
     if (!allowedExts) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "unsupportedFileType") },
+        { code: 400, message: apiMsg(req, "unsupportedFileType"), data: null },
         { status: 400 },
       );
     }
@@ -120,7 +120,7 @@ export async function POST(
     const fileExt = path.extname(file.name).toLowerCase().replace(/^\./, "");
     if (!fileExt || !allowedExts.includes(fileExt)) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "unsupportedFileType") },
+        { code: 400, message: apiMsg(req, "unsupportedFileType"), data: null },
         { status: 400 },
       );
     }
@@ -163,7 +163,7 @@ export async function POST(
       // 清理已写入的文件
       await fs.unlink(savedPath).catch(() => {});
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound") },
+        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -171,6 +171,6 @@ export async function POST(
     return NextResponse.json({ code: 201, data: meta }, { status: 201 });
   } catch (error) {
     console.error("Upload attachment error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

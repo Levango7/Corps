@@ -19,6 +19,7 @@ import { api } from "@/lib/api";
 import type { Member, Role } from "@/lib/types";
 import { ROLE_META } from "@/lib/task-meta";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/Toast";
 
 interface WorkspaceMeta {
   name: string;
@@ -29,7 +30,7 @@ interface WorkspaceMeta {
 
 function Avatar({ m }: { m: Member }) {
   return (
-    <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] flex items-center justify-center text-[length:var(--text-sm)] font-[var(--weight-medium)] shrink-0">
+    <div className="w-8 h-8 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] shrink-0">
       {(m.name || m.email)[0]?.toUpperCase()}
     </div>
   );
@@ -40,6 +41,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
 
   const t = useTranslations("members");
   const tButton = useTranslations("button");
+  const { toast } = useToast();
   const [members, setMembers] = useState<Member[]>([]);
   const [meta, setMeta] = useState<WorkspaceMeta | null>(null);
   const [email, setEmail] = useState("");
@@ -122,18 +124,19 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   }
 
   async function remove(uid: string, label: string) {
-    if (!window.confirm(t("removeConfirm", { name: label }))) return;
     setError("");
     try {
       await api(`/api/v1/workspaces/${wid}/members/${uid}`, { method: "DELETE" });
       await load();
+      toast("success", t("removeSuccess"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("removeFailed"));
+      const msg = e instanceof Error ? e.message : t("removeFailed");
+      setError(msg);
+      toast("error", msg);
     }
   }
 
   async function changeRole(uid: string, role: Role) {
-    if (!window.confirm(t("roleChangeConfirm"))) return;
     setError("");
     setMembers((prev) => prev.map((m) => (m.id === uid ? { ...m, role } : m)));
     try {
@@ -142,8 +145,11 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         body: JSON.stringify({ role }),
       });
       await load();
+      toast("success", t("roleChangeSuccess"));
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("roleChangeFailed"));
+      const msg = e instanceof Error ? e.message : t("roleChangeFailed");
+      setError(msg);
+      toast("error", msg);
       await load();
     }
   }
@@ -184,7 +190,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     <div className="mx-auto max-w-[var(--container-max)]">
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
         <div>
-          <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+          <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             <Users size={20} className="text-[var(--muted)]" />
             {t("title")}
           </h1>
@@ -209,10 +215,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       </div>
 
       {error && (
-        <div
-          className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)] border"
-          style={{ borderColor: "color-mix(in srgb, var(--danger) 20%, transparent)" }}
-        >
+        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)] border border-[color-mix(in_srgb,var(--danger)_20%,transparent)]">
           {error}
         </div>
       )}
@@ -231,7 +234,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
             <button
               onClick={invite}
               disabled={busy || seatsFull}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              className="w-full sm:w-auto flex items-center justify-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <UserPlus size={16} />
               {tButton("invite")}
@@ -275,7 +278,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       {/* 转让所有权：owner only */}
       {meta?.role === "owner" && (
         <section className="mb-6 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
-          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
             {t("transfer")}
           </h2>
           <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">
@@ -285,7 +288,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
             <button
               onClick={() => setTransferOpen(true)}
               disabled={members.filter((m) => !m.isSelf && m.role !== "owner").length === 0}
-              className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              className="h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               {t("transfer")}
             </button>
@@ -312,7 +315,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                 <button
                   onClick={handleTransfer}
                   disabled={transferBusy || !transferTarget}
-                  className="h-9 px-3 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                  className="h-9 px-3 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {t("transferConfirm")}
                 </button>
@@ -344,7 +347,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           <div className="flex justify-center mb-4">
             <UserPlus size={48} className="text-[var(--muted)] opacity-40" />
           </div>
-          <p className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)]">
+          <p className="text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
             {t("emptyTitle")}
           </p>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyDesc")}</p>
@@ -434,7 +437,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
         <Avatar m={m} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+            <span className="text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
               {m.name || m.email.split("@")[0]}
             </span>
             {m.isSelf && (
@@ -482,7 +485,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
         <Avatar m={m} />
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
-            <span className="text-[length:var(--text-base)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+            <span className="text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
               {m.name || m.email.split("@")[0]}
             </span>
             {m.isSelf && (

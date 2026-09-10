@@ -47,7 +47,7 @@ export function LanguageSwitcher() {
           // 与 getByRole 定位均无法区分
           aria-label={`${t("ariaLabel")}：${localeNames[loc]}`}
           aria-current={loc === currentLocale ? "true" : undefined}
-          className={`px-1.5 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+          className={`px-1.5 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
             loc === currentLocale
               ? "bg-[var(--surface-2)] text-[var(--fg)]"
               : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)]"

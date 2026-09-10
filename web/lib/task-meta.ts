@@ -27,7 +27,7 @@ import type { Status, Priority, Role } from "./types";
 export const STATUS_META: Record<Status, { labelKey: string; icon: LucideIcon; color: string }> = {
   todo: { labelKey: "todo", icon: Circle, color: "var(--status-todo)" },
   in_progress: { labelKey: "in_progress", icon: CircleDot, color: "var(--status-doing)" },
-  review: { labelKey: "review", icon: CircleDot, color: "var(--warn)" },
+  review: { labelKey: "review", icon: CircleDot, color: "var(--status-warn-fg)" },
   done: { labelKey: "done", icon: CheckCircle2, color: "var(--status-done)" },
 };
 
@@ -89,8 +89,8 @@ export const STATUS_BADGE_STYLES: Record<Status, { background: string; color: st
     color: "var(--status-doing)",
   },
   review: {
-    background: "color-mix(in srgb, var(--warn) 14%, transparent)",
-    color: "var(--warn)",
+    background: "color-mix(in srgb, var(--status-warn-fg) 14%, transparent)",
+    color: "var(--status-warn-fg)",
   },
   done: {
     background: "color-mix(in srgb, var(--status-done) 12%, transparent)",
@@ -125,7 +125,7 @@ export const PRIORITY_BADGE_STYLES: Record<Priority, { background: string; color
 export const COLUMNS: { id: Status; titleKey: string; color: string }[] = [
   { id: "todo", titleKey: "todo", color: "var(--status-todo)" },
   { id: "in_progress", titleKey: "in_progress", color: "var(--status-doing)" },
-  { id: "review", titleKey: "review", color: "var(--warn)" },
+  { id: "review", titleKey: "review", color: "var(--status-warn-fg)" },
   { id: "done", titleKey: "done", color: "var(--status-done)" },
 ];
 
@@ -141,7 +141,7 @@ export const STATUS_FILTERS: {
   { id: "all", titleKey: "all" },
   { id: "todo", titleKey: "todo", color: "var(--status-todo)" },
   { id: "in_progress", titleKey: "in_progress", color: "var(--status-doing)" },
-  { id: "review", titleKey: "review", color: "var(--warn)" },
+  { id: "review", titleKey: "review", color: "var(--status-warn-fg)" },
   { id: "done", titleKey: "done", color: "var(--status-done)" },
 ];
 

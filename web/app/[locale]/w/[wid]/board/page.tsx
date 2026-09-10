@@ -297,26 +297,16 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         <div
           role="alert"
           aria-live="assertive"
-          className="mb-[var(--space-4)] flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border"
-          style={{
-            background: "color-mix(in srgb, var(--danger) 10%, transparent)",
-            borderColor: "color-mix(in srgb, var(--danger) 30%, transparent)",
-            color: "var(--danger)",
-          }}
+          className="mb-[var(--space-4)] flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
         >
           <AlertCircle size={16} className="shrink-0" />
-          <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">{dragError}</span>
+          <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">{dragError}</span>
         </div>
       )}
 
       {error && (
         <div
-          className="mb-[var(--space-4)] rounded-[var(--radius-md)] p-3 text-[length:var(--text-sm)] flex items-center justify-between"
-          style={{
-            background: "color-mix(in srgb, var(--danger) 10%, transparent)",
-            border: "1px solid color-mix(in srgb, var(--danger) 30%, transparent)",
-            color: "var(--danger)",
-          }}
+          className="mb-[var(--space-4)] rounded-[var(--radius-md)] p-3 text-[length:var(--text-sm)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
         >
           <span>{error}</span>
           <button
@@ -324,8 +314,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               setError(null);
               load();
             }}
-            style={{ color: "var(--danger)" }}
-            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 text-[var(--danger)]"
           >
             {tButton("retry")}
           </button>
@@ -341,7 +330,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           {/* 标题行 + 操作 */}
           <div className="flex items-center justify-between mb-[var(--space-6)] gap-[var(--space-3)] flex-wrap">
             <div>
-              <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+              <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
                 {t("boardTitle")}
               </h1>
               <p className="text-[var(--muted)] text-[length:var(--text-sm)]">

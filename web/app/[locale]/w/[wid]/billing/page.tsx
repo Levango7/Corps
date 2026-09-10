@@ -1,8 +1,8 @@
 "use client";
 
 import { use, useCallback, useEffect, useState, useRef } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useSearchParams } from "next/navigation";
+import { useRouter, Link } from "@/lib/i18n-navigation";
 import {
   CreditCard,
   Check,
@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/Toast";
 
 type Plan = "free" | "pro";
 type PaymentMethod = "card" | "wechat" | "alipay";
@@ -102,6 +103,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
 
   const t = useTranslations("billing");
   const tButton = useTranslations("button");
+  const { toast } = useToast();
   const search = useSearchParams();
   const [status, setStatus] = useState<BillingStatus | null>(null);
   const [error, setError] = useState("");
@@ -150,7 +152,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
     // 跳转型通道（信用卡/支付宝）需确认；微信扫码弹模态框无需 confirm
     if (paymentMethod !== "wechat") {
       const channelLabel = paymentMethod === "card" ? "Stripe" : t("alipay");
-      if (!window.confirm(t("payRedirectConfirm", { channel: channelLabel }))) return;
+      toast("info", t("payRedirectConfirm", { channel: channelLabel }));
     }
 
     setBusy(plan);
@@ -240,7 +242,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
       <div className="mb-6">
-        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <CreditCard size={20} className="text-[var(--muted)]" />
           {t("title")}
         </h1>
@@ -248,7 +250,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         {/* 互链到 /pricing 定价页（spec §1，当前窗口跳转走 next/link 客户端路由） */}
         <Link
           href="/pricing"
-          className="mt-3 inline-flex items-center gap-1 text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
+          className="mt-3 inline-flex items-center gap-1 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent)] hover:text-[var(--accent-hover)] transition-colors duration-[var(--motion-base)]"
         >
           {t("viewFullComparison")} <ArrowRight size={14} aria-hidden="true" />
         </Link>
@@ -293,7 +295,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 {t("currentPlan")}
               </div>
               <div className="flex items-center gap-2">
-                <span className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
+                <span className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                   {t(PLANS.find((p) => p.id === status.plan)?.nameKey ?? "planFree")}
                 </span>
                 {subMeta && (
@@ -332,10 +334,10 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 <Users size={13} />
                 {t("seats")}
               </div>
-              <div className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums">
+              <div className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums">
                 {seatsUsed}
                 {seatLimit > 0 && (
-                  <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--muted)]">
+                  <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-regular)] text-[var(--muted)]">
                     {" "}
                     / {seatLimit}
                   </span>
@@ -358,7 +360,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               <button
                 onClick={openPortal}
                 disabled={busy === "portal"}
-                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {busy === "portal" ? (
                   <Loader2 size={15} className="animate-spin" />
@@ -382,7 +384,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <button
               onClick={() => setPaymentMethod("card")}
               aria-pressed={paymentMethod === "card"}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 paymentMethod === "card"
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -394,7 +396,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <button
               onClick={() => setPaymentMethod("wechat")}
               aria-pressed={paymentMethod === "wechat"}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 paymentMethod === "wechat"
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -406,7 +408,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <button
               onClick={() => setPaymentMethod("alipay")}
               aria-pressed={paymentMethod === "alipay"}
-              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
+              className={`inline-flex items-center gap-2 h-10 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 paymentMethod === "alipay"
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -429,7 +431,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         <div className="mb-4 flex items-center gap-2">
           <button
               onClick={() => setBillingPeriod("monthly")}
-              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "monthly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -439,7 +441,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           </button>
           <button
               onClick={() => setBillingPeriod("yearly")}
-              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "yearly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -472,18 +474,18 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               style={{ boxShadow: "var(--elev-sm)" }}
             >
               <div className="flex items-baseline justify-between">
-                <span className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+                <span className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                   {t(p.nameKey)}
                 </span>
                 {current && (
-                  <span className="px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+                  <span className="px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
                     {t("currentBadge")}
                   </span>
                 )}
               </div>
 
               <div className="mt-3 flex items-baseline gap-1">
-                <span className="text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
+                <span className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[-0.02em]">
                   {price}
                 </span>
                 <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{unit}</span>
@@ -506,7 +508,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
                 title={!upgradable ? t("upgradeDisabledTitle") : undefined}
-                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 style={{
                   background: upgradable ? "var(--accent)" : "var(--surface-2)",
                   color: upgradable ? "var(--accent-fg)" : "var(--meta)",
@@ -576,7 +578,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         >
           <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-6 max-w-sm w-full mx-4">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
+              <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 {t("wechatPayTitle")}
               </h2>
               <button

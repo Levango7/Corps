@@ -27,6 +27,7 @@ import CommandPalette from "@/components/CommandPalette";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
+import { useToast } from "@/components/Toast";
 import type { WorkspaceSummary } from "@/lib/types";
 
 const SIDEBAR_KEY = "corps_sidebar_collapsed";
@@ -66,6 +67,7 @@ export default function WorkspaceLayout({
   const pathname = usePathname();
   const { wid } = use(params);
   const t = useTranslations("nav");
+  const { toast } = useToast();
 
   // ─── 初始化：主题 + 侧栏折叠 + 工作区列表 + 埋点 ───
   useEffect(() => {
@@ -319,7 +321,7 @@ export default function WorkspaceLayout({
         <div className="flex items-center gap-[var(--space-2)] relative" ref={switcherRef}>
           <Link
             href={`/w/${wid}`}
-            className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]"
           >
             <Logo size={22} />
           </Link>
@@ -486,12 +488,12 @@ export default function WorkspaceLayout({
               user={user}
               wid={wid}
               onLogout={async () => {
-                if (!window.confirm(t("user.logoutConfirm"))) return;
                 try {
                   await fetch("/api/v1/auth/logout", { method: "POST", credentials: "include" });
                 } catch {
                   /* 即使 logout 请求失败也跳转 */
                 }
+                toast("info", t("user.logoutDone"));
                 router.push("/auth/login");
               }}
             />

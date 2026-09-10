@@ -83,7 +83,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
       )}
 
       {/* 头像 */}
-      <div className="w-6 h-6 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)] overflow-hidden">
+      <div className="w-6 h-6 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] overflow-hidden">
         {author?.image ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={author.image} alt={displayName} className="w-full h-full object-cover" />
@@ -95,7 +95,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
       {/* 气泡 */}
       <div className={`min-w-0 max-w-[70%] ${isOwn ? "items-end" : "items-start"} flex flex-col`}>
         {!isOwn && (
-          <span className="text-[length:var(--text-xs)] font-[var(--weight-medium)] text-[var(--fg)] mb-0.5">
+          <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg)] mb-0.5">
             {displayName}
           </span>
         )}
@@ -147,7 +147,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
                   >
                     <FileText size={16} className="shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <div className="text-[length:var(--text-xs)] font-[var(--weight-medium)] truncate">{att.fileName}</div>
+                      <div className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] truncate">{att.fileName}</div>
                       <div className="text-[length:var(--text-xs)] opacity-70">{formatFileSize(att.fileSize)}</div>
                     </div>
                     <Download size={14} className="shrink-0 opacity-70" />

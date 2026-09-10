@@ -41,7 +41,8 @@
     "user": {
       "profile": "Profile settings",
       "logout": "Sign out",
-      "logoutConfirm": "Sign out?"
+      "logoutConfirm": "Sign out?",
+      "logoutDone": "Signed out"
     },
     "sidebar": {
       "open": "Open sidebar",
@@ -710,7 +711,8 @@
     "googleHint": "Sync task due dates to Google Calendar",
     "outlookHint": "Sync task due dates to Outlook Calendar",
     "loadFailed": "Failed to load",
-    "disconnectFailed": "Failed to disconnect"
+    "disconnectFailed": "Failed to disconnect",
+    "disconnectSuccess": "Disconnected"
   },
   "legal": {
     "termsTitle": "Terms of Service",
@@ -770,6 +772,8 @@
     "aiGenerate": "Extract",
     "aiReGenerate": "Regenerate",
     "aiCopy": "Copy markdown",
+    "aiCopySuccess": "Copied to clipboard",
+    "aiCopyFailed": "Copy failed — please copy manually",
     "aiFailed": "Extraction failed. Please try again."
   },
   "members": {
@@ -786,8 +790,10 @@
     "copyFailed": "Copy failed — please select and copy the link above manually",
     "removeConfirm": "Remove {name}? This cannot be undone.",
     "removeFailed": "Failed to remove",
+    "removeSuccess": "Member removed",
     "roleChangeConfirm": "Change this member's role?",
     "roleChangeFailed": "Failed to update",
+    "roleChangeSuccess": "Role updated",
     "transfer": "Transfer ownership",
     "transferHint": "Hand over the workspace's owner role to another member. You will automatically become an administrator.",
     "transferSelect": "Select the new owner",

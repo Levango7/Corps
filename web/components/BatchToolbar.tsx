@@ -133,7 +133,7 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       className="fixed bottom-4 left-1/2 -translate-x-1/2 pb-safe z-[var(--z-sticky)] flex items-center gap-2 px-3 py-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] max-w-[calc(100vw-2rem)]"
     >
       {/* 选中计数 */}
-      <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] tabular-nums px-1">
+      <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] tabular-nums px-1">
         {selectedIds.length}
       </span>
 

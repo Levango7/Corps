@@ -81,7 +81,7 @@ export function BoardColumn({
     >
       <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
         <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-        <span className="font-[var(--weight-medium)] text-[var(--fg)]">{tStatus(column.titleKey)}</span>
+        <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{tStatus(column.titleKey)}</span>
         <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
           {columnTasks.length}
         </span>
@@ -218,7 +218,7 @@ function BoardCard({
               {formatTaskId(task.id)}
             </span>
           </div>
-          <p className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+          <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
             {task.title}
           </p>
           <div className="flex items-center gap-1.5 flex-wrap">
@@ -316,13 +316,13 @@ export function ListTable({
       <table className="w-full text-[length:var(--text-sm)]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-            {selectionMode && <th className="font-[var(--weight-medium)] px-4 h-10 w-10" />}
-            <th className="font-[var(--weight-medium)] px-4 h-10">{t("title")}</th>
-            <th className="font-[var(--weight-medium)] px-4 h-10">{t("assignee")}</th>
-            <th className="font-[var(--weight-medium)] px-4 h-10">{t("priority")}</th>
-            <th className="font-[var(--weight-medium)] px-4 h-10">{t("status")}</th>
-            <th className="font-[var(--weight-medium)] px-4 h-10">{t("dueDate")}</th>
-            <th className="font-[var(--weight-medium)] px-4 h-10">{t("label")}</th>
+            {selectionMode && <th className="font-[weight:var(--weight-medium)] px-4 h-10 w-10" />}
+            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("title")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("assignee")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("priority")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("status")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("dueDate")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("label")}</th>
           </tr>
         </thead>
         <tbody>
@@ -367,7 +367,7 @@ export function ListTable({
                     />
                   </td>
                 )}
-                <td className="px-4 h-10 text-[var(--fg)] font-[var(--weight-medium)] truncate max-w-xs">
+                <td className="px-4 h-10 text-[var(--fg)] font-[weight:var(--weight-medium)] truncate max-w-xs">
                   {task.title}
                 </td>
                 <td className="px-4 h-10 text-[var(--muted)]">{task.assignee?.name ?? "—"}</td>
@@ -470,7 +470,7 @@ export function ListCards({
                     aria-label={t("selectTask", { title: task.title })}
                   />
                 )}
-                <p className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] truncate flex-1">{task.title}</p>
+                <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate flex-1">{task.title}</p>
               </div>
               <span
                 className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)] shrink-0"
@@ -551,7 +551,7 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
       <div className="empty-state-dot mb-4">
         <Kanban size={24} />
       </div>
-      <p className="text-[length:var(--text-lg)] font-[var(--weight-medium)] mb-2 text-[var(--fg-2)]">
+      <p className="text-[length:var(--text-lg)] font-[weight:var(--weight-medium)] mb-2 text-[var(--fg-2)]">
         {tEmpty("noTasks")}
       </p>
       <p className="text-[length:var(--text-sm)] mb-4">{tEmpty("noTasksHint")}</p>

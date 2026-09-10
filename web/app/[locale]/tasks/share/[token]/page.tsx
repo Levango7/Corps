@@ -68,7 +68,7 @@ function SharedTaskClient({ params }: { params: Promise<{ token: string }> }) {
   return (
     <article className="max-w-3xl mx-auto px-[var(--space-4)] py-[var(--space-10)]">
       <header className="mb-[var(--space-6)] pb-[var(--space-4)] border-b border-[var(--border-soft)]">
-        <h1 className="text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           {data.title}
         </h1>
         <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -119,7 +119,7 @@ function SharedTaskClient({ params }: { params: Promise<{ token: string }> }) {
 
       {total > 0 && (
         <section className="mb-8">
-          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-3">
+          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-3">
             {t("subtasksLabel")}（{done}/{total}）
           </h2>
           <ul className="divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">

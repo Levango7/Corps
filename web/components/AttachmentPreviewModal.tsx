@@ -62,7 +62,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
         {/* 头部：文件名 + 下载 + 关闭 */}
         <header className="flex items-center gap-2 px-4 py-2.5 border-b border-[var(--border-soft)] shrink-0">
           <FileText size={15} className="shrink-0 text-[var(--muted)]" />
-          <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)] truncate">
+          <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
             {attachment.fileName}
           </span>
           <a
@@ -104,7 +104,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
               <a
                 href={attachment.url}
                 download={attachment.fileName}
-                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors"
+                className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors"
               >
                 <Download size={14} />
                 {t("download")}

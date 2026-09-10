@@ -54,7 +54,7 @@ export default function LoginPage() {
     <div className="w-full max-w-sm px-4 sm:px-0">
       <div className="card-lift bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
         {/* 卡片内顶部居中标题 */}
-        <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           {t("title")}
         </h1>
         {error && (
@@ -71,7 +71,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="email"
-              className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
+              className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
             >
               {t("email")}
             </label>
@@ -90,7 +90,7 @@ export default function LoginPage() {
           <div>
             <label
               htmlFor="password"
-              className="block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
+              className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-[var(--space-2)]"
             >
               {t("password")}
             </label>
@@ -118,7 +118,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={busy}
-            className="btn-press w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="btn-press w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-60 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {busy && <Loader2 size={16} className="animate-spin" />}
             {busy ? t("submitting") : t("submit")}
@@ -130,7 +130,7 @@ export default function LoginPage() {
         {t("signupLink")}{" "}
         <Link
           href="/auth/signup"
-          className="font-[var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          className="font-[weight:var(--weight-semibold)] text-[var(--accent)] hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           onClick={() => {
             track("click_signup", { cta: "card_footer", path: "/auth/login" });
           }}

@@ -21,10 +21,10 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerAdminInvite") },
+      { code: 403, message: apiMsg(req, "onlyOwnerAdminInvite"), data: null },
       { status: 403 },
     );
   }
@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
               result.plan === "pro"
                 ? apiMsg(req, "seatsFullRenew")
                 : apiMsg(req, "seatsFullUpgrade"),
-            seatLimit: result.seatLimit,
+            seatLimit: result.seatLimit, data: null
           },
           { status: 402 },
         );
@@ -215,14 +215,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             result.plan === "pro"
               ? apiMsg(req, "seatsFullRenew")
               : apiMsg(req, "seatsFullUpgrade"),
-          seatLimit: result.seatLimit,
+          seatLimit: result.seatLimit, data: null
         },
         { status: 402 },
       );
     }
     if (result.duplicate) {
       return NextResponse.json(
-        { code: 409, message: apiMsg(req, "userAlreadyMember") },
+        { code: 409, message: apiMsg(req, "userAlreadyMember"), data: null },
         { status: 409 },
       );
     }
@@ -296,7 +296,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // P2025: 记录不存在（invitation 并发删除场景）→ 404
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "invitationNotFound") },
+        { code: 404, message: apiMsg(req, "invitationNotFound"), data: null },
         { status: 404 },
       );
     }

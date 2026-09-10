@@ -174,8 +174,7 @@ export default function NewTaskDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="new-task-title"
-      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto"
-      style={{ background: "var(--overlay)" }}
+      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
@@ -185,7 +184,7 @@ export default function NewTaskDialog({
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
             id="new-task-title"
-            className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           >
             {t("dialogTitle")}
           </h2>
@@ -342,7 +341,7 @@ export default function NewTaskDialog({
                           return next;
                         });
                       }}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[var(--weight-medium)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                       style={{
                         background: selected
                           ? `color-mix(in srgb, ${label.color} 18%, transparent)`
@@ -385,7 +384,7 @@ export default function NewTaskDialog({
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               {tButton("cancel")}
             </button>
@@ -393,7 +392,7 @@ export default function NewTaskDialog({
               type="submit"
               disabled={!title.trim() || submitting}
               title={!title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : undefined}
-              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
               {t("actionCreate")}

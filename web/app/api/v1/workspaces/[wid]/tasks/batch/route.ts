@@ -31,7 +31,7 @@ const batchSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const body = batchSchema.parse(await req.json());
@@ -40,7 +40,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     if (body.action === "update" && body.assigneeId !== undefined) {
       if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
         return NextResponse.json(
-          { code: 403, message: apiMsg(req, "onlyAdminBatchAssign") },
+          { code: 403, message: apiMsg(req, "onlyAdminBatchAssign"), data: null },
           { status: 403 },
         );
       }
@@ -101,18 +101,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
 
     if ("error" in result) {
-      return NextResponse.json({ code: 400, message: result.error }, { status: 400 });
+      return NextResponse.json({ code: 400, message: result.error, data: null }, { status: 400 });
     }
 
     return NextResponse.json({ code: 200, data: result });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     console.error("[POST tasks/batch] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

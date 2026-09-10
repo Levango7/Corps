@@ -20,7 +20,7 @@ export async function PATCH(
 ) {
   const { wid, id, did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = updateDecisionSchema.parse(await req.json());
@@ -80,7 +80,7 @@ export async function PATCH(
 
     if ("notFound" in result) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "decisionNotFound") },
+        { code: 404, message: apiMsg(req, "decisionNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -89,7 +89,7 @@ export async function PATCH(
         {
           code: 409,
           message: apiMsg(req, "optimisticLockConflict"),
-          currentVersion: result.currentVersion,
+          currentVersion: result.currentVersion, data: null
         },
         { status: 409 },
       );
@@ -99,18 +99,18 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
     // P2025: 记录不存在（并发删除场景）→ 404
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "decisionNotFound") },
+        { code: 404, message: apiMsg(req, "decisionNotFound"), data: null },
         { status: 404 },
       );
     }
     console.error("Update decision error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

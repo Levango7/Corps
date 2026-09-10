@@ -27,13 +27,13 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   // 1. 登录校验
   const payload = await authenticate(req);
   if (!payload) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   }
 
   // 2. 路径遍历防护
   const resolved = path.resolve(UPLOAD_DIR, relativePath);
   if (!resolved.startsWith(UPLOAD_DIR + path.sep) && resolved !== UPLOAD_DIR) {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden") }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden"), data: null }, { status: 403 });
   }
 
   // 3. 归属定位：仅已关联消息的附件可下载（孤儿文件 404）
@@ -47,7 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
   );
   if (!att) {
     return NextResponse.json(
-      { code: 404, message: apiMsg(req, "attachmentNotFound") },
+      { code: 404, message: apiMsg(req, "attachmentNotFound"), data: null },
       { status: 404 },
     );
   }
@@ -65,7 +65,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
     payload.sub,
   );
   if (!member) {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden") }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden"), data: null }, { status: 403 });
   }
 
   // 5. 读取文件返回
@@ -90,7 +90,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ path
       },
     });
   } catch {
-    return NextResponse.json({ code: 404, message: apiMsg(req, "fileNotFound") }, { status: 404 });
+    return NextResponse.json({ code: 404, message: apiMsg(req, "fileNotFound"), data: null }, { status: 404 });
   }
 }
 

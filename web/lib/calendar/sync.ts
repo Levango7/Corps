@@ -145,28 +145,25 @@ export async function syncTaskToCalendar(
       }
     }
 
-    // 标记同步中
-    await runWithAuthOp("calendar", (tx) =>
-      tx.calendarConnection.update({
+    // 合并事务 1：标记同步中 + 查询已有事件映射（减少独立短事务，M2）
+    const eventMapping = await runWithAuthOp("calendar", async (tx) => {
+      await tx.calendarConnection.update({
         where: { id: connectionId },
         data: { syncStatus: "syncing", syncError: null },
-      }),
-    );
+      });
+      return tx.taskCalendarEvent.findUnique({
+        where: { taskId_connectionId: { taskId, connectionId } },
+      });
+    });
 
     const { accessToken, connection } = await ensureFreshAccessToken(connectionId);
     const provider = connection.provider as CalendarProvider;
     const taskUrl = buildTaskUrl(task.workspaceId, taskId);
 
-    // 查询已有事件映射
-    const eventMapping = await runWithAuthOp("calendar", (tx) =>
-      tx.taskCalendarEvent.findUnique({
-        where: { taskId_connectionId: { taskId, connectionId } },
-      }),
-    );
-
     if (!task.dueDate) {
       // 截止日期被移除 → 删除外部事件
       if (eventMapping) {
+        // 外部 API 调用（事务外，避免长事务持有外部 IO）
         if (provider === "google") {
           await deleteGoogleEvent(accessToken, connection.calendarId, eventMapping.externalEventId);
         } else {
@@ -176,8 +173,21 @@ export async function syncTaskToCalendar(
             eventMapping.externalEventId,
           );
         }
+        // 合并事务 2：DB 删除 eventMapping + 标记同步成功（M2）
+        await runWithAuthOp("calendar", async (tx) => {
+          await tx.taskCalendarEvent.delete({ where: { id: eventMapping.id } });
+          await tx.calendarConnection.update({
+            where: { id: connectionId },
+            data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
+          });
+        });
+      } else {
+        // 无事件映射，只需标记同步成功
         await runWithAuthOp("calendar", (tx) =>
-          tx.taskCalendarEvent.delete({ where: { id: eventMapping.id } }),
+          tx.calendarConnection.update({
+            where: { id: connectionId },
+            data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
+          }),
         );
       }
     } else {
@@ -190,7 +200,7 @@ export async function syncTaskToCalendar(
       };
 
       if (eventMapping) {
-        // 更新
+        // 更新（外部 API 调用，事务外）
         if (provider === "google") {
           await updateGoogleEvent(
             accessToken,
@@ -206,33 +216,35 @@ export async function syncTaskToCalendar(
             eventOpts,
           );
         }
-        await runWithAuthOp("calendar", (tx) =>
-          tx.taskCalendarEvent.update({
+        // 合并事务 2：DB 更新 eventMapping + 标记同步成功（M2）
+        await runWithAuthOp("calendar", async (tx) => {
+          await tx.taskCalendarEvent.update({
             where: { id: eventMapping.id },
             data: { lastSyncedAt: new Date() },
-          }),
-        );
+          });
+          await tx.calendarConnection.update({
+            where: { id: connectionId },
+            data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
+          });
+        });
       } else {
-        // 创建
+        // 创建（外部 API 调用，事务外）
         const externalEventId =
           provider === "google"
             ? await createGoogleEvent(accessToken, connection.calendarId, eventOpts)
             : await createOutlookEvent(accessToken, connection.calendarId, eventOpts);
-        await runWithAuthOp("calendar", (tx) =>
-          tx.taskCalendarEvent.create({
+        // 合并事务 2：DB 创建 eventMapping + 标记同步成功（M2）
+        await runWithAuthOp("calendar", async (tx) => {
+          await tx.taskCalendarEvent.create({
             data: { taskId, connectionId, externalEventId },
-          }),
-        );
+          });
+          await tx.calendarConnection.update({
+            where: { id: connectionId },
+            data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
+          });
+        });
       }
     }
-
-    // 标记同步成功
-    await runWithAuthOp("calendar", (tx) =>
-      tx.calendarConnection.update({
-        where: { id: connectionId },
-        data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
-      }),
-    );
 
     return { success: true, syncedConnections: 1 };
   } catch (error) {
@@ -297,6 +309,8 @@ export async function syncAllTasks(userId: string): Promise<SyncResult> {
   if (connections.length === 0) return { success: true, syncedConnections: 0 };
 
   // 只同步有截止日期的任务（同上：tasks 受 FORCE RLS，经 calendar 逃生口只读扫描）
+  // M3：加 take 上限保护，防止用户任务量过大时全表扫描拖慢同步
+  const SYNC_ALL_TASKS_LIMIT = 500;
   const tasks = await runWithAuthOp("calendar", (tx) =>
     tx.task.findMany({
       where: {
@@ -304,8 +318,15 @@ export async function syncAllTasks(userId: string): Promise<SyncResult> {
         dueDate: { not: null },
       },
       select: { id: true },
+      take: SYNC_ALL_TASKS_LIMIT,
     }),
   );
+  if (tasks.length === SYNC_ALL_TASKS_LIMIT) {
+    console.warn(
+      `[syncAllTasks] 用户 ${userId} 的待同步任务达到 take 上限 ${SYNC_ALL_TASKS_LIMIT}，` +
+        `可能有更多任务未同步，请考虑分批同步或提高上限`,
+    );
+  }
 
   let synced = 0;
   let lastError: string | undefined;

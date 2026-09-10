@@ -44,7 +44,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
 
   if (!code || !state) {
     return NextResponse.json(
-      { code: 400, message: apiMsg(req, "calendarMissingParams") },
+      { code: 400, message: apiMsg(req, "calendarMissingParams"), data: null },
       { status: 400 },
     );
   }
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   // 校验 provider
   if (provider !== "google" && provider !== "outlook") {
     return NextResponse.json(
-      { code: 400, message: apiMsg(req, "unsupportedCalendarProvider") },
+      { code: 400, message: apiMsg(req, "unsupportedCalendarProvider"), data: null },
       { status: 400 },
     );
   }
@@ -62,7 +62,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
   const statePayload = verifyState(state);
   if (!statePayload) {
     return NextResponse.json(
-      { code: 400, message: apiMsg(req, "calendarStateInvalid") },
+      { code: 400, message: apiMsg(req, "calendarStateInvalid"), data: null },
       { status: 400 },
     );
   }

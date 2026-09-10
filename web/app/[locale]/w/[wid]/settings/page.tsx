@@ -342,14 +342,14 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const inputClass =
     "w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 disabled:bg-[var(--surface-2)] disabled:text-[var(--muted)] placeholder:text-[var(--meta)]";
   const labelClass =
-    "block text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] mb-1.5";
+    "block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5";
   const sectionClass =
     "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
 
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
       <div className="mb-6">
-        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <SettingsIcon size={20} className="text-[var(--muted)]" />
           {t("title")}
         </h1>
@@ -365,7 +365,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 个人资料 */}
       <section className={sectionClass}>
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
           {t("profileTitle")}
         </h2>
 
@@ -424,7 +424,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <button
             onClick={saveUserProfile}
             disabled={!userDirty || userBusy}
-            className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {userBusy && <Loader2 size={15} className="animate-spin" />}
             {t("save")}
@@ -445,7 +445,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 工作区 */}
       <section className={`${sectionClass} mt-5`}>
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
           {t("workspaceTitle")}
         </h2>
 
@@ -487,7 +487,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
             <button
               onClick={save}
               disabled={!dirty || busy}
-              className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              className="w-full sm:w-auto h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               {busy && <Loader2 size={15} className="animate-spin" />}
               {t("save")}
@@ -514,7 +514,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 默认任务视图（P4：工作区设置增强） */}
       <section className={`${sectionClass} mt-5`}>
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
           {t("defaultViewTitle")}
         </h2>
         <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
@@ -528,15 +528,10 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <button
                 key={v.id}
                 onClick={() => pickView(v.id)}
-                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-                style={{
-                  borderColor: active ? "var(--accent)" : "var(--border)",
-                  background: active ? "var(--accent-soft)" : "var(--surface)",
-                  color: active ? "var(--accent)" : "var(--fg-2)",
-                }}
+                className={`w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${active ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)]"}`}
               >
                 <Icon size={16} />
-                <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
+                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
                   {v.id === "board" ? t("viewBoard") : t("viewList")}
                 </span>
               </button>
@@ -547,7 +542,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 通知偏好（P4：工作区设置增强） */}
       <section className={`${sectionClass} mt-5`}>
-        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
           <Bell size={16} className="text-[var(--muted)]" />
           {t("notifTitle")}
         </h2>
@@ -555,7 +550,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
         <div className="space-y-3">
           <label className="flex items-center justify-between gap-3 cursor-pointer">
             <div>
-              <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+              <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                 {t("notifEmail")}
               </div>
               <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
@@ -571,7 +566,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           </label>
           <label className="flex items-center justify-between gap-3 cursor-pointer">
             <div>
-              <div className="text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg)]">
+              <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                 {t("notifMention")}
               </div>
               <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
@@ -590,7 +585,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 外观 */}
       <section className={`${sectionClass} mt-5`}>
-        <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
           {t("appearanceTitle")}
         </h2>
         <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
@@ -612,7 +607,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                 }}
               >
                 <Icon size={18} />
-                <span className="text-[length:var(--text-sm)] font-[var(--weight-medium)]">
+                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
                   {tTheme(tp.labelKey)}
                 </span>
               </button>
@@ -623,7 +618,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 数据导出（P4：CSV 导出） */}
       <section className={`${sectionClass} mt-5`}>
-        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-1">
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
           <Download size={16} className="text-[var(--muted)]" />
           {tExport("title")}
         </h2>
@@ -632,7 +627,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <button
             onClick={handleExportTasks}
             disabled={exportingTasks}
-            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {exportingTasks ? (
               <Loader2 size={15} className="animate-spin" />
@@ -644,7 +639,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           <button
             onClick={handleExportDecisions}
             disabled={exportingDecisions}
-            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {exportingDecisions ? (
               <Loader2 size={15} className="animate-spin" />
@@ -659,7 +654,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       {/* 概况 */}
       {ws && (
         <section className={`${sectionClass} mt-5`}>
-          <h2 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)] mb-4">
+          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
             {t("overviewTitle")}
           </h2>
           <dl className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-y-3 sm:gap-x-4 text-[length:var(--text-sm)]">
@@ -689,7 +684,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       {/* 危险操作（P4：删除工作区两步确认流程） */}
       {ws?.role === "owner" && (
         <section className="mt-5 rounded-[var(--radius-lg)] p-4 sm:p-5 border border-[var(--danger)] bg-[var(--danger-soft)]">
-          <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
+          <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
             <Trash2 size={16} />
             {t("dangerTitle")}
           </h2>
@@ -700,7 +695,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           {!deleteConfirm ? (
             <button
               onClick={() => setDeleteConfirm(true)}
-              className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <Trash2 size={15} />
               {t("deleteInit")}
@@ -728,7 +723,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                 <button
                   onClick={handleDeleteWorkspace}
                   disabled={deleting || deleteInput.trim() !== ws.name}
-                  className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--danger)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                  className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--danger)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {deleting && <Loader2 size={15} className="animate-spin" />}
                   {t("deleteConfirm")}
@@ -738,7 +733,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                     setDeleteConfirm(false);
                     setDeleteInput("");
                   }}
-                  className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                  className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {t("deleteCancel")}
                 </button>
@@ -751,7 +746,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       {/* 删除账户（阶段 2-3：隐私政策"账户设置里可删除"承诺兑现）
           用户级操作（影响所有工作区），三步：展开 → 预览 → 输入邮箱确认删除 */}
       <section className="mt-5 rounded-[var(--radius-lg)] p-4 sm:p-5 border border-[var(--danger)] bg-[var(--danger-soft)]">
-        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
+        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--danger-fg)] mb-1">
           <UserX size={16} />
           {tAccount("title")}
         </h2>
@@ -765,7 +760,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               setAccountDeleteOpen(true);
               loadAccountPreview();
             }}
-            className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="h-9 px-4 border border-[var(--danger)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)] hover:bg-[var(--danger)] hover:text-[var(--accent-fg)] transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             <UserX size={15} />
             {tAccount("init")}
@@ -782,7 +777,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <div className="space-y-2 p-3 rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)]">
                 {accountPreview.ownedWorkspaces.length > 0 && (
                   <div>
-                    <p className="text-[var(--danger-fg)] font-[var(--weight-medium)]">
+                    <p className="text-[var(--danger-fg)] font-[weight:var(--weight-medium)]">
                       {tAccount("previewOwned", { count: accountPreview.ownedWorkspaces.length })}
                     </p>
                     <ul className="mt-1 space-y-0.5 text-[var(--fg-2)]">
@@ -856,7 +851,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               <button
                 onClick={handleDeleteAccount}
                 disabled={accountDeleting || !accountDeleteInput.includes("@")}
-                className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="h-9 px-4 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {accountDeleting && <Loader2 size={15} className="animate-spin" />}
                 {tAccount("confirm")}
@@ -866,7 +861,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                   setAccountDeleteOpen(false);
                   setAccountDeleteInput("");
                 }}
-                className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
               >
                 {tAccount("cancel")}
               </button>

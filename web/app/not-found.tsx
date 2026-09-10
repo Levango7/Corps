@@ -31,7 +31,7 @@ export default function GlobalNotFound() {
             className="mx-auto text-[var(--danger)] mb-4"
             strokeWidth={1.5}
           />
-          <h2 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] text-[var(--fg)] mb-2">
+          <h2 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-2">
             页面未找到
           </h2>
           <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-1">
@@ -40,7 +40,7 @@ export default function GlobalNotFound() {
           <div className="flex items-center justify-center gap-[var(--space-2)] mt-5">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+              className="inline-flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
             >
               <Home size={15} />
               返回首页

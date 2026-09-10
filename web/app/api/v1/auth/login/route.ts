@@ -64,7 +64,7 @@ export async function POST(req: NextRequest) {
       const selected = workspaces.find((w) => w.id === validated.wid);
       if (!selected) {
         return NextResponse.json(
-          { code: 403, message: apiMsg(req, "notMemberOfWorkspace") },
+          { code: 403, message: apiMsg(req, "notMemberOfWorkspace"), data: null },
           { status: 403 },
         );
       }
@@ -106,7 +106,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }

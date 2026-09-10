@@ -12,7 +12,7 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const milestones = await runWithWorkspace(
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: milestones });
   } catch (error) {
     console.error("[GET milestones] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -42,10 +42,10 @@ const createMilestoneSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerAdminCreateMilestones") },
+      { code: 403, message: apiMsg(req, "onlyOwnerAdminCreateMilestones"), data: null },
       {
         status: 403,
       },
@@ -71,12 +71,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     console.error("[POST milestone] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -91,10 +91,10 @@ const deleteMilestoneSchema = z.object({
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission") },
+      { code: 403, message: apiMsg(req, "noPermission"), data: null },
       { status: 403 },
     );
   }
@@ -118,7 +118,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "milestoneNotFound") },
+        { code: 404, message: apiMsg(req, "milestoneNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -126,12 +126,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     console.error("[DELETE milestone] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -149,10 +149,10 @@ const patchMilestoneSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission") },
+      { code: 403, message: apiMsg(req, "noPermission"), data: null },
       { status: 403 },
     );
   }
@@ -166,7 +166,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       validated.description === undefined
     ) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed") },
+        { code: 400, message: apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
@@ -197,7 +197,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "milestoneNotFound") },
+        { code: 404, message: apiMsg(req, "milestoneNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -205,11 +205,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     console.error("[PATCH milestone] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

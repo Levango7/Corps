@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Redis from "ioredis";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * 限流器（Spec 安全基线）：固定窗口计数，两种存储模式按环境自动选择。
@@ -288,7 +289,7 @@ export async function checkRateLimit(
   const result = await hitStore(`${bucket}:${clientKey(req)}`, rule.max, rule.windowMs);
   if (result.ok) return null;
   return NextResponse.json(
-    { code: 429, message: "请求过于频繁，请稍后再试" },
+    { code: 429, message: apiMsg(req, "rateLimited"), data: null },
     { status: 429, headers: { "Retry-After": String(result.retryAfterSec) } },
   );
 }

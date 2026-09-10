@@ -9,7 +9,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { useRouter } from "@/lib/i18n-navigation";
+import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Plus, Search, FileText, Loader2, X } from "lucide-react";
 import { api } from "@/lib/api";
 
@@ -70,15 +70,15 @@ export function DocumentListView({ wid }: { wid: string }) {
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-[var(--space-4)] py-[var(--space-6)]">
+    <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] py-[var(--space-6)]">
       <div className="flex items-center justify-between mb-[var(--space-5)]">
-        <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
           {t("listTitle")}
         </h1>
         <button
           onClick={createDoc}
           disabled={creating}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
         >
           {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           {t("newDocument")}
@@ -126,7 +126,7 @@ export function DocumentListView({ wid }: { wid: string }) {
             const author = d.author?.name || d.author?.email;
             return (
               <li key={d.id}>
-                <a
+                <Link
                   href={`/w/${wid}/documents/${d.id}`}
                   className="block px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors"
                 >
@@ -151,7 +151,7 @@ export function DocumentListView({ wid }: { wid: string }) {
                     <span>·</span>
                     <span>{t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}</span>
                   </div>
-                </a>
+                </Link>
               </li>
             );
           })}

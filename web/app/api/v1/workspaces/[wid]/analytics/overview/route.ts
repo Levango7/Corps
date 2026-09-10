@@ -55,11 +55,11 @@ const MAX_EVENT_LIMIT = 50_000;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   // 仅 owner/admin 可见分析数据
   if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden") }, { status: 403 });
+    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden"), data: null }, { status: 403 });
   }
 
   // M1 修复：支持 ?limit= 查询参数按需放宽事件拉取上限

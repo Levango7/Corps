@@ -77,7 +77,7 @@ export function PricingSection() {
       <div className="mx-auto max-w-[var(--container-max)]">
         <h2
           id="plans-heading"
-          className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] text-center"
+          className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] text-center"
         >
           {t("plans.heading")}
         </h2>
@@ -97,7 +97,7 @@ export function PricingSection() {
                 aria-pressed={pressed}
                 onClick={() => handlePeriodChange(opt.value)}
                 className={
-                  "px-4 h-9 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-[var(--weight-medium)] " +
+                  "px-4 h-9 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] " +
                   "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
                   "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] " +
                   (pressed
@@ -156,7 +156,7 @@ function FreeCard({
         (className ?? "")
       }
     >
-      <h3 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
+      <h3 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
         {t("plans.free.name")}
       </h3>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -164,7 +164,7 @@ function FreeCard({
       </p>
 
       <div className="mt-4 flex items-baseline gap-1">
-        <span className="text-[length:var(--text-4xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <span className="text-[length:var(--text-4xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           ¥0
         </span>
         <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -217,11 +217,11 @@ function ProCard({
       }
     >
       {/* 推荐角标 */}
-      <span className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+      <span className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
         {t("plans.pro.badge")}
       </span>
 
-      <h3 className="text-[length:var(--text-lg)] font-[var(--weight-semibold)] text-[var(--fg)]">
+      <h3 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
         {t("plans.pro.name")}
       </h3>
       <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
@@ -235,12 +235,12 @@ function ProCard({
             ¥{plan.monthlyPrice}
           </span>
         )}
-        <span className="text-[length:var(--text-4xl)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <span className="text-[length:var(--text-4xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           ¥{proPrice}
         </span>
         <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{proUnit}</span>
         {period === "yearly" && (
-          <span className="ml-2 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)]">
+          <span className="ml-2 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
             {t("plans.savePerSeat", { amount: YEARLY_SAVING_PER_SEAT.toFixed(1) })}
           </span>
         )}

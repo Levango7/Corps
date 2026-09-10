@@ -32,7 +32,7 @@ export async function PATCH(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = markReadSchema.parse(await req.json());
@@ -52,7 +52,7 @@ export async function PATCH(
           select: { id: true },
         });
 
-        if (messages.length === 0) return { marked: 0 };
+        if (messages.length === 0) return { marked: 0, newMessageIds: [] as string[] };
 
         // 先查询已存在的已读记录，计算实际新增数（createMany skipDuplicates 不返回 count）
         const existingReads = await tx.messageRead.findMany({
@@ -65,7 +65,7 @@ export async function PATCH(
         const existingIds = new Set(existingReads.map((r) => r.messageId));
         const newMessages = messages.filter((m) => !existingIds.has(m.id));
 
-        if (newMessages.length === 0) return { marked: 0 };
+        if (newMessages.length === 0) return { marked: 0, newMessageIds: [] as string[] };
 
         // 批量创建新增的已读记录（已过滤已存在，无需 skipDuplicates）
         const now = new Date();
@@ -78,27 +78,29 @@ export async function PATCH(
         });
 
         // marked = 实际新增的已读记录数（已读过的消息不重复计数）
-        return { marked: newMessages.length };
+        // newMessageIds = 实际新标记的消息 ID（供事务外 emit SSE，M5）
+        return { marked: newMessages.length, newMessageIds: newMessages.map((m) => m.id) };
       },
       userId,
     );
 
     // emit SSE 事件：通知发送者客户端更新已读回执
-    // 对每条消息 emit 一个 read 事件
+    // M5 修正：只对实际新标记已读的消息 emit，而非所有请求的 messageIds
+    // （已读过的消息重复 emit 会导致发送者客户端收到多余的已读回执）
     const readAtISO = new Date().toISOString();
-    for (const messageId of validated.messageIds) {
+    for (const messageId of result.newMessageIds) {
       emitChatEvent(id, { type: "read", messageId, userId, readAt: readAtISO });
     }
 
-    return NextResponse.json({ code: 200, data: result });
+    return NextResponse.json({ code: 200, data: { marked: result.marked } });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
     console.error("Mark read error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

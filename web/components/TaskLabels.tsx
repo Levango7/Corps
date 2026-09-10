@@ -19,7 +19,7 @@ export function TaskLabels({ labels, max = 3 }: { labels: Label[]; max?: number 
       {visible.map((label) => (
         <span
           key={label.id}
-          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[length:var(--text-xs)] font-[var(--weight-medium)]"
+          className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]"
           style={{
             background: `color-mix(in srgb, ${label.color} 14%, transparent)`,
             color: label.color,

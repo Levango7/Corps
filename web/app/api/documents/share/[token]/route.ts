@@ -58,7 +58,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 
     if (!doc || !doc.publishedMarkdown) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(_req, "shareLinkInvalidUnpublished") },
+        { code: 404, message: apiMsg(_req, "shareLinkInvalidUnpublished"), data: null },
         { status: 404 },
       );
     }

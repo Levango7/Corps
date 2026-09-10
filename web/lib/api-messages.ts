@@ -27,6 +27,7 @@ export const API_MESSAGES = {
   forbidden: { zh: "禁止访问", en: "Forbidden" },
   validationFailed: { zh: "参数校验失败", en: "Validation failed" },
   validationError: { zh: "参数校验错误", en: "Validation error" },
+  rateLimited: { zh: "请求过于频繁，请稍后再试", en: "Too many requests; please try again later" },
 
   /* ── 资源不存在 ── */
   taskNotFound: { zh: "任务不存在", en: "Task not found" },

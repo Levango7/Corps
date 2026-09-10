@@ -41,7 +41,8 @@
     "user": {
       "profile": "个人设置",
       "logout": "退出登录",
-      "logoutConfirm": "确定退出登录？"
+      "logoutConfirm": "确定退出登录？",
+      "logoutDone": "已退出登录"
     },
     "sidebar": {
       "open": "打开侧栏",
@@ -710,7 +711,8 @@
     "googleHint": "同步任务截止日期到 Google 日历",
     "outlookHint": "同步任务截止日期到 Outlook 日历",
     "loadFailed": "加载失败",
-    "disconnectFailed": "断开失败"
+    "disconnectFailed": "断开失败",
+    "disconnectSuccess": "已断开连接"
   },
   "legal": {
     "termsTitle": "服务条款",
@@ -770,6 +772,8 @@
     "aiGenerate": "提炼",
     "aiReGenerate": "重新生成",
     "aiCopy": "复制 Markdown",
+    "aiCopySuccess": "已复制到剪贴板",
+    "aiCopyFailed": "复制失败，请手动选择复制",
     "aiFailed": "提炼失败，请稍后重试"
   },
   "members": {
@@ -786,8 +790,10 @@
     "copyFailed": "复制失败，请手动选择并复制上方链接",
     "removeConfirm": "确定移除「{name}」？此操作不可撤销。",
     "removeFailed": "移除失败",
+    "removeSuccess": "已移除成员",
     "roleChangeConfirm": "确定更改该成员角色？",
     "roleChangeFailed": "修改失败",
+    "roleChangeSuccess": "角色已更新",
     "transfer": "转让所有权",
     "transferHint": "把工作区的拥有者权限移交给另一位成员。你将自动降为管理员。",
     "transferSelect": "选择新的拥有者",

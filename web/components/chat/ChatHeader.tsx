@@ -46,11 +46,11 @@ export function ChatHeader({
   return (
     <div className="mb-[var(--space-3)]">
       <div className="flex items-center justify-between mb-[var(--space-2)]">
-        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <MessageCircle size={16} className="text-[var(--muted)]" />
           {t("title")}
           {messageCount > 0 && (
-            <span className="text-[length:var(--text-sm)] font-[var(--weight-regular)] text-[var(--meta)]">
+            <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-regular)] text-[var(--meta)]">
               {messageCount}
             </span>
           )}
@@ -82,7 +82,7 @@ export function ChatHeader({
           <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("online")}</span>
           {onlineMembers.slice(0, 5).map((m) => (
             <div key={m.id} className="relative shrink-0" title={m.name || m.email}>
-              <div className="w-6 h-6 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[var(--weight-medium)] overflow-hidden">
+              <div className="w-6 h-6 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] overflow-hidden">
                 {m.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img

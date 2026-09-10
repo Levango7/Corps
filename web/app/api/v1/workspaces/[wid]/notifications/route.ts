@@ -22,7 +22,7 @@ const listNotificationsQuerySchema = z.object({
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const url = new URL(req.url);
@@ -48,7 +48,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors },
+        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
         { status: 400 },
       );
     }
@@ -94,7 +94,7 @@ const patchSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const validated = patchSchema.parse(await req.json());
@@ -102,7 +102,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     // 请求语言（apiMsg 需要 req），故在 req 可用处校验并本地化
     if (validated.all !== true && !validated.id) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "notificationsNeedIdOrAll") },
+        { code: 400, message: apiMsg(req, "notificationsNeedIdOrAll"), data: null },
         { status: 400 },
       );
     }
@@ -124,11 +124,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "invalidParams") },
+        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "invalidParams"), data: null },
         { status: 400 },
       );
     }
     console.error("Patch notification error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

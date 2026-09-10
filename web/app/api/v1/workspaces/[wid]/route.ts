@@ -8,7 +8,7 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const ws = await runWithWorkspace(
@@ -30,7 +30,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
 
     if (!ws)
-      return NextResponse.json({ code: 404, message: apiMsg(req, "workspaceNotFound") }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "workspaceNotFound"), data: null }, { status: 404 });
 
     return NextResponse.json({
       code: 200,
@@ -69,10 +69,10 @@ const updateWorkspaceSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerOrAdminUpdateWorkspace") },
+      { code: 403, message: apiMsg(req, "onlyOwnerOrAdminUpdateWorkspace"), data: null },
       { status: 403 },
     );
   }
@@ -100,16 +100,16 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       );
     }
     if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json({ code: 409, message: apiMsg(req, "slugTaken") }, { status: 409 });
+      return NextResponse.json({ code: 409, message: apiMsg(req, "slugTaken"), data: null }, { status: 409 });
     }
     // P2025: 记录不存在（并发删除场景）→ 404
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound") },
+        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
         { status: 404 },
       );
     }
     console.error("Update workspace error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

@@ -40,7 +40,7 @@ export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId(req);
     if (!userId) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
     }
 
     const user = await prisma.user.findUnique({
@@ -48,13 +48,13 @@ export async function GET(req: NextRequest) {
       select: userSelect,
     });
     if (!user) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "userNotFound") }, { status: 404 });
+      return NextResponse.json({ code: 404, message: apiMsg(req, "userNotFound"), data: null }, { status: 404 });
     }
 
     return NextResponse.json({ code: 200, data: user });
   } catch (error) {
     console.error("Get user error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -76,7 +76,7 @@ export async function PATCH(req: NextRequest) {
   try {
     const userId = await getUserId(req);
     if (!userId) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
     }
 
     const body = await req.json();
@@ -91,18 +91,18 @@ export async function PATCH(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     // P2025: 记录不存在（并发删除场景）→ 404
     if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "userNotFound") },
+        { code: 404, message: apiMsg(req, "userNotFound"), data: null },
         { status: 404 },
       );
     }
     console.error("Update user error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

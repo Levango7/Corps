@@ -46,7 +46,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
         orderBy: { createdAt: "asc" },
       });
 
-      // 负责人：users 表豁免 RLS，可直读（仅取显示名）
+      // 负责人：users 表豁免 RLS，可直读
+      // 后端B-L2：select 含 email 是有意为之——当 user.name 为空时，需用 email
+      // 本地部分（@ 前缀）作为显示名 fallback。返回值已做脱敏：只取 email.split("@")[0]，
+      // 不暴露完整邮箱地址（见下方 assignee 构造）。
       const assignee = task.assigneeId
         ? await tx.user.findUnique({
             where: { id: task.assigneeId },
@@ -68,7 +71,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
 
     if (!data) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(_req, "shareLinkInvalidRevoked") },
+        { code: 404, message: apiMsg(_req, "shareLinkInvalidRevoked"), data: null },
         { status: 404 },
       );
     }

@@ -12,7 +12,7 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const labels = await runWithWorkspace(
@@ -28,7 +28,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: labels });
   } catch (error) {
     console.error("[GET labels] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -40,10 +40,10 @@ const createLabelSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerAdminCreateLabels") },
+      { code: 403, message: apiMsg(req, "onlyOwnerAdminCreateLabels"), data: null },
       {
         status: 403,
       },
@@ -68,19 +68,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     // P2002：唯一约束冲突（同工作区标签名重复）
     if ((error as { code?: string }).code === "P2002") {
       return NextResponse.json(
-        { code: 409, message: apiMsg(req, "labelNameExists") },
+        { code: 409, message: apiMsg(req, "labelNameExists"), data: null },
         { status: 409 },
       );
     }
     console.error("[POST label] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -95,10 +95,10 @@ const deleteLabelSchema = z.object({
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission") },
+      { code: 403, message: apiMsg(req, "noPermission"), data: null },
       { status: 403 },
     );
   }
@@ -122,7 +122,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "labelNotFound") },
+        { code: 404, message: apiMsg(req, "labelNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -130,19 +130,19 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     // P2003：外键约束冲突（标签仍被任务引用）
     if ((error as { code?: string }).code === "P2003") {
       return NextResponse.json(
-        { code: 409, message: apiMsg(req, "prismaForeignKeyViolation") },
+        { code: 409, message: apiMsg(req, "prismaForeignKeyViolation"), data: null },
         { status: 409 },
       );
     }
     console.error("[DELETE label] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }
 
@@ -159,10 +159,10 @@ const patchLabelSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission") },
+      { code: 403, message: apiMsg(req, "noPermission"), data: null },
       { status: 403 },
     );
   }
@@ -172,7 +172,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     // 至少需要一个可更新字段
     if (validated.name === undefined && validated.color === undefined) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed") },
+        { code: 400, message: apiMsg(req, "validationFailed"), data: null },
         { status: 400 },
       );
     }
@@ -200,7 +200,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "labelNotFound") },
+        { code: 404, message: apiMsg(req, "labelNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -208,18 +208,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     // P2002：唯一约束冲突（标签名重复）
     if ((error as { code?: string }).code === "P2002") {
       return NextResponse.json(
-        { code: 409, message: apiMsg(req, "labelNameExists") },
+        { code: 409, message: apiMsg(req, "labelNameExists"), data: null },
         { status: 409 },
       );
     }
     console.error("[PATCH label] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

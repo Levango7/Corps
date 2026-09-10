@@ -235,7 +235,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
       });
       if (!res.ok) {
         const json = await res.json().catch(() => ({ message: t("uploadFailed") }));
-        throw new Error(json.message || `t("uploadFailed") (${res.status})`);
+        throw new Error(json.message || `${t("uploadFailed")} (${res.status})`);
       }
       const json = await res.json();
       return json.data as AttachmentMeta;

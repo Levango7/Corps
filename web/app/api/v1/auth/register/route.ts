@@ -12,7 +12,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const registerSchema = z.object({
   email: z.string().email(),
-  password: z.string().min(8),
+  password: z.string().min(8).max(128),
   name: z.string().min(2).max(100).optional(),
   workspaceName: z.string().min(2).max(100),
   // P2-5：clientSessionId zod 校验 z.string().max(64)，
@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
       where: { email: validated.email },
     });
     if (existingUser) {
-      return NextResponse.json({ code: 409, message: apiMsg(req, "emailAlreadyRegistered") }, { status: 409 });
+      return NextResponse.json({ code: 409, message: apiMsg(req, "emailAlreadyRegistered"), data: null }, { status: 409 });
     }
 
     // 1) Better Auth 创建用户 + 会话（写入 cookie）
@@ -57,7 +57,7 @@ export async function POST(req: NextRequest) {
     const baUser = baBody.user;
     if (!baUser?.id) {
       return NextResponse.json(
-        { code: 500, message: apiMsg(req, "authProviderNoUser") },
+        { code: 500, message: apiMsg(req, "authProviderNoUser"), data: null },
         { status: 500 },
       );
     }
@@ -144,7 +144,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }

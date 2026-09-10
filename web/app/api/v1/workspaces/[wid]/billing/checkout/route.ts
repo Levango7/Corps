@@ -54,10 +54,10 @@ function safeRedirectUrl(
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling") },
+      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling"), data: null },
       { status: 403 },
     );
   }
@@ -75,7 +75,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
     if (!workspace) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound") },
+        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -135,7 +135,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     if (error instanceof PaymentProviderError) {
       if (error.code === "unsupported_period") {
         return NextResponse.json(
-          { code: 400, message: apiMsg(req, "yearlyPriceNotConfigured") },
+          { code: 400, message: apiMsg(req, "yearlyPriceNotConfigured"), data: null },
           { status: 400 },
         );
       }
@@ -145,13 +145,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     }
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
         { status: 400 },
       );
     }
     console.error("Billing checkout error:", error);
     return NextResponse.json(
-      { code: 500, message: apiMsg(req, "billingUnavailable") },
+      { code: 500, message: apiMsg(req, "billingUnavailable"), data: null },
       { status: 500 },
     );
   }

@@ -51,7 +51,7 @@ export function MilestoneFilter({
       >
         <MilestoneIcon size={15} className="text-[var(--muted)]" />
         <span className="hidden sm:inline">{t("filterLabel")}</span>
-        <span className="font-[var(--weight-medium)] text-[var(--fg)]">{current}</span>
+        <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{current}</span>
         <ChevronDown size={14} className="text-[var(--meta)]" />
       </button>
 
@@ -72,7 +72,7 @@ export function MilestoneFilter({
               }}
               className={`w-full text-left px-3 py-1.5 text-[length:var(--text-sm)] hover:bg-[var(--surface-2)] transition-colors ${
                 value === "all"
-                  ? "text-[var(--accent)] font-[var(--weight-medium)]"
+                  ? "text-[var(--accent)] font-[weight:var(--weight-medium)]"
                   : "text-[var(--fg-2)]"
               }`}
             >
@@ -87,7 +87,7 @@ export function MilestoneFilter({
               }}
               className={`w-full text-left px-3 py-1.5 text-[length:var(--text-sm)] hover:bg-[var(--surface-2)] transition-colors ${
                 value === "null"
-                  ? "text-[var(--accent)] font-[var(--weight-medium)]"
+                  ? "text-[var(--accent)] font-[weight:var(--weight-medium)]"
                   : "text-[var(--fg-2)]"
               }`}
             >
@@ -105,7 +105,7 @@ export function MilestoneFilter({
                 }}
                 className={`w-full text-left px-3 py-1.5 text-[length:var(--text-sm)] hover:bg-[var(--surface-2)] transition-colors ${
                   value === m.id
-                    ? "text-[var(--accent)] font-[var(--weight-medium)]"
+                    ? "text-[var(--accent)] font-[weight:var(--weight-medium)]"
                     : "text-[var(--fg-2)]"
                 }`}
               >

@@ -68,7 +68,7 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
       );
     } else if (token.startsWith("**")) {
       nodes.push(
-        <strong key={k} className="font-[var(--weight-semibold)] text-[var(--fg)]">
+        <strong key={k} className="font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {token.slice(2, -2)}
         </strong>,
       );
@@ -150,7 +150,7 @@ export default function Markdown({ source }: { source: string }) {
       blocks.push(
         <HeadingTag
           key={key++}
-          className="mt-4 mb-2 font-[var(--weight-semibold)] text-[var(--fg)]"
+          className="mt-4 mb-2 font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           style={{ fontSize }}
         >
           {renderInline(h[2], `h${key}`)}

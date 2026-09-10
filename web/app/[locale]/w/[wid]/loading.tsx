@@ -7,7 +7,7 @@
  * 纯展示组件：
  *  - 不需要 "use client"
  *  - 不需要 i18n（骨架屏无文本）
- *  - 复用 page.tsx 的容器结构（max-w-5xl mx-auto）与设计 tokens
+ *  - 复用 page.tsx 的容器结构（max-w-[var(--container-max)] mx-auto）与设计 tokens
  *
  * 布局与工作区首页 page.tsx 对齐：
  *  1. 顶部标题行（标题 + 副标题 + 新建按钮占位）
@@ -19,7 +19,7 @@ import { Skeleton, StatCardSkeleton, TaskListSkeleton } from "@/components/Skele
 
 export default function WorkspaceLoading() {
   return (
-    <div className="max-w-5xl mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto">
       {/* ─── 顶部标题行：与 page.tsx 顶部对齐，避免加载完成时布局跳动 ─── */}
       <div className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>

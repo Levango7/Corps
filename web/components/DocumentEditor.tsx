@@ -168,7 +168,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         onBlur={() => save()}
         maxLength={255}
         placeholder={t("titlePlaceholder")}
-        className="w-full px-0 py-2 bg-transparent text-[length:var(--text-3xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
+        className="w-full px-0 py-2 bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
       />
 
       {/* 工具栏 */}
@@ -269,7 +269,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={() => save({ publish: true })}
             disabled={busy !== null}
             title={busy !== null ? t("saveFailed") : undefined}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             {busy === "publish" ? (
               <Loader2 size={14} className="animate-spin" />
@@ -376,7 +376,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       </div>
       {/* 打印专用容器（导出 PDF）：屏幕隐藏，打印时仅此区可见 */}
       <div className="hidden print:block print-area" aria-hidden="true">
-        <h1 className="text-[length:var(--text-xl)] font-[var(--weight-semibold)] mb-2">{title}</h1>
+        <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-2">{title}</h1>
         <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
           corps · {new Date().toLocaleString()}
         </p>

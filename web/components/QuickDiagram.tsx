@@ -113,7 +113,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
       >
         {/* 标题栏 */}
         <header className="flex items-center justify-between px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border-soft)]">
-          <h3 className="text-[length:var(--text-md)] font-[var(--weight-semibold)] text-[var(--fg)]">
+          <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             {t("title")}
           </h3>
           <button
@@ -135,7 +135,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
               aria-pressed={kind === dKey}
               className={`px-2.5 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors ${
                 kind === dKey
-                  ? "bg-[var(--accent)] text-[var(--accent-fg)] font-[var(--weight-medium)]"
+                  ? "bg-[var(--accent)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)]"
                   : "text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
               }`}
             >
@@ -187,7 +187,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
                 onClose();
               }}
               disabled={!code.trim()}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
             >
               <ArrowDownToLine size={14} />
               {t("insert")}

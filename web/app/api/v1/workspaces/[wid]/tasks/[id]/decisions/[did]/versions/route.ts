@@ -9,7 +9,7 @@ export async function GET(
 ) {
   const { wid, id, did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     const versions = await runWithWorkspace(wid, async (tx) => {
@@ -29,7 +29,7 @@ export async function GET(
 
     if (versions === null) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "decisionNotFound") },
+        { code: 404, message: apiMsg(req, "decisionNotFound"), data: null },
         { status: 404 },
       );
     }

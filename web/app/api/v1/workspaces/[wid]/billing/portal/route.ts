@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         return NextResponse.json({ code: 400, message: error.message }, { status: 400 });
       }
       if (error.code === "not_configured") {
-        return NextResponse.json({ code: 400, message: error.message }, { status: 400 });
+        return NextResponse.json({ code: 501, message: error.message, data: null }, { status: 501 });
       }
     }
     console.error("Billing portal error:", error);

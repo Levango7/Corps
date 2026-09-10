@@ -19,7 +19,7 @@ interface ConnectionStatus {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
     // calendar_connections 受 FORCE RLS（user_id 谓词）：本人连接的可见性
@@ -54,6 +54,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: { connections: status } });
   } catch (error) {
     console.error("[calendar status] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

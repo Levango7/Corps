@@ -179,12 +179,12 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
       {/* 页头：标题 + 未读计数 badge */}
       <header className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div className="flex items-center gap-[var(--space-3)]">
-          <h1 className="text-[length:var(--text-2xl)] font-[var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
+          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[-0.01em]">
             {tNotif("title")}
           </h1>
           {loaded && unreadCount > 0 && (
             <span
-              className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)] tabular-nums"
+              className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] tabular-nums"
               aria-label={tNotif("unreadCount", { count: unreadCount })}
             >
               {unreadCount}
@@ -206,7 +206,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
               role="tab"
               aria-selected={filter === tab.id}
               onClick={() => setFilter(tab.id)}
-              className={`px-3 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-[var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none ${
+              className={`px-3 h-7 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none ${
                 filter === tab.id
                   ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                   : "text-[var(--muted)] hover:text-[var(--fg-2)]"

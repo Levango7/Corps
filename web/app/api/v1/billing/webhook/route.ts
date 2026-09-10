@@ -49,7 +49,8 @@ export async function POST(req: NextRequest) {
     }
     // not_configured → 500 拒收（现状 L13–18 语义）
     if (err instanceof PaymentProviderError && err.code === "not_configured") {
-      return NextResponse.json({ code: 500, message: err.message }, { status: 500 });
+      console.error("Webhook not configured:", err.message);
+      return NextResponse.json({ code: 500, message: "Webhook processing failed", data: null }, { status: 500 });
     }
     console.error("Webhook parse error:", err);
     return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError") }, { status: 500 });

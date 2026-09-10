@@ -314,7 +314,7 @@ export function TaskFilterBar({
             <button
               onClick={handleSave}
               disabled={!viewName.trim() || isEmptyFilter(value)}
-              className="h-7 px-2 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[var(--weight-medium)] disabled:opacity-50 disabled:cursor-not-allowed"
+              className="h-7 px-2 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {t("saveConfirm")}
             </button>
