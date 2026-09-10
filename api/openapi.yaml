@@ -771,6 +771,64 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # F2: Workspace permission matrix (role-based R/C/U/D overrides)
+  /api/v1/workspaces/{wid}/permissions:
+    get:
+      tags: [members]
+      summary: Get workspace permission matrix
+      description: >
+        Returns the merged permission matrix for all roles (default + overrides).
+        The matrix maps each role (owner/admin/member/viewer) to a set of
+        module→actions entries. Owner row is always full and locked; Admin can
+        override Member and Viewer columns.
+      operationId: getPermissionMatrix
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Permission matrix
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PermissionMatrix'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [members]
+      summary: Update permission override
+      description: >
+        Update permission override for a specific role and module. Only `member`
+        and `viewer` roles can be overridden; attempting to override `owner` or
+        `admin` returns 400. Admin/Owner only (member → 403).
+      operationId: updatePermissionOverride
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePermissionRequest'
+      responses:
+        '200':
+          description: Permission override updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PermissionMatrix'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   # ===========================================================================
   # INVITATIONS（邀请未注册用户）
   # ===========================================================================
@@ -1136,6 +1194,38 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+
+  # F1: Sync decision action items to tasks
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/sync-actions:
+    post:
+      tags: [decisions]
+      summary: Sync decision action items to tasks
+      description: >
+        Parse action items from decision markdown (checkboxes / "- [ ]" lines)
+        and create/update/remove corresponding tasks. Each action item is matched
+        by its text hash; new items create tasks, removed items delete stale
+        tasks, changed items update task titles. Returns counts of created,
+        updated, and removed tasks along with the full task list.
+      operationId: syncDecisionActions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/Did'
+      responses:
+        '200':
+          description: Action items synced successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ActionSyncResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
   # ===========================================================================
   # ANALYTICS & NOTIFICATIONS & EVENTS
@@ -3770,3 +3860,115 @@ components:
             canManage:
               type: boolean
               description: true when a provider-side order exists and portalReady (Portal available).
+
+    # ---- F1: decision action sync ----
+    ActionSyncResponse:
+      type: object
+      required: [created, updated, removed, tasks]
+      properties:
+        created:
+          type: integer
+          description: Number of new tasks created from action items.
+          example: 2
+        updated:
+          type: integer
+          description: Number of existing tasks updated (title changed).
+          example: 1
+        removed:
+          type: integer
+          description: Number of stale action items removed (tasks deleted).
+          example: 0
+        tasks:
+          type: array
+          description: Full list of synced tasks after the operation.
+          items:
+            $ref: '#/components/schemas/Task'
+    Envelope_ActionSyncResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/ActionSyncResponse'
+
+    # ---- F2: permission matrix ----
+    PermissionOverride:
+      type: object
+      required: [role, module, actions]
+      properties:
+        role:
+          type: string
+          enum: [member, viewer]
+          description: Role whose permissions are overridden. Owner/admin cannot be overridden.
+        module:
+          type: string
+          description: Module key (e.g. tasks, decisions, documents, members, billing, analytics, settings).
+          example: tasks
+        actions:
+          type: array
+          items:
+            type: string
+            enum: [read, create, update, delete]
+          description: Allowed actions for this role+module. Absent actions are denied.
+          example: [read]
+    PermissionMatrix:
+      type: object
+      required: [roles, overrides]
+      properties:
+        roles:
+          type: array
+          description: Ordered list of role permission rows (owner, admin, member, viewer).
+          items:
+            type: object
+            required: [role, modules]
+            properties:
+              role:
+                type: string
+                enum: [owner, admin, member, viewer]
+              locked:
+                type: boolean
+                description: true when this role row cannot be modified (owner is always locked).
+              modules:
+                type: array
+                items:
+                  type: object
+                  required: [module, actions]
+                  properties:
+                    module:
+                      type: string
+                      description: Module key.
+                    actions:
+                      type: array
+                      items:
+                        type: string
+                        enum: [read, create, update, delete]
+                      description: Allowed actions for this role+module.
+        overrides:
+          type: array
+          description: Active permission overrides (only member/viewer rows can have overrides).
+          items:
+            $ref: '#/components/schemas/PermissionOverride'
+    Envelope_PermissionMatrix:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/PermissionMatrix'
+    UpdatePermissionRequest:
+      type: object
+      required: [role, module, actions]
+      properties:
+        role:
+          type: string
+          enum: [member, viewer]
+          description: Target role to override. Owner/admin are rejected with 400.
+        module:
+          type: string
+          minLength: 1
+          maxLength: 50
+          description: Module key (e.g. tasks, decisions, documents).
+        actions:
+          type: array
+          items:
+            type: string
+            enum: [read, create, update, delete]
+          description: Allowed actions. Empty array denies all actions for this role+module.

@@ -4,6 +4,7 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { getPaymentProvider, PaymentProviderError, ProviderId } from "@/lib/payments";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 // P3-2 / 裁决三：checkout/route.ts 归支付线独占。period 字段并入本线交付。
 // Phase 2：新增 provider 参数支持通道选择（stripe/wechatpay-native/alipay-page）。
@@ -55,12 +56,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
-  if (ctx.member.role !== "owner") {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling"), data: null },
-      { status: 403 },
-    );
-  }
+  const denied = await requirePermission(ctx, "billing", "update", req);
+  if (denied) return denied;
 
   try {
     const body = checkoutSchema.parse(await req.json().catch(() => ({})));

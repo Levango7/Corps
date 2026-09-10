@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
+import { syncActionItems } from "@/lib/decision-action-parser";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -51,7 +52,7 @@ export async function POST(
   try {
     const validated = createDecisionSchema.parse(await req.json());
 
-    const decision = await runWithWorkspace(wid, async (tx) => {
+    const result = await runWithWorkspace(wid, async (tx) => {
       const task = await tx.task.findFirst({
         where: { id, workspaceId: wid },
         select: { id: true, assigneeId: true, title: true },
@@ -97,14 +98,25 @@ export async function POST(
         });
       }
 
-      return created;
+      // F1: 决策驱动执行 —— 在同一事务内自动解析并同步行动项（创建 Task + DecisionActionItem）
+      const actionSync = await syncActionItems(
+        tx,
+        created.id,
+        validated.markdown,
+        wid,
+        ctx.payload.sub,
+      );
+
+      return { decision: created, actionSync };
     });
 
-    if (!decision)
+    if (!result)
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
       );
+
+    const { decision, actionSync } = result;
 
     // P2 数据埋点：create_decision 事件（不阻塞主流程）
     await trackServerEvent({
@@ -114,7 +126,10 @@ export async function POST(
       props: { taskId: id, version: decision.version },
     });
 
-    return NextResponse.json({ code: 201, data: decision }, { status: 201 });
+    return NextResponse.json(
+      { code: 201, data: { ...decision, actionItems: actionSync } },
+      { status: 201 },
+    );
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

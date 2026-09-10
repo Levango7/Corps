@@ -821,7 +821,10 @@
     "emptyDesc": "Invite teammates to start collaborating",
     "inviteNote": "Colleagues who haven\\u2019t registered will receive a dedicated invite link valid for 7 days and join automatically after signing up. The owner cannot be removed or demoted; transfer ownership in settings.",
     "you": "You",
-    "ownerNotEditable": "Owner cannot be changed here"
+    "ownerNotEditable": "Owner cannot be changed here",
+    "roleViewer": "Viewer (Read-only)",
+    "viewerHint": "Viewer can only view tasks, decisions and documents, cannot edit or manage the workspace.",
+    "viewerSelected": "Viewer (Read-only) selected"
   },
   "command": {
     "searchPlaceholder": "Search tasks / decisions, or jump to a page",
@@ -932,10 +935,62 @@
     "markAllRead": "Mark all read",
     "emptyHint": "When someone @mentions you, assigns a task, or updates a decision, you will be notified here"
   },
+  "decision": {
+    "actionItems": "Action Items",
+    "actionProgress": "Progress",
+    "syncActions": "Sync to Tasks",
+    "noActions": "No action items",
+    "actionCreated": "{count} task(s) created",
+    "actionUpdated": "{count} task(s) updated",
+    "actionRemoved": "{count} action item(s) removed",
+    "syncSuccess": "Sync succeeded",
+    "syncFailed": "Sync failed"
+  },
   "role": {
     "owner": "Owner",
     "admin": "Admin",
-    "member": "Member"
+    "member": "Member",
+    "viewer": "Viewer (Read-only)"
+  },
+  "permissions": {
+    "title": "Permission Matrix",
+    "subtitle": "Configure R/C/U/D permissions by role and module. Owner row is locked; Admin can override Member and Viewer columns.",
+    "viewerHint": "Viewer can only view tasks, decisions and documents, cannot edit or manage the workspace.",
+    "module": {
+      "tasks": "Tasks",
+      "decisions": "Decisions",
+      "documents": "Documents",
+      "messages": "Messages",
+      "members": "Members",
+      "billing": "Billing",
+      "analytics": "Analytics",
+      "settings": "Settings"
+    },
+    "role": {
+      "owner": "Owner",
+      "admin": "Admin",
+      "member": "Member",
+      "viewer": "Viewer"
+    },
+    "action": {
+      "read": "R",
+      "create": "C",
+      "update": "U",
+      "delete": "D",
+      "readLabel": "Read",
+      "createLabel": "Create",
+      "updateLabel": "Update",
+      "deleteLabel": "Delete"
+    },
+    "ownerLocked": "Owner has all permissions and cannot be changed",
+    "adminCanOverride": "Admin can override Member and Viewer columns",
+    "save": "Save permissions",
+    "saving": "Saving…",
+    "saveSuccess": "Permissions saved",
+    "saveFailed": "Save failed",
+    "loadFailed": "Failed to load permissions",
+    "reset": "Reset to default",
+    "resetSuccess": "Permissions reset to default"
   },
   "theme": {
     "light": "Light",

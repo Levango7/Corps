@@ -14,7 +14,7 @@ export type Status = "todo" | "in_progress" | "review" | "done";
 export type Priority = "low" | "medium" | "high" | "urgent";
 
 /** 角色：与 members 表 CHECK 约束严格一致。 */
-export type Role = "owner" | "admin" | "member";
+export type Role = "owner" | "admin" | "member" | "viewer";
 
 /** 人员摘要：assignee/creator/author 共用。image 仅 creator/assignee 在详情页 include。 */
 export interface Person {

@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { shanghaiDay, shanghaiWeekKey, CORE_EVENTS } from "@/lib/analytics-time";
 import { matchFunnel, type FunnelEvent } from "@/lib/analytics-funnel";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /api/v1/workspaces/:wid/analytics/overview — 工作区分析概览。
@@ -57,10 +58,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
-  // 仅 owner/admin 可见分析数据
-  if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "forbidden"), data: null }, { status: 403 });
-  }
+  // 仅 analytics:read 权限可见分析数据
+  const denied = await requirePermission(ctx, "analytics", "read", req);
+  if (denied) return denied;
 
   // M1 修复：支持 ?limit= 查询参数按需放宽事件拉取上限
   const limitParam = Number.parseInt(req.nextUrl.searchParams.get("limit") ?? "", 10);

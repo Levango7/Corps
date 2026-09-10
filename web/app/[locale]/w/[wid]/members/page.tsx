@@ -427,6 +427,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
   const meta = ROLE_META[m.role];
   const t = useTranslations("members");
   const tRole = useTranslations("role");
+  const tPermissions = useTranslations("permissions");
 
   const Icon = meta.icon;
   const editable = canManage && m.role !== "owner" && !m.isSelf;
@@ -435,6 +436,8 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
   // 第一次点击进入 confirming 态（按钮变红+文案切换），第二次点击执行删除。
   // 失焦或 3 秒超时自动重置，避免用户误触后卡在确认态。
   const [confirming, setConfirming] = useState(false);
+  // Viewer 角色提示：选中 viewer 时在角色选择下方显示只读说明
+  const showViewerHint = m.role === "viewer";
 
   if (layout === "row") {
     return (
@@ -462,6 +465,7 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             >
               <option value="member">{t("roleMember")}</option>
               <option value="admin">{t("roleAdmin")}</option>
+              <option value="viewer">{t("roleViewer")}</option>
             </select>
           ) : (
             <span className="flex items-center gap-1.5 px-2 h-8 text-[length:var(--text-sm)] text-[var(--fg-2)]">
@@ -493,6 +497,11 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
             </button>
           )}
         </div>
+        {showViewerHint && (
+          <div className="ml-auto text-[length:var(--text-xs)] text-[var(--meta)] italic">
+            {tPermissions("viewerHint")}
+          </div>
+        )}
       </div>
     );
   }
@@ -535,10 +544,17 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
           >
             <option value="member">{t("roleMember")}</option>
             <option value="admin">{t("roleAdmin")}</option>
+            <option value="viewer">{t("roleViewer")}</option>
           </select>
-          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("ownerNotEditable")}
-          </span>
+          {showViewerHint ? (
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)] italic">
+              {tPermissions("viewerHint")}
+            </span>
+          ) : (
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+              {t("ownerNotEditable")}
+            </span>
+          )}
           <button
             onClick={() => {
               if (confirming) {

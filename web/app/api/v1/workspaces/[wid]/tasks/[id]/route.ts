@@ -6,6 +6,7 @@ import { syncTaskToAllCalendars } from "@/lib/calendar/sync";
 import { deleteTaskFiles } from "@/lib/uploads-cleanup";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -278,12 +279,10 @@ export async function DELETE(
         { status: 404 },
       );
     }
-    // 删除权限：任务创建者或 owner/admin（普通成员不能删他人创建的任务）
-    if (existing.createdBy !== ctx.payload.sub && !["owner", "admin"].includes(ctx.member.role)) {
-      return NextResponse.json(
-        { code: 403, message: apiMsg(req, "onlyCreatorOrAdminDelete"), data: null },
-        { status: 403 },
-      );
+    // 删除权限：任务创建者可直接删除；否则需 tasks:delete 权限
+    if (existing.createdBy !== ctx.payload.sub) {
+      const denied = await requirePermission(ctx, "tasks", "delete", req);
+      if (denied) return denied;
     }
 
     // DB 级联删除前清理附件磁盘文件（message_attachments 行随级联消失，

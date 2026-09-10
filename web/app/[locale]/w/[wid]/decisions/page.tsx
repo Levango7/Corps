@@ -16,7 +16,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@/lib/i18n-navigation";
-import { FileText, Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy } from "lucide-react";
+import { FileText, Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy, ListChecks } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
@@ -33,6 +33,14 @@ interface Decision {
   authorName: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * 执行进度（F1 决策驱动执行）：
+   *  - actionItemCount：行动项总数（null=后端尚未返回，前端不显示进度列）
+   *  - actionItemCompleted：已完成行动项数
+   * 由决策列表 API 内嵌（可选）；缺失时不渲染进度列，保持向后兼容。
+   */
+  actionItemCount?: number | null;
+  actionItemCompleted?: number | null;
 }
 
 interface DecisionsResp {
@@ -357,7 +365,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                       )}
                     </div>
 
-                    {/* 底部：作者 + 创建时间 + 更新时间 */}
+                    {/* 底部：作者 + 创建时间 + 更新时间 + 执行进度 */}
                     <footer className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2 border-t border-[var(--border-soft)] text-[length:var(--text-xs)] text-[var(--meta)]">
                       <span className="truncate">{d.authorName || t("unknownAuthor")}</span>
                       {createdRel && (
@@ -371,6 +379,35 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                           <span className="shrink-0">·</span>
                           <span className="shrink-0 tabular-nums">
                             {t("updatedAtRel", { time: updatedRel })}
+                          </span>
+                        </>
+                      )}
+                      {/* F1 执行进度列：仅当后端返回 actionItemCount 时渲染 */}
+                      {typeof d.actionItemCount === "number" && d.actionItemCount > 0 && (
+                        <>
+                          <span className="shrink-0">·</span>
+                          <span className="shrink-0 inline-flex items-center gap-1 tabular-nums">
+                            <ListChecks size={11} className="text-[var(--muted)]" />
+                            {/* 迷你进度条：宽度按完成率填充 */}
+                            <span className="inline-flex items-center gap-1">
+                              <span className="relative inline-block w-10 h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
+                                <span
+                                  className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-[var(--motion-base)]"
+                                  style={{
+                                    width: `${Math.round(
+                                      ((d.actionItemCompleted ?? 0) / (d.actionItemCount ?? 1)) * 100,
+                                    )}%`,
+                                    background:
+                                      (d.actionItemCompleted ?? 0) >= (d.actionItemCount ?? 0)
+                                        ? "var(--success)"
+                                        : "var(--accent)",
+                                  }}
+                                />
+                              </span>
+                              <span>
+                                {d.actionItemCompleted ?? 0}/{d.actionItemCount}
+                              </span>
+                            </span>
                           </span>
                         </>
                       )}

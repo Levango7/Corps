@@ -39,9 +39,10 @@ import Markdown from "@/components/Markdown";
 import ChatPanel from "@/components/ChatPanel";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 import { SubtaskSection } from "@/components/SubtaskSection";
+import { ActionItemPanel } from "@/components/ActionItemPanel";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 import { QuickDiagram } from "@/components/QuickDiagram";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/Toast";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -124,6 +125,7 @@ export default function TaskDetailPage({
 }) {
   const { wid, id } = use(params);
   const router = useRouter();
+  const locale = useLocale();
   const t = useTranslations("task");
   const tButton = useTranslations("button");
   const tStatus = useTranslations("status");
@@ -137,6 +139,8 @@ export default function TaskDetailPage({
   const [task, setTask] = useState<Task | null>(null);
   const [comments, setComments] = useState<Comment[]>([]);
   const [decisions, setDecisions] = useState<Decision[]>([]);
+  // F1 决策驱动执行：保存决策后 +1，触发 ActionItemPanel 重新拉取行动项
+  const [decisionRefreshSignal, setDecisionRefreshSignal] = useState(0);
   const [members, setMembers] = useState<Person[]>([]);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
@@ -422,6 +426,8 @@ export default function TaskDetailPage({
       setDecisions((prev) => [created, ...prev]);
       setDecisionDraft("");
       setDecisionOpen(false);
+      // F1：保存决策后触发 ActionItemPanel 重新拉取行动项（决策可能含新行动项）
+      setDecisionRefreshSignal((s) => s + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : tErr("saveFailed"));
     } finally {
@@ -752,6 +758,16 @@ export default function TaskDetailPage({
                     </header>
                     <div className="px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-base)]">
                       <Markdown source={d.markdown} />
+                    </div>
+                    {/* F1 决策驱动执行：决策卡片底部嵌入行动项追踪面板 */}
+                    <div className="px-[var(--space-4)] pb-[var(--space-3)]">
+                      <ActionItemPanel
+                        decisionId={d.id}
+                        workspaceId={wid}
+                        taskId={id}
+                        locale={locale}
+                        refreshSignal={decisionRefreshSignal}
+                      />
                     </div>
                   </article>
                 ))}

@@ -19,6 +19,7 @@ import {
   ShieldCheck,
   Shield,
   User as UserIcon,
+  Eye,
   type LucideIcon,
 } from "lucide-react";
 import type { Status, Priority, Role } from "./types";
@@ -181,4 +182,5 @@ export const ROLE_META: Record<Role, { labelKey: string; icon: LucideIcon }> = {
   owner: { labelKey: "owner", icon: ShieldCheck },
   admin: { labelKey: "admin", icon: Shield },
   member: { labelKey: "member", icon: UserIcon },
+  viewer: { labelKey: "viewer", icon: Eye },
 };

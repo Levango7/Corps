@@ -10,6 +10,7 @@ import { z } from "zod";
 
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { requirePermission } from "@/lib/permissions";
 
 const updateSchema = z.object({
   role: z.enum(["admin", "member"]),
@@ -22,12 +23,8 @@ export async function PATCH(
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
-  if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerChangeRole"), data: null },
-      { status: 403 },
-    );
-  }
+  const denied = await requirePermission(ctx, "members", "update", req);
+  if (denied) return denied;
 
   let body: z.infer<typeof updateSchema>;
   try {
@@ -109,12 +106,8 @@ export async function DELETE(
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
-  if (!["owner", "admin"].includes(ctx.member.role)) {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyAdminOrOwnerRemoveMember"), data: null },
-      { status: 403 },
-    );
-  }
+  const denied = await requirePermission(ctx, "members", "delete", req);
+  if (denied) return denied;
   if (userId === ctx.payload.sub) {
     return NextResponse.json(
       { code: 400, message: apiMsg(req, "cannotRemoveSelf"), data: null },

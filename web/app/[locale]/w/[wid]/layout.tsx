@@ -302,6 +302,23 @@ export default function WorkspaceLayout({
     },
   ];
 
+  // Viewer 角色权限过滤：隐藏「成员管理」「计费」「分析」入口。
+  // Viewer 为只读角色，仅可查看任务/决策/文档，不可管理工作区。
+  // 设置页保留（含个人偏好与权限矩阵查看）。
+  const viewerHiddenPrefixes = ["/members", "/billing", "/analytics"];
+  const filteredNavGroups: NavGroup[] =
+    workspace.role === "viewer"
+      ? navGroups
+          .map((group) => ({
+            ...group,
+            items: group.items.filter(
+              (item) => !viewerHiddenPrefixes.some((prefix) => item.href.endsWith(prefix)),
+            ),
+          }))
+          // 过滤掉空分组，避免渲染空标签
+          .filter((group) => group.items.length > 0)
+      : navGroups;
+
   const notifHref = `/w/${wid}/notifications`;
   const notifActive = pathname.startsWith(notifHref);
 
@@ -515,7 +532,7 @@ export default function WorkspaceLayout({
           }`}
         >
           <SidebarNav
-            groups={navGroups}
+            groups={filteredNavGroups}
             pathname={pathname}
             collapsed={collapsed}
             notifHref={notifHref}
@@ -551,7 +568,7 @@ export default function WorkspaceLayout({
           aria-label={t("sidebar.navLabel")}
         >
           <SidebarNav
-            groups={navGroups}
+            groups={filteredNavGroups}
             pathname={pathname}
             collapsed={false}
             notifHref={notifHref}

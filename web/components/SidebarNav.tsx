@@ -17,6 +17,13 @@ export interface NavItem {
   label: string;
   icon: LucideIcon;
   exact: boolean;
+  /**
+   * 可选权限标注：声明该导航项所需的最小权限。
+   * 当前用于文档化目的（实际过滤在 layout.tsx 按 role 执行），
+   * 便于后续扩展为基于权限矩阵的细粒度控制。
+   * 例：`requiredPermission="members:read"` 表示需要 members 模块的读权限。
+   */
+  requiredPermission?: string;
 }
 
 export interface NavGroup {

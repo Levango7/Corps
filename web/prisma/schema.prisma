@@ -90,6 +90,8 @@ model User {
   analyticsEvents  AnalyticsEvent[]
   // 日历集成：用户的外部日历连接（Google/Outlook）
   calendarConnections CalendarConnection[]
+  // F1: 决策行动项的指派人反向关联
+  actionItems         DecisionActionItem[]
 
   @@map("users")
 }
@@ -120,6 +122,8 @@ model Workspace {
   milestones       Milestone[]
   // 工作区文档中心（v0.4.0 队列第 2 项）：团队知识沉淀，与决策正交（不绑任务）
   documents        Document[]
+  // F2: 模块权限覆盖（按角色+模块粒度）
+  memberPermissions MemberPermission[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -128,7 +132,7 @@ model Workspace {
 model Member {
   userId      String   @map("user_id") @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
-  role        String   @default("member") @db.VarChar(20) // owner, admin, member
+  role        String   @default("member") @db.VarChar(20) // owner, admin, member, viewer
   invitedBy   String?  @map("invited_by") @db.Uuid
   joinedAt    DateTime @default(now()) @db.Timestamptz @map("joined_at") 
   invitedAt   DateTime @default(now()) @db.Timestamptz @map("invited_at") 
@@ -207,6 +211,8 @@ model Task {
   labels    TaskLabel[]
   // 日历集成：任务同步到外部日历的事件映射
   calendarEvents TaskCalendarEvent[]
+  // F1: 决策自动分解生成的行动项（此任务由某个决策的行动项创建）
+  actionItems   DecisionActionItem[] @relation("DecisionActionTask")
 
   // 看板视图：按工作区筛选任务状态列
   @@index([workspaceId, status])
@@ -481,6 +487,8 @@ model Decision {
   // 作者注销后决策保留（审计 D3）
   author    User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
   versions  DecisionVersion[]
+  // F1: 决策自动分解的行动项列表
+  actionItems DecisionActionItem[]
 
   // 任务决策按版本号定位（覆盖索引前缀兼容单 taskId 查询）
   @@index([taskId, version])
@@ -709,4 +717,53 @@ model TaskCalendarEvent {
   @@unique([taskId, connectionId])
   @@index([connectionId])
   @@map("task_calendar_events")
+}
+
+// ─── F1: 决策驱动执行 — 行动项与任务关联表 ───
+// 每个行动项从决策 Markdown 中解析得出，可自动创建 Task。
+// 同步策略：新增行动项→创建Task+ActionItem；删除行动项→标记removed=true（Task保留）；
+// 用户手动改Task→标记userModified=true，停止该字段自动同步。
+
+model DecisionActionItem {
+  id           String    @id @default(uuid()) @db.Uuid
+  decisionId   String    @map("decision_id") @db.Uuid
+  taskId       String?   @map("task_id") @db.Uuid    // null = 行动项已删除，Task 保留
+  lineIndex    Int       @map("line_index")            // markdown 中的行号（用于 diff 同步）
+  checked      Boolean   @default(false)
+  assigneeId   String?   @map("assignee_id") @db.Uuid
+  dueDate      DateTime? @map("due_date") @db.Timestamptz
+  priority     String    @default("medium") @db.VarChar(20)
+  title        String    @db.VarChar(500)
+  removed      Boolean   @default(false)               // 行动项从 markdown 中删除
+  userModified Boolean   @default(false) @map("user_modified") // 用户手动改过 Task，停止字段同步
+  createdAt    DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt    DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+
+  decision  Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  task      Task?     @relation("DecisionActionTask", fields: [taskId], references: [id], onDelete: SetNull)
+  assignee  User?     @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+
+  @@index([decisionId])
+  @@index([taskId])
+  @@map("decision_action_items")
+}
+
+// ─── F2: Viewer 角色 + 模块权限矩阵 — 权限覆盖表 ───
+// 按角色+模块粒度覆盖默认权限。owner/admin 不可覆盖（短路返回 true）。
+// 仅对 member/viewer 生效。actions 为空数组=完全禁止该模块。
+
+model MemberPermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  role        String   @db.VarChar(20)    // "member" | "viewer"（owner/admin 不可覆盖）
+  module      String   @db.VarChar(30)    // "tasks"|"decisions"|"documents"|"messages"|"members"|"billing"|"analytics"|"settings"
+  actions     String[] @default([])       // ["read","create","update","delete"]
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, role, module], name: "uq_member_perm")
+  @@index([workspaceId])
+  @@map("member_permissions")
 }

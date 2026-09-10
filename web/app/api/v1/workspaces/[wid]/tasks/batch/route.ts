@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * POST /api/v1/workspaces/:wid/tasks/batch — 任务批量操作。
@@ -36,14 +37,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   try {
     const body = batchSchema.parse(await req.json());
 
-    // 改 assignee 需要 admin/owner 权限（与单条 PATCH 对齐）
+    // 改 assignee 需要 tasks:update 权限（与单条 PATCH 对齐）
     if (body.action === "update" && body.assigneeId !== undefined) {
-      if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
-        return NextResponse.json(
-          { code: 403, message: apiMsg(req, "onlyAdminBatchAssign"), data: null },
-          { status: 403 },
-        );
-      }
+      const denied = await requirePermission(ctx, "tasks", "update", req);
+      if (denied) return denied;
     }
 
     const result = await runWithWorkspace(

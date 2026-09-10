@@ -71,7 +71,11 @@ export async function authenticate(req: NextRequest): Promise<JWTPayload | null>
 export async function getWorkspaceContext(
   req: NextRequest,
   wid: string,
-): Promise<{ payload: JWTPayload; member: { role: string; workspaceId: string } } | null> {
+): Promise<{
+  payload: JWTPayload;
+  member: { role: string; workspaceId: string };
+  permissions?: Map<string, string>;
+} | null> {
   const payload = await authenticate(req);
   if (!payload) return null;
 
@@ -94,7 +98,40 @@ export async function getWorkspaceContext(
   );
   if (!member) return null;
 
-  return { payload, member };
+  // F2（任务 156）：为 member/viewer 角色一次性加载该工作区的权限覆盖。
+  // owner/admin 短路不查权限表（checkPermission 中 owner 永远 true，admin 走默认矩阵）。
+  // DB MemberPermission.actions 存完整动作名 ["read","create",...]，此处转为
+  // 单字符代码 "rc" 存入 Map，与 permissions.ts 的 DEFAULT_PERMISSIONS 格式一致。
+  let permissions: Map<string, string> | undefined;
+  if (member.role === "member" || member.role === "viewer") {
+    const actionToCode: Record<string, string> = {
+      create: "c",
+      read: "r",
+      update: "u",
+      delete: "d",
+    };
+    const perms = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.memberPermission.findMany({
+          where: { workspaceId: wid, role: member.role },
+          select: { role: true, module: true, actions: true },
+        }),
+      payload.sub,
+    );
+    permissions = new Map<string, string>();
+    for (const p of perms) {
+      permissions.set(
+        `${p.role}:${p.module}`,
+        p.actions
+          .map((a) => actionToCode[a] ?? "")
+          .filter(Boolean)
+          .join(""),
+      );
+    }
+  }
+
+  return { payload, member, permissions };
 }
 
 type Tx = Prisma.TransactionClient;

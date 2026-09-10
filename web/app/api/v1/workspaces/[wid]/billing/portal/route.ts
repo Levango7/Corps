@@ -2,17 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { getPaymentProvider, PaymentProviderError } from "@/lib/payments";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
-  if (ctx.member.role !== "owner") {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling"), data: null },
-      { status: 403 },
-    );
-  }
+  const denied = await requirePermission(ctx, "billing", "update", req);
+  if (denied) return denied;
 
   try {
     // M-1 修复（TC-RLS-07 同类）：subscriptions 表在加固模式下带 RLS + FORCE，
