@@ -37,9 +37,18 @@ interface OutlookEventResponse {
 /** 获取用户的默认日历（Graph /me/calendar） */
 export async function getPrimaryCalendarId(accessToken: string): Promise<string> {
   const cfg = getProviderConfig("outlook");
-  const res = await fetch(`${cfg.apiBaseUrl}/me/calendar`, {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  // M22 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.apiBaseUrl}/me/calendar`, {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     throw new Error(`获取 Outlook 主日历失败 (${res.status})`);
   }
@@ -82,14 +91,23 @@ export async function createOutlookEvent(
 ): Promise<string> {
   const cfg = getProviderConfig("outlook");
   const body = buildEventBody(opts);
-  const res = await fetch(`${cfg.apiBaseUrl}/me/calendars/${calendarId}/events`, {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  // M22 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.apiBaseUrl}/me/calendars/${calendarId}/events`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     throw new Error(`创建 Outlook 事件失败 (${res.status}): ${errText}`);
@@ -107,14 +125,23 @@ export async function updateOutlookEvent(
 ): Promise<void> {
   const cfg = getProviderConfig("outlook");
   const body = buildEventBody(opts);
-  const res = await fetch(`${cfg.apiBaseUrl}/me/calendars/${calendarId}/events/${eventId}`, {
-    method: "PATCH",
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify(body),
-  });
+  // M22 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.apiBaseUrl}/me/calendars/${calendarId}/events/${eventId}`, {
+      method: "PATCH",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     throw new Error(`更新 Outlook 事件失败 (${res.status}): ${errText}`);
@@ -128,10 +155,19 @@ export async function deleteOutlookEvent(
   eventId: string,
 ): Promise<void> {
   const cfg = getProviderConfig("outlook");
-  const res = await fetch(`${cfg.apiBaseUrl}/me/calendars/${calendarId}/events/${eventId}`, {
-    method: "DELETE",
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  // M22 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(`${cfg.apiBaseUrl}/me/calendars/${calendarId}/events/${eventId}`, {
+      method: "DELETE",
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   // 404 视为已删除
   if (!res.ok && res.status !== 404) {
     const errText = await res.text().catch(() => "");

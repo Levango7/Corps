@@ -24,17 +24,22 @@ import {
  *  - capabilities.portal = false：无自助管理门户，前端隐藏「管理账单」按钮。
  *  - 扫码型通道：createCheckout 返回 qrCodeUrl（code_url），前端渲染二维码并轮询。
  *
- * 签名方案（任务约束 HMAC-SHA256）：
- *  本实现用 WECHAT_API_KEY 作为 HMAC-SHA256 密钥，对签名串做对称签名。
- *  生产环境接真实微信支付 V3 时，请求签名应改用商户 RSA 私钥（SHA256withRSA）、
- *  回调验签应改用微信平台公钥；此处保持接口契约不变，仅替换 sign/verify 内部实现即可。
+ * 签名方案（S8 修复：RSA-SHA256，符合微信支付 V3 规范）：
+ *  请求签名使用商户 RSA 私钥（SHA256withRSA）对签名串做非对称签名，
+ *  回调验签使用微信平台公钥（RSA-SHA256 verify）。
+ *  私钥经 WECHAT_PRIVATE_KEY_PEM 环境变量传入（PEM 格式字符串），
+ *  平台公钥经 WECHAT_PLATFORM_PUBLIC_KEY_PEM 环境变量传入。
+ *  若未配置 RSA 密钥对，回退到 HMAC-SHA256（仅限沙箱/测试环境，
+ *  生产环境必须配置 RSA 密钥，否则签名无法通过微信 V3 验签）。
  *  回调敏感字段解密使用 AES-256-GCM（APIv3 密钥 = WECHAT_API_KEY），与官方一致。
  *
  * 环境变量：
  *  - WECHAT_APP_ID：应用 ID
  *  - WECHAT_MCH_ID：商户号
- *  - WECHAT_API_KEY：APIv3 密钥（32 字节，用于 HMAC 签名与 AES-256-GCM 解密）
+ *  - WECHAT_API_KEY：APIv3 密钥（32 字节，用于 AES-256-GCM 解密；HMAC 回退时也用于签名）
  *  - WECHAT_CERT_SERIAL_NO：商户证书序列号
+ *  - WECHAT_PRIVATE_KEY_PEM：商户 RSA 私钥（PEM 格式，S8 修复：用于请求 RSA-SHA256 签名）
+ *  - WECHAT_PLATFORM_PUBLIC_KEY_PEM：微信平台公钥（PEM 格式，用于回调 RSA-SHA256 验签）
  *  - WECHAT_PRICE_CENTS_MONTHLY：月付单价（分），默认 5900（¥59，ADR-003 定价）
  *  - WECHAT_PRICE_CENTS_YEARLY：年付单价（分），默认 59000（¥590）
  *  - WECHAT_NOTIFY_URL：回调通知地址，缺省由 NEXT_PUBLIC_APP_URL 拼接
@@ -44,6 +49,8 @@ const WECHAT_APP_ID = process.env.WECHAT_APP_ID;
 const WECHAT_MCH_ID = process.env.WECHAT_MCH_ID;
 const WECHAT_API_KEY = process.env.WECHAT_API_KEY;
 const WECHAT_CERT_SERIAL_NO = process.env.WECHAT_CERT_SERIAL_NO;
+const WECHAT_PRIVATE_KEY_PEM = process.env.WECHAT_PRIVATE_KEY_PEM;
+const WECHAT_PLATFORM_PUBLIC_KEY_PEM = process.env.WECHAT_PLATFORM_PUBLIC_KEY_PEM;
 const WECHAT_PRICE_CENTS_MONTHLY = process.env.WECHAT_PRICE_CENTS_MONTHLY;
 const WECHAT_PRICE_CENTS_YEARLY = process.env.WECHAT_PRICE_CENTS_YEARLY;
 const WECHAT_NOTIFY_URL = process.env.WECHAT_NOTIFY_URL;
@@ -60,8 +67,8 @@ const PRICE_YEARLY_CENTS = Number(WECHAT_PRICE_CENTS_YEARLY ?? 59000);
 const OUT_TRADE_NO_PREFIX = "corps_";
 
 /**
- * HMAC-SHA256 签名（任务约束）。
- * 返回 Base64 编码的签名值，对齐微信 V3 头部签名格式。
+ * HMAC-SHA256 签名（HMAC 回退模式，仅限沙箱/测试环境）。
+ * 返回 Base64 编码的签名值。生产环境应使用 rsaSha256Sign。
  */
 function hmacSha256Sign(key: string, data: string): string {
   const hmac = crypto.createHmac("sha256", key);
@@ -79,6 +86,78 @@ function hmacSha256Verify(key: string, data: string, signature: string): boolean
   const b = Buffer.from(signature, "base64");
   if (a.length !== b.length) return false;
   return crypto.timingSafeEqual(a, b);
+}
+
+/**
+ * S8 修复：RSA-SHA256 签名（微信支付 V3 规范）。
+ * 使用商户 RSA 私钥对签名串做 SHA256withRSA 签名，返回 Base64 编码的签名值。
+ *
+ * @param privateKeyPem - 商户 RSA 私钥（PEM 格式字符串）
+ * @param data - 签名串
+ * @returns Base64 编码的签名值
+ */
+function rsaSha256Sign(privateKeyPem: string, data: string): string {
+  const privateKey = crypto.createPrivateKey({
+    key: privateKeyPem,
+    format: "pem",
+    type: "pkcs8",
+  });
+  const signature = crypto.sign("sha256", Buffer.from(data, "utf8"), privateKey);
+  return signature.toString("base64");
+}
+
+/**
+ * S8 修复：RSA-SHA256 验签（微信支付 V3 回调验签）。
+ * 使用微信平台公钥验证签名，常量时间比较由 OpenSSL 内部保证。
+ *
+ * @param publicKeyPem - 微信平台公钥（PEM 格式字符串）
+ * @param data - 签名串
+ * @param signature - Base64 编码的签名值
+ * @returns 验签是否通过
+ */
+function rsaSha256Verify(publicKeyPem: string, data: string, signature: string): boolean {
+  try {
+    const publicKey = crypto.createPublicKey({
+      key: publicKeyPem,
+      format: "pem",
+      type: "spki",
+    });
+    const signatureBuf = Buffer.from(signature, "base64");
+    return crypto.verify("sha256", Buffer.from(data, "utf8"), publicKey, signatureBuf);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * S8 修复：请求签名调度——有 RSA 私钥用 RSA-SHA256，否则回退 HMAC-SHA256。
+ * 生产环境必须配置 WECHAT_PRIVATE_KEY_PEM，否则签名无法通过微信 V3 验签。
+ */
+function signRequest(data: string): string {
+  if (WECHAT_PRIVATE_KEY_PEM) {
+    return rsaSha256Sign(WECHAT_PRIVATE_KEY_PEM, data);
+  }
+  // HMAC 回退（仅沙箱/测试）：未配置 RSA 私钥时用 APIv3 密钥做 HMAC
+  if (!WECHAT_API_KEY) {
+    throw new PaymentProviderError(
+      "微信支付签名密钥未配置（需 WECHAT_PRIVATE_KEY_PEM 用于 RSA-SHA256，或 WECHAT_API_KEY 用于 HMAC 回退）",
+      "not_configured",
+    );
+  }
+  return hmacSha256Sign(WECHAT_API_KEY, data);
+}
+
+/**
+ * S8 修复：回调验签调度——有平台公钥用 RSA-SHA256，否则回退 HMAC-SHA256。
+ * 生产环境必须配置 WECHAT_PLATFORM_PUBLIC_KEY_PEM。
+ */
+function verifyCallback(data: string, signature: string): boolean {
+  if (WECHAT_PLATFORM_PUBLIC_KEY_PEM) {
+    return rsaSha256Verify(WECHAT_PLATFORM_PUBLIC_KEY_PEM, data, signature);
+  }
+  // HMAC 回退（仅沙箱/测试）
+  if (!WECHAT_API_KEY) return false;
+  return hmacSha256Verify(WECHAT_API_KEY, data, signature);
 }
 
 /**
@@ -135,10 +214,14 @@ function buildAuthHeader(method: string, urlPath: string, body: string): string 
   const nonce = generateNonce();
   // 签名串：method\nurl\ntimestamp\nnonce\nbody\n（V3 规范，末尾换行不可省略）
   const signString = `${method}\n${urlPath}\n${timestamp}\n${nonce}\n${body}\n`;
-  const signature = hmacSha256Sign(WECHAT_API_KEY, signString);
-  // Authorization 头格式对齐 V3（实际生产签名算法为 RSA-SHA256，此处用 HMAC 简化）
-  return `WECHATPAY2-SHA256-RC4-DIGEST mchid="${WECHAT_MCH_ID}",nonce_str="${nonce}",timestamp="${timestamp}",serial_no="${WECHAT_CERT_SERIAL_NO}",signature="${signature}"`;
+  // S8 修复：使用 RSA-SHA256 签名（有私钥时），否则回退 HMAC-SHA256
+  const signature = signRequest(signString);
+  // Authorization 头格式对齐 V3（WECHATPAY2-SHA256-RSA2048）
+  return `WECHATPAY2-SHA256-RSA2048 mchid="${WECHAT_MCH_ID}",nonce_str="${nonce}",timestamp="${timestamp}",serial_no="${WECHAT_CERT_SERIAL_NO}",signature="${signature}"`;
 }
+
+/** 微信 V3 API 请求超时（M19 修复：30 秒，防止挂起请求占连接） */
+const WECHAT_API_TIMEOUT_MS = 30_000;
 
 /** 发送微信 V3 API 请求的统一封装 */
 async function wechatApi<T>(
@@ -149,15 +232,36 @@ async function wechatApi<T>(
   const body = bodyObj ? JSON.stringify(bodyObj) : "";
   const authHeader = buildAuthHeader(method, urlPath, body);
   const url = `${WECHAT_API_BASE}${urlPath}`;
-  const res = await fetch(url, {
-    method,
-    headers: {
-      Authorization: authHeader,
-      "Content-Type": "application/json",
-      Accept: "application/json",
-    },
-    body: method === "POST" ? body : undefined,
-  });
+  // M19 修复：添加 AbortController 超时，防止网络挂起导致请求无限等待
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), WECHAT_API_TIMEOUT_MS);
+  let res: Response;
+  try {
+    res = await fetch(url, {
+      method,
+      headers: {
+        Authorization: authHeader,
+        "Content-Type": "application/json",
+        Accept: "application/json",
+      },
+      body: method === "POST" ? body : undefined,
+      signal: controller.signal,
+    });
+  } catch (err) {
+    // AbortError → 超时；其他 → 网络错误
+    if (err instanceof Error && err.name === "AbortError") {
+      throw new PaymentProviderError(
+        `微信支付 API 请求超时（${WECHAT_API_TIMEOUT_MS}ms）: ${method} ${urlPath}`,
+        "channel_error",
+      );
+    }
+    throw new PaymentProviderError(
+      `微信支付 API 网络错误: ${err instanceof Error ? err.message : "unknown"}`,
+      "channel_error",
+    );
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     throw new PaymentProviderError(
@@ -325,9 +429,9 @@ export class WeChatPayNativeProvider implements PaymentProvider {
     }
 
     // 验签：签名串 = timestamp\nnonce\nbody\n
-    // 生产环境应使用微信平台公钥做 RSA-SHA256 验签；此处用 HMAC-SHA256 简化
+    // S8 修复：使用 RSA-SHA256 验签（有平台公钥时），否则回退 HMAC-SHA256
     const signString = `${timestamp}\n${nonce}\n${rawBody}\n`;
-    if (!hmacSha256Verify(WECHAT_API_KEY, signString, signature)) {
+    if (!verifyCallback(signString, signature)) {
       throw new PaymentWebhookError("WeChatPay signature verification failed");
     }
 

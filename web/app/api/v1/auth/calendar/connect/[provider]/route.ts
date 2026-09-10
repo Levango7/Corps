@@ -63,7 +63,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     const authorizeUrl = buildAuthorizeUrl(p, { state, challenge, redirectUri });
     return NextResponse.redirect(authorizeUrl);
   } catch (error) {
-    const message = error instanceof Error ? error.message : apiMsg(req, "calendarConnectFailed");
-    return NextResponse.json({ code: 500, message, data: null }, { status: 500 });
+    console.error("[calendar connect] error:", error);
+    return NextResponse.json({ code: 500, message: apiMsg(req, "calendarConnectFailed"), data: null }, { status: 500 });
   }
 }

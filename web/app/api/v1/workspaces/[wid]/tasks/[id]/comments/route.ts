@@ -221,7 +221,7 @@ export async function DELETE(
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "commentNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -291,7 +291,7 @@ export async function PATCH(
 
     if (result.kind === "notFound") {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "commentNotFound"), data: null },
         { status: 404 },
       );
     }

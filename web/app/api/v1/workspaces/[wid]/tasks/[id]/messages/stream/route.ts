@@ -3,11 +3,10 @@ import { getWorkspaceContext, runWithWorkspace, withGuc } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
-  chatEvents,
-  chatChannel,
+
   emitChatEvent,
-  tryAcquireSseSlot,
-  releaseSseSlot,
+  acquireSseSlot,
+  subscribeChatEvents,
   type ChatEvent,
 } from "@/lib/chat-events";
 
@@ -72,7 +71,7 @@ export async function GET(
   }
 
   const userId = ctx.payload.sub;
-  const channel = chatChannel(id);
+
 
   // 断线重连补偿：补拉 since 之后的所有消息
   const sinceParam = req.nextUrl.searchParams.get("since");
@@ -121,7 +120,10 @@ export async function GET(
   // 不约束同时存活数——不拦的话单用户可累积约百条长连接占句柄。
   // 多端登录正常值 1-3（PC/手机/平板），5 留余量。放在最后一个可能抛错的
   // await 之后：acquire 与流建立之间不再有失败路径，额度不会泄漏。
-  if (!tryAcquireSseSlot(userId)) {
+  // S6 修复：使用 RAII 风格 acquireSseSlot，返回幂等 release 函数，
+  // 确保 SSE 连接额度在所有退出路径（正常断开、错误、超时）都正确释放。
+  const releaseSseSlot = acquireSseSlot(userId);
+  if (!releaseSseSlot) {
     return NextResponse.json(
       { code: 429, message: apiMsg(req, "tooManySseConnections"), data: null },
       { status: 429 },
@@ -138,7 +140,8 @@ export async function GET(
         controller.enqueue(sseFrame({ type: "message", message: msg }));
       }
 
-      // 2. 订阅聊天事件
+      // 2. 订阅聊天事件（S7 修复：使用 RAII 风格 subscribeChatEvents，
+      //    返回幂等 unsubscribe 函数，确保监听器在连接断开时被移除）
       const listener = (event: ChatEvent) => {
         try {
           controller.enqueue(sseFrame(event));
@@ -146,7 +149,7 @@ export async function GET(
           // controller 已关闭，忽略
         }
       };
-      chatEvents.on(channel, listener);
+      const unsubscribe = subscribeChatEvents(id, listener);
 
       // 3. 心跳定时器（保活 + 同步刷新在线状态）
       const heartbeat = setInterval(() => {
@@ -183,10 +186,10 @@ export async function GET(
         } catch {
           // 已关闭
         }
-        chatEvents.off(channel, listener);
+        unsubscribe();
         clearInterval(heartbeat);
         clearTimeout(idleTimeout);
-        releaseSseSlot(userId);
+        releaseSseSlot();
         // 广播离线并清理在线状态记录（异步，不阻塞；经 GUC 短事务）
         withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
           tx.chatPresence.delete({ where: { taskId_userId: { taskId: id, userId } } }),

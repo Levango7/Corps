@@ -44,11 +44,13 @@ function isImageAttachment(att: MessageAttachment): boolean {
 function highlightText(text: string, query: string): React.ReactNode {
   if (!query.trim()) return text;
   const escaped = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const regex = new RegExp(`(${escaped})`, "gi");
-  const parts = text.split(regex);
+  // split 用带 g 的正则保留分隔符；test 用不带 g 的正则避免 lastIndex 状态问题
+  const splitRegex = new RegExp(`(${escaped})`, "gi");
+  const testRegex = new RegExp(`^${escaped}$`, "i");
+  const parts = text.split(splitRegex);
   return parts.map((part, i) =>
-    regex.test(part) ? (
-      <mark key={i} className="bg-[var(--accent-soft)] text-[var(--accent-fg)] rounded-[var(--radius-sm)] px-0.5">
+    testRegex.test(part) ? (
+      <mark key={i} className="bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] rounded-[var(--radius-sm)] px-0.5">
         {part}
       </mark>
     ) : (

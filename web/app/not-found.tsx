@@ -9,6 +9,9 @@
  *  - 使用中文硬编码文本（全局 fallback）
  *  - 自带 <html> 与 <body> 标签，并手动导入全局样式（globals.css）
  *
+ * 主题：不硬编码 data-theme，由 /theme-init.js 同步脚本根据用户偏好/系统设置
+ * 自动注入 data-theme（与 [locale]/layout.tsx 同机制），支持暗色模式。
+ *
  * 样式走 design tokens（var(--token)），与 error.tsx 设计风格保持一致。
  */
 
@@ -19,7 +22,12 @@ import "./globals.css";
 
 export default function GlobalNotFound() {
   return (
-    <html lang="zh-CN" data-theme="light" suppressHydrationWarning>
+    <html lang="zh-CN" suppressHydrationWarning>
+      <head>
+        {/* 同步解析主题偏好，避免深色用户看到一次浅色闪白（与 [locale]/layout.tsx 同机制） */}
+        {/* eslint-disable-next-line @next/next/no-sync-scripts */}
+        <script src="/theme-init.js" />
+      </head>
       <body className="min-h-dvh flex items-center justify-center bg-[var(--bg)] text-[var(--fg)] px-[var(--space-4)]">
         <div className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-6)] text-center">
           {/* 品牌 Logo */}

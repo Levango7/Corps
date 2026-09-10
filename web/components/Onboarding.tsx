@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
 import {
@@ -54,6 +54,9 @@ export default function Onboarding({
   // LI-15：操作进行中（跳转/完成时按钮 loading 反馈，避免重复点击）
   const [acting, setActing] = useState(false);
   const router = useRouter();
+  // 焦点陷阱：模态框容器 ref + 触发按钮 ref（关闭时返还焦点）
+  const modalRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
 
   useEffect(() => {
     const completed = localStorage.getItem(STORAGE_KEY) === "true";
@@ -91,6 +94,48 @@ export default function Onboarding({
     }
   }
 
+  // 焦点陷阱：expanded 时聚焦模态框，关闭时返还焦点到触发按钮
+  useEffect(() => {
+    if (!expanded) return;
+    // 聚焦模态框内第一个可聚焦元素
+    const modal = modalRef.current;
+    if (modal) {
+      const focusable = modal.querySelector<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+      );
+      (focusable ?? modal).focus();
+    }
+  }, [expanded, step]);
+
+  /** Tab 键循环焦点在模态框内（焦点陷阱） */
+  function handleTrapKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+    if (e.key !== "Tab") return;
+    const modal = modalRef.current;
+    if (!modal) return;
+    const focusables = Array.from(
+      modal.querySelectorAll<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])',
+      ),
+    ).filter((el) => el.offsetParent !== null); // 排除不可见元素
+    if (focusables.length === 0) return;
+    const first = focusables[0];
+    const last = focusables[focusables.length - 1];
+    const active = document.activeElement as HTMLElement | null;
+    if (e.shiftKey) {
+      // Shift+Tab：从第一个跳到最后一个
+      if (active === first || !modal.contains(active)) {
+        e.preventDefault();
+        last.focus();
+      }
+    } else {
+      // Tab：从最后一个跳到第一个
+      if (active === last || !modal.contains(active)) {
+        e.preventDefault();
+        first.focus();
+      }
+    }
+  }
+
   function BubbleIcon() {
     return (
       <svg width="16" height="16" viewBox="0 0 16 16" fill="none" aria-hidden="true">
@@ -108,8 +153,9 @@ export default function Onboarding({
     return (
       <div className="fixed bottom-4 right-4 z-40">
         <button
+          ref={triggerRef}
           onClick={() => setExpanded(true)}
-          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+          className="btn-press flex items-center gap-2 h-9 pl-3 pr-4 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]"
           aria-label={t("openGuide")}
         >
           <BubbleIcon />
@@ -230,7 +276,12 @@ export default function Onboarding({
     <div
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4 bg-[var(--overlay)]"
     >
-      <div className="w-full max-w-[480px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-[var(--elev-lg)] overflow-hidden">
+      <div
+        ref={modalRef}
+        onKeyDown={handleTrapKeyDown}
+        tabIndex={-1}
+        className="w-full max-w-[480px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-xl)] shadow-[var(--elev-lg)] overflow-hidden focus:outline-none"
+      >
         {/* 头部 */}
         <div className="flex items-center justify-between px-5 h-14 border-b border-[var(--border-soft)]">
           <div className="flex items-center gap-2">
@@ -240,7 +291,10 @@ export default function Onboarding({
             </span>
           </div>
           <button
-            onClick={() => setExpanded(false)}
+            onClick={() => {
+              setExpanded(false);
+              triggerRef.current?.focus();
+            }}
             className="p-1.5 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
             aria-label={t("skipAria")}
           >

@@ -6,7 +6,10 @@ import { runWithAuthOp } from "./auth";
  * analytics_events 表已纳入 RLS，直写必须携带 provision 逃生口上下文，
  * 否则加固模式下会被 WITH CHECK 静默拒绝（.catch 吞掉导致埋点丢失）。
  *
- * 统一走此助手：runWithAuthOp("provision") + 失败静默（不阻塞主流程）。
+ * 统一走此助手：runWithAuthOp("provision") + 失败记录日志（不阻塞主流程）。
+ *
+ * M13 修复：原实现 .catch(() => {}) 静默吞掉所有错误，导致埋点丢失时无法排障。
+ * 现改为 .catch 记录 console.error（仍不抛出，不影响主流程），便于运维监控。
  *
  * 终态签名（P2-2 / 裁决二，埋点线独占）：
  *   trackServerEvent(data: {
@@ -46,7 +49,11 @@ export function trackServerEvent(data: {
         },
       }),
     data.userId ?? undefined,
-  ).catch(() => {
-    /* 埋点失败不影响主流程 */
+  ).catch((err) => {
+    // M13 修复：记录埋点失败日志（不阻塞主流程，但便于排障）
+    console.error(
+      `[analytics-server] trackServerEvent 失败 name=${data.name} wid=${data.workspaceId}:`,
+      err instanceof Error ? err.message : err,
+    );
   });
 }

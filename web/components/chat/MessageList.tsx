@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ChevronDown } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { ChatMessage } from "./types";
 import { MessageBubble } from "./MessageBubble";
 import type { TimeT } from "@/lib/format";
@@ -36,7 +36,7 @@ interface MessageListProps {
 const TIME_GROUP_THRESHOLD_MS = 5 * 60 * 1000;
 
 /** 格式化时间戳分组标签（t 由调用方注入——模块级函数不可用 hook） */
-function formatTimeGroup(iso: string, t: TimeT): string {
+function formatTimeGroup(iso: string, t: TimeT, locale: string): string {
   const date = new Date(iso);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -44,10 +44,10 @@ function formatTimeGroup(iso: string, t: TimeT): string {
   yesterday.setDate(yesterday.getDate() - 1);
   const isYesterday = date.toDateString() === yesterday.toDateString();
 
-  const time = date.toLocaleTimeString("zh-CN", { hour: "2-digit", minute: "2-digit" });
+  const time = date.toLocaleTimeString(locale, { hour: "2-digit", minute: "2-digit" });
   if (isToday) return t("today", { time });
   if (isYesterday) return t("yesterday", { time });
-  return `${date.toLocaleDateString("zh-CN", { month: "short", day: "numeric" })} ${time}`;
+  return `${date.toLocaleDateString(locale, { month: "short", day: "numeric" })} ${time}`;
 }
 
 /** 消息分组（按时间间隔） */
@@ -56,7 +56,7 @@ interface MessageGroup {
   messages: ChatMessage[];
 }
 
-function groupByTime(messages: ChatMessage[], t: TimeT): MessageGroup[] {
+function groupByTime(messages: ChatMessage[], t: TimeT, locale: string): MessageGroup[] {
   const groups: MessageGroup[] = [];
   let currentGroup: MessageGroup | null = null;
   let prevTime: number | null = null;
@@ -68,7 +68,7 @@ function groupByTime(messages: ChatMessage[], t: TimeT): MessageGroup[] {
       prevTime === null ||
       msgTime - prevTime > TIME_GROUP_THRESHOLD_MS
     ) {
-      currentGroup = { timeLabel: formatTimeGroup(msg.createdAt, t), messages: [msg] };
+      currentGroup = { timeLabel: formatTimeGroup(msg.createdAt, t, locale), messages: [msg] };
       groups.push(currentGroup);
     } else {
       currentGroup.messages.push(msg);
@@ -87,6 +87,7 @@ export function MessageList({
   connected,
 }: MessageListProps) {
   const t = useTranslations("chat");
+  const locale = useLocale();
   const listRef = useRef<HTMLDivElement>(null);
   const [showNewMessages, setShowNewMessages] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -94,7 +95,7 @@ export function MessageList({
   const isAtBottomRef = useRef(true);
 
   // 按时间分组
-  const groups = useMemo(() => groupByTime(messages, t), [messages, t]);
+  const groups = useMemo(() => groupByTime(messages, t, locale), [messages, t, locale]);
 
   // 搜索过滤
   const filteredGroups = useMemo(() => {
@@ -159,11 +160,11 @@ export function MessageList({
   const hasFilteredMessages = filteredGroups.some((g) => g.messages.length > 0);
 
   return (
-    <div className="relative">
+    <div className="relative flex-1 min-h-0 flex flex-col">
       <div
         ref={listRef}
         onScroll={handleScroll}
-        className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] h-[320px] overflow-y-auto space-y-[var(--space-2)] scroll-smooth"
+        className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] flex-1 min-h-[320px] overflow-y-auto space-y-[var(--space-2)] scroll-smooth"
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">
@@ -212,7 +213,7 @@ export function MessageList({
           className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] shadow-[var(--elev-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
         >
           <ChevronDown size={14} />
-          {t("newMessages", { count: newMessagesCount })}
+          {t("newMessages", { n: newMessagesCount })}
         </button>
       )}
 

@@ -20,6 +20,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { X, Copy, Check, ArrowDownToLine } from "lucide-react";
 import { Mermaid } from "@/components/Mermaid";
+import { useToast } from "@/components/Toast";
 
 /** 图型 key 列表（与 MarkdownToolbar 图表下拉共享同一事实源；模板正文走 i18n） */
 export const DIAGRAM_KEYS = [
@@ -65,10 +66,14 @@ interface QuickDiagramProps {
 export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
   const t = useTranslations("diagramQuick");
   const te = useTranslations("editor");
+  const { toast } = useToast();
   const [kind, setKind] = useState("mindmap");
   const [code, setCode] = useState(() => getDiagramCode("mindmap", te));
   const [copied, setCopied] = useState(false);
   const dialogRef = useRef<HTMLDivElement>(null);
+  // M11 修复：焦点陷阱——记录打开前的焦点，对话框内循环 Tab
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const firstFocusableRef = useRef<HTMLButtonElement>(null);
 
   // 切图型 = 重置为该图型模板（未保存的编辑会被覆盖——对话框语义如此）
   function pickKind(k: string) {
@@ -82,8 +87,18 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
       setKind("mindmap");
       setCode(getDiagramCode("mindmap", te));
       setCopied(false);
+      // M11 修复：记录打开前焦点，对话框打开后焦点移入
+      previousFocusRef.current = document.activeElement as HTMLElement | null;
+      // 延迟一帧让对话框渲染后再聚焦
+      requestAnimationFrame(() => {
+        firstFocusableRef.current?.focus();
+      });
+    } else if (previousFocusRef.current) {
+      // 关闭时恢复焦点
+      previousFocusRef.current.focus();
+      previousFocusRef.current = null;
     }
-  }, [open]);
+  }, [open, te]);
 
   useEffect(() => {
     if (!open) return;
@@ -117,6 +132,7 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
             {t("title")}
           </h3>
           <button
+            ref={firstFocusableRef}
             onClick={onClose}
             aria-label={te("close") || "Close"}
             className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"
@@ -171,9 +187,14 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
             <button
               type="button"
               onClick={async () => {
-                await navigator.clipboard.writeText(block).catch(() => {});
-                setCopied(true);
-                setTimeout(() => setCopied(false), 1500);
+                // M6 修复：复制失败时给出 Toast 提示而非静默吞错
+                try {
+                  await navigator.clipboard.writeText(block);
+                  setCopied(true);
+                  setTimeout(() => setCopied(false), 1500);
+                } catch {
+                  toast("error", t("copyFailed"));
+                }
               }}
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
             >

@@ -11,7 +11,7 @@
  * 关闭：Esc / 点击遮罩 / 右上 X。body 滚动锁定（模态打开时）。
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { X, Download, FileText } from "lucide-react";
 
@@ -26,8 +26,11 @@ interface AttachmentPreviewModalProps {
 
 export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPreviewModalProps) {
   const t = useTranslations("attachment");
+  // M10 修复：焦点陷阱——记录打开前焦点，模态打开时移入，关闭时恢复
+  const previousFocusRef = useRef<HTMLElement | null>(null);
+  const closeBtnRef = useRef<HTMLButtonElement>(null);
 
-  // Esc 关闭 + body 滚动锁
+  // Esc 关闭 + body 滚动锁 + 焦点管理
   useEffect(() => {
     if (!attachment) return;
     const onKey = (e: globalThis.KeyboardEvent) => {
@@ -36,9 +39,17 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
     window.addEventListener("keydown", onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+    // 记录打开前焦点，模态打开后聚焦关闭按钮（首个可交互元素）
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
+    requestAnimationFrame(() => {
+      closeBtnRef.current?.focus();
+    });
     return () => {
       window.removeEventListener("keydown", onKey);
       document.body.style.overflow = prev;
+      // 关闭时恢复焦点到打开前的元素
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
     };
   }, [attachment, onClose]);
 
@@ -74,6 +85,7 @@ export function AttachmentPreviewModal({ attachment, onClose }: AttachmentPrevie
             <Download size={13} />
           </a>
           <button
+            ref={closeBtnRef}
             onClick={onClose}
             aria-label={t("close")}
             className="shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors"

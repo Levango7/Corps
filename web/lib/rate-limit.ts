@@ -17,8 +17,11 @@ import { apiMsg } from "@/lib/api-messages";
  * 降级策略：
  *   Redis 连接/命令失败时，进程内标记 degraded 并 console.error 一次
  *   （避免每个请求刷错误日志），之后自动降级为模式一的内存实现继续放行/拒绝，
- *   保证 Redis 故障不会拖垮业务接口；恢复需重启进程或重新部署。
+ *   保证 Redis 故障不会拖垮业务接口。
  *   可通过 isRedisActive() 判断当前是否处于 Redis 正常模式（测试与诊断用）。
+ *
+ *   M9 修复：降级后启动定期健康检查（每 30s PING 一次），Redis 恢复后自动
+ *   清除 degraded 标记切回共享计数模式，无需重启进程。
  *
  * 实现要点：
  *  - 固定窗口：每个 (bucket, key) 记录窗口起点与计数，窗口过期后重置。
@@ -58,6 +61,42 @@ let client: Redis | null = null;
 /** 进程内降级标记：true 后所有请求直接走内存实现，不再尝试 Redis、不再刷日志 */
 let degraded = false;
 
+/** M9 修复：健康检查定时器句柄（degraded 期间运行，恢复后清除） */
+let healthCheckTimer: ReturnType<typeof setInterval> | null = null;
+/** 健康检查间隔（毫秒）：降级期间每 30s 探测 Redis 是否恢复 */
+const HEALTH_CHECK_INTERVAL_MS = 30_000;
+
+/**
+ * M9 修复：启动降级健康检查。degraded 期间定期 PING Redis，
+ * 成功则清除 degraded 标记并停止检查，自动切回 Redis 共享计数模式。
+ * 幂等：已存在定时器时不重复启动。
+ */
+function startHealthCheck(): void {
+  if (healthCheckTimer) return;
+  healthCheckTimer = setInterval(async () => {
+    if (!degraded || !process.env.REDIS_URL) return;
+    // 复用现有 client（若已断开则 PING 抛错，下次再试）
+    if (!client) return;
+    try {
+      const pong = await client.ping();
+      if (pong === "PONG") {
+        degraded = false;
+        if (healthCheckTimer) {
+          clearInterval(healthCheckTimer);
+          healthCheckTimer = null;
+        }
+        console.info("[rate-limit] Redis 健康检查通过，已从降级恢复为共享计数模式");
+      }
+    } catch {
+      // 仍未恢复，等待下一轮探测（不刷日志，避免噪音）
+    }
+  }, HEALTH_CHECK_INTERVAL_MS);
+  // Node.js 定时器：不阻止进程退出
+  if (typeof healthCheckTimer.unref === "function") {
+    healthCheckTimer.unref();
+  }
+}
+
 async function getRedisClient(): Promise<Redis | null> {
   if (degraded || !process.env.REDIS_URL) return null;
   if (client) return client;
@@ -73,6 +112,8 @@ async function getRedisClient(): Promise<Redis | null> {
       if (!degraded) {
         degraded = true;
         console.error("[rate-limit] Redis 连接异常，降级为进程内内存限流:", err.message);
+        // M9 修复：降级后启动定期健康检查，Redis 恢复后自动切回
+        startHealthCheck();
       }
     });
     client = instance;
@@ -81,6 +122,7 @@ async function getRedisClient(): Promise<Redis | null> {
     // 加载/构造失败同样降级，只报一次
     degraded = true;
     console.error("[rate-limit] Redis 客户端初始化失败，降级为进程内内存限流:", error);
+    // M9 修复：初始化失败时也启动健康检查（client 为 null，检查会等待重连）
     return null;
   }
 }
@@ -105,7 +147,22 @@ async function hitStore(key: string, max: number, windowMs: number): Promise<Rat
     // 固定窗口原子操作：INCR 计数，首次进入窗口时设置过期时间
     const count = await redis.incr(key);
     if (count === 1) {
-      await redis.pexpire(key, windowMs);
+      // M10 修复：PEXPIRE 失败时单独捕获，不影响已完成的 INCR。
+      // 若不设过期，key 会永久残留导致该 IP 永远被限流——此时降级到内存实现更安全。
+      try {
+        await redis.pexpire(key, windowMs);
+      } catch (pexpireErr) {
+        // PEXPIRE 失败：key 已 INCR 但无过期，降级到内存实现避免永久限流
+        if (!degraded) {
+          degraded = true;
+          console.error(
+            "[rate-limit] Redis PEXPIRE 失败，降级为进程内内存限流:",
+            pexpireErr instanceof Error ? pexpireErr.message : pexpireErr,
+          );
+          startHealthCheck();
+        }
+        return hitMemoryStore(key, max, windowMs);
+      }
     }
     if (count > max) {
       // 超限：PTTL 取剩余毫秒，向上取整为秒（至少 1 秒）
@@ -125,6 +182,8 @@ async function hitStore(key: string, max: number, windowMs: number): Promise<Rat
     if (!degraded) {
       degraded = true;
       console.error("[rate-limit] Redis 命令执行失败，降级为进程内内存限流:", error);
+      // M9 修复：命令失败降级后启动健康检查
+      startHealthCheck();
     }
     return hitMemoryStore(key, max, windowMs);
   }

@@ -23,8 +23,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : apiMsg(req, "calendarSyncFailed");
     console.error("[calendar sync] error:", error);
-    return NextResponse.json({ code: 500, data: null, message }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "calendarSyncFailed") }, { status: 500 });
   }
 }

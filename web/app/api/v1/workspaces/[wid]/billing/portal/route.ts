@@ -6,10 +6,10 @@ import { apiMsg } from "@/lib/api-messages";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling") },
+      { code: 403, message: apiMsg(req, "onlyOwnerManageBilling"), data: null },
       { status: 403 },
     );
   }
@@ -46,15 +46,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof PaymentProviderError) {
       if (error.code === "no_customer") {
-        return NextResponse.json({ code: 400, message: error.message }, { status: 400 });
+        console.error("[billing portal] no_customer:", error.message);
+        return NextResponse.json({ code: 400, message: apiMsg(req, "billingUnavailable"), data: null }, { status: 400 });
       }
       if (error.code === "not_configured") {
-        return NextResponse.json({ code: 501, message: error.message, data: null }, { status: 501 });
+        console.error("[billing portal] not_configured:", error.message);
+        return NextResponse.json({ code: 501, message: apiMsg(req, "portalNotSupported"), data: null }, { status: 501 });
       }
     }
     console.error("Billing portal error:", error);
     return NextResponse.json(
-      { code: 500, message: apiMsg(req, "billingUnavailable") },
+      { code: 500, message: apiMsg(req, "billingUnavailable"), data: null },
       { status: 500 },
     );
   }

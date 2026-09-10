@@ -1129,6 +1129,32 @@ CREATE INDEX workspaces_owner_id_idx ON public.workspaces USING btree (owner_id)
 CREATE UNIQUE INDEX workspaces_slug_key ON public.workspaces USING btree (slug);
 
 
+-- ─── L36 修复：对齐 Prisma schema 中存在但 SQL schema 缺失的索引 ──────────────
+-- 以下索引在 web/prisma/schema.prisma 的 @@index 中已定义，但 SQL schema 缺失，
+-- 导致 Prisma migrate 产生 drift 或生产查询走非预期索引。此处补齐。
+
+-- tasks: Prisma 有 (workspaceId, assigneeId) / (workspaceId, sortOrder) / (workspaceId, status, sortOrder)
+CREATE INDEX tasks_workspace_id_assignee_id_idx ON public.tasks USING btree (workspace_id, assignee_id);
+CREATE INDEX tasks_workspace_id_sort_order_idx ON public.tasks USING btree (workspace_id, sort_order);
+CREATE INDEX tasks_workspace_id_status_sort_order_idx ON public.tasks USING btree (workspace_id, status, sort_order);
+
+-- notifications: Prisma 有 (workspaceId, createdAt) / (workspaceId, read, createdAt)
+CREATE INDEX notifications_workspace_id_created_at_idx ON public.notifications USING btree (workspace_id, created_at);
+CREATE INDEX notifications_workspace_id_read_created_at_idx ON public.notifications USING btree (workspace_id, read, created_at);
+
+-- comments: Prisma 有 (taskId, createdAt)，SQL 仅有 (task_id) 单列
+CREATE INDEX comments_task_id_created_at_idx ON public.comments USING btree (task_id, created_at);
+
+-- analytics_events: Prisma 有 (workspaceId, name, createdAt)
+CREATE INDEX analytics_events_workspace_id_name_created_at_idx ON public.analytics_events USING btree (workspace_id, name, created_at);
+
+-- decisions: Prisma 有 (taskId, version)，SQL 仅有 (task_id) 单列
+CREATE INDEX decisions_task_id_version_idx ON public.decisions USING btree (task_id, version);
+
+-- sessions: Prisma 有 (userId, expiresAt)，SQL 仅有 (user_id) 单列
+CREATE INDEX sessions_user_id_expires_at_idx ON public.sessions USING btree (user_id, expires_at);
+
+
 --
 -- Name: accounts accounts_user_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --

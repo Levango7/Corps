@@ -142,6 +142,7 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
  */
 export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces: number }> {
   // 1. 撤销日历 OAuth token（事务外，尽力而为；DB 行随级联删除，token 未撤销会自然过期）
+  //    M15 修复：撤销失败时记录日志（不阻塞删除，但便于排障）
   try {
     const connections = await runWithAuthOp(
       "provision",
@@ -157,12 +158,20 @@ export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces
         const { decrypt } = await import("@/lib/crypto");
         const { revokeToken } = await import("./calendar/oauth");
         await revokeToken(conn.provider as "google" | "outlook", decrypt(conn.accessToken));
-      } catch {
-        // 撤销失败不阻塞删除（记录由路由层做）
+      } catch (err) {
+        // M15 修复：撤销失败记录日志（不阻塞删除，token 会自然过期）
+        console.error(
+          `[account-deletion] OAuth token 撤销失败 provider=${conn.provider} userId=${userId}:`,
+          err instanceof Error ? err.message : err,
+        );
       }
     }
-  } catch {
-    // 查询连接失败不阻塞删除（后续 User 删除会级联清理）
+  } catch (err) {
+    // M15 修复：查询连接失败记录日志（不阻塞删除，后续 User 删除会级联清理）
+    console.error(
+      `[account-deletion] 查询日历连接失败 userId=${userId}:`,
+      err instanceof Error ? err.message : err,
+    );
   }
 
   // 2. 查询自有工作区列表（删前统计 + 逐个删除目标）

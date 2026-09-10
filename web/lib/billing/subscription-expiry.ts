@@ -19,16 +19,18 @@ import { FREE_SEAT_LIMIT } from "@/lib/payments";
 export async function expireSubscriptionIfDue(wid: string): Promise<void> {
   try {
     await runWithAuthOp("webhook", async (tx) => {
+      // L27 修复：用 findFirst 查出 id + currentPeriodEnd，然后 update by id
+      // 避免冗余的 updateMany（每工作区 subscription 唯一，@@unique([workspaceId])）
       const sub = await tx.subscription.findFirst({
         where: { workspaceId: wid, status: "active" },
-        select: { provider: true, currentPeriodEnd: true },
+        select: { id: true, provider: true, currentPeriodEnd: true },
       });
       // Stripe 有通道侧生命周期管理，不在此降级
       if (!sub || sub.provider === "stripe") return;
       if (!sub.currentPeriodEnd || sub.currentPeriodEnd.getTime() > Date.now()) return;
 
-      await tx.subscription.updateMany({
-        where: { workspaceId: wid, status: "active" },
+      await tx.subscription.update({
+        where: { id: sub.id },
         data: { status: "canceled", canceledAt: new Date() },
       });
       await tx.workspace.update({

@@ -51,6 +51,8 @@ interface MarkdownToolbarProps {
   value: string;
   /** 受控更新回调 */
   onChange: (next: string) => void;
+  /** L5 修复：工具栏禁用态（如编辑器只读/提交中），传入后所有按钮 disabled */
+  disabled?: boolean;
 }
 
 /** 对 textarea 执行文本变换：包裹选中区或在光标处插入，并恢复焦点/选区 */
@@ -224,7 +226,7 @@ function diagramTemplates(t: ReturnType<typeof useTranslations>) {
   }));
 }
 
-export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolbarProps) {
+export function MarkdownToolbar({ textareaRef, value, onChange, disabled }: MarkdownToolbarProps) {
   const t = useTranslations("editor");
   const [diagramOpen, setDiagramOpen] = useState(false);
 
@@ -346,10 +348,11 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
             type="button"
             onMouseDown={(e) => e.preventDefault()}
             onClick={b.onClick}
+            disabled={disabled}
             title={b.title ? `${b.label} (${b.title})` : b.label}
             aria-label={b.label}
             aria-keyshortcuts={b.title || undefined}
-            className="p-1.5 rounded-[var(--radius-sm)] text-[var(--fg-2)] hover:bg-[var(--surface)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+            className="p-1.5 rounded-[var(--radius-sm)] text-[var(--fg-2)] hover:bg-[var(--surface)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
           >
             <Icon size={15} />
           </button>
@@ -362,11 +365,12 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setDiagramOpen((v) => !v)}
+          disabled={disabled}
           aria-haspopup="menu"
           aria-expanded={diagramOpen}
           aria-label={t("diagramMenu")}
           title={t("diagramMenuHint")}
-          className="inline-flex items-center gap-0.5 p-1.5 rounded-[var(--radius-sm)] text-[var(--fg-2)] hover:bg-[var(--surface)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+          className="inline-flex items-center gap-0.5 p-1.5 rounded-[var(--radius-sm)] text-[var(--fg-2)] hover:bg-[var(--surface)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
         >
           <GitBranch size={15} />
           <ChevronDown size={12} />
@@ -412,7 +416,8 @@ export function MarkdownToolbar({ textareaRef, value, onChange }: MarkdownToolba
           type="button"
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => insert(tpl.content)}
-          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+          disabled={disabled}
+          className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
           title={t("templateInsert")}
         >
           <ClipboardList size={13} />

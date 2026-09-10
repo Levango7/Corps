@@ -200,6 +200,7 @@ function MessageInputImpl({ onSend, onUploadFile, sending }: MessageInputProps) 
           onChange={(e) => setDraft(e.target.value.slice(0, MAX_BODY_LENGTH))}
           onKeyDown={handleKeyDown}
           rows={1}
+          maxLength={MAX_BODY_LENGTH}
           placeholder={t("placeholder")}
           className="flex-1 px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
         />

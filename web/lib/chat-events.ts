@@ -123,3 +123,53 @@ export type ChatEvent =
 export function emitChatEvent(taskId: string, event: ChatEvent): void {
   chatEvents.emit(chatChannel(taskId), event);
 }
+
+// ─── S6/S7 修复：RAII 风格安全 API，确保资源在所有退出路径释放 ──────────
+
+/**
+ * S7 修复：订阅聊天事件，返回取消订阅函数。
+ *
+ * 替代裸 `chatEvents.on(channel, listener)` + `chatEvents.off(channel, listener)` 配对。
+ * 调用方只需保存返回的 unsubscribe 函数，在连接断开时调用一次即可。
+ * unsubscribe 内部幂等，多次调用安全。
+ *
+ * 用法：
+ *   const unsubscribe = subscribeChatEvents(taskId, (event) => { ... });
+ *   // 连接断开时：
+ *   unsubscribe();
+ */
+export function subscribeChatEvents(taskId: string, listener: (event: ChatEvent) => void): () => void {
+  const channel = chatChannel(taskId);
+  chatEvents.on(channel, listener);
+  let unsubscribed = false;
+  return () => {
+    if (unsubscribed) return; // 幂等
+    unsubscribed = true;
+    chatEvents.off(channel, listener);
+  };
+}
+
+/**
+ * S6 修复：获取 SSE 连接额度，返回释放函数（RAII 模式）。
+ *
+ * 替代裸 `tryAcquireSseSlot(userId)` + `releaseSseSlot(userId)` 配对。
+ * 调用方只需保存返回的 release 函数，在连接断开时调用一次即可。
+ * release 内部幂等，多次调用安全。
+ *
+ * 返回 null 表示额度已满（应拒绝连接），否则返回 release 函数。
+ *
+ * 用法：
+ *   const release = acquireSseSlot(userId);
+ *   if (!release) return new Response(null, { status: 429 });
+ *   // 连接断开时（所有退出路径：正常断开、错误、超时）：
+ *   release();
+ */
+export function acquireSseSlot(userId: string): (() => void) | null {
+  if (!tryAcquireSseSlot(userId)) return null;
+  let released = false;
+  return () => {
+    if (released) return; // 幂等
+    released = true;
+    releaseSseSlot(userId);
+  };
+}

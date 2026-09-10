@@ -25,13 +25,18 @@
  * 默认语言一致）；hydrate 后再按浏览器语言切换到 en。html 标签上的
  * suppressHydrationWarning 用于容忍这一切换带来的差异。
  *
- * 样式策略：root layout 出错时 Tailwind 全局 CSS 可能尚未就绪，
+ * 主题策略：不硬编码 data-theme，由内联同步脚本根据 localStorage/prefers-color-scheme
+ * 自动注入 data-theme（与 /theme-init.js 同机制）。内联脚本不依赖外部资源，确保
+ * root layout 出错时仍能正确设置主题。root layout 出错时 Tailwind 全局 CSS 可能尚未就绪，
  * 故使用内联样式 + 系统字体栈 + design token（var(--token)）引用，
  * 确保任何场景下都能渲染可读的错误页。token 未就绪时回退到浏览器默认值仍可读。
  */
 
 import { useEffect, useState } from "react";
 import "./globals.css";
+
+/** 主题初始化内联脚本：与 /theme-init.js 同机制，但内联以确保 root layout 出错时仍可用 */
+const THEME_INIT_SCRIPT = `(function(){try{var p=localStorage.getItem("corps_theme")||"system";var d=p==="dark"||(p==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.setAttribute("data-theme",d?"dark":"light");}catch(e){}})();`;
 
 /** 错误页兜底文案（与 messages/{zh,en}.json 的 error.* / button.* 保持一致） */
 const COPY = {
@@ -77,7 +82,11 @@ export default function GlobalError({
   const c = COPY[lang];
 
   return (
-    <html lang={lang === "zh" ? "zh-CN" : "en"} data-theme="light" suppressHydrationWarning>
+    <html lang={lang === "zh" ? "zh-CN" : "en"} suppressHydrationWarning>
+      <head>
+        {/* 同步解析主题偏好，避免深色用户看到一次浅色闪白。内联脚本不依赖外部资源 */}
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+      </head>
       <body
         style={{
           margin: 0,

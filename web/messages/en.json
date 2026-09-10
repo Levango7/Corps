@@ -663,6 +663,9 @@
     "noResults": "No results",
     "offline": "Offline",
     "online": "Online",
+    "disconnected": "Disconnected",
+    "fallbackPolling": "Live connection unavailable, polling",
+    "reconnect": "Reconnect",
     "placeholder": "Send a message… (⌘/Ctrl + Enter to send)",
     "readBy": "Read by {count} people",
     "search": "Search messages",
@@ -1058,6 +1061,7 @@
     "hint": "What you see is what you get; the code stays editable in the document",
     "copy": "Copy code",
     "copied": "Copied",
+    "copyFailed": "Copy failed — please select and copy the code manually",
     "insert": "Insert"
   },
   "toast": {

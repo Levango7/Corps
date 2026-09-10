@@ -43,13 +43,13 @@ const VARIANT_CLASS: Record<NonNullable<TrackedCtaProps["variant"]>, string> = {
     "bg-[var(--accent)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)] " +
     "hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] " +
     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
-    "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]",
+    "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
   ghost:
     "inline-flex items-center justify-center gap-2 h-10 px-5 rounded-[var(--radius-md)] " +
     "border border-[var(--border)] text-[var(--fg-2)] font-[weight:var(--weight-medium)] " +
     "hover:bg-[var(--surface-2)] hover:text-[var(--fg)] " +
     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
-    "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]",
+    "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)]",
 };
 
 /**

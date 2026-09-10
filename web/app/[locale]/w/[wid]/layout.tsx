@@ -325,7 +325,7 @@ export default function WorkspaceLayout({
           >
             <Logo size={22} />
           </Link>
-          <span className="text-[var(--border)] select-none">/</span>
+          <span className="text-[var(--meta)] select-none">/</span>
           <button
             onClick={() => setSwitcherOpen((v) => !v)}
             className="flex items-center gap-[var(--space-1)] px-[var(--space-2)] h-8 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] text-[length:var(--text-sm)]"

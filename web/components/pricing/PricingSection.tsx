@@ -82,33 +82,35 @@ export function PricingSection() {
           {t("plans.heading")}
         </h2>
 
-        {/* 切换器（分段控件） */}
-        <div
-          className="mt-6 inline-flex p-1 rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface-2)]"
-          role="group"
-          aria-label={t("plans.periodAriaLabel")}
-        >
-          {periodOptions.map((opt) => {
-            const pressed = opt.value === period;
-            return (
-              <button
-                key={opt.value}
-                type="button"
-                aria-pressed={pressed}
-                onClick={() => handlePeriodChange(opt.value)}
-                className={
-                  "px-4 h-9 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] " +
-                  "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
-                  "focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] " +
-                  (pressed
-                    ? "bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]"
-                    : "text-[var(--muted)] hover:text-[var(--fg-2)]")
-                }
-              >
-                {opt.label}
-              </button>
-            );
-          })}
+        {/* 切换器（分段控件）—— 居中 */}
+        <div className="mt-6 flex justify-center">
+          <div
+            className="inline-flex p-1 rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface-2)]"
+            role="group"
+            aria-label={t("plans.periodAriaLabel")}
+          >
+            {periodOptions.map((opt) => {
+              const pressed = opt.value === period;
+              return (
+                <button
+                  key={opt.value}
+                  type="button"
+                  aria-pressed={pressed}
+                  onClick={() => handlePeriodChange(opt.value)}
+                  className={
+                    "px-4 h-9 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] " +
+                    "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
+                    "focus-visible:outline-none focus-visible:shadow-[var(--focus-ring)] " +
+                    (pressed
+                      ? "bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]"
+                      : "text-[var(--muted)] hover:text-[var(--fg-2)]")
+                  }
+                >
+                  {opt.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         {/* 双卡布局 */}

@@ -33,8 +33,7 @@ export async function DELETE(
     await disconnectCalendar(payload.sub, p);
     return NextResponse.json({ code: 200, data: null });
   } catch (error) {
-    const message = error instanceof Error ? error.message : apiMsg(req, "calendarDisconnectFailed");
     console.error("[calendar disconnect] error:", error);
-    return NextResponse.json({ code: 500, data: null, message }, { status: 500 });
+    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "calendarDisconnectFailed") }, { status: 500 });
   }
 }

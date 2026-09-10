@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { sendTaskDueReminderEmail, isEmailConfigured } from "@/lib/email";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * GET /api/cron/due-reminders — 截止日提醒邮件（每天定时调用）
@@ -17,11 +18,11 @@ export async function GET(req: NextRequest) {
   // 鉴权：CRON_SECRET 必须配置且匹配
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return NextResponse.json({ code: 500, message: "CRON_SECRET not configured", data: null }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null }, { status: 500 });
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ code: 401, message: "Unauthorized", data: null }, { status: 401 });
+    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
   }
 
   if (!isEmailConfigured()) {
@@ -82,6 +83,6 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: { sent, skipped, total: tasks.length } });
   } catch (error) {
     console.error("[cron due-reminders] error:", error);
-    return NextResponse.json({ code: 500, message: "Internal server error", data: null }, { status: 500 });
+    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
   }
 }

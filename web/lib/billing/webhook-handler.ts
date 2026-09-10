@@ -3,6 +3,7 @@ import { runWithAuthOpTx } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { FREE_SEAT_LIMIT, ProviderId, UnifiedBillingEvent } from "@/lib/payments";
+import { Prisma } from "@prisma/client";
 
 /**
  * 统一计费事件处理器（webhook 路由共享层）。
@@ -70,6 +71,13 @@ export async function handleBillingEvent(
         switch (event.type) {
           case "checkout.completed": {
             const wid = event.workspaceId;
+            // M12 修复：类型安全检查——workspaceId 必须为非空 string
+            if (typeof wid !== "string" || wid.length === 0) {
+              console.error(
+                `[${providerId}-webhook] checkout.completed 缺少合法 workspaceId，已忽略: event=${event.providerEventId} wid=${wid}`,
+              );
+              return;
+            }
             // 到期时间按计费周期推算：Stripe 随后由 subscription.synced 用通道侧
             // 真实周期覆盖；国内一次性支付则以本值作为到期依据（懒降级）。
             const expiresAt =
@@ -227,7 +235,26 @@ export async function handleBillingEvent(
       { maxWait: 10_000, timeout: 20_000 },
     );
   } catch (err) {
-    console.error(`[${providerId}-webhook] handler error:`, err);
+    // M11 修复：区分已知业务错误与未知编程错误，避免 catch 过宽掩盖 bug
+    // 1. Prisma 已知请求错误（P2025 记录不存在、P2002 唯一约束等）→ 业务错误，正常处理
+    // 2. TypeError/ReferenceError/SyntaxError → 编程错误，记录后重新抛出（fail-fast）
+    // 3. 其他 → 未知错误，记录并返回 500
+    if (
+      err instanceof TypeError ||
+      err instanceof ReferenceError ||
+      err instanceof SyntaxError
+    ) {
+      console.error(`[${providerId}-webhook] 编程错误（重新抛出，不掩盖 bug）:`, err);
+      throw err;
+    }
+    if (err instanceof Prisma.PrismaClientKnownRequestError) {
+      console.error(
+        `[${providerId}-webhook] Prisma 已知错误 code=${err.code}:`,
+        err.message,
+      );
+    } else {
+      console.error(`[${providerId}-webhook] handler error:`, err);
+    }
     // 事务已自动回滚（含幂等占位），无需手动 deleteMany（DL-1）
     return NextResponse.json({ code: 500, message: "Handler error" }, { status: 500 });
   }

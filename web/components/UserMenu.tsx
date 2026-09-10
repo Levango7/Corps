@@ -11,10 +11,10 @@
  *   - 键盘可达：Esc 关、Tab 循环、focus 管理
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import { Link, usePathname, useRouter } from "@/lib/i18n-navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Sun, Moon, Monitor, ChevronDown, Languages, LogOut, Settings } from "lucide-react";
+import { Sun, Moon, Monitor, ChevronDown, Languages, LogOut, Settings, Loader2 } from "lucide-react";
 import { locales, type Locale, localeNames } from "@/lib/i18n";
 import { type ThemePref, readThemePref, applyTheme } from "@/components/ThemeToggle";
 
@@ -47,6 +47,8 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<ThemePref>(() => readThemePref());
   const ref = useRef<HTMLDivElement>(null);
+  // M5 修复：退出登录 loading 状态，防止重复点击并在退出期间给出视觉反馈
+  const [logoutPending, startLogoutTransition] = useTransition();
 
   // 仅在客户端渲染后同步预读（避免 hydration 差异）
   useEffect(() => {
@@ -192,13 +194,16 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
 
           {/* 退出 */}
           <button
-            onClick={async () => {
+            onClick={() => {
               setOpen(false);
-              await onLogout();
+              startLogoutTransition(async () => {
+                await onLogout();
+              });
             }}
-            className="w-full flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] mt-1 border-t border-[var(--border-soft)]"
+            disabled={logoutPending}
+            className="w-full flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] mt-1 border-t border-[var(--border-soft)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <LogOut size={14} />
+            {logoutPending ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
             {t("user.logout")}
           </button>
         </div>

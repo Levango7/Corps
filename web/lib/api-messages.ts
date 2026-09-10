@@ -41,6 +41,7 @@ export const API_MESSAGES = {
   attachmentNotFound: { zh: "附件不存在", en: "Attachment not found" },
   fileNotFound: { zh: "文件不存在", en: "File not found" },
   userNotFound: { zh: "用户不存在", en: "User not found" },
+  commentNotFound: { zh: "评论不存在", en: "Comment not found" },
 
   /* ── 任务 ── */
   assigneeNotMember: {
@@ -261,6 +262,7 @@ export const API_MESSAGES = {
 
   /* ── Webhook 处理 ── */
   handlerError: { zh: "处理错误", en: "Handler error" },
+  webhookSignatureError: { zh: "回调验签失败", en: "Webhook signature verification failed" },
 
   /* ── Prisma 统一错误处理（DL-14）── */
   prismaUniqueConstraint: {
@@ -282,6 +284,16 @@ export const API_MESSAGES = {
   prismaConstraintFailed: {
     zh: "数据约束校验失败",
     en: "Data constraint validation failed",
+  },
+
+  /* ── Cron / 运维 ── */
+  cronSecretNotConfigured: {
+    zh: "CRON_SECRET 未配置",
+    en: "CRON_SECRET is not configured",
+  },
+  databaseUnreachable: {
+    zh: "数据库不可达",
+    en: "Database unreachable",
   },
 } as const;
 

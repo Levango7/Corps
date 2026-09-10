@@ -16,6 +16,7 @@
  *  - P1003：Database does not exist → 503
  *  - P2002：Unique constraint failed → 409 Conflict
  *  - P2003：Foreign key constraint failed → 409 Conflict
+ *  - P2024：Timed out fetching a new connection from the connection pool → 503
  *  - P2025：Record not found → 404 Not Found
  *  - P2026：The provided value for the column is too long → 400
  *  - P2027：Unique constraint evaluation failure → 409
@@ -68,6 +69,11 @@ export function classifyPrismaError(error: unknown): PrismaErrorClass {
       case "P1008": // Operations timed out
         return { status: 503, code: error.code, msgKey: "prismaConnectionFailed" };
 
+      // P2024：连接池超时（Timed out fetching a new connection from the pool）→ 503
+      // L31 修复：P2024 是连接池超时而非记录不存在，单独归类为 503，不与 P2025 混在一起
+      case "P2024":
+        return { status: 503, code: error.code, msgKey: "prismaConnectionFailed" };
+
       // 唯一约束冲突 → 409
       case "P2002": // Unique constraint failed
       case "P2027": // Unique constraint evaluation failure
@@ -80,11 +86,6 @@ export function classifyPrismaError(error: unknown): PrismaErrorClass {
       // 记录不存在 → 404
       case "P2025": // Record not found
       case "P2018": // The required connected records were not found
-      case "P2024": // Operations timed out（事务超时，归 503 更准但 P2024 文档归 transaction）
-        // P2024 实际是事务超时，归 503
-        if (error.code === "P2024") {
-          return { status: 503, code: error.code, msgKey: "prismaConnectionFailed" };
-        }
         return { status: 404, code: error.code, msgKey: "prismaRecordNotFound" };
 
       // 数据校验类 → 400

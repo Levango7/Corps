@@ -46,11 +46,20 @@ export async function exchangeCodeForToken(
     body.set("client_secret", clientSecret);
   }
 
-  const res = await fetch(cfg.tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  // M20 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(cfg.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     throw new Error(`token 交换失败 (${res.status}): ${errText}`);
@@ -81,11 +90,20 @@ export async function refreshAccessToken(
     body.set("client_secret", clientSecret);
   }
 
-  const res = await fetch(cfg.tokenUrl, {
-    method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
-    body: body.toString(),
-  });
+  // M20 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch(cfg.tokenUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: body.toString(),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     const errText = await res.text().catch(() => "");
     throw new Error(`token 刷新失败 (${res.status}): ${errText}`);
@@ -102,7 +120,17 @@ export async function revokeToken(provider: CalendarProvider, accessToken: strin
   const cfg = getProviderConfig(provider);
   if (!cfg.revokeUrl) return;
   try {
-    await fetch(`${cfg.revokeUrl}?token=${encodeURIComponent(accessToken)}`, { method: "POST" });
+    // M20 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
+    try {
+      await fetch(`${cfg.revokeUrl}?token=${encodeURIComponent(accessToken)}`, {
+        method: "POST",
+        signal: controller.signal,
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   } catch {
     // 撤销失败不阻塞本地记录删除
   }
@@ -125,9 +153,18 @@ export interface OutlookUserInfo {
 
 /** 获取 Google 用户信息（邮箱） */
 export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUserInfo> {
-  const res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  // M20 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch("https://www.googleapis.com/oauth2/v2/userinfo", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     throw new Error(`Google userinfo 失败 (${res.status})`);
   }
@@ -138,9 +175,18 @@ export async function fetchGoogleUserInfo(accessToken: string): Promise<GoogleUs
 
 /** 获取 Outlook 用户信息（邮箱） */
 export async function fetchOutlookUserInfo(accessToken: string): Promise<OutlookUserInfo> {
-  const res = await fetch("https://graph.microsoft.com/v1.0/me", {
-    headers: { Authorization: `Bearer ${accessToken}` },
-  });
+  // M20 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30_000);
+  let res: Response;
+  try {
+    res = await fetch("https://graph.microsoft.com/v1.0/me", {
+      headers: { Authorization: `Bearer ${accessToken}` },
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
   if (!res.ok) {
     throw new Error(`Outlook /me 失败 (${res.status})`);
   }

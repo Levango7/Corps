@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
+import { RefreshCw } from "lucide-react";
 import type { ChatMessage, Person, AttachmentMeta } from "./chat/types";
 import { useChatStream } from "./chat/useChatStream";
 import { ChatHeader } from "./chat/ChatHeader";
@@ -156,7 +157,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
   );
 
   /** SSE 连接 */
-  const { connected, onlineUsers } = useChatStream({
+  const { connected, onlineUsers, reconnect, fallback } = useChatStream({
     streamUrl,
     pollUrl: base,
     enabled: !loading,
@@ -275,6 +276,22 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
       {loadError && (
         <div className="mb-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] border border-[var(--danger-soft)] text-[length:var(--text-sm)] text-[var(--danger)]">
           {loadError}
+        </div>
+      )}
+
+      {/* L7 修复：SSE 断开重连按钮——连接断开且非加载中时显示 */}
+      {!connected && !loading && !loadError && (
+        <div className="mb-2 flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--muted)]">
+          <span className="w-1.5 h-1.5 rounded-full bg-[var(--meta)] animate-pulse" />
+          {fallback ? t("fallbackPolling") : t("disconnected")}
+          <button
+            onClick={reconnect}
+            className="ml-auto inline-flex items-center gap-1 px-2 h-7 rounded-[var(--radius-sm)] text-[var(--accent)] hover:bg-[var(--surface-3)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            aria-label={t("reconnect")}
+          >
+            <RefreshCw size={12} />
+            {t("reconnect")}
+          </button>
         </div>
       )}
 

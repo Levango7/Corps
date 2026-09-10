@@ -7,7 +7,7 @@
  * 新建：POST /documents 获取 id 后跳到编辑页。
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, useDeferredValue, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Plus, Search, FileText, Loader2, X } from "lucide-react";
@@ -26,6 +26,9 @@ export function DocumentListView({ wid }: { wid: string }) {
   const router = useRouter();
   const [items, setItems] = useState<DocumentListItem[]>([]);
   const [q, setQ] = useState("");
+  // M3 修复：搜索防抖——useDeferredValue 让输入快速变化时不立即触发请求，
+  // React 会在空闲时提交 deferredQ，避免每个按键都打一次 API。
+  const deferredQ = useDeferredValue(q);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
@@ -36,7 +39,7 @@ export function DocumentListView({ wid }: { wid: string }) {
       setLoading(true);
       try {
         const params = new URLSearchParams();
-        if (q) params.set("q", q);
+        if (deferredQ) params.set("q", deferredQ);
         const data = await api<DocumentListItem[]>(
           `/api/v1/workspaces/${wid}/documents?${params.toString()}`,
         );
@@ -50,7 +53,7 @@ export function DocumentListView({ wid }: { wid: string }) {
     return () => {
       cancelled = true;
     };
-  }, [wid, q]);
+  }, [wid, deferredQ]);
 
   async function createDoc(e: FormEvent) {
     e.preventDefault();

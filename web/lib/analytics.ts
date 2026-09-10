@@ -146,7 +146,10 @@ export function track(name: string, props: Record<string, unknown> = {}): void {
   });
 }
 
-/** 异步 flush：用 fetch POST，失败静默。 */
+/**
+ * 异步 flush：用 fetch POST，失败简单重试 1 次（M14 修复）。
+ * 重试策略：首次失败后等待 1s 重试一次；二次仍失败则放弃（避免无限累积）。
+ */
 export async function flush(): Promise<void> {
   if (queue.length === 0) return;
   const batch = queue.splice(0, BATCH_SIZE);
@@ -154,16 +157,32 @@ export async function flush(): Promise<void> {
     clearTimeout(flushTimer);
     flushTimer = null;
   }
-  try {
-    await fetch(FLUSH_ENDPOINT, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ events: batch }),
-      credentials: "include",
-      keepalive: true,
-    });
-  } catch {
-    // 失败：事件已出队，放弃重试（避免无限累积）
+
+  // M14 修复：封装单次发送，失败时重试 1 次（总共 2 次尝试）
+  const MAX_ATTEMPTS = 2;
+  for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+    try {
+      const res = await fetch(FLUSH_ENDPOINT, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ events: batch }),
+        credentials: "include",
+        keepalive: true,
+      });
+      if (!res.ok && attempt < MAX_ATTEMPTS) {
+        // HTTP 错误（非 2xx）：等待 1s 后重试
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      return; // 成功或最后一次尝试后返回
+    } catch {
+      if (attempt < MAX_ATTEMPTS) {
+        // 网络错误：等待 1s 后重试
+        await new Promise((r) => setTimeout(r, 1000));
+        continue;
+      }
+      // 两次均失败：放弃（事件已出队，避免无限累积）
+    }
   }
 }
 

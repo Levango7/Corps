@@ -12,7 +12,7 @@ import { apiMsg } from "@/lib/api-messages";
 
 const inviteSchema = z.object({
   email: z.string().email(),
-  role: z.enum(["admin", "member"]).default("member").optional(),
+  role: z.enum(["admin", "member"]).default("member"),
 });
 
 /** 邀请有效期：7 天 */

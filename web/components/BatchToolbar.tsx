@@ -52,6 +52,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
   const [priorityOpen, setPriorityOpen] = useState(false);
   // LI-16：下拉菜单外部点击关闭（ref 持有根元素，检测点击是否在容器外）
   const rootRef = useRef<HTMLDivElement>(null);
+  // L8 修复：操作前记录焦点，操作完成后恢复到触发按钮（或工具栏根）
+  const previousFocusRef = useRef<HTMLElement | null>(null);
 
   // LI-16：点击工具栏外部关闭所有下拉菜单
   useEffect(() => {
@@ -84,6 +86,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
   async function handleStatus(status: Status) {
     setStatusOpen(false);
     if (busy) return;
+    // L8 修复：记录操作前焦点，操作完成后恢复
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
     setBusy(true);
     setError("");
     try {
@@ -92,12 +96,19 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       setError(e instanceof Error ? e.message : t("batchUpdateFailed"));
     } finally {
       setBusy(false);
+      // 恢复焦点到操作前的元素
+      requestAnimationFrame(() => {
+        previousFocusRef.current?.focus();
+        previousFocusRef.current = null;
+      });
     }
   }
 
   async function handlePriority(priority: Priority) {
     setPriorityOpen(false);
     if (busy) return;
+    // L8 修复：记录操作前焦点
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
     setBusy(true);
     setError("");
     try {
@@ -106,6 +117,10 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       setError(e instanceof Error ? e.message : t("batchUpdateFailed"));
     } finally {
       setBusy(false);
+      requestAnimationFrame(() => {
+        previousFocusRef.current?.focus();
+        previousFocusRef.current = null;
+      });
     }
   }
 
@@ -114,6 +129,8 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
     // 保留 window.confirm：批量删除需等待用户确认结果后再决定是否执行，
     // 替换为异步自定义确认对话框需引入额外状态机且阻塞后续流程，风险较大。
     if (!window.confirm(t("batchDeleteConfirm", { count: selectedIds.length }))) return;
+    // L8 修复：记录操作前焦点
+    previousFocusRef.current = document.activeElement as HTMLElement | null;
     setBusy(true);
     setError("");
     try {
@@ -122,6 +139,10 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       setError(e instanceof Error ? e.message : t("batchDeleteFailed"));
     } finally {
       setBusy(false);
+      requestAnimationFrame(() => {
+        previousFocusRef.current?.focus();
+        previousFocusRef.current = null;
+      });
     }
   }
 

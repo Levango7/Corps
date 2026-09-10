@@ -663,6 +663,9 @@
     "noResults": "无搜索结果",
     "offline": "离线",
     "online": "在线",
+    "disconnected": "连接已断开",
+    "fallbackPolling": "实时连接不可用，正在轮询",
+    "reconnect": "重连",
     "placeholder": "发消息…（⌘/Ctrl + Enter 发送）",
     "readBy": "已由 {count} 人阅读",
     "search": "搜索消息",
@@ -1058,6 +1061,7 @@
     "hint": "渲染即所得；插入后仍可在正文编辑代码",
     "copy": "复制代码",
     "copied": "已复制",
+    "copyFailed": "复制失败，请手动选择并复制代码",
     "insert": "插入正文"
   },
   "toast": {

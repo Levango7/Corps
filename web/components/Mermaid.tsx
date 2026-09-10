@@ -9,8 +9,8 @@
  * 设计要点：
  *  - 动态 import：mermaid 体积大（~1MB min+gz 前几百 KB），仅在页面真正出现
  *    mermaid 代码块时才加载（模块级单例 Promise，同页多图共享一次加载）。
- *  - 主题跟随：按 data-theme 初始化 dark/default，切换主题后重新渲染由
- *    RemixIcon 式外部触发……v1 简化：挂载时读取一次（刷新页面即生效）。
+ *  - 主题跟随：按 data-theme 初始化 dark/default；通过 MutationObserver 监听
+ *    data-theme 属性变化，切换主题时自动重新渲染（无需刷新页面）。
  *  - 安全：securityLevel: 'strict'（mermaid 内置 DOMPurify 清洗，禁 click 交互）。
  *  - 失败回退：解析失败（语法错/不支持图型）降级为普通代码块展示原文，
  *    不白屏不吞内容； mermaid.render 的 SVG 通过 innerHTML 注入——
@@ -31,19 +31,41 @@ function loadMermaid(): Promise<MermaidModule> {
   return mermaidPromise;
 }
 
+/** mermaid 主题类型（仅使用 dark/default 两个子集） */
+type MermaidTheme = "dark" | "default";
+
+/** 读取当前主题（data-theme 属性） */
+function readTheme(): MermaidTheme {
+  return document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "default";
+}
+
 let renderSeq = 0;
 
 export function Mermaid({ code }: { code: string }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [failed, setFailed] = useState(false);
+  // 跟踪当前主题，切换时触发重新渲染
+  const [theme, setTheme] = useState<MermaidTheme>(() =>
+    typeof document !== "undefined" ? readTheme() : "default",
+  );
+
+  // 监听 data-theme 属性变化，主题切换时更新 state 触发重渲染
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setTheme(readTheme());
+    });
+    observer.observe(document.documentElement, {
+      attributes: true,
+      attributeFilter: ["data-theme"],
+    });
+    return () => observer.disconnect();
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
         const mermaid = await loadMermaid();
-        const theme =
-          document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "default";
         mermaid.initialize({
           startOnLoad: false,
           theme,
@@ -63,7 +85,7 @@ export function Mermaid({ code }: { code: string }) {
     return () => {
       cancelled = true;
     };
-  }, [code]);
+  }, [code, theme]);
 
   if (failed) {
     // 回退：按普通代码块展示原文（内容不丢，用户可修正语法）

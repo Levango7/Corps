@@ -37,13 +37,14 @@ export async function POST(req: NextRequest) {
     if (err instanceof PaymentWebhookError) {
       console.error("[wechat-webhook] signature error:", err.message);
       return NextResponse.json(
-        { code: 400, message: `Webhook Error: ${err.message}`, data: null },
+        { code: 400, message: apiMsg(req, "webhookSignatureError"), data: null },
         { status: 400 },
       );
     }
     // not_configured → 500 拒收
     if (err instanceof PaymentProviderError && err.code === "not_configured") {
-      return NextResponse.json({ code: 500, message: err.message, data: null }, { status: 500 });
+      console.error("[wechat-webhook] not_configured:", err.message);
+      return NextResponse.json({ code: 500, message: apiMsg(req, "billingUnavailable"), data: null }, { status: 500 });
     }
     console.error("[wechat-webhook] parse error:", err);
     return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError"), data: null }, { status: 500 });

@@ -33,11 +33,42 @@ export interface SyncResult {
   syncedConnections: number;
 }
 
-/** 解密连接的 access_token；如即将过期则自动刷新并持久化新 token */
-async function ensureFreshAccessToken(connectionId: string): Promise<{
+/** ensureFreshAccessToken 返回类型 */
+interface FreshTokenResult {
   accessToken: string;
   connection: { id: string; provider: string; calendarId: string; refreshToken: string };
-}> {
+}
+
+/**
+ * S5 修复：token 刷新内存锁——同一 connectionId 的并发请求共享同一个刷新 Promise，
+ * 避免多个并发同步同时刷新 token（导致旧 refresh_token 失效、token 错乱）。
+ *
+ * 锁的生命周期：从首次刷新请求开始到 Promise 完成（无论成功/失败）。
+ * 后续并发请求直接 await 同一 Promise，不重复刷新。
+ * 锁清除在 finally 块中，确保异常时也释放锁。
+ *
+ * 局限：仅单进程内有效。多实例部署时需升级为分布式锁（如 Redis SET NX EX）。
+ * 当前同步作业经 cron 单实例触发，内存锁足够。
+ */
+const tokenRefreshLocks = new Map<string, Promise<FreshTokenResult>>();
+
+/** 解密连接的 access_token；如即将过期则自动刷新并持久化新 token */
+async function ensureFreshAccessToken(connectionId: string): Promise<FreshTokenResult> {
+  // S5 修复：并发请求共享同一刷新 Promise
+  const existing = tokenRefreshLocks.get(connectionId);
+  if (existing) return existing;
+
+  const promise = doEnsureFreshAccessToken(connectionId);
+  tokenRefreshLocks.set(connectionId, promise);
+  try {
+    return await promise;
+  } finally {
+    tokenRefreshLocks.delete(connectionId);
+  }
+}
+
+/** ensureFreshAccessToken 的实际实现（无锁，由外层 ensureFreshAccessToken 加锁） */
+async function doEnsureFreshAccessToken(connectionId: string): Promise<FreshTokenResult> {
   // calendar_connections 受 FORCE RLS（user_id 谓词 + calendar 逃生口）：
   // 同步作业按连接 id 定位，经 calendar op 放行
   const conn = await runWithAuthOp("calendar", (tx) =>
@@ -233,28 +264,53 @@ export async function syncTaskToCalendar(
           provider === "google"
             ? await createGoogleEvent(accessToken, connection.calendarId, eventOpts)
             : await createOutlookEvent(accessToken, connection.calendarId, eventOpts);
-        // 合并事务 2：DB 创建 eventMapping + 标记同步成功（M2）
-        await runWithAuthOp("calendar", async (tx) => {
-          await tx.taskCalendarEvent.create({
-            data: { taskId, connectionId, externalEventId },
+        // S4 修复：外部 API 已创建事件但 DB 更新失败时，补偿删除外部事件，
+        // 避免产生孤儿事件（外部日历有事件但本地无映射，用户可见但系统不可控）。
+        try {
+          await runWithAuthOp("calendar", async (tx) => {
+            await tx.taskCalendarEvent.create({
+              data: { taskId, connectionId, externalEventId },
+            });
+            await tx.calendarConnection.update({
+              where: { id: connectionId },
+              data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
+            });
           });
-          await tx.calendarConnection.update({
-            where: { id: connectionId },
-            data: { syncStatus: "idle", syncError: null, lastSyncAt: new Date() },
-          });
-        });
+        } catch (dbErr) {
+          // DB 创建失败 → 补偿删除外部事件
+          try {
+            if (provider === "google") {
+              await deleteGoogleEvent(accessToken, connection.calendarId, externalEventId);
+            } else {
+              await deleteOutlookEvent(accessToken, connection.calendarId, externalEventId);
+            }
+            console.warn(
+              `[calendar-sync] S4 补偿删除外部事件成功: connectionId=${connectionId} externalEventId=${externalEventId}`,
+            );
+          } catch (compensateErr) {
+            // 补偿也失败：孤儿事件残留，记日志供对账任务清理
+            console.error(
+              `[calendar-sync] S4 补偿删除外部事件失败，产生孤儿: connectionId=${connectionId} externalEventId=${externalEventId}`,
+              compensateErr,
+            );
+          }
+          throw dbErr; // 重新抛出，由外层 catch 标记 syncStatus=error
+        }
       }
     }
 
     return { success: true, syncedConnections: 1 };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    // 标记同步失败
+    // M16 修复：截断错误信息到 500 字符，避免过长/敏感信息全量写入 DB
+    // （syncError 为 Text 字段可存长文本，但截断防止巨量错误堆栈占空间）
+    const truncatedError = message.slice(0, 500);
+    // 标记同步失败（错误标记失败不阻塞错误返回）
     await runWithAuthOp("calendar", (tx) =>
       tx.calendarConnection
         .update({
           where: { id: connectionId },
-          data: { syncStatus: "error", syncError: message },
+          data: { syncStatus: "error", syncError: truncatedError },
         })
         .catch(() => {}),
     ).catch(() => {});
@@ -272,9 +328,17 @@ export async function syncTaskToAllCalendars(
   opts: { force?: boolean } = {},
 ): Promise<SyncResult> {
   // calendar_connections 受 FORCE RLS（user_id / calendar op）：同步作业经逃生口
+  // M17 修复：添加 take 上限，防止异常数据堆积导致全量扫描
+  // （正常单用户连接数 ≤ provider 数，上限 20 留足余量）
+  const SYNC_CONNECTIONS_LIMIT = 20;
   const connections = await runWithAuthOp(
     "calendar",
-    (tx) => tx.calendarConnection.findMany({ where: { userId }, select: { id: true } }),
+    (tx) =>
+      tx.calendarConnection.findMany({
+        where: { userId },
+        select: { id: true },
+        take: SYNC_CONNECTIONS_LIMIT,
+      }),
     userId,
   );
   if (connections.length === 0) return { success: true, syncedConnections: 0 };
@@ -301,9 +365,16 @@ export async function syncTaskToAllCalendars(
  * 用于手动触发"立即同步"。
  */
 export async function syncAllTasks(userId: string): Promise<SyncResult> {
+  // M17 修复：添加 take 上限（同 syncTaskToAllCalendars）
+  const SYNC_CONNECTIONS_LIMIT = 20;
   const connections = await runWithAuthOp(
     "calendar",
-    (tx) => tx.calendarConnection.findMany({ where: { userId }, select: { id: true } }),
+    (tx) =>
+      tx.calendarConnection.findMany({
+        where: { userId },
+        select: { id: true },
+        take: SYNC_CONNECTIONS_LIMIT,
+      }),
     userId,
   );
   if (connections.length === 0) return { success: true, syncedConnections: 0 };

@@ -67,7 +67,10 @@ export function BoardColumn({
     <div
       // data-column：E2E 拖拽 drop 目标定位（移动端列选择器按钮与桌面列头同名，
       // 纯文本匹配在 BoardView 双渲染下有歧义）
+      // L11 修复：添加 role="group" + aria-label，明确列容器的语义角色
       data-column={column.id}
+      role="group"
+      aria-label={tStatus(column.titleKey)}
       className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();

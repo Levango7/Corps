@@ -196,6 +196,9 @@ async function sendViaResend(opts: {
   if (!apiKey) return false;
 
   try {
+    // M23 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30_000);
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
@@ -210,7 +213,9 @@ async function sendViaResend(opts: {
         subject: opts.subject,
         html: opts.html,
       }),
+      signal: controller.signal,
     });
+    clearTimeout(timeoutId);
     if (!res.ok) {
       throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
     }

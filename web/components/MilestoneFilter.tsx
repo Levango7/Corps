@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Milestone as MilestoneIcon, ChevronDown } from "lucide-react";
+import { Milestone as MilestoneIcon, ChevronDown, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import type { Milestone } from "@/lib/types";
 
@@ -24,12 +24,36 @@ export function MilestoneFilter({
   const t = useTranslations("milestone");
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [open, setOpen] = useState(false);
+  // L2 修复：加载中状态，用于显示 spinner 占位
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
     api<Milestone[]>(`/api/v1/workspaces/${wid}/milestones`)
-      .then(setMilestones)
-      .catch(() => setMilestones([]));
+      .then((data) => {
+        if (!cancelled) setMilestones(data);
+      })
+      .catch(() => {
+        if (!cancelled) setMilestones([]);
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [wid]);
+
+  // 加载中显示 spinner 占位（L2）
+  if (loading) {
+    return (
+      <div className="flex items-center gap-2 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--muted)]">
+        <Loader2 size={14} className="animate-spin" />
+        <span className="hidden sm:inline">{t("filterLabel")}</span>
+      </div>
+    );
+  }
 
   // 无里程碑时折叠为占位（不占视觉空间）
   if (milestones.length === 0) return null;
@@ -45,7 +69,8 @@ export function MilestoneFilter({
     <div className="relative">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="flex items-center gap-2 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors"
+        disabled={loading}
+        className="flex items-center gap-2 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         aria-haspopup="listbox"
         aria-expanded={open}
       >

@@ -378,10 +378,15 @@ export class AlipayPageProvider implements PaymentProvider {
     }
 
     try {
+      // M18 修复：外部 HTTP 调用添加 30s 超时（AbortController）
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 30_000);
       const res = await fetch(url.toString(), {
         method: "GET",
         headers: { Accept: "application/json" },
+        signal: controller.signal,
       });
+      clearTimeout(timeoutId);
       if (!res.ok) {
         throw new PaymentProviderError(`支付宝查单 HTTP 失败: ${res.status}`, "channel_error");
       }

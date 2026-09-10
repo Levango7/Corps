@@ -12,7 +12,7 @@
  * - 分享：生成 token 后展示完整 URL + 复制按钮；可一键关闭分享。
  */
 
-import { useState, useRef, useTransition } from "react";
+import { useState, useRef, useTransition, useEffect } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
 import { Loader2, Share2, X, Globe, Eye, Download, Columns2, Zap, Check } from "lucide-react";
@@ -44,9 +44,23 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const editorRef = useRef<HTMLTextAreaElement>(null);
   const [shareToken, setShareToken] = useState(initial.shareToken);
   const [publishedAt, setPublishedAt] = useState(initial.publishedAt);
+  // S1 修复：SSR 阶段 window 未定义，需 typeof window 守卫避免 ReferenceError。
+  // 仅在客户端且有 shareToken 时才构造 URL；服务端渲染返回 null， hydration 后由
+  // 下方的 useEffect 同步补全（见下）。
   const [shareUrl, setShareUrl] = useState<string | null>(
-    initial.shareToken ? `${window.location.origin}/documents/share/${initial.shareToken}` : null,
+    initial.shareToken && typeof window !== "undefined"
+      ? `${window.location.origin}/documents/share/${initial.shareToken}`
+      : null,
   );
+  // S1 修复续：若 SSR 阶段跳过了 URL 构造（typeof window === "undefined"）但
+  // initial.shareToken 存在，客户端 hydration 后补全 shareUrl，避免链接丢失。
+  useEffect(() => {
+    if (initial.shareToken && shareUrl === null && typeof window !== "undefined") {
+      setShareUrl(`${window.location.origin}/documents/share/${initial.shareToken}`);
+    }
+    // 仅在挂载时执行一次
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [preview, setPreview] = useState(false);
   /** 分屏模式（v0.6）：编辑与预览并排实时渲染（Obsidian 式），与单页切换互斥 */
   const [split, setSplit] = useState(false);
@@ -172,8 +186,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       />
 
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mt-3 mb-4">
-        <div className="flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)]">
+      <div className="flex items-center justify-between mt-3 mb-4 gap-2 flex-wrap">
+        <div className="flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)] min-w-0">
           {/* LI-10：自动保存中指示器 */}
           {busy === "save" && (
             <span className="inline-flex items-center gap-1">
