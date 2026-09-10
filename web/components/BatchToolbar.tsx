@@ -50,6 +50,9 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
   const [error, setError] = useState("");
   const [statusOpen, setStatusOpen] = useState(false);
   const [priorityOpen, setPriorityOpen] = useState(false);
+  // R8B-01：两步确认删除——首次点击进入"确认删除？"态，3s 内再次点击才真正执行
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const confirmDeleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   // LI-16：下拉菜单外部点击关闭（ref 持有根元素，检测点击是否在容器外）
   const rootRef = useRef<HTMLDivElement>(null);
   // L8 修复：操作前记录焦点，操作完成后恢复到触发按钮（或工具栏根）
@@ -126,9 +129,24 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
 
   async function handleDelete() {
     if (busy) return;
-    // 保留 window.confirm：批量删除需等待用户确认结果后再决定是否执行，
-    // 替换为异步自定义确认对话框需引入额外状态机且阻塞后续流程，风险较大。
-    if (!window.confirm(t("batchDeleteConfirm", { count: selectedIds.length }))) return;
+    // R8B-01：两步确认——首次点击进入确认态并提示"再次点击确认删除"，3s 后自动重置；
+    // 第二次点击才真正执行删除。替代原 window.confirm 的同步阻塞式确认。
+    if (!confirmDelete) {
+      setConfirmDelete(true);
+      // 清除前一个定时器（防止多次快速点击累积定时器）
+      if (confirmDeleteTimerRef.current) clearTimeout(confirmDeleteTimerRef.current);
+      confirmDeleteTimerRef.current = setTimeout(() => {
+        setConfirmDelete(false);
+        confirmDeleteTimerRef.current = null;
+      }, 3000);
+      return;
+    }
+    // 已处于确认态，清除定时器并执行删除
+    if (confirmDeleteTimerRef.current) {
+      clearTimeout(confirmDeleteTimerRef.current);
+      confirmDeleteTimerRef.current = null;
+    }
+    setConfirmDelete(false);
     // L8 修复：记录操作前焦点
     previousFocusRef.current = document.activeElement as HTMLElement | null;
     setBusy(true);
@@ -247,12 +265,16 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       <button
         onClick={handleDelete}
         disabled={busy}
-        title={busy ? t("batchDeleteFailed") : undefined}
-        className="flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        title={busy ? t("batchDeleteFailed") : confirmDelete ? t("batchDeleteConfirm", { count: selectedIds.length }) : undefined}
+        className={`flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+          confirmDelete
+            ? "bg-[var(--danger)] text-[var(--danger-fg)] font-[weight:var(--weight-medium)] animate-pulse"
+            : "text-[var(--danger)] hover:bg-[var(--danger-soft)]"
+        }`}
         aria-label={t("batchDeleteAria")}
       >
         <Trash2 size={14} />
-        <span className="hidden sm:inline">{t("delete")}</span>
+        <span className="hidden sm:inline">{confirmDelete ? t("delete") + "?" : t("delete")}</span>
       </button>
 
       {/* 分隔符 */}

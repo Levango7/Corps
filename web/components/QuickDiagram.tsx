@@ -74,6 +74,8 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
   // M11 修复：焦点陷阱——记录打开前的焦点，对话框内循环 Tab
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const firstFocusableRef = useRef<HTMLButtonElement>(null);
+  // R8B-10：最后一个可聚焦元素 ref，用于 Tab 循环
+  const lastFocusableRef = useRef<HTMLButtonElement>(null);
 
   // 切图型 = 重置为该图型模板（未保存的编辑会被覆盖——对话框语义如此）
   function pickKind(k: string) {
@@ -103,7 +105,28 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
   useEffect(() => {
     if (!open) return;
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // R8B-10：Tab 焦点循环——在最后一个可聚焦元素按 Tab 跳回第一个，
+      // 在第一个按 Shift+Tab 跳到最后一个，防止焦点逃逸到背景页面
+      if (e.key === "Tab") {
+        const first = firstFocusableRef.current;
+        const last = lastFocusableRef.current;
+        if (!first || !last) return;
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -202,13 +225,14 @@ export function QuickDiagram({ open, onClose, onInsert }: QuickDiagramProps) {
               {copied ? t("copied") : t("copy")}
             </button>
             <button
+              ref={lastFocusableRef}
               type="button"
               onClick={() => {
                 onInsert(block);
                 onClose();
               }}
               disabled={!code.trim()}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
             >
               <ArrowDownToLine size={14} />
               {t("insert")}

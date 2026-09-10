@@ -64,7 +64,7 @@ function highlight(text: string, query: string) {
   return (
     <>
       {text.slice(0, idx)}
-      <mark className="bg-[var(--accent-soft)] text-[var(--accent)] rounded px-0.5">
+      <mark className="bg-[var(--accent-soft)] text-[var(--accent)] rounded-[var(--radius-sm)] px-0.5">
         {text.slice(idx, idx + query.length)}
       </mark>
       {text.slice(idx + query.length)}
@@ -264,7 +264,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
                 setQuery("");
                 inputRef.current?.focus();
               }}
-              className="w-6 h-6 flex items-center justify-center rounded text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] shrink-0"
+              className="w-6 h-6 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] shrink-0"
               aria-label={t("clearSearch")}
             >
               <X size={16} />

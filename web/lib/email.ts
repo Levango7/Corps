@@ -70,6 +70,18 @@ function escapeHtml(s: string): string {
     .replace(/"/g, "&quot;");
 }
 
+/**
+ * 邮箱地址脱敏（R8D-01：防止 PII 泄漏到日志）。
+ * 保留域名便于排障（区分内/外部域），本地部分仅留前 2 字符 + ***。
+ * 例：john.doe@example.com → jo***@example.com；ab@x.com → ***@x.com
+ */
+function maskEmail(email: string): string {
+  const [local, domain] = email.split("@");
+  if (!domain) return "***";
+  const maskedLocal = local.length <= 2 ? "***" : local.slice(0, 2) + "***";
+  return `${maskedLocal}@${domain}`;
+}
+
 /** 邮件基础模板：标题 + 正文 + CTA 链接，简洁风格，无外部 CSS 依赖。 */
 function renderEmailHtml(opts: {
   title: string;
@@ -219,7 +231,7 @@ async function sendViaResend(opts: {
       if (!res.ok) {
         throw new Error(`Resend HTTP ${res.status}: ${(await res.text()).slice(0, 300)}`);
       }
-      console.info(`[email] ${opts.logTag} sent to ${opts.to}`);
+      console.info(`[email] ${opts.logTag} sent to ${maskEmail(opts.to)}`);
       return true;
     } finally {
       // L1 修复：确保超时 timer 在任何情况下都被清理，防止 timer handle 泄漏
@@ -252,7 +264,7 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<void> 
   if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "invite",
-      `to=${params.to}, workspace=${params.workspaceName}, inviter=${params.inviterName}`,
+      `to=${maskEmail(params.to)}, workspace=${params.workspaceName}, inviter=${params.inviterName}`,
     );
   }
 }
@@ -268,7 +280,7 @@ export async function sendTaskAssignedEmail(params: TaskAssignedEmailParams): Pr
   if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "task_assigned",
-      `to=${params.to}, task=${params.taskTitle}, assigner=${params.assignerName}`,
+      `to=${maskEmail(params.to)}, task=${params.taskTitle}, assigner=${params.assignerName}`,
     );
   }
   return sent;
@@ -287,7 +299,7 @@ export async function sendTaskDueReminderEmail(
   if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "task_due_reminder",
-      `to=${params.to}, task=${params.taskTitle}, due=${params.dueDate}`,
+      `to=${maskEmail(params.to)}, task=${params.taskTitle}, due=${params.dueDate}`,
     );
   }
   return sent;
@@ -304,7 +316,7 @@ export async function sendMentionEmail(params: MentionEmailParams): Promise<bool
   if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "mention",
-      `to=${params.to}, task=${params.taskTitle}, mentioner=${params.mentionerName}`,
+      `to=${maskEmail(params.to)}, task=${params.taskTitle}, mentioner=${params.mentionerName}`,
     );
   }
   return sent;
@@ -320,7 +332,7 @@ export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): 
   });
   if (!sent && !isEmailConfigured()) {
     // 未配置 Resend 时仅记录收件人（S12：不记录 resetUrl/token，避免日志泄露凭据）
-    logPlaceholder("reset_password", `to=${params.to}`);
+    logPlaceholder("reset_password", `to=${maskEmail(params.to)}`);
   }
 }
 
@@ -399,7 +411,7 @@ export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams)
     logTag: "account_deleted",
   });
   if (!sent && !isEmailConfigured()) {
-    logPlaceholder("account_deleted", `to=${params.to}, ws=${params.deletedWorkspaces}`);
+    logPlaceholder("account_deleted", `to=${maskEmail(params.to)}, ws=${params.deletedWorkspaces}`);
   }
 }
 
@@ -431,7 +443,7 @@ export async function sendWeeklyDigestEmail(params: WeeklyDigestEmailParams): Pr
   if (!sent && !isEmailConfigured()) {
     logPlaceholder(
       "weekly_digest",
-      `to=${params.to}, overdue=${params.overdueTasks.length}, upcoming=${params.upcomingTasks.length}`,
+      `to=${maskEmail(params.to)}, overdue=${params.overdueTasks.length}, upcoming=${params.upcomingTasks.length}`,
     );
   }
   return sent;

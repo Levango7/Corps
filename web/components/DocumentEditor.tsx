@@ -186,7 +186,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       />
 
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mt-3 mb-4 gap-2 flex-wrap">
+      <div className="flex items-center justify-between mt-3 mb-4 gap-2 flex-nowrap overflow-x-auto scrollbar-hide">
         <div className="flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)] min-w-0">
           {/* LI-10：自动保存中指示器 */}
           {busy === "save" && (
@@ -210,17 +210,17 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-wrap justify-end">
+        <div className="flex items-center gap-2 flex-nowrap justify-end shrink-0">
           <button
             onClick={back}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <X size={14} />
             {t("backToList")}
           </button>
           <button
             onClick={() => setPreview((v) => !v)}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Eye size={14} />
             {preview ? t("editMode") : t("previewMode")}
@@ -231,7 +231,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               setPreview(false);
             }}
             aria-pressed={split}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
               split
                 ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
                 : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
@@ -244,7 +244,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           {/* 快速图表：不进正文也能出图，确认后一键插入（v0.6 增补） */}
           <button
             onClick={() => setQuickDiagramOpen(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             title={tDiagram("title")}
           >
             <Zap size={14} />
@@ -255,7 +255,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               onClick={unshare}
               disabled={busy !== null}
               title={busy !== null ? t("saving") : undefined}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               <X size={14} />
               {t("unshare")}
@@ -265,7 +265,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               onClick={share}
               disabled={busy !== null}
               title={busy !== null ? t("saving") : undefined}
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               <Share2 size={14} />
               {t("share")}
@@ -274,7 +274,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           <button
             onClick={() => window.print()}
             title={t("exportPdfHint")}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Download size={14} />
             {t("exportPdf")}
@@ -283,7 +283,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={() => save({ publish: true })}
             disabled={busy !== null}
             title={busy !== null ? t("saving") : undefined}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             {busy === "publish" ? (
               <Loader2 size={14} className="animate-spin" />

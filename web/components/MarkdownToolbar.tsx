@@ -336,7 +336,7 @@ export function MarkdownToolbar({ textareaRef, value, onChange, disabled }: Mark
 
   return (
     <div
-      className="flex flex-wrap items-center gap-0.5 p-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)]"
+      className="flex flex-nowrap items-center gap-0.5 p-1 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)] overflow-x-auto scrollbar-hide"
       role="toolbar"
       aria-label={t("toolbarAria")}
     >

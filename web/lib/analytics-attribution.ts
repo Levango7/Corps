@@ -76,6 +76,13 @@ export function captureLandingAttribution(): {
 /** 模块级 Set 记录已上报 path，SPA 内跳转去重（每 sid 每路径会话内至多一条）。 */
 const reported = new Set<string>();
 
+// R8D-11：定期清理 reported Set，防止内存泄漏（SPA 长时间运行时 path 不断累积）
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    reported.clear();
+  }, 10 * 60 * 1000).unref?.(); // unref 避免阻止进程退出
+}
+
 /**
  * PublicPageTracker —— 挂在根 layout 的客户端组件。
  * 命中公开路由且本次加载未上报过该 path 时打 landing_view。

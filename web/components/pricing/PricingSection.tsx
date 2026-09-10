@@ -85,7 +85,7 @@ export function PricingSection() {
         {/* 切换器（分段控件）—— 居中 */}
         <div className="mt-6 flex justify-center">
           <div
-            className="inline-flex p-1 rounded-[var(--radius-pill)] border border-[var(--border)] bg-[var(--surface-2)]"
+            className="inline-flex p-1 rounded-full border border-[var(--border)] bg-[var(--surface-2)]"
             role="group"
             aria-label={t("plans.periodAriaLabel")}
           >
@@ -98,7 +98,7 @@ export function PricingSection() {
                   aria-pressed={pressed}
                   onClick={() => handlePeriodChange(opt.value)}
                   className={
-                    "px-4 h-9 rounded-[var(--radius-pill)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] " +
+                    "px-4 h-9 rounded-full text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] " +
                     "transition-colors duration-[var(--motion-base)] ease-[var(--ease-standard)] " +
                     "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] " +
                     (pressed
@@ -219,7 +219,7 @@ function ProCard({
       }
     >
       {/* 推荐角标 */}
-      <span className="absolute top-4 right-4 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
+      <span className="absolute top-4 right-4 px-2 py-0.5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
         {t("plans.pro.badge")}
       </span>
 
@@ -242,7 +242,7 @@ function ProCard({
         </span>
         <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{proUnit}</span>
         {period === "yearly" && (
-          <span className="ml-2 px-2 py-0.5 rounded-[var(--radius-pill)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
+          <span className="ml-2 px-2 py-0.5 rounded-full bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
             {t("plans.savePerSeat", { amount: YEARLY_SAVING_PER_SEAT.toFixed(1) })}
           </span>
         )}

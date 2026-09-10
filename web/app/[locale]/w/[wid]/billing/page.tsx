@@ -467,7 +467,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       )}
 
       {/* 套餐卡片 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
         {PLANS.map((p) => {
           const current = status?.plan === p.id;
           const upgradable = isOwner && !current && p.id !== "free" && status?.stripeReady;
@@ -589,8 +589,12 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           role="dialog"
           aria-modal="true"
           aria-label={t("wechatQrAria")}
+          onClick={closeWechatQr}
         >
-          <div className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-6 max-w-sm w-full mx-4">
+          <div
+            className="bg-[var(--surface)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-6 max-w-sm w-full mx-4"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between mb-4">
               <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 {t("wechatPayTitle")}

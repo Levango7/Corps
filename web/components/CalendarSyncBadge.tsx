@@ -33,8 +33,9 @@ export default function CalendarSyncBadge({ wid, taskId }: { wid: string; taskId
       .then((s) => {
         if (active) setStatus(s);
       })
-      .catch(() => {
-        // 静默失败，不阻塞任务详情页
+      .catch((err) => {
+        // R8B-11：不再静默吞错，记录警告日志便于排查同步状态获取失败
+        console.warn("[CalendarSyncBadge] 同步状态获取失败:", err);
       })
       .finally(() => {
         if (active) setLoading(false);

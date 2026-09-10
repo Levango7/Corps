@@ -145,7 +145,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
                       isOwn
                         ? "border-[color-mix(in_srgb,var(--accent-fg)_20%,transparent)] bg-[color-mix(in_srgb,var(--accent-fg)_10%,transparent)]"
                         : "border-[var(--border)] bg-[var(--surface-3)]"
-                    } hover:opacity-80 transition-opacity min-w-[200px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]`}
+                    } hover:opacity-80 transition-opacity min-w-0 sm:min-w-[200px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]`}
                   >
                     <FileText size={16} className="shrink-0" />
                     <div className="min-w-0 flex-1">

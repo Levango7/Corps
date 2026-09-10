@@ -89,7 +89,7 @@ export async function PATCH(
         {
           code: 409,
           message: apiMsg(req, "optimisticLockConflict"),
-          currentVersion: result.currentVersion, data: null
+          data: { currentVersion: result.currentVersion }
         },
         { status: 409 },
       );

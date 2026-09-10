@@ -70,29 +70,41 @@ export async function previewAccountDeletion(userId: string): Promise<DeletionPr
   const ownedIds = owned.map((m) => m.workspace.id);
 
   // 自有工作区的数据量（经 workspace GUC 逐租户统计；owned 可能 0 个）
+  // R8D-09：并行查询所有工作区的 count，避免串行 N+1（原 for 循环逐工作区 await）
   const stats = { ownedTasks: 0, ownedDecisions: 0, messages: 0 };
-  for (const w of ownedIds) {
-    const s = await withGuc({ workspace_id: w, user_id: userId }, (tx) =>
-      Promise.all([
-        tx.task.count({ where: { workspaceId: w } }),
-        tx.decision.count({ where: { workspaceId: w } }),
-        tx.message.count({ where: { workspaceId: w } }),
-      ]),
-    );
+  const workspaceStats = await Promise.all(
+    ownedIds.map((w) =>
+      withGuc({ workspace_id: w, user_id: userId }, (tx) =>
+        Promise.all([
+          tx.task.count({ where: { workspaceId: w } }),
+          tx.decision.count({ where: { workspaceId: w } }),
+          tx.message.count({ where: { workspaceId: w } }),
+        ]),
+      ),
+    ),
+  );
+  for (const s of workspaceStats) {
     stats.ownedTasks += s[0];
     stats.ownedDecisions += s[1];
     stats.messages += s[2];
   }
 
   // 自有工作区的成员数（统计含他人成员行 → provision 系统操作）
+  // R8D-09：并行查询所有工作区的成员数，避免串行 N+1（原 for 循环逐工作区 await）
+  const memberCountEntries = await Promise.all(
+    owned.map((m) =>
+      runWithAuthOp(
+        "provision",
+        (tx) => tx.member.count({ where: { workspaceId: m.workspace.id } }),
+        userId,
+      )
+        .then((c) => [m.workspace.id, c] as const)
+        .catch(() => [m.workspace.id, 0] as const),
+    ),
+  );
   const memberCounts: Record<string, number> = {};
-  for (const m of owned) {
-    const c = await runWithAuthOp(
-      "provision",
-      (tx) => tx.member.count({ where: { workspaceId: m.workspace.id } }),
-      userId,
-    ).catch(() => 0);
-    memberCounts[m.workspace.id] = c;
+  for (const [id, c] of memberCountEntries) {
+    memberCounts[id] = c;
   }
 
   return {
@@ -231,8 +243,9 @@ export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces
         "provision",
         (tx) => tx.workspace.delete({ where: { id: ws.id } }),
         userId,
-      ).catch(() => {
+      ).catch((err) => {
         // 强制删除仍失败：记录但不阻塞，User 删除级联会兜底（可能超时，但已尽力）
+        console.error("[account-deletion] 强制删除工作区失败，User删除级联将兜底:", err);
       });
     }
   }

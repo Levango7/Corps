@@ -316,7 +316,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                 d.createdAt &&
                 new Date(d.updatedAt).getTime() > new Date(d.createdAt).getTime();
               return (
-                <li key={d.id} className="relative pl-[var(--space-8)]">
+                <li key={d.id} className="relative pl-[var(--space-4)] sm:pl-[var(--space-8)]">
                   {/* 时间线竖线：非末项时显示，连接到下一项节点 */}
                   {!isLast && (
                     <span
@@ -490,7 +490,7 @@ function DecisionsSkeleton({ count = 4 }: { count?: number }) {
   return (
     <div aria-busy="true" className="relative">
       {Array.from({ length: count }).map((_, i) => (
-        <div key={i} className="relative pl-[var(--space-8)]">
+        <div key={i} className="relative pl-[var(--space-4)] sm:pl-[var(--space-8)]">
           {/* 竖线 */}
           {i < count - 1 && (
             <span

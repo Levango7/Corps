@@ -10,7 +10,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    This contract currently defines 52 paths (updated 2026-09-09).
+    This contract currently defines 57 paths (updated 2026-09-09).
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:
@@ -498,7 +498,12 @@ paths:
       tags: [tasks]
       summary: Get task detail (incl. assignee/labels/counts)
       responses:
-        '200': { description: Task detail }
+        '200':
+          description: Task detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Task'
         '401': { description: Unauthorized }
         '404': { description: Task not found }
     patch:
@@ -675,7 +680,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_Member'
+                $ref: '#/components/schemas/Envelope_InviteResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '402':
@@ -857,7 +862,12 @@ paths:
       tags: [comments]
       summary: List task comments
       responses:
-        '200': { description: Comment list }
+        '200':
+          description: Comment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CommentList'
         '401': { description: Unauthorized }
         '500':
           $ref: '#/components/responses/InternalError'
@@ -1676,7 +1686,12 @@ paths:
       tags: [labels]
       summary: List workspace labels
       responses:
-        '200': { description: Label list }
+        '200':
+          description: Label list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_LabelList'
         '401': { description: Unauthorized }
     post:
       tags: [labels]
@@ -1708,7 +1723,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope'
+                $ref: '#/components/schemas/Envelope_Label'
         '400':
           description: Validation error
           content:
@@ -1837,7 +1852,12 @@ paths:
       tags: [milestones]
       summary: List workspace milestones
       responses:
-        '200': { description: Milestone list }
+        '200':
+          description: Milestone list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MilestoneList'
         '401': { description: Unauthorized }
     post:
       tags: [milestones]
@@ -1872,7 +1892,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope'
+                $ref: '#/components/schemas/Envelope_Milestone'
         '400':
           description: Validation error
           content:
@@ -2241,7 +2261,7 @@ paths:
                 newOwnerUserId: { type: string, format: uuid }
                 password:
                   type: string
-                  nullable: true
+
                   description: >-
                     Current owner's password for二次确认（有密码账户必填，OAuth 账户可省略）.
       responses:
@@ -2897,6 +2917,28 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Member'
+    Envelope_InviteResult:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          oneOf:
+            - $ref: '#/components/schemas/Member'
+            - $ref: '#/components/schemas/PendingInvite'
+    PendingInvite:
+      type: object
+      required: [pending, email, inviteUrl]
+      properties:
+        pending:
+          type: boolean
+          description: Always true; indicates the invitee is not yet registered.
+        email:
+          type: string
+          format: email
+        inviteUrl:
+          type: string
+          format: uri
+          description: One-time signup URL carrying the invite token.
     Envelope_MemberList:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -2920,6 +2962,42 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/Comment'
+    Envelope_CommentList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Comment'
+    Envelope_Label:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Label'
+    Envelope_LabelList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Label'
+    Envelope_Milestone:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Milestone'
+    Envelope_MilestoneList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/Milestone'
     Envelope_Decision:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -3257,16 +3335,38 @@ components:
           type: string
           enum: [low, medium, high, urgent]
         assigneeId:
-          nullable: true
           type: string
           format: uuid
         dueDate:
-          nullable: true
           type: string
           format: date-time
         sortOrder:
           type: number
           format: double
+        milestoneId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional milestone to associate. null removes the association.
+        labelIds:
+          type: array
+          items:
+            type: string
+            format: uuid
+          description: Optional list of label ids to associate (must belong to the workspace).
+        parentId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Optional parent task id (one-level hierarchy only). null removes the association.
+        blocked:
+          type: boolean
+          description: Whether the task is blocked. Defaults to false.
+        blockedReason:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Optional reason text when blocked is true.
     UpdateTaskRequest:
       type: object
       description: Partial update. Any subset of fields may be sent.
@@ -3295,6 +3395,20 @@ components:
         sortOrder:
           type: number
           format: double
+        blocked:
+          type: boolean
+          description: Whether the task is blocked.
+        blockedReason:
+          type: string
+          maxLength: 500
+          nullable: true
+          description: Optional reason text when blocked is true.
+        shareToken:
+          type: string
+          maxLength: 64
+          nullable: true
+          description: >-
+            Public share token. Send "rotate" to generate a new token, null to cancel sharing.
 
     # ---- members (shape mirrors the actual listMembers response) ----
     Member:
@@ -3357,6 +3471,54 @@ components:
         createdAt:
           type: string
           format: date-time
+    Label:
+      type: object
+      required: [id, workspaceId, name, color, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 50
+        color:
+          type: string
+          maxLength: 50
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+    Milestone:
+      type: object
+      required: [id, workspaceId, name, createdAt, updatedAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+        workspaceId:
+          type: string
+          format: uuid
+        name:
+          type: string
+          maxLength: 100
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+        description:
+          type: string
+          nullable: true
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
     CreateCommentRequest:
       type: object
       required: [body]
@@ -3410,6 +3572,7 @@ components:
         markdown:
           type: string
           minLength: 1
+          maxLength: 50000
         baseVersion:
           type: integer
           description: Optimistic concurrency baseline; mismatch returns 409.

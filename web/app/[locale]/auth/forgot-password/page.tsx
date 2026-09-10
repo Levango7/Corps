@@ -117,7 +117,7 @@ export default function ForgotPasswordPage() {
       <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
         <Link
           href="/auth/login"
-          className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded"
+          className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2 px-1 py-0.5 -mx-1 -my-0.5 rounded-[var(--radius-sm)]"
         >
           {t("backToLogin")}
         </Link>

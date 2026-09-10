@@ -100,6 +100,16 @@ if (process.env.NODE_ENV === "production") {
 const MAX_SSE_PER_USER = 5;
 const sseConnections = new Map<string, number>();
 
+// R8D-06：定期清理零计数条目，防止泄漏（依赖 releaseSseSlot 正常调用的前提下，
+// 异常路径可能导致计数只增不减；定期扫描清理 count<=0 的僵尸条目）
+if (typeof setInterval !== "undefined") {
+  setInterval(() => {
+    for (const [key, count] of sseConnections) {
+      if (count <= 0) sseConnections.delete(key);
+    }
+  }, 5 * 60 * 1000).unref?.(); // unref 避免阻止进程退出
+}
+
 /** 该用户是否还有 SSE 连接额度（未达并发上限） */
 export function tryAcquireSseSlot(userId: string): boolean {
   const current = sseConnections.get(userId) ?? 0;

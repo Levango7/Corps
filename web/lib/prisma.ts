@@ -76,8 +76,11 @@ export async function withDbRetry<T>(fn: () => Promise<T>): Promise<T> {
       if (!isConnectionError || attempt === DB_RETRY_MAX) {
         throw error;
       }
-      // 指数退避：500ms, 1000ms, 2000ms
-      await new Promise((resolve) => setTimeout(resolve, DB_RETRY_DELAY_MS * 2 ** attempt));
+      // 指数退避 + 随机抖动（R8D-08：避免多实例同步重试造成 DB 连接风暴）
+      // 基础退避：500ms, 1000ms, 2000ms；叠加 0-30% 随机抖动分散重试时间
+      const baseDelay = DB_RETRY_DELAY_MS * 2 ** attempt;
+      const jitter = Math.random() * baseDelay * 0.3; // 0-30% 抖动
+      await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
     }
   }
   throw lastError;

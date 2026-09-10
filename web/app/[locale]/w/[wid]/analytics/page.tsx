@@ -401,10 +401,10 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
   const areaD = `${pathD} L ${points[points.length - 1].x} ${PAD + innerH} L ${points[0].x} ${PAD + innerH} Z`;
 
   return (
-    <div className="w-full overflow-x-auto">
+    <div className="w-full max-w-full overflow-x-auto">
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="w-full h-auto"
+        className="w-full h-auto max-w-full"
         role="img"
         aria-label={t("trendChartAria")}
       >

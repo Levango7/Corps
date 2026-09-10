@@ -352,7 +352,7 @@ export function ListTable({
                     router.push(`/w/${wid}/task/${task.id}`);
                   }
                 }}
-                className={`border-b border-[var(--border)] last:border-b-0 cursor-pointer hover:bg-[var(--surface-2)] transition-colors focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+                className={`border-b border-[var(--border)] last:border-b-0 cursor-pointer hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
                   selected ? "bg-[var(--accent-soft)]" : ""
                 }`}
               >
@@ -558,7 +558,7 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
       <p className="text-[length:var(--text-sm)] mb-4">{tEmpty("noTasksHint")}</p>
       <button
         onClick={onCreate}
-        className="btn-press flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        className="btn-press flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       >
         <Plus size={16} />
         {tStatus("newTask")}

@@ -254,7 +254,7 @@ function Hero({ t }: { t: TranslateFn }) {
 
       <div className="relative mx-auto max-w-[var(--container-max)]">
         {/* eyebrow 小标签 */}
-        <span className="inline-block px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-pill)] bg-[var(--eyebrow-bg)] text-[var(--eyebrow-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
+        <span className="inline-block px-[var(--space-3)] py-[var(--space-1)] rounded-full bg-[var(--eyebrow-bg)] text-[var(--eyebrow-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
           {t("hero.eyebrow")}
         </span>
 

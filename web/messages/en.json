@@ -670,6 +670,7 @@
     "placeholder": "Send a message… (⌘/Ctrl + Enter to send)",
     "readBy": "Read by {count} people",
     "search": "Search messages",
+    "searchResults": "Search results",
     "send": "Send",
     "sendAria": "Send chat message",
     "title": "Chat",

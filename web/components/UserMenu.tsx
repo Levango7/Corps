@@ -47,6 +47,10 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
   const [open, setOpen] = useState(false);
   const [theme, setTheme] = useState<ThemePref>(() => readThemePref());
   const ref = useRef<HTMLDivElement>(null);
+  // R8B-09：焦点陷阱——菜单容器 ref 与首尾可聚焦元素 ref，实现 Tab 循环
+  const menuRef = useRef<HTMLDivElement>(null);
+  const firstFocusableRef = useRef<HTMLAnchorElement>(null);
+  const lastFocusableRef = useRef<HTMLButtonElement>(null);
   // M5 修复：退出登录 loading 状态，防止重复点击并在退出期间给出视觉反馈
   const [logoutPending, startLogoutTransition] = useTransition();
 
@@ -61,10 +65,37 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
       if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+        return;
+      }
+      // R8B-09：Tab 焦点循环——在最后一个可聚焦元素按 Tab 跳回第一个，
+      // 在第一个按 Shift+Tab 跳到最后一个，防止焦点逃逸到页面其他区域
+      if (e.key === "Tab") {
+        const first = firstFocusableRef.current;
+        const last = lastFocusableRef.current;
+        if (!first || !last) return;
+        if (e.shiftKey) {
+          // Shift+Tab：如果当前焦点在第一个元素，跳到最后一个
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          // Tab：如果当前焦点在最后一个元素，跳到第一个
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
     }
     window.addEventListener("mousedown", onClickOutside);
     window.addEventListener("keydown", onKey);
+    // R8B-09：打开菜单时自动聚焦第一个可聚焦元素（设置入口链接）
+    requestAnimationFrame(() => {
+      firstFocusableRef.current?.focus();
+    });
     return () => {
       window.removeEventListener("mousedown", onClickOutside);
       window.removeEventListener("keydown", onKey);
@@ -115,6 +146,7 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
 
       {open && (
         <div
+          ref={menuRef}
           role="menu"
           className="absolute right-0 top-full mt-1.5 w-64 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] shadow-[var(--elev-lg)] py-1 z-[var(--z-dropdown)]"
         >
@@ -130,9 +162,10 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
 
           {/* 设置入口 */}
           <Link
+            ref={firstFocusableRef}
             href={`/w/${wid}/settings`}
             onClick={() => setOpen(false)}
-            className="flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            className="flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
           >
             <Settings size={14} className="text-[var(--muted)]" />
             {t("user.profile")}
@@ -194,6 +227,7 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
 
           {/* 退出 */}
           <button
+            ref={lastFocusableRef}
             onClick={() => {
               setOpen(false);
               startLogoutTransition(async () => {
@@ -201,7 +235,7 @@ export function UserMenu({ user, wid, onLogout }: UserMenuProps) {
               });
             }}
             disabled={logoutPending}
-            className="w-full flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] mt-1 border-t border-[var(--border-soft)] disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] mt-1 border-t border-[var(--border-soft)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
           >
             {logoutPending ? <Loader2 size={14} className="animate-spin" /> : <LogOut size={14} />}
             {t("user.logout")}

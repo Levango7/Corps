@@ -225,9 +225,9 @@ export function TaskFilterBar({
                       : [...value.labels, l.id],
                   })
                 }
-                className={`px-2 h-7 rounded-full text-[length:var(--text-xs)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${
+                className={`px-2 h-7 rounded-full text-[length:var(--text-xs)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed ${
                   selected
-                    ? "text-[var(--accent-fg)]"
+                    ? "text-white"
                     : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
                 }`}
                 style={selected ? { background: l.color } : undefined}
@@ -237,6 +237,11 @@ export function TaskFilterBar({
               </button>
             );
           })}
+          {labels.length > 8 && (
+            <span className="px-2 h-7 inline-flex items-center rounded-full text-[length:var(--text-xs)] text-[var(--meta)]">
+              +{labels.length - 8}
+            </span>
+          )}
         </div>
       )}
 
@@ -271,7 +276,7 @@ export function TaskFilterBar({
       {active && (
         <button
           onClick={() => onChange({ ...EMPTY_FILTER })}
-          className="flex items-center gap-1 h-7 px-2 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors"
+          className="flex items-center gap-1 h-7 px-2 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
         >
           <X size={13} />
           {t("clear")}
@@ -287,7 +292,7 @@ export function TaskFilterBar({
           >
             <button
               onClick={() => onChange({ ...v.filter })}
-              className="flex items-center gap-1 hover:text-[var(--accent)] transition-colors"
+              className="flex items-center gap-1 hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
               aria-label={t("applyView", { name: v.name })}
             >
               <Bookmark size={11} />
@@ -323,7 +328,7 @@ export function TaskFilterBar({
           <button
             onClick={() => setSaveOpen(true)}
             disabled={locked || isEmptyFilter(value)}
-            className="flex items-center gap-1 h-7 px-2 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-1 h-7 px-2 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed"
             title={t("saveViewHint")}
           >
             <Save size={12} />

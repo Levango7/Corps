@@ -189,7 +189,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
           </h1>
           {loaded && unreadCount > 0 && (
             <span
-              className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] tabular-nums"
+              className="inline-flex items-center justify-center min-w-[20px] h-5 px-1.5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] tabular-nums"
               aria-label={tNotif("unreadCount", { count: unreadCount })}
             >
               {unreadCount}

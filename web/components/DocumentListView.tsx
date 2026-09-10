@@ -81,7 +81,7 @@ export function DocumentListView({ wid }: { wid: string }) {
         <button
           onClick={createDoc}
           disabled={creating}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
         >
           {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           {t("newDocument")}
@@ -103,7 +103,7 @@ export function DocumentListView({ wid }: { wid: string }) {
         {q && (
           <button
             onClick={() => setQ("")}
-            className="absolute right-[var(--space-2)] top-1/2 -translate-y-1/2 p-1 rounded text-[var(--meta)] hover:text-[var(--fg)]"
+            className="absolute right-[var(--space-2)] top-1/2 -translate-y-1/2 p-1 rounded-[var(--radius-sm)] text-[var(--meta)] hover:text-[var(--fg)]"
             aria-label={t("clearSearch")}
           >
             <X size={13} />
@@ -131,7 +131,7 @@ export function DocumentListView({ wid }: { wid: string }) {
               <li key={d.id}>
                 <Link
                   href={`/w/${wid}/documents/${d.id}`}
-                  className="block px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors"
+                  className="block px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
                   <div className="flex items-center gap-2">
                     <FileText size={15} className="shrink-0 text-[var(--muted)]" />

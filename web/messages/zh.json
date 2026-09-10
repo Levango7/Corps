@@ -670,6 +670,7 @@
     "placeholder": "发消息…（⌘/Ctrl + Enter 发送）",
     "readBy": "已由 {count} 人阅读",
     "search": "搜索消息",
+    "searchResults": "搜索结果",
     "send": "发送",
     "sendAria": "发送聊天消息",
     "title": "聊天",

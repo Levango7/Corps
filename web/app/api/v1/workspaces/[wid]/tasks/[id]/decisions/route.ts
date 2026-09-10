@@ -25,7 +25,7 @@ export async function GET(
       }),
     );
 
-    return NextResponse.json({ code: 200, data: decisions });
+    return NextResponse.json({ code: 200, data: { decisions, total: decisions.length } });
   } catch (error) {
     console.error("[GET task decisions] error:", error);
     return NextResponse.json(

@@ -35,11 +35,12 @@ interface SyncSettings {
   remindOneHour: boolean;
 }
 
-const SYNC_SETTINGS_KEY = "corps_calendar_sync_settings";
+// R8B-12：localStorage key 按工作区隔离，防止不同工作区的同步设置互相覆盖
+const getSyncSettingsKey = (wid: string) => `corps_calendar_sync_settings_${wid}`;
 
-function loadSyncSettings(): SyncSettings {
+function loadSyncSettings(wid: string): SyncSettings {
   try {
-    const raw = localStorage.getItem(SYNC_SETTINGS_KEY);
+    const raw = localStorage.getItem(getSyncSettingsKey(wid));
     if (raw) return JSON.parse(raw) as SyncSettings;
   } catch {
     /* ignore */
@@ -47,8 +48,8 @@ function loadSyncSettings(): SyncSettings {
   return { syncDueDateOnly: true, remindOneDay: true, remindOneHour: false };
 }
 
-function saveSyncSettings(s: SyncSettings): void {
-  localStorage.setItem(SYNC_SETTINGS_KEY, JSON.stringify(s));
+function saveSyncSettings(wid: string, s: SyncSettings): void {
+  localStorage.setItem(getSyncSettingsKey(wid), JSON.stringify(s));
 }
 
 export default function CalendarSettingsPage({ params }: { params: Promise<{ wid: string }> }) {
@@ -90,7 +91,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
 
   useEffect(() => {
     load();
-    setSyncSettings(loadSyncSettings());
+    setSyncSettings(loadSyncSettings(wid));
     // 解析回调参数（?connected=google / ?error=xxx）
     const url = new URL(window.location.href);
     const connected = url.searchParams.get("connected");
@@ -105,12 +106,12 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
       url.searchParams.delete("error");
       window.history.replaceState({}, "", url.toString());
     }
-  }, [load, t]);
+  }, [load, t, wid]);
 
   function updateSyncSettings(patch: Partial<SyncSettings>) {
     setSyncSettings((prev) => {
       const next = { ...prev, ...patch };
-      saveSyncSettings(next);
+      saveSyncSettings(wid, next);
       return next;
     });
   }

@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useContext, useState, useCallback, type ReactNode } from "react";
+import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 type ToastType = "success" | "error" | "info" | "warning";
@@ -78,7 +79,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               }}
               aria-label={tToast("close")}
             >
-              &#x2715;
+              <X className="h-3.5 w-3.5" />
             </button>
           </div>
         ))}

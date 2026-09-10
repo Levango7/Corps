@@ -108,7 +108,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
               result.plan === "pro"
                 ? apiMsg(req, "seatsFullRenew")
                 : apiMsg(req, "seatsFullUpgrade"),
-            seatLimit: result.seatLimit, data: null
+            data: { seatLimit: result.seatLimit }
           },
           { status: 402 },
         );

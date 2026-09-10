@@ -329,8 +329,12 @@ export async function syncTaskToCalendar(
           where: { id: connectionId },
           data: { syncStatus: "error", syncError: truncatedError },
         })
-        .catch(() => {}),
-    ).catch(() => {});
+        .catch((err) => {
+          console.warn("[calendar/sync] 标记同步状态失败:", err);
+        }),
+    ).catch((err) => {
+      console.warn("[calendar/sync] runWithAuthOp失败（标记同步错误）:", err);
+    });
     return { success: false, error: message, syncedConnections: 0 };
   }
 }

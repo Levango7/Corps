@@ -101,13 +101,13 @@ export function MessageList({
   const filteredGroups = useMemo(() => {
     if (!searchQuery.trim()) return groups;
     const q = searchQuery.toLowerCase();
-    return groups
-      .map((g) => ({
-        ...g,
-        messages: g.messages.filter((m) => m.body.toLowerCase().includes(q)),
-      }))
-      .filter((g) => g.messages.length > 0);
-  }, [groups, searchQuery]);
+    // R8B-20：搜索模式下将所有匹配消息合并为单个分组，避免时间标签碎片化
+    const matched = groups
+      .flatMap((g) => g.messages)
+      .filter((m) => m.body.toLowerCase().includes(q));
+    if (matched.length === 0) return [];
+    return [{ timeLabel: t("searchResults"), messages: matched }];
+  }, [groups, searchQuery, t]);
 
   // 滚动到底部
   const scrollToBottom = useCallback(() => {

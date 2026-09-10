@@ -316,7 +316,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
                 <button
                   onClick={handleTransfer}
                   disabled={transferBusy || !transferTarget}
-                  className="h-9 px-3 bg-[var(--danger)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                  className="h-9 px-3 bg-[var(--danger)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   {t("transferConfirm")}
                 </button>
@@ -592,8 +592,8 @@ function MemberSkeleton() {
             <div className="flex items-center gap-3">
               <div className="w-8 h-8 rounded-full bg-[var(--surface-2)] animate-pulse shrink-0" />
               <div className="flex-1 space-y-2">
-                <div className="h-4 w-32 rounded bg-[var(--surface-2)] animate-pulse" />
-                <div className="h-3 w-48 rounded bg-[var(--surface-2)] animate-pulse" />
+                <div className="h-4 w-32 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
+                <div className="h-3 w-48 rounded-[var(--radius-sm)] bg-[var(--surface-2)] animate-pulse" />
               </div>
             </div>
           </div>

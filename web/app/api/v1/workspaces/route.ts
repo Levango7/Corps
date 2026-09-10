@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
         name: w.name,
         slug: w.slug,
         plan: w.plan,
+        seatLimit: w.seatLimit,
         role: w.members[0]?.role || "member",
       })),
     });
@@ -68,14 +69,10 @@ export async function POST(req: NextRequest) {
     const slug = await generateSlug(validated.name);
 
     // 建工作区 + owner 成员单事务，走 provision 逃生口（RLS 启用后仍可写）
-    const {
-      id,
-      name,
-      slug: finalSlug,
-    } = await runWithAuthOp(
+    const workspace = await runWithAuthOp(
       "provision",
       async (tx) => {
-        const workspace = await tx.workspace.create({
+        const created = await tx.workspace.create({
           data: {
             name: validated.name,
             slug,
@@ -85,11 +82,11 @@ export async function POST(req: NextRequest) {
         await tx.member.create({
           data: {
             userId: auth.sub,
-            workspaceId: workspace.id,
+            workspaceId: created.id,
             role: "owner",
           },
         });
-        return { id: workspace.id, name: workspace.name, slug: workspace.slug };
+        return created;
       },
       auth.sub,
     );
@@ -97,7 +94,14 @@ export async function POST(req: NextRequest) {
     return NextResponse.json(
       {
         code: 201,
-        data: { id, name, slug: finalSlug },
+        data: {
+          id: workspace.id,
+          name: workspace.name,
+          slug: workspace.slug,
+          plan: workspace.plan,
+          seatLimit: workspace.seatLimit,
+          role: "owner",
+        },
       },
       { status: 201 },
     );

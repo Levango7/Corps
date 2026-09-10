@@ -33,6 +33,8 @@ interface QueuedEvent {
 }
 
 const queue: QueuedEvent[] = [];
+/** R8D-10：队列硬上限，防止无界增长导致内存泄漏（如 flush 持续失败时事件堆积） */
+const MAX_QUEUE_SIZE = 1000;
 let flushTimer: ReturnType<typeof setTimeout> | null = null;
 let initialized = false;
 /** M-05 修复：flush 并发锁。visibilitychange 与 enqueue 定时器可能同时触发 flush，
@@ -41,6 +43,11 @@ let flushing = false;
 
 /** 公共入队逻辑（自 track() 抽出，供 session_start 同步入队复用，绕开 track 避免递归）。 */
 function enqueue(event: QueuedEvent): void {
+  // R8D-10：队列硬上限保护，防止 flush 持续失败时事件无界堆积导致内存泄漏
+  if (queue.length >= MAX_QUEUE_SIZE) {
+    console.warn("[analytics] queue已满，丢弃事件");
+    return;
+  }
   queue.push(event);
   if (queue.length >= BATCH_SIZE) {
     flush();

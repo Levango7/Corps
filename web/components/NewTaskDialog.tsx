@@ -5,6 +5,7 @@ import { X, Loader2, Flag, Calendar, Tag, Milestone as MilestoneIcon } from "luc
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import type { Label, Milestone } from "@/lib/types";
+import { PRIORITY_COLORS } from "@/lib/task-meta";
 import { useTranslations } from "next-intl";
 
 type Status = "todo" | "in_progress" | "review" | "done";
@@ -28,10 +29,10 @@ const STATUS_OPTS: { value: Status; labelKey: string }[] = [
 ];
 
 const PRIORITY_OPTS: { value: Priority; labelKey: string; color: string }[] = [
-  { value: "low", labelKey: "low", color: "var(--meta)" },
-  { value: "medium", labelKey: "medium", color: "var(--muted)" },
-  { value: "high", labelKey: "high", color: "var(--warn)" },
-  { value: "urgent", labelKey: "urgent", color: "var(--danger)" },
+  { value: "low", labelKey: "low", color: PRIORITY_COLORS.low },
+  { value: "medium", labelKey: "medium", color: PRIORITY_COLORS.medium },
+  { value: "high", labelKey: "high", color: PRIORITY_COLORS.high },
+  { value: "urgent", labelKey: "urgent", color: PRIORITY_COLORS.urgent },
 ];
 
 const fieldLabel =
@@ -341,7 +342,7 @@ export default function NewTaskDialog({
                           return next;
                         });
                       }}
-                      className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                       style={{
                         background: selected
                           ? `color-mix(in srgb, ${label.color} 18%, transparent)`
@@ -375,7 +376,7 @@ export default function NewTaskDialog({
                 className="shrink-0 opacity-60 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
                 aria-label={tButton("close")}
               >
-                &#x2715;
+                <X className="h-3.5 w-3.5" />
               </button>
             </div>
           )}

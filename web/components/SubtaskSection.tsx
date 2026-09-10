@@ -135,7 +135,7 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
                 <button
                   onClick={() => router.push(`/w/${wid}/task/${st.id}`)}
                   disabled={isToggling}
-                  className={`flex-1 min-w-0 text-left text-[length:var(--text-sm)] truncate hover:text-[var(--accent)] transition-colors disabled:opacity-50 ${
+                  className={`flex-1 min-w-0 text-left text-[length:var(--text-sm)] truncate hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 ${
                     isDone ? "text-[var(--meta)] line-through" : "text-[var(--fg)]"
                   }`}
                 >
@@ -170,7 +170,7 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
         <button
           onClick={addSubtask}
           disabled={!draft.trim() || busy}
-          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors"
+          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
         >
           {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           {t("subtaskAdd")}
