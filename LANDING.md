@@ -37,7 +37,7 @@
 | 文件 | 说明 |
 |------|------|
 | `spec/SPEC.md` | MVP规格契约（P0/P1功能、API端点、验收标准） |
-| `api/openapi.yaml` | 59个端点OpenAPI定义 |
+| `api/openapi.yaml` | 72个端点OpenAPI定义 |
 | `db/schema.sql` | 15表DDL+RLS策略（含迁移排序修正） |
 | `docs/decisions/ADR-*.md` | 架构决策记录（6份，含 ADR-006 RLS 信任模型） |
 
@@ -60,7 +60,7 @@ web/
 │   ├── globals.css             # CSS变量（对齐design-tokens）
 │   ├── auth/login/signup/      # 登录注册页
 │   ├── w/[wid]/board/members/settings/  # 工作区页面
-│   └── api/v1/                 # 59个 Route Handler（59 API路径）
+│   └── api/v1/                 # 72个 Route Handler（72 API路径）
 └── README.md
 ```
 

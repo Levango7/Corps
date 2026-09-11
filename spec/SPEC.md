@@ -1,7 +1,7 @@
-# Spec - 团队（corps）v0.7.0
+# Spec - 团队（corps）v0.8.0
 
 > 生成日期：2026-08-19
-> 最后更新：2026-09-11（v0.7.0 功能对齐，F1-F6 已实现）
+> 最后更新：2026-09-12（v0.8.0 增强扩展 + 质量审查修复）
 > 基于：PRD v1（许清楚） + 架构文档 v1（高见远） + UIUX 文档 v1（颜好看）
 > 状态：已确认（用户 2026-08-19 拍板 4 项决策）
 > 决策日志：
@@ -254,6 +254,7 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 | 2026-08-24 | 文档对齐实际实现：密码哈希 argon2id → scrypt（与 Better Auth 默认一致）；移动端 App "何时考虑" P1 → v2 晚期（与 ROADMAP 一致）；定价 Pro 层 31+人 → 11–30人高级功能档（与产品定位 5–30人一致）；DESIGN.md 日历标注为 v2 占位（与 SPEC §3 一致） | Task #72 文档一致性修复 | SPEC.md + pricing-strategy.md + DESIGN.md + 审计/安全/竞品文档 |
 | 2026-09-09 | v0.6.0 文档对齐：版本号同步 package.json（next 16.3.3 / react 19.2.8 / tailwind 4.3.3 / better-auth 1.7.2）；部署方案更新为 GHCR + Docker；§7 页面清单补齐已落地页面 | 五维度审查发现文档与实现版本号偏差 | SPEC.md 全文 |
 | 2026-09-11 | v0.7.0 功能落地：F1 决策驱动执行 + F2 Viewer/权限矩阵 + F3 Widget 仪表盘 + F4 Markdown 导出 + F5 分享增强 + F6 暖度调节；新增 11 个 API 端点（§5） | FEATURE-DESIGN-v0.7.md 设计→实现→审查闭环 | SPEC §2/§5 + openapi.yaml + db schema + web/app + web/components |
+| 2026-09-12 | v0.8.0 增强扩展：F1 行动项模板 + F2 临时权限 + F3 布局分享/Widget配置/甘特图/里程碑/自定义图表 + F4 批量导出 + F5 自定义分享路径 + F6 主题色/动画；新增 13 个 API 端点（总计 72）；质量审查修复 40+ 问题（10严重/18中等/12轻微） | Phase A-C 增强 + 三维审查闭环 | openapi.yaml + web/app + web/components + web/lib + web/messages |
 
 ---
 
