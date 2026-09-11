@@ -1310,6 +1310,22 @@
     "rangeCurrentSprint": "Current Sprint",
     "rangeAll": "All Time",
     "countItems": "{count} items",
-    "countMembers": "{count} members"
+    "countMembers": "{count} members",
+    "ganttChart": "Gantt Chart",
+    "milestoneTimeline": "Milestone Timeline",
+    "customChart": "Custom Chart",
+    "ganttEmpty": "No tasks with date range",
+    "milestoneEmpty": "No milestones yet",
+    "milestoneDone": "Completed",
+    "milestoneInProgress": "In Progress",
+    "milestonePending": "Upcoming",
+    "milestoneTaskCount": "{count} tasks",
+    "customChartEmpty": "No chart data",
+    "chartType": "Chart Type",
+    "dataSource": "Data Source",
+    "dataSourceTaskStatus": "Task Status",
+    "dataSourceTaskPriority": "Task Priority",
+    "dataSourceMilestoneProgress": "Milestone Progress",
+    "styleLine": "Line Chart"
   }
 }

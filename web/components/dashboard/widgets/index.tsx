@@ -21,6 +21,8 @@ import {
   TrendingDown,
   PieChart,
   Bell,
+  GanttChartSquare,
+  Milestone,
   type LucideIcon,
 } from "lucide-react";
 
@@ -32,6 +34,9 @@ import TeamLoadWidget from "./TeamLoadWidget";
 import BurndownWidget from "./BurndownWidget";
 import PriorityDistWidget from "./PriorityDistWidget";
 import RecentActivityWidget from "./RecentActivityWidget";
+import GanttWidget from "./GanttWidget";
+import MilestoneTimelineWidget from "./MilestoneTimelineWidget";
+import CustomChartWidget from "./CustomChartWidget";
 
 /** Widget 组件 Props（统一为 { wid }） */
 export interface WidgetProps {
@@ -56,6 +61,9 @@ const WIDGET_COMPONENTS: Record<string, { component: WidgetComponent; icon: Luci
   "burndown": { component: BurndownWidget, icon: TrendingDown, titleKey: "burndown" },
   "priority-dist": { component: PriorityDistWidget, icon: PieChart, titleKey: "priorityDist" },
   "recent-activity": { component: RecentActivityWidget, icon: Bell, titleKey: "recentActivity" },
+  "gantt-chart": { component: GanttWidget, icon: GanttChartSquare, titleKey: "ganttChart" },
+  "milestone-timeline": { component: MilestoneTimelineWidget, icon: Milestone, titleKey: "milestoneTimeline" },
+  "custom-chart": { component: CustomChartWidget, icon: BarChart3, titleKey: "customChart" },
 };
 
 /** 占位 Widget（未知 widgetId 时使用，避免渲染崩溃） */

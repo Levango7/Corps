@@ -20,6 +20,7 @@
  *  - priority-dist: 显示样式（饼图/柱状图）
  *  - recent-activity: 显示数量限制（10/20/50）
  *  - decision-actions: 显示数量限制
+ *  - custom-chart: 图表类型（柱状/折线/饼）、数据源（任务状态/任务优先级/里程碑进度）
  *
  * 经验来源：2026-09-10-react-icon-size-prop-hardcoded-audit
  *   — 图标尺寸走档位值（16/14），不使用任意数值。
@@ -174,6 +175,29 @@ function getFields(widgetId: string, t: TFunc): FieldDef[] {
             { value: 5, label: t("countItems", { count: 5 }) },
             { value: 10, label: t("countItems", { count: 10 }) },
             { value: 20, label: t("countItems", { count: 20 }) },
+          ],
+        },
+      ];
+    case "custom-chart":
+      return [
+        {
+          kind: "select",
+          key: "chartType",
+          label: t("chartType"),
+          options: [
+            { value: "bar", label: t("styleBar") },
+            { value: "line", label: t("styleLine") },
+            { value: "pie", label: t("stylePie") },
+          ],
+        },
+        {
+          kind: "select",
+          key: "dataSource",
+          label: t("dataSource"),
+          options: [
+            { value: "taskStatus", label: t("dataSourceTaskStatus") },
+            { value: "taskPriority", label: t("dataSourceTaskPriority") },
+            { value: "milestoneProgress", label: t("dataSourceMilestoneProgress") },
           ],
         },
       ];

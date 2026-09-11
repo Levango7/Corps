@@ -1310,6 +1310,22 @@
     "rangeCurrentSprint": "当前迭代",
     "rangeAll": "全部",
     "countItems": "{count} 条",
-    "countMembers": "{count} 人"
+    "countMembers": "{count} 人",
+    "ganttChart": "甘特图",
+    "milestoneTimeline": "里程碑时间线",
+    "customChart": "自定义图表",
+    "ganttEmpty": "无日期范围的任务",
+    "milestoneEmpty": "暂无里程碑",
+    "milestoneDone": "已完成",
+    "milestoneInProgress": "进行中",
+    "milestonePending": "待开始",
+    "milestoneTaskCount": "{count} 个任务",
+    "customChartEmpty": "暂无图表数据",
+    "chartType": "图表类型",
+    "dataSource": "数据源",
+    "dataSourceTaskStatus": "任务状态",
+    "dataSourceTaskPriority": "任务优先级",
+    "dataSourceMilestoneProgress": "里程碑进度",
+    "styleLine": "折线图"
   }
 }

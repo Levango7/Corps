@@ -35,6 +35,9 @@ export const WIDGET_REGISTRY: Record<
   "burndown": { titleKey: "burndown", defaultW: 3, defaultH: 2, minW: 2, minH: 2 },
   "priority-dist": { titleKey: "priorityDist", defaultW: 1, defaultH: 1, minW: 1, minH: 1 },
   "recent-activity": { titleKey: "recentActivity", defaultW: 2, defaultH: 1, minW: 1, minH: 1 },
+  "gantt-chart": { titleKey: "ganttChart", defaultW: 4, defaultH: 3, minW: 3, minH: 2 },
+  "milestone-timeline": { titleKey: "milestoneTimeline", defaultW: 2, defaultH: 3, minW: 2, minH: 2 },
+  "custom-chart": { titleKey: "customChart", defaultW: 2, defaultH: 2, minW: 2, minH: 1 },
 };
 
 /** 已注册的 Widget id 列表（用于「添加 Widget」对话框展示可选项） */
