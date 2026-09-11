@@ -34,6 +34,7 @@ import {
   ChevronDown,
   Lock,
   AlertTriangle,
+  Plus,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -41,6 +42,7 @@ import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 import { QuickDiagram } from "@/components/QuickDiagram";
 import { useToast } from "@/components/Toast";
 import { ExportPreview } from "@/components/ExportPreview";
+import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 
 interface DocumentEditorProps {
   wid: string;
@@ -82,6 +84,7 @@ function uaSummary(ua: string | null): string {
 export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const t = useTranslations("document");
   const tDiagram = useTranslations("diagramQuick");
+  const tDecision = useTranslations("decision");
   const router = useRouter();
   const { toast } = useToast();
   const [title, setTitle] = useState(initial.title);
@@ -141,9 +144,54 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   /** 快速图表对话框：插入 ```mermaid 块到正文（追加到末尾，编辑器语义里"出一张图"） */
   const [quickDiagramOpen, setQuickDiagramOpen] = useState(false);
 
+  // ── F1 增强：行动项模板插入下拉菜单 ──
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+
+  // ── F5 增强：分享自定义路径（shareSlug）──
+  const [shareSlug, setShareSlug] = useState<string>("");
+  const [shareSlugSaved, setShareSlugSaved] = useState<string | null>(null);
+
   function insertDiagramBlock(block: string) {
     const sep = markdown.endsWith("\n") || markdown === "" ? "" : "\n\n";
     setMarkdown(markdown + sep + block);
+  }
+
+  /**
+   * F1 增强：插入行动项模板到编辑器。
+   * - 模板中的 {dueDate} 占位符替换为当前日期 + 7 天（YYYY-MM-DD）
+   * - 优先插入到光标位置（textarea selectionStart），无光标信息时追加到末尾
+   * - 自动补足分隔换行，避免与上下文粘连
+   */
+  function handleInsertTemplate(templateMarkdown: string) {
+    const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const dueDateStr = due.toISOString().slice(0, 10);
+    const filled = templateMarkdown.replace(/\{dueDate\}/g, dueDateStr);
+    const ta = editorRef.current;
+    if (ta && ta.selectionStart != null && ta.selectionEnd != null) {
+      // 光标位置插入
+      const start = ta.selectionStart;
+      const end = ta.selectionEnd;
+      const before = markdown.slice(0, start);
+      const after = markdown.slice(end);
+      // 在光标前补换行（若非行首且非空）
+      const needLeadingNL = before.length > 0 && !before.endsWith("\n");
+      const needTrailingNL = after.length > 0 && !after.startsWith("\n");
+      const inserted =
+        (needLeadingNL ? "\n" : "") + filled + (needTrailingNL ? "\n" : "");
+      const next = before + inserted + after;
+      setMarkdown(next);
+      // 还原光标到插入内容末尾
+      requestAnimationFrame(() => {
+        const pos = start + inserted.length;
+        ta.focus();
+        ta.setSelectionRange(pos, pos);
+      });
+    } else {
+      // 末尾追加
+      const sep = markdown.endsWith("\n") || markdown === "" ? "" : "\n\n";
+      setMarkdown(markdown + sep + filled);
+    }
+    setTemplateMenuOpen(false);
   }
 
   async function save(opts: { publish?: boolean } = {}) {
@@ -226,8 +274,13 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         shareToken: string | null;
         shareExpiresAt: string | null;
         hasPassword: boolean;
+        shareSlug?: string | null;
       }>(`/api/v1/workspaces/${wid}/documents/${id}/share`);
       setHasPassword(settings.hasPassword);
+      // F5 增强：加载已保存的自定义路径
+      const slug = settings.shareSlug ?? "";
+      setShareSlug(slug);
+      setShareSlugSaved(slug);
       if (settings.shareExpiresAt) {
         setShareExpiresAt(settings.shareExpiresAt);
         const days = Math.round(
@@ -269,13 +322,17 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
     }
   }
 
-  /** 保存分享设置（PATCH /share：有效期 + 密码） */
+  /** 保存分享设置（PATCH /share：有效期 + 密码 + 自定义路径） */
   async function saveShareSettings() {
     if (busy) return;
     setBusy("share");
     setError("");
     try {
-      const body: { expiresAt: string | null; password?: string } = {
+      const body: {
+        expiresAt: string | null;
+        password?: string;
+        shareSlug?: string | null;
+      } = {
         expiresAt: null,
       };
       // 计算过期时间
@@ -290,6 +347,10 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       if (sharePasswordInput) {
         body.password = sharePasswordInput;
       }
+      // F5 增强：自定义路径（仅当用户修改了 slug 才传，避免无谓写）
+      if (shareSlug !== (shareSlugSaved ?? "")) {
+        body.shareSlug = shareSlug.trim() || null;
+      }
       await api(`/api/v1/workspaces/${wid}/documents/${id}/share`, {
         method: "PATCH",
         body: JSON.stringify(body),
@@ -297,6 +358,10 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       if (sharePasswordInput) setHasPassword(true);
       setSharePasswordInput("");
       setShareExpiresAt(body.expiresAt);
+      // 同步已保存 slug 状态
+      if (body.shareSlug !== undefined) {
+        setShareSlugSaved(body.shareSlug ?? "");
+      }
       toast("success", t("shareSettingsSaved"));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("shareFailed"));
@@ -459,6 +524,50 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             <Zap size={14} />
             <span className="hidden sm:inline">{tDiagram("title")}</span>
           </button>
+          {/* F1 增强：插入行动项模板（下拉菜单，复用 ACTION_TEMPLATES） */}
+          <div className="relative">
+            <button
+              onClick={() => setTemplateMenuOpen((v) => !v)}
+              title={tDecision("insertTemplate")}
+              aria-label={tDecision("insertTemplate")}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              <Plus size={14} />
+              <span className="hidden sm:inline">{tDecision("insertTemplate")}</span>
+              <ChevronDown size={12} className="text-[var(--muted)]" />
+            </button>
+            {templateMenuOpen && (
+              <>
+                {/* 点击外部关闭 */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setTemplateMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <ul
+                  role="menu"
+                  aria-label={tDecision("templateMenuOpen")}
+                  className="absolute right-0 top-9 z-20 min-w-[220px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
+                >
+                  {ACTION_TEMPLATES.map((tpl) => (
+                    <li key={tpl.id} role="menuitem">
+                      <button
+                        onClick={() => handleInsertTemplate(tpl.markdown)}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                      >
+                        <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                          {tpl.name}
+                        </div>
+                        <div className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                          {tpl.description}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
           {/* F5：分享按钮 → 打开分享设置对话框 */}
           <button
             onClick={openShareDialog}
@@ -639,6 +748,31 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                   </div>
                 </div>
               )}
+
+              {/* F5 增强：自定义路径（shareSlug） */}
+              <div>
+                <label className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
+                  <Share2 size={14} className="text-[var(--muted)]" />
+                  {t("customSlug")}
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="shrink-0 inline-flex items-center h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--meta)] font-[family-name:var(--font-mono)]">
+                    {t("customSlugPrefix")}
+                  </span>
+                  <input
+                    type="text"
+                    value={shareSlug}
+                    onChange={(e) => setShareSlug(e.target.value)}
+                    placeholder={t("customSlugPlaceholder")}
+                    maxLength={50}
+                    pattern="[a-z0-9-]*"
+                    className="flex-1 min-w-0 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] placeholder:text-[var(--meta)]"
+                  />
+                </div>
+                <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
+                  {t("customSlugHint")}
+                </p>
+              </div>
 
               {/* 有效期 */}
               <div>

@@ -634,7 +634,18 @@
     "densityCompact": "Compact",
     "densityComfortable": "Comfortable",
     "densityDesc": "Adjust spacing and corner radius",
-    "loadFailed": "Failed to load"
+    "loadFailed": "Failed to load",
+    "accentColor": "Accent Color",
+    "accentColorDesc": "Choose the accent color theme",
+    "accentBlue": "Blue",
+    "accentGreen": "Green",
+    "accentPurple": "Purple",
+    "accentOrange": "Orange",
+    "motion": "Motion",
+    "motionDesc": "Adjust animation intensity",
+    "motionReduced": "Reduced",
+    "motionStandard": "Standard",
+    "motionEnhanced": "Enhanced"
   },
   "label": {
     "title": "Labels",
@@ -948,7 +959,10 @@
     "actionUpdated": "{count} task(s) updated",
     "actionRemoved": "{count} action item(s) removed",
     "syncSuccess": "Sync succeeded",
-    "syncFailed": "Sync failed"
+    "syncFailed": "Sync failed",
+    "insertTemplate": "Insert Template",
+    "templateMenuOpen": "Choose action plan template",
+    "overdueNotification": "Action item overdue"
   },
   "role": {
     "owner": "Owner",
@@ -1078,7 +1092,11 @@
     "shareExpiredTitle": "Link expired",
     "shareExpiredHint": "This share link has expired. Please contact the author for a new link.",
     "sharePasswordRequired": "This document is password-protected. Enter the password to continue.",
-    "shareExpired": "This share link has expired."
+    "shareExpired": "This share link has expired.",
+    "customSlug": "Custom Slug",
+    "customSlugPlaceholder": "my-weekly-review",
+    "customSlugHint": "3-50 chars, lowercase letters, digits, hyphens only",
+    "customSlugPrefix": "/s/"
   },
   "editor": {
     "bold": "Bold",

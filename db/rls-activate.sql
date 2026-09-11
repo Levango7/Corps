@@ -97,11 +97,13 @@ CREATE POLICY p_tasks_rls ON tasks FOR ALL
 DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
 CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
   USING (current_setting('app.auth_op', true) = 'cron');
--- 任务公开只读分享（v0.4 队列第 6 项）：仅放行 share_token 与 GUC 相等的行
+-- 任务公开只读分享（v0.4 队列第 6 项）：放行 share_token 或 share_slug 与 GUC 相等的行
 CREATE POLICY p_tasks_share_select ON tasks FOR SELECT
   USING (
-    task_share_token IS NOT NULL
-    AND task_share_token = NULLIF(current_setting('app.public_token', true), '')
+    (task_share_token IS NOT NULL
+     AND task_share_token = NULLIF(current_setting('app.public_token', true), ''))
+    OR (share_slug IS NOT NULL
+     AND share_slug = NULLIF(current_setting('app.public_token', true), ''))
   );
 
 -- 日历同步逃生口（审计 P1-A）：lib/calendar/sync.ts 按 taskId 定位任务 /
@@ -213,7 +215,7 @@ CREATE POLICY p_task_calendar_events_rls ON task_calendar_events FOR ALL
 
 -- documents（v0.4.0 文档中心）：workspace 谓词 + 公开分享只读逃生口。
 -- /api/documents/share/[token] 无登录态，经 runWithShareToken 注入 app.public_token，
--- share_token 与之相等的行才可读（NULL 永不匹配：未分享/草稿天然隔离）；
+-- share_token 或 share_slug 与之相等的行才可读（NULL 永不匹配：未分享/草稿天然隔离）；
 -- 写操作仅 workspace 谓词，无逃生口。
 DROP POLICY IF EXISTS p_documents_rls ON documents;
 CREATE POLICY p_documents_rls ON documents FOR ALL
@@ -223,8 +225,10 @@ CREATE POLICY p_documents_rls ON documents FOR ALL
 DROP POLICY IF EXISTS p_documents_share_select ON documents;
 CREATE POLICY p_documents_share_select ON documents FOR SELECT
   USING (
-    share_token IS NOT NULL
-    AND share_token = NULLIF(current_setting('app.public_token', true), '')
+    (share_token IS NOT NULL
+     AND share_token = NULLIF(current_setting('app.public_token', true), ''))
+    OR (share_slug IS NOT NULL
+     AND share_slug = NULLIF(current_setting('app.public_token', true), ''))
   );
 
 DROP POLICY IF EXISTS p_comments_rls ON comments;

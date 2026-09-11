@@ -25,7 +25,9 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
       // 因此逐步放行：users 有意豁免 RLS 可直读；workspaces 需按已验证的
       // 文档行注入 workspace_id GUC 后方可读——工作区名只会随其被分享的文档泄露。
       const base = await tx.document.findFirst({
-        where: { shareToken: token },
+        // F5增强：先匹配 shareSlug（自定义路径），再匹配 shareToken（随机 token）
+        // RLS 策略 p_documents_share_select 已放行 share_token 或 share_slug 与 GUC 相等的行
+        where: { OR: [{ shareSlug: token }, { shareToken: token }] },
         select: {
           id: true,
           title: true,

@@ -20,6 +20,8 @@ const updateShareSchema = z.object({
   expiresAt: z.union([z.string().datetime(), z.null()]).optional(),
   /** 分享密码明文（null=清除密码；不传=保持原状；存 scrypt hash） */
   password: z.union([z.string().min(1).max(128), z.null()]).optional(),
+  /** 自定义分享路径（null=清除自定义路径回退到 token；不传=保持原状；3-50 字符，小写字母/数字/连字符） */
+  shareSlug: z.union([z.string().regex(/^[a-z0-9-]{3,50}$/), z.null()]).optional(),
 });
 
 /** PATCH /v1/workspaces/{wid}/documents/{id}/share — 更新分享有效期/密码 */
@@ -55,6 +57,7 @@ export async function PATCH(
         const data: {
           shareExpiresAt?: Date | null;
           sharePassword?: string | null;
+          shareSlug?: string | null;
         } = {};
         if (validated.expiresAt !== undefined) {
           data.shareExpiresAt = validated.expiresAt
@@ -65,6 +68,17 @@ export async function PATCH(
           data.sharePassword = validated.password
             ? await hashSharePassword(validated.password)
             : null;
+        }
+        if (validated.shareSlug !== undefined) {
+          // 唯一性检查：确保 documents 表内 shareSlug 不重复（排除当前文档自身）
+          if (validated.shareSlug) {
+            const conflict = await tx.document.findFirst({
+              where: { shareSlug: validated.shareSlug, id: { not: id } },
+              select: { id: true },
+            });
+            if (conflict) return { kind: "slugTaken" as const };
+          }
+          data.shareSlug = validated.shareSlug;
         }
 
         const doc = await tx.document.update({ where: { id }, data });
@@ -79,13 +93,22 @@ export async function PATCH(
         { status: 404 },
       );
     }
+    if (result.kind === "slugTaken") {
+      return NextResponse.json(
+        { code: 409, message: apiMsg(req, "slugTaken"), data: null },
+        { status: 409 },
+      );
+    }
     // 返回时脱敏：不暴露 sharePassword hash
+    const doc = result.doc;
     return NextResponse.json({
       code: 200,
       data: {
-        shareToken: result.doc.shareToken,
-        shareExpiresAt: result.doc.shareExpiresAt,
-        hasPassword: result.doc.sharePassword !== null,
+        shareToken: doc.shareToken,
+        shareSlug: doc.shareSlug,
+        shareExpiresAt: doc.shareExpiresAt,
+        hasPassword: doc.sharePassword !== null,
+        shareUrl: doc.shareSlug ? `/s/${doc.shareSlug}` : doc.shareToken ? `/s/${doc.shareToken}` : null,
       },
     });
   } catch (error) {
@@ -138,6 +161,7 @@ export async function GET(
           select: {
             id: true,
             shareToken: true,
+            shareSlug: true,
             shareExpiresAt: true,
             sharePassword: true,
           },
@@ -156,8 +180,10 @@ export async function GET(
       code: 200,
       data: {
         shareToken: doc.shareToken,
+        shareSlug: doc.shareSlug,
         shareExpiresAt: doc.shareExpiresAt,
         hasPassword: doc.sharePassword !== null,
+        shareUrl: doc.shareSlug ? `/s/${doc.shareSlug}` : doc.shareToken ? `/s/${doc.shareToken}` : null,
       },
     });
   } catch (error) {

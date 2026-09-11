@@ -90,6 +90,12 @@
   --accent-soft:    color-mix(in srgb, var(--accent) 10%, transparent);
   --accent-soft-fg: var(--accent);
   --on-accent:      var(--p-on-accent);
+  /* --accent-fg：solid 强调色背景上的前景色（白色）。
+   * 注意：此变量语义为"solid 背景前景"，必须保持高对比度白色，
+   * 不可设为浅色（如 #f0fdf4），否则 bg-[var(--accent)] text-[var(--accent-fg)]
+   * 的实心按钮文字将低对比度不可读。soft 背景前景请用 --accent-soft-fg。
+   * 来源：经验 2026-09-10-accent-fg-white-on-accent-soft-low-contrast */
+  --accent-fg:      var(--on-accent);
   --accent-ring:    var(--p-accent-ring);
 
   /* —— 语义状态色 —— */
@@ -294,6 +300,64 @@
   --p-accent-dkr:  #155636;
   --p-accent-soft: color-mix(in srgb, #1F7A4D 12%, transparent);
   --p-accent-ring: rgba(31, 122, 77, 0.30);
+}
+
+/* ----------------------------------------------------------------------------
+ * Accent Color Override —— [data-accent-color="blue|green|purple|orange"]
+ * 用户主题色自定义（F6 增强）。仅覆盖 --p-accent 与 --p-accent-ring，
+ * 派生色（--accent-hover/active/soft）经 color-mix(var(--accent) …) 自动联动。
+ * --accent-fg 保持白色（var(--on-accent)），确保 solid 背景按钮可读。
+ * 蓝色为默认，无需覆盖。
+ * -------------------------------------------------------------------------- */
+:root[data-accent-color="green"] {
+  --p-accent:      #16a34a;
+  --p-accent-ring: rgba(22, 163, 74, 0.28);
+}
+:root[data-accent-color="purple"] {
+  --p-accent:      #9333ea;
+  --p-accent-ring: rgba(147, 51, 234, 0.28);
+}
+:root[data-accent-color="orange"] {
+  --p-accent:      #ea580c;
+  --p-accent-ring: rgba(234, 88, 12, 0.28);
+}
+
+/* 暗色模式强调色变体（亮度上调，与深色背景协调，ring 透明度 0.40） */
+:root[data-theme="dark"][data-accent-color="green"] {
+  --p-accent:      #22c55e;
+  --p-accent-ring: rgba(34, 197, 94, 0.40);
+}
+:root[data-theme="dark"][data-accent-color="purple"] {
+  --p-accent:      #a855f7;
+  --p-accent-ring: rgba(168, 85, 247, 0.40);
+}
+:root[data-theme="dark"][data-accent-color="orange"] {
+  --p-accent:      #f97316;
+  --p-accent-ring: rgba(249, 115, 22, 0.40);
+}
+
+/* ----------------------------------------------------------------------------
+ * Motion Override —— [data-motion="reduced|standard|enhanced"]
+ * 动画效果开关（F6 增强）。覆盖现有 --motion-fast/base/slow/enter。
+ * reduced：全部 0ms（无动画，无闪烁）；standard：保持默认值；enhanced：放慢增强。
+ * -------------------------------------------------------------------------- */
+:root[data-motion="reduced"] {
+  --motion-fast:  0ms;
+  --motion-base:  0ms;
+  --motion-slow:  0ms;
+  --motion-enter: 0ms;
+}
+:root[data-motion="standard"] {
+  --motion-fast:  120ms;
+  --motion-base:  150ms;
+  --motion-slow:  220ms;
+  --motion-enter: 420ms;
+}
+:root[data-motion="enhanced"] {
+  --motion-fast:  200ms;
+  --motion-base:  400ms;
+  --motion-slow:  600ms;
+  --motion-enter: 600ms;
 }
 
 /* 强制尊重系统的"减少动态效果"偏好 */

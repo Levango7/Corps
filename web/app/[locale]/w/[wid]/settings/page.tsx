@@ -63,6 +63,25 @@ const DENSITIES: { id: DensityPref; labelKey: string; icon: typeof Rows3 }[] = [
   { id: "comfortable", labelKey: "densityComfortable", icon: Rows2 },
 ];
 
+/** 强调色偏好（F6 增强）：蓝/绿/紫/橙 4 色 */
+type AccentColor = "blue" | "green" | "purple" | "orange";
+
+const ACCENT_COLORS: { id: AccentColor; swatch: string }[] = [
+  { id: "blue", swatch: "#4263EB" },
+  { id: "green", swatch: "#16a34a" },
+  { id: "purple", swatch: "#9333ea" },
+  { id: "orange", swatch: "#ea580c" },
+];
+
+/** 动画效果偏好（F6 增强）：减少/标准/增强 3 档 */
+type MotionPref = "reduced" | "standard" | "enhanced";
+
+const MOTIONS: { id: MotionPref }[] = [
+  { id: "reduced" },
+  { id: "standard" },
+  { id: "enhanced" },
+];
+
 /** 主题切换过渡时长（与 --motion-slow 对齐，避免硬编码） */
 const THEME_TRANSITION_MS = 220;
 
@@ -83,12 +102,26 @@ function applyDensity(pref: DensityPref) {
   localStorage.setItem(DENSITY_KEY, pref);
 }
 
+function applyAccentColor(pref: AccentColor) {
+  document.documentElement.setAttribute("data-accent-color", pref);
+  localStorage.setItem(ACCENT_COLOR_KEY, pref);
+}
+
+function applyMotion(pref: MotionPref) {
+  document.documentElement.setAttribute("data-motion", pref);
+  localStorage.setItem(MOTION_KEY, pref);
+}
+
 /** 通知偏好持久化 key */
 const NOTIF_PREF_KEY = "corps_notif_pref";
 /** 默认视图持久化 key */
 const DEFAULT_VIEW_KEY = "corps_default_view";
 /** 密度偏好持久化 key */
 const DENSITY_KEY = "corps_density";
+/** 强调色偏好持久化 key（F6 增强） */
+const ACCENT_COLOR_KEY = "corps_accent_color";
+/** 动画效果偏好持久化 key（F6 增强） */
+const MOTION_KEY = "corps_motion";
 
 interface NotifPref {
   emailEnabled: boolean;
@@ -124,6 +157,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const [theme, setTheme] = useState<ThemePref>("system");
   const [defaultView, setDefaultView] = useState<DefaultView>("board");
   const [density, setDensity] = useState<DensityPref>("compact");
+  const [accentColor, setAccentColor] = useState<AccentColor>("blue");
+  const [motion, setMotion] = useState<MotionPref>("standard");
   const [notifPref, setNotifPref] = useState<NotifPref>({
     emailEnabled: true,
     mentionEnabled: true,
@@ -170,6 +205,10 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     setDefaultView(storedView);
     const storedDensity = (localStorage.getItem(DENSITY_KEY) as DensityPref | null) ?? "compact";
     setDensity(storedDensity);
+    const storedAccent = (localStorage.getItem(ACCENT_COLOR_KEY) as AccentColor | null) ?? "blue";
+    setAccentColor(storedAccent);
+    const storedMotion = (localStorage.getItem(MOTION_KEY) as MotionPref | null) ?? "standard";
+    setMotion(storedMotion);
     setNotifPref(loadNotifPref());
   }, [load]);
 
@@ -250,6 +289,16 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   function pickDensity(d: DensityPref) {
     setDensity(d);
     applyDensity(d);
+  }
+
+  function pickAccentColor(c: AccentColor) {
+    setAccentColor(c);
+    applyAccentColor(c);
+  }
+
+  function pickMotion(m: MotionPref) {
+    setMotion(m);
+    applyMotion(m);
   }
 
   function updateNotifPref(patch: Partial<NotifPref>) {
@@ -346,6 +395,23 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       setAccountDeleting(false);
     }
   }
+
+  // F6 增强：强调色 / 动画效果文本（i18n 已接入，key 位于 settings 命名空间）
+  const accentSectionLabel = t("accentColor");
+  const accentSectionDesc = t("accentColorDesc");
+  const accentNames: Record<AccentColor, string> = {
+    blue: t("accentBlue"),
+    green: t("accentGreen"),
+    purple: t("accentPurple"),
+    orange: t("accentOrange"),
+  };
+  const motionSectionLabel = t("motion");
+  const motionSectionDesc = t("motionDesc");
+  const motionNames: Record<MotionPref, string> = {
+    reduced: t("motionReduced"),
+    standard: t("motionStandard"),
+    enhanced: t("motionEnhanced"),
+  };
 
   const canEdit = ws ? ["owner", "admin"].includes(ws.role) : false;
   const dirty = ws ? name.trim() !== ws.name || slug.trim() !== ws.slug : false;
@@ -666,6 +732,79 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                 <Icon size={16} />
                 <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
                   {t(d.labelKey)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 强调色（F6 增强：主题色自定义） */}
+      <section className={`${sectionClass} mt-5`}>
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
+          {accentSectionLabel}
+        </h2>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          {accentSectionDesc}
+        </p>
+        <div className="flex flex-wrap gap-2">
+          {ACCENT_COLORS.map((c) => {
+            const active = accentColor === c.id;
+            return (
+              <button
+                key={c.id}
+                onClick={() => pickAccentColor(c.id)}
+                aria-pressed={active}
+                className="flex flex-col items-center gap-2 py-2.5 px-3 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                style={{
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "var(--accent-soft)" : "var(--surface)",
+                }}
+              >
+                <span
+                  className="w-6 h-6 rounded-full border-2"
+                  style={{
+                    backgroundColor: c.swatch,
+                    borderColor: active ? "var(--fg)" : "transparent",
+                  }}
+                />
+                <span
+                  className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]"
+                  style={{ color: active ? "var(--accent)" : "var(--fg-2)" }}
+                >
+                  {accentNames[c.id]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 动画效果（F6 增强：减少/标准/增强三档） */}
+      <section className={`${sectionClass} mt-5`}>
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
+          {motionSectionLabel}
+        </h2>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          {motionSectionDesc}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {MOTIONS.map((m) => {
+            const active = motion === m.id;
+            return (
+              <button
+                key={m.id}
+                onClick={() => pickMotion(m.id)}
+                aria-pressed={active}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                style={{
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "var(--accent-soft)" : "var(--surface)",
+                  color: active ? "var(--accent)" : "var(--fg-2)",
+                }}
+              >
+                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
+                  {motionNames[m.id]}
                 </span>
               </button>
             );

@@ -31,11 +31,12 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "@/lib/i18n-navigation";
-import { RefreshCw, Loader2, ListChecks, ExternalLink, Calendar } from "lucide-react";
+import { RefreshCw, Loader2, ListChecks, ExternalLink, Calendar, Plus } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { useTranslations } from "next-intl";
 import { PRIORITY_BADGE_STYLES } from "@/lib/task-meta";
+import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 import type { Priority, Person } from "@/lib/types";
 
 /** 行动项形态：决策记录中结构化提取的可执行条目。 */
@@ -75,6 +76,12 @@ interface ActionItemPanelProps {
   initialItems?: ActionItem[];
   /** 外部触发刷新的签名（父组件保存决策后 +1，触发本面板重新拉取） */
   refreshSignal?: number;
+  /**
+   * 插入模板回调（父组件将模板 markdown 插入到决策编辑器）。
+   * 未提供时不显示「插入模板」按钮。模板中的 {dueDate} 占位符已替换为
+   * 当前日期 + 7 天（YYYY-MM-DD）。
+   */
+  onInsertTemplate?: (markdown: string) => void;
 }
 
 /** 环形进度条尺寸常量（SVG viewBox） */
@@ -169,6 +176,7 @@ export function ActionItemPanel({
   taskId,
   initialItems,
   refreshSignal = 0,
+  onInsertTemplate,
 }: ActionItemPanelProps) {
   // TODO: i18n —— 任务 160 将在 messages/{locale}.json 的 "decision" 命名空间下
   // 补齐 actionItems / actionProgress / syncActions / noActions / actionCreated /
@@ -184,6 +192,8 @@ export function ActionItemPanel({
   const [syncing, setSyncing] = useState(false);
   // 勾选中的行动项 ID（loading 反馈，避免重复点击）
   const [togglingId, setTogglingId] = useState<string | null>(null);
+  // 模板下拉菜单开关
+  const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
 
   const endpoint = `/api/v1/workspaces/${workspaceId}/tasks/${taskId}/decisions/${decisionId}/action-items`;
   const syncEndpoint = `/api/v1/workspaces/${workspaceId}/tasks/${taskId}/decisions/${decisionId}/sync-actions`;
@@ -279,6 +289,18 @@ export function ActionItemPanel({
     }
   }
 
+  /**
+   * 插入模板：将 {dueDate} 占位符替换为当前日期 + 7 天（YYYY-MM-DD）后回调父组件。
+   * 硬编码中文文本（i18n 由后续任务统一处理）。
+   */
+  function handleInsertTemplate(md: string) {
+    const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    const dueDateStr = due.toISOString().slice(0, 10);
+    const filled = md.replace(/\{dueDate\}/g, dueDateStr);
+    onInsertTemplate?.(filled);
+    setTemplateMenuOpen(false);
+  }
+
   const total = items.length;
   const completed = items.filter((it) => it.completed).length;
   const percent = total > 0 ? Math.round((completed / total) * 100) : 0;
@@ -318,12 +340,53 @@ export function ActionItemPanel({
             </span>
           </span>
         )}
+        {/* 插入模板按钮（仅当 onInsertTemplate 提供时显示）· 硬编码中文文本 */}
+        {onInsertTemplate && (
+          <div className="relative ml-auto">
+            <button
+              onClick={() => setTemplateMenuOpen((v) => !v)}
+              title="插入模板"
+              aria-label="插入模板"
+              className="inline-flex items-center gap-1 h-6 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            >
+              <Plus size={11} />
+              <span className="hidden sm:inline">插入模板</span>
+            </button>
+            {templateMenuOpen && (
+              <>
+                {/* 点击外部关闭 */}
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setTemplateMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <ul className="absolute right-0 top-7 z-20 min-w-[200px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-2)] shadow-md py-1">
+                  {ACTION_TEMPLATES.map((tpl) => (
+                    <li key={tpl.id}>
+                      <button
+                        onClick={() => handleInsertTemplate(tpl.markdown)}
+                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--surface)] transition-colors duration-[var(--motion-fast)]"
+                      >
+                        <div className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                          {tpl.name}
+                        </div>
+                        <div className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                          {tpl.description}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
+            )}
+          </div>
+        )}
         <button
           onClick={handleSync}
           disabled={syncing}
           title={t("syncActions")}
           aria-label={t("syncActions")}
-          className="ml-auto inline-flex items-center gap-1 h-6 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface)] active:bg-[var(--surface-3)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          className={`${onInsertTemplate ? "" : "ml-auto"} inline-flex items-center gap-1 h-6 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface)] active:bg-[var(--surface-3)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2`}
         >
           {syncing ? <Loader2 size={11} className="animate-spin" /> : <RefreshCw size={11} />}
           <span className="hidden sm:inline">{t("syncActions")}</span>

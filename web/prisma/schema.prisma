@@ -200,8 +200,10 @@ model Task {
   shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
   // F5: 分享密码 hash（null = 无密码；scrypt hash）
   sharePassword  String?   @map("share_password") @db.VarChar(100)
-  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
+  // F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符）
+  shareSlug      String?   @map("share_slug") @db.VarChar(100)
+  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at")
 
   workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   assignee  User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
@@ -402,6 +404,8 @@ model Document {
   shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
   /** F5: 分享密码 hash（null = 无密码；scrypt hash） */
   sharePassword  String?   @map("share_password") @db.VarChar(100)
+  /** F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符） */
+  shareSlug      String?   @map("share_slug") @db.VarChar(100)
   /** 文档作者（可编辑；展示用） */
   authorId     String?  @map("author_id") @db.Uuid
   createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")

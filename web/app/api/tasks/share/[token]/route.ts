@@ -21,8 +21,10 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
   try {
     const data = await runWithShareToken(token, async (tx) => {
       // 只凭 token 读 tasks 标量列
+      // F5增强：先匹配 shareSlug（自定义路径），再匹配 shareToken（随机 token）
+      // RLS 策略 p_tasks_share_select 已放行 task_share_token 或 share_slug 与 GUC 相等的行
       const task = await tx.task.findFirst({
-        where: { shareToken: token },
+        where: { OR: [{ shareSlug: token }, { shareToken: token }] },
         select: {
           id: true,
           title: true,

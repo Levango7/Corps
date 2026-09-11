@@ -634,7 +634,18 @@
     "densityCompact": "紧凑",
     "densityComfortable": "舒适",
     "densityDesc": "调整界面间距和圆角大小",
-    "loadFailed": "加载失败"
+    "loadFailed": "加载失败",
+    "accentColor": "强调色",
+    "accentColorDesc": "选择应用的强调色主题",
+    "accentBlue": "蓝色",
+    "accentGreen": "绿色",
+    "accentPurple": "紫色",
+    "accentOrange": "橙色",
+    "motion": "动画效果",
+    "motionDesc": "调整界面动画的强度",
+    "motionReduced": "减少动画",
+    "motionStandard": "标准",
+    "motionEnhanced": "增强"
   },
   "label": {
     "title": "标签",
@@ -948,7 +959,10 @@
     "actionUpdated": "已更新 {count} 个任务",
     "actionRemoved": "已移除 {count} 个行动项",
     "syncSuccess": "同步成功",
-    "syncFailed": "同步失败"
+    "syncFailed": "同步失败",
+    "insertTemplate": "插入模板",
+    "templateMenuOpen": "选择行动计划模板",
+    "overdueNotification": "行动项已逾期"
   },
   "role": {
     "owner": "拥有者",
@@ -1078,7 +1092,11 @@
     "shareExpiredTitle": "链接已过期",
     "shareExpiredHint": "此分享链接已过期，请联系作者获取新链接。",
     "sharePasswordRequired": "此文档已设置密码保护，请输入密码后继续。",
-    "shareExpired": "此分享链接已过期。"
+    "shareExpired": "此分享链接已过期。",
+    "customSlug": "自定义路径",
+    "customSlugPlaceholder": "my-weekly-review",
+    "customSlugHint": "3-50字符，只允许小写字母、数字、连字符",
+    "customSlugPrefix": "/s/"
   },
   "editor": {
     "bold": "粗体",

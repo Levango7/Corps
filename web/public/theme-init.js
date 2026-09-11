@@ -13,4 +13,20 @@
       document.documentElement.setAttribute("data-density", dn);
     }
   } catch (e) {}
+
+  // 强调色偏好（F6 增强）：首帧前同步应用，避免蓝色闪烁
+  try {
+    var ac = localStorage.getItem("corps_accent_color");
+    if (ac === "blue" || ac === "green" || ac === "purple" || ac === "orange") {
+      document.documentElement.setAttribute("data-accent-color", ac);
+    }
+  } catch (e) {}
+
+  // 动画效果偏好（F6 增强）：首帧前同步应用
+  try {
+    var mo = localStorage.getItem("corps_motion");
+    if (mo === "reduced" || mo === "standard" || mo === "enhanced") {
+      document.documentElement.setAttribute("data-motion", mo);
+    }
+  } catch (e) {}
 })();
