@@ -1565,7 +1565,7 @@ BEGIN
     'subscriptions','notifications','workspaces','invitations','analytics_events',
     'labels','milestones','messages','message_attachments','task_labels',
     'chat_presences','message_reads','calendar_connections','task_calendar_events',
-    'documents'
+    'documents','temporary_grants'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -1847,3 +1847,30 @@ CREATE POLICY p_workspaces_update ON workspaces FOR UPDATE
 
 CREATE POLICY p_workspaces_delete ON workspaces FOR DELETE
   USING (owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+-- ─── F2（任务 186）：临时权限授权表 ──────────────────────────────────────────
+-- temporary_grants：读 = 本工作区成员可见 + cron 逃生口（跨工作区扫描过期记录）；
+-- 写（INSERT/UPDATE/DELETE）= 仅本工作区（owner/admin 在应用层校验）；
+-- DELETE 另放行 cron op（过期回收作业删除已处理记录）。
+DROP POLICY IF EXISTS p_temporary_grants_select ON temporary_grants;
+DROP POLICY IF EXISTS p_temporary_grants_insert ON temporary_grants;
+DROP POLICY IF EXISTS p_temporary_grants_update ON temporary_grants;
+DROP POLICY IF EXISTS p_temporary_grants_delete ON temporary_grants;
+
+CREATE POLICY p_temporary_grants_select ON temporary_grants FOR SELECT
+  USING (
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+    OR current_setting('app.auth_op', true) = 'cron'
+  );
+
+CREATE POLICY p_temporary_grants_insert ON temporary_grants FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+CREATE POLICY p_temporary_grants_update ON temporary_grants FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+CREATE POLICY p_temporary_grants_delete ON temporary_grants FOR DELETE
+  USING (
+    workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+    OR current_setting('app.auth_op', true) = 'cron'
+  );

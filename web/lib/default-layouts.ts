@@ -78,3 +78,43 @@ export function isRGLLayout(value: unknown): value is RGLItem[] {
       typeof (item as Record<string, unknown>).h === "number",
   );
 }
+/**
+ * F3 Widget 仪表盘偏好持久化结构（layout JSON 字段复合格式）。
+ *
+ * 为支持 widgetConfigs 持久化且不修改 Prisma schema，layout JSON 字段
+ * 存储此复合对象。向后兼容：旧记录的 layout 字段为 RGLItem[] 数组，
+ * 读取时 isDashboardPrefData 返回 false，回退为 { items, widgetConfigs: {} }。
+ *
+ * - items：react-grid-layout 布局项数组
+ * - widgetConfigs：每个 widget 的配置参数，key = widgetId，value = 配置对象
+ */
+export interface DashboardPrefData {
+  items: RGLItem[];
+  widgetConfigs?: Record<string, Record<string, unknown>>;
+}
+
+/**
+ * 类型守卫：判断 Prisma Json 值是否为 DashboardPrefData 复合格式。
+ * 用于区分新格式（对象）与旧格式（RGLItem[] 数组）。
+ */
+export function isDashboardPrefData(value: unknown): value is DashboardPrefData {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return false;
+  const obj = value as Record<string, unknown>;
+  return Array.isArray(obj.items) && isRGLLayout(obj.items);
+}
+
+/**
+ * 将任意 Prisma Json 值规范化为 DashboardPrefData。
+ * - 旧格式 RGLItem[] → { items, widgetConfigs: {} }
+ * - 新格式 DashboardPrefData → 原样返回（widgetConfigs 缺失补 {}）
+ * - 非法值 → { items: [], widgetConfigs: {} }
+ */
+export function normalizePrefData(value: unknown): DashboardPrefData {
+  if (isDashboardPrefData(value)) {
+    return { items: value.items, widgetConfigs: value.widgetConfigs ?? {} };
+  }
+  if (isRGLLayout(value)) {
+    return { items: value, widgetConfigs: {} };
+  }
+  return { items: [], widgetConfigs: {} };
+}

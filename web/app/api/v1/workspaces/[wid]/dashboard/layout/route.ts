@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
+import type { Prisma } from "@prisma/client";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
-import { getDefaultLayout, isRGLLayout, type RGLItem } from "@/lib/default-layouts";
+import { getDefaultLayout, type RGLItem } from "@/lib/default-layouts";
+import { putLayoutSchema, extractPref, buildPrefData } from "@/lib/dashboard-layout-helpers";
 import { z } from "zod";
 
 /**
@@ -13,30 +15,19 @@ import { z } from "zod";
  * PUT  /api/v1/workspaces/:wid/dashboard/layout
  *   → upsert 布局（userId + workspaceId 唯一）
  *
+ * 导出/导入端点位于子路由：
+ * GET  /api/v1/workspaces/:wid/dashboard/layout/export
+ * POST /api/v1/workspaces/:wid/dashboard/layout/import
+ *
  * 认证：getWorkspaceContext 校验成员身份 + 注入 RLS。
- * 数据：UserDashboardPref 表（F3），layout 字段为 react-grid-layout JSON。
+ * 数据：UserDashboardPref 表（F3），layout 字段为复合格式
+ *      { items: RGLItem[], widgetConfigs: Record<string, Record<string, unknown>> }。
+ *      向后兼容旧数组格式（读取时自动迁移）。
  */
-
-/** PUT body 校验：layout 为 RGLItem 数组 */
-const layoutItemSchema = z.object({
-  i: z.string().min(1),
-  x: z.number().int().min(0),
-  y: z.number().int().min(0),
-  w: z.number().int().min(1),
-  h: z.number().int().min(1),
-  minW: z.number().int().min(1).optional(),
-  minH: z.number().int().min(1).optional(),
-});
-
-const putLayoutSchema = z.object({
-  layout: z.array(layoutItemSchema).min(1),
-  /** 可选响应式断点标签（对齐 openapi DashboardLayoutUpdateRequest；当前未持久化，仅回显） */
-  breakpoint: z.string().optional(),
-});
 
 /**
  * GET /api/v1/workspaces/:wid/dashboard/layout
- * 响应：{ code: 200, data: { layout: RGLItem[] } }
+ * 响应：{ code: 200, data: { layout: RGLItem[], widgetConfigs: Record<...>, breakpoint: "lg" } }
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -60,11 +51,21 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
 
     // 无记录 → 角色默认布局；有记录 → 校验 JSON 形态后返回（防历史脏数据）
-    const layout: RGLItem[] = pref && isRGLLayout(pref.layout)
-      ? (pref.layout as RGLItem[])
-      : getDefaultLayout(ctx.member.role);
+    let layout: RGLItem[];
+    let widgetConfigs: Record<string, Record<string, unknown>>;
+    if (pref) {
+      const extracted = extractPref(pref.layout);
+      layout = extracted.layout.length > 0 ? extracted.layout : getDefaultLayout(ctx.member.role);
+      widgetConfigs = extracted.widgetConfigs;
+    } else {
+      layout = getDefaultLayout(ctx.member.role);
+      widgetConfigs = {};
+    }
 
-    return NextResponse.json({ code: 200, data: { layout, breakpoint: "lg" } });
+    return NextResponse.json({
+      code: 200,
+      data: { layout, widgetConfigs, breakpoint: "lg" },
+    });
   } catch (error) {
     console.error("[GET dashboard/layout] error:", error);
     return handlePrismaError(error, req);
@@ -73,8 +74,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
 /**
  * PUT /api/v1/workspaces/:wid/dashboard/layout
- * body: { layout: [{ i: "task-stats", x: 0, y: 0, w: 1, h: 1 }, ...] }
- * 响应：{ code: 200, data: { layout: RGLItem[] } }
+ * body: { layout: [{ i: "task-stats", x: 0, y: 0, w: 1, h: 1 }, ...], widgetConfigs?: {...} }
+ * 响应：{ code: 200, data: { layout: RGLItem[], widgetConfigs: Record<...> } }
+ *
+ * 持久化采用复合格式 { items, widgetConfigs }，向后兼容旧读取逻辑。
  */
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -90,6 +93,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid:
     const validated = putLayoutSchema.parse(body);
 
     const userId = ctx.payload.sub;
+    // 复合持久化结构：{ items, widgetConfigs }
+    // cast 为 Prisma.InputJsonValue：接口缺少索引签名，运行时为合法 JSON 对象
+    const prefData = buildPrefData(validated.layout, validated.widgetConfigs) as unknown as Prisma.InputJsonValue;
     const saved = await runWithWorkspace(
       wid,
       (tx) =>
@@ -98,20 +104,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid:
           create: {
             userId,
             workspaceId: wid,
-            layout: validated.layout,
+            layout: prefData,
           },
           update: {
-            layout: validated.layout,
+            layout: prefData,
           },
           select: { layout: true },
         }),
       userId,
     );
 
+    const extracted = extractPref(saved.layout);
     return NextResponse.json({
       code: 200,
       data: {
-        layout: saved.layout as unknown as RGLItem[],
+        layout: extracted.layout,
+        widgetConfigs: extracted.widgetConfigs,
         breakpoint: validated.breakpoint ?? "lg",
       },
     });

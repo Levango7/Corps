@@ -322,6 +322,20 @@ export const API_MESSAGES = {
     zh: "数据库不可达",
     en: "Database unreachable",
   },
+
+  /* ── 临时权限授权（F2 任务 186）── */
+  cannotGrantSelf: {
+    zh: "不能为自己授予临时授权",
+    en: "You cannot grant temporary permission to yourself",
+  },
+  tempRoleSameAsCurrent: {
+    zh: "临时角色与当前角色相同，无需授权",
+    en: "The temporary role is the same as the current role; no grant needed",
+  },
+  tempGrantNotFound: {
+    zh: "临时授权不存在",
+    en: "Temporary grant not found",
+  },
 } as const;
 
 /**

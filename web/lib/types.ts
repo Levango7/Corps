@@ -184,3 +184,18 @@ export interface Milestone {
   createdAt?: string;
   updatedAt?: string;
 }
+// ─── 临时权限授权（F2 任务 186）──
+
+/** 临时授权（限时角色提升，到期自动回收） */
+export interface TemporaryGrant {
+  id: string;
+  userId: string;
+  workspaceId: string;
+  tempRole: Role;
+  originalRole: Role;
+  expiresAt: string;
+  reason: string | null;
+  createdAt: string;
+  /** 关联用户摘要（GET 列表接口返回） */
+  user?: Person;
+}

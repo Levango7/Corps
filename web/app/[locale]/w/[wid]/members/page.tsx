@@ -14,9 +14,9 @@
 
 import { use, useCallback, useEffect, useState } from "react";
 import { Link } from "@/lib/i18n-navigation";
-import { UserPlus, Trash2, Users, CheckCircle2, Link2 } from "lucide-react";
+import { UserPlus, Trash2, Users, CheckCircle2, Link2, Clock, X } from "lucide-react";
 import { api } from "@/lib/api";
-import type { Member, Role } from "@/lib/types";
+import type { Member, Role, TemporaryGrant } from "@/lib/types";
 import { ROLE_META } from "@/lib/task-meta";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
@@ -26,6 +26,30 @@ interface WorkspaceMeta {
   seatLimit: number;
   memberCount: number;
   role: Role;
+}
+
+/** 临时授权持续时间选项（小时） */
+const DURATION_OPTIONS: { label: string; hours: number }[] = [
+  { label: "1 小时", hours: 1 },
+  { label: "4 小时", hours: 4 },
+  { label: "8 小时", hours: 8 },
+  { label: "24 小时", hours: 24 },
+  { label: "48 小时", hours: 48 },
+  { label: "7 天", hours: 168 },
+];
+
+/** 格式化到期时间（相对时间 + 绝对时间） */
+function formatExpiry(expiresAt: string): string {
+  const now = Date.now();
+  const expiry = new Date(expiresAt).getTime();
+  const diffMs = expiry - now;
+  if (diffMs <= 0) return "已过期";
+  const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
+  const diffDays = Math.floor(diffHours / 24);
+  if (diffDays > 0) return `${diffDays} 天后到期`;
+  if (diffHours > 0) return `${diffHours} 小时后到期`;
+  const diffMinutes = Math.floor(diffMs / (60 * 1000));
+  return `${diffMinutes} 分钟后到期`;
 }
 
 function Avatar({ m }: { m: Member }) {
@@ -52,6 +76,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const [inviteLink, setInviteLink] = useState("");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
+  /** 工作区临时授权列表（F2 任务 186） */
+  const [tempGrants, setTempGrants] = useState<TemporaryGrant[]>([]);
+  /** 临时授权模态框目标用户（null=关闭） */
+  const [grantModalTarget, setGrantModalTarget] = useState<Member | null>(null);
 
   const load = useCallback(async () => {
     try {
@@ -61,12 +89,25 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       ]);
       setMembers(list.items);
       setMeta(ws);
+      // 加载临时授权列表（仅 owner/admin 可访问；非管理角色静默跳过）
+      if (["owner", "admin"].includes(ws.role)) {
+        try {
+          // 路径 userId 占位用当前用户（实际后端返回工作区全部授权）
+          const grantsRes = await api<{ items: TemporaryGrant[]; total: number }>(
+            `/api/v1/workspaces/${wid}/members/${list.items[0]?.id ?? "00000000-0000-0000-0000-000000000000"}/temporary-grants`,
+          );
+          setTempGrants(grantsRes.items);
+        } catch {
+          // 临时授权加载失败不阻断主流程
+          setTempGrants([]);
+        }
+      }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
-  }, [wid]);
+  }, [wid, t]);
 
   useEffect(() => {
     load();
@@ -186,6 +227,52 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const seatsTotal = meta?.seatLimit ?? 0;
   const seatsFull = seatsTotal > 0 && seatsUsed >= seatsTotal;
   const onlySelf = members.length <= 1 && members.some((m) => m.isSelf);
+
+  /** 授予临时授权 */
+  async function grantTemporaryRole(
+    target: Member,
+    tempRole: "admin" | "member",
+    durationHours: number,
+    reason: string,
+  ) {
+    setError("");
+    setBusy(true);
+    try {
+      await api(
+        `/api/v1/workspaces/${wid}/members/${target.id}/temporary-grants`,
+        {
+          method: "POST",
+          body: JSON.stringify({ tempRole, durationHours, reason: reason || undefined }),
+        },
+      );
+      setGrantModalTarget(null);
+      toast("success", "临时授权已授予");
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "临时授权失败";
+      setError(msg);
+      toast("error", msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  /** 撤销临时授权 */
+  async function revokeTemporaryRole(userId: string) {
+    setError("");
+    try {
+      await api(
+        `/api/v1/workspaces/${wid}/members/${userId}/temporary-grants`,
+        { method: "DELETE" },
+      );
+      toast("success", "临时授权已撤销");
+      await load();
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "撤销失败";
+      setError(msg);
+      toast("error", msg);
+    }
+  }
 
   return (
     <div className="mx-auto max-w-[var(--container-max)]">
@@ -359,6 +446,21 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           canManage={canManage}
           onChangeRole={changeRole}
           onRemove={remove}
+          tempGrants={tempGrants}
+          onGrantTempRole={(m) => setGrantModalTarget(m)}
+          onRevokeTempRole={revokeTemporaryRole}
+        />
+      )}
+
+      {/* 临时授权模态框 */}
+      {grantModalTarget && (
+        <TemporaryGrantModal
+          target={grantModalTarget}
+          existingGrant={tempGrants.find((g) => g.userId === grantModalTarget.id) ?? null}
+          busy={busy}
+          onClose={() => setGrantModalTarget(null)}
+          onConfirm={grantTemporaryRole}
+          onRevoke={() => revokeTemporaryRole(grantModalTarget.id)}
         />
       )}
 
@@ -374,9 +476,20 @@ interface MemberListProps {
   canManage: boolean;
   onChangeRole: (uid: string, role: Role) => Promise<void>;
   onRemove: (uid: string, label: string) => Promise<void>;
+  tempGrants: TemporaryGrant[];
+  onGrantTempRole: (m: Member) => void;
+  onRevokeTempRole: (userId: string) => Promise<void>;
 }
 
-function MemberList({ members, canManage, onChangeRole, onRemove }: MemberListProps) {
+function MemberList({
+  members,
+  canManage,
+  onChangeRole,
+  onRemove,
+  tempGrants,
+  onGrantTempRole,
+  onRevokeTempRole,
+}: MemberListProps) {
   return (
     <>
       {/* ≥ md：行布局 */}
@@ -389,6 +502,9 @@ function MemberList({ members, canManage, onChangeRole, onRemove }: MemberListPr
             onChangeRole={onChangeRole}
             onRemove={onRemove}
             layout="row"
+            tempGrant={tempGrants.find((g) => g.userId === m.id) ?? null}
+            onGrantTempRole={onGrantTempRole}
+            onRevokeTempRole={onRevokeTempRole}
           />
         ))}
       </div>
@@ -406,6 +522,9 @@ function MemberList({ members, canManage, onChangeRole, onRemove }: MemberListPr
               onChangeRole={onChangeRole}
               onRemove={onRemove}
               layout="card"
+              tempGrant={tempGrants.find((g) => g.userId === m.id) ?? null}
+              onGrantTempRole={onGrantTempRole}
+              onRevokeTempRole={onRevokeTempRole}
             />
           </div>
         ))}
@@ -420,10 +539,22 @@ interface MemberRowProps {
   onChangeRole: (uid: string, role: Role) => Promise<void>;
   onRemove: (uid: string, label: string) => Promise<void>;
   layout: "row" | "card";
+  tempGrant: TemporaryGrant | null;
+  onGrantTempRole: (m: Member) => void;
+  onRevokeTempRole: (userId: string) => Promise<void>;
 }
 
 /** 单个成员行/卡片：共用渲染，layout 控制排列。 */
-function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowProps) {
+function MemberRow({
+  m,
+  canManage,
+  onChangeRole,
+  onRemove,
+  layout,
+  tempGrant,
+  onGrantTempRole,
+  onRevokeTempRole,
+}: MemberRowProps) {
   const meta = ROLE_META[m.role];
   const t = useTranslations("members");
   const tRole = useTranslations("role");
@@ -438,6 +569,9 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
   const [confirming, setConfirming] = useState(false);
   // Viewer 角色提示：选中 viewer 时在角色选择下方显示只读说明
   const showViewerHint = m.role === "viewer";
+  // 临时授权是否有效（未过期）
+  const tempGrantActive =
+    tempGrant && new Date(tempGrant.expiresAt).getTime() > Date.now();
 
   if (layout === "row") {
     return (
@@ -453,8 +587,23 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
                 {t("you")}
               </span>
             )}
+            {/* 临时授权徽章：显示临时角色 + 到期时间 */}
+            {tempGrantActive && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warn)_15%,transparent)] text-[length:var(--text-xs)] text-[var(--warn-fg)]"
+                title={`临时 ${tempGrant!.tempRole} · ${formatExpiry(tempGrant!.expiresAt)}`}
+              >
+                <Clock size={10} />
+                临时{tempGrant!.tempRole === "admin" ? "管理员" : "成员"}
+              </span>
+            )}
           </div>
-          <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">{m.email}</div>
+          <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
+            {m.email}
+            {tempGrantActive && (
+              <span className="ml-2 text-[var(--meta)]">· {formatExpiry(tempGrant!.expiresAt)}</span>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-1">
           {editable ? (
@@ -472,6 +621,28 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
               <Icon size={16} className="text-[var(--muted)]" />
               {tRole(meta.labelKey)}
             </span>
+          )}
+          {/* 临时授权按钮：仅 owner/admin 可见，且不能对 owner/自己操作 */}
+          {editable && (
+            <button
+              onClick={() => onGrantTempRole(m)}
+              className="p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--warn-fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              aria-label="临时授权"
+              title={tempGrantActive ? "管理临时授权" : "临时授权"}
+            >
+              <Clock size={16} />
+            </button>
+          )}
+          {/* 撤销临时授权按钮：仅有有效临时授权时显示 */}
+          {editable && tempGrantActive && (
+            <button
+              onClick={() => onRevokeTempRole(m.id)}
+              className="p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              aria-label="撤销临时授权"
+              title="撤销临时授权"
+            >
+              <X size={16} />
+            </button>
           )}
           {editable && (
             <button
@@ -521,6 +692,16 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
                 {t("you")}
               </span>
             )}
+            {/* 临时授权徽章（card 布局） */}
+            {tempGrantActive && (
+              <span
+                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warn)_15%,transparent)] text-[length:var(--text-xs)] text-[var(--warn-fg)]"
+                title={`临时 ${tempGrant!.tempRole} · ${formatExpiry(tempGrant!.expiresAt)}`}
+              >
+                <Clock size={10} />
+                临时{tempGrant!.tempRole === "admin" ? "管理员" : "成员"}
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-2 mt-0.5">
             <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
@@ -533,6 +714,11 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
               </span>
             )}
           </div>
+          {tempGrantActive && (
+            <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
+              {formatExpiry(tempGrant!.expiresAt)}
+            </div>
+          )}
         </div>
       </div>
       {editable && (
@@ -555,6 +741,25 @@ function MemberRow({ m, canManage, onChangeRole, onRemove, layout }: MemberRowPr
               {t("ownerNotEditable")}
             </span>
           )}
+          {/* 临时授权按钮（card 布局） */}
+          <div className="flex gap-2">
+            <button
+              onClick={() => onGrantTempRole(m)}
+              className="flex-1 flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            >
+              <Clock size={14} />
+              <span>{tempGrantActive ? "管理临时授权" : "临时授权"}</span>
+            </button>
+            {tempGrantActive && (
+              <button
+                onClick={() => onRevokeTempRole(m.id)}
+                className="flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--meta)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              >
+                <X size={14} />
+                <span>撤销</span>
+              </button>
+            )}
+          </div>
           <button
             onClick={() => {
               if (confirming) {
@@ -616,5 +821,158 @@ function MemberSkeleton() {
         ))}
       </div>
     </>
+  );
+}
+// ─── 临时授权模态框（F2 任务 186）─────────────────────────
+
+interface TemporaryGrantModalProps {
+  target: Member;
+  existingGrant: TemporaryGrant | null;
+  busy: boolean;
+  onClose: () => void;
+  onConfirm: (
+    target: Member,
+    tempRole: "admin" | "member",
+    durationHours: number,
+    reason: string,
+  ) => Promise<void>;
+  onRevoke: () => Promise<void>;
+}
+
+function TemporaryGrantModal({
+  target,
+  existingGrant,
+  busy,
+  onClose,
+  onConfirm,
+  onRevoke,
+}: TemporaryGrantModalProps) {
+  const [tempRole, setTempRole] = useState<"admin" | "member">(
+    existingGrant?.tempRole === "admin" ? "admin" : "admin",
+  );
+  const [durationHours, setDurationHours] = useState(24);
+  const [reason, setReason] = useState(existingGrant?.reason ?? "");
+  const existingActive =
+    existingGrant && new Date(existingGrant.expiresAt).getTime() > Date.now();
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--fg)_40%,transparent)] p-4"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-5"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="flex items-center gap-2 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+            <Clock size={18} className="text-[var(--warn-fg)]" />
+            临时授权
+          </h3>
+          <button
+            onClick={onClose}
+            className="p-1 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            aria-label="关闭"
+          >
+            <X size={18} />
+          </button>
+        </div>
+
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-4">
+          为 <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{target.name || target.email}</span> 授予限时权限，到期后自动恢复原角色。
+        </p>
+
+        {/* 当前授权状态 */}
+        {existingActive && (
+          <div className="mb-4 px-3 py-2 rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] border border-[color-mix(in_srgb,var(--warn)_20%,transparent)]">
+            <div className="text-[length:var(--text-sm)] text-[var(--warn-fg)] font-[weight:var(--weight-medium)]">
+              当前授权：临时{existingGrant!.tempRole === "admin" ? "管理员" : "成员"}
+            </div>
+            <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
+              {formatExpiry(existingGrant!.expiresAt)}
+              {existingGrant!.reason && ` · ${existingGrant!.reason}`}
+            </div>
+            <button
+              onClick={onRevoke}
+              disabled={busy}
+              className="mt-2 h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[length:var(--text-xs)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            >
+              <X size={12} />
+              立即撤销
+            </button>
+          </div>
+        )}
+
+        {/* 授权表单 */}
+        <div className="space-y-3">
+          <div>
+            <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
+              临时角色
+            </label>
+            <select
+              value={tempRole}
+              onChange={(e) => setTempRole(e.target.value as "admin" | "member")}
+              className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            >
+              <option value="admin">临时管理员</option>
+              <option value="member">临时成员</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
+              持续时间
+            </label>
+            <div className="grid grid-cols-3 gap-2">
+              {DURATION_OPTIONS.map((opt) => (
+                <button
+                  key={opt.hours}
+                  type="button"
+                  onClick={() => setDurationHours(opt.hours)}
+                  className={`h-9 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+                    durationHours === opt.hours
+                      ? "bg-[var(--accent)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)]"
+                      : "border border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
+              原因（可选）
+            </label>
+            <input
+              type="text"
+              value={reason}
+              onChange={(e) => setReason(e.target.value)}
+              maxLength={500}
+              placeholder="如：项目紧急支援"
+              className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 placeholder:text-[var(--meta)]"
+            />
+          </div>
+        </div>
+
+        <div className="mt-5 flex items-center justify-end gap-2">
+          <button
+            onClick={onClose}
+            disabled={busy}
+            className="h-9 px-4 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
+            取消
+          </button>
+          <button
+            onClick={() => onConfirm(target, tempRole, durationHours, reason)}
+            disabled={busy}
+            className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
+            {busy ? "授权中..." : existingActive ? "更新授权" : "授予授权"}
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }

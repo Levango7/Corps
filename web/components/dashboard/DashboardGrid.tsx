@@ -14,10 +14,11 @@
  *  - 编辑模式切换：可拖拽、缩放、删除；非编辑模式 Widget 固定
  *  - 移动端：禁用拖拽（isDraggable=false + cols=1 纵向堆叠）
  *  - 按 layout 项渲染对应 Widget 组件（每个 Widget 独立加载数据）
- *  - 通过 forwardRef 暴露 addWidget / getLayoutIds 命令式 API
+ *  - 通过 forwardRef 暴露 addWidget / getLayoutIds / exportLayout / importLayout 命令式 API
+ *  - 管理 widgetConfigs 状态，配置变更时持久化到 layout API
  *
  * 数据流：
- *  - 布局：本组件统一管理，编辑后 PUT 持久化
+ *  - 布局 + widgetConfigs：本组件统一管理，编辑后 PUT 持久化（复合格式 { items, widgetConfigs }）
  *  - Widget 数据：各 Widget 内部独立 fetch /dashboard/widgets/:widgetId
  *
  * 经验来源：
@@ -44,6 +45,7 @@ import {
 } from "./default-layouts";
 import WidgetCard from "./WidgetCard";
 import { getWidgetComponent, getWidgetIcon, getWidgetTitleKey } from "./widgets";
+import type { WidgetConfig } from "./WidgetConfigPanel";
 
 // react-grid-layout v2 的原生 API 与 v1 完全不同（gridConfig/dragConfig 等配置对象）。
 // 使用 legacy 导入兼容 v1 扁平 props + WidthProvider HOC 自动测量容器宽度。
@@ -65,12 +67,27 @@ const ROW_HEIGHT = 80;
 /** 移动端断点名称 */
 type Bp = "lg" | "md" | "sm";
 
+/** Widget 配置映射：widgetId → 配置对象 */
+type WidgetConfigs = Record<string, WidgetConfig>;
+
+/** 导出的布局模板数据结构 */
+export interface LayoutTemplate {
+  layout: RGLItem[];
+  widgetConfigs: WidgetConfigs;
+  name?: string;
+  exportedAt?: string;
+}
+
 /** DashboardGrid 暴露的命令式 API */
 export interface DashboardGridHandle {
   /** 添加 Widget 到布局（追加到末尾） */
   addWidget: (widgetId: string) => void;
   /** 获取当前布局中的 Widget id 列表 */
   getLayoutIds: () => string[];
+  /** 导出当前布局为模板 JSON（GET /layout/export） */
+  exportLayout: () => Promise<LayoutTemplate>;
+  /** 导入布局模板（POST /layout/import），成功后重新加载布局 */
+  importLayout: (data: { layout: RGLItem[]; widgetConfigs?: WidgetConfigs }) => Promise<boolean>;
 }
 
 export interface DashboardGridProps {
@@ -89,6 +106,15 @@ export interface DashboardGridProps {
 /** GET /dashboard/layout 响应数据 */
 interface LayoutResponse {
   layout: RGLItem[];
+  widgetConfigs?: WidgetConfigs;
+}
+
+/** GET /dashboard/layout/export 响应数据 */
+interface ExportResponse {
+  layout: RGLItem[];
+  widgetConfigs: WidgetConfigs;
+  name: string;
+  exportedAt: string;
 }
 
 const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(function DashboardGrid(
@@ -99,6 +125,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
   const tButton = useTranslations("button");
 
   const [layout, setLayout] = useState<RGLItem[]>([]);
+  const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigs>({});
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -115,9 +142,11 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       setError(null);
       const res = await api<LayoutResponse>(`/api/v1/workspaces/${wid}/dashboard/layout`);
       setLayout(res.layout ?? []);
+      setWidgetConfigs(res.widgetConfigs ?? {});
     } catch {
       // 加载失败回退角色默认布局，保证可用
       setLayout(getDefaultLayout(role));
+      setWidgetConfigs({});
       setError(t("loadLayoutFailed"));
     } finally {
       setLoaded(true);
@@ -131,12 +160,12 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
 
   // ─── 保存布局（编辑模式退出时触发） ───
   const saveLayout = useCallback(
-    async (toSave: RGLItem[]) => {
+    async (toSave: RGLItem[], configsToSave: WidgetConfigs) => {
       try {
         setSaving(true);
         await api(`/api/v1/workspaces/${wid}/dashboard/layout`, {
           method: "PUT",
-          body: JSON.stringify({ layout: toSave }),
+          body: JSON.stringify({ layout: toSave, widgetConfigs: configsToSave }),
         });
         dirtyRef.current = false;
       } catch {
@@ -151,9 +180,9 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
   // 编辑模式退出时若有脏数据则保存
   useEffect(() => {
     if (!editing && dirtyRef.current && initializedRef.current && layout.length > 0) {
-      saveLayout(layout);
+      saveLayout(layout, widgetConfigs);
     }
-  }, [editing, layout, saveLayout]);
+  }, [editing, layout, widgetConfigs, saveLayout]);
 
   // ─── 布局变化回调 ───
   // RGL legacy onLayoutChange 签名：(layout: Layout, layouts?: ResponsiveLayouts) => void
@@ -210,14 +239,58 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
     });
   }, []);
 
+  // ─── Widget 配置变更 ───
+  const handleConfigChange = useCallback((widgetId: string, nextConfig: WidgetConfig) => {
+    setWidgetConfigs((prev) => ({ ...prev, [widgetId]: nextConfig }));
+    dirtyRef.current = true;
+  }, []);
+
+  // ─── 导出布局 ───
+  const exportLayout = useCallback(async (): Promise<LayoutTemplate> => {
+    const res = await api<ExportResponse>(
+      `/api/v1/workspaces/${wid}/dashboard/layout/export`,
+    );
+    return {
+      layout: res.layout,
+      widgetConfigs: res.widgetConfigs ?? {},
+      name: res.name,
+      exportedAt: res.exportedAt,
+    };
+  }, [wid]);
+
+  // ─── 导入布局 ───
+  const importLayout = useCallback(
+    async (data: { layout: RGLItem[]; widgetConfigs?: WidgetConfigs }): Promise<boolean> => {
+      try {
+        setError(null);
+        await api(`/api/v1/workspaces/${wid}/dashboard/layout/import`, {
+          method: "POST",
+          body: JSON.stringify({
+            layout: data.layout,
+            widgetConfigs: data.widgetConfigs ?? {},
+          }),
+        });
+        // 导入成功后重新加载布局
+        await loadLayout();
+        return true;
+      } catch {
+        setError(t("saveLayoutFailed"));
+        return false;
+      }
+    },
+    [wid, loadLayout, t],
+  );
+
   // ─── 命令式 API ───
   useImperativeHandle(
     ref,
     () => ({
       addWidget,
       getLayoutIds: () => layout.map((item) => item.i),
+      exportLayout,
+      importLayout,
     }),
-    [addWidget, layout],
+    [addWidget, layout, exportLayout, importLayout],
   );
 
   // ─── 移动端：禁用拖拽 + 1 列纵向堆叠 ───
@@ -287,6 +360,9 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
                 icon={WidgetIcon}
                 editing={editing}
                 onRemove={() => handleRemove(item.i)}
+                widgetId={item.i}
+                config={widgetConfigs[item.i]}
+                onConfigChange={(next) => handleConfigChange(item.i, next)}
               >
                 <WidgetComp wid={wid} />
               </WidgetCard>

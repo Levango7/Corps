@@ -94,6 +94,8 @@ model User {
   actionItems         DecisionActionItem[]
   // F3: 用户仪表盘布局偏好
   dashboardPrefs      UserDashboardPref[]
+  // F2: 临时权限授权（限时角色提升，到期自动回收）
+  temporaryGrants     TemporaryGrant[]
 
   @@map("users")
 }
@@ -128,6 +130,8 @@ model Workspace {
   memberPermissions MemberPermission[]
   // F3: 用户仪表盘布局偏好
   dashboardPrefs    UserDashboardPref[]
+  // F2: 临时权限授权（限时角色提升，到期自动回收）
+  temporaryGrants   TemporaryGrant[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -816,4 +820,34 @@ model ShareAccessLog {
 
   @@index([entityType, entityId, accessedAt])
   @@map("share_access_logs")
+}
+// ─── F2: 临时权限授权 — 限时角色提升，到期自动回收 ───
+// 管理员可为成员授予限时权限（如临时提升为 admin 角色），到期后由
+// /api/cron/check-expired-permissions 定时任务自动恢复原角色并删除授权记录。
+// 同一 (userId, workspaceId) 仅保留一条有效授权（@@unique）。
+// 注意：本表启用 RLS（见 db/rls-activate.sql），成员可读自己工作区的授权，
+// 仅 owner/admin 可写。cron 作业通过 auth_op='cron' 逃生口跨工作区扫描过期记录。
+
+model TemporaryGrant {
+  id           String   @id @default(uuid()) @db.Uuid
+  userId       String   @map("user_id") @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  /// 临时角色（如 "admin"），到期后回退到原角色
+  tempRole     String   @map("temp_role") @db.VarChar(20)
+  /// 原角色（到期后恢复）
+  originalRole String   @map("original_role") @db.VarChar(20)
+  /// 到期时间
+  expiresAt    DateTime @map("expires_at") @db.Timestamptz
+  /// 授予原因（可选）
+  reason       String?  @db.Text
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  // 同一用户在同一工作区仅保留一条临时授权（覆盖语义：重新授权更新现有记录）
+  @@unique([userId, workspaceId])
+  // cron 作业按工作区 + 过期时间扫描高效索引
+  @@index([workspaceId, expiresAt])
+  @@map("temporary_grants")
 }

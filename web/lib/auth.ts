@@ -75,6 +75,11 @@ export async function getWorkspaceContext(
   payload: JWTPayload;
   member: { role: string; workspaceId: string };
   permissions?: Map<string, string>;
+  temporaryGrant?: {
+    tempRole: string;
+    originalRole: string;
+    expiresAt: Date;
+  } | null;
 } | null> {
   const payload = await authenticate(req);
   if (!payload) return null;
@@ -131,7 +136,35 @@ export async function getWorkspaceContext(
     }
   }
 
-  return { payload, member, permissions };
+  // F2（任务 186）：加载临时授权（若存在）。临时授权对非 owner 角色生效，
+  // 用于限时角色提升（如临时 admin）。owner 不需要临时授权（已全权）。
+  // 查询走 RLS 事务，按 (userId, workspaceId) 唯一索引最多返回一条。
+  // 过期判定在 permissions.ts 的 checkPermission 中完成（expiresAt > now）。
+  let temporaryGrant: {
+    tempRole: string;
+    originalRole: string;
+    expiresAt: Date;
+  } | null = null;
+  if (member.role !== "owner") {
+    const grant = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.temporaryGrant.findUnique({
+          where: { userId_workspaceId: { userId: payload.sub, workspaceId: wid } },
+          select: { tempRole: true, originalRole: true, expiresAt: true },
+        }),
+      payload.sub,
+    );
+    if (grant) {
+      temporaryGrant = {
+        tempRole: grant.tempRole,
+        originalRole: grant.originalRole,
+        expiresAt: grant.expiresAt,
+      };
+    }
+  }
+
+  return { payload, member, permissions, temporaryGrant };
 }
 
 type Tx = Prisma.TransactionClient;
