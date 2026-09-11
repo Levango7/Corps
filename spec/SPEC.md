@@ -1,7 +1,7 @@
-# Spec - 团队（corps）v0.6.0
+# Spec - 团队（corps）v0.7.0
 
 > 生成日期：2026-08-19
-> 最后更新：2026-09-09（v0.6.0 文档对齐）
+> 最后更新：2026-09-11（v0.7.0 功能对齐，F1-F6 已实现）
 > 基于：PRD v1（许清楚） + 架构文档 v1（高见远） + UIUX 文档 v1（颜好看）
 > 状态：已确认（用户 2026-08-19 拍板 4 项决策）
 > 决策日志：
@@ -32,6 +32,19 @@
 | P1 | 席位计费雏形（Stripe Checkout + Portal + webhook） | 成员数变更同步 subscription quantity | 6.0 |
 | P1 | 全局搜索（任务 + 决策记录，Cmd+K） | 命令栏检索真实语义 | 3.2 |
 | P2 | 数据埋点（注册/激活/留存/转化漏斗） | 核心事件全埋 | 5.0 |
+
+### v0.7.0 新增功能（已实现 2026-09-11）
+
+> 详见 `design/FEATURE-DESIGN-v0.7.md`。Phase 1 commit f9027d1，Phase 2+3 commit 0737513，Review fix commit b9fdbe9。
+
+| 编号 | 功能 | 验收标准摘要 | 优先级 |
+|------|------|-------------|--------|
+| F1 | 决策驱动执行（自动任务分解） | 决策 Markdown 中 `- [ ] @用户 日期 #优先级` 行动项自动解析生成 Task，编辑按 lineIndex diff 同步，userModified 标记防覆盖 | P0 |
+| F2 | Viewer 角色 + 模块权限矩阵 | 4 角色（Owner/Admin/Member/Viewer）+ 8 模块权限矩阵，Admin 可为 Member/Viewer 自定义覆盖（MemberPermission 表） | P0 |
+| F3 | Widget 仪表盘（可拖拽排列） | 工作区首页改为 react-grid-layout 可拖拽 Widget 网格，8 种 Widget 按角色默认布局，布局持久化（UserDashboardPref） | P1 |
+| F4 | Markdown→PDF/HTML 导出 | 纯客户端 `window.print()` + `@media print` 样式，决策记录与文档支持导出预览 | P1 |
+| F5 | 分享增强（有效期+密码+日志） | Document/Task 分享支持 shareExpiresAt + sharePassword(scrypt) + ShareAccessLog 访问日志，密码错误 3 次 IP 锁定 5 分钟 | P1 |
+| F6 | 暖度调节（密度+彩色可视化） | data-density=compact/comfortable 切换 + Widget 图表多色化（燃尽图渐变/热力图多色阶/饼图）+ EmptyState SVG 插画 | P2 |
 
 ## 3. 明确不做（Out-of-Scope — 锁定）
 
@@ -104,6 +117,22 @@
 | POST | /api/v1/workspaces/:wid/billing/portal | Stripe Customer Portal | access+Owner | |
 | GET | /api/v1/workspaces/:wid/billing/status | 计费状态 | access+RBAC | |
 | POST | /api/v1/billing/webhook | Stripe webhook（quantity 同步） | stripe 签名 | |
+
+### v0.7.0 新增端点（11 个，已实现）
+
+| Method | Path | 功能 | 认证 | 说明 |
+|--------|------|------|------|------|
+| POST | /api/v1/workspaces/:wid/tasks/:id/decisions/:did/sync-actions | 决策行动项同步 | access+RBAC | F1：解析 Markdown 行动项→Task |
+| GET | /api/v1/workspaces/:wid/permissions | 权限矩阵查询 | access+Admin | F2：返回角色×模块权限 |
+| PATCH | /api/v1/workspaces/:wid/permissions | 权限覆盖更新 | access+Owner | F2：自定义 Member/Viewer 权限 |
+| GET | /api/v1/workspaces/:wid/dashboard/layout | 仪表盘布局 | access+RBAC | F3：用户布局偏好 |
+| PUT | /api/v1/workspaces/:wid/dashboard/layout | 仪表盘布局保存 | access+RBAC | F3 |
+| GET | /api/v1/workspaces/:wid/dashboard/widgets/:widgetId | 单 Widget 数据 | access+RBAC | F3：按需加载 |
+| PATCH | /api/v1/workspaces/:wid/documents/:id/share | 分享设置更新 | access+RBAC | F5：有效期+密码 |
+| POST | /api/v1/workspaces/:wid/documents/:id/share/verify | 分享密码验证 | 否 | F5 |
+| GET | /api/v1/workspaces/:wid/documents/:id/share/logs | 分享访问日志 | access+Admin | F5 |
+| PATCH | /api/v1/workspaces/:wid/tasks/:id/share | 任务分享设置更新 | access+RBAC | F5 |
+| GET | /api/v1/workspaces/:wid/tasks/:id/share/logs | 任务分享访问日志 | access+Admin | F5 |
 
 ## 6. 数据库表清单（锁定，Phase 2 由架构师产出完整迁移 SQL）
 
@@ -224,6 +253,7 @@ curl -X POST http://localhost:3000/api/v1/workspaces/:wid/members/invite ...
 | 2026-08-29 | 审计修复：IM/日历纳入交付范围（§3）、附件租户隔离（MessageAttachment.workspaceId + RLS + 下载鉴权）、SSE 连接泄漏修复、JWT wid 守卫、verify-production.sh 重写、i18n 补全（attachmentFallback 等） | 2026-08-29 全仓审查发现 P0/P1 缺陷 | Spec §3/§13 + openapi + db/rls-activate.sql |
 | 2026-08-24 | 文档对齐实际实现：密码哈希 argon2id → scrypt（与 Better Auth 默认一致）；移动端 App "何时考虑" P1 → v2 晚期（与 ROADMAP 一致）；定价 Pro 层 31+人 → 11–30人高级功能档（与产品定位 5–30人一致）；DESIGN.md 日历标注为 v2 占位（与 SPEC §3 一致） | Task #72 文档一致性修复 | SPEC.md + pricing-strategy.md + DESIGN.md + 审计/安全/竞品文档 |
 | 2026-09-09 | v0.6.0 文档对齐：版本号同步 package.json（next 16.3.3 / react 19.2.8 / tailwind 4.3.3 / better-auth 1.7.2）；部署方案更新为 GHCR + Docker；§7 页面清单补齐已落地页面 | 五维度审查发现文档与实现版本号偏差 | SPEC.md 全文 |
+| 2026-09-11 | v0.7.0 功能落地：F1 决策驱动执行 + F2 Viewer/权限矩阵 + F3 Widget 仪表盘 + F4 Markdown 导出 + F5 分享增强 + F6 暖度调节；新增 11 个 API 端点（§5） | FEATURE-DESIGN-v0.7.md 设计→实现→审查闭环 | SPEC §2/§5 + openapi.yaml + db schema + web/app + web/components |
 
 ---
 

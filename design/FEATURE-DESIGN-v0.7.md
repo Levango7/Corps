@@ -1,28 +1,30 @@
 # corps v0.7.0 功能设计方案（完善版）
 
 > 日期：2026-09-11
-> 状态：待实现
+> 状态：✅ 已实现（2026-09-11）
+> 实现日期：2026-09-11
+> Commit 引用：Phase 1 = f9027d1，Phase 2+3 = 0737513，Review fix = b9fdbe9
 > 基于：v0.6.0 现有架构 + 产品设计审视 + 代码级可行性验证
-> 目标：75分→90分
+> 目标：75分→90分（已达成）
 
 ---
 
 ## 功能清单与可行性评估
 
-| # | 功能 | 可行性 | 预估耗时 | 优先级 | 关键代码依据 |
-|---|------|--------|---------|--------|-------------|
-| F1 | 决策驱动执行（自动任务分解） | ⭐⭐⭐⭐⭐ | 1.5周 | P0 | Decision 模型已有版本留痕+FOR UPDATE锁+通知机制 |
-| F2 | Viewer角色 + 模块权限矩阵 | ⭐⭐⭐⭐⭐ | 1周 | P0 | Member.role 是字符串字段，types.ts Role 类型集中定义 |
-| F3 | Widget仪表盘（可拖拽排列） | ⭐⭐⭐⭐ | 1.5周 | P1 | 工作区首页已是 client 组件，analytics SVG 图表可复用 |
-| F4 | Markdown→PDF/HTML导出 | ⭐⭐⭐⭐ | 0.5周 | P1 | DocumentEditor 已有 Download 图标+split 预览 |
-| F5 | 分享增强（有效期+密码+日志） | ⭐⭐⭐⭐⭐ | 0.5周 | P1 | Document/Task 均有 shareToken，runWithShareToken 已实现 |
-| F6 | 暖度调节（密度+彩色可视化） | ⭐⭐⭐⭐ | 1周 | P2 | design-tokens.css 已有 density 参数，settings 已有主题切换模式 |
+| # | 功能 | 可行性 | 预估耗时 | 优先级 | 关键代码依据 | 状态 |
+|---|------|--------|---------|--------|-------------|------|
+| F1 | 决策驱动执行（自动任务分解） | ⭐⭐⭐⭐⭐ | 1.5周 | P0 | Decision 模型已有版本留痕+FOR UPDATE锁+通知机制 | ✅ 已实现 |
+| F2 | Viewer角色 + 模块权限矩阵 | ⭐⭐⭐⭐⭐ | 1周 | P0 | Member.role 是字符串字段，types.ts Role 类型集中定义 | ✅ 已实现 |
+| F3 | Widget仪表盘（可拖拽排列） | ⭐⭐⭐⭐ | 1.5周 | P1 | 工作区首页已是 client 组件，analytics SVG 图表可复用 | ✅ 已实现 |
+| F4 | Markdown→PDF/HTML导出 | ⭐⭐⭐⭐ | 0.5周 | P1 | DocumentEditor 已有 Download 图标+split 预览 | ✅ 已实现 |
+| F5 | 分享增强（有效期+密码+日志） | ⭐⭐⭐⭐⭐ | 0.5周 | P1 | Document/Task 均有 shareToken，runWithShareToken 已实现 | ✅ 已实现 |
+| F6 | 暖度调节（密度+彩色可视化） | ⭐⭐⭐⭐ | 1周 | P2 | design-tokens.css 已有 density 参数，settings 已有主题切换模式 | ✅ 已实现 |
 
 > **已实现跳过**：Markdown实时预览分屏 — DocumentEditor.tsx:65 已有 `split` 模式
 
 ---
 
-## F1：决策驱动执行 — 自动任务分解引擎
+## F1：决策驱动执行 — 自动任务分解引擎 ✅ 已实现（2026-09-11，Phase 1 f9027d1）
 
 ### 1.1 痛点
 
@@ -215,7 +217,7 @@ POST /api/v1/workspaces/:wid/tasks/:id/decisions/:did/sync-actions
 
 ---
 
-## F2：Viewer角色 + 模块权限矩阵
+## F2：Viewer角色 + 模块权限矩阵 ✅ 已实现（2026-09-11，Phase 1 f9027d1）
 
 ### 2.1 痛点
 
@@ -433,7 +435,7 @@ export const ROLE_META: Record<Role, { labelKey: string; icon: LucideIcon }> = {
 
 ---
 
-## F3：Widget 仪表盘 — 可拖拽排列的工作区首页
+## F3：Widget 仪表盘 — 可拖拽排列的工作区首页 ✅ 已实现（2026-09-11，Phase 2 0737513）
 
 ### 3.1 痛点
 
@@ -580,7 +582,7 @@ export const DEFAULT_LAYOUTS: Record<Role, RGLItem[]> = {
 
 ---
 
-## F4：Markdown → PDF/HTML 导出
+## F4：Markdown → PDF/HTML 导出 ✅ 已实现（2026-09-11，Phase 2 0737513）
 
 ### 4.1 痛点
 
@@ -649,7 +651,7 @@ interface ExportPreviewProps {
 
 ---
 
-## F5：分享增强 — 有效期 + 密码 + 访问日志
+## F5：分享增强 — 有效期 + 密码 + 访问日志 ✅ 已实现（2026-09-11，Phase 2 0737513）
 
 ### 5.1 痛点
 
@@ -744,7 +746,7 @@ PATCH /api/v1/workspaces/:wid/documents/:id/share
 
 ---
 
-## F6：暖度调节 — 密度切换 + 彩色可视化 + 空状态插画
+## F6：暖度调节 — 密度切换 + 彩色可视化 + 空状态插画 ✅ 已实现（2026-09-11，Phase 3 0737513）
 
 ### 6.1 痛点
 
@@ -949,3 +951,14 @@ PATCH  /api/v1/workspaces/{wid}/tasks/{id}/share
 POST   /api/v1/workspaces/{wid}/tasks/{id}/share/verify
 GET    /api/v1/workspaces/{wid}/tasks/{id}/share/logs
 ```
+---
+
+## 实现总结（2026-09-11）
+
+| 阶段 | 功能 | Commit | 状态 |
+|------|------|--------|------|
+| Phase 1 | F1 决策驱动执行 + F2 Viewer/权限矩阵 | f9027d1 | ✅ 已实现 |
+| Phase 2+3 | F3 Widget仪表盘 + F4 PDF导出 + F5 分享增强 + F6 暖度调节 | 0737513 | ✅ 已实现 |
+| Review fix | 审查修复（openapi 对齐 + zod 校验 + 枚举 schema） | b9fdbe9 | ✅ 已实现 |
+
+**实现闭环**：设计（本文档）→ 实现（3 阶段）→ 审查（openapi/zod/枚举对齐）→ 修复（b9fdbe9）→ 文档对齐（SPEC.md v0.7.0 + LANDING.md 端点数 59）

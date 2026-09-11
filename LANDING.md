@@ -37,7 +37,7 @@
 | 文件 | 说明 |
 |------|------|
 | `spec/SPEC.md` | MVP规格契约（P0/P1功能、API端点、验收标准） |
-| `api/openapi.yaml` | 48个端点OpenAPI定义 |
+| `api/openapi.yaml` | 59个端点OpenAPI定义 |
 | `db/schema.sql` | 15表DDL+RLS策略（含迁移排序修正） |
 | `docs/decisions/ADR-*.md` | 架构决策记录（6份，含 ADR-006 RLS 信任模型） |
 
@@ -60,7 +60,7 @@ web/
 │   ├── globals.css             # CSS变量（对齐design-tokens）
 │   ├── auth/login/signup/      # 登录注册页
 │   ├── w/[wid]/board/members/settings/  # 工作区页面
-│   └── api/v1/                 # 48个 Route Handler（48 API路径）
+│   └── api/v1/                 # 59个 Route Handler（59 API路径）
 └── README.md
 ```
 
@@ -82,6 +82,14 @@ web/
 ### 协作功能
 - `POST /api/v1/workspaces/:wid/tasks/:id/comments` - 任务评论
 - `GET/POST /api/v1/workspaces/:wid/tasks/:id/decisions` - 决策记录
+
+### v0.7.0 新增功能（2026-09-11 已实现）
+- **F1 决策驱动执行**：决策 Markdown 行动项（`- [ ] @用户 日期 #优先级`）自动解析生成 Task，编辑按行号 diff 同步，userModified 标记防覆盖
+- **F2 Viewer 角色 + 权限矩阵**：4 角色（Owner/Admin/Member/Viewer）× 8 模块权限矩阵，Admin 可自定义覆盖
+- **F3 Widget 仪表盘**：工作区首页改为 react-grid-layout 可拖拽 Widget 网格，8 种 Widget 按角色默认布局
+- **F4 Markdown→PDF/HTML 导出**：纯客户端 `window.print()` + 打印样式，决策记录与文档支持导出
+- **F5 分享增强**：Document/Task 分享支持有效期 + 密码(scrypt) + 访问日志，密码错误锁定
+- **F6 暖度调节**：密度切换（compact/comfortable）+ Widget 图表多色化 + EmptyState SVG 插画
 
 ---
 
