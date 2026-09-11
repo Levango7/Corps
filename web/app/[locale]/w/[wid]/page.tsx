@@ -1,383 +1,173 @@
 "use client";
 
-import { use, useCallback, useEffect, useState } from "react";
-import { Link } from "@/lib/i18n-navigation";
-import {
-  Plus,
-  CheckCircle2,
-  CircleDot,
-  Circle,
-  ArrowRight,
-  CalendarClock,
-  Flag,
-  LayoutDashboard,
-} from "lucide-react";
+/**
+ * 工作区首页（仪表盘）· /w/[wid]
+ *
+ * F3 改造：从固定布局改为可拖拽 Widget 仪表盘。
+ *
+ * 结构：
+ *  - 顶部：欢迎语 + 「添加 Widget」按钮 + 「编辑布局」开关
+ *  - 主体：<DashboardGrid>（RGL 容器，内部渲染各 Widget）
+ *  - Onboarding 引导保留（无任务时显示）
+ *
+ * 数据流：
+ *  - workspace context：GET /api/v1/workspaces → 获取当前 workspace 的 role
+ *  - 布局：DashboardGrid 内部管理（GET/PUT /dashboard/layout）
+ *  - Widget 数据：各 Widget 独立 fetch /dashboard/widgets/:widgetId
+ *
+ * 设计：
+ *  - 所有色值走 var(--token)，图标来自 lucide-react
+ *  - i18n 使用 useTranslations hook
+ *  - 响应式：移动端 DashboardGrid 自动切换为单列纵向堆叠
+ */
+
+import { use, useCallback, useEffect, useRef, useState } from "react";
+import { Plus, Pencil, Check, LayoutDashboard } from "lucide-react";
 import { api } from "@/lib/api";
-import { dueMeta as sharedDueMeta, relativeTime as sharedRelativeTime } from "@/lib/format";
-import { STATUS_META } from "@/lib/task-meta";
-import NewTaskDialog from "@/components/NewTaskDialog";
-import Onboarding from "@/components/Onboarding";
-import { TaskListSkeleton, StatCardSkeleton } from "@/components/Skeleton";
 import { useTranslations } from "next-intl";
-
-// 与后端枚举严格一致（tasks 表 CHECK：todo/in_progress/review/done）
-type Status = "todo" | "in_progress" | "review" | "done";
-type Priority = "low" | "medium" | "high" | "urgent";
-
-interface Task {
-  id: string;
-  title: string;
-  status: Status;
-  priority: Priority;
-  dueDate?: string | null;
-  updatedAt?: string;
-  assignee?: { id: string; name: string | null; email: string } | null;
-}
-
-// 概览页三张统计卡：进行中 = in_progress + review 合并计数
-// labelKey 经 t() 渲染（阶段 2-6 i18n）
-
-const STAT_CARDS: {
-  key: "todo" | "doing" | "done";
-  labelKey: "statTodo" | "statDoing" | "statDone";
-  icon: typeof Circle;
-  color: string;
-  match: (s: Status) => boolean;
-}[] = [
-  {
-    key: "todo",
-    labelKey: "statTodo",
-    icon: Circle,
-    color: "var(--status-todo)",
-    match: (s) => s === "todo",
-  },
-  {
-    key: "doing",
-    labelKey: "statDoing",
-    icon: CircleDot,
-    color: "var(--status-doing)",
-    match: (s) => s === "in_progress" || s === "review",
-  },
-  {
-    key: "done",
-    labelKey: "statDone",
-    icon: CheckCircle2,
-    color: "var(--status-done)",
-    match: (s) => s === "done",
-  },
-];
-
-const PRIORITY_COLOR: Record<Priority, string> = {
-  low: "var(--meta)",
-  medium: "var(--muted)",
-  high: "var(--warn)",
-  urgent: "var(--danger)",
-};
-
-// dueMeta / relativeTime：走共享 lib/format.ts（阶段 2-6 i18n，tTime 注入）
+import type { WorkspaceSummary, Role } from "@/lib/types";
+import Onboarding from "@/components/Onboarding";
+import DashboardGrid, { type DashboardGridHandle } from "@/components/dashboard/DashboardGrid";
+import AddWidgetDialog from "@/components/dashboard/AddWidgetDialog";
 
 export default function HomePage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
 
-  const t = useTranslations("task");
-  const tButton = useTranslations("button");
-  const tTime = useTranslations("time");
-  const tErr = useTranslations("error");
+  const t = useTranslations("dashboard");
   const tNav = useTranslations("nav");
-  const tEmpty = useTranslations("empty");
-  const dueMeta = (iso?: string | null) => sharedDueMeta(iso, tTime);
-  const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
-  const [tasks, setTasks] = useState<Task[]>([]);
-  const [loaded, setLoaded] = useState(false);
-  const [showNew, setShowNew] = useState(false);
+  const tTask = useTranslations("task");
+
+  // workspace context（获取 role + 判断 onboarding）
+  const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
+  const [wsLoaded, setWsLoaded] = useState(false);
   // Onboarding 引导：用户完成或跳过后本地标记，避免重复弹窗
   const [onboardingDismissed, setOnboardingDismissed] = useState(false);
-  // "最近更新"列表排序方式：recent 最近更新 / due 即将到期 / priority 优先级
-  const [sortKey, setSortKey] = useState<"recent" | "due" | "priority">("recent");
-  const [error, setError] = useState<string | null>(null);
+  // 任务数（用于 Onboarding 判断是否显示）
+  const [taskCount, setTaskCount] = useState(0);
 
-  const load = useCallback(async () => {
+  // 仪表盘状态
+  const [editing, setEditing] = useState(false);
+  const [addDialogOpen, setAddDialogOpen] = useState(false);
+  /** 当前布局中的 Widget id 列表（用于 AddWidgetDialog 灰显已添加项） */
+  const [layoutIds, setLayoutIds] = useState<string[]>([]);
+  const gridRef = useRef<DashboardGridHandle>(null);
+
+  // ─── 加载 workspace context ───
+  const loadWorkspace = useCallback(async () => {
     try {
-      setError(null);
-      setTasks(await api<Task[]>(`/api/v1/workspaces/${wid}/tasks`));
-    } catch (e) {
-      setError(
-        e instanceof Error && e.message.includes("fetch")
-          ? tErr("networkConnectFailed")
-          : tErr("loadFailed"),
-      );
-      setTasks([]);
+      const wsList = await api<WorkspaceSummary[]>("/api/v1/workspaces");
+      const cur = wsList.find((w) => w.id === wid);
+      if (cur) setWorkspace(cur);
+    } catch {
+      // 忽略：DashboardGrid 会用 viewer 默认布局兜底
     } finally {
-      setLoaded(true);
+      setWsLoaded(true);
     }
   }, [wid]);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    loadWorkspace();
+  }, [loadWorkspace]);
 
-  const counts: Record<"todo" | "doing" | "done", number> = {
-    todo: tasks.filter((t) => STAT_CARDS[0].match(t.status)).length,
-    doing: tasks.filter((t) => STAT_CARDS[1].match(t.status)).length,
-    done: tasks.filter((t) => STAT_CARDS[2].match(t.status)).length,
-  };
+  // ─── 加载任务数（用于 Onboarding 判断） ───
+  useEffect(() => {
+    api<{ items?: unknown[] } | unknown[]>(`/api/v1/workspaces/${wid}/tasks`)
+      .then((res) => {
+        const count = Array.isArray(res) ? res.length : (res as { items?: unknown[] }).items?.length ?? 0;
+        setTaskCount(count);
+      })
+      .catch(() => {
+        /* 忽略：Onboarding 不显示即可 */
+      });
+  }, [wid]);
 
-  const openTasks = tasks.filter((t) => t.status !== "done");
-  const overdue = openTasks.filter((t) => t.dueDate && new Date(t.dueDate) < new Date());
+  const role: Role = workspace?.role ?? "viewer";
 
-  /**
-   * "最近更新"列表排序：
-   * - recent：按 updatedAt 倒序（默认）
-   * - due：按截止日期升序，无截止日期排最后
-   * - priority：urgent > high > medium > low
-   */
-  const PRIORITY_ORDER: Record<Priority, number> = { urgent: 0, high: 1, medium: 2, low: 3 };
-  const sortedRecent = [...tasks].sort((a, b) => {
-    if (sortKey === "due") {
-      const aDue = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
-      const bDue = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
-      return aDue - bDue;
-    }
-    if (sortKey === "priority") {
-      return PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
-    }
-    return (b.updatedAt ?? "").localeCompare(a.updatedAt ?? "");
-  });
-  const recent = sortedRecent.slice(0, 8);
+  // ─── 添加 Widget ───
+  const handleAddWidget = useCallback((widgetId: string) => {
+    gridRef.current?.addWidget(widgetId);
+  }, []);
+
+  // ─── 布局变化回调：更新 layoutIds ───
+  const handleLayoutChange = useCallback((layout: { i: string }[]) => {
+    setLayoutIds(layout.map((item) => item.i));
+  }, []);
 
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
+      {/* 顶部：欢迎语 + 操作区 */}
       <div className="flex items-end justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>
-          <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
+          <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
+            <LayoutDashboard size={20} className="text-[var(--muted)]" />
             {tNav("menu.overview")}
           </h1>
           <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-            {loaded
-              ? openTasks.length === 0
-                ? t("overviewEmpty")
-                : t("overviewProgress", {
-                    open: openTasks.length,
-                    overdue:
-                      overdue.length > 0 ? t("overviewOverduePart", { count: overdue.length }) : "",
-                  })
-              : t("loading")}
+            {t("subtitle")}
           </p>
         </div>
-        <button
-          onClick={() => setShowNew(true)}
-          className="flex items-center gap-2 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] shrink-0 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-        >
-          <Plus size={16} />
-          {t("create")}
-        </button>
-      </div>
-
-      {/* 统计卡片：加载时用骨架，就绪后 3 列网格（< sm 单列） */}
-      {!loaded ? (
-        <StatCardSkeleton />
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] sm:gap-[var(--space-4)] mb-[var(--space-6)]">
-          {STAT_CARDS.map((card) => {
-            const Icon = card.icon;
-            return (
-              <Link
-                key={card.key}
-                href={`/w/${wid}/board`}
-                className="group bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-5 hover:border-[var(--muted)] transition-colors duration-[var(--motion-fast)]"
-              >
-                <div className="flex items-center gap-2">
-                  <Icon size={16} style={{ color: card.color }} />
-                  <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                    {t(card.labelKey)}
-                  </span>
-                  <ArrowRight
-                    size={14}
-                    className="ml-auto text-[var(--meta)] opacity-0 group-hover:opacity-100 transition-opacity duration-[var(--motion-fast)]"
-                  />
-                </div>
-                <div className="mt-2 text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[var(--tracking-display)]">
-                  {counts[card.key]}
-                </div>
-              </Link>
-            );
-          })}
-        </div>
-      )}
-
-      {error && (
-        <div className="mb-4 rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-3 text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
-          <span>{error}</span>
+        <div className="flex items-center gap-2 shrink-0">
+          {/* 编辑布局开关 */}
           <button
-            onClick={() => {
-              setError(null);
-              load();
-            }}
-            className="text-[var(--danger)] underline hover:text-[var(--danger-fg)]"
+            type="button"
+            onClick={() => setEditing((v) => !v)}
+            className={[
+              "flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none",
+              editing
+                ? "bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)]"
+                : "bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]",
+            ].join(" ")}
+            aria-pressed={editing}
           >
-            {tButton("retry")}
+            {editing ? <Check size={15} /> : <Pencil size={15} />}
+            <span className="hidden sm:inline">{editing ? t("exitEdit") : t("editLayout")}</span>
+          </button>
+          {/* 添加 Widget */}
+          <button
+            type="button"
+            onClick={() => setAddDialogOpen(true)}
+            className="flex items-center gap-1.5 h-9 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+          >
+            <Plus size={15} />
+            <span className="hidden sm:inline">{t("addWidgetTitle")}</span>
           </button>
         </div>
-      )}
+      </div>
 
-      {/* 逾期提醒：inline banner，左侧 danger 色条 + 文案，< sm 仅显示计数 */}
-      {loaded && overdue.length > 0 && (
-        <div className="mb-[var(--space-6)] flex items-center gap-2.5 bg-[var(--danger-soft)] border-l-2 border-[var(--danger)] rounded-[var(--radius-md)] px-[var(--space-4)] py-[var(--space-3)] text-[length:var(--text-sm)]">
-          <CalendarClock size={15} className="shrink-0 text-[var(--danger)]" />
-          <span className="shrink-0 font-[weight:var(--weight-medium)] text-[var(--danger-fg)]">
-            {t("overdueCount", { count: overdue.length })}
-          </span>
-          <span className="hidden sm:inline shrink-0 text-[var(--meta)]">·</span>
-          <span className="hidden sm:flex flex-1 min-w-0 items-center gap-0.5 text-[var(--fg-2)] overflow-hidden">
-            {overdue.slice(0, 3).map((t, i) => (
-              <span key={t.id} className="inline-flex min-w-0 items-center">
-                {i > 0 && <span className="text-[var(--meta)] mx-1 shrink-0">、</span>}
-                <Link
-                  href={`/w/${wid}/task/${t.id}`}
-                  className="truncate hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
-                >
-                  {t.title}
-                </Link>
-              </span>
-            ))}
-            {overdue.length > 3 && (
-              <span className="text-[var(--meta)] ml-1 shrink-0">{t("etc")}</span>
-            )}
-          </span>
-          {/* 移动端（< sm）查看全部逾期任务链接 */}
-          <Link
-            href={`/w/${wid}/board`}
-            className="sm:hidden ml-auto text-[var(--accent)] hover:underline"
-          >
-            {t("viewAll")}
-          </Link>
-        </div>
-      )}
-
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)]">
-        <header className="flex items-center justify-between px-4 sm:px-5 py-3.5 border-b border-[var(--border-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-            {t("recentTitle")}
-          </h2>
-          <div className="flex items-center gap-[var(--space-3)]">
-            {/* 排序下拉：最近更新 / 即将到期 / 优先级 */}
-            <select
-              value={sortKey}
-              onChange={(e) => setSortKey(e.target.value as "recent" | "due" | "priority")}
-              aria-label={t("sortAria")}
-              className="text-[length:var(--text-sm)] text-[var(--fg-2)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)] px-2 py-1 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-            >
-              <option value="recent">{t("sortRecent")}</option>
-              <option value="due">{t("sortDue")}</option>
-              <option value="priority">{t("sortPriority")}</option>
-            </select>
-            <Link
-              href={`/w/${wid}/board`}
-              className="flex items-center gap-1 text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] py-1 -my-1 px-1 rounded-[var(--radius-sm)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-            >
-              {t("allTasks")}
-              <ArrowRight size={14} />
-            </Link>
-          </div>
-        </header>
-
-        {!loaded ? (
-          <TaskListSkeleton count={5} />
-        ) : recent.length === 0 ? (
-          <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-            <LayoutDashboard
-              size={48}
-              className="text-[var(--muted)] opacity-40 mb-4"
-              strokeWidth={1.5}
+      {/* 主体：仪表盘网格 */}
+      {!wsLoaded ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" aria-busy="true">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div
+              key={i}
+              className="h-32 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] animate-pulse"
             />
-            <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-              {tEmpty("noTasksYet")}
-            </p>
-            <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-              {tEmpty("noTasksHint")}
-            </p>
-            <button
-              onClick={() => setShowNew(true)}
-              className="mt-5 inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
-            >
-              <Plus size={15} />
-              {t("create")}
-            </button>
-          </div>
-        ) : (
-          <ul className="divide-y divide-[var(--border-soft)]">
-            {recent.map((t) => {
-              const due = dueMeta(t.dueDate);
-              const rel = relativeTime(t.updatedAt);
-              const StatusIcon = STATUS_META[t.status].icon;
-              return (
-                <li key={t.id}>
-                  <Link
-                    href={`/w/${wid}/task/${t.id}`}
-                    className="flex items-center gap-3 px-4 sm:px-5 py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-                  >
-                    <StatusIcon
-                      size={15}
-                      className="shrink-0"
-                      style={{ color: STATUS_META[t.status].color }}
-                    />
-                    <span
-                      className={`flex-1 min-w-0 text-[length:var(--text-base)] truncate ${
-                        t.status === "done"
-                          ? "text-[var(--muted)] line-through decoration-[var(--border)]"
-                          : "text-[var(--fg)]"
-                      }`}
-                    >
-                      {t.title}
-                    </span>
-                    {/* 优先级图标：< sm 隐藏 */}
-                    {(t.priority === "high" || t.priority === "urgent") && (
-                      <Flag
-                        size={13}
-                        className="hidden sm:block shrink-0"
-                        style={{ color: PRIORITY_COLOR[t.priority] }}
-                      />
-                    )}
-                    {due && (
-                      <span
-                        className="shrink-0 text-[length:var(--text-xs)] tabular-nums"
-                        style={{ color: due.color }}
-                      >
-                        {due.text}
-                      </span>
-                    )}
-                    {/* 截止日期与相对时间戳之间的分隔符 */}
-                    {due && rel && <span className="shrink-0 text-[var(--meta)]">·</span>}
-                    {/* 相对时间戳：var(--meta) 色 */}
-                    {rel && (
-                      <span className="shrink-0 text-[length:var(--text-xs)] tabular-nums text-[var(--meta)]">
-                        {rel}
-                      </span>
-                    )}
-                    {/* 负责人头像：< sm 隐藏 */}
-                    {t.assignee && (
-                      <span
-                        className="hidden sm:flex shrink-0 w-6 h-6 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] items-center justify-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]"
-                        title={t.assignee.name || t.assignee.email}
-                      >
-                        {(t.assignee.name || t.assignee.email)[0]?.toUpperCase()}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+          ))}
+        </div>
+      ) : (
+        <DashboardGrid
+          ref={gridRef}
+          wid={wid}
+          role={role}
+          locale=""
+          editing={editing}
+          onLayoutChange={handleLayoutChange}
+        />
+      )}
 
-      <NewTaskDialog wid={wid} open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
+      {/* 添加 Widget 对话框 */}
+      <AddWidgetDialog
+        open={addDialogOpen}
+        addedIds={layoutIds}
+        onAdd={handleAddWidget}
+        onClose={() => setAddDialogOpen(false)}
+      />
 
       {/* Onboarding 引导：仅在工作区无任务且未标记完成时显示 */}
-      {loaded && !onboardingDismissed && (
+      {wsLoaded && taskCount === 0 && !onboardingDismissed && (
         <Onboarding
           wid={wid}
-          taskCount={tasks.length}
+          taskCount={taskCount}
           memberCount={0}
           onDismiss={() => setOnboardingDismissed(true)}
         />

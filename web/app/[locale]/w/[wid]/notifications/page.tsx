@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import EmptyStateBase from "@/components/EmptyState";
 
 import { useTranslations } from "next-intl";
 
@@ -329,44 +330,29 @@ function NotificationListSkeleton({ count = 6 }: { count?: number }) {
   );
 }
 
-/** 空状态：按不同 filter 给不同提示 */
+/**
+ * 空状态：按不同 filter 给不同提示，统一使用 @/components/EmptyState 的 SVG 插画。
+ *  - all      → inbox  + 「暂无通知」+ 引导文案
+ *  - unread   → inbox  + 「没有未读通知」
+ *  - mention  → inbox  + 「没有提及通知」
+ *  - assigned → users  + 「没有分配通知」
+ */
 function EmptyState({ filter }: { filter: Filter }) {
   const t = useTranslations("empty");
   if (filter === "unread") {
-    return (
-      <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-        <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-          {t("noUnreadNotifications")}
-        </p>
-      </div>
-    );
+    return <EmptyStateBase type="inbox" title={t("noUnreadNotifications")} />;
   }
   if (filter === "mention") {
-    return (
-      <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-        <AtSign size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-          {t("noMentionNotifications")}
-        </p>
-      </div>
-    );
+    return <EmptyStateBase type="inbox" title={t("noMentionNotifications")} />;
   }
   if (filter === "assigned") {
-    return (
-      <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-        <UserPlus size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
-          {t("noAssignedNotifications")}
-        </p>
-      </div>
-    );
+    return <EmptyStateBase type="users" title={t("noAssignedNotifications")} />;
   }
   return (
-    <div className="px-5 py-[var(--space-12)] flex flex-col items-center text-center">
-      <Bell size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("noNotifications")}</p>
-      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyHint")}</p>
-    </div>
+    <EmptyStateBase
+      type="inbox"
+      title={t("noNotifications")}
+      description={t("emptyHint")}
+    />
   );
 }

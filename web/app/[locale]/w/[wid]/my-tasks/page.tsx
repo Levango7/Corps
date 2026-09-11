@@ -5,6 +5,7 @@ import { Link } from "@/lib/i18n-navigation";
 import { ClipboardList, ChevronDown, SearchX } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import EmptyStateBase from "@/components/EmptyState";
 import { useTranslations } from "next-intl";
 
 interface Task {
@@ -306,29 +307,22 @@ function TaskCard({ task, href }: { task: Task; href: string }) {
   );
 }
 
-/** 空状态：当前用户没有任何被分配的任务 */
+/** 空状态：当前用户没有任何被分配的任务，统一使用 @/components/EmptyState 的 inbox 插画。 */
 function EmptyState() {
   const tEmpty = useTranslations("empty");
   return (
-    <div className="flex flex-col items-center justify-center text-center px-[var(--space-4)] py-[var(--space-12)]">
-      <ClipboardList size={48} className="text-[var(--muted)] opacity-40 mb-4" strokeWidth={1.5} />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{tEmpty("noTasks")}</p>
-      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-        {tEmpty("noTasksForYou")}
-      </p>
-    </div>
+    <EmptyStateBase
+      type="inbox"
+      title={tEmpty("noTasks")}
+      description={tEmpty("noTasksForYou")}
+    />
   );
 }
 
-/** 筛选后无结果：有任务但当前筛选条件下无匹配 */
+/** 筛选后无结果：有任务但当前筛选条件下无匹配，用 search 插画。 */
 function NoResultState() {
   const tEmpty = useTranslations("empty");
-  return (
-    <div className="flex flex-col items-center justify-center text-center px-[var(--space-4)] py-[var(--space-12)]">
-      <SearchX size={40} className="text-[var(--muted)] opacity-40 mb-3" strokeWidth={1.5} />
-      <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{tEmpty("noTasksMatch")}</p>
-    </div>
-  );
+  return <EmptyStateBase type="search" title={tEmpty("noTasksMatch")} />;
 }
 
 /**

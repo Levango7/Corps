@@ -20,6 +20,7 @@ import { FileText, Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy, Li
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
+import EmptyState from "@/components/EmptyState";
 import { useTranslations } from "next-intl";
 import { relativeTime as sharedRelativeTime } from "@/lib/format";
 
@@ -95,6 +96,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
 
   const t = useTranslations("decisions");
   const tTime = useTranslations("time");
+  const tEmpty = useTranslations("empty");
   const { toast } = useToast();
   const relativeTime = (iso?: string) => sharedRelativeTime(iso, tTime);
   const [decisions, setDecisions] = useState<Decision[]>([]);
@@ -313,7 +315,19 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       {loading ? (
         <DecisionsSkeleton count={4} />
       ) : isEmpty ? (
-        <EmptyState searching={isSearching} />
+        isSearching ? (
+          <EmptyState
+            type="search"
+            title={t("noResultsMatch")}
+            description={t("tryDifferentKeyword")}
+          />
+        ) : (
+          <EmptyState
+            type="folder"
+            title={tEmpty("noDecisions")}
+            description={tEmpty("noDecisionsHint")}
+          />
+        )
       ) : (
         <>
           <ol className="relative">
@@ -567,39 +581,7 @@ function DecisionsSkeleton({ count = 4 }: { count?: number }) {
 }
 
 /**
- * 空状态：
- *  - 搜索无结果：「没有找到匹配的决策记录」
- *  - 工作区无决策：FileText 图标 + 「暂无决策记录」+ 引导文案
+ * 空状态已统一使用 @/components/EmptyState（6 种 SVG 插画）。
+ * 搜索无结果 → type="search"；工作区无决策 → type="folder"。
  */
-function EmptyState({ searching }: { searching: boolean }) {
-  const t = useTranslations("decisions");
-  const tEmpty = useTranslations("empty");
-  if (searching) {
-    return (
-      <div className="px-[var(--space-4)] py-[var(--space-12)] flex flex-col items-center text-center">
-        <Search
-          size={40}
-          className="text-[var(--muted)] opacity-40 mb-[var(--space-3)]"
-          strokeWidth={1.5}
-        />
-        <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{t("noResultsMatch")}</p>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("tryDifferentKeyword")}
-        </p>
-      </div>
-    );
-  }
-  return (
-    <div className="px-[var(--space-4)] py-[var(--space-12)] flex flex-col items-center text-center">
-      <FileText
-        size={48}
-        className="text-[var(--muted)] opacity-40 mb-[var(--space-4)]"
-        strokeWidth={1.5}
-      />
-      <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">{tEmpty("noDecisions")}</p>
-      <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-        {tEmpty("noDecisionsHint")}
-      </p>
-    </div>
-  );
-}
+

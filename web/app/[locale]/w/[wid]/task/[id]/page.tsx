@@ -42,6 +42,7 @@ import { SubtaskSection } from "@/components/SubtaskSection";
 import { ActionItemPanel } from "@/components/ActionItemPanel";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 import { QuickDiagram } from "@/components/QuickDiagram";
+import { ExportPreview } from "@/components/ExportPreview";
 import { useTranslations, useLocale } from "next-intl";
 import { useToast } from "@/components/Toast";
 
@@ -176,6 +177,12 @@ export default function TaskDetailPage({
   // 打印模式：true 时挂载 .print-area（导出 PDF 专用），afterprint 后卸载——
   // 平时 DOM 中不存在打印内容，避免 getByText 多元素歧义（E2E strict violation 修复）
   const [printMode, setPrintMode] = useState(false);
+  // F4 单条决策导出预览：非 null 时打开 ExportPreview 模态框，传入决策标题 + markdown
+  const [exportPreview, setExportPreview] = useState<{
+    title: string;
+    markdown: string;
+    metaLine?: string;
+  } | null>(null);
   // 任务公开分享（v0.4 队列第 6 项）：shareToken 由 GET 详情返回，本地推导 URL
   const [taskShareUrl, setTaskShareUrl] = useState<string | null>(null);
   useEffect(() => {
@@ -749,9 +756,25 @@ export default function TaskDetailPage({
                         {relTime(d.createdAt)}
                       </span>
                       <button
+                        onClick={() =>
+                          setExportPreview({
+                            title: `${task.title} · ${t("decisionsTitle")} v${d.version}`,
+                            markdown: d.markdown,
+                            metaLine: `v${d.version} · ${
+                              d.author ? d.author.name || d.author.email : t("deletedUser")
+                            } · ${new Date(d.createdAt).toLocaleString()}`,
+                          })
+                        }
+                        aria-label={t("exportPdf")}
+                        title={t("exportPdfHint")}
+                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                      >
+                        <Download size={14} />
+                      </button>
+                      <button
                         onClick={() => showHistory(d)}
                         aria-label={t("versionHistory")}
-                        className="ml-auto inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                        className="inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface)] hover:text-[var(--fg-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                       >
                         <History size={14} />
                       </button>
@@ -1191,6 +1214,15 @@ export default function TaskDetailPage({
         open={quickDiagramOpen}
         onClose={() => setQuickDiagramOpen(false)}
         onInsert={insertDiagramToDecision}
+      />
+
+      {/* F4 单条决策导出预览模态框 */}
+      <ExportPreview
+        title={exportPreview?.title ?? ""}
+        markdown={exportPreview?.markdown ?? ""}
+        metaLine={exportPreview?.metaLine}
+        open={exportPreview !== null}
+        onClose={() => setExportPreview(null)}
       />
     </div>
   );

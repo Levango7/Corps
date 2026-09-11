@@ -42,6 +42,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import EmptyState from "@/components/EmptyState";
 import { useTranslations } from "next-intl";
 
 /** 漏斗单步结果（与 lib/analytics-funnel.ts StepResult 对齐）。 */
@@ -247,9 +248,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           {t("dailyTrendTitle")}
         </h2>
         {data.daily.length === 0 ? (
-          <p className="text-[length:var(--text-sm)] text-[var(--muted)] py-8 text-center">
-            {t("noData")}
-          </p>
+          <EmptyState type="chart" title={t("noData")} className="py-8" />
         ) : (
           <DailyTrendChart daily={data.daily} maxDaily={maxDaily} />
         )}
@@ -261,9 +260,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           {t("topEventsTitle")}
         </h2>
         {data.topEvents.length === 0 ? (
-          <p className="text-[length:var(--text-sm)] text-[var(--muted)] py-8 text-center">
-            {t("noData")}
-          </p>
+          <EmptyState type="chart" title={t("noData")} className="py-8" />
         ) : (
           <ul className="space-y-2">
             {data.topEvents.map((e) => {

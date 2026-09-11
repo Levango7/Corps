@@ -15,6 +15,8 @@ import {
   LayoutGrid,
   List,
   UserX,
+  Rows3,
+  Rows2,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
@@ -54,6 +56,13 @@ const VIEWS: { id: DefaultView; icon: typeof LayoutGrid }[] = [
   { id: "list", icon: List },
 ];
 
+type DensityPref = "compact" | "comfortable";
+
+const DENSITIES: { id: DensityPref; labelKey: string; icon: typeof Rows3 }[] = [
+  { id: "compact", labelKey: "densityCompact", icon: Rows3 },
+  { id: "comfortable", labelKey: "densityComfortable", icon: Rows2 },
+];
+
 /** 主题切换过渡时长（与 --motion-slow 对齐，避免硬编码） */
 const THEME_TRANSITION_MS = 220;
 
@@ -69,10 +78,17 @@ function applyTheme(pref: ThemePref) {
   localStorage.setItem("corps_theme", pref);
 }
 
+function applyDensity(pref: DensityPref) {
+  document.documentElement.setAttribute("data-density", pref);
+  localStorage.setItem(DENSITY_KEY, pref);
+}
+
 /** 通知偏好持久化 key */
 const NOTIF_PREF_KEY = "corps_notif_pref";
 /** 默认视图持久化 key */
 const DEFAULT_VIEW_KEY = "corps_default_view";
+/** 密度偏好持久化 key */
+const DENSITY_KEY = "corps_density";
 
 interface NotifPref {
   emailEnabled: boolean;
@@ -107,6 +123,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const [slug, setSlug] = useState("");
   const [theme, setTheme] = useState<ThemePref>("system");
   const [defaultView, setDefaultView] = useState<DefaultView>("board");
+  const [density, setDensity] = useState<DensityPref>("compact");
   const [notifPref, setNotifPref] = useState<NotifPref>({
     emailEnabled: true,
     mentionEnabled: true,
@@ -151,6 +168,8 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     setTheme(stored);
     const storedView = (localStorage.getItem(DEFAULT_VIEW_KEY) as DefaultView | null) ?? "board";
     setDefaultView(storedView);
+    const storedDensity = (localStorage.getItem(DENSITY_KEY) as DensityPref | null) ?? "compact";
+    setDensity(storedDensity);
     setNotifPref(loadNotifPref());
   }, [load]);
 
@@ -226,6 +245,11 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   function pickView(v: DefaultView) {
     setDefaultView(v);
     localStorage.setItem(DEFAULT_VIEW_KEY, v);
+  }
+
+  function pickDensity(d: DensityPref) {
+    setDensity(d);
+    applyDensity(d);
   }
 
   function updateNotifPref(patch: Partial<NotifPref>) {
@@ -609,6 +633,39 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                 <Icon size={18} />
                 <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
                   {tTheme(tp.labelKey)}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+      </section>
+
+      {/* 显示密度（F6：暖度调节密度切换） */}
+      <section className={`${sectionClass} mt-5`}>
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
+          {t("density")}
+        </h2>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          {t("densityDesc")}
+        </p>
+        <div className="flex flex-col sm:flex-row gap-2">
+          {DENSITIES.map((d) => {
+            const Icon = d.icon;
+            const active = density === d.id;
+            return (
+              <button
+                key={d.id}
+                onClick={() => pickDensity(d.id)}
+                className="w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                style={{
+                  borderColor: active ? "var(--accent)" : "var(--border)",
+                  background: active ? "var(--accent-soft)" : "var(--surface)",
+                  color: active ? "var(--accent)" : "var(--fg-2)",
+                }}
+              >
+                <Icon size={16} />
+                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
+                  {t(d.labelKey)}
                 </span>
               </button>
             );

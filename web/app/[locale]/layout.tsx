@@ -71,7 +71,7 @@ export default async function LocaleLayout({
 
   return (
     <NextIntlClientProvider locale={locale} messages={messages}>
-      <html lang={localeToBcp47[locale as Locale]} data-theme="light" suppressHydrationWarning>
+      <html lang={localeToBcp47[locale as Locale]} data-theme="light" data-density="compact" suppressHydrationWarning>
         <head>
           {/* 首帧前同步解析主题偏好，避免深色用户看到一次浅色闪白。
               必须同步执行（不能 async/defer），故显式豁免 no-sync-scripts。 */}

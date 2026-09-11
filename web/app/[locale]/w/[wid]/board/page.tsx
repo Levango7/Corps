@@ -28,12 +28,12 @@ import NewTaskDialog from "@/components/NewTaskDialog";
 import { ViewToggle } from "@/components/ViewToggle";
 import { BatchToolbar } from "@/components/BatchToolbar";
 import { MilestoneFilter } from "@/components/MilestoneFilter";
+import EmptyState from "@/components/EmptyState";
 import {
   BoardColumn,
   ListTable,
   ListCards,
   BoardSkeleton,
-  BoardEmptyState,
   type DragStart,
 } from "@/components/board-parts";
 import type { Task, Status, Priority } from "@/lib/types";
@@ -47,6 +47,8 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   const t = useTranslations("task");
   const tErr = useTranslations("error");
   const tButton = useTranslations("button");
+  const tEmpty = useTranslations("empty");
+  const tStatus = useTranslations("status");
 
   const [tasks, setTasks] = useState<Task[]>([]);
   const [loading, setLoading] = useState(true);
@@ -325,7 +327,12 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       {loading ? (
         <BoardSkeleton />
       ) : tasks.length === 0 ? (
-        <BoardEmptyState onCreate={() => setShowNew(true)} />
+        <EmptyState
+          type="inbox"
+          title={tEmpty("noTasks")}
+          description={tEmpty("noTasksHint")}
+          action={{ label: tStatus("newTask"), onClick: () => setShowNew(true) }}
+        />
       ) : (
         <div>
           {/* 标题行 + 操作 */}

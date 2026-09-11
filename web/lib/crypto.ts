@@ -1,4 +1,7 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
+// F5：分享密码哈希复用 better-auth/crypto 的 scrypt 实现，与登录认证同源同算法。
+// 此处包装为通用 hash/verify 接口，供分享路由使用（避免各路由直接依赖 better-auth）。
+import { hashPassword as baHashPassword, verifyPassword as baVerifyPassword } from "better-auth/crypto";
 
 /**
  * AES-256-GCM 对称加密工具：用于日历 OAuth token 加密存储。
@@ -88,4 +91,27 @@ export function decrypt(payload: string): string {
   decipher.setAuthTag(authTag);
   const dec = Buffer.concat([decipher.update(enc), decipher.final()]);
   return dec.toString("utf8");
+}
+
+// ─── F5：分享密码 scrypt 哈希 ───
+// 复用 better-auth/crypto 的 scrypt 实现（与登录密码同算法），保证哈希强度
+// 与校验逻辑一致。明文密码绝不入库，仅存 hash（VarChar(100)）。
+
+/**
+ * 对分享密码生成 scrypt 哈希。
+ * @param password 明文密码
+ * @returns scrypt 哈希字符串（含 salt/参数，可直接存库）
+ */
+export async function hash(password: string): Promise<string> {
+  return baHashPassword(password);
+}
+
+/**
+ * 校验分享密码是否匹配哈希。
+ * @param password 用户输入的明文密码
+ * @param hashed 库中存储的 scrypt 哈希
+ * @returns true 匹配，false 不匹配
+ */
+export async function verify(password: string, hashed: string): Promise<boolean> {
+  return baVerifyPassword({ hash: hashed, password });
 }

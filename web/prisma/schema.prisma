@@ -92,6 +92,8 @@ model User {
   calendarConnections CalendarConnection[]
   // F1: 决策行动项的指派人反向关联
   actionItems         DecisionActionItem[]
+  // F3: 用户仪表盘布局偏好
+  dashboardPrefs      UserDashboardPref[]
 
   @@map("users")
 }
@@ -124,6 +126,8 @@ model Workspace {
   documents        Document[]
   // F2: 模块权限覆盖（按角色+模块粒度）
   memberPermissions MemberPermission[]
+  // F3: 用户仪表盘布局偏好
+  dashboardPrefs    UserDashboardPref[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -192,6 +196,10 @@ model Task {
   blockedReason String? @map("blocked_reason") @db.VarChar(500)
   // 任务公开分享 token（v0.4 队列第 6 项：只读快照外链，null=未分享）
   shareToken   String?  @unique @map("task_share_token") @db.VarChar(64)
+  // F5: 分享过期时间（null = 永不过期）
+  shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
+  // F5: 分享密码 hash（null = 无密码；scrypt hash）
+  sharePassword  String?   @map("share_password") @db.VarChar(100)
   createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at") 
   updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
 
@@ -390,6 +398,10 @@ model Document {
   publishedAt  DateTime? @map("published_at") @db.Timestamptz
   /** 分享链接 token（unique 索引；null 表示未启用分享） */
   shareToken   String?  @unique @map("share_token") @db.VarChar(64)
+  /** F5: 分享过期时间（null = 永不过期） */
+  shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
+  /** F5: 分享密码 hash（null = 无密码；scrypt hash） */
+  sharePassword  String?   @map("share_password") @db.VarChar(100)
   /** 文档作者（可编辑；展示用） */
   authorId     String?  @map("author_id") @db.Uuid
   createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
@@ -766,4 +778,38 @@ model MemberPermission {
   @@unique([workspaceId, role, module], name: "uq_member_perm")
   @@index([workspaceId])
   @@map("member_permissions")
+}
+
+// ─── F3: Widget 仪表盘 — 用户工作区布局偏好 ───
+// 每个用户在每个工作区有独立的 Widget 布局配置（react-grid-layout 格式）。
+// 无配置时使用角色默认布局（default-layouts.ts）。
+
+model UserDashboardPref {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  layout      Json     // react-grid-layout 布局配置 [{i: "widget-id", x, y, w, h, minW, minH}]
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, workspaceId])
+  @@map("user_dashboard_prefs")
+}
+
+// ─── F5: 分享增强 — 访问日志 ───
+// 记录通过分享链接访问文档/任务的日志，用于审计和安全性分析。
+
+model ShareAccessLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  entityType  String   @map("entity_type") @db.VarChar(20)  // "document" | "task"
+  entityId    String   @map("entity_id") @db.Uuid
+  ip          String?  @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.Text
+  accessedAt  DateTime @default(now()) @db.Timestamptz @map("accessed_at")
+
+  @@index([entityType, entityId, accessedAt])
+  @@map("share_access_logs")
 }

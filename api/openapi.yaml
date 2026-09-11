@@ -10,7 +10,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    This contract currently defines 57 paths (updated 2026-09-09).
+    This contract currently defines 66 paths (updated 2026-09-11).
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:
@@ -60,6 +60,10 @@ tags:
     description: Task-scoped realtime chat (IM)
   - name: calendar
     description: External calendar integration (Google/Outlook)
+  - name: Dashboard
+    description: Workspace dashboard widget layout and widget data (F3)
+  - name: Sharing
+    description: Document/task share settings, password verification and access logs (F5)
 security:
   - bearerAuth: []
 
@@ -2803,6 +2807,321 @@ paths:
         '500':
           description: Internal server error
 
+  # ===========================================================================
+  # F3: DASHBOARD (widget layout & widget data)
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/dashboard/layout:
+    get:
+      tags: [Dashboard]
+      summary: Get the caller's dashboard layout for a workspace
+      description: >
+        Returns the persisted react-grid-layout items for the calling user within
+        the workspace, plus the active breakpoint label. Each user has an independent
+        layout per workspace; membership required. Unknown workspace → 404.
+      operationId: getDashboardLayout
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Dashboard layout
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DashboardLayout'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    put:
+      tags: [Dashboard]
+      summary: Save the caller's dashboard layout for a workspace
+      description: >
+        Upserts the react-grid-layout items for the calling user within the workspace.
+        Body: { layout: RGLItem[], breakpoint?: string }. The layout array may be
+        empty to reset to defaults. Unknown workspace → 404.
+      operationId: saveDashboardLayout
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/DashboardLayoutUpdateRequest'
+      responses:
+        '200':
+          description: Layout saved
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DashboardLayout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/dashboard/widgets/{widgetId}:
+    get:
+      tags: [Dashboard]
+      summary: Get widget data (dynamic per widget kind)
+      description: >
+        Returns the computed data payload for a single widget. The shape of `data`
+        varies by widget kind (e.g. tasks-summary returns {total, byStatus};
+        recent-activity returns {items: [...]}; burndown returns {points: [...]}).
+        The client must branch on widgetId/kind. Membership required; unknown
+        workspace or widget → 404.
+      operationId: getDashboardWidgetData
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidgetId'
+      responses:
+        '200':
+          description: Widget data (dynamic shape)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WidgetData'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ===========================================================================
+  # F5: SHARING — documents
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/documents/{id}/share:
+    get:
+      tags: [Sharing]
+      summary: Get share settings for a document
+      description: >
+        Returns the current share configuration for the document: shareEnabled,
+        shareToken, shareExpiresAt, sharePassword (boolean presence flag, never the
+        raw value), and shareUrl when enabled. Membership required; unknown
+        document → 404.
+      operationId: getDocumentShareSettings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Share settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Sharing]
+      summary: Update share settings for a document
+      description: >
+        Partial update of share configuration. Body may include any subset of:
+        shareEnabled (boolean), shareExpiresAt (ISO-8601, nullable to clear),
+        sharePassword (string, nullable to clear). Enabling sharing when no
+        shareToken exists will mint one server-side. Unknown document → 404.
+      operationId: updateDocumentShareSettings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareSettingsUpdateRequest'
+      responses:
+        '200':
+          description: Updated share settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/documents/{id}/share/verify:
+    post:
+      tags: [Sharing]
+      summary: Verify share password for a document (public)
+      description: >
+        Public endpoint (no workspace membership required) used by the share link
+        landing page to unlock a password-protected document. Body: { password }.
+        On success returns a short-lived access token to render the document; on
+        mismatch returns 401. Unknown/expired/disabled share → 404.
+      security: []
+      operationId: verifyDocumentSharePassword
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareVerifyRequest'
+      responses:
+        '200':
+          description: Password verified; access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareVerifyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/documents/{id}/share/logs:
+    get:
+      tags: [Sharing]
+      summary: List share access logs for a document
+      description: >
+        Returns paginated access log entries (viewer IP, user agent, accessedAt,
+        outcome) for the document's share link. Owner/admin only; unknown document
+        → 404. Query params: page (default 1), pageSize (default 20, max 100).
+      operationId: listDocumentShareLogs
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Share access logs
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareAccessLogList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # ===========================================================================
+  # F5: SHARING — tasks
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/tasks/{id}/share:
+    get:
+      tags: [Sharing]
+      summary: Get share settings for a task
+      description: >
+        Returns the current share configuration for the task (same shape as document
+        share settings). Membership required; unknown task → 404.
+      operationId: getTaskShareSettings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Share settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareSettings'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [Sharing]
+      summary: Update share settings for a task
+      description: >
+        Partial update of share configuration for a task. Same body shape as the
+        document share update. Unknown task → 404.
+      operationId: updateTaskShareSettings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareSettingsUpdateRequest'
+      responses:
+        '200':
+          description: Updated share settings
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareSettings'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/tasks/{id}/share/verify:
+    post:
+      tags: [Sharing]
+      summary: Verify share password for a task (public)
+      description: >
+        Public endpoint used by the task share link landing page to unlock a
+        password-protected task. Body: { password }. On success returns a
+        short-lived access token; on mismatch returns 401. Unknown/expired/disabled
+        share → 404.
+      security: []
+      operationId: verifyTaskSharePassword
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ShareVerifyRequest'
+      responses:
+        '200':
+          description: Password verified; access token issued
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ShareVerifyResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
 components:
   securitySchemes:
     cronSecret:
@@ -2851,6 +3170,18 @@ components:
       required: true
       description: Decision id (UUID).
       schema: { type: string, format: uuid }
+    DocumentId:
+      name: id
+      in: path
+      required: true
+      description: Document id (UUID).
+      schema: { type: string, format: uuid }
+    WidgetId:
+      name: widgetId
+      in: path
+      required: true
+      description: Widget id (kind-qualified, e.g. "tasks-summary", "recent-activity").
+      schema: { type: string, minLength: 1, maxLength: 64 }
 
   responses:
     BadRequest:
@@ -3972,3 +4303,231 @@ components:
             type: string
             enum: [read, create, update, delete]
           description: Allowed actions. Empty array denies all actions for this role+module.
+
+    # ---- F3: dashboard ----
+    # react-grid-layout item shape (subset of RGLItem; the client persists the
+    # full RGL item, the server stores it opaquely and returns it as-is).
+    RGLItem:
+      type: object
+      required: [i, x, y, w, h]
+      properties:
+        i:
+          type: string
+          description: Widget instance id (widgetId or a composite key).
+        x:
+          type: integer
+          minimum: 0
+        y:
+          type: integer
+          minimum: 0
+        w:
+          type: integer
+          minimum: 1
+        h:
+          type: integer
+          minimum: 1
+        minW:
+          type: integer
+          minimum: 1
+        minH:
+          type: integer
+          minimum: 1
+        maxW:
+          type: integer
+          minimum: 1
+        maxH:
+          type: integer
+          minimum: 1
+        moved:
+          type: boolean
+        static:
+          type: boolean
+    DashboardLayout:
+      type: object
+      required: [layout, breakpoint]
+      properties:
+        layout:
+          type: array
+          description: Ordered react-grid-layout items for the calling user.
+          items:
+            $ref: '#/components/schemas/RGLItem'
+        breakpoint:
+          type: string
+          description: Active responsive breakpoint label (e.g. lg, md, sm, xs).
+          example: lg
+    DashboardLayoutUpdateRequest:
+      type: object
+      required: [layout]
+      properties:
+        layout:
+          type: array
+          description: >
+            Full react-grid-layout items to persist for the calling user. An empty
+            array resets the layout to server defaults on next read.
+          items:
+            $ref: '#/components/schemas/RGLItem'
+        breakpoint:
+          type: string
+          description: Optional responsive breakpoint label to persist alongside the layout.
+          example: lg
+    Envelope_DashboardLayout:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/DashboardLayout'
+    # Widget data is dynamic per widget kind; the server returns an opaque object
+    # and the client branches on widgetId/kind.
+    Envelope_WidgetData:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: >
+            Dynamic widget payload. Shape varies by widget kind, e.g.
+            tasks-summary → { total, byStatus: {todo,in_progress,review,done} };
+            recent-activity → { items: [{id, kind, title, at}] };
+            burndown → { points: [{day, remaining}] }. The client must branch on
+            widgetId/kind.
+          additionalProperties: true
+
+    # ---- F5: sharing ----
+    ShareSettings:
+      type: object
+      required: [shareEnabled, hasPassword]
+      properties:
+        shareEnabled:
+          type: boolean
+          description: Whether the share link is active.
+        shareToken:
+          type: string
+          nullable: true
+          description: Public share token (present when sharing has ever been enabled).
+        shareUrl:
+          type: string
+          format: uri
+          nullable: true
+          description: Fully resolved share URL (present when shareEnabled is true).
+        shareExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Optional expiry timestamp; null means no expiry.
+        hasPassword:
+          type: boolean
+          description: >
+            Whether a share password is currently set. The raw password is never
+            returned; this flag drives the "password protected" UI state.
+        sharePassword:
+          type: string
+          nullable: true
+          description: >
+            Write-only. Only accepted on PATCH to set/clear the password
+            (null clears). Never present on GET responses — use hasPassword instead.
+          writeOnly: true
+        updatedAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: Timestamp of the last share settings change.
+    ShareSettingsUpdateRequest:
+      type: object
+      description: Partial update; any subset of fields may be sent.
+      properties:
+        shareEnabled:
+          type: boolean
+        shareExpiresAt:
+          type: string
+          format: date-time
+          nullable: true
+          description: ISO-8601 expiry; null clears the expiry.
+        sharePassword:
+          type: string
+          nullable: true
+          maxLength: 256
+          description: >
+            New password to set. null clears the password. An empty string is
+            treated as a validation error (use null to clear).
+    Envelope_ShareSettings:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/ShareSettings'
+    ShareVerifyRequest:
+      type: object
+      required: [password]
+      properties:
+        password:
+          type: string
+          minLength: 1
+          maxLength: 256
+          description: Share password to verify.
+    ShareVerifyResponse:
+      type: object
+      required: [token]
+      properties:
+        token:
+          type: string
+          description: >
+            Short-lived access token granting read access to the shared resource.
+            The client sends it as a Bearer token on subsequent resource fetches.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the issued token expires.
+    Envelope_ShareVerifyResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/ShareVerifyResponse'
+    ShareAccessLog:
+      type: object
+      required: [id, accessedAt, outcome]
+      properties:
+        id:
+          type: string
+          format: uuid
+        accessedAt:
+          type: string
+          format: date-time
+        outcome:
+          type: string
+          enum: [success, denied, expired]
+          description: Result of the access attempt.
+        ip:
+          type: string
+          nullable: true
+          description: Viewer IP address (best-effort, may be redacted by proxy).
+        userAgent:
+          type: string
+          nullable: true
+          description: Viewer User-Agent header.
+        viewerId:
+          type: string
+          nullable: true
+          description: Resolved viewer user id when the share link was authenticated.
+    Envelope_ShareAccessLogList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, pageSize, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ShareAccessLog'
+            page:
+              type: integer
+              description: Current page number.
+            pageSize:
+              type: integer
+              description: Page size used for this query.
+            total:
+              type: integer
+              description: Total count of access log entries.
+            hasMore: { type: boolean }

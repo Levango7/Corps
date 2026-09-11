@@ -138,6 +138,23 @@ export const API_MESSAGES = {
     zh: "分享链接无效或已被撤销",
     en: "Invalid share link, or sharing has been revoked",
   },
+  /* ── 分享增强（F5：有效期+密码+访问日志）── */
+  shareExpired: {
+    zh: "分享链接已过期",
+    en: "The share link has expired",
+  },
+  sharePasswordRequired: {
+    zh: "此分享需要密码",
+    en: "A password is required to access this share",
+  },
+  sharePasswordIncorrect: {
+    zh: "分享密码错误",
+    en: "Incorrect share password",
+  },
+  shareLocked: {
+    zh: "密码错误次数过多，请 5 分钟后再试",
+    en: "Too many incorrect attempts; please try again in 5 minutes",
+  },
 
   /* ── 计费 ── */
   billingUnavailable: {
