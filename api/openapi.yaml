@@ -775,6 +775,127 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
 
+  # F2: Temporary permission grants (time-limited role elevation)
+  /api/v1/workspaces/{wid}/members/{userId}/temporary-grants:
+    post:
+      tags: [members]
+      summary: Create a temporary permission grant for a member
+      description: >
+        Owner/Admin only. Grants a temporary elevated role (admin/member) to the
+        target user that automatically expires after the specified duration. At
+        expiry, the user's role reverts to their permanent role. A user can have
+        at most one active temporary grant at a time; creating a new grant when
+        one is active will replace it. The reason field is optional and capped
+        at 500 chars. Cannot grant on the owner or self (403).
+      operationId: createTemporaryGrant
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/UserId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [tempRole, durationHours]
+              properties:
+                tempRole:
+                  type: string
+                  enum: [admin, member]
+                  description: Temporary elevated role to grant.
+                durationHours:
+                  type: integer
+                  minimum: 1
+                  maximum: 720
+                  description: Grant duration in hours (1–720, i.e. up to 30 days).
+                reason:
+                  type: string
+                  maxLength: 500
+                  description: Optional human-readable reason for the grant.
+      responses:
+        '200':
+          description: Temporary grant created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    $ref: '#/components/schemas/TemporaryGrant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    get:
+      tags: [members]
+      summary: List temporary grants for a workspace member
+      description: >
+        Owner/Admin only. Returns the active temporary grant for the target user
+        (if any). A user can have at most one active grant at a time; expired
+        grants are not returned. Non-managers → 403.
+      operationId: listTemporaryGrants
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Temporary grants list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/TemporaryGrant'
+                      total: { type: integer, example: 1 }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [members]
+      summary: Revoke a temporary permission grant
+      description: >
+        Owner/Admin only. Immediately revokes the active temporary grant for the
+        target user, reverting them to their permanent role. No-op if no active
+        grant exists (returns 200). Non-managers → 403.
+      operationId: revokeTemporaryGrant
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/UserId'
+      responses:
+        '200':
+          description: Grant revoked (or no active grant)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Null'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   # F2: Workspace permission matrix (role-based R/C/U/D overrides)
   /api/v1/workspaces/{wid}/permissions:
     get:
@@ -2866,6 +2987,120 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  # F3: Dashboard layout export/import (template sharing)
+  /api/v1/workspaces/{wid}/dashboard/layout/export:
+    get:
+      tags: [Dashboard]
+      summary: Export the caller's dashboard layout as a shareable template
+      description: >
+        Returns a JSON template object containing the caller's current
+        react-grid-layout items, widget configurations, and the active
+        breakpoint. The template can be shared with other users and imported
+        via the /layout/import endpoint. Membership required; unknown workspace
+        → 404.
+      operationId: exportDashboardLayout
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Layout template exported
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      version: { type: string, example: "1.0" }
+                      exportedAt: { type: string, format: date-time }
+                      breakpoint: { type: string, example: "lg" }
+                      layout:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RGLItem'
+                      configs:
+                        type: object
+                        additionalProperties: true
+                        description: Widget configurations keyed by widgetId.
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/dashboard/layout/import:
+    post:
+      tags: [Dashboard]
+      summary: Import a dashboard layout template
+      description: >
+        Replaces the caller's current dashboard layout with the provided
+        template. The template must match the export schema (version, layout,
+        configs). Widget IDs that do not exist in the workspace will be ignored
+        (with a warning in the response). Membership required; unknown workspace
+        → 404. The import is atomic — either all items are applied or none.
+      operationId: importDashboardLayout
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [layout]
+              properties:
+                version:
+                  type: string
+                  description: Template version (for forward compatibility).
+                breakpoint:
+                  type: string
+                  description: Active breakpoint label (e.g. lg, md, sm).
+                layout:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/RGLItem'
+                configs:
+                  type: object
+                  additionalProperties: true
+                  description: Widget configurations keyed by widgetId.
+      responses:
+        '200':
+          description: Layout imported successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      applied:
+                        type: integer
+                        description: Number of layout items applied.
+                      skipped:
+                        type: integer
+                        description: Number of items skipped (unknown widget IDs).
+                      layout:
+                        type: array
+                        items:
+                          $ref: '#/components/schemas/RGLItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/v1/workspaces/{wid}/dashboard/widgets/{widgetId}:
     get:
       tags: [Dashboard]
@@ -2891,6 +3126,78 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '404':
           $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  # F4: Batch document export (merge multiple documents into one PDF/HTML)
+  /api/v1/workspaces/{wid}/documents/batch-export:
+    post:
+      tags: [Documents]
+      summary: Batch export multiple documents as a single merged file
+      description: >
+        Exports multiple workspace documents as one merged HTML/PDF file. The
+        response contains the full HTML document with a table-of-contents
+        section and one section per document. The client can open the print
+        dialog (Save as PDF) to produce the final PDF. Membership required;
+        unknown workspace → 404. All documentIds must belong to the workspace;
+        unknown IDs are silently skipped. Maximum 50 documents per batch.
+      operationId: batchExportDocuments
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [documentIds]
+              properties:
+                documentIds:
+                  type: array
+                  items:
+                    type: string
+                    format: uuid
+                  maxItems: 50
+                  description: Document IDs to include in the batch export.
+                format:
+                  type: string
+                  enum: [pdf, html]
+                  default: pdf
+                  description: Output format (pdf triggers print CSS; html returns raw).
+                includeTableOfContents:
+                  type: boolean
+                  default: true
+                  description: Whether to prepend a table-of-contents page.
+      responses:
+        '200':
+          description: Batch export generated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      html:
+                        type: string
+                        description: Merged HTML document (TOC + all document sections).
+                      documentCount:
+                        type: integer
+                        description: Number of documents actually included.
+                      skippedIds:
+                        type: array
+                        items:
+                          type: string
+                          format: uuid
+                        description: Document IDs that were skipped (not found).
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -4308,6 +4615,38 @@ components:
     # ---- F3: dashboard ----
     # react-grid-layout item shape (subset of RGLItem; the client persists the
     # full RGL item, the server stores it opaquely and returns it as-is).
+    TemporaryGrant:
+      type: object
+      required: [id, userId, tempRole, expiresAt, createdAt]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: Grant record id.
+        userId:
+          type: string
+          format: uuid
+          description: Target user id receiving the temporary role.
+        tempRole:
+          type: string
+          enum: [admin, member]
+          description: Temporary elevated role granted to the user.
+        expiresAt:
+          type: string
+          format: date-time
+          description: When the grant expires and the user reverts to their permanent role.
+        createdAt:
+          type: string
+          format: date-time
+          description: When the grant was created.
+        reason:
+          type: string
+          maxLength: 500
+          description: Optional reason for the grant (provided by the admin).
+        grantedBy:
+          type: string
+          format: uuid
+          description: User id of the admin who created the grant.
     RGLItem:
       type: object
       required: [i, x, y, w, h]

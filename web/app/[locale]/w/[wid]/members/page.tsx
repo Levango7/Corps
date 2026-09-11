@@ -28,28 +28,41 @@ interface WorkspaceMeta {
   role: Role;
 }
 
-/** 临时授权持续时间选项（小时） */
-const DURATION_OPTIONS: { label: string; hours: number }[] = [
-  { label: "1 小时", hours: 1 },
-  { label: "4 小时", hours: 4 },
-  { label: "8 小时", hours: 8 },
-  { label: "24 小时", hours: 24 },
-  { label: "48 小时", hours: 48 },
-  { label: "7 天", hours: 168 },
-];
+/** 临时授权持续时间选项（小时） — label 由组件内用 i18n 映射 */
+const DURATION_HOURS: number[] = [1, 4, 8, 24, 48, 168];
 
-/** 格式化到期时间（相对时间 + 绝对时间） */
-function formatExpiry(expiresAt: string): string {
+/** 持续时间小时数 → i18n key 映射 */
+function durationKey(hours: number): string {
+  switch (hours) {
+    case 1:
+      return "duration1h";
+    case 4:
+      return "duration4h";
+    case 8:
+      return "duration8h";
+    case 24:
+      return "duration24h";
+    case 48:
+      return "duration48h";
+    case 168:
+      return "duration7d";
+    default:
+      return "duration24h";
+  }
+}
+
+/** 格式化到期时间（相对时间 + 绝对时间） — 接受 i18n 翻译函数 */
+function formatExpiry(expiresAt: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
   const now = Date.now();
   const expiry = new Date(expiresAt).getTime();
   const diffMs = expiry - now;
-  if (diffMs <= 0) return "已过期";
+  if (diffMs <= 0) return t("tempGrantExpired");
   const diffHours = Math.floor(diffMs / (60 * 60 * 1000));
   const diffDays = Math.floor(diffHours / 24);
-  if (diffDays > 0) return `${diffDays} 天后到期`;
-  if (diffHours > 0) return `${diffHours} 小时后到期`;
+  if (diffDays > 0) return t("tempGrantExpiryDays", { count: diffDays });
+  if (diffHours > 0) return t("tempGrantExpiryHours", { count: diffHours });
   const diffMinutes = Math.floor(diffMs / (60 * 1000));
-  return `${diffMinutes} 分钟后到期`;
+  return t("tempGrantExpiryMinutes", { count: diffMinutes });
 }
 
 function Avatar({ m }: { m: Member }) {
@@ -246,10 +259,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         },
       );
       setGrantModalTarget(null);
-      toast("success", "临时授权已授予");
+      toast("success", t("tempGrantSuccess"));
       await load();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "临时授权失败";
+      const msg = e instanceof Error ? e.message : t("tempGrantFailed");
       setError(msg);
       toast("error", msg);
     } finally {
@@ -265,10 +278,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         `/api/v1/workspaces/${wid}/members/${userId}/temporary-grants`,
         { method: "DELETE" },
       );
-      toast("success", "临时授权已撤销");
+      toast("success", t("tempRevokeSuccess"));
       await load();
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "撤销失败";
+      const msg = e instanceof Error ? e.message : t("tempRevokeFailed");
       setError(msg);
       toast("error", msg);
     }
@@ -591,17 +604,17 @@ function MemberRow({
             {tempGrantActive && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warn)_15%,transparent)] text-[length:var(--text-xs)] text-[var(--warn-fg)]"
-                title={`临时 ${tempGrant!.tempRole} · ${formatExpiry(tempGrant!.expiresAt)}`}
+                title={t("tempGrantActive", { role: tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"), time: formatExpiry(tempGrant!.expiresAt, t) })}
               >
                 <Clock size={10} />
-                临时{tempGrant!.tempRole === "admin" ? "管理员" : "成员"}
+                {tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember")}
               </span>
             )}
           </div>
           <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
             {m.email}
             {tempGrantActive && (
-              <span className="ml-2 text-[var(--meta)]">· {formatExpiry(tempGrant!.expiresAt)}</span>
+              <span className="ml-2 text-[var(--meta)]">· {formatExpiry(tempGrant!.expiresAt, t)}</span>
             )}
           </div>
         </div>
@@ -627,8 +640,8 @@ function MemberRow({
             <button
               onClick={() => onGrantTempRole(m)}
               className="p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--warn-fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-              aria-label="临时授权"
-              title={tempGrantActive ? "管理临时授权" : "临时授权"}
+              aria-label={t("tempGrant")}
+              title={tempGrantActive ? t("tempGrantManage") : t("tempGrant")}
             >
               <Clock size={16} />
             </button>
@@ -638,8 +651,8 @@ function MemberRow({
             <button
               onClick={() => onRevokeTempRole(m.id)}
               className="p-2 rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-              aria-label="撤销临时授权"
-              title="撤销临时授权"
+              aria-label={t("revokeTempPermission")}
+              title={t("revokeTempPermission")}
             >
               <X size={16} />
             </button>
@@ -696,10 +709,10 @@ function MemberRow({
             {tempGrantActive && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warn)_15%,transparent)] text-[length:var(--text-xs)] text-[var(--warn-fg)]"
-                title={`临时 ${tempGrant!.tempRole} · ${formatExpiry(tempGrant!.expiresAt)}`}
+                title={t("tempGrantActive", { role: tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"), time: formatExpiry(tempGrant!.expiresAt, t) })}
               >
                 <Clock size={10} />
-                临时{tempGrant!.tempRole === "admin" ? "管理员" : "成员"}
+                {tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember")}
               </span>
             )}
           </div>
@@ -716,7 +729,7 @@ function MemberRow({
           </div>
           {tempGrantActive && (
             <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
-              {formatExpiry(tempGrant!.expiresAt)}
+              {formatExpiry(tempGrant!.expiresAt, t)}
             </div>
           )}
         </div>
@@ -748,7 +761,7 @@ function MemberRow({
               className="flex-1 flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <Clock size={14} />
-              <span>{tempGrantActive ? "管理临时授权" : "临时授权"}</span>
+              <span>{tempGrantActive ? t("tempGrantManage") : t("tempGrant")}</span>
             </button>
             {tempGrantActive && (
               <button
@@ -756,7 +769,7 @@ function MemberRow({
                 className="flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--meta)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <X size={14} />
-                <span>撤销</span>
+                <span>{t("revokeTempPermission")}</span>
               </button>
             )}
           </div>
@@ -847,6 +860,8 @@ function TemporaryGrantModal({
   onConfirm,
   onRevoke,
 }: TemporaryGrantModalProps) {
+  const t = useTranslations("members");
+  const tButton = useTranslations("button");
   const [tempRole, setTempRole] = useState<"admin" | "member">(
     existingGrant?.tempRole === "admin" ? "admin" : "admin",
   );
@@ -867,29 +882,29 @@ function TemporaryGrantModal({
         <div className="flex items-center justify-between mb-4">
           <h3 className="flex items-center gap-2 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             <Clock size={18} className="text-[var(--warn-fg)]" />
-            临时授权
+            {t("tempGrant")}
           </h3>
           <button
             onClick={onClose}
             className="p-1 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-            aria-label="关闭"
+            aria-label={tButton("close")}
           >
             <X size={18} />
           </button>
         </div>
 
         <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-4">
-          为 <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{target.name || target.email}</span> 授予限时权限，到期后自动恢复原角色。
+          {t("tempGrantDesc")} <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{target.name || target.email}</span>
         </p>
 
         {/* 当前授权状态 */}
         {existingActive && (
           <div className="mb-4 px-3 py-2 rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] border border-[color-mix(in_srgb,var(--warn)_20%,transparent)]">
             <div className="text-[length:var(--text-sm)] text-[var(--warn-fg)] font-[weight:var(--weight-medium)]">
-              当前授权：临时{existingGrant!.tempRole === "admin" ? "管理员" : "成员"}
+              {t("tempGrantCurrent", { role: existingGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember") })}
             </div>
             <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
-              {formatExpiry(existingGrant!.expiresAt)}
+              {formatExpiry(existingGrant!.expiresAt, t)}
               {existingGrant!.reason && ` · ${existingGrant!.reason}`}
             </div>
             <button
@@ -898,7 +913,7 @@ function TemporaryGrantModal({
               className="mt-2 h-7 px-2.5 inline-flex items-center gap-1.5 rounded-[var(--radius-sm)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[length:var(--text-xs)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <X size={12} />
-              立即撤销
+              {t("tempGrantRevokeNow")}
             </button>
           </div>
         )}
@@ -907,35 +922,35 @@ function TemporaryGrantModal({
         <div className="space-y-3">
           <div>
             <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
-              临时角色
+              {t("tempRole")}
             </label>
             <select
               value={tempRole}
               onChange={(e) => setTempRole(e.target.value as "admin" | "member")}
               className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
-              <option value="admin">临时管理员</option>
-              <option value="member">临时成员</option>
+              <option value="admin">{t("tempGrantAdmin")}</option>
+              <option value="member">{t("tempGrantMember")}</option>
             </select>
           </div>
 
           <div>
             <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
-              持续时间
+              {t("duration")}
             </label>
             <div className="grid grid-cols-3 gap-2">
-              {DURATION_OPTIONS.map((opt) => (
+              {DURATION_HOURS.map((hours) => (
                 <button
-                  key={opt.hours}
+                  key={hours}
                   type="button"
-                  onClick={() => setDurationHours(opt.hours)}
+                  onClick={() => setDurationHours(hours)}
                   className={`h-9 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
-                    durationHours === opt.hours
+                    durationHours === hours
                       ? "bg-[var(--accent)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)]"
                       : "border border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
                   }`}
                 >
-                  {opt.label}
+                  {t(durationKey(hours))}
                 </button>
               ))}
             </div>
@@ -943,14 +958,14 @@ function TemporaryGrantModal({
 
           <div>
             <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
-              原因（可选）
+              {t("grantReason")}
             </label>
             <input
               type="text"
               value={reason}
               onChange={(e) => setReason(e.target.value)}
               maxLength={500}
-              placeholder="如：项目紧急支援"
+              placeholder={t("grantReasonPlaceholder")}
               className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 placeholder:text-[var(--meta)]"
             />
           </div>
@@ -962,14 +977,14 @@ function TemporaryGrantModal({
             disabled={busy}
             className="h-9 px-4 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
-            取消
+            {tButton("cancel")}
           </button>
           <button
             onClick={() => onConfirm(target, tempRole, durationHours, reason)}
             disabled={busy}
             className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
-            {busy ? "授权中..." : existingActive ? "更新授权" : "授予授权"}
+            {busy ? t("tempGrantSubmitting") : existingActive ? t("tempGrantUpdate") : t("grantTempPermission")}
           </button>
         </div>
       </div>

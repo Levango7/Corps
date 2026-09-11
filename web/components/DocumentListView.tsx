@@ -28,6 +28,7 @@ interface DocumentListItem {
 
 export function DocumentListView({ wid }: { wid: string }) {
   const t = useTranslations("document");
+  const tExport = useTranslations("exportPreview");
   const router = useRouter();
   const [items, setItems] = useState<DocumentListItem[]>([]);
   const [q, setQ] = useState("");
@@ -125,10 +126,10 @@ export function DocumentListView({ wid }: { wid: string }) {
       const docs = extractDocumentsFromHtml(res.html);
 
       setBatchDocuments(docs);
-      setBatchTitle(`批量导出 (${res.documentCount}个文档)`);
+      setBatchTitle(tExport("batchTitle", { count: res.documentCount }));
       setBatchPreviewOpen(true);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "批量导出失败");
+      setError(e instanceof Error ? e.message : tExport("batchExportFailed"));
     } finally {
       setBatchExporting(false);
     }
@@ -152,7 +153,7 @@ export function DocumentListView({ wid }: { wid: string }) {
         const sectionContent = match[2];
         // 提取 <h1> 标题
         const titleMatch = sectionContent.match(/<h1>([\s\S]*?)<\/h1>/);
-        const title = titleMatch ? titleMatch[1].trim() : "未命名文档";
+        const title = titleMatch ? titleMatch[1].trim() : t("untitledDoc");
         // 提取 <div class="doc-meta"> 后的内容作为 markdown（HTML 形式）
         const contentMatch = sectionContent.match(
           /<div class="doc-meta">[\s\S]*?<\/div>([\s\S]*)/,
@@ -162,9 +163,9 @@ export function DocumentListView({ wid }: { wid: string }) {
       }
       return docs.length > 0
         ? docs
-        : [{ title: "批量导出", markdown: html }];
+        : [{ title: tExport("batchExport"), markdown: html }];
     } catch {
-      return [{ title: "批量导出", markdown: html }];
+      return [{ title: tExport("batchExport"), markdown: html }];
     }
   }
 
@@ -214,7 +215,7 @@ export function DocumentListView({ wid }: { wid: string }) {
       {selectedCount > 0 && (
         <div className="flex items-center gap-3 mb-[var(--space-3)] px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)]">
           <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-            已选择 <span className="font-[weight:var(--weight-semibold)] text-[var(--fg)]">{selectedCount}</span> 个文档
+            {tExport("documentsSelectedInline", { count: selectedCount })}
           </span>
           <div className="flex-1" />
           <button
@@ -222,7 +223,7 @@ export function DocumentListView({ wid }: { wid: string }) {
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
           >
             {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
-            {allSelected ? "取消全选" : "全选"}
+            {allSelected ? tExport("deselectAll") : tExport("selectAll")}
           </button>
           <button
             onClick={handleBatchExport}
@@ -230,7 +231,7 @@ export function DocumentListView({ wid }: { wid: string }) {
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
           >
             {batchExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
-            批量导出
+            {tExport("exportBatch")}
           </button>
         </div>
       )}

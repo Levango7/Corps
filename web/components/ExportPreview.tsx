@@ -96,14 +96,14 @@ export function ExportPreview({
 
   // 批量模式标题：显示"批量导出 (N个文档)"
   const displayTitle = batchMode
-    ? `批量导出 (${documents.length}个文档)`
+    ? t("batchTitle", { count: documents.length })
     : title;
 
   // 批量模式打印按钮文字
-  const printLabel = batchMode ? "打印全部" : t("print");
+  const printLabel = batchMode ? t("printAll") : t("print");
 
   // 批量模式预览标签
-  const previewLabel = batchMode ? "批量预览" : t("previewLabel");
+  const previewLabel = batchMode ? t("batchPreviewLabel") : t("previewLabel");
 
   return (
     <>
@@ -148,7 +148,7 @@ export function ExportPreview({
                   {documents.length > 1 && (
                     <div className="mb-[var(--space-8)] pb-[var(--space-4)] border-b border-[var(--border-soft)]">
                       <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-3)]">
-                        目录
+                        {t("tableOfContents")}
                       </h2>
                       <ol className="list-decimal pl-[var(--space-5)] space-y-[var(--space-1)]">
                         {documents.map((doc, idx) => (
@@ -233,7 +233,7 @@ export function ExportPreview({
             {documents.length > 1 && (
               <div className="mb-[var(--space-8)] pb-[var(--space-4)] border-b border-[var(--border-soft)]">
                 <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] mb-[var(--space-3)]">
-                  目录
+                  {t("tableOfContents")}
                 </h2>
                 <ol className="list-decimal pl-[var(--space-5)] space-y-[var(--space-1)]">
                   {documents.map((doc, idx) => (

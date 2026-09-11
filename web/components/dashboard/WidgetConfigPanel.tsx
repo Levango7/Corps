@@ -27,6 +27,7 @@
 
 import { useEffect, useRef, type ReactNode } from "react";
 import { X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /** Widget 配置数据类型：任意键值对 */
 export type WidgetConfig = Record<string, unknown>;
@@ -53,46 +54,50 @@ type FieldDef =
   | { kind: "select"; key: string; label: string; options: Option<string | number>[] }
   | { kind: "toggle"; key: string; label: string };
 
+/** i18n 翻译函数类型 */
+type TFunc = (key: string, vars?: Record<string, string | number>) => string;
+
 /**
  * 根据 widgetId 返回该 Widget 的配置字段描述符列表。
  * 未注册的 widgetId 返回空数组（不显示配置项）。
+ * 标签通过 i18n 翻译函数 t("dashboard") 命名空间本地化。
  */
-function getFields(widgetId: string): FieldDef[] {
+function getFields(widgetId: string, t: TFunc): FieldDef[] {
   switch (widgetId) {
     case "task-stats":
       return [
         {
           kind: "select",
           key: "timeRange",
-          label: "时间范围",
+          label: t("timeRange"),
           options: [
-            { value: "7d", label: "近 7 天" },
-            { value: "30d", label: "近 30 天" },
-            { value: "90d", label: "近 90 天" },
+            { value: "7d", label: t("range7d") },
+            { value: "30d", label: t("range30d") },
+            { value: "90d", label: t("range90d") },
           ],
         },
-        { kind: "toggle", key: "showCompletionRate", label: "显示完成率" },
+        { kind: "toggle", key: "showCompletionRate", label: t("showCompletionRate") },
       ];
     case "my-tasks":
       return [
         {
           kind: "select",
           key: "limit",
-          label: "显示数量限制",
+          label: t("displayCount"),
           options: [
-            { value: 5, label: "5 条" },
-            { value: 10, label: "10 条" },
-            { value: 20, label: "20 条" },
+            { value: 5, label: t("countItems", { count: 5 }) },
+            { value: 10, label: t("countItems", { count: 10 }) },
+            { value: 20, label: t("countItems", { count: 20 }) },
           ],
         },
         {
           kind: "select",
           key: "statusFilter",
-          label: "筛选状态",
+          label: t("filterStatus"),
           options: [
-            { value: "all", label: "全部" },
-            { value: "in_progress", label: "进行中" },
-            { value: "done", label: "已完成" },
+            { value: "all", label: t("statusAll") },
+            { value: "in_progress", label: t("statusInProgress") },
+            { value: "done", label: t("statusDone") },
           ],
         },
       ];
@@ -101,11 +106,11 @@ function getFields(widgetId: string): FieldDef[] {
         {
           kind: "select",
           key: "limit",
-          label: "显示数量限制",
+          label: t("displayCount"),
           options: [
-            { value: 5, label: "5 条" },
-            { value: 10, label: "10 条" },
-            { value: 20, label: "20 条" },
+            { value: 5, label: t("countItems", { count: 5 }) },
+            { value: 10, label: t("countItems", { count: 10 }) },
+            { value: 20, label: t("countItems", { count: 20 }) },
           ],
         },
       ];
@@ -114,11 +119,11 @@ function getFields(widgetId: string): FieldDef[] {
         {
           kind: "select",
           key: "memberLimit",
-          label: "显示成员数量限制",
+          label: t("displayMemberCount"),
           options: [
-            { value: 5, label: "5 人" },
-            { value: 10, label: "10 人" },
-            { value: 20, label: "20 人" },
+            { value: 5, label: t("countMembers", { count: 5 }) },
+            { value: 10, label: t("countMembers", { count: 10 }) },
+            { value: 20, label: t("countMembers", { count: 20 }) },
           ],
         },
       ];
@@ -127,10 +132,10 @@ function getFields(widgetId: string): FieldDef[] {
         {
           kind: "select",
           key: "timeRange",
-          label: "时间范围",
+          label: t("timeRange"),
           options: [
-            { value: "current_sprint", label: "当前迭代" },
-            { value: "all", label: "全部" },
+            { value: "current_sprint", label: t("rangeCurrentSprint") },
+            { value: "all", label: t("rangeAll") },
           ],
         },
       ];
@@ -139,10 +144,10 @@ function getFields(widgetId: string): FieldDef[] {
         {
           kind: "select",
           key: "chartStyle",
-          label: "显示样式",
+          label: t("chartStyle"),
           options: [
-            { value: "pie", label: "饼图" },
-            { value: "bar", label: "柱状图" },
+            { value: "pie", label: t("stylePie") },
+            { value: "bar", label: t("styleBar") },
           ],
         },
       ];
@@ -151,11 +156,11 @@ function getFields(widgetId: string): FieldDef[] {
         {
           kind: "select",
           key: "limit",
-          label: "显示数量限制",
+          label: t("displayCount"),
           options: [
-            { value: 10, label: "10 条" },
-            { value: 20, label: "20 条" },
-            { value: 50, label: "50 条" },
+            { value: 10, label: t("countItems", { count: 10 }) },
+            { value: 20, label: t("countItems", { count: 20 }) },
+            { value: 50, label: t("countItems", { count: 50 }) },
           ],
         },
       ];
@@ -164,11 +169,11 @@ function getFields(widgetId: string): FieldDef[] {
         {
           kind: "select",
           key: "limit",
-          label: "显示数量限制",
+          label: t("displayCount"),
           options: [
-            { value: 5, label: "5 条" },
-            { value: 10, label: "10 条" },
-            { value: 20, label: "20 条" },
+            { value: 5, label: t("countItems", { count: 5 }) },
+            { value: 10, label: t("countItems", { count: 10 }) },
+            { value: 20, label: t("countItems", { count: 20 }) },
           ],
         },
       ];
@@ -183,8 +188,9 @@ export default function WidgetConfigPanel({
   onChange,
   onClose,
 }: WidgetConfigPanelProps) {
+  const t = useTranslations("dashboard");
   const panelRef = useRef<HTMLDivElement>(null);
-  const fields = getFields(widgetId);
+  const fields = getFields(widgetId, t);
 
   // Escape 关闭
   useEffect(() => {
@@ -219,20 +225,20 @@ export default function WidgetConfigPanel({
         ref={panelRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Widget 配置"
+        aria-label={t("widgetConfig")}
         tabIndex={-1}
         className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] focus-visible:outline-none"
       >
         {/* 标题栏 */}
         <header className="flex items-center justify-between px-5 py-4 border-b border-[var(--border-soft)]">
           <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-            Widget 配置
+            {t("widgetConfig")}
           </h2>
           <button
             type="button"
             onClick={onClose}
             className="p-1 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-            aria-label="关闭"
+            aria-label={t("close")}
           >
             <X size={16} />
           </button>
@@ -242,7 +248,7 @@ export default function WidgetConfigPanel({
         <div className="p-5">
           {fields.length === 0 ? (
             <p className="text-center text-[length:var(--text-sm)] text-[var(--meta)] py-4">
-              此 Widget 暂无可配置项
+              {t("widgetConfigNoOptions")}
             </p>
           ) : (
             <div className="space-y-4">
@@ -265,7 +271,7 @@ export default function WidgetConfigPanel({
             onClick={onClose}
             className="px-3 py-1.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           >
-            完成
+            {t("widgetConfigDone")}
           </button>
         </footer>
       </div>

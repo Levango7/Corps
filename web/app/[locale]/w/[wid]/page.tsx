@@ -22,7 +22,7 @@
  */
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Check, LayoutDashboard } from "lucide-react";
+import { Plus, Pencil, Check, LayoutDashboard, Download, Upload } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import type { WorkspaceSummary, Role } from "@/lib/types";
@@ -93,6 +93,38 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     setLayoutIds(layout.map((item) => item.i));
   }, []);
 
+  // ─── 导出布局 ───
+  const handleExportLayout = useCallback(async () => {
+    try {
+      const data = await gridRef.current?.exportLayout();
+      if (!data) return;
+      const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `dashboard-layout-${new Date().toISOString().slice(0, 10)}.json`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      /* 忽略导出失败 */
+    }
+  }, []);
+
+  // ─── 导入布局 ───
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const handleImportLayout = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      const text = await file.text();
+      const data = JSON.parse(text);
+      await gridRef.current?.importLayout(data);
+    } catch {
+      /* 忽略导入失败 */
+    }
+    e.target.value = ""; // 重置以便重复导入同一文件
+  }, []);
+
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
       {/* 顶部：欢迎语 + 操作区 */}
@@ -122,6 +154,38 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             {editing ? <Check size={15} /> : <Pencil size={15} />}
             <span className="hidden sm:inline">{editing ? t("exitEdit") : t("editLayout")}</span>
           </button>
+          {/* 导出/导入布局（仅编辑模式） */}
+          {editing && (
+            <>
+              <button
+                type="button"
+                onClick={handleExportLayout}
+                className="flex items-center gap-1.5 h-9 px-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                aria-label={t("exportLayout")}
+                title={t("exportLayout")}
+              >
+                <Download size={15} />
+                <span className="hidden sm:inline">{t("exportLayout")}</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                className="flex items-center gap-1.5 h-9 px-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                aria-label={t("importLayout")}
+                title={t("importLayout")}
+              >
+                <Upload size={15} />
+                <span className="hidden sm:inline">{t("importLayout")}</span>
+              </button>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept="application/json"
+                onChange={handleImportLayout}
+                className="hidden"
+              />
+            </>
+          )}
           {/* 添加 Widget */}
           <button
             type="button"
