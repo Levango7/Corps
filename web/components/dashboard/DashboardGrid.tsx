@@ -43,6 +43,7 @@ import {
   getDefaultLayout,
   type RGLItem,
 } from "./default-layouts";
+import { SIZE_PRESETS } from "@/lib/default-layouts";
 import WidgetCard from "./WidgetCard";
 import { getWidgetComponent, getWidgetIcon, getWidgetTitleKey } from "./widgets";
 import type { WidgetConfig } from "./WidgetConfigPanel";
@@ -59,13 +60,27 @@ const ResponsiveGridLayoutWithWidth = dynamic(
   { ssr: false },
 );
 
-/** RGL 布局断点：lg=桌面（4 列）、md=平板（2 列）、sm=移动（1 列纵向堆叠） */
+/** RGL 布局断点：lg=桌面（12 列）、md=平板（6 列）、sm=移动（1 列纵向堆叠） */
 const BREAKPOINTS = { lg: 1024, md: 640, sm: 0 };
-const COLS = { lg: 4, md: 2, sm: 1 };
-/** 每格高度（px），与 RGL rowHeight 配合控制 Widget 高度 */
-const ROW_HEIGHT = 80;
+/** F7: 细粒度网格 — 4列→12列，更精细的拼接控制 */
+const COLS = { lg: 12, md: 6, sm: 1 };
+/** F7: 每格高度从 80→60，配合 12 列实现更细粒度的尺寸控制 */
+const ROW_HEIGHT = 60;
 /** 移动端断点名称 */
 type Bp = "lg" | "md" | "sm";
+
+/** F7: 密度预设 — 控制 Widget 间距 */
+type Density = "compact" | "comfortable" | "spacious";
+const DENSITY_MARGIN: Record<Density, readonly [number, number]> = {
+  compact: [8, 8],
+  comfortable: [12, 12],
+  spacious: [20, 20],
+};
+/** 将字符串安全转为 Density，非法值回退 comfortable */
+function toDensity(v: string | undefined | null): Density {
+  return v === "compact" || v === "comfortable" || v === "spacious" ? v : "comfortable";
+}
+
 
 /** Widget 配置映射：widgetId → 配置对象 */
 type WidgetConfigs = Record<string, WidgetConfig>;
@@ -101,12 +116,24 @@ export interface DashboardGridProps {
   editing: boolean;
   /** 当前布局变化回调（用于父组件感知脏状态 + 获取 widget id 列表） */
   onLayoutChange?: (layout: RGLItem[]) => void;
+  /** F7: 自由排列模式（允许重叠 + 不紧凑），由父组件控制 */
+  freeMode: boolean;
+  /** F7: 自由模式变更回调 */
+  onFreeModeChange?: (v: boolean) => void;
+  /** F7: 密度预设（控制 Widget 间距），由父组件控制 */
+  density: Density;
+  /** F7: 密度变更回调 */
+  onDensityChange?: (v: Density) => void;
 }
 
 /** GET /dashboard/layout 响应数据 */
 interface LayoutResponse {
   layout: RGLItem[];
   widgetConfigs?: WidgetConfigs;
+  /** F7: 自由排列模式（持久化字段） */
+  freeMode?: boolean;
+  /** F7: 密度预设（持久化字段） */
+  density?: string;
 }
 
 /** GET /dashboard/layout/export 响应数据 */
@@ -118,7 +145,17 @@ interface ExportResponse {
 }
 
 const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(function DashboardGrid(
-  { wid, role, locale: _locale, editing, onLayoutChange },
+  {
+    wid,
+    role,
+    locale: _locale,
+    editing,
+    onLayoutChange,
+    freeMode,
+    onFreeModeChange,
+    density,
+    onDensityChange,
+  },
   ref,
 ) {
   const t = useTranslations("dashboard");
@@ -131,6 +168,8 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
   const [saving, setSaving] = useState(false);
   /** 当前活动断点（用于判断是否移动端） */
   const [bp, setBp] = useState<Bp>("lg");
+  /** F7: 拖拽中的 widget id（用于 WidgetCard dragging 视觉反馈） */
+  const [draggingId, setDraggingId] = useState<string | null>(null);
   /** 是否有未保存的布局变更 */
   const dirtyRef = useRef(false);
   /** 防止 onLayoutChange 在初次加载时触发保存 */
@@ -143,6 +182,13 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       const res = await api<LayoutResponse>(`/api/v1/workspaces/${wid}/dashboard/layout`);
       setLayout(res.layout ?? []);
       setWidgetConfigs(res.widgetConfigs ?? {});
+      // F7: 读取持久化的 freeMode / density，通知父组件同步状态
+      if (typeof res.freeMode === "boolean" && onFreeModeChange) {
+        onFreeModeChange(res.freeMode);
+      }
+      if (res.density && onDensityChange) {
+        onDensityChange(toDensity(res.density));
+      }
     } catch {
       // 加载失败回退角色默认布局，保证可用
       setLayout(getDefaultLayout(role));
@@ -152,7 +198,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       setLoaded(true);
       initializedRef.current = true;
     }
-  }, [wid, role, t]);
+  }, [wid, role, t, onFreeModeChange, onDensityChange]);
 
   useEffect(() => {
     loadLayout();
@@ -165,7 +211,13 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
         setSaving(true);
         await api(`/api/v1/workspaces/${wid}/dashboard/layout`, {
           method: "PUT",
-          body: JSON.stringify({ layout: toSave, widgetConfigs: configsToSave }),
+          body: JSON.stringify({
+            layout: toSave,
+            widgetConfigs: configsToSave,
+            // F7: 持久化自由模式与密度预设
+            freeMode,
+            density,
+          }),
         });
         dirtyRef.current = false;
       } catch {
@@ -174,7 +226,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
         setSaving(false);
       }
     },
-    [wid, t],
+    [wid, t, freeMode, density],
   );
 
   // 编辑模式退出时若有脏数据则保存
@@ -205,6 +257,38 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       onLayoutChange?.(normalized);
     },
     [onLayoutChange],
+  );
+
+  // ─── F7: 拖拽视觉反馈 ───
+  // RGL onDragStart/onDragStop 签名：(layout, oldItem, newItem, placeholder, event, element) => void
+  // newItem 类型为 LayoutItem | null，需处理 null 情况
+  const handleDragStart = useCallback(
+    (_current: unknown, _oldItem: unknown, newItem: { i: string } | null) => {
+      if (newItem) setDraggingId(newItem.i);
+    },
+    [],
+  );
+  const handleDragStop = useCallback(() => {
+    setDraggingId(null);
+  }, []);
+
+  // ─── F7: 双击标题栏循环尺寸（E4） ───
+  // S(2×2) → M(4×3) → L(6×4) → XL(8×5) → S
+  // 返回新尺寸标签供 WidgetCard 显示短暂提示
+  const handleCycleSize = useCallback(
+    (widgetId: string): string | void => {
+      const item = layout.find((it) => it.i === widgetId);
+      if (!item) return;
+      const currentIdx = SIZE_PRESETS.findIndex((p) => p.w === item.w && p.h === item.h);
+      const nextIdx = currentIdx >= 0 ? (currentIdx + 1) % SIZE_PRESETS.length : 0;
+      const next = SIZE_PRESETS[nextIdx];
+      setLayout((prev) =>
+        prev.map((it) => (it.i === widgetId ? { ...it, w: next.w, h: next.h } : it)),
+      );
+      dirtyRef.current = true;
+      return next.label;
+    },
+    [layout],
   );
 
   // ─── 删除 Widget ───
@@ -337,14 +421,21 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
         breakpoints={BREAKPOINTS}
         cols={COLS}
         rowHeight={ROW_HEIGHT}
-        margin={[12, 12]}
+        margin={DENSITY_MARGIN[density]}
         containerPadding={[0, 0]}
         isDraggable={editing && !isMobile}
         isResizable={editing && !isMobile}
-        compactType="vertical"
+        // F7: 自由模式 — 允许重叠 + 不紧凑；网格模式 — 垂直紧凑 + 不允许重叠
+        compactType={freeMode ? null : "vertical"}
         preventCollision={false}
+        allowOverlap={freeMode}
+        // F7: 全方向拉伸手柄（编辑模式下生效，8 个方向）
+        resizeHandles={["s", "w", "e", "n", "sw", "nw", "se", "ne"]}
         onLayoutChange={(current) => handleLayoutChange(current)}
         onBreakpointChange={(newBp: string) => setBp(newBp as Bp)}
+        // F7: 拖拽视觉反馈
+        onDragStart={handleDragStart}
+        onDragStop={handleDragStop}
         useCSSTransforms
         draggableHandle=".drag-handle"
       >
@@ -363,6 +454,10 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
                 widgetId={item.i}
                 config={widgetConfigs[item.i]}
                 onConfigChange={(next) => handleConfigChange(item.i, next)}
+                // F7: 拖拽视觉反馈
+                dragging={draggingId === item.i}
+                // F7: 双击标题栏循环尺寸
+                onCycleSize={() => handleCycleSize(item.i)}
               >
                 <WidgetComp wid={wid} />
               </WidgetCard>

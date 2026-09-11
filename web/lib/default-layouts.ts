@@ -30,29 +30,41 @@ export interface RGLItem {
  * viewer 最精简（统计 + 最近活动）。
  */
 export const DEFAULT_LAYOUTS: Record<Role, RGLItem[]> = {
+  // F7: 4列→12列细粒度网格，w×3、x×3、h 按 rowHeight 80→60 调整（×0.75 取整）
   owner: [
-    { i: "task-stats", x: 0, y: 0, w: 1, h: 1 },
-    { i: "burndown", x: 1, y: 0, w: 3, h: 2 },
-    { i: "team-load", x: 0, y: 1, w: 2, h: 2 },
-    { i: "recent-activity", x: 2, y: 2, w: 2, h: 1 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
+    { i: "burndown", x: 3, y: 0, w: 9, h: 3 },
+    { i: "team-load", x: 0, y: 1, w: 6, h: 3 },
+    { i: "recent-activity", x: 6, y: 2, w: 6, h: 2 },
   ],
   admin: [
-    { i: "task-stats", x: 0, y: 0, w: 1, h: 1 },
-    { i: "burndown", x: 1, y: 0, w: 3, h: 2 },
-    { i: "decision-actions", x: 0, y: 1, w: 2, h: 1 },
-    { i: "recent-activity", x: 2, y: 2, w: 2, h: 1 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
+    { i: "burndown", x: 3, y: 0, w: 9, h: 3 },
+    { i: "decision-actions", x: 0, y: 1, w: 6, h: 2 },
+    { i: "recent-activity", x: 6, y: 2, w: 6, h: 2 },
   ],
   member: [
-    { i: "task-stats", x: 0, y: 0, w: 1, h: 1 },
-    { i: "my-tasks", x: 1, y: 0, w: 2, h: 2 },
-    { i: "due-this-week", x: 0, y: 1, w: 2, h: 1 },
-    { i: "priority-dist", x: 3, y: 0, w: 1, h: 1 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
+    { i: "my-tasks", x: 3, y: 0, w: 6, h: 3 },
+    { i: "due-this-week", x: 0, y: 1, w: 6, h: 2 },
+    { i: "priority-dist", x: 9, y: 0, w: 3, h: 1 },
   ],
   viewer: [
-    { i: "task-stats", x: 0, y: 0, w: 1, h: 1 },
-    { i: "recent-activity", x: 1, y: 0, w: 2, h: 1 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
+    { i: "recent-activity", x: 3, y: 0, w: 6, h: 2 },
   ],
 };
+
+/**
+ * F7 尺寸循环预设：双击 Widget 标题栏时按 S→M→L→XL→S 循环切换。
+ * w/h 为 12 列网格下的占位宽高（单位 = 1 格）。
+ */
+export const SIZE_PRESETS: ReadonlyArray<{ label: string; w: number; h: number }> = [
+  { label: "S", w: 2, h: 2 },
+  { label: "M", w: 4, h: 3 },
+  { label: "L", w: 6, h: 4 },
+  { label: "XL", w: 8, h: 5 },
+];
 
 /**
  * 取指定角色的默认布局。角色非法时回退 viewer（最保守）。

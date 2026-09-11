@@ -1346,6 +1346,15 @@
     "dataSourceTaskStatus": "任务状态",
     "dataSourceTaskPriority": "任务优先级",
     "dataSourceMilestoneProgress": "里程碑进度",
-    "styleLine": "折线图"
+    "styleLine": "折线图",
+    "gridMode": "网格",
+    "freeMode": "自由",
+    "compact": "紧凑",
+    "comfortable": "舒适",
+    "spacious": "宽敞",
+    "layoutMode": "布局模式",
+    "layoutDensity": "间距密度",
+    "resetLayout": "恢复默认",
+    "resetLayoutConfirm": "恢复默认布局？这将丢弃当前布局。"
   }
 }

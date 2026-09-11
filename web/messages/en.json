@@ -1346,6 +1346,15 @@
     "dataSourceTaskStatus": "Task Status",
     "dataSourceTaskPriority": "Task Priority",
     "dataSourceMilestoneProgress": "Milestone Progress",
-    "styleLine": "Line Chart"
+    "styleLine": "Line Chart",
+    "gridMode": "Grid",
+    "freeMode": "Free",
+    "compact": "Compact",
+    "comfortable": "Comfortable",
+    "spacious": "Spacious",
+    "layoutMode": "Layout mode",
+    "layoutDensity": "Density",
+    "resetLayout": "Reset to default",
+    "resetLayoutConfirm": "Reset layout to default? This will discard your current layout."
   }
 }

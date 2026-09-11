@@ -27,17 +27,18 @@ export const WIDGET_REGISTRY: Record<
   string,
   { titleKey: string; defaultW: number; defaultH: number; minW?: number; minH?: number }
 > = {
-  "task-stats": { titleKey: "taskStats", defaultW: 1, defaultH: 1, minW: 1, minH: 1 },
-  "my-tasks": { titleKey: "myTasks", defaultW: 2, defaultH: 2, minW: 2, minH: 1 },
-  "decision-actions": { titleKey: "decisionActions", defaultW: 2, defaultH: 1, minW: 2, minH: 1 },
-  "due-this-week": { titleKey: "dueThisWeek", defaultW: 2, defaultH: 1, minW: 2, minH: 1 },
-  "team-load": { titleKey: "teamLoad", defaultW: 2, defaultH: 2, minW: 2, minH: 1 },
-  "burndown": { titleKey: "burndown", defaultW: 3, defaultH: 2, minW: 2, minH: 2 },
-  "priority-dist": { titleKey: "priorityDist", defaultW: 1, defaultH: 1, minW: 1, minH: 1 },
-  "recent-activity": { titleKey: "recentActivity", defaultW: 2, defaultH: 1, minW: 1, minH: 1 },
-  "gantt-chart": { titleKey: "ganttChart", defaultW: 4, defaultH: 3, minW: 3, minH: 2 },
-  "milestone-timeline": { titleKey: "milestoneTimeline", defaultW: 2, defaultH: 3, minW: 2, minH: 2 },
-  "custom-chart": { titleKey: "customChart", defaultW: 2, defaultH: 2, minW: 2, minH: 1 },
+  // F7: 4列→12列细粒度网格，宽度×3、高度×0.75 取整（rowHeight 80→60）
+  "task-stats": { titleKey: "taskStats", defaultW: 3, defaultH: 1, minW: 2, minH: 1 },
+  "my-tasks": { titleKey: "myTasks", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
+  "decision-actions": { titleKey: "decisionActions", defaultW: 6, defaultH: 2, minW: 4, minH: 1 },
+  "due-this-week": { titleKey: "dueThisWeek", defaultW: 6, defaultH: 2, minW: 4, minH: 1 },
+  "team-load": { titleKey: "teamLoad", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
+  "burndown": { titleKey: "burndown", defaultW: 9, defaultH: 3, minW: 6, minH: 2 },
+  "priority-dist": { titleKey: "priorityDist", defaultW: 3, defaultH: 1, minW: 2, minH: 1 },
+  "recent-activity": { titleKey: "recentActivity", defaultW: 6, defaultH: 2, minW: 3, minH: 1 },
+  "gantt-chart": { titleKey: "ganttChart", defaultW: 12, defaultH: 4, minW: 6, minH: 3 },
+  "milestone-timeline": { titleKey: "milestoneTimeline", defaultW: 6, defaultH: 4, minW: 4, minH: 3 },
+  "custom-chart": { titleKey: "customChart", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
 };
 
 /** 已注册的 Widget id 列表（用于「添加 Widget」对话框展示可选项） */

@@ -22,7 +22,7 @@
  */
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Check, LayoutDashboard, Download, Upload } from "lucide-react";
+import { Plus, Pencil, Check, LayoutDashboard, Download, Upload, LayoutGrid, Move, Minimize2, Square, Maximize2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
@@ -30,6 +30,9 @@ import type { WorkspaceSummary, Role } from "@/lib/types";
 import Onboarding from "@/components/Onboarding";
 import DashboardGrid, { type DashboardGridHandle } from "@/components/dashboard/DashboardGrid";
 import AddWidgetDialog from "@/components/dashboard/AddWidgetDialog";
+
+/** 仪表盘间距密度预设 */
+type Density = "compact" | "comfortable" | "spacious";
 
 export default function HomePage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
@@ -53,6 +56,9 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   /** 当前布局中的 Widget id 列表（用于 AddWidgetDialog 灰显已添加项） */
   const [layoutIds, setLayoutIds] = useState<string[]>([]);
   const gridRef = useRef<DashboardGridHandle>(null);
+  // F7 自由拼接：布局模式（网格 / 自由）+ 间距密度预设
+  const [freeMode, setFreeMode] = useState(false);
+  const [density, setDensity] = useState<Density>("comfortable");
 
   // ─── 加载 workspace context ───
   const loadWorkspace = useCallback(async () => {
@@ -95,6 +101,10 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     setLayoutIds(layout.map((item) => item.i));
   }, []);
 
+  // ─── F7 布局模式 / 密度切换 ───
+  const handleFreeModeChange = useCallback((v: boolean) => setFreeMode(v), []);
+  const handleDensityChange = useCallback((v: Density) => setDensity(v), []);
+
   // ─── 导出布局 ───
   const handleExportLayout = useCallback(async () => {
     try {
@@ -127,6 +137,14 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     e.target.value = ""; // 重置以便重复导入同一文件
   }, []);
 
+  // ─── 工具栏按钮样式：激活态高亮，非激活态弱化 + hover ───
+  const toolbarBtnClass = (active: boolean) =>
+    `flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+      active
+        ? "bg-[var(--surface-2)] text-[var(--fg)]"
+        : "text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+    }`;
+
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
       {/* 顶部：欢迎语 + 操作区 */}
@@ -156,9 +174,72 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             {editing ? <Check size={15} /> : <Pencil size={15} />}
             <span className="hidden sm:inline">{editing ? t("exitEdit") : t("editLayout")}</span>
           </button>
-          {/* 导出/导入布局（仅编辑模式） */}
+          {/* 编辑模式工具栏：布局模式 + 密度 + 导出/导入（仅编辑模式） */}
           {editing && (
             <>
+              {/* 分隔线 */}
+              <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
+              {/* 布局模式切换：网格 / 自由 */}
+              <div className="flex items-center gap-1" role="group" aria-label={t("layoutMode")}>
+                <button
+                  type="button"
+                  onClick={() => handleFreeModeChange(false)}
+                  className={toolbarBtnClass(!freeMode)}
+                  aria-pressed={!freeMode}
+                  title={t("gridMode")}
+                >
+                  <LayoutGrid size={16} />
+                  <span className="hidden sm:inline">{t("gridMode")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleFreeModeChange(true)}
+                  className={toolbarBtnClass(freeMode)}
+                  aria-pressed={freeMode}
+                  title={t("freeMode")}
+                >
+                  <Move size={16} />
+                  <span className="hidden sm:inline">{t("freeMode")}</span>
+                </button>
+              </div>
+              {/* 分隔线 */}
+              <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
+              {/* 密度选择器：紧凑 / 舒适 / 宽敞 */}
+              <div className="flex items-center gap-1" role="group" aria-label={t("layoutDensity")}>
+                <button
+                  type="button"
+                  onClick={() => handleDensityChange("compact")}
+                  className={toolbarBtnClass(density === "compact")}
+                  aria-pressed={density === "compact"}
+                  title={t("compact")}
+                >
+                  <Minimize2 size={16} />
+                  <span className="hidden sm:inline">{t("compact")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDensityChange("comfortable")}
+                  className={toolbarBtnClass(density === "comfortable")}
+                  aria-pressed={density === "comfortable"}
+                  title={t("comfortable")}
+                >
+                  <Square size={16} />
+                  <span className="hidden sm:inline">{t("comfortable")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleDensityChange("spacious")}
+                  className={toolbarBtnClass(density === "spacious")}
+                  aria-pressed={density === "spacious"}
+                  title={t("spacious")}
+                >
+                  <Maximize2 size={16} />
+                  <span className="hidden sm:inline">{t("spacious")}</span>
+                </button>
+              </div>
+              {/* 分隔线 */}
+              <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
+              {/* 导出/导入布局 */}
               <button
                 type="button"
                 onClick={handleExportLayout}
@@ -218,6 +299,10 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
           locale=""
           editing={editing}
           onLayoutChange={handleLayoutChange}
+          freeMode={freeMode}
+          onFreeModeChange={handleFreeModeChange}
+          density={density}
+          onDensityChange={handleDensityChange}
         />
       )}
 

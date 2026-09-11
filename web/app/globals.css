@@ -438,3 +438,147 @@ svg {
     transform: translateX(0);
   }
 }
+/* ============================================================================
+ * F7 自由拼接布局 — react-grid-layout 自定义样式
+ * 全方向拉伸手柄（半透明小圆点）+ 拖拽视觉反馈
+ * 项目未单独导入 RGL CSS，此处内联必要的基础布局样式 + 自定义手柄
+ * 所有颜色走 design token（var(--*)），无裸 hex
+ * ========================================================================= */
+
+/* RGL 基础布局容器 */
+.react-grid-layout {
+  position: relative;
+  transition: height 200ms ease;
+}
+
+/* RGL 单个网格项 */
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+}
+.react-grid-item.cssTransforms {
+  transition-property: transform, width, height;
+}
+.react-grid-item img {
+  pointer-events: none;
+  user-select: none;
+}
+
+/* 拉伸中 — 禁用过渡，提升 z-index */
+.react-grid-item.resizing {
+  transition: none;
+  z-index: 1;
+  will-change: width, height;
+}
+
+/* 拖拽中 — 禁用过渡，提升 z-index */
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 3;
+  will-change: transform;
+}
+
+/* 拖放占位符 */
+.react-grid-item.dropping {
+  visibility: hidden;
+}
+
+/* 拖拽占位提示块 */
+.react-grid-item.react-grid-placeholder {
+  background: var(--accent);
+  opacity: 0.15;
+  transition-duration: 100ms;
+  z-index: 2;
+  user-select: none;
+  border-radius: var(--radius-lg);
+}
+.react-grid-item.react-grid-placeholder.placeholder-resizing {
+  transition: none;
+}
+
+/* ── F7: 全方向拉伸手柄 — 半透明小圆点 ── */
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  opacity: 0;
+  transition: opacity var(--motion-fast) ease;
+  z-index: 2;
+}
+
+/* hover 网格项时显示手柄 */
+.react-grid-item:hover > .react-resizable-handle {
+  opacity: 1;
+}
+
+/* 手柄圆点（覆盖 RGL 默认 L 形角标） */
+.react-grid-item > .react-resizable-handle::after {
+  content: "";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent);
+  opacity: 0.35;
+  transition: opacity var(--motion-fast) ease;
+}
+
+/* hover 手柄时圆点变亮 */
+.react-grid-item:hover > .react-resizable-handle:hover::after {
+  opacity: 0.85;
+}
+
+/* 隐藏拉伸手柄（非编辑模式） */
+.react-resizable-hide > .react-resizable-handle {
+  display: none;
+}
+
+/* ── 各方向手柄定位 + cursor ── */
+.react-grid-item > .react-resizable-handle.react-resizable-handle-sw {
+  bottom: -4px;
+  left: -4px;
+  cursor: sw-resize;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-se {
+  bottom: -4px;
+  right: -4px;
+  cursor: se-resize;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-nw {
+  top: -4px;
+  left: -4px;
+  cursor: nw-resize;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-ne {
+  top: -4px;
+  right: -4px;
+  cursor: ne-resize;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-w,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e {
+  top: 50%;
+  margin-top: -8px;
+  cursor: ew-resize;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-w {
+  left: -4px;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-e {
+  right: -4px;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-n,
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
+  left: 50%;
+  margin-left: -8px;
+  cursor: ns-resize;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-n {
+  top: -4px;
+}
+.react-grid-item > .react-resizable-handle.react-resizable-handle-s {
+  bottom: -4px;
+}

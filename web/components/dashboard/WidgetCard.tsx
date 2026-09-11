@@ -20,7 +20,7 @@
  *   — 图标尺寸走档位值（16/14），不使用任意数值。
  */
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GripVertical, Settings, X } from "lucide-react";
 import WidgetConfigPanel, { type WidgetConfig } from "./WidgetConfigPanel";
 
@@ -45,6 +45,10 @@ export interface WidgetCardProps {
   config?: WidgetConfig;
   /** 配置变更回调（编辑模式下触发，由父组件持久化） */
   onConfigChange?: (config: WidgetConfig) => void;
+  /** F7: 双击标题栏循环尺寸回调，可返回新尺寸标签（如 "M"）用于短暂提示 */
+  onCycleSize?: () => string | void;
+  /** F7: 拖拽中视觉反馈（由 RGL onDragStart/onDragStop 驱动） */
+  dragging?: boolean;
 }
 
 export default function WidgetCard({
@@ -58,17 +62,46 @@ export default function WidgetCard({
   widgetId,
   config,
   onConfigChange,
+  onCycleSize,
+  dragging,
 }: WidgetCardProps) {
   /** 是否打开配置面板 */
   const [configOpen, setConfigOpen] = useState(false);
+  /** F7: 双击切换尺寸时的短暂标签提示（如 "M"），1.5s 后自动消失 */
+  const [sizeHint, setSizeHint] = useState<string | null>(null);
+  const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+    };
+  }, []);
+
+  /** F7: 双击标题栏触发尺寸循环，显示返回的标签提示 */
+  const handleHeaderDoubleClick = () => {
+    if (!onCycleSize) return;
+    const label = onCycleSize();
+    if (typeof label === "string" && label.length > 0) {
+      setSizeHint(label);
+      if (hintTimerRef.current) clearTimeout(hintTimerRef.current);
+      hintTimerRef.current = setTimeout(() => setSizeHint(null), 1500);
+    }
+  };
 
   return (
     <div
-      className="flex flex-col h-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden"
+      className={[
+        "flex flex-col h-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden",
+        // F7: 拖拽视觉反馈 — 轻微放大 + 更强阴影 + 半透明
+        dragging
+          ? "scale-[1.02] shadow-[var(--elev-md)] opacity-90 transition-[transform,box-shadow,opacity] duration-[var(--motion-fast)] ease-out"
+          : "transition-[transform,box-shadow,opacity] duration-[var(--motion-fast)] ease-out",
+      ].join(" ")}
       aria-label={ariaLabel ?? title}
     >
       {/* 标题栏 */}
       <header
+        onDoubleClick={handleHeaderDoubleClick}
         className={[
           "flex items-center gap-2 px-4 py-2.5 border-b border-[var(--border-soft)]",
           editing ? "cursor-grab active:cursor-grabbing drag-handle" : "",
@@ -91,6 +124,15 @@ export default function WidgetCard({
         <h3 className="flex-1 min-w-0 truncate text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {title}
         </h3>
+        {/* F7: 双击切换尺寸后的短暂标签提示 */}
+        {sizeHint && (
+          <span
+            className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--accent-soft)] text-[length:var(--text-xs)] font-[weight:var(--weight-semibold)] text-[var(--accent)] animate-pulse"
+            aria-live="polite"
+          >
+            {sizeHint}
+          </span>
+        )}
         {headerExtra && <div className="shrink-0 flex items-center gap-1">{headerExtra}</div>}
         {editing && widgetId && onConfigChange && (
           <button
