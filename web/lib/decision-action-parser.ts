@@ -247,26 +247,26 @@ export interface ActionTemplate {
 export const ACTION_TEMPLATES: ActionTemplate[] = [
   {
     id: "review-revise-merge",
-    name: "评审→修改→合并",
-    description: "代码评审三步流程",
+    name: "decision.template.reviewReviseMerge.name",
+    description: "decision.template.reviewReviseMerge.description",
     markdown: `## 执行计划\n\n- [ ] @reviewer {dueDate} 完成代码评审 #high\n- [ ] @author {dueDate} 根据评审意见修改 #medium\n- [ ] @reviewer {dueDate} 确认修改并合并 #high`,
   },
   {
     id: "investigate-decide-implement",
-    name: "调研→决策→实施",
-    description: "技术方案落地流程",
+    name: "decision.template.investigateDecideImplement.name",
+    description: "decision.template.investigateDecideImplement.description",
     markdown: `## 执行计划\n\n- [ ] @investigator {dueDate} 完成技术调研并输出方案 #high\n- [ ] @team {dueDate} 方案评审会议 #medium\n- [ ] @implementor {dueDate} 完成开发实施 #high`,
   },
   {
     id: "plan-do-check",
-    name: "计划→执行→检查",
-    description: "PDCA经典循环",
+    name: "decision.template.planDoCheck.name",
+    description: "decision.template.planDoCheck.description",
     markdown: `## 执行计划\n\n- [ ] @owner {dueDate} 制定详细执行计划 #medium\n- [ ] @executor {dueDate} 按计划执行 #high\n- [ ] @reviewer {dueDate} 检查执行结果并反馈 #medium`,
   },
   {
     id: "design-develop-test-deploy",
-    name: "设计→开发→测试→上线",
-    description: "功能全流程",
+    name: "decision.template.designDevelopTestDeploy.name",
+    description: "decision.template.designDevelopTestDeploy.description",
     markdown: `## 执行计划\n\n- [ ] @designer {dueDate} 完成UI/UX设计 #medium\n- [ ] @developer {dueDate} 完成开发 #high\n- [ ] @tester {dueDate} 完成测试验证 #high\n- [ ] @devops {dueDate} 部署上线 #medium`,
   },
 ];

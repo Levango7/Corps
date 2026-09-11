@@ -149,6 +149,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const tAccount = useTranslations("accountDeletion");
   const tTheme = useTranslations("theme");
   const tErr = useTranslations("error");
+  const tRole = useTranslations("role");
   const router = useRouter();
   const locale = useLocale();
   const [ws, setWs] = useState<Workspace | null>(null);
@@ -1005,7 +1006,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
                     <ul className="mt-1 space-y-0.5 text-[var(--muted)]">
                       {accountPreview.joinedWorkspaces.map((w) => (
                         <li key={w.id}>
-                          · {w.name}（{w.role}）
+                          · {w.name}（{tRole(w.role)}）
                         </li>
                       ))}
                     </ul>

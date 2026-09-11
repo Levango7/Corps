@@ -147,6 +147,16 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   // ── F1 增强：行动项模板插入下拉菜单 ──
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
 
+  // Escape 关闭模板下拉菜单
+  useEffect(() => {
+    if (!templateMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTemplateMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [templateMenuOpen]);
+
   // ── F5 增强：分享自定义路径（shareSlug）──
   const [shareSlug, setShareSlug] = useState<string>("");
   const [shareSlugSaved, setShareSlugSaved] = useState<string | null>(null);
@@ -530,6 +540,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               onClick={() => setTemplateMenuOpen((v) => !v)}
               title={tDecision("insertTemplate")}
               aria-label={tDecision("insertTemplate")}
+              aria-expanded={templateMenuOpen}
+              aria-haspopup="menu"
               className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               <Plus size={14} />

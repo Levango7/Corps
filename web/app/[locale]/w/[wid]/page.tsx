@@ -25,6 +25,7 @@ import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Plus, Pencil, Check, LayoutDashboard, Download, Upload } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
+import { useToast } from "@/components/Toast";
 import type { WorkspaceSummary, Role } from "@/lib/types";
 import Onboarding from "@/components/Onboarding";
 import DashboardGrid, { type DashboardGridHandle } from "@/components/dashboard/DashboardGrid";
@@ -36,6 +37,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   const t = useTranslations("dashboard");
   const tNav = useTranslations("nav");
   const tTask = useTranslations("task");
+  const { toast } = useToast();
 
   // workspace context（获取 role + 判断 onboarding）
   const [workspace, setWorkspace] = useState<WorkspaceSummary | null>(null);
@@ -106,7 +108,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       a.click();
       URL.revokeObjectURL(url);
     } catch {
-      /* 忽略导出失败 */
+      toast("error", t("exportLayoutFailed"));
     }
   }, []);
 
@@ -120,7 +122,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       const data = JSON.parse(text);
       await gridRef.current?.importLayout(data);
     } catch {
-      /* 忽略导入失败 */
+      toast("error", t("importLayoutFailed"));
     }
     e.target.value = ""; // 重置以便重复导入同一文件
   }, []);

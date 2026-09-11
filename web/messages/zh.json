@@ -990,9 +990,29 @@
     "actionRemoved": "已移除 {count} 个行动项",
     "syncSuccess": "同步成功",
     "syncFailed": "同步失败",
+    "loadFailed": "加载失败",
+    "updateFailed": "更新失败",
     "insertTemplate": "插入模板",
     "templateMenuOpen": "选择行动计划模板",
-    "overdueNotification": "行动项已逾期"
+    "overdueNotification": "行动项已逾期",
+    "template": {
+      "reviewReviseMerge": {
+        "name": "评审→修改→合并",
+        "description": "代码评审三步流程"
+      },
+      "investigateDecideImplement": {
+        "name": "调研→决策→实施",
+        "description": "技术方案落地流程"
+      },
+      "planDoCheck": {
+        "name": "计划→执行→检查",
+        "description": "PDCA经典循环"
+      },
+      "designDevelopTestDeploy": {
+        "name": "设计→开发→测试→上线",
+        "description": "功能全流程"
+      }
+    }
   },
   "role": {
     "owner": "拥有者",

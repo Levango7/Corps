@@ -806,21 +806,21 @@ paths:
                 durationHours:
                   type: integer
                   minimum: 1
-                  maximum: 720
-                  description: Grant duration in hours (1–720, i.e. up to 30 days).
+                  maximum: 168
+                  description: Grant duration in hours (1–168, i.e. up to 7 days).
                 reason:
                   type: string
                   maxLength: 500
                   description: Optional human-readable reason for the grant.
       responses:
-        '200':
+        '201':
           description: Temporary grant created
           content:
             application/json:
               schema:
                 type: object
                 properties:
-                  code: { type: integer, example: 200 }
+                  code: { type: integer, example: 201 }
                   data:
                     $ref: '#/components/schemas/TemporaryGrant'
         '400':
@@ -882,7 +882,7 @@ paths:
         - $ref: '#/components/parameters/UserId'
       responses:
         '200':
-          description: Grant revoked (or no active grant)
+          description: Grant revoked (or no active grant — idempotent)
           content:
             application/json:
               schema:
@@ -891,8 +891,6 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
-        '404':
-          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -1859,6 +1857,41 @@ paths:
       responses:
         '200':
           description: Cleanup summary (deleted/kept counts)
+        '401': { description: Missing/invalid CRON_SECRET }
+        '500': { description: CRON_SECRET not configured or internal error }
+  /api/cron/check-expired-permissions:
+    get:
+      tags: [system]
+      summary: Revoke expired temporary permission grants (hourly cron, Bearer CRON_SECRET)
+      description: >
+        Scans all TemporaryGrant records where expiresAt < now(). For each
+        expired grant, restores the member's role to originalRole (only if
+        current role still matches tempRole, to avoid overwriting manual role
+        changes) and deletes the grant record. All steps run in a single
+        transaction. Returns { checked, restored, skipped }.
+        Suggested schedule: hourly.
+      security:
+        - cronSecret: []
+      responses:
+        '200':
+          description: Expired grants processed (checked/restored/skipped counts)
+        '401': { description: Missing/invalid CRON_SECRET }
+        '500': { description: CRON_SECRET not configured or internal error }
+  /api/cron/check-overdue-actions:
+    get:
+      tags: [system]
+      summary: Send overdue action item notifications (daily cron, Bearer CRON_SECRET)
+      description: >
+        Scans all incomplete and overdue DecisionActionItems with an associated
+        non-done task. For each overdue item with an assignee, creates an
+        in-app Notification (type: action_overdue, deduplicated by entityId).
+        Returns { checked, notified, skipped }.
+        Suggested schedule: daily at 09:00.
+      security:
+        - cronSecret: []
+      responses:
+        '200':
+          description: Overdue action items processed (checked/notified/skipped counts)
         '401': { description: Missing/invalid CRON_SECRET }
         '500': { description: CRON_SECRET not configured or internal error }
   /api/uploads/{path+}:
@@ -3013,17 +3046,18 @@ paths:
                   data:
                     type: object
                     properties:
-                      version: { type: string, example: "1.0" }
-                      exportedAt: { type: string, format: date-time }
-                      breakpoint: { type: string, example: "lg" }
                       layout:
                         type: array
                         items:
                           $ref: '#/components/schemas/RGLItem'
-                      configs:
+                      widgetConfigs:
                         type: object
                         additionalProperties: true
                         description: Widget configurations keyed by widgetId.
+                      name:
+                        type: string
+                        description: Auto-generated template name (workspace id + date).
+                      exportedAt: { type: string, format: date-time }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -3080,16 +3114,14 @@ paths:
                   data:
                     type: object
                     properties:
-                      applied:
-                        type: integer
-                        description: Number of layout items applied.
-                      skipped:
-                        type: integer
-                        description: Number of items skipped (unknown widget IDs).
                       layout:
                         type: array
                         items:
                           $ref: '#/components/schemas/RGLItem'
+                      widgetConfigs:
+                        type: object
+                        additionalProperties: true
+                        description: Widget configurations keyed by widgetId.
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -3107,10 +3139,11 @@ paths:
       summary: Get widget data (dynamic per widget kind)
       description: >
         Returns the computed data payload for a single widget. The shape of `data`
-        varies by widget kind (e.g. tasks-summary returns {total, byStatus};
-        recent-activity returns {items: [...]}; burndown returns {points: [...]}).
-        The client must branch on widgetId/kind. Membership required; unknown
-        workspace or widget → 404.
+        varies by widget kind. Supported widgetId values: tasks-summary
+        (returns {total, byStatus}), team-load, burndown (returns {points: [...]}),
+        priority-dist, recent-activity (returns {items: [...]}), gantt-chart,
+        milestone-timeline, custom-chart. The client must branch on widgetId/kind.
+        Membership required; unknown workspace or widget → 404.
       operationId: getDashboardWidgetData
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -3140,7 +3173,7 @@ paths:
         section and one section per document. The client can open the print
         dialog (Save as PDF) to produce the final PDF. Membership required;
         unknown workspace → 404. All documentIds must belong to the workspace;
-        unknown IDs are silently skipped. Maximum 50 documents per batch.
+        unknown IDs are silently skipped. Maximum 100 documents per batch.
       operationId: batchExportDocuments
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -3157,7 +3190,7 @@ paths:
                   items:
                     type: string
                     format: uuid
-                  maxItems: 50
+                  maxItems: 100
                   description: Document IDs to include in the batch export.
                 format:
                   type: string

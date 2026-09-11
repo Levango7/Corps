@@ -76,18 +76,16 @@ export async function GET(req: NextRequest) {
         }
 
         // 3) 创建逾期通知
-        //    entityTitle 截断到 255 字符（Notification.entityTitle 为 VarChar(255)）
-        const dueDateStr = item.dueDate!.toISOString().slice(0, 10);
-        const fullTitle = `行动项已逾期：${item.title}（截止日：${dueDateStr}）`;
-        const entityTitle = fullTitle.length > 255 ? fullTitle.slice(0, 252) + "..." : fullTitle;
-
+        //    entityTitle 存储 i18n key（非硬编码中文），前端根据用户 locale 翻译。
+        //    entityId = 行动项 ID，前端可通过 entityId 查询行动项详情（标题、截止日等）。
+        //    type = "action_overdue" 用于前端识别通知类型并选择对应 i18n key。
         await tx.notification.create({
           data: {
             userId: item.assigneeId,
             workspaceId: item.decision.workspaceId,
             type: "action_overdue",
             entityId: item.id,
-            entityTitle,
+            entityTitle: "overdue_action_item",
           },
         });
         notified++;

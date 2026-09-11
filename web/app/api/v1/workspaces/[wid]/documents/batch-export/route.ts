@@ -22,8 +22,8 @@ import { apiMsg } from "@/lib/api-messages";
  */
 const batchExportSchema = z.object({
   documentIds: z.array(z.string().min(1)).min(1).max(100),
-  format: z.enum(["html", "pdf"]),
-  includeTableOfContents: z.boolean(),
+  format: z.enum(["html", "pdf"]).default("pdf"),
+  includeTableOfContents: z.boolean().default(true),
 });
 
 export async function POST(
@@ -81,13 +81,19 @@ export async function POST(
       .filter((d): d is (typeof docs)[number] => !!d);
 
     // 生成合并 HTML
-    const html = buildBatchHtml(orderedDocs, validated.includeTableOfContents);
+    const locale = getLocale(req);
+    const html = buildBatchHtml(orderedDocs, validated.includeTableOfContents, locale);
+
+    // 计算未找到的文档ID（请求的 documentIds 中未在数据库中找到的 ID）
+    const foundIds = new Set(docs.map((d) => d.id));
+    const skippedIds = validated.documentIds.filter((id) => !foundIds.has(id));
 
     return NextResponse.json({
       code: 200,
       data: {
         html,
         documentCount: orderedDocs.length,
+        skippedIds,
       },
     });
   } catch (error) {
@@ -112,6 +118,30 @@ export async function POST(
 
 // ─── HTML 生成 helpers ───
 
+/** 从 Accept-Language 头检测 locale（zh / en），默认 en */
+function getLocale(req: NextRequest): "zh" | "en" {
+  const acceptLang = req.headers.get("accept-language") ?? "";
+  return acceptLang.toLowerCase().startsWith("zh") ? "zh" : "en";
+}
+
+/** 批量导出 HTML 文案映射 */
+const BATCH_EXPORT_TEXTS = {
+  zh: {
+    tableOfContents: "目录",
+    updatedOn: "更新于",
+    batchExport: "批量导出",
+    documentsSuffix: (n: number) => ` 等 ${n} 个文档`,
+    lang: "zh-CN",
+  },
+  en: {
+    tableOfContents: "Table of Contents",
+    updatedOn: "Updated on",
+    batchExport: "Batch Export",
+    documentsSuffix: (n: number) => ` and ${n} more documents`,
+    lang: "en",
+  },
+} as const;
+
 interface DocForExport {
   id: string;
   title: string;
@@ -127,7 +157,8 @@ interface DocForExport {
  *  - 每个文档渲染为 <section>，section 间 page-break-after: always
  *  - 所有用户输入经 escapeHtml / markdownToHtml 转义，无 dangerouslySetInnerHTML 注入风险
  */
-function buildBatchHtml(docs: DocForExport[], includeToc: boolean): string {
+function buildBatchHtml(docs: DocForExport[], includeToc: boolean, locale: "zh" | "en"): string {
+  const t = BATCH_EXPORT_TEXTS[locale];
   const sections: string[] = [];
 
   // 内嵌样式：打印友好 + 分页 + 目录页排版
@@ -207,7 +238,7 @@ function buildBatchHtml(docs: DocForExport[], includeToc: boolean): string {
       )
       .join("\n");
     sections.push(`    <section class="doc-section toc">
-      <h1>目录</h1>
+      <h1>${escapeHtml(t.tableOfContents)}</h1>
       <ol>
 ${tocItems}
       </ol>
@@ -219,7 +250,7 @@ ${tocItems}
     const authorName = doc.author?.name || doc.author?.email || "";
     const metaLine = [
       authorName,
-      `更新于 ${doc.updatedAt.toLocaleString()}`,
+      `${t.updatedOn} ${doc.updatedAt.toLocaleString()}`,
     ]
       .filter(Boolean)
       .join(" · ");
@@ -234,11 +265,11 @@ ${tocItems}
   });
 
   return `<!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="${t.lang}">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>批量导出 - ${escapeHtml(docs[0]?.title ?? "")}${docs.length > 1 ? ` 等 ${docs.length} 个文档` : ""}</title>
+    <title>${escapeHtml(t.batchExport)} - ${escapeHtml(docs[0]?.title ?? "")}${docs.length > 1 ? t.documentsSuffix(docs.length) : ""}</title>
 ${styles}
   </head>
   <body>

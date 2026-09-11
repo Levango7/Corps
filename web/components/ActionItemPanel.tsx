@@ -195,6 +195,16 @@ export function ActionItemPanel({
   // 模板下拉菜单开关
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
 
+  // Escape 关闭模板下拉菜单
+  useEffect(() => {
+    if (!templateMenuOpen) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setTemplateMenuOpen(false);
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [templateMenuOpen]);
+
   const endpoint = `/api/v1/workspaces/${workspaceId}/tasks/${taskId}/decisions/${decisionId}/action-items`;
   const syncEndpoint = `/api/v1/workspaces/${workspaceId}/tasks/${taskId}/decisions/${decisionId}/sync-actions`;
 
@@ -213,7 +223,7 @@ export function ActionItemPanel({
       if (msg.includes("404") || msg.toLowerCase().includes("not found")) {
         setItems([]);
       } else {
-        setError(msg || "加载失败");
+        setError(msg || t("loadFailed"));
       }
     } finally {
       setLoading(false);
@@ -261,7 +271,7 @@ export function ActionItemPanel({
         toast("info", t("actionItems"));
       }
     } catch (e) {
-      const msg = e instanceof Error ? e.message : "同步失败";
+      const msg = e instanceof Error ? e.message : t("syncFailed");
       setError(msg);
       toast("error", msg);
     } finally {
@@ -283,7 +293,7 @@ export function ActionItemPanel({
     } catch (e) {
       // 回滚
       setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, completed: item.completed } : it)));
-      toast("error", e instanceof Error ? e.message : "更新失败");
+      toast("error", e instanceof Error ? e.message : t("updateFailed"));
     } finally {
       setTogglingId(null);
     }
@@ -345,12 +355,12 @@ export function ActionItemPanel({
           <div className="relative ml-auto">
             <button
               onClick={() => setTemplateMenuOpen((v) => !v)}
-              title="插入模板"
-              aria-label="插入模板"
+              title={t("insertTemplate")}
+              aria-label={t("insertTemplate")}
               className="inline-flex items-center gap-1 h-6 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <Plus size={11} />
-              <span className="hidden sm:inline">插入模板</span>
+              <span className="hidden sm:inline">{t("insertTemplate")}</span>
             </button>
             {templateMenuOpen && (
               <>

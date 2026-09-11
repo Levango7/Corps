@@ -862,8 +862,23 @@ function TemporaryGrantModal({
 }: TemporaryGrantModalProps) {
   const t = useTranslations("members");
   const tButton = useTranslations("button");
+
+  // Escape 关闭 + body 滚动锁（可访问性）
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prevOverflow;
+    };
+  }, [onClose]);
+
   const [tempRole, setTempRole] = useState<"admin" | "member">(
-    existingGrant?.tempRole === "admin" ? "admin" : "admin",
+    existingGrant?.tempRole === "member" ? "member" : "admin",
   );
   const [durationHours, setDurationHours] = useState(24);
   const [reason, setReason] = useState(existingGrant?.reason ?? "");
@@ -872,7 +887,9 @@ function TemporaryGrantModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-[color-mix(in_srgb,var(--fg)_40%,transparent)] p-4"
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-4"
       onClick={onClose}
     >
       <div

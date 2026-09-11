@@ -262,10 +262,8 @@ export async function DELETE(
     );
 
     if (result.kind === "notFound") {
-      return NextResponse.json(
-        { code: 404, message: apiMsg(req, "tempGrantNotFound"), data: null },
-        { status: 404 },
-      );
+      // 幂等删除：记录不存在时返回 200（与 OpenAPI 定义一致）
+      return NextResponse.json({ code: 200, data: null });
     }
 
     return NextResponse.json({ code: 200, data: null });
