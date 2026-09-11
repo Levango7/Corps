@@ -1217,6 +1217,8 @@
     "teamLoadEmpty": "No team members",
     "burndownEmpty": "No task data",
     "priorityDistEmpty": "No task data",
+    "priorityDistTotal": "Total",
+    "priorityDistAriaLabel": "Priority distribution",
     "recentActivityEmpty": "No recent activity",
     "subtitle": "Drag to arrange your workspace widgets"
   }

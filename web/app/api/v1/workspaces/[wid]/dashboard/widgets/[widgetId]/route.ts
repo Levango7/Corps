@@ -58,11 +58,11 @@ export async function GET(
       { status: 401 },
     );
 
-  // widgetId 白名单校验
+  // widgetId 白名单校验：不在白名单内视为资源不存在（404）
   if (!WIDGET_IDS.has(widgetId)) {
     return NextResponse.json(
-      { code: 400, message: apiMsg(req, "invalidParams"), data: null },
-      { status: 400 },
+      { code: 404, message: apiMsg(req, "widgetNotFound"), data: null },
+      { status: 404 },
     );
   }
 

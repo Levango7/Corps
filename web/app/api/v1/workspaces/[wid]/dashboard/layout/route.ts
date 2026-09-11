@@ -30,6 +30,8 @@ const layoutItemSchema = z.object({
 
 const putLayoutSchema = z.object({
   layout: z.array(layoutItemSchema).min(1),
+  /** 可选响应式断点标签（对齐 openapi DashboardLayoutUpdateRequest；当前未持久化，仅回显） */
+  breakpoint: z.string().optional(),
 });
 
 /**
@@ -62,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ? (pref.layout as RGLItem[])
       : getDefaultLayout(ctx.member.role);
 
-    return NextResponse.json({ code: 200, data: { layout } });
+    return NextResponse.json({ code: 200, data: { layout, breakpoint: "lg" } });
   } catch (error) {
     console.error("[GET dashboard/layout] error:", error);
     return handlePrismaError(error, req);
@@ -108,7 +110,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid:
 
     return NextResponse.json({
       code: 200,
-      data: { layout: saved.layout as unknown as RGLItem[] },
+      data: {
+        layout: saved.layout as unknown as RGLItem[],
+        breakpoint: validated.breakpoint ?? "lg",
+      },
     });
   } catch (error) {
     if (error instanceof z.ZodError) {

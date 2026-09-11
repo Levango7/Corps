@@ -1217,6 +1217,8 @@
     "teamLoadEmpty": "暂无团队成员",
     "burndownEmpty": "暂无任务数据",
     "priorityDistEmpty": "暂无任务数据",
+    "priorityDistTotal": "总数",
+    "priorityDistAriaLabel": "优先级分布",
     "recentActivityEmpty": "暂无最近活动",
     "subtitle": "拖拽排列你的工作区 Widget"
   }

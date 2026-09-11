@@ -92,6 +92,10 @@ export function SharePasswordGate({
       aria-modal="true"
       aria-label={t("dialogLabel")}
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-4"
+      onClick={(e) => {
+        // 仅点击遮罩本身（而非卡片内部）时关闭；未提供 onClose 时不关闭
+        if (e.target === e.currentTarget && onClose) onClose();
+      }}
     >
       <div
         className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] overflow-hidden"

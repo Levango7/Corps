@@ -63,7 +63,9 @@ export async function GET(
         { status: 404 },
       );
 
-    return NextResponse.json({ code: 200, data: task });
+    // 安全：剥离 sharePassword hash，防止泄露给客户端
+    const { sharePassword: _stripped, ...taskSafe } = task;
+    return NextResponse.json({ code: 200, data: taskSafe });
   } catch (error) {
     console.error("[GET task] error:", error);
     return NextResponse.json(
@@ -234,7 +236,9 @@ export async function PATCH(
       });
     }
 
-    return NextResponse.json({ code: 200, data: result.task });
+    // 安全：剥离 sharePassword hash，防止泄露给客户端
+    const { sharePassword: _strippedTask, ...taskSafe } = result.task;
+    return NextResponse.json({ code: 200, data: taskSafe });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

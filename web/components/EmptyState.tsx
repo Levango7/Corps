@@ -160,7 +160,7 @@ export default function EmptyState({
   const Illustration = ILLUSTRATIONS[type];
   return (
     <div
-      className={`flex flex-col items-center justify-center text-center px-[var(--space-4)] py-12 ${
+      className={`flex flex-col items-center justify-center text-center px-[var(--space-4)] py-[var(--space-12)] ${
         className ?? ""
       }`}
     >
@@ -177,7 +177,7 @@ export default function EmptyState({
         <button
           type="button"
           onClick={action.onClick}
-          className="mt-[var(--space-5)] inline-flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+          className="mt-[var(--space-5)] inline-flex items-center gap-2 px-[var(--space-4)] py-[var(--space-2)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
         >
           {action.label}
         </button>

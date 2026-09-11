@@ -2902,10 +2902,9 @@ paths:
       tags: [Sharing]
       summary: Get share settings for a document
       description: >
-        Returns the current share configuration for the document: shareEnabled,
-        shareToken, shareExpiresAt, sharePassword (boolean presence flag, never the
-        raw value), and shareUrl when enabled. Membership required; unknown
-        document → 404.
+        Returns the current share configuration for the document: shareToken,
+        shareExpiresAt, and hasPassword (boolean presence flag, never the raw
+        value). Membership required; unknown document → 404.
       operationId: getDocumentShareSettings
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -2928,9 +2927,8 @@ paths:
       summary: Update share settings for a document
       description: >
         Partial update of share configuration. Body may include any subset of:
-        shareEnabled (boolean), shareExpiresAt (ISO-8601, nullable to clear),
-        sharePassword (string, nullable to clear). Enabling sharing when no
-        shareToken exists will mint one server-side. Unknown document → 404.
+        shareExpiresAt (ISO-8601, nullable to clear), sharePassword (string,
+        nullable to clear). Unknown document → 404.
       operationId: updateDocumentShareSettings
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -2960,13 +2958,13 @@ paths:
   /api/v1/workspaces/{wid}/documents/{id}/share/verify:
     post:
       tags: [Sharing]
-      summary: Verify share password for a document (public)
+      summary: Verify share password for a document
       description: >
-        Public endpoint (no workspace membership required) used by the share link
-        landing page to unlock a password-protected document. Body: { password }.
-        On success returns a short-lived access token to render the document; on
-        mismatch returns 401. Unknown/expired/disabled share → 404.
-      security: []
+        Authenticated endpoint (workspace membership required) used by members to
+        preview a password-protected document share. Body: { password }. On
+        success returns the document content { id, title, markdown }; on mismatch
+        returns 401. Unknown/expired/disabled share → 404. Public (no-login)
+        access uses the /api/documents/share/{token} path instead.
       operationId: verifyDocumentSharePassword
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -2998,8 +2996,8 @@ paths:
       tags: [Sharing]
       summary: List share access logs for a document
       description: >
-        Returns paginated access log entries (viewer IP, user agent, accessedAt,
-        outcome) for the document's share link. Owner/admin only; unknown document
+        Returns paginated access log entries (viewer IP, user agent, accessedAt)
+        for the document's share link. Owner/admin only; unknown document
         → 404. Query params: page (default 1), pageSize (default 20, max 100).
       operationId: listDocumentShareLogs
       parameters:
@@ -3089,13 +3087,13 @@ paths:
   /api/v1/workspaces/{wid}/tasks/{id}/share/verify:
     post:
       tags: [Sharing]
-      summary: Verify share password for a task (public)
+      summary: Verify share password for a task
       description: >
-        Public endpoint used by the task share link landing page to unlock a
-        password-protected task. Body: { password }. On success returns a
-        short-lived access token; on mismatch returns 401. Unknown/expired/disabled
-        share → 404.
-      security: []
+        Authenticated endpoint (workspace membership required) used by members to
+        preview a password-protected task share. Body: { password }. On success
+        returns the task content { id, title, markdown }; on mismatch returns
+        401. Unknown/expired/disabled share → 404. Public (no-login) access uses
+        the /api/tasks/share/{token} path instead.
       operationId: verifyTaskSharePassword
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -3180,7 +3178,10 @@ components:
       name: widgetId
       in: path
       required: true
-      description: Widget id (kind-qualified, e.g. "tasks-summary", "recent-activity").
+      description: >
+        Widget id (kind-qualified). Allowed values: "task-stats", "my-tasks",
+        "decision-actions", "due-this-week", "team-load", "burndown",
+        "priority-dist", "recent-activity".
       schema: { type: string, minLength: 1, maxLength: 64 }
 
   responses:
@@ -4395,20 +4396,12 @@ components:
     # ---- F5: sharing ----
     ShareSettings:
       type: object
-      required: [shareEnabled, hasPassword]
+      required: [hasPassword]
       properties:
-        shareEnabled:
-          type: boolean
-          description: Whether the share link is active.
         shareToken:
           type: string
           nullable: true
           description: Public share token (present when sharing has ever been enabled).
-        shareUrl:
-          type: string
-          format: uri
-          nullable: true
-          description: Fully resolved share URL (present when shareEnabled is true).
         shareExpiresAt:
           type: string
           format: date-time
@@ -4419,24 +4412,11 @@ components:
           description: >
             Whether a share password is currently set. The raw password is never
             returned; this flag drives the "password protected" UI state.
-        sharePassword:
-          type: string
-          nullable: true
-          description: >
-            Write-only. Only accepted on PATCH to set/clear the password
-            (null clears). Never present on GET responses — use hasPassword instead.
-          writeOnly: true
-        updatedAt:
-          type: string
-          format: date-time
-          nullable: true
-          description: Timestamp of the last share settings change.
     ShareSettingsUpdateRequest:
       type: object
       description: Partial update; any subset of fields may be sent.
       properties:
-        shareEnabled:
-          type: boolean
+
         shareExpiresAt:
           type: string
           format: date-time
@@ -4445,7 +4425,7 @@ components:
         sharePassword:
           type: string
           nullable: true
-          maxLength: 256
+          maxLength: 128
           description: >
             New password to set. null clears the password. An empty string is
             treated as a validation error (use null to clear).
@@ -4462,21 +4442,25 @@ components:
         password:
           type: string
           minLength: 1
-          maxLength: 256
+          maxLength: 128
           description: Share password to verify.
     ShareVerifyResponse:
       type: object
-      required: [token]
+      required: [id, title, markdown]
       properties:
-        token:
+        id:
           type: string
+          format: uuid
+          description: Id of the shared resource (document or task).
+        title:
+          type: string
+          description: Title of the shared resource.
+        markdown:
+          type: string
+          nullable: true
           description: >
-            Short-lived access token granting read access to the shared resource.
-            The client sends it as a Bearer token on subsequent resource fetches.
-        expiresAt:
-          type: string
-          format: date-time
-          description: When the issued token expires.
+            Published markdown content of the shared document. Present for
+            documents; null for tasks (tasks have no published markdown body).
     Envelope_ShareVerifyResponse:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -4485,7 +4469,7 @@ components:
           $ref: '#/components/schemas/ShareVerifyResponse'
     ShareAccessLog:
       type: object
-      required: [id, accessedAt, outcome]
+      required: [id, accessedAt]
       properties:
         id:
           type: string
@@ -4493,10 +4477,6 @@ components:
         accessedAt:
           type: string
           format: date-time
-        outcome:
-          type: string
-          enum: [success, denied, expired]
-          description: Result of the access attempt.
         ip:
           type: string
           nullable: true
@@ -4505,10 +4485,6 @@ components:
           type: string
           nullable: true
           description: Viewer User-Agent header.
-        viewerId:
-          type: string
-          nullable: true
-          description: Resolved viewer user id when the share link was authenticated.
     Envelope_ShareAccessLogList:
       allOf:
         - $ref: '#/components/schemas/Envelope'

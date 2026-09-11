@@ -11,6 +11,7 @@
  */
 
 import type { ComponentType } from "react";
+import { useTranslations } from "next-intl";
 import {
   BarChart3,
   CheckSquare,
@@ -59,9 +60,10 @@ const WIDGET_COMPONENTS: Record<string, { component: WidgetComponent; icon: Luci
 
 /** 占位 Widget（未知 widgetId 时使用，避免渲染崩溃） */
 const FallbackWidget: WidgetComponent = () => {
+  const t = useTranslations("dashboard");
   return (
     <div className="p-4 text-center text-[length:var(--text-xs)] text-[var(--meta)]">
-      Unknown widget
+      {t("unknownWidget")}
     </div>
   );
 };

@@ -42,6 +42,7 @@ export const API_MESSAGES = {
   fileNotFound: { zh: "文件不存在", en: "File not found" },
   userNotFound: { zh: "用户不存在", en: "User not found" },
   commentNotFound: { zh: "评论不存在", en: "Comment not found" },
+  widgetNotFound: { zh: "Widget 不存在", en: "Widget not found" },
 
   /* ── 任务 ── */
   assigneeNotMember: {

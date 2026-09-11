@@ -118,7 +118,9 @@ export async function PATCH(
         }
 
         const doc = await tx.document.update({ where: { id }, data });
-        return { kind: "ok" as const, doc };
+        // 安全：剥离 sharePassword hash，防止泄露给客户端
+        const { sharePassword: _stripped, ...docSafe } = doc;
+        return { kind: "ok" as const, doc: docSafe };
       },
       ctx.payload.sub,
     );

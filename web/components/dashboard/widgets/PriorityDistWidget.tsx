@@ -71,6 +71,7 @@ export default function PriorityDistWidget({ wid }: { wid: string }) {
 
 /** 优先级饼图 SVG：4 色扇形 */
 function PriorityPie({ data }: { data: PriorityDistData }) {
+  const t = useTranslations("dashboard");
   const R = 36;
   const CX = 40;
   const CY = 40;
@@ -88,7 +89,7 @@ function PriorityPie({ data }: { data: PriorityDistData }) {
   });
 
   return (
-    <svg viewBox="0 0 80 80" className="w-20 h-20 shrink-0" role="img" aria-label="priority distribution">
+    <svg viewBox="0 0 80 80" className="w-20 h-20 shrink-0" role="img" aria-label={t("priorityDistAriaLabel")}>
       {arcs.map((arc) => {
         if (arc.count === 0) return null;
         // 整圆特殊处理（避免 path 闭合问题）
@@ -128,7 +129,7 @@ function PriorityPie({ data }: { data: PriorityDistData }) {
         y={CY - 2}
         textAnchor="middle"
         className="fill-[var(--fg)]"
-        style={{ fontSize: "11px", fontWeight: 600 }}
+        style={{ fontSize: "11px", fontWeight: "var(--weight-semibold)" }}
       >
         {data.total}
       </text>
@@ -139,7 +140,7 @@ function PriorityPie({ data }: { data: PriorityDistData }) {
         className="fill-[var(--meta)]"
         style={{ fontSize: "7px" }}
       >
-        total
+        {t("priorityDistTotal")}
       </text>
     </svg>
   );

@@ -105,7 +105,7 @@ export function ExportPreview({
 
           {/* 预览区：Markdown 渲染 */}
           <div className="flex-1 min-h-0 overflow-auto px-[var(--space-6)] py-[var(--space-4)] bg-[var(--surface)]">
-            <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-2)] uppercase tracking-[var(--tracking-wide)]">
+            <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-2)] uppercase tracking-[var(--tracking-caps)]">
               {t("previewLabel")}
             </p>
             {hasContent ? (

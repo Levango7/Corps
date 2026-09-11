@@ -43,7 +43,7 @@ export function WidgetError({
       <button
         type="button"
         onClick={onRetry}
-        className="mt-2 px-2 py-1 text-[length:var(--text-xs)] text-[var(--accent)] hover:underline"
+        className="mt-2 px-2 py-1 text-[length:var(--text-xs)] text-[var(--accent)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
       >
         {tButton("retry")}
       </button>

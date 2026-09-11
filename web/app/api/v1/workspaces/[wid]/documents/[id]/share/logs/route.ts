@@ -82,12 +82,10 @@ export async function GET(
       code: 200,
       data: {
         items: result.logs,
-        pagination: {
-          page,
-          pageSize,
-          total: result.total,
-          totalPages: Math.ceil(result.total / pageSize),
-        },
+        page,
+        pageSize,
+        total: result.total,
+        hasMore: page * pageSize < result.total,
       },
     });
   } catch (error) {
