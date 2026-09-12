@@ -28,7 +28,7 @@
   "dependencies": {
     "@ai-sdk/openai": "^4.0.65",
     "@ai-sdk/react": "4.0.102",
-    "@prisma/client": "6.15.0",
+    "@prisma/client": "7.10.0",
     "@tailwindcss/postcss": "4.3.3",
     "@tanstack/react-virtual": "^3.14.11",
     "@tiptap/core": "^3.31.3",
