@@ -1759,5 +1759,53 @@
     "offlineTooLong": "您已离线超过 7 天，编辑可能与其他人差异较大，请检查",
     "dismiss": "知道了",
     "onlineCount": "在线 {count} 人"
+  },
+  "ai": {
+    "completion": {
+      "placeholder": "AI 正在续写...",
+      "accept": "按 Tab 接受",
+      "dismiss": "按 Esc 取消",
+      "loading": "AI 思考中..."
+    },
+    "summarize": {
+      "buttonLabel": "摘要",
+      "tooltip": "为选中文本生成摘要"
+    },
+    "translate": {
+      "buttonLabel": "翻译",
+      "tooltip": "翻译选中文本",
+      "targetZh": "中文",
+      "targetEn": "英文",
+      "targetJa": "日文"
+    },
+    "format": {
+      "buttonLabel": "格式化",
+      "tooltip": "整理选中文本结构"
+    },
+    "toolbar": {
+      "summarize": "摘要",
+      "translate": "翻译",
+      "format": "格式化"
+    },
+    "chat": {
+      "title": "AI 助手",
+      "placeholder": "关于这篇文档，你想问什么...",
+      "send": "发送",
+      "clear": "清空对话",
+      "emptyState": "针对文档内容提出任何问题",
+      "error": "获取回复失败，请重试",
+      "contextLabel": "文档上下文"
+    },
+    "decision": {
+      "extracting": "AI 正在提取决策...",
+      "noDecisions": "未在文本中发现决策内容",
+      "generateActions": "生成行动项",
+      "generatingActions": "AI 正在生成行动项..."
+    },
+    "error": {
+      "notAuthenticated": "请登录后使用 AI 功能",
+      "rateLimited": "请求过于频繁，请稍后重试",
+      "failed": "AI 请求失败，请重试"
+    }
   }
 }

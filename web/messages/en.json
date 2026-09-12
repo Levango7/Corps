@@ -1759,5 +1759,53 @@
     "offlineTooLong": "You've been offline for over 7 days. Edits may differ significantly from others. Please review.",
     "dismiss": "Dismiss",
     "onlineCount": "{count} online"
+  },
+  "ai": {
+    "completion": {
+      "placeholder": "AI is composing...",
+      "accept": "Press Tab to accept",
+      "dismiss": "Press Esc to dismiss",
+      "loading": "AI is thinking..."
+    },
+    "summarize": {
+      "buttonLabel": "Summarize",
+      "tooltip": "Generate summary for selected text"
+    },
+    "translate": {
+      "buttonLabel": "Translate",
+      "tooltip": "Translate selected text",
+      "targetZh": "Chinese",
+      "targetEn": "English",
+      "targetJa": "Japanese"
+    },
+    "format": {
+      "buttonLabel": "Format",
+      "tooltip": "Structure selected text"
+    },
+    "toolbar": {
+      "summarize": "Summarize",
+      "translate": "Translate",
+      "format": "Format"
+    },
+    "chat": {
+      "title": "AI Assistant",
+      "placeholder": "Ask about this document...",
+      "send": "Send",
+      "clear": "Clear conversation",
+      "emptyState": "Ask any question about the document content",
+      "error": "Failed to get response, please try again",
+      "contextLabel": "Document context"
+    },
+    "decision": {
+      "extracting": "AI is extracting decisions...",
+      "noDecisions": "No decisions found in the text",
+      "generateActions": "Generate action items",
+      "generatingActions": "AI is generating action items..."
+    },
+    "error": {
+      "notAuthenticated": "Please sign in to use AI features",
+      "rateLimited": "Too many requests, please try again later",
+      "failed": "AI request failed, please try again"
+    }
   }
 }

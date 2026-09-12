@@ -26,6 +26,8 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.65",
+    "@ai-sdk/react": "4.0.102",
     "@prisma/client": "6.15.0",
     "@tailwindcss/postcss": "4.3.3",
     "@tanstack/react-virtual": "^3.14.11",
@@ -41,6 +43,7 @@
     "@tiptap/react": "^3.31.3",
     "@tiptap/starter-kit": "^3.31.3",
     "@tiptap/suggestion": "^3.31.3",
+    "ai": "^7.0.97",
     "better-auth": "1.7.2",
     "framer-motion": "^13.2.0",
     "ioredis": "5.4.1",

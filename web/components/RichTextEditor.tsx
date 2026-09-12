@@ -67,6 +67,9 @@ import {
 } from "@/components/editor/slashMenuExtension";
 import { DecisionMark } from "@/components/editor/decisionMarkExtension";
 import { TaskEmbed } from "@/components/editor/taskEmbedExtension";
+// AI 续写浮层 + 选中文本浮工具栏
+import { AiSuggestion } from "@/components/editor/AiSuggestion";
+import { AiToolbar } from "@/components/editor/AiToolbar";
 
 // ── ProseMirror JSON doc 子集类型 ──────────────────────────────────────────
 // 自定义而非导入 @tiptap/core 的 JSONContent，避免 pnpm 严格解析耦合；
@@ -750,6 +753,10 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
       mode === "richtext" && editor ? (
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
           <EditorContent editor={editor} />
+          {/* AI 续写浮层：监听光标，停止输入 1.5s 后显示 ghost text */}
+          <AiSuggestion editor={editor} />
+          {/* AI 选中文本浮工具栏：摘要/翻译/格式化 */}
+          <AiToolbar editor={editor} />
         </div>
       ) : (
         <textarea
