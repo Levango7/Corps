@@ -472,6 +472,8 @@ model Document {
   folder    Folder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
   versions  DocumentVersion[]
   comments  DocumentComment[]
+  // Phase 2 协同编辑：Yjs CRDT 状态持久化（一对一，文档删除时级联清除协同状态）
+  yjsPersistence YjsPersistence?
 
   // 工作区内文档搜索
   @@index([workspaceId, updatedAt])
@@ -1039,4 +1041,24 @@ model DocumentComment {
   @@index([documentId, resolved])
   @@index([workspaceId])
   @@map("document_comments")
+}
+/// ─── Phase 2 协同编辑：Yjs CRDT 状态持久化（设计文档 §3.1.2 L849-862）──
+///
+/// Yjs state vector 存入 PostgreSQL（Bytea 二进制列）。
+/// 每个文档对应一行（@@unique([documentId])），存储 Y.encodeStateAsUpdate(doc) 的完整状态。
+/// 协同服务端（server/collab/y-websocket-server.ts）启动时加载此状态，
+/// 编辑更新增量写入（Y.applyUpdate），实现跨会话/跨用户的 CRDT 状态恢复。
+model YjsPersistence {
+  id         String   @id @default(uuid()) @db.Uuid
+  /// 文档 ID（关联 Document；一对一——每个文档仅存一份 CRDT 状态）
+  documentId String   @map("document_id") @db.Uuid
+  /// Yjs 二进制状态（Y.encodeStateAsUpdate 的输出，Bytea 存储）
+  state      Bytes    @db.Bytea
+  /// 最后更新时间（协同服务端每次写入增量更新时刷新）
+  updatedAt  DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  document Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+
+  @@unique([documentId])
+  @@map("yjs_persistence")
 }
