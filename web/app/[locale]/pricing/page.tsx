@@ -520,7 +520,7 @@ function Footer({ t }: { t: TranslateFn }) {
       <div className="mx-auto max-w-[var(--container-max)] flex flex-wrap items-center justify-between gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
         <span>{t("footer.copyright")}</span>
         <div className="flex gap-4">
-          {/* 法务文档页（审计 TODO(legal) 修复；文档内主体信息待注册后补齐） */}
+          {/* 法务文档页（审计 TODO(legal) 已修复；隐私政策与服务条款已实现，见 /legal/privacy 与 /legal/terms） */}
           <Link href="/legal/terms" className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
             {t("footer.terms")}
           </Link>

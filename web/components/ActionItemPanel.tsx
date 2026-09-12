@@ -24,9 +24,8 @@
  *  - 图标仅用 lucide-react
  *
  * i18n：键命名空间 "decision"（actionItems / actionProgress / syncActions /
- *  noActions / actionCreated / actionUpdated）。任务 160 将统一添加翻译键，
- *  此处先用 useTranslations("decision") 调用，next-intl 在 key 缺失时会
- *  回退到 key 本身（不抛错），任务 160 补齐后即正确显示。
+ *  noActions / actionCreated / actionUpdated）+ "priority"（low/medium/high/urgent）。
+ *  翻译键已在 messages/{locale}.json 中补齐。
  */
 
 import { useCallback, useEffect, useState } from "react";
@@ -178,10 +177,7 @@ export function ActionItemPanel({
   refreshSignal = 0,
   onInsertTemplate,
 }: ActionItemPanelProps) {
-  // TODO: i18n —— 任务 160 将在 messages/{locale}.json 的 "decision" 命名空间下
-  // 补齐 actionItems / actionProgress / syncActions / noActions / actionCreated /
-  // actionUpdated / priority.* 等键。此处 useTranslations 在 key 缺失时回退到 key
-  // 本身（next-intl 默认行为），不会抛错。
+
   const t = useTranslations("decision");
   const tPriority = useTranslations("priority");
   const { toast } = useToast();
@@ -301,7 +297,6 @@ export function ActionItemPanel({
 
   /**
    * 插入模板：将 {dueDate} 占位符替换为当前日期 + 7 天（YYYY-MM-DD）后回调父组件。
-   * 硬编码中文文本（i18n 由后续任务统一处理）。
    */
   function handleInsertTemplate(md: string) {
     const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
@@ -350,7 +345,7 @@ export function ActionItemPanel({
             </span>
           </span>
         )}
-        {/* 插入模板按钮（仅当 onInsertTemplate 提供时显示）· 硬编码中文文本 */}
+        {/* 插入模板按钮（仅当 onInsertTemplate 提供时显示） */}
         {onInsertTemplate && (
           <div className="relative ml-auto">
             <button
