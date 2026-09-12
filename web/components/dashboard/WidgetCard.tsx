@@ -22,6 +22,7 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GripVertical, Settings, X } from "lucide-react";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import WidgetConfigPanel, { type WidgetConfig } from "./WidgetConfigPanel";
 
 export interface WidgetCardProps {
@@ -70,6 +71,8 @@ export default function WidgetCard({
   /** F7: 双击切换尺寸时的短暂标签提示（如 "M"），1.5s 后自动消失 */
   const [sizeHint, setSizeHint] = useState<string | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  /** prefers-reduced-motion 检测 */
+  const prefersReduced = useReducedMotion();
 
   useEffect(() => {
     return () => {
@@ -90,8 +93,9 @@ export default function WidgetCard({
 
   return (
     <div
+      style={{ perspective: prefersReduced ? undefined : "1000px" }}
       className={[
-        "flex flex-col h-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden",
+        "relative flex flex-col h-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden",
         // F7: 拖拽视觉反馈 — 轻微放大 + 更强阴影 + 半透明
         dragging
           ? "scale-[1.02] shadow-[var(--elev-md)] opacity-90 transition-[transform,box-shadow,opacity] duration-[var(--motion-fast)] ease-out"
@@ -163,14 +167,36 @@ export default function WidgetCard({
       </header>
       {/* 内容区域 */}
       <div className="flex-1 min-h-0 overflow-auto">{children}</div>
-      {/* 配置面板（编辑模式下点击齿轮按钮打开） */}
-      {configOpen && widgetId && onConfigChange && (
-        <WidgetConfigPanel
-          widgetId={widgetId}
-          config={config ?? {}}
-          onChange={(next) => onConfigChange(next)}
-          onClose={() => setConfigOpen(false)}
-        />
+      {/* 配置面板 — 3D 翻转入场（§4.2），reduced 降级为条件渲染 */}
+      {prefersReduced ? (
+        configOpen && widgetId && onConfigChange && (
+          <WidgetConfigPanel
+            widgetId={widgetId}
+            config={config ?? {}}
+            onChange={(next) => onConfigChange(next)}
+            onClose={() => setConfigOpen(false)}
+          />
+        )
+      ) : (
+        <AnimatePresence>
+          {configOpen && widgetId && onConfigChange && (
+            <motion.div
+              initial={{ rotateX: -90, opacity: 0 }}
+              animate={{ rotateX: 0, opacity: 1 }}
+              exit={{ rotateX: 90, opacity: 0 }}
+              transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
+              style={{ transformOrigin: "top", transformStyle: "preserve-3d" }}
+              className="absolute inset-x-0 bottom-0 z-[var(--z-dropdown)]"
+            >
+              <WidgetConfigPanel
+                widgetId={widgetId}
+                config={config ?? {}}
+                onChange={(next) => onConfigChange(next)}
+                onClose={() => setConfigOpen(false)}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       )}
     </div>
   );
