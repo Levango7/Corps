@@ -28,6 +28,7 @@
   "dependencies": {
     "@prisma/client": "6.15.0",
     "@tailwindcss/postcss": "4.3.3",
+    "@tanstack/react-virtual": "^3.14.11",
     "@tiptap/extension-placeholder": "^3.31.3",
     "@tiptap/extension-task-item": "^3.31.3",
     "@tiptap/extension-task-list": "^3.31.3",

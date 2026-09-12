@@ -141,6 +141,8 @@ model Workspace {
   folders            Folder[]
   documentVersions   DocumentVersion[]
   documentComments   DocumentComment[]
+  // Phase 3A 多维表格：Notion 式 Database
+  databases          Database[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -932,6 +934,8 @@ model Space {
   folders   Folder[]
   // 空间根目录下的文档（folderId = null）
   documents Document[]
+  // Phase 3A 多维表格：空间下的 Database
+  databases Database[]
 
   // 同一工作区内空间名唯一
   @@unique([workspaceId, name], name: "uq_spaces_workspace_name")
@@ -961,6 +965,8 @@ model Folder {
   parent    Folder?    @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
   children  Folder[]   @relation("FolderChildren")
   documents Document[]
+  // Phase 3A 多维表格：文件夹下的 Database
+  databases Database[]
 
   // 目录树查询：按空间 + 父文件夹 + 排序
   @@index([spaceId, parentId, sortOrder])
@@ -1053,7 +1059,7 @@ model YjsPersistence {
   /// 文档 ID（关联 Document；一对一——每个文档仅存一份 CRDT 状态）
   documentId String   @map("document_id") @db.Uuid
   /// Yjs 二进制状态（Y.encodeStateAsUpdate 的输出，Bytea 存储）
-  state      Bytes    @db.Bytea
+  state      Bytes
   /// 最后更新时间（协同服务端每次写入增量更新时刷新）
   updatedAt  DateTime @updatedAt @db.Timestamptz @map("updated_at")
 
@@ -1061,4 +1067,80 @@ model YjsPersistence {
 
   @@unique([documentId])
   @@map("yjs_persistence")
+}
+// ─── Phase 3A 多维表格（Notion 式 Database）──────────────────────────────
+// 结构化数据容器：Database → Field（列定义）+ Record（数据行）+ View（视图）
+// Database 归属 Workspace，可选归属 Space/Folder（与 Document 同构的目录树挂载）
+
+/// 多维表格（Notion Database 式结构化数据）
+model Database {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  spaceId     String?  @map("space_id") @db.Uuid
+  folderId    String?  @map("folder_id") @db.Uuid
+  title       String   @db.VarChar(255)
+  icon        String   @default("table") @db.VarChar(50)
+  emoji       String?  @db.VarChar(10)
+  description String?  @db.Text
+  sortOrder   Float    @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  space     Space?    @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  folder    Folder?   @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  fields    DatabaseField[]
+  records   DatabaseRecord[]
+  views     DatabaseView[]
+
+  @@index([spaceId, folderId, sortOrder])
+  @@index([workspaceId])
+  @@map("databases")
+}
+
+/// 多维表格字段（列定义）：name + type + options（如 select 的选项列表）
+model DatabaseField {
+  id          String   @id @default(uuid()) @db.Uuid
+  databaseId  String   @map("database_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  type        String   @db.VarChar(20)
+  options     Json     @default("{}")
+  sortOrder   Float    @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  database Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@index([databaseId, sortOrder])
+  @@map("database_fields")
+}
+
+/// 多维表格记录（数据行）：data 为 { fieldId: value } 的 JSON 对象
+model DatabaseRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  databaseId  String   @map("database_id") @db.Uuid
+  data        Json     @default("{}")
+  sortOrder   Float    @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  database Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@index([databaseId, sortOrder])
+  @@map("database_records")
+}
+
+/// 多维表格视图：type（table/board/calendar/gallery 等）+ config（筛选/排序/分组等）
+model DatabaseView {
+  id          String   @id @default(uuid()) @db.Uuid
+  databaseId  String   @map("database_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  type        String   @db.VarChar(20)
+  config      Json     @default("{}")
+  sortOrder   Float    @default(0) @map("sort_order")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  database Database @relation(fields: [databaseId], references: [id], onDelete: Cascade)
+
+  @@index([databaseId, sortOrder])
+  @@map("database_views")
 }
