@@ -7,6 +7,8 @@
  * - 在线用户头像列表（awareness.getStates() 中 state.user 存在的客户端）。
  * - 连接状态指示（已连接/同步中/离线），含离线编辑提示。
  * - 头像右下角在线指示点（var(--success)）。
+ * - "已同步"短暂提示：从离线/连接中恢复到在线后，用 --success 色显示 3 秒后自动消失。
+ * - 离线过长提示：离线超过 7 天后重连，显示 warn 色告警，可手动关闭。
  *
  * 设计取舍：
  * - 数据来源：useOnlineUsers()（订阅 awareness.change）+ useCollaboration()（连接状态）。
@@ -15,14 +17,14 @@
  * - 所有样式走 design token（var(--*)），无裸 hex。
  * - lucide-react 图标尺寸用 14（项目约定）。
  * - 最多显示 5 个头像，超出显示 +N（与设计文档 §3.3.1 一致）。
- *
- * i18n 说明：状态文案（离线编辑中 / 同步中 / 已同步）暂硬编码中文。
- * 待后续补充到 messages/{en,zh}.json 的 collaboration 命名空间
- * （受本次"不修改现有文件"约束暂未添加）。
+ * - i18n：状态文案走 collaboration 命名空间（messages/{en,zh}.json）。
+ * - "已同步" 3 秒提示用 setTimeout，prefers-reduced-motion 全局降级块已将 transition-duration
+ *   设为 0.01ms，视觉上无淡入淡出动画，但文本仍显示 3 秒（信息性提示，非装饰性动画）。
  */
 
-import { useMemo } from "react";
-import { WifiOff, Loader2, Check } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
+import { WifiOff, Loader2, Check, AlertTriangle, X } from "lucide-react";
 import {
   useCollaboration,
   useOnlineUsers,
@@ -85,6 +87,7 @@ interface OnlineAvatarsProps {
  * 每个头像右下角有在线指示点（var(--success)）。
  */
 export function OnlineAvatars({ max = 5, avatarSize = 28 }: OnlineAvatarsProps) {
+  const t = useTranslations("collaboration");
   const onlineUsers = useOnlineUsers();
   const visible = onlineUsers.slice(0, max);
   const overflow = onlineUsers.length - visible.length;
@@ -94,7 +97,7 @@ export function OnlineAvatars({ max = 5, avatarSize = 28 }: OnlineAvatarsProps) 
   return (
     <div
       className="flex items-center gap-[var(--space-1)]"
-      aria-label={`在线 ${onlineUsers.length} 人`}
+      aria-label={t("onlineCount", { count: onlineUsers.length })}
     >
       {visible.map(({ clientId, user }) => (
         <div key={clientId} className="relative">
@@ -117,52 +120,82 @@ export function OnlineAvatars({ max = 5, avatarSize = 28 }: OnlineAvatarsProps) 
 
 // ── 连接状态指示 ───────────────────────────────────────────────────────────
 
+/** "已同步" 短暂提示显示时长（毫秒）。 */
+const SYNCED_FLASH_MS = 3000;
+
 /**
  * 连接状态文案 + 图标。
  *
  * 状态映射（CollaborationProvider.connectionStatus + offlineSynced）：
- * - offline → 离线编辑中，上线后自动同步（warn，WifiOff）
- * - connecting → 同步中...（muted，Loader2 旋转）
- * - online + !offlineSynced → 同步中...（muted，Loader2 旋转，WS 已连但 IndexedDB 仍在加载）
- * - online + offlineSynced → 已同步（success，Check）
+ * - offline → 离线编辑中（warn，WifiOff，持续显示）
+ * - connecting → 连接中...（muted，Loader2 旋转，持续显示）
+ * - online + !offlineSynced → 加载离线数据...（muted，Loader2 旋转，持续显示）
+ * - online + offlineSynced → 已同步（success，Check，仅显示 3 秒后消失）
+ *
+ * "已同步" 短暂提示：从非 online 状态恢复到 online+synced 时触发，
+ * 3 秒后自动消失（SYNCED_FLASH_MS）。持续在线时不重复显示。
  */
 export function ConnectionStatusBadge() {
+  const t = useTranslations("collaboration");
   const { connectionStatus, offlineSynced } = useCollaboration();
+
+  // "已同步" 短暂提示：从非 online 变为 online+synced 时显示 3 秒。
+  const [syncedFlash, setSyncedFlash] = useState(false);
+  const prevOnlineRef = useRef(false);
+
+  useEffect(() => {
+    const isOnline = connectionStatus === "online" && offlineSynced;
+    if (isOnline && !prevOnlineRef.current) {
+      // 从非 online 变为 online + synced：触发"已同步"短暂提示。
+      setSyncedFlash(true);
+      const timer = setTimeout(() => setSyncedFlash(false), SYNCED_FLASH_MS);
+      prevOnlineRef.current = true;
+      return () => clearTimeout(timer);
+    }
+    if (!isOnline) {
+      prevOnlineRef.current = false;
+      setSyncedFlash(false);
+    }
+    return undefined;
+  }, [connectionStatus, offlineSynced]);
 
   // 推导展示状态。
   const display = useMemo(() => {
     if (connectionStatus === "offline") {
       return {
         icon: <WifiOff size={14} />,
-        text: "离线编辑中，上线后自动同步",
+        text: t("offlineEditing"),
         className: "text-[var(--warn)]",
-        spin: false,
       };
     }
     if (connectionStatus === "connecting") {
       return {
         icon: <Loader2 size={14} className="animate-spin" />,
-        text: "同步中...",
+        text: t("connecting"),
         className: "text-[var(--muted)]",
-        spin: true,
       };
     }
     // online
     if (!offlineSynced) {
       return {
         icon: <Loader2 size={14} className="animate-spin" />,
-        text: "同步中...",
+        text: t("loadingOfflineData"),
         className: "text-[var(--muted)]",
-        spin: true,
       };
     }
-    return {
-      icon: <Check size={14} />,
-      text: "已同步",
-      className: "text-[var(--success)]",
-      spin: false,
-    };
-  }, [connectionStatus, offlineSynced]);
+    // online + synced：仅在 syncedFlash 期间显示"已同步"，3 秒后消失。
+    if (syncedFlash) {
+      return {
+        icon: <Check size={14} />,
+        text: t("synced"),
+        className: "text-[var(--success)]",
+      };
+    }
+    // online + synced + flash 已过期：不显示状态徽章。
+    return null;
+  }, [connectionStatus, offlineSynced, syncedFlash, t]);
+
+  if (!display) return null;
 
   return (
     <span
@@ -173,6 +206,39 @@ export function ConnectionStatusBadge() {
       {display.icon}
       {display.text}
     </span>
+  );
+}
+
+// ── 离线过长提示 ───────────────────────────────────────────────────────────
+
+/**
+ * 离线过长告警：离线超过 7 天后重连时显示，提示用户检查合并结果。
+ * 用 --warn 色告警，可手动关闭（dismissOfflineTooLong）。
+ * 离线期间其他人的删除/修改操作较多，CRDT 虽自动合并但结果可能与预期有差异。
+ */
+export function OfflineTooLongNotice() {
+  const t = useTranslations("collaboration");
+  const { offlineTooLong, dismissOfflineTooLong } = useCollaboration();
+
+  if (!offlineTooLong) return null;
+
+  return (
+    <div
+      className="inline-flex items-center gap-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--warn-soft)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--warn)]"
+      role="alert"
+      aria-live="assertive"
+    >
+      <AlertTriangle size={14} aria-hidden />
+      <span>{t("offlineTooLong")}</span>
+      <button
+        type="button"
+        onClick={dismissOfflineTooLong}
+        className="inline-flex items-center justify-center rounded-[var(--radius-sm)] p-0.5 text-[var(--warn)] hover:bg-[var(--warn-soft)] focus-visible:outline-2 focus-visible:outline-[var(--warn)] focus-visible:outline-offset-2"
+        aria-label={t("dismiss")}
+      >
+        <X size={12} aria-hidden />
+      </button>
+    </div>
   );
 }
 
@@ -187,10 +253,12 @@ interface PresenceIndicatorProps {
   showStatus?: boolean;
   /** 是否显示在线头像列表，默认 true。 */
   showAvatars?: boolean;
+  /** 是否显示离线过长告警，默认 true。 */
+  showOfflineNotice?: boolean;
 }
 
 /**
- * Presence 指示器：在线头像列表 + 连接状态徽章。
+ * Presence 指示器：在线头像列表 + 连接状态徽章 + 离线过长告警。
  *
  * 在 <CollaborationProvider> 内使用。通常放在编辑器右上角工具栏。
  *
@@ -203,11 +271,13 @@ export default function PresenceIndicator({
   avatarSize = 28,
   showStatus = true,
   showAvatars = true,
+  showOfflineNotice = true,
 }: PresenceIndicatorProps) {
   return (
-    <div className="flex items-center gap-[var(--space-2)]">
+    <div className="flex flex-wrap items-center gap-[var(--space-2)]">
       {showAvatars && <OnlineAvatars max={maxAvatars} avatarSize={avatarSize} />}
       {showStatus && <ConnectionStatusBadge />}
+      {showOfflineNotice && <OfflineTooLongNotice />}
     </div>
   );
 }

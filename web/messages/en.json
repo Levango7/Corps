@@ -933,6 +933,14 @@
     "kbdOpen": "Enter Open",
     "itemCount": "{count} items"
   },
+  "search": {
+    "searchPlaceholder": "Search documents / tasks / decisions, or jump to a page",
+    "noResults": "No matching results",
+    "groupDocuments": "Documents",
+    "groupTasks": "Tasks",
+    "groupDecisions": "Decisions",
+    "searching": "Searching…"
+  },
   "billing": {
     "currentPlan": "Current plan",
     "justPaid": "Payment successful, subscription active. Refresh to see the latest status.",
@@ -1297,7 +1305,30 @@
     "richtextMode": "Rich text mode",
     "richtext": "Rich text",
     "markdownMode": "Markdown source",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "slashMenu": {
+      "empty": "No matching command for \"{query}\"",
+      "h1": { "label": "Heading 1", "description": "Large section title" },
+      "h2": { "label": "Heading 2", "description": "Medium section title" },
+      "bulletList": { "label": "Bullet list", "description": "Unordered list" },
+      "orderedList": { "label": "Numbered list", "description": "Ordered list" },
+      "taskList": { "label": "Task list", "description": "Checkable items" },
+      "quote": { "label": "Quote", "description": "Blockquote" },
+      "codeBlock": { "label": "Code block", "description": "Preformatted code" },
+      "divider": { "label": "Divider", "description": "Horizontal rule" },
+      "table": { "label": "Table", "description": "3×3 grid" },
+      "image": { "label": "Image", "description": "Upload and embed" },
+      "decision": { "label": "Decision mark", "description": "Embed a decision record" },
+      "task": { "label": "Task embed", "description": "Embed a task card" }
+    },
+    "decisionMark": {
+      "cardLabel": "Decision",
+      "untitled": "Untitled decision"
+    },
+    "taskEmbed": {
+      "cardLabel": "Task",
+      "untitled": "Untitled task"
+    }
   },
   "attachment": {
     "previewAria": "Preview: {name}",
@@ -1534,7 +1565,6 @@
       "weekdayFri": "Fri",
       "weekdaySat": "Sat",
       "weekdaySun": "Sun",
-
       "noDateField": "Please set a date field in the view config",
       "untitled": "Untitled",
       "prevPageAria": "Previous",
@@ -1717,5 +1747,17 @@
       "restoreAria": "Restore to v{version}",
       "restoreToVersion": "Restore to this version"
     }
+  },
+  "collaboration": {
+    "offlineEditing": "Offline editing",
+    "offlineDataLoaded": "Offline data loaded from cache",
+    "connecting": "Connecting...",
+    "loadingOfflineData": "Loading offline data...",
+    "synced": "Synced",
+    "reconnected": "Reconnected",
+    "connectionLost": "Connection lost",
+    "offlineTooLong": "You've been offline for over 7 days. Edits may differ significantly from others. Please review.",
+    "dismiss": "Dismiss",
+    "onlineCount": "{count} online"
   }
 }

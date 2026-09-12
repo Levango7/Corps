@@ -12,10 +12,14 @@ import {
   Users,
   CreditCard,
   Settings,
+  Scale,
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
+
+/** 搜索结果类型 */
+type SearchType = "document" | "task" | "decision";
 
 interface CmdItem {
   id: string;
@@ -23,37 +27,30 @@ interface CmdItem {
   title?: string;
   /** 导航项的翻译 key（阶段 2-6 i18n）：title 为原始 key、显示经 tNav(title) */
   titleKey?: string;
-  kind: "task" | "nav" | "decision";
+  kind: SearchType | "nav";
   href: string;
   icon: typeof FileText;
   /** 分组提示翻译 key（nav.menu.*） */
   hintKey?: string;
   /** hintKey 渲染出的分组文案缓存（搜索结果注入时填充） */
   hint?: string;
+  /** 搜索结果匹配上下文摘要（仅搜索结果项有值） */
+  snippet?: string;
 }
 
-/** 搜索 API 返回的任务项 */
-interface SearchTaskItem {
+/** 搜索 API 返回的统一项 */
+interface SearchItem {
+  type: SearchType;
   id: string;
-  title: string;
-  status: string;
-  priority: string;
-  kind: "task";
-}
-
-/** 搜索 API 返回的决策项 */
-interface SearchDecisionItem {
-  id: string;
-  kind: "decision";
   title: string;
   snippet: string;
-  taskId: string;
   href: string;
+  updatedAt: string;
 }
 
 interface SearchResults {
-  tasks: SearchTaskItem[];
-  decisions: SearchDecisionItem[];
+  items: SearchItem[];
+  total: number;
 }
 
 /** 高亮匹配文本：在 text 中标记 query 命中的首段 */
@@ -72,14 +69,19 @@ function highlight(text: string, query: string) {
   );
 }
 
+/** 搜索结果项的图标映射 */
+const SEARCH_ICONS: Record<SearchType, typeof FileText> = {
+  document: FileText,
+  task: CheckSquare,
+  decision: Scale,
+};
+
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
   const t = useTranslations("command");
   const tNav = useTranslations("nav");
+  const tSearch = useTranslations("search");
   const [query, setQuery] = useState("");
-  const [results, setResults] = useState<{ tasks: CmdItem[]; decisions: CmdItem[] }>({
-    tasks: [],
-    decisions: [],
-  });
+  const [results, setResults] = useState<CmdItem[]>([]);
   const [cursor, setCursor] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   // 搜索失败标记：显示错误提示而非静默清空结果
@@ -90,11 +92,11 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   // 持有 go 的最新引用，供键盘 useEffect 使用，避免 stale closure
   const goRef = useRef<(href: string) => void>(() => {});
 
-  // query 变化：防抖 300ms 后调用全局搜索端点（任务标题 + 决策 markdown）
+  // query 变化：防抖 300ms 后调用全局搜索端点（文档 + 任务 + 决策）
   useEffect(() => {
     const q = query.trim();
     if (!q) {
-      setResults({ tasks: [], decisions: [] });
+      setResults([]);
       setIsSearching(false);
       setSearchError(false);
       return;
@@ -110,30 +112,22 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         signal: controller.signal,
       })
         .then((data) => {
-          setResults({
-            tasks: (data?.tasks ?? []).map((t) => ({
-              id: t.id,
-              title: t.title,
-              kind: "task" as const,
-              href: `/w/${wid}/task/${t.id}`,
-              icon: CheckSquare,
-              hintKey: "nav.menu.board",
+          setResults(
+            (data?.items ?? []).map((item) => ({
+              id: item.id,
+              title: item.title,
+              kind: item.type,
+              href: item.href,
+              icon: SEARCH_ICONS[item.type],
+              snippet: item.snippet,
             })),
-            decisions: (data?.decisions ?? []).map((d) => ({
-              id: d.id,
-              title: d.title,
-              kind: "decision" as const,
-              href: d.href,
-              icon: FileText,
-              hintKey: "nav.menu.decisions",
-            })),
-          });
+          );
           setSearchError(false);
         })
         .catch((err: unknown) => {
           // AbortError 是防抖/卸载触发的取消，不算真实失败
           if (err instanceof DOMException && err.name === "AbortError") return;
-          setResults({ tasks: [], decisions: [] });
+          setResults([]);
           setSearchError(true);
         });
     }, 300);
@@ -185,8 +179,14 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     const q = query.trim().toLowerCase();
     // query 为空：仅展示导航项（打开时不拉取所有任务，避免无谓请求）
     if (!q) return navItems;
-    // query 非空：使用搜索端点返回的任务 + 决策结果（分组显示）
-    return [...results.tasks, ...results.decisions];
+    // query 非空：使用搜索端点返回的文档 + 任务 + 决策结果（分组显示）
+    // 结果已按 updatedAt 倒序，但需按 type 分组：document → task → decision
+    const typeOrder: Record<SearchType, number> = { document: 0, task: 1, decision: 2 };
+    return [...results].sort((a, b) => {
+      const ta = typeOrder[a.kind as SearchType];
+      const tb = typeOrder[b.kind as SearchType];
+      return ta - tb;
+    });
   }, [query, results, wid]);
 
   // 是否展示分组标题（仅搜索态下）
@@ -195,7 +195,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   // 结果集变化后把游标收回首项，避免指向越界
   useEffect(() => {
     setCursor(0);
-  }, [query, results.tasks.length, results.decisions.length]);
+  }, [query, results.length]);
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
@@ -234,6 +234,18 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   useEffect(() => {
     goRef.current = go;
   }, [go]);
+
+  /** 分组标题翻译 key 映射 */
+  const groupLabel = (kind: SearchType): string => {
+    switch (kind) {
+      case "document":
+        return tSearch("groupDocuments");
+      case "task":
+        return tSearch("groupTasks");
+      case "decision":
+        return tSearch("groupDecisions");
+    }
+  };
 
   return (
     <div
@@ -285,7 +297,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
               {searchError
                 ? t("searchFailed")
                 : query.trim()
-                  ? (isSearching ? t("searching") : t("typeToSearch"))
+                  ? (isSearching ? t("searching") : tSearch("noResults"))
                   : t("noItems")}
             </li>
           )}
@@ -293,19 +305,15 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
             const Icon = item.icon;
             const active = idx === cursor;
             const prev = items[idx - 1];
-            const showTaskHeader = showGroups && item.kind === "task" && prev?.kind !== "task";
-            const showDecisionHeader =
-              showGroups && item.kind === "decision" && prev?.kind !== "decision";
+            // 分组标题显示：搜索态下，当前项 kind 与前一项不同时显示分组标题。
+            // 搜索态 items 只含搜索结果（不含 nav），prev 为 undefined（首项）或不同 kind 时触发。
+            const showGroupHeader =
+              showGroups && item.kind !== "nav" && prev?.kind !== item.kind;
             return (
               <Fragment key={item.id}>
-                {showTaskHeader && (
+                {showGroupHeader && (
                   <li className="px-4 pt-2 pb-1 text-[length:var(--text-xs)] text-[var(--meta)] uppercase tracking-wide">
-                    {tNav("menu.board")}
-                  </li>
-                )}
-                {showDecisionHeader && (
-                  <li className="px-4 pt-2 pb-1 text-[length:var(--text-xs)] text-[var(--meta)] uppercase tracking-wide">
-                    {tNav("menu.decisions")}
+                    {groupLabel(item.kind as SearchType)}
                   </li>
                 )}
                 <li>
@@ -321,10 +329,17 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
                       size={16}
                       className={`shrink-0 ${active ? "text-[var(--accent)]" : "text-[var(--meta)]"}`}
                     />
-                    <span className="flex-1 text-left truncate">
-                      {highlight(
-                        item.titleKey ? tNav(item.titleKey) : (item.title ?? ""),
-                        query.trim(),
+                    <span className="flex-1 text-left min-w-0">
+                      <span className="block truncate">
+                        {highlight(
+                          item.titleKey ? tNav(item.titleKey) : (item.title ?? ""),
+                          query.trim(),
+                        )}
+                      </span>
+                      {item.snippet && (
+                        <span className="block truncate text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
+                          {highlight(item.snippet, query.trim())}
+                        </span>
                       )}
                     </span>
                     {item.hintKey && (

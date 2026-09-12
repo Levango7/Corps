@@ -28,6 +28,7 @@ import {
   useEffect,
   useImperativeHandle,
   forwardRef,
+  useMemo,
   type RefObject,
   type KeyboardEvent,
 } from "react";
@@ -36,6 +37,10 @@ import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
 import TaskList from "@tiptap/extension-task-list";
 import TaskItem from "@tiptap/extension-task-item";
+import { Table } from "@tiptap/extension-table";
+import { TableRow } from "@tiptap/extension-table-row";
+import { TableCell } from "@tiptap/extension-table-cell";
+import { TableHeader } from "@tiptap/extension-table-header";
 import { useTranslations } from "next-intl";
 import {
   Bold,
@@ -54,6 +59,14 @@ import {
 } from "lucide-react";
 import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
 import Markdown from "@/components/Markdown";
+// Phase 1b：Slash Menu + 决策标记 + 任务嵌入扩展
+import {
+  SlashMenuExtension,
+  type SlashCommandKey,
+  type SlashCommandLabel,
+} from "@/components/editor/slashMenuExtension";
+import { DecisionMark } from "@/components/editor/decisionMarkExtension";
+import { TaskEmbed } from "@/components/editor/taskEmbedExtension";
 
 // ── ProseMirror JSON doc 子集类型 ──────────────────────────────────────────
 // 自定义而非导入 @tiptap/core 的 JSONContent，避免 pnpm 严格解析耦合；
@@ -292,6 +305,27 @@ function nodeToMd(node: DocNode, depth = 0): string {
       return "\n";
     case "text":
       return inlineToMd(node);
+    case "decisionMark": {
+      // 决策标记序列化为引用块占位 `> [decision:id title]`
+      // 反向 markdown→html 时不还原为节点（降级为引用文本），但内容不丢
+      const a = node.attrs ?? {};
+      const id = String(a.decisionId ?? "");
+      const title = String(a.title ?? "");
+      const status = String(a.status ?? "todo");
+      const due = a.dueDate ? ` due="${String(a.dueDate)}"` : "";
+      const ver = a.version != null ? ` v="${String(a.version)}"` : "";
+      return `> [decision:${id} "${title}" status=${status}${due}${ver}]\n\n`;
+    }
+    case "taskEmbed": {
+      // 任务嵌入序列化为引用块占位 `> [task:id title]`
+      const a = node.attrs ?? {};
+      const id = String(a.taskId ?? "");
+      const title = String(a.title ?? "");
+      const status = String(a.status ?? "todo");
+      const assignee = a.assigneeName ? ` assignee="${String(a.assigneeName)}"` : "";
+      const due = a.dueDate ? ` due="${String(a.dueDate)}"` : "";
+      return `> [task:${id} "${title}" status=${status}${assignee}${due}]\n\n`;
+    }
     default:
       return inline(node);
   }
@@ -342,6 +376,12 @@ interface RichTextEditorProps {
   placeholder?: string;
   /** 容器附加类名 */
   className?: string;
+  /** 当前 workspace id（用于决策/任务卡片点击跳转，可选） */
+  wid?: string;
+  /** Slash Menu 触发插入决策标记时回调（父组件打开决策选择器，可选） */
+  onInsertDecision?: () => void;
+  /** Slash Menu 触发插入任务嵌入时回调（父组件打开任务选择器，可选） */
+  onInsertTask?: () => void;
 }
 
 /** 工具栏按钮基础类名（design token，与 MarkdownToolbar 风格一致） */
@@ -350,12 +390,56 @@ const TOOLBAR_BTN =
 const TOOLBAR_BTN_ACTIVE = "bg-[var(--surface)] text-[var(--accent)]";
 
 export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorProps>(
-  function RichTextEditor({ value, onChange, onBlur, split, placeholder, className }, ref) {
+  function RichTextEditor(
+    { value, onChange, onBlur, split, placeholder, className, wid, onInsertDecision, onInsertTask },
+    ref,
+  ) {
     const t = useTranslations("editor");
+    /** Slash Menu 命令文案（i18n） */
+    const tSlash = useTranslations("editor.slashMenu");
     /** 编辑模式：richtext（TipTap）| markdown（源码 textarea） */
     const [mode, setMode] = useState<"richtext" | "markdown">("richtext");
     /** TipTap 重挂载 key：markdown→richtext 切换时递增，用最新 value 重新初始化 */
     const [richtextKey, setRichtextKey] = useState(0);
+
+    // Slash Menu 命令文案映射（i18n → SlashCommandLabel）
+    // 用 useMemo 缓存避免每次 render 重建对象触发 Suggestion items 重算
+    const slashLabels = useMemo<Record<SlashCommandKey, SlashCommandLabel>>(
+      () => ({
+        h1: { label: tSlash("h1.label"), description: tSlash("h1.description") },
+        h2: { label: tSlash("h2.label"), description: tSlash("h2.description") },
+        bulletList: {
+          label: tSlash("bulletList.label"),
+          description: tSlash("bulletList.description"),
+        },
+        orderedList: {
+          label: tSlash("orderedList.label"),
+          description: tSlash("orderedList.description"),
+        },
+        taskList: {
+          label: tSlash("taskList.label"),
+          description: tSlash("taskList.description"),
+        },
+        quote: { label: tSlash("quote.label"), description: tSlash("quote.description") },
+        codeBlock: {
+          label: tSlash("codeBlock.label"),
+          description: tSlash("codeBlock.description"),
+        },
+        divider: {
+          label: tSlash("divider.label"),
+          description: tSlash("divider.description"),
+        },
+        table: { label: tSlash("table.label"), description: tSlash("table.description") },
+        image: { label: tSlash("image.label"), description: tSlash("image.description") },
+        decision: {
+          label: tSlash("decision.label"),
+          description: tSlash("decision.description"),
+        },
+        task: { label: tSlash("task.label"), description: tSlash("task.description") },
+      }),
+      [tSlash],
+    );
+    const slashEmptyText = tSlash("empty");
 
     // 回调 ref：useEditor 的 onUpdate/onBlur 闭包只捕获一次，
     // 用 ref 始终调最新回调，避免父组件每次 render 新函数导致的 stale closure。
@@ -396,6 +480,22 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           }),
           TaskList,
           TaskItem.configure({ nested: true }),
+          // Phase 1b：表格扩展（Slash Menu /table 命令需要）
+          Table.configure({ resizable: true }),
+          TableRow,
+          TableCell,
+          TableHeader,
+          // Phase 1b：Slash Menu 命令面板
+          SlashMenuExtension.configure({
+            labels: slashLabels,
+            emptyText: slashEmptyText,
+            onInsertDecision,
+            onInsertTask,
+          }),
+          // Phase 1b：决策标记块级节点
+          DecisionMark.configure({ wid: wid ?? "" }),
+          // Phase 1b：任务嵌入块级节点
+          TaskEmbed.configure({ wid: wid ?? "" }),
         ],
         content: markdownToHtml(valueRef.current),
         editorProps: {

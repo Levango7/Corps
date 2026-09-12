@@ -933,6 +933,14 @@
     "kbdOpen": "Enter 打开",
     "itemCount": "{count} 项"
   },
+  "search": {
+    "searchPlaceholder": "搜索文档 / 任务 / 决策，或跳转页面",
+    "noResults": "没有匹配的结果",
+    "groupDocuments": "文档",
+    "groupTasks": "任务",
+    "groupDecisions": "决策",
+    "searching": "正在搜索…"
+  },
   "billing": {
     "currentPlan": "当前套餐",
     "justPaid": "支付成功，订阅生效中。刷新页面可查看最新状态。",
@@ -1297,7 +1305,30 @@
     "richtextMode": "富文本模式",
     "richtext": "富文本",
     "markdownMode": "Markdown 源码",
-    "markdown": "Markdown"
+    "markdown": "Markdown",
+    "slashMenu": {
+      "empty": "没有匹配「{query}」的命令",
+      "h1": { "label": "标题 1", "description": "大节标题" },
+      "h2": { "label": "标题 2", "description": "中节标题" },
+      "bulletList": { "label": "无序列表", "description": "项目符号列表" },
+      "orderedList": { "label": "有序列表", "description": "编号列表" },
+      "taskList": { "label": "任务列表", "description": "可勾选项" },
+      "quote": { "label": "引用", "description": "块引用" },
+      "codeBlock": { "label": "代码块", "description": "预格式化代码" },
+      "divider": { "label": "分割线", "description": "水平分隔线" },
+      "table": { "label": "表格", "description": "3×3 网格" },
+      "image": { "label": "图片", "description": "上传并嵌入" },
+      "decision": { "label": "决策标记", "description": "嵌入决策记录" },
+      "task": { "label": "任务嵌入", "description": "嵌入任务卡片" }
+    },
+    "decisionMark": {
+      "cardLabel": "决策",
+      "untitled": "未命名决策"
+    },
+    "taskEmbed": {
+      "cardLabel": "任务",
+      "untitled": "未命名任务"
+    }
   },
   "attachment": {
     "previewAria": "预览：{name}",
@@ -1716,5 +1747,17 @@
       "restoreAria": "回滚到 v{version}",
       "restoreToVersion": "回滚到此版本"
     }
+  },
+  "collaboration": {
+    "offlineEditing": "离线编辑中",
+    "offlineDataLoaded": "离线数据已从缓存加载",
+    "connecting": "连接中...",
+    "loadingOfflineData": "加载离线数据...",
+    "synced": "已同步",
+    "reconnected": "已重连",
+    "connectionLost": "连接已断开",
+    "offlineTooLong": "您已离线超过 7 天，编辑可能与其他人差异较大，请检查",
+    "dismiss": "知道了",
+    "onlineCount": "在线 {count} 人"
   }
 }

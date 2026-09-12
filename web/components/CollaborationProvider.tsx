@@ -7,12 +7,16 @@
  * - 创建 Yjs Doc + WebSocket Provider + IndexedDB Provider，生命周期与组件绑定。
  * - 通过 React Context 向子组件暴露 ydoc / wsProvider / indexeddbProvider / awareness。
  * - 维护连接状态（connecting / online / offline）与离线缓存加载状态，供 PresenceIndicator 消费。
+ * - 离线时长检测：断线时记录时间戳，重连后若离线超过 7 天，暴露 offlineTooLong 供 UI 提示。
  * - 设置 awareness user 信息（name / color / avatar），光标颜色基于用户 ID 哈希稳定分配。
  *
  * 设计取舍：
  * - "use client" 隔离：y-websocket / y-indexeddb 仅浏览器端可用，SSR 不初始化。
  * - 资源在 useEffect 中创建（保证浏览器环境），卸载时按 IndexedDB → WS → Doc 顺序 destroy，
  *   避免 WS 重连写入已销毁 Doc。
+ * - 离线数据加载完成后才连接 WebSocket（IndexeddbPersistence synced 后才 wsProvider.connect()），
+ *   避免空文档闪现：若 WS 先连上，服务端会推送最新状态覆盖本地空 Doc，随后 IndexedDB 加载
+ *   的旧状态又覆盖回去，造成闪烁。先加载本地缓存再连 WS，CRDT 自动合并差异。
  * - 光标色板前 4 色复用语义 token（--accent/--success/--warn/--danger），后 4 色用
  *   --cursor-purple/pink/teal/orange，由下方 <style> 注入到 :root（与 design-tokens.css
  *   同模式：hex 仅出现在 token 定义处，使用处全走 var(--*)）。
@@ -20,8 +24,9 @@
  * - access token 通过 props 传入（string 或取值函数），作为 ws 连接的 params.token，
  *   由 y-websocket 以 query string 发送，服务端按 token 鉴权。
  *
- * i18n 说明：本组件无面向用户文案。PresenceIndicator 的状态文案待后续补充到
- * messages/{en,zh}.json 的 collaboration 命名空间（受本次"不修改现有文件"约束暂未添加）。
+ * i18n 说明：本组件无面向用户文案。PresenceIndicator 的状态文案定义在
+ * messages/{en,zh}.json 的 collaboration 命名空间，由 PresenceIndicator 通过
+ * useTranslations("collaboration") 消费。
  */
 
 import {
@@ -37,6 +42,50 @@ import {
 import * as Y from "yjs";
 import { WebsocketProvider } from "y-websocket";
 import { IndexeddbPersistence } from "y-indexeddb";
+
+// ── 离线时长检测 ───────────────────────────────────────────────────────────
+// 断线时把时间戳存 localStorage，重连后读取计算离线时长。
+// 超过 7 天则暴露 offlineTooLong，供 PresenceIndicator 提示用户检查合并结果。
+
+/** 离线过长阈值：7 天（毫秒）。 */
+const OFFLINE_TOO_LONG_MS = 7 * 24 * 60 * 60 * 1000;
+
+/** 离线开始时间戳的 localStorage key（按文档隔离）。 */
+function offlineSinceKey(documentId: string): string {
+  return `corps-offline-since-${documentId}`;
+}
+
+/** 记算离线时长（毫秒）。若未记录离线开始时间或已过期则返回 0。 */
+function getOfflineDurationMs(documentId: string): number {
+  try {
+    const raw = localStorage.getItem(offlineSinceKey(documentId));
+    if (!raw) return 0;
+    const since = Number(raw);
+    if (!Number.isFinite(since)) return 0;
+    return Date.now() - since;
+  } catch {
+    // localStorage 不可用（隐私模式等），跳过检测。
+    return 0;
+  }
+}
+
+/** 记算离线时长（毫秒）。若未记录离线开始时间或已过期则返回 0。 */
+function recordOfflineStart(documentId: string): void {
+  try {
+    localStorage.setItem(offlineSinceKey(documentId), String(Date.now()));
+  } catch {
+    // localStorage 不可用，跳过记录。
+  }
+}
+
+/** 清除离线开始时间记录（重连成功后调用）。 */
+function clearOfflineStart(documentId: string): void {
+  try {
+    localStorage.removeItem(offlineSinceKey(documentId));
+  } catch {
+    // localStorage 不可用，跳过清除。
+  }
+}
 
 // ── 光标色板（§3.2.1）──────────────────────────────────────────────────────
 // 前 4 色复用语义 token；后 4 色用自定义光标 token（在组件 <style> 中定义）。
@@ -106,6 +155,10 @@ interface CollaborationContextValue {
   connectionStatus: ConnectionStatus;
   /** 离线缓存是否已从 IndexedDB 加载完成（首次同步完成）。 */
   offlineSynced: boolean;
+  /** 离线时长是否超过 7 天（重连后检测一次，true 时 UI 应提示用户检查合并结果）。 */
+  offlineTooLong: boolean;
+  /** 关闭"离线过长"提示（用户确认后调用）。 */
+  dismissOfflineTooLong: () => void;
 }
 
 // ── Context ────────────────────────────────────────────────────────────────
@@ -165,6 +218,13 @@ export function CollaborationProvider({
   const [connectionStatus, setConnectionStatus] =
     useState<ConnectionStatus>("connecting");
   const [offlineSynced, setOfflineSynced] = useState(false);
+  const [offlineTooLong, setOfflineTooLong] = useState(false);
+
+  /** 关闭"离线过长"提示。 */
+  const dismissOfflineTooLong = useCallback(
+    () => setOfflineTooLong(false),
+    [],
+  );
 
   // 稳定的用户信息（color 由 id 哈希得出），写入 awareness。
   const collabUser = useMemo<CollaborationUser>(
@@ -190,17 +250,20 @@ export function CollaborationProvider({
     // ── 创建 Yjs Doc + Providers（仅浏览器端）──────────────────────────────
     const ydoc = new Y.Doc();
 
-    // 离线持久化：IndexedDB key 与 WS roomname 都用 documentId，保证同一文档跨连接复用缓存。
-    const indexeddbProvider = new IndexeddbPersistence(`doc-${documentId}`, ydoc);
+    // 离线持久化：IndexedDB key 用 corps-doc-${documentId}，保证同一文档跨连接复用缓存。
+    // 先创建 IndexeddbPersistence 并等待 synced（离线数据加载到 ydoc），再连接 WebSocket，
+    // 避免空文档闪现（WS 先连会用服务端状态覆盖本地空 Doc，随后 IndexedDB 旧状态又覆盖回去）。
+    const indexeddbProvider = new IndexeddbPersistence(`corps-doc-${documentId}`, ydoc);
 
     // WebSocket 协同：CRDT 同步 + awareness 广播。
+    // connect: false — 先不连接，等 IndexedDB synced 后再 connect()。
     const wsProvider = new WebsocketProvider(
       resolvedWsUrl,
       documentId,
       ydoc,
       {
-        // 显式开启连接（默认即 true，写出来便于未来按需 disable）。
-        connect: true,
+        // 延迟连接：等离线数据加载完成后再 connect()，避免空文档闪现。
+        connect: false,
         // 透传 token params（undefined 时 y-websocket 忽略）。
         params: tokenParams,
       },
@@ -215,11 +278,22 @@ export function CollaborationProvider({
     });
 
     // ── 监听连接状态（y-websocket ObservableV2 'status' 事件）──────────────
+    // 同时管理离线时长记录：断线时记录时间戳，重连时检测是否超过 7 天。
     const handleStatus = (event: { status: "connected" | "disconnected" | "connecting" }) => {
       if (event.status === "connected") {
         setConnectionStatus("online");
+        // 重连成功：检测离线时长，超过 7 天则提示用户检查合并结果。
+        const offlineDuration = getOfflineDurationMs(documentId);
+        if (offlineDuration > OFFLINE_TOO_LONG_MS) {
+          setOfflineTooLong(true);
+        }
+        clearOfflineStart(documentId);
       } else if (event.status === "disconnected") {
         setConnectionStatus("offline");
+        // 断线时记录开始时间（若尚未记录，避免反复刷新覆盖最早时间）。
+        if (getOfflineDurationMs(documentId) === 0) {
+          recordOfflineStart(documentId);
+        }
       } else {
         setConnectionStatus("connecting");
       }
@@ -227,8 +301,11 @@ export function CollaborationProvider({
     wsProvider.on("status", handleStatus);
 
     // ── 监听离线缓存加载完成（IndexeddbPersistence 'synced' 事件）──────────
+    // synced 后：① 标记离线数据已加载；② 连接 WebSocket（延迟连接策略）。
     const handleIdbSynced = () => {
       setOfflineSynced(true);
+      // 离线数据已加载到 ydoc，现在连接 WebSocket，CRDT 自动合并差异。
+      wsProvider.connect();
     };
     indexeddbProvider.on("synced", handleIdbSynced);
 
@@ -241,6 +318,8 @@ export function CollaborationProvider({
       user: collabUser,
       connectionStatus: "connecting",
       offlineSynced: false,
+      offlineTooLong: false,
+      dismissOfflineTooLong,
     };
     ctxRef.current = ctxValue;
     // 强制更新一次，让 useCollaboration 拿到非 null 值。
@@ -270,7 +349,7 @@ export function CollaborationProvider({
   // 初始化完成标记（effect 内 setInitialized 触发首次渲染拿到 ctx）。
   const [, setInitialized] = useState(0);
 
-  // 当前上下文值（合并最新 connectionStatus / offlineSynced）。
+  // 当前上下文值（合并最新 connectionStatus / offlineSynced / offlineTooLong）。
   const value = useMemo<CollaborationContextValue | null>(() => {
     const base = ctxRef.current;
     if (!base) return null;
@@ -278,8 +357,10 @@ export function CollaborationProvider({
       ...base,
       connectionStatus,
       offlineSynced,
+      offlineTooLong,
+      dismissOfflineTooLong,
     };
-  }, [connectionStatus, offlineSynced]);
+  }, [connectionStatus, offlineSynced, offlineTooLong, dismissOfflineTooLong]);
 
   return (
     <>
