@@ -24,6 +24,7 @@ import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
 import { listFavorites, type FavoriteEntry } from "@/lib/favorites";
 import CommandPalette from "@/components/CommandPalette";
+import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
@@ -544,7 +545,7 @@ export default function WorkspaceLayout({
         </aside>
 
         <main className="flex-1 overflow-y-auto bg-[var(--shell-content)] p-[var(--space-4)] lg:p-[var(--space-6)]">
-          {children}
+          <PageTransition>{children}</PageTransition>
         </main>
       </div>
 

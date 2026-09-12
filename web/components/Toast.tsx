@@ -11,6 +11,7 @@ import {
 } from "react";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 
 type ToastType = "success" | "error" | "info" | "warning";
 
@@ -50,6 +51,35 @@ export function ToastProvider({ children }: { children: ReactNode }) {
   const [pausedIds, setPausedIds] = useState<Set<number>>(new Set());
   // 当前时间戳，每秒更新用于动态显示相对时间
   const [now, setNow] = useState(() => Date.now());
+
+  // 尊重 prefers-reduced-motion：降级时仅做 opacity 过渡，无位移 / 缩放
+  const reduceMotion = useReducedMotion();
+
+  // Toast 入场 / 退场动画 variants
+  // 入场：从顶部滑入（y: -12 → 0）+ scale 0.95 → 1，spring 物理曲线
+  // 退场：fade out + scale 1 → 0.95 + y: -8，tween 曲线（干脆不拖沓）
+  // spring 参数对应设计文档 --spring-stiffness: 300 / --spring-damping: 30
+  const toastVariants: Variants = reduceMotion
+    ? {
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { duration: 0.15 } },
+        exit: { opacity: 0, transition: { duration: 0.15 } },
+      }
+    : {
+        initial: { opacity: 0, y: -12, scale: 0.95 },
+        animate: {
+          opacity: 1,
+          y: 0,
+          scale: 1,
+          transition: { type: "spring", stiffness: 300, damping: 30 },
+        },
+        exit: {
+          opacity: 0,
+          y: -8,
+          scale: 0.95,
+          transition: { duration: 0.15, ease: [0.2, 0, 0, 1] },
+        },
+      };
 
   // 每秒 tick 更新动态时间显示
   useEffect(() => {
@@ -152,58 +182,65 @@ export function ToastProvider({ children }: { children: ReactNode }) {
         aria-live="polite"
         aria-label={tToast("regionLabel")}
       >
-        {toasts.map((t) => {
-          const elapsed = now - t.createdAt;
-          const isPaused = pausedIds.has(t.id);
-          return (
-            <div
-              key={t.id}
-              className="fade-in pointer-events-auto flex items-start gap-3 max-w-[calc(100vw-2rem)] px-4 py-3 rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-              style={{
-                background:
-                  t.type === "success"
-                    ? "var(--success-soft)"
-                    : t.type === "error"
-                      ? "var(--danger-soft)"
-                      : t.type === "warning"
-                        ? "var(--warn-soft)"
-                        : "var(--surface)",
-                borderColor: "var(--border)",
-                color:
-                  t.type === "success"
-                    ? "var(--success)"
-                    : t.type === "error"
-                      ? "var(--danger)"
-                      : t.type === "warning"
-                        ? "var(--warn)"
-                        : "var(--fg)",
-              }}
-              onClick={() => remove(t.id)}
-              onMouseEnter={() => handleMouseEnter(t.id, t.createdAt)}
-              onMouseLeave={() => handleMouseLeave(t.id)}
-              role="alert"
-            >
-              <span className="text-[length:var(--text-sm)] flex-1">{t.message}</span>
-              {/* 动态显示时间 */}
-              <span
-                className="shrink-0 text-[length:var(--text-xs)] opacity-60 tabular-nums self-center"
-                aria-hidden="true"
-              >
-                {isPaused ? "⏸" : formatElapsed(elapsed)}
-              </span>
-              <button
-                className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-[length:var(--text-xs)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  remove(t.id);
+        <AnimatePresence>
+          {toasts.map((t) => {
+            const elapsed = now - t.createdAt;
+            const isPaused = pausedIds.has(t.id);
+            return (
+              <motion.div
+                key={t.id}
+                layout
+                variants={toastVariants}
+                initial="initial"
+                animate="animate"
+                exit="exit"
+                className="pointer-events-auto flex items-start gap-3 max-w-[calc(100vw-2rem)] px-4 py-3 rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                style={{
+                  background:
+                    t.type === "success"
+                      ? "var(--success-soft)"
+                      : t.type === "error"
+                        ? "var(--danger-soft)"
+                        : t.type === "warning"
+                          ? "var(--warn-soft)"
+                          : "var(--surface)",
+                  borderColor: "var(--border)",
+                  color:
+                    t.type === "success"
+                      ? "var(--success)"
+                      : t.type === "error"
+                        ? "var(--danger)"
+                        : t.type === "warning"
+                          ? "var(--warn)"
+                          : "var(--fg)",
                 }}
-                aria-label={tToast("close")}
+                onClick={() => remove(t.id)}
+                onMouseEnter={() => handleMouseEnter(t.id, t.createdAt)}
+                onMouseLeave={() => handleMouseLeave(t.id)}
+                role="alert"
               >
-                <X className="h-3.5 w-3.5" />
-              </button>
-            </div>
-          );
-        })}
+                <span className="text-[length:var(--text-sm)] flex-1">{t.message}</span>
+                {/* 动态显示时间 */}
+                <span
+                  className="shrink-0 text-[length:var(--text-xs)] opacity-60 tabular-nums self-center"
+                  aria-hidden="true"
+                >
+                  {isPaused ? "⏸" : formatElapsed(elapsed)}
+                </span>
+                <button
+                  className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-[length:var(--text-xs)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    remove(t.id);
+                  }}
+                  aria-label={tToast("close")}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              </motion.div>
+            );
+          })}
+        </AnimatePresence>
       </div>
     </ToastContext.Provider>
   );

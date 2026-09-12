@@ -1,8 +1,10 @@
 /**
  * Skeleton · 占位加载组件
  *
- * 设计参考 Linear：用与最终内容尺寸一致的灰色占位块替代 spinner，
- * 避免加载完成时布局跳动。所有色值走 var(--token)，圆角用 var(--radius-sm)。
+ * 设计参考 Linear / Stripe：用与最终内容尺寸一致的占位块替代 spinner，
+ * 避免加载完成时布局跳动。采用 shimmer 渐变扫光（高光从左到右扫过），
+ * 比透明度脉动（animate-pulse）更具加载质感。
+ * 所有色值走 var(--token)（shimmer 渐变由 --shimmer-* token 派生），圆角用 var(--radius-sm)。
  *
  * 导出预设：
  *  - Skeleton          基础块，可由调用方拼装任意形状
@@ -12,14 +14,12 @@
 
 import type { CSSProperties } from "react";
 
-/** 基础 Skeleton 块：animate-pulse + surface-2 背景 + radius-sm 圆角 */
+/** 基础 Skeleton 块：shimmer 扫光渐变 + radius-sm 圆角 */
 export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
   return (
     <div
       style={style}
-      className={`animate-pulse bg-[var(--surface-2)] rounded-[var(--radius-sm)] ${
-        className ?? ""
-      }`}
+      className={`shimmer rounded-[var(--radius-sm)] ${className ?? ""}`}
     />
   );
 }

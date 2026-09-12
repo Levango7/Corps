@@ -67,27 +67,27 @@ model User {
   image         String?   @map("avatar_url") @db.Text
   // Better Auth 存储密码哈希（默认字段名 password，映射到 password_hash 列）
   password      String?   @map("password_hash") @db.Text
-  createdAt     DateTime  @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt     DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
 
-  members          Member[]
-  tasks            Task[]            @relation("TaskAssignee")
-  createdTasks     Task[]            @relation("TaskCreator")
-  comments         Comment[]
-  decisions        Decision[]
-  decisionVersions DecisionVersion[]
-  notifications    Notification[]
-  messages         Message[]
+  members             Member[]
+  tasks               Task[]               @relation("TaskAssignee")
+  createdTasks        Task[]               @relation("TaskCreator")
+  comments            Comment[]
+  decisions           Decision[]
+  decisionVersions    DecisionVersion[]
+  notifications       Notification[]
+  messages            Message[]
   // IM 升级：消息已读记录 + 聊天在线状态
-  messageReads     MessageRead[]
-  chatPresences    ChatPresence[]
+  messageReads        MessageRead[]
+  chatPresences       ChatPresence[]
   // 工作区文档（v0.4.0 队列第 2 项）：用户作为作者的文档列表
-  authoredDocuments Document[]
-  ownedWorkspaces  Workspace[]
-  sessions         Session[]
-  accounts         Account[]
-  analyticsEvents  AnalyticsEvent[]
+  authoredDocuments   Document[]
+  ownedWorkspaces     Workspace[]
+  sessions            Session[]
+  accounts            Account[]
+  analyticsEvents     AnalyticsEvent[]
   // 日历集成：用户的外部日历连接（Google/Outlook）
   calendarConnections CalendarConnection[]
   // F1: 决策行动项的指派人反向关联
@@ -96,6 +96,10 @@ model User {
   dashboardPrefs      UserDashboardPref[]
   // F2: 临时权限授权（限时角色提升，到期自动回收）
   temporaryGrants     TemporaryGrant[]
+  // Phase 1 云文档增强：文档版本作者 + 文档评论作者/解决者
+  documentVersions    DocumentVersion[]
+  documentComments    DocumentComment[]
+  resolvedComments    DocumentComment[]    @relation("CommentResolver")
 
   @@map("users")
 }
@@ -107,31 +111,36 @@ model Workspace {
   ownerId   String   @map("owner_id") @db.Uuid
   plan      String   @default("free") @db.VarChar(20) // free, starter, pro, enterprise
   seatLimit Int      @default(10) @map("seat_limit")
-  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt DateTime @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  owner            User              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  members          Member[]
-  invitations      Invitation[]
-  tasks            Task[]
-  comments         Comment[]
-  decisions        Decision[]
-  decisionVersions DecisionVersion[]
-  notifications    Notification[]
-  messages         Message[]
+  owner              User                @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  members            Member[]
+  invitations        Invitation[]
+  tasks              Task[]
+  comments           Comment[]
+  decisions          Decision[]
+  decisionVersions   DecisionVersion[]
+  notifications      Notification[]
+  messages           Message[]
   messageAttachments MessageAttachment[]
-  subscriptions    Subscription?
-  analyticsEvents  AnalyticsEvent[]
-  labels           Label[]
-  milestones       Milestone[]
+  subscriptions      Subscription?
+  analyticsEvents    AnalyticsEvent[]
+  labels             Label[]
+  milestones         Milestone[]
   // 工作区文档中心（v0.4.0 队列第 2 项）：团队知识沉淀，与决策正交（不绑任务）
-  documents        Document[]
+  documents          Document[]
   // F2: 模块权限覆盖（按角色+模块粒度）
-  memberPermissions MemberPermission[]
+  memberPermissions  MemberPermission[]
   // F3: 用户仪表盘布局偏好
-  dashboardPrefs    UserDashboardPref[]
+  dashboardPrefs     UserDashboardPref[]
   // F2: 临时权限授权（限时角色提升，到期自动回收）
-  temporaryGrants   TemporaryGrant[]
+  temporaryGrants    TemporaryGrant[]
+  // Phase 1 云文档增强：知识库空间 + 文件夹 + 文档版本 + 文档评论
+  spaces             Space[]
+  folders            Folder[]
+  documentVersions   DocumentVersion[]
+  documentComments   DocumentComment[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -142,8 +151,8 @@ model Member {
   workspaceId String   @map("workspace_id") @db.Uuid
   role        String   @default("member") @db.VarChar(20) // owner, admin, member, viewer
   invitedBy   String?  @map("invited_by") @db.Uuid
-  joinedAt    DateTime @default(now()) @db.Timestamptz @map("joined_at") 
-  invitedAt   DateTime @default(now()) @db.Timestamptz @map("invited_at") 
+  joinedAt    DateTime @default(now()) @map("joined_at") @db.Timestamptz
+  invitedAt   DateTime @default(now()) @map("invited_at") @db.Timestamptz
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -168,7 +177,7 @@ model Invitation {
   invitedBy   String    @map("invited_by") @db.Uuid
   expiresAt   DateTime  @map("expires_at") @db.Timestamptz
   acceptedAt  DateTime? @map("accepted_at") @db.Timestamptz
-  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at") 
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -181,52 +190,52 @@ model Invitation {
 }
 
 model Task {
-  id          String    @id @default(uuid()) @db.Uuid
-  workspaceId String    @map("workspace_id") @db.Uuid
-  title       String    @db.VarChar(255)
-  description String?   @map("description") @db.Text
-  status      String    @default("todo") @db.VarChar(20) // todo, in_progress, review, done
-  priority    String    @default("medium") @db.VarChar(20) // low, medium, high, urgent
-  assigneeId  String?   @map("assignee_id") @db.Uuid
-  dueDate     DateTime? @map("due_date") @db.Timestamptz
-  sortOrder   Float     @default(0) @map("sort_order")
-  createdBy   String?   @map("created_by") @db.Uuid
+  id             String    @id @default(uuid()) @db.Uuid
+  workspaceId    String    @map("workspace_id") @db.Uuid
+  title          String    @db.VarChar(255)
+  description    String?   @map("description") @db.Text
+  status         String    @default("todo") @db.VarChar(20) // todo, in_progress, review, done
+  priority       String    @default("medium") @db.VarChar(20) // low, medium, high, urgent
+  assigneeId     String?   @map("assignee_id") @db.Uuid
+  dueDate        DateTime? @map("due_date") @db.Timestamptz
+  sortOrder      Float     @default(0) @map("sort_order")
+  createdBy      String?   @map("created_by") @db.Uuid
   // 里程碑归属（可选）：null 表示未归入任何里程碑
-  milestoneId String?   @map("milestone_id") @db.Uuid
+  milestoneId    String?   @map("milestone_id") @db.Uuid
   // 子任务：父任务 ID（自关联，仅一层——父级本身不能是子任务，API 层强制）
-  parentId    String?   @map("parent_id") @db.Uuid
+  parentId       String?   @map("parent_id") @db.Uuid
   // 阻塞标记：任务被问题/依赖卡住时置 true，附原因说明
-  blocked       Boolean @default(false)
-  blockedReason String? @map("blocked_reason") @db.VarChar(500)
+  blocked        Boolean   @default(false)
+  blockedReason  String?   @map("blocked_reason") @db.VarChar(500)
   // 任务公开分享 token（v0.4 队列第 6 项：只读快照外链，null=未分享）
-  shareToken   String?  @unique @map("task_share_token") @db.VarChar(64)
+  shareToken     String?   @unique @map("task_share_token") @db.VarChar(64)
   // F5: 分享过期时间（null = 永不过期）
   shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
   // F5: 分享密码 hash（null = 无密码；scrypt hash）
   sharePassword  String?   @map("share_password") @db.VarChar(100)
   // F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符）
   shareSlug      String?   @map("share_slug") @db.VarChar(100)
-  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  assignee  User?      @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
+  workspace      Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  assignee       User?                @relation("TaskAssignee", fields: [assigneeId], references: [id], onDelete: SetNull)
   // 创建者注销后任务保留，creator 置空（审计 D3：防跨工作区级联销毁）
-  creator   User?      @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: SetNull)
-  milestone Milestone? @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
+  creator        User?                @relation("TaskCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  milestone      Milestone?           @relation(fields: [milestoneId], references: [id], onDelete: SetNull)
   // 子任务自关联：父任务删除时子任务一并删除（子任务语义上从属于父任务）
-  parent    Task?      @relation("TaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
-  children  Task[]     @relation("TaskChildren")
-  comments  Comment[]
-  decisions Decision[]
-  messages  Message[]
+  parent         Task?                @relation("TaskChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children       Task[]               @relation("TaskChildren")
+  comments       Comment[]
+  decisions      Decision[]
+  messages       Message[]
   // IM 升级：任务内聊天在线状态
-  chatPresences ChatPresence[]
-  labels    TaskLabel[]
+  chatPresences  ChatPresence[]
+  labels         TaskLabel[]
   // 日历集成：任务同步到外部日历的事件映射
   calendarEvents TaskCalendarEvent[]
   // F1: 决策自动分解生成的行动项（此任务由某个决策的行动项创建）
-  actionItems   DecisionActionItem[] @relation("DecisionActionTask")
+  actionItems    DecisionActionItem[] @relation("DecisionActionTask")
 
   // 看板视图：按工作区筛选任务状态列
   @@index([workspaceId, status])
@@ -259,10 +268,10 @@ model Label {
   workspaceId String   @map("workspace_id") @db.Uuid
   name        String   @db.VarChar(50)
   color       String   @default("var(--muted)") @db.VarChar(50)
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  workspace Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tasks     TaskLabel[]
 
   // 同工作区内标签名唯一（大小写敏感）
@@ -297,8 +306,8 @@ model Milestone {
   name        String    @db.VarChar(100)
   dueDate     DateTime? @map("due_date") @db.Timestamptz
   description String?   @db.Text
-  createdAt   DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   tasks     Task[]
@@ -314,8 +323,8 @@ model Comment {
   authorId    String?  @map("author_id") @db.Uuid
   body        String   @db.Text
   mentions    String[] @default([])
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -339,12 +348,12 @@ model Message {
   workspaceId String   @map("workspace_id") @db.Uuid
   authorId    String?  @map("author_id") @db.Uuid
   body        String   @db.Text
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  task      Task      @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task        Task                @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workspace   Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   // 作者注销后消息保留（审计 D3）
-  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  author      User?               @relation(fields: [authorId], references: [id], onDelete: SetNull)
   // IM 升级：已读记录 + 文件附件
   reads       MessageRead[]
   attachments MessageAttachment[]
@@ -363,7 +372,7 @@ model MessageRead {
   id        String   @id @default(uuid()) @db.Uuid
   messageId String   @map("message_id") @db.Uuid
   userId    String   @map("user_id") @db.Uuid
-  readAt    DateTime @default(now()) @db.Timestamptz @map("read_at")
+  readAt    DateTime @default(now()) @map("read_at") @db.Timestamptz
 
   message Message @relation(fields: [messageId], references: [id], onDelete: Cascade)
   user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -381,7 +390,6 @@ model MessageRead {
 // 一条消息可携带多个附件（图片/文档），MVP 本地存储到 web/uploads/。
 // thumbnailUrl 仅图片类型生成，用于聊天内预览；其他类型为 null。
 
-
 // ─── 工作区文档中心（v0.4.0 队列第 2 项）────────────────────────────
 
 /**
@@ -393,47 +401,97 @@ model MessageRead {
  * 不需要登录（v0.4 不预设：未来升级为可选密码/过期时间）。
  */
 model Document {
-  id           String   @id @default(uuid()) @db.Uuid
-  workspaceId  String   @map("workspace_id") @db.Uuid
-  title        String   @db.VarChar(255)
-  /** 文档正文（markdown + 可选 markdown-mermaid 代码块；前端 markdown-it 渲染） */
-  markdown     String   @default("") @db.Text
-  /** 当前已发布版本（null 表示从未发布过；编辑文档时工作草稿在 markdown 字段） */
-  publishedMarkdown String? @map("published_markdown") @db.Text
-  /** 发布时间戳（null = 草稿） */
-  publishedAt  DateTime? @map("published_at") @db.Timestamptz
-  /** 分享链接 token（unique 索引；null 表示未启用分享） */
-  shareToken   String?  @unique @map("share_token") @db.VarChar(64)
-  /** F5: 分享过期时间（null = 永不过期） */
-  shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
-  /** F5: 分享密码 hash（null = 无密码；scrypt hash） */
-  sharePassword  String?   @map("share_password") @db.VarChar(100)
-  /** F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符） */
-  shareSlug      String?   @map("share_slug") @db.VarChar(100)
-  /** 文档作者（可编辑；展示用） */
-  authorId     String?  @map("author_id") @db.Uuid
-  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt    DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  id                String    @id @default(uuid()) @db.Uuid
+  workspaceId       String    @map("workspace_id") @db.Uuid
+  title             String    @db.VarChar(255)
+  /**
+   * 文档正文（markdown + 可选 markdown-mermaid 代码块；前端 markdown-it 渲染）
+   */
+  markdown          String    @default("") @db.Text
+  /**
+   * 当前已发布版本（null 表示从未发布过；编辑文档时工作草稿在 markdown 字段）
+   */
+  publishedMarkdown String?   @map("published_markdown") @db.Text
+  /**
+   * 发布时间戳（null = 草稿）
+   */
+  publishedAt       DateTime? @map("published_at") @db.Timestamptz
+  /**
+   * 分享链接 token（unique 索引；null 表示未启用分享）
+   */
+  shareToken        String?   @unique @map("share_token") @db.VarChar(64)
+  /**
+   * F5: 分享过期时间（null = 永不过期）
+   */
+  shareExpiresAt    DateTime? @map("share_expires_at") @db.Timestamptz
+  /**
+   * F5: 分享密码 hash（null = 无密码；scrypt hash）
+   */
+  sharePassword     String?   @map("share_password") @db.VarChar(100)
+  /**
+   * F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符）
+   */
+  shareSlug         String?   @map("share_slug") @db.VarChar(100)
+  /**
+   * 文档作者（可编辑；展示用）
+   */
+  authorId          String?   @map("author_id") @db.Uuid
+  createdAt         DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt         DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
-  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  // ── Phase 1 云文档增强（增量字段，不破坏现有数据）──
+  /**
+   * /** 知识库空间 ID（新增；null = 迁移期未归类文档，UI 显示在"未分类"区）
+   */
+  spaceId        String? @map("space_id") @db.Uuid
+  /**
+   * 所属文件夹 ID（新增；null = 空间根目录下的文档）
+   */
+  folderId       String? @map("folder_id") @db.Uuid
+  /**
+   * 同层级排序值（新增；拖拽排序，复用 Task.sortOrder 方案）
+   */
+  sortOrder      Float   @default(0) @map("sort_order")
+  /**
+   * 文档图标（新增；Lucide 图标名，默认 file-text）
+   */
+  icon           String  @default("file-text") @db.VarChar(50)
+  /**
+   * 文档 emoji 封面（新增；可选，用于文档列表视觉区分）
+   */
+  emoji          String? @db.VarChar(10)
+  /**
+   * 当前版本号（新增；每次创建版本递增）
+   */
+  currentVersion Int     @default(0) @map("current_version")
+
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  // Phase 1 知识库关联
+  space     Space?            @relation(fields: [spaceId], references: [id], onDelete: SetNull)
+  folder    Folder?           @relation(fields: [folderId], references: [id], onDelete: SetNull)
+  versions  DocumentVersion[]
+  comments  DocumentComment[]
 
   // 工作区内文档搜索
   @@index([workspaceId, updatedAt])
   @@index([workspaceId, title])
+  // 知识库目录树查询：按空间 + 文件夹 + 排序
+  @@index([spaceId, folderId, sortOrder])
   @@map("documents")
 }
+
 model MessageAttachment {
-  id           String  @id @default(uuid()) @db.Uuid
-  messageId    String  @map("message_id") @db.Uuid
+  id           String   @id @default(uuid()) @db.Uuid
+  messageId    String   @map("message_id") @db.Uuid
   // 附件租户归属（20260831000000 迁移）：下载端点据此做归属校验，RLS 可按此谓词纳入
-  workspaceId  String  @map("workspace_id") @db.Uuid
-  fileName     String  @map("file_name") @db.VarChar(255)
-  fileSize     Int     @map("file_size")
-  fileType     String  @map("file_type") @db.VarChar(100) // MIME type
-  url          String  @db.Text // 存储路径（MVP: /uploads/xxx）
-  thumbnailUrl String? @map("thumbnail_url") @db.Text // 图片缩略图路径
-  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  fileName     String   @map("file_name") @db.VarChar(255)
+  fileSize     Int      @map("file_size")
+  fileType     String   @map("file_type") @db.VarChar(100) // MIME type
+  url          String   @db.Text // 存储路径（MVP: /uploads/xxx）
+  thumbnailUrl String?  @map("thumbnail_url") @db.Text // 图片缩略图路径
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   message   Message   @relation(fields: [messageId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -452,7 +510,7 @@ model ChatPresence {
   id       String   @id @default(uuid()) @db.Uuid
   taskId   String   @map("task_id") @db.Uuid
   userId   String   @map("user_id") @db.Uuid
-  lastSeen DateTime @default(now()) @db.Timestamptz @map("last_seen")
+  lastSeen DateTime @default(now()) @map("last_seen") @db.Timestamptz
 
   task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -474,7 +532,7 @@ model Notification {
   entityId    String   @map("entity_id") @db.Uuid // 关联的任务 ID
   entityTitle String   @map("entity_title") @db.VarChar(255) // 冗余存储任务标题
   read        Boolean  @default(false)
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -499,14 +557,14 @@ model Decision {
   markdown    String   @db.Text
   version     Int      @default(1)
   authorId    String?  @map("author_id") @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
-  task      Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   // 作者注销后决策保留（审计 D3）
-  author    User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  versions  DecisionVersion[]
+  author      User?                @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  versions    DecisionVersion[]
   // F1: 决策自动分解的行动项列表
   actionItems DecisionActionItem[]
 
@@ -527,7 +585,7 @@ model DecisionVersion {
   markdown    String   @db.Text
   version     Int
   authorId    String?  @map("author_id") @db.Uuid
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   decision  Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -543,8 +601,8 @@ model Session {
   id        String   @id @default(uuid()) @db.Uuid
   expiresAt DateTime @map("expires_at") @db.Timestamptz
   token     String   @unique @map("token") @db.Text
-  createdAt DateTime @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt DateTime @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
   ipAddress String?  @map("ip_address") @db.VarChar(45)
   userAgent String?  @map("user_agent") @db.VarChar(500)
   userId    String   @map("user_id") @db.Uuid
@@ -571,8 +629,8 @@ model Account {
   refreshTokenExpiresAt DateTime? @map("refresh_token_expires_at") @db.Timestamptz
   scope                 String?   @db.Text
   password              String?   @db.Text
-  createdAt             DateTime  @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt             DateTime  @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   @@unique([issuer, accountId])
   @@index([userId])
@@ -584,8 +642,8 @@ model Verification {
   identifier String   @db.Text
   value      String   @db.Text
   expiresAt  DateTime @map("expires_at") @db.Timestamptz
-  createdAt  DateTime @default(now()) @db.Timestamptz @map("created_at") 
-  updatedAt  DateTime @updatedAt @db.Timestamptz @map("updated_at") 
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   @@map("verifications")
 }
@@ -603,8 +661,8 @@ model Subscription {
   status           String    @default("active") @db.VarChar(20) // active, past_due, canceled, trialing, incomplete
   currentPeriodEnd DateTime? @map("current_period_end") @db.Timestamptz
   canceledAt       DateTime? @map("canceled_at") @db.Timestamptz
-  createdAt        DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt        DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt        DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt        DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -621,7 +679,7 @@ model Subscription {
 model ProcessedPaymentEvent {
   provider   String   @db.VarChar(20) // 与 ProviderId 对齐
   eventId    String   @map("event_id") @db.VarChar(255) // 通道侧事件 ID（evt_xxx 等）
-  receivedAt DateTime @default(now()) @db.Timestamptz @map("received_at")
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz
 
   @@id([provider, eventId])
   @@map("processed_payment_events")
@@ -632,7 +690,7 @@ model ProcessedPaymentEvent {
 
 model ProcessedStripeEvent {
   id         String   @id @db.VarChar(255) // stripe event ID (evt_xxx)
-  receivedAt DateTime @default(now()) @db.Timestamptz @map("received_at")
+  receivedAt DateTime @default(now()) @map("received_at") @db.Timestamptz
 
   @@map("processed_stripe_events")
 }
@@ -641,27 +699,23 @@ model ProcessedStripeEvent {
 
 /**
  * 分析事件表：客户端批量上报，服务端按工作区隔离。
- *
  * 设计权衡：
- *  - 不在事件写入路径走 RLS（事件写入用 runWithAuthOp("provision") 逃生口 + 显式 workspace_id），
- *    因为事件可能在 wid 上下文建立之前发生（如 register）。
- *  - 读取（analytics/overview）走 RLS，仅 owner/admin 可见。
- *  - props 用 Json 而非 JsonB：写入少、读取多，Json 行内存储读取更快；
- *    且事件 props 体量小（<1KB），不需要 JsonB 的 GIN 索引。
- *  - 不存 PII（邮箱/姓名），仅存匿名化 props（taskId/role/plan 等）。
- *
+ * - 不在事件写入路径走 RLS（事件写入用 runWithAuthOp("provision") 逃生口 + 显式 workspace_id），
+ * 因为事件可能在 wid 上下文建立之前发生（如 register）。
+ * - 读取（analytics/overview）走 RLS，仅 owner/admin 可见。
+ * - props 用 Json 而非 JsonB：写入少、读取多，Json 行内存储读取更快；
+ * 且事件 props 体量小（<1KB），不需要 JsonB 的 GIN 索引。
+ * - 不存 PII（邮箱/姓名），仅存匿名化 props（taskId/role/plan 等）。
  * ─── GIN 索引策略（DL-16，P3：文档说明）────────────────────────────
  * 当前 props 为 JSON 类型，无 GIN 索引。查询均按 name/userId/workspaceId/
  * sessionId + createdAt 走 B-tree 索引，不做 props 内部字段过滤。
- *
  * 若后续需要按 props 内部字段查询（如按 props.taskId 筛选事件），需：
- *  1. 将 props 从 JSON 改为 JSONB（ALTER TABLE ... ALTER COLUMN props
- *     TYPE JSONB USING props::JSONB；在线可执行，但大表会锁表，需 pg_repack）
- *  2. 创建 GIN 索引：
- *     - 全字段：CREATE INDEX ... ON analytics_events USING GIN (props);
- *     - 路径表达式：CREATE INDEX ... ON analytics_events USING GIN ((props->>'taskId'));
- *  3. Prisma schema 改为 `props JsonB @default("{}")`（Prisma 已支持 JsonB）
- *
+ * 1. 将 props 从 JSON 改为 JSONB（ALTER TABLE ... ALTER COLUMN props
+ * TYPE JSONB USING props::JSONB；在线可执行，但大表会锁表，需 pg_repack）
+ * 2. 创建 GIN 索引：
+ * - 全字段：CREATE INDEX ... ON analytics_events USING GIN (props);
+ * - 路径表达式：CREATE INDEX ... ON analytics_events USING GIN ((props->>'taskId'));
+ * 3. Prisma schema 改为 `props JsonB @default("{}")`（Prisma 已支持 JsonB）
  * 当前不引入的原因：无 props 内部字段查询需求，所有查询走 B-tree 索引即可。
  * 引入 GIN 会增加写入开销（每次写入需更新 GIN 倒排索引）与存储成本。
  * 参考迁移 SQL 见 db/jsonb-gin-index-reference.sql（不自动执行）。
@@ -673,7 +727,7 @@ model AnalyticsEvent {
   name        String   @db.VarChar(64) // register, login, create_task, invite_member, create_decision, ...
   props       Json     @default("{}")
   sessionId   String?  @map("session_id") @db.VarChar(64) // 匿名会话 ID，用于漏斗关联
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at") 
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -697,22 +751,22 @@ model AnalyticsEvent {
 // 同一用户同一 provider 只保留一条连接（@@unique([userId, provider])）。
 
 model CalendarConnection {
-  id            String   @id @default(uuid()) @db.Uuid
-  userId        String   @map("user_id") @db.Uuid
-  provider      String   @db.VarChar(20) // "google" | "outlook"
-  email         String   @db.VarChar(255) // 连接的日历邮箱
-  accessToken   String   @map("access_token") @db.Text // 加密存储
-  refreshToken  String   @map("refresh_token") @db.Text // 加密存储
-  tokenExpiresAt DateTime @map("token_expires_at") @db.Timestamptz
-  calendarId    String   @map("calendar_id") @db.VarChar(255) // 外部日历 ID
-  lastSyncAt    DateTime? @map("last_sync_at") @db.Timestamptz
-  syncStatus    String   @default("idle") @map("sync_status") @db.VarChar(20) // "idle" | "syncing" | "error"
-  syncError     String?  @map("sync_error") @db.Text
-  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt     DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  provider       String    @db.VarChar(20) // "google" | "outlook"
+  email          String    @db.VarChar(255) // 连接的日历邮箱
+  accessToken    String    @map("access_token") @db.Text // 加密存储
+  refreshToken   String    @map("refresh_token") @db.Text // 加密存储
+  tokenExpiresAt DateTime  @map("token_expires_at") @db.Timestamptz
+  calendarId     String    @map("calendar_id") @db.VarChar(255) // 外部日历 ID
+  lastSyncAt     DateTime? @map("last_sync_at") @db.Timestamptz
+  syncStatus     String    @default("idle") @map("sync_status") @db.VarChar(20) // "idle" | "syncing" | "error"
+  syncError      String?   @map("sync_error") @db.Text
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt      DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  user         User                 @relation(fields: [userId], references: [id], onDelete: Cascade)
-  taskEvents   TaskCalendarEvent[]
+  user       User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  taskEvents TaskCalendarEvent[]
 
   // 同一用户同一 provider 只保留一条连接
   @@unique([userId, provider])
@@ -730,8 +784,8 @@ model TaskCalendarEvent {
   externalEventId String   @map("external_event_id") @db.VarChar(255) // 外部日历事件 ID
   lastSyncedAt    DateTime @default(now()) @map("last_synced_at") @db.Timestamptz
 
-  task        Task              @relation(fields: [taskId], references: [id], onDelete: Cascade)
-  connection  CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
+  task       Task               @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  connection CalendarConnection @relation(fields: [connectionId], references: [id], onDelete: Cascade)
 
   // 同一任务在同一连接只保留一条事件映射
   @@unique([taskId, connectionId])
@@ -747,21 +801,21 @@ model TaskCalendarEvent {
 model DecisionActionItem {
   id           String    @id @default(uuid()) @db.Uuid
   decisionId   String    @map("decision_id") @db.Uuid
-  taskId       String?   @map("task_id") @db.Uuid    // null = 行动项已删除，Task 保留
-  lineIndex    Int       @map("line_index")            // markdown 中的行号（用于 diff 同步）
+  taskId       String?   @map("task_id") @db.Uuid // null = 行动项已删除，Task 保留
+  lineIndex    Int       @map("line_index") // markdown 中的行号（用于 diff 同步）
   checked      Boolean   @default(false)
   assigneeId   String?   @map("assignee_id") @db.Uuid
   dueDate      DateTime? @map("due_date") @db.Timestamptz
   priority     String    @default("medium") @db.VarChar(20)
   title        String    @db.VarChar(500)
-  removed      Boolean   @default(false)               // 行动项从 markdown 中删除
+  removed      Boolean   @default(false) // 行动项从 markdown 中删除
   userModified Boolean   @default(false) @map("user_modified") // 用户手动改过 Task，停止字段同步
-  createdAt    DateTime  @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt    DateTime  @updatedAt @db.Timestamptz @map("updated_at")
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  decision  Decision  @relation(fields: [decisionId], references: [id], onDelete: Cascade)
-  task      Task?     @relation("DecisionActionTask", fields: [taskId], references: [id], onDelete: SetNull)
-  assignee  User?     @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
+  decision Decision @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  task     Task?    @relation("DecisionActionTask", fields: [taskId], references: [id], onDelete: SetNull)
+  assignee User?    @relation(fields: [assigneeId], references: [id], onDelete: SetNull)
 
   @@index([decisionId])
   @@index([taskId])
@@ -775,11 +829,11 @@ model DecisionActionItem {
 model MemberPermission {
   id          String   @id @default(uuid()) @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
-  role        String   @db.VarChar(20)    // "member" | "viewer"（owner/admin 不可覆盖）
-  module      String   @db.VarChar(30)    // "tasks"|"decisions"|"documents"|"messages"|"members"|"billing"|"analytics"|"settings"
-  actions     String[] @default([])       // ["read","create","update","delete"]
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  role        String   @db.VarChar(20) // "member" | "viewer"（owner/admin 不可覆盖）
+  module      String   @db.VarChar(30) // "tasks"|"decisions"|"documents"|"messages"|"members"|"billing"|"analytics"|"settings"
+  actions     String[] @default([]) // ["read","create","update","delete"]
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
 
@@ -796,9 +850,9 @@ model UserDashboardPref {
   id          String   @id @default(uuid()) @db.Uuid
   userId      String   @map("user_id") @db.Uuid
   workspaceId String   @map("workspace_id") @db.Uuid
-  layout      Json     // react-grid-layout 布局配置 [{i: "widget-id", x, y, w, h, minW, minH}]
-  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
-  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+  layout      Json // react-grid-layout 布局配置 [{i: "widget-id", x, y, w, h, minW, minH}]
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -811,16 +865,17 @@ model UserDashboardPref {
 // 记录通过分享链接访问文档/任务的日志，用于审计和安全性分析。
 
 model ShareAccessLog {
-  id          String   @id @default(uuid()) @db.Uuid
-  entityType  String   @map("entity_type") @db.VarChar(20)  // "document" | "task"
-  entityId    String   @map("entity_id") @db.Uuid
-  ip          String?  @db.VarChar(45)
-  userAgent   String?  @map("user_agent") @db.Text
-  accessedAt  DateTime @default(now()) @db.Timestamptz @map("accessed_at")
+  id         String   @id @default(uuid()) @db.Uuid
+  entityType String   @map("entity_type") @db.VarChar(20) // "document" | "task"
+  entityId   String   @map("entity_id") @db.Uuid
+  ip         String?  @db.VarChar(45)
+  userAgent  String?  @map("user_agent") @db.Text
+  accessedAt DateTime @default(now()) @map("accessed_at") @db.Timestamptz
 
   @@index([entityType, entityId, accessedAt])
   @@map("share_access_logs")
 }
+
 // ─── F2: 临时权限授权 — 限时角色提升，到期自动回收 ───
 // 管理员可为成员授予限时权限（如临时提升为 admin 角色），到期后由
 // /api/cron/check-expired-permissions 定时任务自动恢复原角色并删除授权记录。
@@ -840,7 +895,7 @@ model TemporaryGrant {
   expiresAt    DateTime @map("expires_at") @db.Timestamptz
   /// 授予原因（可选）
   reason       String?  @db.Text
-  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
@@ -850,4 +905,138 @@ model TemporaryGrant {
   // cron 作业按工作区 + 过期时间扫描高效索引
   @@index([workspaceId, expiresAt])
   @@map("temporary_grants")
+}
+
+// ─── Phase 1 云文档增强（设计文档 §2.2 / §2.3 / §2.4 / §6）──────────────────
+// 知识库结构：Workspace → Space → Folder → Document 层级
+// 文档版本历史：DocumentVersion 快照（full / diff 两种存储策略）
+// 文档行内批注：DocumentComment（锚点 + 讨论线程 + 解决状态）
+
+/// 知识库空间：Workspace 下的顶层文档容器（如"产品文档"/"技术文档"/"团队规范"）
+model Space {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  /// 空间图标（Lucide 图标名，如 "book" / "code" / "users"）
+  icon        String   @default("book") @db.VarChar(50)
+  /// 排序值（拖拽排序，复用 Task.sortOrder 方案）
+  sortOrder   Float    @default(0) @map("sort_order")
+  /// 空间颜色（CSS 变量或 hex，用于图标着色）
+  color       String   @default("var(--accent)") @db.VarChar(50)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  folders   Folder[]
+  // 空间根目录下的文档（folderId = null）
+  documents Document[]
+
+  // 同一工作区内空间名唯一
+  @@unique([workspaceId, name], name: "uq_spaces_workspace_name")
+  @@index([workspaceId, sortOrder])
+  @@map("spaces")
+}
+
+/// 文件夹：Space 下的文档组织单元，可嵌套（最多 5 层，API 层强制）
+model Folder {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  spaceId     String   @map("space_id") @db.Uuid
+  /// 父文件夹 ID（null = 空间根目录）；自关联，最多 5 层嵌套
+  parentId    String?  @map("parent_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  /// 图标（Lucide 图标名，默认 folder）
+  icon        String   @default("folder") @db.VarChar(50)
+  /// 排序值（同层级内拖拽排序）
+  sortOrder   Float    @default(0) @map("sort_order")
+  /// 是否默认展开（目录树 UI 状态）
+  expanded    Boolean  @default(true)
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace Workspace  @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  space     Space      @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  parent    Folder?    @relation("FolderChildren", fields: [parentId], references: [id], onDelete: Cascade)
+  children  Folder[]   @relation("FolderChildren")
+  documents Document[]
+
+  // 目录树查询：按空间 + 父文件夹 + 排序
+  @@index([spaceId, parentId, sortOrder])
+  @@index([workspaceId])
+  @@map("folders")
+}
+
+/// 文档版本历史快照（设计文档 §2.3）
+/// 存储优化：full=全量快照，diff=增量差分；首个版本存全量，后续存 diff，每 10 版本强制全量
+model DocumentVersion {
+  id           String   @id @default(uuid()) @db.Uuid
+  documentId   String   @map("document_id") @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  /// 版本号（递增）
+  version      Int
+  /// 版本类型：full（全量快照）| diff（增量差分）
+  snapshotType String   @map("snapshot_type") @db.VarChar(10) // full | diff
+  /// 全量快照（snapshotType=full 时）：完整 JSON doc
+  contentFull  Json?    @map("content_full")
+  /// 增量 diff（snapshotType=diff 时）：相对上一版本的 diff
+  contentDiff  String?  @map("content_diff") @db.Text
+  /// 该版本的 Markdown 序列化（用于版本对比展示）
+  markdown     String   @db.Text
+  /// 版本说明（用户输入，可选）
+  message      String?  @db.VarChar(255)
+  /// 版本来源：publish（发布）| manual（手动）| auto（自动）| collaborative（协同）
+  source       String   @default("manual") @db.VarChar(20)
+  authorId     String?  @map("author_id") @db.Uuid
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  document  Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  author    User?     @relation(fields: [authorId], references: [id], onDelete: SetNull)
+
+  // 同一文档版本号唯一
+  @@unique([documentId, version], name: "uq_doc_versions_doc_version")
+  // 版本历史按文档 + 创建时间查询
+  @@index([documentId, createdAt])
+  @@index([workspaceId])
+  @@map("document_versions")
+}
+
+/// 文档行内批注（评论，设计文档 §2.4）
+/// 锚点策略：anchorPath=ProseMirror 节点路径，anchorText=锚点文本片段（模糊匹配）
+model DocumentComment {
+  id          String    @id @default(uuid()) @db.Uuid
+  documentId  String    @map("document_id") @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  /// 批注锚点：ProseMirror 节点路径（如 "1.2.0"），定位到具体段落/文本
+  anchorPath  String    @map("anchor_path") @db.VarChar(100)
+  /// 批注锚点文本片段（用于锚点失效时模糊匹配）
+  anchorText  String    @map("anchor_text") @db.Text
+  /// 批注内容（Markdown）
+  body        String    @db.Text
+  /// @提及的用户 ID 列表
+  mentions    String[]  @default([])
+  /// 父评论 ID（讨论线程：首条评论 + 回复）
+  parentId    String?   @map("parent_id") @db.Uuid
+  /// 是否已解决
+  resolved    Boolean   @default(false)
+  /// 解决者
+  resolvedBy  String?   @map("resolved_by") @db.Uuid
+  resolvedAt  DateTime? @map("resolved_at") @db.Timestamptz
+  authorId    String?   @map("author_id") @db.Uuid
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  document  Document          @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  parent    DocumentComment?  @relation("CommentReplies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   DocumentComment[] @relation("CommentReplies")
+  author    User?             @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  resolver  User?             @relation("CommentResolver", fields: [resolvedBy], references: [id], onDelete: SetNull)
+
+  // 按文档 + 锚点路径查询
+  @@index([documentId, anchorPath])
+  // 按文档 + 解决状态筛选
+  @@index([documentId, resolved])
+  @@index([workspaceId])
+  @@map("document_comments")
 }

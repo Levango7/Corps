@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
-import { MarkdownToolbar, useEditorKeys } from "@/components/MarkdownToolbar";
+import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichTextEditor";
 import { QuickDiagram } from "@/components/QuickDiagram";
 import { useToast } from "@/components/Toast";
 import { ExportPreview } from "@/components/ExportPreview";
@@ -89,7 +89,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const { toast } = useToast();
   const [title, setTitle] = useState(initial.title);
   const [markdown, setMarkdown] = useState(initial.markdown);
-  const editorRef = useRef<HTMLTextAreaElement>(null);
+  /** RichTextEditor 命令式句柄：模板/图表通过 insertMarkdown 在光标处插入 */
+  const richTextRef = useRef<RichTextEditorHandle>(null);
   const [shareToken, setShareToken] = useState(initial.shareToken);
   const [publishedAt, setPublishedAt] = useState(initial.publishedAt);
   // S1 修复：SSR 阶段 window 未定义，需 typeof window 守卫避免 ReferenceError。
@@ -135,12 +136,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   // ── F4：导出预览模态框 ──
   const [exportOpen, setExportOpen] = useState(false);
 
-  // Typora 式快捷键层（Ctrl+B/I/K、列表续行、Tab 缩进）——与工具栏共用实现
-  const handleKeyDown = useEditorKeys({
-    textareaRef: editorRef,
-    value: markdown,
-    onChange: setMarkdown,
-  });
+
   /** 快速图表对话框：插入 ```mermaid 块到正文（追加到末尾，编辑器语义里"出一张图"） */
   const [quickDiagramOpen, setQuickDiagramOpen] = useState(false);
 
@@ -162,45 +158,20 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const [shareSlugSaved, setShareSlugSaved] = useState<string | null>(null);
 
   function insertDiagramBlock(block: string) {
-    const sep = markdown.endsWith("\n") || markdown === "" ? "" : "\n\n";
-    setMarkdown(markdown + sep + block);
+    // 通过 RichTextEditor ref 在光标处插入（富文本/Markdown 源码模式均适用）
+    richTextRef.current?.insertMarkdown(block);
   }
 
   /**
    * F1 增强：插入行动项模板到编辑器。
    * - 模板中的 {dueDate} 占位符替换为当前日期 + 7 天（YYYY-MM-DD）
-   * - 优先插入到光标位置（textarea selectionStart），无光标信息时追加到末尾
-   * - 自动补足分隔换行，避免与上下文粘连
+   * - 通过 RichTextEditor ref.insertMarkdown 在光标处插入（富文本/源码模式均适用）
    */
   function handleInsertTemplate(templateMarkdown: string) {
     const due = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
     const dueDateStr = due.toISOString().slice(0, 10);
     const filled = templateMarkdown.replace(/\{dueDate\}/g, dueDateStr);
-    const ta = editorRef.current;
-    if (ta && ta.selectionStart != null && ta.selectionEnd != null) {
-      // 光标位置插入
-      const start = ta.selectionStart;
-      const end = ta.selectionEnd;
-      const before = markdown.slice(0, start);
-      const after = markdown.slice(end);
-      // 在光标前补换行（若非行首且非空）
-      const needLeadingNL = before.length > 0 && !before.endsWith("\n");
-      const needTrailingNL = after.length > 0 && !after.startsWith("\n");
-      const inserted =
-        (needLeadingNL ? "\n" : "") + filled + (needTrailingNL ? "\n" : "");
-      const next = before + inserted + after;
-      setMarkdown(next);
-      // 还原光标到插入内容末尾
-      requestAnimationFrame(() => {
-        const pos = start + inserted.length;
-        ta.focus();
-        ta.setSelectionRange(pos, pos);
-      });
-    } else {
-      // 末尾追加
-      const sep = markdown.endsWith("\n") || markdown === "" ? "" : "\n\n";
-      setMarkdown(markdown + sep + filled);
-    }
+    richTextRef.current?.insertMarkdown(filled);
     setTemplateMenuOpen(false);
   }
 
@@ -645,41 +616,15 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-6)] min-h-[60dvh]">
           <Markdown source={markdown} />
         </div>
-      ) : split ? (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 items-start">
-          <div>
-            <div className="mb-2">
-              <MarkdownToolbar textareaRef={editorRef} value={markdown} onChange={setMarkdown} />
-            </div>
-            <textarea
-              ref={editorRef}
-              value={markdown}
-              onChange={(e) => setMarkdown(e.target.value)}
-              onKeyDown={handleKeyDown}
-              onBlur={() => save()}
-              placeholder={t("markdownPlaceholder")}
-              className="w-full h-[60dvh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
-            />
-          </div>
-          <div className="prose prose-sm max-w-none rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] min-h-[60dvh] overflow-y-auto lg:max-h-[calc(60dvh+2rem)]">
-            <Markdown source={markdown} />
-          </div>
-        </div>
       ) : (
-        <>
-          <div className="mb-2">
-            <MarkdownToolbar textareaRef={editorRef} value={markdown} onChange={setMarkdown} />
-          </div>
-          <textarea
-            ref={editorRef}
-            value={markdown}
-            onChange={(e) => setMarkdown(e.target.value)}
-            onKeyDown={handleKeyDown}
-            onBlur={() => save()}
-            placeholder={t("markdownPlaceholder")}
-            className="w-full h-[60dvh] p-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y"
-          />
-        </>
+        <RichTextEditor
+          ref={richTextRef}
+          value={markdown}
+          onChange={setMarkdown}
+          onBlur={() => save()}
+          split={split}
+          placeholder={t("markdownPlaceholder")}
+        />
       )}
 
       {error && (

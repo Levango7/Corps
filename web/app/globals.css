@@ -41,6 +41,13 @@
 
   /* —— 遮罩层（模态/抽屉背景压暗）—— */
   --overlay: rgba(16, 24, 29, 0.32);
+
+  /* —— shimmer 扫光渐变（骨架屏加载态）
+     基于现有 surface token 派生，跟随主题自动切换。
+     --shimmer-hi 为高光条色，混入微量 accent 提供品牌色调。 —— */
+  --shimmer-from: var(--surface-2);
+  --shimmer-to:   var(--surface-3);
+  --shimmer-hi:   color-mix(in srgb, var(--surface) 60%, var(--p-accent) 4%);
 }
 
 [data-theme="dark"] {
@@ -51,6 +58,9 @@
 
   /* 遮罩层深色压暗 */
   --overlay: rgba(0, 0, 0, 0.56);
+
+  /* shimmer 高光条：深色下提亮 base 并增加 accent 比例，保证扫光可见 */
+  --shimmer-hi: color-mix(in srgb, var(--surface-3) 70%, var(--p-accent) 8%);
 }
 
 /* ============================================================================
@@ -238,6 +248,35 @@ svg {
     transform: translateY(0);
   }
 }
+
+/* ----------------------------------------------------------------------------
+ * Shimmer 骨架屏扫光
+ * 高光从左到右扫过，替代 animate-pulse 的透明度脉动，更接近 Linear / Stripe 质感。
+ * 所有颜色走 design token（--shimmer-* 派生自 --surface-* / --p-accent）。
+ * prefers-reduced-motion 全局降级块已将 animation-iteration-count 设为 1、
+ * animation-duration 设为 0.01ms，shimmer 自动降级为静态占位，无需额外处理。
+ * 来源：设计文档 §2.3；经验 2026-09-11-prefers-reduced-motion-global-block-and-max-duration
+ * -------------------------------------------------------------------------- */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--shimmer-from) 25%,
+    var(--shimmer-hi) 50%,
+    var(--shimmer-to) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s var(--ease-standard) infinite;
+}
+
 /* ----------------------------------------------------------------------------
  * 自定义滚动条
  * 薄、半透明、圆角——融入现代 UI。

@@ -17,6 +17,8 @@ import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Plus, Search, FileText, Loader2, X, Download, CheckSquare, Square } from "lucide-react";
 import { api } from "@/lib/api";
 import { ExportPreview, type BatchDocument } from "@/components/ExportPreview";
+import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
+import { useMotionTokens } from "@/lib/motion-tokens";
 
 interface DocumentListItem {
   id: string;
@@ -30,6 +32,8 @@ export function DocumentListView({ wid }: { wid: string }) {
   const t = useTranslations("document");
   const tExport = useTranslations("exportPreview");
   const router = useRouter();
+  // 动画 token：感知 F6 三档 + prefers-reduced-motion（见 §2.2 列表布局动画）
+  const { slow, easeOut, reduced } = useMotionTokens();
   const [items, setItems] = useState<DocumentListItem[]>([]);
   const [q, setQ] = useState("");
   // M3 修复：搜索防抖——useDeferredValue 让输入快速变化时不立即触发请求，
@@ -249,54 +253,70 @@ export function DocumentListView({ wid }: { wid: string }) {
           <p>{q ? t("noSearchResults") : t("emptyState")}</p>
         </div>
       ) : (
-        <ul className="divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
-          {items.map((d) => {
-            const author = d.author?.name || d.author?.email;
-            const isSelected = selectedIds.has(d.id);
-            return (
-              <li key={d.id} className="relative">
-                {/* 复选框（绝对定位在左侧） */}
-                <label
-                  className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 z-10 cursor-pointer inline-flex items-center justify-center w-4 h-4"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <input
-                    type="checkbox"
-                    checked={isSelected}
-                    onChange={() => toggleSelect(d.id)}
-                    className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)] cursor-pointer"
-                  />
-                </label>
-                <Link
-                  href={`/w/${wid}/documents/${d.id}`}
-                  className="block px-[var(--space-4)] py-3 pl-[var(--space-8)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-                >
-                  <div className="flex items-center gap-2">
-                    <FileText size={15} className="shrink-0 text-[var(--muted)]" />
-                    <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
-                      {d.title}
-                    </span>
-                    {d.publishedAt ? (
-                      <span className="shrink-0 inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--success)]">
-                        <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
-                        {t("publishedBadge")}
-                      </span>
-                    ) : (
-                      <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--muted)]">
-                        {t("draftBadge")}
-                      </span>
-                    )}
-                  </div>
-                  <div className="mt-1 ml-6 text-[length:var(--text-xs)] text-[var(--muted)] flex items-center gap-2">
-                    {author && <span>{author}</span>}
-                    <span>·</span>
-                    <span>{t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}</span>
-                  </div>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
+        <LayoutGroup>
+          <ul className="divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
+            <AnimatePresence initial={false}>
+              {items.map((d) => {
+                const author = d.author?.name || d.author?.email;
+                const isSelected = selectedIds.has(d.id);
+                return (
+                  <motion.li
+                    key={d.id}
+                    // layout="position"：仅动画位置（等高项），跳过尺寸测量性能最优
+                    // 删除/新增时剩余项自动平滑让位（见 §2.2）
+                    layout={reduced ? false : "position"}
+                    initial={reduced ? false : { opacity: 0, height: 0 }}
+                    animate={reduced ? { opacity: 1 } : { opacity: 1, height: "auto" }}
+                    // exit：fade + shrink（高度收折），剩余项 layout 让位
+                    exit={reduced ? { opacity: 0 } : { opacity: 0, height: 0 }}
+                    // var(--motion-slow) 220ms + var(--ease-out) 退场减速
+                    transition={reduced ? { duration: 0 } : { duration: slow, ease: easeOut }}
+                    className="relative"
+                  >
+                    {/* 复选框（绝对定位在左侧） */}
+                    <label
+                      className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 z-10 cursor-pointer inline-flex items-center justify-center w-4 h-4"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => toggleSelect(d.id)}
+                        className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)] cursor-pointer"
+                      />
+                    </label>
+                    <Link
+                      href={`/w/${wid}/documents/${d.id}`}
+                      className="block px-[var(--space-4)] py-3 pl-[var(--space-8)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <FileText size={15} className="shrink-0 text-[var(--muted)]" />
+                        <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
+                          {d.title}
+                        </span>
+                        {d.publishedAt ? (
+                          <span className="shrink-0 inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--success)]">
+                            <span className="inline-block w-1.5 h-1.5 rounded-full bg-[var(--success)]" />
+                            {t("publishedBadge")}
+                          </span>
+                        ) : (
+                          <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--muted)]">
+                            {t("draftBadge")}
+                          </span>
+                        )}
+                      </div>
+                      <div className="mt-1 ml-6 text-[length:var(--text-xs)] text-[var(--muted)] flex items-center gap-2">
+                        {author && <span>{author}</span>}
+                        <span>·</span>
+                        <span>{t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}</span>
+                      </div>
+                    </Link>
+                  </motion.li>
+                );
+              })}
+            </AnimatePresence>
+          </ul>
+        </LayoutGroup>
       )}
 
       {/* ── 批量导出预览模态框（F4）── */}
