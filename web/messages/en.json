@@ -1491,5 +1491,231 @@
     "expand": "Expand",
     "untitledSpace": "Untitled space",
     "untitledFolder": "Untitled folder"
+  },
+  "database": {
+    "editor": {
+      "viewTable": "Table",
+      "viewBoard": "Board",
+      "viewGantt": "Gantt",
+      "viewCalendar": "Calendar",
+      "noView": "No views yet. Please create one first.",
+      "recordCount": "{count} items",
+      "viewSwitchAria": "Switch view",
+      "filterAria": "Filter",
+      "sortAria": "Sort",
+      "groupAria": "Group",
+      "filter": "Filter",
+      "sort": "Sort",
+      "group": "Group"
+    },
+    "rollupField": {
+      "empty": "—"
+    },
+    "relationField": {
+      "empty": "Empty",
+      "noRelation": "No relation",
+      "addRelation": "Add relation",
+      "removeRelationAria": "Remove relation",
+      "addRelationAria": "Add relation",
+      "searchPlaceholder": "Search records…",
+      "noMatch": "No matching records"
+    },
+    "boardView": {
+      "ungrouped": "Ungrouped",
+      "noGroupField": "Please set a group field (select / multiselect / user type) in the view config",
+      "dropHere": "Drop card here",
+      "untitled": "Untitled"
+    },
+    "calendarView": {
+      "weekdayMon": "Mon",
+      "weekdayTue": "Tue",
+      "weekdayWed": "Wed",
+      "weekdayThu": "Thu",
+      "weekdayFri": "Fri",
+      "weekdaySat": "Sat",
+      "weekdaySun": "Sun",
+
+      "noDateField": "Please set a date field in the view config",
+      "untitled": "Untitled",
+      "prevPageAria": "Previous",
+      "nextPageAria": "Next",
+      "today": "Today",
+      "granularityMonth": "Month",
+      "granularityWeek": "Week",
+      "granularityDay": "Day",
+      "more": "+{count} more",
+      "noDayRecords": "No records today",
+      "dayTitle": "{year}/{month}/{day}",
+      "weekTitle": "{year} {startMonth}/{startDay} - {endMonth}/{endDay}",
+      "monthTitle": "{year}/{month}"
+    },
+    "ganttView": {
+      "noDateFields": "Please set start/end date fields in the view config",
+      "noDatedRecords": "No records with dates",
+      "recordLabel": "Record"
+    },
+    "tableView": {
+      "summary": "{rows} rows · {cols} cols",
+      "noRecords": "No records",
+      "addRow": "Add row"
+    },
+    "filterPanel": {
+      "title": "Filter",
+      "logicAnd": "AND",
+      "logicOr": "OR",
+      "addCondition": "Add filter condition",
+      "removeAria": "Remove filter condition",
+      "fieldAria": "Filter field",
+      "operatorAria": "Operator",
+      "opEquals": "equals",
+      "opNotEquals": "not equals",
+      "opContains": "contains",
+      "opStartsWith": "starts with",
+      "opIsEmpty": "is empty",
+      "opIsNotEmpty": "is not empty",
+      "opBefore": "before",
+      "opAfter": "after",
+      "opWithin": "within",
+      "opIs": "is",
+      "opIsNot": "is not",
+      "withinThisWeek": "This week",
+      "withinThisMonth": "This month",
+      "withinThisQuarter": "This quarter",
+      "withinThisYear": "This year",
+      "withinLastWeek": "Last week",
+      "withinLastMonth": "Last month",
+      "withinLastYear": "Last year",
+      "withinLast7Days": "Last 7 days",
+      "withinLast30Days": "Last 30 days",
+      "rangeAria": "Date range",
+      "selectRange": "Select range",
+      "dateAria": "Date",
+      "optionAria": "Option",
+      "selectOption": "Select option",
+      "checkboxAria": "Checked state",
+      "select": "Select",
+      "checked": "Checked",
+      "unchecked": "Unchecked",
+      "userAria": "User",
+      "currentUser": "Current user",
+      "numberAria": "Number",
+      "valuePlaceholder": "Enter value",
+      "textAria": "Text value"
+    },
+    "fieldControls": {
+      "empty": "Empty",
+      "selectPlaceholder": "Select…",
+      "noOptions": "No options",
+      "noAvailableOptions": "No available options",
+      "userIdPlaceholder": "User ID",
+      "urlPlaceholder": "https://",
+      "emailPlaceholder": "example@domain.com",
+      "emptyDash": "—",
+      "relationCount": "{count} relations",
+      "relationIdPlaceholder": "Record IDs (comma-separated)"
+    },
+    "groupControl": {
+      "label": "Group",
+      "fieldAria": "Group field",
+      "noGroup": "No grouping",
+      "clearAria": "Clear grouping"
+    },
+    "sortPanel": {
+      "title": "Sort",
+      "fieldAria": "Sort field",
+      "ascAria": "Ascending, click to switch to descending",
+      "descAria": "Descending, click to switch to ascending",
+      "asc": "Asc",
+      "desc": "Desc",
+      "moveUpAria": "Increase priority",
+      "moveDownAria": "Decrease priority",
+      "removeAria": "Remove sort condition",
+      "addSort": "Add sort"
+    }
+  },
+  "files": {
+    "fileBrowser": {
+      "searchPlaceholder": "Search files…",
+      "searchAria": "Search files",
+      "viewSwitchAria": "Switch view",
+      "listViewAria": "List view",
+      "gridViewAria": "Grid view",
+      "searchEmptyTitle": "No matching files",
+      "searchEmptyDescription": "No files with names containing \"{query}\"",
+      "folderEmptyTitle": "No files yet",
+      "folderEmptyDescription": "Drag files to the upload area, or click the upload button to add files"
+    },
+    "fileUploader": {
+      "uploadFailed": "Upload failed",
+      "networkError": "Network error",
+      "upload": "Upload",
+      "dropAria": "Click or drag files to upload",
+      "releaseToUpload": "Release to upload",
+      "clickOrDrop": "Click or drag files here to upload",
+      "hint": "Supports images, PDF, Office, video, audio, code, text, up to 50MB",
+      "error": "Error",
+      "removeAria": "Remove"
+    },
+    "fileGridItem": {
+      "unselectAria": "Unselect",
+      "selectAria": "Select file",
+      "deleteAria": "Delete file"
+    },
+    "fileListItem": {
+      "unselectAria": "Unselect",
+      "selectAria": "Select file",
+      "deleteAria": "Delete file"
+    },
+    "filePreview": {
+      "categoryImage": "Image",
+      "categoryPdf": "PDF",
+      "categoryOffice": "Office",
+      "categoryVideo": "Video",
+      "categoryAudio": "Audio",
+      "categoryCode": "Code",
+      "categoryMarkdown": "Markdown",
+      "categoryOther": "File",
+      "downloadFile": "Download file",
+      "previewAria": "{name} preview",
+      "download": "Download",
+      "closeAria": "Close preview",
+      "unsupportedType": "This file type does not support online preview. Please download to view.",
+      "loadFailed": "Unable to load preview. Please download to view.",
+      "contentLoadFailed": "Unable to load text content. Please download to view."
+    },
+    "markdownPreview": {},
+    "audioPreview": {},
+    "videoPreview": {},
+    "codePreview": {
+      "ariaLabel": "{name} code preview"
+    },
+    "officePreview": {
+      "unsupportedHint": "{label} file preview requires an online service. Please download to view.",
+      "downloadFile": "Download file"
+    },
+    "pdfPreview": {
+      "title": "PDF preview"
+    },
+    "imagePreview": {
+      "loading": "Loading…"
+    },
+    "versionRestore": {
+      "title": "Confirm restore",
+      "confirmBody": "Are you sure you want to restore \"{fileName}\" to version v{version}?",
+      "hint": "The current version's content will be replaced, but version history is preserved.",
+      "cancel": "Cancel",
+      "confirm": "Confirm restore"
+    },
+    "versionList": {
+      "unknownUploader": "Unknown",
+      "title": "Version history",
+      "loading": "Loading…",
+      "ariaLabel": "{name} version history",
+      "totalCount": "{count} versions",
+      "empty": "No version history",
+      "currentVersion": "Current version",
+      "restoreAria": "Restore to v{version}",
+      "restoreToVersion": "Restore to this version"
+    }
   }
 }

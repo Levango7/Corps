@@ -10,15 +10,18 @@
  * 所有样式走 design token（var(--*)），无裸 hex。
  */
 
+import { useTranslations } from "next-intl";
+
 export interface PdfPreviewProps {
   src: string;
 }
 
 export function PdfPreview({ src }: PdfPreviewProps) {
+  const t = useTranslations("files.pdfPreview");
   return (
     <iframe
       src={src}
-      title="PDF 预览"
+      title={t("title")}
       className="w-full h-full border-0 bg-[var(--surface)]"
       data-testid="pdf-preview"
     />

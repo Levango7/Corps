@@ -27,6 +27,7 @@ import {
   type ReactElement,
 } from "react";
 import { Link2, Plus, Search, X } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ─── Props ──────────────────────────────────────────────────
 
@@ -109,6 +110,8 @@ export function RelationField({
   onChange,
   readOnly,
 }: RelationFieldProps): ReactElement {
+  const t = useTranslations("database.relationField");
+
   // 规范化当前值为 string[]
   const ids: string[] = useMemo(
     () =>
@@ -203,7 +206,7 @@ export function RelationField({
               e.stopPropagation();
               removeRelation(id);
             }}
-            aria-label="移除关联"
+            aria-label={t("removeRelationAria")}
           >
             <X size={14} />
           </button>
@@ -215,7 +218,7 @@ export function RelationField({
   // ─── 只读模式 ─────────────────────────────────────────────
   if (readOnly) {
     if (ids.length === 0) {
-      return <div className={emptyClass}>空</div>;
+      return <div className={emptyClass}>{t("empty")}</div>;
     }
     return (
       <div className="w-full h-full flex items-center gap-1 px-2 overflow-hidden flex-wrap content-center">
@@ -230,7 +233,7 @@ export function RelationField({
       <div className="w-full h-full flex items-center gap-1 px-2 flex-wrap content-center">
         {ids.length === 0 && !searchOpen && (
           <span className="text-[length:var(--text-sm)] text-[var(--meta)]">
-            无关联
+            {t("noRelation")}
           </span>
         )}
         {ids.map((id) => renderChip(id, true))}
@@ -238,10 +241,10 @@ export function RelationField({
           type="button"
           className="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] shrink-0"
           onClick={() => setSearchOpen((v) => !v)}
-          aria-label="添加关联"
+          aria-label={t("addRelationAria")}
         >
           <Plus size={14} />
-          <span>添加关联</span>
+          <span>{t("addRelation")}</span>
         </button>
       </div>
 
@@ -253,7 +256,7 @@ export function RelationField({
             <input
               type="text"
               className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)]"
-              placeholder="搜索记录..."
+              placeholder={t("searchPlaceholder")}
               value={query}
               autoFocus
               onChange={(e) => setQuery(e.target.value)}
@@ -264,7 +267,7 @@ export function RelationField({
           <div className="max-h-48 overflow-auto py-1">
             {filteredRecords.length === 0 ? (
               <div className="px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--meta)]">
-                无匹配记录
+                {t("noMatch")}
               </div>
             ) : (
               filteredRecords.map((r) => {

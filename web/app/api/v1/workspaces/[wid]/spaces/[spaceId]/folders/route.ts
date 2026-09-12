@@ -43,8 +43,8 @@ export async function GET(
         return tx.folder.findMany({
           where: { spaceId, workspaceId: wid },
           orderBy: { sortOrder: "asc" },
-          // 上限保护：文件夹数量不会很多，取 500 兜底
-          take: 500,
+          // 上限保护：文件夹数量不会很多，取 200 兜底
+          take: 200,
         });
       },
       ctx.payload.sub,

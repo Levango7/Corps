@@ -21,6 +21,7 @@
 import type { DatabaseField } from "@prisma/client";
 import type { ReactElement } from "react";
 import { Sigma } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ─── Props ──────────────────────────────────────────────────
 
@@ -39,6 +40,8 @@ const containerClass =
 // ─── 组件 ───────────────────────────────────────────────────
 
 export function RollupField({ value }: RollupFieldProps): ReactElement {
+  const t = useTranslations("database.rollupField");
+
   // ─── null / undefined：空值 ──────────────────────────────
   if (value === null || value === undefined) {
     return (
@@ -47,7 +50,7 @@ export function RollupField({ value }: RollupFieldProps): ReactElement {
         style={{ color: "var(--muted)" }}
       >
         <Sigma size={14} className="shrink-0" />
-        <span>—</span>
+        <span>{t("empty")}</span>
       </div>
     );
   }
@@ -72,7 +75,7 @@ export function RollupField({ value }: RollupFieldProps): ReactElement {
           style={{ color: "var(--muted)" }}
         >
           <Sigma size={14} className="shrink-0" />
-          <span>—</span>
+          <span>{t("empty")}</span>
         </div>
       );
     }
@@ -94,7 +97,7 @@ export function RollupField({ value }: RollupFieldProps): ReactElement {
         style={{ color: "var(--muted)" }}
       >
         <Sigma size={14} className="shrink-0" />
-        <span>—</span>
+        <span>{t("empty")}</span>
       </div>
     );
   }

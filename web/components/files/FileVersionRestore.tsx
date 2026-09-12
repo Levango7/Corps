@@ -21,6 +21,7 @@
 
 import { useEffect } from "react";
 import { AlertTriangle, RotateCcw, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ── Props ──────────────────────────────────────────────────────
 
@@ -41,6 +42,8 @@ export function FileVersionRestore({
   onCancel,
   loading,
 }: FileVersionRestoreProps) {
+  const t = useTranslations("files.versionRestore");
+
   // ESC 键取消（回滚进行中时禁用，避免误触中断）
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -76,25 +79,17 @@ export function FileVersionRestore({
             id="file-version-restore-title"
             className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           >
-            确认回滚
+            {t("title")}
           </h3>
         </div>
 
         {/* 内容 */}
         <div className="px-[var(--space-4)] py-[var(--space-4)] space-y-[var(--space-2)]">
           <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-            确定要将{" "}
-            <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
-              &ldquo;{fileName}&rdquo;
-            </span>{" "}
-            回滚到版本{" "}
-            <span className="font-[weight:var(--weight-medium)] text-[var(--accent)]">
-              v{version}
-            </span>{" "}
-            吗？
+            {t("confirmBody", { fileName, version })}
           </p>
           <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            当前版本的内容将被替换，但版本历史会保留。
+            {t("hint")}
           </p>
         </div>
 
@@ -106,7 +101,7 @@ export function FileVersionRestore({
             disabled={loading}
             className="h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] cursor-pointer"
           >
-            取消
+            {t("cancel")}
           </button>
           <button
             type="button"
@@ -119,7 +114,7 @@ export function FileVersionRestore({
             ) : (
               <RotateCcw size={14} aria-hidden="true" />
             )}
-            确认回滚
+            {t("confirm")}
           </button>
         </div>
       </div>

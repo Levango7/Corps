@@ -11,6 +11,7 @@
 
 import { useMemo } from "react";
 import type { Database, DatabaseField, DatabaseRecord, DatabaseView } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 // ─── 类型与辅助函数 ──────────────────────────────────────────────
 
@@ -112,6 +113,7 @@ interface GanttBar {
 // ─── 主组件 ──────────────────────────────────────────────────────
 
 export function GanttView({ fields, records, view }: GanttViewProps) {
+  const t = useTranslations("database.ganttView");
   const config = readConfig<GanttViewConfig>(view);
 
   const startDateField = config.startDateField
@@ -173,7 +175,7 @@ export function GanttView({ fields, records, view }: GanttViewProps) {
   if (!startDateField && !endDateField) {
     return (
       <div className="flex items-center justify-center min-h-[400px] text-[var(--muted)] text-[length:var(--text-sm)]">
-        请在视图配置中设置开始/结束日期字段
+        {t("noDateFields")}
       </div>
     );
   }
@@ -181,7 +183,7 @@ export function GanttView({ fields, records, view }: GanttViewProps) {
   if (bars.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px] text-[var(--muted)] text-[length:var(--text-sm)]">
-        暂无含日期的记录
+        {t("noDatedRecords")}
       </div>
     );
   }
@@ -207,7 +209,7 @@ export function GanttView({ fields, records, view }: GanttViewProps) {
                 zIndex: 30,
               }}
             >
-              记录
+              {t("recordLabel")}
             </div>
             {days.map((d) => (
               <div

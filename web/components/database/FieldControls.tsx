@@ -3,6 +3,7 @@
 import type { DatabaseField } from "@prisma/client";
 import { useEffect, useRef, useState, type ReactElement } from "react";
 import { Check, ChevronDown, X, Plus, ExternalLink } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ─── 字段类型定义 ───────────────────────────────────────────────────────────
 /** 多维表格字段类型（12 种） */
@@ -211,11 +212,12 @@ function useClickOutside<T extends HTMLElement>(onClose: () => void) {
 
 // ─── 1. text ────────────────────────────────────────────────────────────────
 function TextControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const str = typeof value === "string" ? value : "";
   if (readOnly) {
     return (
       <div className={str ? readonlyClass : emptyClass}>
-        {str || "空"}
+        {str || t("empty")}
       </div>
     );
   }
@@ -231,11 +233,12 @@ function TextControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
 
 // ─── 2. number ──────────────────────────────────────────────────────────────
 function NumberControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const num = typeof value === "number" ? value : null;
   if (readOnly) {
     return (
       <div className={num !== null ? readonlyClass : emptyClass}>
-        {num !== null ? String(num) : "空"}
+        {num !== null ? String(num) : t("empty")}
       </div>
     );
   }
@@ -254,6 +257,7 @@ function NumberControl({ value, onChange, readOnly }: FieldControlProps): ReactE
 
 // ─── 3. select ──────────────────────────────────────────────────────────────
 function SelectControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const opts = parseFieldOptions(field.options);
   const choices = opts.choices ?? [];
   const selectedId = typeof value === "string" ? value : "";
@@ -262,7 +266,7 @@ function SelectControl({ field, value, onChange, readOnly }: FieldControlProps):
   const ref = useClickOutside<HTMLDivElement>(() => setOpen(false));
 
   if (readOnly) {
-    if (!selected) return <div className={emptyClass}>空</div>;
+    if (!selected) return <div className={emptyClass}>{t("empty")}</div>;
     const idx = choices.indexOf(selected);
     return (
       <div className="w-full h-full flex items-center gap-1.5 px-2 text-[length:var(--text-sm)]">
@@ -293,7 +297,7 @@ function SelectControl({ field, value, onChange, readOnly }: FieldControlProps):
             <span className="truncate text-[var(--fg)]">{selected.label}</span>
           </>
         ) : (
-          <span className="text-[var(--meta)]">选择...</span>
+          <span className="text-[var(--meta)]">{t("selectPlaceholder")}</span>
         )}
         <ChevronDown size={14} className="ml-auto shrink-0 text-[var(--meta)]" />
       </button>
@@ -301,7 +305,7 @@ function SelectControl({ field, value, onChange, readOnly }: FieldControlProps):
         <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-sm)] shadow-[var(--elev-md)] py-1 max-h-48 overflow-auto z-[var(--z-dropdown)]">
           {choices.length === 0 ? (
             <div className="px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--meta)]">
-              无选项
+              {t("noOptions")}
             </div>
           ) : (
             choices.map((c, i) => (
@@ -338,6 +342,7 @@ function MultiSelectControl({
   onChange,
   readOnly,
 }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const opts = parseFieldOptions(field.options);
   const choices = opts.choices ?? [];
   const selectedIds: string[] = Array.isArray(value)
@@ -390,7 +395,7 @@ function MultiSelectControl({
   };
 
   if (readOnly) {
-    if (selectedIds.length === 0) return <div className={emptyClass}>空</div>;
+    if (selectedIds.length === 0) return <div className={emptyClass}>{t("empty")}</div>;
     return (
       <div className="w-full h-full flex items-center gap-1 px-2 overflow-hidden">
         {selectedIds.map((id) => renderTag(id, false))}
@@ -409,7 +414,7 @@ function MultiSelectControl({
       >
         {selectedIds.length === 0 ? (
           <span className="text-[length:var(--text-sm)] text-[var(--meta)]">
-            选择...
+            {t("selectPlaceholder")}
           </span>
         ) : (
           selectedIds.map((id) => renderTag(id, true))
@@ -420,7 +425,7 @@ function MultiSelectControl({
         <div className="absolute top-full left-0 right-0 mt-1 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-sm)] shadow-[var(--elev-md)] py-1 max-h-48 overflow-auto z-[var(--z-dropdown)]">
           {unselected.length === 0 ? (
             <div className="px-3 py-1.5 text-[length:var(--text-sm)] text-[var(--meta)]">
-              无可选项
+              {t("noAvailableOptions")}
             </div>
           ) : (
             unselected.map((c) => {
@@ -449,6 +454,7 @@ function MultiSelectControl({
 
 // ─── 5. date ────────────────────────────────────────────────────────────────
 function DateControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const opts = parseFieldOptions(field.options);
   const isRange = opts.range === true;
 
@@ -465,7 +471,7 @@ function DateControl({ field, value, onChange, readOnly }: FieldControlProps): R
 
   if (readOnly) {
     const text = end ? `${start} ~ ${end}` : start;
-    return <div className={text ? readonlyClass : emptyClass}>{text || "空"}</div>;
+    return <div className={text ? readonlyClass : emptyClass}>{text || t("empty")}</div>;
   }
 
   if (isRange) {
@@ -523,10 +529,11 @@ function CheckboxControl({ value, onChange, readOnly }: FieldControlProps): Reac
 
 // ─── 7. user ────────────────────────────────────────────────────────────────
 function UserControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const userId = typeof value === "string" ? value : "";
   if (readOnly) {
     return (
-      <div className={userId ? readonlyClass : emptyClass}>{userId || "空"}</div>
+      <div className={userId ? readonlyClass : emptyClass}>{userId || t("empty")}</div>
     );
   }
   return (
@@ -534,7 +541,7 @@ function UserControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
       type="text"
       className={inputClass}
       value={userId}
-      placeholder="用户 ID"
+      placeholder={t("userIdPlaceholder")}
       onChange={(e) => onChange(e.target.value)}
     />
   );
@@ -542,9 +549,10 @@ function UserControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
 
 // ─── 8. url ─────────────────────────────────────────────────────────────────
 function UrlControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const url = typeof value === "string" ? value : "";
   if (readOnly) {
-    if (!url) return <div className={emptyClass}>空</div>;
+    if (!url) return <div className={emptyClass}>{t("empty")}</div>;
     return (
       <a
         href={url}
@@ -562,7 +570,7 @@ function UrlControl({ value, onChange, readOnly }: FieldControlProps): ReactElem
       type="url"
       className={inputClass}
       value={url}
-      placeholder="https://"
+      placeholder={t("urlPlaceholder")}
       onChange={(e) => onChange(e.target.value)}
     />
   );
@@ -570,10 +578,11 @@ function UrlControl({ value, onChange, readOnly }: FieldControlProps): ReactElem
 
 // ─── 9. email ───────────────────────────────────────────────────────────────
 function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const email = typeof value === "string" ? value : "";
   if (readOnly) {
     return (
-      <div className={email ? readonlyClass : emptyClass}>{email || "空"}</div>
+      <div className={email ? readonlyClass : emptyClass}>{email || t("empty")}</div>
     );
   }
   return (
@@ -581,7 +590,7 @@ function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactEl
       type="email"
       className={inputClass}
       value={email}
-      placeholder="example@domain.com"
+      placeholder={t("emailPlaceholder")}
       onChange={(e) => onChange(e.target.value)}
     />
   );
@@ -589,6 +598,7 @@ function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactEl
 
 // ─── 10. formula（只读） ────────────────────────────────────────────────────
 function FormulaControl({ value }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const text =
     typeof value === "string"
       ? value
@@ -597,13 +607,14 @@ function FormulaControl({ value }: FieldControlProps): ReactElement {
         : "";
   return (
     <div className={text ? readonlyClass : emptyClass}>
-      {text || "—"}
+      {text || t("emptyDash")}
     </div>
   );
 }
 
 // ─── 11. relation ───────────────────────────────────────────────────────────
 function RelationControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const ids: string[] = Array.isArray(value)
     ? value.filter((v): v is string => typeof v === "string")
     : [];
@@ -616,10 +627,10 @@ function RelationControl({ value, onChange, readOnly }: FieldControlProps): Reac
   }, [JSON.stringify(ids)]);
 
   if (readOnly) {
-    if (ids.length === 0) return <div className={emptyClass}>空</div>;
+    if (ids.length === 0) return <div className={emptyClass}>{t("empty")}</div>;
     return (
       <div className="w-full h-full flex items-center px-2 text-[length:var(--text-sm)] text-[var(--fg-2)] truncate">
-        {ids.length} 条关联
+        {t("relationCount", { count: ids.length })}
       </div>
     );
   }
@@ -629,7 +640,7 @@ function RelationControl({ value, onChange, readOnly }: FieldControlProps): Reac
       type="text"
       className={inputClass}
       value={text}
-      placeholder="记录 ID（逗号分隔）"
+      placeholder={t("relationIdPlaceholder")}
       onChange={(e) => {
         setText(e.target.value);
         const newIds = e.target.value
@@ -644,6 +655,7 @@ function RelationControl({ value, onChange, readOnly }: FieldControlProps): Reac
 
 // ─── 12. rollup（只读） ─────────────────────────────────────────────────────
 function RollupControl({ value }: FieldControlProps): ReactElement {
+  const t = useTranslations("database.fieldControls");
   const text =
     typeof value === "string"
       ? value
@@ -652,7 +664,7 @@ function RollupControl({ value }: FieldControlProps): ReactElement {
         : "";
   return (
     <div className={text ? readonlyClass : emptyClass}>
-      {text || "—"}
+      {text || t("emptyDash")}
     </div>
   );
 }

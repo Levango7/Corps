@@ -15,6 +15,7 @@
 
 import { ArrowDown, ArrowUp, ChevronsUpDown, Plus, X } from "lucide-react";
 import type { DatabaseField, SortCondition } from "@/lib/database/query-engine";
+import { useTranslations } from "next-intl";
 
 // ─── 样式 ────────────────────────────────────────────────────
 
@@ -30,6 +31,8 @@ interface SortPanelProps {
 }
 
 export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
+  const t = useTranslations("database.sortPanel");
+
   function updateSort(index: number, patch: Partial<SortCondition>) {
     onChange(sorts.map((s, i) => (i === index ? { ...s, ...patch } : s)));
   }
@@ -68,7 +71,7 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
       <div className="flex items-center gap-2">
         <ChevronsUpDown size={14} className="text-[var(--muted)]" />
         <span className="text-[length:var(--text-sm)] text-[var(--fg-2)] font-[weight:var(--weight-medium)]">
-          排序
+          {t("title")}
         </span>
       </div>
 
@@ -84,7 +87,7 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
             value={sort.fieldId}
             onChange={(e) => updateSort(i, { fieldId: e.target.value })}
             className={selectCls}
-            aria-label="排序字段"
+            aria-label={t("fieldAria")}
           >
             {fields.map((f) => (
               <option key={f.id} value={f.id}>
@@ -98,17 +101,17 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
               updateSort(i, { direction: sort.direction === "asc" ? "desc" : "asc" })
             }
             className="flex items-center gap-1 h-8 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-            aria-label={sort.direction === "asc" ? "升序，点击切换为降序" : "降序，点击切换为升序"}
+            aria-label={sort.direction === "asc" ? t("ascAria") : t("descAria")}
           >
             {sort.direction === "asc" ? <ArrowUp size={14} /> : <ArrowDown size={14} />}
-            {sort.direction === "asc" ? "升序" : "降序"}
+            {sort.direction === "asc" ? t("asc") : t("desc")}
           </button>
           {/* 上移 */}
           <button
             onClick={() => moveUp(i)}
             disabled={i === 0}
             className="flex items-center justify-center h-8 w-8 rounded-[var(--radius-sm)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="提高优先级"
+            aria-label={t("moveUpAria")}
           >
             <ArrowUp size={14} />
           </button>
@@ -117,7 +120,7 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
             onClick={() => moveDown(i)}
             disabled={i === sorts.length - 1}
             className="flex items-center justify-center h-8 w-8 rounded-[var(--radius-sm)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] disabled:opacity-30 disabled:cursor-not-allowed"
-            aria-label="降低优先级"
+            aria-label={t("moveDownAria")}
           >
             <ArrowDown size={14} />
           </button>
@@ -125,7 +128,7 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
           <button
             onClick={() => removeSort(i)}
             className="flex items-center justify-center h-8 w-8 rounded-[var(--radius-sm)] text-[var(--muted)] hover:text-[var(--danger)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-            aria-label="删除排序条件"
+            aria-label={t("removeAria")}
           >
             <X size={14} />
           </button>
@@ -139,7 +142,7 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
         className="flex items-center gap-1 h-8 px-2 w-fit rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus size={14} />
-        添加排序
+        {t("addSort")}
       </button>
     </div>
   );

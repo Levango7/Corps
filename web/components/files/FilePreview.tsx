@@ -32,6 +32,7 @@ import { CodePreview } from "./previews/CodePreview";
 import { VideoPreview } from "./previews/VideoPreview";
 import { AudioPreview } from "./previews/AudioPreview";
 import { MarkdownPreview } from "./previews/MarkdownPreview";
+import { useTranslations } from "next-intl";
 
 // ─── Props ──────────────────────────────────────────────────────
 
@@ -82,20 +83,17 @@ function categorize(fileType: string): FileCategory {
   return "other";
 }
 
-/** 分类 → 中文标签 */
-function categoryLabel(category: FileCategory): string {
-  const labels: Record<FileCategory, string> = {
-    image: "图片",
-    pdf: "PDF",
-    office: "Office",
-    video: "视频",
-    audio: "音频",
-    code: "代码",
-    markdown: "Markdown",
-    other: "文件",
-  };
-  return labels[category];
-}
+/** 分类 → i18n key 后缀映射（在组件内通过 t() 解析为显示标签） */
+const CATEGORY_LABEL_KEYS: Record<FileCategory, string> = {
+  image: "categoryImage",
+  pdf: "categoryPdf",
+  office: "categoryOffice",
+  video: "categoryVideo",
+  audio: "categoryAudio",
+  code: "categoryCode",
+  markdown: "categoryMarkdown",
+  other: "categoryOther",
+};
 
 /** 字节数 → 人类可读文件大小 */
 function formatFileSize(bytes: number): string {
@@ -115,6 +113,7 @@ interface NoPreviewProps {
 }
 
 function NoPreview({ message, downloadUrl, fileName }: NoPreviewProps) {
+  const t = useTranslations("files.filePreview");
   return (
     <div className="flex flex-col items-center justify-center gap-4 w-full h-full text-center px-6">
       <FileText size={32} className="text-[var(--meta)]" />
@@ -126,7 +125,7 @@ function NoPreview({ message, downloadUrl, fileName }: NoPreviewProps) {
           className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] motion-reduce:transition-none hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
         >
           <Download size={14} />
-          <span>下载文件</span>
+          <span>{t("downloadFile")}</span>
         </a>
       )}
     </div>
@@ -145,6 +144,7 @@ const HEADER_BTN =
 // ─── 主组件 ──────────────────────────────────────────────────────
 
 export function FilePreview({ file, downloadUrl, content, onClose }: FilePreviewProps) {
+  const t = useTranslations("files.filePreview");
   const category = categorize(file.fileType);
 
   // 需要 URL 但缺失 / 需要文本但缺失
@@ -182,7 +182,7 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
       className="fixed inset-0 z-[var(--z-modal)] flex flex-col bg-[var(--bg)]"
       role="dialog"
       aria-modal="true"
-      aria-label={`${file.fileName} 预览`}
+      aria-label={t("previewAria", { name: file.fileName })}
       data-testid="file-preview"
     >
       {/* ─── 顶部栏 ─── */}
@@ -191,7 +191,7 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
           {file.fileName}
         </span>
         <span className="shrink-0 inline-flex items-center h-5 px-2 rounded-[var(--radius-pill)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
-          {categoryLabel(category)}
+          {t(CATEGORY_LABEL_KEYS[category])}
         </span>
 
         <div className="ml-auto flex items-center gap-2">
@@ -202,14 +202,14 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
               className={`${HEADER_BTN} gap-1.5 border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]`}
             >
               <Download size={14} />
-              <span>下载</span>
+              <span>{t("download")}</span>
             </a>
           )}
           {onClose && (
             <button
               type="button"
               onClick={onClose}
-              aria-label="关闭预览"
+              aria-label={t("closeAria")}
               className={`${HEADER_BTN} w-8 px-0 text-[var(--fg-2)] hover:bg-[var(--surface-2)]`}
             >
               <X size={14} />
@@ -245,7 +245,7 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
         {/* 降级：不支持预览的文件类型 */}
         {category === "other" && (
           <NoPreview
-            message="此文件类型不支持在线预览，请下载查看"
+            message={t("unsupportedType")}
             downloadUrl={downloadUrl}
             fileName={file.fileName}
           />
@@ -253,7 +253,7 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
         {/* 降级：需要 URL 但未提供 */}
         {needsUrlButMissing && (
           <NoPreview
-            message="无法加载预览，请下载查看"
+            message={t("loadFailed")}
             downloadUrl={downloadUrl}
             fileName={file.fileName}
           />
@@ -261,7 +261,7 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
         {/* 降级：需要文本内容但未提供 */}
         {needsContentButMissing && (
           <NoPreview
-            message="无法加载文本内容，请下载查看"
+            message={t("contentLoadFailed")}
             downloadUrl={downloadUrl}
             fileName={file.fileName}
           />

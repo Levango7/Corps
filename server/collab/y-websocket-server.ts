@@ -362,6 +362,12 @@ export async function startCollabServer(options?: {
       return;
     }
 
+    // JWT 中的 wid 必须与 URL 中的 wid 一致（防跨工作区越权）
+    if (payload.wid !== workspaceId) {
+      conn.close(4003, "Forbidden: workspace mismatch");
+      return;
+    }
+
     // 工作区成员权限验证
     try {
       const isMember = await verifyMembership(prisma, payload.sub, workspaceId);

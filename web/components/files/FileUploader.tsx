@@ -23,6 +23,7 @@ import {
   type ChangeEvent,
 } from "react";
 import { UploadCloud, X, Check, AlertCircle, Loader2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ─── 类型定义 ──────────────────────────────────────────────────
 
@@ -80,6 +81,7 @@ export function FileUploader({
   onUploadComplete,
   compact = false,
 }: FileUploaderProps) {
+  const t = useTranslations("files.fileUploader");
   const [tasks, setTasks] = useState<UploadTask[]>([]);
   const [isDragging, setIsDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -115,7 +117,7 @@ export function FileUploader({
               ),
             );
           } else {
-            let error = "上传失败";
+            let error = t("uploadFailed");
             try {
               const r = JSON.parse(xhr.responseText);
               if (typeof r.message === "string") error = r.message;
@@ -134,8 +136,8 @@ export function FileUploader({
         // 网络错误
         xhr.onerror = () => {
           setTasks((prev) =>
-            prev.map((t) =>
-              t.id === taskId ? { ...t, status: "error", error: "网络错误" } : t,
+            prev.map((t2) =>
+              t2.id === taskId ? { ...t2, status: "error", error: t("networkError") } : t2,
             ),
           );
           resolve();
@@ -145,7 +147,7 @@ export function FileUploader({
         xhr.send(formData);
       });
     },
-    [workspaceId, folderId],
+    [workspaceId, folderId, t],
   );
 
   // ─── 处理文件列表 ────────────────────────────────────────────
@@ -228,7 +230,7 @@ export function FileUploader({
       {compact ? (
         <button type="button" onClick={triggerFileInput} className={COMPACT_BTN}>
           <UploadCloud size={14} />
-          <span>上传</span>
+          <span>{t("upload")}</span>
         </button>
       ) : (
         <div
@@ -238,7 +240,7 @@ export function FileUploader({
           onClick={triggerFileInput}
           role="button"
           tabIndex={0}
-          aria-label="点击或拖拽文件上传"
+          aria-label={t("dropAria")}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
               e.preventDefault();
@@ -260,10 +262,10 @@ export function FileUploader({
             className={isDragging ? "text-[var(--accent)]" : "text-[var(--muted)]"}
           />
           <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-            {isDragging ? "释放以上传" : "点击或拖拽文件到此处上传"}
+            {isDragging ? t("releaseToUpload") : t("clickOrDrop")}
           </p>
           <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            支持图片、PDF、Office、视频、音频、代码、文本，最大 50MB
+            {t("hint")}
           </p>
         </div>
       )}
@@ -298,7 +300,7 @@ export function FileUploader({
                   </span>
                   <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
                     {task.status === "error"
-                      ? task.error ?? "错误"
+                      ? task.error ?? t("error")
                       : task.status === "done"
                         ? formatFileSize(task.fileSize)
                         : `${Math.round(task.progress)}%`}
@@ -326,7 +328,7 @@ export function FileUploader({
               {task.status !== "uploading" && (
                 <button
                   type="button"
-                  aria-label="移除"
+                  aria-label={t("removeAria")}
                   onClick={() => removeTask(task.id)}
                   className="shrink-0 w-5 h-5 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-3)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
                 >

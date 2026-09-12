@@ -14,6 +14,7 @@
 
 import { Columns, X } from "lucide-react";
 import type { DatabaseField } from "@/lib/database/query-engine";
+import { useTranslations } from "next-intl";
 
 // ─── 可分组字段类型 ──────────────────────────────────────────
 
@@ -33,6 +34,8 @@ interface GroupControlProps {
 }
 
 export function GroupControl({ fields, groupFieldId, onChange }: GroupControlProps) {
+  const t = useTranslations("database.groupControl");
+
   // 只允许 select/multiselect/user 类型字段分组
   const groupableFields = fields.filter((f) => GROUPABLE_TYPES.has(f.type));
 
@@ -40,15 +43,15 @@ export function GroupControl({ fields, groupFieldId, onChange }: GroupControlPro
     <div className="flex items-center gap-2" data-testid="group-control">
       <Columns size={14} className="text-[var(--muted)]" />
       <span className="text-[length:var(--text-sm)] text-[var(--fg-2)] font-[weight:var(--weight-medium)]">
-        分组
+        {t("label")}
       </span>
       <select
         value={groupFieldId ?? ""}
         onChange={(e) => onChange(e.target.value === "" ? null : e.target.value)}
         className={selectCls}
-        aria-label="分组字段"
+        aria-label={t("fieldAria")}
       >
-        <option value="">不分组</option>
+        <option value="">{t("noGroup")}</option>
         {groupableFields.map((f) => (
           <option key={f.id} value={f.id}>
             {f.name}
@@ -60,7 +63,7 @@ export function GroupControl({ fields, groupFieldId, onChange }: GroupControlPro
         <button
           onClick={() => onChange(null)}
           className="flex items-center justify-center h-8 w-8 rounded-[var(--radius-sm)] text-[var(--muted)] hover:text-[var(--danger)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-          aria-label="取消分组"
+          aria-label={t("clearAria")}
         >
           <X size={14} />
         </button>

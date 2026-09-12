@@ -12,6 +12,7 @@
  */
 
 import { Download } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 export interface OfficePreviewProps {
   src: string;
@@ -19,6 +20,7 @@ export interface OfficePreviewProps {
 }
 
 export function OfficePreview({ src, fileType }: OfficePreviewProps) {
+  const t = useTranslations("files.officePreview");
   const label = fileType.toUpperCase().replace(/^\./, "");
 
   return (
@@ -27,7 +29,7 @@ export function OfficePreview({ src, fileType }: OfficePreviewProps) {
       data-testid="office-preview"
     >
       <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
-        {label} 文件预览需要在线服务，请下载查看
+        {t("unsupportedHint", { label })}
       </p>
       <a
         href={src}
@@ -35,7 +37,7 @@ export function OfficePreview({ src, fileType }: OfficePreviewProps) {
         className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] motion-reduce:transition-none hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
       >
         <Download size={14} />
-        <span>下载文件</span>
+        <span>{t("downloadFile")}</span>
       </a>
     </div>
   );

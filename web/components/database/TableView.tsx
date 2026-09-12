@@ -19,6 +19,7 @@ import {
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { GripVertical, Plus } from "lucide-react";
 import { FieldControl } from "./FieldControls";
+import { useTranslations } from "next-intl";
 
 // ─── 常量 ───────────────────────────────────────────────────────────────────
 /** 行高（px），虚拟滚动固定行高 */
@@ -165,6 +166,8 @@ export function TableView({
   onRecordUpdate,
   onRecordCreate,
 }: TableViewProps): ReactElement {
+  const t = useTranslations("database.tableView");
+
   // 按 sortOrder 排序字段
   const sortedFields = useMemo(
     () => [...fields].sort((a, b) => a.sortOrder - b.sortOrder),
@@ -317,7 +320,7 @@ export function TableView({
           {database.title}
         </span>
         <span className="text-[length:var(--text-xs)] text-[var(--meta)] ml-auto tabular-nums">
-          {optimisticRecords.length} 行 · {sortedFields.length} 列
+          {t("summary", { rows: optimisticRecords.length, cols: sortedFields.length })}
         </span>
       </div>
 
@@ -375,7 +378,7 @@ export function TableView({
             className="flex items-center justify-center text-[length:var(--text-sm)] text-[var(--meta)]"
             style={{ height: 120 }}
           >
-            暂无记录
+            {t("noRecords")}
           </div>
         ) : (
           <div
@@ -420,7 +423,7 @@ export function TableView({
         >
           <Plus size={14} className="text-[var(--meta)]" />
           <span className="text-[length:var(--text-sm)] text-[var(--meta)]">
-            新增行
+            {t("addRow")}
           </span>
         </div>
       )}

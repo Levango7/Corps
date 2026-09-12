@@ -105,18 +105,8 @@ export async function POST(
         { status: 400 },
       );
     }
-    // P2002：唯一约束冲突（同工作区空间名重复）
-    if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json(
-        { code: 409, message: apiMsg(req, "prismaUniqueConstraint"), data: null },
-        { status: 409 },
-      );
-    }
     console.error("[POST space] error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: apiMsg(req, "internalError") },
-      { status: 500 },
-    );
+    return handlePrismaError(error, req);
   }
 }
 
@@ -217,17 +207,8 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    if ((error as { code?: string }).code === "P2002") {
-      return NextResponse.json(
-        { code: 409, message: apiMsg(req, "prismaUniqueConstraint"), data: null },
-        { status: 409 },
-      );
-    }
     console.error("[PATCH space] error:", error);
-    return NextResponse.json(
-      { code: 500, data: null, message: apiMsg(req, "internalError") },
-      { status: 500 },
-    );
+    return handlePrismaError(error, req);
   }
 }
 

@@ -15,6 +15,7 @@ import { useState } from "react";
 import type { FileAsset } from "@prisma/client";
 import { Check, Trash2 } from "lucide-react";
 import { formatFileSize, getFileIcon } from "./FileListItem";
+import { useTranslations } from "next-intl";
 
 // ─── Props ──────────────────────────────────────────────────────
 
@@ -35,6 +36,7 @@ export function FileGridItem({
   onSelect,
   onDelete,
 }: FileGridItemProps) {
+  const t = useTranslations("files.fileGridItem");
   const Icon = getFileIcon(file.fileType);
   const isImage = file.fileType.toLowerCase().startsWith("image/");
   const [imgError, setImgError] = useState(false);
@@ -61,7 +63,7 @@ export function FileGridItem({
           type="button"
           role="checkbox"
           aria-checked={selected}
-          aria-label={selected ? "取消选择" : "选择文件"}
+          aria-label={selected ? t("unselectAria") : t("selectAria")}
           onClick={(e) => {
             e.stopPropagation();
             onSelect();
@@ -85,7 +87,7 @@ export function FileGridItem({
       {onDelete && (
         <button
           type="button"
-          aria-label="删除文件"
+          aria-label={t("deleteAria")}
           onClick={(e) => {
             e.stopPropagation();
             onDelete();

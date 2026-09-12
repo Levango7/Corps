@@ -1491,5 +1491,230 @@
     "expand": "展开",
     "untitledSpace": "未命名空间",
     "untitledFolder": "未命名文件夹"
+  },
+  "database": {
+    "editor": {
+      "viewTable": "表格",
+      "viewBoard": "看板",
+      "viewGantt": "甘特",
+      "viewCalendar": "日历",
+      "noView": "暂无视图，请先创建一个视图。",
+      "recordCount": "{count} 条",
+      "viewSwitchAria": "视图切换",
+      "filterAria": "筛选",
+      "sortAria": "排序",
+      "groupAria": "分组",
+      "filter": "筛选",
+      "sort": "排序",
+      "group": "分组"
+    },
+    "rollupField": {
+      "empty": "—"
+    },
+    "relationField": {
+      "empty": "空",
+      "noRelation": "无关联",
+      "addRelation": "添加关联",
+      "removeRelationAria": "移除关联",
+      "addRelationAria": "添加关联",
+      "searchPlaceholder": "搜索记录...",
+      "noMatch": "无匹配记录"
+    },
+    "boardView": {
+      "ungrouped": "未分组",
+      "noGroupField": "请在视图配置中设置分组字段（select / multiselect / user 类型）",
+      "dropHere": "拖拽卡片到此处",
+      "untitled": "无标题"
+    },
+    "calendarView": {
+      "weekdayMon": "周一",
+      "weekdayTue": "周二",
+      "weekdayWed": "周三",
+      "weekdayThu": "周四",
+      "weekdayFri": "周五",
+      "weekdaySat": "周六",
+      "weekdaySun": "周日",
+      "noDateField": "请在视图配置中设置日期字段",
+      "untitled": "无标题",
+      "prevPageAria": "上一页",
+      "nextPageAria": "下一页",
+      "today": "今天",
+      "granularityMonth": "月",
+      "granularityWeek": "周",
+      "granularityDay": "日",
+      "more": "+{count} 更多",
+      "noDayRecords": "当天无记录",
+      "dayTitle": "{year}年{month}月{day}日",
+      "weekTitle": "{year}年 {startMonth}/{startDay} - {endMonth}/{endDay}",
+      "monthTitle": "{year}年 {month}月"
+    },
+    "ganttView": {
+      "noDateFields": "请在视图配置中设置开始/结束日期字段",
+      "noDatedRecords": "暂无含日期的记录",
+      "recordLabel": "记录"
+    },
+    "tableView": {
+      "summary": "{rows} 行 · {cols} 列",
+      "noRecords": "暂无记录",
+      "addRow": "新增行"
+    },
+    "filterPanel": {
+      "title": "筛选",
+      "logicAnd": "且",
+      "logicOr": "或",
+      "addCondition": "添加筛选条件",
+      "removeAria": "删除筛选条件",
+      "fieldAria": "筛选字段",
+      "operatorAria": "操作符",
+      "opEquals": "等于",
+      "opNotEquals": "不等于",
+      "opContains": "包含",
+      "opStartsWith": "开头为",
+      "opIsEmpty": "为空",
+      "opIsNotEmpty": "不为空",
+      "opBefore": "早于",
+      "opAfter": "晚于",
+      "opWithin": "属于",
+      "opIs": "是",
+      "opIsNot": "不是",
+      "withinThisWeek": "本周",
+      "withinThisMonth": "本月",
+      "withinThisQuarter": "本季度",
+      "withinThisYear": "本年",
+      "withinLastWeek": "上周",
+      "withinLastMonth": "上月",
+      "withinLastYear": "去年",
+      "withinLast7Days": "过去 7 天",
+      "withinLast30Days": "过去 30 天",
+      "rangeAria": "日期范围",
+      "selectRange": "选择范围",
+      "dateAria": "日期",
+      "optionAria": "选项",
+      "selectOption": "选择选项",
+      "checkboxAria": "勾选状态",
+      "select": "选择",
+      "checked": "已勾选",
+      "unchecked": "未勾选",
+      "userAria": "用户",
+      "currentUser": "当前用户",
+      "numberAria": "数值",
+      "valuePlaceholder": "输入值",
+      "textAria": "文本值"
+    },
+    "fieldControls": {
+      "empty": "空",
+      "selectPlaceholder": "选择...",
+      "noOptions": "无选项",
+      "noAvailableOptions": "无可选项",
+      "userIdPlaceholder": "用户 ID",
+      "urlPlaceholder": "https://",
+      "emailPlaceholder": "example@domain.com",
+      "emptyDash": "—",
+      "relationCount": "{count} 条关联",
+      "relationIdPlaceholder": "记录 ID（逗号分隔）"
+    },
+    "groupControl": {
+      "label": "分组",
+      "fieldAria": "分组字段",
+      "noGroup": "不分组",
+      "clearAria": "取消分组"
+    },
+    "sortPanel": {
+      "title": "排序",
+      "fieldAria": "排序字段",
+      "ascAria": "升序，点击切换为降序",
+      "descAria": "降序，点击切换为升序",
+      "asc": "升序",
+      "desc": "降序",
+      "moveUpAria": "提高优先级",
+      "moveDownAria": "降低优先级",
+      "removeAria": "删除排序条件",
+      "addSort": "添加排序"
+    }
+  },
+  "files": {
+    "fileBrowser": {
+      "searchPlaceholder": "搜索文件...",
+      "searchAria": "搜索文件",
+      "viewSwitchAria": "视图切换",
+      "listViewAria": "列表视图",
+      "gridViewAria": "网格视图",
+      "searchEmptyTitle": "未找到匹配文件",
+      "searchEmptyDescription": "没有名称包含 \"{query}\" 的文件",
+      "folderEmptyTitle": "暂无文件",
+      "folderEmptyDescription": "拖拽文件到上传区域，或点击上传按钮添加文件"
+    },
+    "fileUploader": {
+      "uploadFailed": "上传失败",
+      "networkError": "网络错误",
+      "upload": "上传",
+      "dropAria": "点击或拖拽文件上传",
+      "releaseToUpload": "释放以上传",
+      "clickOrDrop": "点击或拖拽文件到此处上传",
+      "hint": "支持图片、PDF、Office、视频、音频、代码、文本，最大 50MB",
+      "error": "错误",
+      "removeAria": "移除"
+    },
+    "fileGridItem": {
+      "unselectAria": "取消选择",
+      "selectAria": "选择文件",
+      "deleteAria": "删除文件"
+    },
+    "fileListItem": {
+      "unselectAria": "取消选择",
+      "selectAria": "选择文件",
+      "deleteAria": "删除文件"
+    },
+    "filePreview": {
+      "categoryImage": "图片",
+      "categoryPdf": "PDF",
+      "categoryOffice": "Office",
+      "categoryVideo": "视频",
+      "categoryAudio": "音频",
+      "categoryCode": "代码",
+      "categoryMarkdown": "Markdown",
+      "categoryOther": "文件",
+      "downloadFile": "下载文件",
+      "previewAria": "{name} 预览",
+      "download": "下载",
+      "closeAria": "关闭预览",
+      "unsupportedType": "此文件类型不支持在线预览，请下载查看",
+      "loadFailed": "无法加载预览，请下载查看",
+      "contentLoadFailed": "无法加载文本内容，请下载查看"
+    },
+    "markdownPreview": {},
+    "audioPreview": {},
+    "videoPreview": {},
+    "codePreview": {
+      "ariaLabel": "{name} 代码预览"
+    },
+    "officePreview": {
+      "unsupportedHint": "{label} 文件预览需要在线服务，请下载查看",
+      "downloadFile": "下载文件"
+    },
+    "pdfPreview": {
+      "title": "PDF 预览"
+    },
+    "imagePreview": {
+      "loading": "加载中…"
+    },
+    "versionRestore": {
+      "title": "确认回滚",
+      "confirmBody": "确定要将 \"{fileName}\" 回滚到版本 v{version} 吗？",
+      "hint": "当前版本的内容将被替换，但版本历史会保留。",
+      "cancel": "取消",
+      "confirm": "确认回滚"
+    },
+    "versionList": {
+      "unknownUploader": "未知",
+      "title": "版本历史",
+      "loading": "加载中…",
+      "ariaLabel": "{name} 版本历史",
+      "totalCount": "共 {count} 个版本",
+      "empty": "暂无版本历史",
+      "currentVersion": "当前版本",
+      "restoreAria": "回滚到 v{version}",
+      "restoreToVersion": "回滚到此版本"
+    }
   }
 }

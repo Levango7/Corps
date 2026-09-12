@@ -5,6 +5,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { z } from "zod";
 
 /**
  * 云盘文件上传 API · /api/v1/workspaces/{wid}/files/upload
@@ -93,6 +94,9 @@ export async function POST(
       { status: 401 },
     );
 
+  // 声明在 try 块外，以便 catch 块能访问并清理已写入磁盘的文件（防磁盘泄漏）
+  let savedPath: string | null = null;
+
   try {
     const formData = await req.formData();
     const file = formData.get("file");
@@ -139,7 +143,7 @@ export async function POST(
     // 生成唯一文件名并写入磁盘
     const fileId = randomUUID();
     const savedFileName = `${fileId}.${ext}`;
-    const savedPath = path.join(UPLOAD_DIR, savedFileName);
+    savedPath = path.join(UPLOAD_DIR, savedFileName);
     await fs.writeFile(savedPath, buffer);
 
     // 存储 key（相对路径，下载时拼接到 UPLOAD_DIR）
@@ -155,6 +159,17 @@ export async function POST(
         ? folderIdRaw
         : null;
 
+    // 校验 folderId 格式（若提供则必须是合法 UUID，防止注入非法值）
+    if (folderId !== null) {
+      const uuidResult = z.string().uuid().safeParse(folderId);
+      if (!uuidResult.success) {
+        return NextResponse.json(
+          { code: 400, message: "Invalid folderId format", data: null },
+          { status: 400 },
+        );
+      }
+    }
+
     // 可选的版本说明（从 formData 获取）
     const messageRaw = formData.get("message");
     const versionMessage =
@@ -166,6 +181,17 @@ export async function POST(
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
+        // 校验文件夹归属（若指定了 folderId，必须属于当前工作区）
+        if (folderId) {
+          const folder = await tx.folder.findFirst({
+            where: { id: folderId, workspaceId: wid },
+            select: { id: true },
+          });
+          if (!folder) {
+            return { kind: "folderNotFound" as const, assetId: "", version: 0, fileVersion: null };
+          }
+        }
+
         const existing = await tx.fileAsset.findFirst({
           where: { workspaceId: wid, sha256 },
           select: { id: true, currentVersion: true, fileName: true },
@@ -227,6 +253,21 @@ export async function POST(
       ctx.payload.sub,
     );
 
+    // 文件夹归属校验失败：清理已写入磁盘的文件并返回 400
+    if (result.kind === "folderNotFound") {
+      if (savedPath) {
+        try {
+          await fs.unlink(savedPath);
+        } catch {
+          // 文件可能未写入或已删除，忽略清理错误
+        }
+      }
+      return NextResponse.json(
+        { code: 400, message: "Folder not found in this workspace", data: null },
+        { status: 400 },
+      );
+    }
+
     // 查询完整 FileAsset 返回（含 uploader）
     const fileAsset = await runWithWorkspace(
       wid,
@@ -250,6 +291,14 @@ export async function POST(
       { status: 201 },
     );
   } catch (error) {
+    // 清理已写入磁盘的文件（事务失败时避免磁盘泄漏）
+    if (savedPath) {
+      try {
+        await fs.unlink(savedPath);
+      } catch {
+        // 文件可能未写入或已删除，忽略清理错误
+      }
+    }
     console.error("[POST file upload] error:", error);
     return handlePrismaError(error, req);
   }

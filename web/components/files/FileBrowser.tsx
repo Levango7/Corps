@@ -18,6 +18,7 @@ import { FileListItem } from "./FileListItem";
 import { FileGridItem } from "./FileGridItem";
 import { FileUploader } from "./FileUploader";
 import EmptyState from "@/components/EmptyState";
+import { useTranslations } from "next-intl";
 
 // ─── Props ──────────────────────────────────────────────────────
 
@@ -60,6 +61,7 @@ export function FileBrowser({
   onFileDelete,
   onUploadComplete,
 }: FileBrowserProps) {
+  const t = useTranslations("files.fileBrowser");
   const [searchQuery, setSearchQuery] = useState("");
   const [currentView, setCurrentView] = useState<"list" | "grid">(viewMode);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -123,8 +125,8 @@ export function FileBrowser({
             type="search"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="搜索文件..."
-            aria-label="搜索文件"
+            placeholder={t("searchPlaceholder")}
+            aria-label={t("searchAria")}
             className="w-full h-8 pl-8 pr-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)] transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none"
           />
         </div>
@@ -135,13 +137,13 @@ export function FileBrowser({
           <div
             className="flex items-center gap-1"
             role="group"
-            aria-label="视图切换"
+            aria-label={t("viewSwitchAria")}
           >
             <button
               type="button"
               onClick={() => setCurrentView("list")}
               aria-pressed={currentView === "list"}
-              aria-label="列表视图"
+              aria-label={t("listViewAria")}
               className={`${TOOL_BTN} ${currentView === "list" ? TOOL_BTN_ACTIVE : ""}`}
             >
               <List size={14} />
@@ -150,7 +152,7 @@ export function FileBrowser({
               type="button"
               onClick={() => setCurrentView("grid")}
               aria-pressed={currentView === "grid"}
-              aria-label="网格视图"
+              aria-label={t("gridViewAria")}
               className={`${TOOL_BTN} ${currentView === "grid" ? TOOL_BTN_ACTIVE : ""}`}
             >
               <LayoutGrid size={14} />
@@ -175,14 +177,14 @@ export function FileBrowser({
           isSearchActive ? (
             <EmptyState
               type="search"
-              title="未找到匹配文件"
-              description={`没有名称包含 "${searchQuery.trim()}" 的文件`}
+              title={t("searchEmptyTitle")}
+              description={t("searchEmptyDescription", { query: searchQuery.trim() })}
             />
           ) : (
             <EmptyState
               type="folder"
-              title="暂无文件"
-              description="拖拽文件到上传区域，或点击上传按钮添加文件"
+              title={t("folderEmptyTitle")}
+              description={t("folderEmptyDescription")}
             />
           )
         ) : currentView === "list" ? (

@@ -14,6 +14,7 @@
  */
 
 import { useMemo } from "react";
+import { useTranslations } from "next-intl";
 
 export interface CodePreviewProps {
   content: string;
@@ -22,6 +23,7 @@ export interface CodePreviewProps {
 }
 
 export function CodePreview({ content, fileName, language }: CodePreviewProps) {
+  const t = useTranslations("files.codePreview");
   const lines = useMemo(() => content.split("\n"), [content]);
   const lang = language ?? (fileName.split(".").pop() || "text");
 
@@ -29,7 +31,7 @@ export function CodePreview({ content, fileName, language }: CodePreviewProps) {
     <div
       className="w-full h-full overflow-auto bg-[var(--surface-2)] font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] leading-[var(--leading-relaxed)]"
       data-language={lang}
-      aria-label={`${fileName} 代码预览`}
+      aria-label={t("ariaLabel", { name: fileName })}
       data-testid="code-preview"
     >
       <div className="py-3 inline-block min-w-full">

@@ -13,6 +13,7 @@
 import { useState, useMemo } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import type { Database, DatabaseField, DatabaseRecord, DatabaseView } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 // ─── 类型与辅助函数 ──────────────────────────────────────────────
 
@@ -68,7 +69,7 @@ function dateKey(d: Date): string {
 }
 
 const DAY_MS = 86400000;
-const WEEKDAYS = ["一", "二", "三", "四", "五", "六", "日"];
+const WEEKDAY_KEYS = ["weekdayMon", "weekdayTue", "weekdayWed", "weekdayThu", "weekdayFri", "weekdaySat", "weekdaySun"] as const;
 const MAX_EVENTS = 3;
 
 // ─── Props ──────────────────────────────────────────────────────
@@ -94,8 +95,15 @@ export function CalendarView({
   view,
   granularity: initialGranularity = "month",
 }: CalendarViewProps) {
+  const t = useTranslations("database.calendarView");
   const [granularity, setGranularity] = useState<"month" | "week" | "day">(initialGranularity);
   const [currentDate, setCurrentDate] = useState(() => new Date());
+
+  // 周一~周日的显示标签（i18n）
+  const weekdayLabels = useMemo(
+    () => WEEKDAY_KEYS.map((key) => t(key)),
+    [t],
+  );
 
   const config = readConfig<CalendarViewConfig>(view);
   const dateField = config.dateField ? fields.find((f) => f.id === config.dateField) : undefined;
@@ -141,22 +149,35 @@ export function CalendarView({
 
   const headerTitle = useMemo(() => {
     if (granularity === "day") {
-      return `${currentDate.getFullYear()}年${currentDate.getMonth() + 1}月${currentDate.getDate()}日`;
+      return t("dayTitle", {
+        year: currentDate.getFullYear(),
+        month: currentDate.getMonth() + 1,
+        day: currentDate.getDate(),
+      });
     }
     if (granularity === "week") {
       const start = startOfWeek(currentDate);
       const end = new Date(start.getTime() + 6 * DAY_MS);
-      return `${start.getFullYear()}年 ${start.getMonth() + 1}/${start.getDate()} - ${end.getMonth() + 1}/${end.getDate()}`;
+      return t("weekTitle", {
+        year: start.getFullYear(),
+        startMonth: start.getMonth() + 1,
+        startDay: start.getDate(),
+        endMonth: end.getMonth() + 1,
+        endDay: end.getDate(),
+      });
     }
-    return `${currentDate.getFullYear()}年 ${currentDate.getMonth() + 1}月`;
-  }, [currentDate, granularity]);
+    return t("monthTitle", {
+      year: currentDate.getFullYear(),
+      month: currentDate.getMonth() + 1,
+    });
+  }, [currentDate, granularity, t]);
 
   const todayKey = dateKey(new Date());
 
   if (!dateField) {
     return (
       <div className="flex items-center justify-center min-h-[400px] text-[var(--muted)] text-[length:var(--text-sm)]">
-        请在视图配置中设置日期字段
+        {t("noDateField")}
       </div>
     );
   }
@@ -164,7 +185,7 @@ export function CalendarView({
   const getRecordTitle = (record: DatabaseRecord): string => {
     if (!titleField) return record.id.slice(0, 8);
     const v = getFieldValue(record, titleField.id);
-    if (v == null || v === "") return "无标题";
+    if (v == null || v === "") return t("untitled");
     return String(v);
   };
 
@@ -175,7 +196,7 @@ export function CalendarView({
         <button
           onClick={() => navigate(-1)}
           className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-          aria-label="上一页"
+          aria-label={t("prevPageAria")}
         >
           <ChevronLeft size={16} />
         </button>
@@ -185,7 +206,7 @@ export function CalendarView({
         <button
           onClick={() => navigate(1)}
           className="p-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-          aria-label="下一页"
+          aria-label={t("nextPageAria")}
         >
           <ChevronRight size={16} />
         </button>
@@ -193,7 +214,7 @@ export function CalendarView({
           onClick={() => setCurrentDate(new Date())}
           className="px-3 py-1 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
         >
-          今天
+          {t("today")}
         </button>
         <div className="ml-auto flex gap-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)] p-0.5">
           {(["month", "week", "day"] as const).map((g) => (
@@ -207,7 +228,7 @@ export function CalendarView({
                   : "text-[var(--muted)] hover:text-[var(--fg)]",
               ].join(" ")}
             >
-              {g === "month" ? "月" : g === "week" ? "周" : "日"}
+              {t(g === "month" ? "granularityMonth" : g === "week" ? "granularityWeek" : "granularityDay")}
             </button>
           ))}
         </div>
@@ -221,12 +242,12 @@ export function CalendarView({
         />
       ) : (
         <div className="grid grid-cols-7 border border-[var(--border)] rounded-[var(--radius-lg)] overflow-hidden bg-[var(--surface)]">
-          {WEEKDAYS.map((w) => (
+          {weekdayLabels.map((w) => (
             <div
               key={w}
               className="text-center py-2 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)] border-b border-[var(--border)] bg-[var(--surface-2)]"
             >
-              周{w}
+              {w}
             </div>
           ))}
           {displayDays.map((d) => {
@@ -267,7 +288,7 @@ export function CalendarView({
                   ))}
                   {remaining > 0 && (
                     <div className="text-[length:var(--text-xs)] text-[var(--muted)] px-1.5">
-                      +{remaining} 更多
+                      {t("more", { count: remaining })}
                     </div>
                   )}
                 </div>
@@ -288,10 +309,11 @@ interface DayViewProps {
 }
 
 function DayView({ records, getRecordTitle }: DayViewProps) {
+  const t = useTranslations("database.calendarView");
   if (records.length === 0) {
     return (
       <div className="flex items-center justify-center min-h-[400px] text-[var(--muted)] text-[length:var(--text-sm)] border border-[var(--border)] rounded-[var(--radius-lg)] bg-[var(--surface)]">
-        当天无记录
+        {t("noDayRecords")}
       </div>
     );
   }

@@ -21,6 +21,7 @@ import type {
   FilterOperator,
 } from "@/lib/database/query-engine";
 import { getFieldSelectOptions } from "@/lib/database/query-engine";
+import { useTranslations } from "next-intl";
 
 // ─── 操作符映射 ──────────────────────────────────────────────
 
@@ -37,35 +38,35 @@ const OPERATORS_BY_FIELD_TYPE: Record<string, FilterOperator[]> = {
   user: ["is", "is_not", "is_empty", "is_not_empty"],
 };
 
-/** 操作符显示标签 */
-const OPERATOR_LABELS: Record<FilterOperator, string> = {
-  equals: "等于",
-  not_equals: "不等于",
-  contains: "包含",
-  starts_with: "开头为",
-  is_empty: "为空",
-  is_not_empty: "不为空",
-  before: "早于",
-  after: "晚于",
-  within: "属于",
-  is: "是",
-  is_not: "不是",
+/** 操作符 → i18n key 映射（在组件内通过 t() 解析为显示标签） */
+const OPERATOR_LABEL_KEYS: Record<FilterOperator, string> = {
+  equals: "opEquals",
+  not_equals: "opNotEquals",
+  contains: "opContains",
+  starts_with: "opStartsWith",
+  is_empty: "opIsEmpty",
+  is_not_empty: "opIsNotEmpty",
+  before: "opBefore",
+  after: "opAfter",
+  within: "opWithin",
+  is: "opIs",
+  is_not: "opIsNot",
 };
 
 /** 兜底操作符（字段类型未匹配时） */
 const FALLBACK_OPERATORS: FilterOperator[] = ["is_empty"];
 
-/** within 预设选项 */
-const WITHIN_PRESETS: { value: string; label: string }[] = [
-  { value: "this_week", label: "本周" },
-  { value: "this_month", label: "本月" },
-  { value: "this_quarter", label: "本季度" },
-  { value: "this_year", label: "本年" },
-  { value: "last_week", label: "上周" },
-  { value: "last_month", label: "上月" },
-  { value: "last_year", label: "去年" },
-  { value: "last_7_days", label: "过去 7 天" },
-  { value: "last_30_days", label: "过去 30 天" },
+/** within 预设选项（labelKey 在组件内通过 t() 解析） */
+const WITHIN_PRESETS: { value: string; labelKey: string }[] = [
+  { value: "this_week", labelKey: "withinThisWeek" },
+  { value: "this_month", labelKey: "withinThisMonth" },
+  { value: "this_quarter", labelKey: "withinThisQuarter" },
+  { value: "this_year", labelKey: "withinThisYear" },
+  { value: "last_week", labelKey: "withinLastWeek" },
+  { value: "last_month", labelKey: "withinLastMonth" },
+  { value: "last_year", labelKey: "withinLastYear" },
+  { value: "last_7_days", labelKey: "withinLast7Days" },
+  { value: "last_30_days", labelKey: "withinLast30Days" },
 ];
 
 // ─── 样式 ────────────────────────────────────────────────────
@@ -86,6 +87,8 @@ interface ValueInputProps {
 
 /** 根据字段类型 + 操作符渲染对应的值输入控件 */
 function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
+  const t = useTranslations("database.filterPanel");
+
   // is_empty/is_not_empty 不需要值输入
   if (operator === "is_empty" || operator === "is_not_empty") {
     return null;
@@ -100,12 +103,12 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value)}
         className={selectCls}
-        aria-label="日期范围"
+        aria-label={t("rangeAria")}
       >
-        <option value="">选择范围</option>
+        <option value="">{t("selectRange")}</option>
         {WITHIN_PRESETS.map((p) => (
           <option key={p.value} value={p.value}>
-            {p.label}
+            {t(p.labelKey)}
           </option>
         ))}
       </select>
@@ -120,7 +123,7 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value)}
         className={inputCls}
-        aria-label="日期"
+        aria-label={t("dateAria")}
       />
     );
   }
@@ -133,9 +136,9 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value)}
         className={selectCls}
-        aria-label="选项"
+        aria-label={t("optionAria")}
       >
-        <option value="">选择选项</option>
+        <option value="">{t("selectOption")}</option>
         {options.map((o) => (
           <option key={o.id} value={o.id}>
             {o.label}
@@ -152,11 +155,11 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
         value={value === true ? "true" : value === false ? "false" : ""}
         onChange={(e) => onChange(e.target.value === "true")}
         className={selectCls}
-        aria-label="勾选状态"
+        aria-label={t("checkboxAria")}
       >
-        <option value="">选择</option>
-        <option value="true">已勾选</option>
-        <option value="false">未勾选</option>
+        <option value="">{t("select")}</option>
+        <option value="true">{t("checked")}</option>
+        <option value="false">{t("unchecked")}</option>
       </select>
     );
   }
@@ -168,10 +171,10 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
         value={typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value)}
         className={selectCls}
-        aria-label="用户"
+        aria-label={t("userAria")}
       >
-        <option value="">选择</option>
-        <option value="current_user">当前用户</option>
+        <option value="">{t("select")}</option>
+        <option value="current_user">{t("currentUser")}</option>
       </select>
     );
   }
@@ -184,7 +187,7 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
         value={typeof value === "number" ? String(value) : typeof value === "string" ? value : ""}
         onChange={(e) => onChange(e.target.value === "" ? null : Number(e.target.value))}
         className={inputCls}
-        aria-label="数值"
+        aria-label={t("numberAria")}
       />
     );
   }
@@ -195,9 +198,9 @@ function ValueInput({ field, operator, value, onChange }: ValueInputProps) {
       type="text"
       value={typeof value === "string" ? value : ""}
       onChange={(e) => onChange(e.target.value)}
-      placeholder="输入值"
+      placeholder={t("valuePlaceholder")}
       className={inputCls}
-      aria-label="文本值"
+      aria-label={t("textAria")}
     />
   );
 }
@@ -212,6 +215,8 @@ interface FilterPanelProps {
 }
 
 export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPanelProps) {
+  const t = useTranslations("database.filterPanel");
+
   function updateFilter(index: number, patch: Partial<FilterCondition>) {
     const next = filters.map((f, i) => (i === index ? { ...f, ...patch } : f));
     onChange(next, filterLogic);
@@ -251,7 +256,7 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
       <div className="flex items-center gap-2">
         <Filter size={14} className="text-[var(--muted)]" />
         <span className="text-[length:var(--text-sm)] text-[var(--fg-2)] font-[weight:var(--weight-medium)]">
-          筛选
+          {t("title")}
         </span>
         {filters.length > 1 && (
           <div className="flex items-center gap-1 ms-1">
@@ -264,7 +269,7 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
               }`}
               aria-pressed={filterLogic === "AND"}
             >
-              且
+              {t("logicAnd")}
             </button>
             <button
               onClick={() => onChange(filters, "OR")}
@@ -275,7 +280,7 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
               }`}
               aria-pressed={filterLogic === "OR"}
             >
-              或
+              {t("logicOr")}
             </button>
           </div>
         )}
@@ -294,7 +299,7 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
               value={filter.fieldId}
               onChange={(e) => changeField(i, e.target.value)}
               className={selectCls}
-              aria-label="筛选字段"
+              aria-label={t("fieldAria")}
             >
               {fields.map((f) => (
                 <option key={f.id} value={f.id}>
@@ -307,11 +312,11 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
               value={filter.operator}
               onChange={(e) => updateFilter(i, { operator: e.target.value as FilterOperator })}
               className={selectCls}
-              aria-label="操作符"
+              aria-label={t("operatorAria")}
             >
               {operators.map((op) => (
                 <option key={op} value={op}>
-                  {OPERATOR_LABELS[op]}
+                  {t(OPERATOR_LABEL_KEYS[op])}
                 </option>
               ))}
             </select>
@@ -328,7 +333,7 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
             <button
               onClick={() => removeFilter(i)}
               className="flex items-center justify-center h-8 w-8 rounded-[var(--radius-sm)] text-[var(--muted)] hover:text-[var(--danger)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-              aria-label="删除筛选条件"
+              aria-label={t("removeAria")}
             >
               <X size={14} />
             </button>
@@ -343,7 +348,7 @@ export function FilterPanel({ fields, filters, filterLogic, onChange }: FilterPa
         className="flex items-center gap-1 h-8 px-2 w-fit rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--accent)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed"
       >
         <Plus size={14} />
-        添加筛选条件
+        {t("addCondition")}
       </button>
     </div>
   );

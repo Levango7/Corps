@@ -140,14 +140,14 @@ export async function GET(
 
 /** 筛选条件项 */
 const filterItemSchema = z.object({
-  fieldId: z.string(),
+  fieldId: z.string().regex(/^[a-zA-Z0-9_-]+$/),
   op: z.enum(["eq", "ne", "contains"]),
   value: z.union([z.string(), z.number(), z.boolean(), z.null()]),
 });
 
 /** 排序条件项 */
 const sortItemSchema = z.object({
-  fieldId: z.string(),
+  fieldId: z.string().regex(/^[a-zA-Z0-9_-]+$/),
   dir: z.enum(["asc", "desc"]),
 });
 

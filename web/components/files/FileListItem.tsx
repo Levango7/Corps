@@ -24,6 +24,7 @@ import {
   Check,
   type LucideIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 // ─── 辅助函数（导出供 FileGridItem 复用）──────────────────────
 
@@ -88,6 +89,7 @@ export function FileListItem({
   onSelect,
   onDelete,
 }: FileListItemProps) {
+  const t = useTranslations("files.fileListItem");
   const Icon = getFileIcon(file.fileType);
 
   return (
@@ -106,7 +108,7 @@ export function FileListItem({
         type="button"
         role="checkbox"
         aria-checked={selected}
-        aria-label={selected ? "取消选择" : "选择文件"}
+        aria-label={selected ? t("unselectAria") : t("selectAria")}
         onClick={(e) => {
           e.stopPropagation();
           onSelect?.();
@@ -148,7 +150,7 @@ export function FileListItem({
         {onDelete && (
           <button
             type="button"
-            aria-label="删除文件"
+            aria-label={t("deleteAria")}
             onClick={(e) => {
               e.stopPropagation();
               onDelete();

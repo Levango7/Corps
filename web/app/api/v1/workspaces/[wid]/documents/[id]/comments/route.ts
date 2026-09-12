@@ -49,8 +49,8 @@ export async function GET(
             resolver: { select: { id: true, name: true } },
           },
           orderBy: { createdAt: "asc" },
-          // 上限保护：单文档评论数不会很多，取 500 兜底
-          take: 500,
+          // 上限保护：单文档评论数不会很多，取 200 兜底
+          take: 200,
         });
         return comments;
       },
@@ -155,19 +155,20 @@ export async function POST(
           },
         });
 
-        // A-3: 通知 —— mention 通知（每个被提及的用户，排除评论作者自己）
-        for (const mentionedUserId of validMentions) {
-          if (mentionedUserId && mentionedUserId !== ctx.payload.sub) {
-            await tx.notification.create({
-              data: {
-                userId: mentionedUserId,
-                workspaceId: wid,
-                type: "mention",
-                entityId: id,
-                entityTitle: doc.title,
-              },
-            });
-          }
+        // 批量创建 mention 通知（排除评论作者自己）
+        const notifyTargets = validMentions.filter(
+          (uid) => uid && uid !== ctx.payload.sub,
+        );
+        if (notifyTargets.length > 0) {
+          await tx.notification.createMany({
+            data: notifyTargets.map((userId) => ({
+              userId,
+              workspaceId: wid,
+              type: "mention" as const,
+              entityId: id,
+              entityTitle: doc.title,
+            })),
+          });
         }
 
         return { kind: "ok" as const, data: created };

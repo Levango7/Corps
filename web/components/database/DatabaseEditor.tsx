@@ -17,6 +17,7 @@
  */
 
 import { useState, useMemo, useCallback } from "react";
+import { useTranslations } from "next-intl";
 import {
   Table2,
   Columns3,
@@ -65,12 +66,12 @@ const VIEW_ICONS: Record<string, LucideIcon> = {
   calendar: Calendar,
 };
 
-/** 视图类型 → 显示名称 */
-const VIEW_LABELS: Record<string, string> = {
-  table: "表格",
-  board: "看板",
-  gantt: "甘特",
-  calendar: "日历",
+/** 视图类型 → i18n key 后缀映射（在组件内通过 t() 解析为显示名称） */
+const VIEW_LABEL_KEYS: Record<string, string> = {
+  table: "viewTable",
+  board: "viewBoard",
+  gantt: "viewGantt",
+  calendar: "viewCalendar",
 };
 
 // ─── Props ──────────────────────────────────────────────────────
@@ -148,6 +149,8 @@ export function DatabaseEditor({
   onViewChange,
   onViewUpdate,
 }: DatabaseEditorProps) {
+  const t = useTranslations("database.editor");
+
   // 面板展开状态
   const [showFilter, setShowFilter] = useState(false);
   const [showSort, setShowSort] = useState(false);
@@ -252,7 +255,7 @@ export function DatabaseEditor({
         data-testid="database-editor-empty"
       >
         <p className="text-[length:var(--text-sm)]">
-          暂无视图，请先创建一个视图。
+          {t("noView")}
         </p>
       </div>
     );
@@ -278,7 +281,7 @@ export function DatabaseEditor({
             {database.title}
           </h1>
           <span className="text-[length:var(--text-sm)] text-[var(--muted)] shrink-0">
-            {total} 条
+            {t("recordCount", { count: total })}
           </span>
         </div>
 
@@ -286,11 +289,12 @@ export function DatabaseEditor({
         <nav
           className="flex items-center gap-1"
           role="tablist"
-          aria-label="视图切换"
+          aria-label={t("viewSwitchAria")}
         >
           {views.map((view) => {
             const Icon = VIEW_ICONS[view.type] ?? Table2;
-            const label = VIEW_LABELS[view.type] ?? view.name;
+            const labelKey = VIEW_LABEL_KEYS[view.type];
+            const label = labelKey ? t(labelKey) : view.name;
             const isActive = view.id === currentView.id;
             return (
               <button
@@ -318,11 +322,11 @@ export function DatabaseEditor({
             type="button"
             onClick={() => setShowFilter((v) => !v)}
             aria-pressed={showFilter}
-            aria-label="筛选"
+            aria-label={t("filterAria")}
             className={`${TOOL_BTN_BASE} ${hasFilters ? TOOL_BTN_ACTIVE : ""}`}
           >
             <Filter size={14} />
-            <span>筛选</span>
+            <span>{t("filter")}</span>
             {hasFilters && (
               <span className={COUNT_BADGE}>{viewConfig.filters!.length}</span>
             )}
@@ -331,11 +335,11 @@ export function DatabaseEditor({
             type="button"
             onClick={() => setShowSort((v) => !v)}
             aria-pressed={showSort}
-            aria-label="排序"
+            aria-label={t("sortAria")}
             className={`${TOOL_BTN_BASE} ${hasSorts ? TOOL_BTN_ACTIVE : ""}`}
           >
             <ArrowUpDown size={14} />
-            <span>排序</span>
+            <span>{t("sort")}</span>
             {hasSorts && (
               <span className={COUNT_BADGE}>{viewConfig.sorts!.length}</span>
             )}
@@ -344,11 +348,11 @@ export function DatabaseEditor({
             type="button"
             onClick={() => setShowGroup((v) => !v)}
             aria-pressed={showGroup}
-            aria-label="分组"
+            aria-label={t("groupAria")}
             className={`${TOOL_BTN_BASE} ${hasGroup ? TOOL_BTN_ACTIVE : ""}`}
           >
             <Group size={14} />
-            <span>分组</span>
+            <span>{t("group")}</span>
           </button>
         </div>
       </header>

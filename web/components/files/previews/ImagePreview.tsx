@@ -11,6 +11,7 @@
  */
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { useTranslations } from "next-intl";
 
 export interface ImagePreviewProps {
   src: string;
@@ -18,6 +19,7 @@ export interface ImagePreviewProps {
 }
 
 export function ImagePreview({ src, fileName }: ImagePreviewProps) {
+  const t = useTranslations("files.imagePreview");
   const [scale, setScale] = useState(1);
   const [loading, setLoading] = useState(true);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -45,7 +47,7 @@ export function ImagePreview({ src, fileName }: ImagePreviewProps) {
     >
       {loading && (
         <span className="absolute inset-0 flex items-center justify-center text-[var(--muted)] text-[length:var(--text-sm)]">
-          加载中…
+          {t("loading")}
         </span>
       )}
       <img

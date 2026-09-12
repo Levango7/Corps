@@ -12,6 +12,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { GripVertical } from "lucide-react";
 import type { Database, DatabaseField, DatabaseRecord, DatabaseView } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 // ─── 类型与辅助函数 ──────────────────────────────────────────────
 
@@ -120,6 +121,7 @@ interface BoardViewConfig {
 // ─── 主组件 ──────────────────────────────────────────────────────
 
 export function BoardView({ fields, records, view, onRecordUpdate }: BoardViewProps) {
+  const t = useTranslations("database.boardView");
   const [draggingId, setDraggingId] = useState<string | null>(null);
   const [dragOverCol, setDragOverCol] = useState<string | null>(null);
 
@@ -148,9 +150,9 @@ export function BoardView({ fields, records, view, onRecordUpdate }: BoardViewPr
         name: c.name,
         color: c.color ?? COLUMN_COLORS[i % COLUMN_COLORS.length],
       })),
-      { key: UNGROUPED, name: "未分组", color: "var(--meta)" },
+      { key: UNGROUPED, name: t("ungrouped"), color: "var(--meta)" },
     ];
-  }, [groupField]);
+  }, [groupField, t]);
 
   // 按列分组记录
   const recordsByColumn = useMemo(() => {
@@ -200,7 +202,7 @@ export function BoardView({ fields, records, view, onRecordUpdate }: BoardViewPr
   if (!groupField) {
     return (
       <div className="flex items-center justify-center min-h-[var(--board-col-min-h)] text-[var(--muted)] text-[length:var(--text-sm)]">
-        请在视图配置中设置分组字段（select / multiselect / user 类型）
+        {t("noGroupField")}
       </div>
     );
   }
@@ -269,7 +271,7 @@ export function BoardView({ fields, records, view, onRecordUpdate }: BoardViewPr
               ))}
               {colRecords.length === 0 && (
                 <div className="text-center py-8 text-[length:var(--text-xs)] text-[var(--meta)] border border-dashed border-[var(--border)] rounded-[var(--radius-md)]">
-                  拖拽卡片到此处
+                  {t("dropHere")}
                 </div>
               )}
             </div>
@@ -299,11 +301,12 @@ function BoardCard({
   onDragStart,
   onDragEnd,
 }: BoardCardProps) {
+  const t = useTranslations("database.boardView");
   const title = useMemo(() => {
     if (!titleField) return record.id.slice(0, 8);
     const display = getFieldDisplayValue(record, titleField);
-    return display || "无标题";
-  }, [record, titleField]);
+    return display || t("untitled");
+  }, [record, titleField, t]);
 
   const secondary = useMemo(() => {
     if (!secondaryField) return null;

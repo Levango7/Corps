@@ -21,6 +21,7 @@
 import { useMemo } from "react";
 import { History, RotateCcw, Check, Loader2 } from "lucide-react";
 import type { FileAsset, FileVersion } from "@prisma/client";
+import { useTranslations } from "next-intl";
 
 // ── Props ──────────────────────────────────────────────────────
 
@@ -50,10 +51,10 @@ function formatDateTime(date: Date): string {
 /**
  * 上传者显示：用户名或 ID（简化）。
  * FileVersion.uploadedBy 是 User.id（UUID），简化显示前 8 位；
- * null 表示上传者已注销（onDelete: SetNull），显示"未知"。
+ * null 表示上传者已注销（onDelete: SetNull），显示 unknownLabel（由调用方传入 i18n 文案）。
  */
-function uploaderLabel(uploadedBy: string | null): string {
-  if (!uploadedBy) return "未知";
+function uploaderLabel(uploadedBy: string | null, unknownLabel: string): string {
+  if (!uploadedBy) return unknownLabel;
   // UUID 取前 8 位作为简化标识
   return uploadedBy.slice(0, 8);
 }
@@ -78,6 +79,8 @@ export function FileVersionList({
   onRestore,
   loading,
 }: FileVersionListProps) {
+  const t = useTranslations("files.versionList");
+
   // 版本按版本号倒序排列（最新在上）
   const sortedVersions = useMemo(
     () => [...versions].sort((a, b) => b.version - a.version),
@@ -95,12 +98,12 @@ export function FileVersionList({
         <header className="flex items-center gap-2 px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border)]">
           <History size={14} className="text-[var(--muted)]" />
           <h3 className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-            版本历史
+            {t("title")}
           </h3>
         </header>
         <div className="flex items-center justify-center py-[var(--space-10)] text-[var(--muted)]">
           <Loader2 size={14} className="animate-spin mr-2" />
-          <span className="text-[length:var(--text-sm)]">加载中…</span>
+          <span className="text-[length:var(--text-sm)]">{t("loading")}</span>
         </div>
       </section>
     );
@@ -111,16 +114,16 @@ export function FileVersionList({
     <section
       className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]"
       data-testid="file-version-list"
-      aria-label={`${file.fileName} 版本历史`}
+      aria-label={t("ariaLabel", { name: file.fileName })}
     >
       {/* 头部 */}
       <header className="flex items-center gap-2 px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border)]">
         <History size={14} className="text-[var(--muted)]" />
         <h3 className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-          版本历史
+          {t("title")}
         </h3>
         <span className="ml-auto text-[length:var(--text-xs)] text-[var(--meta)]">
-          共 {sortedVersions.length} 个版本
+          {t("totalCount", { count: sortedVersions.length })}
         </span>
       </header>
 
@@ -133,7 +136,7 @@ export function FileVersionList({
             aria-hidden="true"
           />
           <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-            暂无版本历史
+            {t("empty")}
           </p>
         </div>
       ) : (
@@ -166,7 +169,7 @@ export function FileVersionList({
                   {isCurrent ? (
                     <span className="inline-flex items-center gap-1 text-[var(--accent)]">
                       <Check size={14} aria-hidden="true" />
-                      当前版本
+                      {t("currentVersion")}
                     </span>
                   ) : (
                     v.message || "—"
@@ -183,7 +186,7 @@ export function FileVersionList({
 
                 {/* 上传者 */}
                 <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--muted)]">
-                  {uploaderLabel(v.uploadedBy)}
+                  {uploaderLabel(v.uploadedBy, t("unknownUploader"))}
                 </span>
 
                 {/* 操作：非当前版本且提供 onRestore 时显示回滚按钮 */}
@@ -192,10 +195,10 @@ export function FileVersionList({
                     type="button"
                     onClick={() => onRestore(v.id)}
                     className={"shrink-0 " + RESTORE_BTN}
-                    aria-label={`回滚到 v${v.version}`}
+                    aria-label={t("restoreAria", { version: v.version })}
                   >
                     <RotateCcw size={14} aria-hidden="true" />
-                    回滚到此版本
+                    {t("restoreToVersion")}
                   </button>
                 )}
               </li>
