@@ -37,7 +37,9 @@ import {
 } from "react";
 import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
+import { motion } from "framer-motion";
 import { api } from "@/lib/api";
+import { springSmooth, useMotionTokens } from "@/lib/motion-tokens";
 import {
   WIDGET_REGISTRY,
   getDefaultLayout,
@@ -160,6 +162,8 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
 ) {
   const t = useTranslations("dashboard");
   const tButton = useTranslations("button");
+  /** F7: 磁吸拖拽 — 感知 prefers-reduced-motion / F6 reduced 档（reduced 时直接 snap 无弹簧） */
+  const { reduced: prefersReducedMotion } = useMotionTokens();
 
   const [layout, setLayout] = useState<RGLItem[]>([]);
   const [widgetConfigs, setWidgetConfigs] = useState<WidgetConfigs>({});
@@ -170,6 +174,15 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
   const [bp, setBp] = useState<Bp>("lg");
   /** F7: 拖拽中的 widget id（用于 WidgetCard dragging 视觉反馈） */
   const [draggingId, setDraggingId] = useState<string | null>(null);
+  /**
+   * F7: 磁吸拖拽 — 释放时弹簧吸附状态。
+   * id = 正在播放弹簧过渡的 widget；key 递增以重触发 motion.div 动画。
+   * 为 null 表示无磁吸过渡进行中。
+   * 设计依据：design/FEATURE-DESIGN-ui-polish.md §3.3。
+   */
+  const [magneticSnap, setMagneticSnap] = useState<{ id: string; key: number } | null>(null);
+  /** 磁吸脉冲递增 key（ref 避免 useCallback 依赖抖动） */
+  const magneticKeyRef = useRef(0);
   /** 是否有未保存的布局变更 */
   const dirtyRef = useRef(false);
   /** 防止 onLayoutChange 在初次加载时触发保存 */
@@ -259,7 +272,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
     [onLayoutChange],
   );
 
-  // ─── F7: 拖拽视觉反馈 ───
+  // ─── F7: 拖拽视觉反馈 + 磁吸弹簧吸附 ───
   // RGL onDragStart/onDragStop 签名：(layout, oldItem, newItem, placeholder, event, element) => void
   // newItem 类型为 LayoutItem | null，需处理 null 情况
   const handleDragStart = useCallback(
@@ -268,9 +281,23 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
     },
     [],
   );
-  const handleDragStop = useCallback(() => {
-    setDraggingId(null);
-  }, []);
+  // F7 磁吸：释放时在 RGL 瞬时 snap 之上叠加一段弹簧过渡（复用 springSmooth token，
+  // 欠阻尼 damping 30 < critical ≈ 34.6，会过冲再回弹，模拟"啪嗒"物理手感）。
+  // 弹簧过渡由渲染层 motion.div 播放，onAnimationComplete 后才 setDraggingId(null)。
+  // 边界：移动端（bp==="sm"）/ 自由模式（freeMode）/ prefers-reduced-motion → 直接 snap 无弹簧。
+  // 注：此处用 bp==="sm" 而非 isMobile，因 isMobile 在本回调之后定义（TDZ）。
+  const handleDragStop = useCallback(
+    (_current: unknown, _oldItem: unknown, newItem: { i: string } | null) => {
+      const id = newItem?.i;
+      if (!id || bp === "sm" || freeMode || prefersReducedMotion) {
+        setDraggingId(null);
+        return;
+      }
+      magneticKeyRef.current += 1;
+      setMagneticSnap({ id, key: magneticKeyRef.current });
+    },
+    [bp, freeMode, prefersReducedMotion],
+  );
 
   // ─── F7: 双击标题栏循环尺寸（E4） ───
   // S(2×2) → M(4×3) → L(6×4) → XL(8×5) → S
@@ -444,23 +471,46 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
           const WidgetIcon = getWidgetIcon(item.i);
           const titleKey = getWidgetTitleKey(item.i);
           const title = t(titleKey);
+          // F7: 磁吸弹簧过渡 — 仅对释放中的 widget 激活，复用 springSmooth token
+          const snap = magneticSnap?.id === item.i ? magneticSnap : null;
+          const card = (
+            <WidgetCard
+              title={title}
+              icon={WidgetIcon}
+              editing={editing}
+              onRemove={() => handleRemove(item.i)}
+              widgetId={item.i}
+              config={widgetConfigs[item.i]}
+              onConfigChange={(next) => handleConfigChange(item.i, next)}
+              // F7: 拖拽视觉反馈
+              dragging={draggingId === item.i}
+              // F7: 双击标题栏循环尺寸
+              onCycleSize={() => handleCycleSize(item.i)}
+            >
+              <WidgetComp wid={wid} />
+            </WidgetCard>
+          );
           return (
             <div key={item.i}>
-              <WidgetCard
-                title={title}
-                icon={WidgetIcon}
-                editing={editing}
-                onRemove={() => handleRemove(item.i)}
-                widgetId={item.i}
-                config={widgetConfigs[item.i]}
-                onConfigChange={(next) => handleConfigChange(item.i, next)}
-                // F7: 拖拽视觉反馈
-                dragging={draggingId === item.i}
-                // F7: 双击标题栏循环尺寸
-                onCycleSize={() => handleCycleSize(item.i)}
-              >
-                <WidgetComp wid={wid} />
-              </WidgetCard>
+              {snap ? (
+                // 磁吸弹簧：从微小 y 偏移弹簧回 0（欠阻尼过冲回弹 = "啪嗒"手感）。
+                // 用 y 位移而非绝对 x/y 定位，避免与 RGL 外层 useCSSTransforms 冲突。
+                // key=snap.key 递增以在多次释放时重触发 initial→animate。
+                <motion.div
+                  key={snap.key}
+                  initial={{ y: 6 }}
+                  animate={{ y: 0 }}
+                  transition={springSmooth}
+                  onAnimationComplete={() => {
+                    setDraggingId(null);
+                    setMagneticSnap(null);
+                  }}
+                >
+                  {card}
+                </motion.div>
+              ) : (
+                card
+              )}
             </div>
           );
         })}

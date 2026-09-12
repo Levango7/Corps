@@ -260,16 +260,16 @@
   --p-border:      #2A2A2E;
   --p-border-soft: #1F1F23;
 
-  --p-accent:      #5B7EF5;
+  --p-accent:      #5B8EF5;
   --p-accent-dk:   #7B9CF7;
   --p-accent-dkr:  #94B0F9;
-  --p-accent-soft: rgba(91, 126, 245, 0.16);
+  --p-accent-soft: rgba(91, 142, 245, 0.16);
   --p-on-accent:   #FFFFFF;
 
   --p-success: #34C98A;
   --p-warn:    #E0A93A;
   --p-danger:  #F25B67;
-  --p-accent-ring: rgba(91, 126, 245, 0.40);
+  --p-accent-ring: rgba(91, 142, 245, 0.40);
 
   --elev-sm: 0 1px 2px rgba(0,0,0,0.36);
   --elev-md: 0 4px 12px rgba(0,0,0,0.46);

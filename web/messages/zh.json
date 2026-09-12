@@ -270,6 +270,56 @@
     "noTasksForYou": "还没有任务分配给你，去看板认领一个吧。",
     "noDecisionsHint": "在任务详情中记录决策后，会在这里展示"
   },
+  "emptyState": {
+    "inbox": {
+      "title": "暂无任务",
+      "description": "创建第一个任务，开始团队协作",
+      "action": "新建任务"
+    },
+    "folder": {
+      "title": "暂无文档",
+      "description": "创建文档，沉淀团队知识",
+      "action": "新建文档"
+    },
+    "search": {
+      "title": "未找到匹配结果",
+      "description": "尝试调整关键词或筛选条件",
+      "action": "清除筛选"
+    },
+    "chart": {
+      "title": "看板暂无卡片",
+      "description": "添加任务并拖入看板",
+      "action": "添加任务"
+    },
+    "calendar": {
+      "title": "今日无日程",
+      "description": "查看未来 7 天安排",
+      "action": "切换视图"
+    },
+    "users": {
+      "title": "暂无成员",
+      "description": "邀请队友加入工作区",
+      "action": "邀请成员"
+    },
+    "trash": {
+      "title": "回收站为空",
+      "description": "删除的内容会暂存于此"
+    },
+    "network": {
+      "title": "网络连接中断",
+      "description": "请检查网络后重试",
+      "action": "重试"
+    },
+    "permission": {
+      "title": "无访问权限",
+      "description": "联系管理员申请权限"
+    },
+    "filter": {
+      "title": "未找到匹配结果",
+      "description": "尝试调整筛选条件",
+      "action": "清除筛选"
+    }
+  },
   "error": {
     "required": "此项必填",
     "networkError": "网络异常，请检查连接后重试",
@@ -1239,7 +1289,15 @@
     "diagramSequenceCode": "sequenceDiagram\n  participant U as 用户\n  participant S as 系统\n  U->>S: 请求\n  S-->>U: 响应\n",
     "diagramGanttCode": "gantt\n  title 排期\n  dateFormat YYYY-MM-DD\n  section 阶段一\n  调研 :a1, 2026-01-01, 7d\n  开发 :after a1, 10d\n",
     "diagramPieCode": "pie showData\n  title 占比\n  \"A\" : 55\n  \"B\" : 30\n  \"C\" : 15\n",
-    "diagramQuadrantCode": "quadrantChart\n  title 优先级矩阵\n  x-axis 低成本 --> 高成本\n  y-axis 低收益 --> 高收益\n  任务A: [0.7, 0.8]\n  任务B: [0.3, 0.35]\n"
+    "diagramQuadrantCode": "quadrantChart\n  title 优先级矩阵\n  x-axis 低成本 --> 高成本\n  y-axis 低收益 --> 高收益\n  任务A: [0.7, 0.8]\n  任务B: [0.3, 0.35]\n",
+    "strike": "删除线",
+    "taskList": "任务列表",
+    "undo": "撤销",
+    "redo": "重做",
+    "richtextMode": "富文本模式",
+    "richtext": "富文本",
+    "markdownMode": "Markdown 源码",
+    "markdown": "Markdown"
   },
   "attachment": {
     "previewAria": "预览：{name}",

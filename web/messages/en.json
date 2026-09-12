@@ -270,6 +270,56 @@
     "noTasksForYou": "No tasks assigned to you yet. Head to the board to pick one up.",
     "noDecisionsHint": "Record decisions in task details and they will show up here"
   },
+  "emptyState": {
+    "inbox": {
+      "title": "No tasks yet",
+      "description": "Create your first task to start collaborating",
+      "action": "New task"
+    },
+    "folder": {
+      "title": "No documents yet",
+      "description": "Create a document to capture team knowledge",
+      "action": "New document"
+    },
+    "search": {
+      "title": "No matching results",
+      "description": "Try adjusting your keywords or filters",
+      "action": "Clear filters"
+    },
+    "chart": {
+      "title": "No cards on the board",
+      "description": "Add a task and drag it to the board",
+      "action": "Add task"
+    },
+    "calendar": {
+      "title": "No events today",
+      "description": "Check the next 7 days",
+      "action": "Switch view"
+    },
+    "users": {
+      "title": "No members yet",
+      "description": "Invite teammates to join the workspace",
+      "action": "Invite members"
+    },
+    "trash": {
+      "title": "Trash is empty",
+      "description": "Deleted items will be stored here"
+    },
+    "network": {
+      "title": "Network connection lost",
+      "description": "Please check your network and retry",
+      "action": "Retry"
+    },
+    "permission": {
+      "title": "No access permission",
+      "description": "Contact an admin to request access"
+    },
+    "filter": {
+      "title": "No matching results",
+      "description": "Try adjusting your filter criteria",
+      "action": "Clear filters"
+    }
+  },
   "error": {
     "required": "This field is required",
     "networkError": "Network error, please check your connection and retry",
@@ -1239,7 +1289,15 @@
     "diagramSequenceCode": "sequenceDiagram\n  participant U as User\n  participant S as System\n  U->>S: Request\n  S-->>U: Response\n",
     "diagramGanttCode": "gantt\n  title Schedule\n  dateFormat YYYY-MM-DD\n  section Phase 1\n  Research :a1, 2026-01-01, 7d\n  Dev :after a1, 10d\n",
     "diagramPieCode": "pie showData\n  title Proportion\n  \"A\" : 55\n  \"B\" : 30\n  \"C\" : 15\n",
-    "diagramQuadrantCode": "quadrantChart\n  title Priority matrix\n  x-axis Low cost --> High cost\n  y-axis Low gain --> High gain\n  Task A: [0.7, 0.8]\n  Task B: [0.3, 0.35]\n"
+    "diagramQuadrantCode": "quadrantChart\n  title Priority matrix\n  x-axis Low cost --> High cost\n  y-axis Low gain --> High gain\n  Task A: [0.7, 0.8]\n  Task B: [0.3, 0.35]\n",
+    "strike": "Strikethrough",
+    "taskList": "Task list",
+    "undo": "Undo",
+    "redo": "Redo",
+    "richtextMode": "Rich text mode",
+    "richtext": "Rich text",
+    "markdownMode": "Markdown source",
+    "markdown": "Markdown"
   },
   "attachment": {
     "previewAria": "Preview: {name}",

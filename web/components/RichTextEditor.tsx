@@ -17,9 +17,9 @@
  * - 所有样式走 design token（var(--*)），无裸 hex。
  * - "use client" 隔离 TipTap（ProseMirror 仅浏览器端）。
  *
- * i18n 说明：受迁移约束（不修改 en.json/zh.json），工具栏复用现有 editor.* 键；
- * 任务列表 / 撤销 / 重做 / 删除线 / 模式切换无现成键，暂用中文硬编码兜底，
- * 后续 Phase 1b 补齐 i18n 键。
+ * i18n 说明：工具栏复用现有 editor.* 键，并在 editor 命名空间下补齐
+ * strike / taskList / undo / redo / richtext / richtextMode / markdown /
+ * markdownMode 键，覆盖删除线 / 任务列表 / 撤销 / 重做 / 模式切换文案。
  */
 
 import {
@@ -511,8 +511,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           onClick={() => editor.chain().focus().toggleStrike().run()}
           disabled={!editor.can().toggleStrike()}
           className={btn(editor.isActive("strike"))}
-          title="删除线"
-          aria-label="删除线"
+          title={t("strike")}
+          aria-label={t("strike")}
           aria-pressed={editor.isActive("strike")}
         >
           <Strikethrough size={15} />
@@ -556,8 +556,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => editor.chain().focus().toggleTaskList().run()}
           className={btn(editor.isActive("taskList"))}
-          title="任务列表"
-          aria-label="任务列表"
+          title={t("taskList")}
+          aria-label={t("taskList")}
           aria-pressed={editor.isActive("taskList")}
         >
           <ListChecks size={15} />
@@ -592,8 +592,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           onClick={() => editor.chain().focus().undo().run()}
           disabled={!editor.can().undo()}
           className={TOOLBAR_BTN}
-          title="撤销 (Ctrl+Z)"
-          aria-label="撤销"
+          title={`${t("undo")} (Ctrl+Z)`}
+          aria-label={t("undo")}
         >
           <Undo2 size={15} />
         </button>
@@ -603,8 +603,8 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           onClick={() => editor.chain().focus().redo().run()}
           disabled={!editor.can().redo()}
           className={TOOLBAR_BTN}
-          title="重做 (Ctrl+Y)"
-          aria-label="重做"
+          title={`${t("redo")} (Ctrl+Y)`}
+          aria-label={t("redo")}
         >
           <Redo2 size={15} />
         </button>
@@ -618,7 +618,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           type="button"
           onClick={() => switchMode("richtext")}
           aria-pressed={mode === "richtext"}
-          title="富文本模式"
+          title={t("richtextMode")}
           className={`inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
             mode === "richtext"
               ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -626,13 +626,13 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           }`}
         >
           <Eye size={13} />
-          富文本
+          {t("richtext")}
         </button>
         <button
           type="button"
           onClick={() => switchMode("markdown")}
           aria-pressed={mode === "markdown"}
-          title="Markdown 源码"
+          title={t("markdownMode")}
           className={`inline-flex items-center gap-1 px-2 py-1 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
             mode === "markdown"
               ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
@@ -640,7 +640,7 @@ export const RichTextEditor = forwardRef<RichTextEditorHandle, RichTextEditorPro
           }`}
         >
           <FileCode size={13} />
-          Markdown
+          {t("markdown")}
         </button>
       </div>
     );
