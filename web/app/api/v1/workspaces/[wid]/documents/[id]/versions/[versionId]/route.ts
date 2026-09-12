@@ -94,11 +94,11 @@ export async function POST(
       wid,
       async (tx) => {
         // 校验文档存在且属于本工作区
-        const doc = await tx.document.findFirst({
+        const docExists = await tx.document.findFirst({
           where: { id, workspaceId: wid },
-          select: { id: true, currentVersion: true },
+          select: { id: true },
         });
-        if (!doc) return { kind: "docNotFound" as const, data: null };
+        if (!docExists) return { kind: "docNotFound" as const, data: null };
 
         // 读取目标版本
         const targetVersion = await tx.documentVersion.findFirst({
@@ -110,6 +110,14 @@ export async function POST(
         // 并发保护：对 Document 行加 FOR UPDATE 行锁
         await tx.$queryRaw`SELECT id FROM "documents" WHERE id = ${id} FOR UPDATE`;
 
+        // 锁后重新读取 currentVersion，避免 READ COMMITTED 隔离级别下
+        // 并发事务读到相同版本号导致版本号重复
+        const docLocked = await tx.document.findFirst({
+          where: { id, workspaceId: wid },
+          select: { currentVersion: true },
+        });
+        if (!docLocked) return { kind: "docNotFound" as const, data: null };
+
         // 将目标版本的 markdown 写回文档草稿
         await tx.document.update({
           where: { id },
@@ -117,7 +125,7 @@ export async function POST(
         });
 
         // 创建回滚版本快照（版本号继续递增，不覆盖历史）
-        const newVersion = doc.currentVersion + 1;
+        const newVersion = docLocked.currentVersion + 1;
         // contentFull 不传（Json? 字段默认 SQL NULL）
         const created = await tx.documentVersion.create({
           data: {

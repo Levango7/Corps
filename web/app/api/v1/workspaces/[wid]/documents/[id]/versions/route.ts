@@ -137,16 +137,24 @@ export async function POST(
       wid,
       async (tx) => {
         // 校验文档存在且属于本工作区
-        const doc = await tx.document.findFirst({
+        const docExists = await tx.document.findFirst({
           where: { id, workspaceId: wid },
-          select: { id: true, markdown: true, currentVersion: true },
+          select: { id: true },
         });
-        if (!doc) return { kind: "notFound" as const, data: null };
+        if (!docExists) return { kind: "notFound" as const, data: null };
 
         // 并发保护：对 Document 行加 FOR UPDATE 行锁，防止并发版本号重复
         await tx.$queryRaw`SELECT id FROM "documents" WHERE id = ${id} FOR UPDATE`;
 
-        const version = doc.currentVersion + 1;
+        // 锁后重新读取 currentVersion，避免 READ COMMITTED 隔离级别下
+        // 并发事务读到相同版本号导致版本号重复
+        const docLocked = await tx.document.findFirst({
+          where: { id, workspaceId: wid },
+          select: { markdown: true, currentVersion: true },
+        });
+        if (!docLocked) return { kind: "notFound" as const, data: null };
+
+        const version = docLocked.currentVersion + 1;
         // Phase 1 简化：所有版本存全量快照（snapshotType=full）
         // diff 增量存储留待后续优化（需引入 diff-match-patch 依赖）
         // contentFull 不传（Json? 字段默认 SQL NULL）；Phase 1 不存 JSON doc（富文本编辑器未集成）
@@ -157,7 +165,7 @@ export async function POST(
             version,
             snapshotType: "full",
             contentDiff: null,
-            markdown: doc.markdown,
+            markdown: docLocked.markdown,
             message: validated.message ?? null,
             source: validated.source ?? "manual",
             authorId: ctx.payload.sub,

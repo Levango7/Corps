@@ -76,6 +76,67 @@ export function QuickActionMenu({
     };
   }, [open, onClose]);
 
+  // Focus trap：菜单打开时聚焦首个可聚焦元素，Tab/Shift+Tab 在菜单内循环，
+  // 关闭时恢复焦点到触发元素（WAI-ARIA Menu 浮窗规范）
+  useEffect(() => {
+    if (!open) return;
+
+    // 记录打开前的焦点元素，关闭时恢复
+    const previousActiveElement = document.activeElement as HTMLElement | null;
+
+    // 获取菜单内所有可聚焦元素
+    const getFocusableElements = () => {
+      if (!menuRef.current) return [];
+      return Array.from(
+        menuRef.current.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter((el) => !el.hasAttribute("disabled"));
+    };
+
+    // 初始聚焦首个可聚焦元素
+    const initialFocusable = getFocusableElements();
+    if (initialFocusable.length > 0) {
+      initialFocusable[0].focus();
+    }
+
+    // Tab / Shift+Tab 在首尾元素间循环
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== "Tab") return;
+      if (!menuRef.current) return;
+
+      const focusable = getFocusableElements();
+      if (focusable.length === 0) return;
+
+      const firstElement = focusable[0];
+      const lastElement = focusable[focusable.length - 1];
+
+      if (e.shiftKey) {
+        // Shift+Tab：从第一个跳到最后一个
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab：从最后一个跳到第一个
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleTabKey);
+
+    return () => {
+      window.removeEventListener("keydown", handleTabKey);
+      // 关闭时恢复焦点到触发元素
+      if (previousActiveElement) {
+        previousActiveElement.focus();
+      }
+    };
+  }, [open]);
+
   return (
     <AnimatePresence>
       {open && (

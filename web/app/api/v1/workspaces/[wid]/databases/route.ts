@@ -71,7 +71,7 @@ export async function GET(
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { items, page, limit, total, hasMore: page * limit < total },
     });
   } catch (error) {
@@ -142,7 +142,7 @@ export async function POST(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: database }, { status: 201 });
+    return NextResponse.json({ code: 201, data: database }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

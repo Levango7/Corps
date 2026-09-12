@@ -82,6 +82,7 @@ export async function DELETE(
           where: { id: fid, workspaceId: wid },
           select: {
             id: true,
+            uploadedBy: true,
             storageKey: true,
             thumbnailKey: true,
             versions: { select: { storageKey: true } },
@@ -94,6 +95,18 @@ export async function DELETE(
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "fileNotFound"), data: null },
         { status: 404 },
+      );
+    }
+
+    // RBAC 权限检查：仅 owner/admin 或文件上传者本人可删除
+    const isOwnerOrAdmin =
+      ctx.member.role === "owner" || ctx.member.role === "admin";
+    const isUploader =
+      fileAsset.uploadedBy != null && fileAsset.uploadedBy === ctx.payload.sub;
+    if (!isOwnerOrAdmin && !isUploader) {
+      return NextResponse.json(
+        { code: 403, data: null, message: apiMsg(req, "forbidden") },
+        { status: 403 },
       );
     }
 

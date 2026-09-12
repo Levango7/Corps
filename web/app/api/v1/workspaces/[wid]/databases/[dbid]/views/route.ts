@@ -48,7 +48,7 @@ export async function GET(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: { items: result.data, total: result.data.length } });
+    return NextResponse.json({ code: 200, data: { items: result.data, total: result.data.length } });
   } catch (error) {
     console.error("[GET database views] error:", error);
     return NextResponse.json(
@@ -116,7 +116,7 @@ export async function POST(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: result.data }, { status: 201 });
+    return NextResponse.json({ code: 201, data: result.data }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -45,7 +45,7 @@ export async function GET(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: database });
+    return NextResponse.json({ code: 200, data: database });
   } catch (error) {
     console.error("[GET database] error:", error);
     return NextResponse.json(
@@ -126,7 +126,7 @@ export async function PATCH(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: result.data });
+    return NextResponse.json({ code: 200, data: result.data });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -205,7 +205,7 @@ export async function DELETE(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: { id: dbid, deleted: true } });
+    return NextResponse.json({ code: 200, data: { id: dbid, deleted: true } });
   } catch (error) {
     if (error instanceof Prisma.PrismaClientKnownRequestError) {
       if (error.code === "P2025") {

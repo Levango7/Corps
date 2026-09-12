@@ -120,7 +120,7 @@ export async function GET(
       );
     }
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: {
         items: result.items,
         page,
@@ -159,17 +159,35 @@ const listRecordsQuerySchema = z.object({
   filters: z
     .string()
     .optional()
-    .transform((val) => {
+    .transform((val, ctx) => {
       if (!val) return undefined;
-      const parsed = JSON.parse(val);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(val);
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid JSON in filters parameter",
+        });
+        return z.NEVER;
+      }
       return z.array(filterItemSchema).parse(parsed);
     }),
   sorts: z
     .string()
     .optional()
-    .transform((val) => {
+    .transform((val, ctx) => {
       if (!val) return undefined;
-      const parsed = JSON.parse(val);
+      let parsed: unknown;
+      try {
+        parsed = JSON.parse(val);
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: "Invalid JSON in sorts parameter",
+        });
+        return z.NEVER;
+      }
       return z.array(sortItemSchema).parse(parsed);
     }),
 });
@@ -223,7 +241,7 @@ export async function POST(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: result.data }, { status: 201 });
+    return NextResponse.json({ code: 201, data: result.data }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
