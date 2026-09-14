@@ -11,6 +11,7 @@
 //   · Message 用 body（非 content）存储正文
 
 import type { Prisma } from "@prisma/client";
+import { getFeedbackExamples, type FeedbackExample } from "@/lib/ai/feedback";
 
 /** 上下文聚合范围 — 每个范围对应一组查询 */
 export type AiContextScope =
@@ -113,24 +114,85 @@ interface DateCtx {
   now: Date;
 }
 
+/** 含反馈示例的上下文结果（includeFeedback 启用时返回） */
+export interface AiContextResult {
+  /** 聚合后的 markdown 上下文（含反馈示例 section） */
+  context: string;
+  /** few-shot 反馈示例（仅 includeFeedback 启用且有数据时存在） */
+  feedbackExamples?: FeedbackExample[];
+}
+
+/**
+ * 将反馈示例格式化为 markdown section，供 LLM 作为 few-shot 参考。
+ *
+ * 格式：
+ *   ## 反馈示例（用户修正后的好结果）
+ *   - 原始输出: <originalOutput 摘要>
+ *     修正输出: <correctedOutput 摘要>
+ *     备注: <comment>
+ */
+function formatFeedbackExamples(examples: FeedbackExample[]): string {
+  if (examples.length === 0) return "";
+  const lines = examples.map((ex, i) => {
+    const original = summarizeJson(ex.originalOutput);
+    const corrected = summarizeJson(ex.correctedOutput);
+    const comment = ex.comment ? `\n     备注: ${ex.comment}` : "";
+    return `  ${i + 1}. 原始输出: ${original}\n     修正输出: ${corrected}${comment}`;
+  });
+  return `## 反馈示例（用户修正后的好结果）\n${lines.join("\n")}`;
+}
+
+/** 将 JSON 值摘要为单行字符串（截断至 200 字符，避免上下文膨胀） */
+function summarizeJson(value: unknown): string {
+  if (value === null || value === undefined) return "(空)";
+  try {
+    const str = typeof value === "string" ? value : JSON.stringify(value);
+    return str.length > 200 ? str.slice(0, 200) + "…" : str;
+  } catch {
+    return "(无法序列化)";
+  }
+}
+
 /**
  * 按 scopes 聚合工作区数据，返回结构化上下文字符串供 LLM 使用。
  *
  * 每个 scope 有最大条数限制，超出截断并标注。只聚合用户有权限查看的数据
  * （RLS 通过 tx 上下文约束——调用方应将 tx 置于 runWithWorkspace 事务内）。
  *
+ * 重载说明：
+ *  - 不传 includeFeedback（4 参数）→ 返回 string（向后兼容，现有调用方不受影响）
+ *  - 传 includeFeedback=true → 返回 AiContextResult（含 context + feedbackExamples）
+ *
  * @param wid 工作区 ID
  * @param userId 当前用户 ID（用于个人维度数据如工时）
  * @param scopes 需聚合的范围列表
  * @param tx RLS 事务客户端（由 runWithWorkspace 提供）
- * @returns 拼接后的 markdown 上下文字符串，各 scope 间以空行分隔
+ * @param includeFeedback 是否注入反馈示例（few-shot），默认不启用
+ * @param capability AI 能力标识；includeFeedback 为 true 时需提供以查询对应反馈
+ * @returns 拼接后的 markdown 上下文字符串，或含反馈示例的 AiContextResult
  */
 export async function buildAiContext(
   wid: string,
   userId: string,
   scopes: AiContextScope[],
   tx: Tx,
-): Promise<string> {
+): Promise<string>;
+export async function buildAiContext(
+  wid: string,
+  userId: string,
+  scopes: AiContextScope[],
+  tx: Tx,
+  includeFeedback: true,
+  capability?: string,
+): Promise<AiContextResult>;
+export async function buildAiContext(
+  wid: string,
+  userId: string,
+  scopes: AiContextScope[],
+  tx: Tx,
+  includeFeedback?: boolean,
+  capability?: string,
+): Promise<string | AiContextResult> {
   const now = new Date();
   const dateCtx: DateCtx = {
     todayStart: startOfDay(now),
@@ -157,7 +219,34 @@ export async function buildAiContext(
       }
     }),
   );
-  return sections.filter((s): s is string => s !== null).join("\n\n");
+  const context = sections.filter((s): s is string => s !== null).join("\n\n");
+
+  // 未启用反馈注入：返回 string（向后兼容）
+  if (!includeFeedback) return context;
+
+  // 启用反馈注入：获取 few-shot 示例并格式化为 markdown section
+  try {
+    const feedbackExamples = capability
+      ? await getFeedbackExamples(wid, capability, 3, tx)
+      : [];
+
+    if (feedbackExamples.length === 0) {
+      return { context, feedbackExamples: undefined };
+    }
+
+    const feedbackSection = formatFeedbackExamples(feedbackExamples);
+    return {
+      context: feedbackSection ? `${context}\n\n${feedbackSection}` : context,
+      feedbackExamples,
+    };
+  } catch (e) {
+    // 反馈查询失败不中断上下文聚合，仅记录警告
+    console.warn(
+      "[ai-context] 反馈示例获取失败:",
+      e instanceof Error ? e.message : e,
+    );
+    return { context, feedbackExamples: undefined };
+  }
 }
 
 /** 单个 scope 的查询 + 格式化 */

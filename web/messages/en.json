@@ -2161,6 +2161,42 @@
       "actions": "Suggested Actions",
       "confirm": "Confirm",
       "cancel": "Cancel"
+    },
+    "feedback": {
+      "like": "Like",
+      "dislike": "Dislike",
+      "submitted": "Thanks for feedback",
+      "commentPlaceholder": "Enter your correction suggestion (optional)",
+      "submit": "Submit feedback",
+      "cancel": "Cancel",
+      "error": "Feedback submission failed, please try again later"
+    },
+    "usage": {
+      "pageTitle": "AI Usage Statistics",
+      "dashboard": "AI Usage Statistics",
+      "today": "Today",
+      "thisMonth": "This Month",
+      "calls": "Calls",
+      "tokens": "Token Usage",
+      "cost": "Cost",
+      "topCapabilities": "Top Capabilities",
+      "recentLogs": "Recent Logs",
+      "limitSettings": "Limit Settings",
+      "dailyTokenLimit": "Daily Token Limit",
+      "monthlyTokenLimit": "Monthly Token Limit",
+      "dailyCallLimit": "Daily Call Limit",
+      "monthlyCallLimit": "Monthly Call Limit",
+      "save": "Save",
+      "noLimit": "No limit set",
+      "usage": "Usage",
+      "success": "Success",
+      "failed": "Failed",
+      "loadFailed": "Failed to load, please try again later",
+      "saveFailed": "Failed to save, please try again later",
+      "justNow": "just now",
+      "minutesAgo": "{n}m ago",
+      "hoursAgo": "{n}h ago",
+      "daysAgo": "{n}d ago"
     }
   },
   "doc": {

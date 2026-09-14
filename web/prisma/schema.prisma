@@ -133,6 +133,11 @@ model User {
   createdCalendarEvents CalendarEvent[] @relation("CalendarEventCreator")
   // 方向 C：AI 多轮对话（知识问答会话归属用户）
   aiConversations       AiConversation[] @relation("AiConversationUser")
+  // 方向 D：AI 结果反馈
+  aiFeedbacks        AiFeedback[]     @relation("AiFeedbackUser")
+  // 方向 G：AI 使用量记录 + 限额
+  aiUsageLogs        AiUsageLog[]     @relation("AiUsageLogUser")
+  aiUsageLimits      AiUsageLimit[]   @relation("AiUsageLimitUser")
 
   @@map("users")
 }
@@ -204,6 +209,11 @@ model Workspace {
   calendarEvents CalendarEvent[]
   // 方向 C：AI 多轮对话（知识问答会话归属工作区）
   aiConversations AiConversation[]
+  // 方向 D：AI 结果反馈
+  aiFeedbacks   AiFeedback[]
+  // 方向 G：AI 使用量记录 + 限额
+  aiUsageLogs   AiUsageLog[]
+  aiUsageLimits AiUsageLimit[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -1868,4 +1878,68 @@ model AiMessage {
 
   @@index([conversationId, createdAt])
   @@map("ai_messages")
+}
+
+/// 方向 D：AI 结果反馈循环 — 用户对 AI 输出的点赞/点踩/修正反馈
+model AiFeedback {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  capability      String   @db.VarChar(50)  // AI 能力标识（如 "task-breakdown"）
+  rating          String   @db.VarChar(10)  // "positive" | "negative"
+  comment         String?  @db.Text          // 用户修正反馈文本
+  originalOutput  Json?                      // 原始 AI 输出
+  correctedOutput Json?                      // 用户修正后的输出
+  metadata        Json?                      // 额外元数据（如 messageId, conversationId）
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user            User      @relation("AiFeedbackUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, capability, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_feedback")
+}
+
+/// 方向 G：AI 使用量日志 — 记录每次 AI 调用的 Token 消耗/成本/耗时
+model AiUsageLog {
+  id            String   @id @default(uuid()) @db.Uuid
+  workspaceId   String   @map("workspace_id") @db.Uuid
+  userId        String   @map("user_id") @db.Uuid
+  capability    String   @db.VarChar(50)  // AI 能力标识
+  model         String   @db.VarChar(50)  // 使用的模型（如 "deepseek-chat"）
+  inputTokens   Int      @default(0) @map("input_tokens")
+  outputTokens  Int      @default(0) @map("output_tokens")
+  totalTokens   Int      @default(0) @map("total_tokens")
+  cost          Float    @default(0)    // 成本（美元）
+  durationMs    Int      @default(0) @map("duration_ms") // 耗时（毫秒）
+  success       Boolean  @default(true)
+  createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user          User      @relation("AiUsageLogUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([userId, createdAt])
+  @@index([workspaceId, capability, createdAt])
+  @@map("ai_usage_logs")
+}
+
+/// 方向 G：AI 使用限额 — 按用户/工作空间设置 Token 和调用次数限额
+model AiUsageLimit {
+  id                String   @id @default(uuid()) @db.Uuid
+  workspaceId       String   @map("workspace_id") @db.Uuid
+  userId            String?  @map("user_id") @db.Uuid  // null = 工作空间级默认限额
+  dailyTokenLimit   Int?     @map("daily_token_limit")   // 日 Token 限额
+  monthlyTokenLimit Int?     @map("monthly_token_limit") // 月 Token 限额
+  dailyCallLimit    Int?     @map("daily_call_limit")    // 日调用次数限额
+  monthlyCallLimit  Int?     @map("monthly_call_limit")  // 月调用次数限额
+  createdAt         DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt         DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace         Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user              User?     @relation("AiUsageLimitUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, userId])
+  @@map("ai_usage_limits")
 }

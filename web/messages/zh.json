@@ -2161,6 +2161,42 @@
       "actions": "建议操作",
       "confirm": "确认",
       "cancel": "取消"
+    },
+    "feedback": {
+      "like": "赞",
+      "dislike": "踩",
+      "submitted": "感谢反馈",
+      "commentPlaceholder": "请输入您的修正建议（可选）",
+      "submit": "提交反馈",
+      "cancel": "取消",
+      "error": "反馈提交失败，请稍后重试"
+    },
+    "usage": {
+      "pageTitle": "AI 使用统计",
+      "dashboard": "AI 使用统计",
+      "today": "今日",
+      "thisMonth": "本月",
+      "calls": "调用次数",
+      "tokens": "Token 消耗",
+      "cost": "成本",
+      "topCapabilities": "热门能力",
+      "recentLogs": "最近记录",
+      "limitSettings": "限额设置",
+      "dailyTokenLimit": "日 Token 限额",
+      "monthlyTokenLimit": "月 Token 限额",
+      "dailyCallLimit": "日调用次数限额",
+      "monthlyCallLimit": "月调用次数限额",
+      "save": "保存",
+      "noLimit": "未设置限额",
+      "usage": "用量",
+      "success": "成功",
+      "failed": "失败",
+      "loadFailed": "加载失败，请稍后重试",
+      "saveFailed": "保存失败，请稍后重试",
+      "justNow": "刚刚",
+      "minutesAgo": "{n}分钟前",
+      "hoursAgo": "{n}小时前",
+      "daysAgo": "{n}天前"
     }
   },
   "doc": {
