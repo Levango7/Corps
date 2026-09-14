@@ -1,0 +1,313 @@
+"use client";
+
+/**
+ * 创建会议弹窗 · components/meeting/MeetingCreate.tsx
+ *
+ * 表单：标题（必填）、描述（可选）、类型（即时/预约）、预约时间（type=scheduled 时显示）、
+ * 最大参与人数、允许录制。
+ *
+ * Modal 模式（fixed inset-0 + backdrop），design token 样式。
+ * 简单校验：标题非空 + 预约会议时 scheduledAt 必填。
+ */
+
+import { useEffect, useRef, useState, type FormEvent } from "react";
+import { X, Loader2, AlertCircle } from "lucide-react";
+import { useTranslations } from "next-intl";
+import { api } from "@/lib/api";
+
+/** 会议类型 */
+type MeetingType = "instant" | "scheduled";
+
+/** 创建会议 API 请求体 */
+interface CreateMeetingBody {
+  title: string;
+  description?: string;
+  type: MeetingType;
+  scheduledAt?: string;
+  maxParticipants?: number;
+  recordingEnabled?: boolean;
+}
+
+/** 创建会议 API 响应 */
+interface CreatedMeeting {
+  id: string;
+  title: string;
+}
+
+/** 表单字段标签/控件公共样式 */
+const fieldLabel =
+  "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
+const fieldControl =
+  "w-full h-9 px-2.5 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
+
+export interface MeetingCreateProps {
+  workspaceId: string;
+  onClose: () => void;
+  onCreated: (meeting: CreatedMeeting) => void;
+}
+
+export function MeetingCreate({
+  workspaceId,
+  onClose,
+  onCreated,
+}: MeetingCreateProps) {
+  const t = useTranslations("meeting");
+  const tButton = useTranslations("button");
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [type, setType] = useState<MeetingType>("instant");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [maxParticipants, setMaxParticipants] = useState("");
+  const [recordingEnabled, setRecordingEnabled] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Esc 关闭 + focus trap
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    window.addEventListener("keydown", onKey);
+    // 自动聚焦标题输入
+    const firstInput = dialogRef.current?.querySelector<HTMLElement>("input, textarea, select");
+    firstInput?.focus();
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    const trimmedTitle = title.trim();
+    if (!trimmedTitle || submitting) return;
+
+    // 预约会议校验：必须填写预约时间
+    if (type === "scheduled" && !scheduledAt) {
+      setError(t("scheduledAtRequired"));
+      return;
+    }
+
+    setSubmitting(true);
+    setError("");
+    try {
+      const body: CreateMeetingBody = {
+        title: trimmedTitle,
+        type,
+        recordingEnabled,
+      };
+      if (description.trim()) body.description = description.trim();
+      if (type === "scheduled" && scheduledAt) {
+        body.scheduledAt = new Date(scheduledAt).toISOString();
+      }
+      if (maxParticipants) {
+        const n = parseInt(maxParticipants, 10);
+        if (!Number.isNaN(n) && n > 0) body.maxParticipants = n;
+      }
+
+      const created = await api<CreatedMeeting>(
+        `/api/v1/workspaces/${workspaceId}/meetings`,
+        { method: "POST", body: JSON.stringify(body) },
+      );
+      onCreated(created);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("createFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // 即时会议的最小日期时间（当前时间）
+  const minDateTime = new Date().toISOString().slice(0, 16);
+
+  return (
+    <div
+      ref={dialogRef}
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="meeting-create-title"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        onClose();
+      }}
+    >
+      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+        {/* 头部 */}
+        <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
+          <h2
+            id="meeting-create-title"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+          >
+            {t("create")}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            aria-label={tButton("close")}
+          >
+            <X size={16} />
+          </button>
+        </header>
+
+        {/* 表单 */}
+        <form onSubmit={submit} className="px-4 sm:px-5 py-4 space-y-4">
+          {/* 标题（必填） */}
+          <div>
+            <label className={fieldLabel} htmlFor="mc-title">
+              {t("meetingTitle")}
+              <span className="text-[var(--danger)]">*</span>
+            </label>
+            <input
+              id="mc-title"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+              placeholder={t("meetingTitlePlaceholder")}
+              className={`${fieldControl} h-10`}
+              aria-required="true"
+            />
+          </div>
+
+          {/* 描述（可选） */}
+          <div>
+            <label className={fieldLabel} htmlFor="mc-desc">
+              {t("description")}
+            </label>
+            <textarea
+              id="mc-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              maxLength={1000}
+              placeholder={t("descriptionPlaceholder")}
+              className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+            />
+          </div>
+
+          {/* 类型 */}
+          <div>
+            <label className={fieldLabel}>{t("type")}</label>
+            <div className="flex gap-2">
+              <button
+                type="button"
+                onClick={() => setType("instant")}
+                className={[
+                  "flex-1 h-9 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)]",
+                  type === "instant"
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]",
+                ].join(" ")}
+                aria-pressed={type === "instant"}
+              >
+                {t("instant")}
+              </button>
+              <button
+                type="button"
+                onClick={() => setType("scheduled")}
+                className={[
+                  "flex-1 h-9 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)]",
+                  type === "scheduled"
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]",
+                ].join(" ")}
+                aria-pressed={type === "scheduled"}
+              >
+                {t("scheduled")}
+              </button>
+            </div>
+          </div>
+
+          {/* 预约时间（仅 type=scheduled 时显示） */}
+          {type === "scheduled" && (
+            <div>
+              <label className={fieldLabel} htmlFor="mc-scheduled">
+                {t("scheduledAt")}
+                <span className="text-[var(--danger)]">*</span>
+              </label>
+              <input
+                id="mc-scheduled"
+                type="datetime-local"
+                min={minDateTime}
+                value={scheduledAt}
+                onChange={(e) => setScheduledAt(e.target.value)}
+                className={fieldControl}
+                aria-required="true"
+              />
+            </div>
+          )}
+
+          {/* 最大参与人数 + 允许录制 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={fieldLabel} htmlFor="mc-max">
+                {t("maxParticipants")}
+              </label>
+              <input
+                id="mc-max"
+                type="number"
+                min={1}
+                max={500}
+                value={maxParticipants}
+                onChange={(e) => setMaxParticipants(e.target.value)}
+                placeholder={t("maxParticipantsPlaceholder")}
+                className={fieldControl}
+              />
+            </div>
+            <div>
+              <label className={fieldLabel}>{t("recordingEnabled")}</label>
+              <label className="inline-flex items-center gap-2 h-9 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={recordingEnabled}
+                  onChange={(e) => setRecordingEnabled(e.target.checked)}
+                  className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)]"
+                />
+                <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
+                  {recordingEnabled ? t("recordingOn") : t("recordingOff")}
+                </span>
+              </label>
+            </div>
+          </div>
+
+          {/* 错误提示 */}
+          {error && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">
+              <AlertCircle size={14} className="shrink-0 mt-0.5" />
+              <span className="flex-1">{error}</span>
+              <button
+                type="button"
+                onClick={() => setError("")}
+                className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
+                aria-label={tButton("close")}
+              >
+                <X size={14} />
+              </button>
+            </div>
+          )}
+
+          {/* 操作按钮 */}
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              {tButton("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={!title.trim() || submitting}
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              {submitting && <Loader2 size={15} className="animate-spin" />}
+              {submitting ? t("creating") : t("create")}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}

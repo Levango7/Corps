@@ -33,10 +33,14 @@ export function unauthorizedResponse(req: NextRequest): NextResponse {
   );
 }
 
-/** AI 服务未配置响应（503） */
-export function aiNotConfiguredResponse(): NextResponse {
+/** AI 服务未配置响应（503）
+ *
+ * code 对齐统一数字模式（原 "AI_NOT_CONFIGURED" 字符串违反 { code, data, message } 信封约定）。
+ * 接受 req 参数以备国际化；apiMsg 暂无 aiNotConfigured key，先用硬编码英文。
+ */
+export function aiNotConfiguredResponse(req: NextRequest): NextResponse {
   return NextResponse.json(
-    { code: "AI_NOT_CONFIGURED", message: "AI service is not configured", data: null },
+    { code: 503, message: "AI service is not configured", data: null },
     { status: 503 },
   );
 }

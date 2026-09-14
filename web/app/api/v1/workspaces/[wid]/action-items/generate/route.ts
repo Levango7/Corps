@@ -89,7 +89,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   }
 
   // AI 服务配置检查（未配置时无 fallback，直接 503）
-  if (!isAiConfigured()) return aiNotConfiguredResponse();
+  if (!isAiConfigured()) return aiNotConfiguredResponse(req);
 
   let body: z.infer<typeof schema>;
   try {

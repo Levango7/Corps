@@ -33,6 +33,7 @@ export const API_MESSAGES = {
   taskNotFound: { zh: "任务不存在", en: "Task not found" },
   decisionNotFound: { zh: "决策不存在", en: "Decision not found" },
   documentNotFound: { zh: "文档不存在", en: "Document not found" },
+  whiteboardNotFound: { zh: "白板不存在", en: "Whiteboard not found" },
   memberNotFound: { zh: "成员不存在", en: "Member not found" },
   milestoneNotFound: { zh: "里程碑不存在", en: "Milestone not found" },
   labelNotFound: { zh: "标签不存在", en: "Label not found" },
@@ -43,6 +44,13 @@ export const API_MESSAGES = {
   userNotFound: { zh: "用户不存在", en: "User not found" },
   commentNotFound: { zh: "评论不存在", en: "Comment not found" },
   widgetNotFound: { zh: "Widget 不存在", en: "Widget not found" },
+  timeEntryNotFound: { zh: "工时记录不存在", en: "Time entry not found" },
+  timerAlreadyRunning: {
+    zh: "已有正在进行的计时，请先停止",
+    en: "A timer is already running; please stop it first",
+  },
+  timerNotRunning: { zh: "该计时已停止", en: "This timer is not running" },
+
 
   /* ── 任务 ── */
   assigneeNotMember: {
@@ -323,6 +331,68 @@ export const API_MESSAGES = {
     en: "Database unreachable",
   },
 
+  /* ── 独立 IM（会话/消息）── */
+  conversationNotFound: { zh: "会话不存在", en: "Conversation not found" },
+  notConversationMember: {
+    zh: "不是该会话成员",
+    en: "Not a member of this conversation",
+  },
+  onlyOwnerAdminManageConversation: {
+    zh: "仅所有者或管理员可管理会话",
+    en: "Only the owner or admins can manage the conversation",
+  },
+  onlyOwnerChangeConversationRole: {
+    zh: "仅所有者可更改会话成员角色",
+    en: "Only the owner can change conversation member roles",
+  },
+  directChatMembersInvalid: {
+    zh: "单聊成员必须为两人（含自己）",
+    en: "Direct chat must have exactly two members (including yourself)",
+  },
+  groupChatTitleRequired: {
+    zh: "群聊标题必填",
+    en: "Group chat title is required",
+  },
+  cannotRemoveConversationOwner: {
+    zh: "不能移除会话所有者",
+    en: "Cannot remove the conversation owner",
+  },
+  memberAlreadyInConversation: {
+    zh: "该用户已是会话成员",
+    en: "This user is already a member of the conversation",
+  },
+  messageNotFound: { zh: "消息不存在", en: "Message not found" },
+  messageRevoked: { zh: "消息已被撤回", en: "Message has been revoked" },
+  canOnlyEditOwnMessage: {
+    zh: "只能编辑自己的消息",
+    en: "You can only edit your own messages",
+  },
+  revokeTimeExceeded: {
+    zh: "消息发送超过 2 分钟，无法撤回",
+    en: "Messages can only be revoked within 2 minutes of sending",
+  },
+
+  /* ── 音视频会议（阶段 6 任务 218）── */
+  meetingNotFound: { zh: "会议不存在", en: "Meeting not found" },
+  meetingEnded: { zh: "会议已结束", en: "Meeting has ended" },
+  meetingFull: { zh: "会议人数已满", en: "Meeting is full" },
+
+  /* ── 回收站（阶段 6）── */
+  restored: { zh: "已恢复", en: "Restored" },
+  notDeleted: { zh: "该项未被软删除", en: "This item is not soft-deleted" },
+  itemNotFound: { zh: "回收站项不存在", en: "Recycle bin item not found" },
+  permanentlyDeleted: { zh: "已永久删除", en: "Permanently deleted" },
+
+  /* ── 文档级权限（阶段 6 · 任务 222）── */
+  docPermissionNotFound: {
+    zh: "权限记录不存在",
+    en: "Permission not found",
+  },
+  noManagePermission: {
+    zh: "需要管理权限",
+    en: "Manage permission required",
+  },
+
   /* ── 临时权限授权（F2 任务 186）── */
   cannotGrantSelf: {
     zh: "不能为自己授予临时授权",
@@ -336,6 +406,54 @@ export const API_MESSAGES = {
     zh: "临时授权不存在",
     en: "Temporary grant not found",
   },
+
+  /* ── 工作流自动化（任务 225）── */
+  workflowNotFound: { zh: "工作流不存在", en: "Workflow not found" },
+
+  /* ── 审批流（任务 220）── */
+  approvalNotFound: { zh: "审批不存在", en: "Approval not found" },
+  approvalTemplateNotFound: {
+    zh: "审批模板不存在",
+    en: "Approval template not found",
+  },
+  approvalNotPending: { zh: "审批已处理", en: "Approval already processed" },
+  notApplicant: {
+    zh: "只有申请人可操作",
+    en: "Only applicant can perform this action",
+  },
+  notApprover: {
+    zh: "您不是当前节点的审批人",
+    en: "You are not the approver of this node",
+  },
+
+  /* ── OKR（目标与关键结果）── */
+  objectiveNotFound: { zh: "目标不存在", en: "Objective not found" },
+  keyResultNotFound: { zh: "关键结果不存在", en: "Key result not found" },
+
+  /* ── 通讯录（任务 227）── */
+  contactNotFound: { zh: "联系人不存在", en: "Contact not found" },
+  contactGroupNotFound: { zh: "联系人分组不存在", en: "Contact group not found" },
+  contactGroupNameExists: { zh: "分组名已存在", en: "A group with this name already exists" },
+
+  /* ── 项目模板（任务 228）── */
+  templateNotFound: { zh: "项目模板不存在", en: "Project template not found" },
+  templateEmpty: { zh: "模板中没有任务", en: "The template has no tasks" },
+
+  /* ── 表单（任务 230）── */
+  formNotFound: { zh: "表单不存在", en: "Form not found" },
+
+  /* ── 公告（任务 233）── */
+  announcementNotFound: { zh: "公告不存在", en: "Announcement not found" },
+
+  /* ── 会议纪要（任务 232）── */
+  minutesNotFound: { zh: "会议纪要不存在", en: "Meeting minutes not found" },
+
+  /* ── 知识库 Wiki（任务 235）── */
+  wikiPageNotFound: { zh: "Wiki 页面不存在", en: "Wiki page not found" },
+  wikiSlugConflict: { zh: "页面标识冲突", en: "Page slug conflict" },
+
+  /* ── 日历事件（任务 236）── */
+  calendarEventNotFound: { zh: "日历事件不存在", en: "Calendar event not found" },
 } as const;
 
 /**

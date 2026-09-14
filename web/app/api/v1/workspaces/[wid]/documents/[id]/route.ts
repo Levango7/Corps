@@ -55,6 +55,8 @@ const updateDocSchema = z.object({
   shareExpiresAt: z.union([z.string().datetime(), z.null()]).optional(),
   /** F5: 分享密码明文（null=清除密码；不传=保持原状；存 scrypt hash） */
   sharePassword: z.union([z.string().min(1).max(128), z.null()]).optional(),
+  /** 阶段 6：文档可见性（private | workspace | shared） */
+  visibility: z.enum(["private", "workspace", "shared"]).optional(),
 });
 
 /** PATCH /v1/workspaces/{wid}/documents/{id} — 更新标题/正文/发布状态/分享 token */
@@ -90,9 +92,11 @@ export async function PATCH(
           shareToken?: string | null;
           shareExpiresAt?: Date | null;
           sharePassword?: string | null;
+          visibility?: string;
         } = {};
         if (validated.title !== undefined) data.title = validated.title;
         if (validated.markdown !== undefined) data.markdown = validated.markdown;
+        if (validated.visibility !== undefined) data.visibility = validated.visibility;
         if (validated.publish) {
           data.publishedMarkdown = validated.markdown ?? existing.markdown;
           data.publishedAt = new Date();

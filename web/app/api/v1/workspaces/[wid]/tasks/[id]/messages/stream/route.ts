@@ -103,13 +103,23 @@ export async function GET(
 
   // 标记当前用户在线（upsert ChatPresence；经 GUC 短事务——chat_presences
   // 受 FORCE RLS，按 task→workspace 关联套租户谓词）
-  await withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
-    tx.chatPresence.upsert({
-      where: { taskId_userId: { taskId: id, userId } },
-      create: { taskId: id, userId },
-      update: { lastSeen: new Date() },
-    }),
-  ).catch(() => {
+  // taskId 变可选后 Prisma 不生成 taskId_userId 复合唯一键，改用 findFirst + by id
+  await withGuc({ workspace_id: wid, user_id: userId }, async (tx) => {
+    const presence = await tx.chatPresence.findFirst({
+      where: { taskId: id, userId },
+      select: { id: true },
+    });
+    if (presence) {
+      await tx.chatPresence.update({
+        where: { id: presence.id },
+        data: { lastSeen: new Date() },
+      });
+    } else {
+      await tx.chatPresence.create({
+        data: { taskId: id, userId },
+      });
+    }
+  }).catch(() => {
     // 在线状态写入失败不阻塞 SSE 连接（容错降级）
   });
 
@@ -159,12 +169,18 @@ export async function GET(
           // 流已关闭
         }
         // 刷新在线状态（容错；同上经 GUC 短事务——心跳回调不可持长事务）
-        withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
-          tx.chatPresence.update({
-            where: { taskId_userId: { taskId: id, userId } },
-            data: { lastSeen: new Date() },
-          }),
-        ).catch(() => {});
+        withGuc({ workspace_id: wid, user_id: userId }, async (tx) => {
+          const presence = await tx.chatPresence.findFirst({
+            where: { taskId: id, userId },
+            select: { id: true },
+          });
+          if (presence) {
+            await tx.chatPresence.update({
+              where: { id: presence.id },
+              data: { lastSeen: new Date() },
+            });
+          }
+        }).catch(() => {});
       }, HEARTBEAT_INTERVAL_MS);
 
       // 4. 空闲超时自动断开
@@ -191,9 +207,15 @@ export async function GET(
         clearTimeout(idleTimeout);
         releaseSseSlot();
         // 广播离线并清理在线状态记录（异步，不阻塞；经 GUC 短事务）
-        withGuc({ workspace_id: wid, user_id: userId }, (tx) =>
-          tx.chatPresence.delete({ where: { taskId_userId: { taskId: id, userId } } }),
-        ).catch(() => {});
+        withGuc({ workspace_id: wid, user_id: userId }, async (tx) => {
+          const presence = await tx.chatPresence.findFirst({
+            where: { taskId: id, userId },
+            select: { id: true },
+          });
+          if (presence) {
+            await tx.chatPresence.delete({ where: { id: presence.id } });
+          }
+        }).catch(() => {});
         emitChatEvent(id, { type: "presence", taskId: id, userId, online: false });
       };
     },

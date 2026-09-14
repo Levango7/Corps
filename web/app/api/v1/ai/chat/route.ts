@@ -7,6 +7,7 @@ import { streamText } from "ai";
 import { z } from "zod";
 import { defaultModel } from "@/lib/ai/deepseek";
 import { getUserId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({
@@ -29,7 +30,11 @@ export async function POST(req: NextRequest) {
   if (!userId) return unauthorizedResponse(req);
 
   // 2) AI 服务配置检查
-  if (!isAiConfigured()) return aiNotConfiguredResponse();
+  if (!isAiConfigured()) return aiNotConfiguredResponse(req);
+
+  // 2.5) 限流：60s 内最多 20 次
+  const limited = await checkRateLimit(req, "ai-chat", { windowMs: 60_000, max: 20 });
+  if (limited) return limited;
 
   // 3) body 校验
   let body: z.infer<typeof schema>;
@@ -52,11 +57,19 @@ export async function POST(req: NextRequest) {
   ];
 
   // 5) 流式问答：system 注入文档内容作为上下文
-  const result = streamText({
-    model: defaultModel,
-    system: `你是文档问答助手。根据以下文档内容回答用户问题。如果问题超出文档范围，请如实告知。\n\n文档内容：\n${body.documentContent}`,
-    messages,
-  });
+  try {
+    const result = streamText({
+      model: defaultModel,
+      system: `你是文档问答助手。根据以下文档内容回答用户问题。如果问题超出文档范围，请如实告知。\n\n文档内容：\n${body.documentContent}`,
+      messages,
+    });
 
-  return result.toUIMessageStreamResponse();
+    return result.toUIMessageStreamResponse();
+  } catch (error) {
+    console.error("[ai/chat] error:", error);
+    return NextResponse.json(
+      { code: 503, message: "AI service unavailable", data: null },
+      { status: 503 },
+    );
+  }
 }
