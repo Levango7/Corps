@@ -840,33 +840,39 @@
     "decisionsFailed": "Failed to export decisions"
   },
   "calendar": {
-    "title": "Calendar integration",
-    "subtitle": "Sync task due dates to external calendars so nothing slips through.",
-    "connectGoogle": "Connect Google",
-    "connectOutlook": "Connect Outlook",
-    "connected": "Connected",
-    "disconnected": "Not connected",
-    "disconnect": "Disconnect",
-    "lastSync": "Last sync",
-    "syncNow": "Sync now",
-    "syncing": "Syncing",
-    "syncSuccess": "Tasks synced",
-    "syncFailed": "Sync failed",
-    "syncedTo": "Synced to {provider}",
-    "syncSettings": "Sync settings",
-    "syncSettingsHint": "Control which tasks sync and how reminders are sent.",
-    "syncDueDateOnly": "Only sync tasks with a due date",
-    "syncDueDateOnlyHint": "Tasks without a due date won't sync to the calendar",
-    "remindOneDay": "Remind 1 day before",
-    "remindOneDayHint": "Send a calendar reminder 1 day before the due date",
-    "remindOneHour": "Remind 1 hour before",
-    "remindOneHourHint": "Send a calendar reminder 1 hour before the due date",
-    "confirmDisconnect": "Disconnect this calendar?",
-    "googleHint": "Sync task due dates to Google Calendar",
-    "outlookHint": "Sync task due dates to Outlook Calendar",
-    "loadFailed": "Failed to load",
-    "disconnectFailed": "Failed to disconnect",
-    "disconnectSuccess": "Disconnected"
+    "title": "Calendar",
+    "month": "Month",
+    "week": "Week",
+    "day": "Day",
+    "today": "Today",
+    "newEvent": "New Event",
+    "editEvent": "Edit Event",
+    "deleteEvent": "Delete",
+    "deleteConfirm": "Delete this event?",
+    "eventTitle": "Event title",
+    "eventDescription": "Description",
+    "startDate": "Start",
+    "endDate": "End",
+    "allDay": "All day",
+    "location": "Location",
+    "color": "Color",
+    "noEvents": "No events",
+    "loading": "Loading…",
+    "cancel": "Cancel",
+    "save": "Save",
+    "createSuccess": "Event created",
+    "updateSuccess": "Event updated",
+    "deleteSuccess": "Event deleted",
+    "loadError": "Failed to load",
+    "saveError": "Failed to save",
+    "notFound": "Event not found",
+    "sunday": "Sun",
+    "monday": "Mon",
+    "tuesday": "Tue",
+    "wednesday": "Wed",
+    "thursday": "Thu",
+    "friday": "Fri",
+    "saturday": "Sat"
   },
   "legal": {
     "termsTitle": "Terms of Service",
@@ -1412,18 +1418,54 @@
     "markdown": "Markdown",
     "slashMenu": {
       "empty": "No matching command for \"{query}\"",
-      "h1": { "label": "Heading 1", "description": "Large section title" },
-      "h2": { "label": "Heading 2", "description": "Medium section title" },
-      "bulletList": { "label": "Bullet list", "description": "Unordered list" },
-      "orderedList": { "label": "Numbered list", "description": "Ordered list" },
-      "taskList": { "label": "Task list", "description": "Checkable items" },
-      "quote": { "label": "Quote", "description": "Blockquote" },
-      "codeBlock": { "label": "Code block", "description": "Preformatted code" },
-      "divider": { "label": "Divider", "description": "Horizontal rule" },
-      "table": { "label": "Table", "description": "3×3 grid" },
-      "image": { "label": "Image", "description": "Upload and embed" },
-      "decision": { "label": "Decision mark", "description": "Embed a decision record" },
-      "task": { "label": "Task embed", "description": "Embed a task card" }
+      "h1": {
+        "label": "Heading 1",
+        "description": "Large section title"
+      },
+      "h2": {
+        "label": "Heading 2",
+        "description": "Medium section title"
+      },
+      "bulletList": {
+        "label": "Bullet list",
+        "description": "Unordered list"
+      },
+      "orderedList": {
+        "label": "Numbered list",
+        "description": "Ordered list"
+      },
+      "taskList": {
+        "label": "Task list",
+        "description": "Checkable items"
+      },
+      "quote": {
+        "label": "Quote",
+        "description": "Blockquote"
+      },
+      "codeBlock": {
+        "label": "Code block",
+        "description": "Preformatted code"
+      },
+      "divider": {
+        "label": "Divider",
+        "description": "Horizontal rule"
+      },
+      "table": {
+        "label": "Table",
+        "description": "3×3 grid"
+      },
+      "image": {
+        "label": "Image",
+        "description": "Upload and embed"
+      },
+      "decision": {
+        "label": "Decision mark",
+        "description": "Embed a decision record"
+      },
+      "task": {
+        "label": "Task embed",
+        "description": "Embed a task card"
+      }
     },
     "decisionMark": {
       "cardLabel": "Decision",
@@ -2011,7 +2053,6 @@
       "deleteFailed": "Failed to delete conversation",
       "suggestionFailed": "Failed to fetch suggestions"
     },
-
     "meetingFlow": {
       "title": "AI Meeting Flow",
       "analyze": "AI Analyze",
@@ -2254,6 +2295,46 @@
       "loadFailed": "Load failed",
       "cancel": "Cancel"
     },
+    "aiMeeting": {
+      "title": "Meeting AI",
+      "loading": "Loading…",
+      "loadFailed": "Load failed",
+      "error": "Operation failed",
+      "create": "New Session",
+      "created": "Session created",
+      "titlePlaceholder": "Enter meeting title…",
+      "sessions": "Sessions",
+      "noSessions": "No meeting sessions",
+      "active": "Active",
+      "paused": "Paused",
+      "ended": "Ended",
+      "transcriptInput": "Transcript Input",
+      "speakerPlaceholder": "Speaker",
+      "textPlaceholder": "Enter speech content…",
+      "transcriptAdded": "Transcript added",
+      "transcriptCount": "{n} segments",
+      "analyze": "AI Analyze",
+      "analyzed": "Analysis complete",
+      "analyzeFailed": "Analysis failed, please retry",
+      "needTranscript": "Please add transcript first",
+      "noResults": "No action items or decisions extracted",
+      "summary": "Summary",
+      "actionItems": "Action Items",
+      "decisions": "Decisions",
+      "end": "End Meeting",
+      "confirmEnd": "End this meeting?",
+      "delete": "Delete Session",
+      "confirmDelete": "Delete this meeting session?",
+      "deleted": "Session deleted",
+      "markComplete": "Mark complete",
+      "markSkip": "Skip",
+      "skip": "Skip",
+      "confidence": "Confidence",
+      "noActions": "No action items",
+      "noDecisions": "No decisions",
+      "confirm": "Confirm",
+      "reject": "Reject"
+    },
     "feedback": {
       "like": "Like",
       "dislike": "Dislike",
@@ -2343,6 +2424,42 @@
       "templateUpdated": "Template updated successfully",
       "templateDeleted": "Template deleted successfully",
       "close": "Close"
+    },
+    "aiVoice": {
+      "title": "Voice Command",
+      "startRecording": "Start Recording",
+      "stopRecording": "Stop Recording",
+      "processing": "Processing…",
+      "transcript": "Transcript",
+      "confidence": "Confidence",
+      "parameters": "Parameters",
+      "confirm": "Confirm",
+      "cancel": "Cancel",
+      "executed": "Executed",
+      "notSupported": "Speech recognition is not supported in this browser. Please use Chrome or Edge.",
+      "error": "Operation failed, please try again later",
+      "errorUnauthorized": "Not signed in or session expired",
+      "errorAiNotConfigured": "AI service is not configured",
+      "errorRecognition": "Speech recognition failed, please try again",
+      "errorPermissionDenied": "Microphone permission denied, please allow and retry",
+      "intentCreateTask": "Create Task",
+      "intentQuerySchedule": "Query Schedule",
+      "intentSendMessage": "Send Message",
+      "intentGenerateReport": "Generate Report",
+      "intentSearchKnowledge": "Search Knowledge",
+      "intentOpenPage": "Open Page",
+      "intentUnknown": "Unknown Intent",
+      "settingsTitle": "Voice Settings",
+      "loading": "Loading…",
+      "loadFailed": "Failed to load, please try again later",
+      "enabled": "Enable Voice",
+      "enabledDesc": "When enabled, you can operate the workspace via voice commands",
+      "language": "Recognition Language",
+      "speed": "Voice Speed",
+      "wakeWord": "Wake Word",
+      "save": "Save",
+      "saving": "Saving…",
+      "saved": "Saved"
     }
   },
   "doc": {
@@ -2775,41 +2892,6 @@
     "loadError": "Failed to load",
     "saveError": "Failed to save",
     "notFound": "Page not found"
-  },
-  "calendar": {
-    "title": "Calendar",
-    "month": "Month",
-    "week": "Week",
-    "day": "Day",
-    "today": "Today",
-    "newEvent": "New Event",
-    "editEvent": "Edit Event",
-    "deleteEvent": "Delete",
-    "deleteConfirm": "Delete this event?",
-    "eventTitle": "Event title",
-    "eventDescription": "Description",
-    "startDate": "Start",
-    "endDate": "End",
-    "allDay": "All day",
-    "location": "Location",
-    "color": "Color",
-    "noEvents": "No events",
-    "loading": "Loading…",
-    "cancel": "Cancel",
-    "save": "Save",
-    "createSuccess": "Event created",
-    "updateSuccess": "Event updated",
-    "deleteSuccess": "Event deleted",
-    "loadError": "Failed to load",
-    "saveError": "Failed to save",
-    "notFound": "Event not found",
-    "sunday": "Sun",
-    "monday": "Mon",
-    "tuesday": "Tue",
-    "wednesday": "Wed",
-    "thursday": "Thu",
-    "friday": "Fri",
-    "saturday": "Sat"
   },
   "timetrack": {
     "title": "Time Tracking",

@@ -146,6 +146,11 @@ model User {
   // 方向 F：AI 个性化
   aiUserBehaviors    AiUserBehavior[]   @relation("AiUserBehaviorUser")
   aiPersonalizations AiPersonalization[] @relation("AiPersonalizationUser")
+  // 方向 G：实时会议 AI
+  aiMeetingSessions  AiMeetingSession[] @relation("AiMeetingSessionUser")
+  // 方向 H：AI 语音交互
+  aiVoiceCommands    AiVoiceCommand[]   @relation("AiVoiceCommandUser")
+  aiVoicePreference  AiVoicePreference? @relation("AiVoicePreferenceUser")
 
   @@map("users")
 }
@@ -238,6 +243,12 @@ model Workspace {
   // 方向 F：AI 个性化
   aiUserBehaviors    AiUserBehavior[]
   aiPersonalizations AiPersonalization[]
+  // 方向 G：实时会议 AI
+  aiMeetingSessions    AiMeetingSession[]
+  aiMeetingActionItems AiMeetingActionItem[]
+  aiMeetingDecisions   AiMeetingDecision[]
+  // 方向 H：AI 语音交互
+  aiVoiceCommands      AiVoiceCommand[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -2172,4 +2183,103 @@ model AiPersonalization {
 
   @@index([userId, type, createdAt])
   @@map("ai_personalizations")
+}
+// 方向 G：实时会议 AI — 会议会话
+model AiMeetingSession {
+  id              String   @id @default(uuid()) @db.Uuid
+  workspaceId     String   @map("workspace_id") @db.Uuid
+  userId          String   @map("user_id") @db.Uuid
+  title           String   @db.VarChar(200)
+  status          String   @default("active") @db.VarChar(20) // active, paused, ended
+  transcript      Json     @default("[]")
+  summary         String?  @db.Text
+  participantCount Int     @default(0)
+  startTime       DateTime @default(now()) @db.Timestamptz @map("start_time")
+  endTime         DateTime? @db.Timestamptz @map("end_time")
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace       Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user            User      @relation("AiMeetingSessionUser", fields: [userId], references: [id], onDelete: Cascade)
+  actionItems     AiMeetingActionItem[]
+  decisions       AiMeetingDecision[]
+
+  @@index([workspaceId, status])
+  @@map("ai_meeting_sessions")
+}
+
+// 方向 G：实时会议 AI — 行动项
+model AiMeetingActionItem {
+  id          String   @id @default(uuid()) @db.Uuid
+  sessionId   String   @map("session_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  content     String   @db.Text
+  assigneeId  String?  @map("assignee_id") @db.Uuid
+  dueDate     DateTime? @db.Timestamptz @map("due_date")
+  status      String   @default("pending") @db.VarChar(20) // pending, completed, skipped
+  extractedBy String   @default("ai") @db.VarChar(10) // ai, manual
+  confidence  Float    @default(0)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  session     AiMeetingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, status])
+  @@map("ai_meeting_action_items")
+}
+
+// 方向 G：实时会议 AI — 决策
+model AiMeetingDecision {
+  id          String   @id @default(uuid()) @db.Uuid
+  sessionId   String   @map("session_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  content     String   @db.Text
+  context     String?  @db.Text
+  participants Json    @default("[]")
+  status      String   @default("proposed") @db.VarChar(20) // proposed, confirmed, rejected
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  session     AiMeetingSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId, status])
+  @@map("ai_meeting_decisions")
+}
+
+// 方向 H：AI 语音交互 — 命令记录
+model AiVoiceCommand {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  transcript  String   @db.Text
+  intent      String?  @db.VarChar(100)
+  parameters  Json     @default("{}")
+  executed    Boolean  @default(false)
+  result      Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("AiVoiceCommandUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("ai_voice_commands")
+}
+
+// 方向 H：AI 语音交互 — 用户偏好
+model AiVoicePreference {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @unique @map("user_id") @db.Uuid
+  language    String   @default("zh-CN") @db.VarChar(10)
+  voiceId     String?  @map("voice_id") @db.VarChar(50)
+  speed       Float    @default(1.0)
+  wakeWord    String   @default("你好小助手") @db.VarChar(50)
+  enabled     Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  user        User      @relation("AiVoicePreferenceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("ai_voice_preferences")
 }

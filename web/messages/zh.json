@@ -840,33 +840,39 @@
     "decisionsFailed": "导出决策记录失败"
   },
   "calendar": {
-    "title": "日历集成",
-    "subtitle": "将任务截止日期同步到外部日历，避免遗漏。",
-    "connectGoogle": "连接 Google",
-    "connectOutlook": "连接 Outlook",
-    "connected": "已连接",
-    "disconnected": "未连接",
-    "disconnect": "断开连接",
-    "lastSync": "最后同步",
-    "syncNow": "立即同步",
-    "syncing": "同步中",
-    "syncSuccess": "任务已同步",
-    "syncFailed": "同步失败",
-    "syncedTo": "已同步到 {provider}",
-    "syncSettings": "同步设置",
-    "syncSettingsHint": "控制哪些任务同步以及提醒方式。",
-    "syncDueDateOnly": "仅同步有截止日期的任务",
-    "syncDueDateOnlyHint": "未设置截止日期的任务不会同步到日历",
-    "remindOneDay": "同步前 1 天提醒",
-    "remindOneDayHint": "截止日期前 1 天发送日历提醒",
-    "remindOneHour": "同步前 1 小时提醒",
-    "remindOneHourHint": "截止日期前 1 小时发送日历提醒",
-    "confirmDisconnect": "确定要断开连接吗？",
-    "googleHint": "同步任务截止日期到 Google 日历",
-    "outlookHint": "同步任务截止日期到 Outlook 日历",
-    "loadFailed": "加载失败",
-    "disconnectFailed": "断开失败",
-    "disconnectSuccess": "已断开连接"
+    "title": "日历",
+    "month": "月",
+    "week": "周",
+    "day": "日",
+    "today": "今天",
+    "newEvent": "新建事件",
+    "editEvent": "编辑事件",
+    "deleteEvent": "删除事件",
+    "deleteConfirm": "确定删除此事件？",
+    "eventTitle": "事件标题",
+    "eventDescription": "描述",
+    "startDate": "开始时间",
+    "endDate": "结束时间",
+    "allDay": "全天",
+    "location": "地点",
+    "color": "颜色",
+    "noEvents": "暂无事件",
+    "loading": "加载中…",
+    "cancel": "取消",
+    "save": "保存",
+    "createSuccess": "事件创建成功",
+    "updateSuccess": "事件更新成功",
+    "deleteSuccess": "事件已删除",
+    "loadError": "加载失败",
+    "saveError": "保存失败",
+    "notFound": "事件不存在",
+    "sunday": "日",
+    "monday": "一",
+    "tuesday": "二",
+    "wednesday": "三",
+    "thursday": "四",
+    "friday": "五",
+    "saturday": "六"
   },
   "legal": {
     "termsTitle": "服务条款",
@@ -1412,18 +1418,54 @@
     "markdown": "Markdown",
     "slashMenu": {
       "empty": "没有匹配「{query}」的命令",
-      "h1": { "label": "标题 1", "description": "大节标题" },
-      "h2": { "label": "标题 2", "description": "中节标题" },
-      "bulletList": { "label": "无序列表", "description": "项目符号列表" },
-      "orderedList": { "label": "有序列表", "description": "编号列表" },
-      "taskList": { "label": "任务列表", "description": "可勾选项" },
-      "quote": { "label": "引用", "description": "块引用" },
-      "codeBlock": { "label": "代码块", "description": "预格式化代码" },
-      "divider": { "label": "分割线", "description": "水平分隔线" },
-      "table": { "label": "表格", "description": "3×3 网格" },
-      "image": { "label": "图片", "description": "上传并嵌入" },
-      "decision": { "label": "决策标记", "description": "嵌入决策记录" },
-      "task": { "label": "任务嵌入", "description": "嵌入任务卡片" }
+      "h1": {
+        "label": "标题 1",
+        "description": "大节标题"
+      },
+      "h2": {
+        "label": "标题 2",
+        "description": "中节标题"
+      },
+      "bulletList": {
+        "label": "无序列表",
+        "description": "项目符号列表"
+      },
+      "orderedList": {
+        "label": "有序列表",
+        "description": "编号列表"
+      },
+      "taskList": {
+        "label": "任务列表",
+        "description": "可勾选项"
+      },
+      "quote": {
+        "label": "引用",
+        "description": "块引用"
+      },
+      "codeBlock": {
+        "label": "代码块",
+        "description": "预格式化代码"
+      },
+      "divider": {
+        "label": "分割线",
+        "description": "水平分隔线"
+      },
+      "table": {
+        "label": "表格",
+        "description": "3×3 网格"
+      },
+      "image": {
+        "label": "图片",
+        "description": "上传并嵌入"
+      },
+      "decision": {
+        "label": "决策标记",
+        "description": "嵌入决策记录"
+      },
+      "task": {
+        "label": "任务嵌入",
+        "description": "嵌入任务卡片"
+      }
     },
     "decisionMark": {
       "cardLabel": "决策",
@@ -2011,7 +2053,6 @@
       "deleteFailed": "删除对话失败",
       "suggestionFailed": "获取追问建议失败"
     },
-
     "meetingFlow": {
       "title": "AI 会议全流程",
       "analyze": "AI 分析",
@@ -2254,6 +2295,46 @@
       "loadFailed": "加载失败",
       "cancel": "取消"
     },
+    "aiMeeting": {
+      "title": "会议 AI",
+      "loading": "加载中…",
+      "loadFailed": "加载失败",
+      "error": "操作失败",
+      "create": "新建会话",
+      "created": "会话已创建",
+      "titlePlaceholder": "输入会议标题…",
+      "sessions": "会话列表",
+      "noSessions": "暂无会议会话",
+      "active": "进行中",
+      "paused": "已暂停",
+      "ended": "已结束",
+      "transcriptInput": "转录输入",
+      "speakerPlaceholder": "说话人",
+      "textPlaceholder": "输入发言内容…",
+      "transcriptAdded": "转录已添加",
+      "transcriptCount": "{n} 条转录",
+      "analyze": "AI 分析",
+      "analyzed": "分析完成",
+      "analyzeFailed": "分析失败，请重试",
+      "needTranscript": "请先添加转录内容",
+      "noResults": "未提取到行动项或决策",
+      "summary": "会议摘要",
+      "actionItems": "行动项",
+      "decisions": "决策",
+      "end": "结束会议",
+      "confirmEnd": "确定结束该会议？",
+      "delete": "删除会话",
+      "confirmDelete": "确定删除该会议会话？",
+      "deleted": "会话已删除",
+      "markComplete": "标记完成",
+      "markSkip": "跳过",
+      "skip": "跳过",
+      "confidence": "置信度",
+      "noActions": "暂无行动项",
+      "noDecisions": "暂无决策",
+      "confirm": "确认",
+      "reject": "驳回"
+    },
     "feedback": {
       "like": "赞",
       "dislike": "踩",
@@ -2343,6 +2424,42 @@
       "templateUpdated": "模板更新成功",
       "templateDeleted": "模板删除成功",
       "close": "关闭"
+    },
+    "aiVoice": {
+      "title": "语音命令",
+      "startRecording": "开始录音",
+      "stopRecording": "停止录音",
+      "processing": "处理中…",
+      "transcript": "转录文本",
+      "confidence": "置信度",
+      "parameters": "参数",
+      "confirm": "确认执行",
+      "cancel": "取消",
+      "executed": "已执行",
+      "notSupported": "当前浏览器不支持语音识别，请使用 Chrome 或 Edge",
+      "error": "操作失败，请稍后重试",
+      "errorUnauthorized": "未登录或会话已过期",
+      "errorAiNotConfigured": "AI 服务未配置",
+      "errorRecognition": "语音识别失败，请重试",
+      "errorPermissionDenied": "麦克风权限被拒绝，请允许后重试",
+      "intentCreateTask": "创建任务",
+      "intentQuerySchedule": "查询日程",
+      "intentSendMessage": "发送消息",
+      "intentGenerateReport": "生成报告",
+      "intentSearchKnowledge": "搜索知识",
+      "intentOpenPage": "打开页面",
+      "intentUnknown": "未知意图",
+      "settingsTitle": "语音设置",
+      "loading": "加载中…",
+      "loadFailed": "加载失败，请稍后重试",
+      "enabled": "启用语音",
+      "enabledDesc": "开启后可通过语音命令操作工作区",
+      "language": "识别语言",
+      "speed": "语音速度",
+      "wakeWord": "唤醒词",
+      "save": "保存",
+      "saving": "保存中…",
+      "saved": "已保存"
     }
   },
   "doc": {
@@ -2775,41 +2892,6 @@
     "loadError": "加载失败",
     "saveError": "保存失败",
     "notFound": "页面不存在"
-  },
-  "calendar": {
-    "title": "日历",
-    "month": "月",
-    "week": "周",
-    "day": "日",
-    "today": "今天",
-    "newEvent": "新建事件",
-    "editEvent": "编辑事件",
-    "deleteEvent": "删除事件",
-    "deleteConfirm": "确定删除此事件？",
-    "eventTitle": "事件标题",
-    "eventDescription": "描述",
-    "startDate": "开始时间",
-    "endDate": "结束时间",
-    "allDay": "全天",
-    "location": "地点",
-    "color": "颜色",
-    "noEvents": "暂无事件",
-    "loading": "加载中…",
-    "cancel": "取消",
-    "save": "保存",
-    "createSuccess": "事件创建成功",
-    "updateSuccess": "事件更新成功",
-    "deleteSuccess": "事件已删除",
-    "loadError": "加载失败",
-    "saveError": "保存失败",
-    "notFound": "事件不存在",
-    "sunday": "日",
-    "monday": "一",
-    "tuesday": "二",
-    "wednesday": "三",
-    "thursday": "四",
-    "friday": "五",
-    "saturday": "六"
   },
   "timetrack": {
     "title": "工时管理",
