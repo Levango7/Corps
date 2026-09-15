@@ -241,7 +241,7 @@ export async function POST(req: NextRequest) {
 
     if (!sessionData) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
       );
     }

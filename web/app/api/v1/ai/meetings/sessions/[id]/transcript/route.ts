@@ -3,11 +3,11 @@
 //
 // 将转录片段追加到 session.transcript JSON 数组。
 // 认证模式：getUserId → getWorkspaceContext → runWithWorkspace（RLS 事务）
-// 约定：{ code, data, message }；transcript 用 as Prisma.InputJsonValue 转换。
+// 约定：{ code, data, message }
+// 并发安全：用 PostgreSQL 原生 JSONB `||` 追加，避免 read-modify-write 丢失更新。
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -99,53 +99,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 读取当前 transcript，追加新片段，写回
+    // 构造转录片段，用 PostgreSQL 原生 JSONB 追加避免读改写丢失更新
     const segment: TranscriptSegment = {
       speaker: body.speaker,
       text: body.text,
       timestamp: body.timestamp ?? new Date().toISOString(),
     };
+    const segmentJson = JSON.stringify([segment]);
 
+    // 原子追加：transcript || $1::jsonb 在 SQL 层拼接，无需先读后写
+    const affected = await runWithWorkspace(
+      body.wid,
+      (tx) =>
+        tx.$executeRawUnsafe(
+          `UPDATE ai_meeting_sessions SET transcript = transcript || $1::jsonb, updated_at = now() WHERE id = $2 AND workspace_id = $3 AND user_id = $4`,
+          segmentJson,
+          sessionId,
+          body.wid,
+          ctx.payload.sub,
+        ),
+      ctx.payload.sub,
+    );
+
+    if (affected === 0) {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
+        { status: 404 },
+      );
+    }
+
+    // 追加成功后读取最新 transcript 返回（保持响应结构不变）
     const session = await runWithWorkspace(
       body.wid,
-      async (tx) => {
-        // 读取当前会话（含 transcript）
-        const existing = await tx.aiMeetingSession.findFirst({
+      (tx) =>
+        tx.aiMeetingSession.findFirst({
           where: {
             id: sessionId,
             workspaceId: body.wid,
             userId: ctx.payload.sub,
           },
-          select: { transcript: true, participantCount: true },
-        });
-        if (!existing) return null;
-
-        // 追加片段到 transcript 数组
-        const currentTranscript = Array.isArray(existing.transcript)
-          ? (existing.transcript as unknown[])
-          : [];
-        const updatedTranscript = [...currentTranscript, segment];
-
-        return tx.aiMeetingSession.update({
-          where: { id: sessionId },
-          data: {
-            transcript: updatedTranscript as Prisma.InputJsonValue,
-          },
-          select: {
-            id: true,
-            transcript: true,
-          },
-        });
-      },
+          select: { id: true, transcript: true },
+        }),
       ctx.payload.sub,
     );
-
-    if (!session) {
-      return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
-        { status: 404 },
-      );
-    }
 
     return NextResponse.json({ code: 0, data: session, message: "OK" });
   } catch (error) {

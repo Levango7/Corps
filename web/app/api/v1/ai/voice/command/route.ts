@@ -27,7 +27,7 @@ import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { apiMsg } from "@/lib/api-messages";
+import { apiMsg, apiLocale } from "@/lib/api-messages";
 import {
   buildVoiceIntentSystemPrompt,
   buildVoiceIntentPrompt,
@@ -77,13 +77,18 @@ function safeParseJson(text: string): unknown | null {
  * 规范化意图解析结果。
  *
  * 校验：intent 为合法枚举；parameters 为对象；confidence 为 0-1 数值；response 为字符串。
+ * fallback 响应按请求语言（locale）返回中/英文，避免英文用户拿到中文提示。
  */
-function normalizeIntentResult(raw: unknown): VoiceIntentResult {
+function normalizeIntentResult(raw: unknown, locale: "zh" | "en"): VoiceIntentResult {
+  const fallbackResponse =
+    locale === "zh"
+      ? "抱歉，意图解析失败，请再说一遍。"
+      : "Sorry, intent parsing failed. Please try again.";
   const fallback: VoiceIntentResult = {
     intent: "unknown",
     parameters: {},
     confidence: 0,
-    response: "抱歉，意图解析失败，请再说一遍。",
+    response: fallbackResponse,
   };
   if (raw == null || typeof raw !== "object") return fallback;
   const obj = raw as Record<string, unknown>;
@@ -182,8 +187,8 @@ export async function POST(req: NextRequest) {
       },
     );
 
-    // 6.2) 解析 AI 输出
-    const parsed = normalizeIntentResult(safeParseJson(result.text));
+    // 6.2) 解析 AI 输出（fallback 响应按请求语言）
+    const parsed = normalizeIntentResult(safeParseJson(result.text), apiLocale(req));
 
     // 6.3) 持久化到 AiVoiceCommand
     const command = await runWithWorkspace(

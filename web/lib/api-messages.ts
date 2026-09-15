@@ -377,6 +377,10 @@ export const API_MESSAGES = {
   meetingEnded: { zh: "会议已结束", en: "Meeting has ended" },
   meetingFull: { zh: "会议人数已满", en: "Meeting is full" },
 
+  /* ── AI 会议会话（方向 G）── */
+  sessionNotFound: { zh: "会议会话不存在", en: "Meeting session not found" },
+  commandNotFound: { zh: "命令不存在", en: "Command not found" },
+
   /* ── 回收站（阶段 6）── */
   restored: { zh: "已恢复", en: "Restored" },
   notDeleted: { zh: "该项未被软删除", en: "This item is not soft-deleted" },

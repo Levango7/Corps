@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
     );
     if (!session) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -194,6 +194,27 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
+    // 先校验会话归属，防止同工作区其他成员修改他人会议的决策
+    const session = await runWithWorkspace(
+      body.wid,
+      (tx) =>
+        tx.aiMeetingSession.findFirst({
+          where: {
+            id: sessionId,
+            workspaceId: body.wid,
+            userId: ctx.payload.sub,
+          },
+          select: { id: true },
+        }),
+      ctx.payload.sub,
+    );
+    if (!session) {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
+        { status: 404 },
+      );
+    }
+
     const decision = await runWithWorkspace(
       body.wid,
       (tx) =>
@@ -217,7 +238,7 @@ export async function PATCH(req: NextRequest) {
       error.code === "P2025"
     ) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
       );
     }

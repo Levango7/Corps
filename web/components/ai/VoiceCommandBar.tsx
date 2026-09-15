@@ -111,6 +111,8 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
   const [result, setResult] = useState<CommandResult | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [supported, setSupported] = useState(true);
+  // 识别语言（从用户语音偏好加载，默认 zh-CN）
+  const [prefLanguage, setPrefLanguage] = useState<string>("zh-CN");
 
   // SpeechRecognition 实例引用
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
@@ -120,6 +122,18 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
     const Ctor = getSpeechRecognitionCtor();
     setSupported(Ctor !== null);
   }, []);
+
+  // 加载用户语音偏好中的识别语言（用户级数据，不绑定工作区）
+  useEffect(() => {
+    if (!wid) return;
+    api<{ language?: string }>("/api/v1/ai/voice/preferences")
+      .then((data) => {
+        if (data?.language) setPrefLanguage(data.language);
+      })
+      .catch(() => {
+        // 加载失败静默回退默认值 zh-CN
+      });
+  }, [wid]);
 
   /** 处理语音命令：调用 AI 解析意图 */
   const handleCommand = useCallback(
@@ -159,7 +173,7 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
     }
 
     const recognition = new Ctor();
-    recognition.lang = "zh-CN";
+    recognition.lang = prefLanguage;
     recognition.interimResults = true;
     recognition.continuous = false;
 
@@ -205,7 +219,7 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
     setError(null);
     setState("recording");
     recognition.start();
-  }, [handleCommand, t]);
+  }, [handleCommand, t, prefLanguage]);
 
   /** 停止录音 */
   const stopRecording = useCallback(() => {
@@ -215,13 +229,26 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
     setState("idle");
   }, []);
 
-  /** 确认执行命令 */
-  const handleConfirm = useCallback(() => {
+  /** 确认执行命令：调用后端 PATCH 标记 executed=true，再更新本地状态 */
+  const handleConfirm = useCallback(async () => {
     if (!result) return;
-    // 标记已执行（前端确认后，实际业务操作由调用方或路由层处理）
-    // 这里仅更新本地状态；实际执行逻辑由上层组件根据 intent 路由
-    setResult((prev) => (prev ? { ...prev, executed: true } : prev));
-  }, [result]);
+    try {
+      await api(`/api/v1/ai/voice/command/${result.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ workspaceId: wid, executed: true }),
+      });
+      setResult((prev) => (prev ? { ...prev, executed: true } : prev));
+    } catch (e) {
+      if (e instanceof ApiError && e.status === 401) {
+        setError(t("errorUnauthorized"));
+      } else {
+        setError(t("error"));
+      }
+      if (process.env.NODE_ENV === "development") {
+        console.error("[VoiceCommandBar] confirm error:", e);
+      }
+    }
+  }, [result, wid, t]);
 
   /** 取消命令 */
   const handleCancel = useCallback(() => {

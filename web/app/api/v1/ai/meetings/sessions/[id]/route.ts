@@ -114,7 +114,7 @@ export async function GET(req: NextRequest) {
 
     if (!session) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -219,7 +219,7 @@ export async function PATCH(req: NextRequest) {
       error.code === "P2025"
     ) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
       );
     }
@@ -302,7 +302,7 @@ export async function DELETE(req: NextRequest) {
       error.code === "P2025"
     ) {
       return NextResponse.json(
-        { code: 404, message: apiMsg(req, "workspaceNotFound"), data: null },
+        { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
       );
     }
