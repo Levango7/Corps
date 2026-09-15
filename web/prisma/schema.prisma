@@ -138,6 +138,11 @@ model User {
   // 方向 G：AI 使用量记录 + 限额
   aiUsageLogs        AiUsageLog[]     @relation("AiUsageLogUser")
   aiUsageLimits      AiUsageLimit[]   @relation("AiUsageLimitUser")
+  // 方向 A：AI 主动推送
+  aiPushSchedules    AiPushSchedule[] @relation("AiPushScheduleUser")
+  aiPushRecords      AiPushRecord[]   @relation("AiPushRecordUser")
+  // 方向 C：AI 数据分析报告
+  aiAnalysisReports  AiAnalysisReport[] @relation("AiAnalysisReportUser")
 
   @@map("users")
 }
@@ -214,6 +219,14 @@ model Workspace {
   // 方向 G：AI 使用量记录 + 限额
   aiUsageLogs   AiUsageLog[]
   aiUsageLimits AiUsageLimit[]
+  // 方向 A：AI 主动推送
+  aiPushSchedules  AiPushSchedule[]
+  aiPushRecords    AiPushRecord[]
+  // 方向 B：AI 知识图谱
+  knowledgeNodes   KnowledgeNode[]
+  knowledgeEdges   KnowledgeEdge[]
+  // 方向 C：AI 数据分析报告
+  aiAnalysisReports AiAnalysisReport[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -1942,4 +1955,111 @@ model AiUsageLimit {
 
   @@unique([workspaceId, userId])
   @@map("ai_usage_limits")
+}
+/// 方向 A：AI 主动推送计划 — 定时分析工作区状态并推送
+model AiPushSchedule {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  capability  String   @db.VarChar(50)  // "daily_briefing" | "risk_alert" | "progress_anomaly"
+  cron        String   @db.VarChar(50)  // cron 表达式（如 "0 9 * * 1-5"）
+  enabled     Boolean  @default(true)
+  config      Json?    // 推送配置（如 { channels: ["notification", "im"], threshold: 0.8 }）
+  lastRunAt   DateTime? @map("last_run_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("AiPushScheduleUser", fields: [userId], references: [id], onDelete: Cascade)
+  records     AiPushRecord[]
+
+  @@index([workspaceId, enabled])
+  @@index([userId, enabled])
+  @@map("ai_push_schedules")
+}
+
+/// 方向 A：AI 推送记录 — 每次推送的内容和状态
+model AiPushRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  scheduleId  String   @map("schedule_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  capability  String   @db.VarChar(50)
+  title       String   @db.VarChar(200)
+  summary     String   @db.Text
+  detail      Json?
+  read        Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  schedule    AiPushSchedule @relation(fields: [scheduleId], references: [id], onDelete: Cascade)
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User           @relation("AiPushRecordUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, createdAt])
+  @@index([userId, read, createdAt])
+  @@map("ai_push_records")
+}
+
+/// 方向 B：知识图谱节点 — 从文档/会议/聊天中提取的知识点
+model KnowledgeNode {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  type        String   @db.VarChar(50)  // "concept" | "entity" | "fact" | "procedure"
+  label       String   @db.VarChar(200)
+  content     String   @db.Text
+  sourceType  String   @db.VarChar(50)  @map("source_type") // "document" | "meeting" | "chat" | "task"
+  sourceId    String   @db.Uuid @map("source_id")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace    Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  edgesAsSource KnowledgeEdge[]  @relation("KnowledgeEdgeSource")
+  edgesAsTarget KnowledgeEdge[]  @relation("KnowledgeEdgeTarget")
+
+  @@index([workspaceId, type])
+  @@index([workspaceId, sourceType, sourceId])
+  @@map("knowledge_nodes")
+}
+
+/// 方向 B：知识图谱边 — 节点间的关系
+model KnowledgeEdge {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  sourceNodeId String   @map("source_node_id") @db.Uuid
+  targetNodeId String   @map("target_node_id") @db.Uuid
+  relation     String   @db.VarChar(50)  // "depends_on" | "relates_to" | "part_of" | "authored_by"
+  weight       Float    @default(1.0)
+  metadata     Json?
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  sourceNode  KnowledgeNode  @relation("KnowledgeEdgeSource", fields: [sourceNodeId], references: [id], onDelete: Cascade)
+  targetNode  KnowledgeNode  @relation("KnowledgeEdgeTarget", fields: [targetNodeId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, relation])
+  @@index([sourceNodeId])
+  @@index([targetNodeId])
+  @@map("knowledge_edges")
+}
+
+/// 方向 C：AI 分析报告 — 存储分析结果
+model AiAnalysisReport {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String   @db.VarChar(50)  // "burndown" | "team_performance" | "bottleneck" | "weekly_report"
+  title       String   @db.VarChar(200)
+  summary     String   @db.Text
+  data        Json?    // 图表数据（如燃尽图数据点）
+  insights    Json?    // AI 洞察列表
+  period      Json?    // 分析周期 { start, end }
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("AiAnalysisReportUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, type, createdAt])
+  @@index([userId, createdAt])
+  @@map("ai_analysis_reports")
 }
