@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sparkles, X, ChevronRight, Check, SkipForward, Loader2 } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import Markdown from "@/components/Markdown";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /**
  * AI 会议全流程面板（会后阶段）
@@ -91,12 +92,6 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
     };
   }, []);
 
-  /** 提取错误消息（ApiError 携带后端 message） */
-  function errMsg(e: unknown): string {
-    if (e instanceof ApiError) return e.message;
-    if (e instanceof Error) return e.message;
-    return t("error");
-  }
 
   /** Step 1→2：AI 分析转写文本，生成会议纪要 */
   async function handleAnalyze() {
@@ -121,7 +116,8 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
       setStep("minutes");
     } catch (e) {
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(errMsg(e));
+      if (process.env.NODE_ENV === "development") console.error("[MeetingFlowPanel] error:", e);
+      setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
@@ -146,7 +142,8 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
       setStep("decisions");
     } catch (e) {
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(errMsg(e));
+      if (process.env.NODE_ENV === "development") console.error("[MeetingFlowPanel] error:", e);
+      setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
@@ -170,7 +167,8 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
       setStep("actions");
     } catch (e) {
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(errMsg(e));
+      if (process.env.NODE_ENV === "development") console.error("[MeetingFlowPanel] error:", e);
+      setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
@@ -213,11 +211,12 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       // 部分失败：提示已创建数量
       if (count > 0) {
-        toast("warning", t("partialCreateSuccess", { created: count, failed: count + 1 }));
+        toast("warning", t("partialCreateSuccess", { created: count, failed: 1 }));
         setCreatedCount(count);
         setStep("done");
       } else {
-        setError(errMsg(e));
+        if (process.env.NODE_ENV === "development") console.error("[MeetingFlowPanel] error:", e);
+        setError(t("error"));
       }
     } finally {
       if (!ac.signal.aborted) setExecuting(false);
@@ -526,6 +525,13 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
             <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
               {t("doneHint", { count: createdCount })}
             </p>
+
+            {/* AI 结果反馈按钮 */}
+            <FeedbackButtons
+              capability="meeting-flow"
+              workspaceId={wid}
+              originalOutput={summary}
+            />
           </div>
         )}
       </div>

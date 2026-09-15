@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { defaultModel } from "@/lib/ai/deepseek";
-import { getUserId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -18,9 +19,9 @@ const SYSTEM_PROMPT =
   "你是文档续写助手。根据光标前的文本内容，续写接下来的内容。只输出续写内容，不要重复已有文本。续写应当自然流畅、风格一致、长度适中（50-200字）。";
 
 export async function POST(req: NextRequest) {
-  // 1) 认证
-  const userId = await getUserId(req);
-  if (!userId) return unauthorizedResponse(req);
+  // 1) 认证 + 获取 workspaceId（用于 usage tracking）
+  const authCtx = await getUserIdAndWorkspaceId(req);
+  if (!authCtx) return unauthorizedResponse(req);
 
   // 2) AI 服务配置检查
   if (!isAiConfigured()) return aiNotConfiguredResponse(req);
@@ -45,10 +46,26 @@ export async function POST(req: NextRequest) {
 
   // 4) 流式续写
   try {
+    const usageStartTime = Date.now();
     const result = streamText({
       model: defaultModel,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: body.text }],
+      onFinish: ({ usage }) => {
+        // 流结束后异步记录 usage（fire-and-forget）
+        if (authCtx.workspaceId) {
+          fireRecordUsage(
+            {
+              workspaceId: authCtx.workspaceId,
+              userId: authCtx.userId,
+              capability: "completion",
+              model: defaultModel.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

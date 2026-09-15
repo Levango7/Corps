@@ -13,6 +13,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -89,14 +90,33 @@ export async function POST(req: NextRequest) {
     }
 
     try {
-      const result = await generateText({
-        model: reasonerModel,
-        system: withCoT(buildPreMeetingSystemPrompt(), reasonerModel),
-        prompt: buildPreMeetingPrompt({
-          agenda: body.agenda,
-          participants: body.participants,
-        }),
-      });
+      const result = await withUsageTracking(
+        {
+          workspaceId: body.wid,
+          userId: ctx.payload.sub,
+          capability: "meeting-flow",
+          model: reasonerModel.modelId,
+        },
+        async () => {
+          const res = await generateText({
+            model: reasonerModel,
+            system: withCoT(buildPreMeetingSystemPrompt(), reasonerModel),
+            prompt: buildPreMeetingPrompt({
+              agenda: body.agenda!,
+              participants: body.participants,
+            }),
+          });
+          return {
+            result: res,
+            usage: res.usage
+              ? {
+                  inputTokens: res.usage.inputTokens ?? 0,
+                  outputTokens: res.usage.outputTokens ?? 0,
+                }
+              : undefined,
+          };
+        },
+      );
 
       // 解析 LLM 返回的 JSON（降级处理：解析失败返回默认值而非 500）
       const cleaned = cleanJsonResponse(result.text);
@@ -135,11 +155,30 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    const result = await generateText({
-      model: defaultModel,
-      system: withCoT(buildPostMeetingSystemPrompt(), defaultModel),
-      prompt: buildPostMeetingPrompt(body.transcript),
-    });
+    const result = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "meeting-flow",
+        model: defaultModel.modelId,
+      },
+      async () => {
+        const res = await generateText({
+          model: defaultModel,
+          system: withCoT(buildPostMeetingSystemPrompt(), defaultModel),
+          prompt: buildPostMeetingPrompt(body.transcript!),
+        });
+        return {
+          result: res,
+          usage: res.usage
+            ? {
+                inputTokens: res.usage.inputTokens ?? 0,
+                outputTokens: res.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
 
     // 会后阶段只生成纪要摘要；决策提取和行动项生成由前端调用现有端点完成
     return NextResponse.json({

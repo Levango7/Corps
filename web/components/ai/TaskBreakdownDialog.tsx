@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { Sparkles, X, Trash2, Plus, Loader2 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 type Priority = "low" | "medium" | "high" | "urgent";
 
@@ -176,9 +177,9 @@ export default function TaskBreakdownDialog({
       onCreated?.();
       onClose();
     } catch (e) {
-      // 部分失败：提示已创建数量
+      // 部分失败：提示已创建数量（当前批次仅 1 个失败）
       if (created > 0) {
-        toast("warning", t("partialCreateSuccess", { created, failed: created + 1 }));
+        toast("warning", t("partialCreateSuccess", { created, failed: 1 }));
         onCreated?.();
         onClose();
       } else {
@@ -391,6 +392,15 @@ export default function TaskBreakdownDialog({
                 </details>
               )}
             </>
+          )}
+
+          {/* AI 结果反馈按钮 */}
+          {!loading && !error && subtasks.length > 0 && (
+            <FeedbackButtons
+              capability="task-breakdown"
+              workspaceId={wid}
+              originalOutput={subtasks}
+            />
           )}
         </div>
 

@@ -19,6 +19,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
@@ -190,6 +191,13 @@ export async function POST(req: NextRequest) {
     // 9) 流式生成回答
     // 多轮对话：用 messages 参数（历史 + 新 user 消息）
     // 单次问答：用 prompt 参数（保持现有行为）
+    const usageStartTime = Date.now();
+    const usageTrackingParams = {
+      workspaceId: body.wid,
+      userId: ctx.payload.sub,
+      capability: "knowledge-qa" as const,
+      model: defaultModel.modelId,
+    };
     const result =
       conversationId !== null
         ? streamText({
@@ -199,7 +207,10 @@ export async function POST(req: NextRequest) {
               ...historyMessages,
               { role: "user" as const, content: userPrompt },
             ],
-            onFinish: async ({ text }) => {
+            onFinish: async ({ text, usage }) => {
+              // 流结束后异步记录 usage（fire-and-forget）
+              fireRecordUsage(usageTrackingParams, usageStartTime, usage);
+
               // 异步持久化 user question + assistant answer
               if (!conversationId || !text) return;
               try {
@@ -243,10 +254,15 @@ export async function POST(req: NextRequest) {
             model: defaultModel,
             system: systemPrompt,
             prompt: userPrompt,
+            onFinish: ({ usage }) => {
+              // 流结束后异步记录 usage（fire-and-forget）
+              fireRecordUsage(usageTrackingParams, usageStartTime, usage);
+            },
           });
 
     return result.toUIMessageStreamResponse();
   } catch (error) {
+    console.error("[ai/knowledge-qa] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
       { status: 500 },

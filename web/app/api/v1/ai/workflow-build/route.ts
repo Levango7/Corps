@@ -13,6 +13,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import {
   buildWorkflowSystemPrompt,
   buildWorkflowUserPrompt,
@@ -163,11 +164,30 @@ export async function POST(req: NextRequest) {
 
   // 6) LLM 生成工作流定义（非流式，推理模型）
   try {
-    const llmResult = await generateText({
-      model: reasonerModel,
-      system: withCoT(buildWorkflowSystemPrompt(), reasonerModel),
-      prompt: buildWorkflowUserPrompt(body.description),
-    });
+    const llmResult = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "workflow-build",
+        model: reasonerModel.modelId,
+      },
+      async () => {
+        const res = await generateText({
+          model: reasonerModel,
+          system: withCoT(buildWorkflowSystemPrompt(), reasonerModel),
+          prompt: buildWorkflowUserPrompt(body.description),
+        });
+        return {
+          result: res,
+          usage: res.usage
+            ? {
+                inputTokens: res.usage.inputTokens ?? 0,
+                outputTokens: res.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
 
     const cleaned = cleanJsonResponse(llmResult.text);
     const parsed: unknown = JSON.parse(cleaned);

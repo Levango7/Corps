@@ -16,6 +16,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -115,11 +116,30 @@ export async function POST(req: NextRequest) {
       }));
 
     // 7) 调用 deepseek-chat（非流式）
-    const result = await generateText({
-      model: defaultModel,
-      system: withCoT(buildImReplySystemPrompt(), defaultModel),
-      prompt: buildImReplyUserPrompt(messages),
-    });
+    const result = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "im-reply",
+        model: defaultModel.modelId,
+      },
+      async () => {
+        const res = await generateText({
+          model: defaultModel,
+          system: withCoT(buildImReplySystemPrompt(), defaultModel),
+          prompt: buildImReplyUserPrompt(messages),
+        });
+        return {
+          result: res,
+          usage: res.usage
+            ? {
+                inputTokens: res.usage.inputTokens ?? 0,
+                outputTokens: res.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
 
     // 8) 解析 JSON 返回
     let suggestions: ImReplySuggestion[];

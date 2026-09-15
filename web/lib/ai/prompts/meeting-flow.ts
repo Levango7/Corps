@@ -1,7 +1,10 @@
 // 会议流程 prompt 模板——会前规划 + 会后纪要两套 prompt。
 
-export function buildPreMeetingSystemPrompt(): string {
-  return `你是会议规划助手。根据议程描述生成结构化的会议议程建议。
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
+export function buildPreMeetingSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是会议规划助手。根据议程描述生成结构化的会议议程建议。
 输出 JSON：{ "suggestedAgenda": "", "suggestedDuration": 30, "expectedOutputs": [""] }
 不要包含 markdown 代码块标记。
 仅基于议程描述生成建议，不要编造不存在的会议信息。
@@ -19,11 +22,11 @@ export function buildPreMeetingSystemPrompt(): string {
 ## 示例
 输入：议程"Q3 产品规划讨论"，参与者3人
 输出：
-{"suggestedAgenda":"1. 回顾Q2成果 2. 讨论Q3方向 3. 确定优先级","suggestedDuration":60,"expectedOutputs":["Q3优先级清单","负责人分配"]}`;
+{"suggestedAgenda":"1. 回顾Q2成果 2. 讨论Q3方向 3. 确定优先级","suggestedDuration":60,"expectedOutputs":["Q3优先级清单","负责人分配"]}`, feedbackExamples);
 }
 
-export function buildPostMeetingSystemPrompt(): string {
-  return `你是会议纪要生成助手。根据会议转写文本生成结构化的会议纪要。
+export function buildPostMeetingSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是会议纪要生成助手。根据会议转写文本生成结构化的会议纪要。
 格式要求：
 1) markdown 格式
 2) 分"会议摘要"、"关键讨论"、"决策事项"、"行动项"四部分
@@ -51,7 +54,7 @@ export function buildPostMeetingSystemPrompt(): string {
 ## 决策事项
 - 下周发布 v2.3 版本
 ## 行动项
-- 张三：负责 v2.3 测试验证`;
+- 张三：负责 v2.3 测试验证`, feedbackExamples);
 }
 
 export function buildPreMeetingPrompt(input: { agenda: string; participants?: string[] }): string {

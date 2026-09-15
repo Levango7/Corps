@@ -17,6 +17,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
 import { buildDailyReportSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts/daily-report";
+import { getFeedbackExamples } from "@/lib/ai/feedback";
 import { apiMsg } from "@/lib/api-messages";
 import { createAiProgressStream } from "@/lib/ai/stream";
 
@@ -95,13 +96,20 @@ export async function POST(req: NextRequest) {
       targetUserId = body.userId;
     }
 
-    // 7) 流式生成日报（带阶段化进度反馈）
+    // 7) 查询正面反馈作为 few-shot 示例（复用 RLS 事务）
+    const feedbackExamples = await runWithWorkspace(
+      body.wid,
+      (tx) => getFeedbackExamples(body.wid, "daily-report", 2, tx),
+      ctx.payload.sub,
+    );
+
+    // 8) 流式生成日报（带阶段化进度反馈）
     //    buildPrompt 封装上下文聚合，让进度阶段有真实时序：
     //    阶段 1（聚合数据）→ buildPrompt → 阶段 2（分析）→ 阶段 3（生成）→ LLM 文本流
     return createAiProgressStream(
       {
         model: defaultModel,
-        system: withCoT(buildDailyReportSystemPrompt(), defaultModel),
+        system: withCoT(buildDailyReportSystemPrompt(feedbackExamples), defaultModel),
         buildPrompt: async () => {
           const context = await runWithWorkspace(
             body.wid,
@@ -109,6 +117,12 @@ export async function POST(req: NextRequest) {
             ctx.payload.sub,
           );
           return buildUserPrompt(context, { date: body.date });
+        },
+        usageTracking: {
+          workspaceId: body.wid,
+          userId: ctx.payload.sub,
+          capability: "daily-report",
+          model: defaultModel.modelId,
         },
       },
       {

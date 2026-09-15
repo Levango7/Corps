@@ -32,6 +32,8 @@ import {
 import Markdown from "@/components/Markdown";
 import { consumeAiProgressStream, type AiProgressPart } from "@/components/editor/aiStream";
 import { ProgressSteps, type ProgressStage } from "@/components/ai/ProgressSteps";
+import { FeedbackButtons } from "./FeedbackButtons";
+import { api } from "@/lib/api";
 
 type Scope = "progress" | "risk" | "summary" | "weekly";
 
@@ -148,19 +150,14 @@ export function ProjectInsightView({ wid }: ProjectInsightViewProps) {
     if (!content || saveStatus === "saving") return;
     setSaveStatus("saving");
     try {
-      const res = await fetch(`/api/v1/workspaces/${wid}/documents`, {
+      await api(`/api/v1/workspaces/${wid}/documents`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           title: t("weeklyDocTitle"),
           markdown: content,
         }),
       });
-      if (res.ok) {
-        setSaveStatus("saved");
-      } else {
-        setSaveStatus("error");
-      }
+      setSaveStatus("saved");
     } catch {
       setSaveStatus("error");
     }
@@ -255,6 +252,15 @@ export function ProjectInsightView({ wid }: ProjectInsightViewProps) {
               <span className="ml-0.5 inline-block h-[1em] w-[2px] animate-pulse bg-[var(--accent)] align-middle" />
             )}
           </div>
+        )}
+
+        {/* AI 结果反馈按钮 */}
+        {content && !hasError && !loading && (
+          <FeedbackButtons
+            capability="project-insight"
+            workspaceId={wid}
+            originalOutput={content}
+          />
         )}
       </div>
 

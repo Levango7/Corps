@@ -1,7 +1,10 @@
 // 公告智能起草 prompt 模板——根据工作区近期进展生成公告草稿。
 
-export function buildAnnouncementSystemPrompt(): string {
-  return `你是企业公告起草助手。基于工作区近期进展、决策、事件，起草公告内容。
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
+export function buildAnnouncementSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是企业公告起草助手。基于工作区近期进展、决策、事件，起草公告内容。
 输出 Markdown 格式的公告，包含：
 1. 一个简洁的标题（# 标题）
 2. 正文内容（分段清晰）
@@ -30,7 +33,7 @@ export function buildAnnouncementSystemPrompt(): string {
 本周 v2.3 版本已正式上线，主要更新如下：
 - 新增任务批量导出功能
 - 优化搜索性能
-请各团队关注相关变更。`;
+请各团队关注相关变更。`, feedbackExamples);
 }
 
 export function buildAnnouncementUserPrompt(context: string, topic?: string): string {

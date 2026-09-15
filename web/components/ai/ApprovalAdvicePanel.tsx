@@ -30,6 +30,7 @@ import {
 } from "lucide-react";
 import { consumeAiProgressStream, type AiProgressPart } from "@/components/editor/aiStream";
 import { ProgressSteps, type ProgressStage } from "@/components/ai/ProgressSteps";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /** AI 风控建议响应结构（与后端 data 字段一致） */
 interface ApprovalAdvice {
@@ -356,6 +357,13 @@ export function ApprovalAdvicePanel({
           </p>
         )}
       </div>
+
+      {/* AI 结果反馈按钮 */}
+      <FeedbackButtons
+        capability="approval-advice"
+        workspaceId={wid}
+        originalOutput={advice}
+      />
     </aside>
   );
 }

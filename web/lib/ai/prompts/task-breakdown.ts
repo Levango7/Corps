@@ -1,7 +1,10 @@
 // 任务拆解 prompt 模板——将一个任务拆解为可执行的子任务列表。
 
-export function buildTaskBreakdownSystemPrompt(): string {
-  return `你是项目管理专家。将用户提供的任务拆解为可执行的子任务。
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
+export function buildTaskBreakdownSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是项目管理专家。将用户提供的任务拆解为可执行的子任务。
 要求：
 1) 每个子任务粒度适中（预估 1-8 小时工作量）
 2) 子任务之间有清晰边界，不重叠
@@ -24,7 +27,7 @@ export function buildTaskBreakdownSystemPrompt(): string {
 ## 示例
 输入：任务标题"完成用户登录模块"
 输出：
-{"subtasks":[{"title":"设计登录接口","description":"定义登录API的请求与响应结构","estimatedHours":2,"priority":"high","suggestedAssignee":null},{"title":"实现前端登录表单","description":"开发登录页面与表单校验","estimatedHours":4,"priority":"high","suggestedAssignee":null}],"reasoning":"按前后端顺序拆解，先接口后界面"}`;
+{"subtasks":[{"title":"设计登录接口","description":"定义登录API的请求与响应结构","estimatedHours":2,"priority":"high","suggestedAssignee":null},{"title":"实现前端登录表单","description":"开发登录页面与表单校验","estimatedHours":4,"priority":"high","suggestedAssignee":null}],"reasoning":"按前后端顺序拆解，先接口后界面"}`, feedbackExamples);
 }
 
 export function buildUserPrompt(input: {

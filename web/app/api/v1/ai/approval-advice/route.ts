@@ -243,6 +243,12 @@ export async function POST(req: NextRequest) {
             };
           }
         },
+        usageTracking: {
+          workspaceId: body.wid,
+          userId: ctx.payload.sub,
+          capability: "approval-advice",
+          model: reasonerModel.modelId,
+        },
       },
       {
         context: "正在聚合审批数据…",

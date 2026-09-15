@@ -49,3 +49,21 @@ export function aiNotConfiguredResponse(req: NextRequest): NextResponse {
 export function isAiConfigured(): boolean {
   return !!process.env.DEEPSEEK_API_KEY;
 }
+/**
+ * 获取当前用户 ID + 工作区 ID（用于 AI 使用量跟踪）。
+ *
+ * userId 优先 Better Auth session，回退到 JWT access_token（与 getUserId 一致）。
+ * workspaceId 仅从 JWT payload.wid 获取（Better Auth session 不含 wid）；
+ * 若 JWT 不存在（纯 Better Auth session 场景），workspaceId 为 null，
+ * 调用方应跳过 usage tracking（AiUsageLog.workspaceId 为必填外键）。
+ *
+ * @returns { userId, workspaceId } 或 null（未认证）
+ */
+export async function getUserIdAndWorkspaceId(
+  req: NextRequest,
+): Promise<{ userId: string; workspaceId: string | null } | null> {
+  const userId = await getUserId(req);
+  if (!userId) return null;
+  const payload = await authenticate(req);
+  return { userId, workspaceId: payload?.wid ?? null };
+}

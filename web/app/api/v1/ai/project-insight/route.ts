@@ -97,6 +97,12 @@ export async function POST(req: NextRequest) {
           );
           return buildUserPrompt(context, body.scope);
         },
+        usageTracking: {
+          workspaceId: body.wid,
+          userId: ctx.payload.sub,
+          capability: "project-insight",
+          model: reasonerModel.modelId,
+        },
       },
       {
         context: "正在聚合项目数据…",

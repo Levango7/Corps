@@ -15,6 +15,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -113,11 +114,30 @@ export async function POST(req: NextRequest) {
     }
 
     // 7) 调用 deepseek-chat 对候选结果语义重排与摘要（非流式）
-    const result = await generateText({
-      model: defaultModel,
-      system: withCoT(buildWikiSearchSystemPrompt(), defaultModel),
-      prompt: buildWikiSearchUserPrompt(body.query, pages),
-    });
+    const result = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "wiki-search",
+        model: defaultModel.modelId,
+      },
+      async () => {
+        const res = await generateText({
+          model: defaultModel,
+          system: withCoT(buildWikiSearchSystemPrompt(), defaultModel),
+          prompt: buildWikiSearchUserPrompt(body.query, pages),
+        });
+        return {
+          result: res,
+          usage: res.usage
+            ? {
+                inputTokens: res.usage.inputTokens ?? 0,
+                outputTokens: res.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
 
     // 8) 解析 JSON 返回
     let results: WikiSearchResult[] = [];

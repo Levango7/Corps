@@ -31,6 +31,7 @@ import { Brain, Send, Loader2, AlertTriangle, Square, Plus, MessageSquare, Trash
 import Markdown from "@/components/Markdown";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 interface KnowledgeQaPanelProps {
   /** 工作区 ID */
@@ -509,6 +510,15 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
                 <Loader2 size={14} className="animate-spin" />
                 <span className="text-[length:var(--text-sm)]">{t("followUp")}</span>
               </div>
+            )}
+
+            {/* AI 结果反馈按钮 */}
+            {!isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
+              <FeedbackButtons
+                capability="knowledge-qa"
+                workspaceId={wid}
+                originalOutput={getMessageText(messages[messages.length - 1])}
+              />
             )}
           </div>
         ) : (

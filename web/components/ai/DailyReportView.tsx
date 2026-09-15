@@ -7,6 +7,7 @@ import Markdown from "@/components/Markdown";
 import { consumeAiProgressStream, type AiProgressPart } from "@/components/editor/aiStream";
 import { ProgressSteps, type ProgressStage } from "@/components/ai/ProgressSteps";
 import { api } from "@/lib/api";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /**
  * AI 智能日报视图
@@ -286,6 +287,13 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
                 <Markdown source={content} />
               </div>
             )}
+
+            {/* AI 结果反馈按钮 */}
+            <FeedbackButtons
+              capability="daily-report"
+              workspaceId={wid}
+              originalOutput={content}
+            />
           </div>
         )}
 

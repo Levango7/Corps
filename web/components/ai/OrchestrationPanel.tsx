@@ -28,6 +28,7 @@ import {
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /** AiAction 前端简化类型——type 为判别字段，其余字段按 action 类型动态存在 */
 interface AiAction {
@@ -138,7 +139,8 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
       setSelectedIndices(new Set(result.actions.map((_, i) => i)));
     } catch (e) {
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(e instanceof Error ? e.message : t("error"));
+      if (process.env.NODE_ENV === "development") console.error("[OrchestrationPanel] error:", e);
+      setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setAnalyzing(false);
     }
@@ -204,7 +206,8 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
       }
     } catch (e) {
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
-      setError(e instanceof Error ? e.message : t("error"));
+      if (process.env.NODE_ENV === "development") console.error("[OrchestrationPanel] error:", e);
+      setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setExecuting(false);
     }
@@ -385,7 +388,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                               )}
                               {result.success
                                 ? t("success")
-                                : result.error ?? t("failure")}
+                                : t("failure")}
                             </span>
                           )}
                         </div>
@@ -422,6 +425,17 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                 </button>
               </div>
             )}
+          </div>
+        )}
+
+        {/* AI 结果反馈按钮 */}
+        {plan && (
+          <div className="px-5 py-3.5 border-t border-[var(--border-soft)]">
+            <FeedbackButtons
+              capability="orchestrate"
+              workspaceId={wid}
+              originalOutput={plan}
+            />
           </div>
         )}
       </div>

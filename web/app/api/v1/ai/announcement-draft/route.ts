@@ -14,6 +14,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
@@ -21,6 +22,7 @@ import {
   buildAnnouncementSystemPrompt,
   buildAnnouncementUserPrompt,
 } from "@/lib/ai/prompts/announcement-draft";
+import { getFeedbackExamples } from "@/lib/ai/feedback";
 import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({
@@ -113,19 +115,39 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 6) 聚合近期进展上下文（scope 解析为 AiContextScope[]）
+    // 6) 聚合近期进展上下文（scope 解析为 AiContextScope[]）+ 查询正面反馈 few-shot 示例
     const scopes = resolveScopes(body.scope);
-    const context = await runWithWorkspace(
+    const { context, feedbackExamples } = await runWithWorkspace(
       body.wid,
-      (tx) => buildAiContext(body.wid, ctx.payload.sub, scopes, tx),
+      async (tx) => {
+        const [ctxStr, examples] = await Promise.all([
+          buildAiContext(body.wid, ctx.payload.sub, scopes, tx),
+          getFeedbackExamples(body.wid, "announcement-draft", 2, tx),
+        ]);
+        return { context: ctxStr, feedbackExamples: examples };
+      },
       ctx.payload.sub,
     );
 
     // 7) 流式生成公告草稿
+    const usageStartTime = Date.now();
     const result = streamText({
       model: defaultModel,
-      system: withCoT(buildAnnouncementSystemPrompt(), defaultModel),
+      system: withCoT(buildAnnouncementSystemPrompt(feedbackExamples), defaultModel),
       prompt: buildAnnouncementUserPrompt(context, body.topic),
+      onFinish: ({ usage }) => {
+        // 流结束后异步记录 usage（fire-and-forget）
+        fireRecordUsage(
+          {
+            workspaceId: body.wid,
+            userId: ctx.payload.sub,
+            capability: "announcement-draft",
+            model: defaultModel.modelId,
+          },
+          usageStartTime,
+          usage,
+        );
+      },
     });
 
     return result.toUIMessageStreamResponse();

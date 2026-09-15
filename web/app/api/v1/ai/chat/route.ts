@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { defaultModel } from "@/lib/ai/deepseek";
-import { getUserId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -25,9 +26,9 @@ const schema = z.object({
 });
 
 export async function POST(req: NextRequest) {
-  // 1) 认证
-  const userId = await getUserId(req);
-  if (!userId) return unauthorizedResponse(req);
+  // 1) 认证 + 获取 workspaceId（用于 usage tracking）
+  const authCtx = await getUserIdAndWorkspaceId(req);
+  if (!authCtx) return unauthorizedResponse(req);
 
   // 2) AI 服务配置检查
   if (!isAiConfigured()) return aiNotConfiguredResponse(req);
@@ -58,10 +59,25 @@ export async function POST(req: NextRequest) {
 
   // 5) 流式问答：system 注入文档内容作为上下文
   try {
+    const usageStartTime = Date.now();
     const result = streamText({
       model: defaultModel,
       system: `你是文档问答助手。根据以下文档内容回答用户问题。如果问题超出文档范围，请如实告知。\n\n文档内容：\n${body.documentContent}`,
       messages,
+      onFinish: ({ usage }) => {
+        if (authCtx.workspaceId) {
+          fireRecordUsage(
+            {
+              workspaceId: authCtx.workspaceId,
+              userId: authCtx.userId,
+              capability: "chat",
+              model: defaultModel.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

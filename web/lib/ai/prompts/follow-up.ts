@@ -6,11 +6,14 @@
 // - 追问应与当前问答相关、有深度、帮助用户深入探索话题
 // - 中文输出
 
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
 /**
  * 追问建议系统 prompt：定义 AI 角色、任务与输出格式。
  */
-export function buildFollowUpSystemPrompt(): string {
-  return `你是企业知识助手的追问建议生成器。
+export function buildFollowUpSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是企业知识助手的追问建议生成器。
 根据用户的问题和 AI 的回答，生成 3 个有价值的后续追问建议。
 
 生成规则：
@@ -50,7 +53,7 @@ AI 回答：今天有 2 个会议：10:00 产品评审会、14:00 技术方案�
 用户问题：OKR 进度如何？
 AI 回答：当前 Q1 OKR 整体进度 65%，其中关键结果 KR1 已完成、KR2 进行中（80%）、KR3 风险中（30%）。
 输出：
-["KR3 风险中的具体原因是什么？", "KR2 预计什么时候能完成？", "有哪些措施可以推进 KR3？"]`;
+["KR3 风险中的具体原因是什么？", "KR2 预计什么时候能完成？", "有哪些措施可以推进 KR3？"]`, feedbackExamples);
 }
 
 /**

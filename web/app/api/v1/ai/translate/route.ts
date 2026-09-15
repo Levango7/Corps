@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { defaultModel } from "@/lib/ai/deepseek";
-import { getUserId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -26,9 +27,9 @@ function buildSystemPrompt(targetLang: "zh" | "en" | "ja"): string {
 }
 
 export async function POST(req: NextRequest) {
-  // 1) 认证
-  const userId = await getUserId(req);
-  if (!userId) return unauthorizedResponse(req);
+  // 1) 认证 + 获取 workspaceId（用于 usage tracking）
+  const authCtx = await getUserIdAndWorkspaceId(req);
+  if (!authCtx) return unauthorizedResponse(req);
 
   // 2) AI 服务配置检查
   if (!isAiConfigured()) return aiNotConfiguredResponse(req);
@@ -53,10 +54,25 @@ export async function POST(req: NextRequest) {
 
   // 4) 流式翻译
   try {
+    const usageStartTime = Date.now();
     const result = streamText({
       model: defaultModel,
       system: buildSystemPrompt(body.targetLang),
       messages: [{ role: "user", content: body.text }],
+      onFinish: ({ usage }) => {
+        if (authCtx.workspaceId) {
+          fireRecordUsage(
+            {
+              workspaceId: authCtx.workspaceId,
+              userId: authCtx.userId,
+              capability: "translate",
+              model: defaultModel.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

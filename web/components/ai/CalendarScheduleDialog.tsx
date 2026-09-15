@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { CalendarClock, X, Loader2, Check, AlertTriangle } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /** 单个排程建议（与 API 返回结构对齐） */
 interface ScheduleSuggestion {
@@ -323,6 +324,15 @@ export default function CalendarScheduleDialog({
                 ))}
               </ul>
             </div>
+          )}
+
+          {/* AI 结果反馈按钮 */}
+          {!loading && !error && suggestions.length > 0 && (
+            <FeedbackButtons
+              capability="calendar-schedule"
+              workspaceId={wid}
+              originalOutput={suggestions}
+            />
           )}
 
           {/* 空建议态 */}

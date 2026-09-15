@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { defaultModel } from "@/lib/ai/deepseek";
-import { getUserId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -18,9 +19,9 @@ const SYSTEM_PROMPT =
   "你是文档格式化助手。将用户选中的杂乱文本整理为结构化的 markdown 格式。要求：1）识别标题、列表、段落等结构 2）保持原文语义不变 3）使用正确的 markdown 语法 4）适度添加层级，不要过度嵌套。只输出格式化后的 markdown，不要添加解释。";
 
 export async function POST(req: NextRequest) {
-  // 1) 认证
-  const userId = await getUserId(req);
-  if (!userId) return unauthorizedResponse(req);
+  // 1) 认证 + 获取 workspaceId（用于 usage tracking）
+  const authCtx = await getUserIdAndWorkspaceId(req);
+  if (!authCtx) return unauthorizedResponse(req);
 
   // 2) AI 服务配置检查
   if (!isAiConfigured()) return aiNotConfiguredResponse(req);
@@ -45,10 +46,25 @@ export async function POST(req: NextRequest) {
 
   // 4) 流式格式化
   try {
+    const usageStartTime = Date.now();
     const result = streamText({
       model: defaultModel,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: body.text }],
+      onFinish: ({ usage }) => {
+        if (authCtx.workspaceId) {
+          fireRecordUsage(
+            {
+              workspaceId: authCtx.workspaceId,
+              userId: authCtx.userId,
+              capability: "format",
+              model: defaultModel.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

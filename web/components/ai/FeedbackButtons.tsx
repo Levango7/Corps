@@ -57,11 +57,20 @@ export function FeedbackButtons({
 
   // AbortController：组件卸载或重新提交时中止进行中的请求
   const abortRef = useRef<AbortController | null>(null);
+  // 修正建议 textarea 引用，用于对话框打开时自动聚焦
+  const commentRef = useRef<HTMLTextAreaElement>(null);
 
   // 组件卸载时中止进行中的请求
   useEffect(() => {
     return () => abortRef.current?.abort();
   }, []);
+
+  // 对话框打开时自动聚焦 textarea
+  useEffect(() => {
+    if (showDialog) {
+      commentRef.current?.focus();
+    }
+  }, [showDialog]);
 
   // 对话框打开时按 Escape 键关闭
   useEffect(() => {
@@ -208,7 +217,7 @@ export function FeedbackButtons({
           <div
             role="dialog"
             aria-modal="true"
-            aria-label={t("submit")}
+            aria-label={t("dislike")}
             className="fixed left-1/2 top-1/2 z-50 w-[min(90vw,400px)] -translate-x-1/2 -translate-y-1/2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] shadow-[var(--elev-md)]"
           >
             {/* 关闭按钮 */}
@@ -229,11 +238,13 @@ export function FeedbackButtons({
             {/* 修正建议输入 */}
             <textarea
               id="feedback-comment"
+              ref={commentRef}
               value={comment}
               onChange={(e) => setComment(e.target.value)}
               placeholder={t("commentPlaceholder")}
               aria-label={t("commentPlaceholder")}
               rows={4}
+              maxLength={5000}
               disabled={submitting}
               className="w-full resize-none rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50"
             />

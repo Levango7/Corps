@@ -6,7 +6,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { defaultModel } from "@/lib/ai/deepseek";
-import { getUserId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -18,9 +19,9 @@ const SYSTEM_PROMPT =
   "你是文档摘要助手。将用户选中的文本生成简洁摘要。摘要应当：1）保留核心观点和关键信息 2）使用要点列表格式 3）每个要点不超过一行 4）总长度不超过原文的30%。输出 markdown 格式。";
 
 export async function POST(req: NextRequest) {
-  // 1) 认证
-  const userId = await getUserId(req);
-  if (!userId) return unauthorizedResponse(req);
+  // 1) 认证 + 获取 workspaceId（用于 usage tracking）
+  const authCtx = await getUserIdAndWorkspaceId(req);
+  if (!authCtx) return unauthorizedResponse(req);
 
   // 2) AI 服务配置检查
   if (!isAiConfigured()) return aiNotConfiguredResponse(req);
@@ -45,10 +46,25 @@ export async function POST(req: NextRequest) {
 
   // 4) 流式摘要
   try {
+    const usageStartTime = Date.now();
     const result = streamText({
       model: defaultModel,
       system: SYSTEM_PROMPT,
       messages: [{ role: "user", content: body.text }],
+      onFinish: ({ usage }) => {
+        if (authCtx.workspaceId) {
+          fireRecordUsage(
+            {
+              workspaceId: authCtx.workspaceId,
+              userId: authCtx.userId,
+              capability: "summarize",
+              model: defaultModel.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        }
+      },
     });
 
     return result.toUIMessageStreamResponse();

@@ -1,6 +1,9 @@
 // AI 日历智能排程 prompt 模板。
 // 系统提示约束 LLM 输出 JSON 排程建议；用户提示注入自然语言需求 + 工作区日历上下文。
 
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
 /** 排程需求输入 */
 export interface CalendarScheduleInput {
   /** 自然语言排程描述（如"下周二下午开产品评审会"） */
@@ -15,8 +18,8 @@ export interface CalendarScheduleInput {
  * 系统提示：约束 LLM 返回结构化 JSON 排程建议。
  * 不在工作区内的事件上下文由用户提示注入，系统提示仅声明输出契约与排程规则。
  */
-export function buildCalendarSystemPrompt(): string {
-  return `你是日历智能排程助手。根据用户的自然语言描述和工作区日历上下文，生成合理的会议/事件排程建议。
+export function buildCalendarSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是日历智能排程助手。根据用户的自然语言描述和工作区日历上下文，生成合理的会议/事件排程建议。
 要求：
 1) 返回 JSON，格式：{"suggestions":[{"title":"string","startTime":"ISO 8601","endTime":"ISO 8601","duration":number,"reason":"string","conflicts":"string|null"}]}
 2) suggestions 数组包含 1-3 个排程方案
@@ -39,7 +42,7 @@ export function buildCalendarSystemPrompt(): string {
 ## 示例
 输入：下周二下午开产品评审会，2 小时
 输出：
-{"suggestions":[{"title":"产品评审会","startTime":"2026-09-15T14:00:00+08:00","endTime":"2026-09-15T16:00:00+08:00","duration":120,"reason":"下周二下午无已有事件，适合安排评审会","conflicts":null}]}`;
+{"suggestions":[{"title":"产品评审会","startTime":"2026-09-15T14:00:00+08:00","endTime":"2026-09-15T16:00:00+08:00","duration":120,"reason":"下周二下午无已有事件，适合安排评审会","conflicts":null}]}`, feedbackExamples);
 }
 
 /**

@@ -16,6 +16,7 @@ import { useTranslations } from "next-intl";
 import { Sparkles, X, Loader2, Zap, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 interface WorkflowAction {
   type: string;
@@ -308,6 +309,15 @@ export default function WorkflowBuildDialog({
                 )}
               </div>
             </div>
+          )}
+
+          {/* AI 结果反馈按钮 */}
+          {workflow && (
+            <FeedbackButtons
+              capability="workflow-build"
+              workspaceId={wid}
+              originalOutput={workflow}
+            />
           )}
         </div>
 

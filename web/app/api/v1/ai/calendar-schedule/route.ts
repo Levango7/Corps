@@ -16,6 +16,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import {
   buildCalendarSystemPrompt,
   buildCalendarUserPrompt,
@@ -136,15 +137,34 @@ export async function POST(req: NextRequest) {
     );
 
     // 7) 调用 deepseek-reasoner 生成排程建议（非流式）
-    const llmResult = await generateText({
-      model: reasonerModel,
-      system: withCoT(buildCalendarSystemPrompt(), reasonerModel),
-      prompt: buildCalendarUserPrompt(context, {
-        description: body.description,
-        duration: body.duration,
-        attendees: body.attendees,
-      }),
-    });
+    const llmResult = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "calendar-schedule",
+        model: reasonerModel.modelId,
+      },
+      async () => {
+        const res = await generateText({
+          model: reasonerModel,
+          system: withCoT(buildCalendarSystemPrompt(), reasonerModel),
+          prompt: buildCalendarUserPrompt(context, {
+            description: body.description,
+            duration: body.duration,
+            attendees: body.attendees,
+          }),
+        });
+        return {
+          result: res,
+          usage: res.usage
+            ? {
+                inputTokens: res.usage.inputTokens ?? 0,
+                outputTokens: res.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
 
     // 8) 解析 JSON 返回
     let result: CalendarScheduleResult;

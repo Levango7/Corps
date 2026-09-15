@@ -21,6 +21,7 @@ import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Sparkles, Loader2, Copy, Check, RefreshCw } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /** AI 回复建议响应结构（与后端 data 字段一致） */
 interface ImReplySuggestion {
@@ -299,6 +300,13 @@ export function ImReplySuggestions({
           );
         })}
       </ul>
+
+      {/* AI 结果反馈按钮 */}
+      <FeedbackButtons
+        capability="im-reply"
+        workspaceId={wid}
+        originalOutput={suggestions}
+      />
     </aside>
   );
 }

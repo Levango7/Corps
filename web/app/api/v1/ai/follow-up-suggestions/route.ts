@@ -15,6 +15,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -96,11 +97,30 @@ export async function POST(req: NextRequest) {
     }
 
     // 非流式生成追问建议
-    const result = await generateText({
-      model: defaultModel,
-      system: withCoT(buildFollowUpSystemPrompt(), defaultModel),
-      prompt: buildFollowUpUserPrompt(body.question, body.answer),
-    });
+    const result = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "follow-up-suggestions",
+        model: defaultModel.modelId,
+      },
+      async () => {
+        const res = await generateText({
+          model: defaultModel,
+          system: withCoT(buildFollowUpSystemPrompt(), defaultModel),
+          prompt: buildFollowUpUserPrompt(body.question, body.answer),
+        });
+        return {
+          result: res,
+          usage: res.usage
+            ? {
+                inputTokens: res.usage.inputTokens ?? 0,
+                outputTokens: res.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
 
     const suggestions = parseSuggestions(result.text);
 

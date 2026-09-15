@@ -1,7 +1,10 @@
 // 工作日报 prompt 模板——根据当天工作数据生成结构化日报。
 
-export function buildDailyReportSystemPrompt(): string {
-  return `你是工作日报生成助手。根据用户当天的工作数据，生成一份结构化的日报。
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
+export function buildDailyReportSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是工作日报生成助手。根据用户当天的工作数据，生成一份结构化的日报。
 格式要求：
 1) markdown 格式
 2) 分"今日完成"、"进行中"、"问题与风险"、"明日计划"四个部分
@@ -31,7 +34,7 @@ export function buildDailyReportSystemPrompt(): string {
 ## 问题与风险
 - 无
 ## 明日计划
-- 完成导出功能测试`;
+- 完成导出功能测试`, feedbackExamples);
 }
 
 export function buildUserPrompt(context: string, input: { date?: string }): string {

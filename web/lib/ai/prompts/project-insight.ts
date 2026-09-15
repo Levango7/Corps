@@ -1,10 +1,13 @@
 // 项目洞察 prompt 模板——进度/风险/概览/周报四种分析维度。
 
-export function buildProjectInsightSystemPrompts(): Record<
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
+export function buildProjectInsightSystemPrompts(feedbackExamples?: FeedbackExample[]): Record<
   "progress" | "risk" | "summary" | "weekly",
   string
 > {
-  return {
+  const prompts: Record<"progress" | "risk" | "summary" | "weekly", string> = {
   progress: `你是项目进度分析助手。根据项目数据分析进度状况。
 要求：1) 计算完成率 2) 识别趋势 3) 预测风险 4) markdown 格式 5) 仅基于给定数据
 
@@ -84,6 +87,11 @@ export function buildProjectInsightSystemPrompts(): Record<
 - 优先解决第三方服务稳定性问题
 - 启动报表模块开发`,
   };
+  if (!feedbackExamples || feedbackExamples.length === 0) return prompts;
+  (Object.keys(prompts) as Array<keyof typeof prompts>).forEach((k) => {
+    prompts[k] = appendFeedbackShot(prompts[k], feedbackExamples);
+  });
+  return prompts;
 }
 
 export function buildUserPrompt(

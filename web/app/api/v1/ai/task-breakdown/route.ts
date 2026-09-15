@@ -8,12 +8,15 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { defaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
-  getUserId,
+
+  getUserIdAndWorkspaceId,
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { buildTaskBreakdownSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts/task-breakdown";
+import { getFeedbackExamples } from "@/lib/ai/feedback";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
@@ -68,9 +71,10 @@ function normalizeSubtasks(raw: unknown): Subtask[] {
 }
 
 export async function POST(req: NextRequest) {
-  // 1) 认证
-  const userId = await getUserId(req);
-  if (!userId) return unauthorizedResponse(req);
+  // 1) 认证 + 获取 workspaceId（用于 usage tracking）
+  const authCtx = await getUserIdAndWorkspaceId(req);
+  if (!authCtx) return unauthorizedResponse(req);
+  const userId = authCtx.userId;
 
   // 2) AI 服务配置检查
   if (!isAiConfigured()) return aiNotConfiguredResponse(req);
@@ -106,11 +110,40 @@ export async function POST(req: NextRequest) {
   // 5) LLM 生成子任务（非流式）
   let result: TaskBreakdownResult;
   try {
-    const llmResult = await generateText({
-      model: defaultModel,
-      system: withCoT(buildTaskBreakdownSystemPrompt(), defaultModel),
-      prompt: buildUserPrompt(body),
-    });
+    const generateFn = async () => {
+      // 查询正面反馈作为 few-shot 示例（workspaceId 可用时）
+      const feedbackExamples = authCtx.workspaceId
+        ? await getFeedbackExamples(authCtx.workspaceId, "task-breakdown", 2)
+        : undefined;
+      const llmResult = await generateText({
+        model: defaultModel,
+        system: withCoT(buildTaskBreakdownSystemPrompt(feedbackExamples), defaultModel),
+        prompt: buildUserPrompt(body),
+      });
+      return {
+        result: llmResult,
+        usage: llmResult.usage
+          ? {
+              inputTokens: llmResult.usage.inputTokens ?? 0,
+              outputTokens: llmResult.usage.outputTokens ?? 0,
+            }
+          : undefined,
+      };
+    };
+
+    // workspaceId 可用时用 withUsageTracking 包装，否则直接调用
+    const llmResult =
+      authCtx.workspaceId
+        ? await withUsageTracking(
+            {
+              workspaceId: authCtx.workspaceId,
+              userId,
+              capability: "task-breakdown",
+              model: defaultModel.modelId,
+            },
+            generateFn,
+          )
+        : (await generateFn()).result;
 
     const cleaned = cleanJsonResponse(llmResult.text);
     const parsed: unknown = JSON.parse(cleaned);

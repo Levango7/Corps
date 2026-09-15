@@ -6,6 +6,7 @@ import { Sparkles, Megaphone, Save, Loader2, Eye, Edit3 } from "lucide-react";
 import Markdown from "@/components/Markdown";
 import { consumeAiStream } from "@/components/editor/aiStream";
 import { api } from "@/lib/api";
+import { FeedbackButtons } from "./FeedbackButtons";
 
 /**
  * AI 公告智能起草面板。
@@ -258,6 +259,13 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
                 <Markdown source={content} />
               </div>
             )}
+
+            {/* AI 结果反馈按钮 */}
+            <FeedbackButtons
+              capability="announcement-draft"
+              workspaceId={wid}
+              originalOutput={content}
+            />
           </div>
         )}
 

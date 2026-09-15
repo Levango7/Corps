@@ -93,3 +93,48 @@ export async function withUsageTracking<T>(
     });
   }
 }
+/**
+ * 流式 AI 调用的使用量跟踪（fire-and-forget）。
+ *
+ * 流式 API（streamText）的 usage 在流结束后才可用，无法用 withUsageTracking
+ * 同步包装。本函数供 streamText 的 onFinish 回调使用，在流结束后异步记录 usage。
+ *
+ * 用法：
+ * ```ts
+ * const startTime = Date.now();
+ * const result = streamText({
+ *   ...,
+ *   onFinish: ({ usage }) => {
+ *     fireRecordUsage(
+ *       { workspaceId, userId, capability: "completion", model: defaultModel.modelId },
+ *       startTime,
+ *       usage,
+ *     );
+ *   },
+ * });
+ * ```
+ *
+ * 注意：workspaceId 为 null 时跳过记录（AiUsageLog.workspaceId 为必填外键）。
+ */
+export function fireRecordUsage(
+  params: UsageTrackingParams,
+  startTime: number,
+  usage?: { inputTokens?: number; outputTokens?: number },
+  success = true,
+): void {
+  // workspaceId 为空时跳过（AiUsageLog.workspaceId 为必填外键，不能为 null）
+  if (!params.workspaceId) return;
+  const durationMs = Date.now() - startTime;
+  recordAiUsage({
+    workspaceId: params.workspaceId,
+    userId: params.userId,
+    capability: params.capability,
+    model: params.model,
+    inputTokens: usage?.inputTokens ?? 0,
+    outputTokens: usage?.outputTokens ?? 0,
+    durationMs,
+    success,
+  }).catch((err) => {
+    console.error("[usage-tracking] Failed to record stream usage:", err);
+  });
+}

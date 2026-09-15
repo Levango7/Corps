@@ -20,6 +20,7 @@ import {
   aiNotConfiguredResponse,
   isAiConfigured,
 } from "@/lib/ai/shared";
+import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import {
   suggestOrchestration,
   executeOrchestration,
@@ -111,11 +112,25 @@ export async function POST(req: NextRequest) {
 
   // 6) 生成联动方案
   try {
-    const plan = await suggestOrchestration(
-      body.wid,
-      ctx.payload.sub,
-      body.userRequest,
+    // 用 withUsageTracking 包装 suggestOrchestration（内部 generateText 不暴露 usage，
+    // 此处记录调用耗时与成败，token 数为 0）
+    const plan = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "orchestrate",
+        model: "deepseek-reasoner",
+      },
+      async () => {
+        const res = await suggestOrchestration(
+          body.wid,
+          ctx.payload.sub,
+          body.userRequest,
+        );
+        return { result: res };
+      },
     );
+
     if (!plan) {
       return NextResponse.json(
         { code: 500, message: apiMsg(req, "internalError"), data: null },
@@ -206,7 +221,21 @@ export async function PATCH(req: NextRequest) {
     // z.enum 已校验 type ∈ 8 种合法枚举，validateActionFields 已校验必填字段 + 枚举值，
     // passthrough 保留所有字段，断言安全
     const actions = body.actions as AiAction[];
-    const results = await executeOrchestration(body.wid, ctx.payload.sub, actions);
+    // 用 withUsageTracking 包装 executeOrchestration（与 POST 保持一致，
+    // 记录调用耗时与成败，token 数为 0）
+    const executeFn = async () => {
+      const res = await executeOrchestration(body.wid, ctx.payload.sub, actions);
+      return { result: res };
+    };
+    const results = await withUsageTracking(
+      {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "orchestrate",
+        model: "deepseek-chat",
+      },
+      executeFn,
+    );
     const success = results.every((r) => r.success);
 
     return NextResponse.json({

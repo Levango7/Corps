@@ -26,6 +26,7 @@ import {
   type UIMessage,
   type UIMessageChunk,
 } from "ai";
+import { fireRecordUsage, type UsageTrackingParams } from "@/lib/ai/usage-middleware";
 
 /** 进度 data part 的数据结构（写入流中 `data-progress` 类型的 data 字段） */
 export interface AiProgressData {
@@ -75,6 +76,11 @@ export interface CreateAiProgressStreamParams {
    * 将上下文聚合封装在此函数中，让进度阶段有真实时序。
    */
   buildPrompt: () => Promise<string>;
+  /**
+   * 可选：使用量跟踪参数。传入后在流结束后异步记录 usage（fire-and-forget）。
+   * workspaceId 为 null 时跳过记录。
+   */
+  usageTracking?: UsageTrackingParams;
 }
 
 /**
@@ -93,6 +99,7 @@ export function createAiProgressStream(
   params: CreateAiProgressStreamParams,
   stages: AiProgressStages,
 ): Response {
+  const usageStartTime = params.usageTracking ? Date.now() : 0;
   const stream = createUIMessageStream<UIMessage>({
     execute: async ({ writer }) => {
       // 阶段 1：聚合数据
@@ -123,8 +130,18 @@ export function createAiProgressStream(
           model: params.model,
           system: params.system,
           prompt,
+          // 流结束后异步记录 usage（fire-and-forget）
+          onFinish: params.usageTracking
+            ? ({ usage }) => {
+                fireRecordUsage(params.usageTracking!, usageStartTime, usage);
+              }
+            : undefined,
         });
       } catch (e) {
+        // usage tracking：记录失败
+        if (params.usageTracking) {
+          fireRecordUsage(params.usageTracking, usageStartTime, undefined, false);
+        }
         throw new Error(
           `[ai-stream] streamText 初始化失败: ${e instanceof Error ? e.message : String(e)}`,
         );
@@ -159,6 +176,11 @@ export interface CreateAiJsonProgressStreamParams<T> {
    * 解析失败时应返回降级结果（而非抛异常），由调用方决定降级策略。
    */
   parseResult: (text: string) => T;
+  /**
+   * 可选：使用量跟踪参数。传入后在 LLM 调用结束后异步记录 usage（fire-and-forget）。
+   * workspaceId 为 null 时跳过记录。
+   */
+  usageTracking?: UsageTrackingParams;
 }
 
 /**
@@ -176,6 +198,7 @@ export function createAiJsonProgressStream<T>(
   params: CreateAiJsonProgressStreamParams<T>,
   stages: AiProgressStages,
 ): Response {
+  const usageStartTime = params.usageTracking ? Date.now() : 0;
   const stream = createUIMessageStream<UIMessage>({
     execute: async ({ writer }) => {
       // 阶段 1：聚合数据
@@ -208,8 +231,23 @@ export function createAiJsonProgressStream<T>(
           prompt,
         });
       } catch (e) {
+        // usage tracking：记录失败
+        if (params.usageTracking) {
+          fireRecordUsage(params.usageTracking, usageStartTime, undefined, false);
+        }
         throw new Error(
           `[ai-stream] generateText 失败: ${e instanceof Error ? e.message : String(e)}`,
+        );
+      }
+
+      // usage tracking：记录成功（fire-and-forget）
+      if (params.usageTracking) {
+        fireRecordUsage(
+          params.usageTracking,
+          usageStartTime,
+          result.usage
+            ? { inputTokens: result.usage.inputTokens, outputTokens: result.usage.outputTokens }
+            : undefined,
         );
       }
 

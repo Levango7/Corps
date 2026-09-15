@@ -1,10 +1,13 @@
 // 跨模块 AI 知识问答 prompt 模板——基于工作区跨模块上下文回答用户问题。
 
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
 /**
  * 知识问答系统 prompt：定义 AI 角色、可用模块与回答规则。
  */
-export function buildKnowledgeQaSystemPrompt(): string {
-  return `你是企业知识助手，能基于跨模块的工作区上下文回答用户问题。
+export function buildKnowledgeQaSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是企业知识助手，能基于跨模块的工作区上下文回答用户问题。
 你拥有以下模块的数据：任务、文档、会议、审批、工时记录、Wiki、决策、OKR、公告、联系人、工作流、表单、白板。
 回答规则：
 1. 基于提供的上下文数据回答，不要编造不存在的信息
@@ -28,7 +31,7 @@ export function buildKnowledgeQaSystemPrompt(): string {
 输出：
 本周进行中的任务共 2 项：
 - **需求评审**（进行中）—— 负责人：张三
-- **接口联调**（进行中）—— 负责人：李四`;
+- **接口联调**（进行中）—— 负责人：李四`, feedbackExamples);
 }
 
 /**

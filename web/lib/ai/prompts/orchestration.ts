@@ -7,14 +7,17 @@
 // 安全约束：本 prompt 仅"建议"方案，不执行任何操作；执行须经用户确认后
 // 由 executeOrchestration → executeAiActions 在 RLS 事务内原子执行。
 
+import { appendFeedbackShot } from "./feedback-shot";
+import type { FeedbackExample } from "@/lib/ai/feedback";
+
 /**
  * 联动编排 system prompt。
  *
  * 包含：角色定义、输出 JSON schema、8 种 AiAction 字段说明、联动场景示例、
  * 推理步骤（CoT）、格式校验约束、few-shot 示例。
  */
-export function buildOrchestrationSystemPrompt(): string {
-  return `你是跨能力联动编排专家。分析工作区的全量上下文数据，识别需要跨能力协同的场景，建议可执行的操作序列。
+export function buildOrchestrationSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
+  return appendFeedbackShot(`你是跨能力联动编排专家。分析工作区的全量上下文数据，识别需要跨能力协同的场景，建议可执行的操作序列。
 
 返回 JSON 格式：
 {
@@ -111,7 +114,7 @@ export function buildOrchestrationSystemPrompt(): string {
 用户关注点：（无）
 
 输出：
-{"summary":"工作区状态正常","reasoning":"未发现逾期任务、阻塞任务、风险OKR或逾期审批等需要联动的异常状况","actions":[]}`;
+{"summary":"工作区状态正常","reasoning":"未发现逾期任务、阻塞任务、风险OKR或逾期审批等需要联动的异常状况","actions":[]}`, feedbackExamples);
 }
 
 /**
