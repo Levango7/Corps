@@ -14,7 +14,7 @@ import { TaskDecisions } from "@/components/task/TaskDecisions";
 import { TaskComments } from "@/components/task/TaskComments";
 import { TaskPropertyAside } from "@/components/task/TaskPropertyAside";
 import { ConfirmDialog } from "@/components/task/ConfirmDialog";
-import type { Task, Comment, Decision, Person } from "@/components/task/types";
+import type { Task, Comment, Decision, Person, TaskPatch } from "@/components/task/types";
 
 export default function TaskDetailPage({
   params,
@@ -72,15 +72,15 @@ export default function TaskDetailPage({
 
   const load = useCallback(async () => {
     try {
-      const [t, c, d, m] = await Promise.all([
+      const [taskData, c, d, m] = await Promise.all([
         api<Task>(`${base}/tasks/${id}`),
         api<Comment[]>(`${base}/tasks/${id}/comments`),
         api<{ items: Decision[]; total: number; hasMore: boolean }>(`${base}/tasks/${id}/decisions`),
         api<{ items: Person[]; total: number; hasMore: boolean }>(`${base}/members`),
       ]);
-      setTask(t);
-      setTitleDraft(t.title);
-      setDescDraft(t.description ?? "");
+      setTask(taskData);
+      setTitleDraft(taskData.title);
+      setDescDraft(taskData.description ?? "");
       setComments(c);
       setDecisions(d.items);
       setMembers(m.items);
@@ -95,9 +95,9 @@ export default function TaskDetailPage({
     load();
   }, [load]);
 
-  async function patch(data: Partial<Record<string, unknown>>) {
+  async function patch(data: TaskPatch) {
     if (!task) return;
-    setTask({ ...task, ...(data as object) } as Task);
+    setTask({ ...task, ...data });
     setSaving(true);
     try {
       const updated = await api<Task>(`${base}/tasks/${id}`, {

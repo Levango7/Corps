@@ -3,7 +3,8 @@
 // 自定义确认弹窗（替代 window.confirm）。
 // 拆分自 task/[id]/page.tsx 第 1167-1210 行，纯展示 + 回调。
 
-import { Loader2, X } from "lucide-react";
+import { useEffect, useRef } from "react";
+import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 interface ConfirmDialogProps {
@@ -23,11 +24,65 @@ export function ConfirmDialog({
 }: ConfirmDialogProps) {
   const t = useTranslations("task");
   const tButton = useTranslations("button");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // 焦点管理：打开时记录之前焦点并移入模态框，关闭时恢复
+  useEffect(() => {
+    if (!open) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const container = dialogRef.current;
+    if (container) {
+      const focusable = container.querySelector<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      focusable?.focus();
+    }
+    return () => {
+      previouslyFocused?.focus?.();
+    };
+  }, [open]);
+
+  // Escape 关闭 + Tab focus trap（只在 !deleting 时允许 Escape 关闭）
+  useEffect(() => {
+    if (!open) return;
+    const container = dialogRef.current;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape" && !deleting) {
+        e.preventDefault();
+        onClose();
+        return;
+      }
+      if (e.key === "Tab" && container) {
+        const focusables = Array.from(
+          container.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])',
+          ),
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [open, deleting, onClose]);
 
   if (!open) return null;
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={t("confirmAria")}

@@ -11,12 +11,12 @@ import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { STATUS_META } from "@/lib/task-meta";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 import { useToast } from "@/components/Toast";
-import { PRIORITY_META, type Person, type Status, type Priority, type Task } from "./types";
+import { PRIORITY_META, type Person, type Status, type Priority, type Task, type TaskPatch } from "./types";
 
 interface TaskPropertyAsideProps {
   task: Task;
   members: Person[];
-  onPatch: (data: Partial<Record<string, unknown>>) => void;
+  onPatch: (data: TaskPatch) => void;
   wid: string;
   id: string;
   relTime: (iso: string) => string;

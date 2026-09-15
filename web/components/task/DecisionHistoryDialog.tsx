@@ -5,6 +5,7 @@
 // < sm：全屏弹窗（底部贴边、无圆角、100dvh）
 // ≥ sm：居中弹窗（max-w-lg、80dvh、圆角）
 
+import { useEffect, useRef } from "react";
 import { History, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import Markdown from "@/components/Markdown";
@@ -15,6 +16,8 @@ interface DecisionHistoryDialogProps {
   onClose: () => void;
   versions: DecisionVersion[];
   historyLoading: boolean;
+  historyError: boolean;
+  onRetry: () => void;
   relTime: (iso: string) => string;
 }
 
@@ -23,15 +26,66 @@ export function DecisionHistoryDialog({
   onClose,
   versions,
   historyLoading,
+  historyError,
+  onRetry,
   relTime,
 }: DecisionHistoryDialogProps) {
   const t = useTranslations("task");
   const tButton = useTranslations("button");
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // 焦点管理：打开时记录之前焦点并移入模态框，关闭时恢复
+  useEffect(() => {
+    if (!historyFor) return;
+    const previouslyFocused = document.activeElement as HTMLElement | null;
+    const container = dialogRef.current;
+    if (container) {
+      const focusable = container.querySelector<HTMLElement>(
+        'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      focusable?.focus();
+    }
+    return () => {
+      previouslyFocused?.focus?.();
+    };
+  }, [historyFor]);
+
+  // Tab focus trap：在模态框内可聚焦元素间循环
+  useEffect(() => {
+    if (!historyFor) return;
+    const container = dialogRef.current;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Tab" && container) {
+        const focusables = Array.from(
+          container.querySelectorAll<HTMLElement>(
+            'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"]):not([disabled])',
+          ),
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey) {
+          if (document.activeElement === first) {
+            e.preventDefault();
+            last.focus();
+          }
+        } else {
+          if (document.activeElement === last) {
+            e.preventDefault();
+            first.focus();
+          }
+        }
+      }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [historyFor]);
 
   if (!historyFor) return null;
 
   return (
     <div
+      ref={dialogRef}
       role="dialog"
       aria-modal="true"
       aria-label={t("versionHistory")}
@@ -62,7 +116,22 @@ export function DecisionHistoryDialog({
               <div className="h-20 w-full rounded-[var(--radius-md)] bg-[var(--surface-2)] animate-pulse" />
             </div>
           ) : versions.length === 0 ? (
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noHistory")}</p>
+            historyError ? (
+              <div className="text-center">
+                <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-[var(--space-2)]">
+                  {t("historyLoadFailed")}
+                </p>
+                <button
+                  type="button"
+                  onClick={onRetry}
+                  className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--accent)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                >
+                  {tButton("retry")}
+                </button>
+              </div>
+            ) : (
+              <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noHistory")}</p>
+            )
           ) : (
             versions.map((v) => (
               <article

@@ -82,6 +82,7 @@ export function TaskDecisions({
   const [historyFor, setHistoryFor] = useState<Decision | null>(null);
   const [versions, setVersions] = useState<DecisionVersion[]>([]);
   const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyError, setHistoryError] = useState(false);
 
   // ── 版本历史弹窗：Escape 关闭 ──
   useEffect(() => {
@@ -95,6 +96,20 @@ export function TaskDecisions({
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [historyFor]);
+
+  // ── 打印模式：printMode 变为 true 时触发 window.print()，afterprint 后卸载 ──
+  // 改用 useEffect 替代 ref callback，确保 afterprint 监听器在 cleanup 中移除，
+  // 避免用户取消打印时监听器泄漏。
+  useEffect(() => {
+    if (!printMode) return;
+    const off = () => setPrintMode(false);
+    window.addEventListener("afterprint", off);
+    requestAnimationFrame(() => window.print());
+    return () => {
+      window.removeEventListener("afterprint", off);
+      setPrintMode(false);
+    };
+  }, [printMode]);
 
   async function addDecision() {
     if (!decisionDraft.trim() || decisionSaving) return;
@@ -120,10 +135,12 @@ export function TaskDecisions({
   async function showHistory(d: Decision) {
     setHistoryFor(d);
     setHistoryLoading(true);
+    setHistoryError(false);
     try {
       const v = await api<DecisionVersion[]>(`${base}/tasks/${id}/decisions/${d.id}/versions`);
       setVersions(v);
     } catch {
+      setHistoryError(true);
       setVersions([]);
     } finally {
       setHistoryLoading(false);
@@ -322,17 +339,7 @@ export function TaskDecisions({
         <div
           className="hidden print:block print-area"
           aria-hidden="true"
-          ref={(el) => {
-            // 挂载即触发打印；afterprint 卸载 printMode（容器随条件渲染移除）
-            if (el) {
-              requestAnimationFrame(() => window.print());
-              const off = () => {
-                setPrintMode(false);
-                window.removeEventListener("afterprint", off);
-              };
-              window.addEventListener("afterprint", off);
-            }
-          }}
+
         >
           <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-4">
             {task.title} · {t("decisionsTitle")}
@@ -340,7 +347,7 @@ export function TaskDecisions({
           {decisions.map((d) => (
             <section key={d.id} className="mb-8">
               <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-2">
-                v{d.version} · {d.author.name || d.author.email} ·{" "}
+                v{d.version} · {d.author ? d.author.name || d.author.email : t("deletedUser")} ·{" "}
                 {new Date(d.createdAt).toLocaleString()}
               </p>
               <Markdown source={d.markdown} />
@@ -356,6 +363,8 @@ export function TaskDecisions({
         onClose={() => setHistoryFor(null)}
         versions={versions}
         historyLoading={historyLoading}
+        historyError={historyError}
+        onRetry={() => historyFor && showHistory(historyFor)}
         relTime={relTime}
       />
 

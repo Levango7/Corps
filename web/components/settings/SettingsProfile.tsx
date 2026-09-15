@@ -41,7 +41,7 @@ export function SettingsProfile({ onError }: SettingsProfileProps) {
         setUserImage(u.image ?? "");
         setUserInitial({ name: u.name, image: u.image });
       })
-      .catch(() => {});
+      .catch(() => onError(tErr("loadFailed")));
   }, []);
 
   async function saveUserProfile() {
@@ -114,7 +114,7 @@ export function SettingsProfile({ onError }: SettingsProfileProps) {
               else setUserImageError("");
             }}
             className={inputClass}
-            placeholder="https://..."
+            placeholder={t("avatarUrlPlaceholder")}
           />
           {userImageError && (
             <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--danger-fg)]">

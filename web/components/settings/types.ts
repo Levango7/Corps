@@ -68,13 +68,26 @@ export function applyMotion(pref: MotionPref) {
 }
 
 export function loadNotifPref(): NotifPref {
+  const defaults: NotifPref = { emailEnabled: true, mentionEnabled: true };
   try {
     const raw = localStorage.getItem(NOTIF_PREF_KEY);
-    if (raw) return JSON.parse(raw) as NotifPref;
+    if (raw) {
+      const parsed: unknown = JSON.parse(raw);
+      if (parsed && typeof parsed === "object") {
+        return {
+          emailEnabled: typeof (parsed as Record<string, unknown>).emailEnabled === "boolean"
+            ? (parsed as Record<string, boolean>).emailEnabled
+            : defaults.emailEnabled,
+          mentionEnabled: typeof (parsed as Record<string, unknown>).mentionEnabled === "boolean"
+            ? (parsed as Record<string, boolean>).mentionEnabled
+            : defaults.mentionEnabled,
+        };
+      }
+    }
   } catch {
     /* ignore */
   }
-  return { emailEnabled: true, mentionEnabled: true };
+  return defaults;
 }
 
 export function saveNotifPref(pref: NotifPref): void {

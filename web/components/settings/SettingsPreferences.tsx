@@ -42,10 +42,10 @@ const DENSITIES: { id: DensityPref; labelKey: string; icon: typeof Rows3 }[] = [
 ];
 
 const ACCENT_COLORS: { id: AccentColor; swatch: string }[] = [
-  { id: "blue", swatch: "#4263EB" },
-  { id: "green", swatch: "#16a34a" },
-  { id: "purple", swatch: "#9333ea" },
-  { id: "orange", swatch: "#ea580c" },
+  { id: "blue", swatch: "var(--accent-blue)" },
+  { id: "green", swatch: "var(--accent-green)" },
+  { id: "purple", swatch: "var(--accent-purple)" },
+  { id: "orange", swatch: "var(--accent-orange)" },
 ];
 
 const MOTIONS: { id: MotionPref }[] = [
@@ -56,6 +56,14 @@ const MOTIONS: { id: MotionPref }[] = [
 
 const sectionClass =
   "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
+
+/**
+ * 安全枚举读取：从 localStorage 取值并校验是否属于合法枚举集合，
+ * 非法或缺失时返回 fallback。避免 `as T` 不安全类型转换。
+ */
+function safeEnum<T extends string>(v: string | null, valid: readonly T[], fallback: T): T {
+  return valid.includes(v as T) ? (v as T) : fallback;
+}
 
 export function SettingsPreferences() {
   const t = useTranslations("settings");
@@ -72,15 +80,15 @@ export function SettingsPreferences() {
   });
 
   useEffect(() => {
-    const stored = (localStorage.getItem("corps_theme") as ThemePref | null) ?? "system";
+    const stored = safeEnum(localStorage.getItem("corps_theme"), ["light", "dark", "system"] as const, "system");
     setTheme(stored);
-    const storedView = (localStorage.getItem(DEFAULT_VIEW_KEY) as DefaultView | null) ?? "board";
+    const storedView = safeEnum(localStorage.getItem(DEFAULT_VIEW_KEY), ["board", "list"] as const, "board");
     setDefaultView(storedView);
-    const storedDensity = (localStorage.getItem(DENSITY_KEY) as DensityPref | null) ?? "compact";
+    const storedDensity = safeEnum(localStorage.getItem(DENSITY_KEY), ["compact", "comfortable"] as const, "compact");
     setDensity(storedDensity);
-    const storedAccent = (localStorage.getItem(ACCENT_COLOR_KEY) as AccentColor | null) ?? "blue";
+    const storedAccent = safeEnum(localStorage.getItem(ACCENT_COLOR_KEY), ["blue", "green", "purple", "orange"] as const, "blue");
     setAccentColor(storedAccent);
-    const storedMotion = (localStorage.getItem(MOTION_KEY) as MotionPref | null) ?? "standard";
+    const storedMotion = safeEnum(localStorage.getItem(MOTION_KEY), ["reduced", "standard", "enhanced"] as const, "standard");
     setMotion(storedMotion);
     setNotifPref(loadNotifPref());
   }, []);

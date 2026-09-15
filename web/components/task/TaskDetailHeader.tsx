@@ -6,7 +6,7 @@
 import { useEffect, type RefObject } from "react";
 import { Loader2, Star } from "lucide-react";
 import { useTranslations } from "next-intl";
-import type { Task } from "./types";
+import type { Task, TaskPatch } from "./types";
 
 interface TaskDetailHeaderProps {
   task: Task;
@@ -16,7 +16,7 @@ interface TaskDetailHeaderProps {
   setDescDraft: (v: string) => void;
   dirty: boolean;
   setDirty: (v: boolean) => void;
-  onPatch: (data: Partial<Record<string, unknown>>) => void;
+  onPatch: (data: TaskPatch) => void;
   saving: boolean;
   starred: boolean;
   onToggleFavorite: () => void;

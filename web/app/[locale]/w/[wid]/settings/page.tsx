@@ -30,9 +30,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       setName(data.name);
       setSlug(data.slug);
     } catch (e) {
-      setError(e instanceof Error ? e.message : t("loadFailed"));
+      setError(e instanceof Error ? e.message : tErr("loadFailed"));
     }
-  }, [wid, t]);
+  }, [wid, tErr]);
 
   useEffect(() => {
     setLoading(true);
@@ -133,7 +133,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, "-"))}
               disabled={!canEdit}
               className={`${inputClass} font-[family-name:var(--font-mono)] text-[length:var(--text-sm)]`}
-              placeholder="growth-team"
+              placeholder={t("workspaceSlugPlaceholder")}
             />
             <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
               {t("workspaceSlugHint")}

@@ -41,11 +41,25 @@ export interface Task {
   children: SubtaskItem[];
 }
 
+/**
+ * 任务字段乐观更新补丁。
+ * 包含 Task 可编辑字段 + assigneeId（API 层字段，后端据此更新 assignee）。
+ * 用于 onPatch 回调的类型签名，替代不安全的 Partial<Record<string, unknown>>。
+ */
+export type TaskPatch = Partial<
+  Pick<
+    Task,
+    "title" | "description" | "status" | "priority" | "dueDate" | "blocked" | "blockedReason" | "shareToken"
+  >
+> & {
+  assigneeId?: string | null;
+};
+
 export interface Comment {
   id: string;
   body: string;
   createdAt: string;
-  author: Person;
+  author: Person | null;
 }
 
 export interface Decision {
@@ -53,7 +67,7 @@ export interface Decision {
   markdown: string;
   version: number;
   createdAt: string;
-  author: Person;
+  author: Person | null;
 }
 
 export interface DecisionVersion {
@@ -62,7 +76,7 @@ export interface DecisionVersion {
   markdown: string;
   version: number;
   createdAt: string;
-  author: Person;
+  author: Person | null;
 }
 
 export const PRIORITY_META: Record<Priority, { labelKey: string; color: string }> = {

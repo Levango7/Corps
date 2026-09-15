@@ -3,7 +3,7 @@
 // 临时授权模态框（F2 任务 186）。
 // 拆分自 members/page.tsx 第 839-1010 行。
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Member, TemporaryGrant } from "@/lib/types";
@@ -34,17 +34,47 @@ export function TemporaryGrantModal({
   const t = useTranslations("members");
   const tButton = useTranslations("button");
 
-  // Escape 关闭 + body 滚动锁（可访问性）
+  const dialogRef = useRef<HTMLDivElement>(null);
+
+  // Escape 关闭 + body 滚动锁（可访问性）+ focus trap
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
+      if (e.key === "Tab" && dialogRef.current) {
+        // focus trap：Tab/Shift+Tab 在模态框内可聚焦元素间循环
+        const focusables = dialogRef.current.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        );
+        if (focusables.length === 0) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        if (e.shiftKey && document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     document.addEventListener("keydown", onKey);
     const prevOverflow = document.body.style.overflow;
     document.body.style.overflow = "hidden";
+
+    // 记录打开前的焦点，挂载时移入模态框首个可聚焦元素
+    const prevActive = document.activeElement as HTMLElement | null;
+    if (dialogRef.current) {
+      const firstFocusable = dialogRef.current.querySelector<HTMLElement>(
+        'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])',
+      );
+      firstFocusable?.focus();
+    }
+
     return () => {
       document.removeEventListener("keydown", onKey);
       document.body.style.overflow = prevOverflow;
+      // 卸载时恢复焦点
+      prevActive?.focus();
     };
   }, [onClose]);
 
@@ -64,6 +94,7 @@ export function TemporaryGrantModal({
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-5"
         onClick={(e) => e.stopPropagation()}
       >

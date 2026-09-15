@@ -260,16 +260,16 @@
   --p-border:      #2A2A2E;
   --p-border-soft: #1F1F23;
 
-  --p-accent:      #5B7EF5;
+  --p-accent:      #5B8EF5;
   --p-accent-dk:   #7B9CF7;
   --p-accent-dkr:  #94B0F9;
-  --p-accent-soft: rgba(91, 126, 245, 0.16);
+  --p-accent-soft: rgba(91, 142, 245, 0.16);
   --p-on-accent:   #FFFFFF;
 
   --p-success: #34C98A;
   --p-warn:    #E0A93A;
   --p-danger:  #F25B67;
-  --p-accent-ring: rgba(91, 126, 245, 0.40);
+  --p-accent-ring: rgba(91, 142, 245, 0.40);
 
   --elev-sm: 0 1px 2px rgba(0,0,0,0.36);
   --elev-md: 0 4px 12px rgba(0,0,0,0.46);
@@ -324,6 +324,18 @@
   --radius-lg: 18px;  /* 原 14px */
   --control-h: 40px;    /* 原 36px */
   --control-h-sm: 34px; /* 原 30px */
+}
+
+/* ----------------------------------------------------------------------------
+ * Accent Swatch（强调色色块原始值）—— 供设置页强调色预览圆点引用
+ * 与 [data-accent-color] 覆盖的 --p-accent 保持一致；此处为色块展示用原始值，
+ * 不随 data-accent-color 切换（色块需同时展示 4 种候选色）。
+ * -------------------------------------------------------------------------- */
+:root {
+  --accent-blue:   #4263EB;
+  --accent-green:  #16a34a;
+  --accent-purple: #9333ea;
+  --accent-orange: #ea580c;
 }
 
 /* ----------------------------------------------------------------------------

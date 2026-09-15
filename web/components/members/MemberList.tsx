@@ -3,7 +3,7 @@
 // 成员列表（响应式：≥ md 行布局，< md 卡片布局）+ 骨架。
 // 拆分自 members/page.tsx 第 485-838 行。
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Clock, X, Trash2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Member, Role, TemporaryGrant } from "@/lib/types";
@@ -108,6 +108,13 @@ function MemberRow({
   // 第一次点击进入 confirming 态（按钮变红+文案切换），第二次点击执行删除。
   // 失焦或 3 秒超时自动重置，避免用户误触后卡在确认态。
   const [confirming, setConfirming] = useState(false);
+  // 确认态超时定时器引用：组件卸载或重新进入确认态时清理，避免泄漏。
+  const confirmTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => {
+    return () => {
+      if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+    };
+  }, []);
   // Viewer 角色提示：选中 viewer 时在角色选择下方显示只读说明
   const showViewerHint = m.role === "viewer";
   // 临时授权是否有效（未过期）
@@ -193,7 +200,8 @@ function MemberRow({
                   onRemove(m.id, label);
                 } else {
                   setConfirming(true);
-                  setTimeout(() => setConfirming(false), 3000);
+                  if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+                  confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000);
                 }
               }}
               onBlur={() => setConfirming(false)}
@@ -308,7 +316,8 @@ function MemberRow({
                 onRemove(m.id, label);
               } else {
                 setConfirming(true);
-                setTimeout(() => setConfirming(false), 3000);
+                if (confirmTimeoutRef.current) clearTimeout(confirmTimeoutRef.current);
+                confirmTimeoutRef.current = setTimeout(() => setConfirming(false), 3000);
               }
             }}
             onBlur={() => setConfirming(false)}
