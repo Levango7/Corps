@@ -143,6 +143,9 @@ model User {
   aiPushRecords      AiPushRecord[]   @relation("AiPushRecordUser")
   // 方向 C：AI 数据分析报告
   aiAnalysisReports  AiAnalysisReport[] @relation("AiAnalysisReportUser")
+  // 方向 F：AI 个性化
+  aiUserBehaviors    AiUserBehavior[]   @relation("AiUserBehaviorUser")
+  aiPersonalizations AiPersonalization[] @relation("AiPersonalizationUser")
 
   @@map("users")
 }
@@ -227,6 +230,14 @@ model Workspace {
   knowledgeEdges   KnowledgeEdge[]
   // 方向 C：AI 数据分析报告
   aiAnalysisReports AiAnalysisReport[]
+  // 方向 D：多 Agent 协同
+  aiAgents         AiAgent[]
+  aiAgentMessages  AiAgentMessage[]
+  // 方向 E：AI 工作流模板
+  aiWorkflowTemplates AiWorkflowTemplate[]
+  // 方向 F：AI 个性化
+  aiUserBehaviors    AiUserBehavior[]
+  aiPersonalizations AiPersonalization[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -2062,4 +2073,103 @@ model AiAnalysisReport {
   @@index([workspaceId, type, createdAt])
   @@index([userId, createdAt])
   @@map("ai_analysis_reports")
+}
+/// 方向 D：AI Agent 定义 — 多 Agent 协同中的单个 Agent 角色
+model AiAgent {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  name        String   @db.VarChar(100)
+  role        String   @db.VarChar(50)  // "task_breaker" | "doc_writer" | "follow_upper" | "analyst"
+  capabilities Json    // 能力列表
+  systemPrompt String  @db.Text @map("system_prompt")
+  model       String   @db.VarChar(50)
+  enabled     Boolean  @default(true)
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace      Workspace         @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  messagesFrom   AiAgentMessage[]  @relation("AiAgentMessageFrom")
+  messagesTo     AiAgentMessage[]  @relation("AiAgentMessageTo")
+
+  @@index([workspaceId, enabled])
+  @@map("ai_agents")
+}
+
+/// 方向 D：Agent 间消息 — Agent 协同通信记录
+model AiAgentMessage {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  fromAgentId String   @map("from_agent_id") @db.Uuid
+  toAgentId   String?  @map("to_agent_id") @db.Uuid
+  content     String   @db.Text
+  type        String   @db.VarChar(50)  // "request" | "response" | "notification" | "handoff"
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  fromAgent   AiAgent   @relation("AiAgentMessageFrom", fields: [fromAgentId], references: [id], onDelete: Cascade)
+  toAgent     AiAgent?  @relation("AiAgentMessageTo", fields: [toAgentId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, createdAt])
+  @@index([fromAgentId, createdAt])
+  @@index([toAgentId, createdAt])
+  @@map("ai_agent_messages")
+}
+
+/// 方向 E：AI 工作流模板 — 预置场景化模板
+model AiWorkflowTemplate {
+  id          String   @id @default(uuid()) @db.Uuid
+  name        String   @db.VarChar(100)
+  description String   @db.Text
+  category    String   @db.VarChar(50)  // "project" | "meeting" | "review" | "onboarding" | "custom"
+  steps       Json
+  isPublic    Boolean  @default(false) @map("is_public")
+  workspaceId String?  @map("workspace_id") @db.Uuid
+  usageCount  Int      @default(0) @map("usage_count")
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace   Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([category, isPublic])
+  @@index([workspaceId])
+  @@map("ai_workflow_templates")
+}
+
+/// 方向 F：用户行为记录 — AI 个性化推荐的基础数据
+model AiUserBehavior {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  action      String   @db.VarChar(50)  // "use_capability" | "accept_suggestion" | "reject_suggestion" | "edit_output"
+  capability  String   @db.VarChar(50)
+  metadata    Json?
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("AiUserBehaviorUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, action, createdAt])
+  @@index([workspaceId, capability, createdAt])
+  @@map("ai_user_behaviors")
+}
+
+/// 方向 F：AI 个性化推荐 — 基于用户行为的推荐结果
+model AiPersonalization {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  type        String   @db.VarChar(50)  // "capability_recommendation" | "prompt_optimization" | "workflow_suggestion"
+  content     Json
+  score       Float
+  applied     Boolean  @default(false)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("AiPersonalizationUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, type, createdAt])
+  @@map("ai_personalizations")
 }
