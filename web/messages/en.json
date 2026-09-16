@@ -831,6 +831,34 @@
     "settingsLeaveFailed": "Failed to leave conversation",
     "settingsMe": "me"
   },
+  "im": {
+    "actions": {
+      "edit": "Edit",
+      "recall": "Recall",
+      "copy": "Copy",
+      "reply": "Reply",
+      "confirmRecall": "Recall this message?",
+      "recalled": "Message recalled",
+      "edited": "edited",
+      "editExpired": "Messages can only be edited within 5 minutes of sending",
+      "recallExpired": "Messages can only be recalled within 5 minutes of sending",
+      "save": "Save",
+      "cancel": "Cancel",
+      "error": "Operation failed, please retry shortly",
+      "original": "Original message",
+      "editHint": "⌘/Ctrl + Enter to save, Esc to cancel"
+    },
+    "search": {
+      "placeholder": "Search messages…",
+      "clear": "Clear search",
+      "searching": "Searching…",
+      "noResults": "No messages found for \"{keyword}\"",
+      "hint": "Type a keyword to search messages",
+      "error": "Search failed, please retry shortly",
+      "unknownAuthor": "Deleted user",
+      "defaultConversation": "Unknown conversation"
+    }
+  },
   "export": {
     "title": "Data export",
     "hint": "Export workspace data as CSV files (UTF-8 BOM included for Excel compatibility).",
@@ -1546,7 +1574,29 @@
   },
   "common": {
     "loading": "Loading…",
-    "skeletonLabel": "Loading content"
+    "skeletonLabel": "Loading content",
+    "favorite": {
+      "title": "Favorites",
+      "add": "Favorite",
+      "remove": "Unfavorite",
+      "added": "Favorited",
+      "removed": "Unfavorited",
+      "note": "Note",
+      "notePlaceholder": "Add a note (optional)",
+      "save": "Save",
+      "cancel": "Cancel",
+      "noFavorites": "No favorites yet",
+      "loading": "Loading…",
+      "error": "Operation failed",
+      "checkFailed": "Failed to check favorite status",
+      "typeTask": "Task",
+      "typeDocument": "Document",
+      "typeMessage": "Message",
+      "typeWiki": "Wiki",
+      "typeWhiteboard": "Whiteboard",
+      "typeForm": "Form",
+      "typeMeeting": "Meeting"
+    }
   },
   "exportPreview": {
     "dialogLabel": "Export preview dialog",
@@ -1866,6 +1916,26 @@
       "unselectAria": "Unselect",
       "selectAria": "Select file",
       "deleteAria": "Delete file"
+    },
+    "preview": {
+      "title": "File Preview",
+      "close": "Close",
+      "closeAria": "Close preview",
+      "download": "Download",
+      "downloadFile": "Download file",
+      "unsupported": "This file type does not support online preview. Please download to view.",
+      "loading": "Loading…",
+      "error": "Failed to load. Please retry.",
+      "tooLarge": "File is too large. Showing only the first 100KB.",
+      "previewAria": "{name} preview",
+      "categoryImage": "Image",
+      "categoryPdf": "PDF",
+      "categoryOffice": "Office",
+      "categoryVideo": "Video",
+      "categoryAudio": "Audio",
+      "categoryText": "Text",
+      "categoryOther": "File",
+      "officeUnsupported": "Office file preview requires a publicly accessible URL. The current URL may not be reachable by Office Online Viewer."
     },
     "filePreview": {
       "categoryImage": "Image",

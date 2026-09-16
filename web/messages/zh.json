@@ -831,6 +831,34 @@
     "settingsLeaveFailed": "退出会话失败",
     "settingsMe": "我"
   },
+  "im": {
+    "actions": {
+      "edit": "编辑",
+      "recall": "撤回",
+      "copy": "复制",
+      "reply": "回复",
+      "confirmRecall": "确定撤回这条消息？",
+      "recalled": "消息已撤回",
+      "edited": "已编辑",
+      "editExpired": "消息发送超过 5 分钟，无法编辑",
+      "recallExpired": "消息发送超过 5 分钟，无法撤回",
+      "save": "保存",
+      "cancel": "取消",
+      "error": "操作失败，请稍后重试",
+      "original": "原始消息",
+      "editHint": "⌘/Ctrl + Enter 保存，Esc 取消"
+    },
+    "search": {
+      "placeholder": "搜索消息…",
+      "clear": "清空搜索",
+      "searching": "搜索中…",
+      "noResults": "未找到包含「{keyword}」的消息",
+      "hint": "输入关键词搜索消息",
+      "error": "搜索失败，请稍后重试",
+      "unknownAuthor": "已注销用户",
+      "defaultConversation": "未知会话"
+    }
+  },
   "export": {
     "title": "数据导出",
     "hint": "导出工作区数据为 CSV 文件（含 UTF-8 BOM，Excel 中文兼容）。",
@@ -1546,7 +1574,29 @@
   },
   "common": {
     "loading": "加载中…",
-    "skeletonLabel": "正在加载内容"
+    "skeletonLabel": "正在加载内容",
+    "favorite": {
+      "title": "收藏",
+      "add": "收藏",
+      "remove": "取消收藏",
+      "added": "已收藏",
+      "removed": "已取消收藏",
+      "note": "备注",
+      "notePlaceholder": "添加备注（可选）",
+      "save": "保存",
+      "cancel": "取消",
+      "noFavorites": "暂无收藏",
+      "loading": "加载中…",
+      "error": "操作失败",
+      "checkFailed": "检查收藏状态失败",
+      "typeTask": "任务",
+      "typeDocument": "文档",
+      "typeMessage": "消息",
+      "typeWiki": "Wiki",
+      "typeWhiteboard": "白板",
+      "typeForm": "表单",
+      "typeMeeting": "会议"
+    }
   },
   "exportPreview": {
     "dialogLabel": "导出预览对话框",
@@ -1866,6 +1916,26 @@
       "unselectAria": "取消选择",
       "selectAria": "选择文件",
       "deleteAria": "删除文件"
+    },
+    "preview": {
+      "title": "文件预览",
+      "close": "关闭",
+      "closeAria": "关闭预览",
+      "download": "下载",
+      "downloadFile": "下载文件",
+      "unsupported": "此文件类型不支持在线预览，请下载查看",
+      "loading": "加载中…",
+      "error": "加载失败，请重试",
+      "tooLarge": "文件过大，仅显示前 100KB 内容",
+      "previewAria": "{name} 预览",
+      "categoryImage": "图片",
+      "categoryPdf": "PDF",
+      "categoryOffice": "Office",
+      "categoryVideo": "视频",
+      "categoryAudio": "音频",
+      "categoryText": "文本",
+      "categoryOther": "文件",
+      "officeUnsupported": "Office 文件预览需要可公开访问的 URL，当前 URL 可能无法被 Office Online Viewer 访问"
     },
     "filePreview": {
       "categoryImage": "图片",

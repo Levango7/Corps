@@ -151,6 +151,8 @@ model User {
   // 方向 H：AI 语音交互
   aiVoiceCommands    AiVoiceCommand[]   @relation("AiVoiceCommandUser")
   aiVoicePreference  AiVoicePreference? @relation("AiVoicePreferenceUser")
+  // 收藏/书签
+  favorites          Favorite[]         @relation("FavoriteUser")
 
   @@map("users")
 }
@@ -249,6 +251,8 @@ model Workspace {
   aiMeetingDecisions   AiMeetingDecision[]
   // 方向 H：AI 语音交互
   aiVoiceCommands      AiVoiceCommand[]
+  // 收藏/书签
+  favorites            Favorite[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -2282,4 +2286,22 @@ model AiVoicePreference {
   user        User      @relation("AiVoicePreferenceUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("ai_voice_preferences")
+}
+// 收藏/书签 — 跨模块收藏（任务/文档/消息/Wiki/白板/表单/会议）
+model Favorite {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  targetType  String   @db.VarChar(20)  // task | document | message | wiki | whiteboard | form | meeting
+  targetId    String   @map("target_id") @db.Uuid
+  note        String?  @db.VarChar(200)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("FavoriteUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, targetType, targetId])
+  @@index([workspaceId, userId])
+  @@index([userId, targetType])
+  @@map("favorites")
 }

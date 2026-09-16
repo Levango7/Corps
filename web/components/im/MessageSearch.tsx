@@ -3,16 +3,17 @@
 /**
  * 消息搜索面板
  *
- * - 搜索输入框（带 Search 图标）
- * - 搜索结果列表：每条结果显示消息体摘要、作者、会话名、时间
- * - 点击搜索结果跳转到对应会话
- * - 空状态提示
- * - loading 状态
+ * - 搜索输入框（带 Search 图标 + 300ms 防抖）
+ * - 搜索结果列表：每条结果显示消息体摘要（关键词高亮）、作者、会话名、时间
+ * - 点击搜索结果跳转到对应会话的消息
+ * - 空状态 / loading / error 状态
  *
- * API：GET /api/v1/workspaces/{wid}/im/search?q=keyword&limit=20
+ * API：GET /api/v1/im/search?workspaceId=xxx&q=keyword&limit=20
+ *   后端使用 PostgreSQL tsvector 全文检索（messages.body_tsv + GIN 索引）
  *
  * 所有样式走 design token（var(--*)），无裸 hex。
  * lucide-react 图标尺寸用 14/16（项目约定）。
+ * i18n 使用 next-intl，key 在 im.search 命名空间。
  */
 
 import {
@@ -22,6 +23,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type ReactNode,
 } from "react";
 import { Search, X, Loader2, MessageSquare } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
@@ -32,13 +34,15 @@ interface MessageSearchProps {
   workspaceId: string;
   /** 点击搜索结果跳转到对应会话的消息 */
   onJumpToMessage?: (conversationId: string, messageId: string) => void;
+  /** 可选：限定搜索的会话 ID */
+  conversationId?: string;
 }
 
 /** 搜索结果项（与后端 API 响应对齐） */
 interface SearchResult {
   /** 消息 ID */
   messageId: string;
-  /** 消息体摘要（可能被截断） */
+  /** 消息体（可能被截断） */
   body: string;
   /** 作者 ID */
   authorId: string | null;
@@ -47,11 +51,13 @@ interface SearchResult {
   /** 作者头像 */
   authorImage: string | null;
   /** 会话 ID */
-  conversationId: string;
+  conversationId: string | null;
   /** 会话标题 */
   conversationTitle: string | null;
   /** 消息创建时间（ISO 8601） */
   createdAt: string;
+  /** ts_rank 相关性得分 */
+  rank: number;
 }
 
 /** 搜索结果最大返回条数 */
@@ -59,7 +65,7 @@ const SEARCH_LIMIT = 20;
 /** 搜索 debounce 延迟（毫秒） */
 const DEBOUNCE_MS = 300;
 /** 消息摘要最大显示长度 */
-const BODY_MAX_LENGTH = 80;
+const BODY_MAX_LENGTH = 120;
 
 /** 格式化时间：根据 locale 显示日期 + 时间 */
 function formatTime(iso: string, locale: string): string {
@@ -73,8 +79,50 @@ function formatTime(iso: string, locale: string): string {
   });
 }
 
-export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchProps) {
-  const t = useTranslations("chat");
+/**
+ * 关键词高亮：将文本中匹配关键词的部分用 <mark> 包裹。
+ * 大小写不敏感匹配，保留原文大小写。
+ * 高亮样式走 design token（var(--accent-soft) 背景 + var(--accent) 文字）。
+ */
+function highlightKeyword(text: string, keyword: string): ReactNode[] {
+  const trimmed = keyword.trim();
+  if (!trimmed) return [text];
+
+  const nodes: ReactNode[] = [];
+  const lowerText = text.toLowerCase();
+  const lowerKeyword = trimmed.toLowerCase();
+  let lastIndex = 0;
+  let index = lowerText.indexOf(lowerKeyword, lastIndex);
+  let key = 0;
+
+  while (index !== -1) {
+    // 匹配前的普通文本
+    if (index > lastIndex) {
+      nodes.push(text.slice(lastIndex, index));
+    }
+    // 高亮匹配段
+    nodes.push(
+      <mark
+        key={`hl-${key++}`}
+        className="rounded-[var(--radius-xs)] bg-[var(--accent-soft)] px-0.5 text-[var(--accent)]"
+      >
+        {text.slice(index, index + trimmed.length)}
+      </mark>,
+    );
+    lastIndex = index + trimmed.length;
+    index = lowerText.indexOf(lowerKeyword, lastIndex);
+  }
+
+  // 尾部剩余普通文本
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+
+  return nodes;
+}
+
+export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: MessageSearchProps) {
+  const t = useTranslations("im.search");
   const locale = useLocale();
 
   const [query, setQuery] = useState("");
@@ -101,8 +149,17 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
       setLoading(true);
       setError(null);
       try {
+        // 构造 query string：workspaceId + q + limit + 可选 conversationId
+        const qs = new URLSearchParams({
+          workspaceId,
+          q: keyword,
+          limit: String(SEARCH_LIMIT),
+        });
+        if (conversationId) {
+          qs.set("conversationId", conversationId);
+        }
         const data = await api<SearchResult[]>(
-          `/api/v1/workspaces/${workspaceId}/im/search?q=${encodeURIComponent(keyword)}&limit=${SEARCH_LIMIT}`,
+          `/api/v1/im/search?${qs.toString()}`,
           { signal: controller.signal },
         );
         setResults(data ?? []);
@@ -110,14 +167,14 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
       } catch (err) {
         // AbortError 是正常取消，不显示错误
         if (err instanceof Error && err.name === "AbortError") return;
-        setError(err instanceof Error ? err.message : t("searchFailed"));
+        setError(err instanceof Error ? err.message : t("error"));
         setResults([]);
         setHasSearched(true);
       } finally {
         setLoading(false);
       }
     },
-    [workspaceId, t],
+    [workspaceId, conversationId, t],
   );
 
   // —— debounce 搜索 ——
@@ -172,14 +229,16 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
   /** 点击搜索结果 */
   const handleResultClick = useCallback(
     (result: SearchResult) => {
-      onJumpToMessage?.(result.conversationId, result.messageId);
+      if (result.conversationId) {
+        onJumpToMessage?.(result.conversationId, result.messageId);
+      }
     },
     [onJumpToMessage],
   );
 
   /** 获取作者显示名 */
   const getAuthorName = (r: SearchResult): string =>
-    r.authorName ?? t("unknownUser");
+    r.authorName ?? t("unknownAuthor");
 
   /** 获取作者头像首字母 */
   const getInitial = (r: SearchResult): string =>
@@ -206,14 +265,14 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
             type="text"
             value={query}
             onChange={handleChange}
-            placeholder={t("searchPlaceholder")}
+            placeholder={t("placeholder")}
             className="flex-1 min-w-0 bg-transparent text-[length:var(--text-sm)] text-[var(--fg)] outline-none placeholder:text-[var(--meta)]"
           />
           {query && (
             <button
               type="button"
               onClick={handleClear}
-              aria-label={t("clearSearch")}
+              aria-label={t("clear")}
               className="shrink-0 w-5 h-5 flex items-center justify-center rounded text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)]"
             >
               <X size={14} />
@@ -246,7 +305,7 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
           <div className="flex flex-col items-center justify-center py-[var(--space-8)] text-[var(--meta)]">
             <MessageSquare size={24} className="mb-[var(--space-2)] opacity-50" />
             <span className="text-[length:var(--text-sm)]">
-              {t("searchNoResults", { keyword })}
+              {t("noResults", { keyword })}
             </span>
           </div>
         )}
@@ -256,7 +315,7 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
           <div className="flex flex-col items-center justify-center py-[var(--space-8)] text-[var(--meta)]">
             <Search size={24} className="mb-[var(--space-2)] opacity-40" />
             <span className="text-[length:var(--text-sm)]">
-              {t("searchHint")}
+              {t("hint")}
             </span>
           </div>
         )}
@@ -294,14 +353,14 @@ export function MessageSearch({ workspaceId, onJumpToMessage }: MessageSearchPro
                       </span>
                       <span>·</span>
                       <span className="truncate">
-                        {r.conversationTitle ?? t("groupConversation")}
+                        {r.conversationTitle ?? t("defaultConversation")}
                       </span>
                       <span>·</span>
                       <span className="shrink-0">{formatTime(r.createdAt, locale)}</span>
                     </div>
-                    {/* 消息体摘要 */}
+                    {/* 消息体摘要（关键词高亮） */}
                     <p className="mt-0.5 text-[length:var(--text-sm)] text-[var(--fg)] line-clamp-2 break-words">
-                      {truncateBody(r.body)}
+                      {highlightKeyword(truncateBody(r.body), keyword)}
                     </p>
                   </div>
                 </button>

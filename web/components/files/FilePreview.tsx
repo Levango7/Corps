@@ -1,20 +1,18 @@
 "use client";
 
 /**
- * 文件预览主容器（Phase 4C）
+ * 文件预览统一入口
  *
- * 根据 file.fileType 分发到对应预览组件：
- *  - 图片 (png/jpg/gif/webp/svg/…) → ImagePreview
+ * 根据文件类型分发到对应预览组件：
  *  - PDF → PdfPreview（iframe 原生渲染）
- *  - Office (docx/xlsx/pptx/…) → OfficePreview（降级下载提示）
- *  - 视频 (mp4/webm/…) → VideoPreview
- *  - 音频 (mp3/wav/…) → AudioPreview
- *  - 代码 (js/ts/py/go/json/…) → CodePreview
- *  - Markdown (md) → MarkdownPreview
- *  - 其他 → 下载提示
+ *  - Office（docx/xlsx/pptx）→ OfficePreview（Microsoft Office Online Viewer）
+ *  - 图片（jpg/png/gif/webp/svg）→ ImagePreview（<img> 标签）
+ *  - 视频（mp4/webm/ogg）→ VideoPreview（<video> 标签 + controls）
+ *  - 音频（mp3/wav/ogg）→ AudioPreview（<audio> 标签 + controls）
+ *  - 文本（txt/md/json/csv/log）→ TextPreview（<pre> + fetch 内容）
+ *  - 其他 → UnsupportedPreview（文件名 + 下载按钮）
  *
- * UI：全屏模态框，顶部栏（文件名 + 类型标签 + 关闭/下载按钮），
- * 内容区（居中预览），底部栏（文件大小 + 类型）。
+ * UI：顶部栏（文件名 + 关闭按钮），内容区（预览内容）。
  * ESC 键关闭，打开时锁定背景滚动。
  *
  * 所有样式走 design token（var(--*)），无裸 hex。
@@ -23,111 +21,124 @@
  */
 
 import { useEffect, useCallback } from "react";
-import { X, Download, FileText } from "lucide-react";
-import type { FileAsset } from "@prisma/client";
-import { ImagePreview } from "./previews/ImagePreview";
-import { PdfPreview } from "./previews/PdfPreview";
-import { OfficePreview } from "./previews/OfficePreview";
-import { CodePreview } from "./previews/CodePreview";
-import { VideoPreview } from "./previews/VideoPreview";
-import { AudioPreview } from "./previews/AudioPreview";
-import { MarkdownPreview } from "./previews/MarkdownPreview";
+import { X, Download, FileText, FileWarning } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { PdfPreview } from "./PdfPreview";
+import { VideoPreview } from "./VideoPreview";
+import { TextPreview } from "./TextPreview";
 
 // ─── Props ──────────────────────────────────────────────────────
 
 export interface FilePreviewProps {
-  file: FileAsset;
-  /** 下载 URL（用于 iframe/video/audio src 及下载按钮） */
-  downloadUrl?: string;
-  /** 文本内容（代码/Markdown 预览用，由调用方读取文件后传入） */
-  content?: string;
+  /** 文件可访问 URL（用于预览和下载） */
+  url: string;
+  /** 文件名（用于显示和类型推断） */
+  fileName: string;
+  /** 文件类型（扩展名，如 "pdf"、"docx"） */
+  fileType: string;
   /** 关闭回调 */
-  onClose?: () => void;
+  onClose: () => void;
 }
 
 // ─── 文件类型分类 ──────────────────────────────────────────────
 
-const IMAGE_EXTS = ["png", "jpg", "jpeg", "gif", "webp", "svg", "bmp", "ico"];
+const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "webp", "svg", "bmp"];
 const PDF_EXTS = ["pdf"];
-const OFFICE_EXTS = ["docx", "xlsx", "pptx", "doc", "xls", "ppt"];
-const VIDEO_EXTS = ["mp4", "webm", "mov", "avi", "mkv"];
-const AUDIO_EXTS = ["mp3", "wav", "ogg", "flac", "aac", "m4a"];
-const CODE_EXTS = [
-  "js", "ts", "jsx", "tsx", "py", "go", "rs", "java", "c", "cpp", "h", "hpp",
-  "json", "yaml", "yml", "xml", "html", "css", "scss", "sh", "bash", "sql",
-  "r", "rb", "php", "swift", "kt", "dart", "lua", "vim", "toml", "ini", "conf",
+const OFFICE_EXTS = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"];
+const VIDEO_EXTS = ["mp4", "webm", "ogg", "mov", "avi"];
+const AUDIO_EXTS = ["mp3", "wav", "ogg", "m4a", "flac"];
+const TEXT_EXTS = [
+  "txt", "md", "json", "csv", "log", "xml", "yaml", "yml",
+  "js", "ts", "py", "java", "go", "rs",
 ];
-const MD_EXTS = ["md", "markdown"];
 
 type FileCategory =
-  | "image"
   | "pdf"
   | "office"
+  | "image"
   | "video"
   | "audio"
-  | "code"
-  | "markdown"
+  | "text"
   | "other";
 
-/** 根据 fileType（扩展名）判断文件分类 */
-function categorize(fileType: string): FileCategory {
-  const ext = fileType.toLowerCase().replace(/^\./, "");
-  if (IMAGE_EXTS.includes(ext)) return "image";
+/**
+ * 根据文件名（扩展名）判断文件分类。
+ * 按任务规格定义的扩展名列表进行匹配。
+ */
+export function getFileCategory(fileName: string): FileCategory {
+  const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
   if (PDF_EXTS.includes(ext)) return "pdf";
   if (OFFICE_EXTS.includes(ext)) return "office";
+  if (IMAGE_EXTS.includes(ext)) return "image";
   if (VIDEO_EXTS.includes(ext)) return "video";
   if (AUDIO_EXTS.includes(ext)) return "audio";
-  if (CODE_EXTS.includes(ext)) return "code";
-  if (MD_EXTS.includes(ext)) return "markdown";
+  if (TEXT_EXTS.includes(ext)) return "text";
   return "other";
 }
 
-/** 分类 → i18n key 后缀映射（在组件内通过 t() 解析为显示标签） */
-const CATEGORY_LABEL_KEYS: Record<FileCategory, string> = {
-  image: "categoryImage",
-  pdf: "categoryPdf",
-  office: "categoryOffice",
-  video: "categoryVideo",
-  audio: "categoryAudio",
-  code: "categoryCode",
-  markdown: "categoryMarkdown",
-  other: "categoryOther",
-};
+// ─── 内联预览组件 ──────────────────────────────────────────────
 
-/** 字节数 → 人类可读文件大小 */
-function formatFileSize(bytes: number): string {
-  if (bytes <= 0) return "0 B";
-  const units = ["B", "KB", "MB", "GB", "TB"];
-  const i = Math.min(units.length - 1, Math.floor(Math.log(bytes) / Math.log(1024)));
-  const size = bytes / Math.pow(1024, i);
-  return `${size.toFixed(i === 0 ? 0 : 1)} ${units[i]}`;
+/** 图片预览：居中展示，支持滚轮缩放 */
+function ImagePreview({ url, fileName }: { url: string; fileName: string }) {
+  return (
+    <div
+      className="flex items-center justify-center w-full h-full overflow-auto bg-[var(--surface-2)]"
+      data-testid="image-preview"
+    >
+      <img
+        src={url}
+        alt={fileName}
+        className="max-w-full max-h-full object-contain"
+        draggable={false}
+      />
+    </div>
+  );
 }
 
-// ─── 降级提示组件 ──────────────────────────────────────────────
+/** Office 预览：使用 Microsoft Office Online Viewer */
+function OfficePreview({ url }: { url: string }) {
+  const t = useTranslations("files.preview");
+  const viewerUrl = `https://view.officeapps.live.com/view.aspx?url=${encodeURIComponent(url)}`;
 
-interface NoPreviewProps {
-  message: string;
-  downloadUrl?: string;
-  fileName: string;
+  return (
+    <iframe
+      src={viewerUrl}
+      title={t("title")}
+      className="w-full h-full border-0 bg-[var(--surface)]"
+      data-testid="office-preview"
+    />
+  );
 }
 
-function NoPreview({ message, downloadUrl, fileName }: NoPreviewProps) {
-  const t = useTranslations("files.filePreview");
+/** 音频预览：HTML5 <audio> + 原生控件 */
+function AudioPreview({ url }: { url: string }) {
+  return (
+    <div
+      className="flex flex-col items-center justify-center gap-6 w-full h-full bg-[var(--surface-2)]"
+      data-testid="audio-preview"
+    >
+      <audio src={url} controls className="w-full max-w-[400px]" />
+    </div>
+  );
+}
+
+/** 不支持的文件类型：显示文件名 + 下载按钮 */
+function UnsupportedPreview({ url, fileName }: { url: string; fileName: string }) {
+  const t = useTranslations("files.preview");
   return (
     <div className="flex flex-col items-center justify-center gap-4 w-full h-full text-center px-6">
-      <FileText size={32} className="text-[var(--meta)]" />
-      <p className="text-[var(--muted)] text-[length:var(--text-sm)]">{message}</p>
-      {downloadUrl && (
-        <a
-          href={downloadUrl}
-          download={fileName}
-          className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] motion-reduce:transition-none hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
-        >
-          <Download size={14} />
-          <span>{t("downloadFile")}</span>
-        </a>
-      )}
+      <FileWarning size={32} className="text-[var(--meta)]" />
+      <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
+        {t("unsupported")}
+      </p>
+      <a
+        href={url}
+        download={fileName}
+        className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] motion-reduce:transition-none hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+      >
+        <Download size={14} />
+        <span>{t("downloadFile")}</span>
+      </a>
     </div>
   );
 }
@@ -143,21 +154,15 @@ const HEADER_BTN =
 
 // ─── 主组件 ──────────────────────────────────────────────────────
 
-export function FilePreview({ file, downloadUrl, content, onClose }: FilePreviewProps) {
-  const t = useTranslations("files.filePreview");
-  const category = categorize(file.fileType);
-
-  // 需要 URL 但缺失 / 需要文本但缺失
-  const urlCategories: FileCategory[] = ["image", "pdf", "office", "video", "audio"];
-  const contentCategories: FileCategory[] = ["code", "markdown"];
-  const needsUrlButMissing = urlCategories.includes(category) && !downloadUrl;
-  const needsContentButMissing = contentCategories.includes(category) && content === undefined;
+export function FilePreview({ url, fileName, fileType, onClose }: FilePreviewProps) {
+  const t = useTranslations("files.preview");
+  const category = getFileCategory(fileName);
 
   // ESC 键关闭
   const handleKeyDown = useCallback(
     (e: KeyboardEvent) => {
       if (e.key === "Escape") {
-        onClose?.();
+        onClose();
       }
     },
     [onClose],
@@ -182,101 +187,46 @@ export function FilePreview({ file, downloadUrl, content, onClose }: FilePreview
       className="fixed inset-0 z-[var(--z-modal)] flex flex-col bg-[var(--bg)]"
       role="dialog"
       aria-modal="true"
-      aria-label={t("previewAria", { name: file.fileName })}
+      aria-label={t("previewAria", { name: fileName })}
       data-testid="file-preview"
     >
       {/* ─── 顶部栏 ─── */}
       <header className="flex items-center gap-3 px-4 h-12 border-b border-[var(--border)] bg-[var(--surface)] shrink-0">
+        <FileText size={16} className="shrink-0 text-[var(--muted)]" />
         <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)] truncate">
-          {file.fileName}
-        </span>
-        <span className="shrink-0 inline-flex items-center h-5 px-2 rounded-[var(--radius-pill)] bg-[var(--surface-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
-          {t(CATEGORY_LABEL_KEYS[category])}
+          {fileName}
         </span>
 
         <div className="ml-auto flex items-center gap-2">
-          {downloadUrl && (
-            <a
-              href={downloadUrl}
-              download={file.fileName}
-              className={`${HEADER_BTN} gap-1.5 border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]`}
-            >
-              <Download size={14} />
-              <span>{t("download")}</span>
-            </a>
-          )}
-          {onClose && (
-            <button
-              type="button"
-              onClick={onClose}
-              aria-label={t("closeAria")}
-              className={`${HEADER_BTN} w-8 px-0 text-[var(--fg-2)] hover:bg-[var(--surface-2)]`}
-            >
-              <X size={14} />
-            </button>
-          )}
+          <a
+            href={url}
+            download={fileName}
+            className={`${HEADER_BTN} gap-1.5 border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]`}
+          >
+            <Download size={14} />
+            <span>{t("download")}</span>
+          </a>
+          <button
+            type="button"
+            onClick={onClose}
+            aria-label={t("closeAria")}
+            className={`${HEADER_BTN} w-8 px-0 text-[var(--fg-2)] hover:bg-[var(--surface-2)]`}
+          >
+            <X size={14} />
+          </button>
         </div>
       </header>
 
       {/* ─── 内容区 ─── */}
       <main className="flex-1 min-h-0 overflow-hidden">
-        {category === "image" && downloadUrl && (
-          <ImagePreview src={downloadUrl} fileName={file.fileName} />
-        )}
-        {category === "pdf" && downloadUrl && (
-          <PdfPreview src={downloadUrl} />
-        )}
-        {category === "office" && downloadUrl && (
-          <OfficePreview src={downloadUrl} fileType={file.fileType} />
-        )}
-        {category === "video" && downloadUrl && (
-          <VideoPreview src={downloadUrl} />
-        )}
-        {category === "audio" && downloadUrl && (
-          <AudioPreview src={downloadUrl} />
-        )}
-        {category === "code" && content !== undefined && (
-          <CodePreview content={content} fileName={file.fileName} />
-        )}
-        {category === "markdown" && content !== undefined && (
-          <MarkdownPreview content={content} />
-        )}
-
-        {/* 降级：不支持预览的文件类型 */}
-        {category === "other" && (
-          <NoPreview
-            message={t("unsupportedType")}
-            downloadUrl={downloadUrl}
-            fileName={file.fileName}
-          />
-        )}
-        {/* 降级：需要 URL 但未提供 */}
-        {needsUrlButMissing && (
-          <NoPreview
-            message={t("loadFailed")}
-            downloadUrl={downloadUrl}
-            fileName={file.fileName}
-          />
-        )}
-        {/* 降级：需要文本内容但未提供 */}
-        {needsContentButMissing && (
-          <NoPreview
-            message={t("contentLoadFailed")}
-            downloadUrl={downloadUrl}
-            fileName={file.fileName}
-          />
-        )}
+        {category === "pdf" && <PdfPreview url={url} />}
+        {category === "office" && <OfficePreview url={url} />}
+        {category === "image" && <ImagePreview url={url} fileName={fileName} />}
+        {category === "video" && <VideoPreview url={url} />}
+        {category === "audio" && <AudioPreview url={url} />}
+        {category === "text" && <TextPreview url={url} fileName={fileName} />}
+        {category === "other" && <UnsupportedPreview url={url} fileName={fileName} />}
       </main>
-
-      {/* ─── 底部栏 ─── */}
-      <footer className="flex items-center gap-3 px-4 h-9 border-t border-[var(--border)] bg-[var(--surface)] shrink-0">
-        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-          {formatFileSize(file.fileSize)}
-        </span>
-        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-          {file.fileType}
-        </span>
-      </footer>
     </div>
   );
 }

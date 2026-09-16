@@ -20,6 +20,7 @@ export type ApiMsgKey = keyof typeof API_MESSAGES;
 /** 各 key 的 { zh, en } 双语文案。新键必须双端同加。 */
 export const API_MESSAGES = {
   /* ── 通用错误 ── */
+  ok: { zh: "成功", en: "OK" },
   internalError: { zh: "服务器内部错误", en: "Internal server error" },
   invalidBody: { zh: "请求体无效", en: "Invalid request body" },
   invalidParams: { zh: "请求参数无效", en: "Invalid request parameters" },
@@ -458,6 +459,13 @@ export const API_MESSAGES = {
 
   /* ── 日历事件（任务 236）── */
   calendarEventNotFound: { zh: "日历事件不存在", en: "Calendar event not found" },
+
+  /* ── 收藏/书签 ── */
+  favoriteNotFound: { zh: "收藏不存在", en: "Favorite not found" },
+  favoriteAlreadyExists: {
+    zh: "已收藏过该项",
+    en: "This item has already been favorited",
+  },
 } as const;
 
 /**
