@@ -75,31 +75,44 @@ export type SessionRole = "controller" | "controlled";
 // ─── ICE 服务器配置 ────────────────────────────────────────────
 
 /**
- * ICE 服务器配置。
+ * 仅 STUN 的回退配置（API 不可用或失败时使用）。
  *
- * 使用 Google 公共 STUN 服务器（免费、无需认证）。
- * 生产环境如需穿越对称 NAT，应增加 TURN 服务器（如 coturn 自建或 Twilio NAT Traversal）。
- * TURN 服务器配置通过环境变量注入，避免硬编码凭据。
+ * 安全说明：STUN 仅用于候选地址发现，无需凭据，可安全内联到客户端 bundle。
+ * TURN 凭证则必须通过服务端 API 动态签发短期令牌，禁止通过 NEXT_PUBLIC_ 前缀
+ * 环境变量暴露（NEXT_PUBLIC_ 会在构建时内联到客户端 JS，凭据可被提取）。
  */
-function getIceServers(): RTCIceServer[] {
-  const servers: RTCIceServer[] = [
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-  ];
+const STUN_ONLY_FALLBACK: RTCIceServer[] = [
+  { urls: "stun:stun.l.google.com:19302" },
+  { urls: "stun:stun1.l.google.com:19302" },
+];
 
-  // 可选 TURN 服务器（通过环境变量配置）
-  const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
-  const turnUsername = process.env.NEXT_PUBLIC_TURN_USERNAME;
-  const turnCredential = process.env.NEXT_PUBLIC_TURN_CREDENTIAL;
-  if (turnUrl && turnUsername && turnCredential) {
-    servers.push({
-      urls: turnUrl,
-      username: turnUsername,
-      credential: turnCredential,
-    });
+/**
+ * 从服务端 API 获取 ICE 服务器配置（含短期 TURN 凭证）。
+ *
+ * 安全模型：
+ *  - TURN 凭证由服务端按需签发短期令牌（time-limited credentials），
+ *    避免长期凭据暴露到客户端 bundle。
+ *  - API 不可用或返回异常时，回退到仅 STUN 配置（无法穿越对称 NAT，但基本连通性保留）。
+ *  - SSR 期间（typeof window === "undefined"）直接回退，不发起 fetch。
+ *
+ * @returns ICE 服务器配置数组
+ */
+async function fetchIceServers(): Promise<RTCIceServer[]> {
+  // SSR 安全：服务端不发起 fetch，直接回退
+  if (typeof window === "undefined") return STUN_ONLY_FALLBACK;
+  try {
+    const res = await fetch("/api/v1/remote-control/ice-servers");
+    if (!res.ok) throw new Error(`ice-servers API responded ${res.status}`);
+    const json = (await res.json()) as { data?: { iceServers?: RTCIceServer[] } };
+    const servers = json.data?.iceServers;
+    if (!Array.isArray(servers) || servers.length === 0) {
+      return STUN_ONLY_FALLBACK;
+    }
+    return servers;
+  } catch {
+    // API 不可用或响应异常：回退到仅 STUN
+    return STUN_ONLY_FALLBACK;
   }
-
-  return servers;
 }
 
 // ─── 回调类型 ──────────────────────────────────────────────────
@@ -193,16 +206,23 @@ export class RemoteControlSession {
    * 初始化底层 RTCPeerConnection。
    *
    * SSR 安全：服务端无 RTCPeerConnection，抛出明确错误。
+   *
+   * 异步：需先通过 fetchIceServers() 从服务端 API 获取短期 TURN 凭证，
+   * 再创建 RTCPeerConnection。所有调用点必须 await。
    */
-  private ensurePeerConnection(): RTCPeerConnection {
+  private async ensurePeerConnection(): Promise<RTCPeerConnection> {
     if (this.peerConnection) return this.peerConnection;
 
     if (typeof window === "undefined" || typeof RTCPeerConnection === "undefined") {
       throw new Error("[webrtc] RTCPeerConnection unavailable (SSR or unsupported browser)");
     }
 
+    // P1-fix: 通过服务端 API 获取 ICE 配置（含短期 TURN 凭证），
+    // 避免 NEXT_PUBLIC_ 环境变量在构建时内联到客户端 bundle 暴露长期凭据。
+    const iceServers = await fetchIceServers();
+
     const pc = new RTCPeerConnection({
-      iceServers: getIceServers(),
+      iceServers,
       // 仅收集 ICE 候选，不强制使用 relay（允许直连优化延迟）
       iceTransportPolicy: "all",
       // Unified Plan 是现代浏览器默认语义，无需显式设置 sdpSemantics
@@ -326,7 +346,7 @@ export class RemoteControlSession {
    * 创建完成后通过 onSdpReady 回调输出 SDP，调用方负责通过信令发送给对端。
    */
   async initiate(): Promise<void> {
-    const pc = this.ensurePeerConnection();
+    const pc = await this.ensurePeerConnection();
     this.setState("initiating");
 
     try {
@@ -368,7 +388,7 @@ export class RemoteControlSession {
    * 调用前应已通过 startScreenShare() 添加屏幕轨道。
    */
   async accept(offerSdp: string): Promise<void> {
-    const pc = this.ensurePeerConnection();
+    const pc = await this.ensurePeerConnection();
     this.setState("accepting");
 
     try {
@@ -458,7 +478,7 @@ export class RemoteControlSession {
     this.screenStream = stream;
 
     // 将轨道添加到 peer connection
-    const pc = this.ensurePeerConnection();
+    const pc = await this.ensurePeerConnection();
     for (const track of stream.getTracks()) {
       pc.addTrack(track, stream);
 

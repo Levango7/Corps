@@ -2,16 +2,18 @@
  * 邮件发送库 — nodemailer transporter 工厂 + sendMail 封装
  *
  * 设计要点：
- *  - credential 以 Base64 编码存储（简明方案；生产环境应改用 AES-256 加密）。
- *    解码后即为 SMTP 密码（或 OAuth token，当前仅支持密码认证）。
+ *  - credential 以 AES-256-GCM 加密存储（与 offline-push.ts / 日历 OAuth token 同源）。
+ *    解密后即为 SMTP 密码（或 OAuth token，当前仅支持密码认证）。
  *  - transporter 每次发送按需创建并即用即关，避免长连接持有 SMTP 服务端资源。
  *    高频场景可后续引入连接池，但需配合空闲超时回收。
  *  - sendMail 返回 nodemailer 原始 SendInfo（含 messageId/envelope/accepted 等），
  *    调用方据此落库 Mail 记录。
  *
  * 安全：
- *  - SMTP 密码仅在内存中解码，不落日志（console.error 仅打印 error.message）。
+ *  - SMTP 密码仅在内存中解密，不落日志（console.error 仅打印 error.message）。
  *  - secure 标志按 EmailAccount.smtpSecure 传入（465 端口通常 true，587 通常 false + STARTTLS）。
+ *  - P0-fix: credential 加解密统一走 @/lib/crypto 的 AES-256-GCM，
+ *    与 offline-push.ts / 日历 OAuth token 保持一致（此前 Base64 与 AES-256 不一致）。
  *
  * 经验来源：2026-09-14-multi-database-field-type-layered-implementation-pattern
  *  - 纯函数库放在 lib/ 下，按领域子目录组织（lib/mail/）。
@@ -19,29 +21,31 @@
 
 import nodemailer, { type Transporter, type SendMailOptions, type SentMessageInfo } from "nodemailer";
 import type { EmailAccount } from "@prisma/client";
+import { encrypt, decrypt } from "@/lib/crypto";
 
 /**
- * 解码 credential（Base64）为明文 SMTP 密码。
+ * 解码 credential（AES-256-GCM 解密）为明文 SMTP 密码。
  *
- * 约定：credential 字段存 Base64 编码的密码字符串。
- * 生产环境应替换为 AES-256 解密（密钥来自环境变量），此处保持简明。
+ * P0-fix: 与 offline-push.ts 保持一致，统一使用 @/lib/crypto 的 decrypt。
+ * 密钥来自环境变量 CALENDAR_CRYPTO_KEY（见 lib/crypto.ts）。
  *
- * @param credential Base64 编码的密码
+ * @param credential AES-256-GCM 加密的密码（base64(iv || ciphertext || authTag)）
  * @returns 明文密码
  */
 export function decodeCredential(credential: string): string {
-  // Buffer.from 默认 UTF-8，Base64 解码后转 UTF-8 字符串
-  return Buffer.from(credential, "base64").toString("utf-8");
+  return decrypt(credential);
 }
 
 /**
- * 编码明文密码为 Base64 用于存储。
+ * 编码明文密码为 AES-256-GCM 密文用于存储。
+ *
+ * P0-fix: 与 decodeCredential 对称，使用 @/lib/crypto 的 encrypt。
  *
  * @param password 明文密码
- * @returns Base64 编码字符串
+ * @returns AES-256-GCM 加密字符串（base64(iv || ciphertext || authTag)）
  */
 export function encodeCredential(password: string): string {
-  return Buffer.from(password, "utf-8").toString("base64");
+  return encrypt(password);
 }
 
 /**

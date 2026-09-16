@@ -196,7 +196,7 @@ export default function FavoriteButton({
         disabled={submitting}
         className={`inline-flex items-center gap-1.5 ${btnHeight} ${btnPadding} rounded-[var(--radius-md)] ${textSize} font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] disabled:opacity-50 disabled:cursor-not-allowed ${
           favorited
-            ? "bg-[var(--accent-soft)] text-[var(--accent-fg)] border border-[var(--accent)]"
+            ? "bg-[var(--accent-soft)] text-[var(--accent-soft-fg)] border border-[var(--accent)]"
             : "bg-[var(--surface)] text-[var(--fg)] border border-[var(--border)] hover:bg-[var(--surface-2)]"
         }`}
         aria-pressed={favorited}

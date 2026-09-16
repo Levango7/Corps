@@ -243,24 +243,44 @@ export class OfflineCache {
   /**
    * 出队最早入队的同步操作（FIFO），并从队列删除。
    *
-   * 实现用 getAll + 排序取最早一条，再删除。虽多一次读取，
-   * 但类型清晰、无游标事务生命周期问题。
+   * P1-fix: 将读取和删除合并到同一个 readwrite 事务中，通过 byCreatedAt 索引的
+   * cursor 取最早一条后立即 cursor.delete()。原实现用 getAll（readonly 事务）+
+   * removeSyncOp（独立 readwrite 事务）跨事务两步操作，两个标签页同时调用可能
+   * 取到同一条操作（竞态条件）。同一事务内 IndexedDB 串行化隔离保证只有一个调用方
+   * 能拿到该记录。
    *
    * @returns 最早的操作；队列空或不可用时返回 null
    */
   async dequeueSync(): Promise<SyncOperation | null> {
     if (!isIndexedDBAvailable()) return null;
     try {
-      const all = await withStore<SyncOperation[]>(
-        SYNC_QUEUE_STORE,
-        "readonly",
-        (store) => store.getAll() as IDBRequest<SyncOperation[]>,
-      );
-      if (all.length === 0) return null;
-      // 按 createdAt 升序取最早一条
-      const first = all.sort((a, b) => a.createdAt - b.createdAt)[0];
-      await this.removeSyncOp(first.id);
-      return first;
+      const db = await openDB();
+      return await new Promise<SyncOperation | null>((resolve, reject) => {
+        let dequeuedValue: SyncOperation | null = null;
+        const tx = db.transaction(SYNC_QUEUE_STORE, "readwrite");
+        const store = tx.objectStore(SYNC_QUEUE_STORE);
+        // 按 createdAt 升序游标，取最早入队的一条
+        const idx = store.index("byCreatedAt");
+        const req = idx.openCursor(undefined, "next");
+        req.onerror = () =>
+          reject(req.error ?? new Error("IDB cursor request failed"));
+        req.onsuccess = () => {
+          const cursor = req.result;
+          if (!cursor) {
+            // 队列空：等 tx.oncomplete resolve null
+            return;
+          }
+          dequeuedValue = cursor.value as SyncOperation;
+          // 同一事务内删除，原子完成读取+删除
+          cursor.delete();
+        };
+        // 等事务完成再 resolve，确保 delete 已落盘
+        tx.oncomplete = () => resolve(dequeuedValue);
+        tx.onerror = () =>
+          reject(tx.error ?? new Error("IDB transaction failed"));
+        tx.onabort = () =>
+          reject(tx.error ?? new Error("IDB transaction aborted"));
+      });
     } catch {
       return null;
     }

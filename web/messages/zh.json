@@ -56,7 +56,8 @@
       "dailyReport": "AI 日报",
       "knowledgeQa": "AI 知识问答",
       "announcementDraft": "AI 公告起草",
-      "insight": "AI 项目经理"
+      "insight": "AI 项目经理",
+      "navLabel": "移动端底部导航"
     },
     "search": {
       "placeholder": "搜索任务",
@@ -1174,7 +1175,8 @@
     "markRead": "标记已读",
     "offlinePush": "离线推送",
     "youHave": "你有",
-    "newNotifications": "条新通知"
+    "newNotifications": "条新通知",
+    "close": "关闭"
   },
   "decision": {
     "actionItems": "执行追踪",
@@ -1616,7 +1618,12 @@
       "typeWiki": "Wiki",
       "typeWhiteboard": "白板",
       "typeForm": "表单",
-      "typeMeeting": "会议"
+      "typeMeeting": "会议",
+      "justNow": "刚刚",
+      "minutesAgo": "{count}分钟前",
+      "hoursAgo": "{count}小时前",
+      "daysAgo": "{count}天前",
+      "close": "关闭"
     }
   },
   "exportPreview": {
@@ -3139,7 +3146,20 @@
     "selectAccount": "选择账户",
     "updated": "已更新",
     "deleted": "已删除",
-    "accountDeleted": "账户已删除"
+    "accountDeleted": "账户已删除",
+    "justNow": "刚刚",
+    "minutesAgo": "{count}分钟前",
+    "hoursAgo": "{count}小时前",
+    "daysAgo": "{count}天前",
+    "close": "关闭"
+  },
+  "todo": {
+    "dueSoon": "即将到期",
+    "overdue": "已过期",
+    "hoursLater": "{count}小时后",
+    "daysLater": "{count}天后",
+    "daysAgo": "{count}天前",
+    "close": "关闭"
   },
   "sync": {
     "synced": "已同步",

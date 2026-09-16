@@ -197,7 +197,7 @@ export function NotificationBadge({ workspaceId }: NotificationBadgeProps) {
           />
 
           <div
-            className="absolute right-0 top-full z-20 mt-[var(--space-2)] w-80 max-w-[calc(100vw-2rem)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-lg"
+            className="absolute right-0 top-full z-20 mt-[var(--space-2)] w-80 max-w-[calc(100vw-2rem)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)]"
             role="dialog"
             aria-label={t("title")}
           >
@@ -230,7 +230,7 @@ export function NotificationBadge({ workspaceId }: NotificationBadgeProps) {
                   type="button"
                   onClick={() => setOpen(false)}
                   className="inline-flex h-6 w-6 items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                  aria-label="Close"
+                  aria-label={t("close")}
                 >
                   <X size={14} />
                 </button>

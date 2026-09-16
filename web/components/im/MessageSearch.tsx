@@ -104,7 +104,7 @@ function highlightKeyword(text: string, keyword: string): ReactNode[] {
     nodes.push(
       <mark
         key={`hl-${key++}`}
-        className="rounded-[var(--radius-xs)] bg-[var(--accent-soft)] px-0.5 text-[var(--accent)]"
+        className="rounded-[var(--radius-sm)] bg-[var(--accent-soft)] px-0.5 text-[var(--accent)]"
       >
         {text.slice(index, index + trimmed.length)}
       </mark>,

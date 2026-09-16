@@ -65,7 +65,10 @@ interface MailListResponse {
 }
 
 /** 格式化时间（简短相对时间） */
-function formatMailTime(iso: string): string {
+function formatMailTime(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const date = new Date(iso);
   const now = Date.now();
   const diffMs = now - date.getTime();
@@ -73,10 +76,10 @@ function formatMailTime(iso: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffMin < 1) return "刚刚";
-  if (diffMin < 60) return `${diffMin}m`;
-  if (diffHour < 24) return `${diffHour}h`;
-  if (diffDay < 30) return `${diffDay}d`;
+  if (diffMin < 1) return t("justNow");
+  if (diffMin < 60) return t("minutesAgo", { count: diffMin });
+  if (diffHour < 24) return t("hoursAgo", { count: diffHour });
+  if (diffDay < 30) return t("daysAgo", { count: diffDay });
   return date.toLocaleDateString();
 }
 
@@ -238,7 +241,7 @@ export default function MailList({ workspaceId, status }: MailListProps) {
               type="button"
               onClick={() => setError("")}
               className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-              aria-label="close"
+              aria-label={t("close")}
             >
               <X size={14} />
             </button>
@@ -293,14 +296,14 @@ export default function MailList({ workspaceId, status }: MailListProps) {
                     <span
                       className={`text-[length:var(--text-sm)] truncate ${
                         mail.isRead
-                          ? "text-[var(--muted)] font-[weight:var(--weight-normal)]"
+                          ? "text-[var(--muted)] font-[weight:var(--weight-regular)]"
                           : "text-[var(--fg)] font-[weight:var(--weight-semibold)]"
                       }`}
                     >
                       {mail.fromAddr}
                     </span>
                     <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums ml-auto">
-                      {formatMailTime(mail.sentAt ?? mail.createdAt)}
+                      {formatMailTime(mail.sentAt ?? mail.createdAt, t)}
                     </span>
                   </div>
                   <p
@@ -352,7 +355,7 @@ export default function MailList({ workspaceId, status }: MailListProps) {
       {/* ── 邮件详情弹层 ── */}
       {selectedMail && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-overlay)] p-4"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-4"
           onClick={() => setSelectedMail(null)}
         >
           <div
@@ -399,7 +402,7 @@ export default function MailList({ workspaceId, status }: MailListProps) {
                 </span>
               </div>
               <hr className="border-[var(--border-soft)]" />
-              <pre className="whitespace-pre-wrap break-words text-[length:var(--text-sm)] text-[var(--fg)] font-sans">
+              <pre className="whitespace-pre-wrap break-words text-[length:var(--text-sm)] text-[var(--fg)] font-[family-name:var(--font-body)]">
                 {selectedMail.bodyText ?? ""}
               </pre>
             </div>
@@ -409,7 +412,7 @@ export default function MailList({ workspaceId, status }: MailListProps) {
 
       {/* 详情加载态 */}
       {detailLoading && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-[var(--bg-overlay)] p-4">
+        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-4">
           <div className="flex items-center text-[var(--fg)] text-[length:var(--text-sm)] gap-2">
             <Loader2 size={16} className="animate-spin" />
             {t("loading")}

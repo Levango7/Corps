@@ -204,7 +204,8 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       rank: r.rank,
     }));
 
-    return NextResponse.json({ code: 200, data: results, message: "" });
+    // P1-fix: code: 200 → code: 0，message 用 apiMsg 双语
+    return NextResponse.json({ code: 0, data: results, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET /api/v1/im/search] error:", error);
     return NextResponse.json(

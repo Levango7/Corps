@@ -107,7 +107,7 @@ export async function GET(req: NextRequest) {
       favoriteId: favorite?.id ?? null,
     };
 
-    return NextResponse.json({ code: 0, data: result, message: "OK" });
+    return NextResponse.json({ code: 0, data: result, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET favorites/check] error:", error);
     return NextResponse.json(

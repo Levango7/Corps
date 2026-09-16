@@ -14,7 +14,7 @@
 import { prisma } from "@/lib/prisma";
 import { runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { decrypt } from "@/lib/crypto";
-import nodemailer from "nodemailer";
+import nodemailer, { type Transporter } from "nodemailer";
 
 /** 在线判定阈值：lastSeen 在此毫秒数内视为在线（容忍一次心跳丢失） */
 const ONLINE_THRESHOLD_MS = 60_000;
@@ -128,9 +128,11 @@ async function sendOfflineEmail(
   textBody: string,
   htmlBody: string,
 ): Promise<boolean> {
+  // P1-fix: transporter 必须在 finally 中 close，防 SMTP 连接泄漏
+  let transporter: Transporter | null = null;
   try {
     const password = decrypt(emailAccount.credential);
-    const transporter = nodemailer.createTransport({
+    transporter = nodemailer.createTransport({
       host: emailAccount.smtpHost,
       port: emailAccount.smtpPort,
       secure: emailAccount.smtpSecure,
@@ -155,6 +157,9 @@ async function sendOfflineEmail(
   } catch (error) {
     console.error("[offline-push] email send failed (non-blocking):", error);
     return false;
+  } finally {
+    // P1-fix: 无论成功或失败都关闭 SMTP 连接，防连接泄漏
+    transporter?.close();
   }
 }
 

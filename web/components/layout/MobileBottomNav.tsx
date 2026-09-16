@@ -55,7 +55,7 @@ export function MobileBottomNav() {
     <nav
       className="fixed inset-x-0 bottom-0 z-[var(--z-sticky)] flex md:hidden border-t border-[var(--border)] bg-[var(--surface)]"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
-      aria-label="mobile bottom navigation"
+      aria-label={t("navLabel")}
     >
       {TABS.map(({ key, segment, Icon }) => {
         const href = `/w/${wid}/${segment}`;
@@ -79,8 +79,8 @@ export function MobileBottomNav() {
             <span
               className={
                 active
-                  ? "text-xs font-medium text-[var(--accent)]"
-                  : "text-xs text-[var(--muted)]"
+                  ? "text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent)]"
+                  : "text-[length:var(--text-xs)] text-[var(--muted)]"
               }
             >
               {t(key)}

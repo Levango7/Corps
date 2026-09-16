@@ -194,7 +194,7 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
       <header className="flex items-center gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-3)] py-[var(--space-3)]">
         <Wrench size={16} className="text-[var(--accent)]" />
         <div className="flex min-w-0 flex-col">
-          <h2 className="text-[length:var(--text-base)] font-semibold text-[var(--fg)]">
+          <h2 className="text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             {t("title")}
           </h2>
           <span className="truncate text-[length:var(--text-xs)] text-[var(--muted)]">
@@ -261,7 +261,7 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                     />
                   )}
                   <div className="flex min-w-0 flex-col gap-[2px]">
-                    <span className="font-mono text-[length:var(--text-sm)] font-medium text-[var(--fg)]">
+                    <span className="font-mono text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                       {tool.name}
                     </span>
                     <span className="truncate text-[length:var(--text-xs)] text-[var(--muted)]">
@@ -276,7 +276,7 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                     {/* 参数表单 */}
                     {Object.keys(schemaProps).length > 0 ? (
                       <div className="mb-[var(--space-3)] flex flex-col gap-[var(--space-3)]">
-                        <span className="text-[length:var(--text-xs)] font-medium uppercase tracking-wide text-[var(--muted)]">
+                        <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] uppercase tracking-wide text-[var(--muted)]">
                           {t("inputParameters")}
                         </span>
                         {Object.entries(schemaProps).map(([key, schema]) => {
@@ -386,7 +386,7 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                     {/* 执行结果 */}
                     {result && (
                       <div className="mt-[var(--space-3)] flex flex-col gap-[var(--space-3)]">
-                        <div className="flex items-center gap-[var(--space-3)] text-[length:var(--text-xs)] font-medium uppercase tracking-wide text-[var(--muted)]">
+                        <div className="flex items-center gap-[var(--space-3)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] uppercase tracking-wide text-[var(--muted)]">
                           {result.success ? (
                             <CheckCircle
                               size={14}

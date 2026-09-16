@@ -119,7 +119,7 @@ export async function GET(req: NextRequest) {
       })),
     };
 
-    return NextResponse.json({ code: 0, data, message: "OK" });
+    return NextResponse.json({ code: 0, data, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET notifications/unread] error:", error);
     return NextResponse.json(

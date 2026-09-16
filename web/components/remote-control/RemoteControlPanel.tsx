@@ -249,7 +249,7 @@ export function RemoteControlPanel({
     <div className="flex flex-col gap-[var(--space-4)]">
       {/* 标题栏 */}
       <div className="flex items-center justify-between">
-        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg-1)]">
+        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <Monitor size={16} className="text-[var(--accent)]" />
           {t("title")}
         </h2>
@@ -265,7 +265,7 @@ export function RemoteControlPanel({
 
       {/* 错误提示 */}
       {error && (
-        <div className="flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--danger-bg)] text-[var(--danger)] text-[length:var(--text-sm)]">
+        <div className="flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger)] text-[length:var(--text-sm)]">
           <AlertCircle size={14} />
           {error}
         </div>
@@ -280,7 +280,7 @@ export function RemoteControlPanel({
           <select
             value={selectedUserId}
             onChange={(e) => setSelectedUserId(e.target.value)}
-            className="w-full h-9 px-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg)] text-[length:var(--text-sm)] text-[var(--fg-1)] focus:border-[var(--accent)] focus:outline-none"
+            className="w-full h-9 px-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--bg)] text-[length:var(--text-sm)] text-[var(--fg)] focus:border-[var(--accent)] focus:outline-none"
           >
             <option value="">{t("selectUser")}</option>
             {members.map((m) => (
@@ -415,7 +415,7 @@ function SessionGroup({
               className="flex items-center justify-between px-[var(--space-3)] py-[var(--space-3)]"
             >
               <div className="flex flex-col gap-[var(--space-1)] min-w-0">
-                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-1)] truncate">
+                <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                   {isInitiator ? t("youAreControlling") : t("beingControlled")}{" "}
                   {otherName}
                 </span>
@@ -437,7 +437,7 @@ function SessionGroup({
                       onClick={() => onAction(s.id, "accept")}
                       disabled={isActioning}
                       title={t("accept")}
-                      className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--success)] text-[var(--success-fg)] hover:bg-[var(--success-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                      className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--success)] text-[var(--success-fg)] hover:bg-[var(--success-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                     >
                       {isActioning ? (
                         <Loader2 size={14} className="animate-spin" />
@@ -450,7 +450,7 @@ function SessionGroup({
                       onClick={() => onAction(s.id, "reject")}
                       disabled={isActioning}
                       title={t("reject")}
-                      className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[var(--danger-fg)] hover:bg-[var(--danger-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                      className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                     >
                       <X size={14} />
                     </button>
@@ -464,7 +464,7 @@ function SessionGroup({
                     onClick={() => onAction(s.id, "end")}
                     disabled={isActioning}
                     title={t("end")}
-                    className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[var(--danger-fg)] hover:bg-[var(--danger-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                    className="flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                   >
                     {isActioning ? (
                       <Loader2 size={14} className="animate-spin" />

@@ -171,7 +171,7 @@ export async function GET(req: NextRequest) {
       currentUserId,
     );
 
-    return NextResponse.json({ code: 0, data: result, message: "OK" });
+    return NextResponse.json({ code: 0, data: result, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET todos/count] error:", error);
     return NextResponse.json(

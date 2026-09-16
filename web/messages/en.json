@@ -56,7 +56,8 @@
       "dailyReport": "AI Daily Report",
       "knowledgeQa": "AI Knowledge Q&A",
       "announcementDraft": "AI Announcement Draft",
-      "insight": "AI Project Manager"
+      "insight": "AI Project Manager",
+      "navLabel": "Mobile bottom navigation"
     },
     "search": {
       "placeholder": "Search tasks",
@@ -1174,7 +1175,8 @@
     "markRead": "Mark as read",
     "offlinePush": "Offline Push",
     "youHave": "You have",
-    "newNotifications": "new notifications"
+    "newNotifications": "new notifications",
+    "close": "Close"
   },
   "decision": {
     "actionItems": "Action Items",
@@ -1616,7 +1618,12 @@
       "typeWiki": "Wiki",
       "typeWhiteboard": "Whiteboard",
       "typeForm": "Form",
-      "typeMeeting": "Meeting"
+      "typeMeeting": "Meeting",
+      "justNow": "Just now",
+      "minutesAgo": "{count}m ago",
+      "hoursAgo": "{count}h ago",
+      "daysAgo": "{count}d ago",
+      "close": "Close"
     }
   },
   "exportPreview": {
@@ -3139,7 +3146,20 @@
     "selectAccount": "Select account",
     "updated": "Updated",
     "deleted": "Deleted",
-    "accountDeleted": "Account deleted"
+    "accountDeleted": "Account deleted",
+    "justNow": "Just now",
+    "minutesAgo": "{count}m ago",
+    "hoursAgo": "{count}h ago",
+    "daysAgo": "{count}d ago",
+    "close": "Close"
+  },
+  "todo": {
+    "dueSoon": "Due soon",
+    "overdue": "Overdue",
+    "hoursLater": "in {count}h",
+    "daysLater": "in {count}d",
+    "daysAgo": "{count}d ago",
+    "close": "Close"
   },
   "sync": {
     "synced": "Synced",

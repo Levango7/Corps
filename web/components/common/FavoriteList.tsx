@@ -97,7 +97,10 @@ const TYPE_ORDER: TargetType[] = [
 ];
 
 /** 格式化收藏时间（简短相对时间） */
-function formatFavoriteTime(iso: string): string {
+function formatFavoriteTime(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): string {
   const date = new Date(iso);
   const now = Date.now();
   const diffMs = now - date.getTime();
@@ -105,10 +108,10 @@ function formatFavoriteTime(iso: string): string {
   const diffHour = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHour / 24);
 
-  if (diffMin < 1) return "刚刚";
-  if (diffMin < 60) return `${diffMin}分钟前`;
-  if (diffHour < 24) return `${diffHour}小时前`;
-  if (diffDay < 30) return `${diffDay}天前`;
+  if (diffMin < 1) return t("justNow");
+  if (diffMin < 60) return t("minutesAgo", { count: diffMin });
+  if (diffHour < 24) return t("hoursAgo", { count: diffHour });
+  if (diffDay < 30) return t("daysAgo", { count: diffDay });
   // 超过 30 天显示具体日期
   return date.toLocaleDateString();
 }
@@ -225,7 +228,7 @@ export default function FavoriteList({ workspaceId }: FavoriteListProps) {
               type="button"
               onClick={() => setError("")}
               className="shrink-0 opacity-60 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
-              aria-label="close"
+              aria-label={t("close")}
             >
               <X size={14} />
             </button>
@@ -288,7 +291,7 @@ export default function FavoriteList({ workspaceId }: FavoriteListProps) {
                                 {fav.targetId}
                               </span>
                               <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
-                                {formatFavoriteTime(fav.createdAt)}
+                                {formatFavoriteTime(fav.createdAt, t)}
                               </span>
                             </div>
                             {fav.note && (

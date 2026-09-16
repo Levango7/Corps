@@ -36,34 +36,45 @@ export function TextPreview({ url, fileName }: TextPreviewProps) {
   const [error, setError] = useState(false);
   const [truncated, setTruncated] = useState(false);
 
-  const loadContent = useCallback(async () => {
+  // 带 AbortController 的加载：url 变化或组件卸载时中止旧请求，
+  // 避免旧请求覆盖新状态（竞态）。来源：经验 useeffect-cleanup/abortcontroller。
+  const loadContent = useCallback(async (signal: AbortSignal) => {
     setLoading(true);
     setError(false);
     setTruncated(false);
 
     try {
-      const res = await fetch(url);
+      const res = await fetch(url, { signal });
       if (!res.ok) {
         throw new Error(`HTTP ${res.status}`);
       }
 
       // 读取为文本，截断前 MAX_BYTES 字符
       const text = await res.text();
+      // 读取期间可能已被 abort，丢弃结果
+      if (signal.aborted) return;
       if (text.length > MAX_BYTES) {
         setContent(text.slice(0, MAX_BYTES));
         setTruncated(true);
       } else {
         setContent(text);
       }
-    } catch {
+    } catch (e) {
+      // abort 引发的错误静默丢弃，不记为加载失败
+      if (e instanceof Error && e.name === "AbortError") return;
       setError(true);
     } finally {
-      setLoading(false);
+      // 仅在未 abort 时清 loading，避免旧请求清掉新请求的 loading 态
+      if (!signal.aborted) setLoading(false);
     }
   }, [url]);
 
   useEffect(() => {
-    void loadContent();
+    const controller = new AbortController();
+    void loadContent(controller.signal);
+    return () => {
+      controller.abort();
+    };
   }, [loadContent]);
 
   // 加载中

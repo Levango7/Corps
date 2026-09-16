@@ -65,7 +65,10 @@ const TYPE_ICON: Record<TodoType, typeof CheckSquare> = {
 // ─── 辅助函数 ──────────────────────────────────────────────────────────────────
 
 /** 格式化截止日期（简短相对时间，已过期标红） */
-function formatDueDate(iso: string): { text: string; overdue: boolean } {
+function formatDueDate(
+  iso: string,
+  t: ReturnType<typeof useTranslations>,
+): { text: string; overdue: boolean } {
   const date = new Date(iso);
   const now = Date.now();
   const diffMs = date.getTime() - now;
@@ -76,12 +79,14 @@ function formatDueDate(iso: string): { text: string; overdue: boolean } {
   const diffDay = Math.floor(diffHour / 24);
 
   if (diffDay === 0 && !overdue) {
-    if (diffHour === 0) return { text: "即将到期", overdue: false };
-    return { text: `${diffHour}h`, overdue: false };
+    if (diffHour === 0) return { text: t("dueSoon"), overdue: false };
+    return { text: t("hoursLater", { count: diffHour }), overdue: false };
   }
-  if (diffDay === 0 && overdue) return { text: "已过期", overdue: true };
-  if (diffDay <= 7 && !overdue) return { text: `${diffDay}d`, overdue: false };
-  if (diffDay <= 7 && overdue) return { text: `${diffDay}d前`, overdue: true };
+  if (diffDay === 0 && overdue) return { text: t("overdue"), overdue: true };
+  if (diffDay <= 7 && !overdue)
+    return { text: t("daysLater", { count: diffDay }), overdue: false };
+  if (diffDay <= 7 && overdue)
+    return { text: t("daysAgo", { count: diffDay }), overdue: true };
 
   return {
     text: date.toLocaleDateString(),
@@ -218,7 +223,7 @@ export default function TodoWidget({
             {todos.map((todo) => {
               const Icon = TYPE_ICON[todo.type];
               const dueInfo = todo.dueDate
-                ? formatDueDate(todo.dueDate)
+                ? formatDueDate(todo.dueDate, t)
                 : null;
 
               return (

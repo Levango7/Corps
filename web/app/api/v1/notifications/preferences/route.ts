@@ -102,7 +102,7 @@ export async function GET(req: NextRequest) {
       select: selectFields,
     });
 
-    return NextResponse.json({ code: 0, data: toResult(pref), message: "OK" });
+    return NextResponse.json({ code: 0, data: toResult(pref), message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET notifications/preferences] error:", error);
     return NextResponse.json(
@@ -167,7 +167,7 @@ export async function PATCH(req: NextRequest) {
       select: selectFields,
     });
 
-    return NextResponse.json({ code: 0, data: toResult(pref), message: "OK" });
+    return NextResponse.json({ code: 0, data: toResult(pref), message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[PATCH notifications/preferences] error:", error);
     return NextResponse.json(

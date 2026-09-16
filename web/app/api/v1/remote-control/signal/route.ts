@@ -15,7 +15,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
@@ -167,7 +167,8 @@ const signalMessageSchema = z.object({
       usernameFragment: z.string().nullable().optional(),
     })
     .optional(),
-  workspaceId: z.string().uuid().optional(),
+  // P0-fix: workspaceId 必填，强制工作区隔离校验（防跨工作区信令注入）
+  workspaceId: z.string().uuid(),
   reason: z.string().max(200).optional(),
 });
 
@@ -227,18 +228,91 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 4) 工作区隔离校验（若消息携带 workspaceId，校验当前用户是该工作区成员）
-  if (body.workspaceId) {
-    const ctx = await getWorkspaceContext(req, body.workspaceId);
-    if (!ctx) {
+  // 4) 工作区隔离校验（P0-fix: workspaceId 必填，强制校验当前用户是该工作区成员）
+  const ctx = await getWorkspaceContext(req, body.workspaceId);
+  if (!ctx) {
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "forbidden"), data: null },
+      { status: 403 },
+    );
+  }
+
+  // 5) P0-fix: 信令归属校验——sessionId 对应的 RemoteControlSession 必须存在，
+  //    status 为 active/pending，且 fromUserId/toUserId 必须是会话的参与方
+  //    （initiatorId/targetId），防认证用户向任意用户发送信令
+  try {
+    const session = await runWithWorkspace(
+      body.workspaceId,
+      (tx) =>
+        tx.remoteControlSession.findUnique({
+          where: { id: body.sessionId },
+          select: {
+            id: true,
+            status: true,
+            initiatorId: true,
+            targetId: true,
+            expiresAt: true,
+          },
+        }),
+      userId,
+    );
+
+    if (!session) {
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "forbidden"), data: null },
+        {
+          code: 404,
+          message: apiMsg(req, "remoteControlSessionNotFound"),
+          data: null,
+        },
+        { status: 404 },
+      );
+    }
+
+    // 会话状态必须为 active 或 pending（rejected/ended/failed 不允许发信令）
+    if (session.status !== "active" && session.status !== "pending") {
+      return NextResponse.json(
+        {
+          code: 403,
+          message: apiMsg(req, "remoteControlAlreadyProcessed"),
+          data: null,
+        },
         { status: 403 },
       );
     }
+
+    // 会话过期检查
+    if (session.expiresAt < new Date()) {
+      return NextResponse.json(
+        {
+          code: 403,
+          message: apiMsg(req, "remoteControlSessionExpired"),
+          data: null,
+        },
+        { status: 403 },
+      );
+    }
+
+    // fromUserId 和 toUserId 必须是会话的参与方（initiatorId/targetId）
+    const participants = new Set([session.initiatorId, session.targetId]);
+    if (!participants.has(body.fromUserId) || !participants.has(body.toUserId)) {
+      return NextResponse.json(
+        {
+          code: 403,
+          message: apiMsg(req, "remoteControlNotParticipant"),
+          data: null,
+        },
+        { status: 403 },
+      );
+    }
+  } catch (error) {
+    console.error("[POST remote-control/signal] session check error:", error);
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 
-  // 5) 通过 EventEmitter 转发给目标用户
+  // 6) 通过 EventEmitter 转发给目标用户
   try {
     emitSignalingMessage(body.toUserId, body);
     return NextResponse.json({

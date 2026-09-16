@@ -97,7 +97,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({
         code: 0,
         data: { items: [], total: 0, page, pageSize },
-        message: "OK",
+        message: apiMsg(req, "ok"),
       });
     }
 
@@ -149,7 +149,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       code: 0,
       data: { items, total, page, pageSize },
-      message: "OK",
+      message: apiMsg(req, "ok"),
     });
   } catch (error) {
     console.error("[GET mail/inbox] error:", error);

@@ -265,7 +265,7 @@ export function RemoteViewer({
       <div className="flex items-center justify-between px-[var(--space-4)] py-[var(--space-2)] bg-[var(--surface)] border-b border-[var(--border)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <Monitor size={16} className="text-[var(--accent)]" />
-          <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-1)]">
+          <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
             {t("youAreControlling")}
           </span>
           {/* 状态指示器 */}
@@ -284,8 +284,8 @@ export function RemoteViewer({
             )}
             {sessionState === "disconnected" && (
               <>
-                <WifiOff size={12} className="text-[var(--warning)]" />
-                <span className="text-[var(--warning)]">{t("disconnected")}</span>
+                <WifiOff size={12} className="text-[var(--warn)]" />
+                <span className="text-[var(--warn)]">{t("disconnected")}</span>
               </>
             )}
             {sessionState === "failed" && (
@@ -312,7 +312,7 @@ export function RemoteViewer({
             type="button"
             onClick={handleEnd}
             title={t("end")}
-            className="flex items-center gap-[var(--space-1)] h-8 px-3 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--danger-hover)] transition-colors duration-[var(--motion-fast)]"
+            className="flex items-center gap-[var(--space-1)] h-8 px-3 rounded-[var(--radius-sm)] bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)]"
           >
             <PhoneOff size={14} />
             {t("end")}
@@ -321,7 +321,7 @@ export function RemoteViewer({
       </div>
 
       {/* 视频画面区域 */}
-      <div className="flex-1 relative flex items-center justify-center bg-[var(--bg-2)] overflow-hidden">
+      <div className="flex-1 relative flex items-center justify-center bg-[var(--surface)] overflow-hidden">
         <video
           ref={videoRef}
           autoPlay

@@ -188,17 +188,17 @@ export function RemoteControlDialog({
         aria-labelledby="remote-control-dialog-title"
         tabIndex={-1}
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md mx-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--shadow-lg)] focus:outline-none"
+        className="w-full max-w-md mx-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)] focus:outline-none"
       >
         {/* 头部 */}
         <div className="flex items-center gap-[var(--space-3)] px-[var(--space-5)] py-[var(--space-4)] border-b border-[var(--border-soft)]">
-          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--accent-bg)]">
+          <div className="flex items-center justify-center w-10 h-10 rounded-full bg-[var(--accent-soft)]">
             <Monitor size={20} className="text-[var(--accent)]" />
           </div>
           <div className="flex-1 min-w-0">
             <h2
               id="remote-control-dialog-title"
-              className="text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg-1)]"
+              className="text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
             >
               {t("incoming")}
             </h2>
@@ -230,7 +230,7 @@ export function RemoteControlDialog({
               </div>
             )}
             <div className="flex-1 min-w-0">
-              <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-1)] truncate">
+              <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                 {requesterName}
               </p>
               {requester?.email && (
@@ -251,7 +251,7 @@ export function RemoteControlDialog({
 
           {/* 错误提示 */}
           {error && (
-            <div className="mt-[var(--space-3)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--danger-bg)] text-[var(--danger)] text-[length:var(--text-sm)]">
+            <div className="mt-[var(--space-3)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger)] text-[length:var(--text-sm)]">
               {error}
             </div>
           )}
@@ -276,7 +276,7 @@ export function RemoteControlDialog({
             type="button"
             onClick={handleAccept}
             disabled={actioning}
-            className="flex-1 flex items-center justify-center gap-[var(--space-1)] h-10 rounded-[var(--radius-md)] bg-[var(--success)] text-[var(--success-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--success-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
+            className="flex-1 flex items-center justify-center gap-[var(--space-1)] h-10 rounded-[var(--radius-md)] bg-[var(--success)] text-[var(--success-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--success-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
           >
             {actioning ? (
               <Loader2 size={14} className="animate-spin" />

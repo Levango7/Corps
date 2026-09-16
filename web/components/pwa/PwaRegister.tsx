@@ -90,13 +90,13 @@ export function PwaRegister() {
           strokeWidth={2}
           className="shrink-0 text-[var(--accent)]"
         />
-        <p className="flex-1 text-sm leading-[var(--leading-snug)] text-[var(--fg)]">
+        <p className="flex-1 text-[length:var(--text-sm)] leading-[var(--leading-snug)] text-[var(--fg)]">
           {t("installPrompt")}
         </p>
         <button
           type="button"
           onClick={handleInstall}
-          className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1.5 text-sm font-medium text-[var(--accent-fg)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] focus:outline-none focus-visible:[box-shadow:var(--focus-ring)]"
+          className="shrink-0 rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] focus:outline-none focus-visible:[box-shadow:var(--focus-ring)]"
         >
           {t("install")}
         </button>
@@ -106,7 +106,7 @@ export function PwaRegister() {
           aria-label={t("dismiss")}
           className="shrink-0 text-[var(--muted)] transition-colors duration-[var(--motion-fast)] hover:text-[var(--fg)] focus:outline-none focus-visible:[box-shadow:var(--focus-ring)]"
         >
-          <X size={18} strokeWidth={2} />
+          <X size={16} strokeWidth={2} />
         </button>
       </div>
     </div>

@@ -232,9 +232,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     }));
 
     return NextResponse.json({
-      code: 200,
+      // P1-fix: code: 200 → code: 0，message 用 apiMsg 双语
+      code: 0,
       data: { messages, wikis },
-      message: "",
+      message: apiMsg(req, "ok"),
     });
   } catch (error) {
     console.error("[GET /api/v1/search] error:", error);

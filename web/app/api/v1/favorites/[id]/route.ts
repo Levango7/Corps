@@ -137,7 +137,7 @@ export async function PATCH(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: updated, message: "OK" });
+    return NextResponse.json({ code: 0, data: updated, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[PATCH favorites/[id]] error:", error);
     return NextResponse.json(
@@ -202,7 +202,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 0, data: null, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[DELETE favorites/[id]] error:", error);
     return NextResponse.json(

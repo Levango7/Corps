@@ -178,7 +178,7 @@ export default function MailComposer({
               type="button"
               onClick={() => setError("")}
               className="shrink-0 opacity-60 hover:opacity-100 transition-opacity"
-              aria-label="close"
+              aria-label={t("close")}
             >
               <X size={14} />
             </button>

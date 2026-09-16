@@ -45,6 +45,7 @@ export const API_MESSAGES = {
   userNotFound: { zh: "用户不存在", en: "User not found" },
   commentNotFound: { zh: "评论不存在", en: "Comment not found" },
   widgetNotFound: { zh: "Widget 不存在", en: "Widget not found" },
+  toolNotFound: { zh: "工具不存在", en: "Tool not found" },
   timeEntryNotFound: { zh: "工时记录不存在", en: "Time entry not found" },
   timerAlreadyRunning: {
     zh: "已有正在进行的计时，请先停止",

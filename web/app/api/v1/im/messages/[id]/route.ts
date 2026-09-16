@@ -171,7 +171,8 @@ export async function PATCH(
         );
       case "ok":
         return NextResponse.json({
-          code: 200,
+          // P1-fix: code: 200 → code: 0
+          code: 0,
           data: result.message,
           message: apiMsg(req, "ok"),
         });

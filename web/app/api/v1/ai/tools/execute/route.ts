@@ -65,7 +65,8 @@ export async function POST(req: NextRequest) {
   const tool = toolRegistry.get(body.toolName);
   if (!tool) {
     return NextResponse.json(
-      { code: 404, message: `工具不存在: ${body.toolName}`, data: null },
+      // P2-fix: 硬编码中文 → apiMsg 双语
+      { code: 404, message: apiMsg(req, "toolNotFound"), data: null },
       { status: 404 },
     );
   }

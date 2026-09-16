@@ -141,7 +141,7 @@ export async function PATCH(
     return NextResponse.json({
       code: 0,
       data: { ...updated, createdAt: updated.createdAt.toISOString() },
-      message: "OK",
+      message: apiMsg(req, "ok"),
     });
   } catch (error) {
     console.error("[PATCH notifications/[id]] error:", error);
@@ -229,7 +229,7 @@ export async function DELETE(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 0, data: null, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[DELETE notifications/[id]] error:", error);
     return NextResponse.json(

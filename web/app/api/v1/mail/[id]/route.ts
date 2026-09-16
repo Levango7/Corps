@@ -136,7 +136,7 @@ export async function GET(
       );
     }
 
-    return NextResponse.json({ code: 0, data: mail, message: "OK" });
+    return NextResponse.json({ code: 0, data: mail, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET mail/:id] error:", error);
     return NextResponse.json(

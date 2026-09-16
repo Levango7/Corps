@@ -115,7 +115,7 @@ export async function GET(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: accounts, message: "OK" });
+    return NextResponse.json({ code: 0, data: accounts, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET mail/accounts] error:", error);
     return NextResponse.json(
@@ -210,7 +210,7 @@ export async function POST(req: NextRequest) {
     );
 
     return NextResponse.json(
-      { code: 0, data: account, message: "OK" },
+      { code: 0, data: account, message: apiMsg(req, "ok") },
       { status: 201 },
     );
   } catch (error) {

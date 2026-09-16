@@ -44,6 +44,51 @@ const operationSchema = z.object({
   createdAt: z.number().int().min(0),
 });
 
+// ─── P1-fix: 各 module payload 具体校验 schema ────────────────
+// 此前 payload 为 z.unknown() 完全未校验，客户端可注入任意结构数据。
+// 现按 module 定义具体 schema，在 processOperation 分发前校验。
+
+/** task 模块 payload schema */
+const taskPayloadSchema = z.object({
+  title: z.string().max(255).optional(),
+  description: z.string().nullable().optional(),
+  status: z.enum(["todo", "in_progress", "review", "done"]).optional(),
+  priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
+  dueDate: z.string().datetime().nullable().optional(),
+  assigneeId: z.string().uuid().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  parentId: z.string().uuid().nullable().optional(),
+  milestoneId: z.string().uuid().nullable().optional(),
+});
+
+/** decision 模块 payload schema */
+const decisionPayloadSchema = z.object({
+  taskId: z.string().uuid().optional(),
+  markdown: z.string().optional(),
+  title: z.string().optional(),
+  status: z.enum(["pending", "approved", "rejected", "withdrawn"]).optional(),
+});
+
+/** document 模块 payload schema */
+const documentPayloadSchema = z.object({
+  title: z.string().optional(),
+  markdown: z.string().optional(),
+  content: z.string().optional(),
+});
+
+/** notification 模块 payload schema */
+const notificationPayloadSchema = z.object({
+  read: z.boolean().optional(),
+});
+
+/** 各 module payload schema 映射（notification 由服务端生成，仍校验形状） */
+const payloadSchemas: Record<SyncModule, z.ZodType> = {
+  task: taskPayloadSchema,
+  decision: decisionPayloadSchema,
+  document: documentPayloadSchema,
+  notification: notificationPayloadSchema,
+};
+
 /** POST body schema */
 const postBodySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -295,6 +340,20 @@ export async function POST(req: NextRequest) {
         // 不接受跨工作区操作，跳过（不记为冲突，直接忽略）
         continue;
       }
+
+      // P1-fix: 按 module 校验 payload 结构，防客户端注入任意数据
+      const payloadSchema = payloadSchemas[op.module];
+      const payloadResult = payloadSchema.safeParse(op.payload);
+      if (!payloadResult.success) {
+        // payload 校验失败：跳过该操作，记录警告便于排查
+        console.warn(
+          `[POST sync] payload validation failed for op ${op.id} (module=${op.module}):`,
+          payloadResult.error.issues[0]?.message,
+        );
+        continue;
+      }
+      // 用校验后的 payload 替换原始 payload（剥离未知字段）
+      op.payload = payloadResult.data;
 
       const result = await processOperation(op, ctx.payload.sub);
       if (result.kind === "accepted") {
