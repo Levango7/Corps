@@ -2705,6 +2705,38 @@
     "prevPage": "Previous",
     "nextPage": "Next"
   },
+  "meetings": {
+    "room": {
+      "joining": "Joining meeting...",
+      "connecting": "Connecting...",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "error": "Connection error",
+      "serviceUnavailable": "Meeting service unavailable",
+      "serviceUnavailableHint": "The audio/video service is not configured or temporarily unavailable. Please try again later or contact your administrator.",
+      "join": "Join",
+      "leave": "Leave",
+      "leaveConfirm": "Leave the meeting?",
+      "left": "Left the meeting",
+      "micOn": "Turn on microphone",
+      "micOff": "Turn off microphone",
+      "cameraOn": "Turn on camera",
+      "cameraOff": "Turn off camera",
+      "screenShare": "Share Screen",
+      "screenShareStop": "Stop Sharing",
+      "participants": "Participants",
+      "noParticipants": "No participants",
+      "participantCount": "{count} participants",
+      "lobbyTitle": "Ready to join",
+      "lobbySubtitle": "Check your camera and microphone, then join the meeting",
+      "lobbyHint": "You can toggle microphone, camera, or screen share anytime after joining",
+      "testDevices": "Device Test",
+      "joinNow": "Join Now",
+      "username": "Your Name",
+      "reconnecting": "Reconnecting...",
+      "connectionFailed": "Connection failed"
+    }
+  },
   "okr": {
     "title": "Objectives & Key Results",
     "create": "New Objective",

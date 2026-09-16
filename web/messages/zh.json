@@ -2705,6 +2705,38 @@
     "prevPage": "上一页",
     "nextPage": "下一页"
   },
+  "meetings": {
+    "room": {
+      "joining": "加入会议中...",
+      "connecting": "连接中...",
+      "connected": "已连接",
+      "disconnected": "已断开",
+      "error": "连接错误",
+      "serviceUnavailable": "会议服务不可用",
+      "serviceUnavailableHint": "音视频服务暂未配置或暂时不可用，请稍后重试或联系管理员。",
+      "join": "加入",
+      "leave": "离开",
+      "leaveConfirm": "确定离开会议？",
+      "left": "已离开会议",
+      "micOn": "开启麦克风",
+      "micOff": "关闭麦克风",
+      "cameraOn": "开启摄像头",
+      "cameraOff": "关闭摄像头",
+      "screenShare": "共享屏幕",
+      "screenShareStop": "停止共享",
+      "participants": "参与者",
+      "noParticipants": "暂无参与者",
+      "participantCount": "{count} 位参与者",
+      "lobbyTitle": "准备加入会议",
+      "lobbySubtitle": "请检查摄像头与麦克风，准备好后加入会议",
+      "lobbyHint": "加入后可随时开关麦克风、摄像头或共享屏幕",
+      "testDevices": "设备检测",
+      "joinNow": "立即加入",
+      "username": "您的名称",
+      "reconnecting": "重新连接中...",
+      "connectionFailed": "连接失败"
+    }
+  },
   "okr": {
     "title": "目标与关键结果",
     "create": "新建目标",
