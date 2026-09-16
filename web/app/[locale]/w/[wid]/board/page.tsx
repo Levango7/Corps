@@ -12,7 +12,7 @@
  * 共享类型/常量/工具从 lib/types、lib/task-meta、lib/format import，消除重复。
  */
 
-import { use, useEffect, useRef, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 
 import { Plus, AlertCircle, CheckSquare } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -134,7 +134,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       .finally(() => setLoading(false));
   }, [wid, milestoneFilter, taskFilter]);
 
-  async function load() {
+  const load = useCallback(async () => {
     try {
       setError(null);
       const msQuery = milestoneFilter !== "all" ? `milestone=${milestoneFilter}` : "";
@@ -151,7 +151,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       );
       setTasks([]);
     }
-  }
+  }, [wid, milestoneFilter, taskFilter, tErr]);
 
   // ─── 拖拽排序 ───────────────────────────────────────────
 
@@ -174,72 +174,84 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     return ((prev.sortOrder ?? 0) + (next.sortOrder ?? 0)) / 2;
   }
 
-  async function handleReorder(taskId: string, targetIndex: number, column: Status) {
-    if (!tasks.some((t) => t.id === taskId)) return;
-    const newSortOrder = computeSortOrder(tasks, column, targetIndex, taskId);
-    const seq = ++dragSeqRef.current;
-    setTasks((prev) =>
-      prev.map((t) => (t.id === taskId ? { ...t, status: column, sortOrder: newSortOrder } : t)),
-    );
-    try {
-      await api(`/api/v1/workspaces/${wid}/tasks/${taskId}`, {
-        method: "PATCH",
-        body: JSON.stringify({ status: column, sortOrder: newSortOrder }),
-      });
-    } catch {
-      // 仅当没有更新的拖拽操作时才回滚
-      if (seq === dragSeqRef.current) {
-        setDragError(t("dragFailed"));
-        await load();
-        setTimeout(() => setDragError(null), 5000);
+  const handleReorder = useCallback(
+    async (taskId: string, targetIndex: number, column: Status) => {
+      if (!tasks.some((t) => t.id === taskId)) return;
+      const newSortOrder = computeSortOrder(tasks, column, targetIndex, taskId);
+      const seq = ++dragSeqRef.current;
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: column, sortOrder: newSortOrder } : t)),
+      );
+      try {
+        await api(`/api/v1/workspaces/${wid}/tasks/${taskId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ status: column, sortOrder: newSortOrder }),
+        });
+      } catch {
+        // 仅当没有更新的拖拽操作时才回滚
+        if (seq === dragSeqRef.current) {
+          setDragError(t("dragFailed"));
+          await load();
+          setTimeout(() => setDragError(null), 5000);
+        }
       }
-    }
-  }
+    },
+    [tasks, wid, t, load],
+  );
 
-  async function moveTaskByStep(taskId: string, delta: -1 | 1) {
-    const task = tasks.find((t) => t.id === taskId);
-    if (!task) return;
-    const columnTasks = tasks
-      .filter((t) => t.status === task.status)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    const currentIndex = columnTasks.findIndex((t) => t.id === taskId);
-    if (currentIndex < 0) return;
-    const targetIndex = currentIndex + delta;
-    if (targetIndex < 0 || targetIndex >= columnTasks.length) return;
-    await handleReorder(taskId, targetIndex, task.status);
-  }
+  const moveTaskByStep = useCallback(
+    async (taskId: string, delta: -1 | 1) => {
+      const task = tasks.find((t) => t.id === taskId);
+      if (!task) return;
+      const columnTasks = tasks
+        .filter((t) => t.status === task.status)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const currentIndex = columnTasks.findIndex((t) => t.id === taskId);
+      if (currentIndex < 0) return;
+      const targetIndex = currentIndex + delta;
+      if (targetIndex < 0 || targetIndex >= columnTasks.length) return;
+      await handleReorder(taskId, targetIndex, task.status);
+    },
+    [tasks, handleReorder],
+  );
 
-  async function handleDropOnTask(sourceTaskId: string, targetTaskId: string) {
-    if (sourceTaskId === targetTaskId) return;
-    const target = tasks.find((t) => t.id === targetTaskId);
-    if (!target) return;
-    const column = target.status;
-    const columnTasksExcl = tasks
-      .filter((t) => t.status === column && t.id !== sourceTaskId)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    const targetIndex = columnTasksExcl.findIndex((t) => t.id === targetTaskId);
-    if (targetIndex < 0) return;
-    await handleReorder(sourceTaskId, targetIndex, column);
-  }
+  const handleDropOnTask = useCallback(
+    async (sourceTaskId: string, targetTaskId: string) => {
+      if (sourceTaskId === targetTaskId) return;
+      const target = tasks.find((t) => t.id === targetTaskId);
+      if (!target) return;
+      const column = target.status;
+      const columnTasksExcl = tasks
+        .filter((t) => t.status === column && t.id !== sourceTaskId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      const targetIndex = columnTasksExcl.findIndex((t) => t.id === targetTaskId);
+      if (targetIndex < 0) return;
+      await handleReorder(sourceTaskId, targetIndex, column);
+    },
+    [tasks, handleReorder],
+  );
 
-  async function handleDropOnColumn(sourceTaskId: string, targetStatus: Status) {
-    if (!tasks.some((t) => t.id === sourceTaskId)) return;
-    const columnTasksExcl = tasks
-      .filter((t) => t.status === targetStatus && t.id !== sourceTaskId)
-      .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
-    await handleReorder(sourceTaskId, columnTasksExcl.length, targetStatus);
-  }
+  const handleDropOnColumn = useCallback(
+    async (sourceTaskId: string, targetStatus: Status) => {
+      if (!tasks.some((t) => t.id === sourceTaskId)) return;
+      const columnTasksExcl = tasks
+        .filter((t) => t.status === targetStatus && t.id !== sourceTaskId)
+        .sort((a, b) => (a.sortOrder ?? 0) - (b.sortOrder ?? 0));
+      await handleReorder(sourceTaskId, columnTasksExcl.length, targetStatus);
+    },
+    [tasks, handleReorder],
+  );
 
   // ─── 多选 + 批量操作（P2） ───────────────────────────────
 
-  function toggleSelect(id: string) {
+  const toggleSelect = useCallback((id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
       else next.add(id);
       return next;
     });
-  }
+  }, []);
 
   function clearSelection() {
     setSelectedIds(new Set());

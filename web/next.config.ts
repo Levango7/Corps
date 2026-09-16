@@ -1,9 +1,17 @@
 import type { NextConfig } from "next";
 import createNextIntlPlugin from "next-intl/plugin";
+import withBundleAnalyzer from "@next/bundle-analyzer";
 
 // next-intl App Router 集成（ADR-008 方案 A）
 // 指定 i18n 配置入口；插件自动接管 messages 加载与 RSC 注水
 const withNextIntl = createNextIntlPlugin("./lib/i18n.ts");
+
+// Bundle analyzer：仅 ANALYZE=true 时启用（本地分析用，不影响生产构建）。
+// @next/bundle-analyzer 是 devDependency，next.config.ts 仅在构建时执行，
+// Next.js 构建管线会正确处理此 import。
+const withAnalyzer = withBundleAnalyzer({
+  enabled: process.env.ANALYZE === "true",
+});
 
 const nextConfig: NextConfig = {
   output: "standalone",
@@ -68,4 +76,4 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withAnalyzer(withNextIntl(nextConfig));

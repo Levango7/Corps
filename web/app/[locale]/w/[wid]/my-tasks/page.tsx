@@ -7,7 +7,11 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyStateBase from "@/components/EmptyState";
 import { AnimatedList, AnimatedItem } from "@/components/AnimatedList";
+import { VirtualList } from "@/components/VirtualList";
 import { useTranslations } from "next-intl";
+
+/** 任务列表虚拟化阈值：超过此数量启用 VirtualList，否则保持 AnimatedList 原渲染 */
+const TASKS_VIRTUAL_THRESHOLD = 50;
 
 interface Task {
   id: string;
@@ -228,13 +232,11 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 title={tStatus(group.titleKey)}
                 color={group.color}
                 count={groupTasks.length}
-              >
-                {groupTasks.map((task) => (
-                  <AnimatedItem key={task.id}>
-                    <TaskCard task={task} href={`/w/${wid}/task/${task.id}`} />
-                  </AnimatedItem>
-                ))}
-              </StatusGroup>
+                tasks={groupTasks}
+                renderTask={(task) => (
+                  <TaskCard task={task} href={`/w/${wid}/task/${task.id}`} />
+                )}
+              />
             );
           })}
         </div>
@@ -243,18 +245,28 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
   );
 }
 
-/** 状态分组容器：标题（状态点 + 名称 + 计数）+ 卡片列表 */
-function StatusGroup({
+/** 状态分组容器：标题（状态点 + 名称 + 计数）+ 卡片列表
+ *
+ * 渲染策略：
+ *  - tasks.length > TASKS_VIRTUAL_THRESHOLD：启用 VirtualList 虚拟化，
+ *    仅渲染可视区域 + overscan，避免长列表卡顿。每项用 AnimatedItem 包裹
+ *    保留进场动画（stagger 在虚拟模式下退化为各自 fadeUp）。
+ *  - 否则：AnimatedList + AnimatedItem，保留 stagger 进场动画。
+ */
+function StatusGroup<T extends { id: string }>({
   title,
   color,
   count,
-  children,
+  tasks,
+  renderTask,
 }: {
   title: string;
   color: string;
   count: number;
-  children: ReactNode;
+  tasks: T[];
+  renderTask: (task: T) => ReactNode;
 }) {
+  const useVirtual = tasks.length > TASKS_VIRTUAL_THRESHOLD;
   return (
     <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden">
       <header className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-[var(--border-soft)]">
@@ -266,7 +278,25 @@ function StatusGroup({
           {count}
         </span>
       </header>
-      <AnimatedList className="divide-y divide-[var(--border-soft)]">{children}</AnimatedList>
+      {useVirtual ? (
+        // 虚拟列表：TaskCard 高度约 56px（py-3=24px + 内容约 32px）
+        <VirtualList
+          items={tasks}
+          renderItem={(task) => (
+            <AnimatedItem key={task.id} className="border-b border-[var(--border-soft)] last:border-b-0">
+              {renderTask(task)}
+            </AnimatedItem>
+          )}
+          estimateSize={56}
+          className="divide-y divide-[var(--border-soft)]"
+        />
+      ) : (
+        <AnimatedList className="divide-y divide-[var(--border-soft)]">
+          {tasks.map((task) => (
+            <AnimatedItem key={task.id}>{renderTask(task)}</AnimatedItem>
+          ))}
+        </AnimatedList>
+      )}
     </section>
   );
 }

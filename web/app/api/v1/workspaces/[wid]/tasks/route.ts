@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { Prisma } from "@prisma/client";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { shouldActivate } from "@/lib/analytics-activation";
@@ -43,12 +44,47 @@ const listTasksQuerySchema = z.object({
   view: z.enum(["board", "list"]).optional(),
   page: z.coerce.number().int().min(1).optional(),
   limit: z.coerce.number().int().min(1).max(100).optional(),
+  // cursor 分页：传入上一页最后一条任务的 id，获取下一页
+  cursor: z.string().uuid().optional(),
 });
 
 // 分页默认值与上限（DL-8）
 const DEFAULT_PAGE = 1;
 const DEFAULT_LIMIT = 50;
 const MAX_TAKE = 500;
+
+/**
+ * 任务列表 select 投影：只选取前端列表/看板展示所需的标量字段 + 关联，
+ * 避免拉取 description（Text 大字段）、shareToken/sharePassword（敏感）等整行数据。
+ * 关联查询（assignee/labels/_count/children）从原 include 合并到 select 中，保持等价。
+ * 使用 Prisma.validator 保持字面量类型，确保 findMany 返回类型精确推断。
+ */
+const taskListSelect = Prisma.validator<Prisma.TaskSelect>()({
+  id: true,
+  title: true,
+  status: true,
+  priority: true,
+  assigneeId: true,
+  dueDate: true,
+  createdAt: true,
+  updatedAt: true,
+  blocked: true,
+  milestoneId: true,
+  parentId: true,
+  sortOrder: true,
+  assignee: { select: { id: true, name: true, email: true } },
+  labels: { include: { label: { select: { id: true, name: true, color: true } } } },
+  _count: { select: { comments: true, children: true } },
+  // 子任务完成数（进度汇总 3/5 的分子）
+  children: { where: { status: "done" }, select: { id: true } },
+});
+
+// 列表排序：sortOrder + createdAt + id（id 作为最终 tiebreaker，保证 cursor 分页唯一性）
+const taskListOrderBy = Prisma.validator<Prisma.TaskOrderByWithRelationInput[]>()([
+  { sortOrder: "asc" },
+  { createdAt: "asc" },
+  { id: "asc" },
+]);
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -74,6 +110,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       view: url.searchParams.get("view") ?? undefined,
       page: url.searchParams.get("page") ?? undefined,
       limit: url.searchParams.get("limit") ?? undefined,
+      cursor: url.searchParams.get("cursor") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -82,10 +119,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       );
     }
     // DL-8：分页参数解析（未传时使用默认值，R8C-06 统一返回 data 内分页元信息）
+    const cursor = parsed.data.cursor;
     const page = parsed.data.page ?? DEFAULT_PAGE;
     const limit = parsed.data.limit ?? DEFAULT_LIMIT;
-    const skip = (page - 1) * limit;
-    const take = Math.min(limit, MAX_TAKE);
     const assigneeParam = parsed.data.assignee;
     const assigneeFilter =
       assigneeParam === "me"
@@ -131,18 +167,45 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ...qFilter,
     };
 
+    // cursor 分页模式：传入 cursor 时基于 id 游标分页，无需 count 查询，性能更优
+    if (cursor) {
+      const tasks = await runWithWorkspace(wid, (tx) =>
+        tx.task.findMany({
+          where: listWhere,
+          select: taskListSelect,
+          orderBy: taskListOrderBy,
+          cursor: { id: cursor },
+          skip: 1,
+          take: limit,
+        }),
+      );
+
+      // 展平 labels 形态 + 子任务进度（subtaskTotal/subtaskDone 替换 children 数组）
+      const items = tasks.map((t) => ({
+        ...t,
+        labels: t.labels.map((tl) => tl.label),
+        subtaskTotal: t._count.children,
+        subtaskDone: t.children.length,
+        children: undefined,
+      }));
+
+      // cursor 分页响应：nextCursor 为最后一条 id（满页时才有下一页）
+      const nextCursor = items.length === limit ? items[items.length - 1].id : null;
+      return NextResponse.json({
+        code: 200,
+        data: { items, nextCursor, limit },
+      });
+    }
+
+    // page 分页模式（DL-8：skip/take + count，R8C-06 统一返回分页元信息）
+    const skip = (page - 1) * limit;
+    const take = Math.min(limit, MAX_TAKE);
     const [tasks, totalCount] = await runWithWorkspace(wid, (tx) =>
       Promise.all([
         tx.task.findMany({
           where: listWhere,
-          include: {
-            assignee: { select: { id: true, name: true, email: true } },
-            labels: { include: { label: { select: { id: true, name: true, color: true } } } },
-            _count: { select: { comments: true, children: true } },
-            // 子任务完成数（进度汇总 3/5 的分子）
-            children: { where: { status: "done" }, select: { id: true } },
-          },
-          orderBy: [{ sortOrder: "asc" }, { createdAt: "asc" }],
+          select: taskListSelect,
+          orderBy: taskListOrderBy,
           // DL-8：分页 skip/take；take 已在上方被 MAX_TAKE(500) 兜底
           skip,
           take,

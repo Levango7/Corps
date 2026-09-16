@@ -1,9 +1,21 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { WhiteboardCanvas } from "@/components/whiteboard/WhiteboardCanvas";
+import { Skeleton } from "@/components/Skeleton";
+
+// 白板编辑器是 540+ 行的重型客户端组件（元素创建/拖拽/调整大小/内联编辑/自动保存），
+// 仅此页面使用。dynamic import + ssr:false 将其拆分为独立 chunk，
+// 避免计入白板列表页等其他路由的首屏 bundle。
+const WhiteboardCanvas = dynamic(
+  () => import("@/components/whiteboard/WhiteboardCanvas").then((m) => m.WhiteboardCanvas),
+  {
+    ssr: false,
+    loading: () => <Skeleton className="h-[600px] w-full" />,
+  },
+);
 
 /**
  * 单个白板编辑页：全屏画布 + 工具栏。

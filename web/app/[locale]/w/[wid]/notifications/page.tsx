@@ -40,8 +40,12 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyStateBase from "@/components/EmptyState";
 import { AnimatedList, AnimatedItem } from "@/components/AnimatedList";
+import { VirtualList } from "@/components/VirtualList";
 
 import { useTranslations } from "next-intl";
+
+/** 通知列表虚拟化阈值：超过此数量启用 VirtualList，否则保持 AnimatedList 原渲染 */
+const NOTIFICATIONS_VIRTUAL_THRESHOLD = 30;
 
 type NotificationType =
   "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated";
@@ -257,48 +261,97 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
               </button>
             </div>
           )}
-          <AnimatedList className="flex flex-col gap-[var(--space-3)]">
-            {visible.map((n) => {
-              const meta = TYPE_META[n.type];
-              const Icon = meta.icon;
-              const rel = relativeTime(n.createdAt);
-              const text = tNotif(meta.textKey, { title: n.entityTitle });
-              return (
-                <AnimatedItem key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => openNotification(n)}
-                    aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
-                    className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
-                      n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
-                    }`}
-                  >
-                    <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
-                    <div className="flex-1 min-w-0">
-                      <p
-                        className={`text-[length:var(--text-base)] truncate ${
-                          n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
-                        }`}
-                      >
-                        {text}
-                      </p>
-                      {rel && (
-                        <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
-                          {rel}
+          {visible.length > NOTIFICATIONS_VIRTUAL_THRESHOLD ? (
+            // 虚拟列表：通知卡片高度约 68px（py-3.5=28px + 图标行约 40px）
+            <VirtualList
+              items={visible}
+              renderItem={(n) => {
+                const meta = TYPE_META[n.type];
+                const Icon = meta.icon;
+                const rel = relativeTime(n.createdAt);
+                const text = tNotif(meta.textKey, { title: n.entityTitle });
+                return (
+                  <AnimatedItem key={n.id}>
+                    <button
+                      type="button"
+                      onClick={() => openNotification(n)}
+                      aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
+                      className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+                        n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
+                      }`}
+                    >
+                      <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[length:var(--text-base)] truncate ${
+                            n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
+                          }`}
+                        >
+                          {text}
                         </p>
+                        {rel && (
+                          <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                            {rel}
+                          </p>
+                        )}
+                      </div>
+                      {!n.read && (
+                        <span
+                          className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
+                          aria-hidden="true"
+                        />
                       )}
-                    </div>
-                    {!n.read && (
-                      <span
-                        className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
-                        aria-hidden="true"
-                      />
-                    )}
-                  </button>
-                </AnimatedItem>
-              );
-            })}
-          </AnimatedList>
+                    </button>
+                  </AnimatedItem>
+                );
+              }}
+              estimateSize={68}
+              className="flex flex-col gap-[var(--space-3)]"
+            />
+          ) : (
+            <AnimatedList className="flex flex-col gap-[var(--space-3)]">
+              {visible.map((n) => {
+                const meta = TYPE_META[n.type];
+                const Icon = meta.icon;
+                const rel = relativeTime(n.createdAt);
+                const text = tNotif(meta.textKey, { title: n.entityTitle });
+                return (
+                  <AnimatedItem key={n.id}>
+                    <button
+                      type="button"
+                      onClick={() => openNotification(n)}
+                      aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
+                      className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+                        n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
+                      }`}
+                    >
+                      <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
+                      <div className="flex-1 min-w-0">
+                        <p
+                          className={`text-[length:var(--text-base)] truncate ${
+                            n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
+                          }`}
+                        >
+                          {text}
+                        </p>
+                        {rel && (
+                          <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                            {rel}
+                          </p>
+                        )}
+                      </div>
+                      {!n.read && (
+                        <span
+                          className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
+                          aria-hidden="true"
+                        />
+                      )}
+                    </button>
+                  </AnimatedItem>
+                );
+              })}
+            </AnimatedList>
+          )}
         </>
       )}
     </div>

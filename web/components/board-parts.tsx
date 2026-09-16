@@ -8,7 +8,7 @@
  * 各子组件职责单一，便于测试与复用。
  */
 
-import { useState, type DragEvent } from "react";
+import { memo, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
@@ -126,8 +126,11 @@ interface BoardCardProps {
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
 }
 
-/** 单个看板卡片：可拖拽 + 可选中 + 可点击跳转。 */
-function BoardCard({
+/** 单个看板卡片：可拖拽 + 可选中 + 可点击跳转。
+ *  React.memo 包装：当父组件因无关状态（selectionMode / showNew / view 等）
+ *  重渲染时，props 未变的卡片跳过重渲染。配合 board/page.tsx 中
+ *  useCallback 稳定的回调引用，仅在 task / draggingId / selected 等真正变化时重渲染。 */
+function BoardCardImpl({
   task,
   wid,
   draggingId,
@@ -302,6 +305,8 @@ function BoardCard({
     </motion.div>
   );
 }
+
+export const BoardCard = memo(BoardCardImpl);
 
 interface ListTableProps {
   tasks: Task[];

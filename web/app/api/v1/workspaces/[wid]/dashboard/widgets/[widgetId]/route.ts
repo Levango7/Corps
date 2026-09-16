@@ -254,7 +254,7 @@ async function loadBurndown(tx: Tx, wid: string) {
       OR: [{ createdAt: { gte: windowStart } }, { updatedAt: { gte: windowStart } }],
     },
     select: { id: true, status: true, createdAt: true, updatedAt: true },
-    take: 5_000,
+    take: 200,
   });
 
   // 总任务数（不受窗口截断影响，独立 count）

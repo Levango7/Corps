@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { cachedQuery } from "@/lib/cache";
 
 /**
  * 标签 API · /api/v1/workspaces/{wid}/labels
@@ -15,16 +16,24 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
-    const labels = await runWithWorkspace(
-      wid,
-      (tx) =>
-        tx.label.findMany({
-          where: { workspaceId: wid },
-          orderBy: { createdAt: "asc" },
-          take: 200,
-        }),
-      ctx.payload.sub,
+    // 缓存 labels 查询：workspace 级别共享数据，60s 重验证，tag=labels:${wid}
+    // 缓存位于 RBAC 校验之后，仅对有权限的请求生效
+    const getCachedLabels = cachedQuery(
+      () =>
+        runWithWorkspace(
+          wid,
+          (tx) =>
+            tx.label.findMany({
+              where: { workspaceId: wid },
+              orderBy: { createdAt: "asc" },
+              take: 200,
+            }),
+          ctx.payload.sub,
+        ),
+      [`labels:${wid}`],
+      60,
     );
+    const labels = await getCachedLabels();
     return NextResponse.json({ code: 200, data: labels });
   } catch (error) {
     console.error("[GET labels] error:", error);
