@@ -1,3 +1,5 @@
+/* eslint-disable no-console -- 优雅关闭需在 logger 初始化前输出 */
+
 import { prisma } from "@/lib/prisma";
 
 /**

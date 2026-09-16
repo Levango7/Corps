@@ -131,6 +131,8 @@ services:
       EMAIL_FROM: ${EMAIL_FROM:-}
       # RLS 运行时角色密码（RLS_ACTIVATE=true 时必填，见 .env.example 生成命令）
       CORPS_APP_PASSWORD: ${CORPS_APP_PASSWORD:?请在 .env 中设置 CORPS_APP_PASSWORD}
+      # 日志级别（debug/info/warn/error/fatal，默认 info）
+      LOG_LEVEL: ${LOG_LEVEL:-info}
     ports:
       - "3000:3000"
     volumes:

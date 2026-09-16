@@ -40,6 +40,7 @@ import {
   type MailCategory,
   type MailReplyTone,
 } from "@/lib/ai/prompts/mail-assistant";
+import { logger } from "@/lib/logger";
 
 /** 邮件助手支持的操作类型 */
 type MailAction = "draft" | "summarize" | "classify" | "reply";
@@ -313,7 +314,7 @@ export async function POST(req: NextRequest) {
       message: apiMsg(req, "ok"),
     });
   } catch (error) {
-    console.error("[ai/mail-assistant] error:", error);
+    logger.error("mail assistant failed", { error: String(error) });
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
       { status: 500 },

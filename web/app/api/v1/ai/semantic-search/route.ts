@@ -26,6 +26,7 @@ import {
   buildSemanticSearchSystemPrompt,
   buildSemanticSearchUserPrompt,
 } from "@/lib/ai/prompts/semantic-search";
+import { logger } from "@/lib/logger";
 
 /** 搜索范围枚举：消息 / 文档 / 待办 / 决策 */
 type SearchScope = "messages" | "wikis" | "todos" | "decisions";
@@ -339,7 +340,7 @@ export async function POST(req: NextRequest) {
       message: apiMsg(req, "ok"),
     });
   } catch (error) {
-    console.error("[ai/semantic-search] error:", error);
+    logger.error("semantic search failed", { error: String(error) });
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
       { status: 500 },

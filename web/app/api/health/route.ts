@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiMsg } from "@/lib/api-messages";
+import { logger } from "@/lib/logger";
 
 /**
  * 真实健康检查（而非静态 200）：
@@ -30,7 +31,7 @@ export async function GET(req: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("[GET /api/health] database probe failed:", error);
+    logger.error("database probe failed", { endpoint: "health" });
     return NextResponse.json(
       {
         code: 503,

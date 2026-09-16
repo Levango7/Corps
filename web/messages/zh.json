@@ -57,6 +57,7 @@
       "knowledgeQa": "AI 知识问答",
       "announcementDraft": "AI 公告起草",
       "insight": "AI 项目经理",
+      "aiTools": "AI 工具中心",
       "navLabel": "移动端底部导航"
     },
     "search": {
@@ -2738,6 +2739,16 @@
       "generateFailed": "生成失败，请重试",
       "confirmFailed": "创建失败，请重试",
       "error": "操作失败，请重试"
+    },
+    "aiTools": {
+      "title": "AI 工具中心",
+      "semanticSearch": "语义搜索",
+      "mailAssistant": "邮件助手",
+      "todoExtract": "待办提取",
+      "meetingSummary": "会议纪要",
+      "docQa": "文档问答",
+      "decisionAssistant": "决策辅助",
+      "workflowOrchestrator": "工作流编排"
     }
   },
   "doc": {

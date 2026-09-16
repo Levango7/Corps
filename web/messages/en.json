@@ -57,6 +57,7 @@
       "knowledgeQa": "AI Knowledge Q&A",
       "announcementDraft": "AI Announcement Draft",
       "insight": "AI Project Manager",
+      "aiTools": "AI Tools",
       "navLabel": "Mobile bottom navigation"
     },
     "search": {
@@ -2738,6 +2739,16 @@
       "generateFailed": "Generation failed, please retry",
       "confirmFailed": "Creation failed, please retry",
       "error": "Operation failed, please retry"
+    },
+    "aiTools": {
+      "title": "AI Tools",
+      "semanticSearch": "Semantic Search",
+      "mailAssistant": "Mail Assistant",
+      "todoExtract": "Todo Extract",
+      "meetingSummary": "Meeting Summary",
+      "docQa": "Document Q&A",
+      "decisionAssistant": "Decision Assistant",
+      "workflowOrchestrator": "Workflow Orchestrator"
     }
   },
   "doc": {

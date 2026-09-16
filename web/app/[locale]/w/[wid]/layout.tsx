@@ -306,6 +306,7 @@ export default function WorkspaceLayout({
         { href: `/w/${wid}/insight`, label: t("menu.insight"), icon: Sparkles, exact: false },
         { href: `/w/${wid}/knowledge-qa`, label: t("menu.knowledgeQa"), icon: Sparkles, exact: false },
         { href: `/w/${wid}/announcement-draft`, label: t("menu.announcementDraft"), icon: Sparkles, exact: false },
+        { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Sparkles, exact: false },
         { href: `/w/${wid}/recycle-bin`, label: t("menu.recycleBin"), icon: Trash2, exact: false },
       ],
     },

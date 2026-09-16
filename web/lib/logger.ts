@@ -1,3 +1,5 @@
+/* eslint-disable no-console -- 日志工具核心功能就是使用 console */
+
 /**
  * 结构化日志工具 — 生产环境输出 JSON 格式，开发环境输出可读格式
  *
