@@ -5,6 +5,8 @@ import { NextIntlClientProvider, hasLocale } from "next-intl";
 import { getTranslations, setRequestLocale } from "next-intl/server";
 import { WebVitalsReporter } from "@/components/web-vitals-reporter";
 import ClientLayout from "@/components/ClientLayout";
+import { PwaRegister } from "@/components/pwa/PwaRegister";
+import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { PublicPageTracker } from "@/lib/analytics-attribution";
 import { locales, type Locale, localeToBcp47 } from "@/lib/i18n";
 
@@ -25,6 +27,11 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
+  // PWA 顶栏配色：跟随系统主题，对应 design token --p-accent（浅 #4263EB / 深 #5B8EF5）。
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#4263EB" },
+    { media: "(prefers-color-scheme: dark)", color: "#5B8EF5" },
+  ],
 };
 
 /** 静态生成所有支持的 locale。 */
@@ -45,6 +52,8 @@ export async function generateMetadata({
     title: t("title"),
     description: t("description"),
     icons: { icon: "/favicon.svg" },
+    // PWA manifest：Next.js 据此生成 <link rel="manifest" href="/manifest.json" />。
+    manifest: "/manifest.json",
   };
 }
 
@@ -85,6 +94,10 @@ export default async function LocaleLayout({
           <PublicPageTracker />
           {/* ClientLayout：Toast 容器 + 页面入场动画（客户端壳） */}
           <ClientLayout>{children}</ClientLayout>
+          {/* PWA：生产环境注册 Service Worker + 安装提示，渲染 null 或安装横条。 */}
+          <PwaRegister />
+          {/* 移动端底部导航：仅工作区路由且 md 以下显示，桌面端不渲染。 */}
+          <MobileBottomNav />
         </body>
       </html>
     </NextIntlClientProvider>

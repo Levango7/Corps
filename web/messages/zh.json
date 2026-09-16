@@ -5,6 +5,12 @@
     "workspaceTitle": "corps · 工作台",
     "workspaceDescription": "团队 SaaS - 任务看板"
   },
+  "pwa": {
+    "installPrompt": "安装 Corps 到桌面，随时开启高效协作",
+    "install": "安装",
+    "dismiss": "关闭",
+    "installed": "已安装"
+  },
   "nav": {
     "workspace": {
       "switch": "切换工作区",
@@ -2545,6 +2551,26 @@
       "save": "保存",
       "saving": "保存中…",
       "saved": "已保存"
+    },
+    "aiTool": {
+      "title": "工具面板",
+      "description": "AI 可调用的工具集",
+      "execute": "执行",
+      "executing": "执行中...",
+      "result": "结果",
+      "error": "错误",
+      "noTools": "暂无可用工具",
+      "loading": "加载中...",
+      "parameters": "参数",
+      "run": "运行",
+      "clear": "清除",
+      "selectTool": "选择工具",
+      "success": "执行成功",
+      "failed": "执行失败",
+      "toolName": "工具名称",
+      "toolDescription": "工具描述",
+      "inputParameters": "输入参数",
+      "outputResult": "输出结果"
     }
   },
   "doc": {
@@ -3114,5 +3140,26 @@
     "updated": "已更新",
     "deleted": "已删除",
     "accountDeleted": "账户已删除"
+  },
+  "sync": {
+    "synced": "已同步",
+    "syncing": "同步中…",
+    "offline": "离线",
+    "error": "同步失败",
+    "lastSync": "最后同步",
+    "syncNow": "立即同步",
+    "pending": "{count} 项待同步",
+    "offlineBanner": "您当前离线，更改将在恢复连接后同步",
+    "onlineRestored": "已恢复连接，正在同步…",
+    "syncingNow": "正在同步…",
+    "syncComplete": "同步完成",
+    "syncFailed": "同步失败，请重试",
+    "conflictResolved": "冲突已解决",
+    "noPendingSyncs": "无待同步操作",
+    "never": "未同步",
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前",
+    "hoursAgo": "{count} 小时前",
+    "daysAgo": "{count} 天前"
   }
 }

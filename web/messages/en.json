@@ -5,6 +5,12 @@
     "workspaceTitle": "corps · Workspace",
     "workspaceDescription": "Team SaaS — Task board"
   },
+  "pwa": {
+    "installPrompt": "Install Corps for instant access to your workspace",
+    "install": "Install",
+    "dismiss": "Dismiss",
+    "installed": "Installed"
+  },
   "nav": {
     "workspace": {
       "switch": "Switch workspace",
@@ -2545,6 +2551,26 @@
       "save": "Save",
       "saving": "Saving…",
       "saved": "Saved"
+    },
+    "aiTool": {
+      "title": "Tool Panel",
+      "description": "Tools available for AI to call",
+      "execute": "Execute",
+      "executing": "Executing...",
+      "result": "Result",
+      "error": "Error",
+      "noTools": "No tools available",
+      "loading": "Loading...",
+      "parameters": "Parameters",
+      "run": "Run",
+      "clear": "Clear",
+      "selectTool": "Select a tool",
+      "success": "Execution succeeded",
+      "failed": "Execution failed",
+      "toolName": "Tool Name",
+      "toolDescription": "Tool Description",
+      "inputParameters": "Input Parameters",
+      "outputResult": "Output Result"
     }
   },
   "doc": {
@@ -3114,5 +3140,26 @@
     "updated": "Updated",
     "deleted": "Deleted",
     "accountDeleted": "Account deleted"
+  },
+  "sync": {
+    "synced": "Synced",
+    "syncing": "Syncing…",
+    "offline": "Offline",
+    "error": "Sync error",
+    "lastSync": "Last sync",
+    "syncNow": "Sync now",
+    "pending": "{count} pending",
+    "offlineBanner": "You are offline. Changes will sync when you reconnect.",
+    "onlineRestored": "Back online, syncing…",
+    "syncingNow": "Syncing…",
+    "syncComplete": "Sync complete",
+    "syncFailed": "Sync failed, please retry",
+    "conflictResolved": "Conflict resolved",
+    "noPendingSyncs": "No pending syncs",
+    "never": "Never synced",
+    "justNow": "just now",
+    "minutesAgo": "{count} min ago",
+    "hoursAgo": "{count} h ago",
+    "daysAgo": "{count} d ago"
   }
 }
