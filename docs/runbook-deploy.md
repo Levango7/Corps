@@ -321,3 +321,65 @@ find /opt/corps/uploads -type f -mtime +90 -delete
 ```
 
 > 注意：`/opt/corps/uploads` 为卷挂载点示例，实际路径以 `docker volume inspect corps-uploads-data` 为准。
+---
+
+## 8. 监控与可观测性
+
+### 8.1 健康检查端点
+
+- **端点**：`GET /api/health`
+- **行为**：执行 `SELECT 1` 探测数据库（2s 超时），返回 `{ code: 200, data: { status: "ok", db: "up", uptimeSec } }`
+- **Docker**：Dockerfile 已配置 `HEALTHCHECK`（15s 间隔、5s 超时、40s 启动宽限）
+- **CI**：集成测试启动等待循环依赖此端点判断服务就绪
+
+### 8.2 Prometheus 指标端点
+
+- **端点**：`GET /api/metrics`
+- **格式**：Prometheus exposition format（`text/plain; version=0.0.4`）
+- **指标**：
+  - `corps_uptime_seconds` — 进程运行时间
+  - `corps_memory_rss_bytes` — RSS 内存使用
+  - `corps_memory_heap_used_bytes` / `corps_memory_heap_total_bytes` — 堆内存
+  - `corps_memory_external_bytes` — 外部内存
+  - `corps_node_version{version="..."}` — Node.js 版本（info metric）
+  - `corps_process_pid` — 进程 ID
+- **安全**：本端点不要求认证，生产环境应通过网络层（防火墙/ingress）限制访问
+- **Prometheus scrape 配置示例**：
+  ```yaml
+  scrape_configs:
+    - job_name: 'corps'
+      scrape_interval: 15s
+      static_configs:
+        - targets: ['localhost:3000']
+      metrics_path: /api/metrics
+  ```
+
+### 8.3 结构化日志
+
+- **工具**：`web/lib/logger.ts`（零依赖，生产 JSON 格式，开发可读格式）
+- **日志级别**：`debug` / `info` / `warn` / `error` / `fatal`，通过 `LOG_LEVEL` 环境变量控制
+- **请求 ID**：`generateRequestId()` 生成 UUID，用于关联同一请求的多条日志
+- **生产格式**（单行 JSON，便于 ELK/Loki/Datadog 聚合）：
+  ```json
+  {"ts":"2026-09-17T01:50:00.000Z","level":"info","msg":"用户登录","reqId":"a1b2c3d4-...","ctx":{"userId":"u123"}}
+  ```
+- **开发格式**（可读）：
+  ```
+  [2026-09-17T01:50:00.000Z] INFO [a1b2c3d4] 用户登录 {"userId":"u123"}
+  ```
+
+### 8.4 环境变量验证
+
+- **工具**：`web/lib/env.ts`（Zod schema 启动时校验）
+- **行为**：缺失必需变量时 fail-fast 并列出所有缺失项，避免运行时静默降级
+- **必需变量**：`DATABASE_URL`、`JWT_ACCESS_SECRET`（≥32 字符）、`JWT_REFRESH_SECRET`（≥32 字符）、`BETTER_AUTH_SECRET`（≥32 字符）、`NEXT_PUBLIC_APP_URL`
+- **可选变量**：`DEEPSEEK_API_KEY`、`STRIPE_SECRET_KEY`、`STRIPE_WEBHOOK_SECRET`、`REDIS_URL`、`LOG_LEVEL`、`RATE_LIMIT_DISABLED`
+- **测试环境**：跳过验证（`NODE_ENV=test` 时返回 `process.env as Env`）
+
+### 8.5 优雅关闭
+
+- **工具**：`web/lib/shutdown.ts`（SIGTERM/SIGINT 信号处理）
+- **清理步骤**：收到信号 → 停止接受新请求 → 关闭 Prisma 连接池（最多 10s）→ 退出进程
+- **使用场景**：Docker stop/compose down（SIGTERM）、K8s pod termination（SIGTERM，30s grace period）、PM2 reload（SIGINT）
+- **启用方式**：在 Next.js standalone server 入口调用 `setupGracefulShutdown()`
+- **未捕获异常**：`uncaughtException` / `unhandledRejection` 记录后以退出码 1 退出

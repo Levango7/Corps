@@ -95,6 +95,8 @@ ENV BETTER_AUTH_SECRET=""
 ENV JWT_ACCESS_SECRET=""
 ENV JWT_REFRESH_SECRET=""
 ENV NEXT_PUBLIC_APP_URL="http://localhost:3000"
+# 结构化日志级别（debug/info/warn/error/fatal），默认 info
+ENV LOG_LEVEL="info"
 
 USER nextjs
 
