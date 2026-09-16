@@ -9,7 +9,89 @@ import { SettingsPreferences } from "@/components/settings/SettingsPreferences";
 import { SettingsDataExport } from "@/components/settings/SettingsDataExport";
 import { SettingsOverview } from "@/components/settings/SettingsOverview";
 import { SettingsDangerZone } from "@/components/settings/SettingsDangerZone";
+import { Skeleton } from "@/components/Skeleton";
 import type { Workspace } from "@/components/settings/types";
+
+/**
+ * 设置页 Skeleton · 与正式页面布局尺寸对齐
+ *
+ * 结构（自上而下）：
+ *  1. 页头：图标 + 标题 + 副标题
+ *  2. 个人资料卡片（标题 + 头像行 + 2 个输入行）
+ *  3. 工作区卡片（标题 + 2 个输入行 + 按钮行）
+ *  4. 偏好设置卡片（标题 + 3 行）
+ *  5. 数据导出卡片（标题 + 2 行）
+ *  6. 概况卡片（标题 + 3 行）
+ *  7. 危险操作卡片（标题 + 2 行）
+ *
+ * 卡片样式与 sectionClass 一致，仅占位无交互。
+ */
+function SettingsPageSkeleton() {
+  const sectionClass =
+    "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
+
+  /** 单个设置卡片骨架：标题行 + contentRows 行内容占位 */
+  const CardSkeleton = ({ rows = 2 }: { rows?: number }) => (
+    <section className={`${sectionClass} mt-5`}>
+      <Skeleton className="h-5 w-32 mb-4" />
+      <div className="space-y-4">
+        {Array.from({ length: rows }).map((_, i) => (
+          <div key={i}>
+            <Skeleton className="h-4 w-20 mb-1.5" />
+            <Skeleton className="h-9 w-full rounded-[var(--radius-md)]" />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+
+  return (
+    <div className="max-w-[var(--container-max)] mx-auto" aria-busy="true" aria-live="polite">
+      {/* 页头 */}
+      <div className="mb-6">
+        <div className="flex items-center gap-2">
+          <Skeleton className="w-5 h-5 rounded-full" />
+          <Skeleton className="h-7 w-40" />
+        </div>
+        <Skeleton className="mt-1 h-4 w-56" />
+      </div>
+
+      {/* 个人资料卡片 */}
+      <CardSkeleton rows={2} />
+
+      {/* 工作区卡片：标题 + 2 输入行 + 按钮行 */}
+      <section className={`${sectionClass} mt-5`}>
+        <Skeleton className="h-5 w-32 mb-4" />
+        <div className="space-y-4">
+          <div>
+            <Skeleton className="h-4 w-20 mb-1.5" />
+            <Skeleton className="h-9 w-full rounded-[var(--radius-md)]" />
+          </div>
+          <div>
+            <Skeleton className="h-4 w-24 mb-1.5" />
+            <Skeleton className="h-9 w-full rounded-[var(--radius-md)]" />
+            <Skeleton className="mt-1.5 h-3 w-48" />
+          </div>
+        </div>
+        <div className="flex items-center gap-3 mt-5 pt-4 border-t border-[var(--border-soft)]">
+          <Skeleton className="h-9 w-24 rounded-[var(--radius-md)]" />
+        </div>
+      </section>
+
+      {/* 偏好设置 */}
+      <CardSkeleton rows={3} />
+
+      {/* 数据导出 */}
+      <CardSkeleton rows={2} />
+
+      {/* 概况 */}
+      <CardSkeleton rows={3} />
+
+      {/* 危险操作 */}
+      <CardSkeleton rows={2} />
+    </div>
+  );
+}
 
 export default function SettingsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
@@ -66,13 +148,9 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
   const canEdit = ws ? ["owner", "admin"].includes(ws.role) : false;
   const dirty = ws ? name.trim() !== ws.name || slug.trim() !== ws.slug : false;
 
-  // 初始加载：显示居中 spinner，避免空表单闪烁
+  // 初始加载：显示与正式页面布局对齐的 Skeleton，避免布局跳动
   if (loading) {
-    return (
-      <div className="max-w-[var(--container-max)] mx-auto flex items-center justify-center py-[var(--space-16)]">
-        <Loader2 size={24} className="animate-spin text-[var(--muted)]" />
-      </div>
-    );
+    return <SettingsPageSkeleton />;
   }
 
   const inputClass =

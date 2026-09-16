@@ -39,6 +39,7 @@ import {
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyStateBase from "@/components/EmptyState";
+import { AnimatedList, AnimatedItem } from "@/components/AnimatedList";
 
 import { useTranslations } from "next-intl";
 
@@ -256,14 +257,14 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
               </button>
             </div>
           )}
-          <ul className="flex flex-col gap-[var(--space-3)]">
+          <AnimatedList className="flex flex-col gap-[var(--space-3)]">
             {visible.map((n) => {
               const meta = TYPE_META[n.type];
               const Icon = meta.icon;
               const rel = relativeTime(n.createdAt);
               const text = tNotif(meta.textKey, { title: n.entityTitle });
               return (
-                <li key={n.id}>
+                <AnimatedItem key={n.id}>
                   <button
                     type="button"
                     onClick={() => openNotification(n)}
@@ -294,10 +295,10 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                       />
                     )}
                   </button>
-                </li>
+                </AnimatedItem>
               );
             })}
-          </ul>
+          </AnimatedList>
         </>
       )}
     </div>

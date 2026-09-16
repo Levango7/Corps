@@ -6,6 +6,7 @@ import { ClipboardList, ChevronDown, SearchX } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyStateBase from "@/components/EmptyState";
+import { AnimatedList, AnimatedItem } from "@/components/AnimatedList";
 import { useTranslations } from "next-intl";
 
 interface Task {
@@ -229,7 +230,9 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 count={groupTasks.length}
               >
                 {groupTasks.map((task) => (
-                  <TaskCard key={task.id} task={task} href={`/w/${wid}/task/${task.id}`} />
+                  <AnimatedItem key={task.id}>
+                    <TaskCard task={task} href={`/w/${wid}/task/${task.id}`} />
+                  </AnimatedItem>
                 ))}
               </StatusGroup>
             );
@@ -263,7 +266,7 @@ function StatusGroup({
           {count}
         </span>
       </header>
-      <div className="divide-y divide-[var(--border-soft)]">{children}</div>
+      <AnimatedList className="divide-y divide-[var(--border-soft)]">{children}</AnimatedList>
     </section>
   );
 }

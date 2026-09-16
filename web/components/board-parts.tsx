@@ -8,7 +8,7 @@
  * 各子组件职责单一，便于测试与复用。
  */
 
-import { useState } from "react";
+import { useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
 import { Skeleton } from "@/components/Skeleton";
@@ -25,6 +25,8 @@ import {
 } from "@/lib/task-meta";
 import { formatTaskId } from "@/lib/format";
 import { useTranslations } from "next-intl";
+import { motion, useReducedMotion } from "framer-motion";
+import { MOTION } from "@/lib/motion-tokens";
 
 /** 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转 */
 export type DragStart = { x: number; y: number } | null;
@@ -140,12 +142,17 @@ function BoardCard({
   const [dragOverCard, setDragOverCard] = useState(false);
   const router = useRouter();
   const t = useTranslations("task");
+  // hover 抬升微交互：尊重 prefers-reduced-motion，降级时无 hover 位移动画
+  const reduceMotion = useReducedMotion();
 
   return (
-    <div
+    <motion.div
       draggable={!selectionMode}
       role="button"
       tabIndex={0}
+      // hover 抬升 2px（y: -2）；拖拽中 / 降级时不抬升，避免与拖拽视觉冲突
+      whileHover={reduceMotion || draggingId === task.id ? undefined : { y: -2 }}
+      transition={{ duration: MOTION.fast, ease: MOTION.easeStandard }}
       onClick={(e) => {
         if (selectionMode) {
           e.preventDefault();
@@ -170,7 +177,7 @@ function BoardCard({
           router.push(`/w/${wid}/task/${task.id}`);
         }
       }}
-      className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity,transform] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+      className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
         draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
       } ${selected ? "ring-2 ring-[var(--accent)]" : ""} ${
         dragOverCard ? "ring-2 ring-[var(--accent-ring)]" : ""
@@ -179,8 +186,12 @@ function BoardCard({
         borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
       }}
       onDragStart={(e) => {
-        e.dataTransfer.setData("text/plain", task.id);
-        dragStartRef.current = { x: e.clientX, y: e.clientY };
+        // motion.div 的 onDragStart 类型被 framer-motion gesture 覆盖为
+        // MouseEvent | TouchEvent | PointerEvent，但运行时 HTML5 draggable
+        // 仍触发原生 DragEvent，故断言为 React.DragEvent 以访问 dataTransfer / clientX
+        const ev = e as unknown as DragEvent<HTMLDivElement>;
+        ev.dataTransfer.setData("text/plain", task.id);
+        dragStartRef.current = { x: ev.clientX, y: ev.clientY };
         setDraggingId(task.id);
       }}
       onDragEnd={() => {
@@ -288,7 +299,7 @@ function BoardCard({
           </button>
         </div>
       </div>
-    </div>
+    </motion.div>
   );
 }
 

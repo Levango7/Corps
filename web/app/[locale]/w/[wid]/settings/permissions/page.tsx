@@ -20,6 +20,7 @@ import { Lock, Save, Loader2, AlertTriangle, Check, RotateCcw } from "lucide-rea
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
+import { Skeleton } from "@/components/Skeleton";
 import type { Role } from "@/lib/types";
 
 // ─── 类型定义 ───────────────────────────────────────────────
@@ -60,6 +61,79 @@ const MODULES: ModuleKey[] = [
 const ACTIONS: ActionKey[] = ["read", "create", "update", "delete"];
 
 const ROLES: Role[] = ["owner", "admin", "member", "viewer"];
+
+/**
+ * 权限页 Skeleton · 与正式页面布局尺寸对齐
+ *
+ * 结构：
+ *  1. 页头：标题 + 副标题
+ *  2. section 容器：说明行 + 表格（4 行 × 9 列）
+ *
+ * 表格每行：角色名占位（sticky 左列）+ 8 个模块格占位（每格 4 个小方块模拟 R/C/U/D）
+ * 与正式表格的 4 行 × 8 列结构一致，避免加载完成时布局跳动。
+ */
+function PermissionsPageSkeleton() {
+  const sectionClass =
+    "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
+
+  return (
+    <div className="max-w-[var(--container-max)] mx-auto" aria-busy="true" aria-live="polite">
+      {/* 页头 */}
+      <div className="mb-6">
+        <Skeleton className="h-7 w-48" />
+        <Skeleton className="mt-1 h-4 w-64" />
+      </div>
+
+      <section className={sectionClass}>
+        {/* 说明行 */}
+        <div className="mb-4 space-y-1">
+          <Skeleton className="h-3 w-40" />
+          <Skeleton className="h-3 w-56" />
+        </div>
+
+        {/* 表格骨架：4 行 × 9 列 */}
+        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+          <div className="w-full border-collapse">
+            {/* 表头 */}
+            <div className="flex border-b border-[var(--border)]">
+              <Skeleton className="shrink-0 w-20 h-6" />
+              {Array.from({ length: 8 }).map((_, i) => (
+                <Skeleton key={i} className="flex-1 min-w-[120px] h-6" />
+              ))}
+            </div>
+            {/* 4 行角色 */}
+            {Array.from({ length: 4 }).map((_, rowIdx) => (
+              <div
+                key={rowIdx}
+                className="flex items-center border-b border-[var(--border-soft)] last:border-b-0 py-2"
+              >
+                {/* 角色名占位 */}
+                <Skeleton className="shrink-0 w-20 h-4" />
+                {/* 8 个模块格，每格 4 个小方块模拟 R/C/U/D */}
+                {Array.from({ length: 8 }).map((_, modIdx) => (
+                  <div
+                    key={modIdx}
+                    className="flex-1 min-w-[120px] flex items-center justify-center gap-1.5"
+                  >
+                    {Array.from({ length: 4 }).map((_, actIdx) => (
+                      <Skeleton key={actIdx} className="w-3.5 h-3.5 rounded-[var(--radius-sm)]" />
+                    ))}
+                  </div>
+                ))}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* 操作按钮区 */}
+        <div className="flex items-center gap-3 mt-5 pt-4 border-t border-[var(--border-soft)]">
+          <Skeleton className="h-9 w-24 rounded-[var(--radius-md)]" />
+          <Skeleton className="h-9 w-20 rounded-[var(--radius-md)]" />
+        </div>
+      </section>
+    </div>
+  );
+}
 
 /** Owner 默认拥有全部权限 */
 const FULL_CELL: PermissionCell = { read: true, create: true, update: true, delete: true };
@@ -212,11 +286,7 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
   // ─── 渲染 ─────────────────────────────────────────────────
 
   if (loading) {
-    return (
-      <div className="max-w-[var(--container-max)] mx-auto flex items-center justify-center py-[var(--space-16)]">
-        <Loader2 size={24} className="animate-spin text-[var(--muted)]" />
-      </div>
-    );
+    return <PermissionsPageSkeleton />;
   }
 
   const sectionClass =
