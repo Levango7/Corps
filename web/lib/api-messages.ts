@@ -476,6 +476,44 @@ export const API_MESSAGES = {
   },
   mailSendFailed: { zh: "邮件发送失败", en: "Failed to send mail" },
   mailSmtpError: { zh: "SMTP 服务连接失败", en: "SMTP service connection failed" },
+
+  /* ── 远程控制（方向 K）── */
+  remoteControlSessionNotFound: {
+    zh: "远程控制会话不存在",
+    en: "Remote control session not found",
+  },
+  remoteControlNotInitiator: {
+    zh: "只有发起方可操作",
+    en: "Only the initiator can perform this action",
+  },
+  remoteControlNotTarget: {
+    zh: "只有目标方可操作",
+    en: "Only the target can perform this action",
+  },
+  remoteControlNotParticipant: {
+    zh: "不是该远程控制会话的参与方",
+    en: "You are not a participant of this remote control session",
+  },
+  remoteControlAlreadyProcessed: {
+    zh: "远程控制请求已处理",
+    en: "Remote control request already processed",
+  },
+  remoteControlSessionExpired: {
+    zh: "远程控制会话已过期",
+    en: "Remote control session has expired",
+  },
+  remoteControlCannotSelf: {
+    zh: "不能向自己发起远程控制",
+    en: "You cannot initiate remote control on yourself",
+  },
+  remoteControlTargetOffline: {
+    zh: "目标用户不在线",
+    en: "Target user is offline",
+  },
+  remoteControlSignalInvalid: {
+    zh: "信令消息无效",
+    en: "Invalid signaling message",
+  },
 } as const;
 
 /**

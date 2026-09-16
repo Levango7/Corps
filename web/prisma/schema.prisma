@@ -157,6 +157,9 @@ model User {
   emailAccounts      EmailAccount[]     @relation("EmailAccountUser")
   // 通知偏好
   notificationPreference NotificationPreference? @relation("NotificationPreferenceUser")
+  // 方向 K：远程控制 — 发起 + 接收的会话
+  initiatedRemoteControls   RemoteControlSession[] @relation("RemoteControlInitiator")
+  receivedRemoteControls    RemoteControlSession[] @relation("RemoteControlTarget")
 
   @@map("users")
 }
@@ -260,6 +263,8 @@ model Workspace {
   // 企业邮箱
   emailAccounts        EmailAccount[]
   mails                Mail[]
+  // 方向 K：远程控制会话
+  remoteControlSessions RemoteControlSession[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -2386,4 +2391,34 @@ model NotificationPreference {
   user            User      @relation("NotificationPreferenceUser", fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notification_preferences")
+}
+// 方向 K：远程控制会话 — WebRTC 屏幕共享 + 输入事件传输
+model RemoteControlSession {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  // 发起方（控制方）用户 ID
+  initiatorId String   @map("initiator_id") @db.Uuid
+  // 目标方（被控方）用户 ID
+  targetId    String   @map("target_id") @db.Uuid
+  // 会话状态：pending（等待接受）| active（进行中）| rejected（已拒绝）| ended（已结束）| failed（连接失败）
+  status      String   @default("pending") @db.VarChar(20)
+  // 结束原因（ended/failed/rejected 时填充）
+  endReason   String?  @map("end_reason") @db.VarChar(200)
+  // 会话超时时间戳（30 分钟自动结束，由 API 层校验）
+  expiresAt   DateTime @db.Timestamptz @map("expires_at")
+  // 接受时间戳
+  acceptedAt  DateTime? @db.Timestamptz @map("accepted_at")
+  // 结束时间戳
+  endedAt     DateTime? @db.Timestamptz @map("ended_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  initiator   User      @relation("RemoteControlInitiator", fields: [initiatorId], references: [id], onDelete: Cascade)
+  target      User      @relation("RemoteControlTarget", fields: [targetId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, status])
+  @@index([initiatorId, status])
+  @@index([targetId, status])
+  @@map("remote_control_sessions")
 }
