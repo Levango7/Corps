@@ -153,6 +153,10 @@ model User {
   aiVoicePreference  AiVoicePreference? @relation("AiVoicePreferenceUser")
   // 收藏/书签
   favorites          Favorite[]         @relation("FavoriteUser")
+  // 企业邮箱
+  emailAccounts      EmailAccount[]     @relation("EmailAccountUser")
+  // 通知偏好
+  notificationPreference NotificationPreference? @relation("NotificationPreferenceUser")
 
   @@map("users")
 }
@@ -253,6 +257,9 @@ model Workspace {
   aiVoiceCommands      AiVoiceCommand[]
   // 收藏/书签
   favorites            Favorite[]
+  // 企业邮箱
+  emailAccounts        EmailAccount[]
+  mails                Mail[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -2304,4 +2311,79 @@ model Favorite {
   @@index([workspaceId, userId])
   @@index([userId, targetType])
   @@map("favorites")
+}
+// 企业邮箱 — 邮箱账户配置
+model EmailAccount {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  email       String   @db.VarChar(200)
+  displayName String?  @map("display_name") @db.VarChar(100)
+  provider    String   @default("custom") @db.VarChar(50) // gmail | outlook | custom
+  smtpHost    String   @map("smtp_host") @db.VarChar(200)
+  smtpPort    Int      @map("smtp_port") @default(587)
+  smtpSecure  Boolean  @map("smtp_secure") @default(false)
+  imapHost    String?  @map("imap_host") @db.VarChar(200)
+  imapPort    Int?     @map("imap_port") @default(993)
+  // 加密存储的密码/OAuth token（AES-256 加密）
+  credential  String   @db.Text
+  isDefault   Boolean  @default(false) @map("is_default")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User      @relation("EmailAccountUser", fields: [userId], references: [id], onDelete: Cascade)
+  mails       Mail[]
+
+  @@unique([userId, email])
+  @@index([workspaceId, userId])
+  @@map("email_accounts")
+}
+
+// 企业邮箱 — 邮件记录
+model Mail {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  accountId   String   @map("account_id") @db.Uuid
+  messageId   String?  @map("message_id") @db.VarChar(500) // RFC Message-ID
+  fromAddr    String   @map("from_addr") @db.VarChar(500)
+  toAddr      String   @db.Text // 逗号分隔
+  ccAddr      String?  @map("cc_addr") @db.Text
+  bccAddr     String?  @map("bcc_addr") @db.Text
+  subject     String   @db.VarChar(500)
+  bodyText    String?  @map("body_text") @db.Text
+  bodyHtml    String?  @map("body_html") @db.Text
+  status      String   @default("draft") @db.VarChar(20) // draft | sent | received
+  threadId    String?  @map("thread_id") @db.Uuid
+  inReplyTo   String?  @map("in_reply_to") @db.VarChar(500)
+  attachments Json     @default("[]")
+  isRead      Boolean  @default(false) @map("is_read")
+  isStarred   Boolean  @default(false) @map("is_starred")
+  sentAt      DateTime? @db.Timestamptz @map("sent_at")
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  account     EmailAccount @relation(fields: [accountId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, accountId, status])
+  @@index([workspaceId, status, createdAt])
+  @@map("mails")
+}
+
+// 通知偏好 — 离线推送设置
+model NotificationPreference {
+  id              String   @id @default(uuid()) @db.Uuid
+  userId          String   @unique @map("user_id") @db.Uuid
+  emailNotify     Boolean  @default(true) @map("email_notify")
+  pushNotify      Boolean  @default(true) @map("push_notify")
+  dndEnabled      Boolean  @default(false) @map("dnd_enabled")
+  dndStart        String   @default("22:00") @map("dnd_start") @db.VarChar(5) // HH:mm
+  dndEnd          String   @default("08:00") @map("dnd_end") @db.VarChar(5)
+  createdAt       DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt       DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  user            User      @relation("NotificationPreferenceUser", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notification_preferences")
 }

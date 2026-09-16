@@ -466,6 +466,16 @@ export const API_MESSAGES = {
     zh: "已收藏过该项",
     en: "This item has already been favorited",
   },
+
+  /* ── 企业邮箱 ── */
+  mailNotFound: { zh: "邮件不存在", en: "Mail not found" },
+  mailAccountNotFound: { zh: "邮箱账户不存在", en: "Email account not found" },
+  mailAccountAlreadyExists: {
+    zh: "该邮箱账户已存在",
+    en: "This email account already exists",
+  },
+  mailSendFailed: { zh: "邮件发送失败", en: "Failed to send mail" },
+  mailSmtpError: { zh: "SMTP 服务连接失败", en: "SMTP service connection failed" },
 } as const;
 
 /**
