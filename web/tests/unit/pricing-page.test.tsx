@@ -2,9 +2,45 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, fireEvent, screen } from "@testing-library/react";
-import { NextIntlClientProvider } from "next-intl";
 import { createRequire } from "node:module";
 import type { ReactNode } from "react";
+
+// next-intl 4.x ESM 内部从 next/navigation 导入 useRouter/usePathname，
+// setup.ts 的 vi.mock 在 forks pool 下未拦截到 node_modules 嵌套导入，
+// 需在测试文件内显式 mock 并提供完整导出（含 redirect/notFound 等）。
+vi.mock("next/navigation", () => ({
+  useRouter: () => ({
+    push: vi.fn(),
+    replace: vi.fn(),
+    back: vi.fn(),
+    prefetch: vi.fn(),
+    refresh: vi.fn(),
+  }),
+  useParams: () => ({}),
+  usePathname: () => "/",
+  useSearchParams: () => new URLSearchParams(),
+  redirect: vi.fn(),
+  notFound: vi.fn(),
+  permanentRedirect: vi.fn(),
+  unstable_rethrow: vi.fn(),
+}));
+
+// 阻断 next-intl/navigation → createNavigation.js → next/navigation 加载链：
+// lib/i18n-navigation.ts 导入 createNavigation from "next-intl/navigation"，
+// 即使 mock 了 @/lib/i18n-navigation，vitest forks pool 下仍可能解析原始模块。
+vi.mock("next-intl/navigation", () => ({
+  createNavigation: () => ({
+    Link: () => null,
+    useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+    usePathname: () => "/",
+    useParams: () => ({}),
+    redirect: vi.fn(),
+    notFound: vi.fn(),
+    permanentRedirect: vi.fn(),
+  }),
+}));
+
+import { NextIntlClientProvider } from "next-intl";
 
 /**
  * /pricing 定价页单元测试
@@ -27,6 +63,22 @@ import type { ReactNode } from "react";
 // 同步加载 zh messages（createRequire 在 ESM 测试环境提供 CJS require，eval 阶段执行）
 const requireJson = createRequire(import.meta.url);
 const zhMessages = requireJson("../../messages/zh.json") as { pricing: Record<string, unknown> };
+
+// Mock @/lib/i18n-navigation：提供 Link（渲染为 <a>）和 useRouter，
+// 避免加载 next-intl/navigation → createNavigation.js → next/navigation 链。
+// Link 用 React.createElement 避免在 vi.mock 工厂中使用 JSX。
+vi.mock("@/lib/i18n-navigation", async () => {
+  const React = await import("react");
+  return {
+    Link: React.forwardRef<HTMLAnchorElement, Record<string, unknown>>(
+      (props, ref) => React.createElement("a", { ...props, ref }),
+    ),
+    useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
+    usePathname: () => "/",
+    redirect: vi.fn(),
+    getPathname: vi.fn(),
+  };
+});
 
 // ─────────────────────────────────────────────────────────────────────────────
 // 1. 常量口径测试（纯 node 环境，无需 jsdom；放此处便于一并运行）

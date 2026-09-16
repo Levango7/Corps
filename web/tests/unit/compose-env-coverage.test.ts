@@ -14,6 +14,14 @@
  *  - MAIL_FROM / SMTP_HOST：email.ts 历史兼容回退与占位日志分支，
  *    生产变量为 EMAIL_FROM / RESEND_API_KEY（已断言）
  *  - NODE_OPTIONS 等运行时注入变量同理不入清单
+ *  - K8S_REPLICAS / PM2_INSTANCES：部署编排变量，由 K8s/PM2 编排层注入，
+ *    非应用运行时配置（lib/chat-events.ts 多实例检测用）
+ *  - DEEPSEEK_API_KEY：DeepSeek AI 服务密钥，可选功能，未配置时降级为空字符串
+ *  - LIVEKIT_API_KEY / LIVEKIT_API_SECRET / LIVEKIT_URL：LiveKit 音视频服务，
+ *    可选功能，未配置时 meetings join 路由返回 501
+ *  - RECYCLE_RETENTION_DAYS：回收站保留天数，有缺省值 30 天
+ *  - WECHAT_PLATFORM_PUBLIC_KEY_PEM / WECHAT_PRIVATE_KEY_PEM：微信支付平台
+ *    密钥对，可选支付渠道，未配置时走 Stripe
  */
 import { describe, it, expect } from "vitest";
 import { readFileSync, readdirSync, statSync } from "fs";
@@ -24,7 +32,23 @@ const HERE = dirname(fileURLToPath(import.meta.url));
 const REPO_ROOT = join(HERE, "..", "..", "..");
 
 /** 豁免清单：代码会引用、但不要求 compose 透传（理由见文件头） */
-const EXEMPT = new Set(["NODE_ENV", "RATE_LIMIT_DISABLED", "MAIL_FROM", "SMTP_HOST"]);
+const EXEMPT = new Set([
+  "NODE_ENV",
+  "RATE_LIMIT_DISABLED",
+  "MAIL_FROM",
+  "SMTP_HOST",
+  // 部署编排变量（K8s/PM2 编排层注入，非应用运行时配置）
+  "K8S_REPLICAS",
+  "PM2_INSTANCES",
+  // 可选功能密钥/配置（未配置时有合理降级）
+  "DEEPSEEK_API_KEY",
+  "LIVEKIT_API_KEY",
+  "LIVEKIT_API_SECRET",
+  "LIVEKIT_URL",
+  "RECYCLE_RETENTION_DAYS",
+  "WECHAT_PLATFORM_PUBLIC_KEY_PEM",
+  "WECHAT_PRIVATE_KEY_PEM",
+]);
 
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir)) {

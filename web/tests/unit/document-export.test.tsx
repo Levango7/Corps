@@ -30,13 +30,27 @@ const zhFlat: Record<string, string> = {
   "document.unshare": "取消分享",
   "document.shareUrl": "分享链接",
   "document.copy": "复制",
-  "document.exportPdf": "导出 PDF",
-  "document.exportPdfHint": "将文档导出为 PDF",
+  // F4 重构：导出按钮文案 key 从 exportPdf 改为 export
+  "document.export": "导出 PDF",
+  "document.exportHint": "将文档导出为 PDF",
   "document.markdownPlaceholder": "markdown",
   "document.autosaveHint": "自动保存",
   "document.saveFailed": "保存失败",
   "document.shareFailed": "分享操作失败",
   "document.loading": "加载中…",
+  "document.wordCount": "{count} 字",
+  "document.saving": "保存中…",
+  // ExportPreview 模态框命名空间
+  "exportPreview.print": "打印 / 保存为 PDF",
+  "exportPreview.dialogLabel": "导出预览",
+  "exportPreview.close": "关闭",
+  "exportPreview.previewLabel": "预览",
+  "exportPreview.printHint": "在打印对话框中选择「另存为 PDF」",
+  "exportPreview.emptyContent": "无内容可导出",
+  "exportPreview.batchTitle": "批量导出 ({count}个文档)",
+  "exportPreview.printAll": "打印全部",
+  "exportPreview.batchPreviewLabel": "批量预览",
+  "exportPreview.tableOfContents": "目录",
 };
 
 vi.mock("next-intl", () => ({
@@ -52,6 +66,8 @@ vi.mock("next-intl", () => ({
 }));
 
 import { DocumentEditor } from "@/components/DocumentEditor";
+// P1 前端修复后 DocumentEditor 使用 useToast，需 ToastProvider 包裹
+import { ToastProvider } from "@/components/Toast";
 
 const INITIAL = {
   title: "测试文档",
@@ -60,6 +76,11 @@ const INITIAL = {
   publishedAt: null,
   shareToken: null,
 };
+
+/** 包裹 ToastProvider 渲染（P1 修复后 DocumentEditor 依赖 useToast 上下文） */
+function renderWithToast(ui: React.ReactElement) {
+  return render(<ToastProvider>{ui}</ToastProvider>);
+}
 
 describe("DocumentEditor - 导出 PDF", () => {
   let printSpy: ReturnType<typeof vi.fn>;
@@ -76,18 +97,21 @@ describe("DocumentEditor - 导出 PDF", () => {
   });
 
   it("工具栏渲染「导出 PDF」按钮", () => {
-    render(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+    renderWithToast(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
     expect(screen.getByRole("button", { name: "导出 PDF" })).toBeInTheDocument();
   });
 
-  it("点击导出按钮调用 window.print()", () => {
-    render(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+  it("点击导出按钮打开模态框，再点击打印按钮调用 window.print()", () => {
+    renderWithToast(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+    // F4 重构：导出按钮先打开 ExportPreview 模态框
     fireEvent.click(screen.getByRole("button", { name: "导出 PDF" }));
+    // 模态框内的打印按钮触发 window.print()
+    fireEvent.click(screen.getByRole("button", { name: "打印 / 保存为 PDF" }));
     expect(printSpy).toHaveBeenCalledTimes(1);
   });
 
   it("打印容器（print-area）含标题与 markdown 渲染结果", () => {
-    const { container } = render(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+    const { container } = renderWithToast(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
     const area = container.querySelector(".print-area");
     expect(area).not.toBeNull();
     expect(area).toHaveTextContent("测试文档");
@@ -95,14 +119,14 @@ describe("DocumentEditor - 导出 PDF", () => {
   });
 
   it("自动保存提示不参与打印输出（print:hidden）", () => {
-    render(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+    renderWithToast(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
     const hint = screen.getByText("自动保存");
     // v0.6：提示与字数统计同排容器（flex div 带 print:hidden），断言落在共同父级
     expect(hint.closest(".print\\:hidden")).not.toBeNull();
   });
 
   it("导出按钮不触发 api 调用（打印纯前端，无需保存）", () => {
-    render(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+    renderWithToast(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
     fireEvent.click(screen.getByRole("button", { name: "导出 PDF" }));
     expect(apiMock).not.toHaveBeenCalled();
   });

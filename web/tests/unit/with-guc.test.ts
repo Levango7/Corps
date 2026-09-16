@@ -33,6 +33,9 @@ vi.mock("@/lib/prisma", () => ({
     // 记录 (fn, options)，并直接执行 fn(tx) 等价真实事务内执行。
     $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(txMock)),
   },
+  // withDbRetry（DL-4 连接重试包装器）：透传实现，直接执行传入函数，
+  // 测试环境无真实 DB 连接错误，不需要重试逻辑。
+  withDbRetry: vi.fn(async <T>(fn: () => Promise<T>): Promise<T> => fn()),
 }));
 
 vi.mock("@/lib/jwt", () => ({

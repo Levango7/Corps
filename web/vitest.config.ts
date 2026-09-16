@@ -21,12 +21,18 @@ export default defineConfig({
     // 集成测试依赖外部 dev server，禁止 Vitest 自动 watch 干扰
     pool: "forks",
     coverage: {
-      // 覆盖率仅作可见性指标，不设阈值（避免 T-3 阶段被未覆盖文件阻塞 CI）
+      // 覆盖率基线阈值：保守设定，避免阻塞 CI 同时防止覆盖率退化
       // 后续可逐步提高 thresholds.lines/branches/functions/statements
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
       include: ["app/api/**/*.ts", "lib/**/*.ts", "components/**/*.tsx"],
       exclude: ["**/*.config.*", "**/node_modules/**"],
+      thresholds: {
+        lines: 15,
+        branches: 10,
+        functions: 15,
+        statements: 15,
+      },
     },
   },
   resolve: {

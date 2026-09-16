@@ -25,22 +25,21 @@ describe("Skeleton 基础块", () => {
     expect(container.querySelector("div")).toBeInTheDocument();
   });
 
-  it("包含 animate-pulse 动画类", () => {
+  it("包含 shimmer 扫光动画类", () => {
     // Arrange & Act
     const { container } = render(<Skeleton />);
 
-    // Assert
+    // Assert：v0.6 改用 shimmer 扫光渐变替代 animate-pulse 透明度脉动
     const div = container.querySelector("div");
-    expect(div?.className).toContain("animate-pulse");
+    expect(div?.className).toContain("shimmer");
   });
 
-  it("包含 surface-2 背景与 radius-sm 圆角类", () => {
+  it("包含 radius-sm 圆角类", () => {
     // Arrange & Act
     const { container } = render(<Skeleton />);
 
-    // Assert
+    // Assert：shimmer 渐变由 --shimmer-* token 派生，不再用 bg-[var(--surface-2)]
     const div = container.querySelector("div");
-    expect(div?.className).toContain("bg-[var(--surface-2)]");
     expect(div?.className).toContain("rounded-[var(--radius-sm)]");
   });
 
@@ -71,7 +70,7 @@ describe("Skeleton 基础块", () => {
 
     // Assert：基础类存在且无 undefined 残留
     const div = container.querySelector("div");
-    expect(div?.className).toContain("animate-pulse");
+    expect(div?.className).toContain("shimmer");
     expect(div?.className).not.toContain("undefined");
   });
 });
@@ -126,9 +125,9 @@ describe("TaskListSkeleton 任务列表骨架", () => {
     // Arrange & Act
     const { container } = render(<TaskListSkeleton count={1} />);
 
-    // Assert：每行内含 5 个 animate-pulse div
+    // Assert：每行内含 5 个 shimmer div（v0.6 改用 shimmer 替代 animate-pulse）
     const row = container.querySelector("div.divide-y > div");
-    const skeletons = row?.querySelectorAll(".animate-pulse");
+    const skeletons = row?.querySelectorAll(".shimmer");
     expect(skeletons).toHaveLength(5);
   });
 
@@ -165,10 +164,10 @@ describe("StatCardSkeleton 统计卡片骨架", () => {
     // Arrange & Act
     const { container } = render(<StatCardSkeleton />);
 
-    // Assert
+    // Assert：v0.6 改用 shimmer 替代 animate-pulse
     const cards = container.querySelectorAll(".grid > div");
     for (const card of cards) {
-      const skeletons = card.querySelectorAll(".animate-pulse");
+      const skeletons = card.querySelectorAll(".shimmer");
       expect(skeletons).toHaveLength(3);
     }
   });

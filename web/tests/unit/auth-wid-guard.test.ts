@@ -36,6 +36,9 @@ vi.mock("@/lib/prisma", () => ({
     // withGuc 会在回调内先 setGucs（调用 tx.$executeRawUnsafe），再执行成员查询。
     $transaction: vi.fn(async (fn: (tx: unknown) => Promise<unknown>) => fn(txMock)),
   },
+  // withDbRetry（DL-4 连接重试包装器）：透传实现，直接执行传入函数，
+  // 测试环境无真实 DB 连接错误，不需要重试逻辑。
+  withDbRetry: vi.fn(async <T>(fn: () => Promise<T>): Promise<T> => fn()),
 }));
 
 vi.mock("@/lib/jwt", () => ({

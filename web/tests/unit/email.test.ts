@@ -66,7 +66,8 @@ describe("sendInviteEmail - 开发模式（NODE_ENV !== production）", () => {
     expect(logSpy).toHaveBeenCalledTimes(1);
     const output = logSpy.mock.calls[0][0] as string;
     expect(output).toContain("[email-dev]");
-    expect(output).toContain("to=invitee@example.com");
+    // R8D-01：邮箱脱敏后本地部分仅留前 2 字符 + ***（防 PII 泄漏到日志）
+    expect(output).toContain("to=in***@example.com");
     expect(output).toContain("workspace=测试工作区");
     expect(output).toContain("inviter=张三");
   });
@@ -84,7 +85,7 @@ describe("sendInviteEmail - 开发模式（NODE_ENV !== production）", () => {
 
     // Assert
     const output = logSpy.mock.calls[0][0] as string;
-    expect(output).toContain("to=another@test.com");
+    expect(output).toContain("to=an***@test.com");
     expect(output).toContain("workspace=产品团队");
     expect(output).toContain("inviter=李四");
   });
@@ -120,7 +121,8 @@ describe("sendInviteEmail - 生产模式（NODE_ENV=production 且配置 SMTP_HO
     expect(logSpy).toHaveBeenCalledTimes(1);
     const output = logSpy.mock.calls[0][0] as string;
     expect(output).toContain("[email]");
-    expect(output).toContain("invitee@example.com");
+    // R8D-01：邮箱脱敏（前 2 字符 + ***）
+    expect(output).toContain("in***@example.com");
     expect(output).toContain("测试工作区");
     expect(output).toContain("张三");
   });
@@ -135,7 +137,7 @@ describe("sendInviteEmail - 生产模式（NODE_ENV=production 且配置 SMTP_HO
     // Assert
     const output = logSpy.mock.calls[0][0] as string;
     expect(output).toBe(
-      "[email] invite sent (to=invitee@example.com, workspace=测试工作区, inviter=张三)",
+      "[email] invite sent (to=in***@example.com, workspace=测试工作区, inviter=张三)",
     );
   });
 });
@@ -209,7 +211,8 @@ describe("sendInviteEmail - 发送失败与边界情况", () => {
     // Act & Assert
     await expect(sendInviteEmail(params)).resolves.toBeUndefined();
     const output = logSpy.mock.calls[0][0] as string;
-    expect(output).toContain("user+tag@example.com");
+    // R8D-01：邮箱脱敏（前 2 字符 + ***）
+    expect(output).toContain("us***@example.com");
     expect(output).toContain("团队 <重要>");
     expect(output).toContain("O'Brien");
   });

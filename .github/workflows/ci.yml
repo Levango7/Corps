@@ -31,6 +31,8 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       - run: npx eslint .
       - run: npx prettier --check .
+      # 显式类型检查（next build 也含 tsc，但 lint job 更早失败反馈更快）
+      - run: node node_modules/typescript/bin/tsc --noEmit
 
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
   # 独立 job 并行运行，与 test job 互不阻塞，缩短 CI 总时长
