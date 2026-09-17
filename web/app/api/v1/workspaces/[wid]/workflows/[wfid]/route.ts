@@ -20,9 +20,20 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         tx.workflow.findUnique({
           where: { id: wfid },
           include: {
+            // 最近 10 条执行记录（仅返回前端展示所需字段，避免 result/triggerData 等大字段）
             executions: {
               orderBy: [{ createdAt: "desc" }],
               take: 10,
+              select: {
+                id: true,
+                status: true,
+                createdAt: true,
+                completedAt: true,
+              },
+            },
+            // 执行总数（供前端展示"共 N 次执行"）
+            _count: {
+              select: { executions: true },
             },
           },
         }),

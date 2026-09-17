@@ -16,7 +16,7 @@
  */
 
 import { memo } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { Conversation } from "./types";
 
 /** 消息预览最大长度 */
@@ -40,6 +40,7 @@ interface ConversationItemProps {
 function formatRelativeTime(
   iso: string | null,
   t: (key: string, values?: { count?: number }) => string,
+  locale: string,
 ): string | null {
   if (!iso) return null;
   const then = new Date(iso).getTime();
@@ -54,7 +55,7 @@ function formatRelativeTime(
   const day = Math.floor(hr / 24);
   if (day === 1) return t("daysAgo", { count: 1 });
   if (day < 30) return t("daysAgo", { count: day });
-  return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+  return new Date(iso).toLocaleDateString(locale, { month: "numeric", day: "numeric" });
 }
 
 /** 截断文本到指定长度 */
@@ -78,6 +79,7 @@ function ConversationItemImpl({
 }: ConversationItemProps) {
   const t = useTranslations("time");
   const tChat = useTranslations("chat");
+  const locale = useLocale();
 
   // 单聊：找对方成员；群聊：用 title
   const isGroup = conversation.type === "group";
@@ -105,7 +107,7 @@ function ConversationItemImpl({
     : conversation.description ?? "";
 
   // 时间
-  const timeStr = formatRelativeTime(conversation.lastMessageAt, t);
+  const timeStr = formatRelativeTime(conversation.lastMessageAt, t, locale);
 
   // 未读数
   const unread = conversation.unreadCount ?? 0;

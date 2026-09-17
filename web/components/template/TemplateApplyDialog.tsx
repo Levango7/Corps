@@ -211,7 +211,7 @@ export function TemplateApplyDialog({ wid, template, open, onClose, onApplied }:
                     {milestones.map((m) => (
                       <option key={m.id} value={m.id}>
                         {m.name}
-                        {m.dueDate ? `（${new Date(m.dueDate).toLocaleDateString()}）` : ""}
+                        {m.dueDate ? ` (${new Date(m.dueDate).toLocaleDateString()})` : ""}
                       </option>
                     ))}
                   </select>

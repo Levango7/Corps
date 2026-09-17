@@ -30,7 +30,7 @@ import {
   FileText,
   Download,
 } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import type { Message } from "./types";
 
 /** 回复引用摘要最大长度 */
@@ -57,6 +57,7 @@ interface MessageItemProps {
 function formatRelativeTime(
   iso: string,
   t: (key: string, values?: { count?: number }) => string,
+  locale: string,
 ): string {
   const then = new Date(iso).getTime();
   if (Number.isNaN(then)) return iso;
@@ -69,7 +70,7 @@ function formatRelativeTime(
   if (hr < 24) return t("hoursAgo", { count: hr });
   const day = Math.floor(hr / 24);
   if (day < 30) return t("daysAgo", { count: day });
-  return new Date(iso).toLocaleDateString("zh-CN", { month: "numeric", day: "numeric" });
+  return new Date(iso).toLocaleDateString(locale, { month: "numeric", day: "numeric" });
 }
 
 /** 格式化文件大小 */
@@ -181,6 +182,7 @@ function MessageItemImpl({
 }: MessageItemProps) {
   const t = useTranslations("chat");
   const tTime = useTranslations("time");
+  const locale = useLocale();
   const [editing, setEditing] = useState(false);
   const [editBody, setEditBody] = useState(message.body);
 
@@ -192,7 +194,7 @@ function MessageItemImpl({
 
   const isRevoked = message.revokedAt !== null;
   const isEdited = message.editedAt !== null && !isRevoked;
-  const timeStr = formatRelativeTime(message.createdAt, tTime);
+  const timeStr = formatRelativeTime(message.createdAt, tTime, locale);
 
   /** 进入编辑模式 */
   const handleStartEdit = useCallback(() => {

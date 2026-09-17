@@ -7,8 +7,8 @@ import { randomUUID } from "crypto";
 /**
  * 生成 LiveKit 访问令牌（JWT）。
  *
- * 项目未安装 livekit-server-sdk，此处用 jsonwebtoken 手动构造 LiveKit 兼容的
- * JWT（HS256）。LiveKit token payload 规范：
+ * 项目已安装 livekit-server-sdk，但此处仍用 jsonwebtoken 手动构造 LiveKit 兼容的
+ * JWT（HS256），以保持 token 字段构造的显式可控。LiveKit token payload 规范：
  *   - iss: API_KEY
  *   - sub: 参与者身份（userId）
  *   - aud: "livekit"

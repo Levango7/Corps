@@ -135,7 +135,7 @@ export function useIM(workspaceId: string): UseIMResult {
       );
       setConversations(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "加载会话列表失败");
+      setError(err instanceof Error ? err.message : "Failed to load conversations");
     } finally {
       setLoading(false);
     }
@@ -181,7 +181,7 @@ export function useIM(workspaceId: string): UseIMResult {
           prev.map((c) => (c.id === cid ? { ...c, unreadCount: 0 } : c)),
         );
       } catch (err) {
-        setError(err instanceof Error ? err.message : "加载会话失败");
+        setError(err instanceof Error ? err.message : "Failed to load conversation");
       } finally {
         setLoading(false);
       }
@@ -208,7 +208,7 @@ export function useIM(workspaceId: string): UseIMResult {
           prev ? { ...prev, hasMoreMessages } : prev,
         );
       } catch (err) {
-        console.error("[useIM] 加载更多消息失败:", err);
+        console.error("[useIM] Failed to load more messages:", err);
       } finally {
         setLoadingMore(false);
       }
@@ -351,12 +351,12 @@ export function useIM(workspaceId: string): UseIMResult {
             break;
           }
           case "error": {
-            console.error("[useIM] WebSocket 错误:", msg.message);
+            console.error("[useIM] WebSocket error:", msg.message);
             break;
           }
         }
       } catch (err) {
-        console.error("[useIM] 消息处理异常:", err);
+        console.error("[useIM] Message handling error:", err);
       }
     });
     return unsubscribe;

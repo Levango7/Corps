@@ -433,6 +433,18 @@ export const API_MESSAGES = {
 
   /* ── 工作流自动化（任务 225）── */
   workflowNotFound: { zh: "工作流不存在", en: "Workflow not found" },
+  /* ── 工作流执行取消/重试（批次 C-4 任务 357）── */
+  executionNotFound: { zh: "执行记录不存在", en: "Execution not found" },
+  executionCancelled: { zh: "执行已取消", en: "Execution cancelled" },
+  executionRetried: { zh: "执行已重试", en: "Execution retried" },
+  executionCannotCancel: {
+    zh: "仅运行中或待处理的执行可取消",
+    en: "Only running or pending executions can be cancelled",
+  },
+  executionCannotRetry: {
+    zh: "仅失败的执行可重试",
+    en: "Only failed executions can be retried",
+  },
 
   /* ── 审批流（任务 220）── */
   approvalNotFound: { zh: "审批不存在", en: "Approval not found" },

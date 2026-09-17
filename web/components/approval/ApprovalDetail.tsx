@@ -28,8 +28,11 @@ import {
   MinusCircle,
   X,
   CornerDownRight,
+  Forward,
+  MessageSquare,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 import {
   ApprovalFlowDiagram,
   type ApprovalFlowNode,
@@ -149,6 +152,7 @@ export function ApprovalDetail({
 }: ApprovalDetailProps) {
   const t = useTranslations("approval");
   const tButton = useTranslations("button");
+  const { toast } = useToast();
   const [detail, setDetail] = useState<ApprovalInstanceDetail | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -531,6 +535,26 @@ export function ApprovalDetail({
             >
               <MinusCircle size={14} />
               {t("withdraw")}
+            </button>
+          )}
+          {/* TODO: 转交功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
+          {canApproveOrReject && (
+            <button
+              onClick={() => toast("info", "功能开发中")}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <Forward size={14} />
+              转交
+            </button>
+          )}
+          {/* TODO: 评论功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
+          {(canApproveOrReject || canWithdraw) && (
+            <button
+              onClick={() => toast("info", "功能开发中")}
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <MessageSquare size={14} />
+              评论
             </button>
           )}
         </section>
