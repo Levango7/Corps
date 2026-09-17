@@ -18,6 +18,14 @@
     "message": "网络连接已断开，请检查网络后重试。",
     "retry": "重试"
   },
+  "assistant": {
+    "welcome": "AI 助理",
+    "welcomeDesc": "描述你的需求，AI 助理会自动选择合适的能力帮你完成",
+    "placeholder": "输入你的需求...",
+    "thinking": "思考中...",
+    "error": "处理失败，请重试",
+    "capability": "能力"
+  },
   "nav": {
     "workspace": {
       "switch": "切换工作区",

@@ -133,6 +133,11 @@ services:
       CORPS_APP_PASSWORD: ${CORPS_APP_PASSWORD:?请在 .env 中设置 CORPS_APP_PASSWORD}
       # 日志级别（debug/info/warn/error/fatal，默认 info）
       LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Web Push 推送（P1 PWA 化）：VAPID 密钥对 + subject，
+      # 未配置时降级为空字符串，推送功能不可用但应用正常运行
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@corps.app}
     ports:
       - "3000:3000"
     volumes:

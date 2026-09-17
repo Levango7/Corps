@@ -18,6 +18,14 @@
     "message": "Network connection lost. Please check your network and retry.",
     "retry": "Retry"
   },
+  "assistant": {
+    "welcome": "AI Assistant",
+    "welcomeDesc": "Describe your need, the AI assistant will automatically select the right capability",
+    "placeholder": "Type your request...",
+    "thinking": "Thinking...",
+    "error": "Failed, please retry",
+    "capability": "Capability"
+  },
   "nav": {
     "workspace": {
       "switch": "Switch workspace",
