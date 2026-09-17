@@ -1148,6 +1148,7 @@
     "updatedText": "Task {title} was updated",
     "commentText": "{title} has a new comment",
     "decisionText": "Decision on {title} was updated",
+    "aiPushText": "AI Push: {title}",
     "networkError": "Network error, please check your connection",
     "loadFailed": "Failed to load, please retry shortly",
     "unreadCount": "{count} unread",
@@ -2748,7 +2749,8 @@
       "meetingSummary": "Meeting Summary",
       "docQa": "Document Q&A",
       "decisionAssistant": "Decision Assistant",
-      "workflowOrchestrator": "Workflow Orchestrator"
+      "workflowOrchestrator": "Workflow Orchestrator",
+      "aiPush": "AI Push"
     }
   },
   "doc": {

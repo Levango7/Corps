@@ -1,24 +1,23 @@
 // POST /api/v1/ai/push/trigger — 手动触发 AI 推送
 //
-// 输入：{ wid, capability, scheduleId? }
+// 输入：{ wid, capability, scheduleId }
 // 流程：
 //   1. 认证 + AI 配置检查 + 速率限制
-//   2. 根据 capability 选择 prompt 模板 + 上下文聚合 scopes + 模型
-//   3. 在 RLS 事务内聚合上下文
-//   4. withUsageTracking 包装 generateText（非流式）
-//   5. cleanJsonResponse + JSON.parse 解析 JSON 结果
-//   6. 提取 title/summary/detail，创建 AiPushRecord
-//   7. 可选更新 AiPushSchedule.lastRunAt
+//   2. body 校验 + 工作区守卫
+//   3. 校验 schedule 归属当前用户（外键约束 + 权限）
+//   4. 调用 generatePush（共享执行器，与 cron 自动执行器复用同一逻辑）
+//   5. 返回完整 AiPushRecord
+//
+// 共享逻辑抽取至 @/lib/ai/push-runner（CAPABILITIES / SCOPES_BY_CAPABILITY /
+// PROMPT_BUILDERS / safeSlice / extractPushContent / generatePush），
+// 本路由仅保留 HTTP 层：认证 / 速率限制 / body 校验 / 工作区守卫 / schedule 归属校验。
 //
 // 来源：
 //  - 经验 2026-09-15-usage-tracking-per-call-site-integration-by-mode（withUsageTracking 非流式包装）
 //  - 经验 2026-09-15-ai-route-streaming-mode-and-model-pairing-rules（非流式 + 模型选择）
 
 import { NextRequest, NextResponse } from "next/server";
-import { generateText } from "ai";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
-import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -27,27 +26,12 @@ import {
 } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { withUsageTracking } from "@/lib/ai/usage-middleware";
-import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
-import { cleanJsonResponse } from "@/lib/ai/orchestrator";
-import {
-  buildDailyBriefingPrompt,
-  buildDailyBriefingUserPrompt,
-  type WorkspaceContext,
-} from "@/lib/ai/prompts/daily-briefing";
-import {
-  buildRiskAlertPrompt,
-  buildRiskAlertUserPrompt,
-} from "@/lib/ai/prompts/risk-alert";
-import {
-  buildProgressAnomalyPrompt,
-  buildProgressAnomalyUserPrompt,
-} from "@/lib/ai/prompts/progress-anomaly";
 import { apiMsg } from "@/lib/api-messages";
-
-/** 推送能力枚举 */
-const CAPABILITIES = ["daily_briefing", "risk_alert", "progress_anomaly"] as const;
-type PushCapability = (typeof CAPABILITIES)[number];
+import {
+  CAPABILITIES,
+  type PushCapability,
+  generatePush,
+} from "@/lib/ai/push-runner";
 
 const triggerSchema = z.object({
   wid: z.string().uuid(),
@@ -55,81 +39,6 @@ const triggerSchema = z.object({
   /** 关联的推送计划 ID（AiPushRecord.scheduleId 为必填外键） */
   scheduleId: z.string().uuid(),
 });
-
-/** 各 capability 的上下文聚合范围 */
-const SCOPES_BY_CAPABILITY: Record<PushCapability, AiContextScope[]> = {
-  daily_briefing: [
-    "tasks:created:today",
-    "tasks:high:priority",
-    "meetings:today",
-    "meetings:upcoming",
-    "im:unread",
-    "time:today",
-  ],
-  risk_alert: [
-    "tasks:overdue",
-    "tasks:blocked",
-    "okr:at:risk",
-    "okr:progress",
-    "approvals:overdue",
-  ],
-  progress_anomaly: [
-    "okr:progress",
-    "time:week",
-    "tasks:completed:today",
-    "tasks:created:today",
-  ],
-};
-
-/** 各 capability 的 prompt builder（system + user） */
-const PROMPT_BUILDERS: Record<
-  PushCapability,
-  {
-    buildSystem: (ctx: WorkspaceContext) => string;
-    buildUser: (ctx: WorkspaceContext) => string;
-    /** 是否使用推理模型 */
-    useReasoner: boolean;
-  }
-> = {
-  daily_briefing: {
-    buildSystem: buildDailyBriefingPrompt,
-    buildUser: buildDailyBriefingUserPrompt,
-    useReasoner: false,
-  },
-  risk_alert: {
-    buildSystem: buildRiskAlertPrompt,
-    buildUser: buildRiskAlertUserPrompt,
-    useReasoner: true,
-  },
-  progress_anomaly: {
-    buildSystem: buildProgressAnomalyPrompt,
-    buildUser: buildProgressAnomalyUserPrompt,
-    useReasoner: true,
-  },
-};
-
-/** 安全截断字符串至指定长度（按 Unicode 码点，避免截断 emoji 代理对） */
-function safeSlice(s: string, max: number): string {
-  return Array.from(s).slice(0, max).join("");
-}
-
-/** 从 LLM JSON 输出中提取 title/summary，校验类型并截断至 DB 列长度限制 */
-function extractPushContent(
-  raw: unknown,
-  capability: PushCapability,
-): { title: string; summary: string; detail: Prisma.InputJsonValue } | null {
-  if (raw == null || typeof raw !== "object") return null;
-  const obj = raw as Record<string, unknown>;
-
-  const title =
-    typeof obj.title === "string" && obj.title.trim()
-      ? safeSlice(obj.title, 200)
-      : `${capability} 推送`;
-  const summary =
-    typeof obj.summary === "string" ? safeSlice(obj.summary, 5000) : "";
-
-  return { title, summary, detail: obj as Prisma.InputJsonValue };
-}
 
 /** POST /api/v1/ai/push/trigger — 手动触发推送 */
 export async function POST(req: NextRequest) {
@@ -177,80 +86,9 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const builder = PROMPT_BUILDERS[body.capability];
-  const scopes = SCOPES_BY_CAPABILITY[body.capability];
-  const model = builder.useReasoner ? reasonerModel : defaultModel;
-
   try {
-    // 6) 在 RLS 事务内聚合上下文
-    const contextStr = await runWithWorkspace(
-      body.wid,
-      (tx) => buildAiContext(body.wid, ctx.payload.sub, scopes, tx),
-      ctx.payload.sub,
-    );
-    const wsCtx: WorkspaceContext = {
-      context: contextStr,
-      workspaceId: body.wid,
-      userId: ctx.payload.sub,
-    };
-
-    // 7) withUsageTracking 包装 generateText（非流式）
-    const systemPrompt = withCoT(builder.buildSystem(wsCtx), model);
-    const userPrompt = builder.buildUser(wsCtx);
-
-    const llmResult = await withUsageTracking(
-      {
-        workspaceId: body.wid,
-        userId: ctx.payload.sub,
-        capability: `push-${body.capability}`,
-        model: model.modelId,
-      },
-      async () => {
-        const result = await generateText({
-          model,
-          system: systemPrompt,
-          prompt: userPrompt,
-        });
-        return {
-          result,
-          usage: result.usage
-            ? {
-                inputTokens: result.usage.inputTokens ?? 0,
-                outputTokens: result.usage.outputTokens ?? 0,
-              }
-            : undefined,
-        };
-      },
-    );
-
-    // 8) 解析 JSON 结果
-    const cleaned = cleanJsonResponse(llmResult.text);
-    let parsed: unknown;
-    try {
-      parsed = JSON.parse(cleaned);
-    } catch (e) {
-      console.error(
-        "[ai/push/trigger] JSON.parse 失败:",
-        e,
-        "raw:",
-        cleaned.slice(0, 200),
-      );
-      return NextResponse.json(
-        { code: 500, message: apiMsg(req, "internalError"), data: null },
-        { status: 500 },
-      );
-    }
-
-    const content = extractPushContent(parsed, body.capability);
-    if (!content) {
-      return NextResponse.json(
-        { code: 500, message: apiMsg(req, "internalError"), data: null },
-        { status: 500 },
-      );
-    }
-
-    // 9) 创建 AiPushRecord + 更新 schedule.lastRunAt
-    //    先校验 schedule 归属当前用户（外键约束 + 权限）
+    // 6) 校验 schedule 归属当前用户（外键约束 + 权限）
+    //    先校验避免 generatePush 内部外键失败导致难以区分 404 vs 500
     const schedule = await runWithWorkspace(
       body.wid,
       (tx) =>
@@ -271,36 +109,26 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 7) 调用 generatePush 生成推送内容并落库（AiPushRecord + 更新 schedule.lastRunAt）
+    //    不传 tx：内部用 runWithWorkspace 自建 RLS 事务
+    const pushResult = await generatePush({
+      capability: body.capability as PushCapability,
+      workspaceId: body.wid,
+      userId: ctx.payload.sub,
+      scheduleId: body.scheduleId,
+    });
+
+    if (!pushResult) {
+      return NextResponse.json(
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
+      );
+    }
+
+    // 8) 返回完整 AiPushRecord（保持原 API 响应语义，前端依赖 record 完整字段）
     const record = await runWithWorkspace(
       body.wid,
-      async (tx) => {
-        const rec = await tx.aiPushRecord.create({
-          data: {
-            scheduleId: body.scheduleId,
-            workspaceId: body.wid,
-            userId: ctx.payload.sub,
-            capability: body.capability,
-            title: content.title,
-            summary: content.summary,
-            detail: content.detail,
-          },
-        });
-
-        // 更新 schedule.lastRunAt（失败不影响记录创建）
-        await tx.aiPushSchedule
-          .update({
-            where: { id: body.scheduleId },
-            data: { lastRunAt: new Date() },
-          })
-          .catch((e: unknown) => {
-            console.warn(
-              "[ai/push/trigger] 更新 schedule.lastRunAt 失败:",
-              e instanceof Error ? e.message : e,
-            );
-          });
-
-        return rec;
-      },
+      (tx) => tx.aiPushRecord.findUnique({ where: { id: pushResult.recordId } }),
       ctx.payload.sub,
     );
 

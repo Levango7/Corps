@@ -30,6 +30,7 @@ import {
   Lightbulb,
   Workflow,
   Sparkles,
+  Bell,
   X,
 } from "lucide-react";
 import { SemanticSearchPanel } from "@/components/ai/SemanticSearchPanel";
@@ -39,6 +40,8 @@ import MeetingSummaryPanel from "@/components/ai/MeetingSummaryPanel";
 import { DocQaPanel } from "@/components/ai/DocQaPanel";
 import DecisionAssistantPanel from "@/components/ai/DecisionAssistantPanel";
 import WorkflowOrchestratorPanel from "@/components/ai/WorkflowOrchestratorPanel";
+import { AiPushSettings } from "@/components/ai/AiPushSettings";
+import { AiPushFeed } from "@/components/ai/AiPushFeed";
 
 // ─── Tab 定义 ──────────────────────────────────────────────────────────────────
 
@@ -50,7 +53,8 @@ type TabId =
   | "meetingSummary"
   | "docQa"
   | "decisionAssistant"
-  | "workflowOrchestrator";
+  | "workflowOrchestrator"
+  | "aiPush";
 
 /** Tab 配置项 */
 interface TabConfig {
@@ -115,6 +119,13 @@ const TABS: TabConfig[] = [
     fallbackZh: "工作流编排",
     fallbackEn: "Workflow Orchestrator",
     Icon: Workflow,
+  },
+  {
+    id: "aiPush",
+    labelKey: "aiPush",
+    fallbackZh: "AI 推送",
+    fallbackEn: "AI Push",
+    Icon: Bell,
   },
 ];
 
@@ -223,6 +234,7 @@ export default function AiToolsPage({
           {activeTab === "docQa" && <DocQaPanel wid={wid} />}
           {activeTab === "decisionAssistant" && <DecisionAssistantPanel wid={wid} />}
           {activeTab === "workflowOrchestrator" && <WorkflowOrchestratorPanel wid={wid} />}
+          {activeTab === "aiPush" && <AiPushTabContent wid={wid} />}
         </section>
       </div>
     </main>
@@ -297,6 +309,21 @@ function TodoExtractTabContent({
           </div>
         </div>
       )}
+    </div>
+  );
+}
+// ─── AI 推送 Tab 内容（左设置 + 右消息流） ──────────────────────────────────────
+
+/**
+ * AI 推送 Tab 容器：左右分栏布局。
+ * 左侧 AiPushSettings 管理推送计划，右侧 AiPushFeed 展示推送消息流。
+ * 响应式：lg 以上两栏，以下单栏堆叠。
+ */
+function AiPushTabContent({ wid }: { wid: string }) {
+  return (
+    <div className="grid gap-4 lg:grid-cols-2" style={{ gap: "var(--space-4)" }}>
+      <AiPushSettings wid={wid} />
+      <AiPushFeed wid={wid} />
     </div>
   );
 }

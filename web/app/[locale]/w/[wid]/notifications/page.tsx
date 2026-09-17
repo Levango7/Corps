@@ -48,7 +48,7 @@ import { useTranslations } from "next-intl";
 const NOTIFICATIONS_VIRTUAL_THRESHOLD = 30;
 
 type NotificationType =
-  "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated";
+  | "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated" | "ai_push";
 
 interface Notification {
   id: string;
@@ -87,6 +87,7 @@ function matchFilter(n: Notification, f: Filter): boolean {
  *  - task_updated    → RefreshCw     · var(--accent)   （规范写 var(--info)，项目无 --info，用 --accent 代替）
  *  - comment_added   → MessageSquare · var(--warn)     （规范写 var(--warning)，项目 token 为 --warn）
  *  - decision_updated→ FileText      · var(--fg-2)     （决策更新）
+ *  - ai_push         → Bell          · var(--accent)   （AI 推送）
  */
 const TYPE_META: Record<NotificationType, { icon: typeof AtSign; color: string; textKey: string }> =
   {
@@ -95,6 +96,7 @@ const TYPE_META: Record<NotificationType, { icon: typeof AtSign; color: string; 
     task_updated: { icon: RefreshCw, color: "var(--accent)", textKey: "updatedText" },
     comment_added: { icon: MessageSquare, color: "var(--warn)", textKey: "commentText" },
     decision_updated: { icon: FileText, color: "var(--fg-2)", textKey: "decisionText" },
+    ai_push: { icon: Bell, color: "var(--accent)", textKey: "aiPushText" },
   };
 
 // 相对时间戳：共享 format.ts（阶段 2-6 i18n——经 useTranslations("time") 输出当前语言）
@@ -166,7 +168,8 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
    *  跳转目标按通知类型区分：
    *    - task_assigned / task_updated / comment_added / mention → 任务详情
    *    - decision_updated → 任务详情的决策区（hash 锚点 #decisions）
-   *  所有通知的 entityId 均指向关联任务，故统一跳 /task/{entityId}，
+   *    - ai_push → AI 工具中心（/w/[wid]/ai-tools）
+   *  除 ai_push 外，通知的 entityId 均指向关联任务，故统一跳 /task/{entityId}，
    *  decision_updated 追加 #decisions 锚点以便定位到决策记录区。
    */
   function openNotification(n: Notification) {
@@ -180,6 +183,11 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
         // 标记已读失败：router.push 已先执行导航，toast 在新页面弹出会误导用户，降级为 console.warn
         console.warn("openNotification: 标记已读失败，下次进入页面会重新加载纠正");
       });
+    }
+    // AI 推送通知跳转 AI 工具中心
+    if (n.type === "ai_push") {
+      router.push(`/w/${wid}/ai-tools`);
+      return;
     }
     const target = `/w/${wid}/task/${n.entityId}`;
     router.push(n.type === "decision_updated" ? `${target}#decisions` : target);

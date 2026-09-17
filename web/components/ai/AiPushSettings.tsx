@@ -26,6 +26,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { relativeTime } from "@/lib/format";
 
 /** 推送计划类型（与 Prisma AiPushSchedule 对齐） */
 interface PushSchedule {
@@ -55,6 +56,7 @@ interface AiPushSettingsProps {
 
 export function AiPushSettings({ wid }: AiPushSettingsProps) {
   const t = useTranslations("aiPush");
+  const tTime = useTranslations("time");
 
   const [schedules, setSchedules] = useState<PushSchedule[]>([]);
   const [loading, setLoading] = useState(true);
@@ -188,21 +190,13 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
     [t],
   );
 
-  /** 格式化最后运行时间 */
+  /** 格式化最后运行时间（走共享 relativeTime，i18n 经 time 命名空间） */
   const formatLastRun = useCallback(
     (lastRunAt: string | null): string => {
       if (!lastRunAt) return "—";
-      const d = new Date(lastRunAt);
-      const now = new Date();
-      const diffMs = now.getTime() - d.getTime();
-      const diffMin = Math.floor(diffMs / 60_000);
-      if (diffMin < 1) return "刚刚";
-      if (diffMin < 60) return `${diffMin} 分钟前`;
-      const diffHour = Math.floor(diffMin / 60);
-      if (diffHour < 24) return `${diffHour} 小时前`;
-      return d.toLocaleDateString();
+      return relativeTime(lastRunAt, tTime) ?? "—";
     },
-    [],
+    [tTime],
   );
 
   return (

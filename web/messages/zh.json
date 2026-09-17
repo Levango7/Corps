@@ -1148,6 +1148,7 @@
     "updatedText": "任务 {title} 已更新",
     "commentText": "{title} 有新评论",
     "decisionText": "{title} 的决策已更新",
+    "aiPushText": "AI 推送：{title}",
     "networkError": "网络连接失败，请检查网络",
     "loadFailed": "加载失败，请稍后重试",
     "unreadCount": "{count} 条未读",
@@ -2748,7 +2749,8 @@
       "meetingSummary": "会议纪要",
       "docQa": "文档问答",
       "decisionAssistant": "决策辅助",
-      "workflowOrchestrator": "工作流编排"
+      "workflowOrchestrator": "工作流编排",
+      "aiPush": "AI 推送"
     }
   },
   "doc": {

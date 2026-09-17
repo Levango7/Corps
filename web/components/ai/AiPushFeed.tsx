@@ -25,6 +25,7 @@ import {
   Sun,
 } from "lucide-react";
 import { api } from "@/lib/api";
+import { relativeTime } from "@/lib/format";
 
 /** 推送记录类型（与 Prisma AiPushRecord 对齐） */
 interface PushRecord {
@@ -76,6 +77,7 @@ interface AiPushFeedProps {
 
 export function AiPushFeed({ wid }: AiPushFeedProps) {
   const t = useTranslations("aiPush");
+  const tTime = useTranslations("time");
 
   const [records, setRecords] = useState<PushRecord[]>([]);
   const [loading, setLoading] = useState(true);
@@ -167,20 +169,11 @@ export function AiPushFeed({ wid }: AiPushFeedProps) {
     [wid, t],
   );
 
-  /** 格式化时间 */
-  const formatTime = useCallback((createdAt: string): string => {
-    const d = new Date(createdAt);
-    const now = new Date();
-    const diffMs = now.getTime() - d.getTime();
-    const diffMin = Math.floor(diffMs / 60_000);
-    if (diffMin < 1) return "刚刚";
-    if (diffMin < 60) return `${diffMin} 分钟前`;
-    const diffHour = Math.floor(diffMin / 60);
-    if (diffHour < 24) return `${diffHour} 小时前`;
-    const diffDay = Math.floor(diffHour / 24);
-    if (diffDay < 7) return `${diffDay} 天前`;
-    return d.toLocaleDateString();
-  }, []);
+  /** 格式化时间（走共享 relativeTime，i18n 经 time 命名空间） */
+  const formatTime = useCallback(
+    (createdAt: string): string => relativeTime(createdAt, tTime) ?? "—",
+    [tTime],
+  );
 
   /** 获取 capability 显示名称 */
   const capabilityLabel = useCallback(
