@@ -10,7 +10,14 @@
 // 来源：P2 后端任务 318（AI 助理编排引擎 + 对话 API）
 
 import { generateText } from "ai";
-import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import {
+  defaultModel,
+  reasonerModel,
+  withCoT,
+  createAbortTimeout,
+  DEFAULT_TIMEOUT_MS,
+  REASONER_TIMEOUT_MS,
+} from "@/lib/ai/deepseek";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { logger } from "@/lib/logger";
@@ -85,7 +92,11 @@ const REASONER_CAPS = [
  * @returns 能力 ID（如 task_breakdown）
  */
 // P1-fix: 意图识别输出白名单——防止 LLM 被注入后返回任意 capabilityId
-const VALID_CAPS = new Set([
+//
+// ASSISTANT_CAPABILITIES 为全部能力 ID 的权威列表。
+// 用 Set 去重后派生 VALID_CAPS：若维护时误加重复项，去重逻辑会自动收敛，
+// 并在模块加载时 logger.warn 提示，避免重复能力导致意图识别歧义。
+export const ASSISTANT_CAPABILITIES: string[] = [
   "task_breakdown",
   "todo_extract",
   "progress_anomaly",
@@ -98,11 +109,24 @@ const VALID_CAPS = new Set([
   "knowledge_extract",
   "semantic_search",
   "risk_alert",
-]);
+];
+
+// 去重：防止维护过程中误加重复能力 ID
+const DEDUPED_CAPABILITIES = [...new Set(ASSISTANT_CAPABILITIES)];
+if (DEDUPED_CAPABILITIES.length !== ASSISTANT_CAPABILITIES.length) {
+  logger.warn("[ai/assistant] ASSISTANT_CAPABILITIES 存在重复项，已去重", {
+    originalCount: ASSISTANT_CAPABILITIES.length,
+    dedupedCount: DEDUPED_CAPABILITIES.length,
+  });
+}
+
+const VALID_CAPS = new Set(DEDUPED_CAPABILITIES);
 
 async function recognizeIntent(
   message: string,
   phase: TaskPhase,
+  workspaceId: string,
+  userId: string,
 ): Promise<string> {
   // P1-fix: 用户消息只通过 prompt 参数传，不拼进 system prompt，避免 prompt injection
   const systemPrompt = `你是 AI 助理意图识别器。根据用户消息和当前任务阶段，选择最合适的能力。
@@ -115,17 +139,50 @@ knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_a
 
 只返回能力 ID（如 task_breakdown），不要其他内容。`;
 
+  // 30s 超时防护：意图识别应快速返回，长尾请求直接降级为 semantic_search
+  const { signal, cleanup } = createAbortTimeout(
+    DEFAULT_TIMEOUT_MS,
+    "recognizeIntent",
+  );
+
   try {
-    const result = await generateText({
-      model: defaultModel,
-      system: systemPrompt,
-      prompt: message,
-    });
+    const result = await withUsageTracking(
+      {
+        workspaceId,
+        userId,
+        capability: "assistant-recognize-intent",
+        model: defaultModel.modelId,
+      },
+      async () => {
+        const r = await generateText({
+          model: defaultModel,
+          system: systemPrompt,
+          prompt: message,
+          abortSignal: signal,
+        });
+        return {
+          result: r,
+          usage: r.usage
+            ? {
+                inputTokens: r.usage.inputTokens ?? 0,
+                outputTokens: r.usage.outputTokens ?? 0,
+              }
+            : undefined,
+        };
+      },
+    );
     const intent = result.text.trim().toLowerCase();
     // P1-fix: 白名单校验，未命中则降级为 semantic_search
     return VALID_CAPS.has(intent) ? intent : "semantic_search";
-  } catch {
+  } catch (err) {
+    if (err instanceof Error && err.name === "AbortError") {
+      logger.warn("[ai/assistant] recognizeIntent 超时，降级为 semantic_search", {
+        phase,
+      });
+    }
     return "semantic_search";
+  } finally {
+    cleanup();
   }
 }
 
@@ -145,11 +202,25 @@ knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_a
 export async function runAssistant(
   ctx: AssistantContext,
 ): Promise<AssistantResult | null> {
-  const capabilityId = await recognizeIntent(ctx.message, ctx.phase);
+  const capabilityId = await recognizeIntent(
+    ctx.message,
+    ctx.phase,
+    ctx.workspaceId,
+    ctx.userId,
+  );
+
+  // 按能力选择模型 + 超时（推理模型 60s，普通模型 30s）
+  const model = needsReasoner(capabilityId) ? reasonerModel : defaultModel;
+  const timeoutMs = needsReasoner(capabilityId)
+    ? REASONER_TIMEOUT_MS
+    : DEFAULT_TIMEOUT_MS;
+  const { signal: abortSignal, cleanup: abortCleanup } = createAbortTimeout(
+    timeoutMs,
+    `runAssistant:${capabilityId}`,
+  );
 
   try {
     const systemPrompt = buildCapabilityPrompt(capabilityId, ctx);
-    const model = needsReasoner(capabilityId) ? reasonerModel : defaultModel;
 
     // 构建专门 builder 的 PromptContext（传递 history 多轮上下文）
     const promptCtx: PromptContext = {
@@ -174,6 +245,7 @@ export async function runAssistant(
           model,
           system: withCoT(systemPrompt, model),
           prompt: userPrompt,
+          abortSignal,
         });
         return {
           result,
@@ -232,11 +304,20 @@ export async function runAssistant(
       recommendedNext,
     };
   } catch (err) {
-    logger.warn("[ai/assistant] runAssistant failed", {
-      error: err instanceof Error ? err.message : String(err),
-      capabilityId,
-    });
+    if (err instanceof Error && err.name === "AbortError") {
+      logger.warn("[ai/assistant] runAssistant 调用超时", {
+        capabilityId,
+        timeoutMs,
+      });
+    } else {
+      logger.warn("[ai/assistant] runAssistant failed", {
+        error: err instanceof Error ? err.message : String(err),
+        capabilityId,
+      });
+    }
     return null;
+  } finally {
+    abortCleanup();
   }
 }
 

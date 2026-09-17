@@ -11,7 +11,9 @@
     "dismiss": "关闭",
     "installed": "已安装",
     "pushOn": "开启推送",
-    "pushOff": "关闭推送"
+    "pushOff": "关闭推送",
+    "pushNotConfigured": "推送通知未配置，请联系管理员。",
+    "pushSubscribeFailed": "推送订阅失败，请稍后重试。"
   },
   "offline": {
     "title": "您已离线",

@@ -124,13 +124,24 @@ export async function POST(req: NextRequest) {
     // 8) 执行 AI 助理（意图识别 → 能力调用 → 结果解析）
     //    previousOutput 优先用客户端传入，否则用任务上下文
     //    history 传递多轮对话上下文
+    //    previousOutput 超过 4000 字符时截断，避免 prompt 过长导致 token 膨胀
+    const MAX_PREVIOUS_OUTPUT = 4000;
+    let previousOutput = body.previousOutput ?? taskContext;
+    if (previousOutput && previousOutput.length > MAX_PREVIOUS_OUTPUT) {
+      logger.warn("[POST ai/assistant/chat] previousOutput 超长，已截断", {
+        originalLength: previousOutput.length,
+        truncatedTo: MAX_PREVIOUS_OUTPUT,
+      });
+      previousOutput = previousOutput.slice(0, MAX_PREVIOUS_OUTPUT) + "...";
+    }
+
     const result = await runAssistant({
       workspaceId: body.wid,
       userId: ctx.payload.sub,
       taskId: body.taskId,
       phase: body.phase as TaskPhase,
       message: body.message,
-      previousOutput: body.previousOutput ?? taskContext,
+      previousOutput,
       history,
     });
 

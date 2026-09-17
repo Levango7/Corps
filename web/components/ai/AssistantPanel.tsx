@@ -31,9 +31,41 @@ import {
   MessageSquare,
   ChevronRight,
 } from "lucide-react";
+import { logger } from "@/lib/logger";
+
+/**
+ * 生成唯一消息 ID。
+ * 优先用 crypto.randomUUID()（Web Crypto API，现代浏览器均支持），
+ * 不可用时回退到时间戳 + 随机数。
+ */
+function genMessageId(): string {
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
+    return crypto.randomUUID();
+  }
+  return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+/**
+ * 按 Unicode 码点安全截断字符串，避免截断 emoji 代理对（surrogate pair）。
+ *
+ * 原生 String.prototype.slice 按 UTF-16 码元切分，遇到由两个码元组成的
+ * emoji（如 😀 = \uD83D\uDE00）时可能从中间截断，产生乱码。
+ * Array.from 按码点迭代，确保每个 emoji 作为整体保留。
+ *
+ * @param str 原始字符串
+ * @param maxLen 最大码点数（不是 UTF-16 码元数）
+ * @param ellipsis 截断后追加的省略号，默认 "…"
+ */
+function truncateSafe(str: string, maxLen: number, ellipsis = "…"): string {
+  const chars = Array.from(str);
+  if (chars.length <= maxLen) return str;
+  return chars.slice(0, maxLen).join("") + ellipsis;
+}
 
 /** 单条对话消息 */
 interface Message {
+  /** 唯一 ID，用作 React list key（避免用数组索引导致渲染异常） */
+  id: string;
   role: "user" | "assistant";
   content: string;
   /** 命中的 AI 能力 ID（仅 assistant 消息） */
@@ -129,7 +161,11 @@ export function AssistantPanel({ wid }: { wid: string }) {
   /** 发送消息 */
   const handleSend = async () => {
     if (!input.trim() || loading) return;
-    const userMessage: Message = { role: "user", content: input.trim() };
+    const userMessage: Message = {
+      id: genMessageId(),
+      role: "user",
+      content: input.trim(),
+    };
     setMessages((prev) => [...prev, userMessage]);
     setInput("");
     setLoading(true);
@@ -151,11 +187,17 @@ export function AssistantPanel({ wid }: { wid: string }) {
         const errorMsg = res.status === 429 ? t("rateLimited") : t("error");
         setMessages((prev) => [
           ...prev,
-          { role: "assistant", content: errorMsg, ts: Date.now() },
+          {
+            id: genMessageId(),
+            role: "assistant",
+            content: errorMsg,
+            ts: Date.now(),
+          },
         ]);
         return;
       }
       const assistantMessage: Message = {
+        id: genMessageId(),
         role: "assistant",
         content: json.data.content,
         capability: json.data.capabilityId,
@@ -168,8 +210,14 @@ export function AssistantPanel({ wid }: { wid: string }) {
       if (json.data.nextPhase) setPhase(json.data.nextPhase);
       // 刷新历史对话列表（新对话会出现在列表顶部）
       loadConversations();
-    } catch {
-      setMessages((prev) => [...prev, { role: "assistant", content: t("error") }]);
+    } catch (e) {
+      logger.warn("AssistantPanel: chat request failed", {
+        error: e instanceof Error ? e.message : String(e),
+      });
+      setMessages((prev) => [
+        ...prev,
+        { id: genMessageId(), role: "assistant", content: t("error") },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -191,10 +239,20 @@ export function AssistantPanel({ wid }: { wid: string }) {
       );
       const json = await res.json();
       if (json.data?.messages) {
-        setMessages(json.data.messages as Message[]);
+        // 后端返回的消息可能没有 id 字段，逐条生成唯一 id 用作 React key
+        setMessages(
+          (json.data.messages as Omit<Message, "id">[]).map((msg) => ({
+            ...msg,
+            id: genMessageId(),
+          })),
+        );
       }
-    } catch {
+    } catch (e) {
       // 加载失败则保持空消息列表，用户可继续发起新消息
+      logger.warn("AssistantPanel: load conversation failed", {
+        convId,
+        error: e instanceof Error ? e.message : String(e),
+      });
     } finally {
       setLoading(false);
     }
@@ -314,8 +372,8 @@ export function AssistantPanel({ wid }: { wid: string }) {
             </p>
           </div>
         )}
-        {messages.map((msg, i) => (
-          <div key={i} className="mb-4 flex flex-col gap-2">
+        {messages.map((msg) => (
+          <div key={msg.id} className="mb-4 flex flex-col gap-2">
             <div
               className="rounded-[var(--radius-lg)] px-4 py-3"
               style={{
@@ -340,14 +398,17 @@ export function AssistantPanel({ wid }: { wid: string }) {
                 </div>
               )}
               <p className="whitespace-pre-wrap text-[length:var(--text-sm)] leading-[var(--leading-relaxed)]">
-                {msg.content}
+                {/* 超长消息安全截断：按 Unicode 码点切分，避免截断 emoji 代理对 */}
+                {msg.content.length > 10000
+                  ? truncateSafe(msg.content, 10000)
+                  : msg.content}
               </p>
               {/* 跟进建议（点击填入输入框） */}
               {msg.suggestions && msg.suggestions.length > 0 && (
                 <div className="mt-2 flex flex-wrap gap-2">
                   {msg.suggestions.map((s, j) => (
                     <button
-                      key={j}
+                      key={`${msg.id}-s-${j}`}
                       type="button"
                       onClick={() => setInput(s)}
                       className="rounded-[var(--radius-sm)] border border-[var(--border)] px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] transition-colors hover:bg-[var(--surface-hover)]"

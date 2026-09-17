@@ -11,7 +11,9 @@
     "dismiss": "Dismiss",
     "installed": "Installed",
     "pushOn": "Enable Push",
-    "pushOff": "Disable Push"
+    "pushOff": "Disable Push",
+    "pushNotConfigured": "Push notifications are not configured. Please contact the administrator.",
+    "pushSubscribeFailed": "Push subscription failed. Please retry later."
   },
   "offline": {
     "title": "You are offline",

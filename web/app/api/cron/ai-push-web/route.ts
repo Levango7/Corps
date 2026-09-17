@@ -26,7 +26,8 @@ import { sendPushEmail, renderPushEmailHtml } from "@/lib/ai/push-email";
  *  4. 调用 sendPush 发送 Web Push（payload: title/summary/url）
  *  5. Web Push 无订阅或失败时回退发邮件（sendPushEmail）
  *  6. 发送成功后批量标记 record.read=true（避免重复推送）
- *  7. 返回 { checked, sent, skipped, emailSent }
+ *  7. 自动清理过期订阅：sendPush 返回 410 Gone 时，批量删除对应 PushSubscription
+ *  8. 返回 { checked, sent, skipped, emailSent, expiredSubsCleaned }
  *
  * 鉴权：CRON_SECRET Bearer（与 /api/cron/* 路由约定一致）。
  * 调度建议：每 15 分钟调用一次（entrypoint-cron.sh 中配置）。
@@ -115,7 +116,10 @@ export async function GET(req: NextRequest) {
     let sent = 0;
     let skipped = 0;
     let emailSent = 0;
+    let expiredSubsCleaned = 0;
     const sentRecordIds: string[] = [];
+    // 过期订阅的 endpoint 集合（410 Gone），发送循环结束后批量删除
+    const expiredEndpoints = new Set<string>();
 
     // 3) 逐条发送 Web Push（HTTP 调用，在事务外执行）
     //    无订阅或 Web Push 全部失败时，回退发邮件（M2 闭环完善）
@@ -157,7 +161,9 @@ export async function GET(req: NextRequest) {
         url: `/w/${record.workspaceId}/ai-tools`,
       };
 
-      // 对该用户的每个订阅尝试发送，任一成功即视为已推送
+      // 对该用户的每个订阅尝试发送，任一成功即视为已推送。
+      // sendPush 返回 { ok, gone }：gone=true 表示订阅过期（410 Gone），
+      // 收集过期订阅的 endpoint，循环结束后批量删除（自动清理）。
       const results = await Promise.all(
         subscriptions.map((sub) =>
           sendPush(
@@ -170,7 +176,14 @@ export async function GET(req: NextRequest) {
         ),
       );
 
-      if (results.some((ok) => ok)) {
+      // 收集过期订阅的 endpoint（410 Gone），稍后批量删除
+      for (let i = 0; i < results.length; i++) {
+        if (results[i].gone) {
+          expiredEndpoints.add(subscriptions[i].endpoint);
+        }
+      }
+
+      if (results.some((r) => r.ok)) {
         sent++;
         sentRecordIds.push(record.id);
       } else {
@@ -214,9 +227,36 @@ export async function GET(req: NextRequest) {
       });
     }
 
+    // 5) 批量清理过期订阅（410 Gone）——推送服务已删除该订阅，
+    //    DB 中保留只会让后续 cron 重复尝试发送并持续失败，故自动清理。
+    if (expiredEndpoints.size > 0) {
+      const endpointsToDelete = Array.from(expiredEndpoints);
+      try {
+        const deleteResult = await prisma.pushSubscription.deleteMany({
+          where: { endpoint: { in: endpointsToDelete } },
+        });
+        expiredSubsCleaned = deleteResult.count;
+        logger.info("[cron ai-push-web] 清理过期 Web Push 订阅", {
+          count: expiredSubsCleaned,
+          endpoints: endpointsToDelete.length,
+        });
+      } catch (e: unknown) {
+        logger.warn("[cron ai-push-web] 清理过期订阅失败", {
+          error: e instanceof Error ? e.message : String(e),
+          endpoints: endpointsToDelete.length,
+        });
+      }
+    }
+
     return NextResponse.json({
       code: 200,
-      data: { checked: records.length, sent, skipped, emailSent },
+      data: {
+        checked: records.length,
+        sent,
+        skipped,
+        emailSent,
+        expiredSubsCleaned,
+      },
     });
   } catch (error) {
     logger.error("[cron ai-push-web] error", {

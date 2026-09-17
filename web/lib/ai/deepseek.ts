@@ -1,4 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
+import { logger } from "@/lib/logger";
 
 /**
  * DeepSeek 客户端（OpenAI 兼容格式）。
@@ -43,4 +44,60 @@ export function withCoT(
   // 因此 String.replace（仅替换第一个匹配）足够。若未来 prompt 改为多段 CoT 结构，
   // 需改用 replaceAll 或循环替换。
   return systemPrompt.replace(/\n## 推理步骤\n[\s\S]*?(?=\n## |$)/, "");
+}
+// ---------------------------------------------------------------------------
+// LLM 调用超时防护
+//
+// DeepSeek API 偶发长尾请求会拖垮 AI 助理响应。通过 AbortController 给每次
+// generateText 调用加超时：
+//   - 普通模型（deepseek-chat）：30s
+//   - 推理模型（deepseek-reasoner）：60s（推理任务耗时更长）
+// 超时后 abort signal，generateText 抛 AbortError，调用方 catch 后降级处理。
+// ---------------------------------------------------------------------------
+
+/** 普通模型调用超时（30s） */
+export const DEFAULT_TIMEOUT_MS = 30_000;
+
+/** 推理模型调用超时（60s，推理任务需要更长时间） */
+export const REASONER_TIMEOUT_MS = 60_000;
+
+/** createAbortTimeout 返回类型 */
+export interface AbortTimeout {
+  /** 传给 generateText 的 abortSignal 参数 */
+  signal: AbortSignal;
+  /** 清除超时定时器，调用方必须在 finally 中调用以避免内存泄漏 */
+  cleanup: () => void;
+}
+
+/**
+ * 创建带超时的 AbortSignal，供 LLM 调用（generateText 的 abortSignal 参数）使用。
+ *
+ * 超时时 abort signal 并用 logger 记录事件。调用方必须在 finally 中调用 cleanup()
+ * 清除定时器，否则定时器会残留到超时才释放。
+ *
+ * 用法：
+ * ```ts
+ * const { signal, cleanup } = createAbortTimeout(DEFAULT_TIMEOUT_MS, "recognizeIntent");
+ * try {
+ *   const result = await generateText({ ..., abortSignal: signal });
+ *   return result;
+ * } finally {
+ *   cleanup();
+ * }
+ * ```
+ *
+ * @param timeoutMs 超时毫秒数
+ * @param label 日志标签（如 "recognizeIntent" / "runAssistant:task_breakdown"）
+ * @returns { signal, cleanup }
+ */
+export function createAbortTimeout(timeoutMs: number, label: string): AbortTimeout {
+  const controller = new AbortController();
+  const timer = setTimeout(() => {
+    logger.warn("[deepseek] LLM 调用超时，已中止", { label, timeoutMs });
+    controller.abort();
+  }, timeoutMs);
+  return {
+    signal: controller.signal,
+    cleanup: () => clearTimeout(timer),
+  };
 }
