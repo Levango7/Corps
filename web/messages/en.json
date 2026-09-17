@@ -27,6 +27,11 @@
     "capability": "Capability",
     "send": "Send",
     "rateLimited": "Too many requests, please try again later",
+    "nextStep": "Next Step",
+    "history": "History",
+    "newChat": "New Chat",
+    "historyEmpty": "No conversations yet",
+    "msgCount": "{count} messages",
     "suggest": {
       "taskBreakdown": { "label": "Task Breakdown", "desc": "Break down large tasks into subtasks" },
       "todoExtract": { "label": "Todo Extraction", "desc": "Extract action items from text" },
