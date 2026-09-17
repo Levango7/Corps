@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Loader2, ChevronDown } from "lucide-react";
+import { Loader2, ChevronDown, Search, X } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import type { ChatMessage } from "./types";
 import { MessageBubble } from "./MessageBubble";
@@ -10,9 +10,10 @@ import type { TimeT } from "@/lib/format";
 /**
  * 消息列表
  *
+ * - 顶部搜索栏：输入关键词 + 搜索按钮，调用 /messages/search API
  * - 时间戳分组：相邻时间段之间显示时间分隔线（如"今天 14:30"）
- * - 滚动行为：新消息到达时，如果在底部自动滚动；否则显示t("newMessages", { n: (count) })浮窗
- * - 未读高亮：未读消息左侧 3px 色条
+ * - 滚动行为：新消息到达时，如果在底部自动滚动；否则显示新消息浮窗
+ * - 未读高亮：未读消息左侧 3px 色条 + 右上蓝色圆点
  * - 搜索高亮：匹配消息高亮显示
  * - 空状态：显示"还没有消息"提示
  */
@@ -24,12 +25,14 @@ interface MessageListProps {
   currentUserId: string;
   /** 未读消息 ID 集合 */
   unreadIds: Set<string>;
-  /** 搜索关键词 */
+  /** 搜索关键词（由父组件传入，用于高亮；与本地搜索栏互补） */
   searchQuery: string;
   /** 是否正在加载 */
   loading: boolean;
   /** 是否连接中 */
   connected: boolean;
+  /** 消息搜索 API 端点（提供时显示顶部搜索栏） */
+  searchUrl?: string;
 }
 
 /** 时间分组阈值：相邻消息间隔超过 5 分钟显示时间分隔线 */
@@ -85,6 +88,7 @@ export function MessageList({
   searchQuery,
   loading,
   connected,
+  searchUrl,
 }: MessageListProps) {
   const t = useTranslations("chat");
   const locale = useLocale();
@@ -94,14 +98,63 @@ export function MessageList({
   // 是否在底部（用于判断新消息是否自动滚动）
   const isAtBottomRef = useRef(true);
 
+  // 本地搜索栏状态
+  const [localQuery, setLocalQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<ChatMessage[] | null>(null);
+  const [searching, setSearching] = useState(false);
+  const [searchError, setSearchError] = useState("");
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  /** 调用 /messages/search API */
+  const runSearch = useCallback(
+    async (q: string) => {
+      if (!searchUrl || !q.trim()) {
+        setSearchResults(null);
+        setSearchError("");
+        return;
+      }
+      setSearching(true);
+      setSearchError("");
+      try {
+        const url = `${searchUrl}?q=${encodeURIComponent(q.trim())}&limit=20`;
+        const res = await fetch(url, { credentials: "include" });
+        if (!res.ok) {
+          const json = await res.json().catch(() => ({ message: t("searchFailed") }));
+          throw new Error(json.message || `${t("searchFailed")} (${res.status})`);
+        }
+        const json = (await res.json()) as { code: number; data: ChatMessage[] };
+        // API 返回按 createdAt desc，反转为正序以兼容现有渲染
+        setSearchResults((json.data ?? []).slice().reverse());
+      } catch (e) {
+        setSearchError(e instanceof Error ? e.message : t("searchFailed"));
+        setSearchResults([]);
+      } finally {
+        setSearching(false);
+      }
+    },
+    [searchUrl, t],
+  );
+
+  /** 提交搜索（按钮 / Enter） */
+  const submitSearch = useCallback(() => {
+    runSearch(localQuery);
+  }, [runSearch, localQuery]);
+
+  /** 清空搜索 */
+  const clearSearch = useCallback(() => {
+    setLocalQuery("");
+    setSearchResults(null);
+    setSearchError("");
+    if (searchInputRef.current) searchInputRef.current.focus();
+  }, []);
+
   // 按时间分组
   const groups = useMemo(() => groupByTime(messages, t, locale), [messages, t, locale]);
 
-  // 搜索过滤
+  // 父组件 searchQuery 过滤（保留原有高亮过滤行为）
   const filteredGroups = useMemo(() => {
     if (!searchQuery.trim()) return groups;
     const q = searchQuery.toLowerCase();
-    // R8B-20：搜索模式下将所有匹配消息合并为单个分组，避免时间标签碎片化
     const matched = groups
       .flatMap((g) => g.messages)
       .filter((m) => m.body.toLowerCase().includes(q));
@@ -109,8 +162,20 @@ export function MessageList({
     return [{ timeLabel: t("searchResults"), messages: matched }];
   }, [groups, searchQuery, t]);
 
+  // 本地搜索结果分组（覆盖 filteredGroups 当有 searchResults）
+  const effectiveGroups = useMemo(() => {
+    if (searchResults !== null) {
+      if (searchResults.length === 0) return [];
+      // 搜索结果合并为单组，倒序展示（最新在上）——这里反转为正序以保持滚动一致
+      return [{ timeLabel: t("searchResults"), messages: searchResults }];
+    }
+    return filteredGroups;
+  }, [searchResults, filteredGroups, t]);
+
+  // 用于高亮的关键词：本地搜索优先，否则用父组件 searchQuery
+  const effectiveQuery = searchResults !== null ? localQuery : searchQuery;
+
   // 滚动到底部
-  // R9B-07：instant=true 时用 auto 行为（无动画），用于首次加载避免平滑滚动闪烁
   const scrollToBottom = useCallback((instant?: boolean) => {
     const el = listRef.current;
     if (el) {
@@ -122,7 +187,7 @@ export function MessageList({
   const handleScroll = useCallback(() => {
     const el = listRef.current;
     if (!el) return;
-    const threshold = 50; // 50px 内视为在底部
+    const threshold = 50;
     isAtBottomRef.current = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
     if (isAtBottomRef.current) {
       setShowNewMessages(false);
@@ -132,6 +197,8 @@ export function MessageList({
   // 新消息到达时的滚动行为
   const prevMessageCountRef = useRef(messages.length);
   useEffect(() => {
+    // 搜索模式下不自动滚动
+    if (searchResults !== null) return;
     const prevCount = prevMessageCountRef.current;
     const newCount = messages.length;
     prevMessageCountRef.current = newCount;
@@ -139,17 +206,15 @@ export function MessageList({
     if (newCount > prevCount) {
       const diff = newCount - prevCount;
       if (isAtBottomRef.current) {
-        // 在底部，自动滚动
         scrollToBottom();
       } else {
-        // 不在底部，显示t("newMessages", { n: (count) })浮窗
         setNewMessagesCount((prev) => prev + diff);
         setShowNewMessages(true);
       }
     }
-  }, [messages.length, scrollToBottom]);
+  }, [messages.length, scrollToBottom, searchResults]);
 
-  // 首次加载滚动到底部（R9B-07：用 instant=true 避免平滑滚动闪烁）
+  // 首次加载滚动到底部
   const initialScrollDoneRef = useRef(false);
   useEffect(() => {
     if (!loading && messages.length > 0 && !initialScrollDoneRef.current) {
@@ -158,12 +223,74 @@ export function MessageList({
     }
   }, [loading, messages.length, scrollToBottom]);
 
-  // 搜索无结果
   const hasMessages = messages.length > 0;
-  const hasFilteredMessages = filteredGroups.some((g) => g.messages.length > 0);
+  const hasEffectiveMessages = effectiveGroups.some((g) => g.messages.length > 0);
+  const inLocalSearch = searchResults !== null;
 
   return (
     <div className="relative flex-1 min-h-0 flex flex-col">
+      {/* 顶部搜索栏 */}
+      {searchUrl && (
+        <div className="mb-[var(--space-2)] flex items-center gap-[var(--space-2)]">
+          <div className="flex-1 flex items-center gap-1.5 px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] focus-within:border-[var(--accent)] focus-within:ring-2 focus-within:ring-[var(--accent-ring)] transition-colors duration-[var(--motion-fast)]">
+            <Search size={14} className="shrink-0 text-[var(--meta)]" />
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={localQuery}
+              onChange={(e) => setLocalQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  submitSearch();
+                }
+                if (e.key === "Escape") {
+                  clearSearch();
+                }
+              }}
+              placeholder={t("searchPlaceholder")}
+              maxLength={200}
+              className="flex-1 min-w-0 bg-transparent outline-none text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)]"
+            />
+            {localQuery && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                aria-label={t("clearSearch")}
+                className="shrink-0 w-4 h-4 flex items-center justify-center rounded-full text-[var(--meta)] hover:bg-[var(--surface-3)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <X size={12} />
+              </button>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={submitSearch}
+            disabled={searching || !localQuery.trim()}
+            className="shrink-0 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] flex items-center gap-1.5"
+          >
+            {searching ? <Loader2 size={14} className="animate-spin" /> : <Search size={14} />}
+            {t("search")}
+          </button>
+        </div>
+      )}
+
+      {/* 搜索错误提示 */}
+      {searchError && (
+        <div className="mb-1.5 px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-xs)]">
+          {searchError}
+        </div>
+      )}
+
+      {/* 搜索结果计数 */}
+      {inLocalSearch && searchResults !== null && localQuery.trim() && !searchError && (
+        <div className="mb-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
+          {searchResults.length > 0
+            ? t("resultCount", { count: searchResults.length })
+            : t("searchNoResults", { keyword: localQuery.trim() })}
+        </div>
+      )}
+
       <div
         ref={listRef}
         onScroll={handleScroll}
@@ -173,16 +300,22 @@ export function MessageList({
           <div className="flex items-center justify-center h-full">
             <Loader2 size={18} className="animate-spin text-[var(--muted)]" />
           </div>
-        ) : !hasMessages ? (
+        ) : !hasMessages && !inLocalSearch ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("empty")}</p>
           </div>
-        ) : searchQuery.trim() && !hasFilteredMessages ? (
+        ) : inLocalSearch && searchResults !== null && searchResults.length === 0 ? (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
+              {t("searchNoResults", { keyword: localQuery.trim() })}
+            </p>
+          </div>
+        ) : !inLocalSearch && searchQuery.trim() && !hasEffectiveMessages ? (
           <div className="flex items-center justify-center h-full">
             <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noResults")}</p>
           </div>
         ) : (
-          filteredGroups.map((group, gi) => (
+          effectiveGroups.map((group, gi) => (
             <div key={gi} className="space-y-[var(--space-2)]">
               {/* 时间戳分组分隔线 */}
               <div className="flex items-center justify-center">
@@ -191,21 +324,32 @@ export function MessageList({
                 </span>
               </div>
               {/* 消息气泡 */}
-              {group.messages.map((msg) => (
-                <MessageBubble
-                  key={msg.id}
-                  message={msg}
-                  currentUserId={currentUserId}
-                  unread={unreadIds.has(msg.id)}
-                  searchQuery={searchQuery}
-                />
-              ))}
+              {group.messages.map((msg) => {
+                const isUnread = unreadIds.has(msg.id);
+                return (
+                  <div key={msg.id} className="relative">
+                    {/* 未读蓝色圆点标记（右上角） */}
+                    {isUnread && (
+                      <span
+                        aria-label={t("unread")}
+                        className="absolute top-0 right-0 z-10 w-2 h-2 rounded-full bg-[var(--accent)] ring-2 ring-[var(--surface)]"
+                      />
+                    )}
+                    <MessageBubble
+                      message={msg}
+                      currentUserId={currentUserId}
+                      unread={isUnread}
+                      searchQuery={effectiveQuery}
+                    />
+                  </div>
+                );
+              })}
             </div>
           ))
         )}
       </div>
 
-      {/* t("newMessages", { n: (count) })浮窗 */}
+      {/* 新消息浮窗 */}
       {showNewMessages && newMessagesCount > 0 && (
         <button
           onClick={() => {
