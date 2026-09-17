@@ -35,18 +35,54 @@
     "historyEmpty": "No conversations yet",
     "msgCount": "{count} messages",
     "suggest": {
-      "taskBreakdown": { "label": "Task Breakdown", "desc": "Break down large tasks into subtasks" },
-      "todoExtract": { "label": "Todo Extraction", "desc": "Extract action items from text" },
-      "progressAnomaly": { "label": "Progress Anomaly", "desc": "Check task progress deviations" },
-      "bottleneckAnalysis": { "label": "Bottleneck Analysis", "desc": "Identify process bottlenecks" },
-      "followUp": { "label": "Follow-up", "desc": "Generate follow-up plan" },
-      "decisionAssistant": { "label": "Decision Assistant", "desc": "Assist decision analysis" },
-      "approvalAdvice": { "label": "Approval Advice", "desc": "Approval flow suggestions" },
-      "meetingSummary": { "label": "Meeting Summary", "desc": "Generate meeting notes" },
-      "dailyReport": { "label": "Daily Report", "desc": "Generate daily work report" },
-      "knowledgeExtract": { "label": "Knowledge Extraction", "desc": "Extract key document info" },
-      "semanticSearch": { "label": "Semantic Search", "desc": "Search workspace content" },
-      "riskAlert": { "label": "Risk Alert", "desc": "Identify potential risks" }
+      "taskBreakdown": {
+        "label": "Task Breakdown",
+        "desc": "Break down large tasks into subtasks"
+      },
+      "todoExtract": {
+        "label": "Todo Extraction",
+        "desc": "Extract action items from text"
+      },
+      "progressAnomaly": {
+        "label": "Progress Anomaly",
+        "desc": "Check task progress deviations"
+      },
+      "bottleneckAnalysis": {
+        "label": "Bottleneck Analysis",
+        "desc": "Identify process bottlenecks"
+      },
+      "followUp": {
+        "label": "Follow-up",
+        "desc": "Generate follow-up plan"
+      },
+      "decisionAssistant": {
+        "label": "Decision Assistant",
+        "desc": "Assist decision analysis"
+      },
+      "approvalAdvice": {
+        "label": "Approval Advice",
+        "desc": "Approval flow suggestions"
+      },
+      "meetingSummary": {
+        "label": "Meeting Summary",
+        "desc": "Generate meeting notes"
+      },
+      "dailyReport": {
+        "label": "Daily Report",
+        "desc": "Generate daily work report"
+      },
+      "knowledgeExtract": {
+        "label": "Knowledge Extraction",
+        "desc": "Extract key document info"
+      },
+      "semanticSearch": {
+        "label": "Semantic Search",
+        "desc": "Search workspace content"
+      },
+      "riskAlert": {
+        "label": "Risk Alert",
+        "desc": "Identify potential risks"
+      }
     }
   },
   "nav": {
@@ -145,7 +181,8 @@
     "invite": "Invite",
     "upgrade": "Upgrade",
     "viewAll": "View all",
-    "newTask": "New task"
+    "newTask": "New task",
+    "add": "Add"
   },
   "status": {
     "todo": "To do",
@@ -306,7 +343,19 @@
     "shareCopy": "Copy",
     "shareCopied": "Copied",
     "shareRevoke": "Revoke",
-    "saving": "Saving…"
+    "saving": "Saving…",
+    "batchDeleteAria": "Batch delete",
+    "batchPriorityAria": "Batch set priority",
+    "batchStatusAria": "Batch set status",
+    "batchToolbarAria": "Batch action toolbar",
+    "boardViewAria": "Board view",
+    "clearSelectionAria": "Clear selection",
+    "confirmAria": "Confirm dialog",
+    "listViewAria": "List view",
+    "noHistory": "No version history",
+    "noPreviewContent": "No preview content",
+    "versionHistory": "Version history",
+    "viewAria": "Toggle view"
   },
   "time": {
     "justNow": "Just now",
@@ -334,7 +383,11 @@
     "noUnreadNotifications": "No unread notifications",
     "noTasksYet": "This workspace has no tasks yet.",
     "noTasksForYou": "No tasks assigned to you yet. Head to the board to pick one up.",
-    "noDecisionsHint": "Record decisions in task details and they will show up here"
+    "noDecisionsHint": "Record decisions in task details and they will show up here",
+    "emptyHint": "Notifications appear here when someone mentions you, assigns a task, or updates a decision",
+    "noAssignedNotifications": "No task assignment notifications",
+    "noMentionNotifications": "No mention notifications",
+    "noTasksMatch": "No matching tasks"
   },
   "emptyState": {
     "inbox": {
@@ -406,7 +459,8 @@
     "sendFailed": "Send failed",
     "deleteFailed": "Delete failed",
     "fatalError": "A critical error occurred",
-    "fatalErrorDesc": "An unexpected error occurred while rendering the page. Try again or refresh."
+    "fatalErrorDesc": "An unexpected error occurred while rendering the page. Try again or refresh.",
+    "copyFailed": "Copy failed"
   },
   "auth": {
     "tagline": "Lightweight collaboration for small teams",
@@ -875,7 +929,12 @@
     "settingsRemoveFailed": "Failed to remove member",
     "settingsAddFailed": "Failed to add member",
     "settingsLeaveFailed": "Failed to leave conversation",
-    "settingsMe": "me"
+    "settingsMe": "me",
+    "daysAgo": "{count} days ago",
+    "edit": "Edit",
+    "hoursAgo": "{count} hours ago",
+    "justNow": "Just now",
+    "minutesAgo": "{count} minutes ago"
   },
   "im": {
     "actions": {
@@ -946,7 +1005,31 @@
     "wednesday": "Wed",
     "thursday": "Thu",
     "friday": "Fri",
-    "saturday": "Sat"
+    "saturday": "Sat",
+    "connectGoogle": "Connect Google Calendar",
+    "connectOutlook": "Connect Outlook Calendar",
+    "connected": "Connected",
+    "disconnect": "Disconnect",
+    "disconnectFailed": "Disconnect failed",
+    "disconnectSuccess": "Disconnected",
+    "googleHint": "Connect Google Calendar to sync task due dates",
+    "lastSync": "Last sync",
+    "loadFailed": "Load failed",
+    "outlookHint": "Connect Outlook Calendar to sync task due dates",
+    "remindOneDay": "Remind 1 day before",
+    "remindOneDayHint": "Send reminder 1 day before due date",
+    "remindOneHour": "Remind 1 hour before",
+    "remindOneHourHint": "Send reminder 1 hour before due date",
+    "subtitle": "Sync external calendars to push task due dates and reminders",
+    "syncDueDateOnly": "Sync due dates only",
+    "syncDueDateOnlyHint": "Only sync tasks with due dates, not start times",
+    "syncFailed": "Sync failed",
+    "syncNow": "Sync now",
+    "syncSettings": "Sync settings",
+    "syncSettingsHint": "Configure which task fields sync to calendar",
+    "syncSuccess": "Sync succeeded",
+    "syncedTo": "Synced to {provider}",
+    "syncing": "Syncing…"
   },
   "legal": {
     "termsTitle": "Terms of Service",
@@ -978,7 +1061,8 @@
     "loadFailed": "Failed to load",
     "needAdmin": "Admin access required",
     "needAdminDesc": "Only the owner or an admin can view analytics data.",
-    "retryLater": "Please try again later."
+    "retryLater": "Please try again later.",
+    "trendChartAria": "Trend chart"
   },
   "decisions": {
     "searchPlaceholder": "Search decisions…",
@@ -1008,7 +1092,8 @@
     "aiCopy": "Copy markdown",
     "aiCopySuccess": "Copied to clipboard",
     "aiCopyFailed": "Copy failed — please copy manually",
-    "aiFailed": "Extraction failed. Please try again."
+    "aiFailed": "Extraction failed. Please try again.",
+    "searchAria": "Search decisions"
   },
   "members": {
     "invitePlaceholder": "Enter email (unregistered users can be invited)",
@@ -1094,7 +1179,8 @@
     "title": "Command palette",
     "kbdSelect": "↑↓ Navigate",
     "kbdOpen": "Enter Open",
-    "itemCount": "{count} items"
+    "itemCount": "{count} items",
+    "ariaLabel": "Command palette"
   },
   "search": {
     "searchPlaceholder": "Search documents / tasks / decisions, or jump to a page",
@@ -1437,7 +1523,9 @@
     "commentEmptyHint": "Select text in the document to add a comment",
     "commentNoMatch": "No matching comments",
     "kbToggle": "Knowledge base",
-    "kbToggleHint": "Toggle knowledge base sidebar"
+    "kbToggleHint": "Toggle knowledge base sidebar",
+    "anonymous": "Anonymous",
+    "copyFailed": "Copy failed"
   },
   "whiteboard": {
     "title": "Whiteboard",
@@ -1604,7 +1692,13 @@
     "copy": "Copy code",
     "copied": "Copied",
     "copyFailed": "Copy failed — please select and copy the code manually",
-    "insert": "Insert"
+    "insert": "Insert",
+    "diagramFlowCode": "Flow chart code",
+    "diagramGanttCode": "Gantt chart code",
+    "diagramMindmapCode": "Mind map code",
+    "diagramPieCode": "Pie chart code",
+    "diagramQuadrantCode": "Quadrant chart code",
+    "diagramSequenceCode": "Sequence diagram code"
   },
   "toast": {
     "regionLabel": "Notifications",
@@ -1790,7 +1884,10 @@
     "layoutMode": "Layout mode",
     "layoutDensity": "Density",
     "resetLayout": "Reset to default",
-    "resetLayoutConfirm": "Reset layout to default? This will discard your current layout."
+    "resetLayoutConfirm": "Reset layout to default? This will discard your current layout.",
+    "dashboard": "Dashboard",
+    "exportLayoutFailed": "Layout export failed",
+    "importLayoutFailed": "Layout import failed"
   },
   "knowledgeBase": {
     "loading": "Loading…",
@@ -3390,7 +3487,17 @@
     "hoursLater": "in {count}h",
     "daysLater": "in {count}d",
     "daysAgo": "{count}d ago",
-    "close": "Close"
+    "close": "Close",
+    "completed": "Completed",
+    "count": "Count",
+    "dueDate": "Due date",
+    "error": "Load failed, please retry",
+    "loading": "Loading…",
+    "noTodos": "No todos",
+    "pending": "Pending",
+    "title": "Todo Center",
+    "today": "Today",
+    "viewAll": "View all"
   },
   "sync": {
     "synced": "Synced",
@@ -3441,5 +3548,24 @@
     "no": "No",
     "youAreControlling": "You are controlling",
     "beingControlled": "Being controlled"
+  },
+  "accountDeletion": {
+    "title": "Delete Account",
+    "hint": "This action is irreversible. It permanently deletes your account and all associated data.",
+    "init": "Delete Account",
+    "previewLoading": "Loading account data preview…",
+    "previewOwned": "You own {count} workspaces (will be deleted)",
+    "previewMembers": "members",
+    "previewWillDelete": "will be deleted",
+    "previewStats": "Contains {tasks} tasks, {decisions} decisions, {messages} messages",
+    "previewJoined": "{count} workspaces you joined (will leave)",
+    "previewSubscription": "Active subscription: {provider} (will be cancelled)",
+    "previewFailed": "Preview loading failed, but you can still proceed",
+    "confirmHint": "This action is irreversible. Enter your email to confirm account deletion.",
+    "confirmLabel": "Enter email to confirm",
+    "confirmPlaceholder": "Your email",
+    "confirm": "Confirm Delete",
+    "cancel": "Cancel",
+    "failed": "Failed to delete account, please retry"
   }
 }

@@ -35,18 +35,54 @@
     "historyEmpty": "暂无历史对话",
     "msgCount": "{count} 条消息",
     "suggest": {
-      "taskBreakdown": { "label": "任务拆解", "desc": "把大任务拆成可执行的子任务" },
-      "todoExtract": { "label": "待办提取", "desc": "从文本中提取待办事项" },
-      "progressAnomaly": { "label": "进度异常", "desc": "检查任务进度偏差" },
-      "bottleneckAnalysis": { "label": "瓶颈分析", "desc": "识别流程瓶颈" },
-      "followUp": { "label": "跟进提醒", "desc": "生成跟进计划" },
-      "decisionAssistant": { "label": "决策辅助", "desc": "辅助决策分析" },
-      "approvalAdvice": { "label": "审批建议", "desc": "审批流程建议" },
-      "meetingSummary": { "label": "会议纪要", "desc": "生成会议摘要" },
-      "dailyReport": { "label": "日报生成", "desc": "生成工作日报" },
-      "knowledgeExtract": { "label": "知识提取", "desc": "提取文档关键信息" },
-      "semanticSearch": { "label": "语义搜索", "desc": "智能搜索工作区内容" },
-      "riskAlert": { "label": "风险预警", "desc": "识别潜在风险" }
+      "taskBreakdown": {
+        "label": "任务拆解",
+        "desc": "把大任务拆成可执行的子任务"
+      },
+      "todoExtract": {
+        "label": "待办提取",
+        "desc": "从文本中提取待办事项"
+      },
+      "progressAnomaly": {
+        "label": "进度异常",
+        "desc": "检查任务进度偏差"
+      },
+      "bottleneckAnalysis": {
+        "label": "瓶颈分析",
+        "desc": "识别流程瓶颈"
+      },
+      "followUp": {
+        "label": "跟进提醒",
+        "desc": "生成跟进计划"
+      },
+      "decisionAssistant": {
+        "label": "决策辅助",
+        "desc": "辅助决策分析"
+      },
+      "approvalAdvice": {
+        "label": "审批建议",
+        "desc": "审批流程建议"
+      },
+      "meetingSummary": {
+        "label": "会议纪要",
+        "desc": "生成会议摘要"
+      },
+      "dailyReport": {
+        "label": "日报生成",
+        "desc": "生成工作日报"
+      },
+      "knowledgeExtract": {
+        "label": "知识提取",
+        "desc": "提取文档关键信息"
+      },
+      "semanticSearch": {
+        "label": "语义搜索",
+        "desc": "智能搜索工作区内容"
+      },
+      "riskAlert": {
+        "label": "风险预警",
+        "desc": "识别潜在风险"
+      }
     }
   },
   "nav": {
@@ -145,7 +181,8 @@
     "invite": "邀请",
     "upgrade": "升级",
     "viewAll": "查看全部",
-    "newTask": "新建任务"
+    "newTask": "新建任务",
+    "add": "添加"
   },
   "status": {
     "todo": "待办",
@@ -306,7 +343,19 @@
     "shareCopy": "复制",
     "shareCopied": "已复制",
     "shareRevoke": "撤销",
-    "saving": "保存中…"
+    "saving": "保存中…",
+    "batchDeleteAria": "批量删除",
+    "batchPriorityAria": "批量设置优先级",
+    "batchStatusAria": "批量设置状态",
+    "batchToolbarAria": "批量操作工具栏",
+    "boardViewAria": "看板视图",
+    "clearSelectionAria": "清除选择",
+    "confirmAria": "确认对话框",
+    "listViewAria": "列表视图",
+    "noHistory": "暂无历史版本",
+    "noPreviewContent": "暂无预览内容",
+    "versionHistory": "版本历史",
+    "viewAria": "切换视图"
   },
   "time": {
     "justNow": "刚刚",
@@ -334,7 +383,11 @@
     "noUnreadNotifications": "没有未读通知",
     "noTasksYet": "这个工作区还没有任务。",
     "noTasksForYou": "还没有任务分配给你，去看板认领一个吧。",
-    "noDecisionsHint": "在任务详情中记录决策后，会在这里展示"
+    "noDecisionsHint": "在任务详情中记录决策后，会在这里展示",
+    "emptyHint": "当有人 @你、分配任务或更新决策时，会在这里提醒你",
+    "noAssignedNotifications": "没有分配给你的任务通知",
+    "noMentionNotifications": "没有 @提及的通知",
+    "noTasksMatch": "没有匹配的任务"
   },
   "emptyState": {
     "inbox": {
@@ -406,7 +459,8 @@
     "sendFailed": "发送失败",
     "deleteFailed": "删除失败",
     "fatalError": "应用发生严重错误",
-    "fatalErrorDesc": "页面渲染时发生未预期的异常，请尝试重试或刷新。"
+    "fatalErrorDesc": "页面渲染时发生未预期的异常，请尝试重试或刷新。",
+    "copyFailed": "复制失败"
   },
   "auth": {
     "tagline": "面向中小团队的轻量协作平台",
@@ -875,7 +929,12 @@
     "settingsRemoveFailed": "移除成员失败",
     "settingsAddFailed": "添加成员失败",
     "settingsLeaveFailed": "退出会话失败",
-    "settingsMe": "我"
+    "settingsMe": "我",
+    "daysAgo": "{count} 天前",
+    "edit": "编辑",
+    "hoursAgo": "{count} 小时前",
+    "justNow": "刚刚",
+    "minutesAgo": "{count} 分钟前"
   },
   "im": {
     "actions": {
@@ -946,7 +1005,31 @@
     "wednesday": "三",
     "thursday": "四",
     "friday": "五",
-    "saturday": "六"
+    "saturday": "六",
+    "connectGoogle": "连接 Google 日历",
+    "connectOutlook": "连接 Outlook 日历",
+    "connected": "已连接",
+    "disconnect": "断开连接",
+    "disconnectFailed": "断开连接失败",
+    "disconnectSuccess": "已断开连接",
+    "googleHint": "连接 Google 日历，将任务截止日期同步到日历",
+    "lastSync": "上次同步",
+    "loadFailed": "加载失败",
+    "outlookHint": "连接 Outlook 日历，将任务截止日期同步到日历",
+    "remindOneDay": "提前 1 天提醒",
+    "remindOneDayHint": "任务截止前 1 天发送提醒",
+    "remindOneHour": "提前 1 小时提醒",
+    "remindOneHourHint": "任务截止前 1 小时发送提醒",
+    "subtitle": "同步外部日历，将任务截止日期与提醒推送到日历应用",
+    "syncDueDateOnly": "仅同步截止日期",
+    "syncDueDateOnlyHint": "只同步有截止日期的任务，不同步开始时间",
+    "syncFailed": "同步失败",
+    "syncNow": "立即同步",
+    "syncSettings": "同步设置",
+    "syncSettingsHint": "配置哪些任务字段同步到日历",
+    "syncSuccess": "同步成功",
+    "syncedTo": "已同步到 {provider}",
+    "syncing": "同步中…"
   },
   "legal": {
     "termsTitle": "服务条款",
@@ -978,7 +1061,8 @@
     "loadFailed": "加载失败",
     "needAdmin": "需要管理员权限",
     "needAdminDesc": "仅拥有者或管理员可查看分析数据。",
-    "retryLater": "请稍后重试。"
+    "retryLater": "请稍后重试。",
+    "trendChartAria": "趋势图表"
   },
   "decisions": {
     "searchPlaceholder": "搜索决策内容…",
@@ -1008,7 +1092,8 @@
     "aiCopy": "复制 Markdown",
     "aiCopySuccess": "已复制到剪贴板",
     "aiCopyFailed": "复制失败，请手动选择复制",
-    "aiFailed": "提炼失败，请稍后重试"
+    "aiFailed": "提炼失败，请稍后重试",
+    "searchAria": "搜索决策记录"
   },
   "members": {
     "invitePlaceholder": "输入邮箱地址（未注册也可邀请）",
@@ -1094,7 +1179,8 @@
     "title": "命令面板",
     "kbdSelect": "↑↓ 选择",
     "kbdOpen": "Enter 打开",
-    "itemCount": "{count} 项"
+    "itemCount": "{count} 项",
+    "ariaLabel": "命令面板"
   },
   "search": {
     "searchPlaceholder": "搜索文档 / 任务 / 决策，或跳转页面",
@@ -1437,7 +1523,9 @@
     "commentEmptyHint": "在文档中选中文本即可添加评论",
     "commentNoMatch": "没有匹配的评论",
     "kbToggle": "知识库",
-    "kbToggleHint": "切换知识库侧栏"
+    "kbToggleHint": "切换知识库侧栏",
+    "anonymous": "匿名",
+    "copyFailed": "复制失败"
   },
   "whiteboard": {
     "title": "白板",
@@ -1604,7 +1692,13 @@
     "copy": "复制代码",
     "copied": "已复制",
     "copyFailed": "复制失败，请手动选择并复制代码",
-    "insert": "插入正文"
+    "insert": "插入正文",
+    "diagramFlowCode": "流程图代码",
+    "diagramGanttCode": "甘特图代码",
+    "diagramMindmapCode": "思维导图代码",
+    "diagramPieCode": "饼图代码",
+    "diagramQuadrantCode": "象限图代码",
+    "diagramSequenceCode": "时序图代码"
   },
   "toast": {
     "regionLabel": "通知",
@@ -1790,7 +1884,10 @@
     "layoutMode": "布局模式",
     "layoutDensity": "间距密度",
     "resetLayout": "恢复默认",
-    "resetLayoutConfirm": "恢复默认布局？这将丢弃当前布局。"
+    "resetLayoutConfirm": "恢复默认布局？这将丢弃当前布局。",
+    "dashboard": "仪表盘",
+    "exportLayoutFailed": "布局导出失败",
+    "importLayoutFailed": "布局导入失败"
   },
   "knowledgeBase": {
     "loading": "加载中…",
@@ -3390,7 +3487,17 @@
     "hoursLater": "{count}小时后",
     "daysLater": "{count}天后",
     "daysAgo": "{count}天前",
-    "close": "关闭"
+    "close": "关闭",
+    "completed": "已完成",
+    "count": "总数",
+    "dueDate": "截止日期",
+    "error": "加载失败，请稍后重试",
+    "loading": "加载中…",
+    "noTodos": "暂无待办",
+    "pending": "待处理",
+    "title": "待办中心",
+    "today": "今天",
+    "viewAll": "查看全部"
   },
   "sync": {
     "synced": "已同步",
@@ -3441,5 +3548,24 @@
     "no": "否",
     "youAreControlling": "你正在控制",
     "beingControlled": "正在被控制"
+  },
+  "accountDeletion": {
+    "title": "删除账户",
+    "hint": "此操作不可撤销，将永久删除你的账户及所有关联数据。",
+    "init": "删除账户",
+    "previewLoading": "正在加载账户数据预览…",
+    "previewOwned": "你拥有 {count} 个工作区（将被删除）",
+    "previewMembers": "成员",
+    "previewWillDelete": "将被删除",
+    "previewStats": "含 {tasks} 条任务、{decisions} 条决策、{messages} 条消息",
+    "previewJoined": "你加入的 {count} 个工作区（将退出）",
+    "previewSubscription": "活跃订阅：{provider}（将取消）",
+    "previewFailed": "预览加载失败，但仍可继续删除",
+    "confirmHint": "此操作不可撤销。请输入你的邮箱以确认删除账户。",
+    "confirmLabel": "输入邮箱确认",
+    "confirmPlaceholder": "你的邮箱",
+    "confirm": "确认删除",
+    "cancel": "取消",
+    "failed": "删除账户失败，请重试"
   }
 }
