@@ -52,8 +52,15 @@ self.addEventListener("fetch", (event) => {
         }
         return response;
       })
-      .catch(() =>
-        caches.match(request).then((cached) => cached || caches.match("/offline"))
-      )
+      .catch(() => {
+        // 仅导航请求回退到离线页面；API 和其他请求优先回退缓存，否则返回 503
+        if (request.mode === "navigate") {
+          return caches.match(request).then((cached) => cached || caches.match("/offline"));
+        }
+        return caches.match(request).then((cached) => cached || new Response("Offline", {
+          status: 503,
+          statusText: "Service Unavailable",
+        }));
+      })
   );
 });

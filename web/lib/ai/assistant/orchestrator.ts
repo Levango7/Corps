@@ -75,10 +75,27 @@ const REASONER_CAPS = [
  * @param phase 当前任务阶段
  * @returns 能力 ID（如 task_breakdown）
  */
+// P1-fix: 意图识别输出白名单——防止 LLM 被注入后返回任意 capabilityId
+const VALID_CAPS = new Set([
+  "task_breakdown",
+  "todo_extract",
+  "progress_anomaly",
+  "bottleneck_analysis",
+  "follow_up",
+  "decision_assistant",
+  "approval_advice",
+  "meeting_summary",
+  "daily_report",
+  "knowledge_extract",
+  "semantic_search",
+  "risk_alert",
+]);
+
 async function recognizeIntent(
   message: string,
   phase: TaskPhase,
 ): Promise<string> {
+  // P1-fix: 用户消息只通过 prompt 参数传，不拼进 system prompt，避免 prompt injection
   const systemPrompt = `你是 AI 助理意图识别器。根据用户消息和当前任务阶段，选择最合适的能力。
 可用能力：task_breakdown（任务拆解）、todo_extract（待办提取）、progress_anomaly（进度异常）、
 bottleneck_analysis（瓶颈分析）、follow_up（跟进提醒）、decision_assistant（决策辅助）、
@@ -86,7 +103,6 @@ approval_advice（审批建议）、meeting_summary（会议纪要）、daily_re
 knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_alert（风险预警）。
 
 当前任务阶段：${phase}
-用户消息：${message}
 
 只返回能力 ID（如 task_breakdown），不要其他内容。`;
 
@@ -97,7 +113,8 @@ knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_a
       prompt: message,
     });
     const intent = result.text.trim().toLowerCase();
-    return intent || "semantic_search";
+    // P1-fix: 白名单校验，未命中则降级为 semantic_search
+    return VALID_CAPS.has(intent) ? intent : "semantic_search";
   } catch {
     return "semantic_search";
   }
@@ -155,24 +172,38 @@ export async function runAssistant(
     );
 
     const cleaned = cleanJsonResponse(llmResult.text);
-    let parsed: {
-      content?: string;
-      suggestions?: string[];
-      nextPhase?: TaskPhase;
-    };
+    // P1-fix: JSON.parse 后对 suggestions/nextPhase 做运行时类型校验，
+    // 防止 LLM 返回畸形结构导致下游崩溃
+    const VALID_PHASES = new Set<TaskPhase>([
+      "created",
+      "in_progress",
+      "review",
+      "completed",
+      "blocked",
+    ]);
+    let raw: Record<string, unknown>;
     try {
-      parsed = JSON.parse(cleaned);
+      raw = JSON.parse(cleaned) as Record<string, unknown>;
     } catch {
       // LLM 未返回合法 JSON，降级为纯文本
-      parsed = { content: llmResult.text };
+      raw = { content: llmResult.text };
     }
 
     return {
       capabilityId,
       phase: ctx.phase,
-      content: parsed.content ?? llmResult.text,
-      suggestions: parsed.suggestions,
-      nextPhase: parsed.nextPhase,
+      content:
+        typeof raw.content === "string" ? raw.content : llmResult.text,
+      suggestions: Array.isArray(raw.suggestions)
+        ? raw.suggestions.filter(
+            (s): s is string => typeof s === "string",
+          )
+        : undefined,
+      nextPhase:
+        typeof raw.nextPhase === "string" &&
+        VALID_PHASES.has(raw.nextPhase as TaskPhase)
+          ? (raw.nextPhase as TaskPhase)
+          : undefined,
     };
   } catch (err) {
     logger.warn("[ai/assistant] runAssistant failed", {
@@ -188,68 +219,87 @@ export async function runAssistant(
  *
  * 每个阶段对应 2-3 个最相关的能力，按优先级排序。
  *
+ * P1-fix: 返回 i18n key（labelKey/descKey）而非硬编码中文，
+ * 前端按 locale 翻译。AssistantPanel 渲染时用 t(item.labelKey) 取文案。
+ *
  * @param phase 任务生命周期阶段
- * @returns 建议 capability 列表（id/label/description）
+ * @returns 建议 capability 列表（id/labelKey/descKey）
  */
 export function getSuggestionsForPhase(
   phase: TaskPhase,
-): Array<{ id: string; label: string; description: string }> {
+): Array<{ id: string; labelKey: string; descKey: string }> {
   const SUGGESTIONS: Record<
     TaskPhase,
-    Array<{ id: string; label: string; description: string }>
+    Array<{ id: string; labelKey: string; descKey: string }>
   > = {
     created: [
       {
         id: "task_breakdown",
-        label: "任务拆解",
-        description: "把大任务拆成可执行的子任务",
+        labelKey: "assistant.suggest.taskBreakdown.label",
+        descKey: "assistant.suggest.taskBreakdown.desc",
       },
       {
         id: "todo_extract",
-        label: "待办提取",
-        description: "从描述中提取待办事项",
+        labelKey: "assistant.suggest.todoExtract.label",
+        descKey: "assistant.suggest.todoExtract.desc",
       },
     ],
     in_progress: [
       {
         id: "progress_anomaly",
-        label: "进度检查",
-        description: "分析进度是否异常",
+        labelKey: "assistant.suggest.progressAnomaly.label",
+        descKey: "assistant.suggest.progressAnomaly.desc",
       },
       {
         id: "bottleneck_analysis",
-        label: "瓶颈分析",
-        description: "识别卡点和瓶颈",
+        labelKey: "assistant.suggest.bottleneckAnalysis.label",
+        descKey: "assistant.suggest.bottleneckAnalysis.desc",
       },
-      { id: "follow_up", label: "跟进提醒", description: "生成跟进建议" },
+      {
+        id: "follow_up",
+        labelKey: "assistant.suggest.followUp.label",
+        descKey: "assistant.suggest.followUp.desc",
+      },
     ],
     review: [
       {
         id: "decision_assistant",
-        label: "决策辅助",
-        description: "提供决策建议",
+        labelKey: "assistant.suggest.decisionAssistant.label",
+        descKey: "assistant.suggest.decisionAssistant.desc",
       },
-      { id: "approval_advice", label: "审批建议", description: "分析审批风险" },
+      {
+        id: "approval_advice",
+        labelKey: "assistant.suggest.approvalAdvice.label",
+        descKey: "assistant.suggest.approvalAdvice.desc",
+      },
     ],
     completed: [
       {
         id: "meeting_summary",
-        label: "会议纪要",
-        description: "总结会议要点",
+        labelKey: "assistant.suggest.meetingSummary.label",
+        descKey: "assistant.suggest.meetingSummary.desc",
       },
-      { id: "daily_report", label: "日报生成", description: "生成工作日报" },
+      {
+        id: "daily_report",
+        labelKey: "assistant.suggest.dailyReport.label",
+        descKey: "assistant.suggest.dailyReport.desc",
+      },
       {
         id: "knowledge_extract",
-        label: "知识提取",
-        description: "提取可复用知识",
+        labelKey: "assistant.suggest.knowledgeExtract.label",
+        descKey: "assistant.suggest.knowledgeExtract.desc",
       },
     ],
     blocked: [
-      { id: "risk_alert", label: "风险预警", description: "分析阻塞风险" },
+      {
+        id: "risk_alert",
+        labelKey: "assistant.suggest.riskAlert.label",
+        descKey: "assistant.suggest.riskAlert.desc",
+      },
       {
         id: "bottleneck_analysis",
-        label: "瓶颈分析",
-        description: "识别阻塞原因",
+        labelKey: "assistant.suggest.bottleneckAnalysis.label",
+        descKey: "assistant.suggest.bottleneckAnalysis.desc",
       },
     ],
   };

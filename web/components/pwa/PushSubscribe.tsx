@@ -43,14 +43,16 @@ export function PushSubscribe() {
       });
 
       // 4. 发送订阅到后端
-      await fetch("/api/v1/push/subscribe", {
+      const subscribeRes = await fetch("/api/v1/push/subscribe", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(sub),
       });
+      const subscribeJson = await subscribeRes.json();
+      if (subscribeJson.code !== 200) return; // 订阅失败，不更新状态
       setSubscribed(true);
-    } catch {
-      // 静默失败
+    } catch (e) {
+      console.error("[PushSubscribe]", e);
     } finally {
       setLoading(false);
     }
@@ -63,14 +65,17 @@ export function PushSubscribe() {
       const sub = await reg.pushManager.getSubscription();
       if (sub) {
         await sub.unsubscribe();
-        await fetch("/api/v1/push/unsubscribe", {
+        const unsubscribeRes = await fetch("/api/v1/push/unsubscribe", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ endpoint: sub.endpoint }),
         });
+        const unsubscribeJson = await unsubscribeRes.json();
+        if (unsubscribeJson.code !== 200) return;
       }
       setSubscribed(false);
-    } catch {
+    } catch (e) {
+      console.error("[PushSubscribe]", e);
     } finally {
       setLoading(false);
     }

@@ -24,7 +24,23 @@
     "placeholder": "Type your request...",
     "thinking": "Thinking...",
     "error": "Failed, please retry",
-    "capability": "Capability"
+    "capability": "Capability",
+    "send": "Send",
+    "rateLimited": "Too many requests, please try again later",
+    "suggest": {
+      "taskBreakdown": { "label": "Task Breakdown", "desc": "Break down large tasks into subtasks" },
+      "todoExtract": { "label": "Todo Extraction", "desc": "Extract action items from text" },
+      "progressAnomaly": { "label": "Progress Anomaly", "desc": "Check task progress deviations" },
+      "bottleneckAnalysis": { "label": "Bottleneck Analysis", "desc": "Identify process bottlenecks" },
+      "followUp": { "label": "Follow-up", "desc": "Generate follow-up plan" },
+      "decisionAssistant": { "label": "Decision Assistant", "desc": "Assist decision analysis" },
+      "approvalAdvice": { "label": "Approval Advice", "desc": "Approval flow suggestions" },
+      "meetingSummary": { "label": "Meeting Summary", "desc": "Generate meeting notes" },
+      "dailyReport": { "label": "Daily Report", "desc": "Generate daily work report" },
+      "knowledgeExtract": { "label": "Knowledge Extraction", "desc": "Extract key document info" },
+      "semanticSearch": { "label": "Semantic Search", "desc": "Search workspace content" },
+      "riskAlert": { "label": "Risk Alert", "desc": "Identify potential risks" }
+    }
   },
   "nav": {
     "workspace": {

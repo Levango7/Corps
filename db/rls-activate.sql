@@ -48,7 +48,8 @@ BEGIN
     'subscriptions','notifications','workspaces','invitations','analytics_events',
     'labels','milestones','messages','message_attachments','task_labels',
     'chat_presences','message_reads','calendar_connections','task_calendar_events',
-    'documents','temporary_grants'
+    'documents','temporary_grants',
+    'push_subscriptions','ai_push_schedules','ai_push_records'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -422,3 +423,59 @@ CREATE POLICY p_temporary_grants_delete ON temporary_grants FOR DELETE
     workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
     OR current_setting('app.auth_op', true) = 'cron'
   );
+-- ── push_subscriptions（用户级，按 user_id 隔离）──────────────────────────
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY p_push_subscriptions_select ON push_subscriptions FOR SELECT
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+         OR current_setting('app.auth_op', true) = 'cron');
+
+CREATE POLICY p_push_subscriptions_insert ON push_subscriptions FOR INSERT
+  WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+CREATE POLICY p_push_subscriptions_update ON push_subscriptions FOR UPDATE
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
+  WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+CREATE POLICY p_push_subscriptions_delete ON push_subscriptions FOR DELETE
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+-- ── ai_push_schedules（工作区级，按 workspace_id + user_id 隔离）──────────
+ALTER TABLE ai_push_schedules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_push_schedules FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY p_ai_push_schedules_select ON ai_push_schedules FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+         OR current_setting('app.auth_op', true) = 'cron');
+
+CREATE POLICY p_ai_push_schedules_insert ON ai_push_schedules FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+CREATE POLICY p_ai_push_schedules_update ON ai_push_schedules FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+CREATE POLICY p_ai_push_schedules_delete ON ai_push_schedules FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_push_records（工作区级，按 workspace_id + user_id 隔离）────────────
+ALTER TABLE ai_push_records ENABLE ROW LEVEL SECURITY;
+ALTER TABLE ai_push_records FORCE ROW LEVEL SECURITY;
+
+CREATE POLICY p_ai_push_records_select ON ai_push_records FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+         OR current_setting('app.auth_op', true) = 'cron');
+
+CREATE POLICY p_ai_push_records_insert ON ai_push_records FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+              OR current_setting('app.auth_op', true) = 'cron');
+
+CREATE POLICY p_ai_push_records_update ON ai_push_records FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+         OR current_setting('app.auth_op', true) = 'cron')
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+              OR current_setting('app.auth_op', true) = 'cron');
+
+CREATE POLICY p_ai_push_records_delete ON ai_push_records FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);

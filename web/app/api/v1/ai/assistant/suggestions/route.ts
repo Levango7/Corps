@@ -11,6 +11,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
   getSuggestionsForPhase,
@@ -31,6 +32,13 @@ export async function GET(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
+
+  // P1-fix: 速率限制——每分钟 60 次，防止前端轮询/滥用
+  const limited = await checkRateLimit(req, "ai-assistant-suggestions", {
+    windowMs: 60_000,
+    max: 60,
+  });
+  if (limited) return limited;
 
   // 2) 解析 phase query param（默认 in_progress，非法值降级为 in_progress）
   const rawPhase = req.nextUrl.searchParams.get("phase") ?? "in_progress";

@@ -5,6 +5,8 @@
 // 失败不抛异常，仅记日志并返回 false，由调用方决定后续处理。
 
 import webpush from "web-push";
+// P1-fix: 用 web-push 库的精确类型替代 as any
+import type { PushSubscription as WebPushSubscription } from "web-push";
 import { logger } from "@/lib/logger";
 
 const VAPID_PUBLIC_KEY = process.env.VAPID_PUBLIC_KEY ?? "";
@@ -40,7 +42,7 @@ export async function sendPush(
   try {
     ensureVapid();
     await webpush.sendNotification(
-      subscription as any,
+      subscription as WebPushSubscription,
       JSON.stringify(payload),
       { TTL: 86400 },
     );

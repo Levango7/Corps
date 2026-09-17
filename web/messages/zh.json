@@ -24,7 +24,23 @@
     "placeholder": "输入你的需求...",
     "thinking": "思考中...",
     "error": "处理失败，请重试",
-    "capability": "能力"
+    "capability": "能力",
+    "send": "发送",
+    "rateLimited": "操作过于频繁，请稍后再试",
+    "suggest": {
+      "taskBreakdown": { "label": "任务拆解", "desc": "把大任务拆成可执行的子任务" },
+      "todoExtract": { "label": "待办提取", "desc": "从文本中提取待办事项" },
+      "progressAnomaly": { "label": "进度异常", "desc": "检查任务进度偏差" },
+      "bottleneckAnalysis": { "label": "瓶颈分析", "desc": "识别流程瓶颈" },
+      "followUp": { "label": "跟进提醒", "desc": "生成跟进计划" },
+      "decisionAssistant": { "label": "决策辅助", "desc": "辅助决策分析" },
+      "approvalAdvice": { "label": "审批建议", "desc": "审批流程建议" },
+      "meetingSummary": { "label": "会议纪要", "desc": "生成会议摘要" },
+      "dailyReport": { "label": "日报生成", "desc": "生成工作日报" },
+      "knowledgeExtract": { "label": "知识提取", "desc": "提取文档关键信息" },
+      "semanticSearch": { "label": "语义搜索", "desc": "智能搜索工作区内容" },
+      "riskAlert": { "label": "风险预警", "desc": "识别潜在风险" }
+    }
   },
   "nav": {
     "workspace": {

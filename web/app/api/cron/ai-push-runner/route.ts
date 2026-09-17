@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { runWithAuthOp } from "@/lib/auth";
+import { runWithAuthOp, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { generatePush, type PushCapability } from "@/lib/ai/push-runner";
 import { logger } from "@/lib/logger";
@@ -87,7 +87,18 @@ export async function GET(req: NextRequest) {
   try {
     const now = new Date();
 
-    // cron op 逃生口：跨工作区只读 schedule + 写通知（与 check-overdue-actions 同模式）
+    // P1-fix: Notification 创建需要 workspace_id GUC，runWithAuthOp 事务内
+    // 未设置该 GUC 会触发 RLS 拒绝。改为：事务内只读 schedule + 调 generatePush，
+    // 把需要创建通知的成功结果收集到 triggeredSchedules；事务结束后逐个用
+    // runWithWorkspace 包裹创建 Notification（每个独立 RLS 事务，失败仅 warn）。
+    const triggeredSchedules: Array<{
+      userId: string;
+      workspaceId: string;
+      capability: string;
+      recordId: string;
+    }> = [];
+
+    // cron op 逃生口：跨工作区只读 schedule（与 check-overdue-actions 同模式）
     const result = await runWithAuthOp("cron", async (tx) => {
       // 1) 查询所有 enabled 的推送计划
       const schedules = await tx.aiPushSchedule.findMany({
@@ -103,7 +114,6 @@ export async function GET(req: NextRequest) {
       });
 
       let triggered = 0;
-      let notified = 0;
       let skipped = 0;
 
       for (const schedule of schedules) {
@@ -136,37 +146,55 @@ export async function GET(req: NextRequest) {
         }
         triggered++;
 
-        // 4) 创建站内通知
-        //    entityTitle 存储 i18n key（ai_push_${capability}），前端按 locale 翻译
-        //    entityId = AiPushRecord.id，前端可查询推送详情
-        //    type = "ai_push" 用于前端识别通知类型
-        await tx.notification
-          .create({
-            data: {
-              userId: schedule.userId,
-              workspaceId: schedule.workspaceId,
-              type: "ai_push",
-              entityId: pushResult.recordId,
-              entityTitle: `ai_push_${schedule.capability}`,
-            },
-          })
-          .catch((e: unknown) => {
-            logger.warn(
-              "[cron ai-push-runner] 创建 Notification 失败",
-              {
-                error: e instanceof Error ? e.message : String(e),
-                scheduleId: schedule.id,
-                recordId: pushResult.recordId,
-              },
-            );
-          });
-        notified++;
+        // 4) 收集成功结果，事务外再创建 Notification
+        triggeredSchedules.push({
+          userId: schedule.userId,
+          workspaceId: schedule.workspaceId,
+          capability: schedule.capability,
+          recordId: pushResult.recordId,
+        });
       }
 
-      return { checked: schedules.length, triggered, notified, skipped };
+      return { checked: schedules.length, triggered, skipped };
     });
 
-    return NextResponse.json({ code: 200, data: result });
+    // 5) 事务结束后，逐个用 runWithWorkspace 包裹创建 Notification
+    //    entityTitle 存储 i18n key（ai_push_${capability}），前端按 locale 翻译
+    //    entityId = AiPushRecord.id，前端可查询推送详情
+    //    type = "ai_push" 用于前端识别通知类型
+    let notified = 0;
+    for (const item of triggeredSchedules) {
+      const ok = await runWithWorkspace(
+        item.workspaceId,
+        (tx) =>
+          tx.notification.create({
+            data: {
+              userId: item.userId,
+              workspaceId: item.workspaceId,
+              type: "ai_push",
+              entityId: item.recordId,
+              entityTitle: `ai_push_${item.capability}`,
+            },
+          }),
+        item.userId,
+      )
+        .then(() => true)
+        .catch((e: unknown) => {
+          logger.warn("[ai-push-runner] notification create failed", {
+            error: e instanceof Error ? e.message : String(e),
+            userId: item.userId,
+            workspaceId: item.workspaceId,
+            recordId: item.recordId,
+          });
+          return false;
+        });
+      if (ok) notified++;
+    }
+
+    return NextResponse.json({
+      code: 200,
+      data: { ...result, notified },
+    });
   } catch (error) {
     logger.error("[cron ai-push-runner] error", {
       error: error instanceof Error ? error.message : String(error),

@@ -27,12 +27,17 @@ interface Message {
   capability?: string;
   /** 跟进建议（点击填入输入框） */
   suggestions?: string[];
+  /** 时间戳（错误消息用于强制刷新） */
+  ts?: number;
 }
 
 /** 建议卡片项 */
 interface SuggestionItem {
   id: string;
-  label: string;
+  /** 旧格式：直接展示的标签文本 */
+  label?: string;
+  /** 新格式：i18n key（优先于 label） */
+  labelKey?: string;
   description: string;
 }
 
@@ -77,16 +82,23 @@ export function AssistantPanel({ wid }: { wid: string }) {
         body: JSON.stringify({ wid, message: userMessage.content, phase }),
       });
       const json = await res.json();
-      if (json.data) {
-        const assistantMessage: Message = {
-          role: "assistant",
-          content: json.data.content,
-          capability: json.data.capabilityId,
-          suggestions: json.data.suggestions,
-        };
-        setMessages((prev) => [...prev, assistantMessage]);
-        if (json.data.nextPhase) setPhase(json.data.nextPhase);
+      if (!json.data) {
+        // HTTP 错误状态码区分：429 限流 vs 其他错误
+        const errorMsg = res.status === 429 ? t("rateLimited") : t("error");
+        setMessages((prev) => [
+          ...prev,
+          { role: "assistant", content: errorMsg, ts: Date.now() },
+        ]);
+        return;
       }
+      const assistantMessage: Message = {
+        role: "assistant",
+        content: json.data.content,
+        capability: json.data.capabilityId,
+        suggestions: json.data.suggestions,
+      };
+      setMessages((prev) => [...prev, assistantMessage]);
+      if (json.data.nextPhase) setPhase(json.data.nextPhase);
     } catch {
       setMessages((prev) => [...prev, { role: "assistant", content: t("error") }]);
     } finally {
@@ -164,7 +176,9 @@ export function AssistantPanel({ wid }: { wid: string }) {
               className="flex items-center gap-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 transition-colors hover:bg-[var(--surface-hover)]"
             >
               <Sparkles size={14} strokeWidth={2} className="text-[var(--accent)]" />
-              <span className="text-[length:var(--text-sm)] text-[var(--fg)]">{s.label}</span>
+              <span className="text-[length:var(--text-sm)] text-[var(--fg)]">
+                {s.labelKey ? t(s.labelKey) : s.label}
+              </span>
             </button>
           ))}
         </div>
@@ -177,6 +191,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
       >
         <input
           type="text"
+          aria-label={t("placeholder")}
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSend()}
@@ -186,6 +201,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
         />
         <button
           type="button"
+          aria-label={t("send")}
           onClick={handleSend}
           disabled={loading || !input.trim()}
           className="flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-2 text-[var(--accent-fg)] transition-colors hover:bg-[var(--accent-hover)] disabled:opacity-50"
