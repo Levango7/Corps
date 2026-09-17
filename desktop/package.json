@@ -1,0 +1,16 @@
+{
+  "name": "corps-desktop",
+  "version": "0.6.0",
+  "private": true,
+  "description": "Corps 桌面端（Tauri v2，打包为 Windows / macOS / Linux 原生应用）",
+  "scripts": {
+    "dev": "tauri dev",
+    "build": "tauri build",
+    "build:debug": "tauri build --debug",
+    "tauri": "tauri",
+    "icon": "tauri icon"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2"
+  }
+}

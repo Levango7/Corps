@@ -1,0 +1,13 @@
+# Tauri 构建产物
+src-tauri/target/
+dist/
+
+# 依赖
+node_modules/
+
+# Tauri 生成的 schema
+src-tauri/gen/
+
+# 签名密钥（切勿提交）
+*.key
+*.key.pub
