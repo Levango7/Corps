@@ -11,6 +11,10 @@ import { handlePrismaError } from "@/lib/prisma-error";
 // M4 实时协作：任务创建后通过 workspace-events 总线广播 task.created 事件，
 // SSE 端点 /events/stream 订阅者（看板/详情页）实时刷新。
 import { emitWorkspaceEvent } from "@/lib/workspace-events";
+// 工作流自动化：任务创建后触发 task.created 事件，匹配的活跃工作流自动执行动作链。
+// 与 workspace-events 的 emitWorkspaceEvent 同名但职责不同（SSE 推送 vs 工作流执行），
+// 此处用别名导入避免命名冲突。
+import { emitWorkflowEvent as triggerWorkflowEvent } from "@/lib/workflow/triggers";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
@@ -475,6 +479,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       status: task.task.status,
       createdBy: ctx.payload.sub,
     });
+
+    // 工作流自动化：发射 task.created 事件，匹配的活跃工作流自动执行动作链。
+    // 用 .catch(() => {}) 静默处理，触发器失败不影响任务创建主流程。
+    // triggerWorkflowEvent 内部已 try-catch，此处 .catch 仅防御性兜底。
+    triggerWorkflowEvent(wid, "task.created", {
+      taskId: task.task.id,
+      title: task.task.title,
+      status: task.task.status,
+      priority: task.task.priority,
+      assigneeId: task.task.assigneeId,
+      createdBy: ctx.payload.sub,
+    }).catch(() => {});
 
     return NextResponse.json(
       {

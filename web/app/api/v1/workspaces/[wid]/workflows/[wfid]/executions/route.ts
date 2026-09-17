@@ -3,6 +3,8 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { executeWorkflow } from "@/lib/workflow/executor";
+import { logger } from "@/lib/logger";
 
 /**
  * GET /v1/workspaces/{wid}/workflows/{wfid}/executions — 执行历史
@@ -103,7 +105,25 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: execution }, { status: 201 });
+    // 同步执行工作流（executeWorkflow 内部已 try-catch，不会抛异常影响响应）
+    // 执行引擎用裸 prisma client 直接操作（不在 runWithWorkspace 事务上下文中）
+    const triggerData = (validated.triggerData ?? {}) as Record<string, unknown>;
+    await executeWorkflow(wid, wfid, execution.id, triggerData).catch((err) => {
+      // 兜底：executeWorkflow 内部已 try-catch，此处仅防御性记录
+      logger.error("[POST workflow execution] executeWorkflow unexpected error", {
+        executionId: execution.id,
+        error: err instanceof Error ? err.message : String(err),
+      });
+    });
+
+    // 重新查询执行记录，返回最新状态（completed/failed）给客户端
+    const latest = await runWithWorkspace(
+      wid,
+      (tx) => tx.workflowExecution.findUnique({ where: { id: execution.id } }),
+      ctx.payload.sub,
+    );
+
+    return NextResponse.json({ code: 0, data: latest ?? execution }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

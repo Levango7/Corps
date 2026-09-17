@@ -89,12 +89,24 @@ export interface Conversation {
   unreadCount?: number;
 }
 
+/** 发送消息时携带的附件（与 MessageInput.Attachment 结构对齐） */
+export interface SendAttachment {
+  id: string;
+  fileName: string;
+  url: string;
+  fileType: string;
+  fileSize: number;
+  thumbnailUrl: string | null;
+}
+
 /** 发送消息的可选参数 */
 export interface SendMessageOptions {
   /** 回复的消息 ID */
   replyToId?: string;
   /** 提及的用户 ID 列表 */
   mentions?: string[];
+  /** 附件列表（由 MessageInput 上传后传入） */
+  attachments?: SendAttachment[];
 }
 
 /** 创建会话的参数 */

@@ -175,6 +175,16 @@ export function useIM(workspaceId: string): UseIMResult {
       const payload: Record<string, unknown> = { body };
       if (opts?.replyToId) payload.replyToId = opts.replyToId;
       if (opts?.mentions) payload.mentions = opts.mentions;
+      // 附件：仅传服务端需要的字段（剔除本地预览用的 thumbnailUrl 中的 blob: URL 由后端处理）
+      if (opts?.attachments && opts.attachments.length > 0) {
+        payload.attachments = opts.attachments.map((a) => ({
+          fileName: a.fileName,
+          url: a.url,
+          fileType: a.fileType,
+          fileSize: a.fileSize,
+          thumbnailUrl: a.thumbnailUrl,
+        }));
+      }
 
       const msg = await api<Message>(
         `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages`,

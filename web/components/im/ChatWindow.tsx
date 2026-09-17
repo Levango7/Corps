@@ -5,21 +5,19 @@
  *
  * - 顶部：会话标题 + 成员数 + 设置按钮
  * - 中间：MessageList（消息列表）
- * - 底部：消息输入区（MessageInput 在 Task 215 创建，此处用内联简单输入）
- * - 回复引用：点击回复时在输入区上方显示被回复消息摘要
+ * - 底部：MessageInput（消息输入区，支持 @提及/文件上传/字数计数）
+ * - 回复引用：点击回复时由 MessageInput 上方显示被回复消息摘要
  *
  * 所有样式走 design token（var(--*)），无裸 hex。
  * lucide-react 图标尺寸用 14/16（项目约定）。
  */
 
-import { useCallback, useState, type KeyboardEvent } from "react";
-import { Settings, Send, X, Users } from "lucide-react";
+import { useCallback, useMemo, useState } from "react";
+import { Settings, Users } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { Conversation, Message, SendMessageOptions } from "./types";
 import { MessageList } from "./MessageList";
-
-/** 消息体最大长度（与 API zod schema 对齐） */
-const MAX_BODY_LENGTH = 10000;
+import { MessageInput } from "./MessageInput";
 
 interface ChatWindowProps {
   /** 当前会话 */
@@ -48,9 +46,7 @@ export function ChatWindow({
   onSettings,
 }: ChatWindowProps) {
   const t = useTranslations("chat");
-  const [draft, setDraft] = useState("");
   const [replyTo, setReplyTo] = useState<Message | null>(null);
-  const [sending, setSending] = useState(false);
 
   const isGroup = conversation.type === "group";
 
@@ -73,35 +69,32 @@ export function ChatWindow({
     setReplyTo(null);
   }, []);
 
-  /** 发送消息 */
-  const handleSend = useCallback(async () => {
-    const trimmed = draft.trim();
-    if (!trimmed || sending) return;
-
-    setSending(true);
-    try {
-      const opts: SendMessageOptions = {};
-      if (replyTo) opts.replyToId = replyTo.id;
-      onSend(trimmed, opts);
-      setDraft("");
-      setReplyTo(null);
-    } finally {
-      setSending(false);
-    }
-  }, [draft, sending, replyTo, onSend]);
-
-  /** 键盘事件：⌘/Ctrl + Enter 发送 */
-  const handleKeyDown = useCallback(
-    (e: KeyboardEvent<HTMLTextAreaElement>) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
-        e.preventDefault();
-        handleSend();
-      }
-    },
-    [handleSend],
+  /** 回复引用目标（转换为 MessageInput 期望的格式） */
+  const replyTarget = useMemo(
+    () =>
+      replyTo
+        ? {
+            id: replyTo.id,
+            authorName: replyTo.author?.name ?? t("unknownUser"),
+            body: replyTo.body,
+          }
+        : null,
+    [replyTo, t],
   );
 
-  const canSend = draft.trim().length > 0 && !sending;
+  /** 可提及的成员列表（群聊才需要，单聊只有两人也一并传入） */
+  const mentionMembers = useMemo(
+    () =>
+      conversation.members.map((m) => ({
+        userId: m.userId,
+        user: {
+          id: m.user.id,
+          name: m.user.name,
+          image: m.user.image,
+        },
+      })),
+    [conversation.members],
+  );
 
   return (
     <div className="flex flex-col h-full bg-[var(--surface)]">
@@ -145,51 +138,14 @@ export function ChatWindow({
         onReply={handleReply}
       />
 
-      {/* 底部输入区 */}
+      {/* 底部输入区：MessageInput 集成 @提及/文件上传/字数计数 */}
       <div className="border-t border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">
-        {/* 回复引用 */}
-        {replyTo && (
-          <div className="mb-[var(--space-2)] flex items-center justify-between gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] border-l-2 border-[var(--accent)]">
-            <div className="min-w-0 flex-1">
-              <span className="text-[length:var(--text-xs)] text-[var(--accent)] font-[weight:var(--weight-medium)]">
-                {t("replyTo", { name: replyTo.author?.name ?? t("unknownUser") })}
-              </span>
-              <p className="truncate text-[length:var(--text-xs)] text-[var(--muted)]">
-                {replyTo.body}
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={handleCancelReply}
-              aria-label={t("cancel")}
-              className="shrink-0 w-6 h-6 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-
-        {/* 输入框 + 发送按钮 */}
-        <div className="flex items-end gap-[var(--space-2)]">
-          <textarea
-            value={draft}
-            onChange={(e) => setDraft(e.target.value.slice(0, MAX_BODY_LENGTH))}
-            onKeyDown={handleKeyDown}
-            rows={1}
-            placeholder={t("placeholder")}
-            className="flex-1 px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
-          />
-          <button
-            type="button"
-            onClick={handleSend}
-            disabled={!canSend}
-            aria-label={t("sendAria")}
-            className="h-9 px-[var(--space-3)] shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center gap-1.5"
-          >
-            <Send size={15} />
-            {t("send")}
-          </button>
-        </div>
+        <MessageInput
+          onSend={onSend}
+          replyTo={replyTarget}
+          onCancelReply={handleCancelReply}
+          members={mentionMembers}
+        />
       </div>
     </div>
   );
