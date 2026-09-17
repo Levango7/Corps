@@ -2441,3 +2441,30 @@ model RemoteControlSession {
   @@index([targetId, status])
   @@map("remote_control_sessions")
 }
+/// AI 助理对话 — 一个用户在工作区内围绕某任务的连续对话
+model AssistantConversation {
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  taskId      String?  @map("task_id") @db.Uuid
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  messages    AssistantMessage[]
+
+  @@index([userId, workspaceId])
+  @@map("assistant_conversations")
+}
+
+/// AI 助理消息 — 对话中的单条消息（user/assistant）
+model AssistantMessage {
+  id              String   @id @default(uuid()) @db.Uuid
+  conversationId  String   @map("conversation_id") @db.Uuid
+  role            String   @db.VarChar(20)
+  content         String   @db.Text
+  capabilityUsed  String?  @map("capability_used") @db.VarChar(50)
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz
+  conversation    AssistantConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@index([conversationId])
+  @@map("assistant_messages")
+}

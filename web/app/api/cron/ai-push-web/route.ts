@@ -49,6 +49,7 @@ export async function GET(req: NextRequest) {
     const since = new Date(Date.now() - LOOKBACK_MS);
 
     // 1) 跨工作区查询未读 AiPushRecord（cron 逃生口绕过 RLS）
+    //    加 take: 100 限制单次 cron 处理量，避免长事务与超时
     const records = await runWithAuthOp("cron", async (tx) => {
       return tx.aiPushRecord.findMany({
         where: { read: false, createdAt: { gte: since } },
@@ -59,19 +60,42 @@ export async function GET(req: NextRequest) {
           title: true,
           summary: true,
         },
+        take: 100,
       });
     });
+
+    // 2) 批量查询所有相关用户的 PushSubscription（消除 N+1 查询）
+    //    一次性按 userId in (...) 查询，再按 userId 分组建 Map
+    const userIds = Array.from(new Set(records.map((r) => r.userId)));
+    const allSubscriptions =
+      userIds.length > 0
+        ? await prisma.pushSubscription.findMany({
+            where: { userId: { in: userIds } },
+            select: {
+              userId: true,
+              endpoint: true,
+              p256dhKey: true,
+              authKey: true,
+            },
+          })
+        : [];
+    const subsByUser = new Map<string, typeof allSubscriptions>();
+    for (const sub of allSubscriptions) {
+      const list = subsByUser.get(sub.userId);
+      if (list) {
+        list.push(sub);
+      } else {
+        subsByUser.set(sub.userId, [sub]);
+      }
+    }
 
     let sent = 0;
     let skipped = 0;
     const sentRecordIds: string[] = [];
 
-    // 2) 逐条发送 Web Push（HTTP 调用，在事务外执行）
+    // 3) 逐条发送 Web Push（HTTP 调用，在事务外执行）
     for (const record of records) {
-      const subscriptions = await prisma.pushSubscription.findMany({
-        where: { userId: record.userId },
-        select: { endpoint: true, p256dhKey: true, authKey: true },
-      });
+      const subscriptions = subsByUser.get(record.userId) ?? [];
 
       // 用户无任何 Web Push 订阅：跳过（不标记 read，保留站内通知）
       if (subscriptions.length === 0) {
@@ -106,7 +130,7 @@ export async function GET(req: NextRequest) {
       }
     }
 
-    // 3) 批量标记已推送的 record 为已读（避免重复推送）
+    // 4) 批量标记已推送的 record 为已读（避免重复推送）
     if (sentRecordIds.length > 0) {
       await runWithAuthOp("cron", async (tx) => {
         await tx.aiPushRecord.updateMany({

@@ -1,14 +1,16 @@
 // POST /api/v1/ai/assistant/chat — AI 助理对话式 API
 //
-// 输入：{ wid, message, phase, taskId?, previousOutput? }
+// 输入：{ wid, message, phase, taskId?, previousOutput?, conversationId? }
 // 流程：
 //   1. 认证 + AI 配置检查 + 速率限制
 //   2. body 校验 + 工作区守卫
-//   3. buildTaskContext 聚合任务上下文（taskId 存在时）
-//   4. runAssistant 执行助理（意图识别 → 能力调用 → 结果解析）
-//   5. 返回 AssistantResult
+//   3. 若有 conversationId，查询最近 10 条消息作为多轮上下文 history
+//   4. buildTaskContext 聚合任务上下文（taskId 存在时）
+//   5. runAssistant 执行助理（意图识别 → 能力调用 → 结果解析），传递 history
+//   6. 存储 user message + assistant response 到 AssistantMessage（RLS 事务内）
+//   7. 返回 AssistantResult + conversationId + recommendedNext
 //
-// 来源：P2 后端任务 318（AI 助理编排引擎 + 对话 API）
+// 来源：M1-A 后端任务 323（AI 助理深化 — 对话历史存储 + 多轮上下文）
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
@@ -26,6 +28,7 @@ import {
   type TaskPhase,
 } from "@/lib/ai/assistant/orchestrator";
 import { buildTaskContext } from "@/lib/ai/assistant/context-builder";
+import { logger } from "@/lib/logger";
 
 const chatSchema = z.object({
   wid: z.string().uuid(),
@@ -35,6 +38,7 @@ const chatSchema = z.object({
     .default("in_progress"),
   taskId: z.string().uuid().optional(),
   previousOutput: z.string().optional(),
+  conversationId: z.string().uuid().optional(),
 });
 
 /** POST /api/v1/ai/assistant/chat — AI 助理对话 */
@@ -84,7 +88,31 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    // 6) 聚合任务上下文（taskId 存在时在 RLS 事务内读取任务核心字段）
+    // 6) 查询对话历史（conversationId 存在时取最近 10 条消息作为多轮上下文）
+    let history: Array<{ role: "user" | "assistant"; content: string }> = [];
+    if (body.conversationId) {
+      history = await runWithWorkspace(
+        body.wid,
+        async (tx) => {
+          const msgs = await tx.assistantMessage.findMany({
+            where: { conversationId: body.conversationId! },
+            orderBy: { createdAt: "asc" },
+            take: 10,
+            select: { role: true, content: true },
+          });
+          // 仅保留 role 为 user/assistant 的消息（防御性过滤）
+          return msgs
+            .filter((m) => m.role === "user" || m.role === "assistant")
+            .map((m) => ({
+              role: m.role as "user" | "assistant",
+              content: m.content,
+            }));
+        },
+        ctx.payload.sub,
+      );
+    }
+
+    // 7) 聚合任务上下文（taskId 存在时在 RLS 事务内读取任务核心字段）
     const taskContext = body.taskId
       ? await runWithWorkspace(
           body.wid,
@@ -93,8 +121,9 @@ export async function POST(req: NextRequest) {
         )
       : "";
 
-    // 7) 执行 AI 助理（意图识别 → 能力调用 → 结果解析）
+    // 8) 执行 AI 助理（意图识别 → 能力调用 → 结果解析）
     //    previousOutput 优先用客户端传入，否则用任务上下文
+    //    history 传递多轮对话上下文
     const result = await runAssistant({
       workspaceId: body.wid,
       userId: ctx.payload.sub,
@@ -102,6 +131,7 @@ export async function POST(req: NextRequest) {
       phase: body.phase as TaskPhase,
       message: body.message,
       previousOutput: body.previousOutput ?? taskContext,
+      history,
     });
 
     if (!result) {
@@ -111,8 +141,56 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 8) 返回 AssistantResult
-    return NextResponse.json({ code: 0, data: result });
+    // 9) 存储对话历史（user message + assistant response）
+    //    有 conversationId 则追加消息；无则创建新对话再追加
+    const conversationId = await runWithWorkspace(
+      body.wid,
+      async (tx) => {
+        let convId = body.conversationId;
+        if (!convId) {
+          const conv = await tx.assistantConversation.create({
+            data: {
+              userId: ctx.payload.sub,
+              workspaceId: body.wid,
+              taskId: body.taskId,
+            },
+          });
+          convId = conv.id;
+        }
+        // 存储 user message
+        await tx.assistantMessage.create({
+          data: {
+            conversationId: convId,
+            role: "user",
+            content: body.message,
+          },
+        });
+        // 存储 assistant response
+        await tx.assistantMessage.create({
+          data: {
+            conversationId: convId,
+            role: "assistant",
+            content: result.content,
+            capabilityUsed: result.capabilityId,
+          },
+        });
+        return convId;
+      },
+      ctx.payload.sub,
+    ).catch((e: unknown) => {
+      // 历史存储失败不影响主流程，仅记日志
+      logger.warn("[POST ai/assistant/chat] 存储对话历史失败", {
+        error: e instanceof Error ? e.message : String(e),
+        conversationId: body.conversationId,
+      });
+      return body.conversationId ?? null;
+    });
+
+    // 10) 返回 AssistantResult + conversationId
+    return NextResponse.json({
+      code: 0,
+      data: { ...result, conversationId },
+    });
   } catch (error) {
     console.error("[POST ai/assistant/chat] error:", error);
     return NextResponse.json(

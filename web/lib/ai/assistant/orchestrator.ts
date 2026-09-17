@@ -14,6 +14,11 @@ import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { logger } from "@/lib/logger";
+import {
+  ASSISTANT_PROMPT_BUILDERS,
+  type AssistantCapabilityId,
+  type PromptContext,
+} from "@/lib/ai/assistant/prompts";
 
 /** 任务生命周期阶段 */
 export type TaskPhase =
@@ -47,6 +52,8 @@ export interface AssistantContext {
   previousOutput?: string;
   /** 额外上下文 */
   extraContext?: Record<string, string>;
+  /** 对话历史（多轮上下文，按时间正序） */
+  history?: Array<{ role: "user" | "assistant"; content: string }>;
 }
 
 /** AI 助理执行结果 */
@@ -56,6 +63,8 @@ export interface AssistantResult {
   content: string;
   suggestions?: string[];
   nextPhase?: TaskPhase;
+  /** 推荐的下一步能力（任务全流程串联） */
+  recommendedNext?: { nextCapability: string; reason: string };
 }
 
 /** 需要推理模型的能力（复杂分析/决策类） */
@@ -142,6 +151,17 @@ export async function runAssistant(
     const systemPrompt = buildCapabilityPrompt(capabilityId, ctx);
     const model = needsReasoner(capabilityId) ? reasonerModel : defaultModel;
 
+    // 构建专门 builder 的 PromptContext（传递 history 多轮上下文）
+    const promptCtx: PromptContext = {
+      message: ctx.message,
+      phase: ctx.phase,
+      taskId: ctx.taskId,
+      previousOutput: ctx.previousOutput,
+      history: ctx.history,
+    };
+    // 专门 builder 的 user prompt（已包含前序上下文 + 历史摘要）
+    const userPrompt = buildCapabilityUserPrompt(capabilityId, promptCtx);
+
     const llmResult = await withUsageTracking(
       {
         workspaceId: ctx.workspaceId,
@@ -153,11 +173,7 @@ export async function runAssistant(
         const result = await generateText({
           model,
           system: withCoT(systemPrompt, model),
-          prompt:
-            ctx.message +
-            (ctx.previousOutput
-              ? `\n\n前序上下文：\n${ctx.previousOutput}`
-              : ""),
+          prompt: userPrompt,
         });
         return {
           result,
@@ -189,6 +205,15 @@ export async function runAssistant(
       raw = { content: llmResult.text };
     }
 
+    // 任务全流程串联：基于当前阶段和已用能力推荐下一步
+    const phaseRec = getPhaseRecommendation(ctx.phase, capabilityId);
+    const recommendedNext = phaseRec.nextCapability
+      ? {
+          nextCapability: phaseRec.nextCapability,
+          reason: phaseRec.reason,
+        }
+      : undefined;
+
     return {
       capabilityId,
       phase: ctx.phase,
@@ -204,6 +229,7 @@ export async function runAssistant(
         VALID_PHASES.has(raw.nextPhase as TaskPhase)
           ? (raw.nextPhase as TaskPhase)
           : undefined,
+      recommendedNext,
     };
   } catch (err) {
     logger.warn("[ai/assistant] runAssistant failed", {
@@ -309,16 +335,110 @@ export function getSuggestionsForPhase(
 /**
  * 构建能力 system prompt。
  *
- * 统一要求 LLM 返回 JSON 格式（content/suggestions/nextPhase），
- * 各能力的差异由 capabilityId 标识，LLM 据此调整输出风格。
+ * 从 ASSISTANT_PROMPT_BUILDERS 取专门 builder 构建各能力定制的 system prompt
+ * （角色 + 输出 JSON schema + 推理步骤）。
+ * 未命中专门 builder 时降级为通用 prompt。
  */
 function buildCapabilityPrompt(
   capabilityId: string,
   ctx: AssistantContext,
 ): string {
+  const builder = ASSISTANT_PROMPT_BUILDERS[capabilityId as AssistantCapabilityId];
+  if (builder) {
+    return builder.buildSystem({
+      message: ctx.message,
+      phase: ctx.phase,
+      taskId: ctx.taskId,
+      previousOutput: ctx.previousOutput,
+      history: ctx.history,
+    });
+  }
+  // 降级：未命中专门 builder 的能力用通用 prompt
   return `你是 Corps AI 助理，当前能力：${capabilityId}，任务阶段：${ctx.phase}。
 请用 JSON 格式返回：{ "content": "回复内容", "suggestions": ["建议1", "建议2"], "nextPhase": "下一阶段" }
 直接返回 JSON，不要 markdown 代码块。`;
+}
+
+/**
+ * 构建能力 user prompt（用户消息 + 前序上下文 + 对话历史摘要）。
+ *
+ * 由专门 builder 的 buildPrompt 生成，已内置前序上下文与历史摘要拼接。
+ * 未命中专门 builder 时降级为简单拼接。
+ */
+function buildCapabilityUserPrompt(
+  capabilityId: string,
+  ctx: PromptContext,
+): string {
+  const builder = ASSISTANT_PROMPT_BUILDERS[capabilityId as AssistantCapabilityId];
+  if (builder) {
+    return builder.buildPrompt(ctx);
+  }
+  // 降级：简单拼接用户消息 + 前序上下文
+  return (
+    ctx.message +
+    (ctx.previousOutput ? `\n\n前序上下文：\n${ctx.previousOutput}` : "")
+  );
+}
+
+/**
+ * 任务全流程串联：基于当前阶段和刚执行的能力推荐下一步能力。
+ *
+ * 流程编排：
+ *   created       → task_breakdown → todo_extract → follow_up
+ *   in_progress   → progress_anomaly → bottleneck_analysis → follow_up
+ *   review        → decision_assistant → approval_advice
+ *   completed     → daily_report → knowledge_extract
+ *   blocked       → bottleneck_analysis → risk_alert
+ *
+ * @param phase 当前任务阶段
+ * @param lastCapability 刚执行的能力 ID（可选）
+ * @returns 推荐的下一步能力 + 推荐理由；无推荐时 nextCapability 为 undefined
+ */
+export function getPhaseRecommendation(
+  phase: TaskPhase,
+  lastCapability?: string,
+): { nextCapability?: string; reason: string } {
+  // 各阶段的流程链：按顺序执行，lastCapability 之后的为下一步
+  const FLOW: Record<TaskPhase, string[]> = {
+    created: ["task_breakdown", "todo_extract", "follow_up"],
+    in_progress: ["progress_anomaly", "bottleneck_analysis", "follow_up"],
+    review: ["decision_assistant", "approval_advice"],
+    completed: ["daily_report", "knowledge_extract"],
+    blocked: ["bottleneck_analysis", "risk_alert"],
+  };
+
+  const chain = FLOW[phase];
+  if (!chain || chain.length === 0) {
+    return { reason: "当前阶段无推荐流程" };
+  }
+
+  // 无 lastCapability 时推荐流程第一步
+  if (!lastCapability) {
+    return {
+      nextCapability: chain[0],
+      reason: `阶段 ${phase} 建议从 ${chain[0]} 开始`,
+    };
+  }
+
+  // lastCapability 不在流程链中：推荐流程第一步
+  const idx = chain.indexOf(lastCapability);
+  if (idx === -1) {
+    return {
+      nextCapability: chain[0],
+      reason: `当前能力 ${lastCapability} 不在 ${phase} 标准流程中，建议执行 ${chain[0]}`,
+    };
+  }
+
+  // 已是流程最后一步：无下一步推荐
+  if (idx >= chain.length - 1) {
+    return { reason: `${phase} 阶段流程已完成` };
+  }
+
+  const next = chain[idx + 1];
+  return {
+    nextCapability: next,
+    reason: `${lastCapability} 完成后，建议执行 ${next}`,
+  };
 }
 
 /** 判断能力是否需要推理模型 */
