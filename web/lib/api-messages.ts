@@ -53,6 +53,9 @@ export const API_MESSAGES = {
   },
   timerNotRunning: { zh: "该计时已停止", en: "This timer is not running" },
 
+  /* ── AI 推送（M2 闭环完善）── */
+  pushScheduleNotFound: { zh: "推送计划不存在", en: "Push schedule not found" },
+
 
   /* ── 任务 ── */
   assigneeNotMember: {

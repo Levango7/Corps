@@ -4,6 +4,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { sendPush } from "@/lib/web-push";
+import { sendPushEmail, renderPushEmailHtml } from "@/lib/ai/push-email";
 
 /**
  * GET /api/cron/ai-push-web — AI 推送 Web Push 发送器（每 15 分钟定时调用）
@@ -12,13 +13,20 @@ import { sendPush } from "@/lib/web-push";
  * 查对应用户的 PushSubscription，调用 sendPush 发送 Web Push 通知。
  * 发送成功后标记 record.read=true，避免重复推送。
  *
+ * 邮件回退渠道（M2 闭环完善）：
+ *  - 用户无 Web Push 订阅时，回退发邮件（查询 User.email）
+ *  - Web Push 发送全部失败时，回退发邮件
+ *  - 邮件发送成功同样标记 record.read=true，避免重复推送
+ *  - 邮件内容：AI 推送摘要（标题 + 摘要 + 工作区链接）
+ *
  * 逻辑：
  *  1. CRON_SECRET Bearer 鉴权（与 /api/cron/ai-push-runner 同模式）
  *  2. runWithAuthOp("cron") 跨工作区查询未读 AiPushRecord
  *  3. 对每条 record 查对应用户的 PushSubscription（用户级，无 RLS 限制）
  *  4. 调用 sendPush 发送 Web Push（payload: title/summary/url）
- *  5. 发送成功后批量标记 record.read=true（避免重复推送）
- *  6. 返回 { checked, sent, skipped }
+ *  5. Web Push 无订阅或失败时回退发邮件（sendPushEmail）
+ *  6. 发送成功后批量标记 record.read=true（避免重复推送）
+ *  7. 返回 { checked, sent, skipped, emailSent }
  *
  * 鉴权：CRON_SECRET Bearer（与 /api/cron/* 路由约定一致）。
  * 调度建议：每 15 分钟调用一次（entrypoint-cron.sh 中配置）。
@@ -89,17 +97,57 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // 2b) 批量查询所有相关用户的 email（邮件回退渠道用，消除 N+1 查询）
+    //    User 表查询走 prisma 直连（cron 逃生口已用 runWithAuthOp 查 records，
+    //    User 为全局表无 RLS，直接查即可）
+    const allUsers =
+      userIds.length > 0
+        ? await prisma.user.findMany({
+            where: { id: { in: userIds } },
+            select: { id: true, email: true },
+          })
+        : [];
+    const userEmails = new Map<string, string>();
+    for (const u of allUsers) {
+      userEmails.set(u.id, u.email);
+    }
+
     let sent = 0;
     let skipped = 0;
+    let emailSent = 0;
     const sentRecordIds: string[] = [];
 
     // 3) 逐条发送 Web Push（HTTP 调用，在事务外执行）
+    //    无订阅或 Web Push 全部失败时，回退发邮件（M2 闭环完善）
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
     for (const record of records) {
       const subscriptions = subsByUser.get(record.userId) ?? [];
+      const workspaceUrl = `${appUrl}/w/${record.workspaceId}/ai-tools`;
 
-      // 用户无任何 Web Push 订阅：跳过（不标记 read，保留站内通知）
+      // 用户无任何 Web Push 订阅：回退发邮件
       if (subscriptions.length === 0) {
-        skipped++;
+        const email = userEmails.get(record.userId);
+        if (email) {
+          const emailResult = await sendPushEmail({
+            to: email,
+            subject: record.title,
+            html: renderPushEmailHtml({
+              title: record.title,
+              summary: record.summary,
+              workspaceUrl,
+            }),
+            workspaceId: record.workspaceId,
+          });
+          if (emailResult.success) {
+            emailSent++;
+            sentRecordIds.push(record.id);
+          } else {
+            skipped++;
+          }
+        } else {
+          // 用户无 email 且无 Web Push 订阅：跳过（保留站内通知）
+          skipped++;
+        }
         continue;
       }
 
@@ -126,7 +174,28 @@ export async function GET(req: NextRequest) {
         sent++;
         sentRecordIds.push(record.id);
       } else {
-        skipped++;
+        // Web Push 全部失败：回退发邮件
+        const email = userEmails.get(record.userId);
+        if (email) {
+          const emailResult = await sendPushEmail({
+            to: email,
+            subject: record.title,
+            html: renderPushEmailHtml({
+              title: record.title,
+              summary: record.summary,
+              workspaceUrl,
+            }),
+            workspaceId: record.workspaceId,
+          });
+          if (emailResult.success) {
+            emailSent++;
+            sentRecordIds.push(record.id);
+          } else {
+            skipped++;
+          }
+        } else {
+          skipped++;
+        }
       }
     }
 
@@ -147,7 +216,7 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json({
       code: 200,
-      data: { checked: records.length, sent, skipped },
+      data: { checked: records.length, sent, skipped, emailSent },
     });
   } catch (error) {
     logger.error("[cron ai-push-web] error", {

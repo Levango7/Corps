@@ -2005,6 +2005,10 @@ model AiPushSchedule {
   cron        String   @db.VarChar(50)  // cron 表达式（如 "0 9 * * 1-5"）
   enabled     Boolean  @default(true)
   config      Json?    // 推送配置（如 { channels: ["notification", "im"], threshold: 0.8 }）
+  // M2 闭环完善：静默时段 + 推送频率配置
+  quietHoursStart Int?    @map("quiet_hours_start")  // 静默时段开始小时（0-23）
+  quietHoursEnd   Int?    @map("quiet_hours_end")    // 静默时段结束小时（0-23）
+  frequency        String? @default("daily")          // 推送频率（daily/weekly/hourly）
   lastRunAt   DateTime? @map("last_run_at") @db.Timestamptz
   createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
   updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
