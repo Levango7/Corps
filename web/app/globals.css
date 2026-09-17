@@ -672,3 +672,299 @@ svg {
 .react-grid-item > .react-resizable-handle.react-resizable-handle-s {
   bottom: -4px;
 }
+/* ============================================================================
+ * UI 精致化打磨 · 动效增强（2026-09-17）
+ * - 页面切换过渡：fade-in + slide-up 组合
+ * - 列表项 stagger 进入动画
+ * - 微交互增强：button press scale（spring）、card hover lift（bounce）
+ * - WidgetGrid 可拖拽卡片网格样式
+ * 所有时长 / 缓动走 design token（var(--motion-*) / var(--ease-*)），
+ * 高级动效 token（--motion-spring / --ease-bounce / --motion-stagger-delay）
+ * 定义在 design-tokens.css。
+ * prefers-reduced-motion 全局降级块已统一处理，此处不重复声明。
+ * ========================================================================= */
+
+/* ----------------------------------------------------------------------------
+ * 页面切换过渡动画（fade-in + slide-up 组合）
+ * 用于路由切换 / 标签页切换 / 抽屉切换等场景。
+ * -------------------------------------------------------------------------- */
+@keyframes page-fade-slide {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.page-fade-slide {
+  animation: page-fade-slide var(--motion-enter) var(--ease-out) both;
+}
+
+/* 反向退出（slide-down + fade-out，用于退出动画） */
+@keyframes page-fade-slide-exit {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+}
+
+.page-fade-slide-exit {
+  animation: page-fade-slide-exit var(--motion-slow) var(--ease-out) both;
+}
+
+/* ----------------------------------------------------------------------------
+ * 列表项 stagger 进入动画
+ * 子元素依次淡入上移，营造"逐个呈现"的节奏感。
+ * 用法：父容器加 .stagger-list，子项加 .stagger-item，
+ * 通过 --stagger-index 自定义属性控制延迟（JS 设置或 CSS nth-child）。
+ * -------------------------------------------------------------------------- */
+@keyframes stagger-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stagger-list {
+  /* 容器无需额外样式，仅作语义标记 */
+}
+
+.stagger-item {
+  opacity: 0;
+  animation: stagger-enter var(--motion-slow) var(--ease-out) forwards;
+  animation-delay: calc(var(--stagger-index, 0) * var(--motion-stagger-delay, 50ms));
+}
+
+/* 便捷：前 12 个子项自动分配 stagger-index（无需 JS 设置） */
+.stagger-list > .stagger-item:nth-child(1)  { --stagger-index: 0; }
+.stagger-list > .stagger-item:nth-child(2)  { --stagger-index: 1; }
+.stagger-list > .stagger-item:nth-child(3)  { --stagger-index: 2; }
+.stagger-list > .stagger-item:nth-child(4)  { --stagger-index: 3; }
+.stagger-list > .stagger-item:nth-child(5)  { --stagger-index: 4; }
+.stagger-list > .stagger-item:nth-child(6)  { --stagger-index: 5; }
+.stagger-list > .stagger-item:nth-child(7)  { --stagger-index: 6; }
+.stagger-list > .stagger-item:nth-child(8)  { --stagger-index: 7; }
+.stagger-list > .stagger-item:nth-child(9)  { --stagger-index: 8; }
+.stagger-list > .stagger-item:nth-child(10) { --stagger-index: 9; }
+.stagger-list > .stagger-item:nth-child(11) { --stagger-index: 10; }
+.stagger-list > .stagger-item:nth-child(12) { --stagger-index: 11; }
+
+/* ----------------------------------------------------------------------------
+ * 微交互增强 · spring / bounce 变体
+ * 在已有 .btn-press / .card-lift 基础上，提供弹性缓动变体，
+ * 用于强调型按钮 / 卡片落地动画。
+ * -------------------------------------------------------------------------- */
+
+/* 按钮按压弹性反馈（spring 缓动，过冲后回弹） */
+.btn-press-spring {
+  transition:
+    transform var(--motion-base) var(--motion-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
+    box-shadow var(--motion-base) var(--ease-out);
+}
+.btn-press-spring:active {
+  transform: scale(0.94);
+}
+
+/* 卡片悬停弹跳抬升（bounce 缓动，落地有轻微回弹） */
+.card-lift-bounce {
+  transition:
+    transform var(--motion-slow) var(--ease-bounce, cubic-bezier(0.68, -0.55, 0.265, 1.55)),
+    box-shadow var(--motion-slow) var(--ease-out);
+  will-change: transform;
+}
+.card-lift-bounce:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--elev-hover);
+}
+.card-lift-bounce:active {
+  transform: translateY(-1px);
+  box-shadow: var(--elev-sm);
+}
+
+/* 卡片入场弹跳（从下方弹入，带过冲） */
+@keyframes card-enter-bounce {
+  0% {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  60% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.01);
+  }
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+.card-enter-bounce {
+  animation: card-enter-bounce var(--motion-enter) var(--ease-out) both;
+}
+
+/* ----------------------------------------------------------------------------
+ * WidgetGrid 可拖拽卡片网格样式
+ * 配合 WidgetGrid.tsx 组件，提供网格容器 / 卡片 / 拖拽 / resize 视觉反馈。
+ * 所有颜色走 design token（var(--*)），无裸 hex。
+ * 响应式：≤640px 自动单列。
+ * -------------------------------------------------------------------------- */
+
+.widget-grid {
+  position: relative;
+  width: 100%;
+}
+
+/* 单个网格项（卡片） */
+.widget-grid__item {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--elev-sm);
+  overflow: hidden;
+  transition:
+    transform var(--motion-base) var(--ease-out),
+    box-shadow var(--motion-base) var(--ease-out),
+    opacity var(--motion-fast) var(--ease-out),
+    outline-color var(--motion-fast) var(--ease-out);
+}
+
+/* 可编辑态：hover 抬升 + 指针提示 */
+.widget-grid__item--editable {
+  cursor: grab;
+}
+.widget-grid__item--editable:hover {
+  box-shadow: var(--elev-hover);
+  transform: translateY(-1px);
+}
+.widget-grid__item--editable:active {
+  cursor: grabbing;
+}
+
+/* 拖拽中：半透明 + 缩放 + 强阴影 */
+.widget-grid__item--dragging {
+  opacity: 0.4;
+  transform: scale(0.98);
+  box-shadow: var(--elev-lg);
+  z-index: 10;
+  cursor: grabbing;
+}
+
+/* 拖拽悬停目标：虚线占位高亮 */
+.widget-grid__item--drag-over {
+  outline: 2px dashed var(--accent);
+  outline-offset: 2px;
+  background: var(--accent-soft);
+}
+
+/* resize 中：禁用过渡，提升 z-index */
+.widget-grid__item--resizing {
+  transition: none;
+  z-index: 10;
+  box-shadow: var(--elev-lg);
+}
+
+/* 卡片头部 */
+.widget-grid__header {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) var(--space-3);
+  border-bottom: 1px solid var(--border-soft);
+  background: var(--surface-2);
+  user-select: none;
+}
+
+/* 拖拽手柄 */
+.widget-grid__grip {
+  display: inline-flex;
+  align-items: center;
+  color: var(--meta);
+  cursor: grab;
+  transition: color var(--motion-fast) var(--ease-out);
+}
+.widget-grid__grip:hover {
+  color: var(--fg-2);
+}
+.widget-grid__grip:active {
+  cursor: grabbing;
+}
+
+/* 卡片标题 */
+.widget-grid__title {
+  font-size: var(--text-sm);
+  font-weight: var(--weight-medium);
+  color: var(--fg);
+  line-height: var(--leading-snug);
+}
+
+/* 卡片内容区 */
+.widget-grid__body {
+  flex: 1;
+  overflow: auto;
+  background: var(--surface);
+}
+
+/* Resize 手柄（右下角） */
+.widget-grid__resize-handle {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 16px;
+  height: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--meta);
+  cursor: nwse-resize;
+  opacity: 0;
+  transition: opacity var(--motion-fast) var(--ease-out);
+  z-index: 2;
+}
+
+/* hover 卡片时显示 resize 手柄 */
+.widget-grid__item--editable:hover .widget-grid__resize-handle {
+  opacity: 0.6;
+}
+.widget-grid__resize-handle:hover {
+  opacity: 1;
+  color: var(--accent);
+}
+
+/* 响应式：移动端（≤640px）自动单列，禁用拖拽定位 */
+@media (max-width: 640px) {
+  .widget-grid {
+    grid-template-columns: 1fr !important;
+    grid-auto-rows: auto !important;
+  }
+  .widget-grid__item {
+    grid-column-start: auto !important;
+    grid-column-end: auto !important;
+    grid-row-start: auto !important;
+    grid-row-end: auto !important;
+    min-height: auto !important;
+  }
+  /* 移动端隐藏 resize 手柄（单列无需调宽） */
+  .widget-grid__resize-handle {
+    display: none;
+  }
+}
+
+/* 平板端（≤900px）：8 列网格 */
+@media (max-width: 900px) and (min-width: 641px) {
+  .widget-grid {
+    grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+  }
+}
