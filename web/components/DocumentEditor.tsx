@@ -35,6 +35,7 @@ import {
   Lock,
   AlertTriangle,
   Plus,
+  MessageSquare,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -42,6 +43,7 @@ import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichText
 import { QuickDiagram } from "@/components/QuickDiagram";
 import { useToast } from "@/components/Toast";
 import { ExportPreview } from "@/components/ExportPreview";
+import { DocumentComments } from "@/components/DocumentComments";
 import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 
 interface DocumentEditorProps {
@@ -135,6 +137,9 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
   // ── F4：导出预览模态框 ──
   const [exportOpen, setExportOpen] = useState(false);
+
+  // ── 评论/批注面板（可折叠）──
+  const [commentsOpen, setCommentsOpen] = useState(false);
 
 
   /** 快速图表对话框：插入 ```mermaid 块到正文（追加到末尾，编辑器语义里"出一张图"） */
@@ -569,6 +574,20 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           >
             <Download size={14} />
             {t("export")}
+          </button>
+          {/* 评论/批注面板开关 */}
+          <button
+            onClick={() => setCommentsOpen((v) => !v)}
+            aria-pressed={commentsOpen}
+            title={t("comments")}
+            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+              commentsOpen
+                ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
+                : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
+            }`}
+          >
+            <MessageSquare size={14} />
+            <span className="hidden sm:inline">{t("comments")}</span>
           </button>
           <button
             onClick={() => save({ publish: true })}
