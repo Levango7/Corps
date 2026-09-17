@@ -2067,6 +2067,26 @@
     "dismiss": "Dismiss",
     "onlineCount": "{count} online"
   },
+  "presence": {
+    "online": "Online",
+    "offline": "Offline",
+    "onlineCount": "{count} online",
+    "loading": "Loading presence...",
+    "loadFailed": "Failed to load presence"
+  },
+  "activity": {
+    "title": "Activity",
+    "loading": "Loading activity...",
+    "loadFailed": "Failed to load activity",
+    "empty": "No activity yet",
+    "refresh": "Refresh",
+    "taskCreated": "created task",
+    "taskUpdated": "updated task",
+    "commentCreated": "commented on task",
+    "decisionCreated": "created decision",
+    "decisionUpdated": "updated decision",
+    "unknownUser": "Unknown user"
+  },
   "ai": {
     "completion": {
       "placeholder": "AI is composing...",

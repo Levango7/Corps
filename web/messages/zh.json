@@ -2067,6 +2067,26 @@
     "dismiss": "知道了",
     "onlineCount": "在线 {count} 人"
   },
+  "presence": {
+    "online": "在线",
+    "offline": "离线",
+    "onlineCount": "在线 {count} 人",
+    "loading": "加载成员状态...",
+    "loadFailed": "加载在线状态失败"
+  },
+  "activity": {
+    "title": "活动动态",
+    "loading": "加载活动...",
+    "loadFailed": "加载活动失败",
+    "empty": "暂无活动",
+    "refresh": "刷新",
+    "taskCreated": "创建了任务",
+    "taskUpdated": "更新了任务",
+    "commentCreated": "评论了任务",
+    "decisionCreated": "创建了决策",
+    "decisionUpdated": "更新了决策",
+    "unknownUser": "未知用户"
+  },
   "ai": {
     "completion": {
       "placeholder": "AI 正在续写...",

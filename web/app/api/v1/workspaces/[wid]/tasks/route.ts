@@ -8,6 +8,9 @@ import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+// M4 实时协作：任务创建后通过 workspace-events 总线广播 task.created 事件，
+// SSE 端点 /events/stream 订阅者（看板/详情页）实时刷新。
+import { emitWorkspaceEvent } from "@/lib/workspace-events";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
@@ -463,6 +466,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     } catch {
       /* P2-1：判定块任一查询/写入抛错均静默，主接口已 201 不受影响 */
     }
+
+    // M4 实时协作：广播 task.created 事件（SSE 订阅者实时刷新看板）
+    emitWorkspaceEvent(wid, {
+      type: "task.created",
+      taskId: task.task.id,
+      title: task.task.title,
+      status: task.task.status,
+      createdBy: ctx.payload.sub,
+    });
 
     return NextResponse.json(
       {

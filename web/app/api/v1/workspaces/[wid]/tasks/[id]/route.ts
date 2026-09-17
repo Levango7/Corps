@@ -7,6 +7,9 @@ import { deleteTaskFiles } from "@/lib/uploads-cleanup";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
+// M4 实时协作：任务变更/删除后通过 workspace-events 总线广播事件，
+// SSE 端点 /events/stream 订阅者（看板/详情页）实时刷新。
+import { emitWorkspaceEvent } from "@/lib/workspace-events";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -238,6 +241,16 @@ export async function PATCH(
 
     // 安全：剥离 sharePassword hash，防止泄露给客户端
     const { sharePassword: _strippedTask, ...taskSafe } = result.task;
+
+    // M4 实时协作：广播 task.updated 事件（SSE 订阅者实时刷新看板/详情）
+    emitWorkspaceEvent(wid, {
+      type: "task.updated",
+      taskId: id,
+      title: result.task.title,
+      status: result.task.status,
+      updatedBy: ctx.payload.sub,
+    });
+
     return NextResponse.json({ code: 200, data: taskSafe });
   } catch (error) {
     if (error instanceof z.ZodError) {
@@ -273,7 +286,7 @@ export async function DELETE(
       (tx) =>
         tx.task.findFirst({
           where: { id, workspaceId: wid },
-          select: { id: true, createdBy: true },
+          select: { id: true, createdBy: true, title: true },
         }),
       ctx.payload.sub,
     );
@@ -293,6 +306,13 @@ export async function DELETE(
     // 之后将无从定位文件；尽力而为，失败不阻断删除）
     await deleteTaskFiles(id);
     await runWithWorkspace(wid, (tx) => tx.task.delete({ where: { id } }), ctx.payload.sub);
+
+    // M4 实时协作：广播 task.deleted 事件（SSE 订阅者实时移除看板卡片）
+    emitWorkspaceEvent(wid, {
+      type: "task.deleted",
+      taskId: id,
+      title: existing.title,
+    });
 
     return NextResponse.json({ code: 200, data: null });
   } catch (error) {

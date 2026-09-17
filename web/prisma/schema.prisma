@@ -70,6 +70,9 @@ model User {
   createdAt     DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt     DateTime  @updatedAt @map("updated_at") @db.Timestamptz
   lastLoginAt   DateTime? @map("last_login_at") @db.Timestamptz
+  // M4 实时协作：在线状态心跳时间戳。presence API POST 定期更新，
+  // GET 查询时以 now - 5min 为阈值判定在线。NULL 表示从未心跳（离线）。
+  onlineAt      DateTime? @map("online_at") @db.Timestamptz
 
   members             Member[]
   tasks               Task[]               @relation("TaskAssignee")
