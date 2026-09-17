@@ -45,6 +45,8 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
     loading,
     error,
     selectConversation,
+    loadMoreMessages,
+    loadingMore,
     sendMessage,
     editMessage,
     revokeMessage,
@@ -175,6 +177,8 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
                 onSend={(body, opts) => void sendMessage(activeConversation.id, body, opts)}
                 onEdit={(mid, body) => void editMessage(activeConversation.id, mid, body)}
                 onRevoke={(mid) => void revokeMessage(activeConversation.id, mid)}
+                onLoadMore={() => void loadMoreMessages(activeConversation.id)}
+                loadingMore={loadingMore}
                 onSettings={
                   activeConversation.type === "group" || activeConversation.type === "direct"
                     ? () => setSettingsOpen(true)

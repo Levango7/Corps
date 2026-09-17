@@ -3155,7 +3155,8 @@
     "dueDate": "截止日期",
     "noObjectives": "暂无目标",
     "confirmDelete": "确定删除？",
-    "addKeyResult": "添加关键结果"
+    "addKeyResult": "添加关键结果",
+    "editObjective": "编辑目标"
   },
   "workflow": {
     "title": "工作流",

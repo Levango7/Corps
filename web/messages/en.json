@@ -3155,7 +3155,8 @@
     "dueDate": "Due Date",
     "noObjectives": "No objectives",
     "confirmDelete": "Are you sure you want to delete?",
-    "addKeyResult": "Add Key Result"
+    "addKeyResult": "Add Key Result",
+    "editObjective": "Edit Objective"
   },
   "workflow": {
     "title": "Workflows",

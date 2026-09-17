@@ -6,7 +6,7 @@
  * 支持添加/编辑/删除 KR，删除目标。
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { X, Plus, Pencil, Trash2, Loader2, Calendar, User } from "lucide-react";
 import { api } from "@/lib/api";
@@ -54,6 +54,7 @@ export function ObjectiveDetailPanel({
   const [error, setError] = useState("");
   const [krEditorOpen, setKrEditorOpen] = useState(false);
   const [editingKr, setEditingKr] = useState<KeyResult | null>(null);
+  const [editing, setEditing] = useState(false);
 
   async function fetchDetail() {
     setLoading(true);
@@ -142,9 +143,18 @@ export function ObjectiveDetailPanel({
         <div className="px-[var(--space-4)] py-[var(--space-3)] space-y-[var(--space-4)]">
           {/* 目标信息 */}
           <div>
-            <h3 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-              {obj.title}
-            </h3>
+            <div className="flex items-start gap-2">
+              <h3 className="flex-1 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+                {obj.title}
+              </h3>
+              <button
+                onClick={() => setEditing(true)}
+                className="shrink-0 w-7 h-7 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                aria-label={t("editObjective")}
+              >
+                <Pencil size={14} />
+              </button>
+            </div>
             {obj.description && (
               <p className="mt-1 text-[length:var(--text-sm)] text-[var(--fg-2)] whitespace-pre-wrap">
                 {obj.description}
@@ -299,6 +309,196 @@ export function ObjectiveDetailPanel({
           onChanged?.();
         }}
       />
+
+      {obj && editing && (
+        <EditObjectiveDialog
+          wid={wid}
+          oid={oid}
+          initial={{
+            title: obj.title,
+            description: obj.description,
+            period: obj.period,
+            status: obj.status,
+          }}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            fetchDetail();
+            onChanged?.();
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+/** 编辑目标弹窗（内联，复用新建目标表单结构，改为 PATCH 调用） */
+function EditObjectiveDialog({
+  wid,
+  oid,
+  initial,
+  onClose,
+  onSaved,
+}: {
+  wid: string;
+  oid: string;
+  initial: {
+    title: string;
+    description: string | null;
+    period: string;
+    status: ObjectiveStatus;
+  };
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const t = useTranslations("okr");
+  const tButton = useTranslations("button");
+  const [title, setTitle] = useState(initial.title);
+  const [description, setDescription] = useState(initial.description ?? "");
+  const [period, setPeriod] = useState(initial.period);
+  const [status, setStatus] = useState<ObjectiveStatus>(initial.status);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  const fieldLabel =
+    "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
+  const fieldControl =
+    "w-full h-9 px-2.5 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
+
+  async function submit(e: FormEvent) {
+    e.preventDefault();
+    if (!title.trim() || !period.trim() || submitting) return;
+    setSubmitting(true);
+    setError("");
+    try {
+      await api(`/api/v1/workspaces/${wid}/objectives/${oid}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          title: title.trim(),
+          description: description.trim() || null,
+          period: period.trim(),
+          status,
+        }),
+      });
+      onSaved();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : t("editObjective"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div
+      role="dialog"
+      aria-modal="true"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
+      onClick={(e) => {
+        if (e.target !== e.currentTarget) return;
+        onClose();
+      }}
+    >
+      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+        <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
+          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+            {t("editObjective")}
+          </h2>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            aria-label={tButton("close")}
+          >
+            <X size={16} />
+          </button>
+        </header>
+
+        <form onSubmit={submit} className="px-4 sm:px-5 py-4 space-y-4">
+          <div>
+            <label className={fieldLabel} htmlFor="edit-obj-title">
+              {t("title_")}
+            </label>
+            <input
+              id="edit-obj-title"
+              autoFocus
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              maxLength={200}
+              className={`${fieldControl} h-10`}
+            />
+          </div>
+
+          <div>
+            <label className={fieldLabel} htmlFor="edit-obj-desc">
+              {t("description")}
+            </label>
+            <textarea
+              id="edit-obj-desc"
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+              rows={3}
+              maxLength={2000}
+              className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+            />
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className={fieldLabel} htmlFor="edit-obj-period">
+                {t("period")}
+              </label>
+              <input
+                id="edit-obj-period"
+                value={period}
+                onChange={(e) => setPeriod(e.target.value)}
+                placeholder="2026-Q1"
+                maxLength={20}
+                className={fieldControl}
+              />
+            </div>
+            <div>
+              <label className={fieldLabel} htmlFor="edit-obj-status">
+                {t("status")}
+              </label>
+              <select
+                id="edit-obj-status"
+                value={status}
+                onChange={(e) => setStatus(e.target.value as ObjectiveStatus)}
+                className={fieldControl}
+              >
+                <option value="draft">{t("draft")}</option>
+                <option value="active">{t("active")}</option>
+                <option value="completed">{t("completed")}</option>
+                <option value="archived">{t("archived")}</option>
+              </select>
+            </div>
+          </div>
+
+          {error && (
+            <div className="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">
+              <span className="flex-1">{error}</span>
+            </div>
+          )}
+
+          <div className="flex items-center justify-end gap-2 pt-1">
+            <button
+              type="button"
+              onClick={onClose}
+              className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            >
+              {tButton("cancel")}
+            </button>
+            <button
+              type="submit"
+              disabled={!title.trim() || !period.trim() || submitting}
+              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
+            >
+              {submitting && <Loader2 size={15} className="animate-spin" />}
+              {tButton("save")}
+            </button>
+          </div>
+        </form>
+      </div>
     </div>
   );
 }

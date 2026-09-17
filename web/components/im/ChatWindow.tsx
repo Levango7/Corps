@@ -32,6 +32,10 @@ interface ChatWindowProps {
   onEdit: (mid: string, body: string) => void;
   /** 撤回消息 */
   onRevoke: (mid: string) => void;
+  /** 加载更多历史消息（向上滚动触发） */
+  onLoadMore?: () => void;
+  /** 是否正在加载更多历史消息 */
+  loadingMore?: boolean;
   /** 点击设置按钮（可选） */
   onSettings?: () => void;
 }
@@ -43,6 +47,8 @@ export function ChatWindow({
   onSend,
   onEdit,
   onRevoke,
+  onLoadMore,
+  loadingMore = false,
   onSettings,
 }: ChatWindowProps) {
   const t = useTranslations("chat");
@@ -136,6 +142,9 @@ export function ChatWindow({
         onEdit={onEdit}
         onRevoke={onRevoke}
         onReply={handleReply}
+        onLoadMore={onLoadMore}
+        hasMore={conversation.hasMoreMessages}
+        loading={loadingMore}
       />
 
       {/* 底部输入区：MessageInput 集成 @提及/文件上传/字数计数 */}

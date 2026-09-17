@@ -78,7 +78,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
     return NextResponse.json({
       code: 200,
-      data: { items, page, limit, total, hasMore: page * limit < total },
+      data: { items, page, limit, total, hasMore: page * limit < total, totalPages: Math.ceil(total / limit) },
     });
   } catch (error) {
     console.error("[GET approval-instances] error:", error);

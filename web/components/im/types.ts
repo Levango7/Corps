@@ -87,6 +87,8 @@ export interface Conversation {
   messages?: Message[];
   /** 未读消息数（由后端计算或前端根据 lastReadAt 推算） */
   unreadCount?: number;
+  /** 是否还有更早的历史消息可加载（游标分页，由 useIM 维护） */
+  hasMoreMessages?: boolean;
 }
 
 /** 发送消息时携带的附件（与 MessageInput.Attachment 结构对齐） */

@@ -31,6 +31,15 @@ import type {
   CreateConversationParams,
 } from "./types";
 
+/** 消息分页每页条数（与后端 limit 上限 200 对齐，取 50 平衡首屏性能） */
+const MESSAGES_PAGE_SIZE = 50;
+
+/** 消息列表 API 响应（游标分页信封） */
+interface MessagesListResponse {
+  messages: Message[];
+  hasMore: boolean;
+}
+
 /**
  * 将 WebSocket 推送的 MessagePayload 转换为前端 Message 类型。
  *
@@ -78,6 +87,10 @@ export interface UseIMResult {
   loadConversations: () => Promise<void>;
   /** 选择会话（加载详情 + 消息 + 订阅 + 标记已读） */
   selectConversation: (cid: string) => Promise<void>;
+  /** 加载更多历史消息（向上加载，用最早消息 createdAt 作 before 游标） */
+  loadMoreMessages: (cid: string) => Promise<void>;
+  /** 是否正在加载更多历史消息 */
+  loadingMore: boolean;
   /** 发送消息 */
   sendMessage: (cid: string, body: string, opts?: SendMessageOptions) => Promise<void>;
   /** 编辑消息 */
@@ -102,11 +115,15 @@ export function useIM(workspaceId: string): UseIMResult {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  /** 是否正在加载更多历史消息（独立于全局 loading，避免全屏 spinner） */
+  const [loadingMore, setLoadingMore] = useState(false);
 
   const ws = useIMWebSocket(workspaceId);
 
   // 当前活跃会话 ID 引用（供 WS 消息处理判断是否属于当前会话）
   const activeCidRef = useRef<string | null>(null);
+  // 消息列表引用（供 loadMoreMessages 读取最早消息游标，避免依赖 messages 致使函数频繁重建）
+  const messagesRef = useRef<Message[]>([]);
 
   /** 加载会话列表 */
   const loadConversations = useCallback(async () => {
@@ -134,14 +151,17 @@ export function useIM(workspaceId: string): UseIMResult {
         const conv = await api<Conversation>(
           `/api/v1/workspaces/${workspaceId}/conversations/${cid}`,
         );
-        setActiveConversation(conv);
-        activeCidRef.current = cid;
 
-        // 2. 加载消息列表
-        const msgs = await api<Message[]>(
-          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages`,
+        // 2. 加载消息列表（游标分页，取最近 MESSAGES_PAGE_SIZE 条）
+        const result = await api<MessagesListResponse>(
+          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages?limit=${MESSAGES_PAGE_SIZE}`,
         );
-        setMessages(msgs ?? []);
+        const initialMessages = result?.messages ?? [];
+        const hasMoreMessages = result?.hasMore ?? false;
+
+        setActiveConversation({ ...conv, hasMoreMessages });
+        activeCidRef.current = cid;
+        setMessages(initialMessages);
 
         // 3. 订阅 WebSocket
         ws.subscribe(cid);
@@ -167,6 +187,33 @@ export function useIM(workspaceId: string): UseIMResult {
       }
     },
     [workspaceId, ws],
+  );
+
+  /** 加载更多历史消息（向上加载）：用当前最早消息的 createdAt 作 before 游标 */
+  const loadMoreMessages = useCallback(
+    async (cid: string) => {
+      const earliest = messagesRef.current[0];
+      if (!earliest) return;
+
+      setLoadingMore(true);
+      try {
+        const result = await api<MessagesListResponse>(
+          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages?before=${encodeURIComponent(earliest.createdAt)}&limit=${MESSAGES_PAGE_SIZE}`,
+        );
+        const olderMessages = result?.messages ?? [];
+        const hasMoreMessages = result?.hasMore ?? false;
+        // prepend 更早的消息到列表头部（时间线正序：旧在前）
+        setMessages((prev) => [...olderMessages, ...prev]);
+        setActiveConversation((prev) =>
+          prev ? { ...prev, hasMoreMessages } : prev,
+        );
+      } catch (err) {
+        console.error("[useIM] 加载更多消息失败:", err);
+      } finally {
+        setLoadingMore(false);
+      }
+    },
+    [workspaceId],
   );
 
   /** 发送消息 */
@@ -315,6 +362,11 @@ export function useIM(workspaceId: string): UseIMResult {
     return unsubscribe;
   }, [ws]);
 
+  // 同步消息列表引用（供 loadMoreMessages 读取游标）
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
+
   // 初始加载会话列表
   useEffect(() => {
     loadConversations();
@@ -329,6 +381,8 @@ export function useIM(workspaceId: string): UseIMResult {
     wsStatus: ws.status,
     loadConversations,
     selectConversation,
+    loadMoreMessages,
+    loadingMore,
     sendMessage,
     editMessage,
     revokeMessage,

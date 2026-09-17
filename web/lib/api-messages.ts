@@ -381,6 +381,21 @@ export const API_MESSAGES = {
   meetingNotFound: { zh: "会议不存在", en: "Meeting not found" },
   meetingEnded: { zh: "会议已结束", en: "Meeting has ended" },
   meetingFull: { zh: "会议人数已满", en: "Meeting is full" },
+  /* ── 会议录制（批次 B-2 任务 351）── */
+  recordingStarted: { zh: "录制已启动", en: "Recording started" },
+  recordingStopped: { zh: "录制已停止", en: "Recording stopped" },
+  recordingNotEnabled: {
+    zh: "该会议未开启录制",
+    en: "Recording is not enabled for this meeting",
+  },
+  meetingNotActive: {
+    zh: "会议不在进行中，无法录制",
+    en: "The meeting is not active; cannot record",
+  },
+  recordingNotStarted: {
+    zh: "录制尚未启动，无法停止",
+    en: "Recording has not been started; cannot stop",
+  },
 
   /* ── AI 会议会话（方向 G）── */
   sessionNotFound: { zh: "会议会话不存在", en: "Meeting session not found" },
