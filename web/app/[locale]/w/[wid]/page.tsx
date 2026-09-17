@@ -30,6 +30,10 @@ import type { WorkspaceSummary, Role } from "@/lib/types";
 import Onboarding from "@/components/Onboarding";
 import DashboardGrid, { type DashboardGridHandle } from "@/components/dashboard/DashboardGrid";
 import AddWidgetDialog from "@/components/dashboard/AddWidgetDialog";
+import WidgetGrid from "@/components/WidgetGrid";
+import TaskSummaryWidget from "@/components/widgets/TaskSummaryWidget";
+import ActivityWidget from "@/components/widgets/ActivityWidget";
+import AiInsightWidget from "@/components/widgets/AiInsightWidget";
 
 /** 仪表盘间距密度预设 */
 type Density = "compact" | "comfortable" | "spacious";
@@ -59,6 +63,28 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   // F7 自由拼接：布局模式（网格 / 自由）+ 间距密度预设
   const [freeMode, setFreeMode] = useState(false);
   const [density, setDensity] = useState<Density>("comfortable");
+  const [homeView, setHomeView] = useState<"dashboard" | "widgets">("dashboard");
+
+  useEffect(() => {
+    try {
+      setHomeView(localStorage.getItem(`${wid}_home_view`) === "widgets" ? "widgets" : "dashboard");
+    } catch {
+      setHomeView("dashboard"); // 隐私模式下存储不可用，仍可正常切换。
+    }
+    setEditing(false);
+    setAddDialogOpen(false);
+  }, [wid]);
+
+  function changeHomeView(view: "dashboard" | "widgets") {
+    setHomeView(view);
+    setEditing(false);
+    setAddDialogOpen(false);
+    try {
+      localStorage.setItem(`${wid}_home_view`, view);
+    } catch {
+      // 存储权限受限时仅保留当前会话偏好。
+    }
+  }
 
   // ─── 加载 workspace context ───
   const loadWorkspace = useCallback(async () => {
@@ -158,7 +184,15 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             {t("subtitle")}
           </p>
         </div>
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex items-center justify-end gap-2 flex-wrap">
+          <div className="flex items-center gap-1 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]" role="group" aria-label={t("homeView")}>
+            <button type="button" className={toolbarBtnClass(homeView === "dashboard")} aria-pressed={homeView === "dashboard"} onClick={() => changeHomeView("dashboard")}>
+              <LayoutGrid size={16} />{t("gridMode")}
+            </button>
+            <button type="button" className={toolbarBtnClass(homeView === "widgets")} aria-pressed={homeView === "widgets"} onClick={() => changeHomeView("widgets")}>
+              <Move size={16} />{t("widgetView")}
+            </button>
+          </div>
           {/* 编辑布局开关 */}
           <button
             type="button"
@@ -175,7 +209,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             <span className="hidden sm:inline">{editing ? t("exitEdit") : t("editLayout")}</span>
           </button>
           {/* 编辑模式工具栏：布局模式 + 密度 + 导出/导入（仅编辑模式） */}
-          {editing && (
+          {editing && homeView === "dashboard" && (
             <>
               {/* 分隔线 */}
               <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
@@ -269,15 +303,15 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
               />
             </>
           )}
-          {/* 添加 Widget */}
-          <button
+          {/* 添加 Widget 仅适用于原仪表盘 */}
+          {homeView === "dashboard" && <button
             type="button"
             onClick={() => setAddDialogOpen(true)}
             className="flex items-center gap-1.5 h-9 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             <Plus size={15} />
             <span className="hidden sm:inline">{t("addWidgetTitle")}</span>
-          </button>
+          </button>}
         </div>
       </div>
 
@@ -291,6 +325,16 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             />
           ))}
         </div>
+      ) : homeView === "widgets" ? (
+        <WidgetGrid
+          key={wid}
+          readOnly={!editing}
+          widgets={[
+            { id: "summary", title: t("taskStats"), component: <TaskSummaryWidget wid={wid} />, defaultPosition: { x: 0, y: 0, w: 4, h: 5 } },
+            { id: "activity", title: t("recentActivity"), component: <ActivityWidget wid={wid} />, defaultPosition: { x: 4, y: 0, w: 4, h: 5 } },
+            { id: "insight", title: t("aiInsight"), component: <AiInsightWidget wid={wid} />, defaultPosition: { x: 8, y: 0, w: 4, h: 5 } },
+          ]}
+        />
       ) : (
         <DashboardGrid
           ref={gridRef}

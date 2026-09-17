@@ -1402,6 +1402,13 @@
     "sectionTitle": "主题"
   },
   "document": {
+    "previewLabel": "文档预览",
+    "previewImageMissing": "没有可预览的图片",
+    "moreActions": "更多文档操作",
+    "shareLinkCopied": "分享链接已复制，有效期 24 小时",
+    "shareCopyFailed": "分享链接已创建，但复制失败，请在文档分享设置中复制",
+    "exportFailed": "文档导出失败",
+    "exportStarted": "文档下载已开始",
     "listTitle": "文档中心",
     "newDocument": "新建文档",
     "searchPlaceholder": "搜索文档…",
@@ -1802,6 +1809,9 @@
     "passwordIncorrect": "密码错误"
   },
   "dashboard": {
+    "homeView": "首页视图",
+    "widgetView": "自由拼接",
+    "aiInsight": "AI 洞察",
     "addWidgetTitle": "添加 Widget",
     "editLayout": "编辑布局",
     "exitEdit": "退出编辑",

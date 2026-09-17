@@ -1402,6 +1402,13 @@
     "sectionTitle": "Theme"
   },
   "document": {
+    "previewLabel": "Document preview",
+    "previewImageMissing": "No image available to preview",
+    "moreActions": "More document actions",
+    "shareLinkCopied": "Share link copied; valid for 24 hours",
+    "shareCopyFailed": "Share link created, but copying failed. Copy it from the document share settings.",
+    "exportFailed": "Failed to export document",
+    "exportStarted": "Document download started",
     "listTitle": "Document Center",
     "newDocument": "New Document",
     "searchPlaceholder": "Search documents…",
@@ -1802,6 +1809,9 @@
     "passwordIncorrect": "Incorrect password"
   },
   "dashboard": {
+    "homeView": "Home view",
+    "widgetView": "Free-form widgets",
+    "aiInsight": "AI insights",
     "addWidgetTitle": "Add Widget",
     "editLayout": "Edit Layout",
     "exitEdit": "Exit Edit",

@@ -11,10 +11,12 @@
  *  - 点击"批量导出"：POST /documents/batch-export → 打开 ExportPreview 批量模式预览
  */
 
-import { useEffect, useState, useDeferredValue, type FormEvent } from "react";
+import { useEffect, useRef, useState, useDeferredValue, type ComponentProps, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/lib/i18n-navigation";
-import { Plus, Search, FileText, Loader2, X, Download, CheckSquare, Square } from "lucide-react";
+import { Plus, Search, FileText, Loader2, X, Download, CheckSquare, Square, Eye, MoreHorizontal, Share2 } from "lucide-react";
+import { DocumentPreview } from "@/components/DocumentPreview";
+import { useToast } from "@/components/Toast";
 import { api } from "@/lib/api";
 import { ExportPreview, type BatchDocument } from "@/components/ExportPreview";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
@@ -42,6 +44,104 @@ export function DocumentListView({ wid }: { wid: string }) {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
+  const { toast } = useToast();
+  const [previewDocument, setPreviewDocument] = useState<ComponentProps<typeof DocumentPreview>["document"] | null>(null);
+  const [previewId, setPreviewId] = useState<string | null>(null);
+  const [menuId, setMenuId] = useState<string | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const actionInFlight = useRef(false);
+  const previewRequest = useRef<AbortController | null>(null);
+  const previewDialog = useRef<HTMLDialogElement>(null);
+
+  // 原生模态对话框提供焦点圈定、Escape 关闭及关闭后的焦点恢复。
+  useEffect(() => {
+    if (previewDocument) previewDialog.current?.showModal();
+  }, [previewDocument]);
+
+  useEffect(() => {
+    return () => previewRequest.current?.abort();
+  }, [wid]);
+
+  useEffect(() => {
+    if (!menuId) return;
+    const closeMenu = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest("[data-document-actions]")) setMenuId(null);
+    };
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setMenuId(null);
+    };
+    document.addEventListener("pointerdown", closeMenu);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("pointerdown", closeMenu);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [menuId]);
+
+  async function openPreview(item: DocumentListItem) {
+    previewRequest.current?.abort();
+    const controller = new AbortController();
+    previewRequest.current = controller;
+    setPreviewId(item.id);
+    try {
+      const doc = await api<{ title: string; markdown: string }>(
+        `/api/v1/workspaces/${wid}/documents/${item.id}`,
+        { signal: controller.signal },
+      );
+      if (!controller.signal.aborted) setPreviewDocument({ title: doc.title, content: doc.markdown, type: "markdown" });
+    } catch {
+      if (!controller.signal.aborted) toast("error", t("loadFailed"));
+    } finally {
+      if (!controller.signal.aborted) setPreviewId(null);
+    }
+  }
+
+  async function runDocumentAction(item: DocumentListItem, action: "share" | "convert") {
+    if (actionInFlight.current) return;
+    actionInFlight.current = true;
+    setBusyId(item.id);
+    setMenuId(null);
+    try {
+      const path = `/api/v1/workspaces/${wid}/documents/${item.id}/${action}`;
+      if (action === "share") {
+        const result = await api<{ shareUrl: string }>(path, {
+          method: "POST",
+          body: JSON.stringify({ visibility: "private", expiresIn: 24 }),
+        });
+        if (!result.shareUrl) throw new Error("Missing share URL");
+        try {
+          await navigator.clipboard.writeText(new URL(result.shareUrl, window.location.origin).href);
+          toast("success", t("shareLinkCopied"));
+        } catch {
+          toast("error", t("shareCopyFailed"));
+        }
+      } else {
+        const result = await api<{ content: string }>(path, {
+          method: "POST",
+          body: JSON.stringify({ format: "html" }),
+        });
+        if (typeof result.content !== "string") throw new Error("Invalid converted content");
+        const url = URL.createObjectURL(new Blob([result.content], { type: "text/html;charset=utf-8" }));
+        const link = document.createElement("a");
+        try {
+          link.href = url;
+          link.download = `${item.title.replace(/[<>:"/\\\\|?*\u0000-\u001f]/g, "_").slice(0, 120).trim() || item.id}.html`;
+          document.body.appendChild(link);
+          link.click();
+          toast("success", t("exportStarted"));
+        } finally {
+          link.remove();
+          // 下载开始后再释放 URL，避免部分浏览器读取到失效资源。
+          window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+        }
+      }
+    } catch {
+      toast("error", t(action === "share" ? "shareFailed" : "exportFailed"));
+    } finally {
+      actionInFlight.current = false;
+      setBusyId(null);
+    }
+  }
 
   // ── 批量导出状态（F4 任务 188）──
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -287,7 +387,7 @@ export function DocumentListView({ wid }: { wid: string }) {
                     </label>
                     <Link
                       href={`/w/${wid}/documents/${d.id}`}
-                      className="block px-[var(--space-4)] py-3 pl-[var(--space-8)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                      className="block px-[var(--space-4)] py-3 pl-[var(--space-8)] pr-24 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                     >
                       <div className="flex items-center gap-2">
                         <FileText size={15} className="shrink-0 text-[var(--muted)]" />
@@ -311,6 +411,20 @@ export function DocumentListView({ wid }: { wid: string }) {
                         <span>{t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}</span>
                       </div>
                     </Link>
+                    <div data-document-actions className="absolute right-[var(--space-3)] top-3 flex items-center gap-1">
+                      <button type="button" onClick={() => openPreview(d)} disabled={previewId === d.id} aria-label={t("previewMode")} title={t("previewMode")} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]">
+                        {previewId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                      </button>
+                      <button type="button" onClick={() => setMenuId(menuId === d.id ? null : d.id)} disabled={busyId !== null} aria-label={t("moreActions")} aria-expanded={menuId === d.id} aria-controls={`document-actions-${d.id}`} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]">
+                        {busyId === d.id ? <Loader2 size={14} className="animate-spin" /> : <MoreHorizontal size={14} />}
+                      </button>
+                      {menuId === d.id && (
+                        <div id={`document-actions-${d.id}`} className="absolute right-0 top-full z-20 min-w-40 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]" onBlur={(event) => { if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) setMenuId(null); }}>
+                          <button type="button" onClick={() => runDocumentAction(d, "share")} className="flex w-full items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"><Share2 size={14} />{t("share")}</button>
+                          <button type="button" onClick={() => runDocumentAction(d, "convert")} className="flex w-full items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"><Download size={14} />{t("export")}</button>
+                        </div>
+                      )}
+                    </div>
                   </motion.li>
                 );
               })}
@@ -318,6 +432,24 @@ export function DocumentListView({ wid }: { wid: string }) {
           </ul>
         </LayoutGroup>
       )}
+
+      <dialog
+        ref={previewDialog}
+        aria-label={t("previewMode")}
+        onClose={() => setPreviewDocument(null)}
+        onClick={(event) => {
+          if (event.target === event.currentTarget) {
+            const bounds = event.currentTarget.getBoundingClientRect();
+            if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) previewDialog.current?.close();
+          }
+        }}
+        className="m-auto w-[calc(100%-var(--space-8))] max-w-4xl max-h-[90dvh] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] text-[var(--fg)] shadow-[var(--elev-sm)] backdrop:bg-[var(--overlay)]"
+      >
+        <div className="flex justify-end mb-[var(--space-2)]">
+          <button type="button" autoFocus onClick={() => previewDialog.current?.close()} aria-label={t("close")} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"><X size={16} /></button>
+        </div>
+        {previewDocument && <DocumentPreview document={previewDocument} />}
+      </dialog>
 
       {/* ── 批量导出预览模态框（F4）── */}
       <ExportPreview
