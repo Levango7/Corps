@@ -26,7 +26,7 @@ echo "----------------------------------------------------------"
 echo " [entrypoint-cron] Corps cron 调度容器启动"
 echo " 时区（CRON_TZ）：${CRON_TZ}"
 echo " 调度目标（APP_HOST）：${APP_HOST}"
-echo " 计划：due-reminders 每日 01:00 / weekly-digest 每周一 02:00 / cleanup-uploads 每周一 04:00 / ai-push-runner 每 30 分钟"
+echo " 计划：due-reminders 每日 01:00 / weekly-digest 每周一 02:00 / cleanup-uploads 每周一 04:00 / ai-push-runner 每 30 分钟 / ai-push-web 每 15 分钟"
 echo "----------------------------------------------------------"
 
 # busybox crontab 的 TZ 通过环境注入：crond 继承本进程环境，date 按 CRON_TZ 解释计划
@@ -43,6 +43,8 @@ cat > "${CRONTAB_FILE}" <<EOF
 0 4 * * 1 wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/cleanup-uploads" 2>&1 | tail -1 >> /proc/1/fd/1
 # AI 推送自动执行器：每 30 分钟检查到期 schedule
 */30 * * * * wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/ai-push-runner" 2>&1 | tail -1 >> /proc/1/fd/1
+# AI 推送 Web Push：每 15 分钟发送未读推送的 Web Push 通知
+*/15 * * * * wget -qO- --server-response --header="Authorization: Bearer ${CRON_SECRET}" "http://${APP_HOST}/api/cron/ai-push-web" 2>&1 | tail -1 >> /proc/1/fd/1
 EOF
 
 # crond 前台运行（-f），日志输出到 stdout（docker logs 可见）

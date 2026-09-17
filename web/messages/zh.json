@@ -9,7 +9,14 @@
     "installPrompt": "安装 Corps 到桌面，随时开启高效协作",
     "install": "安装",
     "dismiss": "关闭",
-    "installed": "已安装"
+    "installed": "已安装",
+    "pushOn": "开启推送",
+    "pushOff": "关闭推送"
+  },
+  "offline": {
+    "title": "您已离线",
+    "message": "网络连接已断开，请检查网络后重试。",
+    "retry": "重试"
   },
   "nav": {
     "workspace": {

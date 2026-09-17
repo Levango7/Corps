@@ -9,7 +9,14 @@
     "installPrompt": "Install Corps for instant access to your workspace",
     "install": "Install",
     "dismiss": "Dismiss",
-    "installed": "Installed"
+    "installed": "Installed",
+    "pushOn": "Enable Push",
+    "pushOff": "Disable Push"
+  },
+  "offline": {
+    "title": "You are offline",
+    "message": "Network connection lost. Please check your network and retry.",
+    "retry": "Retry"
   },
   "nav": {
     "workspace": {

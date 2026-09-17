@@ -20,6 +20,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Download, X } from "lucide-react";
+import { PushSubscribe } from "./PushSubscribe";
 
 /** beforeinstallprompt 事件的标准外补类型（DOM lib 未收录）。 */
 interface BeforeInstallPromptEvent extends Event {
@@ -100,6 +101,7 @@ export function PwaRegister() {
         >
           {t("install")}
         </button>
+        <PushSubscribe />
         <button
           type="button"
           onClick={() => setDismissed(true)}

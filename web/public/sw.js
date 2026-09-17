@@ -7,7 +7,7 @@
  * ========================================================================== */
 
 const CACHE_VERSION = "corps-sw-v1";
-const CORE_ASSETS = ["/", "/manifest.json", "/favicon.svg"];
+const CORE_ASSETS = ["/", "/offline", "/manifest.json", "/favicon.svg"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -53,7 +53,7 @@ self.addEventListener("fetch", (event) => {
         return response;
       })
       .catch(() =>
-        caches.match(request).then((cached) => cached || caches.match("/"))
+        caches.match(request).then((cached) => cached || caches.match("/offline"))
       )
   );
 });
