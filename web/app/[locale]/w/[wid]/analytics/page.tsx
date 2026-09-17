@@ -150,9 +150,9 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       </div>
 
       {/* 北极星卡 + 概览卡 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
         {/* WAW 北极星卡（占 2 列，突出展示） */}
-        <div className="col-span-2 sm:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
           <div className="flex items-center gap-2 mb-2">
             <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
             <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{t("wawTitle")}</span>
@@ -179,7 +179,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       </div>
 
       {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
         <StatCard icon={Layers} label={t("sessions")} value={data.sessions} color="var(--accent)" />
         <StatCard
           icon={TrendingUp}
@@ -216,7 +216,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           <Repeat size={16} className="text-[var(--muted)]" />
           {t("retentionTitle")}
         </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)]">
           {retentionPoints.map(({ key, labelKey }) => {
             const r = data.retention[key];
             return (
@@ -268,7 +268,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
               const pct = Math.round((e.count / data.totalEvents) * 100);
               return (
                 <li key={e.name} className="flex items-center gap-3">
-                  <code className="w-40 sm:w-48 shrink-0 font-[family-name:var(--font-mono)] text-[length:var(--text-xs)] text-[var(--fg-2)] truncate">
+                  <code className="w-28 sm:w-40 lg:w-48 shrink-0 font-[family-name:var(--font-mono)] text-[length:var(--text-xs)] text-[var(--fg-2)] truncate">
                     {e.name}
                   </code>
                   <div className="flex-1 min-w-0">
@@ -494,8 +494,8 @@ function AnalyticsSkeleton() {
         <Skeleton className="h-4 w-48" />
       </div>
       {/* 北极星 + 概览卡骨架 */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
-        <div className="col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4">
           <Skeleton className="h-4 w-32 mb-2" />
           <Skeleton className="h-9 w-20 mb-1" />
           <Skeleton className="h-3 w-40" />
@@ -511,7 +511,7 @@ function AnalyticsSkeleton() {
         ))}
       </div>
       {/* 次级概览骨架 */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
@@ -543,7 +543,7 @@ function AnalyticsSkeleton() {
       {/* 留存骨架 */}
       <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5 mb-[var(--space-5)]">
         <Skeleton className="h-5 w-28 mb-4" />
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-[var(--space-3)]">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)]">
           {Array.from({ length: 3 }).map((_, i) => (
             <div key={i} className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-3">
               <Skeleton className="h-3 w-8 mx-auto mb-2" />

@@ -13,8 +13,9 @@
  */
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
+import type { TouchEvent as ReactTouchEvent } from "react";
 
-import { Plus, AlertCircle, CheckSquare } from "lucide-react";
+import { Plus, AlertCircle, CheckSquare, Loader2, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { track } from "@/lib/analytics";
@@ -152,6 +153,63 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       setTasks([]);
     }
   }, [wid, milestoneFilter, taskFilter, tErr]);
+
+  // ─── 下拉刷新（pull-to-refresh，M3 移动端手势交互） ─────────
+  // 触摸事件 + translateY 阈值判断，不依赖外部库。
+  // 仅在页面滚动到顶部（window.scrollY <= 0）时触发，避免与内容滚动冲突。
+  // 阻尼 0.5：下拉 140px 实际显示 70px，上限 100px，超过 70px 阈值触发刷新。
+  const PULL_THRESHOLD = 70;
+  const PULL_MAX = 100;
+  const PULL_DAMPING = 0.5;
+  // pullDistance / isRefreshing 需触发渲染；isPulling 用 ref 避免无谓重渲染
+  const [pullDistance, setPullDistance] = useState(0);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const isPullingRef = useRef(false);
+  const isRefreshingRef = useRef(false);
+  const touchStartYRef = useRef(0);
+  const pullDistanceRef = useRef(0);
+
+  const handlePullStart = useCallback((e: ReactTouchEvent) => {
+    if (isRefreshingRef.current) return;
+    // 仅在页面顶部触发下拉刷新
+    if (window.scrollY <= 0) {
+      touchStartYRef.current = e.touches[0].clientY;
+      isPullingRef.current = true;
+    }
+  }, []);
+
+  const handlePullMove = useCallback((e: ReactTouchEvent) => {
+    if (!isPullingRef.current || isRefreshingRef.current) return;
+    const pull = e.touches[0].clientY - touchStartYRef.current;
+    if (pull > 0) {
+      // 阻尼：下拉距离 * 0.5，上限 100px
+      const dist = Math.min(pull * PULL_DAMPING, PULL_MAX);
+      pullDistanceRef.current = dist;
+      setPullDistance(dist);
+    }
+  }, []);
+
+  const handlePullEnd = useCallback(() => {
+    if (!isPullingRef.current) return;
+    isPullingRef.current = false;
+    if (pullDistanceRef.current >= PULL_THRESHOLD) {
+      // 超过阈值：触发刷新，保持 50px 高度显示 spinner
+      isRefreshingRef.current = true;
+      setIsRefreshing(true);
+      pullDistanceRef.current = 50;
+      setPullDistance(50);
+      load().finally(() => {
+        isRefreshingRef.current = false;
+        setIsRefreshing(false);
+        pullDistanceRef.current = 0;
+        setPullDistance(0);
+      });
+    } else {
+      // 未超阈值：回弹归零
+      pullDistanceRef.current = 0;
+      setPullDistance(0);
+    }
+  }, [load]);
 
   // ─── 拖拽排序 ───────────────────────────────────────────
 
@@ -346,7 +404,26 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           action={{ label: tStatus("newTask"), onClick: () => setShowNew(true) }}
         />
       ) : (
-        <div>
+        <div
+          onTouchStart={handlePullStart}
+          onTouchMove={handlePullMove}
+          onTouchEnd={handlePullEnd}
+        >
+          {/* 下拉刷新指示器（M3 移动端手势）：高度随下拉距离变化，超过阈值显示 spinner */}
+          <div
+            className="flex items-center justify-center overflow-hidden transition-[height] duration-[var(--motion-base)]"
+            style={{ height: pullDistance }}
+            aria-hidden={pullDistance === 0}
+          >
+            {isRefreshing ? (
+              <Loader2 size={20} className="animate-spin text-[var(--accent)]" />
+            ) : pullDistance > 0 ? (
+              <ChevronDown
+                size={20}
+                className={`text-[var(--muted)] transition-transform duration-[var(--motion-fast)] ${pullDistance >= 70 ? "rotate-180" : ""}`}
+              />
+            ) : null}
+          </div>
           {/* 标题行 + 操作 */}
           <div className="flex items-center justify-between mb-[var(--space-6)] gap-[var(--space-3)] flex-wrap">
             <div>
@@ -368,7 +445,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
                   if (selectionMode) setSelectedIds(new Set());
                 }}
                 aria-pressed={selectionMode}
-                className={`flex items-center gap-1.5 px-3 py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+                className={`flex items-center gap-1.5 px-3 py-2 min-h-[44px] md:min-h-0 rounded-[var(--radius-md)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                   selectionMode
                     ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                     : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--fg)]"
@@ -380,7 +457,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               </button>
               <button
                 onClick={() => setShowNew(true)}
-                className="flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="flex items-center gap-2 px-4 py-2 min-h-[44px] md:min-h-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <Plus size={16} />
                 {t("create")}
@@ -479,7 +556,7 @@ function BoardView(props: BoardViewProps) {
               key={col.id}
               onClick={() => setActiveColumn(col.id)}
               aria-pressed={activeColumn === col.id}
-              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-2 min-h-[44px] rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                 activeColumn === col.id
                   ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
                   : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -499,9 +576,9 @@ function BoardView(props: BoardViewProps) {
         />
       </div>
 
-      {/* md：4 列水平滚动；lg：4 列网格 */}
+      {/* md：4 列水平滚动 + scroll-snap 列吸附；lg：4 列网格 */}
       <div className="hidden md:block">
-        <div className="flex overflow-x-auto gap-[var(--space-4)] pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+        <div className="flex overflow-x-auto snap-x snap-mandatory touch-pan-x gap-[var(--space-4)] pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0 lg:snap-none lg:touch-auto">
           {COLUMNS.map((column) => (
             <BoardColumn
               key={column.id}

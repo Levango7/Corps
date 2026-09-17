@@ -275,7 +275,7 @@ function MemberRow({
           <select
             value={m.role}
             onChange={(e) => onChangeRole(m.id, e.target.value as Role)}
-            className="w-full h-8 px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="w-full min-h-[44px] px-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             <option value="member">{t("roleMember")}</option>
             <option value="admin">{t("roleAdmin")}</option>
@@ -294,7 +294,7 @@ function MemberRow({
           <div className="flex gap-2">
             <button
               onClick={() => onGrantTempRole(m)}
-              className="flex-1 flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              className="flex-1 flex items-center justify-center gap-2 min-h-[44px] px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <Clock size={14} />
               <span>{tempGrantActive ? t("tempGrantManage") : t("tempGrant")}</span>
@@ -302,7 +302,7 @@ function MemberRow({
             {tempGrantActive && (
               <button
                 onClick={() => onRevokeTempRole(m.id)}
-                className="flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--meta)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="flex items-center justify-center gap-2 min-h-[44px] px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--meta)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <X size={14} />
                 <span>{t("revokeTempPermission")}</span>
@@ -321,7 +321,7 @@ function MemberRow({
               }
             }}
             onBlur={() => setConfirming(false)}
-            className={`w-full flex items-center justify-center gap-2 h-8 px-3 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+            className={`w-full flex items-center justify-center gap-2 min-h-[44px] px-3 rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               confirming
                 ? "bg-[var(--danger-soft)] text-[var(--danger)]"
                 : "hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)]"

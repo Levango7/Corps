@@ -51,10 +51,10 @@ export function TaskPropertyAside({
   const fieldLabel =
     "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
   const fieldControl =
-    "w-full h-8 px-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-colors duration-[var(--motion-fast)]";
+    "w-full min-h-[44px] sm:h-8 px-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] transition-colors duration-[var(--motion-fast)]";
 
   return (
-    <aside className="order-first lg:order-last lg:sticky lg:top-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] lg:p-[var(--space-4)] grid grid-cols-2 md:flex md:flex-wrap gap-x-[var(--space-3)] md:gap-x-[var(--space-5)] gap-y-[var(--space-3)] lg:block lg:space-y-[var(--space-4)] lg:gap-0">
+    <aside className="order-first lg:order-last lg:sticky lg:top-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-3)] lg:p-[var(--space-4)] grid grid-cols-1 sm:grid-cols-2 md:flex md:flex-wrap gap-x-[var(--space-3)] md:gap-x-[var(--space-5)] gap-y-[var(--space-3)] lg:block lg:space-y-[var(--space-4)] lg:gap-0">
       <div className="min-w-[130px] flex-1 lg:flex-none lg:w-full">
         <div className={fieldLabel}>
           <StatusIcon size={13} style={{ color: STATUS_META[task.status].color }} />
@@ -160,7 +160,7 @@ export function TaskPropertyAside({
         ) : (
           <button
             onClick={() => onPatch({ blocked: true })}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            className="inline-flex items-center gap-1.5 min-h-[44px] sm:h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
           >
             <AlertTriangle size={13} />
             {t("blockedMark")}
@@ -175,7 +175,7 @@ export function TaskPropertyAside({
           {t("shareLabel")}
         </div>
         {taskShareUrl ? (
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <input
               type="text"
               readOnly
@@ -198,13 +198,13 @@ export function TaskPropertyAside({
                   toast("error", tErr("copyFailed"));
                 }
               }}
-              className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              className="shrink-0 w-full sm:w-auto min-h-[44px] sm:h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             >
               {shareCopied ? t("shareCopied") : t("shareCopy")}
             </button>
             <button
               onClick={() => onPatch({ shareToken: null })}
-              className="shrink-0 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+              className="shrink-0 w-full sm:w-auto min-h-[44px] sm:h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-xs)] text-[var(--muted)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
             >
               {t("shareRevoke")}
             </button>
@@ -212,7 +212,7 @@ export function TaskPropertyAside({
         ) : (
           <button
             onClick={() => onPatch({ shareToken: "rotate" })}
-            className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            className="inline-flex items-center gap-1.5 min-h-[44px] sm:h-8 px-2.5 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
           >
             <Share2 size={13} />
             {t("shareGenerate")}

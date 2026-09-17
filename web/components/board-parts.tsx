@@ -71,7 +71,7 @@ export function BoardColumn({
       data-column={column.id}
       role="group"
       aria-label={tStatus(column.titleKey)}
-      className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
+      className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 snap-start lg:snap-none lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragOver(true);
