@@ -7,7 +7,7 @@
     "frontendDist": "../dist",
     "devUrl": "http://localhost:3000",
     "beforeDevCommand": "cd ../web && pnpm dev",
-    "beforeBuildCommand": "cd ../web && pnpm build"
+    "beforeBuildCommand": "cd ../web && pnpm build && node ../desktop/copy-standalone.mjs"
   },
   "app": {
     "windows": [
@@ -35,6 +35,7 @@
       "icons/icon.icns",
       "icons/icon.ico"
     ],
+    "resources": ["resources/standalone/**/*"],
     "windows": {
       "webviewInstallMode": {
         "type": "downloadBootstrapper"

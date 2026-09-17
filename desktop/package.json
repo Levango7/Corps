@@ -7,6 +7,7 @@
     "dev": "tauri dev",
     "build": "tauri build",
     "build:debug": "tauri build --debug",
+    "build:sidecar": "cd ../web && pnpm build && node ../desktop/copy-standalone.mjs",
     "tauri": "tauri",
     "icon": "tauri icon"
   },

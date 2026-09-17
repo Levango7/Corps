@@ -5,11 +5,14 @@
 //   2. 系统托盘 —— 最小化到托盘 + 右键菜单（显示/退出）
 //   3. 全局快捷键 —— Ctrl+Shift+C 唤起主窗口
 //   4. 深色/浅色主题 —— 跟随系统主题
+//   5. Sidecar —— 生产模式下启动内嵌 Next.js standalone server 子进程
 //
 // 仅 Windows / macOS / Linux 三端通用代码，无平台条件编译分支。
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::process::{Child, Command};
+use std::sync::Mutex;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
@@ -20,6 +23,25 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 const SHOW_LABEL: &str = "显示窗口";
 const QUIT_LABEL: &str = "退出";
 const HIDE_LABEL: &str = "隐藏到托盘";
+
+/// Sidecar 子进程状态：包装 Next.js standalone server 的子进程句柄。
+/// 使用 Mutex<Option<Child>> 以满足 Send + Sync 要求（Child 仅 Send 非 Sync）。
+/// take() 取出后置 None，确保 kill 只执行一次。
+struct SidecarState(Mutex<Option<Child>>);
+
+/// 终止 sidecar 子进程（如果存在且尚未终止）。
+/// 在应用真正退出时调用（quit_app 命令 / 托盘"退出"菜单）。
+/// CloseRequested 时不调用 —— 此时仅隐藏窗口到托盘，保持 server 运行。
+fn kill_sidecar(app: &tauri::AppHandle) {
+    if let Some(state) = app.try_state::<SidecarState>() {
+        if let Ok(mut guard) = state.0.lock() {
+            if let Some(mut child) = guard.take() {
+                let _ = child.kill();
+                let _ = child.wait(); // 回收僵尸进程，避免资源泄漏
+            }
+        }
+    }
+}
 
 /// 构建系统托盘菜单：显示 / 隐藏 / 分隔 / 退出
 fn build_tray_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
@@ -64,6 +86,8 @@ fn toggle_window(app: tauri::AppHandle) {
 
 #[tauri::command]
 fn quit_app(app: tauri::AppHandle) {
+    // 终止 sidecar 子进程（Next.js standalone server）
+    kill_sidecar(&app);
     app.exit(0);
 }
 
@@ -85,6 +109,29 @@ fn main() {
             show_main_window(app);
         }))
         .setup(|app| {
+            // ─── Sidecar: 启动 Next.js standalone server ──────────────
+            // 生产模式下启动内嵌的 Node.js standalone server，
+            // 开发模式下由 beforeDevCommand 启动 pnpm dev，无需此处启动。
+            #[cfg(not(debug_assertions))]
+            {
+                let resource_path = app.path().resource_dir()?;
+                let server_path = resource_path.join("standalone").join("server.js");
+
+                let child = Command::new("node")
+                    .arg(&server_path)
+                    .spawn()
+                    .expect("Failed to start Next.js standalone server");
+
+                // 存储子进程句柄，退出时终止
+                app.manage(SidecarState(Mutex::new(Some(child))));
+            }
+
+            // 开发模式下也注册空的 SidecarState，使 try_state::<SidecarState>() 始终可用
+            #[cfg(debug_assertions)]
+            {
+                app.manage(SidecarState(Mutex::new(None)));
+            }
+
             // ─── 系统托盘 ──────────────────────────────────────
             let menu = build_tray_menu(app.handle())?;
             let _tray = TrayIconBuilder::with_id("main-tray")
@@ -105,7 +152,11 @@ fn main() {
                 .on_menu_event(|app, event| match event.id.as_ref() {
                     "show" => show_main_window(app),
                     "hide" => hide_main_window(app),
-                    "quit" => app.exit(0),
+                    "quit" => {
+                        // 终止 sidecar 子进程后退出应用
+                        kill_sidecar(app);
+                        app.exit(0);
+                    }
                     _ => {}
                 })
                 .build(app)?;
