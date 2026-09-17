@@ -843,6 +843,13 @@
     "taskCount": "{count} 个任务"
   },
   "chat": {
+    "mentionAria": "提及成员",
+    "moreActions": "更多消息操作",
+    "editMessage": "编辑消息",
+    "recallConfirm": "确定撤回这条消息？撤回后将不再显示原文。",
+    "recallExpired": "消息发送超过 30 分钟，无法撤回",
+    "actionFailed": "消息操作失败，请稍后重试",
+    "saving": "保存中…",
     "attachFile": "添加附件",
     "attachmentFallback": "附件",
     "empty": "还没有消息，发一条开始对话吧。",

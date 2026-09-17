@@ -1,9 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AttachmentPreviewModal } from "@/components/AttachmentPreviewModal";
 
-import { Check, CheckCheck, FileText, Download } from "lucide-react";
+import { Check, CheckCheck, FileText, Download, MoreHorizontal, Pencil, Undo2, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import type { ChatMessage, MessageAttachment } from "./types";
 
@@ -17,9 +17,18 @@ import type { ChatMessage, MessageAttachment } from "./types";
  * - 未读高亮：左侧 3px 色条
  */
 
+export type EditableChatMessage = ChatMessage & {
+  workspaceId?: string;
+  taskId?: string | null;
+  isRecalled?: boolean;
+  revokedAt?: string | null;
+  editedAt?: string | null;
+};
+
 interface MessageBubbleProps {
   /** 消息 */
-  message: ChatMessage;
+  message: EditableChatMessage;
+  onMessageUpdated?: (message: EditableChatMessage) => void;
   /** 当前用户 ID */
   currentUserId: string;
   /** 是否未读（用于高亮） */
@@ -59,14 +68,53 @@ function highlightText(text: string, query: string): React.ReactNode {
   );
 }
 
-export function MessageBubble({ message, currentUserId, unread, searchQuery }: MessageBubbleProps) {
+export function MessageBubble({ message, currentUserId, unread, searchQuery, onMessageUpdated }: MessageBubbleProps) {
   const [previewAttachment, setPreviewAttachment] = useState<{
     url: string;
     fileName: string;
     fileType: string;
   } | null>(null);
   const t = useTranslations("chat");
-  const isOwn = message.authorId === currentUserId;
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(message.body);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const menuRef = useRef<HTMLDetailsElement>(null);
+  const savingRef = useRef(false);
+  const isRecalled = Boolean(message.isRecalled || message.revokedAt);
+  const isOwn = Boolean(currentUserId) && message.authorId === currentUserId;
+  const canUpdate = isOwn && !isRecalled && Boolean(message.workspaceId && message.taskId);
+  const canRecall = Date.now() - new Date(message.createdAt).getTime() <= 30 * 60 * 1000;
+
+  const updateMessage = async (action: "recall" | "edit") => {
+    if (!canUpdate || savingRef.current || (action === "edit" && !draft.trim())) return;
+    if (menuRef.current) menuRef.current.open = false;
+    if (action === "recall" && !window.confirm(t("recallConfirm"))) return;
+    savingRef.current = true;
+    setSaving(true);
+    setError("");
+    try {
+      const url = `/api/v1/workspaces/${encodeURIComponent(message.workspaceId!)}/tasks/${encodeURIComponent(message.taskId!)}/messages/${encodeURIComponent(message.id)}`;
+      const response = await fetch(url, {
+        method: "PATCH",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(action === "edit" ? { action, body: draft.trim() } : { action }),
+      });
+      const result: { code?: number; data?: EditableChatMessage; reason?: string } = await response.json();
+      if (!response.ok || result.code !== 0 || !result.data || result.data.id !== message.id) {
+        throw new Error(result.reason === "recallExpired" ? t("recallExpired") : result.reason === "recalled" ? t("messageRevoked") : t("actionFailed"));
+      }
+      onMessageUpdated?.(result.data);
+      setPreviewAttachment(null);
+      setEditing(false);
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : t("actionFailed"));
+    } finally {
+      savingRef.current = false;
+      setSaving(false);
+    }
+  };
   const author = message.author;
   const displayName = author ? author.name || author.email.split("@")[0] : t("unknownUser");
   const initial = (author ? author.name || author.email : "?")[0]?.toUpperCase();
@@ -77,7 +125,7 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
 
   return (
     <div
-      className={`flex gap-[var(--space-2)] ${isOwn ? "flex-row-reverse" : "flex-row"} relative`}
+      className={`group/message flex gap-[var(--space-2)] ${isOwn ? "flex-row-reverse" : "flex-row"} relative`}
     >
       {/* 未读高亮色条 */}
       {unread && (
@@ -101,16 +149,46 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
             {displayName}
           </span>
         )}
+        {canUpdate && !editing && (
+          <details ref={menuRef} className="relative mb-0.5 opacity-100 sm:opacity-0 group-hover/message:opacity-100 group-focus-within/message:opacity-100 open:opacity-100"
+            onBlur={(event) => { if (!event.currentTarget.contains(event.relatedTarget)) event.currentTarget.open = false; }}
+            onKeyDown={(event) => { if (event.key === "Escape") { event.currentTarget.open = false; event.currentTarget.querySelector("summary")?.focus(); } }}>
+            <summary aria-label={t("moreActions")} title={t("moreActions")} className="flex cursor-pointer list-none items-center justify-center rounded-[var(--radius-sm)] p-1 text-[var(--meta)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]">
+              <MoreHorizontal size={14} />
+            </summary>
+            <div className="absolute right-0 top-full z-20 min-w-[140px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-1 shadow-[var(--elev-md)] text-[length:var(--text-sm)] text-[var(--fg)]">
+              <button type="button" disabled={saving} onClick={() => { if (menuRef.current) menuRef.current.open = false; setDraft(message.body); setEditing(true); setError(""); }} className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] p-2 hover:bg-[var(--surface-2)] disabled:opacity-50">
+                <Pencil size={14} />{t("edit")}
+              </button>
+              <button type="button" disabled={saving || !canRecall} title={!canRecall ? t("recallExpired") : undefined} onClick={() => void updateMessage("recall")} className="flex w-full items-center gap-2 rounded-[var(--radius-sm)] p-2 text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50">
+                <Undo2 size={14} />{t("revoke")}
+              </button>
+            </div>
+          </details>
+        )}
         <div
           className={`px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] leading-[var(--leading-relaxed)] whitespace-pre-wrap break-words ${
-            isOwn
+            isRecalled || editing ? "bg-[var(--surface-2)] text-[var(--meta)]" : isOwn
               ? "bg-[var(--accent)] text-[var(--accent-fg)]"
               : "bg-[var(--surface-2)] text-[var(--fg-2)]"
           }`}
         >
-          {message.body && <span>{highlightText(message.body, searchQuery)}</span>}
+          {isRecalled ? <span>{t("messageRevoked")}</span> : editing ? (
+            <form onSubmit={(event) => { event.preventDefault(); void updateMessage("edit"); }} className="flex min-w-0 flex-col gap-2">
+              <textarea autoFocus value={draft} onChange={(event) => setDraft(event.target.value)} maxLength={10000} rows={3} disabled={saving} aria-label={t("editMessage")}
+                onKeyDown={(event) => {
+                  if (event.key === "Escape" && !saving) setEditing(false);
+                  if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); void updateMessage("edit"); }
+                }}
+                className="w-full min-w-0 resize-y rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-2 text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]" />
+              <div className="flex justify-end gap-2">
+                <button type="button" disabled={saving} onClick={() => setEditing(false)} className="rounded-[var(--radius-sm)] px-2 py-1 text-[var(--fg-2)] hover:bg-[var(--surface-3)] disabled:opacity-50">{t("cancel")}</button>
+                <button type="submit" disabled={saving || !draft.trim()} className="flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--accent)] px-2 py-1 text-[var(--accent-fg)] disabled:opacity-50">{saving && <Loader2 size={14} className="animate-spin" />}{t(saving ? "saving" : "save")}</button>
+              </div>
+            </form>
+          ) : message.body && <span>{highlightText(message.body, searchQuery)}</span>}
           {/* 附件列表 */}
-          {message.attachments && message.attachments.length > 0 && (
+          {!isRecalled && !editing && message.attachments && message.attachments.length > 0 && (
             <div className={`mt-1 space-y-1 ${message.body ? "pt-1" : ""}`}>
               {message.attachments.map((att) =>
                 isImageAttachment(att) && att.thumbnailUrl ? (
@@ -160,8 +238,10 @@ export function MessageBubble({ message, currentUserId, unread, searchQuery }: M
           )}
         </div>
 
+        {error && <p role="alert" className="mt-1 text-[length:var(--text-xs)] text-[var(--danger-fg)]">{error}</p>}
+        {!isRecalled && message.editedAt && <span className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)]">{t("edited")}</span>}
         {/* 已读回执（仅自己的消息显示） */}
-        {isOwn && (
+        {isOwn && !isRecalled && (
           <span
             className={`mt-0.5 flex items-center gap-0.5 text-[length:var(--text-xs)] ${
               isRead ? "text-[var(--accent-success)]" : "text-[var(--meta)]"

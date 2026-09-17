@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Loader2, ChevronDown, Search, X } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import type { ChatMessage } from "./types";
-import { MessageBubble } from "./MessageBubble";
+import { MessageBubble, type EditableChatMessage } from "./MessageBubble";
 import type { TimeT } from "@/lib/format";
 
 /**
@@ -92,6 +92,18 @@ export function MessageList({
 }: MessageListProps) {
   const t = useTranslations("chat");
   const locale = useLocale();
+  // 局部保存操作结果，避免父级旧快照在已读更新时覆盖刚编辑/撤回的内容。
+  const [messageUpdates, setMessageUpdates] = useState<Record<string, EditableChatMessage>>({});
+  const onMessageUpdated = useCallback((message: EditableChatMessage) => {
+    setMessageUpdates((previous) => ({ ...previous, [message.id]: message }));
+  }, []);
+  const applyUpdate = useCallback((message: EditableChatMessage): EditableChatMessage => {
+    const update = messageUpdates[message.id];
+    if (!update || message.isRecalled || message.revokedAt ||
+      (message.editedAt && update.editedAt && new Date(message.editedAt) > new Date(update.editedAt))) return message;
+    return { ...message, body: update.body, isRecalled: update.isRecalled, revokedAt: update.revokedAt, editedAt: update.editedAt,
+      ...(update.isRecalled ? { attachments: [] } : {}) };
+  }, [messageUpdates]);
   const listRef = useRef<HTMLDivElement>(null);
   const [showNewMessages, setShowNewMessages] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -149,7 +161,7 @@ export function MessageList({
   }, []);
 
   // 按时间分组
-  const groups = useMemo(() => groupByTime(messages, t, locale), [messages, t, locale]);
+  const groups = useMemo(() => groupByTime(messages.map(applyUpdate), t, locale), [messages, applyUpdate, t, locale]);
 
   // 父组件 searchQuery 过滤（保留原有高亮过滤行为）
   const filteredGroups = useMemo(() => {
@@ -157,7 +169,7 @@ export function MessageList({
     const q = searchQuery.toLowerCase();
     const matched = groups
       .flatMap((g) => g.messages)
-      .filter((m) => m.body.toLowerCase().includes(q));
+      .filter((m: EditableChatMessage) => !m.isRecalled && !m.revokedAt && m.body.toLowerCase().includes(q));
     if (matched.length === 0) return [];
     return [{ timeLabel: t("searchResults"), messages: matched }];
   }, [groups, searchQuery, t]);
@@ -167,10 +179,10 @@ export function MessageList({
     if (searchResults !== null) {
       if (searchResults.length === 0) return [];
       // 搜索结果合并为单组，倒序展示（最新在上）——这里反转为正序以保持滚动一致
-      return [{ timeLabel: t("searchResults"), messages: searchResults }];
+      return [{ timeLabel: t("searchResults"), messages: searchResults.map(applyUpdate) }];
     }
     return filteredGroups;
-  }, [searchResults, filteredGroups, t]);
+  }, [searchResults, filteredGroups, applyUpdate, t]);
 
   // 用于高亮的关键词：本地搜索优先，否则用父组件 searchQuery
   const effectiveQuery = searchResults !== null ? localQuery : searchQuery;
@@ -259,7 +271,7 @@ export function MessageList({
                 aria-label={t("clearSearch")}
                 className="shrink-0 w-4 h-4 flex items-center justify-center rounded-full text-[var(--meta)] hover:bg-[var(--surface-3)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
               >
-                <X size={12} />
+                <X size={14} />
               </button>
             )}
           </div>
@@ -298,7 +310,7 @@ export function MessageList({
       >
         {loading ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 size={18} className="animate-spin text-[var(--muted)]" />
+            <Loader2 size={16} className="animate-spin text-[var(--muted)]" />
           </div>
         ) : !hasMessages && !inLocalSearch ? (
           <div className="flex items-center justify-center h-full">
@@ -336,7 +348,8 @@ export function MessageList({
                       />
                     )}
                     <MessageBubble
-                      message={msg}
+                      message={applyUpdate(msg)}
+                      onMessageUpdated={onMessageUpdated}
                       currentUserId={currentUserId}
                       unread={isUnread}
                       searchQuery={effectiveQuery}

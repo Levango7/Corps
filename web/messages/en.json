@@ -843,6 +843,13 @@
     "taskCount": "{count} tasks"
   },
   "chat": {
+    "mentionAria": "Mention a member",
+    "moreActions": "More message actions",
+    "editMessage": "Edit message",
+    "recallConfirm": "Recall this message? Its original content will no longer be shown.",
+    "recallExpired": "Messages can only be recalled within 30 minutes of sending",
+    "actionFailed": "Could not update the message. Please try again.",
+    "saving": "Saving…",
     "attachFile": "Attach file",
     "attachmentFallback": "Attachment",
     "empty": "No messages yet. Start the conversation.",

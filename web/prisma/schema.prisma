@@ -540,6 +540,7 @@ model Message {
   authorId       String?  @map("author_id") @db.Uuid
   body           String   @db.Text
   // IM 升级：编辑/撤回/回复/提及
+  isRecalled     Boolean  @default(false)
   editedAt       DateTime? @map("edited_at") @db.Timestamptz
   revokedAt      DateTime? @map("revoked_at") @db.Timestamptz
   revokedBy      String?   @map("revoked_by") @db.Uuid
