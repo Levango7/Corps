@@ -25,6 +25,7 @@ import {
   AlertCircle,
   Pencil,
   Play,
+  User,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { MeetingCreate, type EditableMeeting } from "./MeetingCreate";
@@ -47,12 +48,14 @@ interface MeetingItem {
   createdBy?: string | null;
   /** 录制 URL（已结束会议可查看回放） */
   recordingUrl?: string | null;
-  /** 描述（编辑时回填） */
+  /** 描述（L5 #31：列表展示 + 编辑时回填） */
   description?: string | null;
   /** 类型（编辑时回填） */
   type?: string;
   /** 录制开关（编辑时回填） */
   recordingEnabled?: boolean;
+  /** 创建者信息（L5 #31：列表展示创建者名称） */
+  creator?: { id: string; name: string | null; email: string } | null;
 }
 
 /** 列表 API 响应（分页） */
@@ -111,12 +114,11 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
     };
   }, [workspaceId]);
 
-  // 拉取会议列表
+  // 拉取会议列表 + L7 #33：30 秒轮询刷新（实时更新会议状态/参与者数）
   useEffect(() => {
     let cancelled = false;
-    (async () => {
-      setLoading(true);
-      setError("");
+
+    const fetchMeetings = async () => {
       try {
         const data = await api<MeetingListResponse>(
           `/api/v1/workspaces/${workspaceId}/meetings?page=${page}&limit=${PAGE_LIMIT}`,
@@ -124,6 +126,7 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
         if (!cancelled) {
           setItems(data.items);
           setTotal(data.total);
+          setError("");
         }
       } catch (e) {
         if (!cancelled) {
@@ -132,9 +135,20 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
       } finally {
         if (!cancelled) setLoading(false);
       }
-    })();
+    };
+
+    // 首次加载显示 loading
+    setLoading(true);
+    void fetchMeetings();
+
+    // L7 #33：30 秒轮询刷新（不显示 loading，静默更新）
+    const pollInterval = setInterval(() => {
+      if (!cancelled) void fetchMeetings();
+    }, 30_000);
+
     return () => {
       cancelled = true;
+      clearInterval(pollInterval);
     };
   }, [workspaceId, page, t]);
 
@@ -440,7 +454,20 @@ function MeetingRow({
             {meeting._count.participants}
             {meeting.maxParticipants ? ` / ${meeting.maxParticipants}` : ""}
           </span>
+          {/* L5 #31：显示创建者名称 */}
+          {meeting.creator && (meeting.creator.name || meeting.creator.email) && (
+            <span className="inline-flex items-center gap-1">
+              <User size={12} />
+              {meeting.creator.name ?? meeting.creator.email}
+            </span>
+          )}
         </div>
+        {/* L5 #31：显示会议描述（截断显示） */}
+        {meeting.description && (
+          <p className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)] truncate">
+            {meeting.description}
+          </p>
+        )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
         {/* 查看录制（已结束 + 有录制 URL） */}

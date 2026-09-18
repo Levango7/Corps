@@ -26,6 +26,9 @@ import {
   LiveKitRoom,
   VideoConference,
   RoomAudioRenderer,
+  useParticipants,
+  useLocalParticipant,
+  useDataChannel,
 } from "@livekit/components-react";
 import {
   Loader2,
@@ -34,6 +37,13 @@ import {
   Video,
   Circle,
   Square,
+  Hand,
+  Mic,
+  MicOff,
+  VideoIcon,
+  VideoOff,
+  Crown,
+  Users,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
@@ -501,7 +511,186 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
         <VideoConference className="flex-1" />
         {/* RoomAudioRenderer 不可见，负责渲染远端参与者音频 */}
         <RoomAudioRenderer />
+        {/* L9 #35 + L10 #36：举手/设备信息 + 主持人转移控制面板 */}
+        <MeetingRoomControls isHost={isHost} />
       </LiveKitRoom>
     </div>
+  );
+}
+
+/**
+ * L9 #35 + L10 #36：会议内部控制面板
+ *
+ * 在 LiveKitRoom context 内使用 hooks：
+ * - useParticipants：获取所有参与者（含设备状态）
+ * - useLocalParticipant：获取本地参与者设备状态
+ * - useDataChannel("hand-raise")：举手消息收发
+ * - useDataChannel("host-transfer")：主持人转移消息收发
+ *
+ * 面板叠加在左下角，不影响 VideoConference 的控制栏。
+ */
+function MeetingRoomControls({ isHost }: { isHost: boolean }) {
+  const t = useTranslations("meetings.room");
+
+  // 获取所有参与者 + 本地参与者设备状态
+  const participants = useParticipants();
+  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
+    useLocalParticipant();
+
+  // 举手状态（本地）
+  const [handRaised, setHandRaised] = useState(false);
+  // 收到的举手消息（participantId → raised）
+  const [raisedHands, setRaisedHands] = useState<Record<string, boolean>>({});
+
+  // 举手 data channel
+  const { send: sendHandRaise } = useDataChannel("hand-raise", (msg) => {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(msg.payload)) as {
+        participantId: string;
+        raised: boolean;
+      };
+      setRaisedHands((prev) => ({
+        ...prev,
+        [data.participantId]: data.raised,
+      }));
+    } catch {
+      // 忽略非 JSON 消息
+    }
+  });
+
+  // 主持人转移 data channel
+  const { send: sendHostTransfer } = useDataChannel("host-transfer", (msg) => {
+    try {
+      const data = JSON.parse(new TextDecoder().decode(msg.payload)) as {
+        newHostId: string;
+      };
+      // 收到转移消息：如果目标是自己，更新 metadata 标记为 host
+      if (data.newHostId === localParticipant.identity) {
+        void localParticipant.setMetadata(
+          JSON.stringify({ ...JSON.parse(localParticipant.metadata ?? "{}"), role: "host" }),
+        );
+      }
+    } catch {
+      // 忽略非 JSON 消息
+    }
+  });
+
+  // 切换举手
+  const toggleHandRaise = useCallback(() => {
+    const newRaised = !handRaised;
+    setHandRaised(newRaised);
+    const payload = new TextEncoder().encode(
+      JSON.stringify({ participantId: localParticipant.identity, raised: newRaised }),
+    );
+    void sendHandRaise(payload, { reliable: true });
+  }, [handRaised, localParticipant, sendHandRaise]);
+
+  // L10 #36：主持人转移
+  const [transferTarget, setTransferTarget] = useState("");
+  const handleTransferHost = useCallback(() => {
+    if (!transferTarget) return;
+    const payload = new TextEncoder().encode(
+      JSON.stringify({ newHostId: transferTarget }),
+    );
+    void sendHostTransfer(payload, { reliable: true });
+    setTransferTarget("");
+  }, [transferTarget, sendHostTransfer]);
+
+  return (
+    <>
+      {/* 举手按钮（叠加在左下角） */}
+      <button
+        type="button"
+        onClick={toggleHandRaise}
+        className={[
+          "absolute bottom-[var(--space-20)] left-[var(--space-3)] z-[var(--z-sticky)] inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)]",
+          handRaised
+            ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+            : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]",
+        ].join(" ")}
+        aria-pressed={handRaised}
+        title={t("handRaise")}
+      >
+        <Hand size={16} className={handRaised ? "fill-current" : ""} />
+        {t("handRaise")}
+      </button>
+
+      {/* 参与者设备信息面板（叠加在右侧） */}
+      <div className="absolute top-[var(--space-3)] left-[var(--space-3)] z-[var(--z-sticky)] max-w-[240px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)] p-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--fg-2)] max-h-[60vh] overflow-y-auto">
+        <div className="flex items-center gap-1.5 mb-[var(--space-1)] font-[weight:var(--weight-semibold)] text-[var(--meta)]">
+          <Users size={12} />
+          {t("participants")} · {participants.length}
+        </div>
+        <ul className="space-y-1">
+          {participants.map((p) => {
+            // 设备状态：从 participant 的 tracks 推断
+            const micOn = p.isMicrophoneEnabled;
+            const camOn = p.isCameraEnabled;
+            const raised = raisedHands[p.identity];
+            const isLocal = p.identity === localParticipant.identity;
+            return (
+              <li
+                key={p.identity}
+                className="flex items-center gap-1.5 py-0.5"
+              >
+                <span className="truncate flex-1">
+                  {p.name ?? p.identity}
+                  {isLocal && ` (${t("me")})`}
+                </span>
+                {/* 设备状态图标 */}
+                {micOn ? (
+                  <Mic size={11} className="text-[var(--success)]" />
+                ) : (
+                  <MicOff size={11} className="text-[var(--muted)]" />
+                )}
+                {camOn ? (
+                  <VideoIcon size={11} className="text-[var(--success)]" />
+                ) : (
+                  <VideoOff size={11} className="text-[var(--muted)]" />
+                )}
+                {/* 举手标记 */}
+                {raised && (
+                  <Hand size={11} className="text-[var(--accent)] fill-current" />
+                )}
+              </li>
+            );
+          })}
+        </ul>
+
+        {/* L10 #36：主持人转移（仅 host 可见） */}
+        {isHost && participants.length > 1 && (
+          <div className="mt-[var(--space-2)] pt-[var(--space-2)] border-t border-[var(--border-soft)]">
+            <div className="flex items-center gap-1 mb-1 font-[weight:var(--weight-semibold)] text-[var(--meta)]">
+              <Crown size={12} />
+              {t("transferHost")}
+            </div>
+            <div className="flex gap-1">
+              <select
+                value={transferTarget}
+                onChange={(e) => setTransferTarget(e.target.value)}
+                className="flex-1 h-7 px-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg)] outline-none"
+              >
+                <option value="">{t("selectParticipant")}</option>
+                {participants
+                  .filter((p) => p.identity !== localParticipant.identity)
+                  .map((p) => (
+                    <option key={p.identity} value={p.identity}>
+                      {p.name ?? p.identity}
+                    </option>
+                  ))}
+              </select>
+              <button
+                type="button"
+                onClick={handleTransferHost}
+                disabled={!transferTarget}
+                className="h-7 px-2 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
+              >
+                {t("transfer")}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }

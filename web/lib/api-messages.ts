@@ -381,6 +381,14 @@ export const API_MESSAGES = {
   meetingNotFound: { zh: "会议不存在", en: "Meeting not found" },
   meetingEnded: { zh: "会议已结束", en: "Meeting has ended" },
   meetingFull: { zh: "会议人数已满", en: "Meeting is full" },
+  meetingPasswordRequired: {
+    zh: "该会议需要密码",
+    en: "A password is required to join this meeting",
+  },
+  meetingPasswordIncorrect: {
+    zh: "会议密码错误",
+    en: "Incorrect meeting password",
+  },
   /* ── 会议录制（批次 B-2 任务 351）── */
   recordingStarted: { zh: "录制已启动", en: "Recording started" },
   recordingStopped: { zh: "录制已停止", en: "Recording stopped" },

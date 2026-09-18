@@ -12,6 +12,45 @@ interface Member {
   role: string;
 }
 
+/**
+ * L2: 提取 canManageDoc 为独立函数，避免重复逻辑
+ * 判断当前用户是否有 manage 权限：
+ * 1. 文档作者
+ * 2. 工作区 owner/admin
+ * 3. 显式 manage 权限（通过权限 API 判断）
+ */
+async function checkCanManageDoc(
+  wid: string,
+  docId: string,
+  currentUserId: string,
+  authorId: string | undefined,
+  myRole: string,
+): Promise<boolean> {
+  // 1. 文档作者
+  const isAuthor = !!currentUserId && !!authorId && currentUserId === authorId;
+  // 2. 工作区 owner/admin
+  const isOwnerOrAdmin = myRole === "owner" || myRole === "admin";
+
+  if (isAuthor || isOwnerOrAdmin) return true;
+
+  // 3. 非作者/owner/admin：检查是否有显式 manage 权限
+  if (!currentUserId) return false;
+  try {
+    const permData = await api<{
+      items: { granteeType: string; granteeId: string; permission: string }[];
+    }>(`/api/v1/workspaces/${wid}/documents/${docId}/permissions`);
+    return permData.items.some(
+      (p) =>
+        p.permission === "manage" &&
+        ((p.granteeType === "user" && p.granteeId === currentUserId) ||
+          (p.granteeType === "role" && p.granteeId === myRole)),
+    );
+  } catch {
+    // 无权访问权限列表 → 无 manage 权限
+    return false;
+  }
+}
+
 export default function DocumentEditPage({
   params,
 }: {
@@ -63,38 +102,21 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
           shareToken: doc.shareToken,
         });
 
-        // 判断当前用户是否有 manage 权限：
-        // 1. 文档作者
-        // 2. 工作区 owner/admin
-        // 3. 显式 manage 权限（通过权限 API 判断）
+        // L2: 使用提取的 checkCanManageDoc 函数
         const currentUserId = me.id;
         const authorId = doc.authorId ?? doc.author?.id;
         const memberList = Array.isArray(members) ? members : members.items;
         const myMember = memberList.find((m) => m.userId === currentUserId);
         const myRole = myMember?.role ?? "";
-        const isAuthor = !!currentUserId && !!authorId && currentUserId === authorId;
-        const isOwnerOrAdmin = myRole === "owner" || myRole === "admin";
 
-        if (isAuthor || isOwnerOrAdmin) {
-          setCanManage(true);
-        } else if (currentUserId) {
-          // 非作者/owner/admin：检查是否有显式 manage 权限
-          try {
-            const permData = await api<{ items: { granteeType: string; granteeId: string; permission: string }[] }>(
-              `/api/v1/workspaces/${w}/documents/${i}/permissions`,
-            );
-            const hasManage = permData.items.some(
-              (p) =>
-                p.permission === "manage" &&
-                ((p.granteeType === "user" && p.granteeId === currentUserId) ||
-                  (p.granteeType === "role" && p.granteeId === myRole)),
-            );
-            setCanManage(hasManage);
-          } catch {
-            // 无权访问权限列表 → 无 manage 权限
-            setCanManage(false);
-          }
-        }
+        const canManageDoc = await checkCanManageDoc(
+          w,
+          i,
+          currentUserId,
+          authorId,
+          myRole,
+        );
+        setCanManage(canManageDoc);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t("loadFailed"));
       }

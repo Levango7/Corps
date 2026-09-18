@@ -16,7 +16,10 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 
 /** 会议类型 */
-type MeetingType = "instant" | "scheduled";
+type MeetingType = "instant" | "scheduled" | "recurring";
+
+/** L6 #32：重复频率（iCal RRULE FREQ 值） */
+type RecurringFreq = "daily" | "weekly" | "monthly";
 
 /** 创建会议 API 请求体 */
 interface CreateMeetingBody {
@@ -26,6 +29,10 @@ interface CreateMeetingBody {
   scheduledAt?: string;
   maxParticipants?: number;
   recordingEnabled?: boolean;
+  /** L6 #32：重复规则（iCal RRULE 格式） */
+  recurringRule?: string;
+  /** L8 #34：会议密码 */
+  password?: string;
 }
 
 /** 创建会议 API 响应 */
@@ -43,6 +50,10 @@ export interface EditableMeeting {
   scheduledAt?: string | null;
   maxParticipants?: number | null;
   recordingEnabled?: boolean;
+  /** L6 #32：重复规则 */
+  recurringRule?: string | null;
+  /** L8 #34：会议密码 */
+  password?: string | null;
 }
 
 /** 表单字段标签/控件公共样式 */
@@ -73,13 +84,21 @@ export function MeetingCreate({
   const [title, setTitle] = useState(meeting?.title ?? "");
   const [description, setDescription] = useState(meeting?.description ?? "");
   const [type, setType] = useState<MeetingType>(
-    meeting?.type === "scheduled" ? "scheduled" : "instant",
+    meeting?.type === "scheduled"
+      ? "scheduled"
+      : meeting?.type === "recurring"
+        ? "recurring"
+        : "instant",
   );
   const [scheduledAt, setScheduledAt] = useState(
     meeting?.scheduledAt
       ? new Date(meeting.scheduledAt).toISOString().slice(0, 16)
       : "",
   );
+  // L6 #32：重复频率
+  const [recurringFreq, setRecurringFreq] = useState<RecurringFreq>("daily");
+  // L8 #34：会议密码
+  const [password, setPassword] = useState(meeting?.password ?? "");
   const [maxParticipants, setMaxParticipants] = useState(
     meeting?.maxParticipants ? String(meeting.maxParticipants) : "",
   );
@@ -108,8 +127,8 @@ export function MeetingCreate({
     const trimmedTitle = title.trim();
     if (!trimmedTitle || submitting) return;
 
-    // 预约会议校验：必须填写预约时间
-    if (type === "scheduled" && !scheduledAt) {
+    // 预约/重复会议校验：必须填写预约时间
+    if ((type === "scheduled" || type === "recurring") && !scheduledAt) {
       setError(t("scheduledAtRequired"));
       return;
     }
@@ -126,6 +145,13 @@ export function MeetingCreate({
       if (type === "scheduled" && scheduledAt) {
         body.scheduledAt = new Date(scheduledAt).toISOString();
       }
+      // L6 #32：重复会议生成 iCal RRULE
+      if (type === "recurring" && scheduledAt) {
+        body.scheduledAt = new Date(scheduledAt).toISOString();
+        body.recurringRule = `FREQ=${recurringFreq.toUpperCase()};INTERVAL=1`;
+      }
+      // L8 #34：会议密码（非空时才传递）
+      if (password.trim()) body.password = password.trim();
       if (maxParticipants) {
         const n = parseInt(maxParticipants, 10);
         if (!Number.isNaN(n) && n > 0) body.maxParticipants = n;
@@ -253,11 +279,25 @@ export function MeetingCreate({
               >
                 {t("scheduled")}
               </button>
+              {/* L6 #32：重复会议选项 */}
+              <button
+                type="button"
+                onClick={() => setType("recurring")}
+                className={[
+                  "flex-1 h-9 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)]",
+                  type === "recurring"
+                    ? "border-[var(--accent)] bg-[var(--accent)] text-[var(--accent-fg)]"
+                    : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]",
+                ].join(" ")}
+                aria-pressed={type === "recurring"}
+              >
+                {t("recurring")}
+              </button>
             </div>
           </div>
 
-          {/* 预约时间（仅 type=scheduled 时显示） */}
-          {type === "scheduled" && (
+          {/* 预约时间（type=scheduled 或 recurring 时显示） */}
+          {(type === "scheduled" || type === "recurring") && (
             <div>
               <label className={fieldLabel} htmlFor="mc-scheduled">
                 {t("scheduledAt")}
@@ -272,6 +312,25 @@ export function MeetingCreate({
                 className={fieldControl}
                 aria-required="true"
               />
+            </div>
+          )}
+
+          {/* L6 #32：重复频率选择（仅 type=recurring 时显示） */}
+          {type === "recurring" && (
+            <div>
+              <label className={fieldLabel} htmlFor="mc-recurring-freq">
+                {t("recurringFreq")}
+              </label>
+              <select
+                id="mc-recurring-freq"
+                value={recurringFreq}
+                onChange={(e) => setRecurringFreq(e.target.value as RecurringFreq)}
+                className={fieldControl}
+              >
+                <option value="daily">{t("recurringDaily")}</option>
+                <option value="weekly">{t("recurringWeekly")}</option>
+                <option value="monthly">{t("recurringMonthly")}</option>
+              </select>
             </div>
           )}
 
@@ -306,6 +365,23 @@ export function MeetingCreate({
                 </span>
               </label>
             </div>
+          </div>
+
+          {/* L8 #34：会议密码（可选，设置后加入需验证） */}
+          <div>
+            <label className={fieldLabel} htmlFor="mc-password">
+              {t("password")}
+            </label>
+            <input
+              id="mc-password"
+              type="text"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              maxLength={100}
+              placeholder={t("passwordPlaceholder")}
+              className={fieldControl}
+              autoComplete="off"
+            />
           </div>
 
           {/* 错误提示 */}

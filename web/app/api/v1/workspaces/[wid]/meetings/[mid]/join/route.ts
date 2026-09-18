@@ -33,6 +33,15 @@ export async function POST(
   try {
     const userId = ctx.payload.sub;
 
+    // L8 #34：读取 body 中的密码（会议设置密码时加入需验证）
+    let bodyPassword: string | undefined;
+    try {
+      const body = await req.json();
+      bodyPassword = body?.password;
+    } catch {
+      // 无 body 或非 JSON 时忽略（兼容旧客户端不传 body）
+    }
+
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
@@ -45,12 +54,20 @@ export async function POST(
             maxParticipants: true,
             createdBy: true,
             startedAt: true,
+            password: true,
           },
         });
         if (!meeting) return { kind: "notFound" as const };
 
         // ended 会议不可加入
         if (meeting.status === "ended") return { kind: "ended" as const };
+
+        // L8 #34：密码验证——会议设置了密码且请求未提供匹配密码时拒绝
+        // 会议创建者（host）免密加入
+        const isHostUser = meeting.createdBy === userId;
+        if (meeting.password && !isHostUser && bodyPassword !== meeting.password) {
+          return { kind: "passwordRequired" as const };
+        }
 
         // 在线人数检查（leftAt = null 视为仍在会议中）
         const onlineCount = await tx.meetingParticipant.count({
@@ -68,8 +85,7 @@ export async function POST(
 
         // upsert 参与者记录：首次加入创建，再次加入重置 joinedAt/leftAt
         // 角色：创建者为 host，其余为 guest
-        const isHost = meeting.createdBy === userId;
-        const role = isHost ? "host" : "guest";
+        const role = isHostUser ? "host" : "guest";
         await tx.meetingParticipant.upsert({
           where: { meetingId_userId: { meetingId: mid, userId } },
           create: {
@@ -94,7 +110,7 @@ export async function POST(
           });
         }
 
-        return { kind: "ok" as const, roomName: meeting.roomName, isHost };
+        return { kind: "ok" as const, roomName: meeting.roomName, isHost: isHostUser };
       },
       userId,
     );
@@ -113,6 +129,11 @@ export async function POST(
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "meetingFull"), data: null },
         { status: 409 },
+      );
+    if (result.kind === "passwordRequired")
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "meetingPasswordRequired"), data: null },
+        { status: 403 },
       );
 
     // 生成 LiveKit AccessToken（需查用户展示名）
@@ -136,12 +157,18 @@ export async function POST(
     const ttlSeconds = Number(process.env.LIVEKIT_TOKEN_TTL) || 7200;
     const userName = user?.name ?? user?.email ?? userId;
 
+    // E2EE 开关（L4 #30）：默认关闭，通过 LIVEKIT_E2EE_ENABLED=true 启用。
+    // 启用时客户端需通过 E2EE key 管理器注入密钥，媒体流在客户端加密/解密。
+    const e2eeEnabled = process.env.LIVEKIT_E2EE_ENABLED === "true";
+
     // 使用 livekit-server-sdk AccessToken 签发 JWT
     // 权限分层：host 有 roomRecord（录制权限），guest 无
     const token = new AccessToken(apiKey, apiSecret, {
       identity: userId,
       name: userName,
       ttl: ttlSeconds,
+      // 通过 metadata 传递 e2ee 标志，客户端据此决定是否启用 E2EE key 管理器
+      metadata: e2eeEnabled ? JSON.stringify({ e2ee: true }) : undefined,
     });
     token.addGrant({
       room: result.roomName,
@@ -154,7 +181,12 @@ export async function POST(
 
     return NextResponse.json({
       code: 200,
-      data: { token: jwt, url: livekitUrl, roomName: result.roomName },
+      data: {
+        token: jwt,
+        url: livekitUrl,
+        roomName: result.roomName,
+        e2eeEnabled,
+      },
     });
   } catch (error) {
     // LiveKit 未配置

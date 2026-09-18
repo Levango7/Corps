@@ -68,6 +68,12 @@ const updateMeetingSchema = z.object({
   scheduledAt: z.string().datetime().nullable().optional(),
   maxParticipants: z.number().int().min(1).max(500).optional(),
   recordingEnabled: z.boolean().optional(),
+  // L2 #28：status 枚举约束（含 cancelled）
+  status: z.enum(["scheduled", "active", "ended", "cancelled"]).optional(),
+  // L6 #32：重复规则
+  recurringRule: z.string().max(255).nullable().optional(),
+  // L8 #34：会议密码
+  password: z.string().max(100).nullable().optional(),
 });
 
 export async function PATCH(

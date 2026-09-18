@@ -564,21 +564,23 @@ export function ApprovalDetail({
           {/* TODO: 转交功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
           {canApproveOrReject && (
             <button
-              onClick={() => toast("info", "功能开发中")}
+              onClick={() => toast("info", "Coming soon")}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               <Forward size={14} />
-              转交
+              {/* L5: 改用英文文本（无合适 i18n key，不修改 zh.json/en.json） */}
+              Transfer
             </button>
           )}
           {/* TODO: 评论功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
           {(canApproveOrReject || canWithdraw) && (
             <button
-              onClick={() => toast("info", "功能开发中")}
+              onClick={() => toast("info", "Coming soon")}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               <MessageSquare size={14} />
-              评论
+              {/* L5: 改用英文文本（复用现有 t("comment") key 语义为"备注"，此处用 Comment 更准确） */}
+              Comment
             </button>
           )}
         </section>

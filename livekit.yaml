@@ -1,0 +1,63 @@
+# =============================================================================
+# LiveKit Server 配置 · livekit.yaml
+#
+# 此文件由 docker-compose.yml 挂载为 /config.yaml（:ro）。
+# keys 需与 web/.env.example 的 LIVEKIT_API_KEY / LIVEKIT_API_SECRET 一致。
+# ${VAR} 语法由 LiveKit Server 启动时从环境变量展开（docker-compose 已注入）。
+# =============================================================================
+
+# ─── API/WebSocket 接入 ──
+# 7880：HTTP/WebSocket（前端接入 + API）
+# 7881：UDP RTC 媒体端口（单端口模式）
+# 7882：UDP TURN（NAT 穿透）
+port: 7880
+bind_addresses:
+  - "0.0.0.0"
+
+# ─── API 密钥对 ──
+# 与 LIVEKIT_API_KEY / LIVEKIT_API_SECRET 一致；
+# 开发默认 devkey/secret（生产必须替换为强随机值）
+keys:
+  devkey: secret
+
+# ─── RTC 音视频媒体配置（L3 #29）──
+rtc:
+  tcp_port: 7881
+  port_range: "50000-60000"
+  use_external_ip: true
+  enable_loopback_candidate: false
+  # 抖动缓冲：降低网络抖动导致的音视频卡顿
+  jitter_buffer:
+    enabled: true
+    max_latency: 500
+
+# ─── 录制存储配置（M1 #24）──
+# EgressClient（recording/start route）将录制文件上传至此 S3 兼容存储。
+# 所有字段从环境变量展开；未配置时 recording API 返回 501。
+recording:
+  enabled: true
+  bucket: "${S3_BUCKET}"
+  endpoint: "${S3_ENDPOINT}"
+  access_key: "${S3_ACCESS_KEY}"
+  secret: "${S3_SECRET_KEY}"
+  region: "${S3_REGION}"
+
+# ─── E2EE 端到端加密（L4 #30 占位）──
+# 默认关闭；通过 LIVEKIT_E2EE_ENABLED=true 启用。
+# 启用后客户端需通过 E2EE key 管理器注入密钥，媒体流在客户端加密/解密，
+# LiveKit Server 仅转发密文，无法解密内容。
+e2ee:
+  enabled: "${LIVEKIT_E2EE_ENABLED:-false}"
+  # 加密算法：aes-gcm（默认）或 siphash（兼容旧客户端）
+  algorithm: aes-gcm
+
+# ─── Webhook 回调 ──
+# LiveKit Server 在房间/参与者/egress 事件发生时回调此端点。
+# 签名密钥与 keys 一致；webhooks/livekit/route.ts 用 WebhookReceiver 验签。
+webhook:
+  api_key: devkey
+  urls:
+    - "http://app:3000/api/v1/webhooks/livekit"
+
+# ─── 日志 ──
+log_level: info

@@ -9,6 +9,10 @@ const approvalNodeSchema = z.object({
   approverUserId: z.string().optional(),
   name: z.string().min(1).max(200),
   order: z.number().int().min(0),
+  // M1: 审批模式
+  mode: z.enum(["sequential", "parallel", "countersign"]).optional(),
+  /** countersign 模式下需要通过的最少审批人数 */
+  requiredCount: z.number().int().min(1).optional(),
 });
 
 /** GET 列表 query 校验 */
@@ -27,6 +31,8 @@ interface ApprovalNode {
   approverUserId?: string;
   name: string;
   order: number;
+  mode?: "sequential" | "parallel" | "countersign";
+  requiredCount?: number;
 }
 
 /** 判断用户是否是当前节点的审批人 */
@@ -51,6 +57,8 @@ const createInstanceSchema = z.object({
   description: z.string().optional(),
   content: z.record(z.any()),
   nodes: z.array(approvalNodeSchema).min(1).optional(),
+  // M5: 工作流 approval 节点 — 从工作流节点配置自动生成审批流
+  workflowNodeId: z.string().uuid().optional(),
 });
 
 /**
@@ -163,7 +171,40 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     let nodes: z.infer<typeof approvalNodeSchema>[];
     let templateId: string | null = null;
 
-    if (validated.templateId) {
+    if (validated.workflowNodeId) {
+      // M5: 从工作流节点配置自动生成审批流
+      // workflowNodeId 是 Workflow 的 id，从 Workflow.actions 中找到 type="approval" 的 action
+      const workflow = await runWithWorkspace(wid, (tx) =>
+        tx.workflow.findUnique({ where: { id: validated.workflowNodeId! } }),
+      );
+      if (!workflow || workflow.workspaceId !== wid || !workflow.active) {
+        return NextResponse.json(
+          { code: 404, message: apiMsg(req, "workflowNotFound"), data: null },
+          { status: 404 },
+        );
+      }
+      // 从 actions JSON 中提取 type="approval" 的节点，转换为审批节点
+      const actions = workflow.actions as unknown as Array<{
+        type?: string;
+        config?: Record<string, unknown>;
+        order?: number;
+      }>;
+      const approvalActions = actions.filter((a) => a.type === "approval");
+      if (approvalActions.length === 0) {
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "validationFailed"), data: null },
+          { status: 400 },
+        );
+      }
+      nodes = approvalActions.map((a, idx) => ({
+        approverRole: (a.config?.approverRole as string) || undefined,
+        approverUserId: (a.config?.approverUserId as string) || undefined,
+        name: (a.config?.name as string) || `Node ${idx + 1}`,
+        order: a.order ?? idx,
+        mode: (a.config?.mode as "sequential" | "parallel" | "countersign") || undefined,
+        requiredCount: (a.config?.requiredCount as number) || undefined,
+      }));
+    } else if (validated.templateId) {
       const template = await runWithWorkspace(wid, (tx) =>
         tx.approvalTemplate.findUnique({ where: { id: validated.templateId! } }),
       );

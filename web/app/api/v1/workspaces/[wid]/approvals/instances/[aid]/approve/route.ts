@@ -9,6 +9,13 @@ interface ApprovalNode {
   approverUserId?: string;
   name: string;
   order: number;
+  // M1: 审批模式
+  // - sequential: 顺序审批（默认，一人审批即可进入下一节点）
+  // - parallel: 并行审批（所有人同时审批，全部通过才进入下一节点）
+  // - countersign: 会签（只需 requiredCount 数量的人通过即可）
+  mode?: "sequential" | "parallel" | "countersign";
+  /** countersign 模式下需要通过的最少审批人数 */
+  requiredCount?: number;
 }
 
 /** POST 同意审批 body 校验 */
@@ -70,13 +77,66 @@ export async function POST(
           },
         });
 
-        // 推进节点：如果是最后一个节点，设 status="approved"
+        // M1: 根据 mode 判断是否进入下一节点
+        const nodeMode = currentNode.mode ?? "sequential";
         const isLastNode = instance.currentNode >= nodes.length - 1;
+        let shouldAdvance = false;
+
+        if (nodeMode === "sequential") {
+          // 顺序审批：一人审批即可进入下一节点（当前行为）
+          shouldAdvance = true;
+        } else if (nodeMode === "parallel") {
+          // 并行审批：所有人同时审批，全部通过才进入下一节点
+          // 查询当前节点所有审批人
+          const allApproverIds = new Set<string>();
+          if (currentNode.approverUserId) {
+            allApproverIds.add(currentNode.approverUserId);
+          }
+          if (currentNode.approverRole) {
+            const roleMembers = await tx.member.findMany({
+              where: { workspaceId: wid, role: currentNode.approverRole },
+              select: { userId: true },
+            });
+            for (const m of roleMembers) allApproverIds.add(m.userId);
+          }
+          // 查询当前节点已 approve 的操作记录（不含当前用户，因为刚创建）
+          const approvedOps = await tx.approvalOperation.findMany({
+            where: {
+              instanceId: aid,
+              nodeIndex: instance.currentNode,
+              action: "approve",
+            },
+            select: { operatorId: true },
+          });
+          const approvedSet = new Set(approvedOps.map((op) => op.operatorId));
+          // 检查所有审批人是否都已 approve
+          shouldAdvance = Array.from(allApproverIds).every((id) =>
+            approvedSet.has(id),
+          );
+        } else if (nodeMode === "countersign") {
+          // 会签：只需 requiredCount 数量的人通过即可
+          const requiredCount = currentNode.requiredCount ?? 1;
+          const approvedCount = await tx.approvalOperation.count({
+            where: {
+              instanceId: aid,
+              nodeIndex: instance.currentNode,
+              action: "approve",
+            },
+          });
+          shouldAdvance = approvedCount >= requiredCount;
+        }
+
+        // 推进节点：如果 shouldAdvance 且是最后一个节点，设 status="approved"
         const updated = await tx.approvalInstance.update({
           where: { id: aid },
           data: {
-            currentNode: isLastNode ? instance.currentNode : instance.currentNode + 1,
-            ...(isLastNode ? { status: "approved", completedAt: new Date() } : {}),
+            currentNode:
+              shouldAdvance && !isLastNode
+                ? instance.currentNode + 1
+                : instance.currentNode,
+            ...(shouldAdvance && isLastNode
+              ? { status: "approved", completedAt: new Date() }
+              : {}),
           },
           include: {
             applicant: { select: { id: true, name: true, email: true } },
@@ -88,7 +148,7 @@ export async function POST(
         });
 
         // 通知申请人审批结果（仅在审批最终通过时通知）
-        if (isLastNode && instance.applicantId !== ctx.payload.sub) {
+        if (shouldAdvance && isLastNode && instance.applicantId !== ctx.payload.sub) {
           await tx.notification.create({
             data: {
               userId: instance.applicantId,

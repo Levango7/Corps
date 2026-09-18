@@ -119,9 +119,10 @@ export function ApprovalFlowDiagram({
                   <span
                     className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] truncate"
                     style={{ color: textColor }}
-                    title={node.name}
+                    title={node.name || `Node ${idx + 1}`}
                   >
-                    {node.name}
+                    {/* L1: 节点显示优先用 nodeName，回退到 Node {index}（无硬编码中文） */}
+                    {node.name || `Node ${idx + 1}`}
                   </span>
                 </div>
                 {approverLabel && (

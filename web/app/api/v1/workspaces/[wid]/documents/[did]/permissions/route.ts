@@ -52,6 +52,7 @@ async function canManageDoc(
 
 /**
  * GET /v1/workspaces/{wid}/documents/{did}/permissions — 权限列表
+ * L3: GET 请求也验证工作区成员身份 + 文档存在性
  */
 export async function GET(
   req: NextRequest,
@@ -66,6 +67,23 @@ export async function GET(
     );
 
   try {
+    // L3: 验证文档存在且属于该工作区（隐式校验工作区成员身份 via getWorkspaceContext）
+    const docExists = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.document.findFirst({
+          where: { id: did, workspaceId: wid },
+          select: { id: true },
+        }),
+      ctx.payload.sub,
+    );
+    if (!docExists) {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
+        { status: 404 },
+      );
+    }
+
     const permissions = await runWithWorkspace(
       wid,
       (tx) =>
@@ -92,7 +110,9 @@ export async function GET(
 const createPermissionSchema = z.object({
   granteeType: z.enum(["user", "role"]),
   granteeId: z.string().min(1).max(255),
-  permission: z.enum(["view", "comment", "edit", "manage"]),
+  // M2: 添加 transfer 权限操作（comment 已有）
+  // transfer: 允许转移文档所有权；comment: 允许添加评论
+  permission: z.enum(["view", "comment", "edit", "manage", "transfer"]),
 });
 
 /** 工作区中有效的角色名 */

@@ -1430,10 +1430,14 @@ model Meeting {
   createdBy         String?  @map("created_by") @db.Uuid
   /// LiveKit room name（唯一）
   roomName          String   @unique @map("room_name") @db.VarChar(100)
-  /// 会议状态：scheduled | active | ended
+  /// 会议状态：scheduled | active | ended | cancelled（L2 #28 CHECK 约束见 migration）
   status            String   @default("scheduled") @db.VarChar(20)
   /// 会议类型：instant | scheduled | recurring
   type              String   @default("instant") @db.VarChar(20)
+  /// 重复规则（L6 #32）：iCal RRULE 格式（如 FREQ=DAILY;INTERVAL=1），null 表示非重复会议
+  recurringRule     String?  @map("recurring_rule") @db.VarChar(255)
+  /// 会议密码（L8 #34）：设置后加入需验证密码，null 表示无密码锁定
+  password          String?  @db.VarChar(100)
   scheduledAt       DateTime? @map("scheduled_at") @db.Timestamptz
   startedAt         DateTime? @map("started_at") @db.Timestamptz
   endedAt           DateTime? @map("ended_at") @db.Timestamptz
