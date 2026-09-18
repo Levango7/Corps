@@ -221,7 +221,7 @@ export function ConversationSettings({
     try {
       await api(`/api/v1/workspaces/${wid}/conversations/${cid}/members`, {
         method: "POST",
-        body: JSON.stringify({ memberIds: Array.from(addSelected) }),
+        body: JSON.stringify({ userIds: Array.from(addSelected) }),
       });
       setAddOpen(false);
       await refreshMembers();

@@ -68,6 +68,8 @@ export default function WorkspaceLayout({
   const [cmdOpen, setCmdOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  // IM 会话未读消息总数（聚合所有会话 unreadCount），用于侧边栏 IM 入口 badge
+  const [imUnreadCount, setImUnreadCount] = useState(0);
   // 星标（我的收藏）：这是 localStorage 数据，无服务端，
   // 跨 workspace 记录但当前页面仅展示当前 wid 下的条目
   const [favorites, setFavorites] = useState<FavoriteEntry[]>([]);
@@ -127,6 +129,39 @@ export default function WorkspaceLayout({
     }
     fetchCount();
     const timer = setInterval(fetchCount, 30000);
+    return () => {
+      active = false;
+      clearInterval(timer);
+    };
+  }, [wid, pathname]);
+
+  // IM 未读消息总数：每 30 秒轮询，聚合所有会话 unreadCount
+  // conversations API 不支持服务端聚合，前端翻页求和（最多 10 页 = 1000 会话保护）
+  useEffect(() => {
+    let active = true;
+    async function fetchImUnread() {
+      try {
+        let total = 0;
+        let cursor: string | null = null;
+        for (let i = 0; i < 10; i++) {
+          const params = new URLSearchParams({ limit: "100" });
+          if (cursor) params.set("cursor", cursor);
+          const res = await api<{
+            items: { unreadCount?: number }[];
+            nextCursor: string | null;
+            hasMore: boolean;
+          }>(`/api/v1/workspaces/${wid}/conversations?${params.toString()}`);
+          for (const c of res.items) total += c.unreadCount ?? 0;
+          if (!res.hasMore || !res.nextCursor) break;
+          cursor = res.nextCursor;
+        }
+        if (active) setImUnreadCount(total);
+      } catch {
+        /* 静默失败，保留上次值 */
+      }
+    }
+    fetchImUnread();
+    const timer = setInterval(fetchImUnread, 30000);
     return () => {
       active = false;
       clearInterval(timer);
@@ -286,7 +321,7 @@ export default function WorkspaceLayout({
         { href: `/w/${wid}`, label: t("menu.overview"), icon: LayoutDashboard, exact: true },
         { href: `/w/${wid}/board`, label: t("menu.board"), icon: Kanban, exact: false },
         { href: `/w/${wid}/my-tasks`, label: t("menu.myTasks"), icon: CheckSquare, exact: false },
-        { href: `/w/${wid}/im`, label: t("menu.messages"), icon: MessageSquare, exact: false },
+        { href: `/w/${wid}/im`, label: t("menu.messages"), icon: MessageSquare, exact: false, badge: imUnreadCount },
         { href: `/w/${wid}/meetings`, label: t("menu.meetings"), icon: Video, exact: false },
         { href: `/w/${wid}/approvals`, label: t("menu.approvals"), icon: CheckCircle2, exact: false },
         { href: `/w/${wid}/decisions`, label: t("menu.decisions"), icon: FileText, exact: false },

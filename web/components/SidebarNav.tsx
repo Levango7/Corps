@@ -24,6 +24,11 @@ export interface NavItem {
    * 例：`requiredPermission="members:read"` 表示需要 members 模块的读权限。
    */
   requiredPermission?: string;
+  /**
+   * 未读 badge 数量；>0 时在导航项右侧渲染红色 badge，>99 显示 "99+"。
+   * 样式与通知入口未读 badge 一致（展开为数字胶囊，折叠为红点）。
+   */
+  badge?: number;
 }
 
 export interface NavGroup {
@@ -82,7 +87,7 @@ export function SidebarNav({
                 {group.label}
               </div>
             )}
-            {group.items.map(({ href, label, icon: Icon, exact }) => {
+            {group.items.map(({ href, label, icon: Icon, exact, badge }) => {
               const active = exact ? pathname === href : pathname.startsWith(href);
               return (
                 <Link
@@ -90,7 +95,7 @@ export function SidebarNav({
                   href={href}
                   aria-current={active ? "page" : undefined}
                   onClick={onNavigate}
-                  className={`flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                  className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
                     active
                       ? "bg-[var(--accent-soft)] text-[var(--accent)]"
                       : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
@@ -99,6 +104,14 @@ export function SidebarNav({
                 >
                   <Icon size={18} className="shrink-0" />
                   {!(mode === "desktop" && collapsed) && <span className="truncate">{label}</span>}
+                  {!(mode === "desktop" && collapsed) && badge != null && badge > 0 && (
+                    <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
+                      {badge > 99 ? "99+" : badge}
+                    </span>
+                  )}
+                  {mode === "desktop" && collapsed && badge != null && badge > 0 && (
+                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" />
+                  )}
                 </Link>
               );
             })}

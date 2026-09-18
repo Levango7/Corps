@@ -43,7 +43,13 @@ function buildSnippet(text: string, query: string): string {
  * 搜索范围：当前用户参与的会话中的消息 body（ILIKE 模糊匹配）。
  * 排除已撤回的消息（revokedAt 非空）。
  *
- * 响应：{ code: 200, data: { items: Message[], total: number } }
+ * 响应：{ code: 200, data: SearchResult[] }
+ *
+ * 每个 SearchResult 补齐前端期望字段：
+ *  - messageId（同 id）
+ *  - authorName / authorImage（从 author 展平）
+ *  - conversationTitle（从 conversation 展平）
+ *  - rank（相关性得分，此处用 0 占位）
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -123,18 +129,25 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
     const items = messages.map((m) => ({
       id: m.id,
+      // P1-fix: 补齐前端 SearchResult 期望的字段名
+      messageId: m.id,
       conversationId: m.conversationId,
       authorId: m.authorId,
       body: m.body,
       snippet: buildSnippet(m.body, q),
       createdAt: m.createdAt,
       author: m.author,
+      authorName: m.author?.name ?? null,
+      authorImage: m.author?.image ?? null,
       conversation: m.conversation,
+      conversationTitle: m.conversation?.title ?? null,
+      rank: 0,
     }));
 
+    // P1-fix: 直接返回数组，避免前端解包得到 { items, total } 对象导致 .map 崩溃
     return NextResponse.json({
       code: 200,
-      data: { items, total: items.length },
+      data: items,
     });
   } catch (error) {
     console.error("[GET im search] error:", error);

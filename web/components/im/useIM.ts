@@ -223,12 +223,13 @@ export function useIM(workspaceId: string): UseIMResult {
       if (opts?.replyToId) payload.replyToId = opts.replyToId;
       if (opts?.mentions) payload.mentions = opts.mentions;
       // 附件：仅传服务端需要的字段（剔除本地预览用的 thumbnailUrl 中的 blob: URL 由后端处理）
+      // 字段名对齐后端 zod schema：filename / mimeType / size
       if (opts?.attachments && opts.attachments.length > 0) {
         payload.attachments = opts.attachments.map((a) => ({
-          fileName: a.fileName,
+          filename: a.fileName,
           url: a.url,
-          fileType: a.fileType,
-          fileSize: a.fileSize,
+          mimeType: a.fileType,
+          size: a.fileSize,
           thumbnailUrl: a.thumbnailUrl,
         }));
       }

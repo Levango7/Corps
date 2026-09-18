@@ -156,7 +156,8 @@ export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: 
           limit: String(SEARCH_LIMIT),
         });
         if (conversationId) {
-          qs.set("conversationId", conversationId);
+          // P1-fix: 后端 schema 期望 cid 参数（非 conversationId）
+          qs.set("cid", conversationId);
         }
         const data = await api<SearchResult[]>(
           `/api/v1/im/search?${qs.toString()}`,

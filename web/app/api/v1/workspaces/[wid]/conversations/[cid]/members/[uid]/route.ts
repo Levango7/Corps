@@ -124,17 +124,24 @@ export async function DELETE(
   }
 }
 
-/** 更新成员角色请求体校验 */
-const updateRoleSchema = z.object({
-  role: z.enum(["owner", "admin", "member"]),
-});
+/** 更新成员请求体校验（角色变更 / 静音切换，至少提供一个字段） */
+const updateMemberSchema = z
+  .object({
+    role: z.enum(["owner", "admin", "member"]).optional(),
+    muted: z.boolean().optional(),
+  })
+  .refine((data) => data.role !== undefined || data.muted !== undefined, {
+    message: "role or muted is required",
+  });
 
 /**
- * PATCH /v1/workspaces/{wid}/conversations/{cid}/members/{uid} — 更新成员角色
+ * PATCH /v1/workspaces/{wid}/conversations/{cid}/members/{uid} — 更新成员角色 / 静音状态
  *
- * 仅 owner 可操作。请求体：{ role: "owner" | "admin" | "member" }
+ * 两种用途：
+ *  1. 静音切换（{ muted: boolean }）：仅允许用户更新自己的静音状态，无需 owner 权限。
+ *  2. 角色变更（{ role: "owner" | "admin" | "member" }）：仅 owner 可操作。
  *
- * 特殊处理：
+ * 角色变更特殊处理：
  *  - 若将他人设为 owner，当前 owner 自动降级为 admin（所有权转让）
  *  - 不能修改自己的角色（owner 通过转让所有权变更，而非直接改自己）
  */
@@ -151,12 +158,32 @@ export async function PATCH(
     );
 
   try {
-    const body = updateRoleSchema.parse(await req.json());
+    const body = updateMemberSchema.parse(await req.json());
     const userId = ctx.payload.sub;
 
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
+        // 静音切换：仅允许用户更新自己的静音状态（自我操作，无需 owner 权限）
+        if (body.muted !== undefined) {
+          if (uid !== userId) {
+            return { status: "forbidden" as const };
+          }
+          const myMembership = await tx.conversationMember.findFirst({
+            where: { conversationId: cid, userId, conversation: { workspaceId: wid } },
+            select: { id: true },
+          });
+          if (!myMembership) return { status: "not_found" as const };
+          await tx.conversationMember.update({
+            where: { id: myMembership.id },
+            data: { muted: body.muted },
+          });
+          return { status: "ok" as const, transferred: false };
+        }
+
+        // 角色变更分支：此时 body.role 必有值（schema refine 保证 role 或 muted 至少一个，muted 分支已 return）
+        const newRole = body.role!;
+
         // 验证当前用户是该会话成员且角色为 owner
         const myMembership = await tx.conversationMember.findFirst({
           where: { conversationId: cid, userId, conversation: { workspaceId: wid } },
@@ -180,7 +207,7 @@ export async function PATCH(
         if (!targetMembership) return { status: "target_not_found" as const };
 
         // 所有权转让：将目标设为 owner，当前 owner 降级为 admin
-        if (body.role === "owner") {
+        if (newRole === "owner") {
           await tx.conversationMember.update({
             where: { id: myMembership.id },
             data: { role: "admin" },
@@ -195,7 +222,7 @@ export async function PATCH(
         // 普通角色变更
         await tx.conversationMember.update({
           where: { id: targetMembership.id },
-          data: { role: body.role },
+          data: { role: newRole },
         });
         return { status: "ok" as const, transferred: false };
       },
