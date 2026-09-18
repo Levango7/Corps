@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 /**
  * GET /v1/workspaces/{wid}/objectives — OKR 目标列表
@@ -12,6 +13,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  // 限流：每分钟 60 次列表查询
+  const limited = await checkRateLimit(req, "okr-objectives-list", { windowMs: 60_000, max: 60 });
+  if (limited) return limited;
 
   try {
     const url = new URL(req.url);
@@ -97,6 +102,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  // 限流：每分钟 30 次创建
+  const limited = await checkRateLimit(req, "okr-objective-create", { windowMs: 60_000, max: 30 });
+  if (limited) return limited;
 
   try {
     const body = await req.json();

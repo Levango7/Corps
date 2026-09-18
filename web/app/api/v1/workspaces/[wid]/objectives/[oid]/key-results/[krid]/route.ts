@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 
 const patchSchema = z.object({
@@ -19,6 +20,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   const { wid, oid, krid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  const limited = await checkRateLimit(req, "okr-key-result-update", { windowMs: 60_000, max: 60 });
+  if (limited) return limited;
 
   try {
     const body = await req.json();
@@ -80,6 +84,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   const { wid, oid, krid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  const limited = await checkRateLimit(req, "okr-key-result-delete", { windowMs: 60_000, max: 30 });
+  if (limited) return limited;
 
   try {
     const existing = await runWithWorkspace(

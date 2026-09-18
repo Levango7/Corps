@@ -2,15 +2,23 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { CalendarMonth } from "./CalendarMonth";
 import { CalendarWeek } from "./CalendarWeek";
 import { CalendarDay } from "./CalendarDay";
 import { CalendarEventDialog, type CalendarEvent } from "./CalendarEventDialog";
-import { addMonths, addWeeks, addDays } from "./calendar-utils";
+import { addMonths, addWeeks, addDays, taskToCalendarEvent, type TaskSummary } from "./calendar-utils";
 
 type ViewMode = "month" | "week" | "day";
+
+/** GET /tasks 返回的分页响应 data 形状 */
+interface TasksListResponse {
+  items: TaskSummary[];
+  total: number;
+  hasMore: boolean;
+}
 
 /**
  * CalendarView — 日历主客户端组件。
@@ -18,6 +26,7 @@ type ViewMode = "month" | "week" | "day";
  */
 export function CalendarView({ wid }: { wid: string }) {
   const t = useTranslations("calendar");
+  const router = useRouter();
   const [view, setView] = useState<ViewMode>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -49,16 +58,26 @@ export function CalendarView({ wid }: { wid: string }) {
     return { start, end };
   }, []);
 
-  /** 加载事件 */
+  /** 加载事件 + 任务截止日期（联动显示在日历上） */
   const loadEvents = useCallback(async () => {
     setLoading(true);
     setError(null);
     try {
       const { start, end } = getRange(view, currentDate);
-      const data = await api<CalendarEvent[]>(
-        `/api/v1/workspaces/${wid}/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`,
-      );
-      setEvents(data ?? []);
+      // 并行加载日历事件和任务列表（任务用于截止日期联动）
+      const [eventData, tasksResp] = await Promise.all([
+        api<CalendarEvent[]>(
+          `/api/v1/workspaces/${wid}/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`,
+        ).catch((): CalendarEvent[] => []),
+        api<TasksListResponse>(
+          `/api/v1/workspaces/${wid}/tasks?limit=100`,
+        ).catch((): TasksListResponse => ({ items: [], total: 0, hasMore: false })),
+      ]);
+      // 任务 deadline 转换为虚拟事件，与真实事件合并
+      const taskEvents = (tasksResp.items ?? [])
+        .map((task) => taskToCalendarEvent(task))
+        .filter((e): e is CalendarEvent => e !== null);
+      setEvents([...(eventData ?? []), ...taskEvents]);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("loadError"));
       setEvents([]);
@@ -92,11 +111,18 @@ export function CalendarView({ wid }: { wid: string }) {
     setCurrentDate(new Date());
   }, []);
 
-  /** 事件点击 */
-  const handleEventClick = useCallback((event: CalendarEvent) => {
-    setDialogEvent(event);
-    setDialogOpen(true);
-  }, []);
+  /** 事件点击：任务 deadline 跳转任务详情页，普通事件打开编辑弹窗 */
+  const handleEventClick = useCallback(
+    (event: CalendarEvent) => {
+      if (event.source === "task" && event.taskId) {
+        router.push(`/w/${wid}/task/${event.taskId}`);
+        return;
+      }
+      setDialogEvent(event);
+      setDialogOpen(true);
+    },
+    [router, wid],
+  );
 
   /** 日期点击（月视图切换到日视图） */
   const handleDayClick = useCallback((date: Date) => {

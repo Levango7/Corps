@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
-import { getEventsOnDate, getEventColor, isSameDay, addMonths } from "./calendar-utils";
+import { getEventsOnDate, getEventColor, isSameDay, addMonths, isTaskDeadline } from "./calendar-utils";
 
 /** 月视图公共 props */
 interface CalendarMonthProps {
@@ -133,7 +133,7 @@ export function CalendarMonth({
               {dayEvents.slice(0, 3).map((event) => (
                 <div
                   key={event.id}
-                  className="text-[length:var(--text-xs)] px-1 py-0.5 rounded-[var(--radius-sm)] truncate cursor-pointer"
+                  className="text-[length:var(--text-xs)] px-1 py-0.5 rounded-[var(--radius-sm)] truncate cursor-pointer flex items-center gap-1"
                   style={{
                     background: `color-mix(in srgb, ${getEventColor(event)} 20%, var(--surface))`,
                     color: getEventColor(event),
@@ -143,7 +143,8 @@ export function CalendarMonth({
                     onEventClick(event);
                   }}
                 >
-                  {event.title}
+                  {isTaskDeadline(event) && <CheckCircle2 size={10} className="shrink-0" />}
+                  <span className="truncate">{event.title}</span>
                 </div>
               ))}
               {dayEvents.length > 3 && (

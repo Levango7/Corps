@@ -121,20 +121,23 @@ fn main() {
                 let resource_path = app.path().resource_dir()?;
                 let server_path = resource_path.join("standalone").join("server.js");
 
-                // 检查 server.js 是否存在；缺失时弹出错误对话框并中止启动（不 panic）
+                // 检查 server.js 是否存在；缺失时弹出错误对话框后退出（不 panic）
+                // 注意：setup 在主线程执行，blocking_show 会死锁（对话框任务需
+                // run_on_main_thread 调度，而主线程正阻塞在 recv）。改用异步 show，
+                // 在回调中 exit，并 return Ok 让事件循环启动以显示对话框。
                 if !server_path.exists() {
+                    let app_handle = app.handle().clone();
                     app.dialog()
                         .message(format!(
                             "未找到内嵌服务文件：\n{}\n\n请重新安装应用或联系技术支持。",
                             server_path.display()
                         ))
                         .title("Corps 启动失败")
-                        .blocking_show();
-                    return Err(format!(
-                        "Sidecar server.js not found: {}",
-                        server_path.display()
-                    )
-                    .into());
+                        .show(move |_| {
+                            app_handle.exit(1);
+                        });
+                    app.manage(SidecarState(Mutex::new(None)));
+                    return Ok(());
                 }
 
                 // 启动 Next.js standalone server，传递生产环境变量
@@ -147,13 +150,17 @@ fn main() {
                 {
                     Ok(c) => c,
                     Err(e) => {
+                        let app_handle = app.handle().clone();
                         app.dialog()
                             .message(format!(
                                 "启动内嵌服务失败：\n{e}\n\n请确保系统已安装 Node.js 运行时。"
                             ))
                             .title("Corps 启动失败")
-                            .blocking_show();
-                        return Err(e.into());
+                            .show(move |_| {
+                                app_handle.exit(1);
+                            });
+                        app.manage(SidecarState(Mutex::new(None)));
+                        return Ok(());
                     }
                 };
 

@@ -18,6 +18,15 @@ export interface CalendarEvent {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * 事件来源标记：
+   *  - "event"（默认）：真实日历事件，可编辑/删除
+   *  - "task"：任务截止日期联动生成的虚拟事件，点击跳转任务详情页
+   * 用于子视图区分渲染样式与点击行为。
+   */
+  source?: "event" | "task";
+  /** 当 source === "task" 时关联的任务 ID（用于跳转任务详情页） */
+  taskId?: string;
 }
 
 /** 将 ISO 字符串转为 datetime-local input 所需格式 yyyy-MM-ddTHH:mm */

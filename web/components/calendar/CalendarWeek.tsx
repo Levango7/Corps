@@ -1,9 +1,9 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
-import { getEventsOnDate, getEventColor, isSameDay, getWeekDays, formatTime } from "./calendar-utils";
+import { getEventsOnDate, getEventColor, isSameDay, getWeekDays, formatTime, isTaskDeadline } from "./calendar-utils";
 
 /** 周视图公共 props */
 interface CalendarWeekProps {
@@ -119,7 +119,10 @@ export function CalendarWeek({
                       }}
                       onClick={() => onEventClick(event)}
                     >
-                      <div className="font-[weight:var(--weight-medium)] truncate">{event.title}</div>
+                      <div className="font-[weight:var(--weight-medium)] truncate flex items-center gap-1">
+                        {isTaskDeadline(event) && <CheckCircle2 size={12} className="shrink-0" style={{ color: getEventColor(event) }} />}
+                        <span className="truncate">{event.title}</span>
+                      </div>
                       {!event.allDay && (
                         <div className="text-[var(--muted)]">
                           {formatTime(new Date(event.startAt))} - {formatTime(new Date(event.endAt))}

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 
 /**
@@ -11,6 +12,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  const limited = await checkRateLimit(req, "okr-key-results-list", { windowMs: 60_000, max: 60 });
+  if (limited) return limited;
 
   try {
     const obj = await runWithWorkspace(
@@ -58,6 +62,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  const limited = await checkRateLimit(req, "okr-key-result-create", { windowMs: 60_000, max: 30 });
+  if (limited) return limited;
 
   try {
     const body = await req.json();
