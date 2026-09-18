@@ -236,13 +236,14 @@ export function ChatWindow({
         </div>
       )}
 
-      {/* 底部输入区：MessageInput 集成 @提及/文件上传/字数计数 */}
+      {/* 底部输入区：MessageInput 集成 @提及/文件上传/字数计数/AI 回复建议 */}
       <div className="border-t border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">
         <MessageInput
           onSend={onSend}
           replyTo={replyTarget}
           onCancelReply={handleCancelReply}
           members={mentionMembers}
+          conversationId={conversation.id}
         />
       </div>
     </div>

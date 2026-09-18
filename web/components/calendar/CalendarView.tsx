@@ -3,12 +3,14 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
-import { Plus } from "lucide-react";
+import { Plus, CalendarClock } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
+import { useToast } from "@/components/Toast";
 import { CalendarMonth } from "./CalendarMonth";
 import { CalendarWeek } from "./CalendarWeek";
 import { CalendarDay } from "./CalendarDay";
 import { CalendarEventDialog, type CalendarEvent } from "./CalendarEventDialog";
+import CalendarScheduleDialog from "@/components/ai/CalendarScheduleDialog";
 import { addMonths, addWeeks, addDays, taskToCalendarEvent, type TaskSummary } from "./calendar-utils";
 
 type ViewMode = "month" | "week" | "day";
@@ -27,6 +29,7 @@ interface TasksListResponse {
 export function CalendarView({ wid }: { wid: string }) {
   const t = useTranslations("calendar");
   const router = useRouter();
+  const { toast } = useToast();
   const [view, setView] = useState<ViewMode>("month");
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<CalendarEvent[]>([]);
@@ -34,6 +37,8 @@ export function CalendarView({ wid }: { wid: string }) {
   const [error, setError] = useState<string | null>(null);
   const [dialogEvent, setDialogEvent] = useState<CalendarEvent | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
+  // AI 智能排程弹窗状态
+  const [scheduleDialogOpen, setScheduleDialogOpen] = useState(false);
 
   /** 根据当前视图和日期计算查询时间范围 */
   const getRange = useCallback((mode: ViewMode, date: Date): { start: Date; end: Date } => {
@@ -147,6 +152,41 @@ export function CalendarView({ wid }: { wid: string }) {
     loadEvents();
   }, [loadEvents]);
 
+  /** 打开 AI 智能排程弹窗 */
+  const handleOpenSchedule = useCallback(() => {
+    setScheduleDialogOpen(true);
+  }, []);
+
+  /** 关闭 AI 智能排程弹窗 */
+  const handleScheduleClose = useCallback(() => {
+    setScheduleDialogOpen(false);
+  }, []);
+
+  /**
+   * AI 排程建议被采纳：将 suggestion 创建为日历事件。
+   * suggestion.startTime / endTime 为 ISO 8601 字符串，直接传给事件创建 API。
+   */
+  const handleScheduleAdopted = useCallback(
+    async (suggestion: { title: string; startTime: string; endTime: string; duration: number }) => {
+      try {
+        await api(`/api/v1/workspaces/${wid}/calendar/events`, {
+          method: "POST",
+          body: JSON.stringify({
+            title: suggestion.title,
+            startAt: suggestion.startTime,
+            endAt: suggestion.endTime,
+            allDay: false,
+          }),
+        });
+        toast("success", t("createSuccess"));
+        loadEvents();
+      } catch (e) {
+        toast("error", e instanceof ApiError ? e.message : t("saveError"));
+      }
+    },
+    [wid, t, toast, loadEvents],
+  );
+
   const viewModes: { key: ViewMode; label: string }[] = [
     { key: "month", label: t("month") },
     { key: "week", label: t("week") },
@@ -183,15 +223,29 @@ export function CalendarView({ wid }: { wid: string }) {
           </div>
         </div>
 
-        {/* 新建事件按钮 */}
-        <button
-          onClick={handleNewEvent}
-          className="flex items-center gap-1 px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] cursor-pointer"
-          style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
-        >
-          <Plus size={14} />
-          {t("newEvent")}
-        </button>
+        {/* 新建事件 + AI 排程按钮 */}
+        <div className="flex items-center gap-[var(--space-2)]">
+          <button
+            onClick={handleNewEvent}
+            className="flex items-center gap-1 px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] cursor-pointer"
+            style={{ background: "var(--accent)", color: "var(--accent-fg)" }}
+          >
+            <Plus size={14} />
+            {t("newEvent")}
+          </button>
+          <button
+            onClick={handleOpenSchedule}
+            className="flex items-center gap-1 px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] cursor-pointer transition-colors duration-[var(--motion-fast)]"
+            style={{
+              background: "var(--surface)",
+              color: "var(--accent)",
+              border: "1px solid var(--border)",
+            }}
+          >
+            <CalendarClock size={14} />
+            {t("aiSchedule")}
+          </button>
+        </div>
       </div>
 
       {/* 错误提示 */}
@@ -250,6 +304,14 @@ export function CalendarView({ wid }: { wid: string }) {
           onSaved={handleDialogSaved}
         />
       )}
+
+      {/* AI 智能排程弹窗 */}
+      <CalendarScheduleDialog
+        wid={wid}
+        open={scheduleDialogOpen}
+        onClose={handleScheduleClose}
+        onSchedule={handleScheduleAdopted}
+      />
     </div>
   );
 }

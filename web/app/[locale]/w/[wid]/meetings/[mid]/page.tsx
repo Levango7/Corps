@@ -19,10 +19,11 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
-import { Video, ArrowLeft } from "lucide-react";
+import { Video, ArrowLeft, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { MeetingLobby } from "@/components/meetings/MeetingLobby";
 import { MeetingRoom } from "@/components/meetings/MeetingRoom";
+import MeetingFlowPanel from "@/components/ai/MeetingFlowPanel";
 
 /** 会议详情（仅取所需字段） */
 interface MeetingDetail {
@@ -50,6 +51,17 @@ export default function MeetingRoomPage({
   const [currentUserName, setCurrentUserName] = useState<string | undefined>(
     undefined,
   );
+  // AI 会议流程面板开关（会后阶段：会议已结束时点击"AI 会议流程"按钮打开）
+  const [showAiFlow, setShowAiFlow] = useState(false);
+  // AI 服务是否已配置（挂载时探测一次，未配置时按钮置灰，避免点击后才收到 503）
+  const [aiConfigured, setAiConfigured] = useState(false);
+
+  // 挂载时探测 AI 服务是否已配置（与任务详情页"AI 拆分子任务"按钮同模式）
+  useEffect(() => {
+    api<{ configured: boolean }>("/api/v1/ai/configured")
+      .then((data) => setAiConfigured(data?.configured ?? false))
+      .catch(() => setAiConfigured(false));
+  }, []);
 
   // 解包 params + fetch 会议详情 + 当前用户名
   useEffect(() => {
@@ -142,6 +154,27 @@ export default function MeetingRoomPage({
         <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
           {t("endedMeetings")}
         </p>
+        {/* AI 会议流程按钮（会后阶段）—— 点击打开 MeetingFlowPanel 侧边栏 */}
+        <button
+          type="button"
+          onClick={() => setShowAiFlow(true)}
+          disabled={!aiConfigured}
+          title={!aiConfigured ? t("aiFlowDisabled") : undefined}
+          className="mt-[var(--space-5)] inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        >
+          <Sparkles size={14} className="text-[var(--accent)]" />
+          {t("aiFlow")}
+        </button>
+        {/* AI 会议全流程面板（侧边栏，右侧贴边覆盖） */}
+        {showAiFlow && (
+          <div className="fixed inset-y-0 right-0 z-[var(--z-modal)]">
+            <MeetingFlowPanel
+              wid={wid}
+              meetingId={mid}
+              onClose={() => setShowAiFlow(false)}
+            />
+          </div>
+        )}
       </div>
     );
   }

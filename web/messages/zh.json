@@ -355,7 +355,9 @@
     "noHistory": "暂无历史版本",
     "noPreviewContent": "暂无预览内容",
     "versionHistory": "版本历史",
-    "viewAria": "切换视图"
+    "viewAria": "切换视图",
+    "aiBreakdown": "AI 拆分子任务",
+    "aiBreakdownDisabled": "AI 未配置"
   },
   "time": {
     "justNow": "刚刚",
@@ -948,7 +950,9 @@
     "taskPickerLoading": "加载任务中…",
     "taskPickerEmpty": "暂无任务",
     "taskPickerLoadFailed": "加载任务失败",
-    "taskPickerUnavailable": "无法获取工作区信息"
+    "taskPickerUnavailable": "无法获取工作区信息",
+    "aiReply": "AI 回复",
+    "aiReplyUnavailable": "AI 未配置"
   },
   "im": {
     "actions": {
@@ -1050,7 +1054,8 @@
     "syncSuccess": "同步成功",
     "syncedTo": "已同步到 {provider}",
     "syncing": "同步中…",
-    "taskDeadline": "任务截止"
+    "taskDeadline": "任务截止",
+    "aiSchedule": "AI 排程"
   },
   "legal": {
     "termsTitle": "服务条款",
@@ -3139,7 +3144,9 @@
     "loading": "正在加载...",
     "dismiss": "关闭提示",
     "prevPage": "上一页",
-    "nextPage": "下一页"
+    "nextPage": "下一页",
+    "aiFlow": "AI 会议流程",
+    "aiFlowDisabled": "AI 未配置"
   },
   "meetings": {
     "room": {
@@ -3398,7 +3405,19 @@
     "loadFailed": "加载纪要失败",
     "createFailed": "创建纪要失败",
     "deleteFailed": "删除纪要失败",
-    "loading": "正在加载..."
+    "loading": "正在加载...",
+    "aiSummary": "AI 生成摘要",
+    "aiNotConfigured": "AI 未配置",
+    "aiTranscriptLabel": "会议转写",
+    "aiTranscriptPlaceholder": "粘贴会议转写文本…（说话人: 内容）",
+    "aiTranscriptEmpty": "请先输入转写文本",
+    "aiGenerate": "生成",
+    "aiGenerating": "生成中…",
+    "aiGenerateFailed": "生成失败，请重试",
+    "aiCancel": "取消",
+    "aiSummaryApplied": "已应用 AI 摘要",
+    "aiKeyPoints": "关键讨论点",
+    "aiDecisions": "决策项"
   },
   "announcement": {
     "title": "公告",

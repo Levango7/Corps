@@ -355,7 +355,9 @@
     "noHistory": "No version history",
     "noPreviewContent": "No preview content",
     "versionHistory": "Version history",
-    "viewAria": "Toggle view"
+    "viewAria": "Toggle view",
+    "aiBreakdown": "AI Breakdown",
+    "aiBreakdownDisabled": "AI not configured"
   },
   "time": {
     "justNow": "Just now",
@@ -948,7 +950,9 @@
     "taskPickerLoading": "Loading tasks…",
     "taskPickerEmpty": "No tasks found",
     "taskPickerLoadFailed": "Failed to load tasks",
-    "taskPickerUnavailable": "Workspace context unavailable"
+    "taskPickerUnavailable": "Workspace context unavailable",
+    "aiReply": "AI Reply",
+    "aiReplyUnavailable": "AI not configured"
   },
   "im": {
     "actions": {
@@ -1050,7 +1054,8 @@
     "syncSuccess": "Sync succeeded",
     "syncedTo": "Synced to {provider}",
     "syncing": "Syncing…",
-    "taskDeadline": "Task due"
+    "taskDeadline": "Task due",
+    "aiSchedule": "AI Schedule"
   },
   "legal": {
     "termsTitle": "Terms of Service",
@@ -3139,7 +3144,9 @@
     "loading": "Loading...",
     "dismiss": "Dismiss",
     "prevPage": "Previous",
-    "nextPage": "Next"
+    "nextPage": "Next",
+    "aiFlow": "AI Meeting Flow",
+    "aiFlowDisabled": "AI not configured"
   },
   "meetings": {
     "room": {
@@ -3398,7 +3405,19 @@
     "loadFailed": "Failed to load minutes",
     "createFailed": "Failed to create minutes",
     "deleteFailed": "Failed to delete minutes",
-    "loading": "Loading..."
+    "loading": "Loading...",
+    "aiSummary": "AI Summary",
+    "aiNotConfigured": "AI not configured",
+    "aiTranscriptLabel": "Meeting Transcript",
+    "aiTranscriptPlaceholder": "Paste meeting transcript... (speaker: content)",
+    "aiTranscriptEmpty": "Please enter transcript first",
+    "aiGenerate": "Generate",
+    "aiGenerating": "Generating...",
+    "aiGenerateFailed": "Generation failed, please retry",
+    "aiCancel": "Cancel",
+    "aiSummaryApplied": "AI summary applied",
+    "aiKeyPoints": "Key Points",
+    "aiDecisions": "Decisions"
   },
   "announcement": {
     "title": "Announcements",

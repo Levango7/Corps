@@ -2,12 +2,13 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Link, useRouter } from "@/lib/i18n-navigation";
-import { ArrowLeft, Trash2, Loader2 } from "lucide-react";
+import { ArrowLeft, Trash2, Loader2, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { relTime as sharedRelTime } from "@/lib/format";
 import { isFavorite, toggleFavorite } from "@/lib/favorites";
 import ChatPanel from "@/components/ChatPanel";
 import { SubtaskSection } from "@/components/SubtaskSection";
+import TaskBreakdownDialog from "@/components/ai/TaskBreakdownDialog";
 import { useTranslations } from "next-intl";
 import { TaskDetailHeader } from "@/components/task/TaskDetailHeader";
 import { TaskDecisions } from "@/components/task/TaskDecisions";
@@ -52,6 +53,15 @@ export default function TaskDetailPage({
   useEffect(() => {
     if (task) setStarred(isFavorite(task.id));
   }, [task]);
+
+  // AI 拆解弹窗开关 + AI 服务是否已配置（挂载时探测一次，未配置时按钮置灰）
+  const [breakdownOpen, setBreakdownOpen] = useState(false);
+  const [aiConfigured, setAiConfigured] = useState(false);
+  useEffect(() => {
+    api<{ configured: boolean }>("/api/v1/ai/configured")
+      .then((data) => setAiConfigured(data?.configured ?? false))
+      .catch(() => setAiConfigured(false));
+  }, []);
 
   function onToggleFavorite() {
     if (!task) return;
@@ -236,6 +246,20 @@ export default function TaskDetailPage({
           {/* 子任务（v0.4.0 队列第 1 项） */}
           <SubtaskSection wid={wid} taskId={id} subtasks={task.children ?? []} onChanged={load} />
 
+          {/* AI 拆分子任务按钮（P3）—— 位于子任务区下方，点击打开 TaskBreakdownDialog */}
+          <div className="mt-[var(--space-3)]">
+            <button
+              type="button"
+              onClick={() => setBreakdownOpen(true)}
+              disabled={!aiConfigured}
+              title={!aiConfigured ? t("aiBreakdownDisabled") : undefined}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              <Sparkles size={14} className="text-[var(--accent)]" />
+              {t("aiBreakdown")}
+            </button>
+          </div>
+
           {/* 决策记录 */}
           <TaskDecisions
             task={task}
@@ -283,6 +307,17 @@ export default function TaskDetailPage({
         deleting={deleting}
         taskTitle={task.title}
       />
+
+      {/* ── AI 任务拆解弹窗（P3）── */}
+      {breakdownOpen && (
+        <TaskBreakdownDialog
+          wid={wid}
+          taskId={id}
+          taskTitle={task.title}
+          onClose={() => setBreakdownOpen(false)}
+          onCreated={load}
+        />
+      )}
     </div>
   );
 }

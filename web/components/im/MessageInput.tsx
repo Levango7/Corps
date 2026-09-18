@@ -26,11 +26,12 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
-import { Send, Paperclip, X, Loader2, ListTodo, AlertCircle } from "lucide-react";
+import { Send, Paperclip, X, Loader2, ListTodo, AlertCircle, Sparkles } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
 import { MentionPopover } from "./MentionPopover";
+import { ImReplySuggestions } from "../ai/ImReplySuggestions";
 
 /** 附件（上传后的轻量结构，传给 onSend） */
 export interface Attachment {
@@ -72,6 +73,10 @@ interface MessageInputProps {
   disabled?: boolean;
   /** 占位提示文本 */
   placeholder?: string;
+  /** 当前会话 ID（用于 AI 回复建议，传入后显示"AI 回复"按钮） */
+  conversationId?: string;
+  /** AI 功能是否可用（未配置时禁用 AI 回复按钮）；默认 true */
+  aiEnabled?: boolean;
 }
 
 /** 消息体最大长度（与 API zod schema 对齐） */
@@ -115,6 +120,8 @@ export function MessageInput({
   members,
   disabled = false,
   placeholder,
+  conversationId,
+  aiEnabled = true,
 }: MessageInputProps) {
   const t = useTranslations("chat");
   // 从路由 /[locale]/w/[wid]/im 获取当前工作区 ID
@@ -137,6 +144,9 @@ export function MessageInput({
   const [taskPickerLoading, setTaskPickerLoading] = useState(false);
   const [taskPickerError, setTaskPickerError] = useState<string | null>(null);
   const [tasks, setTasks] = useState<TaskPickerItem[]>([]);
+
+  // AI 回复建议面板状态：是否展开 ImReplySuggestions
+  const [aiReplyOpen, setAiReplyOpen] = useState(false);
 
   // 已提及的用户 ID 集合（发送时传入）
   const mentionedIdsRef = useRef<Set<string>>(new Set());
@@ -483,6 +493,27 @@ export function MessageInput({
     setTaskPickerError(null);
   }, []);
 
+  // —— 切换 AI 回复建议面板 ——
+  // 仅当 wid + conversationId 齐全且 AI 已配置时可展开
+  const canUseAiReply = !!wid && !!conversationId && aiEnabled;
+  const handleToggleAiReply = useCallback(() => {
+    if (!canUseAiReply) return;
+    setAiReplyOpen((prev) => !prev);
+  }, [canUseAiReply]);
+
+  // —— 选中 AI 回复建议：填入输入框并聚焦、关闭面板 ——
+  const handleAiReplySelect = useCallback((text: string) => {
+    setBody(text);
+    setAiReplyOpen(false);
+    // 聚焦输入框并把光标移到末尾，方便用户直接编辑或发送
+    requestAnimationFrame(() => {
+      const el = textareaRef.current;
+      if (!el) return;
+      el.focus();
+      el.setSelectionRange(text.length, text.length);
+    });
+  }, []);
+
   // —— 发送条件 ——
   const overLimit = body.length > MAX_BODY_LENGTH;
   // 有附件正在上传时禁用发送，避免发出未完成上传的附件
@@ -569,6 +600,26 @@ export function MessageInput({
         </div>
       )}
 
+      {/* AI 回复建议面板：展开时显示在输入框上方，可关闭 */}
+      {aiReplyOpen && wid && conversationId && (
+        <div className="mb-[var(--space-2)] relative">
+          {/* 关闭按钮：右上角悬浮，方便用户随时收起建议面板 */}
+          <button
+            type="button"
+            onClick={() => setAiReplyOpen(false)}
+            aria-label={t("cancel")}
+            className="absolute top-[var(--space-2)] right-[var(--space-2)] z-[var(--z-sticky)] w-6 h-6 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-3)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+          >
+            <X size={14} />
+          </button>
+          <ImReplySuggestions
+            wid={wid}
+            conversationId={conversationId}
+            onSelect={handleAiReplySelect}
+          />
+        </div>
+      )}
+
       {/* 输入框 + 工具栏 */}
       <div className="flex items-end gap-[var(--space-2)]">
         {/* 附件按钮 */}
@@ -592,6 +643,25 @@ export function MessageInput({
         >
           <ListTodo size={16} />
         </button>
+
+        {/* AI 回复建议按钮：仅当传入 conversationId 且 AI 可用时启用 */}
+        {conversationId && (
+          <button
+            type="button"
+            onClick={handleToggleAiReply}
+            disabled={disabled || !canUseAiReply}
+            aria-label={t("aiReply")}
+            aria-pressed={aiReplyOpen}
+            title={canUseAiReply ? t("aiReply") : t("aiReplyUnavailable")}
+            className={`shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-md)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed ${
+              aiReplyOpen
+                ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                : "text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+            }`}
+          >
+            <Sparkles size={14} />
+          </button>
+        )}
 
         {/* 隐藏的文件选择 input */}
         <input
@@ -666,6 +736,7 @@ export function MessageInput({
           position={mention.position}
         />
       )}
+
 
       {/* 分享任务弹窗 */}
       {taskPickerOpen && (
