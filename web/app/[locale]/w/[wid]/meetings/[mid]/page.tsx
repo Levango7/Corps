@@ -7,14 +7,19 @@
  *  1. 解包 params 获取 wid/mid
  *  2. fetch GET /api/v1/workspaces/{wid}/meetings/{mid} 获取会议标题
  *  3. lobby 状态：渲染 MeetingLobby（设备预览 + 加入按钮）
+ *     - 传入 currentUserName（Medium #18）
  *  4. room 状态：渲染 MeetingRoom（LiveKit 音视频会议 + 屏幕共享）
- *  5. 离开后返回会议列表页
+ *  5. ended 状态：显示"会议已结束"页面（Medium #19）
+ *  6. 离开后返回会议列表页
+ *  7. fetch 失败用 i18n 而非硬编码英文（Medium #20）
  *
  * Next.js 16 中 params 为 Promise，在 useEffect 中 await 解包。
  */
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "@/lib/i18n-navigation";
+import { useTranslations } from "next-intl";
+import { Video, ArrowLeft } from "lucide-react";
 import { api } from "@/lib/api";
 import { MeetingLobby } from "@/components/meetings/MeetingLobby";
 import { MeetingRoom } from "@/components/meetings/MeetingRoom";
@@ -28,20 +33,25 @@ interface MeetingDetail {
 }
 
 /** 页面阶段 */
-type Stage = "loading" | "lobby" | "room";
+type Stage = "loading" | "lobby" | "room" | "ended";
 
 export default function MeetingRoomPage({
   params,
 }: {
   params: Promise<{ wid: string; mid: string }>;
 }) {
+  const t = useTranslations("meeting");
   const router = useRouter();
   const [wid, setWid] = useState<string | null>(null);
   const [mid, setMid] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
   const [meetingTitle, setMeetingTitle] = useState("");
+  // 当前用户名（Medium #18：传入 MeetingLobby 预填 PreJoin 输入框）
+  const [currentUserName, setCurrentUserName] = useState<string | undefined>(
+    undefined,
+  );
 
-  // 解包 params + fetch 会议详情
+  // 解包 params + fetch 会议详情 + 当前用户名
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -50,27 +60,43 @@ export default function MeetingRoomPage({
       setWid(w);
       setMid(m);
 
-      // 获取会议标题用于大厅显示
-      try {
-        const detail = await api<MeetingDetail>(
-          `/api/v1/workspaces/${w}/meetings/${m}`,
+      // 并行获取会议详情 + 当前用户名
+      const [detailResult, meResult] = await Promise.allSettled([
+        api<MeetingDetail>(`/api/v1/workspaces/${w}/meetings/${m}`),
+        api<{ id: string; name: string | null; email: string }>(
+          "/api/v1/users/me",
+        ),
+      ]);
+
+      if (cancelled) return;
+
+      // Medium #18：设置当前用户名（优先 name，回退 email）
+      if (meResult.status === "fulfilled") {
+        setCurrentUserName(
+          meResult.value.name ?? meResult.value.email ?? undefined,
         );
-        if (!cancelled) {
-          setMeetingTitle(detail.title);
+      }
+
+      // 会议详情
+      if (detailResult.status === "fulfilled") {
+        const detail = detailResult.value;
+        setMeetingTitle(detail.title);
+        // Medium #19：检查 status === "ended"，显示"会议已结束"页面
+        if (detail.status === "ended") {
+          setStage("ended");
+        } else {
           setStage("lobby");
         }
-      } catch {
-        // 获取详情失败仍允许进入会议（用默认标题）
-        if (!cancelled) {
-          setMeetingTitle("Meeting");
-          setStage("lobby");
-        }
+      } else {
+        // Medium #20：fetch 失败用 i18n 而非硬编码 "Meeting"
+        setMeetingTitle(t("title"));
+        setStage("lobby");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [params]);
+  }, [params, t]);
 
   // 返回会议列表
   const goToList = useCallback(() => {
@@ -90,6 +116,36 @@ export default function MeetingRoomPage({
   // 加载中
   if (stage === "loading" || !wid || !mid) return null;
 
+  // Medium #19：会议已结束
+  if (stage === "ended") {
+    return (
+      <div
+        className="fixed inset-0 z-[var(--z-modal)] flex flex-col items-center justify-center bg-[var(--bg)] px-[var(--space-4)]"
+        role="status"
+        aria-live="polite"
+      >
+        <button
+          type="button"
+          onClick={goToList}
+          className="absolute top-[var(--space-4)] left-[var(--space-4)] inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+          aria-label={t("leave")}
+        >
+          <ArrowLeft size={16} />
+          {t("leave")}
+        </button>
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-[var(--surface-2)] text-[var(--muted)] mb-[var(--space-3)]">
+          <Video size={20} />
+        </div>
+        <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] mb-[var(--space-1)]">
+          {meetingTitle}
+        </h1>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
+          {t("endedMeetings")}
+        </p>
+      </div>
+    );
+  }
+
   // 大厅阶段
   if (stage === "lobby") {
     return (
@@ -97,6 +153,7 @@ export default function MeetingRoomPage({
         workspaceId={wid}
         meetingId={mid}
         meetingTitle={meetingTitle}
+        currentUserName={currentUserName}
         onJoin={handleJoin}
         onCancel={goToList}
       />

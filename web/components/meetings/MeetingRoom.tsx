@@ -8,9 +8,15 @@
  *  2. 用 <LiveKitRoom token serverUrl connect> 包裹内容
  *  3. 内部用 <VideoConference />（LiveKit 预置 UI：参与者网格 + 麦克风/摄像头/屏幕共享控制栏）
  *  4. 加上 <RoomAudioRenderer />（音频渲染）
- *  5. 连接状态：connecting / connected / disconnected / error
+ *  5. 连接状态：joining / connected / reconnecting / disconnected / error
  *  6. 离开时调用 POST /api/v1/workspaces/{wid}/meetings/{mid}/leave
+ *     - beforeunload / pagehide 时用 navigator.sendBeacon 发送（High #5）
+ *     - 组件卸载时也调用 leave API
  *  7. 错误处理：LiveKit 未配置（503）→ 显示"会议服务不可用"
+ *  8. 区分主动挂断与意外断开（High #6）：
+ *     - 主动挂断 → leave + onLeave
+ *     - 意外断开 → "重连中..." + 重新 join 获取新 token（Medium #17），30s 超时才回 lobby
+ *  9. 录制控制（Medium #16）：host 可见，调用 recording/start/stop API
  *
  * 全屏布局（fixed inset-0）。
  */
@@ -21,7 +27,14 @@ import {
   VideoConference,
   RoomAudioRenderer,
 } from "@livekit/components-react";
-import { Loader2, AlertCircle, WifiOff, Video } from "lucide-react";
+import {
+  Loader2,
+  AlertCircle,
+  WifiOff,
+  Video,
+  Circle,
+  Square,
+} from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
 
@@ -32,6 +45,18 @@ interface JoinResult {
   roomName: string;
 }
 
+/** 会议详情中参与者条目（用于判断 host 权限） */
+interface ParticipantEntry {
+  userId: string;
+  role: string;
+}
+
+/** 会议详情（仅取所需字段） */
+interface MeetingDetailForHost {
+  createdBy?: string | null;
+  participants: ParticipantEntry[];
+}
+
 export interface MeetingRoomProps {
   workspaceId: string;
   meetingId: string;
@@ -39,10 +64,22 @@ export interface MeetingRoomProps {
 }
 
 /** 连接状态机 */
-type ConnectionState = "joining" | "connected" | "disconnected" | "error";
+type ConnectionState =
+  | "joining"
+  | "connected"
+  | "reconnecting"
+  | "disconnected"
+  | "error";
+
+/** 录制状态 */
+type RecordingState = "idle" | "starting" | "active" | "stopping";
+
+/** 重连超时（ms） */
+const RECONNECT_TIMEOUT_MS = 30_000;
 
 export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProps) {
   const t = useTranslations("meetings.room");
+  const tButton = useTranslations("button");
 
   const [state, setState] = useState<ConnectionState>("joining");
   const [errorMsg, setErrorMsg] = useState("");
@@ -51,21 +88,97 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
   const [token, setToken] = useState<string | undefined>(undefined);
   const [serverUrl, setServerUrl] = useState<string | undefined>(undefined);
 
+  // 录制相关状态
+  const [isHost, setIsHost] = useState(false);
+  const [recording, setRecording] = useState<RecordingState>("idle");
+
   // 记忆凭据，避免 effect 重复 join
   const joinedRef = useRef(false);
   // 记忆是否已调用 leave，避免重复
   const leftRef = useRef(false);
   // 记忆是否组件已卸载
   const mountedRef = useRef(false);
+  // 标记用户是否主动挂断（区分意外断开）
+  const intentionalLeaveRef = useRef(false);
+  // 重连超时定时器
+  const reconnectTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     mountedRef.current = true;
     return () => {
       mountedRef.current = false;
+      // 组件卸载时调用 leave API（High #5）
+      void callLeaveApiRef.current();
+      // 清理重连超时
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
     };
   }, []);
 
-  // 挂载时调用 join API 获取 LiveKit token
+  // 调用 leave API（幂等，失败不阻塞）
+  const callLeaveApi = useCallback(async () => {
+    if (leftRef.current) return;
+    leftRef.current = true;
+    try {
+      await api(
+        `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`,
+        { method: "POST" },
+      );
+    } catch {
+      // 离开失败不阻塞 UI
+    }
+  }, [workspaceId, meetingId]);
+
+  // 用 ref 存储 callLeaveApi，供卸载 effect 调用（避免依赖数组问题）
+  const callLeaveApiRef = useRef(callLeaveApi);
+  callLeaveApiRef.current = callLeaveApi;
+
+  // ── High #5: beforeunload / pagehide 事件 ──
+  // 页面卸载时用 navigator.sendBeacon 发送 leave 请求（无需 await）
+  useEffect(() => {
+    const leaveUrl = `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`;
+
+    const sendLeaveBeacon = () => {
+      if (leftRef.current) return;
+      leftRef.current = true;
+      try {
+        navigator.sendBeacon(leaveUrl);
+      } catch {
+        // sendBeacon 不可用时不阻塞
+      }
+    };
+
+    const onBeforeUnload = () => sendLeaveBeacon();
+    const onPageHide = () => sendLeaveBeacon();
+
+    window.addEventListener("beforeunload", onBeforeUnload);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("beforeunload", onBeforeUnload);
+      window.removeEventListener("pagehide", onPageHide);
+    };
+  }, [workspaceId, meetingId]);
+
+  // 重新 join 获取新 token（用于 Medium #17 token 过期/刷新）
+  const rejoin = useCallback(async (): Promise<boolean> => {
+    try {
+      const result = await api<JoinResult>(
+        `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/join`,
+        { method: "POST" },
+      );
+      if (!mountedRef.current) return false;
+      // 更新 token，LiveKitRoom 会自动重连
+      setToken(result.token);
+      setServerUrl(result.url);
+      return true;
+    } catch {
+      return false;
+    }
+  }, [workspaceId, meetingId]);
+
+  // 挂载时调用 join API 获取 LiveKit token + 判断 host 权限
   useEffect(() => {
     let cancelled = false;
     if (joinedRef.current) return;
@@ -84,6 +197,25 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
         setToken(result.token);
         setServerUrl(result.url);
         // token/url 就绪后 LiveKitRoom 会自动连接（connect=true）
+
+        // 并行获取用户 ID + 会议详情，判断 host 权限（用于录制按钮可见性）
+        try {
+          const [me, detail] = await Promise.all([
+            api<{ id: string }>("/api/v1/users/me"),
+            api<MeetingDetailForHost>(
+              `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}`,
+            ),
+          ]);
+          if (cancelled) return;
+          // host = 会议创建者 或 参与者中 role=host
+          const isCreator = detail.createdBy === me.id;
+          const participantRole = detail.participants.find(
+            (p) => p.userId === me.id,
+          )?.role;
+          setIsHost(isCreator || participantRole === "host");
+        } catch {
+          // 获取 host 权限失败不阻塞会议，只是不显示录制按钮
+        }
       } catch (e) {
         if (cancelled) return;
         const is503 =
@@ -101,50 +233,119 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
     };
   }, [workspaceId, meetingId, t]);
 
-  // 调用 leave API（幂等，失败不阻塞）
-  const callLeaveApi = useCallback(async () => {
-    if (leftRef.current) return;
-    leftRef.current = true;
-    try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`,
-        { method: "POST" },
-      );
-    } catch {
-      // 离开失败不阻塞 UI
-    }
-  }, [workspaceId, meetingId]);
-
   // LiveKit 连接成功
   const handleConnected = useCallback(() => {
-    if (mountedRef.current) setState("connected");
+    if (!mountedRef.current) return;
+    // 如果之前在重连中，清除超时定时器
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+    setState("connected");
   }, []);
 
   // LiveKit 断开连接（用户主动离开或意外断开）
   const handleDisconnected = useCallback(() => {
     if (!mountedRef.current) return;
-    setState("disconnected");
-    // 断开后调用 leave API 通知后端
-    void callLeaveApi();
-    // 通知父组件离开（返回会议列表）
-    onLeave?.();
-  }, [callLeaveApi, onLeave]);
+
+    // High #6: 区分主动挂断与意外断开
+    if (intentionalLeaveRef.current) {
+      // 主动挂断 → leave + onLeave
+      setState("disconnected");
+      void callLeaveApi();
+      onLeave?.();
+      return;
+    }
+
+    // 意外断开 → 显示"重连中..."，尝试重新 join 获取新 token（Medium #17）
+    setState("reconnecting");
+
+    // 尝试重新 join 获取新 token
+    void rejoin().then((success) => {
+      if (!mountedRef.current) return;
+      if (!success) {
+        // 重新 join 失败 → 清除超时，直接回 lobby
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+          reconnectTimeoutRef.current = null;
+        }
+        setState("disconnected");
+        void callLeaveApi();
+        onLeave?.();
+      }
+      // join 成功 → token 已更新，LiveKitRoom 自动重连
+      // 等待 onConnected 回调清除超时
+    });
+
+    // 设置 30s 重连超时
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+    }
+    reconnectTimeoutRef.current = setTimeout(() => {
+      if (!mountedRef.current) return;
+      // 重连超时 → 回 lobby
+      setState("disconnected");
+      void callLeaveApi();
+      onLeave?.();
+    }, RECONNECT_TIMEOUT_MS);
+  }, [callLeaveApi, onLeave, rejoin]);
 
   // LiveKit 连接错误
   const handleError = useCallback(
     (error: Error) => {
       if (!mountedRef.current) return;
+      // 清理重连超时
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
       setErrorMsg(error.message || t("connectionFailed"));
       setState("error");
     },
     [t],
   );
 
-  // 用户点击"返回"按钮（错误/断开状态下）
+  // 用户点击"返回"按钮（错误/断开状态下）— 主动离开
   const handleBack = useCallback(() => {
+    intentionalLeaveRef.current = true;
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
     void callLeaveApi();
     onLeave?.();
   }, [callLeaveApi, onLeave]);
+
+  // ── Medium #16: 录制控制 ──
+  const handleToggleRecording = useCallback(async () => {
+    if (recording === "starting" || recording === "stopping") return;
+
+    if (recording === "idle") {
+      // 开始录制
+      setRecording("starting");
+      try {
+        await api(
+          `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/recording/start`,
+          { method: "POST" },
+        );
+        if (mountedRef.current) setRecording("active");
+      } catch {
+        if (mountedRef.current) setRecording("idle");
+      }
+    } else {
+      // 停止录制
+      setRecording("stopping");
+      try {
+        await api(
+          `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/recording/stop`,
+          { method: "POST" },
+        );
+        if (mountedRef.current) setRecording("idle");
+      } catch {
+        if (mountedRef.current) setRecording("active");
+      }
+    }
+  }, [recording, workspaceId, meetingId]);
 
   // ── 连接中 ──
   if (state === "joining") {
@@ -157,6 +358,25 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
         <Loader2 size={28} className="animate-spin text-[var(--accent)] mb-3" />
         <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
           {t("joining")}
+        </p>
+      </div>
+    );
+  }
+
+  // ── 重连中（意外断开） ──
+  if (state === "reconnecting") {
+    return (
+      <div
+        className="fixed inset-0 z-[var(--z-modal)] flex flex-col items-center justify-center bg-[var(--bg)]"
+        role="status"
+        aria-live="polite"
+      >
+        <Loader2 size={28} className="animate-spin text-[var(--accent)] mb-3" />
+        <p className="text-[length:var(--text-sm)] text-[var(--fg)] mb-2">
+          {t("reconnecting")}
+        </p>
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
+          {t("connectionFailed")}
         </p>
       </div>
     );
@@ -241,6 +461,37 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
         onError={handleError}
         className="flex-1 flex flex-col"
       >
+        {/*
+         * Medium #16: 录制控制条（仅 host 可见）
+         * 叠加在 VideoConference 上方，不影响 LiveKit 预置控制栏
+         */}
+        {isHost && (
+          <div className="absolute top-[var(--space-3)] right-[var(--space-3)] z-[var(--z-sticky)] flex items-center gap-2">
+            {recording === "active" && (
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
+                <Circle size={8} className="fill-current animate-pulse" />
+                {t("reconnecting")}
+              </span>
+            )}
+            <button
+              type="button"
+              onClick={handleToggleRecording}
+              disabled={recording === "starting" || recording === "stopping"}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+            >
+              {recording === "starting" || recording === "stopping" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : recording === "active" ? (
+                <Square size={14} className="fill-current" />
+              ) : (
+                <Circle size={14} className="fill-current text-[var(--danger)]" />
+              )}
+              {recording === "active" || recording === "stopping"
+                ? tButton("close")
+                : tButton("create")}
+            </button>
+          </div>
+        )}
         {/*
          * VideoConference 是 LiveKit 预置的完整视频会议 UI：
          *  - 参与者视频网格（含聚焦/分页）

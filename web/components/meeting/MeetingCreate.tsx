@@ -34,6 +34,17 @@ interface CreatedMeeting {
   title: string;
 }
 
+/** 编辑模式传入的会议初始值 */
+export interface EditableMeeting {
+  id: string;
+  title: string;
+  description?: string | null;
+  type?: string;
+  scheduledAt?: string | null;
+  maxParticipants?: number | null;
+  recordingEnabled?: boolean;
+}
+
 /** 表单字段标签/控件公共样式 */
 const fieldLabel =
   "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
@@ -44,22 +55,37 @@ export interface MeetingCreateProps {
   workspaceId: string;
   onClose: () => void;
   onCreated: (meeting: CreatedMeeting) => void;
+  /** 编辑模式：传入会议初始值，提交时走 PATCH 而非 POST */
+  meeting?: EditableMeeting;
 }
 
 export function MeetingCreate({
   workspaceId,
   onClose,
   onCreated,
+  meeting,
 }: MeetingCreateProps) {
   const t = useTranslations("meeting");
   const tButton = useTranslations("button");
 
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
-  const [type, setType] = useState<MeetingType>("instant");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [maxParticipants, setMaxParticipants] = useState("");
-  const [recordingEnabled, setRecordingEnabled] = useState(false);
+  const isEdit = Boolean(meeting);
+
+  const [title, setTitle] = useState(meeting?.title ?? "");
+  const [description, setDescription] = useState(meeting?.description ?? "");
+  const [type, setType] = useState<MeetingType>(
+    meeting?.type === "scheduled" ? "scheduled" : "instant",
+  );
+  const [scheduledAt, setScheduledAt] = useState(
+    meeting?.scheduledAt
+      ? new Date(meeting.scheduledAt).toISOString().slice(0, 16)
+      : "",
+  );
+  const [maxParticipants, setMaxParticipants] = useState(
+    meeting?.maxParticipants ? String(meeting.maxParticipants) : "",
+  );
+  const [recordingEnabled, setRecordingEnabled] = useState(
+    meeting?.recordingEnabled ?? false,
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -105,11 +131,21 @@ export function MeetingCreate({
         if (!Number.isNaN(n) && n > 0) body.maxParticipants = n;
       }
 
-      const created = await api<CreatedMeeting>(
-        `/api/v1/workspaces/${workspaceId}/meetings`,
-        { method: "POST", body: JSON.stringify(body) },
-      );
-      onCreated(created);
+      if (isEdit && meeting) {
+        // 编辑模式：PATCH 已有会议
+        const updated = await api<CreatedMeeting>(
+          `/api/v1/workspaces/${workspaceId}/meetings/${meeting.id}`,
+          { method: "PATCH", body: JSON.stringify(body) },
+        );
+        onCreated(updated);
+      } else {
+        // 创建模式：POST 新会议
+        const created = await api<CreatedMeeting>(
+          `/api/v1/workspaces/${workspaceId}/meetings`,
+          { method: "POST", body: JSON.stringify(body) },
+        );
+        onCreated(created);
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : t("createFailed"));
     } finally {
@@ -139,7 +175,7 @@ export function MeetingCreate({
             id="meeting-create-title"
             className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           >
-            {t("create")}
+            {isEdit ? tButton("edit") : t("create")}
           </h2>
           <button
             type="button"
@@ -181,7 +217,7 @@ export function MeetingCreate({
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               rows={3}
-              maxLength={1000}
+              maxLength={500}
               placeholder={t("descriptionPlaceholder")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
@@ -303,7 +339,11 @@ export function MeetingCreate({
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
-              {submitting ? t("creating") : t("create")}
+              {submitting
+                ? t("creating")
+                : isEdit
+                  ? tButton("save")
+                  : t("create")}
             </button>
           </div>
         </form>

@@ -83,6 +83,19 @@ export async function POST(
           },
         });
 
+        // 通知申请人审批被拒绝（不通知自己）
+        if (instance.applicantId !== ctx.payload.sub) {
+          await tx.notification.create({
+            data: {
+              userId: instance.applicantId,
+              workspaceId: wid,
+              type: "approval_result",
+              entityId: aid,
+              entityTitle: instance.title,
+            },
+          });
+        }
+
         return { kind: "ok" as const, data: updated };
       },
       ctx.payload.sub,

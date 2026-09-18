@@ -54,6 +54,23 @@ services:
     networks:
       - corps-net
 
+  # ─── LiveKit 音视频服务器（会议/通话 SFU）──────────────────────────────────
+  # 端口：7880 API/WebSocket（前端接入）、7881 UDP（RTC 媒体）、7882 UDP（TURN）
+  # 配置：./livekit.yaml 挂载为 /config.yaml，keys 需与 LIVEKIT_API_KEY/SECRET 一致
+  # 未配置时 app 的会议功能返回 503；配置后前端通过 LIVEKIT_URL 连接房间
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: corps-livekit
+    restart: unless-stopped
+    ports:
+      - "7880:7880"
+      - "7881:7881/udp"
+      - "7882:7882/udp"
+    volumes:
+      - ./livekit.yaml:/config.yaml:ro
+    networks:
+      - corps-net
+
   # ─── Next.js 应用 ──────────────────────────────────────────────────────────
   app:
     build:
@@ -138,6 +155,17 @@ services:
       VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:-}
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@corps.app}
+      # LiveKit 音视频（会议/通话）：未配置时会议功能返回 503
+      # LIVEKIT_URL 为容器内接入地址（通过 livekit 服务名解析）
+      LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
+      LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
+      LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
+      # S3 对象存储（IM 附件/录制文件）：未配置时回退本地 uploads/ 卷
+      S3_ENDPOINT: ${S3_ENDPOINT:-}
+      S3_BUCKET: ${S3_BUCKET:-}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+      S3_REGION: ${S3_REGION:-us-east-1}
     ports:
       - "3000:3000"
     volumes:

@@ -38,7 +38,15 @@ export interface ApprovalInstanceListItem {
   title: string;
   status: "pending" | "approved" | "rejected" | "withdrawn";
   applicantId: string;
+  /** 申请人嵌套对象（后端 Prisma include 返回） */
+  applicant?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
   applicantName?: string | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
   applicantEmail?: string | null;
   templateId?: string | null;
   templateName?: string | null;
@@ -122,7 +130,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
         if (tab === "pending") {
           params.set("status", "pending");
         } else if (tab === "mine") {
-          params.set("mine", "true");
+          params.set("mine", "1");
         }
         const data = await api<PaginatedResponse<ApprovalInstanceListItem> | ApprovalInstanceListItem[]>(
           `/api/v1/workspaces/${workspaceId}/approvals/instances?${params.toString()}`,
@@ -221,7 +229,11 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
             {items.map((item) => {
               const visual = getStatusVisual(item.status);
               const applicant =
-                item.applicantName || item.applicantEmail || "—";
+                item.applicant?.name ||
+                item.applicant?.email ||
+                item.applicantName ||
+                item.applicantEmail ||
+                "—";
               return (
                 <li key={item.id}>
                   <Link

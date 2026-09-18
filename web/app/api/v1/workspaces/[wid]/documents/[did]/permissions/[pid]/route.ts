@@ -47,7 +47,7 @@ async function canManageDoc(
 }
 
 const updatePermissionSchema = z.object({
-  permission: z.enum(["view", "edit", "manage"]),
+  permission: z.enum(["view", "comment", "edit", "manage"]),
 });
 
 /**

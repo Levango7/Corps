@@ -41,6 +41,8 @@ interface ApprovalTemplate {
   id: string;
   name: string;
   description?: string | null;
+  active?: boolean;
+  /** @deprecated 旧字段，保留兼容 */
   enabled?: boolean;
   nodes?: TemplateNode[] | null;
 }
@@ -129,17 +131,19 @@ export function ApprovalTemplateManage({
   }, [workspaceId, t]);
 
   async function toggleEnabled(tpl: ApprovalTemplate) {
+    // 后端字段为 active（非 enabled）
+    const nextActive = !tpl.active;
     try {
       await api(
         `/api/v1/workspaces/${workspaceId}/approvals/templates/${tpl.id}`,
         {
           method: "PATCH",
-          body: JSON.stringify({ enabled: !tpl.enabled }),
+          body: JSON.stringify({ active: nextActive }),
         },
       );
       setTemplates((prev) =>
         prev.map((item) =>
-          item.id === tpl.id ? { ...item, enabled: !tpl.enabled } : item,
+          item.id === tpl.id ? { ...item, active: nextActive } : item,
         ),
       );
     } catch (e) {
@@ -218,17 +222,17 @@ export function ApprovalTemplateManage({
                   </span>
                   <span
                     className={`shrink-0 inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] ${
-                      tpl.enabled
+                      tpl.active
                         ? "text-[var(--success)] bg-[var(--success-soft, var(--surface-2))]"
                         : "text-[var(--muted)] bg-[var(--surface-2)]"
                     }`}
                   >
-                    {tpl.enabled ? (
+                    {tpl.active ? (
                       <CheckCircle2 size={12} />
                     ) : (
                       <XCircle size={12} />
                     )}
-                    {tpl.enabled ? t("templateEnabled") : t("templateDisabled")}
+                    {tpl.active ? t("templateEnabled") : t("templateDisabled")}
                   </span>
                 </div>
                 {tpl.description && (
@@ -254,7 +258,7 @@ export function ApprovalTemplateManage({
                     className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                   >
                     <Power size={12} />
-                    {tpl.enabled ? t("disable") : t("enable")}
+                    {tpl.active ? t("disable") : t("enable")}
                   </button>
                   <button
                     onClick={() => deleteTemplate(tpl)}

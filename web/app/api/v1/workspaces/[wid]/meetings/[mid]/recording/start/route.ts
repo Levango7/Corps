@@ -1,6 +1,40 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import {
+  EgressClient,
+  EncodedFileOutput,
+  S3Upload,
+  EncodedFileType,
+} from "livekit-server-sdk";
+
+/**
+ * 将 LiveKit WebSocket 接入地址转换为 HTTP/HTTPS API 地址。
+ * EgressClient 需要 HTTP host（如 http://host:7880），
+ * 而 LIVEKIT_URL 通常是 ws:// 或 wss://。
+ */
+function livekitApiHost(wsUrl: string): string {
+  if (wsUrl.startsWith("wss://")) return "https://" + wsUrl.slice(6);
+  if (wsUrl.startsWith("ws://")) return "http://" + wsUrl.slice(5);
+  return wsUrl; // 已是 http/https
+}
+
+/** 检查 S3 录制存储配置是否齐全。 */
+function getS3Config(): {
+  endpoint: string;
+  bucket: string;
+  accessKey: string;
+  secretKey: string;
+  region: string;
+} | null {
+  const endpoint = process.env.S3_ENDPOINT;
+  const bucket = process.env.S3_BUCKET;
+  const accessKey = process.env.S3_ACCESS_KEY;
+  const secretKey = process.env.S3_SECRET_KEY;
+  const region = process.env.S3_REGION;
+  if (!endpoint || !bucket || !accessKey || !secretKey || !region) return null;
+  return { endpoint, bucket, accessKey, secretKey, region };
+}
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/recording/start — 启动会议录制
@@ -10,11 +44,11 @@ import { apiMsg } from "@/lib/api-messages";
  *  2. 会议状态为 active（仅进行中的会议可录制）
  *  3. recordingEnabled === true（创建会议时已开启录制开关）
  *  4. 操作者为会议创建者或 admin/owner
+ *  5. LiveKit + S3 存储配置就绪
  *
- * 实现：项目未集成 LiveKit RecordingService（需服务端 SDK + Egress 配置），
- * 此处为占位实现——将 recordingUrl 设为 `pending:${mid}` 标记录制进行中。
- * TODO（集成 LiveKit）：替换为 RecordingService.startRecording(roomName)，
- *   将返回的 recordingId 写入 recordingUrl，并在 stop 端点调用 stopRecording。
+ * 实现：使用 livekit-server-sdk 的 EgressClient.startRoomCompositeEgress
+ * 启动房间合成录制，将返回的 egressId 写入 recordingUrl（格式 `egress:<id>`），
+ * 并设置 recordingStartedAt。最终录制文件 URL 由 webhook egress_ended 事件回填。
  *
  * 信封格式与现有会议端点一致：{ code, data, message }
  */
@@ -30,9 +64,37 @@ export async function POST(
       { status: 401 },
     );
 
+  // S3 录制存储配置检查——未配置时返回 501
+  const s3 = getS3Config();
+  if (!s3) {
+    return NextResponse.json(
+      {
+        code: 501,
+        message: apiMsg(req, "recordingNotEnabled"),
+        data: null,
+      },
+      { status: 501 },
+    );
+  }
+
+  // LiveKit 服务端配置检查
+  const livekitUrl = process.env.LIVEKIT_URL;
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+  if (!livekitUrl || !apiKey || !apiSecret) {
+    return NextResponse.json(
+      {
+        code: 501,
+        message: apiMsg(req, "recordingNotEnabled"),
+        data: null,
+      },
+      { status: 501 },
+    );
+  }
+
   try {
-    // 事务内一次性完成：校验 → 更新，避免 TOCTOU
-    const result = await runWithWorkspace(
+    // 事务内校验会议状态与权限，取出 roomName
+    const check = await runWithWorkspace(
       wid,
       async (tx) => {
         const meeting = await tx.meeting.findFirst({
@@ -42,6 +104,7 @@ export async function POST(
             status: true,
             recordingEnabled: true,
             recordingUrl: true,
+            roomName: true,
             createdBy: true,
           },
         });
@@ -59,44 +122,86 @@ export async function POST(
         // 必须在创建时开启录制开关
         if (!meeting.recordingEnabled) return { kind: "notEnabled" as const };
 
-        // 占位录制 URL：pending:<mid> 表示录制进行中
-        // TODO(LiveKit): const recId = await recordingService.start(meeting.roomName);
-        const recordingUrl = `pending:${mid}`;
+        // 录制已启动则拒绝重复启动
+        if (meeting.recordingUrl?.startsWith("egress:")) {
+          return { kind: "alreadyStarted" as const };
+        }
 
-        const updated = await tx.meeting.update({
-          where: { id: mid },
-          data: { recordingUrl },
-          select: { id: true, recordingUrl: true, status: true },
-        });
-        return { kind: "ok" as const, meeting: updated };
+        return { kind: "ok" as const, roomName: meeting.roomName };
       },
       ctx.payload.sub,
     );
 
-    if (result.kind === "notFound")
+    if (check.kind === "notFound")
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "meetingNotFound"), data: null },
         { status: 404 },
       );
-    if (result.kind === "forbidden")
+    if (check.kind === "forbidden")
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noPermission"), data: null },
         { status: 403 },
       );
-    if (result.kind === "notActive")
+    if (check.kind === "notActive")
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "meetingNotActive"), data: null },
         { status: 409 },
       );
-    if (result.kind === "notEnabled")
+    if (check.kind === "notEnabled")
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "recordingNotEnabled"), data: null },
         { status: 409 },
       );
+    if (check.kind === "alreadyStarted")
+      return NextResponse.json(
+        { code: 409, message: apiMsg(req, "recordingStarted"), data: null },
+        { status: 409 },
+      );
+
+    // 事务外调用 LiveKit EgressClient（不在事务内做网络 IO）
+    const egressClient = new EgressClient(
+      livekitApiHost(livekitUrl),
+      apiKey,
+      apiSecret,
+    );
+    const filepath = `recordings/${mid}-${Date.now()}.mp4`;
+    const output = new EncodedFileOutput({
+      fileType: EncodedFileType.MP4,
+      filepath,
+      output: {
+        case: "s3",
+        value: new S3Upload({
+          accessKey: s3.accessKey,
+          secret: s3.secretKey,
+          region: s3.region,
+          endpoint: s3.endpoint,
+          bucket: s3.bucket,
+        }),
+      },
+    });
+    const egressInfo = await egressClient.startRoomCompositeEgress(
+      check.roomName,
+      output,
+    );
+
+    // 将 egressId 写入 recordingUrl，设置 recordingStartedAt
+    await runWithWorkspace(
+      wid,
+      async (tx) => {
+        await tx.meeting.update({
+          where: { id: mid },
+          data: {
+            recordingUrl: `egress:${egressInfo.egressId}`,
+            recordingStartedAt: new Date(),
+          },
+        });
+      },
+      ctx.payload.sub,
+    );
 
     return NextResponse.json({
       code: 200,
-      data: { recordingUrl: result.meeting.recordingUrl },
+      data: { recordingId: egressInfo.egressId },
       message: apiMsg(req, "recordingStarted"),
     });
   } catch (error) {

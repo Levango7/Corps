@@ -6,6 +6,7 @@ import { apiMsg } from "@/lib/api-messages";
  * POST /v1/workspaces/{wid}/meetings/{mid}/leave — 离开会议
  *
  * 更新 MeetingParticipant 记录（leftAt=now）。
+ * 若离开后无在线参与者（leftAt=null 的数量为 0），自动将会议状态置为 ended。
  * 幂等：未加入或已离开均返回 200（无副作用）。
  */
 export async function POST(
@@ -36,6 +37,17 @@ export async function POST(
             where: { id: participant.id },
             data: { leftAt: new Date() },
           });
+
+          // 检查剩余在线参与者数；若为 0 则自动结束会议
+          const remaining = await tx.meetingParticipant.count({
+            where: { meetingId: mid, leftAt: null },
+          });
+          if (remaining === 0) {
+            await tx.meeting.updateMany({
+              where: { id: mid, status: { not: "ended" } },
+              data: { status: "ended", endedAt: new Date() },
+            });
+          }
         }
       },
       userId,

@@ -976,7 +976,13 @@
       "error": "搜索失败，请稍后重试",
       "unknownAuthor": "已注销用户",
       "defaultConversation": "未知会话"
-    }
+    },
+    "videoCall": "视频通话",
+    "voiceCall": "语音通话",
+    "callInvite": "邀请你加入视频通话",
+    "callEnded": "通话已结束",
+    "callRejected": "通话已拒绝",
+    "joinCall": "加入通话"
   },
   "export": {
     "title": "数据导出",
@@ -3135,7 +3141,17 @@
       "username": "您的名称",
       "reconnecting": "重新连接中...",
       "connectionFailed": "连接失败"
-    }
+    },
+    "defaultTitle": "即时会议",
+    "ended": "已结束",
+    "viewRecording": "查看录制",
+    "recording": "录制中",
+    "startRecording": "开始录制",
+    "stopRecording": "停止录制",
+    "reconnecting": "重新连接中…",
+    "connectionLost": "连接已断开，正在重连…",
+    "edit": "编辑",
+    "participants": "参与者"
   },
   "okr": {
     "title": "目标与关键结果",

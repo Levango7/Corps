@@ -1,18 +1,30 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { EgressClient } from "livekit-server-sdk";
+
+/**
+ * 将 LiveKit WebSocket 接入地址转换为 HTTP/HTTPS API 地址。
+ * EgressClient 需要 HTTP host（如 http://host:7880），
+ * 而 LIVEKIT_URL 通常是 ws:// 或 wss://。
+ */
+function livekitApiHost(wsUrl: string): string {
+  if (wsUrl.startsWith("wss://")) return "https://" + wsUrl.slice(6);
+  if (wsUrl.startsWith("ws://")) return "http://" + wsUrl.slice(5);
+  return wsUrl; // 已是 http/https
+}
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/recording/stop — 停止会议录制
  *
  * 前置条件：
  *  1. 会议存在且属于当前工作区
- *  2. recordingUrl 不为空且以 `pending:` 开头（录制已启动）
+ *  2. recordingUrl 以 `egress:` 开头（录制已启动且未停止）
  *  3. 操作者为会议创建者或 admin/owner
  *
- * 实现：占位实现——将 recordingUrl 设为 `completed:${mid}` 标记录制已完成。
- * TODO（集成 LiveKit）：替换为 RecordingService.stopRecording(recordingId)，
- *   将返回的最终媒体文件 URL（S3/对象存储）写入 recordingUrl。
+ * 实现：使用 livekit-server-sdk 的 EgressClient.stopEgress 停止录制，
+ * 设置 recordingStoppedAt，并将 recordingUrl 标记为 `completed:<egressId>`。
+ * 最终录制文件 URL 由 webhook egress_ended 事件回填。
  *
  * 信封格式与现有会议端点一致：{ code, data, message }
  */
@@ -28,9 +40,24 @@ export async function POST(
       { status: 401 },
     );
 
+  // LiveKit 服务端配置检查
+  const livekitUrl = process.env.LIVEKIT_URL;
+  const apiKey = process.env.LIVEKIT_API_KEY;
+  const apiSecret = process.env.LIVEKIT_API_SECRET;
+  if (!livekitUrl || !apiKey || !apiSecret) {
+    return NextResponse.json(
+      {
+        code: 501,
+        message: apiMsg(req, "recordingNotEnabled"),
+        data: null,
+      },
+      { status: 501 },
+    );
+  }
+
   try {
-    // 事务内一次性完成：校验 → 更新，避免 TOCTOU
-    const result = await runWithWorkspace(
+    // 事务内校验并解析 egressId
+    const check = await runWithWorkspace(
       wid,
       async (tx) => {
         const meeting = await tx.meeting.findFirst({
@@ -45,47 +72,63 @@ export async function POST(
           ctx.member.role === "owner" || ctx.member.role === "admin";
         if (!isCreator && !isAdmin) return { kind: "forbidden" as const };
 
-        // 录制必须已启动（recordingUrl 非空且为 pending 状态）
+        // 录制必须已启动（recordingUrl 以 egress: 开头）
         if (
           !meeting.recordingUrl ||
-          !meeting.recordingUrl.startsWith("pending:")
+          !meeting.recordingUrl.startsWith("egress:")
         ) {
           return { kind: "notStarted" as const };
         }
 
-        // 占位最终录制 URL：completed:<mid>
-        // TODO(LiveKit): const finalUrl = await recordingService.stop(meeting.recordingUrl);
-        const recordingUrl = `completed:${mid}`;
-
-        const updated = await tx.meeting.update({
-          where: { id: mid },
-          data: { recordingUrl },
-          select: { id: true, recordingUrl: true, status: true },
-        });
-        return { kind: "ok" as const, meeting: updated };
+        const egressId = meeting.recordingUrl.slice("egress:".length);
+        return { kind: "ok" as const, egressId };
       },
       ctx.payload.sub,
     );
 
-    if (result.kind === "notFound")
+    if (check.kind === "notFound")
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "meetingNotFound"), data: null },
         { status: 404 },
       );
-    if (result.kind === "forbidden")
+    if (check.kind === "forbidden")
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noPermission"), data: null },
         { status: 403 },
       );
-    if (result.kind === "notStarted")
+    if (check.kind === "notStarted")
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "recordingNotStarted"), data: null },
         { status: 409 },
       );
 
+    // 事务外调用 LiveKit EgressClient 停止录制
+    const egressClient = new EgressClient(
+      livekitApiHost(livekitUrl),
+      apiKey,
+      apiSecret,
+    );
+    await egressClient.stopEgress(check.egressId);
+
+    // 更新 meeting：标记录制已停止，最终 URL 等 webhook 回填
+    const updated = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        return tx.meeting.update({
+          where: { id: mid },
+          data: {
+            recordingUrl: `completed:${check.egressId}`,
+            recordingStoppedAt: new Date(),
+          },
+          select: { id: true, recordingUrl: true, recordingStoppedAt: true },
+        });
+      },
+      ctx.payload.sub,
+    );
+
     return NextResponse.json({
       code: 200,
-      data: { recordingUrl: result.meeting.recordingUrl },
+      data: { recordingUrl: updated.recordingUrl },
       message: apiMsg(req, "recordingStopped"),
     });
   } catch (error) {

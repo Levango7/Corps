@@ -15,9 +15,34 @@ const approvalNodeSchema = z.object({
 const listInstancesQuerySchema = z.object({
   status: z.enum(["pending", "approved", "rejected", "withdrawn"]).optional(),
   mine: z.literal("1").optional(),
+  /** pendingMine=1：筛选当前用户是当前节点审批人且状态为 pending 的实例 */
+  pendingMine: z.literal("1").optional(),
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
+
+/** 审批节点类型（nodes JSON 快照中的单节点） */
+interface ApprovalNode {
+  approverRole?: string;
+  approverUserId?: string;
+  name: string;
+  order: number;
+}
+
+/** 判断用户是否是当前节点的审批人 */
+function isCurrentApprover(
+  nodes: ApprovalNode[],
+  currentNode: number,
+  userId: string,
+  userRole: string,
+): boolean {
+  const node = nodes[currentNode];
+  if (!node) return false;
+  return (
+    node.approverUserId === userId ||
+    (node.approverRole !== undefined && node.approverRole === userRole)
+  );
+}
 
 /** POST 发起审批 body 校验 */
 const createInstanceSchema = z.object({
@@ -30,8 +55,9 @@ const createInstanceSchema = z.object({
 
 /**
  * GET /v1/workspaces/{wid}/approvals/instances — 审批实例列表
- * Query: ?status=pending|approved|rejected|withdrawn&mine=1&page=1&limit=20
+ * Query: ?status=pending|approved|rejected|withdrawn&mine=1&pendingMine=1&page=1&limit=20
  * mine=1 时只返回当前用户发起的，按 submittedAt 倒序
+ * pendingMine=1 时只返回当前用户是当前节点审批人且状态为 pending 的实例
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -43,6 +69,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const parsed = listInstancesQuerySchema.safeParse({
       status: url.searchParams.get("status") ?? undefined,
       mine: url.searchParams.get("mine") ?? undefined,
+      pendingMine: url.searchParams.get("pendingMine") ?? undefined,
       page: url.searchParams.get("page") ?? undefined,
       limit: url.searchParams.get("limit") ?? undefined,
     });
@@ -52,9 +79,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         { status: 400 },
       );
     }
-    const { status, mine, page, limit } = parsed.data;
-    const skip = (page - 1) * limit;
+    const { status, mine, pendingMine, page, limit } = parsed.data;
 
+    // pendingMine=1：当前用户是当前节点审批人且状态为 pending
+    // 由于 nodes 是 JSON 字段，无法用 Prisma where 直接筛选，需在应用层过滤
+    if (pendingMine === "1" && ctx.payload.sub) {
+      const userId = ctx.payload.sub;
+      const userRole = ctx.member.role;
+      // 查询所有 pending 实例（含 nodes），在应用层过滤当前节点审批人
+      const allPending = await runWithWorkspace(wid, (tx) =>
+        tx.approvalInstance.findMany({
+          where: { workspaceId: wid, status: "pending" },
+          include: {
+            applicant: { select: { id: true, name: true, email: true } },
+          },
+          orderBy: [{ submittedAt: "desc" }],
+        }),
+      );
+      const filtered = allPending.filter((inst) => {
+        const nodes = inst.nodes as unknown as ApprovalNode[];
+        return isCurrentApprover(nodes, inst.currentNode, userId, userRole);
+      });
+      const total = filtered.length;
+      const skip = (page - 1) * limit;
+      const items = filtered.slice(skip, skip + limit);
+      return NextResponse.json({
+        code: 200,
+        data: { items, page, limit, total, hasMore: page * limit < total, totalPages: Math.ceil(total / limit) },
+      });
+    }
+
+    const skip = (page - 1) * limit;
     const where = {
       workspaceId: wid,
       ...(status ? { status } : {}),

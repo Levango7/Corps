@@ -976,7 +976,13 @@
       "error": "Search failed, please retry shortly",
       "unknownAuthor": "Deleted user",
       "defaultConversation": "Unknown conversation"
-    }
+    },
+    "videoCall": "Video Call",
+    "voiceCall": "Voice Call",
+    "callInvite": "invited you to a video call",
+    "callEnded": "Call ended",
+    "callRejected": "Call rejected",
+    "joinCall": "Join Call"
   },
   "export": {
     "title": "Data export",
@@ -3135,7 +3141,17 @@
       "username": "Your Name",
       "reconnecting": "Reconnecting...",
       "connectionFailed": "Connection failed"
-    }
+    },
+    "defaultTitle": "Instant Meeting",
+    "ended": "Ended",
+    "viewRecording": "View Recording",
+    "recording": "Recording",
+    "startRecording": "Start Recording",
+    "stopRecording": "Stop Recording",
+    "reconnecting": "Reconnecting…",
+    "connectionLost": "Connection lost, reconnecting…",
+    "edit": "Edit",
+    "participants": "Participants"
   },
   "okr": {
     "title": "Objectives & Key Results",

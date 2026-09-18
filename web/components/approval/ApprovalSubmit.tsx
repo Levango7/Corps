@@ -25,6 +25,8 @@ interface ApprovalTemplate {
   id: string;
   name: string;
   description?: string | null;
+  active?: boolean;
+  /** @deprecated 旧字段，保留兼容 */
   enabled?: boolean;
   nodes?: {
     name: string;
@@ -32,6 +34,13 @@ interface ApprovalTemplate {
     approverRole?: string | null;
     approverUserId?: string | null;
   }[];
+}
+
+/** 工作区成员（用于不选模板时指定审批人） */
+interface Member {
+  id: string;
+  name: string | null;
+  email: string;
 }
 
 interface ApprovalSubmitProps {
@@ -64,21 +73,31 @@ export function ApprovalSubmit({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [loadingTemplates, setLoadingTemplates] = useState(true);
+  // 不选模板时，需指定默认审批人
+  const [members, setMembers] = useState<Member[]>([]);
+  const [selectedApproverId, setSelectedApproverId] = useState<string>("");
 
   const dialogRef = useRef<HTMLDivElement>(null);
 
-  // 拉取模板列表
+  // 拉取模板列表 + 成员列表
   useEffect(() => {
     let cancelled = false;
     (async () => {
       try {
-        const data = await api<ApprovalTemplate[] | { items: ApprovalTemplate[] }>(
-          `/api/v1/workspaces/${workspaceId}/approvals/templates`,
-        );
+        const [tplData, memData] = await Promise.all([
+          api<ApprovalTemplate[] | { items: ApprovalTemplate[] }>(
+            `/api/v1/workspaces/${workspaceId}/approvals/templates`,
+          ),
+          api<Member[] | { items: Member[] }>(
+            `/api/v1/workspaces/${workspaceId}/members`,
+          ).catch(() => ({ items: [] as Member[] })),
+        ]);
         if (cancelled) return;
-        const list = Array.isArray(data) ? data : (data.items ?? []);
-        // 仅展示启用的模板
-        setTemplates(list.filter((tpl) => tpl.enabled !== false));
+        const list = Array.isArray(tplData) ? tplData : (tplData.items ?? []);
+        // 仅展示启用的模板（后端字段为 active）
+        setTemplates(list.filter((tpl) => tpl.active !== false));
+        const memList = Array.isArray(memData) ? memData : (memData.items ?? []);
+        setMembers(memList);
       } catch {
         // 模板加载失败不阻塞表单，用户可不选模板直接提交
       } finally {
@@ -153,6 +172,11 @@ export function ApprovalSubmit({
       setError(t("titleRequired"));
       return;
     }
+    // 不选模板时必须指定审批人
+    if (!templateId && !selectedApproverId) {
+      setError(t("approverRequired"));
+      return;
+    }
     setSubmitting(true);
     setError("");
     try {
@@ -162,6 +186,15 @@ export function ApprovalSubmit({
         const key = f.key.trim();
         if (key) content[key] = f.value;
       }
+      // 不选模板时，构造默认单节点审批流
+      const defaultNodes = templateId
+        ? undefined
+        : [
+            {
+              name: t("approver"),
+              approverIds: [selectedApproverId],
+            },
+          ];
       await api(
         `/api/v1/workspaces/${workspaceId}/approvals/instances`,
         {
@@ -170,7 +203,9 @@ export function ApprovalSubmit({
             templateId: templateId || undefined,
             title: title.trim(),
             description: description.trim() || undefined,
-            content: Object.keys(content).length > 0 ? content : undefined,
+            // 确保 content 有默认值，避免 undefined 导致后端校验失败
+            content: Object.keys(content).length > 0 ? content : "",
+            nodes: defaultNodes,
           }),
         },
       );
@@ -269,6 +304,28 @@ export function ApprovalSubmit({
                 </div>
               )}
           </div>
+
+          {/* 不选模板时，需指定默认审批人 */}
+          {!templateId && (
+            <div>
+              <label className={fieldLabel} htmlFor="approval-approver">
+                {t("selectApprover")}
+              </label>
+              <select
+                id="approval-approver"
+                value={selectedApproverId}
+                onChange={(e) => setSelectedApproverId(e.target.value)}
+                className={fieldControl}
+              >
+                <option value="">—</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>
+                    {m.name || m.email}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* 标题 */}
           <div>
@@ -372,7 +429,11 @@ export function ApprovalSubmit({
             </button>
             <button
               type="submit"
-              disabled={!title.trim() || submitting}
+              disabled={
+                !title.trim() ||
+                submitting ||
+                (!templateId && !selectedApproverId)
+              }
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               {submitting ? (

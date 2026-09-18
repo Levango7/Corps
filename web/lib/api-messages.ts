@@ -416,6 +416,14 @@ export const API_MESSAGES = {
     zh: "需要管理权限",
     en: "Manage permission required",
   },
+  granteeNotInWorkspace: {
+    zh: "授权对象不在该工作区中",
+    en: "Grantee is not a member of this workspace",
+  },
+  invalidGrantee: {
+    zh: "授权对象 ID 无效",
+    en: "Invalid grantee ID",
+  },
 
   /* ── 临时权限授权（F2 任务 186）── */
   cannotGrantSelf: {

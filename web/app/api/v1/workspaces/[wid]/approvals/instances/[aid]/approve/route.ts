@@ -87,6 +87,19 @@ export async function POST(
           },
         });
 
+        // 通知申请人审批结果（仅在审批最终通过时通知）
+        if (isLastNode && instance.applicantId !== ctx.payload.sub) {
+          await tx.notification.create({
+            data: {
+              userId: instance.applicantId,
+              workspaceId: wid,
+              type: "approval_result",
+              entityId: aid,
+              entityTitle: instance.title,
+            },
+          });
+        }
+
         return { kind: "ok" as const, data: updated };
       },
       ctx.payload.sub,

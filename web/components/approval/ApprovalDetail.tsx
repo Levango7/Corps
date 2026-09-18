@@ -45,7 +45,15 @@ interface ApprovalInstanceDetail {
   description?: string | null;
   status: "pending" | "approved" | "rejected" | "withdrawn";
   applicantId: string;
+  /** 申请人嵌套对象（后端 Prisma include 返回） */
+  applicant?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
   applicantName?: string | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
   applicantEmail?: string | null;
   templateId?: string | null;
   templateName?: string | null;
@@ -68,7 +76,15 @@ interface ApprovalOperation {
   /** 操作动作：submit | approve | reject | withdraw */
   action: "submit" | "approve" | "reject" | "withdraw";
   operatorId: string;
+  /** 操作人嵌套对象（后端 Prisma include 返回） */
+  operator?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
   operatorName?: string | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
   operatorEmail?: string | null;
   nodeOrder?: number | null;
   nodeName?: string | null;
@@ -272,16 +288,20 @@ export function ApprovalDetail({
 
   const visual = getStatusVisual(detail.status);
   const applicant =
-    detail.applicantName || detail.applicantEmail || "—";
+    detail.applicant?.name ||
+    detail.applicant?.email ||
+    detail.applicantName ||
+    detail.applicantEmail ||
+    "—";
 
   // 权限判定
   const isApplicant =
     currentUserId !== null && currentUserId === detail.applicantId;
+  // 当前用户是否可审批：必须 pending 且其 ID 在 currentApproverIds 中
   const isCurrentApprover =
     currentUserId !== null &&
     detail.status === "pending" &&
-    Array.isArray(detail.currentApproverIds) &&
-    detail.currentApproverIds!.includes(currentUserId);
+    (detail.currentApproverIds?.includes(currentUserId) ?? false);
   const canWithdraw = isApplicant && detail.status === "pending";
   const canApproveOrReject = isCurrentApprover;
 
@@ -443,7 +463,11 @@ export function ApprovalDetail({
             {operations.map((op) => {
               const opColor = getActionColor(op.action);
               const operator =
-                op.operatorName || op.operatorEmail || "—";
+                op.operator?.name ||
+                op.operator?.email ||
+                op.operatorName ||
+                op.operatorEmail ||
+                "—";
               return (
                 <li key={op.id} className="relative">
                   {/* 时间线圆点 */}

@@ -92,8 +92,11 @@ export async function GET(
 const createPermissionSchema = z.object({
   granteeType: z.enum(["user", "role"]),
   granteeId: z.string().min(1).max(255),
-  permission: z.enum(["view", "edit", "manage"]),
+  permission: z.enum(["view", "comment", "edit", "manage"]),
 });
+
+/** 工作区中有效的角色名 */
+const VALID_ROLES = new Set(["owner", "admin", "member", "viewer"]);
 
 /**
  * POST /v1/workspaces/{wid}/documents/{did}/permissions — 添加权限
@@ -143,6 +146,35 @@ export async function POST(
         { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
         { status: 404 },
       );
+    }
+
+    // granteeId 校验：
+    // - granteeType="user"：验证该用户是当前工作区成员
+    // - granteeType="role"：验证是有效角色名
+    if (validated.granteeType === "role") {
+      if (!VALID_ROLES.has(validated.granteeId)) {
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "invalidGrantee"), data: null },
+          { status: 400 },
+        );
+      }
+    } else {
+      // granteeType="user"：验证该用户是当前工作区成员
+      const memberExists = await runWithWorkspace(
+        wid,
+        (tx) =>
+          tx.member.findFirst({
+            where: { workspaceId: wid, userId: validated.granteeId },
+            select: { userId: true },
+          }),
+        ctx.payload.sub,
+      );
+      if (!memberExists) {
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "granteeNotInWorkspace"), data: null },
+          { status: 400 },
+        );
+      }
     }
 
     const permission = await runWithWorkspace(

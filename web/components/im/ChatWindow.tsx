@@ -13,8 +13,9 @@
  */
 
 import { useCallback, useMemo, useState } from "react";
-import { Settings, Users } from "lucide-react";
+import { Settings, Users, Video } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter, useParams } from "next/navigation";
 import type { Conversation, Message, SendMessageOptions } from "./types";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
@@ -55,6 +56,9 @@ export function ChatWindow({
   typingUserIds = [],
 }: ChatWindowProps) {
   const t = useTranslations("chat");
+  const tIm = useTranslations("im");
+  const router = useRouter();
+  const params = useParams<{ locale: string; wid: string }>();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
 
   const isGroup = conversation.type === "group";
@@ -66,6 +70,42 @@ export function ChatWindow({
   const title = isGroup
     ? conversation.title ?? t("groupConversation")
     : otherMember?.user.name ?? otherMember?.user.email ?? t("unknownUser");
+
+  /**
+   * 发起视频通话：
+   * 1. 创建 instant meeting（POST /api/v1/workspaces/{wid}/meetings）
+   * 2. 发送 call_invite 系统消息（body 含会议链接，通知对方加入）
+   * 3. 跳转到会议页面
+   */
+  const handleVideoCall = useCallback(async () => {
+    const wid = conversation.workspaceId;
+    const locale = params?.locale ?? "zh";
+    try {
+      // 创建即时会议
+      const res = await fetch(`/api/v1/workspaces/${wid}/meetings`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          title: tIm("videoCall"),
+          type: "instant",
+        }),
+      });
+      if (!res.ok) return;
+      const json = (await res.json()) as { code: number; data: { id: string } | null };
+      const meeting = json.data;
+      if (!meeting?.id) return;
+
+      // 发送 call_invite 消息（body 包含会议链接，对方可点击加入）
+      const meetingUrl = `/${locale}/w/${wid}/meetings/${meeting.id}`;
+      onSend(`${tIm("callInvite")}: ${meetingUrl}`);
+
+      // 跳转到会议页面
+      router.push(meetingUrl);
+    } catch {
+      // 静默失败：网络错误时用户可重试
+    }
+  }, [conversation.workspaceId, onSend, router, params, tIm]);
 
   /** 点击回复 */
   const handleReply = useCallback((mid: string) => {
@@ -147,17 +187,29 @@ export function ChatWindow({
             </span>
           )}
         </div>
-        {/* 设置按钮 */}
-        {onSettings && (
+        {/* 视频通话 + 设置按钮 */}
+        <div className="flex items-center gap-[var(--space-1)]">
+          {/* 视频通话按钮：创建即时会议 → 发送 call_invite → 跳转会议页 */}
           <button
             type="button"
-            onClick={onSettings}
-            aria-label={t("settings")}
+            onClick={handleVideoCall}
+            aria-label={tIm("videoCall")}
             className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2"
           >
-            <Settings size={16} />
+            <Video size={16} />
           </button>
-        )}
+          {/* 设置按钮 */}
+          {onSettings && (
+            <button
+              type="button"
+              onClick={onSettings}
+              aria-label={t("settings")}
+              className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2"
+            >
+              <Settings size={16} />
+            </button>
+          )}
+        </div>
       </div>
 
       {/* 消息列表 */}

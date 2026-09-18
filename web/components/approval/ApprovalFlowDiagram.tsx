@@ -28,7 +28,7 @@ export interface ApprovalFlowNode {
 interface ApprovalFlowDiagramProps {
   /** 审批节点列表（按 order 升序） */
   nodes: ApprovalFlowNode[];
-  /** 当前节点序号（1-based；0 表示尚未开始；-1 表示全部完成） */
+  /** 当前节点序号（0-based 索引；0 表示第一个节点；-1 表示尚未开始或全部完成） */
   currentNode: number;
   /** 审批实例状态：pending | approved | rejected | withdrawn */
   status: string;
@@ -56,17 +56,19 @@ export function ApprovalFlowDiagram({
     <div className="overflow-x-auto -mx-[var(--space-2)] px-[var(--space-2)]">
       <ol className="flex items-center gap-[var(--space-2)] min-w-max">
         {sortedNodes.map((node, idx) => {
+          // node.order 为 1-based，currentNode 为 0-based，统一转为 0-based 比较
+          const nodeIdx = node.order - 1;
           // 节点状态判定
           const isPassed =
             status === "approved"
               ? true
               : status === "rejected"
-                ? node.order < currentNode
-                : node.order < currentNode;
+                ? nodeIdx < currentNode
+                : nodeIdx < currentNode;
           const isCurrent =
-            status === "pending" && node.order === currentNode;
+            status === "pending" && nodeIdx === currentNode;
           const isRejected =
-            status === "rejected" && node.order === currentNode;
+            status === "rejected" && nodeIdx === currentNode;
 
           // 边框 / 文本 / 背景色
           let borderColor = "var(--border)";

@@ -539,6 +539,9 @@ model Message {
   workspaceId    String   @map("workspace_id") @db.Uuid
   authorId       String?  @map("author_id") @db.Uuid
   body           String   @db.Text
+  /// 消息类型：text | system | call_invite | call_ended | call_rejected
+  /// text=普通消息，system=系统消息（加群/退群等），call_* = IM 通话邀请/结束/拒绝
+  type           String   @default("text") @db.VarChar(20)
   // IM 升级：编辑/撤回/回复/提及
   isRecalled     Boolean  @default(false)
   editedAt       DateTime? @map("edited_at") @db.Timestamptz
@@ -1440,6 +1443,10 @@ model Meeting {
   recordingEnabled  Boolean  @default(false) @map("recording_enabled")
   /// 录制 URL（会议结束后可用）
   recordingUrl      String?  @map("recording_url") @db.Text
+  /// 录制开始时间（调用 LiveKit StartRecording 时写入）
+  recordingStartedAt DateTime? @map("recording_started_at") @db.Timestamptz
+  /// 录制停止时间（调用 LiveKit StopRecording 时写入）
+  recordingStoppedAt  DateTime? @map("recording_stopped_at") @db.Timestamptz
   createdAt         DateTime @default(now()) @db.Timestamptz @map("created_at")
   updatedAt         DateTime @updatedAt @db.Timestamptz @map("updated_at")
 
@@ -1559,7 +1566,9 @@ model DocumentPermission {
   /// 授权对象：user | role
   granteeType String   @map("grantee_type") @db.VarChar(20)
   /// 用户 ID（granteeType=user）或角色名（granteeType=role）
-  granteeId   String   @map("grantee_id") @db.Uuid
+  /// 类型为 VarChar(100)：granteeType=role 时存角色名字符串（非 UUID），
+  /// granteeType=user 时存 UUID 字符串，统一用 VarChar 避免类型冲突
+  granteeId   String   @map("grantee_id") @db.VarChar(100)
   /// 权限：view | edit | manage
   permission  String   @db.VarChar(20)
   /// 授权人

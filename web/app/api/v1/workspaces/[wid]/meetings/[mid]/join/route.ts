@@ -1,60 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
-import jwt from "jsonwebtoken";
-import { randomUUID } from "crypto";
-
-/**
- * 生成 LiveKit 访问令牌（JWT）。
- *
- * 项目已安装 livekit-server-sdk，但此处仍用 jsonwebtoken 手动构造 LiveKit 兼容的
- * JWT（HS256），以保持 token 字段构造的显式可控。LiveKit token payload 规范：
- *   - iss: API_KEY
- *   - sub: 参与者身份（userId）
- *   - aud: "livekit"
- *   - nbf / exp: 生效与过期时间（unix 秒）
- *   - video: { room, roomJoin, canPublish, canSubscribe, hidden }
- *   - jti: 唯一 ID（防重放）
- *   - name: 参与者展示名（可选）
- *
- * 需配置环境变量：LIVEKIT_API_KEY、LIVEKIT_API_SECRET、LIVEKIT_URL。
- * 缺失时抛错，由调用方捕获后返回 503。
- */
-function issueLiveKitToken(opts: {
-  identity: string;
-  name?: string;
-  roomName: string;
-  ttlSeconds?: number;
-}): { token: string; url: string; roomName: string } {
-  const apiKey = process.env.LIVEKIT_API_KEY;
-  const apiSecret = process.env.LIVEKIT_API_SECRET;
-  const livekitUrl = process.env.LIVEKIT_URL;
-  if (!apiKey || !apiSecret || !livekitUrl) {
-    throw new Error("LiveKit 未配置（缺少 LIVEKIT_API_KEY/SECRET/URL）");
-  }
-
-  const now = Math.floor(Date.now() / 1000);
-  const ttl = opts.ttlSeconds ?? 60 * 60 * 4; // 默认 4 小时
-  const payload = {
-    iss: apiKey,
-    sub: opts.identity,
-    aud: "livekit",
-    nbf: now,
-    exp: now + ttl,
-    jti: randomUUID(),
-    name: opts.name ?? opts.identity,
-    video: {
-      room: opts.roomName,
-      roomJoin: true,
-      canPublish: true,
-      canSubscribe: true,
-      hidden: false,
-    },
-  };
-
-  const token = jwt.sign(payload, apiSecret, { algorithm: "HS256" });
-  return { token, url: livekitUrl, roomName: opts.roomName };
-}
+import { AccessToken } from "livekit-server-sdk";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/join — 加入会议（获取 LiveKit token）
@@ -64,8 +11,12 @@ function issueLiveKitToken(opts: {
  *  2. 校验会议状态（scheduled/active 可加入，ended 不可）
  *  3. 校验人数未满（在线参与者 leftAt=null 的数量 < maxParticipants）
  *  4. upsert MeetingParticipant（joinedAt=now, leftAt=null）
- *  5. 生成 LiveKit access token
+ *  5. 使用 livekit-server-sdk 的 AccessToken 生成 LiveKit JWT
  *  6. 返回 { token, url, roomName }
+ *
+ * 权限分层：
+ *  - host（会议创建者）：canPublish + canSubscribe + roomRecord（可发起录制）
+ *  - guest：canPublish + canSubscribe（无录制权限）
  */
 export async function POST(
   req: NextRequest,
@@ -117,7 +68,8 @@ export async function POST(
 
         // upsert 参与者记录：首次加入创建，再次加入重置 joinedAt/leftAt
         // 角色：创建者为 host，其余为 guest
-        const role = meeting.createdBy === userId ? "host" : "guest";
+        const isHost = meeting.createdBy === userId;
+        const role = isHost ? "host" : "guest";
         await tx.meetingParticipant.upsert({
           where: { meetingId_userId: { meetingId: mid, userId } },
           create: {
@@ -142,7 +94,7 @@ export async function POST(
           });
         }
 
-        return { kind: "ok" as const, roomName: meeting.roomName };
+        return { kind: "ok" as const, roomName: meeting.roomName, isHost };
       },
       userId,
     );
@@ -163,7 +115,14 @@ export async function POST(
         { status: 409 },
       );
 
-    // 生成 LiveKit token（需查用户展示名）
+    // 生成 LiveKit AccessToken（需查用户展示名）
+    const apiKey = process.env.LIVEKIT_API_KEY;
+    const apiSecret = process.env.LIVEKIT_API_SECRET;
+    const livekitUrl = process.env.LIVEKIT_URL;
+    if (!apiKey || !apiSecret || !livekitUrl) {
+      throw new Error("LiveKit 未配置（缺少 LIVEKIT_API_KEY/SECRET/URL）");
+    }
+
     const user = await runWithWorkspace(
       wid,
       (tx) =>
@@ -174,15 +133,28 @@ export async function POST(
       userId,
     );
 
-    const { token, url, roomName } = issueLiveKitToken({
+    const ttlSeconds = Number(process.env.LIVEKIT_TOKEN_TTL) || 7200;
+    const userName = user?.name ?? user?.email ?? userId;
+
+    // 使用 livekit-server-sdk AccessToken 签发 JWT
+    // 权限分层：host 有 roomRecord（录制权限），guest 无
+    const token = new AccessToken(apiKey, apiSecret, {
       identity: userId,
-      name: user?.name ?? user?.email ?? userId,
-      roomName: result.roomName,
+      name: userName,
+      ttl: ttlSeconds,
     });
+    token.addGrant({
+      room: result.roomName,
+      roomJoin: true,
+      canPublish: true,
+      canSubscribe: true,
+      roomRecord: result.isHost,
+    });
+    const jwt = await token.toJwt();
 
     return NextResponse.json({
       code: 200,
-      data: { token, url, roomName },
+      data: { token: jwt, url: livekitUrl, roomName: result.roomName },
     });
   } catch (error) {
     // LiveKit 未配置

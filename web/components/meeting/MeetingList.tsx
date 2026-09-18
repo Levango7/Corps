@@ -23,14 +23,16 @@ import {
   Loader2,
   Plus,
   AlertCircle,
+  Pencil,
+  Play,
 } from "lucide-react";
 import { api } from "@/lib/api";
-import { MeetingCreate } from "./MeetingCreate";
+import { MeetingCreate, type EditableMeeting } from "./MeetingCreate";
 
 /** 会议状态 */
 type MeetingStatus = "active" | "scheduled" | "ended";
 
-/** 会议列表项 */
+/** 会议列表项（后端返回 _count.participants，非 participantCount） */
 interface MeetingItem {
   id: string;
   title: string;
@@ -38,8 +40,19 @@ interface MeetingItem {
   startedAt: string | null;
   endedAt: string | null;
   scheduledAt: string | null;
-  participantCount: number;
+  /** 后端 Prisma _count 投影 */
+  _count: { participants: number };
   maxParticipants: number | null;
+  /** 创建者 ID（用于编辑权限判断） */
+  createdBy?: string | null;
+  /** 录制 URL（已结束会议可查看回放） */
+  recordingUrl?: string | null;
+  /** 描述（编辑时回填） */
+  description?: string | null;
+  /** 类型（编辑时回填） */
+  type?: string;
+  /** 录制开关（编辑时回填） */
+  recordingEnabled?: boolean;
 }
 
 /** 列表 API 响应（分页） */
@@ -59,6 +72,7 @@ export interface MeetingListProps {
 
 export function MeetingList({ workspaceId }: MeetingListProps) {
   const t = useTranslations("meeting");
+  const tButton = useTranslations("button");
   const router = useRouter();
 
   const [items, setItems] = useState<MeetingItem[]>([]);
@@ -68,6 +82,34 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
   const [total, setTotal] = useState(0);
   const [actioningId, setActioningId] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
+  const [editingMeeting, setEditingMeeting] = useState<MeetingItem | null>(null);
+  // 当前用户 ID + 角色（用于编辑按钮可见性判断）
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [currentUserRole, setCurrentUserRole] = useState<string | null>(null);
+
+  // 拉取当前用户 ID + 工作区角色（用于编辑权限判断）
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const [me, membersRes] = await Promise.all([
+          api<{ id: string; name: string | null; email: string }>("/api/v1/users/me"),
+          api<{
+            items: Array<{ id: string; role: string; isSelf: boolean }>;
+          }>(`/api/v1/workspaces/${workspaceId}/members?limit=100`),
+        ]);
+        if (cancelled) return;
+        setCurrentUserId(me.id);
+        const selfMember = membersRes.items.find((m) => m.isSelf);
+        if (selfMember) setCurrentUserRole(selfMember.role);
+      } catch {
+        // 获取用户信息失败不阻塞列表渲染
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [workspaceId]);
 
   // 拉取会议列表
   useEffect(() => {
@@ -128,6 +170,35 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
     [actioningId, workspaceId, t],
   );
 
+  // 编辑会议：打开 MeetingCreate 编辑模式
+  const handleEdit = useCallback((meeting: MeetingItem) => {
+    setEditingMeeting(meeting);
+  }, []);
+
+  // 编辑成功后更新列表
+  const handleEditSaved = useCallback(
+    (updated: { id: string; title: string }) => {
+      setItems((prev) =>
+        prev.map((m) =>
+          m.id === updated.id ? { ...m, title: updated.title } : m,
+        ),
+      );
+      setEditingMeeting(null);
+    },
+    [],
+  );
+
+  // 判断当前用户是否可编辑某会议（创建者或 admin/owner）
+  const canEdit = useCallback(
+    (meeting: MeetingItem): boolean => {
+      if (!currentUserId) return false;
+      if (meeting.createdBy === currentUserId) return true;
+      if (currentUserRole === "admin" || currentUserRole === "owner") return true;
+      return false;
+    },
+    [currentUserId, currentUserRole],
+  );
+
   // 按状态分组
   const activeMeetings = items.filter((m) => m.status === "active");
   const scheduledMeetings = items.filter((m) => m.status === "scheduled");
@@ -186,7 +257,9 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
               items={activeMeetings}
               onJoin={handleJoin}
               onEnd={handleEnd}
+              onEdit={handleEdit}
               actioningId={actioningId}
+              canEdit={canEdit}
             />
           )}
 
@@ -197,7 +270,9 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
               items={scheduledMeetings}
               onJoin={handleJoin}
               onEnd={handleEnd}
+              onEdit={handleEdit}
               actioningId={actioningId}
+              canEdit={canEdit}
             />
           )}
 
@@ -208,7 +283,9 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
               items={endedMeetings}
               onJoin={handleJoin}
               onEnd={handleEnd}
+              onEdit={handleEdit}
               actioningId={actioningId}
+              canEdit={canEdit}
             />
           )}
         </div>
@@ -251,6 +328,26 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
           }}
         />
       )}
+
+      {/* 编辑会议弹窗 */}
+      {editingMeeting && (
+        <MeetingCreate
+          workspaceId={workspaceId}
+          onClose={() => setEditingMeeting(null)}
+          onCreated={handleEditSaved}
+          meeting={
+            {
+              id: editingMeeting.id,
+              title: editingMeeting.title,
+              description: editingMeeting.description,
+              type: editingMeeting.type,
+              scheduledAt: editingMeeting.scheduledAt,
+              maxParticipants: editingMeeting.maxParticipants,
+              recordingEnabled: editingMeeting.recordingEnabled,
+            } satisfies EditableMeeting
+          }
+        />
+      )}
     </div>
   );
 }
@@ -261,13 +358,17 @@ function MeetingGroup({
   items,
   onJoin,
   onEnd,
+  onEdit,
   actioningId,
+  canEdit,
 }: {
   label: string;
   items: MeetingItem[];
   onJoin: (mid: string) => void;
   onEnd: (mid: string) => void;
+  onEdit: (meeting: MeetingItem) => void;
   actioningId: string | null;
+  canEdit: (meeting: MeetingItem) => boolean;
 }) {
   const t = useTranslations("meeting");
   return (
@@ -282,7 +383,9 @@ function MeetingGroup({
             meeting={m}
             onJoin={onJoin}
             onEnd={onEnd}
+            onEdit={onEdit}
             actioning={actioningId === m.id}
+            canEdit={canEdit(m)}
           />
         ))}
       </ul>
@@ -295,17 +398,27 @@ function MeetingRow({
   meeting,
   onJoin,
   onEnd,
+  onEdit,
   actioning,
+  canEdit,
 }: {
   meeting: MeetingItem;
   onJoin: (mid: string) => void;
   onEnd: (mid: string) => void;
+  onEdit: (meeting: MeetingItem) => void;
   actioning: boolean;
+  canEdit: boolean;
 }) {
   const t = useTranslations("meeting");
+  const tButton = useTranslations("button");
 
   const time = meeting.startedAt || meeting.scheduledAt || meeting.endedAt;
   const timeLabel = time ? new Date(time).toLocaleString() : "—";
+  // 录制回放可用：已结束且有非 pending 的 recordingUrl
+  const hasRecording =
+    meeting.status === "ended" &&
+    meeting.recordingUrl &&
+    !meeting.recordingUrl.startsWith("pending:");
 
   return (
     <li className="flex items-center gap-3 px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
@@ -324,12 +437,35 @@ function MeetingRow({
           </span>
           <span className="inline-flex items-center gap-1">
             <Users size={12} />
-            {meeting.participantCount}
+            {meeting._count.participants}
             {meeting.maxParticipants ? ` / ${meeting.maxParticipants}` : ""}
           </span>
         </div>
       </div>
       <div className="flex items-center gap-2 shrink-0">
+        {/* 查看录制（已结束 + 有录制 URL） */}
+        {hasRecording && (
+          <a
+            href={meeting.recordingUrl as string}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+          >
+            <Play size={14} />
+            {tButton("viewAll")}
+          </a>
+        )}
+        {/* 编辑（仅 scheduled 状态 + 创建者/admin 可见） */}
+        {meeting.status === "scheduled" && canEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(meeting)}
+            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+          >
+            <Pencil size={14} />
+            {tButton("edit")}
+          </button>
+        )}
         {(meeting.status === "active" || meeting.status === "scheduled") && (
           <button
             type="button"
