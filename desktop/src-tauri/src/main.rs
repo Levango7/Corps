@@ -11,13 +11,17 @@
 
 #![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
+use std::net::TcpStream;
 use std::process::{Child, Command};
 use std::sync::Mutex;
+use std::thread;
+use std::time::Duration;
 use tauri::{
     menu::{Menu, MenuItem, PredefinedMenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
     Manager, WindowEvent,
 };
+use tauri_plugin_dialog::DialogExt;
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 
 const SHOW_LABEL: &str = "显示窗口";
@@ -117,13 +121,69 @@ fn main() {
                 let resource_path = app.path().resource_dir()?;
                 let server_path = resource_path.join("standalone").join("server.js");
 
-                let child = Command::new("node")
+                // 检查 server.js 是否存在；缺失时弹出错误对话框并中止启动（不 panic）
+                if !server_path.exists() {
+                    app.dialog()
+                        .message(format!(
+                            "未找到内嵌服务文件：\n{}\n\n请重新安装应用或联系技术支持。",
+                            server_path.display()
+                        ))
+                        .title("Corps 启动失败")
+                        .blocking_show();
+                    return Err(format!(
+                        "Sidecar server.js not found: {}",
+                        server_path.display()
+                    )
+                    .into());
+                }
+
+                // 启动 Next.js standalone server，传递生产环境变量
+                let child = match Command::new("node")
                     .arg(&server_path)
+                    .env("PORT", "3000")
+                    .env("HOSTNAME", "127.0.0.1")
+                    .env("NODE_ENV", "production")
                     .spawn()
-                    .expect("Failed to start Next.js standalone server");
+                {
+                    Ok(c) => c,
+                    Err(e) => {
+                        app.dialog()
+                            .message(format!(
+                                "启动内嵌服务失败：\n{e}\n\n请确保系统已安装 Node.js 运行时。"
+                            ))
+                            .title("Corps 启动失败")
+                            .blocking_show();
+                        return Err(e.into());
+                    }
+                };
 
                 // 存储子进程句柄，退出时终止
                 app.manage(SidecarState(Mutex::new(Some(child))));
+
+                // ─── 健康检查：等待 server 就绪后导航 webview ──────────
+                // 单独线程轮询 127.0.0.1:3000，最多重试 30 次（每次 500ms），
+                // 就绪后通过 window.eval 将 webview 跳转到本地服务地址。
+                let app_handle = app.handle().clone();
+                thread::spawn(move || {
+                    for _ in 0..30 {
+                        if TcpStream::connect("127.0.0.1:3000").is_ok() {
+                            if let Some(window) = app_handle.get_webview_window("main") {
+                                let _ = window
+                                    .eval("window.location.href = 'http://127.0.0.1:3000';");
+                            }
+                            return;
+                        }
+                        thread::sleep(Duration::from_millis(500));
+                    }
+                    // 30 次重试仍未就绪：在 webview 中提示用户
+                    if let Some(window) = app_handle.get_webview_window("main") {
+                        let _ = window.eval(
+                            "document.body.innerHTML = \
+                             '<h2>服务启动超时</h2>\
+                             <p>内嵌服务未能在预期时间内就绪，请重启应用或联系技术支持。</p>';",
+                        );
+                    }
+                });
             }
 
             // 开发模式下也注册空的 SidecarState，使 try_state::<SidecarState>() 始终可用

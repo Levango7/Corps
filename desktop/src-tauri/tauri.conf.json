@@ -44,7 +44,7 @@
   },
   "plugins": {
     "updater": {
-      "active": true,
+      "active": false,
       "endpoints": [
         "https://releases.corps.com/desktop/updater/{{target}}/{{arch}}/{{current_version}}"
       ],

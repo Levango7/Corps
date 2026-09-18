@@ -1,0 +1,99 @@
+name: Tauri Build
+
+# Cross-platform desktop build workflow.
+# Triggers: manual dispatch + version tag push (v*).
+# Matrix: Windows / macOS / Linux — produces native installers per platform.
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  build:
+    name: Build (${{ matrix.os }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, macos-latest, ubuntu-latest]
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - uses: actions/checkout@v7
+
+      # pnpm 11 — same version as web/package.json packageManager field
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      # Rust stable toolchain — matches Cargo.toml rust-version = "1.77.2"
+      - uses: dtolnay/rust-toolchain@stable
+
+      # Cache Rust compilation artifacts to speed up subsequent builds
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      # Linux-only: Tauri requires webkit2gtk and related system libraries
+      - name: Install Linux dependencies
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            libwebkit2gtk-4.1-dev \
+            libappindicator3-dev \
+            librsvg2-dev \
+            patchelf
+
+      # Install web/ dependencies (has pnpm-lock.yaml, use frozen lockfile)
+      # --ignore-scripts: pnpm 11 blocks dependency build scripts by default;
+      # same workaround as ci.yml (ERR_PNPM_IGNORED_BUILDS for @parcel/watcher etc.)
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: web
+
+      # Prisma client generation — next build imports @prisma/client at build time
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: web
+
+      # Install desktop/ dependencies (no lockfile, standalone package)
+      - name: Install desktop dependencies
+        run: pnpm install --no-frozen-lockfile
+        working-directory: desktop
+
+      # Build Tauri app — triggers beforeBuildCommand:
+      #   cd ../web && pnpm build && node ../desktop/copy-standalone.mjs
+      # which produces Next.js standalone server and copies it into resources/.
+      # Placeholder env vars satisfy next build validation; real values are
+      # read at runtime by the embedded standalone server.
+      - name: Build Tauri app
+        run: pnpm build
+        working-directory: desktop
+        env:
+          DATABASE_URL: postgresql://placeholder:placeholder@localhost:5432/placeholder
+          BETTER_AUTH_SECRET: ci-tauri-build-placeholder-secret
+          NEXT_PUBLIC_APP_URL: http://localhost:3000
+          # Updater signing — only applied when secrets are configured
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+
+      # Upload native installers per platform.
+      # Paths vary by OS — if-no-files-found: warn avoids failures on non-applicable formats.
+      - name: Upload Tauri bundle artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: tauri-bundle-${{ matrix.os }}
+          path: |
+            desktop/src-tauri/target/release/bundle/msi/
+            desktop/src-tauri/target/release/bundle/nsis/
+            desktop/src-tauri/target/release/bundle/dmg/
+            desktop/src-tauri/target/release/bundle/appimage/
+            desktop/src-tauri/target/release/bundle/deb/
+          retention-days: 30
+          if-no-files-found: warn
