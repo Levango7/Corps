@@ -31,6 +31,8 @@ interface ConversationItemProps {
   currentUserId: string;
   /** 点击选中会话 */
   onSelect: (id: string) => void;
+  /** 对方用户是否在线（仅单聊有效，在头像右下角显示绿点） */
+  isOnline?: boolean;
 }
 
 /**
@@ -76,6 +78,7 @@ function ConversationItemImpl({
   active,
   currentUserId,
   onSelect,
+  isOnline = false,
 }: ConversationItemProps) {
   const t = useTranslations("time");
   const tChat = useTranslations("chat");
@@ -124,7 +127,7 @@ function ConversationItemImpl({
       }`}
     >
       {/* 头像 */}
-      <div className="shrink-0 w-9 h-9 rounded-full bg-[var(--surface-3)] text-[var(--muted)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] overflow-hidden">
+      <div className="relative shrink-0 w-9 h-9 rounded-full bg-[var(--surface-3)] text-[var(--muted)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] overflow-hidden">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
@@ -134,6 +137,13 @@ function ConversationItemImpl({
           />
         ) : (
           initial
+        )}
+        {/* 在线状态绿点（仅单聊且对方在线时显示） */}
+        {isOnline && (
+          <span
+            aria-label={tChat("online")}
+            className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[var(--success)] border-2 border-[var(--surface)]"
+          />
         )}
       </div>
 

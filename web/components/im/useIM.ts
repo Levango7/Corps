@@ -101,6 +101,12 @@ export interface UseIMResult {
   createConversation: (params: CreateConversationParams) => Promise<Conversation>;
   /** 手动设置当前会话（不触发加载） */
   setActiveConversation: (c: Conversation | null) => void;
+  /**
+   * 正在输入的用户列表。
+   * key 为 conversationId，value 为正在输入的 userId 列表。
+   * typing 状态 5 秒无更新自动清除。
+   */
+  typingUsers: Record<string, string[]>;
 }
 
 /**
@@ -117,6 +123,12 @@ export function useIM(workspaceId: string): UseIMResult {
   const [error, setError] = useState<string | null>(null);
   /** 是否正在加载更多历史消息（独立于全局 loading，避免全屏 spinner） */
   const [loadingMore, setLoadingMore] = useState(false);
+  /**
+   * 正在输入的用户列表。
+   * key 为 conversationId，value 为正在输入的 userId 列表。
+   * 由 WebSocket "typing" 消息驱动，5 秒无更新自动清除。
+   */
+  const [typingUsers, setTypingUsers] = useState<Record<string, string[]>>({});
 
   const ws = useIMWebSocket(workspaceId);
 
@@ -124,6 +136,12 @@ export function useIM(workspaceId: string): UseIMResult {
   const activeCidRef = useRef<string | null>(null);
   // 消息列表引用（供 loadMoreMessages 读取最早消息游标，避免依赖 messages 致使函数频繁重建）
   const messagesRef = useRef<Message[]>([]);
+  /**
+   * typing 过期定时器映射。
+   * key 为 `${conversationId}:${userId}`，value 为 setTimeout 句柄。
+   * 每次收到 typing=true 时重置对应定时器，5 秒后清除该用户的 typing 状态。
+   */
+  const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   /** 加载会话列表 */
   const loadConversations = useCallback(async () => {
@@ -296,6 +314,31 @@ export function useIM(workspaceId: string): UseIMResult {
             // 新消息 → 追加到当前会话消息列表
             if (msg.conversationId === activeCidRef.current) {
               setMessages((prev) => [...prev, payloadToMessage(msg.message)]);
+            } else {
+              // 非当前活跃会话 → 触发浏览器通知（需权限已授予）
+              // 仅在浏览器环境且权限已授予时弹出，避免在 SSR 或权限未授予时报错
+              if (
+                typeof window !== "undefined" &&
+                typeof Notification !== "undefined" &&
+                Notification.permission === "granted"
+              ) {
+                try {
+                  const notification = new Notification(
+                    msg.message.authorName || "新消息",
+                    {
+                      body: msg.message.body,
+                      icon: msg.message.authorImage || undefined,
+                    },
+                  );
+                  // MVP：通知点击时聚焦窗口（暂不实现跳转到对应会话）
+                  notification.onclick = () => {
+                    window.focus();
+                    notification.close();
+                  };
+                } catch {
+                  // 通知构造失败静默忽略（部分浏览器在非用户手势上下文限制通知）
+                }
+              }
             }
             // 更新会话列表的 lastMessageAt 和未读数
             setConversations((prev) =>
@@ -344,7 +387,45 @@ export function useIM(workspaceId: string): UseIMResult {
             break;
           }
           case "typing": {
-            // 正在输入：由专门的 typing 状态管理（未来扩展）
+            // 正在输入：更新 typingUsers 状态，5 秒无更新自动清除
+            const { conversationId: tCid, userId: tUid, isTyping } = msg;
+            const timerKey = `${tCid}:${tUid}`;
+
+            // 清除该用户已有的过期定时器（避免重复定时器堆积）
+            const existingTimer = typingTimersRef.current[timerKey];
+            if (existingTimer) {
+              clearTimeout(existingTimer);
+              delete typingTimersRef.current[timerKey];
+            }
+
+            if (isTyping) {
+              // 添加到 typing 列表（去重）
+              setTypingUsers((prev) => {
+                const list = prev[tCid] ?? [];
+                if (list.includes(tUid)) return prev;
+                return { ...prev, [tCid]: [...list, tUid] };
+              });
+              // 设置 5 秒过期定时器，到期后从 typing 列表移除
+              typingTimersRef.current[timerKey] = setTimeout(() => {
+                setTypingUsers((prev) => {
+                  const list = prev[tCid] ?? [];
+                  const next = list.filter((id) => id !== tUid);
+                  // 列表为空时移除 key，避免对象膨胀
+                  const { [tCid]: _removed, ...rest } = prev;
+                  return next.length > 0 ? { ...rest, [tCid]: next } : rest;
+                });
+                delete typingTimersRef.current[timerKey];
+              }, 5000);
+            } else {
+              // isTyping=false → 立即从 typing 列表移除
+              setTypingUsers((prev) => {
+                const list = prev[tCid] ?? [];
+                if (!list.includes(tUid)) return prev;
+                const next = list.filter((id) => id !== tUid);
+                const { [tCid]: _removed, ...rest } = prev;
+                return next.length > 0 ? { ...rest, [tCid]: next } : rest;
+              });
+            }
             break;
           }
           case "read": {
@@ -373,6 +454,31 @@ export function useIM(workspaceId: string): UseIMResult {
     loadConversations();
   }, [loadConversations]);
 
+  /**
+   * 浏览器通知权限请求：IMClient 初始化时请求一次。
+   * 仅在浏览器环境且权限未授予也未拒绝时请求，避免重复弹窗。
+   */
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      typeof Notification !== "undefined" &&
+      Notification.permission === "default"
+    ) {
+      // best-effort 请求权限，失败静默忽略（用户拒绝或不支持时不影响核心功能）
+      Notification.requestPermission().catch(() => {});
+    }
+  }, []);
+
+  // 组件卸载时清理所有 typing 过期定时器，避免内存泄漏和卸载后 setState
+  useEffect(() => {
+    return () => {
+      for (const timer of Object.values(typingTimersRef.current)) {
+        clearTimeout(timer);
+      }
+      typingTimersRef.current = {};
+    };
+  }, []);
+
   return {
     conversations,
     activeConversation,
@@ -389,5 +495,6 @@ export function useIM(workspaceId: string): UseIMResult {
     revokeMessage,
     createConversation,
     setActiveConversation,
+    typingUsers,
   };
 }

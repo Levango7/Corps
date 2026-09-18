@@ -29,8 +29,11 @@ import {
   Reply,
   FileText,
   Download,
+  ListTodo,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
+import { useParams } from "next/navigation";
+import Link from "next/link";
 import type { Message } from "./types";
 
 /** 回复引用摘要最大长度 */
@@ -89,59 +92,82 @@ function isImageAttachment(fileType: string): boolean {
 const URL_REGEX = /(https?:\/\/[^\s<>"']+)/g;
 /** @提及正则 */
 const MENTION_REGEX = /(@[\w\u4e00-\u9fa5]+)/g;
+/** 任务链接正则：[task:taskId:taskTitle]（taskId 为 UUID，taskTitle 为任意非 ] 字符） */
+const TASK_REGEX = /\[task:([a-zA-Z0-9-]+):([^\]]+)\]/g;
+
+/** 任务链接 token（renderLine 中识别后渲染为任务卡片） */
+interface TaskToken {
+  taskId: string;
+  taskTitle: string;
+}
 
 /**
- * 渲染消息体：支持多行、URL 链接、@提及高亮。
- * 先按行分割，每行内识别 URL 和 @mention。
+ * 渲染消息体：支持多行、URL 链接、@提及高亮、任务卡片。
+ * 先按行分割，每行内识别 URL、@mention 和 [task:...] 链接。
+ * wid 用于构造任务卡片跳转链接 /w/{wid}/task/{taskId}。
  */
-function renderBody(body: string): React.ReactNode {
+function renderBody(body: string, wid: string | undefined): React.ReactNode {
   const lines = body.split("\n");
   return lines.map((line, lineIdx) => (
     <span key={lineIdx}>
-      {renderLine(line)}
+      {renderLine(line, wid)}
       {lineIdx < lines.length - 1 && <br />}
     </span>
   ));
 }
 
-/** 渲染单行：识别 URL 和 @mention */
-function renderLine(line: string): React.ReactNode[] {
-  // 合并 URL 和 mention 的匹配
-  const tokens: { text: string; type: "url" | "mention" | "text" }[] = [];
+/** 渲染单行：识别 URL、@mention 和 [task:...] 任务链接 */
+function renderLine(line: string, wid: string | undefined): React.ReactNode[] {
+  // 合并 URL、mention 和 task 的匹配
+  const tokens: {
+    text: string;
+    type: "url" | "mention" | "task" | "text";
+    task?: TaskToken;
+  }[] = [];
   let remaining = line;
 
   while (remaining.length > 0) {
     const urlMatch = remaining.match(URL_REGEX);
     const mentionMatch = remaining.match(MENTION_REGEX);
+    const taskMatch = remaining.match(TASK_REGEX);
 
     const urlIdx = urlMatch ? remaining.indexOf(urlMatch[0]) : -1;
     const mentionIdx = mentionMatch ? remaining.indexOf(mentionMatch[0]) : -1;
+    const taskIdx = taskMatch ? remaining.indexOf(taskMatch[0]) : -1;
 
-    // 取最先匹配的
-    if (urlIdx === -1 && mentionIdx === -1) {
+    // 三者都未匹配：剩余作为纯文本
+    if (urlIdx === -1 && mentionIdx === -1 && taskIdx === -1) {
       tokens.push({ text: remaining, type: "text" });
       break;
     }
 
-    let chosenIdx: number;
-    let chosenText: string;
-    let chosenType: "url" | "mention";
+    // 取最先匹配的（最小索引）
+    const candidates: Array<{ idx: number; type: "url" | "mention" | "task"; text: string }> = [];
+    if (urlIdx !== -1) candidates.push({ idx: urlIdx, type: "url", text: urlMatch![0] });
+    if (mentionIdx !== -1)
+      candidates.push({ idx: mentionIdx, type: "mention", text: mentionMatch![0] });
+    if (taskIdx !== -1) candidates.push({ idx: taskIdx, type: "task", text: taskMatch![0] });
 
-    if (urlIdx !== -1 && (mentionIdx === -1 || urlIdx <= mentionIdx)) {
-      chosenIdx = urlIdx;
-      chosenText = urlMatch![0];
-      chosenType = "url";
+    candidates.sort((a, b) => a.idx - b.idx);
+    const chosen = candidates[0];
+
+    if (chosen.idx > 0) {
+      tokens.push({ text: remaining.slice(0, chosen.idx), type: "text" });
+    }
+
+    if (chosen.type === "task") {
+      // 解析 [task:taskId:taskTitle]
+      const match = chosen.text.match(TASK_REGEX);
+      // match 不会为 null（已确认 taskIdx !== -1）
+      tokens.push({
+        text: chosen.text,
+        type: "task",
+        task: { taskId: match![1], taskTitle: match![2] },
+      });
     } else {
-      chosenIdx = mentionIdx;
-      chosenText = mentionMatch![0];
-      chosenType = "mention";
+      tokens.push({ text: chosen.text, type: chosen.type });
     }
-
-    if (chosenIdx > 0) {
-      tokens.push({ text: remaining.slice(0, chosenIdx), type: "text" });
-    }
-    tokens.push({ text: chosenText, type: chosenType });
-    remaining = remaining.slice(chosenIdx + chosenText.length);
+    remaining = remaining.slice(chosen.idx + chosen.text.length);
   }
 
   return tokens.map((tok, i) => {
@@ -168,6 +194,20 @@ function renderLine(line: string): React.ReactNode[] {
         </span>
       );
     }
+    if (tok.type === "task" && tok.task) {
+      // 任务卡片：带边框的 inline 元素，点击跳转到任务详情页
+      const href = wid ? `/w/${wid}/task/${tok.task.taskId}` : "#";
+      return (
+        <Link
+          key={i}
+          href={href}
+          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent)] hover:text-[var(--accent-fg)] transition-colors"
+        >
+          <ListTodo size={14} className="shrink-0" />
+          <span className="truncate max-w-[200px]">{tok.task.taskTitle}</span>
+        </Link>
+      );
+    }
     return <span key={i}>{tok.text}</span>;
   });
 }
@@ -183,6 +223,9 @@ function MessageItemImpl({
   const t = useTranslations("chat");
   const tTime = useTranslations("time");
   const locale = useLocale();
+  // 从路由 /[locale]/w/[wid]/im 获取当前工作区 ID（用于任务卡片跳转链接）
+  const params = useParams<{ locale: string; wid: string }>();
+  const wid = params?.wid;
   const [editing, setEditing] = useState(false);
   const [editBody, setEditBody] = useState(message.body);
 
@@ -331,7 +374,7 @@ function MessageItemImpl({
             }`}
           >
             {/* 正文 */}
-            {message.body && <span>{renderBody(message.body)}</span>}
+            {message.body && <span>{renderBody(message.body, wid)}</span>}
 
             {/* 附件列表 */}
             {message.attachments.length > 0 && (

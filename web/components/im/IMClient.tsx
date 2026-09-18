@@ -51,6 +51,7 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
     editMessage,
     revokeMessage,
     loadConversations,
+    typingUsers,
   } = useIM(workspaceId);
 
   const [currentUserId, setCurrentUserId] = useState<string>("");
@@ -184,6 +185,7 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
                     ? () => setSettingsOpen(true)
                     : undefined
                 }
+                typingUserIds={typingUsers[activeConversation.id] ?? []}
               />
             </div>
           </div>

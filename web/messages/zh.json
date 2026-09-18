@@ -941,7 +941,14 @@
     "edit": "编辑",
     "hoursAgo": "{count} 小时前",
     "justNow": "刚刚",
-    "minutesAgo": "{count} 分钟前"
+    "minutesAgo": "{count} 分钟前",
+    "filterConversations": "过滤会话",
+    "shareTask": "分享任务",
+    "taskPickerTitle": "选择要分享的任务",
+    "taskPickerLoading": "加载任务中…",
+    "taskPickerEmpty": "暂无任务",
+    "taskPickerLoadFailed": "加载任务失败",
+    "taskPickerUnavailable": "无法获取工作区信息"
   },
   "im": {
     "actions": {

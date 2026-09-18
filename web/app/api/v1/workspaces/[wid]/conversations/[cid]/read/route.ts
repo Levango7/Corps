@@ -45,20 +45,28 @@ export async function POST(
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
-        // 验证当前用户是该会话成员
+        // 验证当前用户是该会话成员，同时读取现有 lastReadAt 用于防回退比较
         const membership = await tx.conversationMember.findFirst({
           where: { conversationId: cid, userId, conversation: { workspaceId: wid } },
-          select: { id: true },
+          select: { id: true, lastReadAt: true },
         });
         if (!membership) return null;
 
-        // 更新 lastReadAt（取传入值与现有值的较大者，防止回退已读游标）
-        await tx.conversationMember.update({
-          where: { id: membership.id },
-          data: { lastReadAt },
-        });
+        // 已读游标防回退（P0）：取传入值与现有值的较大者
+        // 现有值为空或传入值更大时才更新；否则保持现有值不变
+        const existingDate = membership.lastReadAt;
+        let finalLastReadAt: Date;
+        if (!existingDate || lastReadAt > existingDate) {
+          finalLastReadAt = lastReadAt;
+          await tx.conversationMember.update({
+            where: { id: membership.id },
+            data: { lastReadAt },
+          });
+        } else {
+          finalLastReadAt = existingDate;
+        }
 
-        return { lastReadAt };
+        return { lastReadAt: finalLastReadAt };
       },
       userId,
     );

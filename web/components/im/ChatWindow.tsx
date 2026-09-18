@@ -38,6 +38,8 @@ interface ChatWindowProps {
   loadingMore?: boolean;
   /** 点击设置按钮（可选） */
   onSettings?: () => void;
+  /** 正在输入的用户 ID 列表（当前会话） */
+  typingUserIds?: string[];
 }
 
 export function ChatWindow({
@@ -50,6 +52,7 @@ export function ChatWindow({
   onLoadMore,
   loadingMore = false,
   onSettings,
+  typingUserIds = [],
 }: ChatWindowProps) {
   const t = useTranslations("chat");
   const [replyTo, setReplyTo] = useState<Message | null>(null);
@@ -102,6 +105,28 @@ export function ChatWindow({
     [conversation.members],
   );
 
+  /**
+   * 正在输入提示文本。
+   * - 1 人：xxx 正在输入…
+   * - 2 人：xxx、yyy 正在输入…
+   * - 3+ 人：多人正在输入…
+   * 排除当前用户自己（自己输入不提示）。
+   * 复用现有 i18n key: chat.typing ({names} 正在输入…) / chat.typingMany
+   */
+  const typingText = useMemo(() => {
+    if (typingUserIds.length === 0) return "";
+    // 过滤掉当前用户，并将 userId 映射到显示名
+    const others = typingUserIds
+      .filter((id) => id !== currentUserId)
+      .map((id) => {
+        const member = conversation.members.find((m) => m.userId === id);
+        return member?.user.name ?? t("unknownUser");
+      });
+    if (others.length === 0) return "";
+    if (others.length <= 2) return t("typing", { names: others.join("、") });
+    return t("typingMany");
+  }, [typingUserIds, currentUserId, conversation.members, t]);
+
   return (
     <div className="flex flex-col h-full bg-[var(--surface)]">
       {/* 顶部 Header */}
@@ -146,6 +171,18 @@ export function ChatWindow({
         hasMore={conversation.hasMoreMessages}
         loading={loadingMore}
       />
+
+      {/* 正在输入指示器：紧贴输入框上方，仅当有 typing 文本时显示 */}
+      {typingText && (
+        <div
+          className="px-[var(--space-4)] pt-[var(--space-2)] animate-pulse"
+          aria-live="polite"
+        >
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+            {typingText}
+          </span>
+        </div>
+      )}
 
       {/* 底部输入区：MessageInput 集成 @提及/文件上传/字数计数 */}
       <div className="border-t border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">

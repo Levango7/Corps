@@ -941,7 +941,14 @@
     "edit": "Edit",
     "hoursAgo": "{count} hours ago",
     "justNow": "Just now",
-    "minutesAgo": "{count} minutes ago"
+    "minutesAgo": "{count} minutes ago",
+    "filterConversations": "Filter conversations",
+    "shareTask": "Share task",
+    "taskPickerTitle": "Select a task to share",
+    "taskPickerLoading": "Loading tasks…",
+    "taskPickerEmpty": "No tasks found",
+    "taskPickerLoadFailed": "Failed to load tasks",
+    "taskPickerUnavailable": "Workspace context unavailable"
   },
   "im": {
     "actions": {

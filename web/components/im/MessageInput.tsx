@@ -26,8 +26,10 @@ import {
   type DragEvent,
   type KeyboardEvent,
 } from "react";
-import { Send, Paperclip, X, Loader2 } from "lucide-react";
+import { Send, Paperclip, X, Loader2, ListTodo, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useParams } from "next/navigation";
+import { api } from "@/lib/api";
 import { MentionPopover } from "./MentionPopover";
 
 /** 附件（上传后的轻量结构，传给 onSend） */
@@ -91,6 +93,21 @@ interface MentionState {
   position: { top: number; left: number };
 }
 
+/** 任务选择弹窗中的任务项（仅取展示所需字段） */
+interface TaskPickerItem {
+  id: string;
+  title: string;
+  status: string;
+}
+
+/** 文件上传 API 返回的 FileAsset（仅取附件所需字段） */
+interface UploadedFileAsset {
+  id: string;
+  storageKey: string;
+  thumbnailKey: string | null;
+  fileType: string;
+}
+
 export function MessageInput({
   onSend,
   replyTo,
@@ -100,12 +117,26 @@ export function MessageInput({
   placeholder,
 }: MessageInputProps) {
   const t = useTranslations("chat");
+  // 从路由 /[locale]/w/[wid]/im 获取当前工作区 ID
+  const params = useParams<{ locale: string; wid: string }>();
+  const wid = params?.wid;
 
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [mention, setMention] = useState<MentionState | null>(null);
   const [dragOver, setDragOver] = useState(false);
+
+  // 附件上传状态：记录正在上传的 attachment id（上传期间在预览区显示 Loader2）
+  const [uploadingIds, setUploadingIds] = useState<Set<string>>(new Set());
+  // 上传错误提示（短暂展示后自动清除）
+  const [uploadError, setUploadError] = useState<string | null>(null);
+
+  // 任务选择弹窗状态
+  const [taskPickerOpen, setTaskPickerOpen] = useState(false);
+  const [taskPickerLoading, setTaskPickerLoading] = useState(false);
+  const [taskPickerError, setTaskPickerError] = useState<string | null>(null);
+  const [tasks, setTasks] = useState<TaskPickerItem[]>([]);
 
   // 已提及的用户 ID 集合（发送时传入）
   const mentionedIdsRef = useRef<Set<string>>(new Set());
@@ -260,30 +291,90 @@ export function MessageInput({
     [mention, handleSend],
   );
 
-  // —— 文件上传处理 ——
+  // —— 文件上传处理：上传到服务端获取持久化 URL ——
+  // 流程：立即生成本地预览（blob URL）→ 添加到预览区（标记 uploading）→
+  //       异步 POST /api/v1/workspaces/{wid}/files/upload → 用服务端 URL 替换本地 URL
+  // wid 不可用时回退到本地 blob URL（其他用户无法访问，但保证本机可用）
   const processFiles = useCallback(
-    (files: FileList | File[]) => {
+    async (files: FileList | File[]) => {
       const list = Array.from(files);
       for (const file of list) {
         if (file.size > MAX_FILE_SIZE) {
           // 超过大小限制，跳过（UI 上由字数提示区域显示警告）
           continue;
         }
-        // 生成本地预览 URL（实际项目应上传到服务端获取 url）
         const isImage = file.type.startsWith("image/");
         const previewUrl = isImage ? URL.createObjectURL(file) : null;
+        // 生成唯一附件 ID（加随机后缀避免同毫秒同名冲突）
+        const attachmentId = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
         const attachment: Attachment = {
-          id: `${Date.now()}-${file.name}`,
+          id: attachmentId,
           fileName: file.name,
-          url: previewUrl ?? "#",
+          url: "#", // 上传完成后替换为服务端持久化 URL
           fileType: file.type || "application/octet-stream",
           fileSize: file.size,
           thumbnailUrl: previewUrl,
         };
+        // 立即添加到预览区，标记为 uploading
         setAttachments((prev) => [...prev, attachment]);
+        setUploadingIds((prev) => new Set(prev).add(attachmentId));
+
+        try {
+          // wid 不可用：回退到本地 blob URL（仅本机可访问）
+          if (!wid) {
+            const fallbackUrl = previewUrl ?? "#";
+            setAttachments((prev) =>
+              prev.map((a) => (a.id === attachmentId ? { ...a, url: fallbackUrl } : a)),
+            );
+            continue;
+          }
+
+          // 上传到服务端（multipart/form-data，field name = "file"）
+          const formData = new FormData();
+          formData.append("file", file);
+          const res = await fetch(`/api/v1/workspaces/${wid}/files/upload`, {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          });
+          if (!res.ok) {
+            throw new Error(`upload failed: ${res.status}`);
+          }
+          const json = (await res.json()) as { code: number; data: UploadedFileAsset | null };
+          const fileAsset = json.data;
+          if (!fileAsset || !fileAsset.storageKey) {
+            throw new Error("invalid upload response");
+          }
+          // 拼接持久化 URL（与 message_attachments.url 字段格式一致：/uploads/xxx）
+          const persistentUrl = `/uploads/${fileAsset.storageKey}`;
+          const persistentThumbnail = fileAsset.thumbnailKey
+            ? `/uploads/${fileAsset.thumbnailKey}`
+            : previewUrl;
+
+          setAttachments((prev) =>
+            prev.map((a) =>
+              a.id === attachmentId
+                ? { ...a, url: persistentUrl, thumbnailUrl: persistentThumbnail }
+                : a,
+            ),
+          );
+          // 释放本地 blob URL（已被服务端 URL 替换）
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+        } catch {
+          // 上传失败：移除该附件并释放 blob URL，显示错误提示
+          setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
+          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          setUploadError(t("uploadFailed"));
+        } finally {
+          setUploadingIds((prev) => {
+            const next = new Set(prev);
+            next.delete(attachmentId);
+            return next;
+          });
+        }
       }
     },
-    [],
+    [wid, t],
   );
 
   // —— 点击附件按钮：触发隐藏文件选择 ——
@@ -347,9 +438,57 @@ export function MessageInput({
     };
   }, [attachments]);
 
+  // —— 上传错误提示自动清除（3 秒后消失） ——
+  useEffect(() => {
+    if (!uploadError) return;
+    const timer = setTimeout(() => setUploadError(null), 3000);
+    return () => clearTimeout(timer);
+  }, [uploadError]);
+
+  // —— 分享任务：打开弹窗并加载最近任务列表 ——
+  const handleShareTaskClick = useCallback(async () => {
+    setTaskPickerOpen(true);
+    setTaskPickerError(null);
+    if (!wid) {
+      setTaskPickerError(t("taskPickerUnavailable"));
+      setTasks([]);
+      return;
+    }
+    setTaskPickerLoading(true);
+    try {
+      const data = await api<{ items: TaskPickerItem[] }>(
+        `/api/v1/workspaces/${wid}/tasks?limit=20`,
+      );
+      setTasks(data.items ?? []);
+    } catch {
+      setTaskPickerError(t("taskPickerLoadFailed"));
+      setTasks([]);
+    } finally {
+      setTaskPickerLoading(false);
+    }
+  }, [wid, t]);
+
+  // —— 选中任务：在输入框插入 [task:taskId:taskTitle] 文本 ——
+  const handleTaskSelect = useCallback((taskId: string, taskTitle: string) => {
+    const insertText = `[task:${taskId}:${taskTitle}]`;
+    setBody((prev) => (prev ? `${prev} ${insertText}` : insertText));
+    setTaskPickerOpen(false);
+    // 聚焦回输入框
+    requestAnimationFrame(() => textareaRef.current?.focus());
+  }, []);
+
+  // —— 关闭任务弹窗 ——
+  const handleCloseTaskPicker = useCallback(() => {
+    setTaskPickerOpen(false);
+    setTaskPickerError(null);
+  }, []);
+
   // —— 发送条件 ——
   const overLimit = body.length > MAX_BODY_LENGTH;
-  const canSend = body.trim().length > 0 && !sending && !disabled && !overLimit;
+  // 有附件正在上传时禁用发送，避免发出未完成上传的附件
+  const hasUploading = uploadingIds.size > 0;
+  const canSend =
+    body.trim().length > 0 && !sending && !disabled && !overLimit && !hasUploading;
   const showCount = body.length > MAX_BODY_LENGTH * 0.8; // 超过 80% 时显示计数
 
   return (
@@ -392,6 +531,14 @@ export function MessageInput({
         </div>
       )}
 
+      {/* 上传错误提示 */}
+      {uploadError && (
+        <div className="mb-[var(--space-2)] flex items-center gap-[var(--space-2)] px-[var(--space-2)] py-1 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] border border-[var(--danger)] text-[length:var(--text-xs)] text-[var(--danger)]">
+          <AlertCircle size={14} className="shrink-0" />
+          <span className="truncate">{uploadError}</span>
+        </div>
+      )}
+
       {/* 已添加的附件预览 */}
       {attachments.length > 0 && (
         <div className="mb-[var(--space-2)] flex flex-wrap gap-[var(--space-2)]">
@@ -403,14 +550,20 @@ export function MessageInput({
               <span className="truncate max-w-[160px] text-[length:var(--text-xs)] text-[var(--fg)]">
                 {att.fileName}
               </span>
-              <button
-                type="button"
-                onClick={() => handleRemoveAttachment(att.id)}
-                aria-label={t("removeAttachment")}
-                className="shrink-0 w-4 h-4 flex items-center justify-center rounded text-[var(--muted)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
-              >
-                <X size={14} />
-              </button>
+              {uploadingIds.has(att.id) ? (
+                // 上传中：显示旋转图标
+                <Loader2 size={14} className="shrink-0 animate-spin text-[var(--muted)]" />
+              ) : (
+                // 上传完成：显示移除按钮
+                <button
+                  type="button"
+                  onClick={() => handleRemoveAttachment(att.id)}
+                  aria-label={t("removeAttachment")}
+                  className="shrink-0 w-4 h-4 flex items-center justify-center rounded text-[var(--muted)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
+                >
+                  <X size={14} />
+                </button>
+              )}
             </div>
           ))}
         </div>
@@ -427,6 +580,17 @@ export function MessageInput({
           className="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
         >
           <Paperclip size={16} />
+        </button>
+
+        {/* 分享任务按钮 */}
+        <button
+          type="button"
+          onClick={handleShareTaskClick}
+          disabled={disabled}
+          aria-label={t("shareTask")}
+          className="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
+        >
+          <ListTodo size={16} />
         </button>
 
         {/* 隐藏的文件选择 input */}
@@ -501,6 +665,79 @@ export function MessageInput({
           onClose={() => setMention(null)}
           position={mention.position}
         />
+      )}
+
+      {/* 分享任务弹窗 */}
+      {taskPickerOpen && (
+        <div
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center"
+          onClick={handleCloseTaskPicker}
+        >
+          {/* 遮罩 */}
+          <div className="absolute inset-0 bg-[var(--overlay)]" aria-hidden="true" />
+          {/* 弹窗主体 */}
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("shareTask")}
+            onClick={(e) => e.stopPropagation()}
+            className="relative w-[90vw] max-w-[420px] max-h-[60vh] flex flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-md)]"
+          >
+            {/* 弹窗头部 */}
+            <div className="flex items-center justify-between px-[var(--space-3)] py-[var(--space-2)] border-b border-[var(--border)]">
+              <span className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
+                <ListTodo size={16} className="text-[var(--accent)]" />
+                {t("taskPickerTitle")}
+              </span>
+              <button
+                type="button"
+                onClick={handleCloseTaskPicker}
+                aria-label={t("cancel")}
+                className="shrink-0 w-6 h-6 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <X size={14} />
+              </button>
+            </div>
+            {/* 弹窗内容 */}
+            <div className="flex-1 overflow-y-auto px-[var(--space-2)] py-[var(--space-2)]">
+              {taskPickerLoading ? (
+                <div className="flex items-center justify-center py-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--muted)] gap-[var(--space-2)]">
+                  <Loader2 size={16} className="animate-spin" />
+                  {t("taskPickerLoading")}
+                </div>
+              ) : taskPickerError ? (
+                <div className="flex items-center justify-center py-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--danger)] gap-[var(--space-2)]">
+                  <AlertCircle size={16} />
+                  {taskPickerError}
+                </div>
+              ) : tasks.length === 0 ? (
+                <div className="flex items-center justify-center py-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--muted)]">
+                  {t("taskPickerEmpty")}
+                </div>
+              ) : (
+                <ul className="flex flex-col gap-1">
+                  {tasks.map((task) => (
+                    <li key={task.id}>
+                      <button
+                        type="button"
+                        onClick={() => handleTaskSelect(task.id, task.title)}
+                        className="w-full flex items-center gap-[var(--space-2)] px-[var(--space-2)] py-[var(--space-2)] rounded-[var(--radius-sm)] text-left hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                      >
+                        <ListTodo size={14} className="shrink-0 text-[var(--muted)]" />
+                        <span className="min-w-0 flex-1 truncate text-[length:var(--text-sm)] text-[var(--fg)]">
+                          {task.title}
+                        </span>
+                        <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)]">
+                          {task.status}
+                        </span>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
