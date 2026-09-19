@@ -144,37 +144,33 @@ jobs:
         run: npx tauri ios init
         working-directory: desktop
 
-      - name: Build iOS (unsigned, xcodebuild direct)
-        shell: bash
-        run: |
-          # 用 xcodebuild 直接构建，绕过 Tauri 的签名要求
-          # CODE_SIGNING_ALLOWED=NO 产出未签名 .app，可后续用 Sideloadly 签名
-          xcodebuild build \
-            -project src-tauri/gen/apple/corps-desktop.xcodeproj \
-            -scheme corps-desktop_iOS \
-            -configuration Debug \
-            -destination 'generic/platform=iOS' \
-            -derivedDataPath src-tauri/gen/apple/DerivedData \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY="" \
-            AD_HOC_CODE_SIGNING_ALLOWED=YES
+      - name: Build iOS (debug, tauri build)
+        run: npx tauri ios build --debug
         working-directory: desktop
         continue-on-error: true
+        env:
+          CODE_SIGNING_ALLOWED: "NO"
+          CODE_SIGNING_REQUIRED: "NO"
+          CODE_SIGN_IDENTITY: ""
 
-      # 从 DerivedData 提取 .app 打包为未签名 IPA
-      # 用户下载后用 Sideloadly + 免费 Apple ID 本地签名
+      # tauri ios build 签名可能失败，但 .app 可能已产出
+      # 广泛搜索 .app 并打包为未签名 IPA
       - name: Package unsigned IPA
         shell: bash
         run: |
-          app_name=$(find src-tauri/gen/apple/DerivedData -name "*.app" -maxdepth 5 | head -1)
+          # 搜索所有可能的 .app 位置
+          app_name=$(find src-tauri/gen/apple -name "*.app" -maxdepth 10 2>/dev/null | head -1)
           if [ -n "$app_name" ]; then
+            echo "Found .app: $app_name"
+            ls -la "$app_name"
             mkdir -p Payload
             cp -r "$app_name" Payload/
             zip -r corps-desktop-unsigned.ipa Payload
             echo "Created unsigned IPA: $(ls -la corps-desktop-unsigned.ipa)"
           else
-            echo "No .app found in DerivedData"
+            echo "No .app found anywhere under src-tauri/gen/apple"
+            # 列出构建目录结构帮助调试
+            find src-tauri/gen/apple -type d -name "build" -o -name "Build" -o -name "DerivedData" 2>/dev/null
           fi
         working-directory: desktop
 
