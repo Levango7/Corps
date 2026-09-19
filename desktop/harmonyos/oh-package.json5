@@ -1,0 +1,12 @@
+{
+  "name": "corps-harmonyos",
+  "version": "0.6.0",
+  "description": "Corps HarmonyOS application (WebView wrapper)",
+  "main": "",
+  "author": "",
+  "license": "Apache-2.0",
+  "dependencies": {},
+  "devDependencies": {
+    "@ohos/hypium": "1.0.21"
+  }
+}

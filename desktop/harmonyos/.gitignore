@@ -1,0 +1,7 @@
+# HarmonyOS 构建产物
+build/
+.obuild/
+.cxx/
+.cache/
+*.hap
+*.hsp

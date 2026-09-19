@@ -1,0 +1,172 @@
+name: Mobile Build
+
+# 三端移动端构建 CI（Android APK + iOS IPA + HarmonyOS 准备）
+#
+# 架构：移动端 WebView → 远程 Next.js 服务器（https://corps.com）
+# 桌面端仍由 tauri-build.yml 负责（Sidecar 方案）
+#
+# 触发：手动 + version tag push (v*)
+# Android：ubuntu-latest + Rust cross targets + Android SDK/NDK
+# iOS：macos-latest + Rust iOS targets + Xcode（debug 构建，无签名）
+# HarmonyOS：标准 CI 无法构建（需 DevEco Studio），仅验证项目结构
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["v*"]
+
+jobs:
+  android:
+    name: Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android,armv7-linux-androideabi,i686-linux-android,x86_64-linux-android
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android NDK
+        run: sdkmanager "ndk;27.0.12077973"
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: web
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: web
+
+      - name: Install desktop dependencies
+        run: pnpm install --no-frozen-lockfile
+        working-directory: desktop
+
+      - name: Initialize Tauri Android project
+        run: pnpm tauri android init
+        working-directory: desktop
+
+      - name: Build Android APK
+        run: pnpm tauri android build
+        working-directory: desktop
+        env:
+          ANDROID_NDK_HOME: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.0.12077973
+          ANDROID_NDK_ROOT: ${{ env.ANDROID_SDK_ROOT }}/ndk/27.0.12077973
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
+          retention-days: 30
+          if-no-files-found: warn
+
+  ios:
+    name: iOS IPA (debug, no signing)
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-apple-ios,aarch64-apple-ios-sim,x86_64-apple-ios
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: desktop/src-tauri -> target
+
+      - name: Install web dependencies
+        run: pnpm install --frozen-lockfile --ignore-scripts
+        working-directory: web
+
+      - name: Generate Prisma client
+        run: npx prisma generate
+        working-directory: web
+
+      - name: Install desktop dependencies
+        run: pnpm install --no-frozen-lockfile
+        working-directory: desktop
+
+      - name: Initialize Tauri iOS project
+        run: pnpm tauri ios init
+        working-directory: desktop
+
+      - name: Build iOS (debug, no code signing)
+        run: pnpm tauri ios build --debug
+        working-directory: desktop
+
+      - name: Upload iOS app
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-app
+          path: |
+            desktop/src-tauri/gen/apple/build/Debug-iphonesimulator/**/*.app
+            desktop/src-tauri/gen/apple/build/Debug-iphoneos/**/*.app
+          retention-days: 30
+          if-no-files-found: warn
+
+  harmonyos-prepare:
+    name: HarmonyOS (structure validation)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Validate HarmonyOS project structure
+        shell: bash
+        run: |
+          echo "Checking HarmonyOS WebView project structure..."
+          base="desktop/harmonyos"
+          required=(
+            "$base/build-profile.json5"
+            "$base/oh-package.json5"
+            "$base/entry/oh-package.json5"
+            "$base/entry/src/main/module.json5"
+            "$base/entry/src/main/ets/entryability/EntryAbility.ets"
+            "$base/entry/src/main/ets/pages/Index.ets"
+          )
+          missing=0
+          for f in "${required[@]}"; do
+            if [ ! -f "$f" ]; then
+              echo "Missing: $f"
+              missing=1
+            else
+              echo "Found: $f"
+            fi
+          done
+          if [ $missing -eq 1 ]; then
+            echo "HarmonyOS project structure incomplete"
+            exit 1
+          fi
+          echo "All required HarmonyOS files present"

@@ -1,0 +1,16 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "Corps HarmonyOS Application"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "Corps entry ability"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "Corps"
+    }
+  ]
+}
