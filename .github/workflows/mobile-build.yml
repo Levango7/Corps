@@ -2,18 +2,26 @@ name: Mobile Build
 
 # 三端移动端构建 CI（Android APK + iOS IPA + HarmonyOS 准备）
 #
-# 架构：移动端 WebView → 远程 Next.js 服务器（https://corps.com）
+# 架构：移动端 WebView → 远程 Next.js 服务器（CORPS_WEB_URL）
 # 桌面端仍由 tauri-build.yml 负责（Sidecar 方案）
 #
-# 触发：手动 + version tag push (v*)
-# Android：ubuntu-latest + Rust cross targets + Android SDK/NDK
-# iOS：macos-latest + Rust iOS targets + Xcode（debug 构建，无签名）
+# 触发：手动（可指定 CORPS_WEB_URL）+ version tag push (v*)
+# Android：ubuntu-latest + Rust cross targets + Android SDK/NDK → APK
+# iOS：macos-latest + Rust iOS targets + Xcode（debug 构建，无签名）→ IPA
 # HarmonyOS：标准 CI 无法构建（需 DevEco Studio），仅验证项目结构
 
 on:
   workflow_dispatch:
+    inputs:
+      corps_web_url:
+        description: 'Corps web URL (default: https://corps.com)'
+        required: false
+        default: 'https://corps.com'
   push:
     tags: ["v*"]
+
+env:
+  CORPS_WEB_URL: ${{ github.event.inputs.corps_web_url || 'https://corps.com' }}
 
 jobs:
   android:
@@ -64,8 +72,16 @@ jobs:
         run: pnpm install --no-frozen-lockfile
         working-directory: desktop
 
+      - name: Prepare mobile config (set CORPS_WEB_URL)
+        run: node scripts/prepare-mobile.mjs
+        working-directory: desktop
+
       - name: Initialize Tauri Android project
         run: pnpm tauri android init
+        working-directory: desktop
+
+      - name: Add Android permissions
+        run: node scripts/prepare-android.mjs
         working-directory: desktop
 
       - name: Build Android APK
@@ -117,6 +133,10 @@ jobs:
 
       - name: Install desktop dependencies
         run: pnpm install --no-frozen-lockfile
+        working-directory: desktop
+
+      - name: Prepare mobile config (set CORPS_WEB_URL)
+        run: node scripts/prepare-mobile.mjs
         working-directory: desktop
 
       - name: Initialize Tauri iOS project
