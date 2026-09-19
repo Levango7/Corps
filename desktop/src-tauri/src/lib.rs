@@ -16,6 +16,7 @@ pub const APP_IDENTIFIER: &str = "com.corps.desktop";
 /// 桌面端特有的功能（sidecar、系统托盘、全局快捷键、单实例锁）
 /// 在 main.rs 中通过 cfg(desktop) 条件编译附加。
 #[cfg(mobile)]
+#[tauri::mobile_entry_point]
 pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_shell::init())

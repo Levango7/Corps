@@ -147,6 +147,12 @@ jobs:
       - name: Build iOS (debug, no code signing)
         run: npx tauri ios build --debug
         working-directory: desktop
+        env:
+          # 无 Apple Developer 账号，跳过代码签名
+          # 产出的 .app 只能用于模拟器，无法安装到真机
+          CODE_SIGNING_ALLOWED: "NO"
+          CODE_SIGNING_REQUIRED: "NO"
+          CODE_SIGN_IDENTITY: ""
 
       - name: Upload iOS app
         uses: actions/upload-artifact@v4
