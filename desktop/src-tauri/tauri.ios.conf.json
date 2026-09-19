@@ -18,5 +18,8 @@
   "build": {
     "beforeDevCommand": "",
     "beforeBuildCommand": ""
+  },
+  "bundle": {
+    "resources": []
   }
 }

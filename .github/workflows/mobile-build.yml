@@ -58,7 +58,8 @@ jobs:
       # 只需安装 NDK 27（Tauri 2 要求 NDK 25+）
       - name: Install Android NDK
         run: |
-          yes | sdkmanager "ndk;27.0.12077973"
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          yes | "$SDKMANAGER" "ndk;27.0.12077973"
           echo "ANDROID_NDK_HOME=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
 
