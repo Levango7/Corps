@@ -84,6 +84,22 @@ function renderMarkdown(md: string): string {
   return md;
 }
 
+/**
+ * 将日期字符串（YYYY-MM-DD）安全转换为 ISO 字符串。
+ *
+ * AI 返回的 dueDate 可能是空字符串、undefined 或非日期字符串，
+ * 直接 new Date(...).toISOString() 在 Invalid Date 时会抛 RangeError，
+ * 导致整个 applyAiSummary 崩溃。此处用 try-catch + isNaN 兜底返回 null。
+ */
+function safeDateToIso(dateStr: string): string | null {
+  try {
+    const d = new Date(dateStr + "T00:00:00.000Z");
+    return isNaN(d.getTime()) ? null : d.toISOString();
+  } catch {
+    return null;
+  }
+}
+
 // ── AI 摘要 i18n 回退文案 ──
 // key 暂未在 messages/zh.json|en.json 中定义时使用这些默认值。
 // 任务要求不修改 messages 文件，tf helper 通过 t.has() 检测后回退，保证渲染不中断。
@@ -241,9 +257,7 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
       const newActions: ActionItem[] = summary.actionItems.map((a) => ({
         title: a.title,
         assigneeId: a.assignee ?? undefined,
-        dueDate: a.dueDate
-          ? new Date(a.dueDate + "T00:00:00.000Z").toISOString()
-          : undefined,
+        dueDate: a.dueDate ? safeDateToIso(a.dueDate) ?? undefined : undefined,
         done: false,
       }));
       setActionItems((prev) => [...prev, ...newActions]);

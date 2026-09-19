@@ -21,11 +21,13 @@ import { computeProgress } from "@/lib/okr";
 
 const patchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
-  targetValue: z.number().optional(),
-  /** 进度当前值（前端进度更新主入口） */
-  currentValue: z.number().optional(),
+  /** 目标值（必须为有限数，拒绝 NaN/Infinity） */
+  targetValue: z.number().finite().optional(),
+  /** 进度当前值（前端进度更新主入口，必须为有限数，拒绝 NaN/Infinity） */
+  currentValue: z.number().finite().optional(),
   unit: z.string().max(20).nullable().optional(),
-  weight: z.number().min(0).optional(),
+  /** 权重：0-100 之间 */
+  weight: z.number().min(0).max(100).optional(),
   ownerId: z.string().uuid().nullable().optional(),
   dueDate: z.string().datetime().nullable().optional(),
 });
@@ -56,31 +58,23 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     const body = await req.json();
     const validated = patchSchema.parse(body);
 
-    // 归属校验：KR 必须存在且其 Objective 属于当前工作区
-    const existing = await runWithWorkspace(
+    // 归属校验 + 更新 + 重算父目标进度（同一事务内原子完成）
+    // 合并原两次 runWithWorkspace 为单次事务，避免并发场景下校验通过后、
+    // 更新前 KR 被另一请求删除导致 Prisma P2025 错误泄漏为 500 而非 404。
+    const result = await runWithWorkspace(
       wid,
       async (tx) => {
+        // 1. 事务内校验 KR 存在且其 Objective 属于当前工作区
         const kr = await tx.keyResult.findUnique({
           where: { id: kid },
           select: { id: true, objectiveId: true, objective: { select: { workspaceId: true } } },
         });
-        if (!kr || kr.objective.workspaceId !== wid) return null;
-        return { id: kr.id, objectiveId: kr.objectiveId };
-      },
-      ctx.payload.sub,
-    );
-    if (!existing) {
-      return NextResponse.json(
-        { code: 404, message: apiMsg(req, "keyResultNotFound"), data: null },
-        { status: 404 },
-      );
-    }
+        if (!kr || kr.objective.workspaceId !== wid) {
+          return { notFound: true as const, data: null };
+        }
 
-    // 更新 + 重算父目标进度（同一事务内原子完成）
-    const updated = await runWithWorkspace(
-      wid,
-      async (tx) => {
-        const kr = await tx.keyResult.update({
+        // 2. 同事务内更新 KR
+        const updated = await tx.keyResult.update({
           where: { id: kid },
           data: {
             ...validated,
@@ -93,22 +87,29 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
           },
         });
 
-        // 重算父目标进度
+        // 3. 同事务内重算父目标进度
         const allKrs = await tx.keyResult.findMany({
-          where: { objectiveId: existing.objectiveId },
+          where: { objectiveId: kr.objectiveId },
           select: { currentValue: true, targetValue: true, weight: true },
         });
         await tx.objective.update({
-          where: { id: existing.objectiveId },
+          where: { id: kr.objectiveId },
           data: { progress: computeProgress(allKrs) },
         });
 
-        return kr;
+        return { notFound: false as const, data: updated };
       },
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 200, data: updated, message: apiMsg(req, "ok") });
+    if (result.notFound) {
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "keyResultNotFound"), data: null },
+        { status: 404 },
+      );
+    }
+
+    return NextResponse.json({ code: 200, data: result.data, message: apiMsg(req, "ok") });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -148,43 +149,43 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   if (limited) return limited;
 
   try {
-    // 归属校验
-    const existing = await runWithWorkspace(
+    // 归属校验 + 删除 + 重算父目标进度（同一事务内原子完成）
+    // 合并原两次 runWithWorkspace 为单次事务，避免并发场景下校验通过后、
+    // 删除前 KR 被另一请求删除导致 Prisma P2025 错误泄漏为 500 而非 404。
+    const notFound = await runWithWorkspace(
       wid,
       async (tx) => {
+        // 1. 事务内校验 KR 存在且其 Objective 属于当前工作区
         const kr = await tx.keyResult.findUnique({
           where: { id: kid },
           select: { id: true, objectiveId: true, objective: { select: { workspaceId: true } } },
         });
-        if (!kr || kr.objective.workspaceId !== wid) return null;
-        return { id: kr.id, objectiveId: kr.objectiveId };
+        if (!kr || kr.objective.workspaceId !== wid) return true;
+
+        // 2. 同事务内删除 KR
+        await tx.keyResult.delete({ where: { id: kid } });
+
+        // 3. 同事务内重算父目标进度
+        const allKrs = await tx.keyResult.findMany({
+          where: { objectiveId: kr.objectiveId },
+          select: { currentValue: true, targetValue: true, weight: true },
+        });
+        await tx.objective.update({
+          where: { id: kr.objectiveId },
+          data: { progress: computeProgress(allKrs) },
+        });
+
+        return false;
       },
       ctx.payload.sub,
     );
-    if (!existing) {
+
+    if (notFound) {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "keyResultNotFound"), data: null },
         { status: 404 },
       );
     }
-
-    await runWithWorkspace(
-      wid,
-      async (tx) => {
-        await tx.keyResult.delete({ where: { id: kid } });
-
-        // 重算父目标进度
-        const allKrs = await tx.keyResult.findMany({
-          where: { objectiveId: existing.objectiveId },
-          select: { currentValue: true, targetValue: true, weight: true },
-        });
-        await tx.objective.update({
-          where: { id: existing.objectiveId },
-          data: { progress: computeProgress(allKrs) },
-        });
-      },
-      ctx.payload.sub,
-    );
 
     return NextResponse.json({ code: 200, data: null, message: apiMsg(req, "ok") });
   } catch (error) {
