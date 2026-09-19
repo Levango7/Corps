@@ -11,7 +11,7 @@
  *   CORPS_WEB_URL=https://staging.corps.com node prepare-mobile.mjs
  */
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readFileSync, writeFileSync, existsSync, mkdirSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -53,3 +53,20 @@ try {
 }
 
 console.log('[prepare-mobile] Done.');
+// --- 创建占位 frontendDist ---
+// Tauri 要求 frontendDist 指向有效目录（即使移动端用远程 URL）
+// desktop/dist/ 被 .gitignore 忽略，CI 中需要手动创建
+const distDir = resolve(__dirname, '../dist');
+const distIndex = resolve(distDir, 'index.html');
+if (!existsSync(distIndex)) {
+  mkdirSync(distDir, { recursive: true });
+  writeFileSync(
+    distIndex,
+    '<!DOCTYPE html>\n<html><head><meta charset="utf-8"><title>Corps</title></head>\n<body>\n' +
+      '<p>Loading Corps...</p>\n' +
+      `<script>window.location.href='${WEB_URL}';</script>\n` +
+      '</body></html>\n',
+    'utf8'
+  );
+  console.log('[prepare-mobile] Created placeholder dist/index.html');
+}
