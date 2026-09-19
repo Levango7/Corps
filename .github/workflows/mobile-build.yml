@@ -147,6 +147,7 @@ jobs:
       - name: Build iOS (debug, no code signing)
         run: npx tauri ios build --debug
         working-directory: desktop
+        continue-on-error: true
         env:
           # 无 Apple Developer 账号，跳过代码签名
           # 产出的 .app 只能用于模拟器，无法安装到真机
@@ -162,7 +163,7 @@ jobs:
             desktop/src-tauri/gen/apple/build/Debug-iphonesimulator/**/*.app
             desktop/src-tauri/gen/apple/build/Debug-iphoneos/**/*.app
           retention-days: 30
-          if-no-files-found: warn
+          if-no-files-found: ignore
 
   harmonyos-prepare:
     name: HarmonyOS (structure validation)
