@@ -53,22 +53,9 @@ interface ProjectInsightViewProps {
 /** 保存状态 */
 type SaveStatus = "idle" | "saving" | "saved" | "error";
 
-/** 进度阶段 fallback（i18n 键 ai.progress.* 尚未入库时兜底） */
-const PROGRESS_FALLBACK: Record<string, string> = {
-  context: "聚合数据",
-  analyzing: "分析",
-  generating: "生成",
-};
-
 export function ProjectInsightView({ wid }: ProjectInsightViewProps) {
   const t = useTranslations("ai.projectInsight");
   const tp = useTranslations("ai.progress");
-
-  /** 进度 i18n 兜底 */
-  const ttp = (key: string): string => {
-    const v = tp(key);
-    return v === key ? (PROGRESS_FALLBACK[key] ?? key) : v;
-  };
 
   const [activeScope, setActiveScope] = useState<Scope>("progress");
   const [content, setContent] = useState("");
@@ -230,7 +217,7 @@ export function ProjectInsightView({ wid }: ProjectInsightViewProps) {
           <div className="mb-[var(--space-4)]">
             <ProgressSteps
               currentStage={progressStage}
-              stageNames={[ttp("context"), ttp("analyzing"), ttp("generating")]}
+              stageNames={[tp("context"), tp("analyzing"), tp("generating")]}
               currentMessage={progressMessage}
             />
           </div>

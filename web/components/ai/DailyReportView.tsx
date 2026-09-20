@@ -34,51 +34,9 @@ interface DailyReportViewProps {
 /** 组件阶段 */
 type Phase = "idle" | "streaming" | "done";
 
-/** 本地 fallback 文案（i18n 键 ai.dailyReport.* 尚未入库时兜底） */
-const FALLBACK: Record<string, string> = {
-  title: "AI 智能日报",
-  generate: "生成日报",
-  generating: "生成中…",
-  dateLabel: "日期",
-  edit: "编辑",
-  preview: "预览",
-  save: "保存为文档",
-  saving: "保存中…",
-  saved: "已保存",
-  saveFailed: "保存失败，请重试",
-  generateFailed: "生成失败，请重试",
-  empty: "选择日期后点击「生成」，AI 将聚合当日工作数据生成结构化日报。",
-  docTitle: "AI 日报",
-};
-
-/** 进度阶段 fallback（i18n 键 ai.progress.* 尚未入库时兜底） */
-const PROGRESS_FALLBACK: Record<string, string> = {
-  context: "聚合数据",
-  analyzing: "分析",
-  generating: "生成",
-};
-
 export function DailyReportView({ wid }: DailyReportViewProps) {
   const t = useTranslations("ai.dailyReport");
   const tp = useTranslations("ai.progress");
-
-  /** i18n 兜底：键缺失时 next-intl 返回 key 本身，改用 fallback */
-  const tt = useCallback(
-    (key: string): string => {
-      const v = t(key);
-      return v === key ? (FALLBACK[key] ?? key) : v;
-    },
-    [t],
-  );
-
-  /** 进度 i18n 兜底 */
-  const ttp = useCallback(
-    (key: string): string => {
-      const v = tp(key);
-      return v === key ? (PROGRESS_FALLBACK[key] ?? key) : v;
-    },
-    [tp],
-  );
 
   // 日期选择器：默认今天（YYYY-MM-DD）
   const todayStr = new Date().toISOString().split("T")[0]!;
@@ -142,13 +100,13 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
     } catch (e) {
       // abort 不视为错误
       if ((e as Error).name === "AbortError") return;
-      setError(tt("generateFailed"));
+      setError(t("generateFailed"));
       setPhase("idle");
       setProgressStage(null);
     } finally {
       if (abortRef.current === ac) abortRef.current = null;
     }
-  }, [wid, date, tt]);
+  }, [wid, date]);
 
   /** 保存为文档：POST /api/v1/workspaces/{wid}/documents */
   const handleSave = useCallback(async () => {
@@ -159,17 +117,17 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
       await api(`/api/v1/workspaces/${wid}/documents`, {
         method: "POST",
         body: JSON.stringify({
-          title: `${tt("docTitle")} - ${date}`,
+          title: `${t("docTitle")} - ${date}`,
           markdown: content,
         }),
       });
       setSaved(true);
     } catch {
-      setError(tt("saveFailed"));
+      setError(t("saveFailed"));
     } finally {
       setSaving(false);
     }
-  }, [content, saving, wid, date, tt]);
+  }, [content, saving, wid, date]);
 
   const isStreaming = phase === "streaming";
   const hasContent = phase === "done" && content.length > 0;
@@ -179,14 +137,14 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
       {/* 顶部工具栏：日期选择 + 生成按钮 */}
       <header className="flex flex-wrap items-center gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-6)] py-[var(--space-4)]">
         <h1 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-          {tt("title")}
+          {t("title")}
         </h1>
 
         <div className="ml-auto flex items-center gap-[var(--space-3)]">
           {/* 日期选择器 */}
           <label className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg-2)]">
             <Calendar size={14} className="text-[var(--meta)]" />
-            <span className="sr-only">{tt("dateLabel")}</span>
+            <span className="sr-only">{t("dateLabel")}</span>
             <input
               type="date"
               value={date}
@@ -207,12 +165,12 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
             {isStreaming ? (
               <>
                 <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
-                {tt("generating")}
+                {t("generating")}
               </>
             ) : (
               <>
                 <Sparkles size={14} />
-                {tt("generate")}
+                {t("generate")}
               </>
             )}
           </button>
@@ -225,7 +183,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
           <div className="flex h-full flex-col items-center justify-center gap-[var(--space-3)] text-center">
             <Sparkles size={32} className="text-[var(--meta)]" />
             <p className="max-w-md text-[length:var(--text-sm)] text-[var(--meta)]">
-              {tt("empty")}
+              {t("empty")}
             </p>
           </div>
         )}
@@ -235,7 +193,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
           <div className="mb-[var(--space-4)]">
             <ProgressSteps
               currentStage={progressStage}
-              stageNames={[ttp("context"), ttp("analyzing"), ttp("generating")]}
+              stageNames={[tp("context"), tp("analyzing"), tp("generating")]}
               currentMessage={progressMessage}
             />
           </div>
@@ -258,7 +216,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
                 className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] disabled:opacity-40"
               >
                 <Eye size={14} />
-                {tt("preview")}
+                {t("preview")}
               </button>
               <button
                 type="button"
@@ -267,7 +225,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
                 className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] disabled:opacity-40"
               >
                 <Edit3 size={14} />
-                {tt("edit")}
+                {t("edit")}
               </button>
             </div>
 
@@ -280,7 +238,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
                   setSaved(false);
                 }}
                 className="min-h-[400px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-4)] py-[var(--space-3)] font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg)] leading-[var(--leading-relaxed)] transition-colors duration-[var(--motion-fast)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)]"
-                aria-label={tt("edit")}
+                aria-label={t("edit")}
               />
             ) : (
               <div className="rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] px-[var(--space-5)] py-[var(--space-4)]">
@@ -310,7 +268,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
         <footer className="flex items-center justify-end gap-[var(--space-3)] border-t border-[var(--border)] px-[var(--space-6)] py-[var(--space-3)]">
           {saved && (
             <span className="text-[length:var(--text-xs)] text-[var(--success)]">
-              {tt("saved")}
+              {t("saved")}
             </span>
           )}
           <button
@@ -322,12 +280,12 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
             {saving ? (
               <>
                 <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
-                {tt("saving")}
+                {t("saving")}
               </>
             ) : (
               <>
                 <Save size={14} />
-                {tt("save")}
+                {t("save")}
               </>
             )}
           </button>

@@ -78,28 +78,12 @@ function getRiskVisual(riskLevel: ApprovalAdvice["riskLevel"]) {
   }
 }
 
-/** 进度阶段 fallback（i18n 键 ai.progress.* 尚未入库时兜底） */
-const PROGRESS_FALLBACK: Record<string, string> = {
-  context: "聚合数据",
-  analyzing: "分析",
-  generating: "生成",
-};
-
 export function ApprovalAdvicePanel({
   wid,
   approvalInstanceId,
 }: ApprovalAdvicePanelProps) {
   const t = useTranslations("ai.approvalAdvice");
   const tp = useTranslations("ai.progress");
-
-  /** 进度 i18n 兜底 */
-  const ttp = useCallback(
-    (key: string): string => {
-      const v = tp(key);
-      return v === key ? (PROGRESS_FALLBACK[key] ?? key) : v;
-    },
-    [tp],
-  );
 
   const [advice, setAdvice] = useState<ApprovalAdvice | null>(null);
   const [loading, setLoading] = useState(true);
@@ -198,7 +182,7 @@ export function ApprovalAdvicePanel({
         {progressStage ? (
           <ProgressSteps
             currentStage={progressStage}
-            stageNames={[ttp("context"), ttp("analyzing"), ttp("generating")]}
+            stageNames={[tp("context"), tp("analyzing"), tp("generating")]}
             currentMessage={progressMessage}
           />
         ) : (

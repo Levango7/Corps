@@ -11,7 +11,7 @@
  *  - 导出按钮（Markdown 格式下载）
  *
  * 样式全走 design token（var(--*)），lucide-react 图标尺寸 16。
- * 错误处理：catch 中用 tf("error")，不泄露 e.message。
+ * 错误处理：catch 中用 t("error")，不泄露 e.message。
  *
  * i18n：useTranslations("ai.meetingSummary")，引用但不修改 zh.json/en.json。
  * key 暂未在 messages 文件中定义时，tf helper 回退到内置英文默认值，
@@ -66,36 +66,6 @@ interface MeetingSummary {
   participants: string[];
 }
 
-// ── i18n 回退文案 ──
-// key 暂未在 messages/zh.json|en.json 中定义时使用这些默认值。
-// 任务要求引用 ai.meetingSummary.* key 但不修改 messages 文件，
-// tf helper 通过 t.has() 检测 key 是否存在，不存在则回退。
-
-const FALLBACK_TEXT: Record<string, string> = {
-  title: "会议纪要",
-  transcriptLabel: "会议转写",
-  transcriptPlaceholder: "粘贴会议转写文本…（说话人: 内容）",
-  generate: "生成纪要",
-  generating: "生成中…",
-  error: "操作失败，请重试",
-  meetingTitle: "会议标题",
-  meetingTitlePlaceholder: "可选：输入会议标题…",
-  keyPoints: "关键讨论点",
-  decisions: "决策项",
-  actionItems: "待办事项",
-  participants: "参与者",
-  export: "导出",
-  exportMarkdown: "导出 Markdown",
-  addToTodos: "入库为任务",
-  added: "已入库",
-  noResults: "暂无纪要内容",
-  edit: "编辑",
-  save: "保存",
-  noTranscript: "请先输入转写文本",
-  generateFailed: "生成失败，请重试",
-  addFailed: "入库失败，请重试",
-  emptySummary: "点击「生成纪要」开始",
-};
 
 // ── 样式常量 ──
 
@@ -147,24 +117,6 @@ export default function MeetingSummaryPanel({
   const t = useTranslations("ai.meetingSummary");
   const { toast } = useToast();
 
-  /**
-   * 带回退的翻译函数。
-   *
-   * next-intl v4 在 key 不存在时开发模式 console.error、生产模式抛 IntlError。
-   * 本组件引用的 ai.meetingSummary.* key 可能尚未添加到 messages 文件，
-   * 故用 t.has() 检测后回退到 FALLBACK_TEXT，保证渲染不中断。
-   */
-  const tf = useCallback(
-    (key: string): string => {
-      try {
-        if (t.has(key)) return t(key);
-      } catch {
-        // t.has 抛异常时走回退
-      }
-      return FALLBACK_TEXT[key] ?? key;
-    },
-    [t],
-  );
 
   // ── 状态 ──
 
@@ -207,16 +159,16 @@ export default function MeetingSummaryPanel({
         data.decisions.length === 0 &&
         data.actionItems.length === 0
       ) {
-        toast("warning", tf("noResults"));
+        toast("warning", t("noResults"));
       }
     } catch (e) {
       if (process.env.NODE_ENV === "development")
         console.error("[MeetingSummaryPanel] generate error:", e);
-      setError(tf("generateFailed"));
+      setError(t("generateFailed"));
     } finally {
       setGenerating(false);
     }
-  }, [generating, transcript, meetingTitle, wid, toast, tf]);
+  }, [generating, transcript, meetingTitle, wid, toast]);
 
   // ── 待办入库 ──
 
@@ -235,25 +187,25 @@ export default function MeetingSummaryPanel({
           body: JSON.stringify({
             title: item.title,
             description: item.assignee
-              ? `负责人：${item.assignee}`
+              ? t("assigneePrefix", { name: item.assignee })
               : undefined,
             priority: item.priority,
             dueDate: dueDateIso,
           }),
         });
         setAddedIndices((prev) => new Set(prev).add(index));
-        toast("success", tf("added"));
+        toast("success", t("added"));
       } catch (e) {
         if (process.env.NODE_ENV === "development")
           console.error("[MeetingSummaryPanel] addToTask error:", e);
         const msg =
-          e instanceof ApiError ? e.message : tf("addFailed");
+          e instanceof ApiError ? e.message : t("addFailed");
         toast("error", msg);
       } finally {
         setAddingIndex(null);
       }
     },
-    [addingIndex, addedIndices, wid, toast, tf],
+    [addingIndex, addedIndices, wid, toast],
   );
 
   // ── 编辑/保存 ──
@@ -283,22 +235,22 @@ export default function MeetingSummaryPanel({
     if (!s) return;
 
     const lines: string[] = [];
-    lines.push(`# ${s.title || tf("title")}`);
+    lines.push(`# ${s.title || t("title")}`);
     lines.push("");
 
     if (s.participants.length > 0) {
-      lines.push(`**${tf("participants")}：** ${s.participants.join("、")}`);
+      lines.push(`**${t("participants")}：** ${s.participants.join("、")}`);
       lines.push("");
     }
 
     if (s.keyPoints.length > 0) {
-      lines.push(`## ${tf("keyPoints")}`);
+      lines.push(`## ${t("keyPoints")}`);
       s.keyPoints.forEach((p) => lines.push(`- ${p}`));
       lines.push("");
     }
 
     if (s.decisions.length > 0) {
-      lines.push(`## ${tf("decisions")}`);
+      lines.push(`## ${t("decisions")}`);
       s.decisions.forEach((d) => {
         lines.push(`### ${d.title}`);
         if (d.description) lines.push(d.description);
@@ -307,10 +259,10 @@ export default function MeetingSummaryPanel({
     }
 
     if (s.actionItems.length > 0) {
-      lines.push(`## ${tf("actionItems")}`);
+      lines.push(`## ${t("actionItems")}`);
       s.actionItems.forEach((a) => {
         const parts: string[] = [`- [ ] ${a.title}`];
-        if (a.assignee) parts.push(`（${tf("meetingTitle")}: ${a.assignee}）`);
+        if (a.assignee) parts.push(`（${t("meetingTitle")}: ${a.assignee}）`);
         if (a.dueDate) parts.push(`📅 ${a.dueDate}`);
         parts.push(`[${a.priority}]`);
         lines.push(parts.join(" "));
@@ -328,7 +280,7 @@ export default function MeetingSummaryPanel({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [summary, editBuffer, editing, tf]);
+  }, [summary, editBuffer, editing]);
 
   // ── 渲染数据（编辑时用 editBuffer，否则用 summary） ──
 
@@ -349,13 +301,13 @@ export default function MeetingSummaryPanel({
   return (
     <div
       className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]"
-      aria-label={tf("title")}
+      aria-label={t("title")}
     >
       {/* ── 头部 ── */}
       <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
         <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <FileText size={16} className="text-[var(--accent)]" />
-          {tf("title")}
+          {t("title")}
         </h2>
         <div className="flex items-center gap-2">
           {canExport && (
@@ -363,10 +315,10 @@ export default function MeetingSummaryPanel({
               type="button"
               onClick={handleExportMarkdown}
               className={ghostBtn}
-              title={tf("exportMarkdown")}
+              title={t("exportMarkdown")}
             >
               <Download size={16} />
-              {tf("export")}
+              {t("export")}
             </button>
           )}
           {summary && !editing && (
@@ -374,10 +326,10 @@ export default function MeetingSummaryPanel({
               type="button"
               onClick={startEdit}
               className={ghostBtn}
-              title={tf("edit")}
+              title={t("edit")}
             >
               <Edit size={16} />
-              {tf("edit")}
+              {t("edit")}
             </button>
           )}
           {editing && (
@@ -386,10 +338,10 @@ export default function MeetingSummaryPanel({
                 type="button"
                 onClick={saveEdit}
                 className={primaryBtn}
-                title={tf("save")}
+                title={t("save")}
               >
                 <Save size={16} />
-                {tf("save")}
+                {t("save")}
               </button>
               <button
                 type="button"
@@ -428,20 +380,20 @@ export default function MeetingSummaryPanel({
             type="text"
             value={meetingTitle}
             onChange={(e) => setMeetingTitle(e.target.value)}
-            placeholder={tf("meetingTitlePlaceholder")}
+            placeholder={t("meetingTitlePlaceholder")}
             maxLength={200}
             className={fieldControl}
-            aria-label={tf("meetingTitle")}
+            aria-label={t("meetingTitle")}
           />
           {/* 转写 textarea */}
           <textarea
             value={transcript}
             onChange={(e) => setTranscript(e.target.value)}
-            placeholder={tf("transcriptPlaceholder")}
+            placeholder={t("transcriptPlaceholder")}
             maxLength={50000}
             rows={6}
             className={`${fieldControl} resize-y min-h-[120px] leading-relaxed`}
-            aria-label={tf("transcriptLabel")}
+            aria-label={t("transcriptLabel")}
           />
           {/* 生成按钮 */}
           <div className="flex items-center gap-2">
@@ -459,11 +411,11 @@ export default function MeetingSummaryPanel({
               ) : (
                 <Sparkles size={16} />
               )}
-              {generating ? tf("generating") : tf("generate")}
+              {generating ? t("generating") : t("generate")}
             </button>
             {!transcript.trim() && (
               <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                {tf("noTranscript")}
+                {t("noTranscript")}
               </span>
             )}
           </div>
@@ -476,7 +428,7 @@ export default function MeetingSummaryPanel({
               size={16}
               className="animate-spin mr-2 motion-reduce:animate-none"
             />
-            {tf("generating")}
+            {t("generating")}
           </div>
         )}
 
@@ -484,7 +436,7 @@ export default function MeetingSummaryPanel({
         {!generating && !display && (
           <div className="flex flex-col items-center justify-center py-12 text-[var(--muted)] text-[length:var(--text-sm)] gap-2">
             <FileText size={32} className="opacity-40" />
-            <p>{tf("emptySummary")}</p>
+            <p>{t("emptySummary")}</p>
           </div>
         )}
 
@@ -503,11 +455,11 @@ export default function MeetingSummaryPanel({
                     )
                   }
                   className={`${fieldControl} text-[length:var(--text-md)] font-[weight:var(--weight-semibold)]`}
-                  aria-label={tf("meetingTitle")}
+                  aria-label={t("meetingTitle")}
                 />
               ) : (
                 <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-                  {display.title || tf("title")}
+                  {display.title || t("title")}
                 </h3>
               )}
             </div>
@@ -517,7 +469,7 @@ export default function MeetingSummaryPanel({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)]">
                   <Users size={16} />
-                  {tf("participants")}
+                  {t("participants")}
                 </div>
                 <div className="flex flex-wrap gap-1.5">
                   {display.participants.map((p, i) => (
@@ -537,7 +489,7 @@ export default function MeetingSummaryPanel({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)]">
                   <ListChecks size={16} />
-                  {tf("keyPoints")}
+                  {t("keyPoints")}
                 </div>
                 <ul className="space-y-1">
                   {display.keyPoints.map((point, i) => (
@@ -578,7 +530,7 @@ export default function MeetingSummaryPanel({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)]">
                   <Gavel size={16} />
-                  {tf("decisions")}
+                  {t("decisions")}
                 </div>
                 <div className="space-y-2">
                   {display.decisions.map((d, i) => (
@@ -641,7 +593,7 @@ export default function MeetingSummaryPanel({
               <div className="space-y-1.5">
                 <div className="flex items-center gap-1.5 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)]">
                   <CheckSquare size={16} />
-                  {tf("actionItems")}
+                  {t("actionItems")}
                 </div>
                 <ul className="space-y-1.5">
                   {display.actionItems.map((item, i) => {
@@ -682,7 +634,7 @@ export default function MeetingSummaryPanel({
                                     return { ...prev, actionItems: next };
                                   })
                                 }
-                                placeholder="负责人"
+                                placeholder={t("assigneePlaceholder")}
                                 className={`${fieldControl} flex-1`}
                               />
                               <select
@@ -747,7 +699,7 @@ export default function MeetingSummaryPanel({
                                   ? "bg-[var(--success-soft)] text-[var(--success-fg)] cursor-default"
                                   : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent-fg)]"
                               }`}
-                              title={isAdded ? tf("added") : tf("addToTodos")}
+                              title={isAdded ? t("added") : t("addToTodos")}
                             >
                               {isAdding ? (
                                 <Loader2
@@ -759,7 +711,7 @@ export default function MeetingSummaryPanel({
                               ) : (
                                 <Plus size={14} />
                               )}
-                              {isAdded ? tf("added") : tf("addToTodos")}
+                              {isAdded ? t("added") : t("addToTodos")}
                             </button>
                           </>
                         )}
@@ -773,7 +725,7 @@ export default function MeetingSummaryPanel({
             {/* 无内容提示 */}
             {!canExport && (
               <div className="text-center py-6 text-[length:var(--text-sm)] text-[var(--meta)]">
-                {tf("noResults")}
+                {t("noResults")}
               </div>
             )}
           </div>

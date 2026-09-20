@@ -2606,7 +2606,12 @@
       "noMessages": "暂无消息",
       "error": "操作失败",
       "loadFailed": "加载失败",
-      "cancel": "取消"
+      "cancel": "取消",
+      "roleTaskBreaker": "任务拆解",
+      "roleDocWriter": "文档撰写",
+      "roleFollowUpper": "跟进催办",
+      "roleAnalyst": "分析洞察",
+      "confirmDelete": "确定删除 Agent「{name}」？"
     },
     "aiMeeting": {
       "title": "会议 AI",
@@ -2772,7 +2777,12 @@
       "wakeWord": "唤醒词",
       "save": "保存",
       "saving": "保存中…",
-      "saved": "已保存"
+      "saved": "已保存",
+      "languageZhCN": "中文（简体）",
+      "languageEnUS": "English (US)",
+      "languageJaJP": "日本語",
+      "languageKoKR": "한국어",
+      "defaultWakeWord": "你好小助手"
     },
     "aiTool": {
       "title": "工具面板",
@@ -2891,7 +2901,9 @@
       "noTranscript": "请先输入转写文本",
       "generateFailed": "生成失败，请重试",
       "addFailed": "入库失败，请重试",
-      "emptySummary": "点击「生成纪要」开始"
+      "emptySummary": "点击「生成纪要」开始",
+      "assigneePlaceholder": "负责人",
+      "assigneePrefix": "负责人：{name}"
     },
     "docQa": {
       "title": "文档问答",
@@ -2947,12 +2959,18 @@
       "config": "配置",
       "edges": "流转关系",
       "noEdges": "无流转关系",
+      "edgeLabel": "分支",
       "explanation": "AI 解释",
       "confirmed": "已确认创建",
       "confirm": "确认创建",
       "generateFailed": "生成失败，请重试",
       "confirmFailed": "创建失败，请重试",
-      "error": "操作失败，请重试"
+      "error": "操作失败，请重试",
+      "nodeTypeAction": "操作",
+      "nodeTypeCondition": "条件",
+      "nodeTypeLoop": "循环",
+      "nodeTypeParallel": "并行",
+      "nodeTypeApproval": "审批"
     },
     "aiTools": {
       "title": "AI 工具中心",

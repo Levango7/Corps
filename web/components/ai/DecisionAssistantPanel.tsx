@@ -12,7 +12,7 @@
  *    · 历史决策参考列表
  *
  * 样式全走 design token（var(--*)），lucide-react 图标尺寸 14/16。
- * 错误处理：catch 中用 tf("error")，不泄露 e.message。
+ * 错误处理：catch 中用 t("error")，不泄露 e.message。
  *
  * i18n：useTranslations("ai.decisionAssistant")，引用但不修改 zh.json/en.json。
  * key 暂未在 messages 文件中定义时，tf helper 回退到内置英文默认值，
@@ -67,35 +67,6 @@ interface DecisionAssistantResult {
   historicalRefs: HistoricalRef[];
 }
 
-// ── i18n 回退文案 ──
-// key 暂未在 messages/zh.json|en.json 中定义时使用这些默认值。
-// 任务要求引用 ai.decisionAssistant.* key 但不修改 messages 文件，
-// tf helper 通过 t.has() 检测 key 是否存在，不存在则回退。
-
-const FALLBACK_TEXT: Record<string, string> = {
-  title: "决策辅助",
-  questionLabel: "决策问题",
-  questionPlaceholder: "输入你的决策问题，如「应该选 A 方案还是 B 方案」",
-  contextLabel: "补充背景",
-  contextPlaceholder: "可选：补充背景信息…",
-  analyze: "分析",
-  analyzing: "分析中…",
-  error: "操作失败，请重试",
-  noQuestion: "请先输入决策问题",
-  options: "可选方案",
-  recommendation: "推荐方案",
-  recommendationReason: "推荐理由",
-  pros: "优势",
-  cons: "劣势",
-  risks: "风险",
-  historicalRefs: "历史参考",
-  noHistoricalRefs: "暂无相关历史决策",
-  noResults: "暂无分析结果",
-  emptyHint: "输入决策问题后点击「分析」",
-  analyzeFailed: "分析失败，请重试",
-  optionLabel: "方案",
-  recommended: "推荐",
-};
 
 // ── 样式常量 ──
 
@@ -122,24 +93,6 @@ export default function DecisionAssistantPanel({
   const t = useTranslations("ai.decisionAssistant");
   const { toast } = useToast();
 
-  /**
-   * 带回退的翻译函数。
-   *
-   * next-intl v4 在 key 不存在时开发模式 console.error、生产模式抛 IntlError。
-   * 本组件引用的 ai.decisionAssistant.* key 可能尚未添加到 messages 文件，
-   * 故用 t.has() 检测后回退到 FALLBACK_TEXT，保证渲染不中断。
-   */
-  const tf = useCallback(
-    (key: string): string => {
-      try {
-        if (t.has(key)) return t(key);
-      } catch {
-        // t.has 抛异常时走回退
-      }
-      return FALLBACK_TEXT[key] ?? key;
-    },
-    [t],
-  );
 
   // ── 状态 ──
 
@@ -169,17 +122,17 @@ export default function DecisionAssistantPanel({
       );
       setResult(data);
       if (data.options.length === 0) {
-        toast("warning", tf("noResults"));
+        toast("warning", t("noResults"));
       }
     } catch (e) {
       if (process.env.NODE_ENV === "development")
         console.error("[DecisionAssistantPanel] analyze error:", e);
-      const msg = e instanceof ApiError ? e.message : tf("analyzeFailed");
+      const msg = e instanceof ApiError ? e.message : t("analyzeFailed");
       setError(msg);
     } finally {
       setAnalyzing(false);
     }
-  }, [analyzing, question, context, wid, toast, tf]);
+  }, [analyzing, question, context, wid, toast]);
 
   // ── 推荐方案索引 ──
   const recommendedIndex = result?.recommendation.optionIndex ?? -1;
@@ -187,13 +140,13 @@ export default function DecisionAssistantPanel({
   return (
     <div
       className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]"
-      aria-label={tf("title")}
+      aria-label={t("title")}
     >
       {/* ── 头部 ── */}
       <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
         <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <Lightbulb size={16} className="text-[var(--accent)]" />
-          {tf("title")}
+          {t("title")}
         </h2>
       </header>
 
@@ -221,36 +174,36 @@ export default function DecisionAssistantPanel({
             className="block text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]"
             htmlFor="decision-question"
           >
-            {tf("questionLabel")}
+            {t("questionLabel")}
           </label>
           <textarea
             id="decision-question"
             value={question}
             onChange={(e) => setQuestion(e.target.value)}
-            placeholder={tf("questionPlaceholder")}
+            placeholder={t("questionPlaceholder")}
             maxLength={2000}
             rows={3}
             disabled={analyzing}
             className={`${fieldControl} resize-y min-h-[80px] leading-relaxed disabled:opacity-60`}
-            aria-label={tf("questionLabel")}
+            aria-label={t("questionLabel")}
           />
           {/* 补充背景（可选） */}
           <label
             className="block text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--meta)]"
             htmlFor="decision-context"
           >
-            {tf("contextLabel")}
+            {t("contextLabel")}
           </label>
           <input
             id="decision-context"
             type="text"
             value={context}
             onChange={(e) => setContext(e.target.value)}
-            placeholder={tf("contextPlaceholder")}
+            placeholder={t("contextPlaceholder")}
             maxLength={2000}
             disabled={analyzing}
             className={`${fieldControl} disabled:opacity-60`}
-            aria-label={tf("contextLabel")}
+            aria-label={t("contextLabel")}
           />
           {/* 分析按钮 */}
           <div className="flex items-center gap-2">
@@ -265,11 +218,11 @@ export default function DecisionAssistantPanel({
               ) : (
                 <Sparkles size={16} />
               )}
-              {analyzing ? tf("analyzing") : tf("analyze")}
+              {analyzing ? t("analyzing") : t("analyze")}
             </button>
             {!question.trim() && (
               <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                {tf("noQuestion")}
+                {t("noQuestion")}
               </span>
             )}
           </div>
@@ -282,7 +235,7 @@ export default function DecisionAssistantPanel({
               size={16}
               className="animate-spin mr-2 motion-reduce:animate-none"
             />
-            {tf("analyzing")}
+            {t("analyzing")}
           </div>
         )}
 
@@ -290,7 +243,7 @@ export default function DecisionAssistantPanel({
         {!analyzing && !result && (
           <div className="flex flex-col items-center justify-center py-12 text-[var(--muted)] text-[length:var(--text-sm)] gap-2">
             <Lightbulb size={32} className="opacity-40" />
-            <p>{tf("emptyHint")}</p>
+            <p>{t("emptyHint")}</p>
           </div>
         )}
 
@@ -302,7 +255,7 @@ export default function DecisionAssistantPanel({
               <div className="space-y-[var(--space-2)]">
                 <h3 className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                   <Sparkles size={14} className="text-[var(--accent)]" />
-                  {tf("options")}
+                  {t("options")}
                 </h3>
                 <div className="space-y-[var(--space-3)]">
                   {result.options.map((option, index) => {
@@ -320,14 +273,14 @@ export default function DecisionAssistantPanel({
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                             <span className="text-[var(--meta)]">
-                              {tf("optionLabel")} {index + 1}
+                              {t("optionLabel")} {index + 1}
                             </span>
                             {option.title}
                           </h4>
                           {isRecommended && (
                             <span className="inline-flex items-center gap-1 rounded-[var(--radius-sm)] bg-[var(--accent)] px-1.5 py-0.5 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)]">
                               <Award size={14} />
-                              {tf("recommended")}
+                              {t("recommended")}
                             </span>
                           )}
                         </div>
@@ -342,7 +295,7 @@ export default function DecisionAssistantPanel({
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)]">
                               <ThumbsUp size={14} />
-                              {tf("pros")}
+                              {t("pros")}
                             </div>
                             <ul className="space-y-0.5 pl-5">
                               {option.pros.map((pro, i) => (
@@ -365,7 +318,7 @@ export default function DecisionAssistantPanel({
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                               <ThumbsDown size={14} />
-                              {tf("cons")}
+                              {t("cons")}
                             </div>
                             <ul className="space-y-0.5 pl-5">
                               {option.cons.map((con, i) => (
@@ -388,7 +341,7 @@ export default function DecisionAssistantPanel({
                           <div className="space-y-1">
                             <div className="flex items-center gap-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--danger-fg)]">
                               <AlertTriangle size={14} />
-                              {tf("risks")}
+                              {t("risks")}
                             </div>
                             <ul className="space-y-0.5 pl-5">
                               {option.risks.map((risk, i) => (
@@ -418,7 +371,7 @@ export default function DecisionAssistantPanel({
               <div className="rounded-[var(--radius-md)] border border-[var(--accent)] bg-[var(--accent-soft)] p-[var(--space-3)] space-y-1">
                 <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--accent-fg)]">
                   <Award size={16} />
-                  {tf("recommendationReason")}
+                  {t("recommendationReason")}
                 </div>
                 <p className="text-[length:var(--text-sm)] leading-relaxed text-[var(--fg)]">
                   {result.recommendation.reason}
@@ -430,11 +383,11 @@ export default function DecisionAssistantPanel({
             <div className="space-y-[var(--space-2)]">
               <h3 className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <History size={14} className="text-[var(--accent)]" />
-                {tf("historicalRefs")}
+                {t("historicalRefs")}
               </h3>
               {result.historicalRefs.length === 0 ? (
                 <p className="text-[length:var(--text-xs)] text-[var(--meta)] py-2">
-                  {tf("noHistoricalRefs")}
+                  {t("noHistoricalRefs")}
                 </p>
               ) : (
                 <ul className="space-y-[var(--space-2)]">

@@ -11,7 +11,7 @@
  *  - 确认创建按钮（toast 反馈，实际持久化由上层接入）
  *
  * 样式全走 design token（var(--*)），lucide-react 图标尺寸 14/16。
- * 错误处理：catch 中用 tf("error")，不泄露 e.message。
+ * 错误处理：catch 中用 t("error")，不泄露 e.message。
  *
  * i18n：useTranslations("ai.workflowOrchestrator")，引用但不修改 zh.json/en.json。
  * key 暂未在 messages 文件中定义时，tf helper 回退到内置英文默认值，
@@ -73,41 +73,6 @@ interface WorkflowDefinition {
   explanation: string;
 }
 
-// ── i18n 回退文案 ──
-// key 暂未在 messages/zh.json|en.json 中定义时使用这些默认值。
-// 任务要求引用 ai.workflowOrchestrator.* key 但不修改 messages 文件，
-// tf helper 通过 t.has() 检测 key 是否存在，不存在则回退。
-
-const FALLBACK_TEXT: Record<string, string> = {
-  title: "工作流编排",
-  descriptionLabel: "描述你想要的工作流",
-  descriptionPlaceholder:
-    "用自然语言描述…例如：当任务完成时通知负责人并创建跟进任务",
-  generate: "生成工作流",
-  generating: "生成中…",
-  error: "操作失败，请重试",
-  trigger: "触发器",
-  triggerEvent: "事件",
-  triggerConditions: "条件",
-  noConditions: "无条件",
-  nodes: "节点",
-  edges: "连接关系",
-  explanation: "流程说明",
-  confirm: "确认创建",
-  confirmed: "已确认创建",
-  confirmFailed: "创建失败，请重试",
-  noDescription: "请先输入工作流描述",
-  generateFailed: "生成失败，请重试",
-  emptyWorkflow: "点击「生成工作流」开始",
-  nodeTypeAction: "操作",
-  nodeTypeCondition: "条件",
-  nodeTypeLoop: "循环",
-  nodeTypeParallel: "并行",
-  nodeTypeApproval: "审批",
-  config: "配置",
-  edgeLabel: "分支",
-  noEdges: "无连接关系",
-};
 
 // ── 节点类型样式映射 ──
 
@@ -199,24 +164,6 @@ export default function WorkflowOrchestratorPanel({
   const t = useTranslations("ai.workflowOrchestrator");
   const { toast } = useToast();
 
-  /**
-   * 带回退的翻译函数。
-   *
-   * next-intl v4 在 key 不存在时开发模式 console.error、生产模式抛 IntlError。
-   * 本组件引用的 ai.workflowOrchestrator.* key 可能尚未添加到 messages 文件，
-   * 故用 t.has() 检测后回退到 FALLBACK_TEXT，保证渲染不中断。
-   */
-  const tf = useCallback(
-    (key: string): string => {
-      try {
-        if (t.has(key)) return t(key);
-      } catch {
-        // t.has 抛异常时走回退
-      }
-      return FALLBACK_TEXT[key] ?? key;
-    },
-    [t],
-  );
 
   // ── 状态 ──
 
@@ -249,12 +196,12 @@ export default function WorkflowOrchestratorPanel({
     } catch (e) {
       if (process.env.NODE_ENV === "development")
         console.error("[WorkflowOrchestratorPanel] generate error:", e);
-      const msg = e instanceof ApiError ? e.message : tf("generateFailed");
+      const msg = e instanceof ApiError ? e.message : t("generateFailed");
       setError(msg);
     } finally {
       setGenerating(false);
     }
-  }, [generating, description, wid, tf]);
+  }, [generating, description, wid]);
 
   // ── 确认创建 ──
 
@@ -267,16 +214,16 @@ export default function WorkflowOrchestratorPanel({
       // workflow 定义已校验，可直接用于后续持久化。
       await new Promise((resolve) => setTimeout(resolve, 300)); // 模拟异步
       setConfirmed(true);
-      toast("success", tf("confirmed"));
+      toast("success", t("confirmed"));
     } catch (e) {
       if (process.env.NODE_ENV === "development")
         console.error("[WorkflowOrchestratorPanel] confirm error:", e);
-      const msg = e instanceof ApiError ? e.message : tf("confirmFailed");
+      const msg = e instanceof ApiError ? e.message : t("confirmFailed");
       toast("error", msg);
     } finally {
       setConfirming(false);
     }
-  }, [confirming, confirmed, workflow, toast, tf]);
+  }, [confirming, confirmed, workflow, toast]);
 
   // ── 构建 node id → node 映射（用于 edges 展示节点名）──
 
@@ -288,13 +235,13 @@ export default function WorkflowOrchestratorPanel({
   return (
     <div
       className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]"
-      aria-label={tf("title")}
+      aria-label={t("title")}
     >
       {/* ── 头部 ── */}
       <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
         <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <Workflow size={16} className="text-[var(--accent)]" />
-          {tf("title")}
+          {t("title")}
         </h2>
       </header>
 
@@ -321,11 +268,11 @@ export default function WorkflowOrchestratorPanel({
           <textarea
             value={description}
             onChange={(e) => setDescription(e.target.value)}
-            placeholder={tf("descriptionPlaceholder")}
+            placeholder={t("descriptionPlaceholder")}
             maxLength={2000}
             rows={3}
             className={`${fieldControl} resize-y min-h-[80px] leading-relaxed`}
-            aria-label={tf("descriptionLabel")}
+            aria-label={t("descriptionLabel")}
           />
           <div className="flex items-center gap-2">
             <button
@@ -342,11 +289,11 @@ export default function WorkflowOrchestratorPanel({
               ) : (
                 <Sparkles size={16} />
               )}
-              {generating ? tf("generating") : tf("generate")}
+              {generating ? t("generating") : t("generate")}
             </button>
             {!description.trim() && (
               <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                {tf("noDescription")}
+                {t("noDescription")}
               </span>
             )}
           </div>
@@ -359,7 +306,7 @@ export default function WorkflowOrchestratorPanel({
               size={16}
               className="animate-spin mr-2 motion-reduce:animate-none"
             />
-            {tf("generating")}
+            {t("generating")}
           </div>
         )}
 
@@ -367,7 +314,7 @@ export default function WorkflowOrchestratorPanel({
         {!generating && !workflow && (
           <div className="flex flex-col items-center justify-center py-12 text-[var(--muted)] text-[length:var(--text-sm)] gap-2">
             <Workflow size={32} className="opacity-40" />
-            <p>{tf("emptyWorkflow")}</p>
+            <p>{t("emptyWorkflow")}</p>
           </div>
         )}
 
@@ -378,18 +325,18 @@ export default function WorkflowOrchestratorPanel({
             <div className={card}>
               <div className="flex items-center gap-1.5 mb-2 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <Zap size={14} className="text-[var(--accent)]" />
-                {tf("trigger")}
+                {t("trigger")}
               </div>
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2 text-[length:var(--text-xs)]">
-                  <span className="text-[var(--meta)]">{tf("triggerEvent")}：</span>
+                  <span className="text-[var(--meta)]">{t("triggerEvent")}：</span>
                   <code className="px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--fg)] text-[length:var(--text-xs)]">
                     {workflow.trigger.event}
                   </code>
                 </div>
                 <div className="flex items-start gap-2 text-[length:var(--text-xs)]">
                   <span className="text-[var(--meta)] shrink-0">
-                    {tf("triggerConditions")}：
+                    {t("triggerConditions")}：
                   </span>
                   {workflow.trigger.conditions.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
@@ -403,7 +350,7 @@ export default function WorkflowOrchestratorPanel({
                       ))}
                     </div>
                   ) : (
-                    <span className="text-[var(--meta)]">{tf("noConditions")}</span>
+                    <span className="text-[var(--meta)]">{t("noConditions")}</span>
                   )}
                 </div>
               </div>
@@ -413,7 +360,7 @@ export default function WorkflowOrchestratorPanel({
             <div className={card}>
               <div className="flex items-center gap-1.5 mb-2 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <FileText size={14} className="text-[var(--accent)]" />
-                {tf("nodes")}
+                {t("nodes")}
                 <span className="text-[var(--meta)] font-[weight:var(--weight-normal)]">
                   ({workflow.nodes.length})
                 </span>
@@ -434,7 +381,7 @@ export default function WorkflowOrchestratorPanel({
                         <span
                           className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] ${nodeTypeStyle(node.type)}`}
                         >
-                          {tf(nodeTypeLabelKey(node.type))}
+                          {t(nodeTypeLabelKey(node.type))}
                         </span>
                         {/* 节点名称 */}
                         <span className="text-[length:var(--text-sm)] text-[var(--fg)] font-[weight:var(--weight-medium)]">
@@ -446,7 +393,7 @@ export default function WorkflowOrchestratorPanel({
                         <code>{node.id}</code>
                         {Object.keys(node.config).length > 0 && (
                           <span className="truncate">
-                            {tf("config")}:{" "}
+                            {t("config")}:{" "}
                             {JSON.stringify(node.config).slice(0, 80)}
                             {JSON.stringify(node.config).length > 80 ? "…" : ""}
                           </span>
@@ -462,7 +409,7 @@ export default function WorkflowOrchestratorPanel({
             <div className={card}>
               <div className="flex items-center gap-1.5 mb-2 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <GitBranch size={14} className="text-[var(--accent)]" />
-                {tf("edges")}
+                {t("edges")}
               </div>
               {workflow.edges.length > 0 ? (
                 <div className="space-y-1">
@@ -493,7 +440,7 @@ export default function WorkflowOrchestratorPanel({
                 </div>
               ) : (
                 <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                  {tf("noEdges")}
+                  {t("noEdges")}
                 </p>
               )}
             </div>
@@ -502,7 +449,7 @@ export default function WorkflowOrchestratorPanel({
             <div className={card}>
               <div className="flex items-center gap-1.5 mb-2 text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 <Sparkles size={14} className="text-[var(--accent)]" />
-                {tf("explanation")}
+                {t("explanation")}
               </div>
               <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-relaxed">
                 {workflow.explanation}
@@ -527,7 +474,7 @@ export default function WorkflowOrchestratorPanel({
                 ) : (
                   <Plus size={16} />
                 )}
-                {confirmed ? tf("confirmed") : tf("confirm")}
+                {confirmed ? t("confirmed") : t("confirm")}
               </button>
             </div>
           </div>

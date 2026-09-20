@@ -72,35 +72,6 @@ interface MailAssistantPanelProps {
   wid: string;
 }
 
-// ─── i18n 兜底字典 ───
-
-const FALLBACK: Record<string, string> = {
-  title: "AI 邮件助手",
-  actionDraft: "起草",
-  actionSummarize: "摘要",
-  actionClassify: "分类",
-  actionReply: "回复",
-  contentLabel: "邮件内容",
-  contentPlaceholder: "输入邮件内容或起草需求…",
-  contextLabel: "上下文（可选）",
-  contextPlaceholder: "补充背景信息，如收件人关系、历史往来…",
-  execute: "执行",
-  generating: "生成中…",
-  error: "生成失败，请重试",
-  categoryWork: "工作",
-  categoryNotice: "通知",
-  categoryPersonal: "私人",
-  categoryUrgent: "紧急",
-  categoryOther: "其他",
-  confidence: "置信度",
-  reason: "理由",
-  copy: "复制",
-  copied: "已复制",
-  insertResult: "插入结果",
-  toneFormal: "正式",
-  toneCasual: "随意",
-  toneConcise: "简洁",
-};
 
 // ─── 类别 / 语气视觉映射 ───
 
@@ -180,14 +151,6 @@ const TABS: ReadonlyArray<{
 export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
   const t = useTranslations("ai.mailAssistant");
 
-  /** i18n 兜底：键缺失时 next-intl 返回 key 本身，改用 fallback */
-  const tt = useCallback(
-    (key: string): string => {
-      const v = t(key);
-      return v === key ? (FALLBACK[key] ?? key) : v;
-    },
-    [t],
-  );
 
   const [action, setAction] = useState<MailAction>("draft");
   const [content, setContent] = useState("");
@@ -305,7 +268,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
       if (ac.signal.aborted) return;
       // AbortError 是主动中止，不显示错误状态
       if (e instanceof Error && e.name === "AbortError") return;
-      setError(tt("error"));
+      setError(t("error"));
       // 仅在开发环境输出错误日志，避免生产环境噪音
       if (
         process.env.NODE_ENV === "development" &&
@@ -317,7 +280,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
       if (ac.signal.aborted) return;
       setLoading(false);
     }
-  }, [action, content, context, loading, wid, tt]);
+  }, [action, content, context, loading, wid]);
 
   /** 切换 tab：重置结果区 */
   const handleTabChange = useCallback((next: MailAction) => {
@@ -365,14 +328,14 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
       <header className="flex items-center gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-6)] py-[var(--space-4)]">
         <Mail size={16} className="shrink-0 text-[var(--accent)]" />
         <h1 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-          {tt("title")}
+          {t("title")}
         </h1>
       </header>
 
       {/* Tab 切换栏 */}
       <nav
         className="flex items-center gap-[var(--space-1)] border-b border-[var(--border)] px-[var(--space-6)] py-[var(--space-2)]"
-        aria-label={tt("title")}
+        aria-label={t("title")}
       >
         {TABS.map((tab) => {
           const Icon = tab.icon;
@@ -391,7 +354,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               }
             >
               <Icon size={16} className="shrink-0" />
-              {tt(tab.labelKey)}
+              {t(tab.labelKey)}
             </button>
           );
         })}
@@ -406,7 +369,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               htmlFor="mail-assistant-content"
               className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]"
             >
-              {tt("contentLabel")}
+              {t("contentLabel")}
             </label>
             <textarea
               id="mail-assistant-content"
@@ -414,7 +377,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               onChange={(e) => setContent(e.target.value)}
               maxLength={20_000}
               disabled={loading}
-              placeholder={tt("contentPlaceholder")}
+              placeholder={t("contentPlaceholder")}
               className="min-h-[120px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] leading-[var(--leading-relaxed)] transition-colors duration-[var(--motion-fast)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)] disabled:opacity-50"
             />
           </div>
@@ -425,7 +388,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               htmlFor="mail-assistant-context"
               className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]"
             >
-              {tt("contextLabel")}
+              {t("contextLabel")}
             </label>
             <textarea
               id="mail-assistant-context"
@@ -433,7 +396,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               onChange={(e) => setContext(e.target.value)}
               maxLength={5000}
               disabled={loading}
-              placeholder={tt("contextPlaceholder")}
+              placeholder={t("contextPlaceholder")}
               className="min-h-[60px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[var(--leading-relaxed)] transition-colors duration-[var(--motion-fast)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)] disabled:opacity-50"
             />
           </div>
@@ -449,12 +412,12 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               {loading ? (
                 <>
                   <Loader2 size={16} className="shrink-0 animate-spin motion-reduce:animate-none" />
-                  {tt("generating")}
+                  {t("generating")}
                 </>
               ) : (
                 <>
                   <Mail size={16} className="shrink-0" />
-                  {tt("execute")}
+                  {t("execute")}
                 </>
               )}
             </button>
@@ -481,7 +444,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
             <div className="flex flex-col gap-[var(--space-3)]">
               <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                 <FileText size={16} className="shrink-0 text-[var(--accent)]" />
-                {tt("actionSummarize")}
+                {t("actionSummarize")}
               </div>
               <div className="rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] px-[var(--space-5)] py-[var(--space-4)]">
                 <Markdown source={summary} />
@@ -494,7 +457,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
             <div className="flex flex-col gap-[var(--space-4)]">
               <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                 <Tags size={16} className="shrink-0 text-[var(--accent)]" />
-                {tt("actionClassify")}
+                {t("actionClassify")}
               </div>
 
               {/* 类别标签 */}
@@ -506,13 +469,13 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
                       className="inline-flex items-center rounded-[var(--radius-sm)] px-[var(--space-3)] py-[var(--space-1)] text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)]"
                       style={{ color: visual.color, backgroundColor: visual.bg }}
                     >
-                      {tt(visual.labelKey)}
+                      {t(visual.labelKey)}
                     </span>
 
                     {/* 置信度进度条 */}
                     <div className="flex items-center gap-[var(--space-2)]">
                       <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                        {tt("confidence")}
+                        {t("confidence")}
                       </span>
                       <div
                         className="h-[6px] w-[120px] overflow-hidden rounded-[var(--radius-sm)] bg-[var(--surface-3)]"
@@ -540,7 +503,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
               {classifyResult.reason && (
                 <div className="flex flex-col gap-[var(--space-2)]">
                   <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--meta)]">
-                    {tt("reason")}
+                    {t("reason")}
                   </span>
                   <p className="break-words text-[length:var(--text-sm)] leading-relaxed text-[var(--fg-2)]">
                     {classifyResult.reason}
@@ -555,12 +518,12 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
             <div className="flex flex-col gap-[var(--space-3)]">
               <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                 <Reply size={16} className="shrink-0 text-[var(--accent)]" />
-                {tt("actionReply")}
+                {t("actionReply")}
               </div>
 
               {suggestions.length === 0 ? (
                 <p className="py-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--meta)]">
-                  {tt("error")}
+                  {t("error")}
                 </p>
               ) : (
                 <ul className="flex flex-col gap-[var(--space-2)]">
@@ -576,7 +539,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
                               className="inline-flex items-center rounded-[var(--radius-sm)] px-[var(--space-2)] py-[0.125rem] text-[length:var(--text-xs)] font-[weight:var(--weight-semibold)]"
                               style={{ color: tone.color, backgroundColor: tone.bg }}
                             >
-                              {tt(tone.labelKey)}
+                              {t(tone.labelKey)}
                             </span>
                             <button
                               type="button"
@@ -584,7 +547,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
                                 e.stopPropagation();
                                 void handleCopy(s.text, i);
                               }}
-                              aria-label={isCopied ? tt("copied") : tt("copy")}
+                              aria-label={isCopied ? t("copied") : t("copy")}
                               className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] px-[var(--space-1)] py-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--muted)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-3)] hover:text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                             >
                               {isCopied ? (
@@ -593,7 +556,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
                                 <Copy size={16} className="shrink-0" />
                               )}
                               <span className="sr-only">
-                                {isCopied ? tt("copied") : tt("copy")}
+                                {isCopied ? t("copied") : t("copy")}
                               </span>
                             </button>
                           </div>

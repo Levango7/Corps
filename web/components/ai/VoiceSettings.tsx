@@ -36,10 +36,10 @@ interface VoicePreference {
 
 /** 语言选项 */
 const LANGUAGE_OPTIONS = [
-  { value: "zh-CN", label: "中文（简体）" },
-  { value: "en-US", label: "English (US)" },
-  { value: "ja-JP", label: "日本語" },
-  { value: "ko-KR", label: "한국어" },
+  { value: "zh-CN", labelKey: "languageZhCN" },
+  { value: "en-US", labelKey: "languageEnUS" },
+  { value: "ja-JP", labelKey: "languageJaJP" },
+  { value: "ko-KR", labelKey: "languageKoKR" },
 ] as const;
 
 export function VoiceSettings() {
@@ -54,7 +54,7 @@ export function VoiceSettings() {
   // 编辑中的表单状态（与 pref 分离，保存前不写入 pref）
   const [language, setLanguage] = useState("zh-CN");
   const [speed, setSpeed] = useState(1.0);
-  const [wakeWord, setWakeWord] = useState("你好小助手");
+  const [wakeWord, setWakeWord] = useState("");
   const [enabled, setEnabled] = useState(true);
 
   // AbortController：组件卸载时中止进行中的请求
@@ -76,7 +76,7 @@ export function VoiceSettings() {
       setPref(data);
       setLanguage(data.language);
       setSpeed(data.speed);
-      setWakeWord(data.wakeWord);
+      setWakeWord(data.wakeWord || t("defaultWakeWord"));
       setEnabled(data.enabled);
     } catch (e) {
       if (ac.signal.aborted) return;
@@ -204,7 +204,7 @@ export function VoiceSettings() {
         >
           {LANGUAGE_OPTIONS.map((opt) => (
             <option key={opt.value} value={opt.value}>
-              {opt.label}
+              {t(opt.labelKey)}
             </option>
           ))}
         </select>

@@ -2606,7 +2606,12 @@
       "noMessages": "No Messages",
       "error": "Operation failed",
       "loadFailed": "Load failed",
-      "cancel": "Cancel"
+      "cancel": "Cancel",
+      "roleTaskBreaker": "Task Breakdown",
+      "roleDocWriter": "Document Writing",
+      "roleFollowUpper": "Follow-up",
+      "roleAnalyst": "Analysis",
+      "confirmDelete": "Are you sure you want to delete Agent \"{name}\"?"
     },
     "aiMeeting": {
       "title": "Meeting AI",
@@ -2772,7 +2777,12 @@
       "wakeWord": "Wake Word",
       "save": "Save",
       "saving": "Saving…",
-      "saved": "Saved"
+      "saved": "Saved",
+      "languageZhCN": "Chinese (Simplified)",
+      "languageEnUS": "English (US)",
+      "languageJaJP": "Japanese",
+      "languageKoKR": "Korean",
+      "defaultWakeWord": "Hey Assistant"
     },
     "aiTool": {
       "title": "Tool Panel",
@@ -2891,7 +2901,9 @@
       "noTranscript": "Please enter transcript text first",
       "generateFailed": "Generation failed, please retry",
       "addFailed": "Failed to add, please retry",
-      "emptySummary": "Click \"Generate Summary\" to start"
+      "emptySummary": "Click \"Generate Summary\" to start",
+      "assigneePlaceholder": "Assignee",
+      "assigneePrefix": "Assignee: {name}"
     },
     "docQa": {
       "title": "Document Q&A",
@@ -2947,12 +2959,18 @@
       "config": "Config",
       "edges": "Transitions",
       "noEdges": "No transitions",
+      "edgeLabel": "Branch",
       "explanation": "AI Explanation",
       "confirmed": "Workflow created",
       "confirm": "Confirm & Create",
       "generateFailed": "Generation failed, please retry",
       "confirmFailed": "Creation failed, please retry",
-      "error": "Operation failed, please retry"
+      "error": "Operation failed, please retry",
+      "nodeTypeAction": "Action",
+      "nodeTypeCondition": "Condition",
+      "nodeTypeLoop": "Loop",
+      "nodeTypeParallel": "Parallel",
+      "nodeTypeApproval": "Approval"
     },
     "aiTools": {
       "title": "AI Tools",

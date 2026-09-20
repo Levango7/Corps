@@ -31,22 +31,6 @@ interface AnnouncementDraftPanelProps {
 /** 组件阶段 */
 type Phase = "idle" | "streaming" | "done";
 
-/** 本地 fallback 文案（i18n 键 ai.announcementDraft.* 尚未入库时兜底） */
-const FALLBACK: Record<string, string> = {
-  title: "AI 公告起草",
-  topicPlaceholder: "输入公告主题（可选）",
-  generate: "生成草稿",
-  generating: "生成中…",
-  preview: "预览",
-  edit: "编辑",
-  save: "保存为公告",
-  saving: "保存中…",
-  saved: "已保存",
-  saveFailed: "保存失败，请重试",
-  generateFailed: "生成失败，请重试",
-  empty: "输入主题后点击「生成」，AI 将基于工作区近期进展起草公告。",
-  announcementTitle: "AI 起草公告",
-};
 
 /**
  * 从生成的 markdown 中提取标题与正文。
@@ -68,14 +52,6 @@ function extractTitleAndContent(markdown: string): { title: string; content: str
 export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
   const t = useTranslations("ai.announcementDraft");
 
-  /** i18n 兜底：键缺失时 next-intl 返回 key 本身，改用 fallback */
-  const tt = useCallback(
-    (key: string): string => {
-      const v = t(key);
-      return v === key ? (FALLBACK[key] ?? key) : v;
-    },
-    [t],
-  );
 
   const [topic, setTopic] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
@@ -123,12 +99,12 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
     } catch (e) {
       // abort 不视为错误
       if ((e as Error).name === "AbortError") return;
-      setError(tt("generateFailed"));
+      setError(t("generateFailed"));
       setPhase("idle");
     } finally {
       if (abortRef.current === ac) abortRef.current = null;
     }
-  }, [wid, topic, tt]);
+  }, [wid, topic]);
 
   /** 保存为公告：POST /api/v1/workspaces/{wid}/announcements */
   const handleSave = useCallback(async () => {
@@ -138,7 +114,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
     try {
       // 从 markdown 提取标题（# 标题）与正文；无标题行时用默认标题兜底
       const { title: extracted, content: body } = extractTitleAndContent(content);
-      const title = extracted || tt("announcementTitle");
+      const title = extracted || t("announcementTitle");
       const announcementContent = body || content;
 
       await api(`/api/v1/workspaces/${wid}/announcements`, {
@@ -147,11 +123,11 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
       });
       setSaved(true);
     } catch {
-      setError(tt("saveFailed"));
+      setError(t("saveFailed"));
     } finally {
       setSaving(false);
     }
-  }, [content, saving, wid, tt]);
+  }, [content, saving, wid]);
 
   const isStreaming = phase === "streaming";
   const hasContent = phase === "done" && content.length > 0;
@@ -163,7 +139,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
         <div className="flex items-center gap-[var(--space-2)]">
           <Megaphone size={16} className="text-[var(--accent)]" />
           <h1 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-            {tt("title")}
+            {t("title")}
           </h1>
         </div>
 
@@ -175,8 +151,8 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
             onChange={(e) => setTopic(e.target.value)}
             maxLength={500}
             disabled={isStreaming}
-            placeholder={tt("topicPlaceholder")}
-            aria-label={tt("topicPlaceholder")}
+            placeholder={t("topicPlaceholder")}
+            aria-label={t("topicPlaceholder")}
             className="w-64 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)] disabled:opacity-50"
           />
 
@@ -190,12 +166,12 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
             {isStreaming ? (
               <>
                 <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
-                {tt("generating")}
+                {t("generating")}
               </>
             ) : (
               <>
                 <Sparkles size={14} />
-                {tt("generate")}
+                {t("generate")}
               </>
             )}
           </button>
@@ -208,7 +184,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
           <div className="flex h-full flex-col items-center justify-center gap-[var(--space-3)] text-center">
             <Sparkles size={32} className="text-[var(--meta)]" />
             <p className="max-w-md text-[length:var(--text-sm)] text-[var(--meta)]">
-              {tt("empty")}
+              {t("empty")}
             </p>
           </div>
         )}
@@ -230,7 +206,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
                 className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] disabled:opacity-40"
               >
                 <Eye size={14} />
-                {tt("preview")}
+                {t("preview")}
               </button>
               <button
                 type="button"
@@ -239,7 +215,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
                 className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] disabled:opacity-40"
               >
                 <Edit3 size={14} />
-                {tt("edit")}
+                {t("edit")}
               </button>
             </div>
 
@@ -252,7 +228,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
                   setSaved(false);
                 }}
                 className="min-h-[400px] w-full resize-y rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-4)] py-[var(--space-3)] font-[family-name:var(--font-mono)] text-[length:var(--text-sm)] text-[var(--fg)] leading-[var(--leading-relaxed)] transition-colors duration-[var(--motion-fast)] focus:border-[var(--accent)] focus:outline-none focus:ring-2 focus:ring-[var(--accent-ring)]"
-                aria-label={tt("edit")}
+                aria-label={t("edit")}
               />
             ) : (
               <div className="rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] px-[var(--space-5)] py-[var(--space-4)]">
@@ -282,7 +258,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
         <footer className="flex items-center justify-end gap-[var(--space-3)] border-t border-[var(--border)] px-[var(--space-6)] py-[var(--space-3)]">
           {saved && (
             <span className="text-[length:var(--text-xs)] text-[var(--success)]">
-              {tt("saved")}
+              {t("saved")}
             </span>
           )}
           <button
@@ -294,12 +270,12 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
             {saving ? (
               <>
                 <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
-                {tt("saving")}
+                {t("saving")}
               </>
             ) : (
               <>
                 <Save size={14} />
-                {tt("save")}
+                {t("save")}
               </>
             )}
           </button>

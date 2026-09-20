@@ -67,10 +67,10 @@ interface CoordinationResult {
 
 /** 合法角色枚举 */
 const ROLE_OPTIONS = [
-  { value: "task_breaker", label: "任务拆解" },
-  { value: "doc_writer", label: "文档撰写" },
-  { value: "follow_upper", label: "跟进催办" },
-  { value: "analyst", label: "分析洞察" },
+  { value: "task_breaker", labelKey: "roleTaskBreaker" },
+  { value: "doc_writer", labelKey: "roleDocWriter" },
+  { value: "follow_upper", labelKey: "roleFollowUpper" },
+  { value: "analyst", labelKey: "roleAnalyst" },
 ] as const;
 
 /** 合法模型枚举 */
@@ -293,7 +293,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
   /** 删除当前 Agent */
   async function deleteAgent() {
     if (!selectedId) return;
-    if (!window.confirm(`确定删除 Agent「${formData.name}」？`)) return;
+    if (!window.confirm(t("confirmDelete", { name: formData.name }))) return;
 
     try {
       await api(
@@ -508,7 +508,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                     >
                       {ROLE_OPTIONS.map((opt) => (
                         <option key={opt.value} value={opt.value}>
-                          {opt.label}
+                          {t(opt.labelKey)}
                         </option>
                       ))}
                     </select>
@@ -637,7 +637,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                       onClick={cancelEdit}
                       className="inline-flex items-center gap-1.5 h-8 px-3 border border-[var(--border)] text-[var(--fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                     >
-                      {t("cancel") ?? "取消"}
+                      {t("cancel")}
                     </button>
                     <button
                       type="button"
@@ -701,7 +701,11 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                       <span className="ml-1.5 text-[var(--fg)]">
                         {ROLE_OPTIONS.find(
                           (r) => r.value === selectedAgent.role,
-                        )?.label ?? selectedAgent.role}
+                        )?.labelKey
+                          ? t(ROLE_OPTIONS.find(
+                              (r) => r.value === selectedAgent.role,
+                            )!.labelKey)
+                          : selectedAgent.role}
                       </span>
                     </div>
                     <div>
