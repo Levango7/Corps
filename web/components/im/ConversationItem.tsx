@@ -13,11 +13,14 @@
  *
  * 所有样式走 design token（var(--*)），无裸 hex。
  * lucide-react 图标尺寸用 14/16（项目约定）。
+ *
+ * 拆分说明：ConversationItem 保持 client component（被 ConversationList client 引用），
+ * onClick 交互逻辑委托给 ConversationItemClient 子组件。
  */
 
-import { memo } from "react";
 import { useTranslations, useLocale } from "next-intl";
 import type { Conversation } from "./types";
+import { ConversationItemClient } from "./ConversationItemClient";
 
 /** 消息预览最大长度 */
 const PREVIEW_MAX_LENGTH = 30;
@@ -73,7 +76,7 @@ function getInitial(name: string | null): string {
   return trimmed[0].toUpperCase();
 }
 
-function ConversationItemImpl({
+export function ConversationItem({
   conversation,
   active,
   currentUserId,
@@ -116,69 +119,19 @@ function ConversationItemImpl({
   const unread = conversation.unreadCount ?? 0;
 
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(conversation.id)}
-      aria-current={active ? "true" : undefined}
-      className={`w-full flex items-center gap-[var(--space-3)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] text-left transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2 ${
-        active
-          ? "bg-[var(--accent-soft)] text-[var(--fg)]"
-          : "hover:bg-[var(--surface-2)] text-[var(--fg)]"
-      }`}
-    >
-      {/* 头像 */}
-      <div className="relative shrink-0 w-9 h-9 rounded-full bg-[var(--surface-3)] text-[var(--muted)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] overflow-hidden">
-        {avatarUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="w-full h-full object-cover"
-          />
-        ) : (
-          initial
-        )}
-        {/* 在线状态绿点（仅单聊且对方在线时显示） */}
-        {isOnline && (
-          <span
-            aria-label={tChat("online")}
-            className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-[var(--success)] border-2 border-[var(--surface)]"
-          />
-        )}
-      </div>
-
-      {/* 主体 */}
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center justify-between gap-[var(--space-2)]">
-          {/* 名称 */}
-          <span
-            className="truncate text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]"
-            title={displayName}
-          >
-            {displayName}
-          </span>
-          {/* 时间 */}
-          {timeStr && (
-            <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)]">
-              {timeStr}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center justify-between gap-[var(--space-2)] mt-0.5">
-          {/* 最后消息预览 */}
-          <span className="truncate text-[length:var(--text-xs)] text-[var(--muted)]">
-            {preview || tChat("noMessages")}
-          </span>
-          {/* 未读 badge */}
-          {unread > 0 && (
-            <span className="shrink-0 inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-[var(--danger)] text-[var(--on-accent)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] leading-none">
-              {unread > 99 ? "99+" : unread}
-            </span>
-          )}
-        </div>
-      </div>
-    </button>
+    <ConversationItemClient
+      conversationId={conversation.id}
+      active={active}
+      displayName={displayName}
+      avatarUrl={avatarUrl}
+      initial={initial}
+      preview={preview}
+      timeStr={timeStr}
+      unread={unread}
+      isOnline={isOnline}
+      onlineLabel={tChat("online")}
+      noMessagesLabel={tChat("noMessages")}
+      onSelect={onSelect}
+    />
   );
 }
-
-export const ConversationItem = memo(ConversationItemImpl);
