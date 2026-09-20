@@ -45,9 +45,9 @@ export function aiNotConfiguredResponse(req: NextRequest): NextResponse {
   );
 }
 
-/** 检查 AI 服务是否已配置（DEEPSEEK_API_KEY 存在且非空） */
+/** 检查 AI 服务是否已配置（DEEPSEEK_API_KEY 或 OPENAI_API_KEY 任一存在且非空） */
 export function isAiConfigured(): boolean {
-  return !!process.env.DEEPSEEK_API_KEY;
+  return !!process.env.DEEPSEEK_API_KEY || !!process.env.OPENAI_API_KEY;
 }
 /**
  * 获取当前用户 ID + 工作区 ID（用于 AI 使用量跟踪）。

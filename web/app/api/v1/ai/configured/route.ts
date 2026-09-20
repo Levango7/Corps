@@ -7,15 +7,15 @@
 // 仅返回布尔值，不泄露密钥；仍要求认证以避免匿名探测。
 
 import { NextRequest, NextResponse } from "next/server";
-import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse, isAiConfigured } from "@/lib/ai/shared";
 import { apiMsg } from "@/lib/api-messages";
 
 export async function GET(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
-  // isAiConfigured 仅读取 process.env.DEEPSEEK_API_KEY 是否存在，无 IO
-  const configured = !!process.env.DEEPSEEK_API_KEY;
+  // isAiConfigured 检查 DEEPSEEK_API_KEY 或 OPENAI_API_KEY 是否存在，无 IO
+  const configured = isAiConfigured();
   return NextResponse.json(
     { code: 200, message: apiMsg(req, "ok"), data: { configured } },
     { status: 200 },

@@ -21,6 +21,7 @@ const envSchema = z.object({
 
   // 可选变量
   DEEPSEEK_API_KEY: z.string().optional(),
+  OPENAI_API_KEY: z.string().optional(),
   STRIPE_SECRET_KEY: z.string().optional(),
   STRIPE_WEBHOOK_SECRET: z.string().optional(),
   REDIS_URL: z.string().optional(),
