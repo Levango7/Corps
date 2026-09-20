@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Office 文件预览组件（降级方案）
  *
@@ -12,15 +10,15 @@
  */
 
 import { Download } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export interface OfficePreviewProps {
   src: string;
   fileType: string;
 }
 
-export function OfficePreview({ src, fileType }: OfficePreviewProps) {
-  const t = useTranslations("files.officePreview");
+export async function OfficePreview({ src, fileType }: OfficePreviewProps) {
+  const t = await getTranslations("files.officePreview");
   const label = fileType.toUpperCase().replace(/^\./, "");
 
   return (

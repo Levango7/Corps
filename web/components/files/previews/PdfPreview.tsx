@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * PDF 预览组件
  *
@@ -10,14 +8,14 @@
  * 所有样式走 design token（var(--*)），无裸 hex。
  */
 
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export interface PdfPreviewProps {
   src: string;
 }
 
-export function PdfPreview({ src }: PdfPreviewProps) {
-  const t = useTranslations("files.pdfPreview");
+export async function PdfPreview({ src }: PdfPreviewProps) {
+  const t = await getTranslations("files.pdfPreview");
   return (
     <iframe
       src={src}

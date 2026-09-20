@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * 审批流程图可视化组件。
  *
@@ -14,7 +12,7 @@
  */
 
 import { ArrowRight, CheckCircle2, XCircle, Clock } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export interface ApprovalFlowNode {
   name: string;
@@ -34,12 +32,12 @@ interface ApprovalFlowDiagramProps {
   status: string;
 }
 
-export function ApprovalFlowDiagram({
+export async function ApprovalFlowDiagram({
   nodes,
   currentNode,
   status,
 }: ApprovalFlowDiagramProps) {
-  const t = useTranslations("approval");
+  const t = await getTranslations("approval");
 
   if (!nodes || nodes.length === 0) {
     return (

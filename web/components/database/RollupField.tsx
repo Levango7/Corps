@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * Rollup 聚合结果只读显示控件
  *
@@ -15,13 +13,12 @@
  * ## 样式
  *
  * - 所有颜色使用 design token（var(--*)），禁止裸 hex
- * - "use client" 隔离客户端交互（虽然本组件无交互，保持一致性）
  */
 
 import type { DatabaseField } from "@prisma/client";
 import type { ReactElement } from "react";
 import { Sigma } from "lucide-react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 // ─── Props ──────────────────────────────────────────────────
 
@@ -39,8 +36,8 @@ const containerClass =
 
 // ─── 组件 ───────────────────────────────────────────────────
 
-export function RollupField({ value }: RollupFieldProps): ReactElement {
-  const t = useTranslations("database.rollupField");
+export async function RollupField({ value }: RollupFieldProps): Promise<ReactElement> {
+  const t = await getTranslations("database.rollupField");
 
   // ─── null / undefined：空值 ──────────────────────────────
   if (value === null || value === undefined) {

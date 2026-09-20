@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * 行为统计图表组件（方向 F）
  *
@@ -12,13 +10,13 @@
  * 聚合后传入，或独立调用 getBehaviorStats。
  *
  * 样式：design token（var(--*)），lucide-react 图标 size 14/16
- * i18n：useTranslations("ai.aiPersonalization")
+ * i18n：getTranslations("ai.aiPersonalization")
  * 图表：原生 SVG，不引入外部库
  *
  * 来源：方向 F 任务 5（BehaviorStats.tsx）
  */
 
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 import { BarChart3, CheckCircle2, XCircle } from "lucide-react";
 
 /** 单个能力统计（与 behavior-tracker.ts CapabilityStat 对齐） */
@@ -55,11 +53,11 @@ function truncateCapability(name: string, maxLen = 12): string {
   return name.length > maxLen ? name.slice(0, maxLen) + "…" : name;
 }
 
-export function BehaviorStats({
+export async function BehaviorStats({
   capabilities,
   totalBehaviors,
 }: BehaviorStatsProps) {
-  const t = useTranslations("ai.aiPersonalization");
+  const t = await getTranslations("ai.aiPersonalization");
 
   // 空数据态
   if (capabilities.length === 0) {
