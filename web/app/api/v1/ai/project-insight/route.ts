@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -87,8 +87,8 @@ export async function POST(req: NextRequest) {
     //    buildPrompt 封装上下文聚合（RLS 事务内），让进度阶段有真实时序
     return createAiProgressStream(
       {
-        model: reasonerModel,
-        system: withCoT(buildProjectInsightSystemPrompts()[body.scope], reasonerModel),
+        model: requireReasonerModel(),
+        system: withCoT(buildProjectInsightSystemPrompts()[body.scope], requireReasonerModel()),
         buildPrompt: async () => {
           const context = await runWithWorkspace(
             body.wid,
@@ -101,7 +101,7 @@ export async function POST(req: NextRequest) {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
           capability: "project-insight",
-          model: reasonerModel.modelId,
+          model: requireReasonerModel().modelId,
         },
       },
       {

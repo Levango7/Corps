@@ -7,7 +7,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -132,8 +132,8 @@ export async function POST(req: NextRequest) {
     // 7) 流式生成公告草稿
     const usageStartTime = Date.now();
     const result = streamText({
-      model: defaultModel,
-      system: withCoT(buildAnnouncementSystemPrompt(feedbackExamples), defaultModel),
+      model: requireDefaultModel(),
+      system: withCoT(buildAnnouncementSystemPrompt(feedbackExamples), requireDefaultModel()),
       prompt: buildAnnouncementUserPrompt(context, body.topic),
       onFinish: ({ usage }) => {
         // 流结束后异步记录 usage（fire-and-forget）
@@ -142,7 +142,7 @@ export async function POST(req: NextRequest) {
             workspaceId: body.wid,
             userId: ctx.payload.sub,
             capability: "announcement-draft",
-            model: defaultModel.modelId,
+            model: requireDefaultModel().modelId,
           },
           usageStartTime,
           usage,

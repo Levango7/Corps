@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -261,12 +261,12 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "knowledge-extract",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const llmResult = await generateText({
-          model: defaultModel,
-          system: withCoT(systemPrompt, defaultModel),
+          model: requireDefaultModel(),
+          system: withCoT(systemPrompt, requireDefaultModel()),
           prompt: "请提取上述内容中的知识点并输出 JSON。",
         });
         return {

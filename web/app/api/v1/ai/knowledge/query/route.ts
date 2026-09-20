@@ -11,7 +11,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -150,7 +150,7 @@ export async function POST(req: NextRequest) {
 
 ## 检索到的知识点
 ${contextMarkdown}`,
-      defaultModel,
+      requireDefaultModel(),
     );
 
     // 6.3) AI 生成回答（非流式，withUsageTracking 包装）
@@ -159,11 +159,11 @@ ${contextMarkdown}`,
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "knowledge-query",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const llmResult = await generateText({
-          model: defaultModel,
+          model: requireDefaultModel(),
           system: systemPrompt,
           prompt: body.question,
         });

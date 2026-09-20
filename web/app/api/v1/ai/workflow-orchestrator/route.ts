@@ -17,7 +17,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -264,16 +264,16 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "workflow-orchestrator",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const res = await generateText({
-          model: defaultModel,
+          model: requireDefaultModel(),
           system: withCoT(
             buildWorkflowOrchestratorSystemPrompt(
               body.existingWorkflows as ExistingWorkflowSummary[] | undefined,
             ),
-            defaultModel,
+            requireDefaultModel(),
           ),
           prompt: buildWorkflowOrchestratorUserPrompt(body.description),
         });

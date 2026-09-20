@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -145,7 +145,7 @@ export async function POST(req: NextRequest) {
 
     // 7) 组装新用户消息（包含上下文）
     const userPrompt = buildKnowledgeQaUserPrompt(body.question, context);
-    const systemPrompt = withCoT(buildKnowledgeQaSystemPrompt(), defaultModel);
+    const systemPrompt = withCoT(buildKnowledgeQaSystemPrompt(), requireDefaultModel());
 
     // 8) 多轮对话：加载历史消息
     let historyMessages: { role: "user" | "assistant"; content: string }[] = [];
@@ -196,12 +196,12 @@ export async function POST(req: NextRequest) {
       workspaceId: body.wid,
       userId: ctx.payload.sub,
       capability: "knowledge-qa" as const,
-      model: defaultModel.modelId,
+      model: requireDefaultModel().modelId,
     };
     const result =
       conversationId !== null
         ? streamText({
-            model: defaultModel,
+            model: requireDefaultModel(),
             system: systemPrompt,
             messages: [
               ...historyMessages,
@@ -251,7 +251,7 @@ export async function POST(req: NextRequest) {
             },
           })
         : streamText({
-            model: defaultModel,
+            model: requireDefaultModel(),
             system: systemPrompt,
             prompt: userPrompt,
             onFinish: ({ usage }) => {

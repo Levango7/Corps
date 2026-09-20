@@ -12,7 +12,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -250,10 +250,10 @@ export async function POST(req: NextRequest) {
     // 7) LLM 生成决策分析（非流式，withUsageTracking 包装记录用量）
     const generateFn = async () => {
       const llmResult = await generateText({
-        model: defaultModel,
+        model: requireDefaultModel(),
         system: withCoT(
           buildDecisionAssistantSystemPrompt(workspaceContext),
-          defaultModel,
+          requireDefaultModel(),
         ),
         prompt: buildDecisionAssistantUserPrompt(body.question, body.context),
       });
@@ -273,7 +273,7 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "decision-assistant",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       generateFn,
     );

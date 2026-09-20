@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -95,12 +95,12 @@ export async function POST(req: NextRequest) {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
           capability: "meeting-flow",
-          model: reasonerModel.modelId,
+          model: requireReasonerModel().modelId,
         },
         async () => {
           const res = await generateText({
-            model: reasonerModel,
-            system: withCoT(buildPreMeetingSystemPrompt(), reasonerModel),
+            model: requireReasonerModel(),
+            system: withCoT(buildPreMeetingSystemPrompt(), requireReasonerModel()),
             prompt: buildPreMeetingPrompt({
               agenda: body.agenda!,
               participants: body.participants,
@@ -159,13 +159,13 @@ export async function POST(req: NextRequest) {
       {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
-        capability: "meeting-flow",
-        model: defaultModel.modelId,
+          capability: "meeting-flow",
+          model: requireDefaultModel().modelId,
       },
       async () => {
         const res = await generateText({
-          model: defaultModel,
-          system: withCoT(buildPostMeetingSystemPrompt(), defaultModel),
+            model: requireDefaultModel(),
+            system: withCoT(buildPostMeetingSystemPrompt(), requireDefaultModel()),
           prompt: buildPostMeetingPrompt(body.transcript!),
         });
         return {

@@ -11,8 +11,8 @@
 
 import { generateText } from "ai";
 import {
-  defaultModel,
-  reasonerModel,
+  requireDefaultModel,
+  requireReasonerModel,
   withCoT,
   createAbortTimeout,
   DEFAULT_TIMEOUT_MS,
@@ -151,11 +151,11 @@ knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_a
         workspaceId,
         userId,
         capability: "assistant-recognize-intent",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const r = await generateText({
-          model: defaultModel,
+          model: requireDefaultModel(),
           system: systemPrompt,
           prompt: message,
           abortSignal: signal,
@@ -210,7 +210,7 @@ export async function runAssistant(
   );
 
   // 按能力选择模型 + 超时（推理模型 60s，普通模型 30s）
-  const model = needsReasoner(capabilityId) ? reasonerModel : defaultModel;
+  const model = needsReasoner(capabilityId) ? requireReasonerModel() : requireDefaultModel();
   const timeoutMs = needsReasoner(capabilityId)
     ? REASONER_TIMEOUT_MS
     : DEFAULT_TIMEOUT_MS;

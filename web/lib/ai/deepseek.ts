@@ -1,5 +1,5 @@
 import { createOpenAI } from "@ai-sdk/openai";
-import type { LanguageModel } from "ai";
+import type { LanguageModelV4 } from "@ai-sdk/provider";
 import { logger } from "@/lib/logger";
 
 /**
@@ -70,7 +70,7 @@ function isOpenAIConfigured(): boolean {
  *
  * 调用方应在 isAiConfigured() 检查通过后使用，或使用 requireDefaultModel()。
  */
-export function getDefaultModel(): LanguageModel | null {
+export function getDefaultModel(): LanguageModelV4 | null {
   if (isDeepSeekConfigured()) return deepseekDefaultModel;
   if (isOpenAIConfigured()) return fallbackDefaultModel;
   return null;
@@ -81,7 +81,7 @@ export function getDefaultModel(): LanguageModel | null {
  *
  * 调用方应在 isAiConfigured() 检查通过后使用，或使用 requireReasonerModel()。
  */
-export function getReasonerModel(): LanguageModel | null {
+export function getReasonerModel(): LanguageModelV4 | null {
   if (isDeepSeekConfigured()) return deepseekReasonerModel;
   if (isOpenAIConfigured()) return fallbackReasonerModel;
   return null;
@@ -92,7 +92,7 @@ export function getReasonerModel(): LanguageModel | null {
  *
  * 适用于在 isAiConfigured() 检查之后直接使用，避免 null 处理样板代码。
  */
-export function requireDefaultModel(): LanguageModel {
+export function requireDefaultModel(): LanguageModelV4 {
   const model = getDefaultModel();
   if (!model) throw new Error("No AI provider configured (DEEPSEEK_API_KEY or OPENAI_API_KEY required)");
   return model;
@@ -103,7 +103,7 @@ export function requireDefaultModel(): LanguageModel {
  *
  * 适用于在 isAiConfigured() 检查之后直接使用，避免 null 处理样板代码。
  */
-export function requireReasonerModel(): LanguageModel {
+export function requireReasonerModel(): LanguageModelV4 {
   const model = getReasonerModel();
   if (!model) throw new Error("No AI provider configured (DEEPSEEK_API_KEY or OPENAI_API_KEY required)");
   return model;
@@ -118,7 +118,7 @@ export function requireReasonerModel(): LanguageModel {
  *
  * 通过 modelId 判断：deepseek-reasoner / o3-mini 均为推理模型。
  */
-export function isReasonerModel(model: LanguageModel): boolean {
+export function isReasonerModel(model: LanguageModelV4): boolean {
   return model.modelId.includes("reasoner") || model.modelId.includes("o3");
 }
 
@@ -138,7 +138,7 @@ export function isReasonerModel(model: LanguageModel): boolean {
  */
 export function withCoT(
   systemPrompt: string,
-  model: LanguageModel,
+  model: LanguageModelV4,
 ): string {
   // 推理模型保留 CoT
   if (isReasonerModel(model)) return systemPrompt;

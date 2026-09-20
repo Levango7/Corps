@@ -10,7 +10,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -148,8 +148,8 @@ export async function POST(req: NextRequest) {
     //    阶段 1（聚合审批数据）→ 查询+聚合 → 阶段 2（分析风险）→ 阶段 3（生成建议）→ LLM → 结果 data part
     return createAiJsonProgressStream<ApprovalAdvice>(
       {
-        model: reasonerModel,
-        system: withCoT(buildApprovalAdviceSystemPrompt(), reasonerModel),
+        model: requireReasonerModel(),
+        system: withCoT(buildApprovalAdviceSystemPrompt(), requireReasonerModel()),
         buildPrompt: async () => {
           try {
             const data = await runWithWorkspace(
@@ -247,7 +247,7 @@ export async function POST(req: NextRequest) {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
           capability: "approval-advice",
-          model: reasonerModel.modelId,
+          model: requireReasonerModel().modelId,
         },
       },
       {

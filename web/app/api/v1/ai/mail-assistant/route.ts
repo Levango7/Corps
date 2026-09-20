@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText, generateText } from "ai";
 import { z } from "zod";
-import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -135,16 +135,16 @@ export async function POST(req: NextRequest) {
     if (action === "draft") {
       const usageStartTime = Date.now();
       const result = streamText({
-        model: defaultModel,
-        system: withCoT(buildMailDraftSystemPrompt(), defaultModel),
+        model: requireDefaultModel(),
+        system: withCoT(buildMailDraftSystemPrompt(), requireDefaultModel()),
         prompt: buildMailDraftUserPrompt(content, context),
         onFinish: ({ usage }) => {
           fireRecordUsage(
             {
               workspaceId: body.wid,
               userId: ctx.payload.sub,
-              capability: "mail-assistant-draft",
-              model: defaultModel.modelId,
+          capability: "mail-assistant-draft",
+          model: requireDefaultModel().modelId,
             },
             usageStartTime,
             usage,
@@ -161,12 +161,12 @@ export async function POST(req: NextRequest) {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
           capability: "mail-assistant-summarize",
-          model: defaultModel.modelId,
+          model: requireDefaultModel().modelId,
         },
         async () => {
           const res = await generateText({
-            model: defaultModel,
-            system: withCoT(buildMailSummarizeSystemPrompt(), defaultModel),
+            model: requireDefaultModel(),
+            system: withCoT(buildMailSummarizeSystemPrompt(), requireDefaultModel()),
             prompt: buildMailSummarizeUserPrompt(content),
           });
           return {
@@ -195,12 +195,12 @@ export async function POST(req: NextRequest) {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
           capability: "mail-assistant-classify",
-          model: reasonerModel.modelId,
+          model: requireReasonerModel().modelId,
         },
         async () => {
           const res = await generateText({
-            model: reasonerModel,
-            system: withCoT(buildMailClassifySystemPrompt(), reasonerModel),
+            model: requireReasonerModel(),
+            system: withCoT(buildMailClassifySystemPrompt(), requireReasonerModel()),
             prompt: buildMailClassifyUserPrompt(content),
           });
           return {
@@ -267,13 +267,13 @@ export async function POST(req: NextRequest) {
       {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
-        capability: "mail-assistant-reply",
-        model: defaultModel.modelId,
+          capability: "mail-assistant-reply",
+          model: requireDefaultModel().modelId,
       },
       async () => {
         const res = await generateText({
-          model: defaultModel,
-          system: withCoT(buildMailReplySystemPrompt(), defaultModel),
+          model: requireDefaultModel(),
+          system: withCoT(buildMailReplySystemPrompt(), requireDefaultModel()),
           prompt: buildMailReplyUserPrompt(content, context),
         });
         return {

@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -162,8 +162,8 @@ export async function POST(req: NextRequest) {
   try {
     const generateFn = async () => {
       const llmResult = await generateText({
-        model: reasonerModel,
-        system: withCoT(buildBottleneckSystemPrompt(feedbackExamples), reasonerModel),
+        model: requireReasonerModel(),
+        system: withCoT(buildBottleneckSystemPrompt(feedbackExamples), requireReasonerModel()),
         prompt: buildBottleneckUserPrompt(tasks.map(toBottleneckTask), deps),
       });
       return {
@@ -182,7 +182,7 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "analysis-bottleneck",
-        model: reasonerModel.modelId,
+        model: requireReasonerModel().modelId,
       },
       generateFn,
     );

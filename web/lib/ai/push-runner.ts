@@ -17,7 +17,7 @@
 
 import { generateText } from "ai";
 import type { Prisma } from "@prisma/client";
-import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import { runWithWorkspace } from "@/lib/auth";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
@@ -148,7 +148,7 @@ export async function generatePush(opts: {
 
   const builder = PROMPT_BUILDERS[capability];
   const scopes = SCOPES_BY_CAPABILITY[capability];
-  const model = builder.useReasoner ? reasonerModel : defaultModel;
+  const model = builder.useReasoner ? requireReasonerModel() : requireDefaultModel();
 
   try {
     // 1) 聚合上下文：传了 tx 复用调用方事务；否则用 runWithWorkspace 自建 RLS 事务

@@ -8,7 +8,7 @@
 // - 安全约束：suggestOrchestration 仅"建议"不执行；执行须经用户确认后调用 executeOrchestration
 
 import { generateText } from "ai";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   buildAiContext,
   type AiContextScope,
@@ -270,8 +270,8 @@ export async function suggestOrchestration(
   let llmResult;
   try {
     llmResult = await generateText({
-      model: reasonerModel,
-      system: withCoT(buildOrchestrationSystemPrompt(), reasonerModel),
+      model: requireReasonerModel(),
+      system: withCoT(buildOrchestrationSystemPrompt(), requireReasonerModel()),
       prompt: buildOrchestrationUserPrompt(context, userRequest),
     });
   } catch (e) {

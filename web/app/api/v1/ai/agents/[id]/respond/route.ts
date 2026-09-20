@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateText } from "ai";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -149,7 +149,7 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "agent-respond",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         // 7.1) 查询 Agent
@@ -185,8 +185,8 @@ export async function POST(req: NextRequest) {
         let handoff: string | null = null;
         try {
           const llmResult = await generateText({
-            model: defaultModel,
-            system: withCoT(systemPrompt, defaultModel),
+            model: requireDefaultModel(),
+            system: withCoT(systemPrompt, requireDefaultModel()),
             prompt: `请基于你的角色和专长响应以上消息，返回 JSON。`,
           });
           const parsed = safeParseJson(llmResult.text);

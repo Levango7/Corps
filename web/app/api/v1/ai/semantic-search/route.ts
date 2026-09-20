@@ -10,7 +10,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -163,12 +163,12 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "semantic-search",
-        model: reasonerModel.modelId,
+        model: requireReasonerModel().modelId,
       },
       async () => {
         const res = await generateText({
-          model: reasonerModel,
-          system: withCoT(buildSemanticSearchSystemPrompt(), reasonerModel),
+          model: requireReasonerModel(),
+          system: withCoT(buildSemanticSearchSystemPrompt(), requireReasonerModel()),
           prompt: buildSemanticSearchUserPrompt(body.query),
         });
         return {

@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -118,12 +118,12 @@ export async function POST(req: NextRequest) {
       body.question,
       documents.map((d) => ({ title: d.title, content: d.content })),
     );
-    const systemPrompt = withCoT(buildDocQaSystemPrompt(), reasonerModel);
+    const systemPrompt = withCoT(buildDocQaSystemPrompt(), requireReasonerModel());
 
     // 8) 流式生成回答（reasonerModel 提供更强的推理能力用于文档定位与引用）
     const usageStartTime = Date.now();
     const result = streamText({
-      model: reasonerModel,
+      model: requireReasonerModel(),
       system: systemPrompt,
       prompt: userPrompt,
       onFinish: ({ usage }) => {
@@ -133,7 +133,7 @@ export async function POST(req: NextRequest) {
             workspaceId: body.wid,
             userId: ctx.payload.sub,
             capability: "doc-qa",
-            model: reasonerModel.modelId,
+            model: requireReasonerModel().modelId,
           },
           usageStartTime,
           usage,

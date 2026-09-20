@@ -16,7 +16,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateText } from "ai";
 import { Prisma } from "@prisma/client";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -166,13 +166,13 @@ export async function POST(req: NextRequest) {
         workspaceId: body.workspaceId,
         userId: ctx.payload.sub,
         capability: "voice-command",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         // 6.1) 调用 AI 解析意图
         const res = await generateText({
-          model: defaultModel,
-          system: withCoT(buildVoiceIntentSystemPrompt(), defaultModel),
+          model: requireDefaultModel(),
+          system: withCoT(buildVoiceIntentSystemPrompt(), requireDefaultModel()),
           prompt: buildVoiceIntentPrompt(body.transcript, ""),
         });
         return {

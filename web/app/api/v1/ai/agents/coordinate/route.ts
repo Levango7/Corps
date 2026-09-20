@@ -16,7 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateText } from "ai";
-import { defaultModel, reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "agents-coordinate",
-        model: reasonerModel.modelId,
+        model: requireReasonerModel().modelId,
       },
       async () => {
         // 6.1) 查询启用的 Agent 列表
@@ -235,8 +235,8 @@ export async function POST(req: NextRequest) {
         let assignments: Assignment[] = [];
         try {
           const coordResult = await generateText({
-            model: reasonerModel,
-            system: withCoT(coordinationSystemPrompt, reasonerModel),
+            model: requireReasonerModel(),
+            system: withCoT(coordinationSystemPrompt, requireReasonerModel()),
             prompt: `请分析以上任务并分配给各 Agent，返回 JSON。`,
           });
           const parsed = safeParseJson(coordResult.text);
@@ -273,8 +273,8 @@ export async function POST(req: NextRequest) {
 
           try {
             const agentResult = await generateText({
-              model: defaultModel,
-              system: withCoT(responseSystemPrompt, defaultModel),
+              model: requireDefaultModel(),
+              system: withCoT(responseSystemPrompt, requireDefaultModel()),
               prompt: `请基于你的角色和专长响应以上消息，返回 JSON。`,
             });
             const parsed = safeParseJson(agentResult.text);

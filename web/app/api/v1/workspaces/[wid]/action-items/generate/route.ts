@@ -10,7 +10,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { generateText } from "ai";
-import { defaultModel } from "@/lib/ai/deepseek";
+import { requireDefaultModel } from "@/lib/ai/deepseek";
 import { isAiConfigured, aiNotConfiguredResponse } from "@/lib/ai/shared";
 
 const schema = z.object({
@@ -56,7 +56,7 @@ async function generateActionItems(decisionMarkdown: string): Promise<ParsedActi
 ${decisionMarkdown}`;
 
   const result = await generateText({
-    model: defaultModel,
+    model: requireDefaultModel(),
     prompt,
   });
 

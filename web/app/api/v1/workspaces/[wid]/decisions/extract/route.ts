@@ -10,7 +10,7 @@ import { getWorkspaceContext } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { generateText } from "ai";
-import { reasonerModel } from "@/lib/ai/deepseek";
+import { requireReasonerModel } from "@/lib/ai/deepseek";
 import { isAiConfigured } from "@/lib/ai/shared";
 
 const schema = z.object({
@@ -127,7 +127,7 @@ ${sourceText}`;
 
   // deepseek-reasoner 不支持 system message，用 prompt（等价单条 user message）传入
   const result = await generateText({
-    model: reasonerModel,
+    model: requireReasonerModel(),
     prompt,
   });
 

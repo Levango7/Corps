@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { defaultModel } from "@/lib/ai/deepseek";
+import { requireDefaultModel } from "@/lib/ai/deepseek";
 import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -56,7 +56,7 @@ export async function POST(req: NextRequest) {
   try {
     const usageStartTime = Date.now();
     const result = streamText({
-      model: defaultModel,
+      model: requireDefaultModel(),
       system: buildSystemPrompt(body.targetLang),
       messages: [{ role: "user", content: body.text }],
       onFinish: ({ usage }) => {
@@ -66,7 +66,7 @@ export async function POST(req: NextRequest) {
               workspaceId: authCtx.workspaceId,
               userId: authCtx.userId,
               capability: "translate",
-              model: defaultModel.modelId,
+              model: requireDefaultModel().modelId,
             },
             usageStartTime,
             usage,

@@ -9,7 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -145,8 +145,8 @@ export async function POST(req: NextRequest) {
   try {
     const generateFn = async () => {
       const llmResult = await generateText({
-        model: reasonerModel,
-        system: withCoT(buildBurndownSystemPrompt(feedbackExamples), reasonerModel),
+        model: requireReasonerModel(),
+        system: withCoT(buildBurndownSystemPrompt(feedbackExamples), requireReasonerModel()),
         prompt: buildBurndownUserPrompt(tasks.map(toBurndownTask), period),
       });
       return {
@@ -165,7 +165,7 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "analysis-burndown",
-        model: reasonerModel.modelId,
+        model: requireReasonerModel().modelId,
       },
       generateFn,
     );

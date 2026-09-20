@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
 
   getUserIdAndWorkspaceId,
@@ -116,8 +116,8 @@ export async function POST(req: NextRequest) {
         ? await getFeedbackExamples(authCtx.workspaceId, "task-breakdown", 2)
         : undefined;
       const llmResult = await generateText({
-        model: defaultModel,
-        system: withCoT(buildTaskBreakdownSystemPrompt(feedbackExamples), defaultModel),
+        model: requireDefaultModel(),
+        system: withCoT(buildTaskBreakdownSystemPrompt(feedbackExamples), requireDefaultModel()),
         prompt: buildUserPrompt(body),
       });
       return {
@@ -139,7 +139,7 @@ export async function POST(req: NextRequest) {
               workspaceId: authCtx.workspaceId,
               userId,
               capability: "task-breakdown",
-              model: defaultModel.modelId,
+              model: requireDefaultModel().modelId,
             },
             generateFn,
           )

@@ -19,7 +19,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
-import { reasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -217,7 +217,7 @@ export async function POST(req: NextRequest) {
     // 6) withUsageTracking 包装 AI 调用（reasonerModel，非流式）
     const systemPrompt = withCoT(
       buildMeetingSummarySystemPrompt(),
-      reasonerModel,
+      requireReasonerModel(),
     );
     const userPrompt = buildMeetingSummaryUserPrompt(
       body.transcript,
@@ -229,11 +229,11 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "meeting-summary",
-        model: reasonerModel.modelId,
+        model: requireReasonerModel().modelId,
       },
       async () => {
         const llmResult = await generateText({
-          model: reasonerModel,
+          model: requireReasonerModel(),
           system: systemPrompt,
           prompt: userPrompt,
         });

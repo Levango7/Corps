@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -108,8 +108,8 @@ export async function POST(req: NextRequest) {
     //    阶段 1（聚合数据）→ buildPrompt → 阶段 2（分析）→ 阶段 3（生成）→ LLM 文本流
     return createAiProgressStream(
       {
-        model: defaultModel,
-        system: withCoT(buildDailyReportSystemPrompt(feedbackExamples), defaultModel),
+        model: requireDefaultModel(),
+        system: withCoT(buildDailyReportSystemPrompt(feedbackExamples), requireDefaultModel()),
         buildPrompt: async () => {
           const context = await runWithWorkspace(
             body.wid,
@@ -122,7 +122,7 @@ export async function POST(req: NextRequest) {
           workspaceId: body.wid,
           userId: ctx.payload.sub,
           capability: "daily-report",
-          model: defaultModel.modelId,
+          model: requireDefaultModel().modelId,
         },
       },
       {

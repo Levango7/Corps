@@ -10,7 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { defaultModel, withCoT } from "@/lib/ai/deepseek";
+import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
   getUserId,
   unauthorizedResponse,
@@ -152,12 +152,12 @@ export async function POST(req: NextRequest) {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
         capability: "personalization-generate",
-        model: defaultModel.modelId,
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const res = await generateText({
-          model: defaultModel,
-          system: withCoT(buildPersonalizationSystemPrompt(), defaultModel),
+          model: requireDefaultModel(),
+          system: withCoT(buildPersonalizationSystemPrompt(), requireDefaultModel()),
           prompt: buildPersonalizationPrompt(behaviors, body.type),
         });
         return {
