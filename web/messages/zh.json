@@ -638,8 +638,8 @@
     "comparison": {
       "heading": "功能对比",
       "feature": "功能",
-      "free": "Free",
-      "pro": "Pro"
+      "free": "免费",
+      "pro": "专业版"
     },
     "faq": {
       "heading": "常见问题",
@@ -1388,7 +1388,7 @@
       "owner": "拥有者",
       "admin": "管理员",
       "member": "成员",
-      "viewer": "Viewer"
+      "viewer": "Viewer（只读）"
     },
     "action": {
       "read": "R",
@@ -1804,7 +1804,7 @@
       "typeTask": "任务",
       "typeDocument": "文档",
       "typeMessage": "消息",
-      "typeWiki": "Wiki",
+      "typeWiki": "知识库",
       "typeWhiteboard": "白板",
       "typeForm": "表单",
       "typeMeeting": "会议",

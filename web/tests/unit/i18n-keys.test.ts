@@ -42,6 +42,57 @@ function collectLeafKeys(obj: unknown, prefix = ""): string[] {
   return keys;
 }
 
+/** 递归提取对象的所有叶子 key-value 对，路径用 "." 连接 */
+function collectLeafEntries(obj: unknown, prefix = ""): Record<string, string> {
+  const entries: Record<string, string> = {};
+  if (obj !== null && typeof obj === "object" && !Array.isArray(obj)) {
+    for (const [k, v] of Object.entries(obj as Record<string, unknown>)) {
+      const full = prefix ? `${prefix}.${k}` : k;
+      if (v !== null && typeof v === "object" && !Array.isArray(v)) {
+        Object.assign(entries, collectLeafEntries(v, full));
+      } else {
+        entries[full] = String(v);
+      }
+    }
+  }
+  return entries;
+}
+
+/**
+ * 合理例外：zh 值允许等于 en 值的 key。
+ * 包括：品牌名、技术术语（OKR/Markdown/PDF/Office）、语言自名、
+ * 单字母缩写（R/C/U/D）、符号（—）、URL/邮箱占位符示例、
+ * slug 示例、版本号格式、快捷键符号、版权声明等。
+ */
+const ALLOWED_SAME_VALUE_KEYS = new Set([
+  "nav.menu.okr",
+  "nav.search.shortcut",
+  "pricing.footer.copyright",
+  "languageSwitcher.zh",
+  "languageSwitcher.en",
+  "settings.avatarUrlPlaceholder",
+  "settings.workspaceSlugPlaceholder",
+  "permissions.action.read",
+  "permissions.action.create",
+  "permissions.action.update",
+  "permissions.action.delete",
+  "document.customSlugPlaceholder",
+  "document.customSlugPrefix",
+  "document.versionCompareTitle",
+  "document.commentAnchorPlaceholder",
+  "editor.markdown",
+
+  "database.rollupField.empty",
+  "database.fieldControls.urlPlaceholder",
+  "database.fieldControls.emailPlaceholder",
+  "database.fieldControls.emptyDash",
+  "files.preview.categoryPdf",
+  "files.preview.categoryOffice",
+  "files.filePreview.categoryPdf",
+  "files.filePreview.categoryOffice",
+  "files.filePreview.categoryMarkdown",
+]);
+
 describe("i18n 消息 key 一致性", () => {
   const zh = loadMessages("zh");
   const en = loadMessages("en");
@@ -74,5 +125,21 @@ describe("i18n 消息 key 一致性", () => {
     for (const key of allKeys) {
       expect(key, `非法 i18n key: "${key}"`).toMatch(pattern);
     }
+  });
+
+  it("zh.json 值不应等于 en.json 值（排除合理例外）", () => {
+    const zhEntries = collectLeafEntries(zh);
+    const enEntries = collectLeafEntries(en);
+    const sameValueKeys: string[] = [];
+    for (const key of enKeys) {
+      if (ALLOWED_SAME_VALUE_KEYS.has(key)) continue;
+      if (zhEntries[key] !== undefined && zhEntries[key] === enEntries[key]) {
+        sameValueKeys.push(key);
+      }
+    }
+    expect(
+      sameValueKeys,
+      `zh 值与 en 值相同的 key（未翻译）：\n${sameValueKeys.map((k) => `  ${k} => "${enEntries[k]}"`).join("\n")}`,
+    ).toEqual([]);
   });
 });
