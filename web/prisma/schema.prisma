@@ -165,6 +165,8 @@ model User {
   receivedRemoteControls    RemoteControlSession[] @relation("RemoteControlTarget")
   // Web Push 订阅（浏览器 PushSubscription，用于 AI 推送 Web Push 通知）
   pushSubscriptions         PushSubscription[]
+  // 原生 App 推送 token（FCM/APNs/Huawei Push Kit），用于跨平台统一推送
+  pushTokens                PushToken[]
 
   @@map("users")
 }
@@ -2076,6 +2078,27 @@ model PushSubscription {
   @@unique([userId, endpoint])
   @@index([userId])
   @@map("push_subscriptions")
+}
+
+/// 原生 App 推送 token — 跨平台统一推送（Android FCM / iOS APNs / HarmonyOS Push Kit）
+/// 与 PushSubscription（浏览器 Web Push）正交，覆盖原生客户端推送通道。
+model PushToken {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @map("user_id") @db.Uuid
+  // 推送平台：'android'（FCM）| 'ios'（APNs）| 'harmonyos'（Push Kit）
+  platform  String   @db.VarChar(20)
+  // 设备推送 token（FCM registration token / APNs device token / Huawei push token）
+  token     String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
+
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // 同一用户同一平台同一 token 唯一，防止重复注册
+  @@unique([userId, platform, token])
+  @@index([userId])
+  @@index([token])
+  @@map("push_tokens")
 }
 
 /// 方向 B：知识图谱节点 — 从文档/会议/聊天中提取的知识点
