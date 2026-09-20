@@ -34,6 +34,7 @@ import {
   X,
 } from "lucide-react";
 import dynamic from "next/dynamic";
+import { SafeComponent } from "@/components/SafeComponent";
 
 // P0-2: code splitting — 重型 AI 面板组件改为 dynamic import 懒加载
 const SemanticSearchPanel = dynamic(
@@ -249,22 +250,52 @@ export default function AiToolsPage({
           role="tabpanel"
           className="min-h-0 flex-1 rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border-soft)] p-[var(--space-5)]"
         >
-          {activeTab === "semanticSearch" && <SemanticSearchPanel wid={wid} />}
-          {activeTab === "mailAssistant" && <MailAssistantPanel wid={wid} />}
-          {activeTab === "todoExtract" && (
-            <TodoExtractTabContent
-              wid={wid}
-              open={todoDialogOpen}
-              onOpen={() => setTodoDialogOpen(true)}
-              onClose={() => setTodoDialogOpen(false)}
-              label={tabLabel(TABS[2])}
-            />
+          {activeTab === "semanticSearch" && (
+            <SafeComponent name="语义搜索" fallback={<AiFallback name="语义搜索" />}>
+              <SemanticSearchPanel wid={wid} />
+            </SafeComponent>
           )}
-          {activeTab === "meetingSummary" && <MeetingSummaryPanel wid={wid} />}
-          {activeTab === "docQa" && <DocQaPanel wid={wid} />}
-          {activeTab === "decisionAssistant" && <DecisionAssistantPanel wid={wid} />}
-          {activeTab === "workflowOrchestrator" && <WorkflowOrchestratorPanel wid={wid} />}
-          {activeTab === "aiPush" && <AiPushTabContent wid={wid} />}
+          {activeTab === "mailAssistant" && (
+            <SafeComponent name="邮件助手" fallback={<AiFallback name="邮件助手" />}>
+              <MailAssistantPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "todoExtract" && (
+            <SafeComponent name="待办提取" fallback={<AiFallback name="待办提取" />}>
+              <TodoExtractTabContent
+                wid={wid}
+                open={todoDialogOpen}
+                onOpen={() => setTodoDialogOpen(true)}
+                onClose={() => setTodoDialogOpen(false)}
+                label={tabLabel(TABS[2])}
+              />
+            </SafeComponent>
+          )}
+          {activeTab === "meetingSummary" && (
+            <SafeComponent name="会议纪要" fallback={<AiFallback name="会议纪要" />}>
+              <MeetingSummaryPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "docQa" && (
+            <SafeComponent name="文档问答" fallback={<AiFallback name="文档问答" />}>
+              <DocQaPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "decisionAssistant" && (
+            <SafeComponent name="决策辅助" fallback={<AiFallback name="决策辅助" />}>
+              <DecisionAssistantPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "workflowOrchestrator" && (
+            <SafeComponent name="工作流编排" fallback={<AiFallback name="工作流编排" />}>
+              <WorkflowOrchestratorPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "aiPush" && (
+            <SafeComponent name="AI 推送" fallback={<AiFallback name="AI 推送" />}>
+              <AiPushTabContent wid={wid} />
+            </SafeComponent>
+          )}
         </section>
       </div>
     </main>
@@ -354,6 +385,24 @@ function AiPushTabContent({ wid }: { wid: string }) {
     <div className="grid gap-4 lg:grid-cols-2" style={{ gap: "var(--space-4)" }}>
       <AiPushSettings wid={wid} />
       <AiPushFeed wid={wid} />
+    </div>
+  );
+}
+// ─── AI 面板统一降级 UI ──────────────────────────────────────────────────────────
+
+/** AI 面板崩溃时的统一 fallback：显示"AI 服务暂时不可用"提示 */
+function AiFallback({ name }: { name: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center gap-3 p-8 rounded-[var(--radius-md)] bg-[var(--surface-2)]">
+      <p className="text-sm text-[var(--text-secondary)]">
+        {name} 服务暂时不可用，请重试
+      </p>
+      <button
+        onClick={() => window.location.reload()}
+        className="text-xs text-[var(--accent-fg)] hover:underline"
+      >
+        刷新重试
+      </button>
     </div>
   );
 }

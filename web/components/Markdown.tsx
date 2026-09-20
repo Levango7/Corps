@@ -2,6 +2,7 @@
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Mermaid } from "@/components/Mermaid";
+import { SafeComponent } from "@/components/SafeComponent";
 
 /**
  * 极简 Markdown 渲染器（零依赖，不使用 dangerouslySetInnerHTML）。
@@ -120,7 +121,11 @@ export default function Markdown({ source }: { source: string }) {
       i++; // 跳过收尾 ```
       // mermaid 代码块 → 图表渲染（v0.4.0 队列第 3 项；决策/文档/评论三处通用）
       if (lang === "mermaid" && buf.length > 0) {
-        blocks.push(<Mermaid key={key++} code={buf.join("\n")} />);
+        blocks.push(
+          <SafeComponent key={key++} name="Mermaid 图表">
+            <Mermaid code={buf.join("\n")} />
+          </SafeComponent>,
+        );
         continue;
       }
       blocks.push(

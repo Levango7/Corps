@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
+import { SafeComponent } from "@/components/SafeComponent";
 
 // 白板编辑器是 540+ 行的重型客户端组件（元素创建/拖拽/调整大小/内联编辑/自动保存），
 // 仅此页面使用。dynamic import + ssr:false 将其拆分为独立 chunk，
@@ -76,11 +77,13 @@ function WhiteboardEditPageClient({
     return <p className="p-[var(--space-8)] text-center text-[var(--muted)]">{t("loading")}</p>;
   }
   return (
-    <WhiteboardCanvas
-      wid={wid}
-      wbid={wbid}
-      initialTitle={data.title}
-      initialData={data.data}
-    />
+    <SafeComponent name="白板编辑器">
+      <WhiteboardCanvas
+        wid={wid}
+        wbid={wbid}
+        initialTitle={data.title}
+        initialData={data.data}
+      />
+    </SafeComponent>
   );
 }

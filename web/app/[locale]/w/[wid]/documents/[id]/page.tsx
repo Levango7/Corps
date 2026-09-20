@@ -11,6 +11,7 @@ const DocumentEditor = dynamic(
   { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
 );
 import { PermissionManager } from "@/components/doc/PermissionManager";
+import { SafeComponent } from "@/components/SafeComponent";
 
 /** 工作区成员（用于判断当前用户角色） */
 interface Member {
@@ -140,7 +141,9 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
   }
   return (
     <div className="flex flex-col gap-[var(--space-4)]">
-      <DocumentEditor wid={wid} id={id} initial={data} />
+      <SafeComponent name="文档编辑器">
+        <DocumentEditor wid={wid} id={id} initial={data} />
+      </SafeComponent>
       {canManage && <PermissionManager docId={id} workspaceId={wid} />}
     </div>
   );
