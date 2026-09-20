@@ -7,7 +7,7 @@ import { apiMsg } from "@/lib/api-messages";
 /**
  * 文档级权限 CRUD（阶段 6 · 任务 222）
  *
- * 路由：/v1/workspaces/{wid}/documents/{did}/permissions
+ * 路由：/v1/workspaces/{wid}/documents/{id}/permissions
  *  - GET    列出文档的所有 DocumentPermission 记录
  *  - POST   新增权限（granteeType/granteeId/permission）
  *
@@ -30,14 +30,7 @@ async function canManageDoc(
       // 文档作者可管理
       const doc = await tx.document.findFirst({
         where: { id: did, workspaceId: wid },
-        select: { authorId: true },
-      });
-      if (!doc) return false;
-      if (doc.authorId === userId) return true;
-      // 显式 manage 权限
-      const perm = await tx.documentPermission.findFirst({
-        where: {
-          documentId: did,
+
           granteeType: "user",
           granteeId: userId,
           permission: "manage",
@@ -56,9 +49,9 @@ async function canManageDoc(
  */
 export async function GET(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; did: string }> },
+  { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
-  const { wid, did } = await params;
+  const { wid, id: did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
     return NextResponse.json(
@@ -123,9 +116,9 @@ const VALID_ROLES = new Set(["owner", "admin", "member", "viewer"]);
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; did: string }> },
+  { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
-  const { wid, did } = await params;
+  const { wid, id: did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
     return NextResponse.json(

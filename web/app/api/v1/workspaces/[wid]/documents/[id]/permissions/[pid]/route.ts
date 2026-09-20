@@ -7,7 +7,7 @@ import { apiMsg } from "@/lib/api-messages";
 /**
  * 文档级权限单条操作（阶段 6 · 任务 222）
  *
- * 路由：/v1/workspaces/{wid}/documents/{did}/permissions/{pid}
+ * 路由：/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
  *  - PATCH   更新权限级别（view/edit/manage）
  *  - DELETE  移除权限
  *
@@ -55,9 +55,9 @@ const updatePermissionSchema = z.object({
  */
 export async function PATCH(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; did: string; pid: string }> },
+  { params }: { params: Promise<{ wid: string; id: string; pid: string }> },
 ) {
-  const { wid, did, pid } = await params;
+  const { wid, id: did, pid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
     return NextResponse.json(
@@ -147,9 +147,9 @@ export async function PATCH(
  */
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: Promise<{ wid: string; did: string; pid: string }> },
+  { params }: { params: Promise<{ wid: string; id: string; pid: string }> },
 ) {
-  const { wid, did, pid } = await params;
+  const { wid, id: did, pid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
     return NextResponse.json(
