@@ -1,5 +1,9 @@
 "use client";
 
+// 保持 "use client"：接收 4 个函数 props（onPrev/onNext/onToday/onEventClick），
+// 这些回调来自 client 父组件 (CalendarView.tsx)，无法跨越 server/client 边界传递。
+// CalendarView 管理所有日历状态（currentDate/events/dialogOpen），本组件仅做展示 + 回调转发。
+
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";

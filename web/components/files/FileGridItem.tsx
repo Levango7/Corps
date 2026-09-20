@@ -14,7 +14,7 @@
 import { useState } from "react";
 import type { FileAsset } from "@prisma/client";
 import { Check, Trash2 } from "lucide-react";
-import { formatFileSize, getFileIcon } from "./FileListItem";
+import { formatFileSize, getFileIcon } from "./file-utils";
 import { useTranslations } from "next-intl";
 
 // ─── Props ──────────────────────────────────────────────────────

@@ -1,74 +1,14 @@
 "use client";
 
-/**
- * FileListItem · 文件列表视图项（Phase 4B 云盘）
- *
- * 列表视图中的单行文件项：选择复选框 + 文件类型图标 + 文件名 + 大小 + 日期 + 操作。
- * 导出 formatFileSize / getFileIcon / formatDate 辅助函数供 FileGridItem 复用，
- * 避免创建额外工具文件，保持 4 文件约束。
- *
- * 所有样式走 design token（var(--*)），无裸 hex。
- * 图标：lucide-react，尺寸 14。
- * 动效：transition 用 var(--motion-fast)，motion-reduce 时禁用。
- */
+// 保持 "use client"：接收 3 个函数 props（onClick/onSelect/onDelete），
+// 这些回调来自 client 父组件 (FileBrowser.tsx)，无法跨越 server/client 边界传递。
+// FileBrowser 管理选中状态和删除逻辑，本组件仅做展示 + 回调转发。
+// 辅助函数已提取到 file-utils.ts（纯函数，可在 server/client 通用）。
 
 import type { FileAsset } from "@prisma/client";
-import {
-  File,
-  FileText,
-  Image as ImageIcon,
-  Film,
-  Music,
-  Code,
-  Trash2,
-  Check,
-  type LucideIcon,
-} from "lucide-react";
+import { Trash2, Check } from "lucide-react";
 import { useTranslations } from "next-intl";
-
-// ─── 辅助函数（导出供 FileGridItem 复用）──────────────────────
-
-/** 文件大小格式化：B/KB/MB/GB，保留 1 位小数 */
-export function formatFileSize(bytes: number): string {
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
-}
-
-/** 文件类型 → lucide 图标映射（按 MIME type 前缀/关键字判断） */
-export function getFileIcon(fileType: string): LucideIcon {
-  const ft = fileType.toLowerCase();
-  if (ft.startsWith("image/")) return ImageIcon;
-  if (ft.startsWith("video/")) return Film;
-  if (ft.startsWith("audio/")) return Music;
-  if (ft.includes("pdf")) return FileText;
-  if (
-    ft.includes("javascript") ||
-    ft.includes("typescript") ||
-    ft.includes("python") ||
-    ft.includes("json") ||
-    ft.includes("html") ||
-    ft.includes("css") ||
-    ft.includes("xml") ||
-    ft.includes("java") ||
-    ft.includes("go") ||
-    ft.includes("markdown")
-  ) {
-    return Code;
-  }
-  if (ft.startsWith("text/")) return FileText;
-  return File;
-}
-
-/** 日期格式化为 YYYY-MM-DD（用 new Date() 包装以兼容序列化 string，运行时健壮） */
-export function formatDate(date: Date): string {
-  const d = new Date(date);
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
-}
+import { formatFileSize, getFileIcon, formatDate } from "./file-utils";
 
 // ─── Props ──────────────────────────────────────────────────────
 

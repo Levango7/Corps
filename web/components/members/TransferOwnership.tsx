@@ -2,6 +2,9 @@
 
 // 转让所有权区（owner only）。
 // 拆分自 members/page.tsx 第 379-442 行。纯展示 + 回调，状态由父组件管理。
+// 保持 "use client"：接收 6 个函数 props（setTransferOpen/setTransferTarget/onTransfer 等），
+// 这些回调来自 client 父组件 (members/page.tsx)，无法跨越 server/client 边界传递。
+// 父组件管理所有状态（transferOpen/transferTarget/transferBusy），本组件仅做展示 + 回调转发。
 
 import { useTranslations } from "next-intl";
 import type { Member } from "@/lib/types";
