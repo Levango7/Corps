@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * 看板视图切换按钮组 —— 共享组件。
  *
@@ -7,51 +5,27 @@
  * 合并为单套响应式实现：图标始终显示，文案 sm 起显示。
  */
 
-import { Kanban, List } from "lucide-react";
 import type { ViewMode } from "./types";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
+import { ViewToggleClient } from "./ViewToggleClient";
 
 interface ViewToggleProps {
   view: ViewMode;
   onChange: (v: ViewMode) => void;
 }
 
-export function ViewToggle({ view, onChange }: ViewToggleProps) {
-  const t = useTranslations("task");
+export async function ViewToggle({ view, onChange }: ViewToggleProps) {
+  const t = await getTranslations("task");
+
   return (
-    <div
-      className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]"
-      role="group"
-      aria-label={t("viewAria")}
-    >
-      <button
-        type="button"
-        onClick={() => onChange("board")}
-        aria-pressed={view === "board"}
-        className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] ${
-          view === "board"
-            ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-            : "text-[var(--muted)] hover:text-[var(--fg)]"
-        }`}
-        aria-label={t("boardViewAria")}
-      >
-        <Kanban size={16} />
-        <span className="hidden sm:inline">{t("boardView")}</span>
-      </button>
-      <button
-        type="button"
-        onClick={() => onChange("list")}
-        aria-pressed={view === "list"}
-        className={`flex items-center gap-1.5 p-2 sm:px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] ${
-          view === "list"
-            ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)]"
-            : "text-[var(--muted)] hover:text-[var(--fg)]"
-        }`}
-        aria-label={t("listViewAria")}
-      >
-        <List size={16} />
-        <span className="hidden sm:inline">{t("listView")}</span>
-      </button>
-    </div>
+    <ViewToggleClient
+      view={view}
+      onChange={onChange}
+      viewAria={t("viewAria")}
+      boardViewAria={t("boardViewAria")}
+      boardView={t("boardView")}
+      listViewAria={t("listViewAria")}
+      listView={t("listView")}
+    />
   );
 }

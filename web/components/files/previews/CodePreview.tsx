@@ -1,5 +1,3 @@
-"use client";
-
 /**
  * 代码预览组件
  *
@@ -13,8 +11,7 @@
  * 所有样式走 design token（var(--*)），无裸 hex。
  */
 
-import { useMemo } from "react";
-import { useTranslations } from "next-intl";
+import { getTranslations } from "next-intl/server";
 
 export interface CodePreviewProps {
   content: string;
@@ -22,9 +19,9 @@ export interface CodePreviewProps {
   language?: string;
 }
 
-export function CodePreview({ content, fileName, language }: CodePreviewProps) {
-  const t = useTranslations("files.codePreview");
-  const lines = useMemo(() => content.split("\n"), [content]);
+export async function CodePreview({ content, fileName, language }: CodePreviewProps) {
+  const t = await getTranslations("files.codePreview");
+  const lines = content.split("\n");
   const lang = language ?? (fileName.split(".").pop() || "text");
 
   return (
