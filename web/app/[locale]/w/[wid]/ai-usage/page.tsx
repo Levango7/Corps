@@ -20,8 +20,17 @@
 import { use } from "react";
 import { BarChart3 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { UsageDashboard } from "@/components/ai/UsageDashboard";
-import { UsageLimitSettings } from "@/components/ai/UsageLimitSettings";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — AI 使用统计组件改为 dynamic import 懒加载
+const UsageDashboard = dynamic(
+  () => import("@/components/ai/UsageDashboard").then((m) => m.UsageDashboard),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const UsageLimitSettings = dynamic(
+  () => import("@/components/ai/UsageLimitSettings").then((m) => m.UsageLimitSettings),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 export default function AiUsagePage({
   params,

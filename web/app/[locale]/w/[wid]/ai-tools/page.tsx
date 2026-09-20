@@ -33,15 +33,45 @@ import {
   Bell,
   X,
 } from "lucide-react";
-import { SemanticSearchPanel } from "@/components/ai/SemanticSearchPanel";
-import { MailAssistantPanel } from "@/components/ai/MailAssistantPanel";
-import TodoExtractDialog from "@/components/ai/TodoExtractDialog";
-import MeetingSummaryPanel from "@/components/ai/MeetingSummaryPanel";
-import { DocQaPanel } from "@/components/ai/DocQaPanel";
-import DecisionAssistantPanel from "@/components/ai/DecisionAssistantPanel";
-import WorkflowOrchestratorPanel from "@/components/ai/WorkflowOrchestratorPanel";
-import { AiPushSettings } from "@/components/ai/AiPushSettings";
-import { AiPushFeed } from "@/components/ai/AiPushFeed";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — 重型 AI 面板组件改为 dynamic import 懒加载
+const SemanticSearchPanel = dynamic(
+  () => import("@/components/ai/SemanticSearchPanel").then((m) => m.SemanticSearchPanel),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const MailAssistantPanel = dynamic(
+  () => import("@/components/ai/MailAssistantPanel").then((m) => m.MailAssistantPanel),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const TodoExtractDialog = dynamic(
+  () => import("@/components/ai/TodoExtractDialog"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const MeetingSummaryPanel = dynamic(
+  () => import("@/components/ai/MeetingSummaryPanel"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const DocQaPanel = dynamic(
+  () => import("@/components/ai/DocQaPanel").then((m) => m.DocQaPanel),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const DecisionAssistantPanel = dynamic(
+  () => import("@/components/ai/DecisionAssistantPanel"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const WorkflowOrchestratorPanel = dynamic(
+  () => import("@/components/ai/WorkflowOrchestratorPanel"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const AiPushSettings = dynamic(
+  () => import("@/components/ai/AiPushSettings").then((m) => m.AiPushSettings),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
+const AiPushFeed = dynamic(
+  () => import("@/components/ai/AiPushFeed").then((m) => m.AiPushFeed),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 // ─── Tab 定义 ──────────────────────────────────────────────────────────────────
 

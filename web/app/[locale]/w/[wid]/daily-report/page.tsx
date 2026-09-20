@@ -1,4 +1,10 @@
-import { DailyReportView } from "@/components/ai/DailyReportView";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — DailyReportView 改为 dynamic import 懒加载
+const DailyReportView = dynamic(
+  () => import("@/components/ai/DailyReportView").then((m) => m.DailyReportView),
+  { loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 /**
  * AI 智能日报页面：聚合当日工作数据，流式生成结构化日报，

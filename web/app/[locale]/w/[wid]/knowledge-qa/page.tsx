@@ -1,4 +1,10 @@
-import { KnowledgeQaPanel } from "@/components/ai/KnowledgeQaPanel";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — KnowledgeQaPanel 改为 dynamic import 懒加载
+const KnowledgeQaPanel = dynamic(
+  () => import("@/components/ai/KnowledgeQaPanel").then((m) => m.KnowledgeQaPanel),
+  { loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 /**
  * 跨模块 AI 知识问答页面。

@@ -8,7 +8,13 @@ import { relTime as sharedRelTime } from "@/lib/format";
 import { isFavorite, toggleFavorite } from "@/lib/favorites";
 import ChatPanel from "@/components/ChatPanel";
 import { SubtaskSection } from "@/components/SubtaskSection";
-import TaskBreakdownDialog from "@/components/ai/TaskBreakdownDialog";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — TaskBreakdownDialog 改为 dynamic import 懒加载（对话框，点击时才需要）
+const TaskBreakdownDialog = dynamic(
+  () => import("@/components/ai/TaskBreakdownDialog"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 import { useTranslations } from "next-intl";
 import { TaskDetailHeader } from "@/components/task/TaskDetailHeader";
 import { TaskDecisions } from "@/components/task/TaskDecisions";

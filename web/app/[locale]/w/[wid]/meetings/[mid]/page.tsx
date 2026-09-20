@@ -23,7 +23,13 @@ import { Video, ArrowLeft, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { MeetingLobby } from "@/components/meetings/MeetingLobby";
 import { MeetingRoom } from "@/components/meetings/MeetingRoom";
-import MeetingFlowPanel from "@/components/ai/MeetingFlowPanel";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — MeetingFlowPanel 改为 dynamic import 懒加载
+const MeetingFlowPanel = dynamic(
+  () => import("@/components/ai/MeetingFlowPanel"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 /** 会议详情（仅取所需字段） */
 interface MeetingDetail {

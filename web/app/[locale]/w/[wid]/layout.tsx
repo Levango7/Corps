@@ -39,7 +39,13 @@ import {
 import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
 import { listFavorites, type FavoriteEntry } from "@/lib/favorites";
-import CommandPalette from "@/components/CommandPalette";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — CommandPalette 改为 dynamic import 懒加载（快捷键触发，非常适合懒加载）
+const CommandPalette = dynamic(
+  () => import("@/components/CommandPalette"),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";

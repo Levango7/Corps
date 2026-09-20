@@ -3,7 +3,13 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { DocumentEditor } from "@/components/DocumentEditor";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — DocumentEditor 改为 dynamic import 懒加载
+const DocumentEditor = dynamic(
+  () => import("@/components/DocumentEditor").then((m) => m.DocumentEditor),
+  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 import { PermissionManager } from "@/components/doc/PermissionManager";
 
 /** 工作区成员（用于判断当前用户角色） */

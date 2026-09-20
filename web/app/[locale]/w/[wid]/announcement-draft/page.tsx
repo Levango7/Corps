@@ -1,4 +1,10 @@
-import { AnnouncementDraftPanel } from "@/components/ai/AnnouncementDraftPanel";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — AnnouncementDraftPanel 改为 dynamic import 懒加载
+const AnnouncementDraftPanel = dynamic(
+  () => import("@/components/ai/AnnouncementDraftPanel").then((m) => m.AnnouncementDraftPanel),
+  { loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 /**
  * AI 公告智能起草页面：聚合工作区近期进展，流式生成公告草稿，

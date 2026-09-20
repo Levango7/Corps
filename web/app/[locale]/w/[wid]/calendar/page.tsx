@@ -1,4 +1,10 @@
-import { CalendarView } from "@/components/calendar/CalendarView";
+import dynamic from "next/dynamic";
+
+// P0-2: code splitting — CalendarView 改为 dynamic import 懒加载
+const CalendarView = dynamic(
+  () => import("@/components/calendar/CalendarView").then((m) => m.CalendarView),
+  { loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+);
 
 /**
  * 日历主页面：服务端组件，提取 wid 后渲染客户端组件。
