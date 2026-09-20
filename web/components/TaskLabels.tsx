@@ -1,4 +1,3 @@
-"use client";
 
 import type { Label } from "@/lib/types";
 

@@ -1,4 +1,3 @@
-"use client";
 
 // 成员管理共享辅助：Avatar / formatExpiry / durationKey / DURATION_HOURS。
 // 拆分自 members/page.tsx 第 31-74 行。

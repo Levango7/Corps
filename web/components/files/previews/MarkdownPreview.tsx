@@ -1,4 +1,3 @@
-"use client";
 
 /**
  * Markdown 预览组件
