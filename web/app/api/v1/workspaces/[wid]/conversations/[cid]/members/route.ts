@@ -37,7 +37,19 @@ export async function GET(
 
   try {
     const userId = ctx.payload.sub;
-    const members = await runWithWorkspace(
+    const url = new URL(req.url);
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
+    const result = await runWithWorkspace(
       wid,
       async (tx) => {
         // 验证当前用户是该会话成员
@@ -47,21 +59,30 @@ export async function GET(
         });
         if (!membership) return null;
 
-        return tx.conversationMember.findMany({
-          where: { conversationId: cid },
-          include: { user: { select: USER_SELECT } },
-          orderBy: { joinedAt: "asc" },
-        });
+        const [members, total] = await Promise.all([
+          tx.conversationMember.findMany({
+            where: { conversationId: cid },
+            include: { user: { select: USER_SELECT } },
+            orderBy: { joinedAt: "asc" },
+            take,
+            skip,
+          }),
+          tx.conversationMember.count({ where: { conversationId: cid } }),
+        ]);
+
+        return { members, total };
       },
       userId,
     );
 
-    if (members === null) {
+    if (result === null) {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "conversationNotFound"), data: null },
         { status: 404 },
       );
     }
+
+    const { members, total } = result;
 
     return NextResponse.json({
       code: 200,
@@ -75,7 +96,8 @@ export async function GET(
           muted: m.muted,
           user: m.user,
         })),
-        total: members.length,
+        total,
+        hasMore: skip + take < total,
       },
     });
   } catch (error) {

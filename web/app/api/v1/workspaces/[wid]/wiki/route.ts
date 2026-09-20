@@ -93,6 +93,17 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const q = url.searchParams.get("q")?.trim() ?? "";
     const parentId = url.searchParams.get("parentId") ?? undefined;
 
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
     const where: Prisma.WikiPageWhereInput = { workspaceId: wid };
     if (q) {
       where.OR = [
@@ -104,28 +115,36 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       where.parentId = parentId === "root" ? null : parentId;
     }
 
-    const pages = await runWithWorkspace(wid, (tx) =>
-      tx.wikiPage.findMany({
-        where,
-        select: {
-          id: true,
-          title: true,
-          slug: true,
-          content: true,
-          parentId: true,
-          createdBy: true,
-          sortOrder: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
-      }),
+    const [pages, total] = await runWithWorkspace(wid, async (tx) =>
+      Promise.all([
+        tx.wikiPage.findMany({
+          where,
+          select: {
+            id: true,
+            title: true,
+            slug: true,
+            content: true,
+            parentId: true,
+            createdBy: true,
+            sortOrder: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: [{ sortOrder: "asc" }, { updatedAt: "desc" }],
+          take,
+          skip,
+        }),
+        tx.wikiPage.count({ where }),
+      ]),
     );
 
     // 带 parentId 过滤时返回扁平列表；否则构建完整树
-    const data = parentId !== undefined ? pages : buildTree(pages);
+    const items = parentId !== undefined ? pages : buildTree(pages);
 
-    return NextResponse.json({ code: 200, data });
+    return NextResponse.json({
+      code: 200,
+      data: { items, total, hasMore: skip + take < total },
+    });
   } catch (error) {
     console.error("[GET wiki] error:", error);
     return NextResponse.json(

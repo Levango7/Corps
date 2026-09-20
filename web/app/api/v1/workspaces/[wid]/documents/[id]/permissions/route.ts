@@ -30,7 +30,15 @@ async function canManageDoc(
       // 文档作者可管理
       const doc = await tx.document.findFirst({
         where: { id: did, workspaceId: wid },
+        select: { id: true, authorId: true },
+      });
+      if (doc?.authorId === userId) return true;
 
+      // 检查 manage 权限
+      const perm = await tx.documentPermission.findFirst({
+        where: {
+          documentId: did,
+          workspaceId: wid,
           granteeType: "user",
           granteeId: userId,
           permission: "manage",
@@ -60,6 +68,18 @@ export async function GET(
     );
 
   try {
+    const url = new URL(req.url);
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
     // L3: 验证文档存在且属于该工作区（隐式校验工作区成员身份 via getWorkspaceContext）
     const docExists = await runWithWorkspace(
       wid,
@@ -77,20 +97,28 @@ export async function GET(
       );
     }
 
-    const permissions = await runWithWorkspace(
+    const [permissions, total] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.documentPermission.findMany({
-          where: { documentId: did, workspaceId: wid },
-          include: {
-            granter: { select: { id: true, name: true, email: true } },
-          },
-          orderBy: [{ createdAt: "asc" }],
-        }),
+      async (tx) =>
+        Promise.all([
+          tx.documentPermission.findMany({
+            where: { documentId: did, workspaceId: wid },
+            include: {
+              granter: { select: { id: true, name: true, email: true } },
+            },
+            orderBy: [{ createdAt: "asc" }],
+            take,
+            skip,
+          }),
+          tx.documentPermission.count({ where: { documentId: did, workspaceId: wid } }),
+        ]),
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 200, data: { items: permissions } });
+    return NextResponse.json({
+      code: 200,
+      data: { items: permissions, total, hasMore: skip + take < total },
+    });
   } catch (error) {
     console.error("[GET document permissions] error:", error);
     return NextResponse.json(

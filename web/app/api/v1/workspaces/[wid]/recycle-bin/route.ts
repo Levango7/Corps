@@ -66,8 +66,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     // 当 type 未指定时，两表合并后按 deletedAt 倒序统一分页——
     // 简单稳妥的做法是两表全量拉取（带 deletedAt 倒序）后内存合并分页。
     // 回收站数据量通常较小（保留期 30 天），此方案可接受。
+    // 安全限制：各表查询带 take 限制，防止极端情况下全量拉取。
     const wantTasks = type === undefined || type === "task";
     const wantDocs = type === undefined || type === "document";
+    // 每表最多拉取 limit + 1 条用于判断 hasMore
+    const queryTake = limit + 1;
 
     const [tasks, docs] = await runWithWorkspace(wid, (tx) =>
       Promise.all([
@@ -81,6 +84,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
                 deletedBy: true,
               },
               orderBy: [{ deletedAt: "desc" }],
+              take: queryTake,
             })
           : Promise.resolve([]),
         wantDocs
@@ -93,6 +97,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
                 deletedBy: true,
               },
               orderBy: [{ deletedAt: "desc" }],
+              take: queryTake,
             })
           : Promise.resolve([]),
       ]),

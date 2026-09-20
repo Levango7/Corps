@@ -17,6 +17,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (limited) return limited;
 
   try {
+    const url = new URL(req.url);
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
     const obj = await runWithWorkspace(
       wid,
       (tx) => tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
@@ -26,18 +38,26 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       return NextResponse.json({ code: 404, message: apiMsg(req, "objectiveNotFound"), data: null }, { status: 404 });
     }
 
-    const keyResults = await runWithWorkspace(
+    const [keyResults, total] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.keyResult.findMany({
-          where: { objectiveId: oid },
-          orderBy: [{ createdAt: "asc" }],
-          include: { owner: { select: { id: true, name: true, email: true } } },
-        }),
+      async (tx) =>
+        Promise.all([
+          tx.keyResult.findMany({
+            where: { objectiveId: oid },
+            orderBy: [{ createdAt: "asc" }],
+            include: { owner: { select: { id: true, name: true, email: true } } },
+            take,
+            skip,
+          }),
+          tx.keyResult.count({ where: { objectiveId: oid } }),
+        ]),
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 200, data: keyResults });
+    return NextResponse.json({
+      code: 200,
+      data: { items: keyResults, total, hasMore: skip + take < total },
+    });
   } catch (error) {
     console.error("[GET key-results] error:", error);
     return NextResponse.json(

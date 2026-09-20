@@ -25,6 +25,18 @@ export async function GET(
     );
 
   try {
+    const url = new URL(req.url);
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
     // 先校验 database 存在且属于该工作区
     const result = await runWithWorkspace(
       wid,
@@ -34,11 +46,16 @@ export async function GET(
           select: { id: true },
         });
         if (!db) return { kind: "notFound" as const, data: null };
-        const fields = await tx.databaseField.findMany({
-          where: { databaseId: dbid },
-          orderBy: { sortOrder: "asc" },
-        });
-        return { kind: "ok" as const, data: fields };
+        const [fields, total] = await Promise.all([
+          tx.databaseField.findMany({
+            where: { databaseId: dbid },
+            orderBy: { sortOrder: "asc" },
+            take,
+            skip,
+          }),
+          tx.databaseField.count({ where: { databaseId: dbid } }),
+        ]);
+        return { kind: "ok" as const, data: { items: fields, total, hasMore: skip + take < total } };
       },
       ctx.payload.sub,
     );
@@ -49,7 +66,7 @@ export async function GET(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 200, data: { items: result.data, total: result.data.length } });
+    return NextResponse.json({ code: 200, data: result.data });
   } catch (error) {
     console.error("[GET database fields] error:", error);
     return NextResponse.json(

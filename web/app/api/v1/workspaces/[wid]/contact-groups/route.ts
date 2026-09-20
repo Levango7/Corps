@@ -26,17 +26,37 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
 
   try {
-    const groups = await runWithWorkspace(
+    const url = new URL(req.url);
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
+    const [groups, total] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.contactGroup.findMany({
-          where: { workspaceId: wid },
-          include: { _count: { select: { contacts: true } } },
-          orderBy: [{ name: "asc" }],
-        }),
+      async (tx) =>
+        Promise.all([
+          tx.contactGroup.findMany({
+            where: { workspaceId: wid },
+            include: { _count: { select: { contacts: true } } },
+            orderBy: [{ name: "asc" }],
+            take,
+            skip,
+          }),
+          tx.contactGroup.count({ where: { workspaceId: wid } }),
+        ]),
       ctx.payload.sub,
     );
-    return NextResponse.json({ code: 200, data: groups });
+    return NextResponse.json({
+      code: 200,
+      data: { items: groups, total, hasMore: skip + take < total },
+    });
   } catch (error) {
     console.error("[GET contact-groups] error:", error);
     return NextResponse.json(

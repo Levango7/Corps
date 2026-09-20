@@ -65,14 +65,31 @@ export async function GET(
   if (denied) return denied;
 
   try {
+    const url = new URL(req.url);
+    const paginationSchema = z.object({
+      page: z.coerce.number().int().min(1).default(1),
+      pageSize: z.coerce.number().int().min(1).max(100).default(50),
+    });
+    const { page, pageSize } = paginationSchema.parse({
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
+    });
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
+
     // 查询该工作区所有权限覆盖（所有 role）
-    const allPerms = await runWithWorkspace(
+    const [allPerms, total] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.memberPermission.findMany({
-          where: { workspaceId: wid },
-          select: { role: true, module: true, actions: true },
-        }),
+      async (tx) =>
+        Promise.all([
+          tx.memberPermission.findMany({
+            where: { workspaceId: wid },
+            select: { role: true, module: true, actions: true },
+            take,
+            skip,
+          }),
+          tx.memberPermission.count({ where: { workspaceId: wid } }),
+        ]),
       ctx.payload.sub,
     );
     const overrides = permsToMap(allPerms);
@@ -88,6 +105,8 @@ export async function GET(
       data: {
         roles,
         modules: [...MODULES],
+        total,
+        hasMore: skip + take < total,
       },
     });
   } catch (error) {

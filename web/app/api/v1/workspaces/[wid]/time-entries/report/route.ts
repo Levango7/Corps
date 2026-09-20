@@ -8,6 +8,8 @@ const reportQuerySchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   groupBy: z.enum(["user", "task", "day"]).default("user"),
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).max(100).default(50),
 });
 
 interface GroupRow {
@@ -35,6 +37,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       startDate: url.searchParams.get("startDate") ?? undefined,
       endDate: url.searchParams.get("endDate") ?? undefined,
       groupBy: url.searchParams.get("groupBy") ?? undefined,
+      page: url.searchParams.get("page") ?? undefined,
+      pageSize: url.searchParams.get("pageSize") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -42,7 +46,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         { status: 400 },
       );
     }
-    const { userId, startDate, endDate, groupBy } = parsed.data;
+    const { userId, startDate, endDate, groupBy, page, pageSize } = parsed.data;
+    const take = pageSize;
+    const skip = (page - 1) * pageSize;
 
     const where = {
       workspaceId: wid,
@@ -59,17 +65,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         : {}),
     };
 
-    const entries = await runWithWorkspace(
+    const [entries, total] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.timeEntry.findMany({
-          where,
-          include: {
-            user: { select: { id: true, name: true, email: true } },
-            task: { select: { id: true, title: true } },
-          },
-          orderBy: [{ startTime: "asc" }],
-        }),
+      async (tx) =>
+        Promise.all([
+          tx.timeEntry.findMany({
+            where,
+            include: {
+              user: { select: { id: true, name: true, email: true } },
+              task: { select: { id: true, title: true } },
+            },
+            orderBy: [{ startTime: "asc" }],
+            take,
+            skip,
+          }),
+          tx.timeEntry.count({ where }),
+        ]),
       ctx.payload.sub,
     );
 
@@ -127,6 +138,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           billableDuration: summaryBillable,
           totalAmount: Math.round(summaryAmount * 100) / 100,
         },
+        total,
+        hasMore: skip + take < total,
       },
     });
   } catch (error) {
