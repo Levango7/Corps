@@ -12,6 +12,7 @@ const DocumentEditor = dynamic(
 );
 import { PermissionManager } from "@/components/doc/PermissionManager";
 import { SafeComponent } from "@/components/SafeComponent";
+import type { DocumentEditorProps } from "@/components/DocumentEditor";
 
 /** 工作区成员（用于判断当前用户角色） */
 interface Member {
@@ -70,7 +71,7 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
   const t = useTranslations("document");
   const [wid, setWid] = useState<string | null>(null);
   const [id, setId] = useState<string | null>(null);
-  const [data, setData] = useState<Parameters<typeof DocumentEditor>[0]["initial"] | null>(null);
+  const [data, setData] = useState<DocumentEditorProps["initial"] | null>(null);
   const [error, setError] = useState("");
   // 权限管理：仅对有 manage 权限的用户显示 PermissionManager
   const [canManage, setCanManage] = useState(false);

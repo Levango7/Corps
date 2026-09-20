@@ -46,7 +46,7 @@ import { ExportPreview } from "@/components/ExportPreview";
 import { DocumentComments } from "@/components/DocumentComments";
 import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 
-interface DocumentEditorProps {
+export interface DocumentEditorProps {
   wid: string;
   id: string;
   initial: {
