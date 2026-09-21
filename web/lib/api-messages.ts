@@ -40,6 +40,7 @@ export const API_MESSAGES = {
   labelNotFound: { zh: "标签不存在", en: "Label not found" },
   parentTaskNotFound: { zh: "父任务不存在", en: "Parent task not found" },
   workspaceNotFound: { zh: "工作区不存在", en: "Workspace not found" },
+  spaceNotFound: { zh: "空间不存在", en: "Space not found" },
   attachmentNotFound: { zh: "附件不存在", en: "Attachment not found" },
   fileNotFound: { zh: "文件不存在", en: "File not found" },
   userNotFound: { zh: "用户不存在", en: "User not found" },
@@ -144,6 +145,10 @@ export const API_MESSAGES = {
   },
 
   /* ── 分享（任务/文档公开只读）── */
+  shareLinkNotFound: {
+    zh: "分享链接不存在",
+    en: "Share link not found",
+  },
   shareLinkInvalidUnpublished: {
     zh: "分享链接无效或文档尚未发布",
     en: "Invalid share link, or the document has not been published yet",
@@ -431,6 +436,16 @@ export const API_MESSAGES = {
   invalidGrantee: {
     zh: "授权对象 ID 无效",
     en: "Invalid grantee ID",
+  },
+
+  /* ── 文件夹级权限（任务 441）── */
+  folderNotFound: {
+    zh: "文件夹不存在",
+    en: "Folder not found",
+  },
+  folderPermissionNotFound: {
+    zh: "文件夹权限记录不存在",
+    en: "Folder permission not found",
   },
 
   /* ── 临时权限授权（F2 任务 186）── */
