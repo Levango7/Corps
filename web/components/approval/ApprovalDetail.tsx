@@ -30,6 +30,9 @@ import {
   CornerDownRight,
   Forward,
   MessageSquare,
+  UserPlus,
+  UserCog,
+  Users,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -73,8 +76,8 @@ interface ApprovalInstanceDetail {
 
 interface ApprovalOperation {
   id: string;
-  /** 操作动作：submit | approve | reject | withdraw */
-  action: "submit" | "approve" | "reject" | "withdraw";
+  /** 操作动作：submit | approve | reject | withdraw | transfer | addSign | delegate | cc */
+  action: "submit" | "approve" | "reject" | "withdraw" | "transfer" | "addSign" | "delegate" | "cc";
   operatorId: string;
   /** 操作人嵌套对象（后端 Prisma include 返回） */
   operator?: {
@@ -95,6 +98,25 @@ interface ApprovalOperation {
 interface ApprovalDetailProps {
   approvalId: string;
   workspaceId: string;
+}
+
+/** 抄送人信息 */
+interface CcUser {
+  id: string;
+  userId: string;
+  /** 抄送人嵌套对象（后端 Prisma include 返回） */
+  user?: {
+    id: string;
+    name?: string | null;
+    email?: string | null;
+  } | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
+  userName?: string | null;
+  /** @deprecated 旧平铺字段，保留兼容 */
+  userEmail?: string | null;
+  nodeOrder?: number | null;
+  nodeName?: string | null;
+  read?: boolean;
 }
 
 /** 状态 → 图标 + 颜色 token */
@@ -141,6 +163,14 @@ function getActionLabelKey(action: ApprovalOperation["action"]) {
       return "operationReject";
     case "withdraw":
       return "operationWithdraw";
+    case "transfer":
+      return "operationTransfer";
+    case "addSign":
+      return "operationAddSign";
+    case "delegate":
+      return "operationDelegate";
+    case "cc":
+      return "operationCc";
     case "submit":
     default:
       return "operationSubmit";
@@ -155,6 +185,14 @@ function getActionColor(action: ApprovalOperation["action"]) {
     case "reject":
       return "var(--danger)";
     case "withdraw":
+      return "var(--muted)";
+    case "transfer":
+      return "var(--accent)";
+    case "addSign":
+      return "var(--warning)";
+    case "delegate":
+      return "var(--info, var(--accent))";
+    case "cc":
       return "var(--muted)";
     case "submit":
     default:
@@ -176,12 +214,22 @@ export function ApprovalDetail({
 
   // 操作弹窗状态
   const [actionDialog, setActionDialog] = useState<
-    | { type: "approve" | "reject" | "withdraw"; confirmKey: string }
+    | {
+        type: "approve" | "reject" | "withdraw";
+        confirmKey: string;
+      }
+    | {
+        type: "transfer" | "addSign" | "delegate";
+        confirmKey: string;
+        targetLabelKey: string;
+      }
     | null
   >(null);
   const [comment, setComment] = useState("");
+  const [targetUserId, setTargetUserId] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [actionError, setActionError] = useState("");
+  const [ccUsers, setCcUsers] = useState<CcUser[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -200,6 +248,17 @@ export function ApprovalDetail({
         if (cancelled) return;
         setDetail(d);
         setCurrentUserId(me.id || null);
+
+        // 拉取抄送列表
+        try {
+          const cc = await api<CcUser[]>(
+            `/api/v1/workspaces/${workspaceId}/approvals/instances/${approvalId}/cc`,
+          );
+          if (!cancelled) setCcUsers(cc);
+        } catch {
+          // 抄送 API 可能不存在，从详情中提取（如果有的话）
+          if (!cancelled) setCcUsers([]);
+        }
       } catch (e) {
         if (cancelled) return;
         setError(
@@ -229,23 +288,66 @@ export function ApprovalDetail({
   async function handleAction(e: FormEvent) {
     e.preventDefault();
     if (!actionDialog || submitting) return;
+
+    // 转交/加签/委托需要目标用户 ID
+    if (
+      (actionDialog.type === "transfer" ||
+        actionDialog.type === "addSign" ||
+        actionDialog.type === "delegate") &&
+      !targetUserId.trim()
+    ) {
+      setActionError(t("selectUser"));
+      return;
+    }
+
     setSubmitting(true);
     setActionError("");
     try {
-      const body = comment.trim()
-        ? JSON.stringify({ comment: comment.trim() })
-        : undefined;
+      let body: string | undefined;
+
+      if (
+        actionDialog.type === "transfer" ||
+        actionDialog.type === "addSign" ||
+        actionDialog.type === "delegate"
+      ) {
+        // 转交/加签/委托：需要目标用户 ID + 备注
+        const idField =
+          actionDialog.type === "transfer"
+            ? "transferToId"
+            : actionDialog.type === "addSign"
+              ? "addSignToId"
+              : "delegateToId";
+        const payload: Record<string, string> = {
+          [idField]: targetUserId.trim(),
+        };
+        if (comment.trim()) payload.comment = comment.trim();
+        body = JSON.stringify(payload);
+      } else {
+        // approve/reject/withdraw：只需要备注
+        body = comment.trim()
+          ? JSON.stringify({ comment: comment.trim() })
+          : undefined;
+      }
+
       await api(
         `/api/v1/workspaces/${workspaceId}/approvals/instances/${approvalId}/${actionDialog.type}`,
         { method: "POST", body },
       );
-      // 重新拉取详情
-      const d = await api<ApprovalInstanceDetail>(
-        `/api/v1/workspaces/${workspaceId}/approvals/instances/${approvalId}`,
-      );
+
+      // 重新拉取详情和抄送列表
+      const [d, cc] = await Promise.all([
+        api<ApprovalInstanceDetail>(
+          `/api/v1/workspaces/${workspaceId}/approvals/instances/${approvalId}`,
+        ),
+        api<CcUser[]>(
+          `/api/v1/workspaces/${workspaceId}/approvals/instances/${approvalId}/cc`,
+        ).catch(() => []),
+      ]);
       setDetail(d);
+      setCcUsers(cc);
       setActionDialog(null);
       setComment("");
+      setTargetUserId("");
     } catch (e) {
       setActionError(
         e instanceof ApiError || e instanceof Error
@@ -516,6 +618,52 @@ export function ApprovalDetail({
         )}
       </section>
 
+      {/* 抄送人列表 */}
+      {ccUsers.length > 0 && (
+        <section className="mb-[var(--space-5)]">
+          <h2 className="flex items-center gap-1.5 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-2">
+            <Users size={16} className="text-[var(--muted)]" />
+            {t("ccUsers")}
+          </h2>
+          <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] divide-y divide-[var(--border-soft)]">
+            {ccUsers.map((cc) => {
+              const ccName =
+                cc.user?.name ||
+                cc.user?.email ||
+                cc.userName ||
+                cc.userEmail ||
+                "—";
+              return (
+                <div
+                  key={cc.id}
+                  className="flex items-center gap-2 px-[var(--space-3)] py-2 text-[length:var(--text-sm)]"
+                >
+                  <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
+                    {ccName}
+                  </span>
+                  {cc.nodeName && (
+                    <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                      · {cc.nodeName}
+                    </span>
+                  )}
+                  {cc.read ? (
+                    <span className="ml-auto inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--success)]">
+                      <CheckCircle2 size={12} />
+                      Read
+                    </span>
+                  ) : (
+                    <span className="ml-auto inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--muted)]">
+                      <Clock size={12} />
+                      Unread
+                    </span>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        </section>
+      )}
+
       {/* 操作按钮 */}
       {(canApproveOrReject || canWithdraw) && (
         <section className="flex items-center gap-2 pt-[var(--space-3)] border-t border-[var(--border-soft)]">
@@ -561,17 +709,55 @@ export function ApprovalDetail({
               {t("withdraw")}
             </button>
           )}
-          {/* TODO: 转交功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
+          {/* 转交按钮 */}
           {canApproveOrReject && (
             <button
-              onClick={() => toast("info", "Coming soon")}
+              onClick={() =>
+                setActionDialog({
+                  type: "transfer",
+                  confirmKey: "confirmTransfer",
+                  targetLabelKey: "transferTo",
+                })
+              }
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               <Forward size={14} />
-              {/* L5: 改用英文文本（无合适 i18n key，不修改 zh.json/en.json） */}
-              Transfer
+              {t("transfer")}
             </button>
           )}
+          {/* 加签按钮 */}
+          {canApproveOrReject && (
+            <button
+              onClick={() =>
+                setActionDialog({
+                  type: "addSign",
+                  confirmKey: "confirmAddSign",
+                  targetLabelKey: "addSignTo",
+                })
+              }
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <UserPlus size={14} />
+              {t("addSign")}
+            </button>
+          )}
+          {/* 委托按钮 */}
+          {canApproveOrReject && (
+            <button
+              onClick={() =>
+                setActionDialog({
+                  type: "delegate",
+                  confirmKey: "confirmDelegate",
+                  targetLabelKey: "delegateTo",
+                })
+              }
+              className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <UserCog size={14} />
+              {t("delegate")}
+            </button>
+          )}
+
           {/* TODO: 评论功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
           {(canApproveOrReject || canWithdraw) && (
             <button
@@ -612,6 +798,28 @@ export function ApprovalDetail({
               </button>
             </header>
             <form onSubmit={handleAction} className="px-5 py-4 space-y-3">
+              {/* 转交/加签/委托：目标用户输入 */}
+              {(actionDialog.type === "transfer" ||
+                actionDialog.type === "addSign" ||
+                actionDialog.type === "delegate") && (
+                <div>
+                  <label
+                    className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5"
+                    htmlFor="approval-target-user"
+                  >
+                    {t(actionDialog.targetLabelKey)}
+                  </label>
+                  <input
+                    id="approval-target-user"
+                    type="text"
+                    value={targetUserId}
+                    onChange={(e) => setTargetUserId(e.target.value)}
+                    maxLength={100}
+                    placeholder={t("selectUser")}
+                    className="w-full px-2.5 py-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+                  />
+                </div>
+              )}
               <div>
                 <label
                   className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5"

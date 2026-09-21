@@ -4,11 +4,14 @@
  * 审批列表组件。
  *
  * 功能：
- * - 标签页切换：待审批 / 我发起的 / 全部
+ * - 标签页切换：待审批 / 我发起的 / 我抄送的 / 全部
  * - 拉取审批实例列表（GET /api/v1/workspaces/{wid}/approvals/instances）
+ * - 拉取抄送列表（GET /api/v1/workspaces/{wid}/approvals/cc）
  * - 每条：标题、申请人、状态标签（颜色区分）、提交时间
  * - 点击跳转详情页
  * - 分页（page + limit）
+ * - 优先级筛选（前端应用层过滤）
+ * - 搜索框（按标题和申请人名称前端过滤）
  *
  * 状态颜色映射（design token，禁止裸 hex）：
  * - pending  → var(--warning) / var(--warning-fg)
@@ -17,7 +20,7 @@
  * - withdrawn→ var(--muted)
  */
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
 import { Link } from "@/lib/i18n-navigation";
 import {
@@ -29,6 +32,8 @@ import {
   ChevronLeft,
   ChevronRight,
   MinusCircle,
+  Search,
+  Filter,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
@@ -52,8 +57,29 @@ export interface ApprovalInstanceListItem {
   templateName?: string | null;
   currentNode?: number;
   totalNodes?: number;
+  priority?: "normal" | "urgent" | "critical" | null;
   submittedAt: string;
   completedAt?: string | null;
+}
+
+/** 抄送记录（与后端 GET /approvals/cc 响应一致） */
+interface ApprovalCcRecord {
+  id: string;
+  instanceId: string;
+  userId: string;
+  nodeIndex: number;
+  readAt?: string | null;
+  createdAt: string;
+  instance: {
+    id: string;
+    title: string;
+    status: "pending" | "approved" | "rejected" | "withdrawn";
+    applicant: {
+      id: string;
+      name?: string | null;
+      email?: string | null;
+    };
+  };
 }
 
 /** 分页响应信封（后端通用格式） */
@@ -65,7 +91,8 @@ interface PaginatedResponse<T> {
   totalPages: number;
 }
 
-type Tab = "pending" | "mine" | "all";
+type Tab = "pending" | "mine" | "cc" | "all";
+type PriorityFilter = "all" | "normal" | "urgent" | "critical";
 
 const PAGE_LIMIT = 20;
 
@@ -104,6 +131,22 @@ function getStatusVisual(status: ApprovalInstanceListItem["status"]) {
   }
 }
 
+/** 将抄送记录转换为 ApprovalInstanceListItem 兼容格式 */
+function ccRecordToItem(record: ApprovalCcRecord): ApprovalInstanceListItem {
+  return {
+    id: record.instance.id,
+    title: record.instance.title,
+    status: record.instance.status,
+    applicantId: record.instance.applicant.id,
+    applicant: {
+      id: record.instance.applicant.id,
+      name: record.instance.applicant.name,
+      email: record.instance.applicant.email,
+    },
+    submittedAt: record.createdAt,
+  };
+}
+
 interface ApprovalListProps {
   workspaceId: string;
 }
@@ -117,6 +160,8 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const [total, setTotal] = useState(0);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<PriorityFilter>("all");
 
   useEffect(() => {
     let cancelled = false;
@@ -124,27 +169,51 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
       setLoading(true);
       setError("");
       try {
-        const params = new URLSearchParams();
-        params.set("page", String(page));
-        params.set("limit", String(PAGE_LIMIT));
-        if (tab === "pending") {
-          params.set("status", "pending");
-        } else if (tab === "mine") {
-          params.set("mine", "1");
-        }
-        const data = await api<PaginatedResponse<ApprovalInstanceListItem> | ApprovalInstanceListItem[]>(
-          `/api/v1/workspaces/${workspaceId}/approvals/instances?${params.toString()}`,
-        );
-        if (cancelled) return;
-        // 兼容分页信封与裸数组两种响应
-        if (Array.isArray(data)) {
-          setItems(data);
-          setTotal(data.length);
-          setTotalPages(1);
+        if (tab === "cc") {
+          // 抄送列表使用不同的 API 端点
+          const data = await api<
+            PaginatedResponse<ApprovalCcRecord> | ApprovalCcRecord[]
+          >(
+            `/api/v1/workspaces/${workspaceId}/approvals/cc?page=${page}&limit=${PAGE_LIMIT}`,
+          );
+          if (cancelled) return;
+          // 兼容分页信封与裸数组两种响应
+          if (Array.isArray(data)) {
+            const converted = data.map(ccRecordToItem);
+            setItems(converted);
+            setTotal(converted.length);
+            setTotalPages(1);
+          } else {
+            const converted = (data.items ?? []).map(ccRecordToItem);
+            setItems(converted);
+            setTotal(data.total ?? 0);
+            setTotalPages(data.totalPages ?? 1);
+          }
         } else {
-          setItems(data.items ?? []);
-          setTotal(data.total ?? 0);
-          setTotalPages(data.totalPages ?? 1);
+          const params = new URLSearchParams();
+          params.set("page", String(page));
+          params.set("limit", String(PAGE_LIMIT));
+          if (tab === "pending") {
+            params.set("status", "pending");
+          } else if (tab === "mine") {
+            params.set("mine", "1");
+          }
+          const data = await api<
+            PaginatedResponse<ApprovalInstanceListItem> | ApprovalInstanceListItem[]
+          >(
+            `/api/v1/workspaces/${workspaceId}/approvals/instances?${params.toString()}`,
+          );
+          if (cancelled) return;
+          // 兼容分页信封与裸数组两种响应
+          if (Array.isArray(data)) {
+            setItems(data);
+            setTotal(data.length);
+            setTotalPages(1);
+          } else {
+            setItems(data.items ?? []);
+            setTotal(data.total ?? 0);
+            setTotalPages(data.totalPages ?? 1);
+          }
         }
       } catch (e) {
         if (cancelled) return;
@@ -162,6 +231,30 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
     };
   }, [workspaceId, tab, page, t]);
 
+  // 前端过滤：优先级 + 搜索（后端 API 不支持这些参数）
+  const filteredItems = useMemo(() => {
+    let result = items;
+    if (priorityFilter !== "all") {
+      result = result.filter((item) => item.priority === priorityFilter);
+    }
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      result = result.filter((item) => {
+        const applicantName =
+          item.applicant?.name ||
+          item.applicant?.email ||
+          item.applicantName ||
+          item.applicantEmail ||
+          "";
+        return (
+          item.title.toLowerCase().includes(q) ||
+          applicantName.toLowerCase().includes(q)
+        );
+      });
+    }
+    return result;
+  }, [items, priorityFilter, searchQuery]);
+
   // 切换标签页时重置到第一页
   function switchTab(next: Tab) {
     if (next === tab) return;
@@ -172,7 +265,15 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
   const tabs: { key: Tab; labelKey: string }[] = [
     { key: "pending", labelKey: "pending" },
     { key: "mine", labelKey: "mine" },
+    { key: "cc", labelKey: "ccTab" },
     { key: "all", labelKey: "all" },
+  ];
+
+  const priorityOptions: { value: PriorityFilter; labelKey: string }[] = [
+    { value: "all", labelKey: "priority" },
+    { value: "normal", labelKey: "priorityNormal" },
+    { value: "urgent", labelKey: "priorityUrgent" },
+    { value: "critical", labelKey: "priorityCritical" },
   ];
 
   return (
@@ -207,6 +308,46 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
         })}
       </div>
 
+      {/* 筛选与搜索区域 */}
+      <div className="flex items-center gap-3 mb-[var(--space-4)] flex-wrap">
+        {/* 优先级筛选 */}
+        <div className="relative inline-flex items-center">
+          <Filter
+            size={14}
+            className="absolute left-2 text-[var(--muted)] pointer-events-none"
+          />
+          <select
+            value={priorityFilter}
+            onChange={(e) =>
+              setPriorityFilter(e.target.value as PriorityFilter)
+            }
+            className="h-8 pl-7 pr-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] cursor-pointer"
+            aria-label={t("priority")}
+          >
+            {priorityOptions.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {t(opt.labelKey)}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* 搜索框 */}
+        <div className="relative inline-flex items-center flex-1 min-w-[200px]">
+          <Search
+            size={14}
+            className="absolute left-2 text-[var(--muted)] pointer-events-none"
+          />
+          <input
+            type="text"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            placeholder={t("searchPlaceholder")}
+            className="h-8 w-full pl-7 pr-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          />
+        </div>
+      </div>
+
       {error && (
         <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">
           {error}
@@ -218,7 +359,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
           <Loader2 size={20} className="inline animate-spin mr-2" />
           {t("loading")}
         </div>
-      ) : items.length === 0 ? (
+      ) : filteredItems.length === 0 ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">
           <FileText size={36} className="mx-auto mb-3 opacity-50" />
           <p>{t("noApprovals")}</p>
@@ -226,7 +367,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
       ) : (
         <>
           <ul className="divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
-            {items.map((item) => {
+            {filteredItems.map((item) => {
               const visual = getStatusVisual(item.status);
               const applicant =
                 item.applicant?.name ||

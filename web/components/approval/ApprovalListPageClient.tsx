@@ -11,10 +11,11 @@
 
 import { useState } from "react";
 import { useTranslations } from "next-intl";
-import { Plus, Settings, X } from "lucide-react";
+import { Plus, Settings, UserCog, X } from "lucide-react";
 import { ApprovalList } from "./ApprovalList";
 import { ApprovalSubmit } from "./ApprovalSubmit";
 import { ApprovalTemplateManage } from "./ApprovalTemplateManage";
+import { ApprovalDelegateSettings } from "./ApprovalDelegateSettings";
 
 interface ApprovalListPageClientProps {
   workspaceId: string;
@@ -26,6 +27,7 @@ export function ApprovalListPageClient({
   const t = useTranslations("approval");
   const [submitOpen, setSubmitOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [delegateOpen, setDelegateOpen] = useState(false);
   // refreshKey：发起审批成功后递增，触发 ApprovalList 重建刷新数据
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -39,6 +41,13 @@ export function ApprovalListPageClient({
         >
           <Settings size={14} />
           {t("templateManage")}
+        </button>
+        <button
+          onClick={() => setDelegateOpen(true)}
+          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+        >
+          <UserCog size={14} />
+          {t("delegateSettings")}
         </button>
         <button
           onClick={() => setSubmitOpen(true)}
@@ -77,6 +86,25 @@ export function ApprovalListPageClient({
             {t("close")}
           </button>
           <ApprovalTemplateManage workspaceId={workspaceId} />
+        </div>
+      )}
+
+      {/* 委托设置全屏覆盖 */}
+      {delegateOpen && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          className="fixed inset-0 z-[var(--z-modal)] overflow-y-auto bg-[var(--bg)]"
+        >
+          <button
+            onClick={() => setDelegateOpen(false)}
+            className="fixed top-[var(--space-4)] right-[var(--space-4)] z-10 inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] shadow-[var(--elev-sm)]"
+            aria-label={t("close")}
+          >
+            <X size={14} />
+            {t("close")}
+          </button>
+          <ApprovalDelegateSettings workspaceId={workspaceId} />
         </div>
       )}
     </div>
