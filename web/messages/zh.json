@@ -952,7 +952,8 @@
     "taskPickerLoadFailed": "加载任务失败",
     "taskPickerUnavailable": "无法获取工作区信息",
     "aiReply": "AI 回复",
-    "aiReplyUnavailable": "AI 未配置"
+    "aiReplyUnavailable": "AI 未配置",
+    "loading": "加载中…"
   },
   "im": {
     "actions": {

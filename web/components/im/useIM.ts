@@ -87,6 +87,8 @@ export interface UseIMResult {
   loadConversations: () => Promise<void>;
   /** 选择会话（加载详情 + 消息 + 订阅 + 标记已读） */
   selectConversation: (cid: string) => Promise<void>;
+  /** 从任务 ID 获取/创建关联会话（任务详情页内嵌聊天用） */
+  selectTaskConversation: (taskId: string) => Promise<void>;
   /** 加载更多历史消息（向上加载，用最早消息 createdAt 作 before 游标） */
   loadMoreMessages: (cid: string) => Promise<void>;
   /** 是否正在加载更多历史消息 */
@@ -205,6 +207,23 @@ export function useIM(workspaceId: string): UseIMResult {
       }
     },
     [workspaceId, ws],
+  );
+
+  /** 从任务 ID 获取/创建关联会话（任务详情页内嵌聊天用） */
+  const selectTaskConversation = useCallback(
+    async (taskId: string) => {
+      try {
+        setError(null);
+        const conv = await api<Conversation>(
+          `/api/v1/workspaces/${workspaceId}/tasks/${taskId}/conversation`,
+          { method: "POST" },
+        );
+        await selectConversation(conv.id);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : "Failed to load task conversation");
+      }
+    },
+    [workspaceId, selectConversation],
   );
 
   /** 加载更多历史消息（向上加载）：用当前最早消息的 createdAt 作 before 游标 */
@@ -488,6 +507,7 @@ export function useIM(workspaceId: string): UseIMResult {
     wsStatus: ws.status,
     loadConversations,
     selectConversation,
+    selectTaskConversation,
     loadMoreMessages,
     loadingMore,
     sendMessage,

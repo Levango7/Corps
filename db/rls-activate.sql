@@ -47,6 +47,7 @@ BEGIN
     'members','tasks','comments','decisions','decision_versions',
     'subscriptions','notifications','workspaces','invitations','analytics_events',
     'labels','milestones','messages','message_attachments','task_labels',
+    'conversations','conversation_members',
     'chat_presences','message_reads','calendar_connections','task_calendar_events',
     'documents','temporary_grants',
     'push_subscriptions','ai_push_schedules','ai_push_records'
@@ -162,15 +163,22 @@ CREATE POLICY p_task_labels_rls ON task_labels FOR ALL
 -- ─── 2026-08-30 四表收编（审计 P2 + 决策 A 体验优先版）──────────────────────
 -- chat_presences / message_reads：与 messages 同域（经 task/message 关联套租户）。
 -- 调用点（stream/read 路由）已持 wid 上下文，改走 runWithWorkspace 注入 GUC。
+-- chat_presences：扩展 RLS 覆盖 conversation_id 路径
+-- 原：仅 task_id → tasks → workspace_id
+-- 新：task_id → tasks → workspace_id OR conversation_id → conversations → workspace_id
 DROP POLICY IF EXISTS p_chat_presences_rls ON chat_presences;
 CREATE POLICY p_chat_presences_rls ON chat_presences FOR ALL
   USING (
     task_id IN (SELECT t.id FROM tasks t
                 WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+    OR conversation_id IN (SELECT c.id FROM conversations c
+                           WHERE c.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   )
   WITH CHECK (
     task_id IN (SELECT t.id FROM tasks t
                 WHERE t.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+    OR conversation_id IN (SELECT c.id FROM conversations c
+                           WHERE c.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   );
 
 DROP POLICY IF EXISTS p_message_reads_rls ON message_reads;
@@ -479,3 +487,22 @@ CREATE POLICY p_ai_push_records_update ON ai_push_records FOR UPDATE
 
 CREATE POLICY p_ai_push_records_delete ON ai_push_records FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+-- ─── IM 会话表 RLS 补齐（安全修复）──────────────────────────────────────────
+-- conversations：workspace_id 直接谓词（与 tasks/labels/milestones 同模式）
+DROP POLICY IF EXISTS p_conversations_rls ON conversations;
+CREATE POLICY p_conversations_rls ON conversations FOR ALL
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- conversation_members：经 conversation 关联套 workspace_id 谓词
+-- （与 task_labels/message_reads 同模式：子查询 IN 路径）
+DROP POLICY IF EXISTS p_conversation_members_rls ON conversation_members;
+CREATE POLICY p_conversation_members_rls ON conversation_members FOR ALL
+  USING (
+    conversation_id IN (SELECT c.id FROM conversations c
+                        WHERE c.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  )
+  WITH CHECK (
+    conversation_id IN (SELECT c.id FROM conversations c
+                        WHERE c.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  );

@@ -33,9 +33,11 @@ interface IMClientProps {
   workspaceId: string;
   /** 初始会话 ID（从路由 /im/[cid] 进入时指定） */
   initialConversationId?: string;
+  /** 单会话模式：仅显示指定会话，无列表/搜索/创建 */
+  singleConversationId?: string;
 }
 
-export function IMClient({ workspaceId, initialConversationId }: IMClientProps) {
+export function IMClient({ workspaceId, initialConversationId, singleConversationId }: IMClientProps) {
   const t = useTranslations("chat");
   const router = useRouter();
   const {
@@ -76,15 +78,28 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
     }
   }, [initialConversationId, currentUserId, selectConversation]);
 
+  // 单会话模式：自动选中指定会话，不做 URL 跳转
+  useEffect(() => {
+    if (singleConversationId && currentUserId) {
+      void selectConversation(singleConversationId);
+      setMobileView("chat");
+    }
+  }, [singleConversationId, currentUserId, selectConversation]);
+
+  /** 是否为单会话模式 */
+  const isSingleMode = !!singleConversationId;
+
   /** 选择会话 */
   const handleSelect = useCallback(
     (id: string) => {
       void selectConversation(id);
       setMobileView("chat");
-      // 同步 URL（不触发服务端导航，仅 push state）
-      router.push(`/w/${workspaceId}/im/${id}`);
+      // 单会话模式下不做 URL 跳转
+      if (!isSingleMode) {
+        router.push(`/w/${workspaceId}/im/${id}`);
+      }
     },
-    [selectConversation, router, workspaceId],
+    [selectConversation, router, workspaceId, isSingleMode],
   );
 
   /** 创建会话成功 */
@@ -137,11 +152,11 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
 
   return (
     <div className="flex h-[calc(100dvh-var(--topbar-h)-var(--space-8))] lg:h-[calc(100dvh-var(--topbar-h)-var(--space-12))] rounded-[var(--radius-lg)] overflow-hidden border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]">
-      {/* 左侧会话列表（桌面常驻 / 移动端 list 视图） */}
+      {/* 左侧会话列表（桌面常驻 / 移动端 list 视图 / 单会话模式下隐藏） */}
       <div
         className={`${
-          mobileView === "list" ? "flex" : "hidden"
-        } md:flex w-full md:w-72 lg:w-80 shrink-0`}
+          isSingleMode ? "hidden" : mobileView === "list" ? "flex" : "hidden"
+        } md:${isSingleMode ? "hidden" : "flex"} w-full md:w-72 lg:w-80 shrink-0`}
       >
         <ConversationList
           conversations={conversations}
@@ -153,23 +168,25 @@ export function IMClient({ workspaceId, initialConversationId }: IMClientProps) 
         />
       </div>
 
-      {/* 右侧聊天窗口（桌面常驻 / 移动端 chat 视图） */}
+      {/* 右侧聊天窗口（桌面常驻 / 移动端 chat 视图 / 单会话模式始终显示） */}
       <div
         className={`${
-          mobileView === "chat" ? "flex" : "hidden"
+          isSingleMode ? "flex" : mobileView === "chat" ? "flex" : "hidden"
         } md:flex flex-1 min-w-0`}
       >
         {showChat && activeConversation ? (
           <div className="flex flex-col w-full h-full">
-            {/* 移动端返回栏 */}
-            <button
-              type="button"
-              onClick={handleBackToList}
-              className="md:hidden flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] border-b border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-            >
-              <ArrowLeft size={16} />
-              {t("backToList")}
-            </button>
+            {/* 移动端返回栏（单会话模式下隐藏） */}
+            {!isSingleMode && (
+              <button
+                type="button"
+                onClick={handleBackToList}
+                className="md:hidden flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] border-b border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <ArrowLeft size={16} />
+                {t("backToList")}
+              </button>
+            )}
             <div className="flex-1 min-h-0">
               <ChatWindow
                 conversation={activeConversation}

@@ -22,6 +22,7 @@ const USER_SELECT = {
 const listQuerySchema = z.object({
   cursor: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(100).default(20),
+  type: z.enum(["direct", "group", "task"]).optional(),
 });
 
 /**
@@ -46,6 +47,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const parsed = listQuerySchema.safeParse({
       cursor: url.searchParams.get("cursor") ?? undefined,
       limit: url.searchParams.get("limit") ?? undefined,
+      type: url.searchParams.get("type") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -69,6 +71,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           where: {
             workspaceId: wid,
             members: { some: { userId } },
+            ...(parsed.data.type === "task"
+              ? { source: "task" }
+              : parsed.data.type
+                ? { type: parsed.data.type }
+                : {}),
           },
           include: {
             members: {
@@ -158,6 +165,8 @@ const createConversationSchema = z.object({
   memberIds: z.array(z.string().uuid()).min(2),
   title: z.string().min(1).max(200).optional(),
   description: z.string().max(500).optional(),
+  taskId: z.string().uuid().optional(),
+  source: z.enum(["manual", "task", "system"]).optional(),
 });
 
 /**
@@ -240,6 +249,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             title: body.title ?? null,
             description: body.description ?? null,
             createdBy: userId,
+            ...(body.taskId ? { taskId: body.taskId } : {}),
+            ...(body.source ? { source: body.source } : {}),
             members: {
               create: body.memberIds.map((memberUserId) => ({
                 userId: memberUserId,

@@ -117,6 +117,12 @@ model User {
   approvalInstances    ApprovalInstance[]      @relation("ApprovalApplicant")
   approvalOperations   ApprovalOperation[]     @relation("ApprovalOperator")
   approvalTransfers    ApprovalOperation[]     @relation("ApprovalTransferTarget")
+  approvalAddSigns     ApprovalOperation[]     @relation("ApprovalAddSignTarget")
+  approvalDelegateTargets ApprovalOperation[]  @relation("ApprovalDelegateTarget")
+  approvalDelegators   ApprovalDelegate[]      @relation("ApprovalDelegator")
+  approvalDelegateTos  ApprovalDelegate[]      @relation("ApprovalDelegateTo")
+  approvalCcRecords    ApprovalCcRecord[]      @relation("ApprovalCcRecipient")
+  grantedFolderPermissions FolderPermission[]  @relation("FolderPermissionGranter")
   // 阶段 6：文档权限授权
   grantedDocumentPermissions DocumentPermission[] @relation("DocumentPermissionGranter")
   // 阶段 7+8：工作流创建 + OKR 负责人/关键结果负责人 + 通讯录创建 + 项目模板创建 + 白板创建 + 表单创建/提交 + 工时 + 会议纪要创建 + 公告发布
@@ -220,6 +226,11 @@ model Workspace {
   approvalInstances   ApprovalInstance[]
   approvalOperations  ApprovalOperation[]
   documentPermissions DocumentPermission[]
+  approvalCcRecords    ApprovalCcRecord[]
+  approvalDelegates    ApprovalDelegate[]
+  folderPermissions    FolderPermission[]
+  shareLinkPermissions ShareLinkPermission[]
+  permissionAuditLogs  PermissionAuditLog[]
   // 阶段 7+8：工作流 + OKR + 通讯录 + 项目模板 + 白板 + 表单 + 工时 + 会议纪要 + 公告
   workflows              Workflow[]
   workflowExecutions     WorkflowExecution[]
@@ -362,6 +373,7 @@ model Task {
   messages       Message[]
   // IM 升级：任务内聊天在线状态
   chatPresences  ChatPresence[]
+  conversations  Conversation[] @relation("TaskConversations")
   labels         TaskLabel[]
   // 日历集成：任务同步到外部日历的事件映射
   calendarEvents TaskCalendarEvent[]
@@ -496,6 +508,8 @@ model Conversation {
   createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
   updatedAt     DateTime @updatedAt @db.Timestamptz @map("updated_at")
   lastMessageAt DateTime? @map("last_message_at") @db.Timestamptz
+  taskId         String?  @map("task_id") @db.Uuid
+  source         String   @default("manual") @db.VarChar(20)
 
   members       ConversationMember[]
   messages      Message[]
@@ -503,9 +517,11 @@ model Conversation {
   workspace     Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   // 创建者注销后会话保留，creator 置空（审计 D3：防跨工作区级联销毁）
   creator       User?     @relation("ConversationCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  task          Task?     @relation("TaskConversations", fields: [taskId], references: [id], onDelete: SetNull)
 
   // 会话列表按工作区 + 最近活动排序
   @@index([workspaceId, updatedAt])
+  @@index([taskId])
   @@map("conversations")
 }
 
@@ -522,6 +538,7 @@ model ConversationMember {
   joinedAt       DateTime @default(now()) @db.Timestamptz @map("joined_at")
   lastReadAt     DateTime? @map("last_read_at") @db.Timestamptz
   muted          Boolean  @default(false)
+  invitedBy      String?  @map("invited_by") @db.Uuid
 
   conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   user         User         @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1495,6 +1512,11 @@ model ApprovalTemplate {
   createdBy     String?  @map("created_by") @db.Uuid
   /// 是否启用
   active        Boolean  @default(true)
+  flowType      String   @default("sequential") @map("flow_type") @db.VarChar(20)
+  formSchema    Json?    @map("form_schema") @db.JsonB
+  icon          String   @default("file-check") @db.VarChar(50)
+  category      String?  @db.VarChar(50)
+  isBuiltin     Boolean  @default(false) @map("is_builtin")
   createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
   updatedAt     DateTime @updatedAt @db.Timestamptz @map("updated_at")
 
@@ -1503,6 +1525,7 @@ model ApprovalTemplate {
   creator       User?              @relation("ApprovalTemplateCreator", fields: [createdBy], references: [id], onDelete: SetNull)
 
   @@index([workspaceId, active])
+  @@index([workspaceId, category])
   @@map("approval_templates")
 }
 
@@ -1521,6 +1544,12 @@ model ApprovalInstance {
   status        String   @default("pending") @db.VarChar(20)
   /// 当前审批节点序号
   currentNode   Int      @default(0) @map("current_node")
+  activeNodeIds  String[] @default([]) @map("active_node_ids")
+  conditionCache Json?    @map("condition_cache") @db.JsonB
+  priority       String   @default("normal") @db.VarChar(20)
+  expectedAt     DateTime? @map("expected_at") @db.Timestamptz
+  entityType     String?  @map("entity_type") @db.VarChar(20)
+  entityId       String?  @map("entity_id") @db.Uuid
   /// 审批节点配置快照（从模板复制，避免模板修改影响进行中的审批）
   nodes         Json     @db.JsonB
   submittedAt   DateTime @default(now()) @db.Timestamptz @map("submitted_at")
@@ -1530,11 +1559,13 @@ model ApprovalInstance {
 
   template      ApprovalTemplate?   @relation(fields: [templateId], references: [id], onDelete: SetNull)
   operations    ApprovalOperation[]
+  ccRecords     ApprovalCcRecord[]
   workspace     Workspace           @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   applicant     User                @relation("ApprovalApplicant", fields: [applicantId], references: [id], onDelete: Cascade)
 
   @@index([workspaceId, status])
   @@index([applicantId, status])
+  @@index([workspaceId, priority, status])
   @@map("approval_instances")
 }
 
@@ -1553,15 +1584,61 @@ model ApprovalOperation {
   comment       String?  @db.Text
   /// 转交目标用户（action=transfer 时）
   transferToId  String?  @map("transfer_to_id") @db.Uuid
+  nodeId        String?  @map("node_id") @db.VarChar(100)
+  addSignToId   String?  @map("add_sign_to_id") @db.Uuid
+  delegateToId  String?  @map("delegate_to_id") @db.Uuid
   createdAt     DateTime @default(now()) @db.Timestamptz @map("created_at")
 
   instance      ApprovalInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
   workspace     Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
   operator      User             @relation("ApprovalOperator", fields: [operatorId], references: [id], onDelete: Cascade)
   transferTo    User?            @relation("ApprovalTransferTarget", fields: [transferToId], references: [id], onDelete: SetNull)
+  addSignTo     User?            @relation("ApprovalAddSignTarget", fields: [addSignToId], references: [id], onDelete: SetNull)
+  delegateTo    User?            @relation("ApprovalDelegateTarget", fields: [delegateToId], references: [id], onDelete: SetNull)
 
   @@index([instanceId, createdAt])
+  @@index([instanceId, nodeId])
   @@map("approval_operations")
+}
+
+/// 审批抄送记录：通知非审批人查看审批进度
+model ApprovalCcRecord {
+  id          String   @id @default(uuid()) @db.Uuid
+  instanceId  String   @map("instance_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  userId      String   @map("user_id") @db.Uuid
+  nodeIndex   Int      @map("node_index")
+  readAt      DateTime? @map("read_at") @db.Timestamptz
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  instance    ApprovalInstance @relation(fields: [instanceId], references: [id], onDelete: Cascade)
+  workspace   Workspace        @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  user        User             @relation("ApprovalCcRecipient", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([instanceId, userId, nodeIndex])
+  @@index([userId, readAt])
+  @@map("approval_cc_records")
+}
+
+/// 审批委托：用户可设置出差/休假期间的审批代理人
+model ApprovalDelegate {
+  id           String   @id @default(uuid()) @db.Uuid
+  workspaceId  String   @map("workspace_id") @db.Uuid
+  delegatorId  String   @map("delegator_id") @db.Uuid
+  delegateToId String   @map("delegate_to_id") @db.Uuid
+  startAt      DateTime @map("start_at") @db.Timestamptz
+  endAt        DateTime @map("end_at") @db.Timestamptz
+  reason       String?  @db.Text
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace    Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  delegator    User      @relation("ApprovalDelegator", fields: [delegatorId], references: [id], onDelete: Cascade)
+  delegateTo   User      @relation("ApprovalDelegateTo", fields: [delegateToId], references: [id], onDelete: Cascade)
+
+  @@unique([workspaceId, delegatorId, startAt])
+  @@index([delegateToId, active])
+  @@map("approval_delegates")
 }
 
 /// 文档级权限（分享/协作者）
@@ -1579,6 +1656,9 @@ model DocumentPermission {
   permission  String   @db.VarChar(20)
   /// 授权人
   grantedBy   String?  @map("granted_by") @db.Uuid
+  source      String   @default("explicit") @db.VarChar(20)
+  inheritedFromId String? @map("inherited_from_id") @db.Uuid
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
   createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
 
   document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
@@ -1587,8 +1667,79 @@ model DocumentPermission {
 
   @@unique([documentId, granteeType, granteeId])
   @@index([documentId])
+  @@index([workspaceId, granteeType, granteeId])
   @@map("document_permissions")
 }
+
+/// 文件夹级权限：控制对 Space/Folder 的访问权限
+model FolderPermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  targetType  String   @map("target_type") @db.VarChar(10)
+  targetId    String   @map("target_id") @db.Uuid
+  granteeType String   @map("grantee_type") @db.VarChar(20)
+  granteeId   String   @map("grantee_id") @db.VarChar(100)
+  permission  String   @db.VarChar(20)
+  grantedBy   String?  @map("granted_by") @db.Uuid
+  inheritable Boolean  @default(true)
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+  updatedAt   DateTime @updatedAt @db.Timestamptz @map("updated_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  granter     User?     @relation("FolderPermissionGranter", fields: [grantedBy], references: [id], onDelete: SetNull)
+
+  @@unique([targetType, targetId, granteeType, granteeId])
+  @@index([targetType, targetId])
+  @@index([workspaceId, granteeType, granteeId])
+  @@map("folder_permissions")
+}
+
+/// 分享链接权限：外部用户通过链接访问文档的权限配置
+model ShareLinkPermission {
+  id          String   @id @default(uuid()) @db.Uuid
+  documentId  String   @map("document_id") @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  shareToken  String   @unique @map("share_token") @db.VarChar(64)
+  permission  String   @default("view") @db.VarChar(20)
+  allowDownload Boolean @default(false) @map("allow_download")
+  allowPrint  Boolean  @default(false) @map("allow_print")
+  allowCopy   Boolean  @default(true) @map("allow_copy")
+  passwordHash String? @map("password_hash") @db.VarChar(100)
+  expiresAt   DateTime? @map("expires_at") @db.Timestamptz
+  maxViews    Int?     @map("max_views")
+  viewCount   Int      @default(0) @map("view_count")
+  createdBy   String?  @map("created_by") @db.Uuid
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  document    Document  @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([documentId])
+  @@map("share_link_permissions")
+}
+
+/// 权限变更审计日志
+model PermissionAuditLog {
+  id          String   @id @default(uuid()) @db.Uuid
+  workspaceId String   @map("workspace_id") @db.Uuid
+  action      String   @db.VarChar(20)
+  targetType  String   @map("target_type") @db.VarChar(20)
+  targetId    String   @map("target_id") @db.Uuid
+  granteeType String   @map("grantee_type") @db.VarChar(20)
+  granteeId   String   @map("grantee_id") @db.VarChar(100)
+  oldPermission String? @map("old_permission") @db.VarChar(20)
+  newPermission String? @map("new_permission") @db.VarChar(20)
+  operatorId  String   @map("operator_id") @db.Uuid
+  reason      String?  @db.Text
+  createdAt   DateTime @default(now()) @db.Timestamptz @map("created_at")
+
+  workspace   Workspace @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([targetType, targetId, createdAt])
+  @@index([workspaceId, granteeType, granteeId])
+  @@map("permission_audit_logs")
+}
+
 // ─── 阶段 7+8：工作流自动化 + OKR + 通讯录 + 项目模板 + 白板 + 表单 + 工时 + 会议纪要 + 公告 ──
 
 /// 工作流自动化：触发器 + 动作列表
