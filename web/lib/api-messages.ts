@@ -477,6 +477,34 @@ export const API_MESSAGES = {
     zh: "您不是当前节点的审批人",
     en: "You are not the approver of this node",
   },
+  approvalTransferTargetNotFound: {
+    zh: "转交目标用户不存在",
+    en: "Transfer target user not found",
+  },
+  approvalAddSignTargetNotFound: {
+    zh: "加签目标用户不存在",
+    en: "Add-sign target user not found",
+  },
+  approvalDelegateTargetNotFound: {
+    zh: "委托目标用户不存在",
+    en: "Delegate target user not found",
+  },
+  approvalDelegateNotFound: {
+    zh: "委托设置不存在",
+    en: "Delegate setting not found",
+  },
+  approvalDelegateOverlap: {
+    zh: "委托时间与已有委托重叠",
+    en: "Delegate time overlaps with an existing delegate",
+  },
+  approvalCcTargetNotFound: {
+    zh: "抄送目标用户不存在",
+    en: "CC target user not found",
+  },
+  approvalConditionEvalFailed: {
+    zh: "条件求值失败",
+    en: "Condition evaluation failed",
+  },
 
   /* ── OKR（目标与关键结果）── */
   objectiveNotFound: { zh: "目标不存在", en: "Objective not found" },

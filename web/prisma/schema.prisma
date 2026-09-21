@@ -711,6 +711,8 @@ model Document {
   yjsPersistence YjsPersistence?
   // 阶段 6：文档级权限
   permissions    DocumentPermission[]
+  // 分享链接权限
+  shareLinkPermissions ShareLinkPermission[]
 
   // 工作区内文档搜索
   @@index([workspaceId, updatedAt])

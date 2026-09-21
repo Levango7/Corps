@@ -50,6 +50,7 @@
     "better-auth": "1.7.2",
     "framer-motion": "^13.2.0",
     "ioredis": "5.4.1",
+    "json-logic-js": "^2.0.5",
     "jsonwebtoken": "9.0.3",
     "lib0": "^0.2.117",
     "livekit-client": "^2.22.3",
