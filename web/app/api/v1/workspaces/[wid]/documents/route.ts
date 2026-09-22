@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 
 /**
@@ -34,19 +35,47 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const { page, limit } = parsed.data;
     const skip = (page - 1) * limit;
 
-    const where = {
+    const userId = ctx.payload.sub;
+    const role = ctx.member.role;
+    const isPrivileged = role === "owner" || role === "admin";
+
+    // 构建 where 条件：基础过滤 + 搜索 + visibility 权限
+    const where: Prisma.DocumentWhereInput = {
       workspaceId: wid,
-      ...(mine && ctx.payload.sub ? { authorId: ctx.payload.sub } : {}),
-      ...(q
-        ? {
-            OR: [
-              { title: { contains: q, mode: "insensitive" as const } },
-              { markdown: { contains: q, mode: "insensitive" as const } },
-              { publishedMarkdown: { contains: q, mode: "insensitive" as const } },
-            ],
-          }
-        : {}),
+      deletedAt: null,
     };
+
+    if (mine && userId) {
+      where.authorId = userId;
+    }
+
+    if (q) {
+      where.OR = [
+        { title: { contains: q, mode: "insensitive" } },
+        { markdown: { contains: q, mode: "insensitive" } },
+        { publishedMarkdown: { contains: q, mode: "insensitive" } },
+      ];
+    }
+
+    // 非特权角色（member/viewer）的 visibility 权限过滤：
+    // - workspace 可见的文档：所有人可读
+    // - private/shared 的文档：仅作者 + 有显式 DocumentPermission 的用户可见
+    // （shared 文档的分享链接访问走单独路由，此处不处理）
+    if (!isPrivileged && userId) {
+      where.AND = [
+        {
+          OR: [
+            { visibility: "workspace" },
+            { authorId: userId },
+            {
+              permissions: {
+                some: { granteeType: "user", granteeId: userId },
+              },
+            },
+          ],
+        },
+      ];
+    }
 
     const [docs, total] = await runWithWorkspace(wid, (tx) =>
       Promise.all([

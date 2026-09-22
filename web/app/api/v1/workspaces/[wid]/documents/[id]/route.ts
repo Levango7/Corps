@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { hash as hashSharePassword } from "@/lib/crypto";
+import { checkDocumentPermission } from "@/lib/document-permission-check";
 
 /**
  * GET /v1/workspaces/{wid}/documents/{id} — 文档详情（编辑视图）
@@ -21,7 +22,7 @@ export async function GET(
   try {
     const doc = await runWithWorkspace(wid, (tx) =>
       tx.document.findFirst({
-        where: { id, workspaceId: wid },
+        where: { id, workspaceId: wid, deletedAt: null },
         include: {
           author: { select: { id: true, name: true, email: true } },
         },
@@ -34,6 +35,34 @@ export async function GET(
         { status: 404 },
       );
     }
+
+    // visibility 权限检查：
+    // - owner/admin：可查看任何文档
+    // - workspace 可见：工作区所有成员可读
+    // - private/shared：需要是作者或有显式 DocumentPermission
+    //   （shared 文档的分享链接访问走单独路由，此处不处理）
+    const userId = ctx.payload.sub;
+    const role = ctx.member.role;
+    const isPrivileged = role === "owner" || role === "admin";
+
+    if (!isPrivileged && userId) {
+      if (doc.visibility !== "workspace" && doc.authorId !== userId) {
+        const canView = await checkDocumentPermission(
+          userId,
+          doc.id,
+          "view",
+          wid,
+          role,
+        );
+        if (!canView) {
+          return NextResponse.json(
+            { code: 403, message: apiMsg(req, "forbidden"), data: null },
+            { status: 403 },
+          );
+        }
+      }
+    }
+
     return NextResponse.json({ code: 200, data: doc });
   } catch (error) {
     console.error("[GET document] error:", error);

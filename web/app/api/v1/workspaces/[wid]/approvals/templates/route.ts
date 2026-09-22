@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import type { Prisma } from "@prisma/client";
+import { getBuiltinTemplates } from "@/lib/approval/builtin-templates";
 
 /** 审批节点配置 schema（模板与实例共用） */
 const approvalNodeSchema = z.object({
@@ -22,6 +24,8 @@ const listTemplatesQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(20),
   // M3: pageSize 作为 limit 的别名，支持 { items, total, page, pageSize } 分页结构
   pageSize: z.coerce.number().int().min(1).max(100).optional(),
+  // 分类筛选：leave | expense | purchase | contract | hr
+  category: z.string().optional(),
 });
 
 /** POST 创建模板 body 校验 */
@@ -31,9 +35,15 @@ const createTemplateSchema = z.object({
   nodes: z.array(approvalNodeSchema).min(1),
 });
 
+/** POST init-builtin body 校验 */
+const initBuiltinSchema = z.object({
+  action: z.literal("init-builtin"),
+});
+
 /**
  * GET /v1/workspaces/{wid}/approvals/templates — 审批模板列表
  * Query: ?includeInactive=1（包含已停用模板）?page=1&limit=20
+ *        ?category=leave（按分类筛选：leave/expense/purchase/contract/hr）
  * 默认仅返回 active=true 的模板，按 createdAt 倒序
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -48,6 +58,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       page: url.searchParams.get("page") ?? undefined,
       limit: url.searchParams.get("limit") ?? undefined,
       pageSize: url.searchParams.get("pageSize") ?? undefined,
+      category: url.searchParams.get("category") ?? undefined,
     });
     if (!parsed.success) {
       return NextResponse.json(
@@ -56,13 +67,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       );
     }
     // M3: pageSize 优先于 limit，支持 { items, total, page, pageSize } 分页结构
-    const { includeInactive, page } = parsed.data;
+    const { includeInactive, page, category } = parsed.data;
     const limit = parsed.data.pageSize ?? parsed.data.limit;
     const skip = (page - 1) * limit;
 
     const where = {
       workspaceId: wid,
       ...(includeInactive !== "1" ? { active: true } : {}),
+      ...(category ? { category } : {}),
     };
 
     const [items, total] = await runWithWorkspace(wid, (tx) =>
@@ -94,6 +106,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 /**
  * POST /v1/workspaces/{wid}/approvals/templates — 创建审批模板
  * Body: { name, description?, nodes: [{ approverRole?, approverUserId?, name, order }] }
+ *       { action: "init-builtin" } — 初始化内置模板
  * createdBy 设为当前用户，返回 { code: 201, data: template }
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -103,6 +116,63 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
   try {
     const body = await req.json();
+
+    // 内置模板初始化分支
+    if (body?.action === "init-builtin") {
+      const validated = initBuiltinSchema.parse(body);
+      if (validated.action === "init-builtin") {
+        const builtinTemplates = getBuiltinTemplates();
+
+        const result = await runWithWorkspace(
+          wid,
+          async (tx) => {
+            const created: { name: string; skipped: boolean }[] = [];
+
+            for (const tpl of builtinTemplates) {
+              // 按 name + workspaceId 去重，已存在的跳过
+              const existing = await tx.approvalTemplate.findFirst({
+                where: { workspaceId: wid, name: tpl.name },
+              });
+
+              if (existing) {
+                created.push({ name: tpl.name, skipped: true });
+                continue;
+              }
+
+              await tx.approvalTemplate.create({
+                data: {
+                  workspaceId: wid,
+                  name: tpl.name,
+                  description: tpl.description,
+                  nodes: tpl.nodes as unknown as Prisma.InputJsonValue,
+                  formSchema: tpl.formSchema as unknown as Prisma.InputJsonValue,
+                  icon: tpl.icon,
+                  category: tpl.category,
+                  flowType: tpl.flowType,
+                  isBuiltin: true,
+                  createdBy: ctx.payload.sub,
+                },
+              });
+              created.push({ name: tpl.name, skipped: false });
+            }
+
+            return created;
+          },
+          ctx.payload.sub,
+        );
+
+        const createdCount = result.filter((r) => !r.skipped).length;
+        const skippedCount = result.filter((r) => r.skipped).length;
+
+        return NextResponse.json({
+          code: 201,
+          data: { created: createdCount, skipped: skippedCount, details: result },
+          message: `内置模板初始化完成：新增 ${createdCount} 个，跳过 ${skippedCount} 个已存在模板`,
+        }, { status: 201 });
+      }
+    }
+
+    // 常规创建模板分支
     const validated = createTemplateSchema.parse(body);
 
     const template = await runWithWorkspace(
@@ -113,7 +183,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             workspaceId: wid,
             name: validated.name,
             description: validated.description,
-            nodes: validated.nodes,
+            nodes: validated.nodes as unknown as Prisma.InputJsonValue,
             createdBy: ctx.payload.sub,
           },
         }),

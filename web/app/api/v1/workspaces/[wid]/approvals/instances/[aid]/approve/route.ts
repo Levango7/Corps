@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { applyPermissionOnApproval } from "@/lib/approval/permission-linkage";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
 interface ApprovalNode {
@@ -147,17 +148,32 @@ export async function POST(
           },
         });
 
-        // 通知申请人审批结果（仅在审批最终通过时通知）
-        if (shouldAdvance && isLastNode && instance.applicantId !== ctx.payload.sub) {
-          await tx.notification.create({
-            data: {
-              userId: instance.applicantId,
-              workspaceId: wid,
-              type: "approval_result",
-              entityId: aid,
-              entityTitle: instance.title,
+        // 审批最终通过时：通知申请人 + 权限联动授权
+        if (shouldAdvance && isLastNode) {
+          // 通知申请人审批结果（仅在审批最终通过时通知）
+          if (instance.applicantId !== ctx.payload.sub) {
+            await tx.notification.create({
+              data: {
+                userId: instance.applicantId,
+                workspaceId: wid,
+                type: "approval_result",
+                entityId: aid,
+                entityTitle: instance.title,
+              },
+            });
+          }
+
+          // 审批通过后自动授权文档权限（联动）
+          await applyPermissionOnApproval(
+            tx,
+            {
+              entityType: instance.entityType,
+              entityId: instance.entityId,
+              applicantId: instance.applicantId,
+              nodes: instance.nodes,
             },
-          });
+            wid,
+          );
         }
 
         return { kind: "ok" as const, data: updated };
