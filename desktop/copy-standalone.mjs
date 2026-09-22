@@ -34,7 +34,13 @@ const webDir = resolve(projectRoot, "web");
 const srcTauriDir = resolve(desktopDir, "src-tauri");
 
 // 源路径
-const standaloneSrc = resolve(webDir, ".next", "standalone");
+// Next.js 16+ standalone 输出结构：.next/standalone/<项目名>/server.js
+// 需要检测是否存在子目录（项目名），兼容新旧两种结构<projectname>
+const standaloneRoot = resolve(webDir, ".next", "standalone");
+const standaloneProjectDir = resolve(standaloneRoot, "web");
+const standaloneSrc = existsSync(resolve(standaloneProjectDir, "server.js"))
+  ? standaloneProjectDir
+  : standaloneRoot;
 const staticSrc = resolve(webDir, ".next", "static");
 const publicSrc = resolve(webDir, "public");
 
