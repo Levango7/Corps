@@ -99,6 +99,7 @@ export function MeetingCreate({
   const [recurringFreq, setRecurringFreq] = useState<RecurringFreq>("daily");
   // L8 #34：会议密码
   const [password, setPassword] = useState(meeting?.password ?? "");
+  const [passwordConfirm, setPasswordConfirm] = useState(meeting?.password ?? "");
   const [maxParticipants, setMaxParticipants] = useState(
     meeting?.maxParticipants ? String(meeting.maxParticipants) : "",
   );
@@ -130,6 +131,12 @@ export function MeetingCreate({
     // 预约/重复会议校验：必须填写预约时间
     if ((type === "scheduled" || type === "recurring") && !scheduledAt) {
       setError(t("scheduledAtRequired"));
+      return;
+    }
+
+    // 密码确认校验：两次输入必须一致
+    if (password.trim() && password !== passwordConfirm) {
+      setError(t("passwordMismatch"));
       return;
     }
 
@@ -379,6 +386,23 @@ export function MeetingCreate({
               onChange={(e) => setPassword(e.target.value)}
               maxLength={100}
               placeholder={t("passwordPlaceholder")}
+              className={fieldControl}
+              autoComplete="new-password"
+            />
+          </div>
+
+          {/* 密码确认 */}
+          <div>
+            <label className={fieldLabel} htmlFor="mc-password-confirm">
+              {t("passwordConfirm")}
+            </label>
+            <input
+              id="mc-password-confirm"
+              type="password"
+              value={passwordConfirm}
+              onChange={(e) => setPasswordConfirm(e.target.value)}
+              maxLength={100}
+              placeholder={t("passwordConfirmPlaceholder")}
               className={fieldControl}
               autoComplete="new-password"
             />

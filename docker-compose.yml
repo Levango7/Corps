@@ -59,7 +59,7 @@ services:
   # 配置：./livekit.yaml 挂载为 /config.yaml，keys 需与 LIVEKIT_API_KEY/SECRET 一致
   # 未配置时 app 的会议功能返回 503；配置后前端通过 LIVEKIT_URL 连接房间
   livekit:
-    image: livekit/livekit-server:latest
+    image: livekit/livekit-server:v1.8.3
     container_name: corps-livekit
     restart: unless-stopped
     environment:
@@ -75,6 +75,12 @@ services:
       - "7880:7880"
       - "7881:7881"
       - "50000-50100:50000-50100/udp"
+    healthcheck:
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:7880 || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
     volumes:
       - ./livekit.yaml:/config.yaml:ro
     networks:

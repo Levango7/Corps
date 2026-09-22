@@ -19,8 +19,7 @@ import { Video, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export interface MeetingLobbyProps {
-  workspaceId: string;
-  meetingId: string;
+
   meetingTitle: string;
   /** 当前用户名（预填到 PreJoin 输入框） */
   currentUserName?: string;

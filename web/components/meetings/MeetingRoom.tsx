@@ -165,9 +165,10 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   }, [conversationId, workspaceId]);
 
   // ── High #5: beforeunload / pagehide 事件 ──
-  // 页面卸载时用 navigator.sendBeacon 发送 leave 请求（无需 await）
+  // 页面卸载时用 navigator.sendBeacon 发送 leave 请求 + call_ended 消息（无需 await）
   useEffect(() => {
     const leaveUrl = `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`;
+    const messagesUrl = `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`;
 
     const sendLeaveBeacon = () => {
       if (leftRef.current) return;
@@ -176,6 +177,18 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         navigator.sendBeacon(leaveUrl);
       } catch {
         // sendBeacon 不可用时不阻塞
+      }
+      // 同时发送 call_ended 系统消息（sendBeacon 只能发 POST，用 Blob 发送 JSON）
+      if (conversationId) {
+        try {
+          const blob = new Blob(
+            [JSON.stringify({ type: "call_ended", body: "" })],
+            { type: "application/json" },
+          );
+          navigator.sendBeacon(messagesUrl, blob);
+        } catch {
+          // sendBeacon 不可用时不阻塞
+        }
       }
     };
 
@@ -188,7 +201,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       window.removeEventListener("beforeunload", onBeforeUnload);
       window.removeEventListener("pagehide", onPageHide);
     };
-  }, [workspaceId, meetingId]);
+  }, [workspaceId, meetingId, conversationId]);
 
   // 重新 join 获取新 token（用于 Medium #17 token 过期/刷新）
   const rejoin = useCallback(async (): Promise<boolean> => {
@@ -506,6 +519,14 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
                 {tMeetings("recording")}
               </span>
             )}
+            {(recording === "starting" || recording === "stopping") && (
+              <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--meta)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
+                <Loader2 size={10} className="animate-spin" />
+                {recording === "starting"
+                  ? tMeetings("recordingStarting")
+                  : tMeetings("recordingStopping")}
+              </span>
+            )}
             <button
               type="button"
               onClick={handleToggleRecording}
@@ -691,6 +712,7 @@ function MeetingRoomControls({ isHost }: { isHost: boolean }) {
               <select
                 value={transferTarget}
                 onChange={(e) => setTransferTarget(e.target.value)}
+                aria-label={t("transferHost")}
                 className="flex-1 h-7 px-1.5 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg)] outline-none"
               >
                 <option value="">{t("selectParticipant")}</option>

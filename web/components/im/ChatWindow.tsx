@@ -12,8 +12,8 @@
  * lucide-react 图标尺寸用 14/16（项目约定）。
  */
 
-import { useCallback, useMemo, useState } from "react";
-import { Settings, Users, Video } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Settings, Users, Video, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
 import type { Conversation, Message, SendMessageOptions } from "./types";
@@ -60,6 +60,18 @@ export function ChatWindow({
   const router = useRouter();
   const params = useParams<{ locale: string; wid: string }>();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  const [isCalling, setIsCalling] = useState(false);
+  const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // 组件卸载时清理超时计时器，防止内存泄漏
+  useEffect(() => {
+    return () => {
+      if (callTimeoutRef.current) {
+        clearTimeout(callTimeoutRef.current);
+        callTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   const isGroup = conversation.type === "group";
 
@@ -78,8 +90,10 @@ export function ChatWindow({
    * 3. 跳转到会议页面
    */
   const handleVideoCall = useCallback(async () => {
+    if (isCalling) return;
     const wid = conversation.workspaceId;
     const locale = params?.locale ?? "zh";
+    setIsCalling(true);
     try {
       // 创建即时会议
       const res = await fetch(`/api/v1/workspaces/${wid}/meetings`, {
@@ -100,12 +114,47 @@ export function ChatWindow({
       const meetingUrl = `/${locale}/w/${wid}/meetings/${meeting.id}`;
       onSend(`${tIm("callInvite")}: ${meetingUrl}`, { type: "call_invite" });
 
+      // 设置5分钟超时：如果对方未加入，自动发送 call_ended 消息
+      const meetingId = meeting.id;
+      callTimeoutRef.current = setTimeout(async () => {
+        try {
+          const checkRes = await fetch(
+            `/api/v1/workspaces/${wid}/meetings/${meetingId}`,
+            { credentials: "include" },
+          );
+          if (checkRes.ok) {
+            const checkJson = (await checkRes.json()) as {
+              code: number;
+              data: {
+                status: string;
+                participants: Array<{ userId: string; joinedAt: string }>;
+              } | null;
+            };
+            const meetingData = checkJson.data;
+            // 会议已结束 或 无其他参与者（只有发起者自己）→ 发送 call_ended
+            const hasOtherParticipants =
+              (meetingData?.participants ?? []).length > 1;
+            if (
+              meetingData?.status === "ended" ||
+              !hasOtherParticipants
+            ) {
+              onSend(tIm("callEnded"), { type: "call_ended" });
+            }
+          }
+        } catch {
+          // API 检查失败时不发送，避免误报
+        }
+        callTimeoutRef.current = null;
+      }, 5 * 60 * 1000);
+
       // 跳转到会议页面，通过 URL query 传递 conversationId（供 MeetingRoom 发送 call_ended）
       router.push(`${meetingUrl}?conversationId=${conversation.id}`);
     } catch {
       // 静默失败：网络错误时用户可重试
+    } finally {
+      setIsCalling(false);
     }
-  }, [conversation.workspaceId, conversation.id, onSend, router, params, tIm]);
+  }, [conversation.workspaceId, conversation.id, onSend, router, params, tIm, isCalling]);
 
   /** 点击回复 */
   const handleReply = useCallback((mid: string) => {
@@ -193,10 +242,15 @@ export function ChatWindow({
           <button
             type="button"
             onClick={handleVideoCall}
-            aria-label={tIm("videoCall")}
-            className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2"
+            disabled={isCalling}
+            aria-label={isCalling ? tIm("calling") : tIm("videoCall")}
+            className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--muted)]"
           >
-            <Video size={16} />
+            {isCalling ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <Video size={16} />
+            )}
           </button>
           {/* 设置按钮 */}
           {onSettings && (

@@ -995,7 +995,8 @@
     "callInvite": "邀请你加入视频通话",
     "callEnded": "通话已结束",
     "callRejected": "通话已拒绝",
-    "joinCall": "加入通话"
+    "joinCall": "加入通话",
+    "calling": "通话中…"
   },
   "export": {
     "title": "数据导出",
@@ -3257,6 +3258,9 @@
     "scheduledAtRequired": "预约会议需填写开始时间",
     "password": "会议密码",
     "passwordPlaceholder": "留空表示无密码锁定",
+    "passwordConfirm": "确认密码",
+    "passwordConfirmPlaceholder": "再次输入密码",
+    "passwordMismatch": "两次输入的密码不一致",
     "maxParticipants": "最大参与人数",
     "maxParticipantsPlaceholder": "不限",
     "recordingEnabled": "允许录制",
@@ -3319,6 +3323,8 @@
     "recording": "录制中",
     "startRecording": "开始录制",
     "stopRecording": "停止录制",
+    "recordingStarting": "正在启动录制...",
+    "recordingStopping": "正在停止录制...",
     "reconnecting": "重新连接中…",
     "connectionLost": "连接已断开，正在重连…",
     "edit": "编辑",

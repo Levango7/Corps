@@ -64,6 +64,7 @@ interface MeetingListResponse {
   total: number;
   page: number;
   limit: number;
+  hasMore: boolean;
 }
 
 /** 每页条数 */
@@ -142,13 +143,25 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
     void fetchMeetings();
 
     // L7 #33：30 秒轮询刷新（不显示 loading，静默更新）
+    // 页面可见性优化：仅在页面可见时轮询，切到后台时暂停
     const pollInterval = setInterval(() => {
-      if (!cancelled) void fetchMeetings();
+      if (!cancelled && document.visibilityState === "visible") {
+        void fetchMeetings();
+      }
     }, 30_000);
+
+    // 页面从后台切回前台时立即刷新一次
+    const onVisibilityChange = () => {
+      if (!cancelled && document.visibilityState === "visible") {
+        void fetchMeetings();
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
 
     return () => {
       cancelled = true;
       clearInterval(pollInterval);
+      document.removeEventListener("visibilitychange", onVisibilityChange);
     };
   }, [workspaceId, page, t]);
 

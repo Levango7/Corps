@@ -995,7 +995,8 @@
     "callInvite": "invited you to a video call",
     "callEnded": "Call ended",
     "callRejected": "Call rejected",
-    "joinCall": "Join Call"
+    "joinCall": "Join Call",
+    "calling": "Calling…"
   },
   "export": {
     "title": "Data export",
@@ -3257,6 +3258,9 @@
     "scheduledAtRequired": "Scheduled meeting requires a start time",
     "password": "Meeting Password",
     "passwordPlaceholder": "Leave empty for no password lock",
+    "passwordConfirm": "Confirm Password",
+    "passwordConfirmPlaceholder": "Re-enter the password",
+    "passwordMismatch": "Passwords do not match",
     "maxParticipants": "Max Participants",
     "maxParticipantsPlaceholder": "Unlimited",
     "recordingEnabled": "Recording Enabled",
@@ -3319,6 +3323,8 @@
     "recording": "Recording",
     "startRecording": "Start Recording",
     "stopRecording": "Stop Recording",
+    "recordingStarting": "Starting recording...",
+    "recordingStopping": "Stopping recording...",
     "reconnecting": "Reconnecting…",
     "connectionLost": "Connection lost, reconnecting…",
     "edit": "Edit",

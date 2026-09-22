@@ -1460,6 +1460,7 @@ model Meeting {
   /// 重复规则（L6 #32）：iCal RRULE 格式（如 FREQ=DAILY;INTERVAL=1），null 表示非重复会议
   recurringRule     String?  @map("recurring_rule") @db.VarChar(255)
   /// 会议密码（L8 #34）：设置后加入需验证密码，null 表示无密码锁定
+  /// 存储 bcrypt hash（60 字符），VarChar(100) 留余量以兼容未来算法变更
   password          String?  @db.VarChar(100)
   scheduledAt       DateTime? @map("scheduled_at") @db.Timestamptz
   startedAt         DateTime? @map("started_at") @db.Timestamptz

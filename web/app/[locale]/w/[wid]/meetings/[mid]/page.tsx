@@ -192,8 +192,7 @@ export default function MeetingRoomPage({
   if (stage === "lobby") {
     return (
       <MeetingLobby
-        workspaceId={wid}
-        meetingId={mid}
+
         meetingTitle={meetingTitle}
         currentUserName={currentUserName}
         onJoin={handleJoin}
