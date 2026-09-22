@@ -230,7 +230,7 @@ export function MeetingCreate({
             </label>
             <input
               id="mc-title"
-              autoFocus
+
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}

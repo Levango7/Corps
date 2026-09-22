@@ -143,7 +143,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           code: 400,
-          message: apiMsg(req, "validationError"),
+          message: apiMsg(req, "validationFailed"),
           errors: error.errors,
           data: null,
         },

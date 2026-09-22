@@ -158,7 +158,7 @@ export async function POST(
       userId,
     );
 
-    const ttlSeconds = Number(process.env.LIVEKIT_TOKEN_TTL) || 7200;
+    const ttlSeconds = Number(process.env.LIVEKIT_TOKEN_TTL) || 3600;
     const userName = user?.name ?? user?.email ?? userId;
 
     // E2EE 开关（L4 #30）：默认关闭，通过 LIVEKIT_E2EE_ENABLED=true 启用。

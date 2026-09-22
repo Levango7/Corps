@@ -21,7 +21,10 @@ export async function POST(req: NextRequest) {
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
   if (!apiKey || !apiSecret) {
-    return NextResponse.json({ code: 501, data: null }, { status: 501 });
+    return NextResponse.json(
+      { code: 501, data: null, message: "LiveKit not configured" },
+      { status: 501 },
+    );
   }
 
   try {

@@ -19,6 +19,10 @@ import { useRouter, useParams } from "next/navigation";
 import type { Conversation, Message, SendMessageOptions } from "./types";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
+import { api } from "@/lib/api";
+
+/** 通话超时：5 分钟内对方未加入则自动发送 call_ended */
+const CALL_TIMEOUT_MS = 5 * 60 * 1000;
 
 interface ChatWindowProps {
   /** 当前会话 */
@@ -96,56 +100,40 @@ export function ChatWindow({
     setIsCalling(true);
     try {
       // 创建即时会议
-      const res = await fetch(`/api/v1/workspaces/${wid}/meetings`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          title: tIm("videoCall"),
-          type: "instant",
-        }),
-      });
-      if (!res.ok) return;
-      const json = (await res.json()) as { code: number; data: { id: string } | null };
-      const meeting = json.data;
-      if (!meeting?.id) return;
+      const meeting = await api<{ id: string }>(
+        `/api/v1/workspaces/${wid}/meetings`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            title: tIm("videoCall"),
+            type: "instant",
+          }),
+        },
+      );
 
       // 发送 call_invite 消息（body 包含会议链接，对方可点击加入）
       const meetingUrl = `/${locale}/w/${wid}/meetings/${meeting.id}`;
       onSend(`${tIm("callInvite")}: ${meetingUrl}`, { type: "call_invite" });
 
-      // 设置5分钟超时：如果对方未加入，自动发送 call_ended 消息
+      // 设置超时：如果对方未加入，自动发送 call_ended 消息
       const meetingId = meeting.id;
       callTimeoutRef.current = setTimeout(async () => {
         try {
-          const checkRes = await fetch(
-            `/api/v1/workspaces/${wid}/meetings/${meetingId}`,
-            { credentials: "include" },
-          );
-          if (checkRes.ok) {
-            const checkJson = (await checkRes.json()) as {
-              code: number;
-              data: {
-                status: string;
-                participants: Array<{ userId: string; joinedAt: string }>;
-              } | null;
-            };
-            const meetingData = checkJson.data;
-            // 会议已结束 或 无其他参与者（只有发起者自己）→ 发送 call_ended
-            const hasOtherParticipants =
-              (meetingData?.participants ?? []).length > 1;
-            if (
-              meetingData?.status === "ended" ||
-              !hasOtherParticipants
-            ) {
-              onSend(tIm("callEnded"), { type: "call_ended" });
-            }
+          const meetingData = await api<{
+            status: string;
+            participants: Array<{ userId: string; joinedAt: string }>;
+          }>(`/api/v1/workspaces/${wid}/meetings/${meetingId}`);
+          // 会议已结束 或 无其他参与者（只有发起者自己）→ 发送 call_ended
+          const hasOtherParticipants =
+            (meetingData?.participants ?? []).length > 1;
+          if (meetingData?.status === "ended" || !hasOtherParticipants) {
+            onSend(tIm("callEnded"), { type: "call_ended" });
           }
         } catch {
           // API 检查失败时不发送，避免误报
         }
         callTimeoutRef.current = null;
-      }, 5 * 60 * 1000);
+      }, CALL_TIMEOUT_MS);
 
       // 跳转到会议页面，通过 URL query 传递 conversationId（供 MeetingRoom 发送 call_ended）
       router.push(`${meetingUrl}?conversationId=${conversation.id}`);

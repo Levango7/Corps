@@ -42,16 +42,6 @@ const REPLY_PREVIEW_MAX = 50;
 /** 消息体最大长度 */
 const MAX_BODY_LENGTH = 10000;
 
-/**
- * 扩展 Message 类型，支持 call 消息特殊渲染。
- * types.ts 中 type 字段由另一个 subagent 处理，
- * 此处用可选类型兼容当前 Message 定义。
- */
-type MessageWithType = Message & {
-  type?: "text" | "call_invite" | "call_ended" | "call_rejected" | "system";
-  meetingUrl?: string;
-};
-
 interface MessageItemProps {
   /** 消息数据 */
   message: Message;
@@ -310,8 +300,7 @@ function MessageItemImpl({
   }
 
   // ── call / system 消息特殊渲染 ──
-  const msgWithType = message as MessageWithType;
-  const messageType = msgWithType.type ?? "text";
+  const messageType = message.type ?? "text";
 
   // call_ended / call_rejected / system: 居中系统消息（灰色、无气泡、居中）
   if (
@@ -336,7 +325,7 @@ function MessageItemImpl({
 
   // call_invite: 通话邀请卡片（含"加入通话"按钮）
   if (messageType === "call_invite") {
-    const meetingUrl = msgWithType.meetingUrl;
+    const meetingUrl = message.meetingUrl;
     return (
       <div className="flex justify-center py-2">
         <div className="inline-flex flex-col items-center gap-2 px-4 py-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] max-w-[280px]">

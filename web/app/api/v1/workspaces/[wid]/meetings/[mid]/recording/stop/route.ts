@@ -104,7 +104,7 @@ export async function POST(
     const updated = await runWithWorkspace(
       wid,
       async (tx) => {
-        return tx.meeting.update({
+        return await tx.meeting.update({
           where: { id: mid },
           data: {
             recordingUrl: `completed:${check.egressId}`,

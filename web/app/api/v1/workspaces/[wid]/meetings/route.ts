@@ -85,7 +85,7 @@ export async function GET(
       data: { items, page, limit, total, hasMore: page * limit < total },
     });
   } catch (error) {
-    console.error("[GET meetings] error:", error);
+    console.error("[GET meetings] error:", error, "wid:", wid);
     return NextResponse.json(
       { code: 500, data: null, message: apiMsg(req, "internalError") },
       { status: 500 },
@@ -184,7 +184,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    console.error("[POST meeting] error:", error);
+    console.error("[POST meeting] error:", error, "wid:", wid);
     return NextResponse.json(
       { code: 500, data: null, message: apiMsg(req, "internalError") },
       { status: 500 },

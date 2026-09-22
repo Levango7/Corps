@@ -71,6 +71,8 @@ export interface Message {
   /** 提及的用户 ID 列表 */
   mentions: string[];
   attachments: MessageAttachment[];
+  /** 通话邀请消息中的会议链接（仅 type=call_invite 时有值） */
+  meetingUrl?: string;
 }
 
 /** 会话（对话） */

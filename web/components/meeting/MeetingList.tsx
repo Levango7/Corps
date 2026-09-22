@@ -445,7 +445,7 @@ function MeetingRow({
   const hasRecording =
     meeting.status === "ended" &&
     meeting.recordingUrl &&
-    !meeting.recordingUrl.startsWith("pending:");
+    !meeting.recordingUrl.startsWith("egress:");
 
   return (
     <li className="flex items-center gap-3 px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">

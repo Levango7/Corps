@@ -1486,6 +1486,7 @@ model Meeting {
 
   @@index([workspaceId, status])
   @@index([workspaceId, scheduledAt])
+  @@index([createdBy])
   @@map("meetings")
 }
 
@@ -1503,6 +1504,7 @@ model MeetingParticipant {
 
   @@unique([meetingId, userId])
   @@index([userId])
+  @@index([meetingId, leftAt])
   @@map("meeting_participants")
 }
 

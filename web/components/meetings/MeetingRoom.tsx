@@ -168,7 +168,6 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   // 页面卸载时用 navigator.sendBeacon 发送 leave 请求 + call_ended 消息（无需 await）
   useEffect(() => {
     const leaveUrl = `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`;
-    const messagesUrl = `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`;
 
     const sendLeaveBeacon = () => {
       if (leftRef.current) return;
@@ -181,6 +180,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       // 同时发送 call_ended 系统消息（sendBeacon 只能发 POST，用 Blob 发送 JSON）
       if (conversationId) {
         try {
+          const messagesUrl = `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`;
           const blob = new Blob(
             [JSON.stringify({ type: "call_ended", body: "" })],
             { type: "application/json" },
