@@ -22,7 +22,7 @@
  * lucide-react 图标尺寸用 14/16（项目约定）。
  */
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   X,
   Users,
@@ -83,6 +83,7 @@ export function ConversationSettings({
   const [loadingMembers, setLoadingMembers] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
+  const successTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // 添加成员相关状态
   const [addOpen, setAddOpen] = useState(false);
@@ -112,6 +113,15 @@ export function ConversationSettings({
     return () => window.removeEventListener("keydown", onKey);
   }, [addOpen, onClose]);
 
+  // 组件卸载时清理 setTimeout，防止内存泄漏
+  useEffect(() => {
+    return () => {
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+    };
+  }, []);
+
   /** 拉取最新成员列表 */
   const refreshMembers = useCallback(async () => {
     setLoadingMembers(true);
@@ -138,7 +148,10 @@ export function ConversationSettings({
       });
       setSuccessMsg(t("settingsSaved"));
       onUpdate();
-      setTimeout(() => setSuccessMsg(null), 2000);
+      if (successTimerRef.current) {
+        clearTimeout(successTimerRef.current);
+      }
+      successTimerRef.current = setTimeout(() => setSuccessMsg(null), 2000);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("settingsSaveFailed"));
     } finally {
@@ -260,7 +273,7 @@ export function ConversationSettings({
     if (role === "owner") {
       return (
         <span className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--warn)]">
-          <Crown size={12} />
+          <Crown size={14} />
           {t("roleOwner")}
         </span>
       );
@@ -268,7 +281,7 @@ export function ConversationSettings({
     if (role === "admin") {
       return (
         <span className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--accent)]">
-          <Shield size={12} />
+          <Shield size={14} />
           {t("roleAdmin")}
         </span>
       );

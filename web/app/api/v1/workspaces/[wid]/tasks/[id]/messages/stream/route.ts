@@ -103,22 +103,13 @@ export async function GET(
 
   // 标记当前用户在线（upsert ChatPresence；经 GUC 短事务——chat_presences
   // 受 FORCE RLS，按 task→workspace 关联套租户谓词）
-  // taskId 变可选后 Prisma 不生成 taskId_userId 复合唯一键，改用 findFirst + by id
+  // 使用命名唯一约束 uq_chat_presences_task_user 做 upsert，消除 findFirst+create/update 竞态
   await withGuc({ workspace_id: wid, user_id: userId }, async (tx) => {
-    const presence = await tx.chatPresence.findFirst({
-      where: { taskId: id, userId },
-      select: { id: true },
+    await tx.chatPresence.upsert({
+      where: { uq_chat_presences_task_user: { taskId: id, userId } },
+      create: { taskId: id, userId },
+      update: { lastSeen: new Date() },
     });
-    if (presence) {
-      await tx.chatPresence.update({
-        where: { id: presence.id },
-        data: { lastSeen: new Date() },
-      });
-    } else {
-      await tx.chatPresence.create({
-        data: { taskId: id, userId },
-      });
-    }
   }).catch(() => {
     // 在线状态写入失败不阻塞 SSE 连接（容错降级）
   });
@@ -170,16 +161,11 @@ export async function GET(
         }
         // 刷新在线状态（容错；同上经 GUC 短事务——心跳回调不可持长事务）
         withGuc({ workspace_id: wid, user_id: userId }, async (tx) => {
-          const presence = await tx.chatPresence.findFirst({
-            where: { taskId: id, userId },
-            select: { id: true },
+          await tx.chatPresence.upsert({
+            where: { uq_chat_presences_task_user: { taskId: id, userId } },
+            create: { taskId: id, userId },
+            update: { lastSeen: new Date() },
           });
-          if (presence) {
-            await tx.chatPresence.update({
-              where: { id: presence.id },
-              data: { lastSeen: new Date() },
-            });
-          }
         }).catch(() => {});
       }, HEARTBEAT_INTERVAL_MS);
 

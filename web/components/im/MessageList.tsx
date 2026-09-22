@@ -197,7 +197,7 @@ export function MessageList({
 
         {loading && messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <Loader2 size={18} className="animate-spin text-[var(--muted)]" />
+            <Loader2 size={16} className="animate-spin text-[var(--muted)]" />
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">

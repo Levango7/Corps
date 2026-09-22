@@ -143,10 +143,10 @@ function renderLine(line: string, wid: string | undefined): React.ReactNode[] {
 
     // 取最先匹配的（最小索引）
     const candidates: Array<{ idx: number; type: "url" | "mention" | "task"; text: string }> = [];
-    if (urlIdx !== -1) candidates.push({ idx: urlIdx, type: "url", text: urlMatch![0] });
+    if (urlIdx !== -1) candidates.push({ idx: urlIdx, type: "url", text: urlMatch?.[0] ?? "" });
     if (mentionIdx !== -1)
-      candidates.push({ idx: mentionIdx, type: "mention", text: mentionMatch![0] });
-    if (taskIdx !== -1) candidates.push({ idx: taskIdx, type: "task", text: taskMatch![0] });
+      candidates.push({ idx: mentionIdx, type: "mention", text: mentionMatch?.[0] ?? "" });
+    if (taskIdx !== -1) candidates.push({ idx: taskIdx, type: "task", text: taskMatch?.[0] ?? "" });
 
     candidates.sort((a, b) => a.idx - b.idx);
     const chosen = candidates[0];
@@ -162,7 +162,7 @@ function renderLine(line: string, wid: string | undefined): React.ReactNode[] {
       tokens.push({
         text: chosen.text,
         type: "task",
-        task: { taskId: match![1], taskTitle: match![2] },
+        task: { taskId: match?.[1] ?? "", taskTitle: match?.[2] ?? "" },
       });
     } else {
       tokens.push({ text: chosen.text, type: chosen.type });

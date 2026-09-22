@@ -275,7 +275,7 @@ export function ConversationCreate({
                     aria-label={t("removeMember")}
                     className="shrink-0 w-4 h-4 flex items-center justify-center rounded-full hover:bg-[var(--surface-3)]"
                   >
-                    <X size={10} />
+                    <X size={14} />
                   </button>
                 </span>
               ))}

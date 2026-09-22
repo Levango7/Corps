@@ -547,6 +547,8 @@ model ConversationMember {
   @@unique([conversationId, userId])
   // 按用户查询其参与的所有会话（会话列表页）
   @@index([userId])
+  // 按会话查询成员列表（群聊成员页）
+  @@index([conversationId])
   @@map("conversation_members")
 }
 
