@@ -3140,7 +3140,19 @@
     "priorityNormal": "Normal",
     "priorityUrgent": "Urgent",
     "priorityCritical": "Critical",
-    "searchPlaceholder": "Search title or applicant"
+    "searchPlaceholder": "Search title or applicant",
+    "statsDashboard": "Statistics",
+    "pendingMine": "Pending My Approval",
+    "avgProcessingTime": "Avg Processing Time",
+    "hours": "h",
+    "statusDistribution": "Status Distribution",
+    "priorityDistribution": "Priority Distribution",
+    "templateUsage": "Template Usage",
+    "last7Days": "Last 7 Days",
+    "last30Days": "Last 30 Days",
+    "allTime": "All Time",
+    "noTemplateUsage": "No template usage data",
+    "statsLoadFailed": "Failed to load statistics"
   },
   "permissions": {
     "title": "Document Permissions",

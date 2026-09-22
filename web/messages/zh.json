@@ -3140,7 +3140,19 @@
     "priorityNormal": "普通",
     "priorityUrgent": "紧急",
     "priorityCritical": "非常重要",
-    "searchPlaceholder": "搜索标题或申请人"
+    "searchPlaceholder": "搜索标题或申请人",
+    "statsDashboard": "统计",
+    "pendingMine": "待我审批",
+    "avgProcessingTime": "平均处理时长",
+    "hours": "小时",
+    "statusDistribution": "状态分布",
+    "priorityDistribution": "优先级分布",
+    "templateUsage": "模板使用",
+    "last7Days": "最近7天",
+    "last30Days": "最近30天",
+    "allTime": "全部",
+    "noTemplateUsage": "暂无模板使用数据",
+    "statsLoadFailed": "加载统计数据失败"
   },
   "permissions": {
     "title": "文档权限",
