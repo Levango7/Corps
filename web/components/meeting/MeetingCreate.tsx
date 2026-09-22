@@ -374,13 +374,13 @@ export function MeetingCreate({
             </label>
             <input
               id="mc-password"
-              type="text"
+              type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               maxLength={100}
               placeholder={t("passwordPlaceholder")}
               className={fieldControl}
-              autoComplete="off"
+              autoComplete="new-password"
             />
           </div>
 

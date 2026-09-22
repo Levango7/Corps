@@ -31,6 +31,8 @@ export interface MessagePayload {
   authorImage: string | null;
   /** 消息正文（markdown 纯文本） */
   body: string;
+  /** 消息类型：text / system / call_invite / call_ended / call_rejected */
+  type: "text" | "system" | "call_invite" | "call_ended" | "call_rejected";
   /** 创建时间（ISO 8601） */
   createdAt: string;
   /** 最后编辑时间（ISO 8601）；null 表示未编辑 */

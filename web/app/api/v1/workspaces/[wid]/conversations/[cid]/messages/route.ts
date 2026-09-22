@@ -44,6 +44,7 @@ function toMessagePayload(
     authorId: string | null;
     author: { name: string | null; image: string | null } | null;
     body: string;
+    type: string | null;
     createdAt: Date;
     editedAt: Date | null;
     revokedAt: Date | null;
@@ -59,6 +60,7 @@ function toMessagePayload(
     authorName: msg.author?.name ?? null,
     authorImage: msg.author?.image ?? null,
     body: msg.revokedAt ? "" : msg.body,
+    type: (msg.type as MessagePayload["type"]) ?? "text",
     createdAt: msg.createdAt.toISOString(),
     editedAt: msg.editedAt?.toISOString() ?? null,
     revokedAt: msg.revokedAt?.toISOString() ?? null,
@@ -213,6 +215,10 @@ export async function GET(
 /** 发送消息请求体校验 */
 const sendMessageSchema = z.object({
   body: z.string().min(1).max(10000),
+  type: z
+    .enum(["text", "system", "call_invite", "call_ended", "call_rejected"])
+    .optional()
+    .default("text"),
   replyToId: z.string().uuid().optional(),
   mentions: z.array(z.string().uuid()).optional().default([]),
   attachments: z
@@ -272,6 +278,7 @@ export async function POST(
             workspaceId: wid,
             authorId: userId,
             body: body.body,
+            type: body.type,
             replyToId: body.replyToId ?? null,
             mentions: body.mentions,
           },

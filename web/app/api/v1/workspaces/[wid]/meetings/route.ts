@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import bcrypt from "bcryptjs";
 
 /**
  * GET /v1/workspaces/{wid}/meetings — 工作区会议列表
@@ -142,7 +143,7 @@ export async function POST(
 
     const meeting = await runWithWorkspace(
       wid,
-      (tx) =>
+      async (tx) =>
         tx.meeting.create({
           data: {
             workspaceId: wid,
@@ -158,8 +159,10 @@ export async function POST(
             createdBy: ctx.payload.sub,
             // L6 #32：重复规则（仅 type=recurring 时有意义，但不在后端强校验）
             recurringRule: validated.recurringRule,
-            // L8 #34：会议密码（明文存储，加入时做字符串比对；后续可改为 hash）
-            password: validated.password,
+            // L8 #34：会议密码——使用 bcrypt hash 存储，加入时用 bcrypt.compare 验证
+            password: validated.password
+              ? await bcrypt.hash(validated.password, 10)
+              : null,
           },
           include: {
             creator: { select: { id: true, name: true, email: true } },

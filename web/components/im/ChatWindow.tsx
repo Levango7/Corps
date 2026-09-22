@@ -98,14 +98,14 @@ export function ChatWindow({
 
       // 发送 call_invite 消息（body 包含会议链接，对方可点击加入）
       const meetingUrl = `/${locale}/w/${wid}/meetings/${meeting.id}`;
-      onSend(`${tIm("callInvite")}: ${meetingUrl}`);
+      onSend(`${tIm("callInvite")}: ${meetingUrl}`, { type: "call_invite" });
 
-      // 跳转到会议页面
-      router.push(meetingUrl);
+      // 跳转到会议页面，通过 URL query 传递 conversationId（供 MeetingRoom 发送 call_ended）
+      router.push(`${meetingUrl}?conversationId=${conversation.id}`);
     } catch {
       // 静默失败：网络错误时用户可重试
     }
-  }, [conversation.workspaceId, onSend, router, params, tIm]);
+  }, [conversation.workspaceId, conversation.id, onSend, router, params, tIm]);
 
   /** 点击回复 */
   const handleReply = useCallback((mid: string) => {

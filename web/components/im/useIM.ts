@@ -58,6 +58,7 @@ function payloadToMessage(p: MessagePayload): Message {
       image: p.authorImage,
     },
     body: p.body,
+    type: p.type ?? "text",
     createdAt: p.createdAt,
     editedAt: p.editedAt,
     revokedAt: p.revokedAt,
@@ -279,6 +280,7 @@ export function useIM(
       const payload: Record<string, unknown> = { body };
       if (opts?.replyToId) payload.replyToId = opts.replyToId;
       if (opts?.mentions) payload.mentions = opts.mentions;
+      if (opts?.type) payload.type = opts.type;
       // 附件：仅传服务端需要的字段（剔除本地预览用的 thumbnailUrl 中的 blob: URL 由后端处理）
       // 字段名对齐后端 zod schema：filename / mimeType / size
       if (opts?.attachments && opts.attachments.length > 0) {

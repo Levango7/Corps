@@ -71,6 +71,8 @@ export interface MeetingRoomProps {
   workspaceId: string;
   meetingId: string;
   onLeave?: () => void;
+  /** 关联的 IM 会话 ID；存在时离开会议会自动发送 call_ended 系统消息 */
+  conversationId?: string;
 }
 
 /** 连接状态机 */
@@ -87,8 +89,9 @@ type RecordingState = "idle" | "starting" | "active" | "stopping";
 /** 重连超时（ms） */
 const RECONNECT_TIMEOUT_MS = 30_000;
 
-export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProps) {
+export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }: MeetingRoomProps) {
   const t = useTranslations("meetings.room");
+  const tMeetings = useTranslations("meetings");
   const tButton = useTranslations("button");
 
   const [state, setState] = useState<ConnectionState>("joining");
@@ -144,6 +147,22 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
   // 用 ref 存储 callLeaveApi，供卸载 effect 调用（避免依赖数组问题）
   const callLeaveApiRef = useRef(callLeaveApi);
   callLeaveApiRef.current = callLeaveApi;
+
+  // 发送 call_ended 系统消息到关联会话（best-effort，失败不阻塞）
+  const sendCallEndedMessage = useCallback(async () => {
+    if (!conversationId) return;
+    try {
+      await api(
+        `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`,
+        {
+          method: "POST",
+          body: JSON.stringify({ type: "call_ended", body: "" }),
+        },
+      );
+    } catch {
+      // 发送 call_ended 失败不阻塞离开流程
+    }
+  }, [conversationId, workspaceId]);
 
   // ── High #5: beforeunload / pagehide 事件 ──
   // 页面卸载时用 navigator.sendBeacon 发送 leave 请求（无需 await）
@@ -260,9 +279,10 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
 
     // High #6: 区分主动挂断与意外断开
     if (intentionalLeaveRef.current) {
-      // 主动挂断 → leave + onLeave
+      // 主动挂断 → leave + sendCallEnded + onLeave
       setState("disconnected");
       void callLeaveApi();
+      void sendCallEndedMessage();
       onLeave?.();
       return;
     }
@@ -281,6 +301,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
         }
         setState("disconnected");
         void callLeaveApi();
+        void sendCallEndedMessage();
         onLeave?.();
       }
       // join 成功 → token 已更新，LiveKitRoom 自动重连
@@ -296,9 +317,10 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
       // 重连超时 → 回 lobby
       setState("disconnected");
       void callLeaveApi();
+      void sendCallEndedMessage();
       onLeave?.();
     }, RECONNECT_TIMEOUT_MS);
-  }, [callLeaveApi, onLeave, rejoin]);
+  }, [callLeaveApi, onLeave, rejoin, sendCallEndedMessage]);
 
   // LiveKit 连接错误
   const handleError = useCallback(
@@ -323,8 +345,9 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
       reconnectTimeoutRef.current = null;
     }
     void callLeaveApi();
+    void sendCallEndedMessage();
     onLeave?.();
-  }, [callLeaveApi, onLeave]);
+  }, [callLeaveApi, onLeave, sendCallEndedMessage]);
 
   // ── Medium #16: 录制控制 ──
   const handleToggleRecording = useCallback(async () => {
@@ -480,7 +503,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
             {recording === "active" && (
               <span className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
                 <Circle size={8} className="fill-current animate-pulse" />
-                {t("reconnecting")}
+                {tMeetings("recording")}
               </span>
             )}
             <button
@@ -497,8 +520,8 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave }: MeetingRoomProp
                 <Circle size={14} className="fill-current text-[var(--danger)]" />
               )}
               {recording === "active" || recording === "stopping"
-                ? tButton("close")
-                : tButton("create")}
+                ? tMeetings("stopRecording")
+                : tMeetings("startRecording")}
             </button>
           </div>
         )}

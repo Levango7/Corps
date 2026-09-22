@@ -30,6 +30,7 @@ import {
   FileText,
   Download,
   ListTodo,
+  Video,
 } from "lucide-react";
 import { useTranslations, useLocale } from "next-intl";
 import { useParams } from "next/navigation";
@@ -40,6 +41,16 @@ import type { Message } from "./types";
 const REPLY_PREVIEW_MAX = 50;
 /** 消息体最大长度 */
 const MAX_BODY_LENGTH = 10000;
+
+/**
+ * 扩展 Message 类型，支持 call 消息特殊渲染。
+ * types.ts 中 type 字段由另一个 subagent 处理，
+ * 此处用可选类型兼容当前 Message 定义。
+ */
+type MessageWithType = Message & {
+  type?: "text" | "call_invite" | "call_ended" | "call_rejected" | "system";
+  meetingUrl?: string;
+};
 
 interface MessageItemProps {
   /** 消息数据 */
@@ -293,6 +304,54 @@ function MessageItemImpl({
           <div className="px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--meta)] text-[length:var(--text-sm)] italic">
             {t("messageRevoked")}
           </div>
+        </div>
+      </div>
+    );
+  }
+
+  // ── call / system 消息特殊渲染 ──
+  const msgWithType = message as MessageWithType;
+  const messageType = msgWithType.type ?? "text";
+
+  // call_ended / call_rejected / system: 居中系统消息（灰色、无气泡、居中）
+  if (
+    messageType === "call_ended" ||
+    messageType === "call_rejected" ||
+    messageType === "system"
+  ) {
+    const systemText =
+      messageType === "call_ended"
+        ? t("callEnded")
+        : messageType === "call_rejected"
+          ? t("callRejected")
+          : message.body;
+    return (
+      <div className="flex justify-center py-1">
+        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+          {systemText}
+        </span>
+      </div>
+    );
+  }
+
+  // call_invite: 通话邀请卡片（含"加入通话"按钮）
+  if (messageType === "call_invite") {
+    const meetingUrl = msgWithType.meetingUrl;
+    return (
+      <div className="flex justify-center py-2">
+        <div className="inline-flex flex-col items-center gap-2 px-4 py-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] max-w-[280px]">
+          <Video size={16} className="text-[var(--accent)]" />
+          <span className="text-[length:var(--text-sm)] text-[var(--fg)] text-center">
+            {t("callInvite")}
+          </span>
+          {meetingUrl && (
+            <Link
+              href={meetingUrl}
+              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
+            >
+              {t("joinCall")}
+            </Link>
+          )}
         </div>
       </div>
     );

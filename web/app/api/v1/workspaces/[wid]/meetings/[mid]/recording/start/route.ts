@@ -93,7 +93,8 @@ export async function POST(
   }
 
   try {
-    // 事务内校验会议状态与权限，取出 roomName
+    // 事务内校验会议状态与权限，同时写入 "egress:pending" 占位标记（乐观锁）
+    // 防止并发请求同时通过校验后各自启动 Egress（TOCTOU 竞态）
     const check = await runWithWorkspace(
       wid,
       async (tx) => {
@@ -126,6 +127,12 @@ export async function POST(
         if (meeting.recordingUrl?.startsWith("egress:")) {
           return { kind: "alreadyStarted" as const };
         }
+
+        // 写入 "egress:pending" 占位标记——并发请求此时会看到 recordingUrl 已有值
+        await tx.meeting.update({
+          where: { id: mid },
+          data: { recordingUrl: "egress:pending" },
+        });
 
         return { kind: "ok" as const, roomName: meeting.roomName };
       },
@@ -184,20 +191,36 @@ export async function POST(
       output,
     );
 
-    // 将 egressId 写入 recordingUrl，设置 recordingStartedAt
-    await runWithWorkspace(
+    // 原子抢占：仅当 recordingUrl 仍为 "egress:pending" 时才更新为真实 egressId
+    // 若另一并发请求已抢先更新（recordingUrl 不再是 "egress:pending"），
+    // 则当前请求竞争失败，需停止自己启动的 Egress 并返回 409
+    const claim = await runWithWorkspace(
       wid,
       async (tx) => {
-        await tx.meeting.update({
-          where: { id: mid },
+        const result = await tx.meeting.updateMany({
+          where: { id: mid, recordingUrl: "egress:pending" },
           data: {
             recordingUrl: `egress:${egressInfo.egressId}`,
             recordingStartedAt: new Date(),
           },
         });
+        return result.count > 0;
       },
       ctx.payload.sub,
     );
+
+    if (!claim) {
+      // 竞态失败：另一请求已抢先，停止当前 Egress 并返回 409
+      try {
+        await egressClient.stopEgress(egressInfo.egressId);
+      } catch (stopError) {
+        console.error("[POST recording/start] failed to stop losing egress:", stopError);
+      }
+      return NextResponse.json(
+        { code: 409, message: apiMsg(req, "recordingStarted"), data: null },
+        { status: 409 },
+      );
+    }
 
     return NextResponse.json({
       code: 200,

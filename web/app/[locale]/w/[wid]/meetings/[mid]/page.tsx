@@ -19,6 +19,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
+import { useSearchParams } from "next/navigation";
 import { Video, ArrowLeft, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { MeetingLobby } from "@/components/meetings/MeetingLobby";
@@ -49,6 +50,8 @@ export default function MeetingRoomPage({
 }) {
   const t = useTranslations("meeting");
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const conversationId = searchParams.get("conversationId") ?? undefined;
   const [wid, setWid] = useState<string | null>(null);
   const [mid, setMid] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
@@ -205,6 +208,7 @@ export default function MeetingRoomPage({
       workspaceId={wid}
       meetingId={mid}
       onLeave={handleLeaveRoom}
+      conversationId={conversationId}
     />
   );
 }

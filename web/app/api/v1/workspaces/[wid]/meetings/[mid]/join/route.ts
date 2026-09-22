@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { AccessToken } from "livekit-server-sdk";
+import bcrypt from "bcryptjs";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/join — 加入会议（获取 LiveKit token）
@@ -64,9 +65,12 @@ export async function POST(
 
         // L8 #34：密码验证——会议设置了密码且请求未提供匹配密码时拒绝
         // 会议创建者（host）免密加入
+        // 密码以 bcrypt hash 存储，使用 bcrypt.compare 验证
         const isHostUser = meeting.createdBy === userId;
-        if (meeting.password && !isHostUser && bodyPassword !== meeting.password) {
-          return { kind: "passwordRequired" as const };
+        if (meeting.password && !isHostUser) {
+          if (!bodyPassword || !(await bcrypt.compare(bodyPassword, meeting.password))) {
+            return { kind: "passwordRequired" as const };
+          }
         }
 
         // 在线人数检查（leftAt = null 视为仍在会议中）

@@ -18,7 +18,7 @@ bind_addresses:
 # 与 LIVEKIT_API_KEY / LIVEKIT_API_SECRET 一致；
 # 开发默认 devkey/secret（生产必须替换为强随机值）
 keys:
-  devkey: secret
+  ${LIVEKIT_API_KEY}: ${LIVEKIT_API_SECRET}
 
 # ─── RTC 音视频媒体配置（L3 #29）──
 rtc:
@@ -55,7 +55,7 @@ e2ee:
 # LiveKit Server 在房间/参与者/egress 事件发生时回调此端点。
 # 签名密钥与 keys 一致；webhooks/livekit/route.ts 用 WebhookReceiver 验签。
 webhook:
-  api_key: devkey
+  api_key: ${LIVEKIT_API_KEY}
   urls:
     - "http://app:3000/api/v1/webhooks/livekit"
 

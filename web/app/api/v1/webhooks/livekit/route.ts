@@ -33,11 +33,21 @@ export async function POST(req: NextRequest) {
     const receiver = new WebhookReceiver(apiKey, apiSecret);
     const event: WebhookEvent = await receiver.receive(body, authHeader);
 
-    await handleEvent(event);
+    // handleEvent 内部错误应返回 500，不应与签名验证失败混淆
+    try {
+      await handleEvent(event);
+    } catch (error) {
+      console.error("[webhook livekit] handleEvent error:", error);
+      return NextResponse.json(
+        { code: 500, data: null, message: "Internal server error" },
+        { status: 500 },
+      );
+    }
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 200, data: null, message: "OK" });
   } catch (error) {
-    console.error("[webhook livekit] error:", error);
+    // 签名验证失败（receiver.receive 抛出）返回 401
+    console.error("[webhook livekit] signature verification failed:", error);
     return NextResponse.json(
       { code: 401, data: null, message: "Webhook signature verification failed" },
       { status: 401 },

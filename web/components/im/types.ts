@@ -45,6 +45,9 @@ export interface MessageAttachment {
   thumbnailUrl: string | null;
 }
 
+/** 消息类型：text（普通文本）/ system（系统消息）/ call_invite（通话邀请）/ call_ended（通话结束）/ call_rejected（通话拒绝） */
+export type MessageType = "text" | "system" | "call_invite" | "call_ended" | "call_rejected";
+
 /** 单条消息 */
 export interface Message {
   id: string;
@@ -52,6 +55,8 @@ export interface Message {
   authorId: string | null;
   author: UserSummary | null;
   body: string;
+  /** 消息类型；默认 "text" */
+  type: MessageType;
   createdAt: string;
   /** 编辑时间；null 表示未编辑 */
   editedAt: string | null;
@@ -109,6 +114,8 @@ export interface SendMessageOptions {
   mentions?: string[];
   /** 附件列表（由 MessageInput 上传后传入） */
   attachments?: SendAttachment[];
+  /** 消息类型；默认 "text" */
+  type?: MessageType;
 }
 
 /** 创建会话的参数 */
