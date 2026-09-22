@@ -66,6 +66,28 @@ export async function POST(
           finalLastReadAt = existingDate;
         }
 
+        // 同时为该时间点之前的所有未读消息创建 MessageRead 记录
+        // （双勾✓✓回执展示依赖 MessageRead 表）
+        const unreadMessages = await tx.message.findMany({
+          where: {
+            conversationId: cid,
+            authorId: { not: userId },
+            createdAt: { lte: finalLastReadAt },
+            reads: { none: { userId } },
+          },
+          select: { id: true },
+        });
+        if (unreadMessages.length > 0) {
+          await tx.messageRead.createMany({
+            data: unreadMessages.map((msg) => ({
+              messageId: msg.id,
+              userId,
+              readAt: finalLastReadAt,
+            })),
+            skipDuplicates: true,
+          });
+        }
+
         return { lastReadAt: finalLastReadAt };
       },
       userId,

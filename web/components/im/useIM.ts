@@ -115,9 +115,13 @@ export interface UseIMResult {
  * IM 主 Hook。
  *
  * @param workspaceId 当前工作区 ID
+ * @param t i18n 翻译函数（useTranslations("chat") 的返回值），用于错误消息本地化
  * @returns IM 状态和操作方法
  */
-export function useIM(workspaceId: string): UseIMResult {
+export function useIM(
+  workspaceId: string,
+  t?: (key: string) => string,
+): UseIMResult {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -136,6 +140,8 @@ export function useIM(workspaceId: string): UseIMResult {
 
   // 当前活跃会话 ID 引用（供 WS 消息处理判断是否属于当前会话）
   const activeCidRef = useRef<string | null>(null);
+  // 请求序号（递增 counter），用于 selectConversation 竞态条件防护
+  const requestSeqRef = useRef(0);
   // 消息列表引用（供 loadMoreMessages 读取最早消息游标，避免依赖 messages 致使函数频繁重建）
   const messagesRef = useRef<Message[]>([]);
   /**
@@ -155,7 +161,7 @@ export function useIM(workspaceId: string): UseIMResult {
       );
       setConversations(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load conversations");
+      setError(err instanceof Error ? err.message : (t?.("loadConversationsFailed") ?? "Failed to load conversations"));
     } finally {
       setLoading(false);
     }
@@ -164,6 +170,8 @@ export function useIM(workspaceId: string): UseIMResult {
   /** 选择会话：加载详情 + 消息 + 订阅 WS + 标记已读 */
   const selectConversation = useCallback(
     async (cid: string) => {
+      // 递增请求序号，用于竞态条件防护
+      const seq = ++requestSeqRef.current;
       setLoading(true);
       setError(null);
       try {
@@ -172,10 +180,17 @@ export function useIM(workspaceId: string): UseIMResult {
           `/api/v1/workspaces/${workspaceId}/conversations/${cid}`,
         );
 
+        // 竞态检查：如果用户已切换到其他会话，丢弃此旧响应
+        if (seq !== requestSeqRef.current) return;
+
         // 2. 加载消息列表（游标分页，取最近 MESSAGES_PAGE_SIZE 条）
         const result = await api<MessagesListResponse>(
           `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages?limit=${MESSAGES_PAGE_SIZE}`,
         );
+
+        // 竞态检查：加载消息后再次确认
+        if (seq !== requestSeqRef.current) return;
+
         const initialMessages = result?.messages ?? [];
         const hasMoreMessages = result?.hasMore ?? false;
 
@@ -201,9 +216,14 @@ export function useIM(workspaceId: string): UseIMResult {
           prev.map((c) => (c.id === cid ? { ...c, unreadCount: 0 } : c)),
         );
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load conversation");
+        // 竞态检查：错误响应也需丢弃旧请求
+        if (seq !== requestSeqRef.current) return;
+        setError(err instanceof Error ? err.message : (t?.("loadConversationFailed") ?? "Failed to load conversation"));
       } finally {
-        setLoading(false);
+        // 竞态检查：仅当前请求才复位 loading
+        if (seq === requestSeqRef.current) {
+          setLoading(false);
+        }
       }
     },
     [workspaceId, ws],
@@ -220,7 +240,7 @@ export function useIM(workspaceId: string): UseIMResult {
         );
         await selectConversation(conv.id);
       } catch (err) {
-        setError(err instanceof Error ? err.message : "Failed to load task conversation");
+        setError(err instanceof Error ? err.message : (t?.("loadTaskConversationFailed") ?? "Failed to load task conversation"));
       }
     },
     [workspaceId, selectConversation],
@@ -271,57 +291,77 @@ export function useIM(workspaceId: string): UseIMResult {
         }));
       }
 
-      const msg = await api<Message>(
-        `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages`,
-        { method: "POST", body: JSON.stringify(payload) },
-      );
-      // 乐观更新：立即追加到消息列表
-      setMessages((prev) => [...prev, msg]);
+      try {
+        const msg = await api<Message>(
+          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages`,
+          { method: "POST", body: JSON.stringify(payload) },
+        );
+        // 乐观更新：立即追加到消息列表
+        setMessages((prev) => [...prev, msg]);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : (t?.("sendMessageFailed") ?? "Failed to send message"));
+        throw err;
+      }
     },
-    [workspaceId],
+    [workspaceId, t],
   );
 
   /** 编辑消息 */
   const editMessage = useCallback(
     async (cid: string, mid: string, body: string) => {
-      const msg = await api<Message>(
-        `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages/${mid}`,
-        { method: "PATCH", body: JSON.stringify({ body }) },
-      );
-      setMessages((prev) => prev.map((m) => (m.id === mid ? msg : m)));
+      try {
+        const msg = await api<Message>(
+          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages/${mid}`,
+          { method: "PATCH", body: JSON.stringify({ body }) },
+        );
+        setMessages((prev) => prev.map((m) => (m.id === mid ? msg : m)));
+      } catch (err) {
+        setError(err instanceof Error ? err.message : (t?.("editMessageFailed") ?? "Failed to edit message"));
+        throw err;
+      }
     },
-    [workspaceId],
+    [workspaceId, t],
   );
 
   /** 撤回消息 */
   const revokeMessage = useCallback(
     async (cid: string, mid: string) => {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages/${mid}`,
-        { method: "DELETE" },
-      );
-      // 本地标记撤回（WS 也会推送，此处乐观更新）
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.id === mid ? { ...m, revokedAt: new Date().toISOString() } : m,
-        ),
-      );
+      try {
+        await api(
+          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages/${mid}`,
+          { method: "DELETE" },
+        );
+        // 本地标记撤回（WS 也会推送，此处乐观更新）
+        setMessages((prev) =>
+          prev.map((m) =>
+            m.id === mid ? { ...m, revokedAt: new Date().toISOString() } : m,
+          ),
+        );
+      } catch (err) {
+        setError(err instanceof Error ? err.message : (t?.("revokeMessageFailed") ?? "Failed to revoke message"));
+        throw err;
+      }
     },
-    [workspaceId],
+    [workspaceId, t],
   );
 
   /** 创建会话 */
   const createConversation = useCallback(
     async (params: CreateConversationParams): Promise<Conversation> => {
-      const conv = await api<Conversation>(
-        `/api/v1/workspaces/${workspaceId}/conversations`,
-        { method: "POST", body: JSON.stringify(params) },
-      );
-      // 追加到会话列表
-      setConversations((prev) => [...prev, conv]);
-      return conv;
+      try {
+        const conv = await api<Conversation>(
+          `/api/v1/workspaces/${workspaceId}/conversations`,
+          { method: "POST", body: JSON.stringify(params) },
+        );
+        // 追加到会话列表
+        setConversations((prev) => [...prev, conv]);
+        return conv;
+      } catch (err) {
+        setError(err instanceof Error ? err.message : (t?.("createConversationFailed") ?? "Failed to create conversation"));
+        throw err;
+      }
     },
-    [workspaceId],
+    [workspaceId, t],
   );
 
   /** WebSocket 消息处理：统一分发服务端推送 */

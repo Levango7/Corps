@@ -953,7 +953,15 @@
     "taskPickerUnavailable": "Workspace context unavailable",
     "aiReply": "AI Reply",
     "aiReplyUnavailable": "AI not configured",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "loadConversationsFailed": "Failed to load conversations",
+    "loadConversationFailed": "Failed to load conversation",
+    "loadTaskConversationFailed": "Failed to load task conversation",
+    "sendMessageFailed": "Failed to send message",
+    "editMessageFailed": "Failed to edit message",
+    "revokeMessageFailed": "Failed to revoke message",
+    "createConversationFailed": "Failed to create conversation",
+    "imagePreview": "Image Preview"
   },
   "im": {
     "actions": {

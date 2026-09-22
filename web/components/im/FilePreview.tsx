@@ -88,6 +88,7 @@ export function FilePreview({ attachment, onClick }: FilePreviewProps) {
           <div
             role="dialog"
             aria-modal="true"
+            aria-label={t("imagePreview")}
             onClick={() => setExpanded(false)}
             className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[color-mix(in_srgb,var(--mix-black)_70%,transparent)] p-[var(--space-6)]"
           >

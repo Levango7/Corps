@@ -84,45 +84,62 @@ if (process.env.NODE_ENV === "production") {
 /**
  * 单用户并发 SSE 连接计数（审计遗留：连接建立限流已有，但缺并发硬上限——
  * 按每分钟 20 次建立 × 5 分钟空闲存活，单用户理论上可累积约百条长连接占句柄）。
- * key=userId，value=当前活跃连接数。多端登录场景正常值 1-3（PC + 手机 + 平板），
- * 上限取 5 留足余量；超出返回 429 由调用方拒绝连接。
+ * key=userId，value={ count: 当前活跃连接数, lastActive: 最后活跃时间戳 }。
+ * 多端登录场景正常值 1-3（PC + 手机 + 平板），上限取 5 留足余量；
+ * 超出返回 429 由调用方拒绝连接。
  *
- * L-02 已知限制：sseConnections 计数依赖客户端在连接断开时调用 releaseSseSlot
- * 释放额度。若客户端崩溃/网络断开未发送 FIN，或调用方在异常路径漏调 release，
- * 计数会泄漏（只增不减），最终用户被误限流（达到 MAX_SSE_PER_USER 后拒绝新连接）。
- *
- * 当前防护：依赖应用层心跳——SSE 路由发送定期 ping，客户端 pong 超时后路由
- * 主动关闭连接并调 release。若未来需更强的防护，可添加定期扫描机制：
- *   - 每 5 分钟扫描 sseConnections，对计数 > 0 的 userId 发心跳探测；
- *   - 探测无响应的连接标记为僵尸，扣减计数并清理。
- * 或改为在 sseConnections 中存储最后活跃时间戳，定期清理超时（如 10 分钟无活动）的条目。
+ * 中等问题5修复：sseConnections 存储结构从 Map<string, number> 改为
+ * Map<string, { count: number; lastActive: number }>，定期清理僵尸条目：
+ *  - count <= 0 的条目：立即清理（与原逻辑一致）
+ *  - lastActive 超过 10 分钟且 count > 0 的条目：视为僵尸（客户端崩溃未 release），
+ *    强制清理并释放额度，防止用户被误限流
  */
 const MAX_SSE_PER_USER = 5;
-const sseConnections = new Map<string, number>();
+const SSE_ZOMBIE_TIMEOUT_MS = 10 * 60 * 1000; // 10 分钟无活动视为僵尸
+const sseConnections = new Map<string, { count: number; lastActive: number }>();
 
-// R8D-06：定期清理零计数条目，防止泄漏（依赖 releaseSseSlot 正常调用的前提下，
-// 异常路径可能导致计数只增不减；定期扫描清理 count<=0 的僵尸条目）
+// 定期清理：零计数条目 + 僵尸条目（lastActive 超时且 count > 0）
 if (typeof setInterval !== "undefined") {
   setInterval(() => {
-    for (const [key, count] of sseConnections) {
-      if (count <= 0) sseConnections.delete(key);
+    const now = Date.now();
+    for (const [key, entry] of sseConnections) {
+      if (entry.count <= 0) {
+        // 零计数：正常清理
+        sseConnections.delete(key);
+      } else if (now - entry.lastActive > SSE_ZOMBIE_TIMEOUT_MS) {
+        // 僵尸条目：count > 0 但超过 10 分钟无活动，客户端可能崩溃未 release
+        console.warn(
+          `[chat-events] 清理僵尸 SSE 连接: userId=${key}, count=${entry.count}, ` +
+            `lastActive=${new Date(entry.lastActive).toISOString()}`,
+        );
+        sseConnections.delete(key);
+      }
     }
   }, 5 * 60 * 1000).unref?.(); // unref 避免阻止进程退出
 }
 
 /** 该用户是否还有 SSE 连接额度（未达并发上限） */
 export function tryAcquireSseSlot(userId: string): boolean {
-  const current = sseConnections.get(userId) ?? 0;
-  if (current >= MAX_SSE_PER_USER) return false;
-  sseConnections.set(userId, current + 1);
+  const entry = sseConnections.get(userId);
+  if (entry && entry.count >= MAX_SSE_PER_USER) return false;
+  if (entry) {
+    entry.count += 1;
+    entry.lastActive = Date.now();
+  } else {
+    sseConnections.set(userId, { count: 1, lastActive: Date.now() });
+  }
   return true;
 }
 
 /** 释放一个 SSE 连接额度（断开时调用，与 acquire 配对） */
 export function releaseSseSlot(userId: string): void {
-  const current = sseConnections.get(userId) ?? 0;
-  if (current <= 1) sseConnections.delete(userId);
-  else sseConnections.set(userId, current - 1);
+  const entry = sseConnections.get(userId);
+  if (!entry) return;
+  if (entry.count <= 1) sseConnections.delete(userId);
+  else {
+    entry.count -= 1;
+    entry.lastActive = Date.now();
+  }
 }
 
 /** 事件通道命名：`chat:${taskId}` */

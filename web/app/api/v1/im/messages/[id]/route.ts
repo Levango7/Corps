@@ -6,9 +6,9 @@
  *  - DELETE /api/v1/im/messages/{id} 撤回消息（5 分钟内可撤回）
  *
  * ─── 业务规则 ─────────────────────────────────────────────────
- *  1. 仅消息作者可编辑/撤回（authorId === ctx.payload.sub）
+ *  1. 仅消息作者可编辑；作者可撤回，管理员可撤回他人消息
  *  2. 已撤回消息不可编辑/再次撤回（revokedAt === null）
- *  3. 发送 5 分钟内可编辑/撤回（与微信/飞书一致）
+ *  3. 发送 5 分钟内可编辑/撤回（管理员撤回不受时间限制）
  *  4. 撤回为软删除：保留行，前端展示"此消息已撤回"
  *  5. 编辑更新 body + editedAt = now()，允许多次编辑（5 分钟内）
  *
@@ -171,8 +171,7 @@ export async function PATCH(
         );
       case "ok":
         return NextResponse.json({
-          // P1-fix: code: 200 → code: 0
-          code: 0,
+          code: 200,
           data: result.message,
           message: apiMsg(req, "ok"),
         });
@@ -202,9 +201,8 @@ export async function PATCH(
  *  1. 认证 + 工作区成员资格
  *  2. 限流
  *  3. 消息存在 + 属于该工作区
- *  4. 作者 === 当前用户
+ *  4. 作者可撤回（5 分钟内）；管理员可撤回他人消息（不受时间限制）
  *  5. 未撤回
- *  6. 距 createdAt < 5 分钟
  *
  * 软删除：设置 revokedAt + revokedBy，不删除行。
  * 前端展示"此消息已撤回"。
@@ -267,17 +265,35 @@ export async function DELETE(
             authorId: true,
             revokedAt: true,
             createdAt: true,
+            conversationId: true,
           },
         });
 
         if (!existing) return { kind: "notFound" as const };
-        if (existing.authorId !== ctx.payload.sub) {
+
+        const isAuthor = existing.authorId === ctx.payload.sub;
+        // 查询会话成员角色（如果有 conversationId），判断是否为管理员
+        let isAdmin = false;
+        if (existing.conversationId) {
+          const membership = await tx.conversationMember.findFirst({
+            where: {
+              conversationId: existing.conversationId,
+              userId: ctx.payload.sub,
+            },
+            select: { role: true },
+          });
+          isAdmin = membership?.role === "owner" || membership?.role === "admin";
+        }
+
+        // 权限校验：作者或管理员可撤回
+        if (!isAuthor && !isAdmin) {
           return { kind: "forbidden" as const };
         }
         if (existing.revokedAt !== null) {
           return { kind: "revoked" as const };
         }
-        if (Date.now() - existing.createdAt.getTime() > EDIT_WINDOW_MS) {
+        // 时间窗口：作者 5 分钟内，管理员不受限
+        if (isAuthor && !isAdmin && Date.now() - existing.createdAt.getTime() > EDIT_WINDOW_MS) {
           return { kind: "expired" as const };
         }
 
@@ -301,7 +317,7 @@ export async function DELETE(
         );
       case "forbidden":
         return NextResponse.json(
-          { code: 403, message: apiMsg(req, "canOnlyEditOwnMessage"), data: null },
+          { code: 403, message: apiMsg(req, "forbidden"), data: null },
           { status: 403 },
         );
       case "revoked":
@@ -316,7 +332,7 @@ export async function DELETE(
         );
       case "ok":
         return NextResponse.json({
-          code: 0,
+          code: 200,
           data: null,
           message: apiMsg(req, "ok"),
         });

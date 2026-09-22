@@ -24,13 +24,20 @@
  */
 
 import { verifyAccessToken } from "@/lib/jwt";
-import { prisma } from "@/lib/prisma";
+
+import { withGuc } from "@/lib/auth";
 import type {
   ClientMessage,
   ServerMessage,
   IMWebSocket,
 } from "./types";
 import { WS_OPEN } from "./types";
+
+/** 单用户 WebSocket 连接数上限（多设备场景：PC + 手机 + 平板 + 余量） */
+const MAX_WS_PER_USER = 5;
+
+/** onerror 后等待 onclose 的超时时间（ms），超时后强制清理 */
+const ONERROR_DISCONNECT_TIMEOUT_MS = 30_000;
 
 /**
  * IM 连接管理器单例。
@@ -51,6 +58,12 @@ class IMConnectionManager {
   private conversationSockets: Map<string, Set<IMWebSocket>> = new Map();
   /** socket → 已认证的 userId（认证前不存在于此映射） */
   private socketUser: Map<IMWebSocket, string> = new Map();
+  /** socket → 连接绑定的工作区 ID（handleImUpgrade 时从 URL ?wid= 提取） */
+  private socketWorkspace: Map<IMWebSocket, string> = new Map();
+  /** conversationId → 该会话所属的工作区 ID（subscribe 时从 DB 查询缓存） */
+  private conversationWorkspace: Map<string, string> = new Map();
+  /** socket → onerror 超时定时器引用（防止 onclose 未触发时资源泄漏） */
+  private socketErrorTimer: Map<IMWebSocket, ReturnType<typeof setTimeout>> = new Map();
 
   // ─── 连接生命周期 ────────────────────────────────────────────
 
@@ -59,11 +72,30 @@ class IMConnectionManager {
    *
    * @param ws WebSocket 连接实例（已适配到 IMWebSocket 接口）
    * @param preAuthUserId upgrade 阶段已认证的 userId（主路径）；undefined 表示需等待 auth 消息
+   * @param boundWorkspaceId upgrade 阶段从 URL ?wid= 提取的工作区 ID（用于跨工作区隔离验证）
    *
-   * 调用方在 WebSocket upgrade 成功后调用此方法。此方法注册 onmessage/onclose 回调，
+   * 调用方在 WebSocket upgrade 成功后调用此方法。此方法注册 onmessage/onclose/onerror 回调，
    * 连接的后续处理由回调驱动。preAuthUserId 非空时跳过 auth 消息步骤。
    */
-  async handleConnection(ws: IMWebSocket, preAuthUserId?: string): Promise<void> {
+  async handleConnection(ws: IMWebSocket, preAuthUserId?: string, boundWorkspaceId?: string): Promise<void> {
+    // 中等问题3：单用户 WebSocket 连接数限制
+    if (preAuthUserId) {
+      const currentCount = this.userSockets.get(preAuthUserId)?.size ?? 0;
+      if (currentCount >= MAX_WS_PER_USER) {
+        this.send(ws, {
+          type: "error",
+          message: `连接数超限：单用户最多 ${MAX_WS_PER_USER} 个并发 WebSocket 连接`,
+        });
+        ws.close(1008, "Too many connections");
+        return;
+      }
+    }
+
+    // 绑定工作区 ID（从 URL ?wid= 提取，用于 subscribe 时跨工作区隔离验证）
+    if (boundWorkspaceId) {
+      this.socketWorkspace.set(ws, boundWorkspaceId);
+    }
+
     // 预认证：upgrade 阶段已从 cookie 验证身份，直接注册
     if (preAuthUserId) {
       this.registerAuthenticatedSocket(ws, preAuthUserId);
@@ -81,14 +113,31 @@ class IMConnectionManager {
 
     // 关闭回调：清理资源并广播离线
     ws.onclose = () => {
+      // 中等问题6：onclose 触发时取消 onerror 超时定时器
+      const timer = this.socketErrorTimer.get(ws);
+      if (timer) {
+        clearTimeout(timer);
+        this.socketErrorTimer.delete(ws);
+      }
       this.handleDisconnect(ws);
     };
 
-    // 错误回调：记录日志但不主动断开（容错降级）
+    // 错误回调：记录日志并启动超时兜底机制
+    // 中等问题6：onerror 后 onclose 可能不触发（如网络层异常），
+    // 启动 30 秒定时器，若 onclose 仍未触发则强制调用 handleDisconnect
     ws.onerror = (event: unknown) => {
       console.error("[im-ws] 连接错误:", event);
+      if (!this.socketErrorTimer.has(ws)) {
+        const timer = setTimeout(() => {
+          console.warn("[im-ws] onerror 后 30s 未收到 onclose，强制清理连接");
+          this.handleDisconnect(ws);
+        }, ONERROR_DISCONNECT_TIMEOUT_MS);
+        timer.unref?.(); // unref 避免阻止进程退出
+        this.socketErrorTimer.set(ws, timer);
+      }
     };
   }
+
 
   /**
    * 注册已认证的 socket：加入 userSockets 映射并广播上线。
@@ -176,6 +225,16 @@ class IMConnectionManager {
         this.send(ws, { type: "error", message: "认证失败：令牌无效或已过期" });
         return;
       }
+      // 中等问题3：认证时也检查连接数限制
+      const currentCount = this.userSockets.get(payload.sub)?.size ?? 0;
+      if (currentCount >= MAX_WS_PER_USER) {
+        this.send(ws, {
+          type: "error",
+          message: `连接数超限：单用户最多 ${MAX_WS_PER_USER} 个并发 WebSocket 连接`,
+        });
+        ws.close(1008, "Too many connections");
+        return;
+      }
       this.registerAuthenticatedSocket(ws, payload.sub);
     } catch (err) {
       this.send(ws, {
@@ -188,7 +247,11 @@ class IMConnectionManager {
   /**
    * 处理 subscribe：验证用户是该会话成员后加入订阅。
    *
-   * 查 ConversationMember 表确认成员资格，防止跨会话窃听。
+   * 严重问题1修复：DB 操作通过 withGuc 注入 workspace_id GUC 上下文，确保 RLS 策略生效。
+   * 严重问题2修复：验证 conversation.workspaceId 与连接绑定的工作区 ID 一致，
+   *               防止跨工作区订阅（即使成员资格验证通过）。
+   *
+   * 查 ConversationMember 表确认成员资格，防跨会话窃听。
    * DB 操作 try-catch，失败时发 error 但不断开连接。
    */
   private async handleSubscribe(
@@ -197,17 +260,48 @@ class IMConnectionManager {
     conversationId: string,
   ): Promise<void> {
     try {
-      // 验证用户是该会话成员（防跨会话窃听）
-      const member = await prisma.conversationMember.findUnique({
-        where: {
-          conversationId_userId: { conversationId, userId },
+      // 严重问题1：通过 withGuc 注入 RLS 上下文执行 DB 查询
+      // 先查询会话所属工作区和成员资格（在同一 GUC 事务内完成）
+      const boundWorkspaceId = this.socketWorkspace.get(ws);
+
+      const { member, workspaceId } = await withGuc(
+        boundWorkspaceId ? { workspace_id: boundWorkspaceId, user_id: userId } : { user_id: userId },
+        async (tx) => {
+          // 查询会话所属工作区
+          const conversation = await tx.conversation.findUnique({
+            where: { id: conversationId },
+            select: { workspaceId: true },
+          });
+          if (!conversation) {
+            return { member: null, workspaceId: null };
+          }
+          // 验证用户是该会话成员（防跨会话窃听）
+          const member = await tx.conversationMember.findUnique({
+            where: {
+              conversationId_userId: { conversationId, userId },
+            },
+            select: { id: true },
+          });
+          return { member, workspaceId: conversation.workspaceId };
         },
-        select: { id: true },
-      });
-      if (!member) {
-        this.send(ws, { type: "error", message: "订阅失败：非该会话成员" });
+      );
+
+      if (!member || !workspaceId) {
+        this.send(ws, { type: "error", message: "订阅失败：非该会话成员或会话不存在" });
         return;
       }
+
+      // 严重问题2：验证 conversation.workspaceId 与连接绑定的 workspaceId 一致
+      if (boundWorkspaceId && workspaceId !== boundWorkspaceId) {
+        this.send(ws, {
+          type: "error",
+          message: "订阅失败：会话不属于当前工作区",
+        });
+        return;
+      }
+
+      // 缓存 conversation → workspaceId 映射，供 handleRead 使用
+      this.conversationWorkspace.set(conversationId, workspaceId);
 
       // 加入 socket → conversation 双向索引
       let convSet = this.socketConversations.get(ws);
@@ -266,6 +360,10 @@ class IMConnectionManager {
   /**
    * 处理 read：更新 DB 已读游标并广播已读回执给该会话其他订阅者。
    *
+   * 严重问题1修复：通过 withGuc 注入 workspace_id GUC 上下文，确保 RLS 策略生效。
+   * workspaceId 从 conversationWorkspace 缓存获取（subscribe 时已查询并缓存），
+   * 若缓存未命中则从 socketWorkspace 获取连接绑定的工作区 ID。
+   *
    * 更新 ConversationMember.lastReadAt 为当前时间（已读游标）。
    * 广播 read 事件让其他客户端显示双勾✓✓回执。
    */
@@ -276,13 +374,23 @@ class IMConnectionManager {
     messageIds: string[],
   ): Promise<void> {
     try {
-      // 更新已读游标（lastReadAt = 当前时间）
-      await prisma.conversationMember.update({
-        where: {
-          conversationId_userId: { conversationId, userId },
+      // 严重问题1：获取 workspaceId 并通过 withGuc 注入 RLS 上下文
+      const workspaceId =
+        this.conversationWorkspace.get(conversationId) ??
+        this.socketWorkspace.get(ws);
+
+      await withGuc(
+        workspaceId ? { workspace_id: workspaceId, user_id: userId } : { user_id: userId },
+        async (tx) => {
+          // 更新已读游标（lastReadAt = 当前时间）
+          await tx.conversationMember.update({
+            where: {
+              conversationId_userId: { conversationId, userId },
+            },
+            data: { lastReadAt: new Date() },
+          });
         },
-        data: { lastReadAt: new Date() },
-      });
+      );
 
       // 广播已读回执给该会话其他订阅者
       this.broadcastToConversation(
@@ -366,12 +474,21 @@ class IMConnectionManager {
    * 处理连接断开：清理所有映射并广播离线状态。
    *
    * 清理顺序：
-   *  1. 从 socketConversations 移除该 socket 的所有订阅
-   *  2. 从 conversationSockets 对应移除该 socket
-   *  3. 从 userSockets 移除该 socket
-   *  4. 若该用户已无任何 socket，广播 offline
+   *  1. 取消 onerror 超时定时器（若有）
+   *  2. 从 socketConversations 移除该 socket 的所有订阅
+   *  3. 从 conversationSockets 对应移除该 socket
+   *  4. 从 socketUser 移除
+   *  5. 从 socketWorkspace 移除
+   *  6. 若该用户已无任何 socket，广播 offline
    */
   private handleDisconnect(ws: IMWebSocket): void {
+    // 取消 onerror 超时定时器
+    const timer = this.socketErrorTimer.get(ws);
+    if (timer) {
+      clearTimeout(timer);
+      this.socketErrorTimer.delete(ws);
+    }
+
     const userId = this.socketUser.get(ws);
 
     // 清理 socket → conversation 索引，同步清理 conversation → socket
@@ -382,6 +499,8 @@ class IMConnectionManager {
         sockSet?.delete(ws);
         if (sockSet && sockSet.size === 0) {
           this.conversationSockets.delete(cid);
+          // 会话无订阅者时清理 workspaceId 缓存
+          this.conversationWorkspace.delete(cid);
         }
       }
       this.socketConversations.delete(ws);
@@ -389,6 +508,9 @@ class IMConnectionManager {
 
     // 清理 socketUser
     this.socketUser.delete(ws);
+
+    // 清理 socketWorkspace
+    this.socketWorkspace.delete(ws);
 
     // 清理 userSockets，并在用户无剩余 socket 时广播离线
     if (userId) {

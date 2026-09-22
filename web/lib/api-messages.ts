@@ -378,8 +378,16 @@ export const API_MESSAGES = {
     en: "You can only edit your own messages",
   },
   revokeTimeExceeded: {
-    zh: "消息发送超过 2 分钟，无法撤回",
-    en: "Messages can only be revoked within 2 minutes of sending",
+    zh: "消息发送超过 5 分钟，无法撤回",
+    en: "Messages can only be revoked within 5 minutes of sending",
+  },
+  usersNotWorkspaceMembers: {
+    zh: "部分用户不是该工作区成员",
+    en: "Some users are not members of this workspace",
+  },
+  userNotWorkspaceMember: {
+    zh: "该用户不是工作区成员",
+    en: "This user is not a member of the workspace",
   },
 
   /* ── 音视频会议（阶段 6 任务 218）── */

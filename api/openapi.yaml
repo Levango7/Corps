@@ -2356,6 +2356,711 @@ paths:
         '201': { description: Attachment metadata }
         '400': { description: Missing/invalid file }
         '404': { description: Task not found }
+
+  # ===========================================================================
+  # IM CONVERSATIONS (独立会话 IM)
+  # ===========================================================================
+  /api/v1/workspaces/{wid}/conversations:
+    get:
+      tags: [messages]
+      summary: List conversations for the current user
+      description: >
+        Returns conversations the current user participates in, ordered by
+        lastMessageAt desc (nulls last). Each conversation includes members,
+        last message, and unread count. Cursor-based pagination.
+      operationId: listConversations
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cursor
+          in: query
+          schema: { type: string, format: uuid }
+          description: Pagination cursor (last conversation id from previous page).
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: type
+          in: query
+          schema: { type: string, enum: [direct, group, task] }
+      responses:
+        '200':
+          description: Conversation list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    required: [items, nextCursor, hasMore]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            type: { type: string, enum: [direct, group] }
+                            title: { type: string, nullable: true }
+                            avatar: { type: string, nullable: true }
+                            description: { type: string, nullable: true }
+                            createdBy: { type: string, format: uuid, nullable: true }
+                            createdAt: { type: string, format: date-time }
+                            updatedAt: { type: string, format: date-time }
+                            lastMessageAt: { type: string, format: date-time, nullable: true }
+                            lastMessage:
+                              type: object
+                              nullable: true
+                            unreadCount: { type: integer }
+                            members:
+                              type: array
+                              items:
+                                type: object
+                                properties:
+                                  id: { type: string, format: uuid }
+                                  userId: { type: string, format: uuid }
+                                  role: { type: string, enum: [owner, admin, member] }
+                                  joinedAt: { type: string, format: date-time }
+                                  lastReadAt: { type: string, format: date-time, nullable: true }
+                                  muted: { type: boolean }
+                                  user:
+                                    type: object
+                                    properties:
+                                      id: { type: string, format: uuid }
+                                      name: { type: string, nullable: true }
+                                      email: { type: string }
+                                      image: { type: string, nullable: true }
+                      nextCursor: { type: string, format: uuid, nullable: true }
+                      hasMore: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [messages]
+      summary: Create a conversation (direct/group)
+      description: >
+        Creates a new conversation. Direct chats require exactly 2 memberIds
+        (including self); group chats require a title. All memberIds must be
+        workspace members. If a direct chat with the same 2 members already
+        exists, returns it (200) instead of creating a new one (201).
+      operationId: createConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, memberIds]
+              properties:
+                type:
+                  type: string
+                  enum: [direct, group]
+                memberIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                  minItems: 2
+                title:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 500
+                taskId:
+                  type: string
+                  format: uuid
+                source:
+                  type: string
+                  enum: [manual, task, system]
+      responses:
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 201 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      type: { type: string, enum: [direct, group] }
+                      title: { type: string, nullable: true }
+                      members:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            userId: { type: string, format: uuid }
+                            role: { type: string, enum: [owner, admin, member] }
+        '200':
+          description: Existing direct chat returned (idempotent)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/conversations/{cid}:
+    get:
+      tags: [messages]
+      summary: Get conversation detail
+      description: >
+        Returns the conversation with members and recent messages.
+        Membership required; unknown conversation → 404.
+      operationId: getConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Conversation detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      type: { type: string, enum: [direct, group] }
+                      title: { type: string, nullable: true }
+                      members:
+                        type: array
+                        items:
+                          type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [messages]
+      summary: Update conversation (title/description/avatar)
+      description: >
+        Owner/admin only. Partial update of conversation metadata.
+      operationId: updateConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title:
+                  type: string
+                  maxLength: 200
+                description:
+                  type: string
+                  maxLength: 500
+                avatar:
+                  type: string
+      responses:
+        '200':
+          description: Conversation updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [messages]
+      summary: Leave or delete conversation
+      description: >
+        Members leave the conversation (removes their ConversationMember row).
+        Owner can delete the conversation entirely. Direct chats: leaving
+        effectively deletes the conversation for that user.
+      operationId: leaveOrDeleteConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Left or deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/conversations/{cid}/members:
+    get:
+      tags: [messages]
+      summary: List conversation members
+      description: >
+        Returns all members of the conversation with user info, role,
+        joinedAt, lastReadAt, and muted flag. Membership required.
+      operationId: listConversationMembers
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Member list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    required: [items, total, hasMore]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            userId: { type: string, format: uuid }
+                            role: { type: string, enum: [owner, admin, member] }
+                            joinedAt: { type: string, format: date-time }
+                            lastReadAt: { type: string, format: date-time, nullable: true }
+                            muted: { type: boolean }
+                            user:
+                              type: object
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string, nullable: true }
+                                email: { type: string }
+                                image: { type: string, nullable: true }
+                      total: { type: integer }
+                      hasMore: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [messages]
+      summary: Add members to conversation (owner/admin)
+      description: >
+        Owner/admin only. Adds new members to the conversation. All userIds
+        must be workspace members. Already-existing members are skipped.
+      operationId: addConversationMembers
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [userIds]
+              properties:
+                userIds:
+                  type: array
+                  items: { type: string, format: uuid }
+                  minItems: 1
+                  maxItems: 100
+      responses:
+        '201':
+          description: Members added
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 201 }
+                  data:
+                    type: object
+                    properties:
+                      added: { type: integer }
+                      skipped: { type: integer }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}:
+    delete:
+      tags: [messages]
+      summary: Remove a member from conversation (owner/admin)
+      description: >
+        Owner/admin only. Removes the specified member from the conversation.
+        Cannot remove the conversation owner.
+      operationId: removeConversationMember
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: uid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Member removed
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/conversations/{cid}/messages:
+    get:
+      tags: [messages]
+      summary: List messages in a conversation (cursor-based)
+      description: >
+        Returns messages in the conversation ordered by createdAt asc,
+        with cursor-based pagination (?before= for older messages).
+        Membership required.
+      operationId: listConversationMessages
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: before
+          in: query
+          schema: { type: string, format: uuid }
+          description: Cursor — return messages before this message id.
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Message list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    required: [items, hasMore]
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            id: { type: string, format: uuid }
+                            authorId: { type: string, format: uuid, nullable: true }
+                            body: { type: string }
+                            type: { type: string, enum: [text, system, call_invite, call_ended, call_rejected] }
+                            editedAt: { type: string, format: date-time, nullable: true }
+                            revokedAt: { type: string, format: date-time, nullable: true }
+                            replyToId: { type: string, format: uuid, nullable: true }
+                            createdAt: { type: string, format: date-time }
+                            author:
+                              type: object
+                              nullable: true
+                              properties:
+                                id: { type: string, format: uuid }
+                                name: { type: string, nullable: true }
+                                email: { type: string }
+                                image: { type: string, nullable: true }
+                      hasMore: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [messages]
+      summary: Send a message to a conversation
+      description: >
+        Creates a message in the conversation. Membership required.
+        Supports replyToId for threaded replies and attachments.
+      operationId: sendConversationMessage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+                replyToId:
+                  type: string
+                  format: uuid
+                mentions:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Message created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 201 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      body: { type: string }
+                      authorId: { type: string, format: uuid }
+                      conversationId: { type: string, format: uuid }
+                      createdAt: { type: string, format: date-time }
+                      author:
+                        type: object
+                        properties:
+                          id: { type: string, format: uuid }
+                          name: { type: string, nullable: true }
+                          image: { type: string, nullable: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}:
+    patch:
+      tags: [messages]
+      summary: Edit a message (author only, within 5 minutes)
+      description: >
+        Only the message author can edit, within 5 minutes of sending.
+        Updates body + editedAt. WebSocket broadcasts edit event.
+      operationId: editConversationMessage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [body]
+              properties:
+                body:
+                  type: string
+                  minLength: 1
+                  maxLength: 10000
+      responses:
+        '200':
+          description: Message edited
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [messages]
+      summary: Revoke a message (author within 5 min, admin unrestricted)
+      description: >
+        Author can revoke within 5 minutes. Conversation owner/admin can
+        revoke others' messages without time limit. Soft delete: sets
+        revokedAt + revokedBy. WebSocket broadcasts revoke event.
+      operationId: revokeConversationMessage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Message revoked
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    description: Revoked message with body cleared.
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/conversations/{cid}/read:
+    post:
+      tags: [messages]
+      summary: Mark conversation as read
+      description: >
+        Updates the current user's ConversationMember.lastReadAt (with
+        anti-rollback) and creates MessageRead records for all unread
+        messages up to that timestamp. Used for unread count reset.
+      operationId: markConversationRead
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                lastReadAt:
+                  type: string
+                  format: date-time
+                  description: Optional ISO-8601 timestamp; defaults to now.
+      responses:
+        '200':
+          description: Marked as read
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      lastReadAt: { type: string, format: date-time }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/workspaces/{wid}/conversations/unread-count:
+    get:
+      tags: [messages]
+      summary: Get unread message counts across all conversations
+      description: >
+        Returns per-conversation unread counts for the current user.
+        A conversation is "unread" if it has messages after the user's
+        lastReadAt that were not authored by the user.
+      operationId: getUnreadCounts
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Unread counts
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      items:
+                        type: array
+                        items:
+                          type: object
+                          properties:
+                            conversationId: { type: string, format: uuid }
+                            unreadCount: { type: integer }
+                      total: { type: integer }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
   # ===========================================================================
   # CALENDAR
   # ===========================================================================

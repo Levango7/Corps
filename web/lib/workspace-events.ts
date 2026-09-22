@@ -28,6 +28,54 @@ export const workspaceEvents = new EventEmitter();
 // 同一工作区可能多端订阅（看板 + 详情 + 仪表盘），上限 100 与 chat-events 对齐。
 workspaceEvents.setMaxListeners(100);
 
+/**
+ * 多实例部署运行时警告（与 chat-events.ts 同构）：
+ *  如果检测到可能的多实例部署环境（如 PM2 cluster 模式、K8s 多 Pod），
+ *  输出警告提醒开发者事件总线仅在单实例内有效。
+ *  检测依据：PM2 实例 > 1 或 K8S 环境变量指示多副本。
+ *
+ *  - 多实例 + 无 REDIS_URL → 严重警告（事件将丢失，必须升级 Redis Pub/Sub）
+ *  - 多实例 + 有 REDIS_URL → 警告（Redis 已配置但 workspace-events 仍用 EventEmitter，
+ *    需要将本模块升级为 Redis Pub/Sub 才能跨实例传递事件）
+ *  - 单实例 + 无 REDIS_URL → 正常，不警告（EventEmitter 单实例内有效）
+ *  - 生产环境 + 无任何实例标志 + 无 REDIS_URL → info 提示（可能漏配实例标志）
+ */
+if (process.env.NODE_ENV === "production") {
+  const pm2Instances = parseInt(process.env.PM2_INSTANCES ?? "1", 10);
+  const k8sReplicas = parseInt(process.env.K8S_REPLICAS ?? "1", 10);
+  const hasRedis = !!process.env.REDIS_URL;
+  const isMultiInstance = pm2Instances > 1 || k8sReplicas > 1;
+
+  if (isMultiInstance) {
+    if (!hasRedis) {
+      console.warn(
+        "[workspace-events] 🔴 严重：检测到多实例部署环境（PM2_INSTANCES=" +
+          pm2Instances +
+          ", K8S_REPLICAS=" +
+          k8sReplicas +
+          "）且未配置 REDIS_URL。工作区事件总线（EventEmitter）仅在单实例内有效，" +
+          "多实例间事件将丢失。必须配置 REDIS_URL 并将本模块升级为 Redis Pub/Sub" +
+          "（见文件头注释升级路径）。",
+      );
+    } else {
+      console.warn(
+        "[workspace-events] ⚠️ 检测到多实例部署环境（PM2_INSTANCES=" +
+          pm2Instances +
+          ", K8S_REPLICAS=" +
+          k8sReplicas +
+          "），REDIS_URL 已配置但 workspace-events 仍使用进程内 EventEmitter。" +
+          "多实例间事件将丢失。请将本模块升级为 Redis Pub/Sub 以利用已有 Redis" +
+          "（见文件头注释升级路径）。",
+      );
+    }
+  } else if (!hasRedis) {
+    console.info(
+      "[workspace-events] ℹ️ 单实例模式运行，未配置 REDIS_URL。当前 EventEmitter 总线可用。" +
+        "若未来扩容到多实例，请先接入 Redis Pub/Sub（见文件头注释升级路径）。",
+    );
+  }
+}
+
 /** 事件通道命名：`workspace:${workspaceId}` */
 export function workspaceChannel(workspaceId: string): string {
   return `workspace:${workspaceId}`;

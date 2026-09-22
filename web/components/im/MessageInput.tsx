@@ -62,7 +62,7 @@ interface MessageInputProps {
       mentions?: string[];
       attachments?: Attachment[];
     },
-  ) => void;
+  ) => Promise<void> | void;
   /** 回复引用目标（显示在输入框上方，可取消） */
   replyTo?: { id: string; authorName: string; body: string } | null;
   /** 取消回复 */
@@ -248,7 +248,7 @@ export function MessageInput({
   );
 
   // —— 发送消息 ——
-  const handleSend = useCallback(() => {
+  const handleSend = useCallback(async () => {
     const trimmed = body.trim();
     if (!trimmed || sending || disabled) return;
     if (body.length > MAX_BODY_LENGTH) return;
@@ -266,7 +266,7 @@ export function MessageInput({
       }
       if (attachments.length > 0) opts.attachments = attachments;
 
-      onSend(trimmed, opts);
+      await onSend(trimmed, opts);
 
       // 清空输入框和状态
       setBody("");
@@ -368,8 +368,9 @@ export function MessageInput({
                 : a,
             ),
           );
-          // 释放本地 blob URL（已被服务端 URL 替换）
-          if (previewUrl) URL.revokeObjectURL(previewUrl);
+          // 释放本地 blob URL：仅当后端返回了 thumbnailKey 时才 revoke previewUrl
+          // （若 thumbnailKey 不存在，thumbnailUrl 仍指向 previewUrl，不能释放）
+          if (previewUrl && fileAsset.thumbnailKey) URL.revokeObjectURL(previewUrl);
         } catch {
           // 上传失败：移除该附件并释放 blob URL，显示错误提示
           setAttachments((prev) => prev.filter((a) => a.id !== attachmentId));
@@ -440,13 +441,16 @@ export function MessageInput({
   }, []);
 
   // —— 组件卸载时释放 object URL ——
+  // 使用 ref 跟踪 attachments，仅在组件卸载时释放，避免每次 attachments 变化时过早释放
+  const attachmentsRef = useRef(attachments);
+  attachmentsRef.current = attachments;
   useEffect(() => {
     return () => {
-      attachments.forEach((a) => {
-        if (a.thumbnailUrl) URL.revokeObjectURL(a.thumbnailUrl);
+      attachmentsRef.current.forEach((a) => {
+        if (a.thumbnailUrl?.startsWith("blob:")) URL.revokeObjectURL(a.thumbnailUrl);
       });
     };
-  }, [attachments]);
+  }, []);
 
   // —— 上传错误提示自动清除（3 秒后消失） ——
   useEffect(() => {

@@ -54,7 +54,7 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
     revokeMessage,
     loadConversations,
     typingUsers,
-  } = useIM(workspaceId);
+  } = useIM(workspaceId, t);
 
   const [currentUserId, setCurrentUserId] = useState<string>("");
   const [createOpen, setCreateOpen] = useState(false);
@@ -73,7 +73,7 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
   // 若从 /im/[cid] 进入，自动选中该会话
   useEffect(() => {
     if (initialConversationId && currentUserId) {
-      void selectConversation(initialConversationId);
+      selectConversation(initialConversationId).catch(() => {});
       setMobileView("chat");
     }
   }, [initialConversationId, currentUserId, selectConversation]);
@@ -81,7 +81,7 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
   // 单会话模式：自动选中指定会话，不做 URL 跳转
   useEffect(() => {
     if (singleConversationId && currentUserId) {
-      void selectConversation(singleConversationId);
+      selectConversation(singleConversationId).catch(() => {});
       setMobileView("chat");
     }
   }, [singleConversationId, currentUserId, selectConversation]);
@@ -92,7 +92,7 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
   /** 选择会话 */
   const handleSelect = useCallback(
     (id: string) => {
-      void selectConversation(id);
+      selectConversation(id).catch(() => {});
       setMobileView("chat");
       // 单会话模式下不做 URL 跳转
       if (!isSingleMode) {
@@ -106,8 +106,8 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
   const handleCreated = useCallback(
     (conversationId: string) => {
       setCreateOpen(false);
-      void loadConversations();
-      void selectConversation(conversationId);
+      loadConversations().catch(() => {});
+      selectConversation(conversationId).catch(() => {});
       setMobileView("chat");
       router.push(`/w/${workspaceId}/im/${conversationId}`);
     },
@@ -116,13 +116,13 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
 
   /** 设置面板更新后刷新 */
   const handleSettingsUpdate = useCallback(() => {
-    void loadConversations();
+    loadConversations().catch(() => {});
   }, [loadConversations]);
 
   /** 退出/删除会话后 */
   const handleSettingsLeave = useCallback(() => {
     setSettingsOpen(false);
-    void loadConversations();
+    loadConversations().catch(() => {});
     setMobileView("list");
     router.push(`/w/${workspaceId}/im`);
   }, [loadConversations, router, workspaceId]);
@@ -137,7 +137,7 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
   const handleJumpToMessage = useCallback(
     (conversationId: string, _messageId: string) => {
       setSearchOpen(false);
-      void selectConversation(conversationId);
+      selectConversation(conversationId).catch(() => {});
       setMobileView("chat");
       router.push(`/w/${workspaceId}/im/${conversationId}`);
     },
@@ -192,10 +192,10 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
                 conversation={activeConversation}
                 messages={messages}
                 currentUserId={currentUserId}
-                onSend={(body, opts) => void sendMessage(activeConversation.id, body, opts)}
-                onEdit={(mid, body) => void editMessage(activeConversation.id, mid, body)}
-                onRevoke={(mid) => void revokeMessage(activeConversation.id, mid)}
-                onLoadMore={() => void loadMoreMessages(activeConversation.id)}
+                onSend={(body, opts) => sendMessage(activeConversation.id, body, opts).catch(() => {})}
+                onEdit={(mid, body) => editMessage(activeConversation.id, mid, body).catch(() => {})}
+                onRevoke={(mid) => revokeMessage(activeConversation.id, mid).catch(() => {})}
+                onLoadMore={() => loadMoreMessages(activeConversation.id).catch(() => {})}
                 loadingMore={loadingMore}
                 onSettings={
                   activeConversation.type === "group" || activeConversation.type === "direct"

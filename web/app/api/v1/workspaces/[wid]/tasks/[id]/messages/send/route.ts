@@ -110,6 +110,12 @@ export async function POST(
           });
         }
 
+        // 更新关联 Conversation.lastMessageAt（如果任务有关联会话）
+        await tx.conversation.updateMany({
+          where: { taskId: id, workspaceId: wid },
+          data: { lastMessageAt: created.createdAt },
+        });
+
         return created;
       },
       ctx.payload.sub,

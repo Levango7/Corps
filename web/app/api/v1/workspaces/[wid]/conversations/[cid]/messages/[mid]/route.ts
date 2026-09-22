@@ -29,8 +29,8 @@ const MESSAGE_INCLUDE = {
   },
 } as const;
 
-/** 撤回时间限制：普通成员 2 分钟内可撤回（管理员不受限） */
-const REVOKE_WINDOW_MS = 2 * 60 * 1000;
+/** 编辑/撤回时间窗口（毫秒）：5 分钟（与 im/messages/[id] 端点统一） */
+const EDIT_WINDOW_MS = 5 * 60 * 1000;
 
 /** 编辑消息请求体校验 */
 const editMessageSchema = z.object({
@@ -40,7 +40,7 @@ const editMessageSchema = z.object({
 /**
  * PATCH /v1/workspaces/{wid}/conversations/{cid}/messages/{mid} — 编辑消息
  *
- * 权限：仅消息作者可编辑自己的消息，且消息未被撤回。
+ * 权限：仅消息作者可编辑自己的消息，且消息未被撤回，5 分钟内可编辑。
  * 更新 body + editedAt = now()，WebSocket 广播 edit 事件。
  */
 export async function PATCH(
@@ -72,7 +72,7 @@ export async function PATCH(
         // 查询消息（确认属于该会话）
         const message = await tx.message.findFirst({
           where: { id: mid, conversationId: cid, workspaceId: wid },
-          select: { id: true, authorId: true, revokedAt: true },
+          select: { id: true, authorId: true, revokedAt: true, createdAt: true },
         });
         if (!message) return { status: "not_found" as const };
 
@@ -83,6 +83,10 @@ export async function PATCH(
         // 已撤回消息不可编辑
         if (message.revokedAt) {
           return { status: "revoked" as const };
+        }
+        // 5 分钟时间窗口校验
+        if (Date.now() - message.createdAt.getTime() > EDIT_WINDOW_MS) {
+          return { status: "time_exceeded" as const };
         }
 
         // 更新 body + editedAt
@@ -121,6 +125,12 @@ export async function PATCH(
         { status: 400 },
       );
     }
+    if (result.status === "time_exceeded") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "revokeTimeExceeded"), data: null },
+        { status: 403 },
+      );
+    }
 
     // WebSocket 广播编辑事件给会话其他订阅者（排除发送者）
     const editMsg: ServerMessage = {
@@ -156,7 +166,7 @@ export async function PATCH(
  * DELETE /v1/workspaces/{wid}/conversations/{cid}/messages/{mid} — 撤回消息
  *
  * 权限：
- *  - 消息作者：2 分钟内可撤回
+ *  - 消息作者：5 分钟内可撤回
  *  - 会话 owner/admin：可撤回他人消息，不受时间限制
  *
  * 更新 revokedAt + revokedBy，WebSocket 广播 revoke 事件。
@@ -208,10 +218,10 @@ export async function DELETE(
           return { status: "forbidden_revoke" as const };
         }
 
-        // 撤回时间限制：作者 2 分钟内，管理员不受限
+        // 撤回时间限制：作者 5 分钟内，管理员不受限
         if (isAuthor && !isAdmin) {
           const elapsed = Date.now() - message.createdAt.getTime();
-          if (elapsed > REVOKE_WINDOW_MS) {
+          if (elapsed > EDIT_WINDOW_MS) {
             return { status: "time_exceeded" as const };
           }
         }

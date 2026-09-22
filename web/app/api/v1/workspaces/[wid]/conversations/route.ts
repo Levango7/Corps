@@ -217,6 +217,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     const result = await runWithWorkspace(
       wid,
       async (tx) => {
+        // 验证所有 userIds 都是当前工作区的成员
+        const workspaceMembers = await tx.member.findMany({
+          where: { workspaceId: wid, userId: { in: body.memberIds } },
+          select: { userId: true },
+        });
+        const memberIdsSet = new Set(workspaceMembers.map((m) => m.userId));
+        const nonMemberIds = body.memberIds.filter((uid) => !memberIdsSet.has(uid));
+        if (nonMemberIds.length > 0) {
+          return { created: false, error: "not_workspace_member" as const, nonMemberIds };
+        }
+
         // 单聊去重：查找已存在的、包含相同 2 名成员的 direct 会话
         if (body.type === "direct") {
           const [a, b] = body.memberIds;
@@ -269,6 +280,13 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       },
       userId,
     );
+
+    if ("error" in result && result.error === "not_workspace_member") {
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "usersNotWorkspaceMembers"), data: { nonMemberIds: result.nonMemberIds } },
+        { status: 400 },
+      );
+    }
 
     return NextResponse.json(
       { code: result.created ? 201 : 200, data: result.conversation },

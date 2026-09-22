@@ -149,6 +149,17 @@ export async function POST(
           return { status: "forbidden" as const };
         }
 
+        // 验证所有 userIds 都是当前工作区的成员
+        const workspaceMembers = await tx.member.findMany({
+          where: { workspaceId: wid, userId: { in: body.userIds } },
+          select: { userId: true },
+        });
+        const memberIdsSet = new Set(workspaceMembers.map((m) => m.userId));
+        const nonMemberIds = body.userIds.filter((uid) => !memberIdsSet.has(uid));
+        if (nonMemberIds.length > 0) {
+          return { status: "not_workspace_member" as const, nonMemberIds };
+        }
+
         // 查询已存在的成员，计算实际新增数
         const existing = await tx.conversationMember.findMany({
           where: { conversationId: cid, userId: { in: body.userIds } },
@@ -192,6 +203,16 @@ export async function POST(
           data: null,
         },
         { status: 403 },
+      );
+    }
+    if (result.status === "not_workspace_member") {
+      return NextResponse.json(
+        {
+          code: 400,
+          message: apiMsg(req, "userNotWorkspaceMember"),
+          data: { nonMemberIds: result.nonMemberIds },
+        },
+        { status: 400 },
       );
     }
 
