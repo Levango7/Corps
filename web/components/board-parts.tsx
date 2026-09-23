@@ -174,6 +174,8 @@ function BoardCardImpl({
     setLongPressOpen(true);
   });
 
+  // TODO: P3 — QuickAction 操作目前均为跳转到任务详情页的占位实现，
+  // 后续需接入实际 API（完成任务/复制任务/归档任务/分享链接/删除任务）
   const quickActions: QuickAction[] = [
     {
       icon: Check,

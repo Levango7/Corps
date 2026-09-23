@@ -3817,5 +3817,11 @@
     "confirm": "确认删除",
     "cancel": "取消",
     "failed": "删除账户失败，请重试"
+  },
+  "widget": {
+    "config": "配置",
+    "fullscreen": "全屏",
+    "refresh": "刷新",
+    "remove": "删除"
   }
 }

@@ -27,6 +27,7 @@ import WidgetConfigPanel, { type WidgetConfig } from "./WidgetConfigPanel";
 import { PinchToZoom } from "@/components/PinchToZoom";
 import { QuickActionMenu, type QuickAction } from "@/components/QuickActionMenu";
 import { useLongPress } from "@/lib/use-long-press";
+import { useTranslations } from "next-intl";
 
 export interface WidgetCardProps {
   /** Widget 标题（已 i18n 渲染） */
@@ -82,6 +83,7 @@ export default function WidgetCard({
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** prefers-reduced-motion 检测 */
   const prefersReduced = useReducedMotion();
+  const t = useTranslations("widget");
 
   /** 长按 QuickActionMenu 状态 */
   const [quickActionOpen, setQuickActionOpen] = useState(false);
@@ -98,28 +100,28 @@ export default function WidgetCard({
   if (widgetId && onConfigChange) {
     quickActions.push({
       icon: Settings,
-      label: "配置",
+      label: t("config"),
       onClick: () => setConfigOpen(true),
     });
   }
   if (onFullscreen) {
     quickActions.push({
       icon: Maximize2,
-      label: "全屏",
+      label: t("fullscreen"),
       onClick: () => onFullscreen(),
     });
   }
   if (onRefresh) {
     quickActions.push({
       icon: RefreshCw,
-      label: "刷新",
+      label: t("refresh"),
       onClick: () => onRefresh(),
     });
   }
   if (onRemove) {
     quickActions.push({
       icon: Trash2,
-      label: "删除",
+      label: t("remove"),
       onClick: () => onRemove(),
       danger: true,
     });

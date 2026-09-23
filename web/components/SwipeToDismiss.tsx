@@ -35,6 +35,8 @@ export interface SwipeToDismissProps {
   threshold?: number;
   /** 横滑速度阈值（px/s），默认 500 */
   velocityThreshold?: number;
+  /** 删除/Dismiss 提示文案，默认 "删除" */
+  dismissLabel?: string;
 }
 
 export function SwipeToDismiss({
@@ -42,6 +44,7 @@ export function SwipeToDismiss({
   onDismiss,
   threshold = 100,
   velocityThreshold = 500,
+  dismissLabel = "删除",
 }: SwipeToDismissProps) {
   const prefersReduced = useReducedMotion();
   const x = useMotionValue(0);
@@ -66,7 +69,7 @@ export function SwipeToDismiss({
           type="button"
           onClick={onDismiss}
           className="shrink-0 ml-2 p-2 rounded-[var(--radius-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-          aria-label="delete"
+          aria-label={dismissLabel}
         >
           <Trash2 size={16} />
         </button>
@@ -88,7 +91,7 @@ export function SwipeToDismiss({
         >
           <Trash2 size={16} />
           <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
-            删除
+            {dismissLabel}
           </span>
         </motion.div>
       </motion.div>

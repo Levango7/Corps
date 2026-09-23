@@ -127,6 +127,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   // setTimeout timer refs — 组件卸载时清理，防止在已卸载组件上调用 setState
   const savedFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const shareTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const shareCloseRef = useRef<HTMLButtonElement | null>(null);
 
   // ── F5：分享设置对话框状态 ──
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -575,6 +577,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           </div>
           {/* F5：分享按钮 → 打开分享设置对话框 */}
           <button
+            ref={shareTriggerRef}
             onClick={openShareDialog}
             disabled={busy !== null}
             title={busy !== null ? t("saving") : undefined}
@@ -694,6 +697,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           onClick={() => {
             setShareDialogOpen(false);
             setRevokeConfirm(false);
+            shareTriggerRef.current?.focus();
           }}
         >
           <div
@@ -707,9 +711,12 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                 {t("shareDialogTitle")}
               </span>
               <button
+                ref={shareCloseRef}
+                autoFocus
                 onClick={() => {
                   setShareDialogOpen(false);
                   setRevokeConfirm(false);
+                  shareTriggerRef.current?.focus();
                 }}
                 aria-label={t("close")}
                 className="shrink-0 inline-flex items-center justify-center w-8 h-8 rounded-[var(--radius-sm)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"

@@ -3817,5 +3817,11 @@
     "confirm": "Confirm Delete",
     "cancel": "Cancel",
     "failed": "Failed to delete account, please retry"
+  },
+  "widget": {
+    "config": "Configure",
+    "fullscreen": "Fullscreen",
+    "refresh": "Refresh",
+    "remove": "Remove"
   }
 }

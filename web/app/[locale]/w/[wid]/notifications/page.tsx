@@ -293,7 +293,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 const text = tNotif(meta.textKey, { title: n.entityTitle });
                 return (
                   <AnimatedItem key={n.id}>
-                    <SwipeToDismiss onDismiss={() => dismissNotification(n)}>
+                    <SwipeToDismiss onDismiss={() => dismissNotification(n)} dismissLabel={tNotif("markRead")}>
                       <button
                         type="button"
                         onClick={() => openNotification(n)}
@@ -340,7 +340,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 const text = tNotif(meta.textKey, { title: n.entityTitle });
                 return (
                   <AnimatedItem key={n.id}>
-                    <SwipeToDismiss onDismiss={() => dismissNotification(n)}>
+                    <SwipeToDismiss onDismiss={() => dismissNotification(n)} dismissLabel={tNotif("markRead")}>
                       <button
                         type="button"
                         onClick={() => openNotification(n)}
