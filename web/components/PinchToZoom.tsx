@@ -93,7 +93,7 @@ export function PinchToZoom({
       onTouchStart={handleTouchStart}
       onTouchMove={handleTouchMove}
       onTouchEnd={handleTouchEnd}
-      className="h-full w-full touch-none"
+      className="h-full w-full touch-pan-x touch-pan-y"
     >
       {children}
     </motion.div>

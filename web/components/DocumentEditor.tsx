@@ -124,6 +124,9 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
   const [copied, setCopied] = useState(false);
   // 自动保存成功反馈：短暂显示"已保存"提示（2s 后消失）
   const [savedFlash, setSavedFlash] = useState(false);
+  // setTimeout timer refs — 组件卸载时清理，防止在已卸载组件上调用 setState
+  const savedFlashTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const copiedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // ── F5：分享设置对话框状态 ──
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
@@ -159,6 +162,14 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
   }, [templateMenuOpen]);
+
+  // 组件卸载时清除所有 setTimeout，防止在已卸载组件上调用 setState
+  useEffect(() => {
+    return () => {
+      if (savedFlashTimerRef.current !== null) clearTimeout(savedFlashTimerRef.current);
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+    };
+  }, []);
 
   // ── F5 增强：分享自定义路径（shareSlug）──
   const [shareSlug, setShareSlug] = useState<string>("");
@@ -201,7 +212,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       // 自动保存成功：短暂显示"已保存"提示（非发布场景）
       if (!opts.publish) {
         setSavedFlash(true);
-        setTimeout(() => setSavedFlash(false), 2000);
+        if (savedFlashTimerRef.current !== null) clearTimeout(savedFlashTimerRef.current);
+        savedFlashTimerRef.current = setTimeout(() => setSavedFlash(false), 2000);
       }
     } catch (e) {
       setError(e instanceof Error ? e.message : t("saveFailed"));
@@ -216,7 +228,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
     try {
       await navigator.clipboard.writeText(shareUrl);
       setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
+      if (copiedTimerRef.current !== null) clearTimeout(copiedTimerRef.current);
+      copiedTimerRef.current = setTimeout(() => setCopied(false), 2000);
     } catch {
       /* 剪贴板权限失败：提示用户复制失败 */
       toast("error", t("copyFailed"));

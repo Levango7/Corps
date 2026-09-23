@@ -14,7 +14,7 @@
  * 返回的事件处理器可直接展开到 motion.div / div 的 props 上。
  */
 
-import { useCallback, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 
 export interface LongPressPosition {
   x: number;
@@ -53,6 +53,9 @@ export function useLongPress(
     },
     [callback, delay, clear],
   );
+
+  // 组件卸载时清除计时器，防止 callback 在已卸载组件上调用 setState
+  useEffect(() => () => clear(), [clear]);
 
   const onContextMenu = useCallback(
     (e: React.MouseEvent) => {
