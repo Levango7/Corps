@@ -1526,8 +1526,8 @@ paths:
       summary: Mark notifications as read (single or all)
       description: >
         Body must provide either `id` (marks that notification, only when it belongs
-        to the caller and this workspace) or `all: true` (marks every unread
-        notification of the caller in this workspace). Otherwise 400.
+        to the caller and this workspace) or `all: true` (marks up to 500 unread
+        notifications of the caller in this workspace per request). Otherwise 400.
       operationId: markNotificationsRead
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -1558,6 +1558,10 @@ paths:
                     type: object
                     properties:
                       success: { type: boolean }
+                      updatedCount:
+                        type: integer
+                        description: Number of notifications actually marked as read (max 500 per request when all=true).
+                        example: 42
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':

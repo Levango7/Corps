@@ -2,6 +2,35 @@
 
 本文件记录 corps 的版本变更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 惯例，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [0.7.1] - 2026-09-24
+
+全栈审查修复版本：6 波次审查-修复循环覆盖 UI 响应式、后端安全、组件视觉一致性、cron 时间计算、API 行为优化，累计 40 文件 +945/-421 行。
+
+### Fixed
+
+- **UI 响应式修复（8 高严重度 + 16 中 + 23 低）**：
+  - 日历月/周视图手机单列布局 + 工具栏两行 + i18n 日期格式。
+  - Wiki/会议/工作流侧边栏移动端抽屉 + 操作按钮下拉菜单。
+  - 核心工作区分页触摸目标 + md 断点 + 编辑模式工具栏折叠 + 单列选择器 2×2 网格。
+  - 审批/通知/设置/计费 flex-wrap + overflow-x-auto + 水平 padding + grid 断点。
+- **后端安全修复（2 高 + 4 中 + 7 低）**：
+  - documents/[id] PATCH/DELETE 缺权限检查（viewer 可删除任何文档）→ 添加 checkDocumentPermission。
+  - members/invite role 硬编码 → 从请求体读取 role 参数。
+  - tasks/batch 附件清理 + webhook data:null + activity code:200 + description maxLength。
+- **cron DST 时间计算修复**：recycle-cleanup 和 weekly-digest 使用毫秒运算在夏令时切换日偏差 1 小时 → 改用 Date 构造器按年/月/日进位。
+- **notifications PATCH all=true 性能保护**：updateMany 无 take 限制 → 改为 findMany(take:500)+updateMany，返回 updatedCount。
+- **组件层视觉一致性（1 高 + 12 中 + 3 低）**：
+  - Toast.tsx emoji ⏸ → lucide-react Pause 图标（违反"禁 emoji"规则）。
+  - 20+ 处图标尺寸统一为 size={14}（12/13/15 → 14，36 → 32）。
+  - 30+ 处硬编码 Tailwind 间距类 → var(--space-*) token。
+  - WidgetCard perspective "1000px" → var(--perspective-card)。
+  - DocumentEditor 工具栏窄屏折叠低频操作到"更多"菜单。
+  - board-parts h-64 → min-h-[16rem]，DocumentListView pr-24 → pr-[6rem]。
+
+### Changed
+
+- openapi.yaml notifications PATCH 响应新增 `updatedCount` 字段，描述更新为"最多 500 条/请求"。
+
 ## [0.7.0] - 2026-09-15
 
 AI 原生办公平台升级版本：从"项目管理工具"升级为 AI 原生办公平台，新增 17 个核心 AI 能力，完成 8 方向深化，补齐反馈循环与使用量统计基础设施，并拆分三个千行级页面。
