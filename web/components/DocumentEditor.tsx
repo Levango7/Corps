@@ -36,6 +36,7 @@ import {
   AlertTriangle,
   Plus,
   MessageSquare,
+  MoreHorizontal,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import Markdown from "@/components/Markdown";
@@ -154,6 +155,9 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
   // ── F1 增强：行动项模板插入下拉菜单 ──
   const [templateMenuOpen, setTemplateMenuOpen] = useState(false);
+
+  // ── 窄屏"更多"菜单（折叠低频操作）──
+  const [moreMenuOpen, setMoreMenuOpen] = useState(false);
 
   // Escape 关闭模板下拉菜单
   useEffect(() => {
@@ -495,14 +499,14 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <X size={14} />
-            {t("backToList")}
+            <span className="hidden md:inline">{t("backToList")}</span>
           </button>
           <button
             onClick={() => setPreview((v) => !v)}
             className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Eye size={14} />
-            {preview ? t("editMode") : t("previewMode")}
+            <span className="hidden md:inline">{preview ? t("editMode") : t("previewMode")}</span>
           </button>
           <button
             onClick={() => {
@@ -518,19 +522,69 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             title={t("splitHint")}
           >
             <Columns2 size={14} />
-            {t("splitMode")}
+            <span className="hidden md:inline">{t("splitMode")}</span>
           </button>
-          {/* 快速图表：不进正文也能出图，确认后一键插入（v0.6 增补） */}
+          {/* 窄屏"更多"菜单：折叠快速图表 + 插入模板 */}
+          <div className="relative md:hidden">
+            <button
+              onClick={() => setMoreMenuOpen((v) => !v)}
+              title={t("moreActions")}
+              aria-label={t("moreActions")}
+              aria-expanded={moreMenuOpen}
+              aria-haspopup="menu"
+              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              <MoreHorizontal size={14} />
+            </button>
+            {moreMenuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-10"
+                  onClick={() => setMoreMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <ul
+                  role="menu"
+                  aria-label={t("moreActions")}
+                  className="absolute right-0 top-9 z-20 min-w-[180px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
+                >
+                  <li role="menuitem">
+                    <button
+                      onClick={() => { setQuickDiagramOpen(true); setMoreMenuOpen(false); }}
+                      className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                    >
+                      <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                        <Zap size={14} />
+                        {tDiagram("title")}
+                      </div>
+                    </button>
+                  </li>
+                  <li role="menuitem">
+                    <button
+                      onClick={() => { setTemplateMenuOpen(true); setMoreMenuOpen(false); }}
+                      className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                    >
+                      <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                        <Plus size={14} />
+                        {tDecision("insertTemplate")}
+                      </div>
+                    </button>
+                  </li>
+                </ul>
+              </>
+            )}
+          </div>
+          {/* 快速图表（宽屏显示）：不进正文也能出图，确认后一键插入（v0.6 增补） */}
           <button
             onClick={() => setQuickDiagramOpen(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="hidden md:inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             title={tDiagram("title")}
           >
             <Zap size={14} />
-            <span className="hidden sm:inline">{tDiagram("title")}</span>
+            <span>{tDiagram("title")}</span>
           </button>
-          {/* F1 增强：插入行动项模板（下拉菜单，复用 ACTION_TEMPLATES） */}
-          <div className="relative">
+          {/* F1 增强：插入行动项模板（宽屏显示，下拉菜单，复用 ACTION_TEMPLATES） */}
+          <div className="relative hidden md:block">
             <button
               onClick={() => setTemplateMenuOpen((v) => !v)}
               title={tDecision("insertTemplate")}
@@ -584,7 +638,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Share2 size={14} />
-            {t("share")}
+            <span className="hidden md:inline">{t("share")}</span>
           </button>
           {/* F4：导出按钮 → 打开 ExportPreview 模态框 */}
           <button
@@ -593,7 +647,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Download size={14} />
-            {t("export")}
+            <span className="hidden md:inline">{t("export")}</span>
           </button>
           {/* 评论/批注面板开关 */}
           <button
@@ -607,7 +661,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             }`}
           >
             <MessageSquare size={14} />
-            <span className="hidden sm:inline">{t("comments")}</span>
+            <span className="hidden md:inline">{t("comments")}</span>
           </button>
           <button
             onClick={() => save({ publish: true })}
