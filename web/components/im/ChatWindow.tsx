@@ -74,6 +74,7 @@ export function ChatWindow({
     null,
   );
   const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const incomingCallRef = useRef<IncomingCallData | null>(null);
 
   // 组件卸载时清理超时计时器，防止内存泄漏
   useEffect(() => {
@@ -97,12 +98,13 @@ export function ChatWindow({
       if (msgType === "call_ended" || msgType === "call_rejected") {
         // 通话已结束/被拒绝 → 关闭来电通知
         setIncomingCall(null);
+        incomingCallRef.current = null;
         break;
       }
 
       if (msgType === "call_invite") {
         // 仅当消息不是自己发送的（别人发起的通话邀请）且当前没有来电通知时才弹出
-        if (msg.authorId !== currentUserId && !incomingCall) {
+        if (msg.authorId !== currentUserId && !incomingCallRef.current) {
           // 从消息体中解析会议链接
           const bodyMatch = msg.body?.match(
             /(\/[a-z]+\/w\/[a-zA-Z0-9-]+\/meetings\/[a-zA-Z0-9-]+)/,
@@ -112,9 +114,9 @@ export function ChatWindow({
           const meetingId = meetingIdMatch?.[1] ?? "";
 
           // 判断通话类型：消息体中包含"语音"关键词则为语音通话
-          const isVoice = msg.body?.includes("语音") ?? false;
+          const isVoice = msg.body?.includes("语音") || msg.body?.includes("voice") || false;
 
-          setIncomingCall({
+          const callData: IncomingCallData = {
             messageId: msg.id,
             callerId: msg.authorId ?? "",
             callerName: msg.author?.name ?? msg.author?.email ?? t("unknownUser"),
@@ -122,12 +124,14 @@ export function ChatWindow({
             callType: isVoice ? "voice" : "video",
             meetingUrl,
             meetingId,
-          });
+          };
+          setIncomingCall(callData);
+          incomingCallRef.current = callData;
         }
         break;
       }
     }
-  }, [messages, currentUserId, incomingCall, t]);
+  }, [messages, currentUserId, t]);
 
   const isGroup = conversation.type === "group";
 
@@ -180,6 +184,9 @@ export function ChatWindow({
 
         // 设置超时：如果对方未加入，自动发送 call_ended 消息
         const meetingId = meeting.id;
+        if (callTimeoutRef.current) {
+          clearTimeout(callTimeoutRef.current);
+        }
         callTimeoutRef.current = setTimeout(async () => {
           try {
             const meetingData = await api<{
@@ -234,6 +241,7 @@ export function ChatWindow({
   const handleAcceptCall = useCallback(
     (callData: IncomingCallData) => {
       setIncomingCall(null);
+      incomingCallRef.current = null;
       const wid = conversation.workspaceId;
       const locale = params?.locale ?? "zh";
       // 跳转到会议页面，跳过大厅直接进入会议室
@@ -248,6 +256,7 @@ export function ChatWindow({
   const handleRejectCall = useCallback(
     (callData: IncomingCallData) => {
       setIncomingCall(null);
+      incomingCallRef.current = null;
       onSend(tIm("callRejected"), { type: "call_rejected" });
     },
     [onSend, tIm],

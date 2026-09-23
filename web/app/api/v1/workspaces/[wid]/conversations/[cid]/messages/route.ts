@@ -235,8 +235,12 @@ function getAllowedAttachmentDomains(): string[] {
 /** 验证附件 URL 的域名是否在白名单中 */
 function isAttachmentUrlAllowed(url: string): boolean {
   try {
-    const hostname = new URL(url).hostname;
-    return getAllowedAttachmentDomains().includes(hostname);
+    const parsed = new URL(url);
+    const protocol = parsed.protocol;
+    if (!["http:", "https:"].includes(protocol)) {
+      return false;
+    }
+    return getAllowedAttachmentDomains().includes(parsed.hostname);
   } catch {
     return false;
   }

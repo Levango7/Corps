@@ -523,9 +523,8 @@ export function useIM(
               setMessages((prev) =>
                 prev.map((m) => {
                   if (msg.messageIds.includes(m.id)) {
-                    // readByCount 递增：每收到一个用户的 read 事件，对应消息的 readByCount +1
-                    const currentCount = m.readByCount ?? 0;
-                    return { ...m, readByCount: currentCount + 1 };
+                    // 使用服务端提供的 readByCount 值，避免本地递增导致多设备重复计数
+                    return { ...m, readByCount: msg.readByCount ?? m.readByCount ?? 0 };
                   }
                   return m;
                 }),

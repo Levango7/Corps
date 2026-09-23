@@ -23,7 +23,7 @@
  * lucide-react 图标尺寸用 14/16（项目约定）。
  */
 
-import { memo, useState, useCallback, useRef, type KeyboardEvent, type TouchEvent } from "react";
+import { memo, useState, useCallback, useRef, useEffect, type KeyboardEvent, type TouchEvent } from "react";
 import {
   CheckCheck,
   Check,
@@ -233,6 +233,7 @@ function MessageItemImpl({
   callEnded = false,
 }: MessageItemProps) {
   const t = useTranslations("chat");
+  const tIm = useTranslations("im");
   const tTime = useTranslations("time");
   const locale = useLocale();
   // 从路由 /[locale]/w/[wid]/im 获取当前工作区 ID（用于任务卡片跳转链接）
@@ -248,6 +249,16 @@ function MessageItemImpl({
   // 长按手势检测
   const longPressTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const longPressStartRef = useRef<{ x: number; y: number } | null>(null);
+
+  // 组件卸载时清理长按计时器，防止卸载后 setState
+  useEffect(() => {
+    return () => {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
+      }
+    };
+  }, []);
 
   const author = message.author;
   const displayName = author
@@ -383,9 +394,9 @@ function MessageItemImpl({
   ) {
     const systemText =
       messageType === "call_ended"
-        ? t("callEnded")
+        ? tIm("callEnded")
         : messageType === "call_rejected"
-          ? t("callRejected")
+          ? tIm("callRejected")
           : message.body;
     return (
       <div className="flex justify-center py-1">
@@ -410,23 +421,23 @@ function MessageItemImpl({
             <Video size={16} className="text-[var(--accent)]" />
           )}
           <span className="text-[length:var(--text-sm)] text-[var(--fg)] text-center">
-            {t("callInvite")}
+            {tIm("callInvite")}
           </span>
           {isCallEnded ? (
             <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-              {callStatus === "rejected" ? t("callRejected") : t("callEndedLabel")}
+              {callStatus === "rejected" ? tIm("callRejected") : tIm("callEndedLabel")}
             </span>
           ) : (
             <>
               <span className="text-[length:var(--text-xs)] text-[var(--accent)]">
-                {t("callInProgress")}
+                {tIm("callInProgress")}
               </span>
               {meetingUrl && (
                 <Link
                   href={meetingUrl}
                   className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
                 >
-                  {t("joinCall")}
+                  {tIm("joinCall")}
                 </Link>
               )}
             </>

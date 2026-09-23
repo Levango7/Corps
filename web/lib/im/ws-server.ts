@@ -292,7 +292,7 @@ class IMConnectionManager {
       }
 
       // 严重问题2：验证 conversation.workspaceId 与连接绑定的 workspaceId 一致
-      if (boundWorkspaceId && workspaceId !== boundWorkspaceId) {
+      if (!boundWorkspaceId || workspaceId !== boundWorkspaceId) {
         this.send(ws, {
           type: "error",
           message: "订阅失败：会话不属于当前工作区",

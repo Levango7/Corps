@@ -33,7 +33,7 @@ export async function GET(
       async (tx) => {
         // 1. 查找用户参与的所有会话 + lastReadAt
         const memberships = await tx.conversationMember.findMany({
-          where: { userId },
+          where: { userId, conversation: { workspaceId: wid } },
           select: { conversationId: true, lastReadAt: true },
         });
 
