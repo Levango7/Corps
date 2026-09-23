@@ -636,7 +636,7 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
   const tEmpty = useTranslations("empty");
   const tStatus = useTranslations("status");
   return (
-    <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
+    <div className="flex flex-col items-center justify-center min-h-[16rem] text-[var(--muted)]">
       <div className="empty-state-dot mb-[var(--space-4)]">
         <Kanban size={24} />
       </div>

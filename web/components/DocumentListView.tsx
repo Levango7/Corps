@@ -441,7 +441,7 @@ export function DocumentListView({ wid }: { wid: string }) {
                     </label>
                     <Link
                       href={`/w/${wid}/documents/${d.id}`}
-                      className="block px-[var(--space-4)] py-[var(--space-3)] pl-[var(--space-8)] pr-24 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                      className="block px-[var(--space-4)] py-[var(--space-3)] pl-[var(--space-8)] pr-[6rem] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                     >
                       <div className="flex items-center gap-2">
                         <FileText size={14} className="shrink-0 text-[var(--muted)]" />
