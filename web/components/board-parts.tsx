@@ -10,10 +10,12 @@
 
 import { memo, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
+import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle, Check, Copy, Archive, Trash2, Share2 } from "lucide-react";
 import { Skeleton, BoardColumnSkeleton } from "@/components/Skeleton";
 import { DueTag } from "@/components/DueTag";
 import { TaskLabels } from "@/components/TaskLabels";
+import { QuickActionMenu, type QuickAction } from "@/components/QuickActionMenu";
+import { useLongPress } from "@/lib/use-long-press";
 import type { Task } from "@/lib/types";
 import {
   COLUMNS,
@@ -159,12 +161,56 @@ function BoardCardImpl({
   // hover 抬升微交互：尊重 prefers-reduced-motion，降级时无 hover 位移动画
   const reduceMotion = useReducedMotion();
 
+  // ── 长按快捷菜单（QuickActionMenu）──
+  const [longPressOpen, setLongPressOpen] = useState(false);
+  const [longPressX, setLongPressX] = useState(0);
+  const [longPressY, setLongPressY] = useState(0);
+
+  const longPressHandlers = useLongPress((pos) => {
+    // 选择模式下不触发长按菜单
+    if (selectionMode) return;
+    setLongPressX(pos.x);
+    setLongPressY(pos.y);
+    setLongPressOpen(true);
+  });
+
+  const quickActions: QuickAction[] = [
+    {
+      icon: Check,
+      label: t("complete"),
+      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
+    },
+    {
+      icon: Copy,
+      label: t("copy"),
+      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
+    },
+    {
+      icon: Archive,
+      label: t("archive"),
+      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
+    },
+    {
+      icon: Share2,
+      label: t("share"),
+      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
+    },
+    {
+      icon: Trash2,
+      label: t("delete"),
+      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
+      danger: true,
+    },
+  ];
+
   return (
+    <>
     <motion.div
       layout="position"
       draggable={!selectionMode}
       role="button"
       tabIndex={0}
+      {...longPressHandlers}
       // hover 抬升 2px（y: -2）；拖拽中 / 降级时不抬升，避免与拖拽视觉冲突
       whileHover={reduceMotion || draggingId === task.id ? undefined : { y: -2 }}
       // 进出动画：AnimatePresence 驱动卡片增删时的淡入/淡出 + 微缩放
@@ -319,6 +365,14 @@ function BoardCardImpl({
         </div>
       </div>
     </motion.div>
+    <QuickActionMenu
+      open={longPressOpen}
+      onClose={() => setLongPressOpen(false)}
+      actions={quickActions}
+      x={longPressX}
+      y={longPressY}
+    />
+    </>
   );
 }
 

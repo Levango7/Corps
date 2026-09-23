@@ -21,9 +21,12 @@
  */
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
-import { GripVertical, Settings, X } from "lucide-react";
+import { GripVertical, Settings, X, Maximize2, RefreshCw, Trash2 } from "lucide-react";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import WidgetConfigPanel, { type WidgetConfig } from "./WidgetConfigPanel";
+import { PinchToZoom } from "@/components/PinchToZoom";
+import { QuickActionMenu, type QuickAction } from "@/components/QuickActionMenu";
+import { useLongPress } from "@/lib/use-long-press";
 
 export interface WidgetCardProps {
   /** Widget 标题（已 i18n 渲染） */
@@ -50,6 +53,10 @@ export interface WidgetCardProps {
   onCycleSize?: () => string | void;
   /** F7: 拖拽中视觉反馈（由 RGL onDragStart/onDragStop 驱动） */
   dragging?: boolean;
+  /** 全屏回调（长按 QuickActionMenu 中触发） */
+  onFullscreen?: () => void;
+  /** 刷新回调（长按 QuickActionMenu 中触发） */
+  onRefresh?: () => void;
 }
 
 export default function WidgetCard({
@@ -65,6 +72,8 @@ export default function WidgetCard({
   onConfigChange,
   onCycleSize,
   dragging,
+  onFullscreen,
+  onRefresh,
 }: WidgetCardProps) {
   /** 是否打开配置面板 */
   const [configOpen, setConfigOpen] = useState(false);
@@ -73,6 +82,48 @@ export default function WidgetCard({
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   /** prefers-reduced-motion 检测 */
   const prefersReduced = useReducedMotion();
+
+  /** 长按 QuickActionMenu 状态 */
+  const [quickActionOpen, setQuickActionOpen] = useState(false);
+  const [quickActionPos, setQuickActionPos] = useState({ x: 0, y: 0 });
+
+  /** 长按内容区域触发 QuickActionMenu */
+  const longPressHandlers = useLongPress((pos) => {
+    setQuickActionPos(pos);
+    setQuickActionOpen(true);
+  });
+
+  /** QuickActionMenu 操作列表（按可用性动态构建） */
+  const quickActions: QuickAction[] = [];
+  if (widgetId && onConfigChange) {
+    quickActions.push({
+      icon: Settings,
+      label: "配置",
+      onClick: () => setConfigOpen(true),
+    });
+  }
+  if (onFullscreen) {
+    quickActions.push({
+      icon: Maximize2,
+      label: "全屏",
+      onClick: () => onFullscreen(),
+    });
+  }
+  if (onRefresh) {
+    quickActions.push({
+      icon: RefreshCw,
+      label: "刷新",
+      onClick: () => onRefresh(),
+    });
+  }
+  if (onRemove) {
+    quickActions.push({
+      icon: Trash2,
+      label: "删除",
+      onClick: () => onRemove(),
+      danger: true,
+    });
+  }
 
   useEffect(() => {
     return () => {
@@ -165,8 +216,13 @@ export default function WidgetCard({
           </button>
         )}
       </header>
-      {/* 内容区域 */}
-      <div className="flex-1 min-h-0 overflow-auto">{children}</div>
+      {/* 内容区域 — PinchToZoom 包裹 + 长按 QuickActionMenu */}
+      <div
+        className="flex-1 min-h-0 overflow-auto"
+        {...(quickActions.length > 0 ? longPressHandlers : {})}
+      >
+        <PinchToZoom>{children}</PinchToZoom>
+      </div>
       {/* 配置面板 — 3D 翻转入场（§4.2），reduced 降级为条件渲染 */}
       {prefersReduced ? (
         configOpen && widgetId && onConfigChange && (
@@ -197,6 +253,16 @@ export default function WidgetCard({
             </motion.div>
           )}
         </AnimatePresence>
+      )}
+      {/* 长按 QuickActionMenu — 仅在有可用操作时渲染 */}
+      {quickActions.length > 0 && (
+        <QuickActionMenu
+          open={quickActionOpen}
+          onClose={() => setQuickActionOpen(false)}
+          actions={quickActions}
+          x={quickActionPos.x}
+          y={quickActionPos.y}
+        />
       )}
     </div>
   );

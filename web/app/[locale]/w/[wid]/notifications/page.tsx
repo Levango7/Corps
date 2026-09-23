@@ -41,6 +41,7 @@ import { Skeleton } from "@/components/Skeleton";
 import EmptyStateBase from "@/components/EmptyState";
 import { AnimatedList, AnimatedItem } from "@/components/AnimatedList";
 import { VirtualList } from "@/components/VirtualList";
+import { SwipeToDismiss } from "@/components/SwipeToDismiss";
 
 import { useTranslations } from "next-intl";
 
@@ -193,6 +194,18 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
     router.push(n.type === "decision_updated" ? `${target}#decisions` : target);
   }
 
+  /** 横滑删除：乐观从本地列表移除，PATCH 标记已读；失败回滚重新加载 */
+  function dismissNotification(n: Notification) {
+    setAll((prev) => prev.filter((x) => x.id !== n.id));
+    api(`/api/v1/workspaces/${wid}/notifications`, {
+      method: "PATCH",
+      body: JSON.stringify({ id: n.id }),
+    }).catch(() => {
+      // 删除失败：重新加载恢复列表
+      load();
+    });
+  }
+
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
       {/* 页头：标题 + 未读计数 badge */}
@@ -280,36 +293,38 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 const text = tNotif(meta.textKey, { title: n.entityTitle });
                 return (
                   <AnimatedItem key={n.id}>
-                    <button
-                      type="button"
-                      onClick={() => openNotification(n)}
-                      aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
-                      className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
-                        n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
-                      }`}
-                    >
-                      <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-[length:var(--text-base)] truncate ${
-                            n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
-                          }`}
-                        >
-                          {text}
-                        </p>
-                        {rel && (
-                          <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
-                            {rel}
+                    <SwipeToDismiss onDismiss={() => dismissNotification(n)}>
+                      <button
+                        type="button"
+                        onClick={() => openNotification(n)}
+                        aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
+                        className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+                          n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
+                        }`}
+                      >
+                        <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-[length:var(--text-base)] truncate ${
+                              n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
+                            }`}
+                          >
+                            {text}
                           </p>
+                          {rel && (
+                            <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                              {rel}
+                            </p>
+                          )}
+                        </div>
+                        {!n.read && (
+                          <span
+                            className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
+                            aria-hidden="true"
+                          />
                         )}
-                      </div>
-                      {!n.read && (
-                        <span
-                          className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </button>
+                      </button>
+                    </SwipeToDismiss>
                   </AnimatedItem>
                 );
               }}
@@ -325,36 +340,38 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 const text = tNotif(meta.textKey, { title: n.entityTitle });
                 return (
                   <AnimatedItem key={n.id}>
-                    <button
-                      type="button"
-                      onClick={() => openNotification(n)}
-                      aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
-                      className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
-                        n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
-                      }`}
-                    >
-                      <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
-                      <div className="flex-1 min-w-0">
-                        <p
-                          className={`text-[length:var(--text-base)] truncate ${
-                            n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
-                          }`}
-                        >
-                          {text}
-                        </p>
-                        {rel && (
-                          <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
-                            {rel}
+                    <SwipeToDismiss onDismiss={() => dismissNotification(n)}>
+                      <button
+                        type="button"
+                        onClick={() => openNotification(n)}
+                        aria-label={`${text}${n.read ? "" : tNotif("unreadSuffix")}`}
+                        className={`w-full flex items-start gap-3 px-4 py-3.5 rounded-[var(--radius-lg)] border border-[var(--border)] text-left transition-colors duration-[var(--motion-fast)] hover:border-[var(--muted)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+                          n.read ? "bg-[var(--surface)]" : "bg-[var(--surface-2)]"
+                        }`}
+                      >
+                        <Icon size={16} className="shrink-0 mt-0.5" style={{ color: meta.color }} />
+                        <div className="flex-1 min-w-0">
+                          <p
+                            className={`text-[length:var(--text-base)] truncate ${
+                              n.read ? "text-[var(--fg-2)]" : "text-[var(--fg)]"
+                            }`}
+                          >
+                            {text}
                           </p>
+                          {rel && (
+                            <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                              {rel}
+                            </p>
+                          )}
+                        </div>
+                        {!n.read && (
+                          <span
+                            className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
+                            aria-hidden="true"
+                          />
                         )}
-                      </div>
-                      {!n.read && (
-                        <span
-                          className="shrink-0 mt-1 w-2 h-2 rounded-full bg-[var(--accent)]"
-                          aria-hidden="true"
-                        />
-                      )}
-                    </button>
+                      </button>
+                    </SwipeToDismiss>
                   </AnimatedItem>
                 );
               })}

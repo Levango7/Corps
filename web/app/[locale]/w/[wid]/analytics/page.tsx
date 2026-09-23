@@ -44,6 +44,7 @@ import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import { useTranslations } from "next-intl";
+import { Parallax } from "@/components/Parallax";
 
 /** 漏斗单步结果（与 lib/analytics-funnel.ts StepResult 对齐）。 */
 interface FunnelStep {
@@ -149,8 +150,8 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
         </p>
       </div>
 
-      {/* 北极星卡 + 概览卡 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
+      {/* 北极星卡 + 概览卡 — 轻微视差（应用内 ≤ 10px） */}
+      <Parallax offset={5} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
         {/* WAW 北极星卡（占 2 列，突出展示） */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
           <div className="flex items-center gap-2 mb-2">
@@ -176,10 +177,10 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           value={data.coreActiveUsers}
           color="var(--success)"
         />
-      </div>
+      </Parallax>
 
-      {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
+      {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） — 轻微视差 */}
+      <Parallax offset={3} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
         <StatCard icon={Layers} label={t("sessions")} value={data.sessions} color="var(--accent)" />
         <StatCard
           icon={TrendingUp}
@@ -193,7 +194,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
           value={data.activeUsers}
           color="var(--muted)"
         />
-      </div>
+      </Parallax>
 
       {/* 获客段漏斗 */}
       <FunnelSection

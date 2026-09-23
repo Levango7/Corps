@@ -46,6 +46,7 @@ import { ExportPreview } from "@/components/ExportPreview";
 import { DocumentComments } from "@/components/DocumentComments";
 import { Ripple } from "@/components/Ripple";
 import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
+import { Parallax } from "@/components/Parallax";
 
 export interface DocumentEditorProps {
   wid: string;
@@ -436,8 +437,10 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
   return (
     <div className="max-w-3xl mx-auto px-[var(--space-4)] py-[var(--space-6)]">
-      {/* 标题 */}
-      <input
+      {/* 标题区 — 微妙视差（应用内 ≤ 10px），正文为前景层不移动 */}
+      <Parallax offset={4}>
+        {/* 标题 */}
+        <input
         value={title}
         onChange={(e) => setTitle(e.target.value)}
         onBlur={() => save()}
@@ -605,6 +608,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           </button>
         </div>
       </div>
+      </Parallax>
 
       {/* 分享链接条（快捷展示，详细设置在对话框内） */}
       {shareUrl && (

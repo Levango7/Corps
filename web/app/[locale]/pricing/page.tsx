@@ -42,6 +42,7 @@ import { locales } from "@/lib/i18n";
 import { PricingSection } from "@/components/pricing/PricingSection";
 import { PricingViewTracker } from "@/components/pricing/PricingViewTracker";
 import { TrackedCta } from "@/components/pricing/TrackedCta";
+import { Parallax } from "@/components/Parallax";
 
 /**
  * 翻译函数结构签名。
@@ -121,8 +122,10 @@ export default async function PricingPage({ params }: { params: Promise<{ locale
       {/* ④ 功能三栏 */}
       <FeatureGrid t={tt} />
 
-      {/* ⑤ 定价卡（client，内部 useTranslations） */}
-      <PricingSection />
+      {/* ⑤ 定价卡（client，内部 useTranslations） — 中景层视差（营销页 15px） */}
+      <Parallax offset={15}>
+        <PricingSection />
+      </Parallax>
 
       {/* ⑥ 功能对比表 */}
       <ComparisonTable t={tt} />
@@ -212,7 +215,8 @@ function Hero({ t }: { t: TranslateFn }) {
       aria-labelledby="hero-heading"
     >
       {/* 背景装饰 SVG —— 抽象几何形状，纯装饰 aria-hidden */}
-      <div className="pointer-events-none absolute inset-0 select-none" aria-hidden="true">
+      {/* 背景层视差（营销页大幅 30px） */}
+      <Parallax offset={30} className="pointer-events-none absolute inset-0 select-none" >
         {/* 右上角大圆环 */}
         <svg
           className="absolute -top-24 -right-24 w-96 h-96 opacity-[0.04]"
@@ -250,7 +254,7 @@ function Hero({ t }: { t: TranslateFn }) {
           <path d="M60 30L90 60L60 90L30 60Z" />
           <path d="M60 50L70 60L60 70L50 60Z" />
         </svg>
-      </div>
+      </Parallax>
 
       <div className="relative mx-auto max-w-[var(--container-max)]">
         {/* eyebrow 小标签 */}

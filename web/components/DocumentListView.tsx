@@ -14,12 +14,14 @@
 import { useEffect, useRef, useState, useDeferredValue, type ComponentProps, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/lib/i18n-navigation";
-import { Plus, Search, FileText, Loader2, X, Download, CheckSquare, Square, Eye, MoreHorizontal, Share2 } from "lucide-react";
+import { Plus, Search, FileText, Loader2, X, Download, CheckSquare, Square, Eye, MoreHorizontal, Share2, Pencil, Trash2, FolderInput } from "lucide-react";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { useToast } from "@/components/Toast";
 import { api } from "@/lib/api";
 import { ExportPreview, type BatchDocument } from "@/components/ExportPreview";
 import { DocumentListSkeleton } from "@/components/Skeleton";
+import { QuickActionMenu, type QuickAction } from "@/components/QuickActionMenu";
+import { useLongPress } from "@/lib/use-long-press";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useMotionTokens } from "@/lib/motion-tokens";
 
@@ -53,6 +55,49 @@ export function DocumentListView({ wid }: { wid: string }) {
   const actionInFlight = useRef(false);
   const previewRequest = useRef<AbortController | null>(null);
   const previewDialog = useRef<HTMLDialogElement>(null);
+
+  // ── 长按快捷菜单（QuickActionMenu）──
+  const [longPressOpen, setLongPressOpen] = useState(false);
+  const [longPressX, setLongPressX] = useState(0);
+  const [longPressY, setLongPressY] = useState(0);
+  const [longPressItem, setLongPressItem] = useState<DocumentListItem | null>(null);
+
+  const longPressHandlers = useLongPress((pos) => {
+    setLongPressX(pos.x);
+    setLongPressY(pos.y);
+    setLongPressOpen(true);
+  });
+
+  const longPressActions: QuickAction[] = longPressItem
+    ? [
+        {
+          icon: Eye,
+          label: t("previewMode"),
+          onClick: () => openPreview(longPressItem),
+        },
+        {
+          icon: Pencil,
+          label: t("rename"),
+          onClick: () => router.push(`/w/${wid}/documents/${longPressItem.id}`),
+        },
+        {
+          icon: FolderInput,
+          label: t("move"),
+          onClick: () => router.push(`/w/${wid}/documents/${longPressItem.id}`),
+        },
+        {
+          icon: Share2,
+          label: t("share"),
+          onClick: () => runDocumentAction(longPressItem, "share"),
+        },
+        {
+          icon: Trash2,
+          label: t("delete"),
+          onClick: () => router.push(`/w/${wid}/documents/${longPressItem.id}`),
+          danger: true,
+        },
+      ]
+    : [];
 
   // 原生模态对话框提供焦点圈定、Escape 关闭及关闭后的焦点恢复。
   useEffect(() => {
@@ -370,6 +415,17 @@ export function DocumentListView({ wid }: { wid: string }) {
                     // var(--motion-slow) 220ms + var(--ease-out) 退场减速
                     transition={reduced ? { duration: 0 } : { duration: slow, ease: easeOut }}
                     className="relative"
+                    onPointerDown={(e) => {
+                      setLongPressItem(d);
+                      longPressHandlers.onPointerDown(e);
+                    }}
+                    onPointerUp={longPressHandlers.onPointerUp}
+                    onPointerLeave={longPressHandlers.onPointerLeave}
+                    onPointerCancel={longPressHandlers.onPointerCancel}
+                    onContextMenu={(e) => {
+                      setLongPressItem(d);
+                      longPressHandlers.onContextMenu(e);
+                    }}
                   >
                     {/* 复选框（绝对定位在左侧） */}
                     <label
@@ -457,6 +513,15 @@ export function DocumentListView({ wid }: { wid: string }) {
         onClose={() => setBatchPreviewOpen(false)}
         batchMode
         documents={batchDocuments}
+      />
+
+      {/* ── 长按快捷菜单 ── */}
+      <QuickActionMenu
+        open={longPressOpen}
+        onClose={() => setLongPressOpen(false)}
+        actions={longPressActions}
+        x={longPressX}
+        y={longPressY}
       />
     </div>
   );
