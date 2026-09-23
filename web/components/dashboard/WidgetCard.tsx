@@ -146,7 +146,7 @@ export default function WidgetCard({
 
   return (
     <div
-      style={{ perspective: prefersReduced ? undefined : "1000px" }}
+      style={{ perspective: prefersReduced ? undefined : "var(--perspective-card)" }}
       className={[
         "relative flex flex-col h-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden",
         // F7: 拖拽视觉反馈 — 轻微放大 + 更强阴影 + 半透明
@@ -160,7 +160,7 @@ export default function WidgetCard({
       <header
         onDoubleClick={handleHeaderDoubleClick}
         className={[
-          "flex items-center gap-2 px-4 py-2.5 border-b border-[var(--border-soft)]",
+          "flex items-center gap-2 px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)]",
           editing ? "cursor-grab active:cursor-grabbing drag-handle" : "",
         ].join(" ")}
       >
@@ -190,7 +190,7 @@ export default function WidgetCard({
             {sizeHint}
           </span>
         )}
-        {headerExtra && <div className="shrink-0 flex items-center gap-1">{headerExtra}</div>}
+        {headerExtra && <div className="shrink-0 flex items-center gap-[var(--space-1)]">{headerExtra}</div>}
         {editing && widgetId && onConfigChange && (
           <button
             type="button"

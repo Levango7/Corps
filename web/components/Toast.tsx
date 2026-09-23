@@ -9,7 +9,7 @@ import {
   useEffect,
   type ReactNode,
 } from "react";
-import { X } from "lucide-react";
+import { X, Pause } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { motion, AnimatePresence, useReducedMotion, type Variants } from "framer-motion";
 
@@ -178,7 +178,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
     <ToastContext.Provider value={{ toast: addToast }}>
       {children}
       <div
-        className="fixed bottom-4 right-4 pb-safe z-[var(--z-toast)] flex flex-col gap-2 pointer-events-none"
+        className="fixed bottom-[var(--space-4)] right-[var(--space-4)] pb-safe z-[var(--z-toast)] flex flex-col gap-2 pointer-events-none"
         aria-live="polite"
         aria-label={tToast("regionLabel")}
       >
@@ -194,7 +194,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                 initial="initial"
                 animate="animate"
                 exit="exit"
-                className="pointer-events-auto flex items-start gap-3 max-w-[calc(100vw-2rem)] px-4 py-3 rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                className="pointer-events-auto flex items-start gap-[var(--space-3)] max-w-[calc(100vw-2rem)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] border cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 style={{
                   background:
                     t.type === "success"
@@ -225,7 +225,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   className="shrink-0 text-[length:var(--text-xs)] opacity-60 tabular-nums self-center"
                   aria-hidden="true"
                 >
-                  {isPaused ? "⏸" : formatElapsed(elapsed)}
+                  {isPaused ? <Pause size={14} /> : formatElapsed(elapsed)}
                 </span>
                 <button
                   className="shrink-0 opacity-60 hover:opacity-100 transition-opacity text-[length:var(--text-xs)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
@@ -235,7 +235,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
                   }}
                   aria-label={tToast("close")}
                 >
-                  <X className="h-3.5 w-3.5" />
+                  <X size={14} />
                 </button>
               </motion.div>
             );

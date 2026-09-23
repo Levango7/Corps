@@ -176,14 +176,14 @@ export default function NewTaskDialog({
       role="dialog"
       aria-modal="true"
       aria-labelledby="new-task-title"
-      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
+      className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-[var(--space-4)] sm:p-[var(--space-8)] overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
       <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
-        <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
+        <header className="flex items-center justify-between px-[var(--space-5)] py-3.5 border-b border-[var(--border-soft)]">
           <h2
             id="new-task-title"
             className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
@@ -200,7 +200,7 @@ export default function NewTaskDialog({
           </button>
         </header>
 
-        <form onSubmit={submit} className="px-4 sm:px-5 py-4 space-y-4">
+        <form onSubmit={submit} className="px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-4)] space-y-[var(--space-4)]">
           <div>
             <label className={fieldLabel} htmlFor="nt-title">
               {t("fieldTitle")}
@@ -229,11 +229,11 @@ export default function NewTaskDialog({
               rows={3}
               maxLength={2000}
               placeholder={t("descriptionPlaceholder")}
-              className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
+              className="w-full px-2.5 py-[var(--space-2)] resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[var(--space-3)]">
             <div>
               <label className={fieldLabel}>{t("status")}</label>
               <select
@@ -250,7 +250,7 @@ export default function NewTaskDialog({
             </div>
             <div>
               <label className={fieldLabel}>
-                <Flag size={13} />
+                <Flag size={14} />
                 {t("fieldPriority")}
               </label>
               <select
@@ -267,7 +267,7 @@ export default function NewTaskDialog({
             </div>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-[var(--space-3)]">
             <div>
               <label className={fieldLabel}>{t("assigneeOptional")}</label>
               <select
@@ -285,7 +285,7 @@ export default function NewTaskDialog({
             </div>
             <div>
               <label className={fieldLabel}>
-                <Calendar size={13} />
+                <Calendar size={14} />
                 {t("fieldDueOptional")}
               </label>
               <input
@@ -302,7 +302,7 @@ export default function NewTaskDialog({
           {milestones.length > 0 && (
             <div>
               <label className={fieldLabel}>
-                <MilestoneIcon size={13} />
+                <MilestoneIcon size={14} />
                 {t("fieldMilestoneOptional")}
               </label>
               <select
@@ -325,7 +325,7 @@ export default function NewTaskDialog({
           {labels.length > 0 && (
             <div>
               <label className={fieldLabel}>
-                <Tag size={13} />
+                <Tag size={14} />
                 {t("fieldLabelsOptional")}
               </label>
               <div className="flex flex-wrap gap-1.5">
@@ -369,7 +369,7 @@ export default function NewTaskDialog({
           )}
 
           {error && (
-            <div className="flex items-start gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">
+            <div className="flex items-start gap-[var(--space-2)] px-3 py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)]">
               <span className="flex-1">{error}</span>
               <button
                 type="button"
@@ -377,16 +377,16 @@ export default function NewTaskDialog({
                 className="shrink-0 opacity-60 hover:opacity-100 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
                 aria-label={tButton("close")}
               >
-                <X className="h-3.5 w-3.5" />
+                <X size={14} />
               </button>
             </div>
           )}
 
-          <div className="flex items-center justify-end gap-2 pt-1">
+          <div className="flex items-center justify-end gap-[var(--space-2)] pt-[var(--space-1)]">
             <button
               type="button"
               onClick={onClose}
-              className="h-9 px-4 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="h-9 px-[var(--space-4)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               {tButton("cancel")}
             </button>
@@ -394,9 +394,9 @@ export default function NewTaskDialog({
               type="submit"
               disabled={!title.trim() || submitting}
               title={!title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : undefined}
-              className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="inline-flex items-center gap-1.5 h-9 px-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
-              {submitting && <Loader2 size={15} className="animate-spin" />}
+              {submitting && <Loader2 size={14} className="animate-spin" />}
               <Ripple>{t("actionCreate")}</Ripple>
             </button>
           </div>

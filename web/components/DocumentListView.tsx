@@ -331,7 +331,7 @@ export function DocumentListView({ wid }: { wid: string }) {
         <button
           onClick={createDoc}
           disabled={creating}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
         >
           {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           {t("newDocument")}
@@ -341,7 +341,7 @@ export function DocumentListView({ wid }: { wid: string }) {
       {/* 搜索 */}
       <div className="relative mb-[var(--space-4)]">
         <Search
-          size={15}
+          size={14}
           className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 text-[var(--meta)] pointer-events-none"
         />
         <input
@@ -356,21 +356,21 @@ export function DocumentListView({ wid }: { wid: string }) {
             className="absolute right-[var(--space-2)] top-1/2 -translate-y-1/2 p-1 rounded-[var(--radius-sm)] text-[var(--meta)] hover:text-[var(--fg)]"
             aria-label={t("clearSearch")}
           >
-            <X size={13} />
+            <X size={14} />
           </button>
         )}
       </div>
 
       {/* 批量操作工具栏（选中数量 > 0 时显示） */}
       {selectedCount > 0 && (
-        <div className="flex items-center gap-3 mb-[var(--space-3)] px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)]">
+        <div className="flex items-center gap-[var(--space-3)] mb-[var(--space-3)] px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)]">
           <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
             {tExport("documentsSelectedInline", { count: selectedCount })}
           </span>
           <div className="flex-1" />
           <button
             onClick={toggleSelectAll}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
           >
             {allSelected ? <CheckSquare size={14} /> : <Square size={14} />}
             {allSelected ? tExport("deselectAll") : tExport("selectAll")}
@@ -378,7 +378,7 @@ export function DocumentListView({ wid }: { wid: string }) {
           <button
             onClick={handleBatchExport}
             disabled={batchExporting}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
           >
             {batchExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
             {tExport("exportBatch")}
@@ -386,13 +386,13 @@ export function DocumentListView({ wid }: { wid: string }) {
         </div>
       )}
 
-      {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
+      {error && <p className="mb-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {loading ? (
         <DocumentListSkeleton count={5} />
       ) : items.length === 0 ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">
-          <FileText size={36} className="mx-auto mb-3 opacity-50" />
+          <FileText size={32} className="mx-auto mb-[var(--space-3)] opacity-50" />
           <p>{q ? t("noSearchResults") : t("emptyState")}</p>
         </div>
       ) : (
@@ -441,10 +441,10 @@ export function DocumentListView({ wid }: { wid: string }) {
                     </label>
                     <Link
                       href={`/w/${wid}/documents/${d.id}`}
-                      className="block px-[var(--space-4)] py-3 pl-[var(--space-8)] pr-24 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                      className="block px-[var(--space-4)] py-[var(--space-3)] pl-[var(--space-8)] pr-24 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                     >
                       <div className="flex items-center gap-2">
-                        <FileText size={15} className="shrink-0 text-[var(--muted)]" />
+                        <FileText size={14} className="shrink-0 text-[var(--muted)]" />
                         <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                           {d.title}
                         </span>
@@ -459,13 +459,13 @@ export function DocumentListView({ wid }: { wid: string }) {
                           </span>
                         )}
                       </div>
-                      <div className="mt-1 ml-6 text-[length:var(--text-xs)] text-[var(--muted)] flex items-center gap-2">
+                      <div className="mt-[var(--space-1)] ml-6 text-[length:var(--text-xs)] text-[var(--muted)] flex items-center gap-2">
                         {author && <span>{author}</span>}
                         <span>·</span>
                         <span>{t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}</span>
                       </div>
                     </Link>
-                    <div data-document-actions className="absolute right-[var(--space-3)] top-3 flex items-center gap-1">
+                    <div data-document-actions className="absolute right-[var(--space-3)] top-[var(--space-3)] flex items-center gap-1">
                       <button type="button" onClick={() => openPreview(d)} disabled={previewId === d.id} aria-label={t("previewMode")} title={t("previewMode")} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]">
                         {previewId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
                       </button>

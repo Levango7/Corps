@@ -461,23 +461,23 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         onBlur={() => save()}
         maxLength={255}
         placeholder={t("titlePlaceholder")}
-        className="w-full px-0 py-2 bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
+        className="w-full px-0 py-[var(--space-2)] bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
       />
 
       {/* 工具栏 */}
-      <div className="flex items-center justify-between mt-3 mb-4 gap-2 flex-nowrap overflow-x-auto scrollbar-hide">
-        <div className="flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)] min-w-0">
+      <div className="flex items-center justify-between mt-[var(--space-3)] mb-[var(--space-4)] gap-[var(--space-2)] flex-nowrap overflow-x-auto scrollbar-hide">
+        <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--muted)] min-w-0">
           {/* LI-10：自动保存中指示器 */}
           {busy === "save" && (
             <span className="inline-flex items-center gap-1">
-              <Loader2 size={12} className="animate-spin" />
+              <Loader2 size={14} className="animate-spin" />
               {t("saving")}
             </span>
           )}
           {/* 自动保存成功反馈：短暂显示"已保存"提示 */}
           {savedFlash && busy !== "save" && (
             <span className="inline-flex items-center gap-1 text-[var(--success)]">
-              <Check size={12} />
+              <Check size={14} />
               {t("saved")}
             </span>
           )}
@@ -489,17 +489,17 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             </span>
           )}
         </div>
-        <div className="flex items-center gap-2 flex-nowrap justify-end shrink-0">
+        <div className="flex items-center gap-[var(--space-2)] flex-nowrap justify-end shrink-0">
           <button
             onClick={back}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <X size={14} />
             {t("backToList")}
           </button>
           <button
             onClick={() => setPreview((v) => !v)}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Eye size={14} />
             {preview ? t("editMode") : t("previewMode")}
@@ -510,7 +510,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               setPreview(false);
             }}
             aria-pressed={split}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+            className={`inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
               split
                 ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
                 : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
@@ -523,7 +523,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           {/* 快速图表：不进正文也能出图，确认后一键插入（v0.6 增补） */}
           <button
             onClick={() => setQuickDiagramOpen(true)}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             title={tDiagram("title")}
           >
             <Zap size={14} />
@@ -537,11 +537,11 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               aria-label={tDecision("insertTemplate")}
               aria-expanded={templateMenuOpen}
               aria-haspopup="menu"
-              className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               <Plus size={14} />
               <span className="hidden sm:inline">{tDecision("insertTemplate")}</span>
-              <ChevronDown size={12} className="text-[var(--muted)]" />
+              <ChevronDown size={14} className="text-[var(--muted)]" />
             </button>
             {templateMenuOpen && (
               <>
@@ -560,7 +560,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     <li key={tpl.id} role="menuitem">
                       <button
                         onClick={() => handleInsertTemplate(tpl.markdown)}
-                        className="w-full text-left px-3 py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                        className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                       >
                         <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
                           {tpl.name}
@@ -581,7 +581,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={openShareDialog}
             disabled={busy !== null}
             title={busy !== null ? t("saving") : undefined}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Share2 size={14} />
             {t("share")}
@@ -590,7 +590,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           <button
             onClick={() => setExportOpen(true)}
             title={t("exportHint")}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             <Download size={14} />
             {t("export")}
@@ -600,7 +600,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={() => setCommentsOpen((v) => !v)}
             aria-pressed={commentsOpen}
             title={t("comments")}
-            className={`inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+            className={`inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
               commentsOpen
                 ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
                 : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
@@ -613,7 +613,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={() => save({ publish: true })}
             disabled={busy !== null}
             title={busy !== null ? t("saving") : undefined}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
             {busy === "publish" ? (
               <Loader2 size={14} className="animate-spin" />
@@ -628,7 +628,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
       {/* 分享链接条（快捷展示，详细设置在对话框内） */}
       {shareUrl && (
-        <div className="mb-3 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] flex items-center gap-2 text-[length:var(--text-xs)]">
+        <div className="mb-[var(--space-3)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)] flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)]">
           <span className="text-[var(--muted)] shrink-0">{t("shareUrl")}:</span>
           <input
             value={shareUrl}
@@ -639,7 +639,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={copyShareUrl}
             className="shrink-0 inline-flex items-center gap-1 text-[var(--accent)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] rounded-[var(--radius-sm)]"
           >
-            {copied ? <Check size={12} /> : null}
+            {copied ? <Check size={14} /> : null}
             {copied ? t("copied") : t("copy")}
           </button>
           <button
@@ -668,7 +668,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       )}
 
       {error && (
-        <div className="mt-2 flex items-start gap-2 text-[length:var(--text-sm)] text-[var(--danger)]">
+        <div className="mt-[var(--space-2)] flex items-start gap-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--danger)]">
           <span className="flex-1">{error}</span>
           <button
             onClick={() => setError("")}
@@ -705,7 +705,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}
-            <header className="flex items-center gap-2 px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)] shrink-0">
+            <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)] shrink-0">
               <Share2 size={16} className="text-[var(--muted)]" />
               <span className="flex-1 min-w-0 text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg)] truncate">
                 {t("shareDialogTitle")}
@@ -726,14 +726,14 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             </header>
 
             {/* 内容区 */}
-            <div className="flex-1 min-h-0 overflow-auto px-[var(--space-5)] py-[var(--space-4)] space-y-5">
+            <div className="flex-1 min-h-0 overflow-auto px-[var(--space-5)] py-[var(--space-4)] space-y-[var(--space-5)]">
               {/* 分享链接 */}
               {shareUrl && (
                 <div>
                   <label className="block text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] mb-1.5">
                     {t("shareUrl")}
                   </label>
-                  <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)]">
+                  <div className="flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border)]">
                     <input
                       value={shareUrl}
                       readOnly
@@ -743,7 +743,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                       onClick={copyShareUrl}
                       className="shrink-0 inline-flex items-center gap-1 text-[var(--accent)] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)]"
                     >
-                      {copied ? <Check size={12} /> : null}
+                      {copied ? <Check size={14} /> : null}
                       {copied ? t("copied") : t("copy")}
                     </button>
                   </div>
@@ -756,8 +756,8 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                   <Share2 size={14} className="text-[var(--muted)]" />
                   {t("customSlug")}
                 </label>
-                <div className="flex items-center gap-2">
-                  <span className="shrink-0 inline-flex items-center h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--meta)] font-[family-name:var(--font-mono)]">
+                <div className="flex items-center gap-[var(--space-2)]">
+                  <span className="shrink-0 inline-flex items-center h-9 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--meta)] font-[family-name:var(--font-mono)]">
                     {t("customSlugPrefix")}
                   </span>
                   <input
@@ -767,7 +767,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     placeholder={t("customSlugPlaceholder")}
                     maxLength={50}
                     pattern="[a-z0-9-]*"
-                    className="flex-1 min-w-0 h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] placeholder:text-[var(--meta)]"
+                    className="flex-1 min-w-0 h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] placeholder:text-[var(--meta)]"
                   />
                 </div>
                 <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
@@ -781,13 +781,13 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                   <Calendar size={14} className="text-[var(--muted)]" />
                   {t("shareExpiry")}
                 </label>
-                <div className="flex flex-wrap gap-2">
+                <div className="flex flex-wrap gap-[var(--space-2)]">
                   {(["never", "7d", "30d", "custom"] as const).map((mode) => (
                     <button
                       key={mode}
                       onClick={() => setExpiryMode(mode)}
                       aria-pressed={expiryMode === mode}
-                      className={`h-8 px-3 rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+                      className={`h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
                         expiryMode === mode
                           ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
                           : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
@@ -803,7 +803,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     value={customExpiryDate}
                     onChange={(e) => setCustomExpiryDate(e.target.value)}
                     min={todayStr}
-                    className="mt-2 w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+                    className="mt-[var(--space-2)] w-full h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                   />
                 )}
                 {shareExpiresAt && expiryMode !== "custom" && (
@@ -822,9 +822,9 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                   {t("sharePassword")}
                 </label>
                 {hasPassword && !sharePasswordInput && (
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-[var(--space-2)] mb-2">
                     <span className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success)]">
-                      <Lock size={13} />
+                      <Lock size={14} />
                       {t("sharePasswordEnabled")}
                     </span>
                     <button
@@ -846,7 +846,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                       ? t("sharePasswordChangePlaceholder")
                       : t("sharePasswordPlaceholder")
                   }
-                  className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] placeholder:text-[var(--meta)]"
+                  className="w-full h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] placeholder:text-[var(--meta)]"
                 />
                 {sharePasswordInput && (
                   <p className="mt-1.5 text-[length:var(--text-xs)] text-[var(--meta)]">
@@ -872,14 +872,14 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                   {t("shareAccessLogs")}
                 </button>
                 {logsExpanded && (
-                  <div className="mt-2 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
+                  <div className="mt-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] overflow-hidden">
                     {logsLoading ? (
-                      <div className="px-3 py-4 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+                      <div className="px-[var(--space-3)] py-4 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
                         <Loader2 size={14} className="inline animate-spin mr-1.5" />
                         {t("loading")}
                       </div>
                     ) : accessLogs.length === 0 ? (
-                      <div className="px-3 py-4 text-center text-[length:var(--text-sm)] text-[var(--meta)]">
+                      <div className="px-[var(--space-3)] py-4 text-center text-[length:var(--text-sm)] text-[var(--meta)]">
                         {t("shareNoLogs")}
                       </div>
                     ) : (
@@ -887,7 +887,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                         {accessLogs.map((log) => (
                           <div
                             key={log.id}
-                            className="grid grid-cols-[1fr_auto_auto] gap-2 px-3 py-2 text-[length:var(--text-xs)] items-center"
+                            className="grid grid-cols-[1fr_auto_auto] gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-xs)] items-center"
                           >
                             <span className="text-[var(--fg-2)] font-[family-name:var(--font-mono)] truncate">
                               {log.ip}
@@ -908,28 +908,28 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             </div>
 
             {/* 底部操作栏 */}
-            <footer className="flex items-center justify-between gap-2 px-[var(--space-4)] py-[var(--space-3)] border-t border-[var(--border-soft)] shrink-0">
+            <footer className="flex items-center justify-between gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-3)] border-t border-[var(--border-soft)] shrink-0">
               {/* 撤销分享（两步确认） */}
               {revokeConfirm ? (
-                <div className="flex items-center gap-2">
+                <div className="flex items-center gap-[var(--space-2)]">
                   <span className="text-[length:var(--text-xs)] text-[var(--danger)]">
                     {t("shareRevokeConfirm")}
                   </span>
                   <button
                     onClick={revokeShare}
                     disabled={busy !== null}
-                    className="inline-flex items-center gap-1 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 disabled:opacity-50 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                    className="inline-flex items-center gap-1 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--danger)] text-[var(--danger-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 disabled:opacity-50 transition-opacity focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                   >
                     {busy === "share" ? (
-                      <Loader2 size={13} className="animate-spin" />
+                      <Loader2 size={14} className="animate-spin" />
                     ) : (
-                      <Trash2 size={13} />
+                      <Trash2 size={14} />
                     )}
                     {t("shareRevokeConfirmBtn")}
                   </button>
                   <button
                     onClick={() => setRevokeConfirm(false)}
-                    className="h-8 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                    className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                   >
                     {t("cancel")}
                   </button>
@@ -937,7 +937,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
               ) : (
                 <button
                   onClick={() => setRevokeConfirm(true)}
-                  className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                  className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                 >
                   <Trash2 size={14} />
                   {t("shareRevoke")}
@@ -949,9 +949,9 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                 className="inline-flex items-center gap-1.5 h-9 px-[var(--space-4)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {busy === "share" && !revokeConfirm ? (
-                  <Loader2 size={15} className="animate-spin" />
+                  <Loader2 size={14} className="animate-spin" />
                 ) : (
-                  <Check size={15} />
+                  <Check size={14} />
                 )}
                 {t("shareSave")}
               </button>
@@ -969,7 +969,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
         metaLine={`corps · ${new Date().toLocaleString()}`}
       />
 
-      <div className="mt-3 flex items-center justify-between gap-3 print:hidden">
+      <div className="mt-[var(--space-3)] flex items-center justify-between gap-3 print:hidden">
         <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("autosaveHint")}</p>
         {/* 字数统计（v0.6）：去 Markdown 标记后的近似可读字数 */}
         <p className="text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
@@ -985,7 +985,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       {!exportOpen && (
         <div className="hidden print:block print-area" aria-hidden="true">
           <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-2">{title}</h1>
-          <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
+          <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-4)]">
             corps · {new Date().toLocaleString()}
           </p>
           <Markdown source={markdown} />

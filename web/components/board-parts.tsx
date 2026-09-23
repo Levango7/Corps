@@ -81,7 +81,7 @@ export function BoardColumn({
       data-column={column.id}
       role="group"
       aria-label={tStatus(column.titleKey)}
-      className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 snap-start lg:snap-none lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
+      className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-[var(--space-4)] min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 snap-start lg:snap-none lg:min-w-0 transition-shadow duration-[var(--motion-fast)] ${dragOver ? "shadow-[var(--elev-md)] ring-2 ring-[var(--accent-ring)]" : ""}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragOver(true);
@@ -92,7 +92,7 @@ export function BoardColumn({
         if (taskId) onDropOnColumn(taskId, column.id);
       }}
     >
-      <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
+            <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-4)] pb-[var(--space-2)] border-b border-[var(--border)]">
         <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
         <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{tStatus(column.titleKey)}</span>
         <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
@@ -101,7 +101,7 @@ export function BoardColumn({
       </div>
 
       <LayoutGroup id={`column-${column.id}`}>
-        <div className="space-y-2">
+            <div className="space-y-[var(--space-2)]">
           <AnimatePresence mode="popLayout" initial={false}>
             {columnTasks.map((task) => (
               <BoardCard
@@ -292,7 +292,7 @@ function BoardCardImpl({
         )}
         <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
+          <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-1)]">
             <span className="text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--muted)]">
               {formatTaskId(task.id)}
             </span>
@@ -326,13 +326,13 @@ function BoardCardImpl({
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-xs)]"
                 title={task.blockedReason ?? undefined}
               >
-                <AlertTriangle size={11} />
+                <AlertTriangle size={14} />
               </span>
             )}
           </div>
           {task.labels && task.labels.length > 0 && <TaskLabels labels={task.labels} />}
           {task.assignee && (
-            <div className="flex items-center gap-1 mt-2">
+            <div className="flex items-center gap-[var(--space-1)] mt-[var(--space-2)]">
               <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
                 {task.assignee.name?.[0]}
               </div>
@@ -405,13 +405,13 @@ export function ListTable({
       <table className="w-full text-[length:var(--text-sm)]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-            {selectionMode && <th className="font-[weight:var(--weight-medium)] px-4 h-10 w-10" />}
-            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("title")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("assignee")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("priority")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("status")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("dueDate")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-4 h-10">{t("label")}</th>
+            {selectionMode && <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10 w-10" />}
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("title")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("assignee")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("priority")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("status")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("dueDate")}</th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("label")}</th>
           </tr>
         </thead>
         <tbody>
@@ -445,7 +445,7 @@ export function ListTable({
                 }`}
               >
                 {selectionMode && (
-                  <td className="px-4 h-10 w-10">
+                  <td className="px-[var(--space-4)] h-10 w-10">
                     <input
                       type="checkbox"
                       checked={selected}
@@ -456,11 +456,11 @@ export function ListTable({
                     />
                   </td>
                 )}
-                <td className="px-4 h-10 text-[var(--fg)] font-[weight:var(--weight-medium)] truncate max-w-xs">
+                <td className="px-[var(--space-4)] h-10 text-[var(--fg)] font-[weight:var(--weight-medium)] truncate max-w-xs">
                   {task.title}
                 </td>
-                <td className="px-4 h-10 text-[var(--muted)]">{task.assignee?.name ?? "—"}</td>
-                <td className="px-4 h-10">
+                <td className="px-[var(--space-4)] h-10 text-[var(--muted)]">{task.assignee?.name ?? "—"}</td>
+                <td className="px-[var(--space-4)] h-10">
                   <span
                     className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
                     style={PRIORITY_BADGE_STYLES[task.priority]}
@@ -468,7 +468,7 @@ export function ListTable({
                     {tPriority(PRIORITY_LABEL_KEYS[task.priority])}
                   </span>
                 </td>
-                <td className="px-4 h-10">
+                <td className="px-[var(--space-4)] h-10">
                   <span
                     className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
                     style={STATUS_BADGE_STYLES[task.status]}
@@ -476,10 +476,10 @@ export function ListTable({
                     {tStatus(STATUS_LABEL_KEYS[task.status])}
                   </span>
                 </td>
-                <td className="px-4 h-10 text-[var(--muted)]">
+                <td className="px-[var(--space-4)] h-10 text-[var(--muted)]">
                   {task.dueDate ? new Date(task.dueDate).toLocaleDateString() : "—"}
                 </td>
-                <td className="px-4 h-10">
+                <td className="px-[var(--space-4)] h-10">
                   {task.labels && task.labels.length > 0 ? (
                     <TaskLabels labels={task.labels} max={2} />
                   ) : (
@@ -515,7 +515,7 @@ export function ListCards({
   const t = useTranslations("task");
   const tStatus = useTranslations("status");
   return (
-    <div className="md:hidden space-y-2">
+    <div className="md:hidden space-y-[var(--space-2)]">
       {tasks.map((task) => {
         const selected = selectedIds.has(task.id);
         return (
@@ -591,36 +591,36 @@ export function ListCards({
 export function BoardSkeleton() {
   return (
     <div aria-busy="true" aria-live="polite">
-      <div className="flex items-center justify-between mb-6 gap-3">
+      <div className="flex items-center justify-between mb-[var(--space-6)] gap-[var(--space-3)]">
         <div>
           <Skeleton className="h-7 w-28 mb-2" />
           <Skeleton className="h-4 w-20" />
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-[var(--space-3)]">
           <Skeleton className="h-8 w-20 rounded-[var(--radius-md)]" />
           <Skeleton className="h-8 w-24 rounded-[var(--radius-md)]" />
         </div>
       </div>
-      <div className="flex overflow-x-auto gap-4 pb-2 lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
+      <div className="flex overflow-x-auto gap-[var(--space-4)] pb-[var(--space-2)] lg:grid lg:grid-cols-4 lg:overflow-visible lg:pb-0">
         {COLUMNS.map((col) => (
           <div
             key={col.id}
-            className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-4 min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
+            className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-[var(--space-4)] min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
           >
-            <div className="flex items-center gap-2 mb-4 pb-2 border-b border-[var(--border)]">
+      <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-4)] pb-[var(--space-2)] border-b border-[var(--border)]">
               <Skeleton className="w-2 h-2 rounded-full" />
               <Skeleton className="h-4 w-14" />
               <Skeleton className="ml-auto h-5 w-8 rounded-full" />
             </div>
-            <div className="space-y-2">
+        <div className="space-y-[var(--space-2)]">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
                   className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5"
                 >
                   <Skeleton className="h-3 w-16 mb-2" />
-                  <Skeleton className="h-4 w-full mb-1" style={{ maxWidth: `${70 + i * 8}%` }} />
-                  <Skeleton className="h-3 w-20 mt-2" />
+                  <Skeleton className="h-4 w-full mb-[var(--space-1)]" style={{ maxWidth: `${70 + i * 8}%` }} />
+                  <Skeleton className="h-3 w-20 mt-[var(--space-2)]" />
                 </div>
               ))}
             </div>
@@ -637,16 +637,16 @@ export function BoardEmptyState({ onCreate }: { onCreate: () => void }) {
   const tStatus = useTranslations("status");
   return (
     <div className="flex flex-col items-center justify-center h-64 text-[var(--muted)]">
-      <div className="empty-state-dot mb-4">
+      <div className="empty-state-dot mb-[var(--space-4)]">
         <Kanban size={24} />
       </div>
       <p className="text-[length:var(--text-lg)] font-[weight:var(--weight-medium)] mb-2 text-[var(--fg-2)]">
         {tEmpty("noTasks")}
       </p>
-      <p className="text-[length:var(--text-sm)] mb-4">{tEmpty("noTasksHint")}</p>
+      <p className="text-[length:var(--text-sm)] mb-[var(--space-4)]">{tEmpty("noTasksHint")}</p>
       <button
         onClick={onCreate}
-        className="btn-press flex items-center gap-2 px-4 py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+        className="btn-press flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
       >
         <Plus size={16} />
         {tStatus("newTask")}
