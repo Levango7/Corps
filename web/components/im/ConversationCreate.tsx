@@ -19,10 +19,10 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Search, X, Users, User, Loader2, Check } from "lucide-react";
+import { Search, X, Users, User, Loader2, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import type { UserSummary } from "./types";
+import type { UserSummary, Conversation } from "./types";
 
 /** 工作区成员项（与 /workspaces/{wid}/members 响应对齐） */
 interface WorkspaceMember {
@@ -36,6 +36,8 @@ interface ConversationCreateProps {
   workspaceId: string;
   /** 当前用户 ID（用于从成员列表中排除自己） */
   currentUserId: string;
+  /** 已有会话列表（用于单聊去重检查） */
+  conversations: Conversation[];
   /** 创建成功回调 */
   onCreated: (conversationId: string) => void;
   /** 关闭弹窗回调 */
@@ -45,6 +47,7 @@ interface ConversationCreateProps {
 export function ConversationCreate({
   workspaceId,
   currentUserId,
+  conversations,
   onCreated,
   onClose,
 }: ConversationCreateProps) {
@@ -151,6 +154,20 @@ export function ConversationCreate({
     [members, selected],
   );
 
+  /** 单聊去重：检查是否已存在与选中成员的 direct 会话 */
+  const existingDirectConversation = useMemo(() => {
+    if (mode !== "direct" || selected.size !== 1) return null;
+    const targetUserId = Array.from(selected)[0];
+    return (
+      conversations.find(
+        (conv) =>
+          conv.type === "direct" &&
+          conv.members.some((m) => m.userId === targetUserId) &&
+          conv.members.some((m) => m.userId === currentUserId),
+      ) ?? null
+    );
+  }, [mode, selected, conversations, currentUserId]);
+
   /** 是否可提交 */
   const canSubmit = useMemo(() => {
     if (submitting) return false;
@@ -256,6 +273,12 @@ export function ConversationCreate({
               maxLength={100}
               className="w-full h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] transition-colors duration-[var(--motion-fast)]"
             />
+            {/* 群名验证提示：已选 2+ 成员但群名为空时显示 */}
+            {selected.size >= 2 && groupTitle.trim().length === 0 && (
+              <p className="mt-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--danger)]">
+                {t("enterGroupName")}
+              </p>
+            )}
           </div>
         )}
 
@@ -279,6 +302,24 @@ export function ConversationCreate({
                   </button>
                 </span>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* 单聊去重提示：已存在与该用户的会话 */}
+        {existingDirectConversation && (
+          <div className="px-[var(--space-4)] pt-[var(--space-3)]">
+            <div className="flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[length:var(--text-xs)] text-[var(--danger)]">
+              <AlertCircle size={14} className="shrink-0" />
+              <span className="flex-1">{t("existingDirectConversation")}</span>
+              <button
+                type="button"
+                onClick={() => onCreated(existingDirectConversation.id)}
+                className="shrink-0 inline-flex items-center gap-[var(--space-1)] px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
+              >
+                {t("jumpToConversation")}
+                <ArrowRight size={14} />
+              </button>
             </div>
           </div>
         )}

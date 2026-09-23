@@ -13,7 +13,7 @@
  */
 
 import { useMemo, useState, useEffect } from "react";
-import { Search, Plus } from "lucide-react";
+import { Search, Plus, Inbox, CircleDot } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useParams } from "next/navigation";
 import { api } from "@/lib/api";
@@ -60,6 +60,8 @@ export function ConversationList({
   const [filterQuery, setFilterQuery] = useState("");
   // 在线用户 ID 集合（由 /im/online 轮询维护）
   const [onlineUserIds, setOnlineUserIds] = useState<Set<string>>(new Set());
+  // 会话筛选模式：全部 / 未读
+  const [filterMode, setFilterMode] = useState<"all" | "unread">("all");
 
   // 轮询在线状态：30 秒间隔，组件卸载时清除定时器
   useEffect(() => {
@@ -96,10 +98,15 @@ export function ConversationList({
 
   // 本地过滤：按会话名称不区分大小写匹配
   // 单聊用对方用户名（name → email fallback），群聊用 title
+  // 未读模式下仅显示 unreadCount > 0 的会话
   const filtered = useMemo(() => {
+    let list = sorted;
+    if (filterMode === "unread") {
+      list = list.filter((conv) => (conv.unreadCount ?? 0) > 0);
+    }
     const q = filterQuery.trim().toLowerCase();
-    if (!q) return sorted;
-    return sorted.filter((conv) => {
+    if (!q) return list;
+    return list.filter((conv) => {
       if (conv.type === "group") {
         return (conv.title ?? "").toLowerCase().includes(q);
       }
@@ -107,7 +114,7 @@ export function ConversationList({
       const name = otherMember?.user.name ?? otherMember?.user.email ?? "";
       return name.toLowerCase().includes(q);
     });
-  }, [sorted, filterQuery, currentUserId]);
+  }, [sorted, filterQuery, currentUserId, filterMode]);
 
   // 是否正在过滤（用于区分空状态文案）
   const isFiltering = filterQuery.trim().length > 0;
@@ -142,6 +149,34 @@ export function ConversationList({
           className="shrink-0 w-9 h-9 flex items-center justify-center rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2"
         >
           <Plus size={16} />
+        </button>
+      </div>
+
+      {/* 全部/未读筛选切换 */}
+      <div className="flex gap-[var(--space-1)] px-[var(--space-3)] py-[var(--space-2)] border-b border-[var(--border)]">
+        <button
+          type="button"
+          onClick={() => setFilterMode("all")}
+          className={`flex-1 flex items-center justify-center gap-[var(--space-1)] py-[var(--space-1)] rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+            filterMode === "all"
+              ? "bg-[var(--surface-2)] text-[var(--fg)]"
+              : "text-[var(--muted)] hover:text-[var(--fg-2)]"
+          }`}
+        >
+          <Inbox size={14} />
+          {t("all")}
+        </button>
+        <button
+          type="button"
+          onClick={() => setFilterMode("unread")}
+          className={`flex-1 flex items-center justify-center gap-[var(--space-1)] py-[var(--space-1)] rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+            filterMode === "unread"
+              ? "bg-[var(--surface-2)] text-[var(--fg)]"
+              : "text-[var(--muted)] hover:text-[var(--fg-2)]"
+          }`}
+        >
+          <CircleDot size={14} />
+          {t("unread")}
         </button>
       </div>
 

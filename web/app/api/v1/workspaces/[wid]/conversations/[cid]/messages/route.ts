@@ -212,6 +212,36 @@ export async function GET(
   }
 }
 
+/**
+ * 获取允许的附件域名白名单。
+ *
+ * 来源：环境变量 ALLOWED_ATTACHMENT_DOMAINS（逗号分隔），默认包含当前应用域名。
+ * 用于防止 SSRF / 钓鱼攻击：附件 URL 必须指向受信任的域名。
+ */
+function getAllowedAttachmentDomains(): string[] {
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  const defaultDomain = new URL(appUrl).hostname;
+  const envDomains = process.env.ALLOWED_ATTACHMENT_DOMAINS;
+  if (envDomains) {
+    const domains = envDomains
+      .split(",")
+      .map((d) => d.trim())
+      .filter(Boolean);
+    if (domains.length > 0) return domains;
+  }
+  return [defaultDomain];
+}
+
+/** 验证附件 URL 的域名是否在白名单中 */
+function isAttachmentUrlAllowed(url: string): boolean {
+  try {
+    const hostname = new URL(url).hostname;
+    return getAllowedAttachmentDomains().includes(hostname);
+  } catch {
+    return false;
+  }
+}
+
 /** 发送消息请求体校验 */
 const sendMessageSchema = z.object({
   body: z.string().min(1).max(10000),
@@ -225,7 +255,10 @@ const sendMessageSchema = z.object({
     .array(
       z.object({
         filename: z.string().min(1).max(255),
-        url: z.string().url(),
+        url: z
+          .string()
+          .url()
+          .refine(isAttachmentUrlAllowed, "附件 URL 域名不在允许的白名单中"),
         mimeType: z.string().min(1).max(100),
         size: z.number().int().positive(),
       }),

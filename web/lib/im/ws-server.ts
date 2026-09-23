@@ -379,23 +379,53 @@ class IMConnectionManager {
         this.conversationWorkspace.get(conversationId) ??
         this.socketWorkspace.get(ws);
 
-      await withGuc(
+      const now = new Date();
+
+      const readByCount = await withGuc(
         workspaceId ? { workspace_id: workspaceId, user_id: userId } : { user_id: userId },
         async (tx) => {
-          // 更新已读游标（lastReadAt = 当前时间）
-          await tx.conversationMember.update({
+          // 读取当前 lastReadAt，用于防回退比较（对齐 REST API /read 端点逻辑）
+          const membership = await tx.conversationMember.findUnique({
             where: {
               conversationId_userId: { conversationId, userId },
             },
-            data: { lastReadAt: new Date() },
+            select: { id: true, lastReadAt: true },
           });
+          if (!membership) return 0;
+
+          // 防回退：只有当 now > existingDate（或 existingDate 为 null）时才更新
+          const existingDate = membership.lastReadAt;
+          if (!existingDate || now > existingDate) {
+            await tx.conversationMember.update({
+              where: { id: membership.id },
+              data: { lastReadAt: now },
+            });
+          }
+
+          // 计算 readByCount：该会话有多少成员的 lastReadAt >= 消息的 createdAt
+          // 取 messageIds 中最早的消息 createdAt 作为基准
+          if (messageIds.length === 0) return 0;
+          const earliestMessage = await tx.message.findFirst({
+            where: { id: { in: messageIds } },
+            orderBy: { createdAt: "asc" },
+            select: { createdAt: true },
+          });
+          if (!earliestMessage) return 0;
+
+          const readCount = await tx.conversationMember.count({
+            where: {
+              conversationId,
+              lastReadAt: { gte: earliestMessage.createdAt },
+            },
+          });
+          return readCount;
         },
       );
 
-      // 广播已读回执给该会话其他订阅者
+      // 广播已读回执给该会话其他订阅者（附带 readByCount）
       this.broadcastToConversation(
         conversationId,
-        { type: "read", conversationId, userId, messageIds },
+        { type: "read", conversationId, userId, messageIds, readByCount },
         userId,
       );
     } catch (err) {

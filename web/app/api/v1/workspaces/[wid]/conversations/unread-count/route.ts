@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { Prisma } from "@prisma/client";
 
 /**
  * 未读消息计数 API
@@ -36,35 +37,39 @@ export async function GET(
           select: { conversationId: true, lastReadAt: true },
         });
 
-        // 2. 批量计算每个会话的未读数
-        const byConversation = await Promise.all(
-          memberships.map(async (m) => {
-            const unreadCount = m.lastReadAt
-              ? await tx.message.count({
-                  where: {
-                    conversationId: m.conversationId,
-                    createdAt: { gt: m.lastReadAt },
-                    authorId: { not: userId },
-                  },
-                })
-              : await tx.message.count({
-                  where: {
-                    conversationId: m.conversationId,
-                    authorId: { not: userId },
-                  },
-                });
-            return { conversationId: m.conversationId, unreadCount };
-          }),
+        if (memberships.length === 0) {
+          return { totalUnread: 0, byConversation: [] };
+        }
+
+        // 2. 批量计算每个会话的未读数（消除 N+1：单次 raw SQL 聚合查询）
+        const conversationIds = memberships.map((m) => m.conversationId);
+        const unreadResults = await tx.$queryRaw<{ conversation_id: string; unread_count: bigint }[]>`
+          SELECT m.conversation_id, COUNT(*)::bigint AS unread_count
+          FROM messages m
+          JOIN conversation_members cm
+            ON m.conversation_id = cm.conversation_id
+           AND cm.user_id = ${userId}::uuid
+          WHERE m.conversation_id IN (${Prisma.join(conversationIds)})
+            AND m.author_id IS DISTINCT FROM ${userId}::uuid
+            AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
+          GROUP BY m.conversation_id`;
+        const unreadMap = new Map<string, number>(
+          unreadResults.map((r) => [r.conversation_id, Number(r.unread_count)]),
         );
 
         // 3. 过滤掉 unreadCount=0 的会话，计算总数
-        const filtered = byConversation.filter((c) => c.unreadCount > 0);
-        const totalUnread = filtered.reduce(
+        const byConversation = conversationIds
+          .map((cid) => ({
+            conversationId: cid,
+            unreadCount: unreadMap.get(cid) ?? 0,
+          }))
+          .filter((c) => c.unreadCount > 0);
+        const totalUnread = byConversation.reduce(
           (sum, c) => sum + c.unreadCount,
           0,
         );
 
-        return { totalUnread, byConversation: filtered };
+        return { totalUnread, byConversation };
       },
       userId,
     );

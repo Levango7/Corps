@@ -73,6 +73,10 @@ export interface Message {
   attachments: MessageAttachment[];
   /** 通话邀请消息中的会议链接（仅 type=call_invite 时有值） */
   meetingUrl?: string;
+  /** 已读人数（由后端计算或前端根据 read 事件累计）；0 表示已发送但未读 */
+  readByCount?: number;
+  /** 通话状态（仅 type=call_invite 时有值，由 call_ended/call_rejected 事件更新） */
+  callStatus?: "ongoing" | "ended" | "rejected";
 }
 
 /** 会话（对话） */

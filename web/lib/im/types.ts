@@ -90,7 +90,7 @@ export type ServerMessage =
     }
   | { type: "presence"; userId: string; online: boolean }
   | { type: "typing"; conversationId: string; userId: string; isTyping: boolean }
-  | { type: "read"; conversationId: string; userId: string; messageIds: string[] }
+  | { type: "read"; conversationId: string; userId: string; messageIds: string[]; readByCount?: number }
   | { type: "error"; message: string };
 
 // ─── 连接状态 ──────────────────────────────────────────────────

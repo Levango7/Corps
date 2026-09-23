@@ -44,8 +44,10 @@ import {
   VideoOff,
   Crown,
   Users,
+  Clock,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
+import { useRouter } from "next/navigation";
 import { api, ApiError } from "@/lib/api";
 
 /** join API 返回的连接凭据 */
@@ -93,6 +95,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   const t = useTranslations("meetings.room");
   const tMeetings = useTranslations("meetings");
   const tButton = useTranslations("button");
+  const router = useRouter();
 
   const [state, setState] = useState<ConnectionState>("joining");
   const [errorMsg, setErrorMsg] = useState("");
@@ -104,6 +107,10 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   // 录制相关状态
   const [isHost, setIsHost] = useState(false);
   const [recording, setRecording] = useState<RecordingState>("idle");
+
+  // 通话计时器：从连接成功开始计时，断开时停止
+  const [callDuration, setCallDuration] = useState(0);
+  const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // 记忆凭据，避免 effect 重复 join
   const joinedRef = useRef(false);
@@ -127,6 +134,11 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         clearTimeout(reconnectTimeoutRef.current);
         reconnectTimeoutRef.current = null;
       }
+      // 清理通话计时器
+      if (callTimerRef.current) {
+        clearInterval(callTimerRef.current);
+        callTimerRef.current = null;
+      }
     };
   }, []);
 
@@ -147,6 +159,44 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   // 用 ref 存储 callLeaveApi，供卸载 effect 调用（避免依赖数组问题）
   const callLeaveApiRef = useRef(callLeaveApi);
   callLeaveApiRef.current = callLeaveApi;
+
+  // 通话时长格式化（mm:ss 或 hh:mm:ss）
+  const formatCallDuration = useCallback((seconds: number): string => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+    return `${pad(m)}:${pad(s)}`;
+  }, []);
+
+  // 通话结束后自动返回 IM 页面
+  const navigateBackToIM = useCallback(() => {
+    if (conversationId) {
+      router.push(`/w/${workspaceId}/im/${conversationId}`);
+    } else {
+      router.push(`/w/${workspaceId}/im`);
+    }
+  }, [router, workspaceId, conversationId]);
+
+  // 启动通话计时器
+  const startCallTimer = useCallback(() => {
+    if (callTimerRef.current) return; // 已在计时中
+    setCallDuration(0);
+    callTimerRef.current = setInterval(() => {
+      if (mountedRef.current) {
+        setCallDuration((prev) => prev + 1);
+      }
+    }, 1000);
+  }, []);
+
+  // 停止通话计时器
+  const stopCallTimer = useCallback(() => {
+    if (callTimerRef.current) {
+      clearInterval(callTimerRef.current);
+      callTimerRef.current = null;
+    }
+  }, []);
 
   // 发送 call_ended 系统消息到关联会话（best-effort，失败不阻塞）
   const sendCallEndedMessage = useCallback(async () => {
@@ -284,19 +334,25 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       reconnectTimeoutRef.current = null;
     }
     setState("connected");
-  }, []);
+    // 启动通话计时器
+    startCallTimer();
+  }, [startCallTimer]);
 
   // LiveKit 断开连接（用户主动离开或意外断开）
   const handleDisconnected = useCallback(() => {
     if (!mountedRef.current) return;
+    // 停止通话计时器
+    stopCallTimer();
 
     // High #6: 区分主动挂断与意外断开
     if (intentionalLeaveRef.current) {
-      // 主动挂断 → leave + sendCallEnded + onLeave
+      // 主动挂断 → leave + sendCallEnded + onLeave + 自动返回 IM
       setState("disconnected");
       void callLeaveApi();
       void sendCallEndedMessage();
       onLeave?.();
+      // 自动返回 IM 页面
+      navigateBackToIM();
       return;
     }
 
@@ -316,6 +372,8 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         void callLeaveApi();
         void sendCallEndedMessage();
         onLeave?.();
+        // 自动返回 IM 页面
+        navigateBackToIM();
       }
       // join 成功 → token 已更新，LiveKitRoom 自动重连
       // 等待 onConnected 回调清除超时
@@ -332,8 +390,10 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       void callLeaveApi();
       void sendCallEndedMessage();
       onLeave?.();
+      // 自动返回 IM 页面
+      navigateBackToIM();
     }, RECONNECT_TIMEOUT_MS);
-  }, [callLeaveApi, onLeave, rejoin, sendCallEndedMessage]);
+  }, [callLeaveApi, onLeave, rejoin, sendCallEndedMessage, stopCallTimer, navigateBackToIM]);
 
   // LiveKit 连接错误
   const handleError = useCallback(
@@ -353,6 +413,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   // 用户点击"返回"按钮（错误/断开状态下）— 主动离开
   const handleBack = useCallback(() => {
     intentionalLeaveRef.current = true;
+    stopCallTimer();
     if (reconnectTimeoutRef.current) {
       clearTimeout(reconnectTimeoutRef.current);
       reconnectTimeoutRef.current = null;
@@ -360,7 +421,9 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
     void callLeaveApi();
     void sendCallEndedMessage();
     onLeave?.();
-  }, [callLeaveApi, onLeave, sendCallEndedMessage]);
+    // 自动返回 IM 页面
+    navigateBackToIM();
+  }, [callLeaveApi, onLeave, sendCallEndedMessage, stopCallTimer, navigateBackToIM]);
 
   // ── Medium #16: 录制控制 ──
   const handleToggleRecording = useCallback(async () => {
@@ -507,6 +570,15 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         onError={handleError}
         className="flex-1 flex flex-col"
       >
+        {/*
+         * 通话时长显示：居中顶部，连接成功后开始计时
+         */}
+        {state === "connected" && (
+          <div className="absolute top-[var(--space-3)] left-1/2 -translate-x-1/2 z-[var(--z-sticky)] inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
+            <Clock size={14} className="text-[var(--accent)]" />
+            {formatCallDuration(callDuration)}
+          </div>
+        )}
         {/*
          * Medium #16: 录制控制条（仅 host 可见）
          * 叠加在 VideoConference 上方，不影响 LiveKit 预置控制栏

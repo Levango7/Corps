@@ -92,6 +92,10 @@ export function ConversationSettings({
   const [addQuery, setAddQuery] = useState("");
   const [addSelected, setAddSelected] = useState<Set<string>>(new Set());
 
+  // 危险操作确认弹窗状态
+  const [confirmAction, setConfirmAction] = useState<"leave" | "removeMember" | null>(null);
+  const [confirmRemoveUserId, setConfirmRemoveUserId] = useState<string | null>(null);
+
   // 当前用户在该会话中的角色
   const myRole = useMemo(
     () => members.find((m) => m.userId === currentUserId)?.role ?? "member",
@@ -192,7 +196,7 @@ export function ConversationSettings({
     [wid, cid, refreshMembers, t],
   );
 
-  /** 移除成员 */
+  /** 移除成员（实际执行，确认后调用） */
   const handleRemoveMember = useCallback(
     async (userId: string) => {
       setError(null);
@@ -207,6 +211,15 @@ export function ConversationSettings({
       }
     },
     [wid, cid, t],
+  );
+
+  /** 请求移除成员（弹出确认弹窗） */
+  const requestRemoveMember = useCallback(
+    (userId: string) => {
+      setConfirmRemoveUserId(userId);
+      setConfirmAction("removeMember");
+    },
+    [],
   );
 
   /** 打开添加成员面板 */
@@ -244,7 +257,7 @@ export function ConversationSettings({
     }
   }, [wid, cid, addSelected, refreshMembers, onUpdate, t]);
 
-  /** 退出/删除会话 */
+  /** 退出/删除会话（实际执行，确认后调用） */
   const handleLeave = useCallback(async () => {
     setError(null);
     try {
@@ -256,6 +269,28 @@ export function ConversationSettings({
       setError(err instanceof Error ? err.message : t("settingsLeaveFailed"));
     }
   }, [wid, cid, onLeave, t]);
+
+  /** 请求退出/删除会话（弹出确认弹窗） */
+  const requestLeave = useCallback(() => {
+    setConfirmAction("leave");
+  }, []);
+
+  /** 确认弹窗：确认执行危险操作 */
+  const handleConfirmAction = useCallback(() => {
+    if (confirmAction === "leave") {
+      handleLeave();
+    } else if (confirmAction === "removeMember" && confirmRemoveUserId) {
+      handleRemoveMember(confirmRemoveUserId);
+    }
+    setConfirmAction(null);
+    setConfirmRemoveUserId(null);
+  }, [confirmAction, confirmRemoveUserId, handleLeave, handleRemoveMember]);
+
+  /** 确认弹窗：取消 */
+  const handleCancelConfirm = useCallback(() => {
+    setConfirmAction(null);
+    setConfirmRemoveUserId(null);
+  }, []);
 
   /** 添加成员候选过滤 */
   const filteredCandidates = useMemo(() => {
@@ -488,7 +523,7 @@ export function ConversationSettings({
                           {/* 移除成员 */}
                           <button
                             type="button"
-                            onClick={() => handleRemoveMember(m.userId)}
+                            onClick={() => requestRemoveMember(m.userId)}
                             aria-label={t("removeMember")}
                             title={t("removeMember")}
                             className="w-7 h-7 flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] transition-colors duration-[var(--motion-fast)]"
@@ -509,7 +544,7 @@ export function ConversationSettings({
             {isGroup && (
               <button
                 type="button"
-                onClick={handleLeave}
+                onClick={requestLeave}
                 className={`w-full flex items-center justify-center gap-[var(--space-2)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] ${
                   isOwner
                     ? "bg-[var(--danger)] text-[var(--accent-fg)] hover:bg-[var(--danger)]/90"
@@ -647,6 +682,46 @@ export function ConversationSettings({
                 className="h-9 px-[var(--space-4)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
               >
                 {t("addMember")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 危险操作确认弹窗 */}
+      {confirmAction && (
+        <div
+          className="fixed inset-0 z-[calc(var(--z-modal)+1)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
+          role="dialog"
+          aria-modal="true"
+          aria-label={t("confirm")}
+          onClick={handleCancelConfirm}
+        >
+          <div
+            className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] p-[var(--space-5)]"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
+              {confirmAction === "leave"
+                ? isOwner
+                  ? t("confirmDeleteGroup")
+                  : t("confirmLeaveGroup")
+                : t("confirmRemoveMember")}
+            </h3>
+            <div className="flex items-center justify-end gap-[var(--space-2)] mt-[var(--space-4)]">
+              <button
+                type="button"
+                onClick={handleCancelConfirm}
+                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              >
+                {t("cancel")}
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmAction}
+                className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 transition-opacity duration-[var(--motion-fast)]"
+              >
+                {t("confirm")}
               </button>
             </div>
           </div>

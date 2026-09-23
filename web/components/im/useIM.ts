@@ -67,6 +67,8 @@ function payloadToMessage(p: MessagePayload): Message {
     replyTo: null,
     mentions: p.mentions,
     attachments: [],
+    // call_invite 消息默认通话状态为 ongoing
+    callStatus: p.type === "call_invite" ? "ongoing" : undefined,
   };
 }
 
@@ -374,7 +376,33 @@ export function useIM(
           case "message": {
             // 新消息 → 追加到当前会话消息列表
             if (msg.conversationId === activeCidRef.current) {
-              setMessages((prev) => [...prev, payloadToMessage(msg.message)]);
+              const newMessage = payloadToMessage(msg.message);
+              // 如果收到 call_ended 或 call_rejected 消息，
+              // 更新同会话中最近的 call_invite 消息的 callStatus
+              if (
+                newMessage.type === "call_ended" ||
+                newMessage.type === "call_rejected"
+              ) {
+                const callStatus =
+                  newMessage.type === "call_ended" ? "ended" : "rejected";
+                setMessages((prev) => {
+                  // 从末尾向前查找最近的 call_invite 消息
+                  const updated = [...prev];
+                  for (let i = updated.length - 1; i >= 0; i--) {
+                    if (updated[i].type === "call_invite") {
+                      updated[i] = { ...updated[i], callStatus };
+                      break;
+                    }
+                  }
+                  return [...updated, newMessage];
+                });
+              } else {
+                // 新 call_invite 消息默认 callStatus 为 "ongoing"
+                if (newMessage.type === "call_invite") {
+                  newMessage.callStatus = "ongoing";
+                }
+                setMessages((prev) => [...prev, newMessage]);
+              }
             } else {
               // 非当前活跃会话 → 触发浏览器通知（需权限已授予）
               // 仅在浏览器环境且权限已授予时弹出，避免在 SSR 或权限未授予时报错
@@ -490,7 +518,19 @@ export function useIM(
             break;
           }
           case "read": {
-            // 已读回执：更新消息已读状态（未来扩展）
+            // 已读回执：更新对应消息的 readByCount
+            if (msg.conversationId === activeCidRef.current) {
+              setMessages((prev) =>
+                prev.map((m) => {
+                  if (msg.messageIds.includes(m.id)) {
+                    // readByCount 递增：每收到一个用户的 read 事件，对应消息的 readByCount +1
+                    const currentCount = m.readByCount ?? 0;
+                    return { ...m, readByCount: currentCount + 1 };
+                  }
+                  return m;
+                }),
+              );
+            }
             break;
           }
           case "error": {

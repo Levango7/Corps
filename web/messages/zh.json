@@ -961,7 +961,12 @@
     "editMessageFailed": "编辑消息失败",
     "revokeMessageFailed": "撤回消息失败",
     "createConversationFailed": "创建会话失败",
-    "imagePreview": "图片预览"
+    "imagePreview": "图片预览",
+    "all": "全部",
+    "existingDirectConversation": "已存在与该用户的会话",
+    "jumpToConversation": "跳转到该会话",
+    "enterGroupName": "请输入群名",
+    "createConversationButton": "创建会话"
   },
   "im": {
     "actions": {
@@ -995,8 +1000,16 @@
     "callInvite": "邀请你加入视频通话",
     "callEnded": "通话已结束",
     "callRejected": "通话已拒绝",
+    "callInProgress": "通话进行中",
+    "callEndedLabel": "通话已结束",
     "joinCall": "加入通话",
-    "calling": "通话中…"
+    "calling": "通话中…",
+    "confirmRevoke": "确定撤回此消息？",
+    "confirmLeaveGroup": "确定退出群聊？",
+    "confirmDeleteGroup": "确定删除群聊？",
+    "confirmRemoveMember": "确定移除该成员？",
+    "confirm": "确认",
+    "sent": "已发送"
   },
   "export": {
     "title": "数据导出",

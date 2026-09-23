@@ -17,7 +17,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MessageSquare, ArrowLeft, X } from "lucide-react";
+import { MessageSquare, ArrowLeft, X, Plus } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useIM } from "./useIM";
@@ -215,9 +215,20 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
             <p className="text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)] mb-[var(--space-1)]">
               {t("selectConversationPrompt")}
             </p>
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)] max-w-xs">
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)] max-w-xs mb-[var(--space-4)]">
               {t("startChatting")}
             </p>
+            {/* 会话列表为空时显示创建会话按钮 */}
+            {conversations.length === 0 && (
+              <button
+                type="button"
+                onClick={() => setCreateOpen(true)}
+                className="inline-flex items-center gap-[var(--space-2)] h-9 px-[var(--space-4)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-fast)]"
+              >
+                <Plus size={16} />
+                {t("createConversationButton")}
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -241,6 +252,7 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
         <ConversationCreate
           workspaceId={workspaceId}
           currentUserId={currentUserId}
+          conversations={conversations}
           onCreated={handleCreated}
           onClose={() => setCreateOpen(false)}
         />

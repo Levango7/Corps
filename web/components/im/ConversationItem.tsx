@@ -19,6 +19,7 @@
  */
 
 import { useTranslations, useLocale } from "next-intl";
+import { BellOff } from "lucide-react";
 import type { Conversation } from "./types";
 import { ConversationItemClient } from "./ConversationItemClient";
 
@@ -118,6 +119,9 @@ export function ConversationItem({
   // 未读数
   const unread = conversation.unreadCount ?? 0;
 
+  // 当前用户在该会话中是否静音
+  const isMuted = conversation.members.find((m) => m.userId === currentUserId)?.muted ?? false;
+
   return (
     <ConversationItemClient
       conversationId={conversation.id}
@@ -129,6 +133,7 @@ export function ConversationItem({
       timeStr={timeStr}
       unread={unread}
       isOnline={isOnline}
+      isMuted={isMuted}
       onlineLabel={tChat("online")}
       noMessagesLabel={tChat("noMessages")}
       onSelect={onSelect}

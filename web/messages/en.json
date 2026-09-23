@@ -961,7 +961,12 @@
     "editMessageFailed": "Failed to edit message",
     "revokeMessageFailed": "Failed to revoke message",
     "createConversationFailed": "Failed to create conversation",
-    "imagePreview": "Image Preview"
+    "imagePreview": "Image Preview",
+    "all": "All",
+    "existingDirectConversation": "A conversation with this user already exists",
+    "jumpToConversation": "Jump to conversation",
+    "enterGroupName": "Please enter a group name",
+    "createConversationButton": "Create conversation"
   },
   "im": {
     "actions": {
@@ -995,8 +1000,16 @@
     "callInvite": "invited you to a video call",
     "callEnded": "Call ended",
     "callRejected": "Call rejected",
+    "callInProgress": "Call in progress",
+    "callEndedLabel": "Call ended",
     "joinCall": "Join Call",
-    "calling": "Calling…"
+    "calling": "Calling…",
+    "confirmRevoke": "Revoke this message?",
+    "confirmLeaveGroup": "Leave this group?",
+    "confirmDeleteGroup": "Delete this group?",
+    "confirmRemoveMember": "Remove this member?",
+    "confirm": "Confirm",
+    "sent": "Sent"
   },
   "export": {
     "title": "Data export",

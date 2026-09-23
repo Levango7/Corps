@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { Prisma } from "@prisma/client";
 
 /**
  * 独立 IM 会话 API（任务 212）
@@ -99,50 +100,51 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         const page = hasMore ? conversations.slice(0, limit) : conversations;
         const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
 
-        // 批量计算每个会话的未读数（messages where createdAt > member.lastReadAt）
-        const items = await Promise.all(
-          page.map(async (conv) => {
-            const myMembership = conv.members.find((m) => m.userId === userId);
-            const lastReadAt = myMembership?.lastReadAt;
-            const unreadCount = lastReadAt
-              ? await tx.message.count({
-                  where: {
-                    conversationId: conv.id,
-                    createdAt: { gt: lastReadAt },
-                    authorId: { not: userId },
-                  },
-                })
-              : // lastReadAt 为 null 表示从未读过——统计所有非自己发送的消息
-                await tx.message.count({
-                  where: {
-                    conversationId: conv.id,
-                    authorId: { not: userId },
-                  },
-                });
-            return {
-              id: conv.id,
-              type: conv.type,
-              title: conv.title,
-              avatar: conv.avatar,
-              description: conv.description,
-              createdBy: conv.createdBy,
-              createdAt: conv.createdAt,
-              updatedAt: conv.updatedAt,
-              lastMessageAt: conv.lastMessageAt,
-              lastMessage: conv.messages[0] ?? null,
-              unreadCount,
-              members: conv.members.map((m) => ({
-                id: m.id,
-                userId: m.userId,
-                role: m.role,
-                joinedAt: m.joinedAt,
-                lastReadAt: m.lastReadAt,
-                muted: m.muted,
-                user: m.user,
-              })),
-            };
-          }),
+        // 批量计算每个会话的未读数（消除 N+1：单次 raw SQL 聚合查询）
+        // 未读定义：createdAt > member.lastReadAt 且 authorId != userId
+        // lastReadAt 为 null 时，统计所有非自己发送的消息
+        const conversationIds = page.map((conv) => conv.id);
+        const unreadResults = conversationIds.length > 0
+          ? await tx.$queryRaw<{ conversation_id: string; unread_count: bigint }[]>`
+              SELECT m.conversation_id, COUNT(*)::bigint AS unread_count
+              FROM messages m
+              JOIN conversation_members cm
+                ON m.conversation_id = cm.conversation_id
+               AND cm.user_id = ${userId}::uuid
+              WHERE m.conversation_id IN (${Prisma.join(conversationIds)})
+                AND m.author_id IS DISTINCT FROM ${userId}::uuid
+                AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
+              GROUP BY m.conversation_id`
+          : [];
+        const unreadMap = new Map<string, number>(
+          unreadResults.map((r) => [r.conversation_id, Number(r.unread_count)]),
         );
+
+        const items = page.map((conv) => {
+          const unreadCount = unreadMap.get(conv.id) ?? 0;
+          return {
+            id: conv.id,
+            type: conv.type,
+            title: conv.title,
+            avatar: conv.avatar,
+            description: conv.description,
+            createdBy: conv.createdBy,
+            createdAt: conv.createdAt,
+            updatedAt: conv.updatedAt,
+            lastMessageAt: conv.lastMessageAt,
+            lastMessage: conv.messages[0] ?? null,
+            unreadCount,
+            members: conv.members.map((m) => ({
+              id: m.id,
+              userId: m.userId,
+              role: m.role,
+              joinedAt: m.joinedAt,
+              lastReadAt: m.lastReadAt,
+              muted: m.muted,
+              user: m.user,
+            })),
+          };
+        });
 
         return { items, nextCursor, hasMore };
       },

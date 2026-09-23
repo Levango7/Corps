@@ -81,6 +81,41 @@ function groupByDate(messages: Message[], locale: string, t: (key: string, value
   return groups;
 }
 
+/**
+ * 预计算每个 call_invite 消息的通话是否已结束。
+ * 如果同一会话中，该 call_invite 之后存在 call_ended 或 call_rejected 消息，
+ * 则认为通话已结束。
+ * 返回 Map<messageId, boolean>，仅包含 call_invite 类型的消息。
+ */
+function computeCallEndedSet(messages: Message[]): Map<string, boolean> {
+  const result = new Map<string, boolean>();
+  // 按会话分组，记录每个会话中 call_invite 的索引和后续是否有 call_ended/call_rejected
+  const conversationCallInvites = new Map<string, { msgId: string; ended: boolean }[]>();
+
+  for (const msg of messages) {
+    if (msg.type === "call_invite") {
+      const list = conversationCallInvites.get(msg.conversationId ?? "") ?? [];
+      list.push({ msgId: msg.id, ended: false });
+      conversationCallInvites.set(msg.conversationId ?? "", list);
+    } else if (msg.type === "call_ended" || msg.type === "call_rejected") {
+      // 标记该会话中所有尚未结束的 call_invite 为已结束
+      const list = conversationCallInvites.get(msg.conversationId ?? "");
+      if (list) {
+        for (const item of list) {
+          if (!item.ended) item.ended = true;
+        }
+      }
+    }
+  }
+
+  for (const list of conversationCallInvites.values()) {
+    for (const item of list) {
+      result.set(item.msgId, item.ended);
+    }
+  }
+  return result;
+}
+
 export function MessageList({
   messages,
   currentUserId,
@@ -105,6 +140,8 @@ export function MessageList({
 
   // 按日期分组
   const groups = useMemo(() => groupByDate(messages, locale, t), [messages, locale, t]);
+  // 预计算 call_invite 消息的通话状态
+  const callEndedMap = useMemo(() => computeCallEndedSet(messages), [messages]);
 
   /** 滚动到底部 */
   const scrollToBottom = useCallback((instant?: boolean) => {
@@ -229,6 +266,7 @@ export function MessageList({
                     onEdit={onEdit}
                     onRevoke={onRevoke}
                     onReply={onReply}
+                    callEnded={callEndedMap.get(msg.id)}
                   />
                 );
               })}

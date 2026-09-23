@@ -7,6 +7,7 @@
  */
 
 import { memo } from "react";
+import { BellOff } from "lucide-react";
 
 interface ConversationItemClientProps {
   conversationId: string;
@@ -18,6 +19,7 @@ interface ConversationItemClientProps {
   timeStr: string | null;
   unread: number;
   isOnline: boolean;
+  isMuted: boolean;
   onlineLabel: string;
   noMessagesLabel: string;
   onSelect: (id: string) => void;
@@ -33,6 +35,7 @@ function ConversationItemClientImpl({
   timeStr,
   unread,
   isOnline,
+  isMuted,
   onlineLabel,
   noMessagesLabel,
   onSelect,
@@ -72,12 +75,15 @@ function ConversationItemClientImpl({
       {/* 主体 */}
       <div className="flex-1 min-w-0">
         <div className="flex items-center justify-between gap-[var(--space-2)]">
-          {/* 名称 */}
+          {/* 名称 + 静音标记 */}
           <span
-            className="truncate text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]"
+            className="truncate text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] flex items-center gap-[var(--space-1)]"
             title={displayName}
           >
-            {displayName}
+            <span className="truncate">{displayName}</span>
+            {isMuted && (
+              <BellOff size={14} className="shrink-0 text-[var(--meta)]" />
+            )}
           </span>
           {/* 时间 */}
           {timeStr && (

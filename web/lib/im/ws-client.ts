@@ -34,6 +34,8 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 const RECONNECT_BASE_DELAY_MS = 1_000;
 /** 重连最大延迟：30 秒 */
 const RECONNECT_MAX_DELAY_MS = 30_000;
+/** onerror 后等待 onclose 的超时时间（ms），超时后强制清理并触发重连 */
+const ONERROR_DISCONNECT_TIMEOUT_MS = 30_000;
 
 /**
  * 根据当前页面 location 构建 WebSocket URL。
@@ -105,6 +107,10 @@ export function useIMWebSocket(workspaceId: string): {
   const handlersRef = useRef<Set<(msg: ServerMessage) => void>>(new Set());
   // 已认证标记（连接建立后等待服务端确认，此处简化为连接即认证）
   const authedRef = useRef<boolean>(false);
+  // 已订阅会话集合（重连后自动恢复所有订阅）
+  const subscribedConversationsRef = useRef<Set<string>>(new Set());
+  // onerror 超时定时器引用（防止 onclose 未触发时资源泄漏）
+  const onerrorTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /**
    * 清理心跳定时器。
@@ -123,6 +129,16 @@ export function useIMWebSocket(workspaceId: string): {
     if (reconnectTimerRef.current !== null) {
       clearTimeout(reconnectTimerRef.current);
       reconnectTimerRef.current = null;
+    }
+  }, []);
+
+  /**
+   * 清理 onerror 超时定时器。
+   */
+  const clearOerrorTimeout = useCallback(() => {
+    if (onerrorTimeoutRef.current !== null) {
+      clearTimeout(onerrorTimeoutRef.current);
+      onerrorTimeoutRef.current = null;
     }
   }, []);
 
@@ -175,11 +191,16 @@ export function useIMWebSocket(workspaceId: string): {
 
     wsRef.current = ws;
 
-    // 连接建立：更新状态 + 启动心跳 + 重置重连计数
+    // 连接建立：更新状态 + 恢复订阅 + 启动心跳 + 重置重连计数
     ws.onopen = () => {
       setStatus("connected");
       authedRef.current = true;
       reconnectAttemptRef.current = 0;
+
+      // 重连后自动恢复所有订阅
+      for (const conversationId of subscribedConversationsRef.current) {
+        sendRaw({ type: "subscribe", conversationId });
+      }
 
       // 启动心跳定时器
       clearHeartbeat();
@@ -211,6 +232,7 @@ export function useIMWebSocket(workspaceId: string): {
     // 连接关闭：清理资源 + 触发重连（非主动断开时）
     ws.onclose = () => {
       clearHeartbeat();
+      clearOerrorTimeout();
       authedRef.current = false;
 
       if (intentionalCloseRef.current) {
@@ -229,11 +251,37 @@ export function useIMWebSocket(workspaceId: string): {
       }, delay);
     };
 
-    // 连接错误：更新状态（onclose 会随后触发，重连逻辑在那里处理）
+    // 连接错误：更新状态 + 启动超时兜底定时器
+    // 某些网络异常下 onclose 可能不触发，启动 30 秒定时器，
+    // 若 onclose 仍未触发则强制清理并触发重连（参考服务端 ws-server.ts 的 socketErrorTimer 模式）
     ws.onerror = () => {
       setStatus("error");
+      if (onerrorTimeoutRef.current === null) {
+        onerrorTimeoutRef.current = setTimeout(() => {
+          console.warn("[im-ws-client] onerror 后 30s 未收到 onclose，强制清理并触发重连");
+          onerrorTimeoutRef.current = null;
+          clearHeartbeat();
+          authedRef.current = false;
+          // 尝试关闭 ws（可能已处于异常状态）
+          try {
+            ws.close();
+          } catch {
+            // 忽略关闭错误
+          }
+          // 非主动断开时触发重连
+          if (!intentionalCloseRef.current) {
+            setStatus("disconnected");
+            const delay = reconnectDelay(reconnectAttemptRef.current);
+            reconnectAttemptRef.current += 1;
+            clearReconnectTimer();
+            reconnectTimerRef.current = setTimeout(() => {
+              connect();
+            }, delay);
+          }
+        }, ONERROR_DISCONNECT_TIMEOUT_MS);
+      }
     };
-  }, [workspaceId, clearHeartbeat, clearReconnectTimer, sendRaw]);
+  }, [workspaceId, clearHeartbeat, clearReconnectTimer, clearOerrorTimeout, sendRaw]);
 
   /**
    * 主动断开连接。
@@ -245,6 +293,7 @@ export function useIMWebSocket(workspaceId: string): {
     intentionalCloseRef.current = true;
     clearHeartbeat();
     clearReconnectTimer();
+    clearOerrorTimeout();
     const ws = wsRef.current;
     if (ws) {
       try {
@@ -255,7 +304,7 @@ export function useIMWebSocket(workspaceId: string): {
     }
     wsRef.current = null;
     setStatus("disconnected");
-  }, [clearHeartbeat, clearReconnectTimer]);
+  }, [clearHeartbeat, clearReconnectTimer, clearOerrorTimeout]);
 
   /**
    * 发送客户端消息。
@@ -269,10 +318,11 @@ export function useIMWebSocket(workspaceId: string): {
 
   /**
    * 订阅指定会话。
-   * 连接已建立时立即发送 subscribe 消息。
+   * 连接已建立时立即发送 subscribe 消息，并记录到订阅集合以便重连后恢复。
    */
   const subscribe = useCallback(
     (conversationId: string): void => {
+      subscribedConversationsRef.current.add(conversationId);
       sendRaw({ type: "subscribe", conversationId });
     },
     [sendRaw],
@@ -280,9 +330,11 @@ export function useIMWebSocket(workspaceId: string): {
 
   /**
    * 取消订阅指定会话。
+   * 从订阅集合中移除，重连后不再恢复该会话的订阅。
    */
   const unsubscribe = useCallback(
     (conversationId: string): void => {
+      subscribedConversationsRef.current.delete(conversationId);
       sendRaw({ type: "unsubscribe", conversationId });
     },
     [sendRaw],

@@ -52,6 +52,7 @@ export default function MeetingRoomPage({
   const router = useRouter();
   const searchParams = useSearchParams();
   const conversationId = searchParams.get("conversationId") ?? undefined;
+  const skipLobby = searchParams.get("skipLobby") === "true";
   const [wid, setWid] = useState<string | null>(null);
   const [mid, setMid] = useState<string | null>(null);
   const [stage, setStage] = useState<Stage>("loading");
@@ -105,19 +106,23 @@ export default function MeetingRoomPage({
         // Medium #19：检查 status === "ended"，显示"会议已结束"页面
         if (detail.status === "ended") {
           setStage("ended");
+        } else if (skipLobby) {
+          // 即时通话场景：跳过大厅，直接进入会议室
+          setStage("room");
         } else {
           setStage("lobby");
         }
       } else {
         // Medium #20：fetch 失败用 i18n 而非硬编码 "Meeting"
         setMeetingTitle(t("title"));
-        setStage("lobby");
+        // skipLobby 时即使 fetch 失败也直接进入会议室
+        setStage(skipLobby ? "room" : "lobby");
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [params, t]);
+  }, [params, t, skipLobby]);
 
   // 返回会议列表
   const goToList = useCallback(() => {
