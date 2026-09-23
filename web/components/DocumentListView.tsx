@@ -19,6 +19,7 @@ import { DocumentPreview } from "@/components/DocumentPreview";
 import { useToast } from "@/components/Toast";
 import { api } from "@/lib/api";
 import { ExportPreview, type BatchDocument } from "@/components/ExportPreview";
+import { DocumentListSkeleton } from "@/components/Skeleton";
 import { motion, AnimatePresence, LayoutGroup } from "framer-motion";
 import { useMotionTokens } from "@/lib/motion-tokens";
 
@@ -343,10 +344,7 @@ export function DocumentListView({ wid }: { wid: string }) {
       {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {loading ? (
-        <div className="py-[var(--space-12)] text-center text-[var(--muted)]">
-          <Loader2 size={20} className="inline animate-spin mr-2" />
-          {t("loading")}
-        </div>
+        <DocumentListSkeleton count={5} />
       ) : items.length === 0 ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">
           <FileText size={36} className="mx-auto mb-3 opacity-50" />

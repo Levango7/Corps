@@ -43,15 +43,15 @@
   --overlay: rgba(16, 24, 29, 0.32);
 
   /* —— shimmer 扫光渐变（骨架屏加载态）
-     基于现有 surface token 派生，跟随主题自动切换。
-     --shimmer-hi 为高光条色，混入微量 accent 提供品牌色调。 —— */
+      基于现有 surface token 派生，跟随主题自动切换。
+      --shimmer-hi 为高光条色，混入微量 accent 提供品牌色调。
+      来源：design-tokens.css — 此处保留是 globals.css :root 块完整性需要 —— */
   --shimmer-from: var(--surface-2);
   --shimmer-to:   var(--surface-3);
   --shimmer-hi:   color-mix(in srgb, var(--surface) 60%, var(--p-accent) 4%);
 
   /* —— ripple 涟漪色（accent 极淡派生，跟随主题自动切换）——
-     design-tokens.css 未定义此 token，在此补充（与 --shimmer-* 同级）。
-     来源：设计文档 §1.3 L93。 */
+      来源：design-tokens.css — 此处保留是 globals.css :root 块完整性需要 */
   --ripple: color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
@@ -64,10 +64,12 @@
   /* 遮罩层深色压暗 */
   --overlay: rgba(0, 0, 0, 0.56);
 
-  /* shimmer 高光条：深色下提亮 base 并增加 accent 比例，保证扫光可见 */
+  /* shimmer 高光条：深色下提亮 base 并增加 accent 比例，保证扫光可见
+     来源：design-tokens.css — 此处保留是 globals.css [data-theme="dark"] 块完整性需要 */
   --shimmer-hi: color-mix(in srgb, var(--surface-3) 70%, var(--p-accent) 8%);
 
-  /* ripple 涟漪色：深色下提高 accent 比例保证可见（来源：设计文档 §1.3 L107） */
+  /* ripple 涟漪色：深色下提高 accent 比例保证可见
+     来源：design-tokens.css — 此处保留是 globals.css [data-theme="dark"] 块完整性需要 */
   --ripple: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 

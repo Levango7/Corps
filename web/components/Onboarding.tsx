@@ -13,6 +13,7 @@ import {
   PartyPopper,
   Loader2,
 } from "lucide-react";
+import { Ripple } from "@/components/Ripple";
 
 interface OnboardingProps {
   wid: string;
@@ -359,7 +360,7 @@ export default function Onboarding({
               <Loader2 size={15} className="animate-spin" />
             ) : (
               <>
-                {current.action.label}
+                <Ripple>{current.action.label}</Ripple>
                 <ArrowRight size={15} />
               </>
             )}

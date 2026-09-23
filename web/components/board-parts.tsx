@@ -11,7 +11,7 @@
 import { memo, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
 import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle } from "lucide-react";
-import { Skeleton } from "@/components/Skeleton";
+import { Skeleton, BoardColumnSkeleton } from "@/components/Skeleton";
 import { DueTag } from "@/components/DueTag";
 import { TaskLabels } from "@/components/TaskLabels";
 import type { Task } from "@/lib/types";
@@ -25,7 +25,7 @@ import {
 } from "@/lib/task-meta";
 import { formatTaskId } from "@/lib/format";
 import { useTranslations } from "next-intl";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion, LayoutGroup, AnimatePresence } from "framer-motion";
 import { MOTION } from "@/lib/motion-tokens";
 
 /** 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转 */
@@ -44,6 +44,7 @@ interface BoardColumnProps {
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onDropOnColumn: (sourceId: string, status: Task["status"]) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
+  loading?: boolean;
 }
 
 /** 单个看板列：列头 + 任务卡片列表。 */
@@ -60,9 +61,16 @@ export function BoardColumn({
   onDropOnTask,
   onDropOnColumn,
   onMoveByStep,
+  loading,
 }: BoardColumnProps) {
   const [dragOver, setDragOver] = useState(false);
   const tStatus = useTranslations("status");
+
+  // 加载态：用 BoardColumnSkeleton 替代整列内容，避免列容器样式跳动
+  if (loading) {
+    return <BoardColumnSkeleton />;
+  }
+
   return (
     <div
       // data-column：E2E 拖拽 drop 目标定位（移动端列选择器按钮与桌面列头同名，
@@ -90,24 +98,27 @@ export function BoardColumn({
         </span>
       </div>
 
-      <div className="space-y-2">
-        {columnTasks.map((task) => (
-          <BoardCard
-            key={task.id}
-            task={task}
-            wid={wid}
-            draggingId={draggingId}
-            setDraggingId={setDraggingId}
-            dragStartRef={dragStartRef}
-            selected={selectedIds.has(task.id)}
-            selectionMode={selectionMode}
-            onToggleSelect={onToggleSelect}
-
-            onDropOnTask={onDropOnTask}
-            onMoveByStep={onMoveByStep}
-          />
-        ))}
-      </div>
+      <LayoutGroup id={`column-${column.id}`}>
+        <div className="space-y-2">
+          <AnimatePresence mode="popLayout" initial={false}>
+            {columnTasks.map((task) => (
+              <BoardCard
+                key={task.id}
+                task={task}
+                wid={wid}
+                draggingId={draggingId}
+                setDraggingId={setDraggingId}
+                dragStartRef={dragStartRef}
+                selected={selectedIds.has(task.id)}
+                selectionMode={selectionMode}
+                onToggleSelect={onToggleSelect}
+                onDropOnTask={onDropOnTask}
+                onMoveByStep={onMoveByStep}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      </LayoutGroup>
     </div>
   );
 }
@@ -150,11 +161,16 @@ function BoardCardImpl({
 
   return (
     <motion.div
+      layout="position"
       draggable={!selectionMode}
       role="button"
       tabIndex={0}
       // hover 抬升 2px（y: -2）；拖拽中 / 降级时不抬升，避免与拖拽视觉冲突
       whileHover={reduceMotion || draggingId === task.id ? undefined : { y: -2 }}
+      // 进出动画：AnimatePresence 驱动卡片增删时的淡入/淡出 + 微缩放
+      initial={{ opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.92 }}
       transition={{ duration: MOTION.fast, ease: MOTION.easeStandard }}
       onClick={(e) => {
         if (selectionMode) {

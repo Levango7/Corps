@@ -14,6 +14,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Loader2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { Ripple } from "@/components/Ripple";
 
 /** 会议类型 */
 type MeetingType = "instant" | "scheduled" | "recurring";
@@ -439,11 +440,13 @@ export function MeetingCreate({
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
-              {submitting
-                ? t("creating")
-                : isEdit
-                  ? tButton("save")
-                  : t("create")}
+              <Ripple>
+                {submitting
+                  ? t("creating")
+                  : isEdit
+                    ? tButton("save")
+                    : t("create")}
+              </Ripple>
             </button>
           </div>
         </form>

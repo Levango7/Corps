@@ -44,6 +44,7 @@ import { QuickDiagram } from "@/components/QuickDiagram";
 import { useToast } from "@/components/Toast";
 import { ExportPreview } from "@/components/ExportPreview";
 import { DocumentComments } from "@/components/DocumentComments";
+import { Ripple } from "@/components/Ripple";
 import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 
 export interface DocumentEditorProps {
@@ -600,7 +601,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
             ) : (
               <Globe size={14} />
             )}
-            {t("publish")}
+            <Ripple>{t("publish")}</Ripple>
           </button>
         </div>
       </div>

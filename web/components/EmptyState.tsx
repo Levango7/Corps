@@ -26,6 +26,7 @@
 import type { ReactNode } from "react";
 import { motion } from "framer-motion";
 import { useMotionTokens } from "@/lib/motion-tokens";
+import { Ripple } from "@/components/Ripple";
 
 type EmptyStateType =
   | "inbox"
@@ -303,7 +304,7 @@ export default function EmptyState({
             onClick={action.onClick}
             className="mt-[var(--space-5)] inline-flex items-center gap-2 px-[var(--space-4)] py-[var(--space-2)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
           >
-            {action.label}
+            <Ripple>{action.label}</Ripple>
           </button>
         </motion.div>
       )}

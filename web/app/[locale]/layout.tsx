@@ -27,10 +27,10 @@ export const viewport: Viewport = {
   initialScale: 1,
   viewportFit: "cover",
   interactiveWidget: "resizes-content",
-  // PWA 顶栏配色：跟随系统主题，对应 design token --p-accent（浅 #4263EB / 深 #5B8EF5）。
+  // PWA 顶栏配色：跟随系统主题，对应 design token --p-accent（浅 #4263EB / 深 #4973D1）。
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#4263EB" },
-    { media: "(prefers-color-scheme: dark)", color: "#5B8EF5" },
+    { media: "(prefers-color-scheme: dark)", color: "#4973D1" },
   ],
 };
 

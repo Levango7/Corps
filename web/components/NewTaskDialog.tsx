@@ -7,6 +7,7 @@ import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import type { Label, Milestone } from "@/lib/types";
 import { PRIORITY_COLORS } from "@/lib/task-meta";
 import { useTranslations } from "next-intl";
+import { Ripple } from "@/components/Ripple";
 
 type Status = "todo" | "in_progress" | "review" | "done";
 type Priority = "low" | "medium" | "high" | "urgent";
@@ -396,7 +397,7 @@ export default function NewTaskDialog({
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
-              {t("actionCreate")}
+              <Ripple>{t("actionCreate")}</Ripple>
             </button>
           </div>
         </form>

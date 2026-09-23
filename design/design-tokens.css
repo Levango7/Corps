@@ -85,8 +85,8 @@
 
   /* —— 强调色（派生经 color-mix，租户覆盖 --accent 即联动）—— */
   --accent:         var(--p-accent);
-  --accent-hover:   color-mix(in srgb, var(--accent) 88%, #000);
-  --accent-active:  color-mix(in srgb, var(--accent) 78%, #000);
+  --accent-hover:   color-mix(in srgb, var(--accent) 88%, var(--mix-black));
+  --accent-active:  color-mix(in srgb, var(--accent) 78%, var(--mix-black));
   --accent-soft:    color-mix(in srgb, var(--accent) 10%, transparent);
   --accent-soft-fg: var(--accent);
   --on-accent:      var(--p-on-accent);
@@ -218,6 +218,22 @@
    * 50ms 间隔在 12 项以内节奏舒适；超出时通过 --stagger-index 自定义。 */
   --motion-stagger-delay: 50ms;
 
+  /* —— UI 打磨补充 token（来源：FEATURE-DESIGN-ui-polish.md §1.3）—— */
+  /* shimmer 扫光渐变基准色 */
+  --shimmer-from: color-mix(in srgb, var(--surface-2) 100%, transparent);
+  --shimmer-to:   color-mix(in srgb, var(--surface-3) 100%, transparent);
+  --shimmer-hi:   color-mix(in srgb, var(--surface) 60%, var(--p-accent) 4%);
+
+  /* ripple 涟漪色 */
+  --ripple: color-mix(in srgb, var(--accent) 12%, transparent);
+
+  /* 弹簧物理（framer-motion spring config 复用） */
+  --spring-stiffness: 300;
+  --spring-damping:   30;
+
+  /* 3D 翻转透视 */
+  --perspective-card: 1000px;
+
   /* —— 层级 —— */
   --z-base:    0;
   --z-dropdown: 1000;
@@ -279,22 +295,22 @@
 
   --p-fg:   #F4F4F2;
   --p-fg-2: #C8C8C2;
-  --p-muted:#8B8B82;
+  --p-muted:#909087;
   --p-meta: #6A6A62;
 
   --p-border:      #2A2A2E;
   --p-border-soft: #1F1F23;
 
-  --p-accent:      #5B8EF5;
-  --p-accent-dk:   #7B9CF7;
-  --p-accent-dkr:  #94B0F9;
-  --p-accent-soft: rgba(91, 142, 245, 0.16);
+  --p-accent:      #4973D1;
+  --p-accent-dk:   #5B8EF5;
+  --p-accent-dkr:  #7B9CF7;
+  --p-accent-soft: rgba(73, 115, 209, 0.16);
   --p-on-accent:   #FFFFFF;
 
   --p-success: #34C98A;
   --p-warn:    #E0A93A;
   --p-danger:  #F25B67;
-  --p-accent-ring: rgba(91, 142, 245, 0.40);
+  --p-accent-ring: rgba(73, 115, 209, 0.40);
 
   --elev-sm: 0 1px 2px rgba(0,0,0,0.36);
   --elev-md: 0 4px 12px rgba(0,0,0,0.46);
@@ -314,6 +330,12 @@
   --shell-edge:      color-mix(in srgb, var(--shell-blue) 38%, transparent);
   --shell-edge-soft: color-mix(in srgb, var(--shell-blue) 16%, var(--border) 55%);
   --mix-black: #000;
+
+  /* —— UI 打磨补充 token 深色覆盖（来源：FEATURE-DESIGN-ui-polish.md §1.3）—— */
+  /* shimmer 高光条：深色下提亮 */
+  --shimmer-hi: color-mix(in srgb, var(--surface-3) 70%, var(--p-accent) 8%);
+  /* ripple 涟漪色：深色下提高 accent 比例 */
+  --ripple: color-mix(in srgb, var(--accent) 16%, transparent);
 }
 
 /* ----------------------------------------------------------------------------

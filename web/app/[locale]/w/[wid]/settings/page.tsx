@@ -10,6 +10,7 @@ import { SettingsDataExport } from "@/components/settings/SettingsDataExport";
 import { SettingsOverview } from "@/components/settings/SettingsOverview";
 import { SettingsDangerZone } from "@/components/settings/SettingsDangerZone";
 import { Skeleton } from "@/components/Skeleton";
+import { Ripple } from "@/components/Ripple";
 import type { Workspace } from "@/components/settings/types";
 
 /**
@@ -227,7 +228,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
               className="w-full sm:w-auto min-h-[44px] sm:h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               {busy && <Loader2 size={15} className="animate-spin" />}
-              {t("save")}
+              <Ripple>{t("save")}</Ripple>
             </button>
             {!dirty && !busy && (
               <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
