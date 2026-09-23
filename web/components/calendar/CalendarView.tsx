@@ -195,13 +195,14 @@ export function CalendarView({ wid }: { wid: string }) {
 
   return (
     <div className="flex flex-col h-full p-[var(--space-4)]">
-      {/* 顶部工具栏 */}
-      <div className="flex items-center justify-between mb-[var(--space-4)]">
-        <div className="flex items-center gap-[var(--space-2)]">
-          <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mr-[var(--space-4)]">
+      {/* 顶部工具栏 — 手机端两行布局，sm 以上单行 */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-[var(--space-2)] mb-[var(--space-4)]">
+        {/* 第一行：标题（手机端独占一行，sm 以上与视图切换同行） */}
+        <div className="flex items-center justify-between sm:justify-start gap-[var(--space-2)]">
+          <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] sm:mr-[var(--space-4)]">
             {t("title")}
           </h1>
-          {/* 视图切换 */}
+          {/* 视图切换 — 手机端在第一行右侧，sm 以上在标题旁边 */}
           <div
             className="flex items-center rounded-[var(--radius-md)] overflow-hidden"
             style={{ border: "1px solid var(--border)" }}
@@ -223,8 +224,8 @@ export function CalendarView({ wid }: { wid: string }) {
           </div>
         </div>
 
-        {/* 新建事件 + AI 排程按钮 */}
-        <div className="flex items-center gap-[var(--space-2)]">
+        {/* 第二行：操作按钮（手机端独占一行，sm 以上在右侧） */}
+        <div className="flex items-center gap-[var(--space-2)] sm:justify-end">
           <button
             onClick={handleNewEvent}
             className="flex items-center gap-1 px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[length:var(--text-sm)] cursor-pointer"

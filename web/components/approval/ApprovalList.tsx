@@ -286,7 +286,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
       <div
         role="tablist"
         aria-label={t("title")}
-        className="inline-flex items-center gap-1 p-1 mb-[var(--space-4)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)]"
+        className="inline-flex items-center gap-1 p-1 mb-[var(--space-4)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
       >
         {tabs.map((tabItem) => {
           const active = tabItem.key === tab;

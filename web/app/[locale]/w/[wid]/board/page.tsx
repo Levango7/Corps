@@ -550,7 +550,7 @@ function BoardView(props: BoardViewProps) {
     <>
       {/* < md：单列选择器 */}
       <div className="md:hidden">
-        <div className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)] mb-[var(--space-4)] w-full">
+        <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)] mb-[var(--space-4)] w-full">
           {COLUMNS.map((col) => (
             <button
               key={col.id}
@@ -644,7 +644,7 @@ function ListView(props: ListViewProps) {
           <button
             onClick={onPrevPage}
             disabled={safeListPage <= 1}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="px-3 py-1.5 min-h-[44px] md:min-h-0 min-w-[44px] md:min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("prevPage")}
           >
             {t("prevPage")}
@@ -655,7 +655,7 @@ function ListView(props: ListViewProps) {
           <button
             onClick={onNextPage}
             disabled={safeListPage >= listTotalPages}
-            className="px-3 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="px-3 py-1.5 min-h-[44px] md:min-h-0 min-w-[44px] md:min-w-0 rounded-[var(--radius-md)] border border-[var(--border)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             aria-label={t("nextPage")}
           >
             {t("nextPage")}

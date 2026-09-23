@@ -26,6 +26,7 @@ import {
   Pencil,
   Play,
   User,
+  MoreVertical,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { MeetingCreate, type EditableMeeting } from "./MeetingCreate";
@@ -438,6 +439,7 @@ function MeetingRow({
 }) {
   const t = useTranslations("meeting");
   const tButton = useTranslations("button");
+  const [menuOpen, setMenuOpen] = useState(false);
 
   const time = meeting.startedAt || meeting.scheduledAt || meeting.endedAt;
   const timeLabel = time ? new Date(time).toLocaleString() : "—";
@@ -446,6 +448,9 @@ function MeetingRow({
     meeting.status === "ended" &&
     meeting.recordingUrl &&
     !meeting.recordingUrl.startsWith("egress:");
+
+  // 是否有次要操作（查看录制/编辑）
+  const hasSecondaryActions = hasRecording || (meeting.status === "scheduled" && canEdit);
 
   return (
     <li className="flex items-center gap-3 px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
@@ -483,29 +488,56 @@ function MeetingRow({
         )}
       </div>
       <div className="flex items-center gap-2 shrink-0">
-        {/* 查看录制（已结束 + 有录制 URL） */}
-        {hasRecording && (
-          <a
-            href={meeting.recordingUrl as string}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-          >
-            <Play size={14} />
-            {tButton("viewAll")}
-          </a>
+        {/* 手机端次要操作下拉菜单 */}
+        {hasSecondaryActions && (
+          <div className="relative md:hidden">
+            <button
+              type="button"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="inline-flex items-center justify-center h-8 w-8 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+              aria-label="More actions"
+            >
+              <MoreVertical size={14} />
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  className="fixed inset-0 z-[var(--z-dropdown)]"
+                  onClick={() => setMenuOpen(false)}
+                />
+                <div className="absolute right-0 top-full mt-1 min-w-[140px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1 z-[calc(var(--z-dropdown)+1)]">
+                  {hasRecording && (
+                    <a
+                      href={meeting.recordingUrl as string}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setMenuOpen(false)}
+                      className="flex items-center gap-2 px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                    >
+                      <Play size={14} />
+                      {tButton("viewAll")}
+                    </a>
+                  )}
+                  {meeting.status === "scheduled" && canEdit && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        onEdit(meeting);
+                        setMenuOpen(false);
+                      }}
+                      className="flex items-center gap-2 w-full px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                    >
+                      <Pencil size={14} />
+                      {tButton("edit")}
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         )}
-        {/* 编辑（仅 scheduled 状态 + 创建者/admin 可见） */}
-        {meeting.status === "scheduled" && canEdit && (
-          <button
-            type="button"
-            onClick={() => onEdit(meeting)}
-            className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
-          >
-            <Pencil size={14} />
-            {tButton("edit")}
-          </button>
-        )}
+
+        {/* 主要操作：加入 — 始终显示（手机端仅图标） */}
         {(meeting.status === "active" || meeting.status === "scheduled") && (
           <button
             type="button"
@@ -513,9 +545,10 @@ function MeetingRow({
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
           >
             <Video size={14} />
-            {t("join")}
+            <span className="hidden sm:inline">{t("join")}</span>
           </button>
         )}
+        {/* 主要操作：结束 — 始终显示（手机端仅图标） */}
         {meeting.status === "active" && (
           <button
             type="button"
@@ -528,7 +561,30 @@ function MeetingRow({
             ) : (
               <PhoneOff size={14} />
             )}
-            {t("end")}
+            <span className="hidden sm:inline">{t("end")}</span>
+          </button>
+        )}
+
+        {/* md 以上：次要操作按钮直接显示 */}
+        {hasRecording && (
+          <a
+            href={meeting.recordingUrl as string}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+          >
+            <Play size={14} />
+            {tButton("viewAll")}
+          </a>
+        )}
+        {meeting.status === "scheduled" && canEdit && (
+          <button
+            type="button"
+            onClick={() => onEdit(meeting)}
+            className="hidden md:inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+          >
+            <Pencil size={14} />
+            {tButton("edit")}
           </button>
         )}
       </div>

@@ -57,6 +57,9 @@ export function CalendarMonth({
   for (let d = 1; d <= daysInMonth; d++) cells.push(new Date(year, month, d));
   while (cells.length < 42) cells.push(null);
 
+  // 手机端：仅展示有事件的日期（过滤掉 null 和无事件日期），避免长列表空白
+  const mobileDays = cells.filter((d): d is Date => d !== null);
+
   return (
     <div className="flex flex-col h-full">
       {/* 头部：导航 */}
@@ -91,8 +94,8 @@ export function CalendarMonth({
         </h2>
       </div>
 
-      {/* 星期标题 */}
-      <div className="grid grid-cols-7 mb-1">
+      {/* 星期标题 — 仅 sm 以上显示 */}
+      <div className="hidden sm:grid grid-cols-7 mb-1">
         {weekHeaders.map((h) => (
           <div
             key={h}
@@ -103,8 +106,75 @@ export function CalendarMonth({
         ))}
       </div>
 
-      {/* 日期网格 */}
-      <div className="grid grid-cols-7 grid-rows-6 gap-px flex-1" style={{ background: "var(--border)" }}>
+      {/* 手机端：单列日列表视图 */}
+      <div className="sm:hidden flex-1 overflow-y-auto flex flex-col gap-[var(--space-2)]">
+        {mobileDays.map((date) => {
+          const dayEvents = getEventsOnDate(events, date);
+          const isToday = isSameDay(date, today);
+          return (
+            <div
+              key={date.toISOString()}
+              className="flex items-start gap-[var(--space-3)] p-[var(--space-3)] rounded-[var(--radius-md)] cursor-pointer"
+              style={{
+                background: "var(--surface)",
+                border: "1px solid var(--border)",
+              }}
+              onClick={() => onDayClick(date)}
+            >
+              {/* 日期标签 */}
+              <div className="flex flex-col items-center shrink-0 w-12">
+                <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+                  {weekHeaders[date.getDay()]}
+                </span>
+                <span
+                  className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] w-8 h-8 flex items-center justify-center rounded-full mt-1"
+                  style={
+                    isToday
+                      ? { background: "var(--accent)", color: "var(--accent-fg)" }
+                      : { color: "var(--fg)" }
+                  }
+                >
+                  {date.getDate()}
+                </span>
+              </div>
+              {/* 事件列表 */}
+              <div className="flex-1 flex flex-col gap-1 min-w-0">
+                {dayEvents.length === 0 ? (
+                  <span className="text-[length:var(--text-xs)] text-[var(--muted)] opacity-50">
+                    {t("noEvents")}
+                  </span>
+                ) : (
+                  dayEvents.slice(0, 4).map((event) => (
+                    <div
+                      key={event.id}
+                      className="text-[length:var(--text-sm)] px-[var(--space-2)] py-1 rounded-[var(--radius-sm)] truncate cursor-pointer flex items-center gap-1"
+                      style={{
+                        background: `color-mix(in srgb, ${getEventColor(event)} 20%, var(--surface))`,
+                        color: getEventColor(event),
+                      }}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onEventClick(event);
+                      }}
+                    >
+                      {isTaskDeadline(event) && <CheckCircle2 size={12} className="shrink-0" />}
+                      <span className="truncate">{event.title}</span>
+                    </div>
+                  ))
+                )}
+                {dayEvents.length > 4 && (
+                  <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+                    +{dayEvents.length - 4}
+                  </span>
+                )}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+
+      {/* sm 以上：7列网格 */}
+      <div className="hidden sm:grid grid-cols-7 grid-rows-6 gap-px flex-1" style={{ background: "var(--border)" }}>
         {cells.map((date, i) => {
           if (!date) {
             return (

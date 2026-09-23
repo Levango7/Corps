@@ -4,7 +4,7 @@
 // 这些回调来自 client 父组件 (CalendarView.tsx)，无法跨越 server/client 边界传递。
 // CalendarView 管理所有日历状态（currentDate/events/dialogOpen），本组件仅做展示 + 回调转发。
 
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
 import { getEventsOnDate, getEventColor, isSameDay, formatTime, isTaskDeadline } from "./calendar-utils";
@@ -33,9 +33,18 @@ export function CalendarDay({
   onEventClick,
 }: CalendarDayProps) {
   const t = useTranslations("calendar");
+  const locale = useLocale();
   const today = new Date();
   const isToday = isSameDay(currentDate, today);
   const dayEvents = getEventsOnDate(events, currentDate);
+
+  // i18n 日期格式化：根据 locale 选择 BCP 47 语言标签
+  const dateLocale = locale === "zh" ? "zh-CN" : "en-US";
+  const formattedDate = new Intl.DateTimeFormat(dateLocale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(currentDate);
 
   // 24 小时时间轴
   const hours = Array.from({ length: 24 }, (_, i) => i);
@@ -73,7 +82,7 @@ export function CalendarDay({
           className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)]"
           style={isToday ? { color: "var(--accent)" } : { color: "var(--fg)" }}
         >
-          {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月{currentDate.getDate()}日
+          {formattedDate}
         </h2>
       </div>
 

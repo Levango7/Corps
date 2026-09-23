@@ -214,6 +214,7 @@ export default function TaskDetailPage({
         <button
           onClick={removeTask}
           disabled={deleting}
+          title={tButton("delete")}
           className="inline-flex items-center justify-center gap-1.5 min-w-[44px] sm:min-w-[32px] px-2.5 min-h-[44px] sm:h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           {deleting ? (
@@ -221,7 +222,7 @@ export default function TaskDetailPage({
           ) : (
             <Trash2 size={15} />
           )}
-          {tButton("delete")}
+          <span className="hidden sm:inline">{tButton("delete")}</span>
         </button>
       </div>
 
@@ -231,7 +232,7 @@ export default function TaskDetailPage({
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-[1fr_var(--task-aside-w)] gap-[var(--space-6)] items-start">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_220px] lg:grid-cols-[1fr_var(--task-aside-w)] gap-[var(--space-4)] md:gap-[var(--space-5)] lg:gap-[var(--space-6)] items-start">
         {/* ── 主列 ── */}
         <div className="min-w-0">
           <TaskDetailHeader

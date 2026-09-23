@@ -268,7 +268,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   const seatLimit = status?.seatLimit ?? 0;
 
   return (
-    <div className="max-w-[var(--container-max)] mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] sm:px-0">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <CreditCard size={20} className="text-[var(--muted)]" />
@@ -328,21 +328,13 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 </span>
                 {subMeta && (
                   <span
-                    className="px-2 py-0.5 rounded-full text-[length:var(--text-xs)]"
-                    style={{
-                      background:
-                        subMeta.tone === "ok"
-                          ? "var(--success-soft)"
-                          : subMeta.tone === "warn"
-                            ? "var(--warn-soft)"
-                            : "var(--surface-2)",
-                      color:
-                        subMeta.tone === "ok"
-                          ? "var(--success-fg)"
-                          : subMeta.tone === "warn"
-                            ? "var(--warn-fg)"
-                            : "var(--muted)",
-                    }}
+                    className={`px-2 py-0.5 rounded-full text-[length:var(--text-xs)] ${
+                      subMeta.tone === "ok"
+                        ? "bg-[var(--success-soft)] text-[var(--success-fg)]"
+                        : subMeta.tone === "warn"
+                          ? "bg-[var(--warn-soft)] text-[var(--warn-fg)]"
+                          : "bg-[var(--surface-2)] text-[var(--muted)]"
+                    }`}
                   >
                     {t(subMeta.labelKey)}
                   </span>
@@ -459,7 +451,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
         <div className="mb-4 flex items-center gap-2">
           <button
               onClick={() => setBillingPeriod("monthly")}
-              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              className={`h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "monthly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -469,7 +461,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           </button>
           <button
               onClick={() => setBillingPeriod("yearly")}
-              className={`h-8 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+              className={`h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "yearly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -481,7 +473,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       )}
 
       {/* 套餐卡片 */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         {PLANS.map((p) => {
           const current = status?.plan === p.id;
           const upgradable = isOwner && !current && p.id !== "free" && status?.stripeReady;
@@ -498,8 +490,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
           return (
             <div
               key={p.id}
-              className={`flex flex-col bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-5 ${current ? "border-2 border-[var(--accent)]" : "border border-[var(--border)]"}`}
-              style={{ boxShadow: "var(--elev-sm)" }}
+              className={`flex flex-col bg-[var(--surface)] rounded-[var(--radius-lg)] p-4 sm:p-5 shadow-[var(--elev-sm)] ${current ? "border-2 border-[var(--accent)]" : "border border-[var(--border)]"}`}
             >
               <div className="flex items-baseline justify-between">
                 <span className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
@@ -536,11 +527,11 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
                 onClick={() => upgrade(p.id)}
                 disabled={!upgradable || busy === p.id}
                 title={!upgradable ? t("upgradeDisabledTitle") : undefined}
-                className="mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
-                style={{
-                  background: upgradable ? "var(--accent)" : "var(--surface-2)",
-                  color: upgradable ? "var(--accent-fg)" : "var(--meta)",
-                }}
+                className={`mt-5 h-9 w-full rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+                  upgradable
+                    ? "bg-[var(--accent)] text-[var(--accent-fg)]"
+                    : "bg-[var(--surface-2)] text-[var(--meta)]"
+                }`}
               >
                 {busy === p.id && <Loader2 size={15} className="animate-spin" />}
                 {current

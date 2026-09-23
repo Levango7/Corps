@@ -47,7 +47,7 @@ function SettingsPageSkeleton() {
   );
 
   return (
-    <div className="max-w-[var(--container-max)] mx-auto" aria-busy="true" aria-live="polite">
+    <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] sm:px-0" aria-busy="true" aria-live="polite">
       {/* 页头 */}
       <div className="mb-6">
         <div className="flex items-center gap-2">
@@ -162,7 +162,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
     "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
 
   return (
-    <div className="max-w-[var(--container-max)] mx-auto">
+    <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] sm:px-0">
       <div className="mb-6">
         <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <SettingsIcon size={20} className="text-[var(--muted)]" />

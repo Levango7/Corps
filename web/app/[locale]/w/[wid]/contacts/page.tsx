@@ -45,7 +45,7 @@ export default function ContactsPage({
   return (
     <div className="flex h-full min-h-0">
       {/* 左侧分组侧栏 */}
-      <aside className="hidden md:flex w-56 shrink-0 flex-col border-r border-[var(--border)] bg-[var(--shell-sidebar)]">
+      <aside className="hidden md:flex w-[var(--sidebar-w)] shrink-0 flex-col border-r border-[var(--border)] bg-[var(--shell-sidebar)]">
         <ContactGroupSidebar
           wid={wid}
           selectedGroupId={selectedGroupId}

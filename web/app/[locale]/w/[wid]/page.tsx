@@ -22,7 +22,7 @@
  */
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Check, LayoutDashboard, Download, Upload, LayoutGrid, Move, Minimize2, Square, Maximize2 } from "lucide-react";
+import { Plus, Pencil, Check, LayoutDashboard, Download, Upload, LayoutGrid, Move, Minimize2, Square, Maximize2, ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
@@ -64,6 +64,8 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   const [freeMode, setFreeMode] = useState(false);
   const [density, setDensity] = useState<Density>("comfortable");
   const [homeView, setHomeView] = useState<"dashboard" | "widgets">("dashboard");
+  // 编辑模式工具栏下拉菜单（< lg 时折叠）
+  const [toolbarMenuOpen, setToolbarMenuOpen] = useState(false);
 
   useEffect(() => {
     try {
@@ -184,7 +186,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             {t("subtitle")}
           </p>
         </div>
-        <div className="flex items-center justify-end gap-2 flex-wrap">
+        <div className="relative flex items-center justify-end gap-2 flex-wrap">
           <div className="flex items-center gap-1 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]" role="group" aria-label={t("homeView")}>
             <button type="button" className={toolbarBtnClass(homeView === "dashboard")} aria-pressed={homeView === "dashboard"} onClick={() => changeHomeView("dashboard")}>
               <LayoutGrid size={16} />{t("gridMode")}
@@ -211,89 +213,187 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
           {/* 编辑模式工具栏：布局模式 + 密度 + 导出/导入（仅编辑模式） */}
           {editing && homeView === "dashboard" && (
             <>
-              {/* 分隔线 */}
-              <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
-              {/* 布局模式切换：网格 / 自由 */}
-              <div className="flex items-center gap-1" role="group" aria-label={t("layoutMode")}>
-                <button
-                  type="button"
-                  onClick={() => handleFreeModeChange(false)}
-                  className={toolbarBtnClass(!freeMode)}
-                  aria-pressed={!freeMode}
-                  title={t("gridMode")}
-                >
-                  <LayoutGrid size={16} />
-                  <span className="hidden sm:inline">{t("gridMode")}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleFreeModeChange(true)}
-                  className={toolbarBtnClass(freeMode)}
-                  aria-pressed={freeMode}
-                  title={t("freeMode")}
-                >
-                  <Move size={16} />
-                  <span className="hidden sm:inline">{t("freeMode")}</span>
-                </button>
-              </div>
-              {/* 分隔线 */}
-              <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
-              {/* 密度选择器：紧凑 / 舒适 / 宽敞 */}
-              <div className="flex items-center gap-1" role="group" aria-label={t("layoutDensity")}>
-                <button
-                  type="button"
-                  onClick={() => handleDensityChange("compact")}
-                  className={toolbarBtnClass(density === "compact")}
-                  aria-pressed={density === "compact"}
-                  title={t("compact")}
-                >
-                  <Minimize2 size={16} />
-                  <span className="hidden sm:inline">{t("compact")}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDensityChange("comfortable")}
-                  className={toolbarBtnClass(density === "comfortable")}
-                  aria-pressed={density === "comfortable"}
-                  title={t("comfortable")}
-                >
-                  <Square size={16} />
-                  <span className="hidden sm:inline">{t("comfortable")}</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleDensityChange("spacious")}
-                  className={toolbarBtnClass(density === "spacious")}
-                  aria-pressed={density === "spacious"}
-                  title={t("spacious")}
-                >
-                  <Maximize2 size={16} />
-                  <span className="hidden sm:inline">{t("spacious")}</span>
-                </button>
-              </div>
-              {/* 分隔线 */}
-              <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
-              {/* 导出/导入布局 */}
+              {/* < lg：折叠为下拉菜单触发按钮 */}
               <button
                 type="button"
-                onClick={handleExportLayout}
-                className="flex items-center gap-1.5 h-9 px-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-                aria-label={t("exportLayout")}
-                title={t("exportLayout")}
+                onClick={() => setToolbarMenuOpen((v) => !v)}
+                aria-expanded={toolbarMenuOpen}
+                aria-label={t("layoutOptions")}
+                className="flex items-center gap-1.5 h-9 px-3 lg:hidden rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
               >
-                <Download size={15} />
-                <span className="hidden sm:inline">{t("exportLayout")}</span>
+                <LayoutGrid size={16} />
+                <ChevronDown size={14} className={`transition-transform duration-[var(--motion-fast)] ${toolbarMenuOpen ? "rotate-180" : ""}`} />
               </button>
-              <button
-                type="button"
-                onClick={() => fileInputRef.current?.click()}
-                className="flex items-center gap-1.5 h-9 px-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-                aria-label={t("importLayout")}
-                title={t("importLayout")}
-              >
-                <Upload size={15} />
-                <span className="hidden sm:inline">{t("importLayout")}</span>
-              </button>
+              {/* < lg：下拉菜单面板 */}
+              {toolbarMenuOpen && (
+                <div className="lg:hidden absolute right-0 top-full mt-1 z-50 min-w-[200px] p-2 rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-md)]">
+                  {/* 布局模式切换 */}
+                  <div className="px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] font-[weight:var(--weight-medium)]">{t("layoutMode")}</div>
+                  <div className="flex items-center gap-1 p-1" role="group" aria-label={t("layoutMode")}>
+                    <button
+                      type="button"
+                      onClick={() => handleFreeModeChange(false)}
+                      className={toolbarBtnClass(!freeMode)}
+                      aria-pressed={!freeMode}
+                      title={t("gridMode")}
+                    >
+                      <LayoutGrid size={16} />
+                      <span>{t("gridMode")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleFreeModeChange(true)}
+                      className={toolbarBtnClass(freeMode)}
+                      aria-pressed={freeMode}
+                      title={t("freeMode")}
+                    >
+                      <Move size={16} />
+                      <span>{t("freeMode")}</span>
+                    </button>
+                  </div>
+                  {/* 分隔线 */}
+                  <div className="h-px my-1 bg-[var(--border)]" aria-hidden="true" />
+                  {/* 密度选择器 */}
+                  <div className="px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] font-[weight:var(--weight-medium)]">{t("layoutDensity")}</div>
+                  <div className="flex items-center gap-1 p-1" role="group" aria-label={t("layoutDensity")}>
+                    <button
+                      type="button"
+                      onClick={() => handleDensityChange("compact")}
+                      className={toolbarBtnClass(density === "compact")}
+                      aria-pressed={density === "compact"}
+                      title={t("compact")}
+                    >
+                      <Minimize2 size={16} />
+                      <span>{t("compact")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDensityChange("comfortable")}
+                      className={toolbarBtnClass(density === "comfortable")}
+                      aria-pressed={density === "comfortable"}
+                      title={t("comfortable")}
+                    >
+                      <Square size={16} />
+                      <span>{t("comfortable")}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDensityChange("spacious")}
+                      className={toolbarBtnClass(density === "spacious")}
+                      aria-pressed={density === "spacious"}
+                      title={t("spacious")}
+                    >
+                      <Maximize2 size={16} />
+                      <span>{t("spacious")}</span>
+                    </button>
+                  </div>
+                  {/* 分隔线 */}
+                  <div className="h-px my-1 bg-[var(--border)]" aria-hidden="true" />
+                  {/* 导出/导入布局 */}
+                  <button
+                    type="button"
+                    onClick={() => { handleExportLayout(); setToolbarMenuOpen(false); }}
+                    className="w-full flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                  >
+                    <Download size={15} />
+                    <span>{t("exportLayout")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { fileInputRef.current?.click(); setToolbarMenuOpen(false); }}
+                    className="w-full flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                  >
+                    <Upload size={15} />
+                    <span>{t("importLayout")}</span>
+                  </button>
+                </div>
+              )}
+              {/* ≥ lg：平铺展示完整工具栏 */}
+              <div className="hidden lg:flex items-center gap-2">
+                {/* 分隔线 */}
+                <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
+                {/* 布局模式切换：网格 / 自由 */}
+                <div className="flex items-center gap-1" role="group" aria-label={t("layoutMode")}>
+                  <button
+                    type="button"
+                    onClick={() => handleFreeModeChange(false)}
+                    className={toolbarBtnClass(!freeMode)}
+                    aria-pressed={!freeMode}
+                    title={t("gridMode")}
+                  >
+                    <LayoutGrid size={16} />
+                    <span className="hidden sm:inline">{t("gridMode")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleFreeModeChange(true)}
+                    className={toolbarBtnClass(freeMode)}
+                    aria-pressed={freeMode}
+                    title={t("freeMode")}
+                  >
+                    <Move size={16} />
+                    <span className="hidden sm:inline">{t("freeMode")}</span>
+                  </button>
+                </div>
+                {/* 分隔线 */}
+                <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
+                {/* 密度选择器：紧凑 / 舒适 / 宽敞 */}
+                <div className="flex items-center gap-1" role="group" aria-label={t("layoutDensity")}>
+                  <button
+                    type="button"
+                    onClick={() => handleDensityChange("compact")}
+                    className={toolbarBtnClass(density === "compact")}
+                    aria-pressed={density === "compact"}
+                    title={t("compact")}
+                  >
+                    <Minimize2 size={16} />
+                    <span className="hidden sm:inline">{t("compact")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDensityChange("comfortable")}
+                    className={toolbarBtnClass(density === "comfortable")}
+                    aria-pressed={density === "comfortable"}
+                    title={t("comfortable")}
+                  >
+                    <Square size={16} />
+                    <span className="hidden sm:inline">{t("comfortable")}</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleDensityChange("spacious")}
+                    className={toolbarBtnClass(density === "spacious")}
+                    aria-pressed={density === "spacious"}
+                    title={t("spacious")}
+                  >
+                    <Maximize2 size={16} />
+                    <span className="hidden sm:inline">{t("spacious")}</span>
+                  </button>
+                </div>
+                {/* 分隔线 */}
+                <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
+                {/* 导出/导入布局 */}
+                <button
+                  type="button"
+                  onClick={handleExportLayout}
+                  className="flex items-center gap-1.5 h-9 px-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                  aria-label={t("exportLayout")}
+                  title={t("exportLayout")}
+                >
+                  <Download size={15} />
+                  <span className="hidden sm:inline">{t("exportLayout")}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => fileInputRef.current?.click()}
+                  className="flex items-center gap-1.5 h-9 px-3 bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+                  aria-label={t("importLayout")}
+                  title={t("importLayout")}
+                >
+                  <Upload size={15} />
+                  <span className="hidden sm:inline">{t("importLayout")}</span>
+                </button>
+              </div>
               <input
                 ref={fileInputRef}
                 type="file"

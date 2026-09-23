@@ -34,7 +34,7 @@ export function ApprovalListPageClient({
   return (
     <div className="relative">
       {/* 顶部操作栏 */}
-      <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] pt-[var(--space-4)] flex items-center justify-end gap-2">
+      <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] pt-[var(--space-4)] flex items-center justify-end gap-2 flex-wrap">
         <button
           onClick={() => setTemplateOpen(true)}
           className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"

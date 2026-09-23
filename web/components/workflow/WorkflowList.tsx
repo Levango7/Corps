@@ -18,6 +18,7 @@ import {
   Trash2,
   History,
   AlertCircle,
+  MoreVertical,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
@@ -48,6 +49,7 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
   const [error, setError] = useState("");
   const [togglingId, setTogglingId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [menuOpenId, setMenuOpenId] = useState<string | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -170,6 +172,7 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                 <span>{new Date(wf.updatedAt).toLocaleString()}</span>
               </div>
               <div className="mt-2 ml-6 flex items-center gap-1">
+                {/* 启用/禁用 — 始终显示（手机端仅图标） */}
                 <button
                   onClick={() => toggleActive(wf)}
                   disabled={togglingId === wf.id}
@@ -177,18 +180,72 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                   className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                 >
                   {togglingId === wf.id ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}
-                  {wf.active ? t("disable") : t("enable")}
+                  <span className="hidden sm:inline">{wf.active ? t("disable") : t("enable")}</span>
                 </button>
+
+                {/* 手机端次要操作下拉菜单 */}
+                <div className="relative md:hidden">
+                  <button
+                    onClick={() => setMenuOpenId(menuOpenId === wf.id ? null : wf.id)}
+                    className="inline-flex items-center justify-center h-7 w-7 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                    aria-label="More actions"
+                  >
+                    <MoreVertical size={14} />
+                  </button>
+                  {menuOpenId === wf.id && (
+                    <>
+                      <div
+                        className="fixed inset-0 z-[var(--z-dropdown)]"
+                        onClick={() => setMenuOpenId(null)}
+                      />
+                      <div className="absolute left-0 top-full mt-1 min-w-[140px] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1 z-[calc(var(--z-dropdown)+1)]">
+                        <button
+                          onClick={() => {
+                            onEdit(wf);
+                            setMenuOpenId(null);
+                          }}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                        >
+                          <Pencil size={14} />
+                          {t("edit")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            onShowExecutions(wf);
+                            setMenuOpenId(null);
+                          }}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                        >
+                          <History size={14} />
+                          {t("executions")}
+                        </button>
+                        <button
+                          onClick={() => {
+                            handleDelete(wf);
+                            setMenuOpenId(null);
+                          }}
+                          disabled={deletingId === wf.id}
+                          className="flex items-center gap-2 w-full px-3 py-2 text-[length:var(--text-sm)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                        >
+                          {deletingId === wf.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          {t("delete")}
+                        </button>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* md 以上：全部按钮直接显示 */}
                 <button
                   onClick={() => onEdit(wf)}
-                  className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                  className="hidden md:inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
                   <Pencil size={12} />
                   {t("edit")}
                 </button>
                 <button
                   onClick={() => onShowExecutions(wf)}
-                  className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+                  className="hidden md:inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                 >
                   <History size={12} />
                   {t("executions")}
@@ -196,7 +253,7 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                 <button
                   onClick={() => handleDelete(wf)}
                   disabled={deletingId === wf.id}
-                  className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+                  className="hidden md:inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                 >
                   {deletingId === wf.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
                   {t("delete")}
