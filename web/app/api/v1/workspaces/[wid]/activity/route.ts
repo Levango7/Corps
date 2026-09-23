@@ -219,7 +219,7 @@ export async function GET(
     const nextCursor = items.length === PAGE_SIZE ? items[items.length - 1].createdAt : null;
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { items, nextCursor },
       message: apiMsg(req, "ok"),
     });

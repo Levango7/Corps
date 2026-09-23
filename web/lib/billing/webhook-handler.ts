@@ -264,7 +264,7 @@ export async function handleBillingEvent(
       console.error(`[${providerId}-webhook] handler error:`, err);
     }
     // 事务已自动回滚（含幂等占位），无需手动 deleteMany（DL-1）
-    return NextResponse.json({ code: 500, message: "Handler error" }, { status: 500 });
+    return NextResponse.json({ code: 500, message: "Handler error", data: null }, { status: 500 });
   }
 
   if (duplicate) {

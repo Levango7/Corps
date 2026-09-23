@@ -141,11 +141,11 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
     <div className="mx-auto max-w-[var(--container-max)]">
       {/* 标题 */}
       <div className="mb-[var(--space-6)]">
-        <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+        <h1 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           <BarChart3 size={20} className="text-[var(--muted)]" />
           {t("title")}
         </h1>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+        <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">
           {t("subtitle", { days: data.range.days })}
         </p>
       </div>
@@ -153,15 +153,15 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       {/* 北极星卡 + 概览卡 — 轻微视差（应用内 ≤ 10px） */}
       <Parallax offset={5} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
         {/* WAW 北极星卡（占 2 列，突出展示） */}
-        <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
-          <div className="flex items-center gap-2 mb-2">
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)]">
+          <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-2)]">
             <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
             <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{t("wawTitle")}</span>
           </div>
           <div className="text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums tracking-[var(--tracking-display)]">
             {data.waw.users}
           </div>
-          <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)]">
+          <div className="mt-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--meta)]">
             {t("wawWeekStart", { date: data.waw.weekStart })}
           </div>
         </div>
@@ -212,8 +212,8 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       />
 
       {/* 留存回访率 */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)]">
-        <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)] sm:p-[var(--space-5)] mb-[var(--space-5)]">
+        <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-4)]">
           <Repeat size={16} className="text-[var(--muted)]" />
           {t("retentionTitle")}
         </h2>
@@ -223,52 +223,52 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
             return (
               <div
                 key={key}
-                className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-3 text-center"
+                className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-[var(--space-3)] text-center"
               >
-                <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-1">
+                <div className="text-[length:var(--text-xs)] text-[var(--muted)] mb-[var(--space-1)]">
                   {t(labelKey)}
                 </div>
                 <div className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums">
                   {r ? `${r.rate}%` : "—"}
                 </div>
-                <div className="mt-1 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                <div className="mt-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
                   {r ? `${r.active}/${r.eligible}` : "0/0"}
                 </div>
               </div>
             );
           })}
         </div>
-        <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">
+        <p className="mt-[var(--space-4)] text-[length:var(--text-xs)] text-[var(--meta)]">
           {t("retentionFormula")}
         </p>
       </section>
 
       {/* 趋势线 */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)]">
-        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)] sm:p-[var(--space-5)] mb-[var(--space-5)]">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-4)]">
           {t("dailyTrendTitle")}
         </h2>
         {data.daily.length === 0 ? (
-          <EmptyState type="chart" title={t("noData")} className="py-8" />
+          <EmptyState type="chart" title={t("noData")} className="py-[var(--space-8)]" />
         ) : (
           <DailyTrendChart daily={data.daily} maxDaily={maxDaily} />
         )}
       </section>
 
       {/* Top 事件 */}
-      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5">
-        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-4">
+      <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)] sm:p-[var(--space-5)]">
+        <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-4)]">
           {t("topEventsTitle")}
         </h2>
         {data.topEvents.length === 0 ? (
-          <EmptyState type="chart" title={t("noData")} className="py-8" />
+          <EmptyState type="chart" title={t("noData")} className="py-[var(--space-8)]" />
         ) : (
-          <ul className="space-y-2">
+          <ul className="space-y-[var(--space-2)]">
             {data.topEvents.map((e) => {
               const widthPct = (e.count / maxTopEvent) * 100;
               const pct = Math.round((e.count / data.totalEvents) * 100);
               return (
-                <li key={e.name} className="flex items-center gap-3">
+                <li key={e.name} className="flex items-center gap-[var(--space-3)]">
                   <code className="w-28 sm:w-40 lg:w-48 shrink-0 font-[family-name:var(--font-mono)] text-[length:var(--text-xs)] text-[var(--fg-2)] truncate">
                     {e.name}
                   </code>
@@ -309,8 +309,8 @@ function StatCard({
   color: string;
 }) {
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4">
-      <div className="flex items-center gap-2 mb-2">
+    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)]">
+      <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-2)]">
         <Icon size={16} style={{ color }} />
         <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{label}</span>
       </div>
@@ -337,20 +337,20 @@ function FunnelSection({
 
   return (
     <section
-      className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5 mb-[var(--space-5)] ${
+      className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)] sm:p-[var(--space-5)] mb-[var(--space-5)] ${
         className ?? ""
       }`}
     >
-      <h2 className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
+      <h2 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-1)]">
         <Filter size={16} className="text-[var(--muted)]" />
         {title}
       </h2>
-      <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">{description}</p>
-      <div className="space-y-3">
+      <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-4)]">{description}</p>
+      <div className="space-y-[var(--space-3)]">
         {steps.map((step, i) => {
           const widthPct = (step.users / maxFunnel) * 100;
           return (
-            <div key={step.name} className="flex items-center gap-3">
+            <div key={step.name} className="flex items-center gap-[var(--space-3)]">
               <div className="w-20 sm:w-24 shrink-0 text-[length:var(--text-sm)] text-[var(--fg-2)] truncate">
                 {step.label}
               </div>
@@ -360,7 +360,7 @@ function FunnelSection({
                     className="absolute inset-y-0 left-0 bg-[var(--accent)] rounded-[var(--radius-sm)] transition-[width] duration-[var(--motion-base)]"
                     style={{ width: `${widthPct}%` }}
                   />
-                  <span className="absolute inset-0 flex items-center px-2 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg)] tabular-nums">
+                  <span className="absolute inset-0 flex items-center px-[var(--space-2)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg)] tabular-nums">
                     {step.users}
                   </span>
                 </div>
@@ -463,20 +463,20 @@ function ErrorState({
       <div className="flex flex-col items-center justify-center py-[var(--space-16)] text-center">
         <AlertTriangle
           size={48}
-          className="text-[var(--muted)] opacity-40 mb-4"
+          className="text-[var(--muted)] opacity-40 mb-[var(--space-4)]"
           strokeWidth={1.5}
         />
         <p className="text-[length:var(--text-base)] text-[var(--fg-2)]">
           {forbidden ? t("needAdmin") : t("loadFailed")}
         </p>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+        <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">
           {forbidden ? t("needAdminDesc") : message || t("retryLater")}
         </p>
         {!forbidden && (
           <button
             type="button"
             onClick={onRetry}
-            className="mt-4 inline-flex items-center justify-center h-9 px-4 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+            className="mt-[var(--space-4)] inline-flex items-center justify-center h-9 px-[var(--space-4)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {retryLabel}
           </button>
@@ -491,22 +491,22 @@ function AnalyticsSkeleton() {
   return (
     <div className="mx-auto max-w-[var(--container-max)]" aria-busy="true">
       <div className="mb-[var(--space-6)]">
-        <Skeleton className="h-8 w-32 mb-2" />
+        <Skeleton className="h-8 w-32 mb-[var(--space-2)]" />
         <Skeleton className="h-4 w-48" />
       </div>
       {/* 北极星 + 概览卡骨架 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
-        <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4">
-          <Skeleton className="h-4 w-32 mb-2" />
-          <Skeleton className="h-9 w-20 mb-1" />
+        <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-4)]">
+          <Skeleton className="h-4 w-32 mb-[var(--space-2)]" />
+          <Skeleton className="h-9 w-20 mb-[var(--space-1)]" />
           <Skeleton className="h-3 w-40" />
         </div>
         {Array.from({ length: 2 }).map((_, i) => (
           <div
             key={i}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4"
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-4)]"
           >
-            <Skeleton className="h-4 w-20 mb-2" />
+            <Skeleton className="h-4 w-20 mb-[var(--space-2)]" />
             <Skeleton className="h-7 w-16" />
           </div>
         ))}
@@ -516,9 +516,9 @@ function AnalyticsSkeleton() {
         {Array.from({ length: 3 }).map((_, i) => (
           <div
             key={i}
-            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-4"
+            className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-4)]"
           >
-            <Skeleton className="h-4 w-16 mb-2" />
+            <Skeleton className="h-4 w-16 mb-[var(--space-2)]" />
             <Skeleton className="h-7 w-12" />
           </div>
         ))}
@@ -527,12 +527,12 @@ function AnalyticsSkeleton() {
       {Array.from({ length: 2 }).map((_, idx) => (
         <div
           key={idx}
-          className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5 mb-[var(--space-5)]"
+          className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-5)] mb-[var(--space-5)]"
         >
-          <Skeleton className="h-5 w-28 mb-4" />
-          <div className="space-y-3">
+          <Skeleton className="h-5 w-28 mb-[var(--space-4)]" />
+          <div className="space-y-[var(--space-3)]">
             {Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="flex items-center gap-3">
+              <div key={i} className="flex items-center gap-[var(--space-3)]">
                 <Skeleton className="w-20 h-4 shrink-0" />
                 <Skeleton className="flex-1 h-7" />
                 <Skeleton className="w-12 h-4 shrink-0" />
@@ -542,29 +542,29 @@ function AnalyticsSkeleton() {
         </div>
       ))}
       {/* 留存骨架 */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5 mb-[var(--space-5)]">
-        <Skeleton className="h-5 w-28 mb-4" />
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-5)] mb-[var(--space-5)]">
+        <Skeleton className="h-5 w-28 mb-[var(--space-4)]" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)]">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-3">
-              <Skeleton className="h-3 w-8 mx-auto mb-2" />
-              <Skeleton className="h-7 w-12 mx-auto mb-1" />
+            <div key={i} className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-[var(--space-3)]">
+              <Skeleton className="h-3 w-8 mx-auto mb-[var(--space-2)]" />
+              <Skeleton className="h-7 w-12 mx-auto mb-[var(--space-1)]" />
               <Skeleton className="h-3 w-10 mx-auto" />
             </div>
           ))}
         </div>
       </div>
       {/* 趋势骨架 */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5 mb-[var(--space-5)]">
-        <Skeleton className="h-5 w-32 mb-4" />
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-5)] mb-[var(--space-5)]">
+        <Skeleton className="h-5 w-32 mb-[var(--space-4)]" />
         <Skeleton className="h-40 w-full" />
       </div>
       {/* 热门事件骨架 */}
-      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-5">
-        <Skeleton className="h-5 w-24 mb-4" />
-        <div className="space-y-2">
+      <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-5)]">
+        <Skeleton className="h-5 w-24 mb-[var(--space-4)]" />
+        <div className="space-y-[var(--space-2)]">
           {Array.from({ length: 5 }).map((_, i) => (
-            <div key={i} className="flex items-center gap-3">
+            <div key={i} className="flex items-center gap-[var(--space-3)]">
               <Skeleton className="w-40 h-4 shrink-0" />
               <Skeleton className="flex-1 h-5" />
               <Skeleton className="w-16 h-4 shrink-0" />

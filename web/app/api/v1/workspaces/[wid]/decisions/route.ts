@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
   try {
     const url = new URL(req.url);
-    const q = url.searchParams.get("q")?.trim() || "";
+    const q = (url.searchParams.get("q")?.trim() || "").slice(0, 200);
     const { page, limit, skip } = parsePagination(url);
 
     // 公共 where 子句：限定工作区 + 可选 markdown ilike

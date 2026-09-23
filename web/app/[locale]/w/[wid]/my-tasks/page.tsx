@@ -130,7 +130,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
         <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           {tNav("menu.myTasks")}
         </h1>
-        <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+        <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">
           {loading ? t("loading") : t("myTasksCount", { count: tasks.length })}
         </p>
       </div>
@@ -138,13 +138,13 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
       {/* 筛选栏：状态筛选（移动端横向滚动）+ 排序下拉 */}
       <div className="mb-[var(--space-5)] flex items-center gap-[var(--space-3)]">
         <div className="flex-1 min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          <div className="inline-flex items-center gap-1 p-1 bg-[var(--surface-2)] rounded-[var(--radius-md)]">
+          <div className="inline-flex items-center gap-[var(--space-1)] p-[var(--space-1)] bg-[var(--surface-2)] rounded-[var(--radius-md)]">
             {STATUS_FILTERS.map((f) => (
               <button
                 key={f.id}
                 onClick={() => setStatusFilter(f.id)}
                 aria-pressed={statusFilter === f.id}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] whitespace-nowrap transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+                className={`flex items-center gap-1.5 px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-sm)] text-[length:var(--text-sm)] whitespace-nowrap transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
                   statusFilter === f.id
                     ? "bg-[var(--surface)] text-[var(--fg)] shadow-[var(--elev-sm)] font-[weight:var(--weight-medium)]"
                     : "text-[var(--muted)] hover:text-[var(--fg)]"
@@ -167,7 +167,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
             value={sortKey}
             onChange={(e) => setSortKey(e.target.value as SortKey)}
             aria-label={t("sortAria")}
-            className="appearance-none text-[length:var(--text-sm)] text-[var(--fg-2)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)] pl-3 pr-8 py-1.5 cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            className="appearance-none text-[length:var(--text-sm)] text-[var(--fg-2)] bg-[var(--surface-2)] border border-[var(--border)] rounded-[var(--radius-md)] pl-[var(--space-3)] pr-[var(--space-8)] py-[var(--space-1)] cursor-pointer focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
           >
             <option value="recent">{t("sortRecent")}</option>
             <option value="due">{t("sortDue")}</option>
@@ -206,7 +206,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
       ) : (
         <div className="space-y-[var(--space-4)]">
           {error && (
-            <div className="mb-4 rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-3 text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
+            <div className="mb-[var(--space-4)] rounded-[var(--radius-md)] bg-[var(--danger-soft)] p-[var(--space-4)] text-[length:var(--text-sm)] text-[var(--danger-fg)] flex items-center justify-between">
               <span>{error}</span>
               <button
                 onClick={() => {
@@ -269,17 +269,17 @@ function StatusGroup<T extends { id: string }>({
   const useVirtual = tasks.length > TASKS_VIRTUAL_THRESHOLD;
   return (
     <section className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden">
-      <header className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-[var(--border-soft)]">
+      <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-3)] border-b border-[var(--border-soft)]">
         <span className="w-2 h-2 rounded-full shrink-0" style={{ background: color }} />
         <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {title}
         </h2>
-        <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface-2)] px-2 py-0.5 rounded-full tabular-nums">
+        <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface-2)] px-[var(--space-2)] py-0.5 rounded-full tabular-nums">
           {count}
         </span>
       </header>
       {useVirtual ? (
-        // 虚拟列表：TaskCard 高度约 56px（py-3=24px + 内容约 32px）
+        // 虚拟列表：TaskCard 高度约 56px（py-[var(--space-3)]=24px + 内容约 32px）
         <VirtualList
           items={tasks}
           renderItem={(task) => (
@@ -309,7 +309,7 @@ function TaskCard({ task, href }: { task: Task; href: string }) {
   return (
     <Link
       href={href}
-      className="flex w-full items-center gap-[var(--space-3)] px-4 sm:px-5 py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+      className="flex w-full items-center gap-[var(--space-3)] px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-3)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
       style={{ borderLeft: `4px solid ${PRIORITY_BAR_COLORS[task.priority]}` }}
     >
       <span className="flex-1 min-w-0 text-[length:var(--text-base)] text-[var(--fg)] truncate">
@@ -331,7 +331,7 @@ function TaskCard({ task, href }: { task: Task; href: string }) {
       )}
       {/* 状态 badge */}
       <span
-        className="shrink-0 text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
+        className="shrink-0 text-[length:var(--text-xs)] px-[var(--space-1)] py-0.5 rounded-[var(--radius-sm)]"
         style={STATUS_BADGE_STYLES[task.status]}
       >
         {tStatus(STATUS_LABEL_KEYS[task.status])}
@@ -367,7 +367,7 @@ function MyTasksSkeleton() {
     <div aria-busy="true" aria-live="polite">
       {/* 标题骨架 */}
       <div className="mb-[var(--space-6)]">
-        <Skeleton className="h-8 w-32 mb-2" />
+        <Skeleton className="h-8 w-32 mb-[var(--space-2)]" />
         <Skeleton className="h-4 w-20" />
       </div>
       {/* 筛选栏骨架 */}
@@ -383,7 +383,7 @@ function MyTasksSkeleton() {
             className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden"
           >
             {/* 组头 */}
-            <div className="flex items-center gap-2 px-4 sm:px-5 py-3 border-b border-[var(--border-soft)]">
+            <div className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-3)] border-b border-[var(--border-soft)]">
               <Skeleton className="w-2 h-2 rounded-full" />
               <Skeleton className="h-4 w-16" />
               <Skeleton className="ml-auto h-5 w-8 rounded-full" />
@@ -391,7 +391,7 @@ function MyTasksSkeleton() {
             {/* 卡片行骨架 × 3 */}
             <div className="divide-y divide-[var(--border-soft)]">
               {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="flex items-center gap-3 px-4 sm:px-5 py-3">
+                <div key={j} className="flex items-center gap-[var(--space-3)] px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-3)]">
                   <Skeleton
                     className="flex-1 h-4"
                     // 宽度在 65%~94% 间错落，避免机械感

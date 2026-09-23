@@ -13,7 +13,7 @@ import { emitWorkspaceEvent } from "@/lib/workspace-events";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  description: z.string().optional(),
+  description: z.string().max(5000).optional(),
   status: z.enum(["todo", "in_progress", "review", "done"]).optional(),
   priority: z.enum(["low", "medium", "high", "urgent"]).optional(),
   assigneeId: z.string().uuid().nullable().optional(),

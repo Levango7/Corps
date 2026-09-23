@@ -75,7 +75,7 @@ export async function GET(
 
 const updateDocSchema = z.object({
   title: z.string().min(1).max(255).optional(),
-  markdown: z.string().optional(),
+  markdown: z.string().max(500000).optional(),
   /** 设为 true 将当前 markdown 快照到 publishedMarkdown；false 不影响发布快照 */
   publish: z.boolean().optional(),
   /** "rotate"=服务端生成新分享 token（旧链接立即失效）；null=取消分享；不传=保持原状 */
@@ -100,6 +100,34 @@ export async function PATCH(
   try {
     const body = await req.json();
     const validated = updateDocSchema.parse(body);
+
+    // 权限检查：owner/admin 可编辑任何文档，其他角色需有 edit 级别权限
+    const userId = ctx.payload.sub;
+    const role = ctx.member.role;
+    if (role !== "owner" && role !== "admin") {
+      const docForPerm = await runWithWorkspace(
+        wid,
+        (tx) =>
+          tx.document.findFirst({
+            where: { id, workspaceId: wid, deletedAt: null },
+            select: { id: true },
+          }),
+        userId,
+      );
+      if (!docForPerm) {
+        return NextResponse.json(
+          { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
+          { status: 404 },
+        );
+      }
+      const canEdit = await checkDocumentPermission(userId, id, "edit", wid, role);
+      if (!canEdit) {
+        return NextResponse.json(
+          { code: 403, message: apiMsg(req, "forbidden"), data: null },
+          { status: 403 },
+        );
+      }
+    }
 
     const updated = await runWithWorkspace(
       wid,
@@ -197,6 +225,34 @@ export async function DELETE(
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
 
   try {
+    // 权限检查：owner/admin 可删除任何文档，其他角色需有 manage 级别权限
+    const userId = ctx.payload.sub;
+    const role = ctx.member.role;
+    if (role !== "owner" && role !== "admin") {
+      const docForPerm = await runWithWorkspace(
+        wid,
+        (tx) =>
+          tx.document.findFirst({
+            where: { id, workspaceId: wid, deletedAt: null },
+            select: { id: true },
+          }),
+        userId,
+      );
+      if (!docForPerm) {
+        return NextResponse.json(
+          { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
+          { status: 404 },
+        );
+      }
+      const canManage = await checkDocumentPermission(userId, id, "manage", wid, role);
+      if (!canManage) {
+        return NextResponse.json(
+          { code: 403, message: apiMsg(req, "forbidden"), data: null },
+          { status: 403 },
+        );
+      }
+    }
+
     const deleted = await runWithWorkspace(
       wid,
       async (tx) => {

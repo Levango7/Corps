@@ -175,7 +175,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         data: {
           userId: invitedUser.id,
           workspaceId: wid,
-          role: "member",
+          role: role,
           invitedBy: ctx.payload.sub,
         },
         include: { user: { select: { id: true, email: true, name: true, image: true } } },
@@ -279,7 +279,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       workspaceId: wid,
       name: "invite_member",
       props: {
-        role: "member",
+        role: role,
         channel: "email",
         ...(seatUsage ? { seatUsage } : {}),
       },

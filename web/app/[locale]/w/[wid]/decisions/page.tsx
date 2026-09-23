@@ -252,18 +252,18 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
   return (
     <div className="max-w-[var(--container-max)] mx-auto">
       {/* ── 标题栏 ── */}
-      <div className="mb-[var(--space-6)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+      <div className="mb-[var(--space-6)] flex flex-col sm:flex-row sm:items-start sm:justify-between gap-[var(--space-3)]">
         <div className="min-w-0">
           <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
             {t("title")}
           </h1>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
+          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">
             {loading ? t("loading") : t("count", { count: total })}
           </p>
         </div>
         <button
           onClick={() => setAiOpen(true)}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)] shrink-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
           <Sparkles size={14} />
           {t("aiExtract")}
@@ -357,15 +357,15 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
 
                   <article className="mb-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] overflow-hidden">
                     {/* 顶部：关联任务标题 + 版本 badge */}
-                    <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)]">
+                    <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-2)] border-b border-[var(--border-soft)]">
                       <Link
                         href={`/w/${wid}/task/${d.taskId}`}
-                        className="flex items-center gap-1 min-w-0 flex-1 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
+                        className="flex items-center gap-[var(--space-1)] min-w-0 flex-1 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)]"
                       >
                         <span className="truncate">{d.taskTitle || t("unnamedTask")}</span>
                         <ChevronRight size={13} className="shrink-0 text-[var(--meta)]" />
                       </Link>
-                      <span className="shrink-0 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--border)] text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--fg-2)]">
+                      <span className="shrink-0 px-[var(--space-1)] py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--border)] text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--fg-2)]">
                         v{d.version}
                       </span>
                     </header>
@@ -380,7 +380,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                     </div>
 
                     {/* 底部：作者 + 创建时间 + 更新时间 + 执行进度 */}
-                    <footer className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2 border-t border-[var(--border-soft)] text-[length:var(--text-xs)] text-[var(--meta)]">
+                    <footer className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-2)] border-t border-[var(--border-soft)] text-[length:var(--text-xs)] text-[var(--meta)]">
                       <span className="truncate">{d.authorName || t("unknownAuthor")}</span>
                       {createdRel && (
                         <>
@@ -400,10 +400,10 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                       {typeof d.actionItemCount === "number" && d.actionItemCount > 0 && (
                         <>
                           <span className="shrink-0">·</span>
-                          <span className="shrink-0 inline-flex items-center gap-1 tabular-nums">
+                          <span className="shrink-0 inline-flex items-center gap-[var(--space-1)] tabular-nums">
                             <ListChecks size={11} className="text-[var(--muted)]" />
                             {/* 迷你进度条：宽度按完成率填充 */}
-                            <span className="inline-flex items-center gap-1">
+                            <span className="inline-flex items-center gap-[var(--space-1)]">
                               <span className="relative inline-block w-10 h-1.5 rounded-full bg-[var(--surface-3)] overflow-hidden">
                                 <span
                                   className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-[var(--motion-base)]"
@@ -438,7 +438,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
               <button
                 onClick={handleLoadMore}
                 disabled={loadingMore}
-                className="inline-flex items-center gap-2 h-9 px-5 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:border-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-[var(--space-2)] h-9 px-[var(--space-5)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:border-[var(--muted)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {loadingMore ? (
                   <>
@@ -457,7 +457,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
       {/* AI 提炼对话框：粘贴原始讨论 → 生成 markdown 草稿 → 复制后到任务详情粘贴 */}
       {aiOpen && (
         <div
-          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] px-4"
+          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] px-[var(--space-4)]"
           role="dialog"
           aria-modal="true"
           aria-label={t("aiDialogTitle")}
@@ -466,21 +466,21 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
           }}
         >
           <div className="w-full max-w-2xl bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden max-h-[85dvh] flex flex-col">
-            <div className="px-4 py-3 border-b border-[var(--border-soft)] flex items-center justify-between">
-              <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] flex items-center gap-2">
+            <div className="px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border-soft)] flex items-center justify-between">
+              <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] flex items-center gap-[var(--space-2)]">
                 <Sparkles size={16} className="text-[var(--accent)]" />
                 {t("aiDialogTitle")}
               </h2>
               <button
                 onClick={closeAi}
                 aria-label={t("aiClose")}
-                className="p-1.5 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="p-[var(--space-1)] rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 <X size={16} />
               </button>
             </div>
-            <div className="px-4 py-3 overflow-y-auto flex-1">
-              <label className="block text-[length:var(--text-xs)] text-[var(--muted)] mb-1.5">
+            <div className="px-[var(--space-4)] py-[var(--space-3)] overflow-y-auto flex-1">
+              <label className="block text-[length:var(--text-xs)] text-[var(--muted)] mb-[var(--space-1)]">
                 {t("aiSourceLabel")}
               </label>
               <textarea
@@ -488,42 +488,42 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                 onChange={(e) => setAiSource(e.target.value)}
                 placeholder={t("aiSourcePlaceholder")}
                 rows={8}
-                className="w-full px-3 py-2 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y font-[family-name:var(--font-mono)]"
+                className="w-full px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y font-[family-name:var(--font-mono)]"
               />
               {aiErr && (
-                <p className="mt-2 text-[length:var(--text-xs)] text-[var(--danger-fg)]">{aiErr}</p>
+                <p className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--danger-fg)]">{aiErr}</p>
               )}
               {aiResult && (
-                <div className="mt-4 border border-[var(--border)] rounded-[var(--radius-md)] overflow-hidden">
-                  <div className="px-3 py-2 bg-[var(--surface-2)] flex items-center justify-between gap-2">
+                <div className="mt-[var(--space-4)] border border-[var(--border)] rounded-[var(--radius-md)] overflow-hidden">
+                  <div className="px-[var(--space-3)] py-[var(--space-2)] bg-[var(--surface-2)] flex items-center justify-between gap-[var(--space-2)]">
                     <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] truncate">
                       {aiResult.title}
                     </span>
                     <button
                       onClick={copyAiMarkdown}
-                      className="inline-flex items-center gap-1 px-2 h-7 text-[length:var(--text-xs)] text-[var(--fg-2)] rounded-[var(--radius-sm)] border border-[var(--border)] hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                      className="inline-flex items-center gap-[var(--space-1)] px-[var(--space-2)] h-7 text-[length:var(--text-xs)] text-[var(--fg-2)] rounded-[var(--radius-sm)] border border-[var(--border)] hover:bg-[var(--surface)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                     >
                       <ClipboardCopy size={12} />
                       {t("aiCopy")}
                     </button>
                   </div>
-                  <pre className="px-3 py-2 text-[length:var(--text-xs)] text-[var(--fg-2)] overflow-x-auto whitespace-pre-wrap break-words">
+                  <pre className="px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--fg-2)] overflow-x-auto whitespace-pre-wrap break-words">
                     {aiResult.markdown}
                   </pre>
                 </div>
               )}
             </div>
-            <div className="px-4 py-3 border-t border-[var(--border-soft)] flex items-center justify-end gap-2">
+            <div className="px-[var(--space-4)] py-[var(--space-3)] border-t border-[var(--border-soft)] flex items-center justify-end gap-[var(--space-2)]">
               <button
                 onClick={closeAi}
-                className="h-9 px-3 text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="h-9 px-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--fg-2)] rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {t("aiClose")}
               </button>
               <button
                 onClick={handleExtract}
                 disabled={aiBusy || aiSource.trim().length < 10}
-                className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                className="inline-flex items-center gap-1.5 h-9 px-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
                 {aiBusy && <Loader2 size={14} className="animate-spin" />}
                 {aiResult ? t("aiReGenerate") : t("aiGenerate")}
@@ -556,7 +556,7 @@ function DecisionsSkeleton({ count = 4 }: { count?: number }) {
           <Skeleton className="absolute left-0 top-[10px] w-[15px] h-[15px] rounded-full" />
           <div className="mb-[var(--space-4)] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden">
             {/* 标题行 */}
-            <div className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)]">
+            <div className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-2)] border-b border-[var(--border-soft)]">
               <Skeleton
                 className="flex-1 h-[14px]"
                 style={{ maxWidth: `${55 + ((i * 23) % 30)}%` }}
@@ -564,12 +564,12 @@ function DecisionsSkeleton({ count = 4 }: { count?: number }) {
               <Skeleton className="shrink-0 w-8 h-[18px] rounded-[var(--radius-sm)]" />
             </div>
             {/* 摘要占位 2 行 */}
-            <div className="px-[var(--space-4)] py-[var(--space-3)] space-y-2">
+            <div className="px-[var(--space-4)] py-[var(--space-3)] space-y-[var(--space-2)]">
               <Skeleton className="w-full h-[12px]" />
               <Skeleton className="w-3/4 h-[12px]" />
             </div>
             {/* 底部行 */}
-            <div className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2 border-t border-[var(--border-soft)]">
+            <div className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-2)] border-t border-[var(--border-soft)]">
               <Skeleton className="w-16 h-[11px]" />
               <Skeleton className="w-20 h-[11px]" />
             </div>

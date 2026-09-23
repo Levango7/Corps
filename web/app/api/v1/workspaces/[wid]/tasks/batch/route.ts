@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
+import { deleteTaskFiles } from "@/lib/uploads-cleanup";
 
 /**
  * POST /api/v1/workspaces/:wid/tasks/batch — 任务批量操作。
@@ -71,6 +72,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
         // 3) 执行批量操作
         if (body.action === "delete") {
+          // 清理附件磁盘文件（与单条 DELETE 对齐；尽力而为，失败不阻断删除）
+          for (const taskId of validIds) {
+            await deleteTaskFiles(taskId);
+          }
           const deleted = await tx.task.deleteMany({
             where: { id: { in: Array.from(validIds) }, workspaceId: wid },
           });

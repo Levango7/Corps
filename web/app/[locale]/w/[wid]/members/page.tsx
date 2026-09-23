@@ -242,20 +242,20 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
 
   return (
     <div className="mx-auto max-w-[var(--container-max)]">
-      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-6 gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between mb-[var(--space-6)] gap-[var(--space-4)]">
         <div>
-          <h1 className="flex items-center gap-2 text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+          <h1 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             <Users size={20} className="text-[var(--muted)]" />
             {t("title")}
           </h1>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
+          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
         </div>
         {seatsTotal > 0 && (
-          <div className="w-full sm:w-auto sm:text-right sm:shrink-0 order-first sm:order-none mb-4 sm:mb-0">
+          <div className="w-full sm:w-auto sm:text-right sm:shrink-0 order-first sm:order-none mb-[var(--space-4)] sm:mb-0">
             <div className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
               {t("seatsCount", { used: seatsUsed, total: seatsTotal })}
             </div>
-            <div className="mt-1.5 w-full sm:w-28 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden">
+            <div className="mt-[var(--space-1)] w-full sm:w-28 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden">
               <div
                 className="h-full rounded-full transition-[width] duration-[var(--motion-slow)]"
                 style={{
@@ -269,44 +269,44 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       </div>
 
       {error && (
-        <div className="mb-4 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)] border border-[color-mix(in_srgb,var(--danger)_20%,transparent)]">
+        <div className="mb-[var(--space-4)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-sm)] border border-[color-mix(in_srgb,var(--danger)_20%,transparent)]">
           {error}
         </div>
       )}
 
       {canManage && (
         <>
-          <div className="flex flex-col sm:flex-row sm:items-center gap-2 mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-[var(--space-2)] mb-[var(--space-6)]">
             <input
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && invite()}
               placeholder={t("invitePlaceholder")}
-              className="w-full sm:w-auto sm:flex-1 min-h-[44px] sm:h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 placeholder:text-[var(--meta)]"
+              className="w-full sm:w-auto sm:flex-1 min-h-[44px] sm:h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 placeholder:text-[var(--meta)]"
             />
             <button
               onClick={invite}
               disabled={busy || seatsFull}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 min-h-[44px] sm:h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+              className="w-full sm:w-auto flex items-center justify-center gap-[var(--space-2)] min-h-[44px] sm:h-9 px-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
               <UserPlus size={16} />
               {tButton("invite")}
             </button>
           </div>
           {inviteSuccess && (
-            <div className="mb-4 flex items-start gap-2 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-sm)]">
+            <div className="mb-[var(--space-4)] flex items-start gap-[var(--space-2)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--success-soft)] text-[var(--success-fg)] text-[length:var(--text-sm)]">
               <CheckCircle2 size={16} className="shrink-0 mt-0.5 text-[var(--success)]" />
               <div className="min-w-0">
                 <span>{inviteSuccess}</span>
                 {inviteLink && (
-                  <div className="mt-2 flex flex-col sm:flex-row sm:items-center gap-2">
-                    <code className="flex-1 min-w-0 truncate px-2 py-1 rounded-[var(--radius-sm)] bg-[var(--surface-3)] text-[length:var(--text-xs)] text-[var(--fg-2)]">
+                  <div className="mt-[var(--space-2)] flex flex-col sm:flex-row sm:items-center gap-[var(--space-2)]">
+                    <code className="flex-1 min-w-0 truncate px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--surface-3)] text-[length:var(--text-xs)] text-[var(--fg-2)]">
                       {inviteLink}
                     </code>
                     <button
                       onClick={copyInviteLink}
-                      className="shrink-0 inline-flex items-center gap-1.5 h-7 px-2.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+                      className="shrink-0 inline-flex items-center gap-1.5 h-7 px-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
                     >
                       <Link2 size={12} />
                       {t("copyLink")}
@@ -320,7 +320,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       )}
 
       {seatsFull && canManage && (
-        <div className="mb-6 px-4 py-3 rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
+        <div className="mb-[var(--space-6)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
           {t("seatsFullPrefix")}{" "}
           <Link href={`/w/${wid}/billing`} className="underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
             {t("seatsFullBillingLink")}
@@ -345,14 +345,14 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       {loading ? (
         <MemberSkeleton />
       ) : onlySelf ? (
-        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] px-4 py-12 text-center">
-          <div className="flex justify-center mb-4">
+        <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] px-[var(--space-4)] py-[var(--space-12)] text-center">
+          <div className="flex justify-center mb-[var(--space-4)]">
             <UserPlus size={48} className="text-[var(--muted)] opacity-40" />
           </div>
           <p className="text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
             {t("emptyTitle")}
           </p>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyDesc")}</p>
+          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyDesc")}</p>
         </div>
       ) : (
         <MemberList
@@ -378,7 +378,7 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         />
       )}
 
-      <p className="mt-4 text-[length:var(--text-xs)] text-[var(--meta)]">{t("inviteNote")}</p>
+      <p className="mt-[var(--space-4)] text-[length:var(--text-xs)] text-[var(--meta)]">{t("inviteNote")}</p>
     </div>
   );
 }
