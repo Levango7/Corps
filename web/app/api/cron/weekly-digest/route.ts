@@ -34,7 +34,7 @@ export async function GET(req: NextRequest) {
 
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   const now = new Date();
-  const weekAhead = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+  const weekAhead = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 7);
 
   try {
     // cron op 逃生口：跨工作区只读扫描（due-reminders 同模式）
@@ -52,7 +52,7 @@ export async function GET(req: NextRequest) {
 
       const workspaceIds = proWorkspaces.map((s) => s.workspaceId);
       // 本周运营埋点（供邮件漏斗段，逐工作区取）：Asia/Shanghai 最近 7 天窗口
-      const weekStart = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+      const weekStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 7);
 
       // 2) 一次性聚合本周运营埋点（按 workspaceId + name 分组，替代逐工作区 4 次 count）
       const eventAgg = await tx.analyticsEvent.groupBy({

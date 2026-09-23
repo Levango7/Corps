@@ -117,14 +117,21 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
         ? { userId, workspaceId: wid, read: false } // 标记当前用户在该工作区的所有未读通知
         : { id: validated.id!, userId, workspaceId: wid }; // 标记单条（仅当属于当前用户且属于当前工作区）
 
-    await runWithWorkspace(wid, (tx) =>
-      tx.notification.updateMany({
+    // 先取前 500 条未读通知 ID，再批量更新（updateMany 不支持 take）
+    const result = await runWithWorkspace(wid, async (tx) => {
+      const unread = await tx.notification.findMany({
         where,
+        select: { id: true },
+        take: 500,
+      });
+      if (unread.length === 0) return { count: 0 };
+      return tx.notification.updateMany({
+        where: { id: { in: unread.map((n) => n.id) } },
         data: { read: true },
-      }),
-    );
+      });
+    });
 
-    return NextResponse.json({ code: 200, data: { success: true } });
+    return NextResponse.json({ code: 200, data: { success: true, updatedCount: result.count } });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

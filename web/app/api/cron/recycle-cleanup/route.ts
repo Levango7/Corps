@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
 
   // 保留期（天）：环境变量 RECYCLE_RETENTION_DAYS，默认 30
   const retentionDays = Number(process.env.RECYCLE_RETENTION_DAYS) || 30;
-  const cutoff = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
+  const cutoff = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - retentionDays);
 
   try {
     const result = await runWithAuthOp("cron", async (tx) => {
