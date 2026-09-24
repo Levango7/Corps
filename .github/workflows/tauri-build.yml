@@ -63,8 +63,10 @@ jobs:
         working-directory: web
 
       # Install desktop/ dependencies (no lockfile, standalone package)
+      # --ignore-scripts: pnpm 11 blocks dependency build scripts by default;
+      # same workaround as web install step (ERR_PNPM_IGNORED_BUILDS)
       - name: Install desktop dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
         working-directory: desktop
 
       # Build Tauri app — triggers beforeBuildCommand:

@@ -48,6 +48,22 @@ const EXEMPT = new Set([
   "RECYCLE_RETENTION_DAYS",
   "WECHAT_PLATFORM_PUBLIC_KEY_PEM",
   "WECHAT_PRIVATE_KEY_PEM",
+  // 推送通知密钥（各平台可选，未配置时降级为无推送）
+  "APNS_KEY_ID",
+  "APNS_PRIVATE_KEY",
+  "APNS_TEAM_ID",
+  "FIREBASE_SERVER_KEY",
+  "HUAWEI_APP_ID",
+  "HUAWEI_APP_SECRET",
+  "PUSH_ADMIN_USER_IDS",
+  // AI/OpenAI 可选功能密钥（未配置时降级为空字符串）
+  "OPENAI_API_KEY",
+  // LiveKit 音视频服务配置（未配置时 meetings 路由返回 501）
+  "LIVEKIT_TOKEN_TTL",
+  // 附件域名白名单（可选，未配置时使用默认值）
+  "ALLOWED_ATTACHMENT_DOMAINS",
+  // APNS Bundle ID（Apple 推送可选功能）
+  "APNS_BUNDLE_ID",
 ]);
 
 function walk(dir: string, out: string[] = []): string[] {
