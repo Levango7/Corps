@@ -112,6 +112,20 @@ export async function executeWorkflow(
     // 4. 逐个执行动作
     const results: ActionResult[] = [];
     for (let i = 0; i < actions.length; i++) {
+      // 每次执行动作前检查是否已被取消（cancel API 可在执行期间将 status 改为 "cancelled"）
+      const current = await prisma.workflowExecution.findUnique({
+        where: { id: executionId },
+        select: { status: true },
+      });
+      if (current?.status === "cancelled") {
+        logger.info("[workflow:executor] execution cancelled, aborting remaining actions", {
+          workflowId,
+          executionId,
+          completedActions: i,
+        });
+        break;
+      }
+
       const action = actions[i];
       const result = await executeAction(action, i, workspaceId, triggerData);
       results.push(result);
@@ -229,6 +243,10 @@ async function executeAction(
  * create_task 动作：在工作区创建任务。
  * config 字段：title（必填）、description?、status?、priority?、assigneeId?、dueDate?
  * triggerData 中的字段可用 {{trigger.field}} 占位符引用（此处仅做简单字符串替换）。
+ *
+ * 递归防护：此函数直接用 prisma.task.create 创建任务，不经过 API 路由，
+ * 因此不会触发 emitWorkflowEvent（task.created 事件），避免无限递归。
+ * 切勿在此处添加 emitWorkflowEvent 调用，否则会导致 task.created → create_task → task.created 循环。
  */
 async function executeCreateTask(
   action: WorkflowAction,
@@ -261,6 +279,7 @@ async function executeCreateTask(
 /**
  * send_notification 动作：创建通知记录。
  * config 字段：userId（必填）、type（必填）、entityId（必填）、entityTitle（必填）
+ * 安全：校验 userId 是否为该工作区成员，防止越权向非成员发送通知
  */
 async function executeSendNotification(
   action: WorkflowAction,
@@ -279,6 +298,20 @@ async function executeSendNotification(
       type: "send_notification",
       status: "failed",
       error: "config requires userId, type, entityId, entityTitle",
+    };
+  }
+
+  // 校验目标用户是否为该工作区成员（防止越权/钓鱼）
+  const membership = await prisma.member.findFirst({
+    where: { userId, workspaceId },
+    select: { userId: true },
+  });
+  if (!membership) {
+    return {
+      index,
+      type: "send_notification",
+      status: "failed",
+      error: `user ${userId} is not a member of workspace ${workspaceId}`,
     };
   }
 

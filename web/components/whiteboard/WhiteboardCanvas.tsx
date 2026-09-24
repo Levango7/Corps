@@ -130,14 +130,21 @@ export function WhiteboardCanvas({
   // 自动保存：debounce timer + AbortController
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveAbortRef = useRef<AbortController | null>(null);
-  // 脏标记：elements 是否有未保存变更
-  const dirtyRef = useRef(false);
+  // 版本号追踪：每次 elements 变化递增，save 时记录当前版本，成功后只清除对应版本的脏标记
+  const versionRef = useRef(0);
+  const savedVersionRef = useRef(0);
   // 避免首次渲染触发保存（initialData 已是服务端数据）
   const firstRunRef = useRef(true);
+  // 保存最新 elements 引用，供卸载时 flush 保存使用
+  const elementsRef = useRef<WhiteboardElement[]>(elements);
+  elementsRef.current = elements;
 
   // ── 自动保存（debounce 2 秒）──
   const save = useCallback(async () => {
-    if (!dirtyRef.current) return;
+    // 检查是否有未保存的版本（versionRef > savedVersionRef）
+    if (versionRef.current <= savedVersionRef.current) return;
+    // 记录本次保存对应的版本号
+    const savingVersion = versionRef.current;
     // 取消上一次进行中的请求
     saveAbortRef.current?.abort();
     const ac = new AbortController();
@@ -149,7 +156,8 @@ export function WhiteboardCanvas({
         body: JSON.stringify({ data: JSON.stringify(elements) }),
         signal: ac.signal,
       });
-      dirtyRef.current = false;
+      // 只清除本次保存对应版本的脏标记；若期间有新改动，versionRef 已递增，仍为脏
+      savedVersionRef.current = savingVersion;
       setSavedAt(new Date());
     } catch {
       // 保存失败保留脏标记，下次再试
@@ -163,7 +171,7 @@ export function WhiteboardCanvas({
       firstRunRef.current = false;
       return;
     }
-    dirtyRef.current = true;
+    versionRef.current++;
     if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
     saveTimerRef.current = setTimeout(() => {
       save();
@@ -173,13 +181,22 @@ export function WhiteboardCanvas({
     };
   }, [elements, save]);
 
-  // 卸载时取消进行中的保存请求
+  // 卸载时 flush 保存（而非 abort），确保 2s 内离开页面不丢失更改
   useEffect(() => {
     return () => {
-      saveAbortRef.current?.abort();
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
+      // 若有未保存的改动，立即执行保存（不 abort 进行中的请求）
+      if (versionRef.current > savedVersionRef.current) {
+        // 用最新 elements 引用发送保存请求
+        api(`/api/v1/workspaces/${wid}/whiteboards/${wbid}`, {
+          method: "PATCH",
+          body: JSON.stringify({ data: JSON.stringify(elementsRef.current) }),
+        }).catch(() => {
+          // 卸载后保存失败无法重试，静默
+        });
+      }
     };
-  }, []);
+  }, [wid, wbid]);
 
   // ── 全局鼠标移动/松开（拖拽）──
   useEffect(() => {

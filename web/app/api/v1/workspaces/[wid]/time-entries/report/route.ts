@@ -8,8 +8,7 @@ const reportQuerySchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   groupBy: z.enum(["user", "task", "day"]).default("user"),
-  page: z.coerce.number().int().min(1).default(1),
-  pageSize: z.coerce.number().int().min(1).max(100).default(50),
+
 });
 
 interface GroupRow {
@@ -46,9 +45,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         { status: 400 },
       );
     }
-    const { userId, startDate, endDate, groupBy, page, pageSize } = parsed.data;
-    const take = pageSize;
-    const skip = (page - 1) * pageSize;
+    const { userId, startDate, endDate, groupBy } = parsed.data;
 
     const where = {
       workspaceId: wid,
@@ -65,22 +62,18 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         : {}),
     };
 
-    const [entries, total] = await runWithWorkspace(
+    // 报告查询全量聚合，不分页（工时记录数量通常可控，全量聚合保证 summary 准确）
+    const entries = await runWithWorkspace(
       wid,
-      async (tx) =>
-        Promise.all([
-          tx.timeEntry.findMany({
-            where,
-            include: {
-              user: { select: { id: true, name: true, email: true } },
-              task: { select: { id: true, title: true } },
-            },
-            orderBy: [{ startTime: "asc" }],
-            take,
-            skip,
-          }),
-          tx.timeEntry.count({ where }),
-        ]),
+      (tx) =>
+        tx.timeEntry.findMany({
+          where,
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            task: { select: { id: true, title: true } },
+          },
+          orderBy: [{ startTime: "asc" }],
+        }),
       ctx.payload.sub,
     );
 
@@ -138,8 +131,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           billableDuration: summaryBillable,
           totalAmount: Math.round(summaryAmount * 100) / 100,
         },
-        total,
-        hasMore: skip + take < total,
+
       },
     });
   } catch (error) {

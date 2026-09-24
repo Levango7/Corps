@@ -121,7 +121,7 @@ const actionItemSchema = z.object({
  */
 const createMinutesSchema = z.object({
   title: z.string().min(1).max(200),
-  content: z.string().min(1),
+  content: z.string().default(""),
   meetingId: z.string().uuid().optional(),
   attendees: z.array(attendeeSchema).default([]),
   actionItems: z.array(actionItemSchema).default([]),

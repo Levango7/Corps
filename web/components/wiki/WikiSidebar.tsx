@@ -112,6 +112,7 @@ export function WikiSidebar({ wid, selectedId, onSelect, refreshKey = 0 }: WikiS
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [internalRefresh, setInternalRefresh] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -120,10 +121,10 @@ export function WikiSidebar({ wid, selectedId, onSelect, refreshKey = 0 }: WikiS
       try {
         const params = new URLSearchParams();
         if (search) params.set("q", search);
-        const data = await api<WikiPageNode[]>(
+        const data = await api<{ items: WikiPageNode[]; total: number; hasMore: boolean }>(
           `/api/v1/workspaces/${wid}/wiki?${params.toString()}`,
         );
-        if (!cancelled) setTree(data);
+        if (!cancelled) setTree(data.items);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t("loadError"));
       } finally {
@@ -133,7 +134,7 @@ export function WikiSidebar({ wid, selectedId, onSelect, refreshKey = 0 }: WikiS
     return () => {
       cancelled = true;
     };
-  }, [wid, search, refreshKey, t]);
+  }, [wid, search, refreshKey, internalRefresh, t]);
 
   /** 创建新页面（根或子页面），创建后选中 */
   async function handleCreate(parentId?: string) {
@@ -144,8 +145,8 @@ export function WikiSidebar({ wid, selectedId, onSelect, refreshKey = 0 }: WikiS
         method: "POST",
         body: JSON.stringify({ title: title.trim(), parentId: parentId ?? null, content: "" }),
       });
-      // 重新拉取树（通过 refreshKey 机制由父组件控制更简洁，这里直接刷新）
-      setSearch((s) => s); // 触发 useEffect 重跑
+      // 重新拉取树（递增内部刷新计数器触发 useEffect）
+      setInternalRefresh((n) => n + 1);
       onSelect(page);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("saveError"));

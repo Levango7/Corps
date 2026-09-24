@@ -3,6 +3,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /v1/workspaces/{wid}/announcements — 公告列表
@@ -104,6 +105,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+
+  const denied = await requirePermission(ctx, "announcements", "create", req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

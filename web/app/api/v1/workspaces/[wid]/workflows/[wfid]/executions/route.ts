@@ -98,7 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           data: {
             workflowId: wfid,
             workspaceId: wid,
-            triggerData: (validated.triggerData ?? wf.trigger) as Prisma.InputJsonValue,
+            triggerData: (validated.triggerData ?? {}) as Prisma.InputJsonValue,
             status: "pending",
           },
         }),

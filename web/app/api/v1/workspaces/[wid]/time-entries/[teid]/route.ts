@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { checkPermission } from "@/lib/permissions";
 
 const updateSchema = z.object({
   endTime: z.string().datetime().nullable().optional(),
@@ -68,9 +69,16 @@ export async function PATCH(
       async (tx) => {
         const existing = await tx.timeEntry.findFirst({
           where: { id: teid, workspaceId: wid },
-          select: { id: true },
+          select: { id: true, userId: true },
         });
         if (!existing) return { kind: "notFound" as const };
+
+        // 横向越权防护：仅允许记录所有者修改，owner/admin 可修改任意记录
+        const isOwner = existing.userId === ctx.payload.sub;
+        const canManageOthers = await checkPermission(ctx, "timetrack", "update");
+        if (!isOwner && !canManageOthers) {
+          return { kind: "forbidden" as const };
+        }
 
         const entry = await tx.timeEntry.update({
           where: { id: teid },
@@ -97,6 +105,13 @@ export async function PATCH(
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "timeEntryNotFound"), data: null },
         { status: 404 },
+      );
+    }
+
+    if (result.kind === "forbidden") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "forbidden"), data: null },
+        { status: 403 },
       );
     }
 
@@ -134,13 +149,23 @@ export async function DELETE(
   try {
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.timeEntry.findFirst({ where: { id: teid, workspaceId: wid }, select: { id: true } }),
+      (tx) => tx.timeEntry.findFirst({ where: { id: teid, workspaceId: wid }, select: { id: true, userId: true } }),
       ctx.payload.sub,
     );
     if (!existing) {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "timeEntryNotFound"), data: null },
         { status: 404 },
+      );
+    }
+
+    // 横向越权防护：仅允许记录所有者删除，owner/admin 可删除任意记录
+    const isOwner = existing.userId === ctx.payload.sub;
+    const canManageOthers = await checkPermission(ctx, "timetrack", "delete");
+    if (!isOwner && !canManageOthers) {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "forbidden"), data: null },
+        { status: 403 },
       );
     }
 

@@ -46,6 +46,10 @@ export const MODULES = [
   "billing",
   "analytics",
   "settings",
+  "whiteboards",
+  "timetrack",
+  "announcements",
+  "contacts",
 ] as const;
 
 /** 角色列表 */
@@ -81,6 +85,10 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     billing: "crud",
     analytics: "r",
     settings: "crud",
+    whiteboards: "crud",
+    timetrack: "crud",
+    announcements: "crud",
+    contacts: "crud",
   },
   admin: {
     tasks: "crud",
@@ -91,6 +99,10 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     billing: "",
     analytics: "r",
     settings: "r",
+    whiteboards: "crud",
+    timetrack: "crud",
+    announcements: "crud",
+    contacts: "crud",
   },
   member: {
     tasks: "crud",
@@ -101,6 +113,10 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     billing: "",
     analytics: "",
     settings: "",
+    whiteboards: "crud",
+    timetrack: "crud",
+    announcements: "r",
+    contacts: "cr",
   },
   viewer: {
     tasks: "r",
@@ -111,6 +127,10 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     billing: "",
     analytics: "",
     settings: "",
+    whiteboards: "r",
+    timetrack: "r",
+    announcements: "r",
+    contacts: "r",
   },
 };
 

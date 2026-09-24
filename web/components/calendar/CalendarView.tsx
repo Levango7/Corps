@@ -71,9 +71,11 @@ export function CalendarView({ wid }: { wid: string }) {
       const { start, end } = getRange(view, currentDate);
       // 并行加载日历事件和任务列表（任务用于截止日期联动）
       const [eventData, tasksResp] = await Promise.all([
-        api<CalendarEvent[]>(
+        api<{ items: CalendarEvent[]; total: number; hasMore: boolean }>(
           `/api/v1/workspaces/${wid}/calendar/events?start=${start.toISOString()}&end=${end.toISOString()}`,
-        ).catch((): CalendarEvent[] => []),
+        )
+          .then((resp): CalendarEvent[] => resp.items ?? [])
+          .catch((): CalendarEvent[] => []),
         api<TasksListResponse>(
           `/api/v1/workspaces/${wid}/tasks?limit=100`,
         ).catch((): TasksListResponse => ({ items: [], total: 0, hasMore: false })),

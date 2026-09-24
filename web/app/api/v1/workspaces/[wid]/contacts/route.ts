@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * 通讯录联系人 API · /api/v1/workspaces/{wid}/contacts
@@ -132,6 +133,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+
+  const denied = await requirePermission(ctx, "contacts", "create", req);
+  if (denied) return denied;
 
   try {
     const validated = createContactSchema.parse(await req.json());

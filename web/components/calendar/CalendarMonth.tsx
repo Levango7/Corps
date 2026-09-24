@@ -90,7 +90,7 @@ export function CalendarMonth({
           </button>
         </div>
         <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-          {year}年 {month + 1}月
+          {t("monthYear", { year, month: month + 1 })}
         </h2>
       </div>
 

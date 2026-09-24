@@ -43,10 +43,10 @@ export function ContactGroupSidebar({
     (async () => {
       setLoading(true);
       try {
-        const data = await api<ContactGroupItem[]>(
+        const data = await api<{ items: ContactGroupItem[]; total: number; hasMore: boolean }>(
           `/api/v1/workspaces/${wid}/contact-groups`,
         );
-        if (!cancelled) setGroups(data);
+        if (!cancelled) setGroups(data.items);
       } catch {
         /* 静默：侧栏加载失败不阻塞主列表 */
       } finally {
