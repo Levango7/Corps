@@ -54,7 +54,7 @@ jobs:
       # --ignore-scripts: pnpm 11 blocks dependency build scripts by default;
       # same workaround as ci.yml (ERR_PNPM_IGNORED_BUILDS for @parcel/watcher etc.)
       - name: Install web dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
         working-directory: web
 
       # Prisma client generation — next build imports @prisma/client at build time

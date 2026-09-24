@@ -64,7 +64,7 @@ jobs:
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
 
       - name: Install web dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
         working-directory: web
 
       - name: Generate Prisma client
@@ -124,7 +124,7 @@ jobs:
           workspaces: desktop/src-tauri -> target
 
       - name: Install web dependencies
-        run: pnpm install --frozen-lockfile --ignore-scripts
+        run: pnpm install --frozen-lockfile
         working-directory: web
 
       - name: Generate Prisma client
