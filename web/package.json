@@ -106,8 +106,6 @@
     "react-dom": "19.2.8",
     "effect": "^3.20.0",
     "deepmerge-ts": "^8.0.0"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": ["@prisma/client", "prisma", "esbuild", "@swc/core", "@parcel/watcher"]
+
   }
 }
