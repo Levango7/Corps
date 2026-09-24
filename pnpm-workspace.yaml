@@ -2,7 +2,9 @@ packages:
   - web
   - desktop
 
-allowBuilds:
+nodeLinker: hoisted
+
+onlyBuiltDependencies:
   - '@prisma/client'
   - '@prisma/engines'
   - '@parcel/watcher'
