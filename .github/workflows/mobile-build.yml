@@ -64,11 +64,21 @@ jobs:
           echo "ANDROID_NDK_ROOT=$ANDROID_HOME/ndk/27.0.12077973" >> $GITHUB_ENV
 
       - name: Install web dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: web
 
       - name: Generate Prisma client
         run: npx prisma generate
+        working-directory: web
+
+      - name: Link .prisma to @prisma/client (pnpm virtual store fix)
+        shell: bash
+        run: |
+          PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
+          if [ ! -e "$PRISMA_CLIENT_DIR/.prisma" ]; then
+            ln -s ../.prisma "$PRISMA_CLIENT_DIR/.prisma"
+            echo "Created symlink: $PRISMA_CLIENT_DIR/.prisma → ../.prisma"
+          fi
         working-directory: web
 
       - name: Install desktop dependencies
@@ -124,11 +134,21 @@ jobs:
           workspaces: desktop/src-tauri -> target
 
       - name: Install web dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: web
 
       - name: Generate Prisma client
         run: npx prisma generate
+        working-directory: web
+
+      - name: Link .prisma to @prisma/client (pnpm virtual store fix)
+        shell: bash
+        run: |
+          PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
+          if [ ! -e "$PRISMA_CLIENT_DIR/.prisma" ]; then
+            ln -s ../.prisma "$PRISMA_CLIENT_DIR/.prisma"
+            echo "Created symlink: $PRISMA_CLIENT_DIR/.prisma → ../.prisma"
+          fi
         working-directory: web
 
       # desktop 是独立包（非 pnpm workspace 成员），用 npm install 避免workspace 干扰

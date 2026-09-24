@@ -54,12 +54,25 @@ jobs:
       # --ignore-scripts: pnpm 11 blocks dependency build scripts by default;
       # same workaround as ci.yml (ERR_PNPM_IGNORED_BUILDS for @parcel/watcher etc.)
       - name: Install web dependencies
-        run: pnpm install --frozen-lockfile
+        run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: web
 
       # Prisma client generation — next build imports @prisma/client at build time
       - name: Generate Prisma client
         run: npx prisma generate
+        working-directory: web
+
+      # pnpm 虚拟存储中 .prisma/client 与 @prisma/client 不在同一目录层级，
+      # 导致 @prisma/client/default.js 的 require('.prisma/client/default') 无法解析。
+      # 创建符号链接 @prisma/client/.prisma → ../.prisma 修复此问题。
+      - name: Link .prisma to @prisma/client (pnpm virtual store fix)
+        shell: bash
+        run: |
+          PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
+          if [ ! -e "$PRISMA_CLIENT_DIR/.prisma" ]; then
+            ln -s ../.prisma "$PRISMA_CLIENT_DIR/.prisma"
+            echo "Created symlink: $PRISMA_CLIENT_DIR/.prisma → ../.prisma"
+          fi
         working-directory: web
 
       # Install desktop/ dependencies (no lockfile, standalone package)
