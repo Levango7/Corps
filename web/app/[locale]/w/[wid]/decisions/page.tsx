@@ -16,7 +16,7 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@/lib/i18n-navigation";
-import { FileText, Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy, ListChecks } from "lucide-react";
+import { Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy, ListChecks } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";

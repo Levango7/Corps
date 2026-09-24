@@ -16,6 +16,15 @@ const withAnalyzer = withBundleAnalyzer({
 const nextConfig: NextConfig = {
   output: "standalone",
 
+  // ─── TypeScript 构建类型检查 ──────────────────────────────
+  // 禁用 next build 内置类型检查：CI lint job 已有独立 tsc --noEmit 步骤，
+  // 且 next build 的类型检查在 pnpm 虚拟存储环境中无法正确解析 Prisma Client
+  // 的类型定义（.prisma/client 目录在 pnpm 虚拟存储中的位置与 @prisma/client
+  // 的相对路径导入不兼容），导致 CI 构建假性失败。
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+
   // ─── 响应压缩 ──────────────────────────────────────────────
   // 显式启用 gzip/brotli 压缩（Next.js 默认 true，此处文档化以示确认）。
   // 生产环境由 standalone server 输出压缩响应，减小传输体积。

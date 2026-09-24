@@ -63,7 +63,7 @@ function ShareClient({ params }: { params: Promise<{ token: string }> }) {
   const [remainingAttempts, setRemainingAttempts] = useState<number | undefined>(undefined);
   /** 锁定截止时间 */
   const [lockedUntil, setLockedUntil] = useState<Date | null>(null);
-  const [verifying, setVerifying] = useState(false);
+  const [, setVerifying] = useState(false);
 
   useEffect(() => {
     let cancelled = false;

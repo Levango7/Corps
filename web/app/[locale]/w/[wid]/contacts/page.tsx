@@ -22,7 +22,7 @@ export default function ContactsPage({
 }) {
   const { wid } = use(params);
   const t = useTranslations("contact");
-  const tButton = useTranslations("button");
+
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<ContactItem | null>(null);
