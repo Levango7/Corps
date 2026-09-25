@@ -110,10 +110,10 @@ describe("文档搜索", () => {
     });
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.data.length).toBeGreaterThanOrEqual(3);
-    for (let i = 0; i < json.data.length - 1; i++) {
-      const prev = new Date(json.data[i].updatedAt).getTime();
-      const next = new Date(json.data[i + 1].updatedAt).getTime();
+    expect(json.data.items.length).toBeGreaterThanOrEqual(3);
+    for (let i = 0; i < json.data.items.length - 1; i++) {
+      const prev = new Date(json.data.items[i].updatedAt).getTime();
+      const next = new Date(json.data.items[i + 1].updatedAt).getTime();
       expect(prev).toBeGreaterThanOrEqual(next);
     }
   });
@@ -123,7 +123,7 @@ describe("文档搜索", () => {
       headers: authHeader(token),
     });
     const json = await res.json();
-    const titles = json.data.map((d: { title: string }) => d.title);
+    const titles = json.data.items.map((d: { title: string }) => d.title);
     expect(titles).toContain("新人入职清单");
   });
 
@@ -132,7 +132,7 @@ describe("文档搜索", () => {
       headers: authHeader(token),
     });
     const json = await res.json();
-    const titles = json.data.map((d: { title: string }) => d.title);
+    const titles = json.data.items.map((d: { title: string }) => d.title);
     expect(titles).toContain("周会纪要 2026-08-31");
   });
 });

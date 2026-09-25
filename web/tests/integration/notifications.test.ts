@@ -80,7 +80,7 @@ async function getNotifications(
   const res = await fetch(url.toString(), { headers: authHeader(token) });
   expect(res.status).toBe(200);
   const json = await res.json();
-  return json.data.notifications;
+  return json.data.items;
 }
 
 /** 获取未读计数 */
