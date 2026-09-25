@@ -121,14 +121,14 @@ describe("子任务进度汇总与列表", () => {
       headers: authHeader(token),
     });
     const listJson = await list.json();
-    const parent = listJson.data.find((t: { id: string }) => t.id === parentId);
+    const parent = listJson.data.items.find((t: { id: string }) => t.id === parentId);
     expect(parent).toBeDefined();
     expect(parent.subtaskTotal).toBe(3);
     expect(parent.subtaskDone).toBe(2);
 
     // 子任务行不出现在顶层列表
     const childIds = detailJson.data.children.map((c: { id: string }) => c.id);
-    for (const row of listJson.data) {
+    for (const row of listJson.data.items) {
       expect(childIds).not.toContain(row.id);
     }
   });

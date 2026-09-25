@@ -130,8 +130,8 @@ describe("任务查询 GET /tasks", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(Array.isArray(json.data)).toBe(true);
-    expect(json.data.length).toBeGreaterThan(0);
+    expect(Array.isArray(json.data.items)).toBe(true);
+    expect(json.data.items.length).toBeGreaterThan(0);
   });
 
   it("GET 详情返回单个任务", async () => {
@@ -179,10 +179,10 @@ describe("任务查询 GET /tasks", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(json.data.every((t: { assigneeId?: string }) => t.assigneeId === owner.user.id)).toBe(
+    expect(json.data.items.every((t: { assigneeId?: string }) => t.assigneeId === owner.user.id)).toBe(
       true,
     );
-    expect(json.data.some((t: { id: string }) => t.id === assignedToMe.body.data!.id)).toBe(true);
+    expect(json.data.items.some((t: { id: string }) => t.id === assignedToMe.body.data!.id)).toBe(true);
   });
 });
 

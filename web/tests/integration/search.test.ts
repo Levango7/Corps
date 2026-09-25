@@ -79,7 +79,7 @@ describe("搜索 limit 边界", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    const json = await res.json();
+
     expect(json.data.items.length).toBeLessThanOrEqual(1);
   });
 });
