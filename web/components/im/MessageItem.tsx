@@ -23,7 +23,15 @@
  * lucide-react 图标尺寸用 14/16（项目约定）。
  */
 
-import { memo, useState, useCallback, useRef, useEffect, type KeyboardEvent, type TouchEvent } from "react";
+import {
+  memo,
+  useState,
+  useCallback,
+  useRef,
+  useEffect,
+  type KeyboardEvent,
+  type TouchEvent,
+} from "react";
 import {
   CheckCheck,
   Check,
@@ -197,10 +205,7 @@ function renderLine(line: string, wid: string | undefined): React.ReactNode[] {
     }
     if (tok.type === "mention") {
       return (
-        <span
-          key={i}
-          className="text-[var(--accent)] font-[weight:var(--weight-medium)]"
-        >
+        <span key={i} className="text-[var(--accent)] font-[weight:var(--weight-medium)]">
           {tok.text}
         </span>
       );
@@ -261,9 +266,7 @@ function MessageItemImpl({
   }, []);
 
   const author = message.author;
-  const displayName = author
-    ? author.name ?? author.email ?? t("unknownUser")
-    : t("unknownUser");
+  const displayName = author ? (author.name ?? author.email ?? t("unknownUser")) : t("unknownUser");
   const initial = (author?.name ?? author?.email ?? "?")[0]?.toUpperCase() ?? "?";
 
   const isRevoked = message.revokedAt !== null;
@@ -319,20 +322,17 @@ function MessageItemImpl({
   }, [message.id, onRevoke]);
 
   /** 长按开始：启动计时器 */
-  const handleTouchStart = useCallback(
-    (e: TouchEvent<HTMLDivElement>) => {
-      const touch = e.touches[0];
-      longPressStartRef.current = { x: touch.clientX, y: touch.clientY };
-      longPressTimerRef.current = setTimeout(() => {
-        setShowMobileMenu(true);
-        // 触觉反馈（如果设备支持）
-        if (typeof navigator !== "undefined" && navigator.vibrate) {
-          navigator.vibrate(50);
-        }
-      }, LONG_PRESS_DURATION);
-    },
-    [],
-  );
+  const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    const touch = e.touches[0];
+    longPressStartRef.current = { x: touch.clientX, y: touch.clientY };
+    longPressTimerRef.current = setTimeout(() => {
+      setShowMobileMenu(true);
+      // 触觉反馈（如果设备支持）
+      if (typeof navigator !== "undefined" && navigator.vibrate) {
+        navigator.vibrate(50);
+      }
+    }, LONG_PRESS_DURATION);
+  }, []);
 
   /** 长按结束：清除计时器 */
   const handleTouchEnd = useCallback(() => {
@@ -344,22 +344,19 @@ function MessageItemImpl({
   }, []);
 
   /** 长按移动：超过阈值则取消 */
-  const handleTouchMove = useCallback(
-    (e: TouchEvent<HTMLDivElement>) => {
-      const start = longPressStartRef.current;
-      if (!start) return;
-      const touch = e.touches[0];
-      const dx = Math.abs(touch.clientX - start.x);
-      const dy = Math.abs(touch.clientY - start.y);
-      if (dx > LONG_PRESS_TOLERANCE || dy > LONG_PRESS_TOLERANCE) {
-        if (longPressTimerRef.current) {
-          clearTimeout(longPressTimerRef.current);
-          longPressTimerRef.current = null;
-        }
+  const handleTouchMove = useCallback((e: TouchEvent<HTMLDivElement>) => {
+    const start = longPressStartRef.current;
+    if (!start) return;
+    const touch = e.touches[0];
+    const dx = Math.abs(touch.clientX - start.x);
+    const dy = Math.abs(touch.clientY - start.y);
+    if (dx > LONG_PRESS_TOLERANCE || dy > LONG_PRESS_TOLERANCE) {
+      if (longPressTimerRef.current) {
+        clearTimeout(longPressTimerRef.current);
+        longPressTimerRef.current = null;
       }
-    },
-    [],
-  );
+    }
+  }, []);
 
   // 撤回消息：只显示"消息已撤回"
   if (isRevoked) {
@@ -387,11 +384,7 @@ function MessageItemImpl({
   const messageType = message.type ?? "text";
 
   // call_ended / call_rejected / system: 居中系统消息（灰色、无气泡、居中）
-  if (
-    messageType === "call_ended" ||
-    messageType === "call_rejected" ||
-    messageType === "system"
-  ) {
+  if (messageType === "call_ended" || messageType === "call_rejected" || messageType === "system") {
     const systemText =
       messageType === "call_ended"
         ? tIm("callEnded")
@@ -400,9 +393,7 @@ function MessageItemImpl({
           : message.body;
     return (
       <div className="flex justify-center py-1">
-        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-          {systemText}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{systemText}</span>
       </div>
     );
   }
@@ -501,7 +492,9 @@ function MessageItemImpl({
                 autoFocus
                 className="w-full px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--accent)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none resize-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               />
-              <div className={`flex gap-[var(--space-2)] mt-1 ${isOwn ? "justify-end" : "justify-start"}`}>
+              <div
+                className={`flex gap-[var(--space-2)] mt-1 ${isOwn ? "justify-end" : "justify-start"}`}
+              >
                 <button
                   type="button"
                   onClick={handleCancelEdit}

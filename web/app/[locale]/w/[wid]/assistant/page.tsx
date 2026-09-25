@@ -13,14 +13,13 @@ import dynamic from "next/dynamic";
 // P0-2: code splitting — AssistantPanel 改为 dynamic import 懒加载
 const AssistantPanel = dynamic(
   () => import("@/components/ai/AssistantPanel").then((m) => m.AssistantPanel),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
 );
 
-export default function AssistantPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default function AssistantPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   return <AssistantPanel wid={wid} />;
 }

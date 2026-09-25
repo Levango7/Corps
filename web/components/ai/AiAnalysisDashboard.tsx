@@ -214,14 +214,11 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
         });
         if (!ac.signal.aborted) setBurndown(result);
       } else if (activeType === "team_performance") {
-        const result = await api<TeamPerformanceResult>(
-          "/api/v1/ai/analysis/team-performance",
-          {
-            method: "POST",
-            body: JSON.stringify({ wid, period }),
-            signal: ac.signal,
-          },
-        );
+        const result = await api<TeamPerformanceResult>("/api/v1/ai/analysis/team-performance", {
+          method: "POST",
+          body: JSON.stringify({ wid, period }),
+          signal: ac.signal,
+        });
         if (!ac.signal.aborted) setTeamPerf(result);
       } else if (activeType === "bottleneck") {
         const result = await api<BottleneckResult>("/api/v1/ai/analysis/bottleneck", {
@@ -235,14 +232,11 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
         if (periodPreset !== "custom") {
           body.weekStart = period.start;
         }
-        const result = await api<WeeklyReportResult>(
-          "/api/v1/ai/analysis/weekly-report",
-          {
-            method: "POST",
-            body: JSON.stringify(body),
-            signal: ac.signal,
-          },
-        );
+        const result = await api<WeeklyReportResult>("/api/v1/ai/analysis/weekly-report", {
+          method: "POST",
+          body: JSON.stringify(body),
+          signal: ac.signal,
+        });
         if (!ac.signal.aborted) setWeekly(result);
       }
     } catch (e) {
@@ -290,10 +284,7 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
     burndown?.reportId ?? teamPerf?.reportId ?? bottleneck?.reportId ?? weekly?.reportId ?? null;
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--surface)]"
-      aria-label={t("title")}
-    >
+    <div className="flex h-full flex-col bg-[var(--surface)]" aria-label={t("title")}>
       {/* 标题栏 */}
       <header className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
@@ -340,9 +331,7 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
       <div className="flex items-center justify-between gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-2)]">
         <div className="flex items-center gap-[var(--space-2)]">
           <Calendar size={14} className="text-[var(--muted)]" />
-          <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
-            {t("period")}：
-          </span>
+          <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("period")}：</span>
           <select
             value={periodPreset}
             onChange={(e) => setPeriodPreset(e.target.value as PeriodPreset)}
@@ -361,11 +350,7 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
           disabled={loading}
           className="inline-flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--accent)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--on-accent)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
         >
-          {loading ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Sparkles size={14} />
-          )}
+          {loading ? <Loader2 size={14} className="animate-spin" /> : <Sparkles size={14} />}
           {loading ? t("analyzing") : t("run")}
         </button>
       </div>
@@ -407,9 +392,7 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
               <h2 className="mb-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 {t("summary")}
               </h2>
-              <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                {burndown.summary}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{burndown.summary}</p>
             </section>
             <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)]">
               <BurndownChart
@@ -465,20 +448,28 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
               <h2 className="mb-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 {t("summary")}
               </h2>
-              <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                {teamPerf.summary}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{teamPerf.summary}</p>
             </section>
             <section className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)]">
               <div className="overflow-x-auto">
                 <table className="w-full text-[length:var(--text-sm)]">
                   <thead>
                     <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-                      <th className="py-[var(--space-2)] pr-[var(--space-3)] font-[weight:var(--weight-medium)]">{t("teamPerformance")}</th>
-                      <th className="py-[var(--space-2)] px-[var(--space-3)] font-[weight:var(--weight-medium)]">Completion</th>
-                      <th className="py-[var(--space-2)] px-[var(--space-3)] font-[weight:var(--weight-medium)]">Avg Days</th>
-                      <th className="py-[var(--space-2)] px-[var(--space-3)] font-[weight:var(--weight-medium)]">Workload</th>
-                      <th className="py-[var(--space-2)] pl-[var(--space-3)] font-[weight:var(--weight-medium)]">Strengths</th>
+                      <th className="py-[var(--space-2)] pr-[var(--space-3)] font-[weight:var(--weight-medium)]">
+                        {t("teamPerformance")}
+                      </th>
+                      <th className="py-[var(--space-2)] px-[var(--space-3)] font-[weight:var(--weight-medium)]">
+                        Completion
+                      </th>
+                      <th className="py-[var(--space-2)] px-[var(--space-3)] font-[weight:var(--weight-medium)]">
+                        Avg Days
+                      </th>
+                      <th className="py-[var(--space-2)] px-[var(--space-3)] font-[weight:var(--weight-medium)]">
+                        Workload
+                      </th>
+                      <th className="py-[var(--space-2)] pl-[var(--space-3)] font-[weight:var(--weight-medium)]">
+                        Strengths
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -615,9 +606,7 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
               <h2 className="mb-[var(--space-2)] text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
                 {t("summary")}
               </h2>
-              <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
-                {weekly.summary}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{weekly.summary}</p>
             </section>
             <div className="grid grid-cols-1 gap-[var(--space-3)] sm:grid-cols-2">
               {/* 本周完成 */}
@@ -630,7 +619,10 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
                   {weekly.completed.map((c, i) => (
                     <li key={i} className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
                       <span className="font-[weight:var(--weight-medium)]">{c.title}</span>
-                      <span className="text-[var(--muted)]"> — {c.owner} · {c.date}</span>
+                      <span className="text-[var(--muted)]">
+                        {" "}
+                        — {c.owner} · {c.date}
+                      </span>
                     </li>
                   ))}
                   {weekly.completed.length === 0 && (
@@ -648,7 +640,10 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
                   {weekly.planned.map((p, i) => (
                     <li key={i} className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
                       <span className="font-[weight:var(--weight-medium)]">{p.title}</span>
-                      <span className="text-[var(--muted)]"> — {p.owner} · {p.dueDate}</span>
+                      <span className="text-[var(--muted)]">
+                        {" "}
+                        — {p.owner} · {p.dueDate}
+                      </span>
                     </li>
                   ))}
                   {weekly.planned.length === 0 && (
@@ -736,9 +731,7 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
             <FeedbackButtons
               capability={`analysis-${activeType}`}
               workspaceId={wid}
-              originalOutput={
-                burndown ?? teamPerf ?? bottleneck ?? weekly ?? null
-              }
+              originalOutput={burndown ?? teamPerf ?? bottleneck ?? weekly ?? null}
             />
           </div>
         )}

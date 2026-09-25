@@ -108,10 +108,10 @@ export default function KeyResultEditor({
         dueDate: dueDate ? localDateToISOString(dueDate) : undefined,
       };
       if (kr) {
-        await api(
-          `/api/v1/workspaces/${wid}/objectives/${oid}/key-results/${kr.id}`,
-          { method: "PATCH", body: JSON.stringify(payload) },
-        );
+        await api(`/api/v1/workspaces/${wid}/objectives/${oid}/key-results/${kr.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
       } else {
         await api(`/api/v1/workspaces/${wid}/objectives/${oid}/key-results`, {
           method: "POST",

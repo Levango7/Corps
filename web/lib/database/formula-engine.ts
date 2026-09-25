@@ -51,56 +51,44 @@ export class FormulaError extends Error {
     public readonly position?: number,
   ) {
     super(message);
-    this.name = 'FormulaError';
+    this.name = "FormulaError";
   }
 }
 
 // ─── AST 节点（内部实现）────────────────────────────────────
 
 type BinaryOperator =
-  | '+'
-  | '-'
-  | '*'
-  | '/'
-  | '%'
-  | '=='
-  | '!='
-  | '>'
-  | '<'
-  | '>='
-  | '<='
-  | '&&'
-  | '||';
+  "+" | "-" | "*" | "/" | "%" | "==" | "!=" | ">" | "<" | ">=" | "<=" | "&&" | "||";
 
 type ASTNode =
-  | { type: 'Field'; name: string }
-  | { type: 'String'; value: string }
-  | { type: 'Number'; value: number }
-  | { type: 'Boolean'; value: boolean }
-  | { type: 'Null' }
-  | { type: 'UnaryOp'; op: '-' | '!'; operand: ASTNode }
-  | { type: 'BinaryOp'; op: BinaryOperator; left: ASTNode; right: ASTNode }
-  | { type: 'Ternary'; condition: ASTNode; trueExpr: ASTNode; falseExpr: ASTNode }
-  | { type: 'Method'; object: ASTNode; method: string }
-  | { type: 'Call'; name: string; args: ASTNode[] };
+  | { type: "Field"; name: string }
+  | { type: "String"; value: string }
+  | { type: "Number"; value: number }
+  | { type: "Boolean"; value: boolean }
+  | { type: "Null" }
+  | { type: "UnaryOp"; op: "-" | "!"; operand: ASTNode }
+  | { type: "BinaryOp"; op: BinaryOperator; left: ASTNode; right: ASTNode }
+  | { type: "Ternary"; condition: ASTNode; trueExpr: ASTNode; falseExpr: ASTNode }
+  | { type: "Method"; object: ASTNode; method: string }
+  | { type: "Call"; name: string; args: ASTNode[] };
 
 // ─── Lexer（词法分析）──────────────────────────────────────
 
 type TokenType =
-  | 'FIELD'
-  | 'STRING'
-  | 'NUMBER'
-  | 'BOOLEAN'
-  | 'NULL'
-  | 'IDENT'
-  | 'OP'
-  | 'LPAREN'
-  | 'RPAREN'
-  | 'DOT'
-  | 'COMMA'
-  | 'QUESTION'
-  | 'COLON'
-  | 'EOF';
+  | "FIELD"
+  | "STRING"
+  | "NUMBER"
+  | "BOOLEAN"
+  | "NULL"
+  | "IDENT"
+  | "OP"
+  | "LPAREN"
+  | "RPAREN"
+  | "DOT"
+  | "COMMA"
+  | "QUESTION"
+  | "COLON"
+  | "EOF";
 
 interface Token {
   type: TokenType;
@@ -111,22 +99,34 @@ interface Token {
 
 /** 运算符列表，按长度降序排列，确保多字符运算符优先匹配 */
 const OPERATORS: readonly string[] = [
-  '==', '!=', '>=', '<=', '&&', '||',
-  '+', '-', '*', '/', '%', '>', '<', '!',
+  "==",
+  "!=",
+  ">=",
+  "<=",
+  "&&",
+  "||",
+  "+",
+  "-",
+  "*",
+  "/",
+  "%",
+  ">",
+  "<",
+  "!",
 ];
 
 /** 支持的数学函数名 */
-const MATH_FUNCTIONS = new Set(['round', 'floor', 'ceil', 'abs', 'min', 'max']);
+const MATH_FUNCTIONS = new Set(["round", "floor", "ceil", "abs", "min", "max"]);
 
 /** 支持的字符串方法名 */
-const STRING_METHODS = new Set(['length', 'toUpperCase', 'toLowerCase']);
+const STRING_METHODS = new Set(["length", "toUpperCase", "toLowerCase"]);
 
 function isDigit(ch: string): boolean {
-  return ch >= '0' && ch <= '9';
+  return ch >= "0" && ch <= "9";
 }
 
 function isAlpha(ch: string): boolean {
-  return (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') || ch === '_';
+  return (ch >= "a" && ch <= "z") || (ch >= "A" && ch <= "Z") || ch === "_";
 }
 
 function isAlphaNum(ch: string): boolean {
@@ -146,29 +146,29 @@ function tokenize(expr: string): Token[] {
     const ch = expr[i];
 
     // 跳过空白字符
-    if (ch === ' ' || ch === '\t' || ch === '\n' || ch === '\r') {
+    if (ch === " " || ch === "\t" || ch === "\n" || ch === "\r") {
       i++;
       continue;
     }
 
     // 字段引用 {{fieldName}}
-    if (ch === '{' && expr[i + 1] === '{') {
+    if (ch === "{" && expr[i + 1] === "{") {
       const start = i;
       i += 2; // 跳过 {{
-      let name = '';
-      while (i < n && !(expr[i] === '}' && expr[i + 1] === '}')) {
+      let name = "";
+      while (i < n && !(expr[i] === "}" && expr[i + 1] === "}")) {
         name += expr[i];
         i++;
       }
       if (i >= n) {
-        throw new FormulaError('字段引用未闭合，缺少 }}', start);
+        throw new FormulaError("字段引用未闭合，缺少 }}", start);
       }
       i += 2; // 跳过 }}
       const trimmed = name.trim();
-      if (trimmed === '') {
-        throw new FormulaError('字段引用名为空', start);
+      if (trimmed === "") {
+        throw new FormulaError("字段引用名为空", start);
       }
-      tokens.push({ type: 'FIELD', value: trimmed, pos: start });
+      tokens.push({ type: "FIELD", value: trimmed, pos: start });
       continue;
     }
 
@@ -176,22 +176,34 @@ function tokenize(expr: string): Token[] {
     if (ch === '"') {
       const start = i;
       i++; // 跳过开始 "
-      let str = '';
+      let str = "";
       while (i < n && expr[i] !== '"') {
-        if (expr[i] === '\\') {
+        if (expr[i] === "\\") {
           // 转义字符
           i++;
           if (i >= n) {
-            throw new FormulaError('字符串转义序列不完整', start);
+            throw new FormulaError("字符串转义序列不完整", start);
           }
           const esc = expr[i];
           switch (esc) {
-            case 'n': str += '\n'; break;
-            case 't': str += '\t'; break;
-            case 'r': str += '\r'; break;
-            case '\\': str += '\\'; break;
-            case '"': str += '"'; break;
-            default: str += esc; break; // 未知转义：保留字符
+            case "n":
+              str += "\n";
+              break;
+            case "t":
+              str += "\t";
+              break;
+            case "r":
+              str += "\r";
+              break;
+            case "\\":
+              str += "\\";
+              break;
+            case '"':
+              str += '"';
+              break;
+            default:
+              str += esc;
+              break; // 未知转义：保留字符
           }
           i++;
         } else {
@@ -203,57 +215,81 @@ function tokenize(expr: string): Token[] {
         throw new FormulaError('字符串未闭合，缺少结束引号 "', start);
       }
       i++; // 跳过结束 "
-      tokens.push({ type: 'STRING', value: str, pos: start });
+      tokens.push({ type: "STRING", value: str, pos: start });
       continue;
     }
 
     // 数字字面量（含小数）
-    if (isDigit(ch) || (ch === '.' && isDigit(expr[i + 1]))) {
+    if (isDigit(ch) || (ch === "." && isDigit(expr[i + 1]))) {
       const start = i;
-      let num = '';
-      while (i < n && (isDigit(expr[i]) || expr[i] === '.')) {
+      let num = "";
+      while (i < n && (isDigit(expr[i]) || expr[i] === ".")) {
         num += expr[i];
         i++;
       }
       // 验证：最多一个小数点
-      if (num.split('.').length - 1 > 1) {
+      if (num.split(".").length - 1 > 1) {
         throw new FormulaError(`无效的数字字面量 "${num}"`, start);
       }
-      tokens.push({ type: 'NUMBER', value: num, pos: start });
+      tokens.push({ type: "NUMBER", value: num, pos: start });
       continue;
     }
 
     // 标识符 / 关键字（true / false / null / 函数名）
     if (isAlpha(ch)) {
       const start = i;
-      let ident = '';
+      let ident = "";
       while (i < n && isAlphaNum(expr[i])) {
         ident += expr[i];
         i++;
       }
-      if (ident === 'true' || ident === 'false') {
-        tokens.push({ type: 'BOOLEAN', value: ident, pos: start });
-      } else if (ident === 'null') {
-        tokens.push({ type: 'NULL', value: ident, pos: start });
+      if (ident === "true" || ident === "false") {
+        tokens.push({ type: "BOOLEAN", value: ident, pos: start });
+      } else if (ident === "null") {
+        tokens.push({ type: "NULL", value: ident, pos: start });
       } else {
-        tokens.push({ type: 'IDENT', value: ident, pos: start });
+        tokens.push({ type: "IDENT", value: ident, pos: start });
       }
       continue;
     }
 
     // 单字符分隔符
-    if (ch === '(') { tokens.push({ type: 'LPAREN', value: ch, pos: i }); i++; continue; }
-    if (ch === ')') { tokens.push({ type: 'RPAREN', value: ch, pos: i }); i++; continue; }
-    if (ch === '.') { tokens.push({ type: 'DOT', value: ch, pos: i }); i++; continue; }
-    if (ch === ',') { tokens.push({ type: 'COMMA', value: ch, pos: i }); i++; continue; }
-    if (ch === '?') { tokens.push({ type: 'QUESTION', value: ch, pos: i }); i++; continue; }
-    if (ch === ':') { tokens.push({ type: 'COLON', value: ch, pos: i }); i++; continue; }
+    if (ch === "(") {
+      tokens.push({ type: "LPAREN", value: ch, pos: i });
+      i++;
+      continue;
+    }
+    if (ch === ")") {
+      tokens.push({ type: "RPAREN", value: ch, pos: i });
+      i++;
+      continue;
+    }
+    if (ch === ".") {
+      tokens.push({ type: "DOT", value: ch, pos: i });
+      i++;
+      continue;
+    }
+    if (ch === ",") {
+      tokens.push({ type: "COMMA", value: ch, pos: i });
+      i++;
+      continue;
+    }
+    if (ch === "?") {
+      tokens.push({ type: "QUESTION", value: ch, pos: i });
+      i++;
+      continue;
+    }
+    if (ch === ":") {
+      tokens.push({ type: "COLON", value: ch, pos: i });
+      i++;
+      continue;
+    }
 
     // 运算符（多字符优先匹配）
     let matched = false;
     for (const op of OPERATORS) {
       if (expr.slice(i, i + op.length) === op) {
-        tokens.push({ type: 'OP', value: op, pos: i });
+        tokens.push({ type: "OP", value: op, pos: i });
         i += op.length;
         matched = true;
         break;
@@ -264,7 +300,7 @@ function tokenize(expr: string): Token[] {
     throw new FormulaError(`未知字符 "${ch}"`, i);
   }
 
-  tokens.push({ type: 'EOF', value: '', pos: n });
+  tokens.push({ type: "EOF", value: "", pos: n });
   return tokens;
 }
 
@@ -293,10 +329,7 @@ class Parser {
   private expect(type: TokenType, value?: string): Token {
     const tok = this.peek();
     if (tok.type !== type || (value !== undefined && tok.value !== value)) {
-      throw new FormulaError(
-        `期望 ${value ?? type}，但得到 "${tok.value || tok.type}"`,
-        tok.pos,
-      );
+      throw new FormulaError(`期望 ${value ?? type}，但得到 "${tok.value || tok.type}"`, tok.pos);
     }
     return this.advance();
   }
@@ -304,7 +337,7 @@ class Parser {
   /** 入口：解析整个表达式，返回 AST 根节点 */
   parse(): ASTNode {
     const node = this.parseTernary();
-    if (this.peek().type !== 'EOF') {
+    if (this.peek().type !== "EOF") {
       const tok = this.peek();
       throw new FormulaError(`意外的 token "${tok.value}"`, tok.pos);
     }
@@ -314,12 +347,12 @@ class Parser {
   /** 三元条件: cond ? trueExpr : falseExpr（右结合）*/
   private parseTernary(): ASTNode {
     const condition = this.parseOr();
-    if (this.peek().type === 'QUESTION') {
+    if (this.peek().type === "QUESTION") {
       this.advance();
       const trueExpr = this.parseTernary();
-      this.expect('COLON');
+      this.expect("COLON");
       const falseExpr = this.parseTernary();
-      return { type: 'Ternary', condition, trueExpr, falseExpr };
+      return { type: "Ternary", condition, trueExpr, falseExpr };
     }
     return condition;
   }
@@ -327,9 +360,9 @@ class Parser {
   /** 逻辑或 ||（左结合）*/
   private parseOr(): ASTNode {
     let left = this.parseAnd();
-    while (this.isOp('||')) {
+    while (this.isOp("||")) {
       this.advance();
-      left = { type: 'BinaryOp', op: '||', left, right: this.parseAnd() };
+      left = { type: "BinaryOp", op: "||", left, right: this.parseAnd() };
     }
     return left;
   }
@@ -337,9 +370,9 @@ class Parser {
   /** 逻辑与 &&（左结合）*/
   private parseAnd(): ASTNode {
     let left = this.parseEquality();
-    while (this.isOp('&&')) {
+    while (this.isOp("&&")) {
       this.advance();
-      left = { type: 'BinaryOp', op: '&&', left, right: this.parseEquality() };
+      left = { type: "BinaryOp", op: "&&", left, right: this.parseEquality() };
     }
     return left;
   }
@@ -347,9 +380,9 @@ class Parser {
   /** 相等 == !=（左结合）*/
   private parseEquality(): ASTNode {
     let left = this.parseComparison();
-    while (this.isOp('==') || this.isOp('!=')) {
-      const op = this.advance().value as '==' | '!=';
-      left = { type: 'BinaryOp', op, left, right: this.parseComparison() };
+    while (this.isOp("==") || this.isOp("!=")) {
+      const op = this.advance().value as "==" | "!=";
+      left = { type: "BinaryOp", op, left, right: this.parseComparison() };
     }
     return left;
   }
@@ -357,9 +390,9 @@ class Parser {
   /** 比较 > < >= <=（左结合）*/
   private parseComparison(): ASTNode {
     let left = this.parseAdditive();
-    while (this.isOp('>') || this.isOp('<') || this.isOp('>=') || this.isOp('<=')) {
-      const op = this.advance().value as '>' | '<' | '>=' | '<=';
-      left = { type: 'BinaryOp', op, left, right: this.parseAdditive() };
+    while (this.isOp(">") || this.isOp("<") || this.isOp(">=") || this.isOp("<=")) {
+      const op = this.advance().value as ">" | "<" | ">=" | "<=";
+      left = { type: "BinaryOp", op, left, right: this.parseAdditive() };
     }
     return left;
   }
@@ -367,9 +400,9 @@ class Parser {
   /** 加减 + -（左结合）*/
   private parseAdditive(): ASTNode {
     let left = this.parseMultiplicative();
-    while (this.isOp('+') || this.isOp('-')) {
-      const op = this.advance().value as '+' | '-';
-      left = { type: 'BinaryOp', op, left, right: this.parseMultiplicative() };
+    while (this.isOp("+") || this.isOp("-")) {
+      const op = this.advance().value as "+" | "-";
+      left = { type: "BinaryOp", op, left, right: this.parseMultiplicative() };
     }
     return left;
   }
@@ -377,9 +410,9 @@ class Parser {
   /** 乘除 * / %（左结合）*/
   private parseMultiplicative(): ASTNode {
     let left = this.parseUnary();
-    while (this.isOp('*') || this.isOp('/') || this.isOp('%')) {
-      const op = this.advance().value as '*' | '/' | '%';
-      left = { type: 'BinaryOp', op, left, right: this.parseUnary() };
+    while (this.isOp("*") || this.isOp("/") || this.isOp("%")) {
+      const op = this.advance().value as "*" | "/" | "%";
+      left = { type: "BinaryOp", op, left, right: this.parseUnary() };
     }
     return left;
   }
@@ -387,10 +420,10 @@ class Parser {
   /** 一元 ! -（右结合）*/
   private parseUnary(): ASTNode {
     const tok = this.peek();
-    if (tok.type === 'OP' && (tok.value === '!' || tok.value === '-')) {
+    if (tok.type === "OP" && (tok.value === "!" || tok.value === "-")) {
       this.advance();
       const operand = this.parseUnary();
-      return { type: 'UnaryOp', op: tok.value as '!' | '-', operand };
+      return { type: "UnaryOp", op: tok.value as "!" | "-", operand };
     }
     return this.parsePostfix();
   }
@@ -398,15 +431,15 @@ class Parser {
   /** 后缀 .method（左结合）*/
   private parsePostfix(): ASTNode {
     let node = this.parsePrimary();
-    while (this.peek().type === 'DOT') {
+    while (this.peek().type === "DOT") {
       this.advance();
-      const methodTok = this.expect('IDENT');
+      const methodTok = this.expect("IDENT");
       // 方法可带空括号调用，如 .toUpperCase()
-      if (this.peek().type === 'LPAREN') {
+      if (this.peek().type === "LPAREN") {
         this.advance();
-        this.expect('RPAREN'); // 当前方法不接受参数
+        this.expect("RPAREN"); // 当前方法不接受参数
       }
-      node = { type: 'Method', object: node, method: methodTok.value };
+      node = { type: "Method", object: node, method: methodTok.value };
     }
     return node;
   }
@@ -416,61 +449,58 @@ class Parser {
     const tok = this.peek();
 
     switch (tok.type) {
-      case 'FIELD':
+      case "FIELD":
         this.advance();
-        return { type: 'Field', name: tok.value };
+        return { type: "Field", name: tok.value };
 
-      case 'STRING':
+      case "STRING":
         this.advance();
-        return { type: 'String', value: tok.value };
+        return { type: "String", value: tok.value };
 
-      case 'NUMBER':
+      case "NUMBER":
         this.advance();
-        return { type: 'Number', value: parseFloat(tok.value) };
+        return { type: "Number", value: parseFloat(tok.value) };
 
-      case 'BOOLEAN':
+      case "BOOLEAN":
         this.advance();
-        return { type: 'Boolean', value: tok.value === 'true' };
+        return { type: "Boolean", value: tok.value === "true" };
 
-      case 'NULL':
+      case "NULL":
         this.advance();
-        return { type: 'Null' };
+        return { type: "Null" };
 
-      case 'LPAREN': {
+      case "LPAREN": {
         this.advance();
         const node = this.parseTernary();
-        this.expect('RPAREN');
+        this.expect("RPAREN");
         return node;
       }
 
-      case 'IDENT': {
+      case "IDENT": {
         // 函数调用 name(arg1, arg2, ...)
         this.advance();
-        this.expect('LPAREN');
+        this.expect("LPAREN");
         const args: ASTNode[] = [];
-        if (this.peek().type !== 'RPAREN') {
+        if (this.peek().type !== "RPAREN") {
           args.push(this.parseTernary());
-          while (this.peek().type === 'COMMA') {
+          while (this.peek().type === "COMMA") {
             this.advance();
             args.push(this.parseTernary());
           }
         }
-        this.expect('RPAREN');
-        return { type: 'Call', name: tok.value, args };
+        this.expect("RPAREN");
+        return { type: "Call", name: tok.value, args };
       }
 
       default:
-        throw new FormulaError(
-          `意外的 token "${tok.value || tok.type}"`,
-          tok.pos,
-        );
+        throw new FormulaError(`意外的 token "${tok.value || tok.type}"`, tok.pos);
     }
   }
 
   /** 辅助：当前 token 是否为指定运算符 */
   private isOp(op: string): boolean {
     const tok = this.peek();
-    return tok.type === 'OP' && tok.value === op;
+    return tok.type === "OP" && tok.value === op;
   }
 }
 
@@ -481,16 +511,16 @@ function isTruthy(v: unknown): boolean {
   if (v === null || v === undefined) return false;
   if (v === false) return false;
   if (v === 0) return false;
-  if (v === '') return false;
+  if (v === "") return false;
   return true;
 }
 
 /** 强制转 number（string→parseFloat，boolean→0/1，null→0）*/
 function toNumber(v: unknown): number {
   if (v === null || v === undefined) return 0;
-  if (typeof v === 'number') return v;
-  if (typeof v === 'boolean') return v ? 1 : 0;
-  if (typeof v === 'string') {
+  if (typeof v === "number") return v;
+  if (typeof v === "boolean") return v ? 1 : 0;
+  if (typeof v === "string") {
     const n = parseFloat(v);
     return Number.isNaN(n) ? 0 : n;
   }
@@ -499,19 +529,19 @@ function toNumber(v: unknown): number {
 
 /** 强制转 string */
 function toString(v: unknown): string {
-  if (v === null || v === undefined) return '';
-  if (typeof v === 'string') return v;
-  if (typeof v === 'number') return String(v);
-  if (typeof v === 'boolean') return v ? 'true' : 'false';
+  if (v === null || v === undefined) return "";
+  if (typeof v === "string") return v;
+  if (typeof v === "number") return String(v);
+  if (typeof v === "boolean") return v ? "true" : "false";
   return String(v);
 }
 
 /** 将 context 中的值规范化为 FormulaResult（只允许基本类型）*/
 function normalizeFieldValue(val: unknown): FormulaResult {
   if (val === null) return null;
-  if (typeof val === 'string') return val;
-  if (typeof val === 'number') return val;
-  if (typeof val === 'boolean') return val;
+  if (typeof val === "string") return val;
+  if (typeof val === "number") return val;
+  if (typeof val === "boolean") return val;
   // undefined 或复杂类型（对象/数组）→ null
   return null;
 }
@@ -519,48 +549,46 @@ function normalizeFieldValue(val: unknown): FormulaResult {
 /** 递归求值 AST 节点 */
 function evaluate(node: ASTNode, context: FormulaContext): FormulaResult {
   switch (node.type) {
-    case 'Field':
+    case "Field":
       return normalizeFieldValue(context[node.name]);
 
-    case 'String':
+    case "String":
       return node.value;
 
-    case 'Number':
+    case "Number":
       return node.value;
 
-    case 'Boolean':
+    case "Boolean":
       return node.value;
 
-    case 'Null':
+    case "Null":
       return null;
 
-    case 'UnaryOp': {
-      if (node.op === '!') {
+    case "UnaryOp": {
+      if (node.op === "!") {
         return !isTruthy(evaluate(node.operand, context));
       }
       // 一元负号
       return -toNumber(evaluate(node.operand, context));
     }
 
-    case 'BinaryOp': {
+    case "BinaryOp": {
       const left = evaluate(node.left, context);
       const right = evaluate(node.right, context);
       return evalBinaryOp(node.op, left, right);
     }
 
-    case 'Ternary': {
+    case "Ternary": {
       const cond = evaluate(node.condition, context);
-      return isTruthy(cond)
-        ? evaluate(node.trueExpr, context)
-        : evaluate(node.falseExpr, context);
+      return isTruthy(cond) ? evaluate(node.trueExpr, context) : evaluate(node.falseExpr, context);
     }
 
-    case 'Method': {
+    case "Method": {
       const obj = evaluate(node.object, context);
       return evalMethod(node.method, obj);
     }
 
-    case 'Call': {
+    case "Call": {
       const args = node.args.map((a) => evaluate(a, context));
       return evalCall(node.name, args);
     }
@@ -578,53 +606,53 @@ function evalBinaryOp(
   right: FormulaResult,
 ): FormulaResult {
   switch (op) {
-    case '+':
+    case "+":
       // 任一操作数为 string → 字符串拼接；否则数值加法
-      if (typeof left === 'string' || typeof right === 'string') {
+      if (typeof left === "string" || typeof right === "string") {
         return toString(left) + toString(right);
       }
       return toNumber(left) + toNumber(right);
 
-    case '-':
+    case "-":
       return toNumber(left) - toNumber(right);
 
-    case '*':
+    case "*":
       return toNumber(left) * toNumber(right);
 
-    case '/': {
+    case "/": {
       const r = toNumber(right);
       if (r === 0) return null; // 除以零 → null
       return toNumber(left) / r;
     }
 
-    case '%': {
+    case "%": {
       const r = toNumber(right);
       if (r === 0) return null; // 模零 → null
       return toNumber(left) % r;
     }
 
-    case '==':
+    case "==":
       return compareEq(left, right);
 
-    case '!=':
+    case "!=":
       return !compareEq(left, right);
 
-    case '>':
+    case ">":
       return compare(left, right) > 0;
 
-    case '<':
+    case "<":
       return compare(left, right) < 0;
 
-    case '>=':
+    case ">=":
       return compare(left, right) >= 0;
 
-    case '<=':
+    case "<=":
       return compare(left, right) <= 0;
 
-    case '&&':
+    case "&&":
       return isTruthy(left) && isTruthy(right);
 
-    case '||':
+    case "||":
       return isTruthy(left) || isTruthy(right);
 
     default:
@@ -654,17 +682,17 @@ function compareEq(a: FormulaResult, b: FormulaResult): boolean {
  * - 不同类型转 string 后按字典序比较
  */
 function compare(a: FormulaResult, b: FormulaResult): number {
-  if (typeof a === 'number' && typeof b === 'number') {
+  if (typeof a === "number" && typeof b === "number") {
     if (a < b) return -1;
     if (a > b) return 1;
     return 0;
   }
-  if (typeof a === 'string' && typeof b === 'string') {
+  if (typeof a === "string" && typeof b === "string") {
     if (a < b) return -1;
     if (a > b) return 1;
     return 0;
   }
-  if (typeof a === 'boolean' && typeof b === 'boolean') {
+  if (typeof a === "boolean" && typeof b === "boolean") {
     return (a ? 1 : 0) - (b ? 1 : 0);
   }
   // 不同类型：转 string 按字典序比较
@@ -682,11 +710,11 @@ function evalMethod(method: string, obj: FormulaResult): FormulaResult {
   }
   const str = toString(obj);
   switch (method) {
-    case 'length':
+    case "length":
       return str.length;
-    case 'toUpperCase':
+    case "toUpperCase":
       return str.toUpperCase();
-    case 'toLowerCase':
+    case "toLowerCase":
       return str.toLowerCase();
     default:
       return null;
@@ -701,27 +729,27 @@ function evalCall(name: string, args: FormulaResult[]): FormulaResult {
   const nums = args.map(toNumber);
 
   switch (name) {
-    case 'round':
+    case "round":
       if (nums.length !== 1) return null;
       return Math.round(nums[0]);
 
-    case 'floor':
+    case "floor":
       if (nums.length !== 1) return null;
       return Math.floor(nums[0]);
 
-    case 'ceil':
+    case "ceil":
       if (nums.length !== 1) return null;
       return Math.ceil(nums[0]);
 
-    case 'abs':
+    case "abs":
       if (nums.length !== 1) return null;
       return Math.abs(nums[0]);
 
-    case 'min':
+    case "min":
       if (nums.length < 1) return null;
       return Math.min(...nums);
 
-    case 'max':
+    case "max":
       if (nums.length < 1) return null;
       return Math.max(...nums);
 
@@ -745,10 +773,7 @@ function evalCall(name: string, args: FormulaResult[]): FormulaResult {
  * evaluateFormula('{{名称}}.length', { 名称: 'hello' }) // 5
  * evaluateFormula('{{分数}} / {{总分}} * 100', { 分数: 85, 总分: 100 }) // 85
  */
-export function evaluateFormula(
-  expression: string,
-  context: FormulaContext,
-): FormulaResult {
+export function evaluateFormula(expression: string, context: FormulaContext): FormulaResult {
   const tokens = tokenize(expression);
   const ast = new Parser(tokens).parse();
   return evaluate(ast, context);
@@ -790,7 +815,7 @@ export function extractFieldReferences(expression: string): string[] {
   try {
     const tokens = tokenize(expression);
     for (const tok of tokens) {
-      if (tok.type === 'FIELD' && !seen.has(tok.value)) {
+      if (tok.type === "FIELD" && !seen.has(tok.value)) {
         seen.add(tok.value);
         names.push(tok.value);
       }

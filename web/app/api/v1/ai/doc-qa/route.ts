@@ -23,10 +23,7 @@ import {
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
-import {
-  buildDocQaSystemPrompt,
-  buildDocQaUserPrompt,
-} from "@/lib/ai/prompts/doc-qa";
+import { buildDocQaSystemPrompt, buildDocQaUserPrompt } from "@/lib/ai/prompts/doc-qa";
 import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({

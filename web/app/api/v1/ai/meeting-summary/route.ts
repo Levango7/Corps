@@ -83,10 +83,7 @@ function normalizeMeetingSummary(raw: unknown): MeetingSummary | null {
   const obj = raw as Record<string, unknown>;
 
   // title：必填字符串，截断至 100
-  const title =
-    typeof obj.title === "string" && obj.title.trim()
-      ? obj.title.slice(0, 100)
-      : "";
+  const title = typeof obj.title === "string" && obj.title.trim() ? obj.title.slice(0, 100) : "";
 
   // keyPoints：字符串数组，最多 15 条，每条截断至 200
   const keyPoints: string[] = [];
@@ -107,8 +104,7 @@ function normalizeMeetingSummary(raw: unknown): MeetingSummary | null {
       if (typeof d.title !== "string" || !d.title.trim()) continue;
       decisions.push({
         title: d.title.slice(0, 200),
-        description:
-          typeof d.description === "string" ? d.description.slice(0, 500) : "",
+        description: typeof d.description === "string" ? d.description.slice(0, 500) : "",
       });
       if (decisions.length >= 20) break;
     }
@@ -137,9 +133,7 @@ function normalizeMeetingSummary(raw: unknown): MeetingSummary | null {
       actionItems.push({
         title: a.title.slice(0, 200),
         assignee:
-          typeof a.assignee === "string" && a.assignee.trim()
-            ? a.assignee.slice(0, 100)
-            : null,
+          typeof a.assignee === "string" && a.assignee.trim() ? a.assignee.slice(0, 100) : null,
         dueDate,
         priority,
       });
@@ -215,14 +209,8 @@ export async function POST(req: NextRequest) {
 
   try {
     // 6) withUsageTracking 包装 AI 调用（reasonerModel，非流式）
-    const systemPrompt = withCoT(
-      buildMeetingSummarySystemPrompt(),
-      requireReasonerModel(),
-    );
-    const userPrompt = buildMeetingSummaryUserPrompt(
-      body.transcript,
-      body.meetingTitle,
-    );
+    const systemPrompt = withCoT(buildMeetingSummarySystemPrompt(), requireReasonerModel());
+    const userPrompt = buildMeetingSummaryUserPrompt(body.transcript, body.meetingTitle);
 
     const summary = await withUsageTracking(
       {
@@ -244,12 +232,7 @@ export async function POST(req: NextRequest) {
         try {
           parsed = JSON.parse(cleaned);
         } catch (e) {
-          console.error(
-            "[ai/meeting-summary] JSON.parse 失败:",
-            e,
-            "raw:",
-            cleaned.slice(0, 200),
-          );
+          console.error("[ai/meeting-summary] JSON.parse 失败:", e, "raw:", cleaned.slice(0, 200));
           throw new Error("AI 返回结果解析失败", { cause: e });
         }
 

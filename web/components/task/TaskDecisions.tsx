@@ -261,9 +261,7 @@ export function TaskDecisions({
                 disabled={!decisionDraft.trim() || decisionSaving}
                 className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
-                {decisionSaving ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : null}
+                {decisionSaving ? <Loader2 size={14} className="animate-spin" /> : null}
                 {t("saveAsVersion", { version: (decisions[0]?.version ?? 0) + 1 })}
               </button>
             </div>
@@ -336,11 +334,7 @@ export function TaskDecisions({
 
       {/* 打印专用容器（导出 PDF）：屏幕隐藏，打印时仅此区可见 */}
       {printMode && (
-        <div
-          className="hidden print:block print-area"
-          aria-hidden="true"
-
-        >
+        <div className="hidden print:block print-area" aria-hidden="true">
           <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-4">
             {task.title} · {t("decisionsTitle")}
           </h1>

@@ -8,10 +8,17 @@ import { computeProgress } from "@/lib/okr";
 /**
  * GET /v1/workspaces/{wid}/objectives/{oid}/key-results — 关键结果列表
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string }> },
+) {
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-key-results-list", { windowMs: 60_000, max: 60 });
   if (limited) return limited;
@@ -31,11 +38,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
     const obj = await runWithWorkspace(
       wid,
-      (tx) => tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
+      (tx) =>
+        tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
       ctx.payload.sub,
     );
     if (!obj || obj.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "objectiveNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "objectiveNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     const [keyResults, total] = await runWithWorkspace(
@@ -78,10 +89,17 @@ const createSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/objectives/{oid}/key-results — 创建关键结果并重算父目标进度 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string }> },
+) {
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-key-result-create", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
@@ -92,11 +110,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     const obj = await runWithWorkspace(
       wid,
-      (tx) => tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
+      (tx) =>
+        tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
       ctx.payload.sub,
     );
     if (!obj || obj.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "objectiveNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "objectiveNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     // 创建关键结果 + 重算父目标进度（同一事务内原子完成）
@@ -135,7 +157,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

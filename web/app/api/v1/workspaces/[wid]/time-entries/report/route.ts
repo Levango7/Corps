@@ -8,7 +8,6 @@ const reportQuerySchema = z.object({
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   groupBy: z.enum(["user", "task", "day"]).default("user"),
-
 });
 
 interface GroupRow {
@@ -27,7 +26,11 @@ interface GroupRow {
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const url = new URL(req.url);
@@ -41,7 +44,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -131,7 +139,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           billableDuration: summaryBillable,
           totalAmount: Math.round(summaryAmount * 100) / 100,
         },
-
       },
     });
   } catch (error) {

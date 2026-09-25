@@ -122,17 +122,10 @@ export function GanttView({ fields, records, view }: GanttViewProps) {
   const endDateField = config.endDateField
     ? fields.find((f) => f.id === config.endDateField)
     : undefined;
-  const labelField = config.labelField
-    ? fields.find((f) => f.id === config.labelField)
-    : undefined;
-  const colorField = config.colorField
-    ? fields.find((f) => f.id === config.colorField)
-    : undefined;
+  const labelField = config.labelField ? fields.find((f) => f.id === config.labelField) : undefined;
+  const colorField = config.colorField ? fields.find((f) => f.id === config.colorField) : undefined;
 
-  const titleField = useMemo(
-    () => fields.find((f) => f.type === "text") ?? fields[0],
-    [fields],
-  );
+  const titleField = useMemo(() => fields.find((f) => f.type === "text") ?? fields[0], [fields]);
 
   // 计算甘特条目和时间范围
   const { bars, minDate, totalDays } = useMemo(() => {
@@ -225,7 +218,10 @@ export function GanttView({ fields, records, view }: GanttViewProps) {
           {/* 记录行 */}
           {bars.map((bar) => {
             const offset = Math.max(0, daysBetween(minDate, bar.start));
-            const span = Math.max(1, Math.min(daysBetween(bar.start, bar.end) + 1, totalDays - offset));
+            const span = Math.max(
+              1,
+              Math.min(daysBetween(bar.start, bar.end) + 1, totalDays - offset),
+            );
             const title = titleField
               ? String(getFieldValue(bar.record, titleField.id) ?? bar.record.id.slice(0, 8))
               : bar.record.id.slice(0, 8);
@@ -247,7 +243,10 @@ export function GanttView({ fields, records, view }: GanttViewProps) {
                 >
                   {title}
                 </div>
-                <div className="relative" style={{ width: totalDays * DAY_WIDTH, height: ROW_HEIGHT }}>
+                <div
+                  className="relative"
+                  style={{ width: totalDays * DAY_WIDTH, height: ROW_HEIGHT }}
+                >
                   <div
                     className="absolute top-1/2 -translate-y-1/2 rounded-[var(--radius-sm)] flex items-center px-2 text-[length:var(--text-xs)] text-[var(--on-accent)] font-[weight:var(--weight-medium)] truncate overflow-hidden"
                     style={{

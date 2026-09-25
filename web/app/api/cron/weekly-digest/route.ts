@@ -18,11 +18,17 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return NextResponse.json({ code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null },
+      { status: 500 },
+    );
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   }
 
   if (!isEmailConfigured()) {
@@ -52,7 +58,11 @@ export async function GET(req: NextRequest) {
 
       const workspaceIds = proWorkspaces.map((s) => s.workspaceId);
       // 本周运营埋点（供邮件漏斗段，逐工作区取）：Asia/Shanghai 最近 7 天窗口
-      const weekStart = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - 7);
+      const weekStart = new Date(
+        new Date().getFullYear(),
+        new Date().getMonth(),
+        new Date().getDate() - 7,
+      );
 
       // 2) 一次性聚合本周运营埋点（按 workspaceId + name 分组，替代逐工作区 4 次 count）
       const eventAgg = await tx.analyticsEvent.groupBy({
@@ -77,10 +87,18 @@ export async function GET(req: NextRequest) {
           statsByWs.set(agg.workspaceId, s);
         }
         switch (agg.name) {
-          case "register_success": s.registers = agg._count._all; break;
-          case "activation_completed": s.activations = agg._count._all; break;
-          case "create_task": s.taskCreates = agg._count._all; break;
-          case "page_view": s.pageViews = agg._count._all; break;
+          case "register_success":
+            s.registers = agg._count._all;
+            break;
+          case "activation_completed":
+            s.activations = agg._count._all;
+            break;
+          case "create_task":
+            s.taskCreates = agg._count._all;
+            break;
+          case "page_view":
+            s.pageViews = agg._count._all;
+            break;
         }
       }
 
@@ -110,10 +128,7 @@ export async function GET(req: NextRequest) {
           assigneeId: { in: allAssigneeIds },
           status: { not: "done" },
           dueDate: { not: null },
-          OR: [
-            { dueDate: { lt: now } },
-            { dueDate: { gte: now, lte: weekAhead } },
-          ],
+          OR: [{ dueDate: { lt: now } }, { dueDate: { gte: now, lte: weekAhead } }],
         },
         select: { id: true, title: true, dueDate: true, workspaceId: true, assigneeId: true },
         orderBy: { dueDate: "asc" },
@@ -150,7 +165,12 @@ export async function GET(req: NextRequest) {
       for (const sub of proWorkspaces) {
         const wid = sub.workspaceId;
         const wsName = sub.workspace.name;
-        const wsStats = statsByWs.get(wid) ?? { registers: 0, activations: 0, taskCreates: 0, pageViews: 0 };
+        const wsStats = statsByWs.get(wid) ?? {
+          registers: 0,
+          activations: 0,
+          taskCreates: 0,
+          pageViews: 0,
+        };
         totals.registers += wsStats.registers;
         totals.activations += wsStats.activations;
         totals.taskCreates += wsStats.taskCreates;
@@ -201,6 +221,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: result });
   } catch (error) {
     console.error("[cron weekly-digest] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

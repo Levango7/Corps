@@ -185,9 +185,7 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
         });
         // 从列表中更新状态为已结束
         setItems((prev) =>
-          prev.map((m) =>
-            m.id === mid ? { ...m, status: "ended" as MeetingStatus } : m,
-          ),
+          prev.map((m) => (m.id === mid ? { ...m, status: "ended" as MeetingStatus } : m)),
         );
       } catch (e) {
         setError(e instanceof Error ? e.message : t("endFailed"));
@@ -204,17 +202,10 @@ export function MeetingList({ workspaceId }: MeetingListProps) {
   }, []);
 
   // 编辑成功后更新列表
-  const handleEditSaved = useCallback(
-    (updated: { id: string; title: string }) => {
-      setItems((prev) =>
-        prev.map((m) =>
-          m.id === updated.id ? { ...m, title: updated.title } : m,
-        ),
-      );
-      setEditingMeeting(null);
-    },
-    [],
-  );
+  const handleEditSaved = useCallback((updated: { id: string; title: string }) => {
+    setItems((prev) => prev.map((m) => (m.id === updated.id ? { ...m, title: updated.title } : m)));
+    setEditingMeeting(null);
+  }, []);
 
   // 判断当前用户是否可编辑某会议（创建者或 admin/owner）
   const canEdit = useCallback(
@@ -398,7 +389,6 @@ function MeetingGroup({
   actioningId: string | null;
   canEdit: (meeting: MeetingItem) => boolean;
 }) {
-
   return (
     <section>
       <h2 className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--meta)] uppercase tracking-wide mb-[var(--space-2)]">
@@ -556,11 +546,7 @@ function MeetingRow({
             disabled={actioning}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
           >
-            {actioning ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <PhoneOff size={14} />
-            )}
+            {actioning ? <Loader2 size={14} className="animate-spin" /> : <PhoneOff size={14} />}
             <span className="hidden sm:inline">{t("end")}</span>
           </button>
         )}
@@ -596,10 +582,8 @@ function MeetingRow({
 function StatusBadge({ status }: { status: MeetingStatus }) {
   const t = useTranslations("meeting");
   const styles: Record<MeetingStatus, string> = {
-    active:
-      "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success)]",
-    scheduled:
-      "bg-[var(--surface-2)] text-[var(--meta)] border-[var(--border)]",
+    active: "bg-[var(--success-soft)] text-[var(--success)] border-[var(--success)]",
+    scheduled: "bg-[var(--surface-2)] text-[var(--meta)] border-[var(--border)]",
     ended: "bg-[var(--surface-2)] text-[var(--muted)] border-[var(--border)]",
   };
   const labels: Record<MeetingStatus, string> = {

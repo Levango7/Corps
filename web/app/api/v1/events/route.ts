@@ -103,7 +103,10 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("[POST events] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
 
@@ -113,10 +116,17 @@ export async function POST(req: NextRequest) {
  */
 export async function GET(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "forbiddenInProduction"), data: null }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "forbiddenInProduction"), data: null },
+      { status: 403 },
+    );
   }
   const payload = await authenticate(req);
-  if (!payload) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!payload)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const events = await withGuc({ user_id: payload.sub }, (tx) =>
@@ -129,7 +139,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: events });
   } catch (error) {
     console.error("[GET events] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
-

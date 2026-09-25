@@ -1,4 +1,3 @@
-
 /**
  * 音频预览组件
  *
@@ -24,11 +23,7 @@ export function AudioPreview({ src }: AudioPreviewProps) {
       <div className="flex items-center justify-center w-16 h-16 rounded-[var(--radius-lg)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]">
         <Music size={32} />
       </div>
-      <audio
-        src={src}
-        controls
-        className="w-full max-w-[400px]"
-      />
+      <audio src={src} controls className="w-full max-w-[400px]" />
     </div>
   );
 }

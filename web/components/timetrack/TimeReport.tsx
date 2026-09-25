@@ -131,7 +131,9 @@ export function TimeReport({ wid, refreshKey }: { wid: string; refreshKey?: numb
         </div>
       </div>
 
-      {error && <p className="px-4 py-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
+      {error && (
+        <p className="px-4 py-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>
+      )}
 
       {loading ? (
         <div className="py-8 text-center text-[var(--muted)]">

@@ -152,8 +152,7 @@ export async function GET(req: NextRequest) {
   // 5) 查询反馈列表 + 统计
   try {
     // 普通用户只能看自己的反馈；owner/admin 可看全部
-    const isManager =
-      ctx.member.role === "owner" || ctx.member.role === "admin";
+    const isManager = ctx.member.role === "owner" || ctx.member.role === "admin";
 
     const where = {
       workspaceId: params.workspaceId,

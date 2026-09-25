@@ -21,19 +21,15 @@ const patchSchema = z.object({
 });
 
 /** PATCH /api/v1/ai/personalization/recommendations/{id} — 标记推荐已采纳/拒绝 */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
-  const rateLimited = await checkRateLimit(
-    req,
-    "ai-personalization-recommendation-mark",
-    { windowMs: 60_000, max: 60 },
-  );
+  const rateLimited = await checkRateLimit(req, "ai-personalization-recommendation-mark", {
+    windowMs: 60_000,
+    max: 60,
+  });
   if (rateLimited) return rateLimited;
 
   let body: z.infer<typeof patchSchema>;

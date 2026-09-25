@@ -71,7 +71,6 @@ function parseDate(value: unknown): Date | null {
   return null;
 }
 
-
 /** 获取字段值的显示文本（select 显示选项名、date 显示 M/D） */
 function getFieldDisplayValue(record: DatabaseRecord, field: DatabaseField): string {
   const v = getFieldValue(record, field.id);
@@ -79,9 +78,7 @@ function getFieldDisplayValue(record: DatabaseRecord, field: DatabaseField): str
   if (field.type === "select" || field.type === "multiselect") {
     const choices = readChoices(field);
     if (Array.isArray(v)) {
-      return v
-        .map((id) => choices.find((c) => c.id === id)?.name ?? String(id))
-        .join(", ");
+      return v.map((id) => choices.find((c) => c.id === id)?.name ?? String(id)).join(", ");
     }
     return choices.find((c) => c.id === v)?.name ?? String(v);
   }
@@ -130,10 +127,7 @@ export function BoardView({ fields, records, view, onRecordUpdate }: BoardViewPr
     ? fields.find((f) => f.id === config.groupFieldId)
     : undefined;
 
-  const titleField = useMemo(
-    () => fields.find((f) => f.type === "text") ?? fields[0],
-    [fields],
-  );
+  const titleField = useMemo(() => fields.find((f) => f.type === "text") ?? fields[0], [fields]);
 
   const secondaryField = useMemo(
     () => fields.find((f) => f.id !== titleField?.id),
@@ -241,10 +235,7 @@ export function BoardView({ fields, records, view, onRecordUpdate }: BoardViewPr
           >
             {/* 列头 */}
             <div className="flex items-center gap-2 mb-3 pb-2 border-b border-[var(--border)]">
-              <div
-                className="w-2 h-2 rounded-full shrink-0"
-                style={{ background: col.color }}
-              />
+              <div className="w-2 h-2 rounded-full shrink-0" style={{ background: col.color }} />
               <span className="font-[weight:var(--weight-medium)] text-[var(--fg)] text-[length:var(--text-sm)] truncate">
                 {col.name}
               </span>

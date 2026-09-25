@@ -12,10 +12,7 @@ import { apiMsg } from "@/lib/api-messages";
  */
 
 /** GET /v1/workspaces/{wid}/databases — 列出工作区多维表格 */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -102,10 +99,7 @@ const createDatabaseSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/databases — 创建多维表格（仅 owner/admin） */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

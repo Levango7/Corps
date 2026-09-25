@@ -33,11 +33,17 @@ export const WIDGET_REGISTRY: Record<
   "decision-actions": { titleKey: "decisionActions", defaultW: 6, defaultH: 2, minW: 4, minH: 1 },
   "due-this-week": { titleKey: "dueThisWeek", defaultW: 6, defaultH: 2, minW: 4, minH: 1 },
   "team-load": { titleKey: "teamLoad", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
-  "burndown": { titleKey: "burndown", defaultW: 9, defaultH: 3, minW: 6, minH: 2 },
+  burndown: { titleKey: "burndown", defaultW: 9, defaultH: 3, minW: 6, minH: 2 },
   "priority-dist": { titleKey: "priorityDist", defaultW: 3, defaultH: 1, minW: 2, minH: 1 },
   "recent-activity": { titleKey: "recentActivity", defaultW: 6, defaultH: 2, minW: 3, minH: 1 },
   "gantt-chart": { titleKey: "ganttChart", defaultW: 12, defaultH: 4, minW: 6, minH: 3 },
-  "milestone-timeline": { titleKey: "milestoneTimeline", defaultW: 6, defaultH: 4, minW: 4, minH: 3 },
+  "milestone-timeline": {
+    titleKey: "milestoneTimeline",
+    defaultW: 6,
+    defaultH: 4,
+    minW: 4,
+    minH: 3,
+  },
   "custom-chart": { titleKey: "customChart", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
 };
 

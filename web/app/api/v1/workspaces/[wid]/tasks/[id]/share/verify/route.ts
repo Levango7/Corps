@@ -9,12 +9,7 @@ import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { verify as verifySharePassword } from "@/lib/crypto";
-import {
-  isLocked,
-  recordFailure,
-  clearFailures,
-  rateLimitKey,
-} from "@/lib/share-rate-limit";
+import { isLocked, recordFailure, clearFailures, rateLimitKey } from "@/lib/share-rate-limit";
 
 const verifySchema = z.object({
   password: z.string().min(1).max(128),
@@ -81,10 +76,7 @@ export async function POST(
 
         // 密码校验
         if (task.sharePassword) {
-          const ok = await verifySharePassword(
-            validated.password,
-            task.sharePassword,
-          );
+          const ok = await verifySharePassword(validated.password, task.sharePassword);
           if (!ok) return { kind: "wrongPassword" as const };
         }
 

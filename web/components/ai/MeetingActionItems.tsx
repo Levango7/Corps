@@ -81,16 +81,11 @@ export function MeetingActionItems({ wid, sessionId }: MeetingActionItemsProps) 
     async (action: ActionItem, status: "completed" | "skipped") => {
       setUpdatingId(action.id);
       try {
-        await api(
-          `/api/v1/ai/meetings/sessions/${sessionId}/actions`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ wid, actionId: action.id, status }),
-          },
-        );
-        setActions((prev) =>
-          prev.map((a) => (a.id === action.id ? { ...a, status } : a)),
-        );
+        await api(`/api/v1/ai/meetings/sessions/${sessionId}/actions`, {
+          method: "PATCH",
+          body: JSON.stringify({ wid, actionId: action.id, status }),
+        });
+        setActions((prev) => prev.map((a) => (a.id === action.id ? { ...a, status } : a)));
       } catch (e) {
         if (process.env.NODE_ENV === "development")
           console.error("[MeetingActionItems] update failed:", e);
@@ -136,9 +131,7 @@ export function MeetingActionItems({ wid, sessionId }: MeetingActionItemsProps) 
     return (
       <div className="flex flex-col items-center justify-center gap-[var(--space-2)] py-[var(--space-6)] text-center">
         <ListChecks size={24} className="text-[var(--meta)]" />
-        <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-          {t("noActions")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noActions")}</p>
       </div>
     );
   }
@@ -160,10 +153,7 @@ export function MeetingActionItems({ wid, sessionId }: MeetingActionItemsProps) 
             {/* 状态切换按钮 */}
             <button
               type="button"
-              onClick={() =>
-                action.status === "pending" &&
-                handleUpdateStatus(action, "completed")
-              }
+              onClick={() => action.status === "pending" && handleUpdateStatus(action, "completed")}
               disabled={updatingId === action.id || action.status !== "pending"}
               title={t("markComplete")}
               className="shrink-0 mt-0.5 text-[var(--fg-2)] transition-colors hover:text-[var(--success)] disabled:cursor-not-allowed focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-sm)]"

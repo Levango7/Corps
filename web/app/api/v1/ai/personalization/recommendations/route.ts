@@ -25,11 +25,10 @@ export async function GET(req: NextRequest) {
   if (!userId) return unauthorizedResponse(req);
 
   // 2) 速率限制：每分钟 60 次
-  const rateLimited = await checkRateLimit(
-    req,
-    "ai-personalization-recommendations",
-    { windowMs: 60_000, max: 60 },
-  );
+  const rateLimited = await checkRateLimit(req, "ai-personalization-recommendations", {
+    windowMs: 60_000,
+    max: 60,
+  });
   if (rateLimited) return rateLimited;
 
   // 3) 解析查询参数

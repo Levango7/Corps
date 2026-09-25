@@ -177,7 +177,6 @@ export function ActionItemPanel({
   refreshSignal = 0,
   onInsertTemplate,
 }: ActionItemPanelProps) {
-
   const t = useTranslations("decision");
   const tPriority = useTranslations("priority");
   const { toast } = useToast();
@@ -258,7 +257,10 @@ export function ActionItemPanel({
         await loadItems();
       }
       if (created > 0 && updated > 0) {
-        toast("success", `${t("actionCreated", { count: created })} · ${t("actionUpdated", { count: updated })}`);
+        toast(
+          "success",
+          `${t("actionCreated", { count: created })} · ${t("actionUpdated", { count: updated })}`,
+        );
       } else if (created > 0) {
         toast("success", t("actionCreated", { count: created }));
       } else if (updated > 0) {
@@ -280,7 +282,9 @@ export function ActionItemPanel({
     if (togglingId) return;
     setTogglingId(item.id);
     // 乐观更新
-    setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, completed: !it.completed } : it)));
+    setItems((prev) =>
+      prev.map((it) => (it.id === item.id ? { ...it, completed: !it.completed } : it)),
+    );
     try {
       await api(`${endpoint}/${item.id}`, {
         method: "PATCH",
@@ -288,7 +292,9 @@ export function ActionItemPanel({
       });
     } catch (e) {
       // 回滚
-      setItems((prev) => prev.map((it) => (it.id === item.id ? { ...it, completed: item.completed } : it)));
+      setItems((prev) =>
+        prev.map((it) => (it.id === item.id ? { ...it, completed: item.completed } : it)),
+      );
       toast("error", e instanceof Error ? e.message : t("updateFailed"));
     } finally {
       setTogglingId(null);
@@ -414,7 +420,8 @@ export function ActionItemPanel({
         <ul className="divide-y divide-[var(--border-soft)]">
           {items.map((item) => {
             const isToggling = togglingId === item.id;
-            const assigneeDisplay = item.assignee?.name ?? item.assigneeName ?? item.assignee?.email ?? null;
+            const assigneeDisplay =
+              item.assignee?.name ?? item.assigneeName ?? item.assignee?.email ?? null;
             const due = item.dueDate ? new Date(item.dueDate) : null;
             const isOverdue = due && !item.completed && due.getTime() < Date.now();
             return (
@@ -443,9 +450,7 @@ export function ActionItemPanel({
                 <div className="flex-1 min-w-0 flex items-center gap-1">
                   <span
                     className={`truncate text-[length:var(--text-sm)] ${
-                      item.completed
-                        ? "text-[var(--meta)] line-through"
-                        : "text-[var(--fg-2)]"
+                      item.completed ? "text-[var(--meta)] line-through" : "text-[var(--fg-2)]"
                     }`}
                     title={item.title}
                   >
@@ -463,10 +468,7 @@ export function ActionItemPanel({
                 </div>
 
                 {/* 优先级标签 */}
-                <PriorityBadge
-                  priority={item.priority}
-                  label={tPriority(item.priority)}
-                />
+                <PriorityBadge priority={item.priority} label={tPriority(item.priority)} />
 
                 {/* 负责人头像 */}
                 {assigneeDisplay && (

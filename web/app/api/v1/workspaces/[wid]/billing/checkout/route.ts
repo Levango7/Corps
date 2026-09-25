@@ -55,7 +55,11 @@ function safeRedirectUrl(
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   const denied = await requirePermission(ctx, "billing", "update", req);
   if (denied) return denied;
 
@@ -137,7 +141,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         );
       }
       if (error.code === "not_configured") {
-        return NextResponse.json({ code: 501, message: apiMsg(req, "billingNotConfigured"), data: null }, { status: 501 });
+        return NextResponse.json(
+          { code: 501, message: apiMsg(req, "billingNotConfigured"), data: null },
+          { status: 501 },
+        );
       }
     }
     if (error instanceof z.ZodError) {

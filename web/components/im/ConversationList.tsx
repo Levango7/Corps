@@ -69,9 +69,7 @@ export function ConversationList({
     let cancelled = false;
     const fetchOnline = async () => {
       try {
-        const data = await api<OnlineResponse>(
-          `/api/v1/workspaces/${wid}/im/online`,
-        );
+        const data = await api<OnlineResponse>(`/api/v1/workspaces/${wid}/im/online`);
         if (!cancelled && data?.items) {
           setOnlineUserIds(new Set(data.items.map((item) => item.userId)));
         }
@@ -201,11 +199,7 @@ export function ConversationList({
                 active={conv.id === activeId}
                 currentUserId={currentUserId}
                 onSelect={onSelect}
-                isOnline={
-                  !isGroup && otherMember
-                    ? onlineUserIds.has(otherMember.userId)
-                    : false
-                }
+                isOnline={!isGroup && otherMember ? onlineUserIds.has(otherMember.userId) : false}
               />
             );
           })

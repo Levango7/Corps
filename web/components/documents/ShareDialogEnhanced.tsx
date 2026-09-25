@@ -106,8 +106,7 @@ function isExpired(expiresAt: string | null): boolean {
 /** 权限级别图标映射 */
 function PermissionIcon({ level }: { level: "view" | "comment" | "edit" }) {
   if (level === "view") return <Eye size={14} className="text-[var(--muted)]" />;
-  if (level === "comment")
-    return <MessageSquare size={14} className="text-[var(--muted)]" />;
+  if (level === "comment") return <MessageSquare size={14} className="text-[var(--muted)]" />;
   return <Pencil size={14} className="text-[var(--muted)]" />;
 }
 
@@ -148,8 +147,7 @@ export function ShareDialogEnhanced({
 
   // 创建分享链接表单状态
   const [showForm, setShowForm] = useState(false);
-  const [permission, setPermission] =
-    useState<"view" | "comment" | "edit">("view");
+  const [permission, setPermission] = useState<"view" | "comment" | "edit">("view");
   const [allowDownload, setAllowDownload] = useState(false);
   const [allowPrint, setAllowPrint] = useState(false);
   const [allowCopy, setAllowCopy] = useState(false);
@@ -174,11 +172,7 @@ export function ShareDialogEnhanced({
       );
       setShareLinks(data.items ?? []);
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("loadFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -219,11 +213,7 @@ export function ShareDialogEnhanced({
       setShareLinks((prev) => prev.filter((l) => l.id !== link.id));
       setSuccessMsg(t("shareLinkRevoked"));
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("shareFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("shareFailed"));
     }
   }
 
@@ -253,13 +243,10 @@ export function ShareDialogEnhanced({
         }
       }
 
-      await api(
-        `/api/v1/workspaces/${workspaceId}/documents/${documentId}/share-links`,
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-        },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/documents/${documentId}/share-links`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+      });
 
       // 成功后刷新列表并关闭表单
       setShowForm(false);
@@ -267,11 +254,7 @@ export function ShareDialogEnhanced({
       setSuccessMsg(t("shareLinkCreated"));
       loadShareLinks();
     } catch (e) {
-      setFormError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("shareFailed"),
-      );
+      setFormError(e instanceof ApiError || e instanceof Error ? e.message : t("shareFailed"));
     } finally {
       setSubmitting(false);
     }

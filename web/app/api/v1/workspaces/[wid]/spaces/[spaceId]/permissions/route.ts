@@ -162,12 +162,7 @@ export async function POST(
     const validated = createPermissionSchema.parse(body);
 
     // 鉴权：owner/admin 全权；其他角色需对该空间有 manage 权限
-    const allowed = await canManageSpace(
-      wid,
-      spaceId,
-      ctx.payload.sub,
-      ctx.member.role,
-    );
+    const allowed = await canManageSpace(wid, spaceId, ctx.payload.sub, ctx.member.role);
     if (!allowed) {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noManagePermission"), data: null },
@@ -247,8 +242,7 @@ export async function POST(
       return NextResponse.json(
         {
           code: 400,
-          message:
-            error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
           errors: error.errors,
         },
@@ -256,10 +250,7 @@ export async function POST(
       );
     }
     // P2002: 唯一约束冲突（同一 targetType+targetId+granteeType+granteeId 已存在）
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "prismaUniqueConstraint"), data: null },
         { status: 409 },

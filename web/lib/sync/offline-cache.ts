@@ -222,7 +222,9 @@ export class OfflineCache {
    *
    * @param op 同步操作（id/createdAt 可省略，自动生成）
    */
-  async enqueueSync(op: Omit<SyncOperation, "id" | "createdAt"> & Partial<Pick<SyncOperation, "id" | "createdAt">>): Promise<void> {
+  async enqueueSync(
+    op: Omit<SyncOperation, "id" | "createdAt"> & Partial<Pick<SyncOperation, "id" | "createdAt">>,
+  ): Promise<void> {
     if (!isIndexedDBAvailable()) return;
     try {
       const fullOp: SyncOperation = {
@@ -262,8 +264,7 @@ export class OfflineCache {
         // 按 createdAt 升序游标，取最早入队的一条
         const idx = store.index("byCreatedAt");
         const req = idx.openCursor(undefined, "next");
-        req.onerror = () =>
-          reject(req.error ?? new Error("IDB cursor request failed"));
+        req.onerror = () => reject(req.error ?? new Error("IDB cursor request failed"));
         req.onsuccess = () => {
           const cursor = req.result;
           if (!cursor) {
@@ -276,16 +277,13 @@ export class OfflineCache {
         };
         // 等事务完成再 resolve，确保 delete 已落盘
         tx.oncomplete = () => resolve(dequeuedValue);
-        tx.onerror = () =>
-          reject(tx.error ?? new Error("IDB transaction failed"));
-        tx.onabort = () =>
-          reject(tx.error ?? new Error("IDB transaction aborted"));
+        tx.onerror = () => reject(tx.error ?? new Error("IDB transaction failed"));
+        tx.onabort = () => reject(tx.error ?? new Error("IDB transaction aborted"));
       });
     } catch {
       return null;
     }
   }
-
 
   /**
    * 获取所有待同步操作（按 createdAt 升序），不删除。
@@ -388,9 +386,10 @@ export class OfflineCache {
     // 远程不存在：本地操作直接生效（新建场景）
     if (!remote) return local.payload;
 
-    const remoteTs = typeof remote.updatedAt === "string"
-      ? new Date(remote.updatedAt).getTime()
-      : (remote.updatedAt ?? 0);
+    const remoteTs =
+      typeof remote.updatedAt === "string"
+        ? new Date(remote.updatedAt).getTime()
+        : (remote.updatedAt ?? 0);
 
     // 本地较新 → 本地胜出
     if (local.createdAt > remoteTs) return local.payload;

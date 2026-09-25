@@ -28,7 +28,11 @@ export async function POST(
 ) {
   const { wid, aid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -124,7 +128,12 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

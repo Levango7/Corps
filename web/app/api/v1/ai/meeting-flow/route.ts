@@ -34,7 +34,6 @@ const schema = z.object({
   meetingId: z.string().uuid().optional(),
 });
 
-
 export async function POST(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
@@ -61,7 +60,10 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+      { status: 400 },
+    );
   }
 
   // 5) 工作区认证（wid 守卫 + 成员资格）
@@ -120,7 +122,11 @@ export async function POST(req: NextRequest) {
 
       // 解析 LLM 返回的 JSON（降级处理：解析失败返回默认值而非 500）
       const cleaned = cleanJsonResponse(result.text);
-      let parsed: { suggestedAgenda?: string; suggestedDuration?: number; expectedOutputs?: unknown };
+      let parsed: {
+        suggestedAgenda?: string;
+        suggestedDuration?: number;
+        expectedOutputs?: unknown;
+      };
       try {
         parsed = JSON.parse(cleaned);
       } catch {
@@ -131,7 +137,8 @@ export async function POST(req: NextRequest) {
         code: 200,
         data: {
           suggestedAgenda: typeof parsed.suggestedAgenda === "string" ? parsed.suggestedAgenda : "",
-          suggestedDuration: typeof parsed.suggestedDuration === "number" ? parsed.suggestedDuration : 30,
+          suggestedDuration:
+            typeof parsed.suggestedDuration === "number" ? parsed.suggestedDuration : 30,
           expectedOutputs: Array.isArray(parsed.expectedOutputs)
             ? parsed.expectedOutputs.filter((x: unknown) => typeof x === "string")
             : [],
@@ -159,13 +166,13 @@ export async function POST(req: NextRequest) {
       {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
-          capability: "meeting-flow",
-          model: requireDefaultModel().modelId,
+        capability: "meeting-flow",
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const res = await generateText({
-            model: requireDefaultModel(),
-            system: withCoT(buildPostMeetingSystemPrompt(), requireDefaultModel()),
+          model: requireDefaultModel(),
+          system: withCoT(buildPostMeetingSystemPrompt(), requireDefaultModel()),
           prompt: buildPostMeetingPrompt(body.transcript!),
         });
         return {

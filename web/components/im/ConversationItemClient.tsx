@@ -55,11 +55,7 @@ function ConversationItemClientImpl({
       <div className="relative shrink-0 w-9 h-9 rounded-full bg-[var(--surface-3)] text-[var(--muted)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] overflow-hidden">
         {avatarUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={avatarUrl}
-            alt={displayName}
-            className="w-full h-full object-cover"
-          />
+          <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
         ) : (
           initial
         )}
@@ -81,9 +77,7 @@ function ConversationItemClientImpl({
             title={displayName}
           >
             <span className="truncate">{displayName}</span>
-            {isMuted && (
-              <BellOff size={14} className="shrink-0 text-[var(--meta)]" />
-            )}
+            {isMuted && <BellOff size={14} className="shrink-0 text-[var(--meta)]" />}
           </span>
           {/* 时间 */}
           {timeStr && (

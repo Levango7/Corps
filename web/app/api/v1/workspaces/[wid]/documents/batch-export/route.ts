@@ -26,10 +26,7 @@ const batchExportSchema = z.object({
   includeTableOfContents: z.boolean().default(true),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -232,10 +229,7 @@ function buildBatchHtml(docs: DocForExport[], includeToc: boolean, locale: "zh" 
   // 目录页
   if (includeToc) {
     const tocItems = docs
-      .map(
-        (d, i) =>
-          `      <li><a href="#doc-${i}">${escapeHtml(d.title)}</a></li>`,
-      )
+      .map((d, i) => `      <li><a href="#doc-${i}">${escapeHtml(d.title)}</a></li>`)
       .join("\n");
     sections.push(`    <section class="doc-section toc">
       <h1>${escapeHtml(t.tableOfContents)}</h1>
@@ -248,10 +242,7 @@ ${tocItems}
   // 每个文档渲染为一个 section
   docs.forEach((doc, i) => {
     const authorName = doc.author?.name || doc.author?.email || "";
-    const metaLine = [
-      authorName,
-      `${t.updatedOn} ${doc.updatedAt.toLocaleString()}`,
-    ]
+    const metaLine = [authorName, `${t.updatedOn} ${doc.updatedAt.toLocaleString()}`]
       .filter(Boolean)
       .join(" · ");
 
@@ -304,13 +295,10 @@ function renderInline(text: string): string {
   // 斜体：*text* → <em>text</em>
   out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   // 链接：[label](href) → <a href="href">label</a>（href 经白名单过滤）
-  out = out.replace(
-    /\[([^\]]+)\]\(([^)\s]+)\)/g,
-    (_match, label: string, href: string) => {
-      const safeHref = SAFE_HREF_PATTERN.test(href) ? href : "#";
-      return `<a href="${escapeHtml(safeHref)}">${label}</a>`;
-    },
-  );
+  out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_match, label: string, href: string) => {
+    const safeHref = SAFE_HREF_PATTERN.test(href) ? href : "#";
+    return `<a href="${escapeHtml(safeHref)}">${label}</a>`;
+  });
   return out;
 }
 
@@ -346,9 +334,7 @@ function markdownToHtml(markdown: string): string {
         i++;
       }
       i++; // 跳过收尾 ```
-      blocks.push(
-        `<pre><code>${escapeHtml(buf.join("\n"))}</code></pre>`,
-      );
+      blocks.push(`<pre><code>${escapeHtml(buf.join("\n"))}</code></pre>`);
       continue;
     }
 
@@ -388,9 +374,7 @@ function markdownToHtml(markdown: string): string {
         i++;
       }
       const tag = ordered ? "ol" : "ul";
-      const itemsHtml = items
-        .map((it) => `        <li>${renderInline(it)}</li>`)
-        .join("\n");
+      const itemsHtml = items.map((it) => `        <li>${renderInline(it)}</li>`).join("\n");
       blocks.push(`      <${tag}>\n${itemsHtml}\n      </${tag}>`);
       continue;
     }

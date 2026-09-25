@@ -237,8 +237,7 @@ const searchDocumentsTool: ToolDefinition = {
 
 const getWorkspaceStatsTool: ToolDefinition = {
   name: "get_workspace_stats",
-  description:
-    "获取当前工作区统计概览：任务总数、各状态任务数、文档数、成员数。只读，无参数。",
+  description: "获取当前工作区统计概览：任务总数、各状态任务数、文档数、成员数。只读，无参数。",
   parameters: {
     type: "object",
     description: "无参数",
@@ -249,23 +248,16 @@ const getWorkspaceStatsTool: ToolDefinition = {
     const { tx, workspaceId } = context;
 
     // 并行聚合各维度计数（单事务内，共享 RLS GUC）
-    const [
-      taskTotal,
-      taskTodo,
-      taskInProgress,
-      taskReview,
-      taskDone,
-      documentTotal,
-      memberTotal,
-    ] = await Promise.all([
-      tx.task.count({ where: { workspaceId, deletedAt: null } }),
-      tx.task.count({ where: { workspaceId, deletedAt: null, status: "todo" } }),
-      tx.task.count({ where: { workspaceId, deletedAt: null, status: "in_progress" } }),
-      tx.task.count({ where: { workspaceId, deletedAt: null, status: "review" } }),
-      tx.task.count({ where: { workspaceId, deletedAt: null, status: "done" } }),
-      tx.document.count({ where: { workspaceId } }),
-      tx.member.count({ where: { workspaceId } }),
-    ]);
+    const [taskTotal, taskTodo, taskInProgress, taskReview, taskDone, documentTotal, memberTotal] =
+      await Promise.all([
+        tx.task.count({ where: { workspaceId, deletedAt: null } }),
+        tx.task.count({ where: { workspaceId, deletedAt: null, status: "todo" } }),
+        tx.task.count({ where: { workspaceId, deletedAt: null, status: "in_progress" } }),
+        tx.task.count({ where: { workspaceId, deletedAt: null, status: "review" } }),
+        tx.task.count({ where: { workspaceId, deletedAt: null, status: "done" } }),
+        tx.document.count({ where: { workspaceId } }),
+        tx.member.count({ where: { workspaceId } }),
+      ]);
 
     const stats = {
       tasks: {
@@ -297,12 +289,7 @@ export function registerBuiltinTools(): void {
 registerBuiltinTools();
 
 // 导出工具定义（供测试或文档生成使用）
-export {
-  searchTasksTool,
-  createTaskTool,
-  searchDocumentsTool,
-  getWorkspaceStatsTool,
-};
+export { searchTasksTool, createTaskTool, searchDocumentsTool, getWorkspaceStatsTool };
 
 // Prisma.InputJsonValue 占位引用（部分工具未来扩展 JSON 字段时使用）
 // 保留导入避免 tree-shaking 误删类型引用

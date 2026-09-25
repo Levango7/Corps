@@ -21,13 +21,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Sparkles,
-  AlertTriangle,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-} from "lucide-react";
+import { Sparkles, AlertTriangle, CheckCircle2, XCircle, Loader2 } from "lucide-react";
 import { consumeAiProgressStream, type AiProgressPart } from "@/components/editor/aiStream";
 import { ProgressSteps, type ProgressStage } from "@/components/ai/ProgressSteps";
 import { FeedbackButtons } from "./FeedbackButtons";
@@ -78,10 +72,7 @@ function getRiskVisual(riskLevel: ApprovalAdvice["riskLevel"]) {
   }
 }
 
-export function ApprovalAdvicePanel({
-  wid,
-  approvalInstanceId,
-}: ApprovalAdvicePanelProps) {
+export function ApprovalAdvicePanel({ wid, approvalInstanceId }: ApprovalAdvicePanelProps) {
   const t = useTranslations("ai.approvalAdvice");
   const tp = useTranslations("ai.progress");
 
@@ -188,10 +179,7 @@ export function ApprovalAdvicePanel({
           />
         ) : (
           <div className="flex items-center justify-center gap-[var(--space-2)] py-[var(--space-4)]">
-            <Loader2
-              size={14}
-              className="shrink-0 animate-spin text-[var(--muted)]"
-            />
+            <Loader2 size={14} className="shrink-0 animate-spin text-[var(--muted)]" />
             <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
               {t("analyzing")}
             </span>
@@ -215,9 +203,7 @@ export function ApprovalAdvicePanel({
           </h2>
         </header>
         <div className="flex flex-col items-center gap-[var(--space-3)] py-[var(--space-3)]">
-          <p className="text-[length:var(--text-xs)] text-[var(--danger)]">
-            {t("error")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--danger)]">{t("error")}</p>
           <button
             type="button"
             onClick={() => void analyze()}
@@ -254,9 +240,7 @@ export function ApprovalAdvicePanel({
         style={{ backgroundColor: risk.bg }}
       >
         <span style={{ color: risk.color }}>{risk.icon}</span>
-        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          {t("riskLevel")}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("riskLevel")}</span>
         <span
           className="ml-auto text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)]"
           style={{ color: risk.color }}
@@ -277,18 +261,13 @@ export function ApprovalAdvicePanel({
                 key={`${factor}_${idx}`}
                 className="flex items-start gap-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--fg-2)]"
               >
-                <AlertTriangle
-                  size={14}
-                  className="mt-0.5 shrink-0 text-[var(--warn)]"
-                />
+                <AlertTriangle size={14} className="mt-0.5 shrink-0 text-[var(--warn)]" />
                 <span className="break-words">{factor}</span>
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("noRiskFactors")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noRiskFactors")}</p>
         )}
       </div>
 
@@ -317,38 +296,24 @@ export function ApprovalAdvicePanel({
                 className="flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--fg-2)]"
               >
                 {c.result === "approved" ? (
-                  <CheckCircle2
-                    size={14}
-                    className="shrink-0 text-[var(--success)]"
-                  />
+                  <CheckCircle2 size={14} className="shrink-0 text-[var(--success)]" />
                 ) : (
-                  <XCircle
-                    size={14}
-                    className="shrink-0 text-[var(--danger)]"
-                  />
+                  <XCircle size={14} className="shrink-0 text-[var(--danger)]" />
                 )}
                 <span className="break-words">{c.title}</span>
                 {c.amount > 0 && (
-                  <span className="ml-auto shrink-0 text-[var(--meta)]">
-                    ¥{c.amount}
-                  </span>
+                  <span className="ml-auto shrink-0 text-[var(--meta)]">¥{c.amount}</span>
                 )}
               </li>
             ))}
           </ul>
         ) : (
-          <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("noSimilarCases")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noSimilarCases")}</p>
         )}
       </div>
 
       {/* AI 结果反馈按钮 */}
-      <FeedbackButtons
-        capability="approval-advice"
-        workspaceId={wid}
-        originalOutput={advice}
-      />
+      <FeedbackButtons capability="approval-advice" workspaceId={wid} originalOutput={advice} />
     </aside>
   );
 }

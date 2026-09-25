@@ -7,10 +7,17 @@ import { checkRateLimit } from "@/lib/rate-limit";
 /**
  * GET /v1/workspaces/{wid}/objectives/{oid} — 目标详情（含关键结果列表）
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string }> },
+) {
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-objective-detail", { windowMs: 60_000, max: 60 });
   if (limited) return limited;
@@ -33,7 +40,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
 
     if (!obj || obj.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "objectiveNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "objectiveNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ code: 200, data: obj });
@@ -55,10 +65,17 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/objectives/{oid} — 更新目标 */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string }> },
+) {
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-objective-update", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
@@ -69,11 +86,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
+      (tx) =>
+        tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
       ctx.payload.sub,
     );
     if (!existing || existing.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "objectiveNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "objectiveNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     const updated = await runWithWorkspace(
@@ -90,7 +111,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }
@@ -103,10 +129,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 }
 
 /** DELETE /v1/workspaces/{wid}/objectives/{oid} — 删除目标（级联删除 KeyResult） */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string }> },
+) {
   const { wid, oid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-objective-delete", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
@@ -114,11 +147,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   try {
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
+      (tx) =>
+        tx.objective.findUnique({ where: { id: oid }, select: { id: true, workspaceId: true } }),
       ctx.payload.sub,
     );
     if (!existing || existing.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "objectiveNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "objectiveNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     // KeyResult 通过 onDelete: Cascade 自动级联删除

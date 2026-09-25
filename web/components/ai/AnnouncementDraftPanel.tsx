@@ -31,7 +31,6 @@ interface AnnouncementDraftPanelProps {
 /** 组件阶段 */
 type Phase = "idle" | "streaming" | "done";
 
-
 /**
  * 从生成的 markdown 中提取标题与正文。
  *
@@ -51,7 +50,6 @@ function extractTitleAndContent(markdown: string): { title: string; content: str
 
 export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
   const t = useTranslations("ai.announcementDraft");
-
 
   const [topic, setTopic] = useState("");
   const [phase, setPhase] = useState<Phase>("idle");
@@ -183,9 +181,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
         {phase === "idle" && !error && (
           <div className="flex h-full flex-col items-center justify-center gap-[var(--space-3)] text-center">
             <Sparkles size={32} className="text-[var(--meta)]" />
-            <p className="max-w-md text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("empty")}
-            </p>
+            <p className="max-w-md text-[length:var(--text-sm)] text-[var(--meta)]">{t("empty")}</p>
           </div>
         )}
 
@@ -257,9 +253,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
       {hasContent && (
         <footer className="flex items-center justify-end gap-[var(--space-3)] border-t border-[var(--border)] px-[var(--space-6)] py-[var(--space-3)]">
           {saved && (
-            <span className="text-[length:var(--text-xs)] text-[var(--success)]">
-              {t("saved")}
-            </span>
+            <span className="text-[length:var(--text-xs)] text-[var(--success)]">{t("saved")}</span>
           )}
           <button
             type="button"

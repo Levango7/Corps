@@ -379,16 +379,13 @@ export function WhiteboardCanvas({
         onMouseDown={handleCanvasMouseDown}
         className="relative flex-1 min-h-0 overflow-auto bg-[var(--surface-2)]"
         style={{
-          backgroundImage:
-            "radial-gradient(circle, var(--border-soft) 1px, transparent 1px)",
+          backgroundImage: "radial-gradient(circle, var(--border-soft) 1px, transparent 1px)",
           backgroundSize: "24px 24px",
         }}
       >
         {elements.length === 0 && (
           <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("noWhiteboards")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noWhiteboards")}</p>
           </div>
         )}
 
@@ -411,7 +408,12 @@ export function WhiteboardCanvas({
               }}
             >
               {/* 元素渲染 */}
-              <ElementRenderer element={el} isEditing={isEditing} onEditChange={handleEditChange} onEditBlur={handleEditBlur} />
+              <ElementRenderer
+                element={el}
+                isEditing={isEditing}
+                onEditChange={handleEditChange}
+                onEditBlur={handleEditBlur}
+              />
 
               {/* 选中边框 + 调整大小手柄 */}
               {isSelected && !isEditing && (
@@ -475,7 +477,8 @@ function ElementRenderer({
           style={{
             color: style?.color ?? "var(--fg)",
             fontSize: style?.fontSize ?? 14,
-            background: type === "sticky" ? (style?.background ?? "var(--warning-soft)") : "transparent",
+            background:
+              type === "sticky" ? (style?.background ?? "var(--warning-soft)") : "transparent",
           }}
         />
       );
@@ -486,7 +489,8 @@ function ElementRenderer({
         style={{
           color: style?.color ?? "var(--fg)",
           fontSize: style?.fontSize ?? 14,
-          background: type === "sticky" ? (style?.background ?? "var(--warning-soft)") : "transparent",
+          background:
+            type === "sticky" ? (style?.background ?? "var(--warning-soft)") : "transparent",
           border: type === "sticky" ? "1px solid var(--border-soft)" : "none",
         }}
       >

@@ -204,7 +204,10 @@ export class SyncManager {
       for (const conflict of result.conflicts) {
         const localOp = pending.find((p) => p.id === conflict.id);
         if (!localOp) continue;
-        const resolved = await this.cache.resolveConflict(localOp, conflict.remote as { updatedAt?: string | number; data?: unknown } | null);
+        const resolved = await this.cache.resolveConflict(
+          localOp,
+          conflict.remote as { updatedAt?: string | number; data?: unknown } | null,
+        );
         // 触发冲突回调
         this.notifyConflict({
           local: localOp,
@@ -545,10 +548,13 @@ export class SyncManager {
     if (typeof localStorage === "undefined") return;
     try {
       const key = `${LAST_SYNC_KEY_PREFIX}${this.workspaceId}`;
-      localStorage.setItem(key, JSON.stringify({
-        lastSyncAt: this.lastSyncAt,
-        since: this.since,
-      }));
+      localStorage.setItem(
+        key,
+        JSON.stringify({
+          lastSyncAt: this.lastSyncAt,
+          since: this.since,
+        }),
+      );
     } catch {
       // localStorage 不可用（隐私模式等）静默忽略
     }

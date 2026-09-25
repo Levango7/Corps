@@ -32,10 +32,7 @@ interface MilestoneData {
 }
 
 /** 状态 → 节点色 token + i18n key */
-const STATUS_META: Record<
-  MilestoneItem["status"],
-  { color: string; labelKey: string }
-> = {
+const STATUS_META: Record<MilestoneItem["status"], { color: string; labelKey: string }> = {
   done: { color: "var(--status-done)", labelKey: "milestoneDone" },
   in_progress: { color: "var(--status-doing)", labelKey: "milestoneInProgress" },
   pending: { color: "var(--meta)", labelKey: "milestonePending" },
@@ -49,10 +46,7 @@ function fmtDate(iso: string | null): string {
 
 export default function MilestoneTimelineWidget({ wid }: { wid: string }) {
   const t = useTranslations("dashboard");
-  const { data, loading, error, retry } = useWidgetData<MilestoneData>(
-    wid,
-    "milestone-timeline",
-  );
+  const { data, loading, error, retry } = useWidgetData<MilestoneData>(wid, "milestone-timeline");
 
   if (loading) return <WidgetSkeleton lines={4} />;
   if (error || !data) return <WidgetError message={error} onRetry={retry} />;
@@ -83,10 +77,7 @@ export default function MilestoneTimelineWidget({ wid }: { wid: string }) {
                   />
                 )}
                 {it.status === "done" && (
-                  <span
-                    className="w-2 h-2 rounded-full"
-                    style={{ backgroundColor: meta.color }}
-                  />
+                  <span className="w-2 h-2 rounded-full" style={{ backgroundColor: meta.color }} />
                 )}
               </span>
               {/* 内容 */}
@@ -95,16 +86,16 @@ export default function MilestoneTimelineWidget({ wid }: { wid: string }) {
                   <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                     {it.name}
                   </span>
-                  <span
-                    className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums"
-                  >
+                  <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
                     {fmtDate(it.dueDate)}
                   </span>
                 </div>
                 <div className="mt-0.5 flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--meta)]">
                   <span style={{ color: meta.color }}>{t(meta.labelKey)}</span>
                   <span aria-hidden="true">·</span>
-                  <span className="tabular-nums">{t("milestoneTaskCount", { count: it.taskCount })}</span>
+                  <span className="tabular-nums">
+                    {t("milestoneTaskCount", { count: it.taskCount })}
+                  </span>
                 </div>
               </div>
             </li>

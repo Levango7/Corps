@@ -194,10 +194,7 @@ export async function POST(
     });
   } catch (error) {
     // LiveKit 未配置
-    if (
-      error instanceof Error &&
-      error.message.includes("LiveKit 未配置")
-    ) {
+    if (error instanceof Error && error.message.includes("LiveKit 未配置")) {
       console.error("[join meeting] LiveKit not configured:", error.message);
       return NextResponse.json(
         { code: 503, data: null, message: apiMsg(req, "internalError") },

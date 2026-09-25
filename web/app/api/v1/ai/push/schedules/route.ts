@@ -146,9 +146,7 @@ export async function POST(req: NextRequest) {
             capability: body.capability,
             cron: body.cron,
             enabled: body.enabled,
-            config: body.config
-              ? (body.config as Prisma.InputJsonValue)
-              : undefined,
+            config: body.config ? (body.config as Prisma.InputJsonValue) : undefined,
           },
         }),
       ctx.payload.sub,

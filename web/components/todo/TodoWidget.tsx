@@ -83,10 +83,8 @@ function formatDueDate(
     return { text: t("hoursLater", { count: diffHour }), overdue: false };
   }
   if (diffDay === 0 && overdue) return { text: t("overdue"), overdue: true };
-  if (diffDay <= 7 && !overdue)
-    return { text: t("daysLater", { count: diffDay }), overdue: false };
-  if (diffDay <= 7 && overdue)
-    return { text: t("daysAgo", { count: diffDay }), overdue: true };
+  if (diffDay <= 7 && !overdue) return { text: t("daysLater", { count: diffDay }), overdue: false };
+  if (diffDay <= 7 && overdue) return { text: t("daysAgo", { count: diffDay }), overdue: true };
 
   return {
     text: date.toLocaleDateString(),
@@ -103,10 +101,7 @@ interface TodoWidgetProps {
   onViewAll?: () => void;
 }
 
-export default function TodoWidget({
-  workspaceId,
-  onViewAll,
-}: TodoWidgetProps) {
+export default function TodoWidget({ workspaceId, onViewAll }: TodoWidgetProps) {
   const t = useTranslations("todo");
 
   const [todos, setTodos] = useState<TodoItem[]>([]);
@@ -131,23 +126,17 @@ export default function TodoWidget({
           `/api/v1/todos?workspaceId=${encodeURIComponent(workspaceId)}&type=all&status=pending&limit=5`,
           { signal: ac.signal },
         ),
-        api<TodoCountResult>(
-          `/api/v1/todos/count?workspaceId=${encodeURIComponent(workspaceId)}`,
-          { signal: ac.signal },
-        ),
+        api<TodoCountResult>(`/api/v1/todos/count?workspaceId=${encodeURIComponent(workspaceId)}`, {
+          signal: ac.signal,
+        }),
       ]);
 
       if (ac.signal.aborted) return;
       setTodos(todoData);
       setCount(countData);
     } catch (e) {
-      if (
-        ac.signal.aborted ||
-        (e instanceof Error && e.name === "AbortError")
-      )
-        return;
-      if (process.env.NODE_ENV === "development")
-        console.error("[TodoWidget] loadData error:", e);
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
+      if (process.env.NODE_ENV === "development") console.error("[TodoWidget] loadData error:", e);
       setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setLoading(false);
@@ -222,9 +211,7 @@ export default function TodoWidget({
           <div className="space-y-0.5">
             {todos.map((todo) => {
               const Icon = TYPE_ICON[todo.type];
-              const dueInfo = todo.dueDate
-                ? formatDueDate(todo.dueDate, t)
-                : null;
+              const dueInfo = todo.dueDate ? formatDueDate(todo.dueDate, t) : null;
 
               return (
                 <button
@@ -233,19 +220,14 @@ export default function TodoWidget({
                   onClick={() => navigateTo(todo.sourceUrl)}
                   className="w-full flex items-center gap-2 px-2 py-1.5 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] transition-colors text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                 >
-                  <Icon
-                    size={14}
-                    className="shrink-0 text-[var(--muted)]"
-                  />
+                  <Icon size={14} className="shrink-0 text-[var(--muted)]" />
                   <span className="flex-1 min-w-0 text-[length:var(--text-xs)] text-[var(--fg)] truncate">
                     {todo.title}
                   </span>
                   {dueInfo && (
                     <span
                       className={`shrink-0 text-[length:var(--text-xs)] tabular-nums ${
-                        dueInfo.overdue
-                          ? "text-[var(--danger)]"
-                          : "text-[var(--meta)]"
+                        dueInfo.overdue ? "text-[var(--danger)]" : "text-[var(--meta)]"
                       }`}
                     >
                       {dueInfo.text}

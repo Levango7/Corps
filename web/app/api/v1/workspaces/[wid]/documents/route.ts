@@ -13,7 +13,11 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const url = new URL(req.url);
@@ -26,7 +30,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -133,7 +142,11 @@ const listDocsQuerySchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json();
@@ -157,7 +170,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

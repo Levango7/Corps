@@ -146,7 +146,14 @@ export async function checkDocumentPermission(
 
       // 5. 文件夹继承权限（向上递归）
       if (doc) {
-        const inheritedPerm = await getInheritedFolderPermissionInternal(tx, doc.folderId, doc.spaceId, userId, wid, role);
+        const inheritedPerm = await getInheritedFolderPermissionInternal(
+          tx,
+          doc.folderId,
+          doc.spaceId,
+          userId,
+          wid,
+          role,
+        );
         if (inheritedPerm) {
           if (hasPermissionLevel(inheritedPerm as PermissionLevel, requiredPermission)) {
             return true;
@@ -333,7 +340,10 @@ export async function checkFolderPermission(
         },
         select: { permission: true },
       });
-      if (folderPerm && hasPermissionLevel(folderPerm.permission as PermissionLevel, requiredPermission)) {
+      if (
+        folderPerm &&
+        hasPermissionLevel(folderPerm.permission as PermissionLevel, requiredPermission)
+      ) {
         return true;
       }
 
@@ -349,7 +359,10 @@ export async function checkFolderPermission(
           },
           select: { permission: true },
         });
-        if (folderRolePerm && hasPermissionLevel(folderRolePerm.permission as PermissionLevel, requiredPermission)) {
+        if (
+          folderRolePerm &&
+          hasPermissionLevel(folderRolePerm.permission as PermissionLevel, requiredPermission)
+        ) {
           return true;
         }
       }
@@ -365,7 +378,10 @@ export async function checkFolderPermission(
         },
         select: { permission: true },
       });
-      if (spacePerm && hasPermissionLevel(spacePerm.permission as PermissionLevel, requiredPermission)) {
+      if (
+        spacePerm &&
+        hasPermissionLevel(spacePerm.permission as PermissionLevel, requiredPermission)
+      ) {
         return true;
       }
 
@@ -381,14 +397,24 @@ export async function checkFolderPermission(
           },
           select: { permission: true },
         });
-        if (spaceRolePerm && hasPermissionLevel(spaceRolePerm.permission as PermissionLevel, requiredPermission)) {
+        if (
+          spaceRolePerm &&
+          hasPermissionLevel(spaceRolePerm.permission as PermissionLevel, requiredPermission)
+        ) {
           return true;
         }
       }
 
       // 4. 向上递归父文件夹权限
       if (folder.parentId) {
-        return checkParentFolderPermissionInternal(tx, folder.parentId, userId, wid, role, requiredPermission);
+        return checkParentFolderPermissionInternal(
+          tx,
+          folder.parentId,
+          userId,
+          wid,
+          role,
+          requiredPermission,
+        );
       }
 
       return false;
@@ -426,7 +452,14 @@ export async function getInheritedFolderPermission(
       });
       if (!folder) return null;
 
-      return getInheritedFolderPermissionInternal(tx, folderId, folder.spaceId, userId, wid, "member");
+      return getInheritedFolderPermissionInternal(
+        tx,
+        folderId,
+        folder.spaceId,
+        userId,
+        wid,
+        "member",
+      );
     },
     userId,
   );
@@ -545,7 +578,14 @@ async function getInheritedFolderPermissionInternal(
 
   // 向上递归父文件夹
   if (folder.parentId) {
-    return getInheritedFolderPermissionInternal(tx, folder.parentId, folder.spaceId, userId, wid, role);
+    return getInheritedFolderPermissionInternal(
+      tx,
+      folder.parentId,
+      folder.spaceId,
+      userId,
+      wid,
+      role,
+    );
   }
 
   return null;
@@ -573,7 +613,10 @@ async function checkParentFolderPermissionInternal(
     },
     select: { permission: true },
   });
-  if (parentPerm && hasPermissionLevel(parentPerm.permission as PermissionLevel, requiredPermission)) {
+  if (
+    parentPerm &&
+    hasPermissionLevel(parentPerm.permission as PermissionLevel, requiredPermission)
+  ) {
     return true;
   }
 
@@ -589,7 +632,10 @@ async function checkParentFolderPermissionInternal(
       },
       select: { permission: true },
     });
-    if (parentRolePerm && hasPermissionLevel(parentRolePerm.permission as PermissionLevel, requiredPermission)) {
+    if (
+      parentRolePerm &&
+      hasPermissionLevel(parentRolePerm.permission as PermissionLevel, requiredPermission)
+    ) {
       return true;
     }
   }
@@ -612,7 +658,10 @@ async function checkParentFolderPermissionInternal(
     },
     select: { permission: true },
   });
-  if (spacePerm && hasPermissionLevel(spacePerm.permission as PermissionLevel, requiredPermission)) {
+  if (
+    spacePerm &&
+    hasPermissionLevel(spacePerm.permission as PermissionLevel, requiredPermission)
+  ) {
     return true;
   }
 
@@ -627,14 +676,24 @@ async function checkParentFolderPermissionInternal(
       },
       select: { permission: true },
     });
-    if (spaceRolePerm && hasPermissionLevel(spaceRolePerm.permission as PermissionLevel, requiredPermission)) {
+    if (
+      spaceRolePerm &&
+      hasPermissionLevel(spaceRolePerm.permission as PermissionLevel, requiredPermission)
+    ) {
       return true;
     }
   }
 
   // 继续向上递归
   if (parentFolder.parentId) {
-    return checkParentFolderPermissionInternal(tx, parentFolder.parentId, userId, wid, role, requiredPermission);
+    return checkParentFolderPermissionInternal(
+      tx,
+      parentFolder.parentId,
+      userId,
+      wid,
+      role,
+      requiredPermission,
+    );
   }
 
   return false;

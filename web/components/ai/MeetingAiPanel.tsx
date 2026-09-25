@@ -140,11 +140,7 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
         setSelectedId(data.items[0].id);
       }
     } catch (e) {
-      if (
-        ac.signal.aborted ||
-        (e instanceof Error && e.name === "AbortError")
-      )
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[MeetingAiPanel] loadSessions error:", e);
       setError(t("loadFailed"));
@@ -189,13 +185,10 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
     setCreating(true);
     setError("");
     try {
-      const created = await api<SessionSummary>(
-        "/api/v1/ai/meetings/sessions",
-        {
-          method: "POST",
-          body: JSON.stringify({ wid, title: newTitle.trim() }),
-        },
-      );
+      const created = await api<SessionSummary>("/api/v1/ai/meetings/sessions", {
+        method: "POST",
+        body: JSON.stringify({ wid, title: newTitle.trim() }),
+      });
       setSessions((prev) => [created, ...prev]);
       setSelectedId(created.id);
       setNewTitle("");
@@ -211,21 +204,17 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
 
   /** 提交转录片段 */
   async function submitTranscript() {
-    if (submitting || !selectedId || !speaker.trim() || !transcriptText.trim())
-      return;
+    if (submitting || !selectedId || !speaker.trim() || !transcriptText.trim()) return;
     setSubmitting(true);
     try {
-      await api(
-        `/api/v1/ai/meetings/sessions/${selectedId}/transcript`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            wid,
-            speaker: speaker.trim(),
-            text: transcriptText.trim(),
-          }),
-        },
-      );
+      await api(`/api/v1/ai/meetings/sessions/${selectedId}/transcript`, {
+        method: "POST",
+        body: JSON.stringify({
+          wid,
+          speaker: speaker.trim(),
+          text: transcriptText.trim(),
+        }),
+      });
       setTranscriptText("");
       // 刷新详情以显示新片段
       await loadDetail();
@@ -274,18 +263,11 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
     if (!selectedId) return;
     if (!window.confirm(t("confirmEnd"))) return;
     try {
-      await api(
-        `/api/v1/ai/meetings/sessions/${selectedId}?wid=${encodeURIComponent(wid)}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ wid, status: "ended" }),
-        },
-      );
-      setSessions((prev) =>
-        prev.map((s) =>
-          s.id === selectedId ? { ...s, status: "ended" } : s,
-        ),
-      );
+      await api(`/api/v1/ai/meetings/sessions/${selectedId}?wid=${encodeURIComponent(wid)}`, {
+        method: "PATCH",
+        body: JSON.stringify({ wid, status: "ended" }),
+      });
+      setSessions((prev) => prev.map((s) => (s.id === selectedId ? { ...s, status: "ended" } : s)));
       toast("success", t("ended"));
     } catch (e) {
       if (process.env.NODE_ENV === "development")
@@ -299,10 +281,9 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
     if (!selectedId) return;
     if (!window.confirm(t("confirmDelete"))) return;
     try {
-      await api(
-        `/api/v1/ai/meetings/sessions/${selectedId}?wid=${encodeURIComponent(wid)}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/ai/meetings/sessions/${selectedId}?wid=${encodeURIComponent(wid)}`, {
+        method: "DELETE",
+      });
       setSessions((prev) => prev.filter((s) => s.id !== selectedId));
       setSelectedId(null);
       setSessionDetail(null);
@@ -458,9 +439,7 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
                           {formatTime(sessionDetail.startTime)}
                         </span>
                         <span>·</span>
-                        <span>
-                          {t("transcriptCount", { n: transcriptCount })}
-                        </span>
+                        <span>{t("transcriptCount", { n: transcriptCount })}</span>
                       </div>
                     </div>
                     <div className="flex items-center gap-1 shrink-0">
@@ -517,15 +496,14 @@ export default function MeetingAiPanel({ wid }: MeetingAiPanelProps) {
                         <button
                           type="button"
                           onClick={submitTranscript}
-                          disabled={
-                            submitting ||
-                            !speaker.trim() ||
-                            !transcriptText.trim()
-                          }
+                          disabled={submitting || !speaker.trim() || !transcriptText.trim()}
                           className="inline-flex items-center justify-center h-9 w-9 shrink-0 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                         >
                           {submitting ? (
-                            <Loader2 size={14} className="animate-spin motion-reduce:animate-none" />
+                            <Loader2
+                              size={14}
+                              className="animate-spin motion-reduce:animate-none"
+                            />
                           ) : (
                             <Send size={14} />
                           )}

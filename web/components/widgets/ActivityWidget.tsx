@@ -31,11 +31,7 @@ import { api } from "@/lib/api";
 interface Activity {
   id: string;
   type:
-    | "task.created"
-    | "task.updated"
-    | "comment.created"
-    | "decision.created"
-    | "decision.updated";
+    "task.created" | "task.updated" | "comment.created" | "decision.created" | "decision.updated";
   actorId: string | null;
   actorName: string | null;
   entityType: "task" | "comment" | "decision";
@@ -58,10 +54,7 @@ interface ActivityWidgetProps {
 }
 
 /** 活动类型 → 图标 + 动作文案映射 */
-const ACTIVITY_META: Record<
-  Activity["type"],
-  { icon: typeof Plus; label: string }
-> = {
+const ACTIVITY_META: Record<Activity["type"], { icon: typeof Plus; label: string }> = {
   "task.created": { icon: Plus, label: "创建了任务" },
   "task.updated": { icon: CheckCircle2, label: "更新了任务" },
   "comment.created": { icon: MessageSquare, label: "评论了" },
@@ -94,29 +87,19 @@ function getInitial(name: string | null): string {
 /** 头像背景色：根据用户名 hash 分配语义色（避免裸 hex） */
 function getAvatarColor(name: string | null): string {
   if (!name) return "var(--muted)";
-  const colors = [
-    "var(--accent)",
-    "var(--success)",
-    "var(--warn)",
-    "var(--danger)",
-  ];
+  const colors = ["var(--accent)", "var(--success)", "var(--warn)", "var(--danger)"];
   const hash = name.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
   return colors[hash % colors.length];
 }
 
-export default function ActivityWidget({
-  wid,
-  limit = 5,
-}: ActivityWidgetProps) {
+export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) {
   const [data, setData] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
 
   const load = useCallback(async () => {
     try {
-      const result = await api<ActivityData>(
-        `/api/v1/workspaces/${wid}/activity`,
-      );
+      const result = await api<ActivityData>(`/api/v1/workspaces/${wid}/activity`);
       setData(result);
       setError(false);
     } catch {
@@ -139,10 +122,7 @@ export default function ActivityWidget({
         aria-label="加载活动流"
       >
         {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex items-center gap-[var(--space-2)]"
-          >
+          <div key={i} className="flex items-center gap-[var(--space-2)]">
             <span className="h-6 w-6 rounded-full bg-[var(--surface-3)] animate-pulse" />
             <span className="h-3 flex-1 rounded bg-[var(--surface-3)] animate-pulse" />
           </div>
@@ -201,11 +181,7 @@ export default function ActivityWidget({
               {getInitial(activity.actorName)}
             </span>
             {/* 动作图标 */}
-            <Icon
-              size={14}
-              className="shrink-0 text-[var(--muted)]"
-              aria-hidden
-            />
+            <Icon size={14} className="shrink-0 text-[var(--muted)]" aria-hidden />
             {/* 文案：用户名 + 动作 + 实体标题 */}
             <span className="flex-1 truncate text-[length:var(--text-sm)]">
               <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">

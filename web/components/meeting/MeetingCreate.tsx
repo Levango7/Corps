@@ -71,12 +71,7 @@ export interface MeetingCreateProps {
   meeting?: EditableMeeting;
 }
 
-export function MeetingCreate({
-  workspaceId,
-  onClose,
-  onCreated,
-  meeting,
-}: MeetingCreateProps) {
+export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: MeetingCreateProps) {
   const t = useTranslations("meeting");
   const tButton = useTranslations("button");
 
@@ -92,9 +87,7 @@ export function MeetingCreate({
         : "instant",
   );
   const [scheduledAt, setScheduledAt] = useState(
-    meeting?.scheduledAt
-      ? new Date(meeting.scheduledAt).toISOString().slice(0, 16)
-      : "",
+    meeting?.scheduledAt ? new Date(meeting.scheduledAt).toISOString().slice(0, 16) : "",
   );
   // L6 #32：重复频率
   const [recurringFreq, setRecurringFreq] = useState<RecurringFreq>("daily");
@@ -104,9 +97,7 @@ export function MeetingCreate({
   const [maxParticipants, setMaxParticipants] = useState(
     meeting?.maxParticipants ? String(meeting.maxParticipants) : "",
   );
-  const [recordingEnabled, setRecordingEnabled] = useState(
-    meeting?.recordingEnabled ?? false,
-  );
+  const [recordingEnabled, setRecordingEnabled] = useState(meeting?.recordingEnabled ?? false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
 
@@ -174,10 +165,10 @@ export function MeetingCreate({
         onCreated(updated);
       } else {
         // 创建模式：POST 新会议
-        const created = await api<CreatedMeeting>(
-          `/api/v1/workspaces/${workspaceId}/meetings`,
-          { method: "POST", body: JSON.stringify(body) },
-        );
+        const created = await api<CreatedMeeting>(`/api/v1/workspaces/${workspaceId}/meetings`, {
+          method: "POST",
+          body: JSON.stringify(body),
+        });
         onCreated(created);
       }
     } catch (err) {
@@ -440,13 +431,7 @@ export function MeetingCreate({
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               {submitting && <Loader2 size={15} className="animate-spin" />}
-              <Ripple>
-                {submitting
-                  ? t("creating")
-                  : isEdit
-                    ? tButton("save")
-                    : t("create")}
-              </Ripple>
+              <Ripple>{submitting ? t("creating") : isEdit ? tButton("save") : t("create")}</Ripple>
             </button>
           </div>
         </form>

@@ -42,11 +42,7 @@ const REFRESH_INTERVAL_MS = 30 * 1000;
 interface Activity {
   id: string;
   type:
-    | "task.created"
-    | "task.updated"
-    | "comment.created"
-    | "decision.created"
-    | "decision.updated";
+    "task.created" | "task.updated" | "comment.created" | "decision.created" | "decision.updated";
   actorId: string | null;
   actorName: string | null;
   entityType: "task" | "comment" | "decision";
@@ -73,7 +69,11 @@ interface ActivityFeedProps {
 /** 活动类型 → 图标 + 文案 key 映射 */
 const ACTIVITY_META: Record<
   Activity["type"],
-  { icon: typeof Plus; labelKey: "taskCreated" | "taskUpdated" | "commentCreated" | "decisionCreated" | "decisionUpdated" }
+  {
+    icon: typeof Plus;
+    labelKey:
+      "taskCreated" | "taskUpdated" | "commentCreated" | "decisionCreated" | "decisionUpdated";
+  }
 > = {
   "task.created": { icon: Plus, labelKey: "taskCreated" },
   "task.updated": { icon: CheckCircle2, labelKey: "taskUpdated" },
@@ -99,11 +99,7 @@ function formatRelativeTime(iso: string, locale: string): string {
   return new Date(iso).toLocaleDateString(locale === "zh" ? "zh-CN" : "en-US");
 }
 
-export default function ActivityFeed({
-  wid,
-  autoRefresh = true,
-  limit = 20,
-}: ActivityFeedProps) {
+export default function ActivityFeed({ wid, autoRefresh = true, limit = 20 }: ActivityFeedProps) {
   const t = useTranslations("activity");
   // next-intl 暴露当前 locale（用于相对时间格式化）
   const locale = useLocale();
@@ -147,7 +143,11 @@ export default function ActivityFeed({
   if (loading) {
     // 骨架屏
     return (
-      <div className="flex flex-col gap-[var(--space-2)]" aria-busy="true" aria-label={t("loading")}>
+      <div
+        className="flex flex-col gap-[var(--space-2)]"
+        aria-busy="true"
+        aria-label={t("loading")}
+      >
         {Array.from({ length: 5 }).map((_, i) => (
           <div
             key={i}

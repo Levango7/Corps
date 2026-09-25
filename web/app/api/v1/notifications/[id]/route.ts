@@ -33,10 +33,7 @@ const patchSchema = z.object({
  *
  * 标记通知已读/未读。先验证通知属于当前用户 + 工作区，再更新。
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -58,8 +55,7 @@ export async function PATCH(
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsedQuery.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsedQuery.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -157,10 +153,7 @@ export async function PATCH(
  *
  * 删除通知。先验证通知属于当前用户 + 工作区，再删除。
  */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -182,8 +175,7 @@ export async function DELETE(
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsedQuery.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsedQuery.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },

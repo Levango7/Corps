@@ -121,7 +121,11 @@ function highlightKeyword(text: string, keyword: string): ReactNode[] {
   return nodes;
 }
 
-export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: MessageSearchProps) {
+export function MessageSearch({
+  workspaceId,
+  onJumpToMessage,
+  conversationId,
+}: MessageSearchProps) {
   const t = useTranslations("im.search");
   const locale = useLocale();
 
@@ -159,10 +163,9 @@ export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: 
           // P1-fix: 后端 schema 期望 cid 参数（非 conversationId）
           qs.set("cid", conversationId);
         }
-        const data = await api<SearchResult[]>(
-          `/api/v1/im/search?${qs.toString()}`,
-          { signal: controller.signal },
-        );
+        const data = await api<SearchResult[]>(`/api/v1/im/search?${qs.toString()}`, {
+          signal: controller.signal,
+        });
         setResults(data ?? []);
         setHasSearched(true);
       } catch (err) {
@@ -238,19 +241,18 @@ export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: 
   );
 
   /** 获取作者显示名 */
-  const getAuthorName = (r: SearchResult): string =>
-    r.authorName ?? t("unknownAuthor");
+  const getAuthorName = (r: SearchResult): string => r.authorName ?? t("unknownAuthor");
 
   /** 获取作者头像首字母 */
-  const getInitial = (r: SearchResult): string =>
-    (r.authorName ?? "?")[0]?.toUpperCase() ?? "?";
+  const getInitial = (r: SearchResult): string => (r.authorName ?? "?")[0]?.toUpperCase() ?? "?";
 
   /** 截断消息体 */
   const truncateBody = useMemo(
-    () => (body: string): string => {
-      if (body.length <= BODY_MAX_LENGTH) return body;
-      return body.slice(0, BODY_MAX_LENGTH) + "…";
-    },
+    () =>
+      (body: string): string => {
+        if (body.length <= BODY_MAX_LENGTH) return body;
+        return body.slice(0, BODY_MAX_LENGTH) + "…";
+      },
     [],
   );
 
@@ -305,9 +307,7 @@ export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: 
         {!loading && !error && hasSearched && results.length === 0 && (
           <div className="flex flex-col items-center justify-center py-[var(--space-8)] text-[var(--meta)]">
             <MessageSquare size={24} className="mb-[var(--space-2)] opacity-50" />
-            <span className="text-[length:var(--text-sm)]">
-              {t("noResults", { keyword })}
-            </span>
+            <span className="text-[length:var(--text-sm)]">{t("noResults", { keyword })}</span>
           </div>
         )}
 
@@ -315,9 +315,7 @@ export function MessageSearch({ workspaceId, onJumpToMessage, conversationId }: 
         {!loading && !error && !hasSearched && (
           <div className="flex flex-col items-center justify-center py-[var(--space-8)] text-[var(--meta)]">
             <Search size={24} className="mb-[var(--space-2)] opacity-40" />
-            <span className="text-[length:var(--text-sm)]">
-              {t("hint")}
-            </span>
+            <span className="text-[length:var(--text-sm)]">{t("hint")}</span>
           </div>
         )}
 

@@ -24,7 +24,11 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     // 查询该任务的所有事件映射 + 对应连接的 provider + 同步状态
@@ -66,6 +70,9 @@ export async function GET(
     return NextResponse.json({ code: 200, data: status });
   } catch (error) {
     console.error("[task calendar-sync] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

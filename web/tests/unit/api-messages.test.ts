@@ -1,10 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  API_MESSAGES,
-  apiLocale,
-  apiMsg,
-  type ApiMsgKey,
-} from "@/lib/api-messages";
+import { API_MESSAGES, apiLocale, apiMsg, type ApiMsgKey } from "@/lib/api-messages";
 
 // Mock NextRequest
 function mockReq(opts: {

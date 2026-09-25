@@ -90,14 +90,10 @@ export function ExportPreview({
 
   if (!open) return null;
 
-  const hasContent = batchMode
-    ? documents.length > 0
-    : markdown.trim().length > 0;
+  const hasContent = batchMode ? documents.length > 0 : markdown.trim().length > 0;
 
   // 批量模式标题：显示"批量导出 (N个文档)"
-  const displayTitle = batchMode
-    ? t("batchTitle", { count: documents.length })
-    : title;
+  const displayTitle = batchMode ? t("batchTitle", { count: documents.length }) : title;
 
   // 批量模式打印按钮文字
   const printLabel = batchMode ? t("printAll") : t("print");
@@ -269,11 +265,7 @@ export function ExportPreview({
                 {metaLine}
               </p>
             )}
-            {hasContent ? (
-              <Markdown source={markdown} />
-            ) : (
-              <p>—</p>
-            )}
+            {hasContent ? <Markdown source={markdown} /> : <p>—</p>}
           </>
         )}
       </div>

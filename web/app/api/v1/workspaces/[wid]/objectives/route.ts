@@ -12,7 +12,11 @@ import { checkRateLimit } from "@/lib/rate-limit";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   // 限流：每分钟 60 次列表查询
   const limited = await checkRateLimit(req, "okr-objectives-list", { windowMs: 60_000, max: 60 });
@@ -28,7 +32,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -101,7 +110,11 @@ const createSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   // 限流：每分钟 30 次创建
   const limited = await checkRateLimit(req, "okr-objective-create", { windowMs: 60_000, max: 30 });
@@ -131,7 +144,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

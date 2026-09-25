@@ -4,13 +4,7 @@
 
 /** 表单字段类型 */
 export type FormFieldType =
-  | "text"
-  | "textarea"
-  | "number"
-  | "select"
-  | "radio"
-  | "checkbox"
-  | "date";
+  "text" | "textarea" | "number" | "select" | "radio" | "checkbox" | "date";
 
 /** 表单字段定义（与 Prisma Form.fields JSON 结构一致） */
 export interface FormFieldDefinition {

@@ -19,10 +19,7 @@ const patchSchema = z.object({
 });
 
 /** PATCH /api/v1/ai/push/schedules/{id} — 更新推送计划 */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -87,9 +84,7 @@ export async function PATCH(
           data: {
             cron: body.cron,
             enabled: body.enabled,
-            config: body.config
-              ? (body.config as Prisma.InputJsonValue)
-              : undefined,
+            config: body.config ? (body.config as Prisma.InputJsonValue) : undefined,
           },
         }),
       ctx.payload.sub,
@@ -105,10 +100,7 @@ export async function PATCH(
 }
 
 /** DELETE /api/v1/ai/push/schedules/{id} — 删除推送计划 */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);

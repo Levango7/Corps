@@ -19,15 +19,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Star,
-  Trash2,
-  Loader2,
-  AlertCircle,
-  Mail,
-  MailOpen,
-  X,
-} from "lucide-react";
+import { Star, Trash2, Loader2, AlertCircle, Mail, MailOpen, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
@@ -65,10 +57,7 @@ interface MailListResponse {
 }
 
 /** 格式化时间（简短相对时间） */
-function formatMailTime(
-  iso: string,
-  t: ReturnType<typeof useTranslations>,
-): string {
+function formatMailTime(iso: string, t: ReturnType<typeof useTranslations>): string {
   const date = new Date(iso);
   const now = Date.now();
   const diffMs = now - date.getTime();
@@ -117,17 +106,14 @@ export default function MailList({ workspaceId, status }: MailListProps) {
         pageSize: "50",
       });
       if (status) params.set("status", status);
-      const data = await api<MailListResponse>(
-        `/api/v1/mail/inbox?${params.toString()}`,
-        { signal: ac.signal },
-      );
+      const data = await api<MailListResponse>(`/api/v1/mail/inbox?${params.toString()}`, {
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       setMails(data.items);
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailList] loadMails error:", e);
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
+      if (process.env.NODE_ENV === "development") console.error("[MailList] loadMails error:", e);
       setError(t("error"));
     } finally {
       if (!ac.signal.aborted) setLoading(false);
@@ -158,13 +144,10 @@ export default function MailList({ workspaceId, status }: MailListProps) {
           method: "PATCH",
           body: JSON.stringify({ wid: workspaceId, isRead: true }),
         });
-        setMails((prev) =>
-          prev.map((m) => (m.id === id ? { ...m, isRead: true } : m)),
-        );
+        setMails((prev) => prev.map((m) => (m.id === id ? { ...m, isRead: true } : m)));
       }
     } catch (e) {
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailList] openDetail error:", e);
+      if (process.env.NODE_ENV === "development") console.error("[MailList] openDetail error:", e);
       toast("error", t("error"));
     } finally {
       setDetailLoading(false);
@@ -180,12 +163,9 @@ export default function MailList({ workspaceId, status }: MailListProps) {
         method: "PATCH",
         body: JSON.stringify({ wid: workspaceId, isStarred: !current }),
       });
-      setMails((prev) =>
-        prev.map((m) => (m.id === id ? { ...m, isStarred: !current } : m)),
-      );
+      setMails((prev) => prev.map((m) => (m.id === id ? { ...m, isStarred: !current } : m)));
     } catch (e) {
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailList] toggleStar error:", e);
+      if (process.env.NODE_ENV === "development") console.error("[MailList] toggleStar error:", e);
       toast("error", t("error"));
     } finally {
       setOperatingId(null);
@@ -198,16 +178,12 @@ export default function MailList({ workspaceId, status }: MailListProps) {
     if (!window.confirm(t("deleteConfirm"))) return;
     setOperatingId(id);
     try {
-      await api(
-        `/api/v1/mail/${id}?wid=${encodeURIComponent(workspaceId)}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/mail/${id}?wid=${encodeURIComponent(workspaceId)}`, { method: "DELETE" });
       setMails((prev) => prev.filter((m) => m.id !== id));
       if (selectedMail?.id === id) setSelectedMail(null);
       toast("success", t("deleted"));
     } catch (e) {
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailList] deleteMail error:", e);
+      if (process.env.NODE_ENV === "development") console.error("[MailList] deleteMail error:", e);
       toast("error", t("error"));
     } finally {
       setOperatingId(null);
@@ -225,9 +201,7 @@ export default function MailList({ workspaceId, status }: MailListProps) {
           <Mail size={16} className="text-[var(--accent)]" />
           {t("inbox")}
         </h2>
-        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          {mails.length}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{mails.length}</span>
       </header>
 
       {/* ── 正文 ── */}
@@ -396,9 +370,7 @@ export default function MailList({ workspaceId, status }: MailListProps) {
                   {t("date")}:
                 </span>
                 <span className="text-[var(--fg)]">
-                  {new Date(
-                    selectedMail.sentAt ?? selectedMail.createdAt,
-                  ).toLocaleString()}
+                  {new Date(selectedMail.sentAt ?? selectedMail.createdAt).toLocaleString()}
                 </span>
               </div>
               <hr className="border-[var(--border-soft)]" />

@@ -50,11 +50,9 @@ export async function sendPush(
 ): Promise<SendPushResult> {
   try {
     ensureVapid();
-    await webpush.sendNotification(
-      subscription as WebPushSubscription,
-      JSON.stringify(payload),
-      { TTL: 86400 },
-    );
+    await webpush.sendNotification(subscription as WebPushSubscription, JSON.stringify(payload), {
+      TTL: 86400,
+    });
     return { ok: true };
   } catch (err) {
     // web-push 库抛出 WebPushError，含 statusCode 字段。

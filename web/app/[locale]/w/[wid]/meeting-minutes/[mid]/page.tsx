@@ -63,9 +63,7 @@ export default function MinutesDetailPage({
       setWid(w);
       setMid(m);
       try {
-        const minutes = await api<MinutesData>(
-          `/api/v1/workspaces/${w}/meeting-minutes/${m}`,
-        );
+        const minutes = await api<MinutesData>(`/api/v1/workspaces/${w}/meeting-minutes/${m}`);
         if (!cancelled) setData(minutes);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t("loadFailed"));

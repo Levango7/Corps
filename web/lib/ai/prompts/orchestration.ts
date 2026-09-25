@@ -17,7 +17,8 @@ import type { FeedbackExample } from "@/lib/ai/feedback";
  * 推理步骤（CoT）、格式校验约束、few-shot 示例。
  */
 export function buildOrchestrationSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是跨能力联动编排专家。分析工作区的全量上下文数据，识别需要跨能力协同的场景，建议可执行的操作序列。
+  return appendFeedbackShot(
+    `你是跨能力联动编排专家。分析工作区的全量上下文数据，识别需要跨能力协同的场景，建议可执行的操作序列。
 
 返回 JSON 格式：
 {
@@ -114,7 +115,9 @@ export function buildOrchestrationSystemPrompt(feedbackExamples?: FeedbackExampl
 用户关注点：（无）
 
 输出：
-{"summary":"工作区状态正常","reasoning":"未发现逾期任务、阻塞任务、风险OKR或逾期审批等需要联动的异常状况","actions":[]}`, feedbackExamples);
+{"summary":"工作区状态正常","reasoning":"未发现逾期任务、阻塞任务、风险OKR或逾期审批等需要联动的异常状况","actions":[]}`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -124,7 +127,8 @@ export function buildOrchestrationSystemPrompt(feedbackExamples?: FeedbackExampl
  * @param userRequest 用户可选的关注点（如"重点关注OKR风险"），为空时不附加
  */
 export function buildOrchestrationUserPrompt(context: string, userRequest?: string): string {
-  const truncated = context.length > 18000 ? context.slice(0, 18000) + "\n\n[上下文已截断]" : context;
+  const truncated =
+    context.length > 18000 ? context.slice(0, 18000) + "\n\n[上下文已截断]" : context;
   const parts = [`## 工作区上下文数据\n\n${truncated || "（无数据）"}`];
   if (userRequest && userRequest.trim()) {
     parts.push(`## 用户关注点\n\n${userRequest.trim()}`);

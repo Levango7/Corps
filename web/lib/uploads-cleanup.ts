@@ -91,10 +91,7 @@ async function isOrphanUnderLock(url: string): Promise<boolean> {
     // 兜底。若未来清理量大需更高并发，可改用两段锁
     // pg_advisory_xact_lock(hashtext($1)::bigint, hashtext($1 || ':2')::bigint)
     // 扩展到 64 位 key 空间，冲突概率降至可忽略。
-    await tx.$executeRawUnsafe(
-      "SELECT pg_advisory_xact_lock(hashtext($1))",
-      url,
-    );
+    await tx.$executeRawUnsafe("SELECT pg_advisory_xact_lock(hashtext($1))", url);
     // 事务内再次检查引用（url 或 thumbnailUrl 匹配）
     const refCount = await tx.messageAttachment.count({
       where: { OR: [{ url }, { thumbnailUrl: url }] },
@@ -117,9 +114,9 @@ async function isOrphanUnderLock(url: string): Promise<boolean> {
  * @param options.maxFilesToCheck - 单次最多检查的磁盘文件数（默认 200）
  *   调度建议：每周一次 cron，孤儿无害仅占空间，无需一次清完。
  */
-export async function cleanupOrphanUploads(
-  options?: { maxFilesToCheck?: number },
-): Promise<{ deleted: number; kept: number; skipped: number }> {
+export async function cleanupOrphanUploads(options?: {
+  maxFilesToCheck?: number;
+}): Promise<{ deleted: number; kept: number; skipped: number }> {
   const maxFilesToCheck = options?.maxFilesToCheck ?? 200;
 
   // 1. 扫描磁盘，按 mtime 升序（老文件优先清理），单次最多处理 maxFilesToCheck 个

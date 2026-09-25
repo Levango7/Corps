@@ -131,14 +131,11 @@ export default function CalendarScheduleDialog({
       if (duration && Number.isFinite(dur) && dur >= 5 && dur <= 480) {
         payload.duration = Math.round(dur);
       }
-      const result = await api<CalendarScheduleResult>(
-        "/api/v1/ai/calendar-schedule",
-        {
-          method: "POST",
-          body: JSON.stringify(payload),
-          signal: ac.signal,
-        },
-      );
+      const result = await api<CalendarScheduleResult>("/api/v1/ai/calendar-schedule", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       setSuggestions(result.suggestions ?? []);
     } catch (e) {

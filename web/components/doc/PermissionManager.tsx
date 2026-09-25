@@ -18,15 +18,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Loader2,
-  Plus,
-  Trash2,
-  Shield,
-  User,
-  Users,
-  AlertCircle,
-} from "lucide-react";
+import { Loader2, Plus, Trash2, Shield, User, Users, AlertCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
 /** 权限级别 */
@@ -65,11 +57,7 @@ function permKey(level: PermissionLevel): string {
 }
 
 /** 授权对象显示名 */
-function granteeLabel(
-  perm: DocPermission,
-  members: Member[],
-  _t: (k: string) => string,
-): string {
+function granteeLabel(perm: DocPermission, members: Member[], _t: (k: string) => string): string {
   if (perm.granteeType === "role") {
     return perm.granteeId;
   }
@@ -77,13 +65,7 @@ function granteeLabel(
   return m?.name || m?.email || perm.granteeId;
 }
 
-export function PermissionManager({
-  docId,
-  workspaceId,
-}: {
-  docId: string;
-  workspaceId: string;
-}) {
+export function PermissionManager({ docId, workspaceId }: { docId: string; workspaceId: string }) {
   const t = useTranslations("doc");
   const [permissions, setPermissions] = useState<DocPermission[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -103,9 +85,7 @@ export function PermissionManager({
         api<{ items: DocPermission[] }>(
           `/api/v1/workspaces/${workspaceId}/documents/${docId}/permissions`,
         ).catch(() => ({ items: [] as DocPermission[] })),
-        api<Member[]>(`/api/v1/workspaces/${workspaceId}/members`).catch(
-          () => [] as Member[],
-        ),
+        api<Member[]>(`/api/v1/workspaces/${workspaceId}/members`).catch(() => [] as Member[]),
       ]);
       setPermissions(permData.items);
       setMembers(memberData);
@@ -158,9 +138,7 @@ export function PermissionManager({
           body: JSON.stringify({ permission: level }),
         },
       );
-      setPermissions((prev) =>
-        prev.map((p) => (p.id === pid ? updated : p)),
-      );
+      setPermissions((prev) => prev.map((p) => (p.id === pid ? updated : p)));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("updateFailed"));
     } finally {
@@ -174,10 +152,9 @@ export function PermissionManager({
     setBusy(true);
     setError("");
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/documents/${docId}/permissions/${pid}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/documents/${docId}/permissions/${pid}`, {
+        method: "DELETE",
+      });
       setPermissions((prev) => prev.filter((p) => p.id !== pid));
     } catch (e) {
       setError(e instanceof Error ? e.message : t("removeFailed"));
@@ -238,9 +215,7 @@ export function PermissionManager({
                 </div>
                 <select
                   value={perm.permission}
-                  onChange={(e) =>
-                    updatePermission(perm.id, e.target.value as PermissionLevel)
-                  }
+                  onChange={(e) => updatePermission(perm.id, e.target.value as PermissionLevel)}
                   disabled={busy}
                   className="h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50"
                 >
@@ -282,9 +257,7 @@ export function PermissionManager({
           </select>
           <select
             value={selectedPerm}
-            onChange={(e) =>
-              setSelectedPerm(e.target.value as PermissionLevel)
-            }
+            onChange={(e) => setSelectedPerm(e.target.value as PermissionLevel)}
             disabled={busy}
             className="h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50"
           >
@@ -300,11 +273,7 @@ export function PermissionManager({
             disabled={!selectedUserId || busy}
             className="inline-flex items-center gap-1 h-8 px-3 rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
           >
-            {busy ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Plus size={14} />
-            )}
+            {busy ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
             {t("addPermission")}
           </button>
         </div>

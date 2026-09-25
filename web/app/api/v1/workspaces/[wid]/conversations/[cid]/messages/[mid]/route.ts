@@ -210,8 +210,7 @@ export async function DELETE(
         }
 
         const isAuthor = message.authorId === userId;
-        const isAdmin =
-          membership.role === "owner" || membership.role === "admin";
+        const isAdmin = membership.role === "owner" || membership.role === "admin";
 
         // 权限校验：作者或管理员可撤回
         if (!isAuthor && !isAdmin) {

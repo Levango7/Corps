@@ -11,7 +11,11 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const url = new URL(req.url);
@@ -29,7 +33,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     const take = pageSize;
     const skip = (page - 1) * pageSize;
 
-    const where: { workspaceId: string; startAt?: { gte: Date }; endAt?: { lte: Date } } = { workspaceId: wid };
+    const where: { workspaceId: string; startAt?: { gte: Date }; endAt?: { lte: Date } } = {
+      workspaceId: wid,
+    };
     if (start) where.startAt = { gte: new Date(start) };
     if (end) where.endAt = { lte: new Date(end) };
 
@@ -88,7 +94,11 @@ const createSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json();
@@ -130,7 +140,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

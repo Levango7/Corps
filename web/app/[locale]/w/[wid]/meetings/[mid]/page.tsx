@@ -27,10 +27,10 @@ import { MeetingRoom } from "@/components/meetings/MeetingRoom";
 import dynamic from "next/dynamic";
 
 // P0-2: code splitting — MeetingFlowPanel 改为 dynamic import 懒加载
-const MeetingFlowPanel = dynamic(
-  () => import("@/components/ai/MeetingFlowPanel"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
+const MeetingFlowPanel = dynamic(() => import("@/components/ai/MeetingFlowPanel"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
 
 /** 会议详情（仅取所需字段） */
 interface MeetingDetail {
@@ -58,9 +58,7 @@ export default function MeetingRoomPage({
   const [stage, setStage] = useState<Stage>("loading");
   const [meetingTitle, setMeetingTitle] = useState("");
   // 当前用户名（Medium #18：传入 MeetingLobby 预填 PreJoin 输入框）
-  const [currentUserName, setCurrentUserName] = useState<string | undefined>(
-    undefined,
-  );
+  const [currentUserName, setCurrentUserName] = useState<string | undefined>(undefined);
   // AI 会议流程面板开关（会后阶段：会议已结束时点击"AI 会议流程"按钮打开）
   const [showAiFlow, setShowAiFlow] = useState(false);
   // AI 服务是否已配置（挂载时探测一次，未配置时按钮置灰，避免点击后才收到 503）
@@ -85,18 +83,14 @@ export default function MeetingRoomPage({
       // 并行获取会议详情 + 当前用户名
       const [detailResult, meResult] = await Promise.allSettled([
         api<MeetingDetail>(`/api/v1/workspaces/${w}/meetings/${m}`),
-        api<{ id: string; name: string | null; email: string }>(
-          "/api/v1/users/me",
-        ),
+        api<{ id: string; name: string | null; email: string }>("/api/v1/users/me"),
       ]);
 
       if (cancelled) return;
 
       // Medium #18：设置当前用户名（优先 name，回退 email）
       if (meResult.status === "fulfilled") {
-        setCurrentUserName(
-          meResult.value.name ?? meResult.value.email ?? undefined,
-        );
+        setCurrentUserName(meResult.value.name ?? meResult.value.email ?? undefined);
       }
 
       // 会议详情
@@ -165,9 +159,7 @@ export default function MeetingRoomPage({
         <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] mb-[var(--space-1)]">
           {meetingTitle}
         </h1>
-        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("endedMeetings")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("endedMeetings")}</p>
         {/* AI 会议流程按钮（会后阶段）—— 点击打开 MeetingFlowPanel 侧边栏 */}
         <button
           type="button"
@@ -182,11 +174,7 @@ export default function MeetingRoomPage({
         {/* AI 会议全流程面板（侧边栏，右侧贴边覆盖） */}
         {showAiFlow && (
           <div className="fixed inset-y-0 right-0 z-[var(--z-modal)]">
-            <MeetingFlowPanel
-              wid={wid}
-              meetingId={mid}
-              onClose={() => setShowAiFlow(false)}
-            />
+            <MeetingFlowPanel wid={wid} meetingId={mid} onClose={() => setShowAiFlow(false)} />
           </div>
         )}
       </div>
@@ -197,7 +185,6 @@ export default function MeetingRoomPage({
   if (stage === "lobby") {
     return (
       <MeetingLobby
-
         meetingTitle={meetingTitle}
         currentUserName={currentUserName}
         onJoin={handleJoin}

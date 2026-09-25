@@ -15,11 +15,7 @@
  */
 
 import { Filter, Plus, X } from "lucide-react";
-import type {
-  DatabaseField,
-  FilterCondition,
-  FilterOperator,
-} from "@/lib/database/query-engine";
+import type { DatabaseField, FilterCondition, FilterOperator } from "@/lib/database/query-engine";
 import { getFieldSelectOptions } from "@/lib/database/query-engine";
 import { useTranslations } from "next-intl";
 

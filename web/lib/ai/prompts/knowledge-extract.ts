@@ -43,11 +43,10 @@ export function buildKnowledgeExtractPrompt(
   const sourceLabel = SOURCE_LABEL[sourceType] ?? "来源";
   // 截断超长内容，避免 prompt 膨胀（保留前 8000 字符）
   const truncatedContent =
-    sourceContent.length > 8000
-      ? sourceContent.slice(0, 8000) + "\n\n[内容已截断]"
-      : sourceContent;
+    sourceContent.length > 8000 ? sourceContent.slice(0, 8000) + "\n\n[内容已截断]" : sourceContent;
 
-  return appendFeedbackShot(`你是企业知识图谱提取专家。从给定的${sourceLabel}中提取结构化知识点，构建知识图谱节点与关系。
+  return appendFeedbackShot(
+    `你是企业知识图谱提取专家。从给定的${sourceLabel}中提取结构化知识点，构建知识图谱节点与关系。
 
 ## 提取规则
 1. 识别文本中的核心概念、实体、事实和流程
@@ -90,5 +89,7 @@ export function buildKnowledgeExtractPrompt(
 ## 待提取的${sourceLabel}内容
 ${truncatedContent}
 
-请提取知识点并输出 JSON。`, feedbackExamples);
+请提取知识点并输出 JSON。`,
+    feedbackExamples,
+  );
 }

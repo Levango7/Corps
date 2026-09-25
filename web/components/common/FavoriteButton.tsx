@@ -69,10 +69,7 @@ export default function FavoriteButton({
   const iconSize = size === "sm" ? 14 : 16;
   const btnHeight = size === "sm" ? "h-7" : "h-8";
   const btnPadding = size === "sm" ? "px-2" : "px-2.5";
-  const textSize =
-    size === "sm"
-      ? "text-[length:var(--text-xs)]"
-      : "text-[length:var(--text-sm)]";
+  const textSize = size === "sm" ? "text-[length:var(--text-xs)]" : "text-[length:var(--text-sm)]";
 
   /** 加载收藏状态 */
   async function loadStatus() {
@@ -89,8 +86,7 @@ export default function FavoriteButton({
       setFavorited(data.favorited);
       setFavoriteId(data.favoriteId);
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[FavoriteButton] loadStatus error:", e);
     } finally {
@@ -139,10 +135,9 @@ export default function FavoriteButton({
     if (submitting || !favoriteId) return;
     setSubmitting(true);
     try {
-      await api(
-        `/api/v1/favorites/${favoriteId}?wid=${encodeURIComponent(workspaceId)}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/favorites/${favoriteId}?wid=${encodeURIComponent(workspaceId)}`, {
+        method: "DELETE",
+      });
       setFavorited(false);
       setFavoriteId(null);
       toast("success", t("removed"));

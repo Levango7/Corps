@@ -8,7 +8,6 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
 import {
-
   getUserIdAndWorkspaceId,
   unauthorizedResponse,
   aiNotConfiguredResponse,
@@ -40,7 +39,6 @@ interface TaskBreakdownResult {
   reasoning: string;
 }
 
-
 /** 校验并规范化 LLM 返回的子任务列表，丢弃非法条目 */
 function normalizeSubtasks(raw: unknown): Subtask[] {
   if (!Array.isArray(raw)) return [];
@@ -59,12 +57,9 @@ function normalizeSubtasks(raw: unknown): Subtask[] {
       title: obj.title.slice(0, 255),
       description: typeof obj.description === "string" ? obj.description : "",
       estimatedHours:
-        typeof obj.estimatedHours === "number" && obj.estimatedHours > 0
-          ? obj.estimatedHours
-          : 0,
+        typeof obj.estimatedHours === "number" && obj.estimatedHours > 0 ? obj.estimatedHours : 0,
       priority,
-      suggestedAssignee:
-        typeof obj.suggestedAssignee === "string" ? obj.suggestedAssignee : null,
+      suggestedAssignee: typeof obj.suggestedAssignee === "string" ? obj.suggestedAssignee : null,
     });
   }
   return result;
@@ -132,18 +127,17 @@ export async function POST(req: NextRequest) {
     };
 
     // workspaceId 可用时用 withUsageTracking 包装，否则直接调用
-    const llmResult =
-      authCtx.workspaceId
-        ? await withUsageTracking(
-            {
-              workspaceId: authCtx.workspaceId,
-              userId,
-              capability: "task-breakdown",
-              model: requireDefaultModel().modelId,
-            },
-            generateFn,
-          )
-        : (await generateFn()).result;
+    const llmResult = authCtx.workspaceId
+      ? await withUsageTracking(
+          {
+            workspaceId: authCtx.workspaceId,
+            userId,
+            capability: "task-breakdown",
+            model: requireDefaultModel().modelId,
+          },
+          generateFn,
+        )
+      : (await generateFn()).result;
 
     const cleaned = cleanJsonResponse(llmResult.text);
     const parsed: unknown = JSON.parse(cleaned);

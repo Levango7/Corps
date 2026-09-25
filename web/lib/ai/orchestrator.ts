@@ -9,15 +9,8 @@
 
 import { generateText } from "ai";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
-import {
-  buildAiContext,
-  type AiContextScope,
-} from "@/lib/ai/context";
-import {
-  executeAiActions,
-  type AiAction,
-  type AiActionResult,
-} from "@/lib/ai/executor";
+import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
+import { executeAiActions, type AiAction, type AiActionResult } from "@/lib/ai/executor";
 import { runWithWorkspace } from "@/lib/auth";
 import {
   buildOrchestrationSystemPrompt,
@@ -83,12 +76,7 @@ const VALID_ACTION_TYPES = new Set([
 /** createTask.priority 有效枚举（与 executor.ts executeAction 保持一致） */
 const VALID_PRIORITIES = new Set(["low", "medium", "high", "urgent"]);
 /** updateTaskStatus.status 有效枚举（与 executor.ts executeAction 保持一致） */
-const VALID_TASK_STATUSES = new Set([
-  "todo",
-  "in_progress",
-  "review",
-  "done",
-]);
+const VALID_TASK_STATUSES = new Set(["todo", "in_progress", "review", "done"]);
 /** sendAnnouncement.announcementType 有效枚举（与 executor.ts executeAction 保持一致） */
 const VALID_ANNOUNCEMENT_TYPES = new Set(["info", "warning", "urgent"]);
 
@@ -136,9 +124,11 @@ export function validateActionFields(a: Record<string, unknown>): boolean {
   switch (a.type) {
     case "createTask":
       return (
-        typeof a.title === "string" && a.title.trim() !== "" &&
+        typeof a.title === "string" &&
+        a.title.trim() !== "" &&
         typeof a.description === "string" &&
-        typeof a.priority === "string" && VALID_PRIORITIES.has(a.priority) &&
+        typeof a.priority === "string" &&
+        VALID_PRIORITIES.has(a.priority) &&
         // 可选字段类型校验：assigneeId/dueDate 传入时须为 string
         (a.assigneeId === undefined || typeof a.assigneeId === "string") &&
         (a.dueDate === undefined || typeof a.dueDate === "string")
@@ -149,29 +139,32 @@ export function validateActionFields(a: Record<string, unknown>): boolean {
       return typeof a.userId === "string" && typeof a.message === "string";
     case "createDocument":
       return (
-        typeof a.title === "string" && typeof a.markdown === "string" &&
+        typeof a.title === "string" &&
+        typeof a.markdown === "string" &&
         // 可选字段：authorId 传入时须为 string
         (a.authorId === undefined || typeof a.authorId === "string")
       );
     case "scheduleMeeting":
       return (
-        typeof a.title === "string" && typeof a.scheduledAt === "string" &&
+        typeof a.title === "string" &&
+        typeof a.scheduledAt === "string" &&
         // 可选字段：description 传入时须为 string；participantIds 传入时须为 string 数组
         (a.description === undefined || typeof a.description === "string") &&
         (a.participantIds === undefined ||
-          (Array.isArray(a.participantIds) &&
-            a.participantIds.every((p) => typeof p === "string")))
+          (Array.isArray(a.participantIds) && a.participantIds.every((p) => typeof p === "string")))
       );
     case "updateTaskStatus":
       return (
         typeof a.taskId === "string" &&
-        typeof a.status === "string" && VALID_TASK_STATUSES.has(a.status)
+        typeof a.status === "string" &&
+        VALID_TASK_STATUSES.has(a.status)
       );
     case "createDecision":
       return typeof a.taskId === "string" && typeof a.markdown === "string";
     case "sendAnnouncement":
       return (
-        typeof a.title === "string" && typeof a.content === "string" &&
+        typeof a.title === "string" &&
+        typeof a.content === "string" &&
         // announcementType 可选，传入时必须是合法枚举
         (a.announcementType === undefined ||
           (typeof a.announcementType === "string" &&
@@ -219,10 +212,7 @@ export function normalizePlan(raw: unknown): OrchestrationPlan | null {
     }
     const a = item as Record<string, unknown>;
     if (typeof a.type !== "string" || !VALID_ACTION_TYPES.has(a.type)) {
-      console.warn(
-        "[orchestrator] normalizePlan 跳过非法 type action, type:",
-        a.type,
-      );
+      console.warn("[orchestrator] normalizePlan 跳过非法 type action, type:", a.type);
       continue;
     }
     if (!validateActionFields(a)) {
@@ -275,10 +265,7 @@ export async function suggestOrchestration(
       prompt: buildOrchestrationUserPrompt(context, userRequest),
     });
   } catch (e) {
-    console.error(
-      "[orchestrator] generateText 调用失败:",
-      e instanceof Error ? e.message : e,
-    );
+    console.error("[orchestrator] generateText 调用失败:", e instanceof Error ? e.message : e);
     return null;
   }
 
@@ -288,20 +275,12 @@ export async function suggestOrchestration(
   try {
     parsed = JSON.parse(cleaned);
   } catch (e) {
-    console.error(
-      "[orchestrator] JSON.parse 失败:",
-      e,
-      "raw:",
-      cleaned.slice(0, 200),
-    );
+    console.error("[orchestrator] JSON.parse 失败:", e, "raw:", cleaned.slice(0, 200));
     return null;
   }
   const plan = normalizePlan(parsed);
   if (!plan) {
-    console.error(
-      "[orchestrator] normalizePlan 返回 null, raw:",
-      cleaned.slice(0, 200),
-    );
+    console.error("[orchestrator] normalizePlan 返回 null, raw:", cleaned.slice(0, 200));
   }
   return plan;
 }

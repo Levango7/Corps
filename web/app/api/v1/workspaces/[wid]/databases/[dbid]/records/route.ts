@@ -70,7 +70,9 @@ export async function GET(
         } else if (f.op === "ne") {
           return { NOT: { data: { path, equals: f.value } } } as Prisma.DatabaseRecordWhereInput;
         } else if (f.op === "contains") {
-          return { data: { path, string_contains: f.value as string } } as Prisma.DatabaseRecordWhereInput;
+          return {
+            data: { path, string_contains: f.value as string },
+          } as Prisma.DatabaseRecordWhereInput;
         }
         return {};
       });
@@ -78,7 +80,9 @@ export async function GET(
 
     // 排序：优先使用 sorts 参数（单字段 data 排序），否则按 sortOrder
     // sorts 格式: [{ fieldId, dir }]
-    let orderBy: Prisma.DatabaseRecordOrderByWithRelationInput | Prisma.DatabaseRecordOrderByWithRelationInput[];
+    let orderBy:
+      | Prisma.DatabaseRecordOrderByWithRelationInput
+      | Prisma.DatabaseRecordOrderByWithRelationInput[];
     if (sorts && sorts.length > 0) {
       // 按 data JSON 字段排序（PostgreSQL JSON 路径）
       // Prisma 支持 orderBy: { data: { path: '$."fieldId"', sort: 'asc' } }

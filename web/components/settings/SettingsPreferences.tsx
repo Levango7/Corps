@@ -48,11 +48,7 @@ const ACCENT_COLORS: { id: AccentColor; swatch: string }[] = [
   { id: "orange", swatch: "var(--accent-orange)" },
 ];
 
-const MOTIONS: { id: MotionPref }[] = [
-  { id: "reduced" },
-  { id: "standard" },
-  { id: "enhanced" },
-];
+const MOTIONS: { id: MotionPref }[] = [{ id: "reduced" }, { id: "standard" }, { id: "enhanced" }];
 
 const sectionClass =
   "bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-4 sm:p-5";
@@ -80,15 +76,35 @@ export function SettingsPreferences() {
   });
 
   useEffect(() => {
-    const stored = safeEnum(localStorage.getItem("corps_theme"), ["light", "dark", "system"] as const, "system");
+    const stored = safeEnum(
+      localStorage.getItem("corps_theme"),
+      ["light", "dark", "system"] as const,
+      "system",
+    );
     setTheme(stored);
-    const storedView = safeEnum(localStorage.getItem(DEFAULT_VIEW_KEY), ["board", "list"] as const, "board");
+    const storedView = safeEnum(
+      localStorage.getItem(DEFAULT_VIEW_KEY),
+      ["board", "list"] as const,
+      "board",
+    );
     setDefaultView(storedView);
-    const storedDensity = safeEnum(localStorage.getItem(DENSITY_KEY), ["compact", "comfortable"] as const, "compact");
+    const storedDensity = safeEnum(
+      localStorage.getItem(DENSITY_KEY),
+      ["compact", "comfortable"] as const,
+      "compact",
+    );
     setDensity(storedDensity);
-    const storedAccent = safeEnum(localStorage.getItem(ACCENT_COLOR_KEY), ["blue", "green", "purple", "orange"] as const, "blue");
+    const storedAccent = safeEnum(
+      localStorage.getItem(ACCENT_COLOR_KEY),
+      ["blue", "green", "purple", "orange"] as const,
+      "blue",
+    );
     setAccentColor(storedAccent);
-    const storedMotion = safeEnum(localStorage.getItem(MOTION_KEY), ["reduced", "standard", "enhanced"] as const, "standard");
+    const storedMotion = safeEnum(
+      localStorage.getItem(MOTION_KEY),
+      ["reduced", "standard", "enhanced"] as const,
+      "standard",
+    );
     setMotion(storedMotion);
     setNotifPref(loadNotifPref());
   }, []);
@@ -250,9 +266,7 @@ export function SettingsPreferences() {
         <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
           {t("density")}
         </h2>
-        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
-          {t("densityDesc")}
-        </p>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">{t("densityDesc")}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           {DENSITIES.map((d) => {
             const Icon = d.icon;
@@ -324,9 +338,7 @@ export function SettingsPreferences() {
         <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
           {t("motion")}
         </h2>
-        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">
-          {t("motionDesc")}
-        </p>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-4">{t("motionDesc")}</p>
         <div className="flex flex-col sm:flex-row gap-2">
           {MOTIONS.map((m) => {
             const active = motion === m.id;

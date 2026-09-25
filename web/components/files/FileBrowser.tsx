@@ -109,10 +109,7 @@ export function FileBrowser({
   // ─── 渲染 ────────────────────────────────────────────────────
 
   return (
-    <div
-      className="flex flex-col h-full bg-[var(--bg)]"
-      data-testid="file-browser"
-    >
+    <div className="flex flex-col h-full bg-[var(--bg)]" data-testid="file-browser">
       {/* ─── 顶部工具栏 ─── */}
       <header className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
         {/* 搜索框 */}
@@ -134,11 +131,7 @@ export function FileBrowser({
         {/* 右侧：视图切换 + 上传 */}
         <div className="flex items-center gap-1 ml-auto">
           {/* 视图切换 */}
-          <div
-            className="flex items-center gap-1"
-            role="group"
-            aria-label={t("viewSwitchAria")}
-          >
+          <div className="flex items-center gap-1" role="group" aria-label={t("viewSwitchAria")}>
             <button
               type="button"
               onClick={() => setCurrentView("list")}
@@ -197,9 +190,7 @@ export function FileBrowser({
                 selected={selectedIds.has(file.id)}
                 onClick={() => onFileClick?.(file)}
                 onSelect={() => toggleSelect(file.id)}
-                onDelete={
-                  onFileDelete ? () => handleDelete(file.id) : undefined
-                }
+                onDelete={onFileDelete ? () => handleDelete(file.id) : undefined}
               />
             ))}
           </div>
@@ -216,9 +207,7 @@ export function FileBrowser({
                 selected={selectedIds.has(file.id)}
                 onClick={() => onFileClick?.(file)}
                 onSelect={() => toggleSelect(file.id)}
-                onDelete={
-                  onFileDelete ? () => handleDelete(file.id) : undefined
-                }
+                onDelete={onFileDelete ? () => handleDelete(file.id) : undefined}
               />
             ))}
           </div>

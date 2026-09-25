@@ -247,19 +247,12 @@ export async function handleBillingEvent(
     // 1. Prisma 已知请求错误（P2025 记录不存在、P2002 唯一约束等）→ 业务错误，正常处理
     // 2. TypeError/ReferenceError/SyntaxError → 编程错误，记录后重新抛出（fail-fast）
     // 3. 其他 → 未知错误，记录并返回 500
-    if (
-      err instanceof TypeError ||
-      err instanceof ReferenceError ||
-      err instanceof SyntaxError
-    ) {
+    if (err instanceof TypeError || err instanceof ReferenceError || err instanceof SyntaxError) {
       console.error(`[${providerId}-webhook] 编程错误（重新抛出，不掩盖 bug）:`, err);
       throw err;
     }
     if (err instanceof Prisma.PrismaClientKnownRequestError) {
-      console.error(
-        `[${providerId}-webhook] Prisma 已知错误 code=${err.code}:`,
-        err.message,
-      );
+      console.error(`[${providerId}-webhook] Prisma 已知错误 code=${err.code}:`, err.message);
     } else {
       console.error(`[${providerId}-webhook] handler error:`, err);
     }

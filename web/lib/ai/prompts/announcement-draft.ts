@@ -4,7 +4,8 @@ import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
 export function buildAnnouncementSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是企业公告起草助手。基于工作区近期进展、决策、事件，起草公告内容。
+  return appendFeedbackShot(
+    `你是企业公告起草助手。基于工作区近期进展、决策、事件，起草公告内容。
 输出 Markdown 格式的公告，包含：
 1. 一个简洁的标题（# 标题）
 2. 正文内容（分段清晰）
@@ -33,10 +34,13 @@ export function buildAnnouncementSystemPrompt(feedbackExamples?: FeedbackExample
 本周 v2.3 版本已正式上线，主要更新如下：
 - 新增任务批量导出功能
 - 优化搜索性能
-请各团队关注相关变更。`, feedbackExamples);
+请各团队关注相关变更。`,
+    feedbackExamples,
+  );
 }
 
 export function buildAnnouncementUserPrompt(context: string, topic?: string): string {
-  const truncated = context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
+  const truncated =
+    context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
   return `${topic ? `## 公告主题\n${topic}\n\n` : ""}## 工作区近期上下文\n${truncated}\n\n请基于上述信息起草公告。`;
 }

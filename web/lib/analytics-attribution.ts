@@ -85,14 +85,17 @@ const reported = new Map<string, number>();
 
 // R8D-11：定期清理 reported Map 中过期条目，防止内存泄漏
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [path, ts] of reported) {
-      if (now - ts > REPORTED_TTL_MS) {
-        reported.delete(path);
+  setInterval(
+    () => {
+      const now = Date.now();
+      for (const [path, ts] of reported) {
+        if (now - ts > REPORTED_TTL_MS) {
+          reported.delete(path);
+        }
       }
-    }
-  }, 10 * 60 * 1000).unref?.(); // unref 避免阻止进程退出
+    },
+    10 * 60 * 1000,
+  ).unref?.(); // unref 避免阻止进程退出
 }
 
 /**

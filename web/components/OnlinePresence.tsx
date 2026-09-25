@@ -59,11 +59,7 @@ function getInitial(name: string): string {
   return trimmed[0].toUpperCase();
 }
 
-export default function OnlinePresence({
-  wid,
-  max = 8,
-  heartbeat = true,
-}: OnlinePresenceProps) {
+export default function OnlinePresence({ wid, max = 8, heartbeat = true }: OnlinePresenceProps) {
   const t = useTranslations("presence");
   const [data, setData] = useState<PresenceData | null>(null);
   const [error, setError] = useState(false);
@@ -133,10 +129,7 @@ export default function OnlinePresence({
         aria-label={t("loading")}
       >
         {Array.from({ length: 5 }).map((_, i) => (
-          <span
-            key={i}
-            className="h-7 w-7 rounded-full bg-[var(--surface-hover)] animate-pulse"
-          />
+          <span key={i} className="h-7 w-7 rounded-full bg-[var(--surface-hover)] animate-pulse" />
         ))}
       </div>
     );
@@ -183,9 +176,7 @@ export default function OnlinePresence({
           </div>
         ))}
         {overflow > 0 && (
-          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            +{overflow}
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">+{overflow}</span>
         )}
       </div>
     </div>

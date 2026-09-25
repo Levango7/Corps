@@ -43,9 +43,7 @@ export function useLongPress({
   // 检测 prefers-reduced-motion
   const [reduced, setReduced] = useState(false);
   useEffect(() => {
-    setReduced(
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches,
-    );
+    setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   }, []);
 
   const startTimer = useCallback(() => {

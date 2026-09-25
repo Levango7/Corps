@@ -62,9 +62,7 @@ export function FileListItem({
             : "bg-[var(--surface)] border-[var(--border)] hover:border-[var(--accent)]")
         }
       >
-        {selected && (
-          <Check size={10} className="text-[var(--accent-fg)]" strokeWidth={3} />
-        )}
+        {selected && <Check size={10} className="text-[var(--accent-fg)]" strokeWidth={3} />}
       </button>
 
       {/* 文件类型图标 */}

@@ -97,13 +97,29 @@ export function MessageList({
   const onMessageUpdated = useCallback((message: EditableChatMessage) => {
     setMessageUpdates((previous) => ({ ...previous, [message.id]: message }));
   }, []);
-  const applyUpdate = useCallback((message: EditableChatMessage): EditableChatMessage => {
-    const update = messageUpdates[message.id];
-    if (!update || message.isRecalled || message.revokedAt ||
-      (message.editedAt && update.editedAt && new Date(message.editedAt) > new Date(update.editedAt))) return message;
-    return { ...message, body: update.body, isRecalled: update.isRecalled, revokedAt: update.revokedAt, editedAt: update.editedAt,
-      ...(update.isRecalled ? { attachments: [] } : {}) };
-  }, [messageUpdates]);
+  const applyUpdate = useCallback(
+    (message: EditableChatMessage): EditableChatMessage => {
+      const update = messageUpdates[message.id];
+      if (
+        !update ||
+        message.isRecalled ||
+        message.revokedAt ||
+        (message.editedAt &&
+          update.editedAt &&
+          new Date(message.editedAt) > new Date(update.editedAt))
+      )
+        return message;
+      return {
+        ...message,
+        body: update.body,
+        isRecalled: update.isRecalled,
+        revokedAt: update.revokedAt,
+        editedAt: update.editedAt,
+        ...(update.isRecalled ? { attachments: [] } : {}),
+      };
+    },
+    [messageUpdates],
+  );
   const listRef = useRef<HTMLDivElement>(null);
   const [showNewMessages, setShowNewMessages] = useState(false);
   const [newMessagesCount, setNewMessagesCount] = useState(0);
@@ -161,7 +177,10 @@ export function MessageList({
   }, []);
 
   // 按时间分组
-  const groups = useMemo(() => groupByTime(messages.map(applyUpdate), t, locale), [messages, applyUpdate, t, locale]);
+  const groups = useMemo(
+    () => groupByTime(messages.map(applyUpdate), t, locale),
+    [messages, applyUpdate, t, locale],
+  );
 
   // 父组件 searchQuery 过滤（保留原有高亮过滤行为）
   const filteredGroups = useMemo(() => {
@@ -169,7 +188,10 @@ export function MessageList({
     const q = searchQuery.toLowerCase();
     const matched = groups
       .flatMap((g) => g.messages)
-      .filter((m: EditableChatMessage) => !m.isRecalled && !m.revokedAt && m.body.toLowerCase().includes(q));
+      .filter(
+        (m: EditableChatMessage) =>
+          !m.isRecalled && !m.revokedAt && m.body.toLowerCase().includes(q),
+      );
     if (matched.length === 0) return [];
     return [{ timeLabel: t("searchResults"), messages: matched }];
   }, [groups, searchQuery, t]);

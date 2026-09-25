@@ -23,20 +23,10 @@ import { Mermaid } from "@/components/Mermaid";
 import { useToast } from "@/components/Toast";
 
 /** 图型 key 列表（与 MarkdownToolbar 图表下拉共享同一事实源；模板正文走 i18n） */
-export const DIAGRAM_KEYS = [
-  "mindmap",
-  "flow",
-  "sequence",
-  "gantt",
-  "pie",
-  "quadrant",
-] as const;
+export const DIAGRAM_KEYS = ["mindmap", "flow", "sequence", "gantt", "pie", "quadrant"] as const;
 
 /** 根据 key 与翻译函数返回 mermaid 模板代码（正文已 i18n，mermaid 语法在消息文件中维护） */
-export function getDiagramCode(
-  key: string,
-  t: ReturnType<typeof useTranslations>,
-): string {
+export function getDiagramCode(key: string, t: ReturnType<typeof useTranslations>): string {
   switch (key) {
     case "mindmap":
       return t("diagramMindmapCode");

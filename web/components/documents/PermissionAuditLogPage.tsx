@@ -121,9 +121,7 @@ interface PermissionAuditLogPageProps {
   workspaceId: string;
 }
 
-export function PermissionAuditLogPage({
-  workspaceId,
-}: PermissionAuditLogPageProps) {
+export function PermissionAuditLogPage({ workspaceId }: PermissionAuditLogPageProps) {
   const t = useTranslations("permissions");
   const [items, setItems] = useState<AuditLogEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -133,10 +131,8 @@ export function PermissionAuditLogPage({
   const [total, setTotal] = useState(0);
 
   // 筛选状态
-  const [targetTypeFilter, setTargetTypeFilter] =
-    useState<TargetTypeFilter>("all");
-  const [actionTypeFilter, setActionTypeFilter] =
-    useState<ActionTypeFilter>("all");
+  const [targetTypeFilter, setTargetTypeFilter] = useState<TargetTypeFilter>("all");
+  const [actionTypeFilter, setActionTypeFilter] = useState<ActionTypeFilter>("all");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
 
@@ -170,9 +166,7 @@ export function PermissionAuditLogPage({
       setError("");
       try {
         const queryString = buildQueryParams(currentPage);
-        const data = await api<
-          PaginatedResponse<AuditLogEntry> | AuditLogEntry[]
-        >(
+        const data = await api<PaginatedResponse<AuditLogEntry> | AuditLogEntry[]>(
           `/api/v1/workspaces/${workspaceId}/permissions/audit-logs?${queryString}`,
         );
         // 兼容分页信封与裸数组两种响应
@@ -186,11 +180,7 @@ export function PermissionAuditLogPage({
           setTotalPages(data.totalPages ?? 1);
         }
       } catch (e) {
-        setError(
-          e instanceof ApiError || e instanceof Error
-            ? e.message
-            : t("noAuditLogs"),
-        );
+        setError(e instanceof ApiError || e instanceof Error ? e.message : t("noAuditLogs"));
       } finally {
         setLoading(false);
       }
@@ -247,15 +237,10 @@ export function PermissionAuditLogPage({
       <div className="flex items-center gap-3 mb-[var(--space-4)] flex-wrap">
         {/* 目标类型筛选 */}
         <div className="relative inline-flex items-center">
-          <Filter
-            size={14}
-            className="absolute left-2 text-[var(--muted)] pointer-events-none"
-          />
+          <Filter size={14} className="absolute left-2 text-[var(--muted)] pointer-events-none" />
           <select
             value={targetTypeFilter}
-            onChange={(e) =>
-              setTargetTypeFilter(e.target.value as TargetTypeFilter)
-            }
+            onChange={(e) => setTargetTypeFilter(e.target.value as TargetTypeFilter)}
             className="h-8 pl-7 pr-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] cursor-pointer"
             aria-label={t("targetType")}
           >
@@ -275,9 +260,7 @@ export function PermissionAuditLogPage({
           />
           <select
             value={actionTypeFilter}
-            onChange={(e) =>
-              setActionTypeFilter(e.target.value as ActionTypeFilter)
-            }
+            onChange={(e) => setActionTypeFilter(e.target.value as ActionTypeFilter)}
             className="h-8 pl-7 pr-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] cursor-pointer"
             aria-label={t("action")}
           >
@@ -291,10 +274,7 @@ export function PermissionAuditLogPage({
 
         {/* 时间范围筛选 */}
         <div className="relative inline-flex items-center">
-          <Calendar
-            size={14}
-            className="absolute left-2 text-[var(--muted)] pointer-events-none"
-          />
+          <Calendar size={14} className="absolute left-2 text-[var(--muted)] pointer-events-none" />
           <input
             type="date"
             value={startDate}
@@ -303,14 +283,9 @@ export function PermissionAuditLogPage({
             aria-label="start date"
           />
         </div>
-        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          –
-        </span>
+        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">–</span>
         <div className="relative inline-flex items-center">
-          <Calendar
-            size={14}
-            className="absolute left-2 text-[var(--muted)] pointer-events-none"
-          />
+          <Calendar size={14} className="absolute left-2 text-[var(--muted)] pointer-events-none" />
           <input
             type="date"
             value={endDate}
@@ -329,10 +304,7 @@ export function PermissionAuditLogPage({
         </button>
 
         {/* 重置筛选按钮 */}
-        {(targetTypeFilter !== "all" ||
-          actionTypeFilter !== "all" ||
-          startDate ||
-          endDate) && (
+        {(targetTypeFilter !== "all" || actionTypeFilter !== "all" || startDate || endDate) && (
           <button
             onClick={resetFilters}
             className="h-8 px-3 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -343,11 +315,7 @@ export function PermissionAuditLogPage({
       </div>
 
       {/* 错误提示 */}
-      {error && (
-        <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </p>
-      )}
+      {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {/* 内容区域 */}
       {loading ? (
@@ -367,10 +335,7 @@ export function PermissionAuditLogPage({
             {items.map((entry) => {
               const visual = getActionVisual(entry.action);
               const operatorName =
-                entry.operator?.name ||
-                entry.operator?.email ||
-                entry.operatorId ||
-                "—";
+                entry.operator?.name || entry.operator?.email || entry.operatorId || "—";
               const oldPermKey = getPermissionLabelKey(entry.oldPermission);
               const newPermKey = getPermissionLabelKey(entry.newPermission);
 
@@ -404,9 +369,7 @@ export function PermissionAuditLogPage({
                       {t("targetType")}: {t(entry.targetType)}
                     </span>
                     <span>·</span>
-                    <span className="truncate max-w-[160px]">
-                      ID: {entry.targetId}
-                    </span>
+                    <span className="truncate max-w-[160px]">ID: {entry.targetId}</span>
 
                     {/* 授权对象 */}
                     <span>·</span>
@@ -414,9 +377,7 @@ export function PermissionAuditLogPage({
                       {t("granteeType")}: {t(entry.granteeType)}
                     </span>
                     <span>·</span>
-                    <span className="truncate max-w-[120px]">
-                      {entry.granteeId}
-                    </span>
+                    <span className="truncate max-w-[120px]">{entry.granteeId}</span>
 
                     {/* 权限变更 */}
                     {oldPermKey && (
@@ -476,9 +437,7 @@ export function PermissionAuditLogPage({
                   {page} / {totalPages}
                 </span>
                 <button
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                   className="inline-flex items-center gap-1 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
                   aria-label="next page"

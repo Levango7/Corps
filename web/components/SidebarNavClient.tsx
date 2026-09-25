@@ -142,13 +142,7 @@ export function SidebarNavClient({
       <button
         onClick={mode === "desktop" ? onToggleCollapse : onClose}
         className="m-[var(--space-2)] p-[var(--space-2)] rounded-[var(--radius-md)] text-[var(--meta)] hover:bg-[var(--surface-2)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] flex items-center justify-center"
-        aria-label={
-          mode === "desktop"
-            ? collapsed
-              ? expandLabel
-              : collapseLabel
-            : closeLabel
-        }
+        aria-label={mode === "desktop" ? (collapsed ? expandLabel : collapseLabel) : closeLabel}
       >
         {mode === "desktop" ? (
           collapsed ? (

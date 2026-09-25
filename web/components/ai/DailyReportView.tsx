@@ -182,9 +182,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
         {phase === "idle" && !error && (
           <div className="flex h-full flex-col items-center justify-center gap-[var(--space-3)] text-center">
             <Sparkles size={32} className="text-[var(--meta)]" />
-            <p className="max-w-md text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("empty")}
-            </p>
+            <p className="max-w-md text-[length:var(--text-sm)] text-[var(--meta)]">{t("empty")}</p>
           </div>
         )}
 
@@ -247,11 +245,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
             )}
 
             {/* AI 结果反馈按钮 */}
-            <FeedbackButtons
-              capability="daily-report"
-              workspaceId={wid}
-              originalOutput={content}
-            />
+            <FeedbackButtons capability="daily-report" workspaceId={wid} originalOutput={content} />
           </div>
         )}
 
@@ -267,9 +261,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
       {hasContent && (
         <footer className="flex items-center justify-end gap-[var(--space-3)] border-t border-[var(--border)] px-[var(--space-6)] py-[var(--space-3)]">
           {saved && (
-            <span className="text-[length:var(--text-xs)] text-[var(--success)]">
-              {t("saved")}
-            </span>
+            <span className="text-[length:var(--text-xs)] text-[var(--success)]">{t("saved")}</span>
           )}
           <button
             type="button"

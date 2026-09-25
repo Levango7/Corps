@@ -27,7 +27,6 @@ import {
   Shield,
   Crown,
   Layers,
-
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
@@ -85,10 +84,7 @@ const fieldControl =
   "w-full h-9 px-2.5 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
 
 /** 来源标记配置：图标 + 颜色 token */
-const sourceConfig: Record<
-  PermissionSource,
-  { icon: typeof Shield; color: string; bg: string }
-> = {
+const sourceConfig: Record<PermissionSource, { icon: typeof Shield; color: string; bg: string }> = {
   explicit: {
     icon: ShieldCheck,
     color: "var(--accent)",
@@ -129,10 +125,7 @@ function formatExpiry(isoString: string): string {
   });
 }
 
-export function DocumentPermissionPanel({
-  workspaceId,
-  documentId,
-}: DocumentPermissionPanelProps) {
+export function DocumentPermissionPanel({ workspaceId, documentId }: DocumentPermissionPanelProps) {
   const t = useTranslations("permissions");
 
   const [permissions, setPermissions] = useState<DocumentPermission[]>([]);
@@ -145,8 +138,7 @@ export function DocumentPermissionPanel({
   const [showForm, setShowForm] = useState(false);
   const [granteeType, setGranteeType] = useState<GranteeType>("user");
   const [granteeId, setGranteeId] = useState("");
-  const [permissionLevel, setPermissionLevel] =
-    useState<PermissionLevel>("view");
+  const [permissionLevel, setPermissionLevel] = useState<PermissionLevel>("view");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
@@ -159,9 +151,7 @@ export function DocumentPermissionPanel({
       );
       setPermissions(data.items ?? []);
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error ? e.message : t("noPermissions"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("noPermissions"));
     } finally {
       setLoading(false);
     }
@@ -170,9 +160,7 @@ export function DocumentPermissionPanel({
   useEffect(() => {
     loadPermissions();
     // 拉取成员列表用于授权对象选择
-    api<Member[] | { items: Member[] }>(
-      `/api/v1/workspaces/${workspaceId}/members`,
-    )
+    api<Member[] | { items: Member[] }>(`/api/v1/workspaces/${workspaceId}/members`)
       .then((data) => {
         const list = Array.isArray(data) ? data : (data.items ?? []);
         setMembers(list);
@@ -181,9 +169,7 @@ export function DocumentPermissionPanel({
         // 成员列表加载失败不阻塞权限管理
       });
     // 拉取角色列表用于授权对象选择
-    api<Role[] | { items: Role[] }>(
-      `/api/v1/workspaces/${workspaceId}/roles`,
-    )
+    api<Role[] | { items: Role[] }>(`/api/v1/workspaces/${workspaceId}/roles`)
       .then((data) => {
         const list = Array.isArray(data) ? data : (data.items ?? []);
         setRoles(list);
@@ -202,9 +188,7 @@ export function DocumentPermissionPanel({
       );
       setPermissions((prev) => prev.filter((p) => p.id !== permission.id));
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error ? e.message : t("confirmRemove"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("confirmRemove"));
     }
   }
 
@@ -218,26 +202,21 @@ export function DocumentPermissionPanel({
     setSubmitting(true);
     setFormError("");
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/documents/${documentId}/permissions`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            granteeType,
-            granteeId,
-            permissionLevel,
-          }),
-        },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/documents/${documentId}/permissions`, {
+        method: "POST",
+        body: JSON.stringify({
+          granteeType,
+          granteeId,
+          permissionLevel,
+        }),
+      });
       // 成功后刷新列表并关闭表单
       setShowForm(false);
       setGranteeId("");
       setPermissionLevel("view");
       loadPermissions();
     } catch (e) {
-      setFormError(
-        e instanceof ApiError || e instanceof Error ? e.message : t("save"),
-      );
+      setFormError(e instanceof ApiError || e instanceof Error ? e.message : t("save"));
     } finally {
       setSubmitting(false);
     }
@@ -259,11 +238,7 @@ export function DocumentPermissionPanel({
         </button>
       </div>
 
-      {error && (
-        <p className="text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </p>
-      )}
+      {error && <p className="text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {/* 添加权限表单 */}
       {showForm && (
@@ -302,9 +277,7 @@ export function DocumentPermissionPanel({
               className={fieldControl}
               aria-required="true"
             >
-              <option value="">
-                {granteeType === "user" ? t("user") : t("role")}
-              </option>
+              <option value="">{granteeType === "user" ? t("user") : t("role")}</option>
               {granteeType === "user"
                 ? members.map((m) => (
                     <option key={m.id} value={m.id}>
@@ -327,9 +300,7 @@ export function DocumentPermissionPanel({
             <select
               id="permission-level"
               value={permissionLevel}
-              onChange={(e) =>
-                setPermissionLevel(e.target.value as PermissionLevel)
-              }
+              onChange={(e) => setPermissionLevel(e.target.value as PermissionLevel)}
               className={fieldControl}
             >
               <option value="view">{t("view")}</option>
@@ -395,11 +366,7 @@ export function DocumentPermissionPanel({
               >
                 <div className="flex items-center gap-2">
                   {/* 来源标记图标 */}
-                  <SourceIcon
-                    size={16}
-                    className="shrink-0"
-                    style={{ color: sc.color }}
-                  />
+                  <SourceIcon size={16} className="shrink-0" style={{ color: sc.color }} />
                   {/* 授权对象名称 */}
                   <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                     {perm.granteeName}
@@ -444,9 +411,7 @@ export function DocumentPermissionPanel({
                   )}
                   <span>
                     {t("expiresAt")}:{" "}
-                    {perm.expiresAt
-                      ? formatExpiry(perm.expiresAt)
-                      : t("noExpiry")}
+                    {perm.expiresAt ? formatExpiry(perm.expiresAt) : t("noExpiry")}
                   </span>
                 </div>
               </li>

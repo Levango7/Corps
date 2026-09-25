@@ -211,10 +211,7 @@ export async function buildAiContext(
         return section;
       } catch (e) {
         // 单个 scope 失败不中断整体上下文聚合，但记录警告便于排查
-        console.warn(
-          `[ai-context] scope "${scope}" 聚合失败:`,
-          e instanceof Error ? e.message : e,
-        );
+        console.warn(`[ai-context] scope "${scope}" 聚合失败:`, e instanceof Error ? e.message : e);
         return null;
       }
     }),
@@ -226,9 +223,7 @@ export async function buildAiContext(
 
   // 启用反馈注入：获取 few-shot 示例并格式化为 markdown section
   try {
-    const feedbackExamples = capability
-      ? await getFeedbackExamples(wid, capability, 3, tx)
-      : [];
+    const feedbackExamples = capability ? await getFeedbackExamples(wid, capability, 3, tx) : [];
 
     if (feedbackExamples.length === 0) {
       return { context, feedbackExamples: undefined };
@@ -241,10 +236,7 @@ export async function buildAiContext(
     };
   } catch (e) {
     // 反馈查询失败不中断上下文聚合，仅记录警告
-    console.warn(
-      "[ai-context] 反馈示例获取失败:",
-      e instanceof Error ? e.message : e,
-    );
+    console.warn("[ai-context] 反馈示例获取失败:", e instanceof Error ? e.message : e);
     return { context, feedbackExamples: undefined };
   }
 }
@@ -297,8 +289,8 @@ async function buildSection(
           select: { title: true, blockedReason: true },
         }),
       ]);
-      const lines = items.map((t) =>
-        `- ${t.title}${t.blockedReason ? `（原因：${t.blockedReason}）` : ""}`,
+      const lines = items.map(
+        (t) => `- ${t.title}${t.blockedReason ? `（原因：${t.blockedReason}）` : ""}`,
       );
       return `## 任务（阻塞）\n${lines.join("\n") || "无"}${truncationNote(total, max)}`;
     }
@@ -408,7 +400,9 @@ async function buildSection(
           select: { title: true, submittedAt: true },
         }),
       ]);
-      const lines = items.map((a) => `- ${a.title} (提交于: ${a.submittedAt ? dateStr(a.submittedAt) : "?"})`);
+      const lines = items.map(
+        (a) => `- ${a.title} (提交于: ${a.submittedAt ? dateStr(a.submittedAt) : "?"})`,
+      );
       return `## 审批（待处理）\n${lines.join("\n") || "无"}${truncationNote(total, max)}`;
     }
 
@@ -516,7 +510,10 @@ async function buildSection(
         }),
       ]);
       const lines = items.map((d) => {
-        const preview = d.markdown.replace(/[#*\n]/g, " ").trim().slice(0, 80);
+        const preview = d.markdown
+          .replace(/[#*\n]/g, " ")
+          .trim()
+          .slice(0, 80);
         return `- ${preview || "(空决策)"} (时间: ${dateStr(d.createdAt)})`;
       });
       return `## 决策（最近）\n${lines.join("\n") || "无"}${truncationNote(total, max)}`;
@@ -683,7 +680,9 @@ async function buildSection(
           select: { title: true, submittedAt: true },
         }),
       ]);
-      const lines = items.map((a) => `- ${a.title} (提交于: ${a.submittedAt ? dateStr(a.submittedAt) : "?"})`);
+      const lines = items.map(
+        (a) => `- ${a.title} (提交于: ${a.submittedAt ? dateStr(a.submittedAt) : "?"})`,
+      );
       return `## 审批（逾期未处理）\n${lines.join("\n") || "无"}${truncationNote(total, max)}`;
     }
 
@@ -734,7 +733,9 @@ async function buildSection(
           select: { role: true, user: { select: { name: true, email: true } } },
         }),
       ]);
-      const lines = items.map((m) => `- ${m.user.name ?? m.user.email ?? "未知用户"} (角色: ${m.role})`);
+      const lines = items.map(
+        (m) => `- ${m.user.name ?? m.user.email ?? "未知用户"} (角色: ${m.role})`,
+      );
       return `## 成员（活跃）\n${lines.join("\n") || "无"}${truncationNote(total, max)}`;
     }
 

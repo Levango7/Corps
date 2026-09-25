@@ -19,15 +19,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Plus,
-  Trash2,
-  Loader2,
-  AlertCircle,
-  Mail,
-  X,
-  Check,
-} from "lucide-react";
+import { Plus, Trash2, Loader2, AlertCircle, Mail, X, Check } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
@@ -85,8 +77,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
       if (ac.signal.aborted) return;
       setAccounts(data);
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[MailSettings] loadAccounts error:", e);
       setError(t("error"));
@@ -132,8 +123,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
       setPassword("");
       toast("success", t("updated"));
     } catch (e) {
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailSettings] add error:", e);
+      if (process.env.NODE_ENV === "development") console.error("[MailSettings] add error:", e);
       toast("error", t("error"));
     } finally {
       setAdding(false);
@@ -146,15 +136,13 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
     if (!window.confirm(t("deleteConfirm"))) return;
     setRemovingId(id);
     try {
-      await api(
-        `/api/v1/mail/accounts/${id}?wid=${encodeURIComponent(workspaceId)}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/mail/accounts/${id}?wid=${encodeURIComponent(workspaceId)}`, {
+        method: "DELETE",
+      });
       setAccounts((prev) => prev.filter((a) => a.id !== id));
       toast("success", t("accountDeleted"));
     } catch (e) {
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailSettings] remove error:", e);
+      if (process.env.NODE_ENV === "development") console.error("[MailSettings] remove error:", e);
       toast("error", t("error"));
     } finally {
       setRemovingId(null);
@@ -172,9 +160,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
           <Mail size={16} className="text-[var(--accent)]" />
           {t("settings")}
         </h2>
-        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          {accounts.length}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{accounts.length}</span>
       </header>
 
       {/* ── 正文 ── */}
@@ -291,16 +277,10 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
             <button
               type="button"
               onClick={handleAdd}
-              disabled={
-                adding || !email.trim() || !smtpHost.trim() || !password.trim()
-              }
+              disabled={adding || !email.trim() || !smtpHost.trim() || !password.trim()}
               className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {adding ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Plus size={14} />
-              )}
+              {adding ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
               {t("addAccount")}
             </button>
           </div>
@@ -331,17 +311,10 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
                     <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                       {acc.email}
                     </span>
-                    {acc.isDefault && (
-                      <Check
-                        size={14}
-                        className="shrink-0 text-[var(--accent)]"
-                      />
-                    )}
+                    {acc.isDefault && <Check size={14} className="shrink-0 text-[var(--accent)]" />}
                   </div>
                   <p className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
-                    {acc.displayName
-                      ? `${acc.displayName} · `
-                      : ""}
+                    {acc.displayName ? `${acc.displayName} · ` : ""}
                     {acc.smtpHost}:{acc.smtpPort}
                     {acc.smtpSecure ? " (SSL)" : ""}
                   </p>

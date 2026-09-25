@@ -165,19 +165,9 @@ export default function WidgetCard({
         ].join(" ")}
       >
         {editing && (
-          <GripVertical
-            size={14}
-            className="shrink-0 text-[var(--meta)]"
-            aria-hidden="true"
-          />
+          <GripVertical size={14} className="shrink-0 text-[var(--meta)]" aria-hidden="true" />
         )}
-        {Icon && (
-          <Icon
-            size={14}
-            className="shrink-0 text-[var(--muted)]"
-            strokeWidth={2}
-          />
-        )}
+        {Icon && <Icon size={14} className="shrink-0 text-[var(--muted)]" strokeWidth={2} />}
         <h3 className="flex-1 min-w-0 truncate text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {title}
         </h3>
@@ -190,7 +180,9 @@ export default function WidgetCard({
             {sizeHint}
           </span>
         )}
-        {headerExtra && <div className="shrink-0 flex items-center gap-[var(--space-1)]">{headerExtra}</div>}
+        {headerExtra && (
+          <div className="shrink-0 flex items-center gap-[var(--space-1)]">{headerExtra}</div>
+        )}
         {editing && widgetId && onConfigChange && (
           <button
             type="button"
@@ -227,7 +219,9 @@ export default function WidgetCard({
       </div>
       {/* 配置面板 — 3D 翻转入场（§4.2），reduced 降级为条件渲染 */}
       {prefersReduced ? (
-        configOpen && widgetId && onConfigChange && (
+        configOpen &&
+        widgetId &&
+        onConfigChange && (
           <WidgetConfigPanel
             widgetId={widgetId}
             config={config ?? {}}

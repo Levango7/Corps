@@ -8,7 +8,14 @@ import { useState } from "react";
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
-import { getEventsOnDate, getEventColor, isSameDay, getWeekDays, formatTime, isTaskDeadline } from "./calendar-utils";
+import {
+  getEventsOnDate,
+  getEventColor,
+  isSameDay,
+  getWeekDays,
+  formatTime,
+  isTaskDeadline,
+} from "./calendar-utils";
 
 /** 周视图公共 props */
 interface CalendarWeekProps {
@@ -43,8 +50,13 @@ export function CalendarWeek({
   });
 
   const weekHeaders = [
-    t("sunday"), t("monday"), t("tuesday"), t("wednesday"),
-    t("thursday"), t("friday"), t("saturday"),
+    t("sunday"),
+    t("monday"),
+    t("tuesday"),
+    t("wednesday"),
+    t("thursday"),
+    t("friday"),
+    t("saturday"),
   ];
 
   // 手机端切换日期时重置索引
@@ -85,7 +97,8 @@ export function CalendarWeek({
           </button>
         </div>
         <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-          {weekDays[0].getFullYear()}年 {weekDays[0].getMonth() + 1}月{weekDays[0].getDate()}日 - {weekDays[6].getMonth() + 1}月{weekDays[6].getDate()}日
+          {weekDays[0].getFullYear()}年 {weekDays[0].getMonth() + 1}月{weekDays[0].getDate()}日 -{" "}
+          {weekDays[6].getMonth() + 1}月{weekDays[6].getDate()}日
         </h2>
       </div>
 
@@ -103,7 +116,8 @@ export function CalendarWeek({
             <ChevronLeft size={14} />
           </button>
           <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
-            {weekHeaders[mobileDayIndex]} · {weekDays[mobileDayIndex].getMonth() + 1}/{weekDays[mobileDayIndex].getDate()}
+            {weekHeaders[mobileDayIndex]} · {weekDays[mobileDayIndex].getMonth() + 1}/
+            {weekDays[mobileDayIndex].getDate()}
           </span>
           <button
             onClick={handleMobileNext}
@@ -140,7 +154,13 @@ export function CalendarWeek({
                 onClick={() => onEventClick(event)}
               >
                 <div className="font-[weight:var(--weight-medium)] text-[length:var(--text-sm)] flex items-center gap-1">
-                  {isTaskDeadline(event) && <CheckCircle2 size={14} className="shrink-0" style={{ color: getEventColor(event) }} />}
+                  {isTaskDeadline(event) && (
+                    <CheckCircle2
+                      size={14}
+                      className="shrink-0"
+                      style={{ color: getEventColor(event) }}
+                    />
+                  )}
                   <span className="truncate">{event.title}</span>
                 </div>
                 {!event.allDay && (
@@ -155,7 +175,10 @@ export function CalendarWeek({
       </div>
 
       {/* sm 以上：7列网格 */}
-      <div className="hidden sm:grid grid-cols-7 gap-px flex-1" style={{ background: "var(--border)" }}>
+      <div
+        className="hidden sm:grid grid-cols-7 gap-px flex-1"
+        style={{ background: "var(--border)" }}
+      >
         {weekDays.map((date, i) => {
           const dayEvents = getEventsOnDate(events, date);
           const isToday = isSameDay(date, today);
@@ -203,12 +226,19 @@ export function CalendarWeek({
                       onClick={() => onEventClick(event)}
                     >
                       <div className="font-[weight:var(--weight-medium)] truncate flex items-center gap-1">
-                        {isTaskDeadline(event) && <CheckCircle2 size={12} className="shrink-0" style={{ color: getEventColor(event) }} />}
+                        {isTaskDeadline(event) && (
+                          <CheckCircle2
+                            size={12}
+                            className="shrink-0"
+                            style={{ color: getEventColor(event) }}
+                          />
+                        )}
                         <span className="truncate">{event.title}</span>
                       </div>
                       {!event.allDay && (
                         <div className="text-[var(--muted)]">
-                          {formatTime(new Date(event.startAt))} - {formatTime(new Date(event.endAt))}
+                          {formatTime(new Date(event.startAt))} -{" "}
+                          {formatTime(new Date(event.endAt))}
                         </div>
                       )}
                     </div>

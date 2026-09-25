@@ -23,11 +23,29 @@
  *       （空状态处理 + design token 样式）
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type KeyboardEvent, type MouseEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ChangeEvent,
+  type KeyboardEvent,
+  type MouseEvent,
+} from "react";
 import { useChat } from "@ai-sdk/react";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { useTranslations } from "next-intl";
-import { Brain, Send, Loader2, AlertTriangle, Square, Plus, MessageSquare, Trash2 } from "lucide-react";
+import {
+  Brain,
+  Send,
+  Loader2,
+  AlertTriangle,
+  Square,
+  Plus,
+  MessageSquare,
+  Trash2,
+} from "lucide-react";
 import Markdown from "@/components/Markdown";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -107,7 +125,8 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
             body: {
               wid,
               question,
-              conversationId: (body as { conversationId?: string | null } | undefined)?.conversationId ?? null,
+              conversationId:
+                (body as { conversationId?: string | null } | undefined)?.conversationId ?? null,
             },
           };
         },
@@ -142,7 +161,10 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
     } catch (e) {
       // 不静默失败，提示用户
       if (process.env.NODE_ENV === "development") {
-        console.error("[KnowledgeQaPanel] loadConversations error:", e instanceof Error ? e.message : e);
+        console.error(
+          "[KnowledgeQaPanel] loadConversations error:",
+          e instanceof Error ? e.message : e,
+        );
       }
       toast("error", t("loadFailed"));
     }
@@ -164,7 +186,10 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
       void loadConversations();
     } catch (e) {
       if (process.env.NODE_ENV === "development") {
-        console.error("[KnowledgeQaPanel] handleNewConversation error:", e instanceof Error ? e.message : e);
+        console.error(
+          "[KnowledgeQaPanel] handleNewConversation error:",
+          e instanceof Error ? e.message : e,
+        );
       }
       toast("error", t("createFailed"));
     }
@@ -174,9 +199,9 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
   const handleLoadConversation = useCallback(
     async (convId: string) => {
       try {
-        const data = await api<{ messages: Array<{ id: string; role: string; content: string; createdAt: string }> }>(
-          `/api/v1/ai/conversations/${convId}?wid=${wid}`,
-        );
+        const data = await api<{
+          messages: Array<{ id: string; role: string; content: string; createdAt: string }>;
+        }>(`/api/v1/ai/conversations/${convId}?wid=${wid}`);
         if (data) {
           setConversationId(convId);
           // 将 DB 消息转为 UIMessage 格式
@@ -192,7 +217,10 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
         }
       } catch (e) {
         if (process.env.NODE_ENV === "development") {
-          console.error("[KnowledgeQaPanel] handleLoadConversation error:", e instanceof Error ? e.message : e);
+          console.error(
+            "[KnowledgeQaPanel] handleLoadConversation error:",
+            e instanceof Error ? e.message : e,
+          );
         }
         toast("error", t("loadFailed"));
       }
@@ -216,7 +244,10 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
         await loadConversations();
       } catch (err) {
         if (process.env.NODE_ENV === "development") {
-          console.error("[KnowledgeQaPanel] handleDeleteConversation error:", err instanceof Error ? err.message : err);
+          console.error(
+            "[KnowledgeQaPanel] handleDeleteConversation error:",
+            err instanceof Error ? err.message : err,
+          );
         }
         toast("error", t("deleteFailed"));
       }
@@ -240,7 +271,10 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
         }
       } catch (e) {
         if (process.env.NODE_ENV === "development") {
-          console.error("[KnowledgeQaPanel] fetchSuggestions error:", e instanceof Error ? e.message : e);
+          console.error(
+            "[KnowledgeQaPanel] fetchSuggestions error:",
+            e instanceof Error ? e.message : e,
+          );
         }
         // 追问建议失败不阻塞主流程，仅 dev 日志
       } finally {
@@ -338,10 +372,7 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
   };
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--surface)]"
-      aria-label={t("title")}
-    >
+    <div className="flex h-full flex-col bg-[var(--surface)]" aria-label={t("title")}>
       {/* 标题栏 */}
       <header className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
@@ -431,9 +462,7 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
         {hasError && (
           <div className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--danger-soft)] px-[var(--space-3)] py-[var(--space-2)]">
             <AlertTriangle size={14} className="text-[var(--danger)]" />
-            <span className="text-[length:var(--text-sm)] text-[var(--danger)]">
-              {t("error")}
-            </span>
+            <span className="text-[length:var(--text-sm)] text-[var(--danger)]">{t("error")}</span>
           </div>
         )}
 
@@ -513,13 +542,15 @@ export function KnowledgeQaPanel({ wid }: KnowledgeQaPanelProps) {
             )}
 
             {/* AI 结果反馈按钮 */}
-            {!isStreaming && messages.length > 0 && messages[messages.length - 1]?.role === "assistant" && (
-              <FeedbackButtons
-                capability="knowledge-qa"
-                workspaceId={wid}
-                originalOutput={getMessageText(messages[messages.length - 1])}
-              />
-            )}
+            {!isStreaming &&
+              messages.length > 0 &&
+              messages[messages.length - 1]?.role === "assistant" && (
+                <FeedbackButtons
+                  capability="knowledge-qa"
+                  workspaceId={wid}
+                  originalOutput={getMessageText(messages[messages.length - 1])}
+                />
+              )}
           </div>
         ) : (
           /* 空状态提示 */

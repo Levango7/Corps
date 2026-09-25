@@ -32,7 +32,11 @@ export async function GET(
 ) {
   const { wid, aid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const result = await runWithWorkspace(
@@ -102,19 +106,13 @@ export async function GET(
     // M6: 从 content JSON 中提取 entityType / entityId（支持审批关联到任务/文档/自定义实体）
     const contentObj = result.instance.content as Record<string, unknown> | null;
     const entityType =
-      contentObj && typeof contentObj.entityType === "string"
-        ? contentObj.entityType
-        : null;
+      contentObj && typeof contentObj.entityType === "string" ? contentObj.entityType : null;
     const entityId =
-      contentObj && typeof contentObj.entityId === "string"
-        ? contentObj.entityId
-        : null;
+      contentObj && typeof contentObj.entityId === "string" ? contentObj.entityId : null;
 
     // M4: AI 审批建议 — 使用 isAiConfigured() 检查，未配置时返回 null
     // 配置时返回 { available: true }，前端可调用 /api/v1/ai/approval-advice 流式获取实际建议
-    const aiSuggestion = isAiConfigured()
-      ? { available: true as const }
-      : null;
+    const aiSuggestion = isAiConfigured() ? { available: true as const } : null;
 
     return NextResponse.json({
       code: 200,

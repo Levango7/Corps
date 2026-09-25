@@ -36,9 +36,7 @@ export function TransferOwnership({
       <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-1">
         {t("transfer")}
       </h2>
-      <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">
-        {t("transferHint")}
-      </p>
+      <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-3">{t("transferHint")}</p>
       {!transferOpen ? (
         <button
           onClick={() => setTransferOpen(true)}

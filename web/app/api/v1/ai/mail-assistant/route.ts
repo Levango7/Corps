@@ -75,11 +75,7 @@ const VALID_CATEGORIES: ReadonlySet<MailCategory> = new Set([
 ]);
 
 /** 合法语气白名单 */
-const VALID_TONES: ReadonlySet<MailReplyTone> = new Set([
-  "formal",
-  "casual",
-  "concise",
-]);
+const VALID_TONES: ReadonlySet<MailReplyTone> = new Set(["formal", "casual", "concise"]);
 
 export async function POST(req: NextRequest) {
   // 1) 认证
@@ -143,8 +139,8 @@ export async function POST(req: NextRequest) {
             {
               workspaceId: body.wid,
               userId: ctx.payload.sub,
-          capability: "mail-assistant-draft",
-          model: requireDefaultModel().modelId,
+              capability: "mail-assistant-draft",
+              model: requireDefaultModel().modelId,
             },
             usageStartTime,
             usage,
@@ -267,8 +263,8 @@ export async function POST(req: NextRequest) {
       {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
-          capability: "mail-assistant-reply",
-          model: requireDefaultModel().modelId,
+        capability: "mail-assistant-reply",
+        model: requireDefaultModel().modelId,
       },
       async () => {
         const res = await generateText({

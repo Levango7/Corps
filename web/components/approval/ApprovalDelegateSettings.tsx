@@ -18,14 +18,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Loader2,
-  Trash2,
-  UserCog,
-  CheckCircle2,
-  XCircle,
-  Plus,
-} from "lucide-react";
+import { Loader2, Trash2, UserCog, CheckCircle2, XCircle, Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
 /** 审批委托 */
@@ -94,9 +87,7 @@ function formatDateTime(isoString: string): string {
   });
 }
 
-export function ApprovalDelegateSettings({
-  workspaceId,
-}: ApprovalDelegateSettingsProps) {
+export function ApprovalDelegateSettings({ workspaceId }: ApprovalDelegateSettingsProps) {
   const t = useTranslations("approval");
 
   const [delegates, setDelegates] = useState<ApprovalDelegate[]>([]);
@@ -122,11 +113,7 @@ export function ApprovalDelegateSettings({
       );
       setDelegates(data.items ?? []);
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("loadFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -135,9 +122,7 @@ export function ApprovalDelegateSettings({
   useEffect(() => {
     loadDelegates();
     // 拉取成员列表用于代理人选择
-    api<Member[] | { items: Member[] }>(
-      `/api/v1/workspaces/${workspaceId}/members`,
-    )
+    api<Member[] | { items: Member[] }>(`/api/v1/workspaces/${workspaceId}/members`)
       .then((data) => {
         const list = Array.isArray(data) ? data : (data.items ?? []);
         setMembers(list);
@@ -150,17 +135,12 @@ export function ApprovalDelegateSettings({
   async function revokeDelegate(delegate: ApprovalDelegate) {
     if (!window.confirm(t("confirmDelegate"))) return;
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/approvals/delegates/${delegate.id}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/approvals/delegates/${delegate.id}`, {
+        method: "DELETE",
+      });
       setDelegates((prev) => prev.filter((d) => d.id !== delegate.id));
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("operationFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"));
     }
   }
 
@@ -182,18 +162,15 @@ export function ApprovalDelegateSettings({
     setSubmitting(true);
     setFormError("");
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/approvals/delegates`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            delegateToId,
-            startAt: toISO(startAt),
-            endAt: toISO(endAt),
-            reason: reason.trim() || undefined,
-          }),
-        },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/approvals/delegates`, {
+        method: "POST",
+        body: JSON.stringify({
+          delegateToId,
+          startAt: toISO(startAt),
+          endAt: toISO(endAt),
+          reason: reason.trim() || undefined,
+        }),
+      });
       // 成功后刷新委托列表并关闭表单
       setShowForm(false);
       setDelegateToId("");
@@ -202,11 +179,7 @@ export function ApprovalDelegateSettings({
       setReason("");
       loadDelegates();
     } catch (e) {
-      setFormError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("operationFailed"),
-      );
+      setFormError(e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -227,11 +200,7 @@ export function ApprovalDelegateSettings({
         </button>
       </div>
 
-      {error && (
-        <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </p>
-      )}
+      {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {/* 创建委托表单 */}
       {showForm && (
@@ -355,10 +324,7 @@ export function ApprovalDelegateSettings({
                 className="px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
               >
                 <div className="flex items-center gap-2">
-                  <UserCog
-                    size={15}
-                    className="shrink-0 text-[var(--muted)]"
-                  />
+                  <UserCog size={15} className="shrink-0 text-[var(--muted)]" />
                   <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                     {delegate.delegateTo?.name || delegate.delegateTo?.email || t("delegateTo")}
                   </span>
@@ -369,11 +335,7 @@ export function ApprovalDelegateSettings({
                         : "text-[var(--success)] bg-[var(--success-soft, var(--surface-2))]"
                     }`}
                   >
-                    {expired ? (
-                      <XCircle size={12} />
-                    ) : (
-                      <CheckCircle2 size={12} />
-                    )}
+                    {expired ? <XCircle size={12} /> : <CheckCircle2 size={12} />}
                     {expired ? t("delegateExpired") : t("delegateActive")}
                   </span>
                 </div>

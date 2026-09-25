@@ -87,9 +87,7 @@ function normalizeTodos(raw: unknown): TodoItem[] {
         ? (obj.priority as TodoItem["priority"])
         : "medium";
     const confidence =
-      typeof obj.confidence === "number" &&
-      obj.confidence >= 0 &&
-      obj.confidence <= 1
+      typeof obj.confidence === "number" && obj.confidence >= 0 && obj.confidence <= 1
         ? obj.confidence
         : 0.5;
     const description =
@@ -167,9 +165,7 @@ export async function POST(req: NextRequest) {
           }),
         userId,
       );
-      assignees = members
-        .map((m) => m.user.name)
-        .filter((n): n is string => !!n);
+      assignees = members.map((m) => m.user.name).filter((n): n is string => !!n);
     } catch (error) {
       // 候选人查询失败不阻塞提取，仅 console.error
       console.error("[POST ai/todo-extract] fetch members failed:", error);
@@ -199,18 +195,17 @@ export async function POST(req: NextRequest) {
     };
 
     // workspaceId 可用时用 withUsageTracking 包装，否则直接调用
-    const llmResult =
-      authCtx.workspaceId
-        ? await withUsageTracking(
-            {
-              workspaceId: authCtx.workspaceId,
-              userId,
-              capability: "todo-extract",
-              model: requireReasonerModel().modelId,
-            },
-            generateFn,
-          )
-        : (await generateFn()).result;
+    const llmResult = authCtx.workspaceId
+      ? await withUsageTracking(
+          {
+            workspaceId: authCtx.workspaceId,
+            userId,
+            capability: "todo-extract",
+            model: requireReasonerModel().modelId,
+          },
+          generateFn,
+        )
+      : (await generateFn()).result;
 
     const cleaned = cleanJsonResponse(llmResult.text);
     const parsed: unknown = JSON.parse(cleaned);

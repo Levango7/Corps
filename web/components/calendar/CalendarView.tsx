@@ -11,7 +11,13 @@ import { CalendarWeek } from "./CalendarWeek";
 import { CalendarDay } from "./CalendarDay";
 import { CalendarEventDialog, type CalendarEvent } from "./CalendarEventDialog";
 import CalendarScheduleDialog from "@/components/ai/CalendarScheduleDialog";
-import { addMonths, addWeeks, addDays, taskToCalendarEvent, type TaskSummary } from "./calendar-utils";
+import {
+  addMonths,
+  addWeeks,
+  addDays,
+  taskToCalendarEvent,
+  type TaskSummary,
+} from "./calendar-utils";
 
 type ViewMode = "month" | "week" | "day";
 
@@ -76,9 +82,9 @@ export function CalendarView({ wid }: { wid: string }) {
         )
           .then((resp): CalendarEvent[] => resp.items ?? [])
           .catch((): CalendarEvent[] => []),
-        api<TasksListResponse>(
-          `/api/v1/workspaces/${wid}/tasks?limit=100`,
-        ).catch((): TasksListResponse => ({ items: [], total: 0, hasMore: false })),
+        api<TasksListResponse>(`/api/v1/workspaces/${wid}/tasks?limit=100`).catch(
+          (): TasksListResponse => ({ items: [], total: 0, hasMore: false }),
+        ),
       ]);
       // 任务 deadline 转换为虚拟事件，与真实事件合并
       const taskEvents = (tasksResp.items ?? [])

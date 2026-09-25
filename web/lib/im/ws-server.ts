@@ -26,11 +26,7 @@
 import { verifyAccessToken } from "@/lib/jwt";
 
 import { withGuc } from "@/lib/auth";
-import type {
-  ClientMessage,
-  ServerMessage,
-  IMWebSocket,
-} from "./types";
+import type { ClientMessage, ServerMessage, IMWebSocket } from "./types";
 import { WS_OPEN } from "./types";
 
 /** 单用户 WebSocket 连接数上限（多设备场景：PC + 手机 + 平板 + 余量） */
@@ -77,7 +73,11 @@ class IMConnectionManager {
    * 调用方在 WebSocket upgrade 成功后调用此方法。此方法注册 onmessage/onclose/onerror 回调，
    * 连接的后续处理由回调驱动。preAuthUserId 非空时跳过 auth 消息步骤。
    */
-  async handleConnection(ws: IMWebSocket, preAuthUserId?: string, boundWorkspaceId?: string): Promise<void> {
+  async handleConnection(
+    ws: IMWebSocket,
+    preAuthUserId?: string,
+    boundWorkspaceId?: string,
+  ): Promise<void> {
     // 中等问题3：单用户 WebSocket 连接数限制
     if (preAuthUserId) {
       const currentCount = this.userSockets.get(preAuthUserId)?.size ?? 0;
@@ -137,7 +137,6 @@ class IMConnectionManager {
       }
     };
   }
-
 
   /**
    * 注册已认证的 socket：加入 userSockets 映射并广播上线。
@@ -211,7 +210,10 @@ class IMConnectionManager {
         break;
       default:
         // 类型安全：switch 穷尽所有 ClientMessage 分支后此行不可达
-        this.send(ws, { type: "error", message: `未知消息类型: ${(msg as { type: string }).type}` });
+        this.send(ws, {
+          type: "error",
+          message: `未知消息类型: ${(msg as { type: string }).type}`,
+        });
     }
   }
 
@@ -265,7 +267,9 @@ class IMConnectionManager {
       const boundWorkspaceId = this.socketWorkspace.get(ws);
 
       const { member, workspaceId } = await withGuc(
-        boundWorkspaceId ? { workspace_id: boundWorkspaceId, user_id: userId } : { user_id: userId },
+        boundWorkspaceId
+          ? { workspace_id: boundWorkspaceId, user_id: userId }
+          : { user_id: userId },
         async (tx) => {
           // 查询会话所属工作区
           const conversation = await tx.conversation.findUnique({
@@ -376,8 +380,7 @@ class IMConnectionManager {
     try {
       // 严重问题1：获取 workspaceId 并通过 withGuc 注入 RLS 上下文
       const workspaceId =
-        this.conversationWorkspace.get(conversationId) ??
-        this.socketWorkspace.get(ws);
+        this.conversationWorkspace.get(conversationId) ?? this.socketWorkspace.get(ws);
 
       const now = new Date();
 

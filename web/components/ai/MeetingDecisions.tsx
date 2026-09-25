@@ -14,15 +14,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  CheckCircle2,
-  XCircle,
-  Circle,
-  Users,
-  Loader2,
-  AlertCircle,
-  Gavel,
-} from "lucide-react";
+import { CheckCircle2, XCircle, Circle, Users, Loader2, AlertCircle, Gavel } from "lucide-react";
 import { api } from "@/lib/api";
 
 /** 决策类型（与 Prisma AiMeetingDecision 对齐） */
@@ -78,16 +70,11 @@ export function MeetingDecisions({ wid, sessionId }: MeetingDecisionsProps) {
     async (decision: Decision, status: "confirmed" | "rejected") => {
       setUpdatingId(decision.id);
       try {
-        await api(
-          `/api/v1/ai/meetings/sessions/${sessionId}/decisions`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ wid, decisionId: decision.id, status }),
-          },
-        );
-        setDecisions((prev) =>
-          prev.map((d) => (d.id === decision.id ? { ...d, status } : d)),
-        );
+        await api(`/api/v1/ai/meetings/sessions/${sessionId}/decisions`, {
+          method: "PATCH",
+          body: JSON.stringify({ wid, decisionId: decision.id, status }),
+        });
+        setDecisions((prev) => prev.map((d) => (d.id === decision.id ? { ...d, status } : d)));
       } catch (e) {
         if (process.env.NODE_ENV === "development")
           console.error("[MeetingDecisions] update failed:", e);
@@ -127,9 +114,7 @@ export function MeetingDecisions({ wid, sessionId }: MeetingDecisionsProps) {
     return (
       <div className="flex flex-col items-center justify-center gap-[var(--space-2)] py-[var(--space-6)] text-center">
         <Gavel size={24} className="text-[var(--meta)]" />
-        <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-          {t("noDecisions")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noDecisions")}</p>
       </div>
     );
   }
@@ -161,9 +146,7 @@ export function MeetingDecisions({ wid, sessionId }: MeetingDecisionsProps) {
 
             <div className="min-w-0 flex-1">
               {/* 决策内容 */}
-              <p className="text-[length:var(--text-sm)] text-[var(--fg)]">
-                {decision.content}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--fg)]">{decision.content}</p>
 
               {/* 上下文 */}
               {decision.context && (

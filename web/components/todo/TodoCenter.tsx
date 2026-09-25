@@ -21,7 +21,6 @@ import {
   ClipboardCheck,
   Video,
   FileText,
-
   Loader2,
   AlertCircle,
   X,
@@ -121,10 +120,8 @@ function formatDueDate(
     return { text: t("hoursLater", { count: diffHour }), overdue: false };
   }
   if (diffDay === 0 && overdue) return { text: t("overdue"), overdue: true };
-  if (diffDay <= 7 && !overdue)
-    return { text: t("daysLater", { count: diffDay }), overdue: false };
-  if (diffDay <= 7 && overdue)
-    return { text: t("daysAgo", { count: diffDay }), overdue: true };
+  if (diffDay <= 7 && !overdue) return { text: t("daysLater", { count: diffDay }), overdue: false };
+  if (diffDay <= 7 && overdue) return { text: t("daysAgo", { count: diffDay }), overdue: true };
 
   // 超过 7 天显示具体日期
   return {
@@ -178,11 +175,7 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
         setTodos(todoData);
         setCount(countData);
       } catch (e) {
-        if (
-          ac.signal.aborted ||
-          (e instanceof Error && e.name === "AbortError")
-        )
-          return;
+        if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
         if (process.env.NODE_ENV === "development")
           console.error("[TodoCenter] loadData error:", e);
         setError(t("error"));
@@ -233,26 +226,24 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
       {/* ── 统计区：按类型分布 ── */}
       {count && (
         <div className="flex items-center gap-3 px-5 py-3 border-b border-[var(--border-soft)]">
-          {(["task", "approval", "meeting", "document"] as TodoType[]).map(
-            (type) => {
-              const Icon = TYPE_ICON[type];
-              const num = count.byType[type];
-              return (
-                <div
-                  key={type}
-                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)]"
-                >
-                  <Icon size={14} className="text-[var(--muted)]" />
-                  <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                    {t(TYPE_LABEL_KEY[type])}
-                  </span>
-                  <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums">
-                    {num}
-                  </span>
-                </div>
-              );
-            },
-          )}
+          {(["task", "approval", "meeting", "document"] as TodoType[]).map((type) => {
+            const Icon = TYPE_ICON[type];
+            const num = count.byType[type];
+            return (
+              <div
+                key={type}
+                className="flex items-center gap-1.5 px-2.5 py-1 rounded-[var(--radius-sm)] bg-[var(--surface-2)]"
+              >
+                <Icon size={14} className="text-[var(--muted)]" />
+                <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+                  {t(TYPE_LABEL_KEY[type])}
+                </span>
+                <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tabular-nums">
+                  {num}
+                </span>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -261,9 +252,7 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
         {FILTER_TABS.map((tab) => {
           const isActive = filter === tab.key;
           const tabCount =
-            tab.key === "all"
-              ? count?.total ?? 0
-              : count?.byType[tab.key as TodoType] ?? 0;
+            tab.key === "all" ? (count?.total ?? 0) : (count?.byType[tab.key as TodoType] ?? 0);
           return (
             <button
               key={tab.key}
@@ -323,15 +312,9 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
           <div className="space-y-1">
             {todos.map((todo) => {
               const Icon = TYPE_ICON[todo.type];
-              const dueInfo = todo.dueDate
-                ? formatDueDate(todo.dueDate, t)
-                : null;
-              const prioColor = todo.priority
-                ? PRIORITY_COLOR[todo.priority]
-                : null;
-              const prioLabelKey = todo.priority
-                ? PRIORITY_LABEL_KEY[todo.priority]
-                : null;
+              const dueInfo = todo.dueDate ? formatDueDate(todo.dueDate, t) : null;
+              const prioColor = todo.priority ? PRIORITY_COLOR[todo.priority] : null;
+              const prioLabelKey = todo.priority ? PRIORITY_LABEL_KEY[todo.priority] : null;
 
               return (
                 <div
@@ -339,10 +322,7 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
                   className="group flex items-center gap-2.5 px-2.5 py-2 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors"
                 >
                   {/* 类型图标 */}
-                  <Icon
-                    size={16}
-                    className="shrink-0 text-[var(--accent)]"
-                  />
+                  <Icon size={16} className="shrink-0 text-[var(--accent)]" />
 
                   {/* 主要内容（可点击跳转） */}
                   <button
@@ -358,9 +338,7 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
                       {dueInfo && (
                         <span
                           className={`shrink-0 text-[length:var(--text-xs)] tabular-nums ${
-                            dueInfo.overdue
-                              ? "text-[var(--danger)]"
-                              : "text-[var(--meta)]"
+                            dueInfo.overdue ? "text-[var(--danger)]" : "text-[var(--meta)]"
                           }`}
                         >
                           {t("dueDate")}: {dueInfo.text}
@@ -395,9 +373,7 @@ export default function TodoCenter({ workspaceId }: TodoCenterProps) {
                         : "bg-[var(--success-soft)] text-[var(--success)]"
                     }`}
                   >
-                    {todo.status === "pending"
-                      ? t("pending")
-                      : t("completed")}
+                    {todo.status === "pending" ? t("pending") : t("completed")}
                   </span>
                 </div>
               );

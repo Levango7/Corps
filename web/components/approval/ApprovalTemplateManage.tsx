@@ -84,11 +84,8 @@ function nextTempId() {
   return `tmp-${tempIdCounter}`;
 }
 
-export function ApprovalTemplateManage({
-  workspaceId,
-}: ApprovalTemplateManageProps) {
+export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManageProps) {
   const t = useTranslations("approval");
-
 
   const [templates, setTemplates] = useState<ApprovalTemplate[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
@@ -104,17 +101,13 @@ export function ApprovalTemplateManage({
     setLoading(true);
     setError("");
     try {
-      const data = await api<
-        ApprovalTemplate[] | { items: ApprovalTemplate[] }
-      >(`/api/v1/workspaces/${workspaceId}/approvals/templates`);
+      const data = await api<ApprovalTemplate[] | { items: ApprovalTemplate[] }>(
+        `/api/v1/workspaces/${workspaceId}/approvals/templates`,
+      );
       const list = Array.isArray(data) ? data : (data.items ?? []);
       setTemplates(list);
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("loadFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -134,41 +127,27 @@ export function ApprovalTemplateManage({
     // 后端字段为 active（非 enabled）
     const nextActive = !tpl.active;
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/approvals/templates/${tpl.id}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({ active: nextActive }),
-        },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/approvals/templates/${tpl.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({ active: nextActive }),
+      });
       setTemplates((prev) =>
-        prev.map((item) =>
-          item.id === tpl.id ? { ...item, active: nextActive } : item,
-        ),
+        prev.map((item) => (item.id === tpl.id ? { ...item, active: nextActive } : item)),
       );
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("operationFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"));
     }
   }
 
   async function deleteTemplate(tpl: ApprovalTemplate) {
     if (!window.confirm(t("confirmDeleteTemplate"))) return;
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/approvals/templates/${tpl.id}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/approvals/templates/${tpl.id}`, {
+        method: "DELETE",
+      });
       setTemplates((prev) => prev.filter((item) => item.id !== tpl.id));
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("operationFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"));
     }
   }
 
@@ -187,11 +166,7 @@ export function ApprovalTemplateManage({
         </button>
       </div>
 
-      {error && (
-        <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </p>
-      )}
+      {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {loading ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">
@@ -213,10 +188,7 @@ export function ApprovalTemplateManage({
                 className="px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
               >
                 <div className="flex items-center gap-2">
-                  <FileText
-                    size={15}
-                    className="shrink-0 text-[var(--muted)]"
-                  />
+                  <FileText size={15} className="shrink-0 text-[var(--muted)]" />
                   <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                     {tpl.name}
                   </span>
@@ -227,11 +199,7 @@ export function ApprovalTemplateManage({
                         : "text-[var(--muted)] bg-[var(--surface-2)]"
                     }`}
                   >
-                    {tpl.active ? (
-                      <CheckCircle2 size={12} />
-                    ) : (
-                      <XCircle size={12} />
-                    )}
+                    {tpl.active ? <CheckCircle2 size={12} /> : <XCircle size={12} />}
                     {tpl.active ? t("templateEnabled") : t("templateDisabled")}
                   </span>
                 </div>
@@ -360,14 +328,8 @@ function TemplateEditDialog({
     });
   }
 
-  function updateNode(
-    tempId: string,
-    field: keyof EditableNode,
-    val: string,
-  ) {
-    setNodes((prev) =>
-      prev.map((n) => (n.tempId === tempId ? { ...n, [field]: val } : n)),
-    );
+  function updateNode(tempId: string, field: keyof EditableNode, val: string) {
+    setNodes((prev) => prev.map((n) => (n.tempId === tempId ? { ...n, [field]: val } : n)));
   }
 
   async function submit(e: FormEvent) {
@@ -404,23 +366,19 @@ function TemplateEditDialog({
         })),
       };
       if (template) {
-        await api(
-          `/api/v1/workspaces/${workspaceId}/approvals/templates/${template.id}`,
-          { method: "PATCH", body: JSON.stringify(payload) },
-        );
+        await api(`/api/v1/workspaces/${workspaceId}/approvals/templates/${template.id}`, {
+          method: "PATCH",
+          body: JSON.stringify(payload),
+        });
       } else {
-        await api(
-          `/api/v1/workspaces/${workspaceId}/approvals/templates`,
-          { method: "POST", body: JSON.stringify(payload) },
-        );
+        await api(`/api/v1/workspaces/${workspaceId}/approvals/templates`, {
+          method: "POST",
+          body: JSON.stringify(payload),
+        });
       }
       onSaved();
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("operationFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -536,9 +494,7 @@ function TemplateEditDialog({
                   <div className="space-y-2">
                     <input
                       value={node.name}
-                      onChange={(e) =>
-                        updateNode(node.tempId, "name", e.target.value)
-                      }
+                      onChange={(e) => updateNode(node.tempId, "name", e.target.value)}
                       maxLength={50}
                       placeholder={t("nodeName")}
                       className={fieldControl}
@@ -550,13 +506,7 @@ function TemplateEditDialog({
                         </label>
                         <input
                           value={node.approverRole}
-                          onChange={(e) =>
-                            updateNode(
-                              node.tempId,
-                              "approverRole",
-                              e.target.value,
-                            )
-                          }
+                          onChange={(e) => updateNode(node.tempId, "approverRole", e.target.value)}
                           maxLength={50}
                           placeholder={t("approverRole")}
                           className={fieldControl}
@@ -569,11 +519,7 @@ function TemplateEditDialog({
                         <select
                           value={node.approverUserId}
                           onChange={(e) =>
-                            updateNode(
-                              node.tempId,
-                              "approverUserId",
-                              e.target.value,
-                            )
+                            updateNode(node.tempId, "approverUserId", e.target.value)
                           }
                           className={fieldControl}
                         >

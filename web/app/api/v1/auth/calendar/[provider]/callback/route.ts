@@ -128,6 +128,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     return NextResponse.redirect(`${redirectTarget}?connected=${p}`);
   } catch (error) {
     console.error("[calendar callback] error:", error);
-    return NextResponse.redirect(`${redirectTarget}?error=${encodeURIComponent(apiMsg(req, "calendarCallbackFailed"))}`);
+    return NextResponse.redirect(
+      `${redirectTarget}?error=${encodeURIComponent(apiMsg(req, "calendarCallbackFailed"))}`,
+    );
   }
 }

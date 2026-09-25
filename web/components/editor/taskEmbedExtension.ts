@@ -144,10 +144,7 @@ export const TaskEmbed = Node.create<TaskEmbedOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      "div",
-      mergeAttributes(HTMLAttributes, { "data-type": "task-embed" }),
-    ];
+    return ["div", mergeAttributes(HTMLAttributes, { "data-type": "task-embed" })];
   },
 
   addNodeView() {

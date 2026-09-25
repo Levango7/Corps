@@ -2,12 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { livekitApiHost } from "@/lib/livekit-utils";
-import {
-  EgressClient,
-  EncodedFileOutput,
-  S3Upload,
-  EncodedFileType,
-} from "livekit-server-sdk";
+import { EgressClient, EncodedFileOutput, S3Upload, EncodedFileType } from "livekit-server-sdk";
 
 /** 检查 S3 录制存储配置是否齐全。 */
 function getS3Config(): {
@@ -103,8 +98,7 @@ export async function POST(
 
         // 权限：创建者或 admin/owner
         const isCreator = meeting.createdBy === ctx.payload.sub;
-        const isAdmin =
-          ctx.member.role === "owner" || ctx.member.role === "admin";
+        const isAdmin = ctx.member.role === "owner" || ctx.member.role === "admin";
         if (!isCreator && !isAdmin) return { kind: "forbidden" as const };
 
         // 仅进行中的会议可录制
@@ -156,11 +150,7 @@ export async function POST(
       );
 
     // 事务外调用 LiveKit EgressClient（不在事务内做网络 IO）
-    const egressClient = new EgressClient(
-      livekitApiHost(livekitUrl),
-      apiKey,
-      apiSecret,
-    );
+    const egressClient = new EgressClient(livekitApiHost(livekitUrl), apiKey, apiSecret);
     const filepath = `recordings/${mid}-${Date.now()}.mp4`;
     const output = new EncodedFileOutput({
       fileType: EncodedFileType.MP4,
@@ -176,10 +166,7 @@ export async function POST(
         }),
       },
     });
-    const egressInfo = await egressClient.startRoomCompositeEgress(
-      check.roomName,
-      output,
-    );
+    const egressInfo = await egressClient.startRoomCompositeEgress(check.roomName, output);
 
     // 原子抢占：仅当 recordingUrl 仍为 "egress:pending" 时才更新为真实 egressId
     // 若另一并发请求已抢先更新（recordingUrl 不再是 "egress:pending"），

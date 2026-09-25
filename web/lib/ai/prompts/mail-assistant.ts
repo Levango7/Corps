@@ -27,7 +27,8 @@ import type { FeedbackExample } from "@/lib/ai/feedback";
  * @param feedbackExamples 可选的正面反馈示例（few-shot）
  */
 export function buildMailDraftSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是专业商务邮件起草助手。根据用户描述生成完整邮件正文。
+  return appendFeedbackShot(
+    `你是专业商务邮件起草助手。根据用户描述生成完整邮件正文。
 输出 Markdown 格式邮件，包含：
 1. 邮件主题（以 # 开头）
 2. 称呼（如"您好，"）
@@ -59,7 +60,9 @@ export function buildMailDraftSystemPrompt(feedbackExamples?: FeedbackExample[])
 本周一上午 10 点将召开周会，请准时参加。
 会议地点：3 号会议室（线上链接随后同步）。
 请提前准备本周工作进展与待办事项。
-此致 敬礼`, feedbackExamples);
+此致 敬礼`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -85,7 +88,8 @@ export function buildMailDraftUserPrompt(description: string, context?: string):
  * @param feedbackExamples 可选的正面反馈示例（few-shot）
  */
 export function buildMailSummarizeSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是邮件摘要助手。将用户提供的邮件内容生成简洁摘要。
+  return appendFeedbackShot(
+    `你是邮件摘要助手。将用户提供的邮件内容生成简洁摘要。
 摘要应当：
 1) 保留核心观点和关键信息
 2) 使用要点列表格式（- xxx）
@@ -109,7 +113,9 @@ export function buildMailSummarizeSystemPrompt(feedbackExamples?: FeedbackExampl
 - 验收时间：本周五 14:00，地点 3 号会议室
 - 需携带：项目文档、测试报告、签字章
 - 联系人：张三（内线 8821）
-- 未通过验收需在 3 个工作日内整改`, feedbackExamples);
+- 未通过验收需在 3 个工作日内整改`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -118,7 +124,8 @@ export function buildMailSummarizeSystemPrompt(feedbackExamples?: FeedbackExampl
  * @param content 邮件正文
  */
 export function buildMailSummarizeUserPrompt(content: string): string {
-  const truncated = content.length > 12000 ? content.slice(0, 12000) + "\n\n[邮件内容已截断]" : content;
+  const truncated =
+    content.length > 12000 ? content.slice(0, 12000) + "\n\n[邮件内容已截断]" : content;
   return `## 邮件内容\n${truncated}\n\n请生成摘要。`;
 }
 
@@ -140,7 +147,8 @@ export type MailCategory = "work" | "notice" | "personal" | "urgent" | "other";
  * @param feedbackExamples 可选的正面反馈示例（few-shot）
  */
 export function buildMailClassifySystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是邮件分类助手。根据邮件内容判断类别，并给出置信度与理由。
+  return appendFeedbackShot(
+    `你是邮件分类助手。根据邮件内容判断类别，并给出置信度与理由。
 返回 JSON 格式：
 { "category": "work|notice|personal|urgent|other", "confidence": 0.0-1.0, "reason": "分类理由" }
 
@@ -169,7 +177,9 @@ export function buildMailClassifySystemPrompt(feedbackExamples?: FeedbackExample
 ## 示例
 输入：项目周报邮件，含本周进展与下周计划
 输出：
-{"category":"work","confidence":0.95,"reason":"项目周报，含工作进展与计划，属工作协作场景"}`, feedbackExamples);
+{"category":"work","confidence":0.95,"reason":"项目周报，含工作进展与计划，属工作协作场景"}`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -178,7 +188,8 @@ export function buildMailClassifySystemPrompt(feedbackExamples?: FeedbackExample
  * @param content 邮件正文
  */
 export function buildMailClassifyUserPrompt(content: string): string {
-  const truncated = content.length > 8000 ? content.slice(0, 8000) + "\n\n[邮件内容已截断]" : content;
+  const truncated =
+    content.length > 8000 ? content.slice(0, 8000) + "\n\n[邮件内容已截断]" : content;
   return `## 邮件内容\n${truncated}\n\n请分类。`;
 }
 
@@ -195,7 +206,8 @@ export type MailReplyTone = "formal" | "casual" | "concise";
  * @param feedbackExamples 可选的正面反馈示例（few-shot）
  */
 export function buildMailReplySystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是邮件回复建议助手。根据原邮件内容，生成 3 个不同语气的回复建议。
+  return appendFeedbackShot(
+    `你是邮件回复建议助手。根据原邮件内容，生成 3 个不同语气的回复建议。
 返回 JSON 数组格式：
 [
   { "text": "回复内容1", "tone": "formal" },
@@ -223,7 +235,9 @@ export function buildMailReplySystemPrompt(feedbackExamples?: FeedbackExample[])
 ## 示例
 输入：邮件"请于本周五前提交项目报告"
 输出：
-[{"text":"您好，项目报告将于本周五前按时提交，届时请您查阅。","tone":"formal"},{"text":"收到，周五前提交~","tone":"casual"},{"text":"已收到，按期提交。","tone":"concise"}]`, feedbackExamples);
+[{"text":"您好，项目报告将于本周五前按时提交，届时请您查阅。","tone":"formal"},{"text":"收到，周五前提交~","tone":"casual"},{"text":"已收到，按期提交。","tone":"concise"}]`,
+    feedbackExamples,
+  );
 }
 
 /**

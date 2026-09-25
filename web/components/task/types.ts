@@ -49,7 +49,14 @@ export interface Task {
 export type TaskPatch = Partial<
   Pick<
     Task,
-    "title" | "description" | "status" | "priority" | "dueDate" | "blocked" | "blockedReason" | "shareToken"
+    | "title"
+    | "description"
+    | "status"
+    | "priority"
+    | "dueDate"
+    | "blocked"
+    | "blockedReason"
+    | "shareToken"
   >
 > & {
   assigneeId?: string | null;

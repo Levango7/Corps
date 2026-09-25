@@ -53,10 +53,7 @@ function truncateCapability(name: string, maxLen = 12): string {
   return name.length > maxLen ? name.slice(0, maxLen) + "…" : name;
 }
 
-export async function BehaviorStats({
-  capabilities,
-  totalBehaviors,
-}: BehaviorStatsProps) {
+export async function BehaviorStats({ capabilities, totalBehaviors }: BehaviorStatsProps) {
   const t = await getTranslations("ai.aiPersonalization");
 
   // 空数据态
@@ -86,13 +83,10 @@ export async function BehaviorStats({
   const barGap = barWidth * 0.3;
   const barActualWidth = barWidth - barGap;
 
-  const yScale = (val: number) =>
-    CHART_PADDING.top + plotHeight - (val / maxCount) * plotHeight;
+  const yScale = (val: number) => CHART_PADDING.top + plotHeight - (val / maxCount) * plotHeight;
 
   // Y 轴刻度（4 等分）
-  const yTicks = Array.from({ length: 5 }, (_, i) =>
-    Math.round((maxCount * i) / 4),
-  );
+  const yTicks = Array.from({ length: 5 }, (_, i) => Math.round((maxCount * i) / 4));
 
   return (
     <section

@@ -9,10 +9,7 @@ import bcrypt from "bcryptjs";
  * Query: ?status=scheduled|active|ended&page=1&limit=20
  * 返回按 createdAt 倒序，统一分页格式 { items, page, limit, total, hasMore }
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -122,10 +119,7 @@ const createMeetingSchema = z.object({
   password: z.string().max(100).optional(),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -151,18 +145,14 @@ export async function POST(
             description: validated.description,
             roomName,
             type: validated.type ?? "instant",
-            scheduledAt: validated.scheduledAt
-              ? new Date(validated.scheduledAt)
-              : null,
+            scheduledAt: validated.scheduledAt ? new Date(validated.scheduledAt) : null,
             maxParticipants: validated.maxParticipants ?? 50,
             recordingEnabled: validated.recordingEnabled ?? false,
             createdBy: ctx.payload.sub,
             // L6 #32：重复规则（仅 type=recurring 时有意义，但不在后端强校验）
             recurringRule: validated.recurringRule,
             // L8 #34：会议密码——使用 bcrypt hash 存储，加入时用 bcrypt.compare 验证
-            password: validated.password
-              ? await bcrypt.hash(validated.password, 10)
-              : null,
+            password: validated.password ? await bcrypt.hash(validated.password, 10) : null,
           },
           include: {
             creator: { select: { id: true, name: true, email: true } },

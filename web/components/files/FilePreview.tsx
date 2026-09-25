@@ -48,18 +48,23 @@ const OFFICE_EXTS = ["doc", "docx", "xls", "xlsx", "ppt", "pptx"];
 const VIDEO_EXTS = ["mp4", "webm", "ogg", "mov", "avi"];
 const AUDIO_EXTS = ["mp3", "wav", "ogg", "m4a", "flac"];
 const TEXT_EXTS = [
-  "txt", "md", "json", "csv", "log", "xml", "yaml", "yml",
-  "js", "ts", "py", "java", "go", "rs",
+  "txt",
+  "md",
+  "json",
+  "csv",
+  "log",
+  "xml",
+  "yaml",
+  "yml",
+  "js",
+  "ts",
+  "py",
+  "java",
+  "go",
+  "rs",
 ];
 
-type FileCategory =
-  | "pdf"
-  | "office"
-  | "image"
-  | "video"
-  | "audio"
-  | "text"
-  | "other";
+type FileCategory = "pdf" | "office" | "image" | "video" | "audio" | "text" | "other";
 
 /**
  * 根据文件名（扩展名）判断文件分类。
@@ -128,9 +133,7 @@ function UnsupportedPreview({ url, fileName }: { url: string; fileName: string }
   return (
     <div className="flex flex-col items-center justify-center gap-4 w-full h-full text-center px-6">
       <FileWarning size={32} className="text-[var(--meta)]" />
-      <p className="text-[var(--muted)] text-[length:var(--text-sm)]">
-        {t("unsupported")}
-      </p>
+      <p className="text-[var(--muted)] text-[length:var(--text-sm)]">{t("unsupported")}</p>
       <a
         href={url}
         download={fileName}

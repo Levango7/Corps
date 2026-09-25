@@ -1,4 +1,3 @@
-
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
 import { Mermaid } from "@/components/Mermaid";

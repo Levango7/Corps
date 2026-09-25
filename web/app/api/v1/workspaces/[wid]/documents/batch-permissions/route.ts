@@ -32,10 +32,7 @@ const batchPermissionSchema = z.object({
 /** 工作区中有效的角色名 */
 const VALID_ROLES = new Set(["owner", "admin", "member", "viewer"]);
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -141,16 +138,12 @@ export async function POST(
       } catch (error) {
         // P2002: 唯一约束冲突（同一 documentId+granteeType+granteeId 已存在）
         // 视为"已有该权限"，跳过但不计为失败
-        if (
-          error instanceof Prisma.PrismaClientKnownRequestError &&
-          error.code === "P2002"
-        ) {
+        if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
           // 已存在相同权限记录，跳过（幂等语义）
           continue;
         }
         // 其他错误记录为失败
-        const errorMsg =
-          error instanceof Error ? error.message : apiMsg(req, "internalError");
+        const errorMsg = error instanceof Error ? error.message : apiMsg(req, "internalError");
         failures.push({ documentId, error: errorMsg });
       }
     }

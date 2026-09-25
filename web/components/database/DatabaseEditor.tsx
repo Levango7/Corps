@@ -28,12 +28,7 @@ import {
   Group,
   type LucideIcon,
 } from "lucide-react";
-import type {
-  Database,
-  DatabaseField,
-  DatabaseRecord,
-  DatabaseView,
-} from "@prisma/client";
+import type { Database, DatabaseField, DatabaseRecord, DatabaseView } from "@prisma/client";
 import {
   queryRecords,
   type FilterCondition,
@@ -194,9 +189,7 @@ export function DatabaseEditor({
     });
     // 扁平化分组结果传给视图组件（视图组件自行呈现分组）
     return {
-      processedRecords: result.groups.flatMap(
-        (g) => g.records,
-      ) as unknown as DatabaseRecord[],
+      processedRecords: result.groups.flatMap((g) => g.records) as unknown as DatabaseRecord[],
       total: result.total,
     };
   }, [queryableRecords, fields, currentView, viewConfig]);
@@ -254,9 +247,7 @@ export function DatabaseEditor({
         className="flex items-center justify-center h-full min-h-[400px] text-[var(--muted)]"
         data-testid="database-editor-empty"
       >
-        <p className="text-[length:var(--text-sm)]">
-          {t("noView")}
-        </p>
+        <p className="text-[length:var(--text-sm)]">{t("noView")}</p>
       </div>
     );
   }
@@ -264,18 +255,13 @@ export function DatabaseEditor({
   // ─── 渲染：主界面 ────────────────────────────────────────────
 
   return (
-    <div
-      className="flex flex-col h-full bg-[var(--bg)]"
-      data-testid="database-editor"
-    >
+    <div className="flex flex-col h-full bg-[var(--bg)]" data-testid="database-editor">
       {/* ─── 顶部栏：数据库名称 + 视图切换 + 工具栏 ─── */}
       <header className="flex flex-wrap items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface)]">
         {/* 数据库名称 */}
         <div className="flex items-center gap-2 mr-auto min-w-0">
           {database.emoji && (
-            <span className="text-[length:var(--text-lg)] shrink-0">
-              {database.emoji}
-            </span>
+            <span className="text-[length:var(--text-lg)] shrink-0">{database.emoji}</span>
           )}
           <h1 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] truncate">
             {database.title}
@@ -286,11 +272,7 @@ export function DatabaseEditor({
         </div>
 
         {/* 视图切换 tabs */}
-        <nav
-          className="flex items-center gap-1"
-          role="tablist"
-          aria-label={t("viewSwitchAria")}
-        >
+        <nav className="flex items-center gap-1" role="tablist" aria-label={t("viewSwitchAria")}>
           {views.map((view) => {
             const Icon = VIEW_ICONS[view.type] ?? Table2;
             const labelKey = VIEW_LABEL_KEYS[view.type];
@@ -327,9 +309,7 @@ export function DatabaseEditor({
           >
             <Filter size={14} />
             <span>{t("filter")}</span>
-            {hasFilters && (
-              <span className={COUNT_BADGE}>{viewConfig.filters!.length}</span>
-            )}
+            {hasFilters && <span className={COUNT_BADGE}>{viewConfig.filters!.length}</span>}
           </button>
           <button
             type="button"
@@ -340,9 +320,7 @@ export function DatabaseEditor({
           >
             <ArrowUpDown size={14} />
             <span>{t("sort")}</span>
-            {hasSorts && (
-              <span className={COUNT_BADGE}>{viewConfig.sorts!.length}</span>
-            )}
+            {hasSorts && <span className={COUNT_BADGE}>{viewConfig.sorts!.length}</span>}
           </button>
           <button
             type="button"
@@ -369,11 +347,7 @@ export function DatabaseEditor({
             />
           )}
           {showSort && (
-            <SortPanel
-              fields={fields}
-              sorts={viewConfig.sorts ?? []}
-              onChange={handleSortChange}
-            />
+            <SortPanel fields={fields} sorts={viewConfig.sorts ?? []} onChange={handleSortChange} />
           )}
           {showGroup && (
             <GroupControl

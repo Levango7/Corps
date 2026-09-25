@@ -59,10 +59,7 @@ async function loadAccessibleTemplate(
 }
 
 /** GET /api/v1/ai/templates/{id} */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -92,10 +89,7 @@ export async function GET(
 }
 
 /** PATCH /api/v1/ai/templates/{id} */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -166,10 +160,7 @@ export async function PATCH(
 }
 
 /** DELETE /api/v1/ai/templates/{id} */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 

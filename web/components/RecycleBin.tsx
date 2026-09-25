@@ -258,7 +258,8 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
       });
       toast("success", t("restored"));
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("restoreFailed");
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("restoreFailed");
       toast("error", msg);
     } finally {
       setActionLoadingId(null);
@@ -291,7 +292,8 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
       toast("success", t("deleted"));
       closeConfirm();
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("deleteFailed");
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("deleteFailed");
       toast("error", msg);
     } finally {
       setConfirmLoading(false);
@@ -331,8 +333,6 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
     // 重新拉取列表以确保一致性
     await fetchList();
   }
-
-
 
   // ─── 清空回收站（带确认对话框） ─────────────────────────
   function handleClearAllClick() {
@@ -412,11 +412,7 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
               disabled={clearLoading || batchLoading}
               className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] bg-[var(--surface)] border border-[var(--border)] text-[var(--danger)] hover:bg-[var(--danger-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
             >
-              {clearLoading ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <Trash2 size={14} />
-              )}
+              {clearLoading ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
               {t("clearAll")}
             </button>
           </div>
@@ -517,9 +513,7 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
                       key={key}
                       className={
                         "transition-colors duration-[var(--motion-fast)] " +
-                        (isSelected
-                          ? "bg-[var(--accent-soft)]"
-                          : "hover:bg-[var(--surface-2)]")
+                        (isSelected ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--surface-2)]")
                       }
                     >
                       <td className="px-[var(--space-3)] py-3">
@@ -538,7 +532,9 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
                           ) : (
                             <FileText size={14} className="shrink-0 text-[var(--muted)]" />
                           )}
-                          <span className="truncate font-[weight:var(--weight-medium)]">{item.name}</span>
+                          <span className="truncate font-[weight:var(--weight-medium)]">
+                            {item.name}
+                          </span>
                         </div>
                       </td>
                       <td className="px-[var(--space-4)] py-3 text-[var(--meta)]">
@@ -671,9 +667,7 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
                 disabled={confirmLoading}
                 className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] bg-[var(--danger)] text-[var(--accent-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
               >
-                {confirmLoading ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : null}
+                {confirmLoading ? <Loader2 size={14} className="animate-spin" /> : null}
                 {t("confirm")}
               </button>
             </div>

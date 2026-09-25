@@ -7,25 +7,16 @@
 // 约定：{ code, data, message }
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
 /** UUID 正则校验 */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 合法消息类型枚举（与 schema 注释保持一致） */
-const VALID_TYPES = new Set([
-  "request",
-  "response",
-  "notification",
-  "handoff",
-]);
+const VALID_TYPES = new Set(["request", "response", "notification", "handoff"]);
 
 /** 从 URL 路径提取 Agent ID（倒数第二段，因为最后一段是 messages） */
 function extractAgentId(req: NextRequest): string | null {

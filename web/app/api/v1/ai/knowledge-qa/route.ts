@@ -203,10 +203,7 @@ export async function POST(req: NextRequest) {
         ? streamText({
             model: requireDefaultModel(),
             system: systemPrompt,
-            messages: [
-              ...historyMessages,
-              { role: "user" as const, content: userPrompt },
-            ],
+            messages: [...historyMessages, { role: "user" as const, content: userPrompt }],
             onFinish: async ({ text, usage }) => {
               // 流结束后异步记录 usage（fire-and-forget）
               fireRecordUsage(usageTrackingParams, usageStartTime, usage);

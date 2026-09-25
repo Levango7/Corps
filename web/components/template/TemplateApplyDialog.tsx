@@ -44,7 +44,13 @@ const fieldLabel =
 const fieldControl =
   "w-full h-9 px-2.5 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
 
-export function TemplateApplyDialog({ wid, template, open, onClose, onApplied }: TemplateApplyDialogProps) {
+export function TemplateApplyDialog({
+  wid,
+  template,
+  open,
+  onClose,
+  onApplied,
+}: TemplateApplyDialogProps) {
   const t = useTranslations("projectTemplate");
   const tPriority = useTranslations("priority");
   const tButton = useTranslations("button");
@@ -107,7 +113,8 @@ export function TemplateApplyDialog({ wid, template, open, onClose, onApplied }:
       setSuccessCount(res.count);
       onApplied?.(res.count);
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("applyFailed");
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("applyFailed");
       setError(msg);
     } finally {
       setSubmitting(false);

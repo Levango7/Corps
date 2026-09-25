@@ -95,7 +95,10 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid:
     const userId = ctx.payload.sub;
     // 复合持久化结构：{ items, widgetConfigs }
     // cast 为 Prisma.InputJsonValue：接口缺少索引签名，运行时为合法 JSON 对象
-    const prefData = buildPrefData(validated.layout, validated.widgetConfigs) as unknown as Prisma.InputJsonValue;
+    const prefData = buildPrefData(
+      validated.layout,
+      validated.widgetConfigs,
+    ) as unknown as Prisma.InputJsonValue;
     const saved = await runWithWorkspace(
       wid,
       (tx) =>

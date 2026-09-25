@@ -1,10 +1,5 @@
 import { describe, it, expect, beforeEach } from "vitest";
-import {
-  isLocked,
-  recordFailure,
-  clearFailures,
-  rateLimitKey,
-} from "@/lib/share-rate-limit";
+import { isLocked, recordFailure, clearFailures, rateLimitKey } from "@/lib/share-rate-limit";
 
 describe("share-rate-limit", () => {
   beforeEach(() => {
@@ -15,15 +10,11 @@ describe("share-rate-limit", () => {
 
   describe("rateLimitKey", () => {
     it("构造正确的 key 格式", () => {
-      expect(rateLimitKey("document", "doc-1", "127.0.0.1")).toBe(
-        "document:doc-1:127.0.0.1",
-      );
+      expect(rateLimitKey("document", "doc-1", "127.0.0.1")).toBe("document:doc-1:127.0.0.1");
     });
 
     it("task 类型也正确", () => {
-      expect(rateLimitKey("task", "task-1", "10.0.0.1")).toBe(
-        "task:task-1:10.0.0.1",
-      );
+      expect(rateLimitKey("task", "task-1", "10.0.0.1")).toBe("task:task-1:10.0.0.1");
     });
   });
 

@@ -45,7 +45,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     });
 
     if (!result) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "invitationNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "invitationNotFound"), data: null },
+        { status: 404 },
+      );
     }
     const { invitation, inviter } = result;
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {
@@ -70,6 +73,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ toke
     });
   } catch (error) {
     console.error("[invitation preview] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

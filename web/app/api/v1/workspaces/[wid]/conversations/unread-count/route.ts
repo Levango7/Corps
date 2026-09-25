@@ -13,10 +13,7 @@ import { Prisma } from "@prisma/client";
  * lastReadAt 为 null 时，统计所有非自己发送的消息。
  */
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -43,7 +40,9 @@ export async function GET(
 
         // 2. 批量计算每个会话的未读数（消除 N+1：单次 raw SQL 聚合查询）
         const conversationIds = memberships.map((m) => m.conversationId);
-        const unreadResults = await tx.$queryRaw<{ conversation_id: string; unread_count: bigint }[]>`
+        const unreadResults = await tx.$queryRaw<
+          { conversation_id: string; unread_count: bigint }[]
+        >`
           SELECT m.conversation_id, COUNT(*)::bigint AS unread_count
           FROM messages m
           JOIN conversation_members cm
@@ -64,10 +63,7 @@ export async function GET(
             unreadCount: unreadMap.get(cid) ?? 0,
           }))
           .filter((c) => c.unreadCount > 0);
-        const totalUnread = byConversation.reduce(
-          (sum, c) => sum + c.unreadCount,
-          0,
-        );
+        const totalUnread = byConversation.reduce((sum, c) => sum + c.unreadCount, 0);
 
         return { totalUnread, byConversation };
       },

@@ -37,7 +37,11 @@ interface IMClientProps {
   singleConversationId?: string;
 }
 
-export function IMClient({ workspaceId, initialConversationId, singleConversationId }: IMClientProps) {
+export function IMClient({
+  workspaceId,
+  initialConversationId,
+  singleConversationId,
+}: IMClientProps) {
   const t = useTranslations("chat");
   const router = useRouter();
   const {
@@ -192,8 +196,12 @@ export function IMClient({ workspaceId, initialConversationId, singleConversatio
                 conversation={activeConversation}
                 messages={messages}
                 currentUserId={currentUserId}
-                onSend={(body, opts) => sendMessage(activeConversation.id, body, opts).catch(() => {})}
-                onEdit={(mid, body) => editMessage(activeConversation.id, mid, body).catch(() => {})}
+                onSend={(body, opts) =>
+                  sendMessage(activeConversation.id, body, opts).catch(() => {})
+                }
+                onEdit={(mid, body) =>
+                  editMessage(activeConversation.id, mid, body).catch(() => {})
+                }
                 onRevoke={(mid) => revokeMessage(activeConversation.id, mid).catch(() => {})}
                 onLoadMore={() => loadMoreMessages(activeConversation.id).catch(() => {})}
                 loadingMore={loadingMore}

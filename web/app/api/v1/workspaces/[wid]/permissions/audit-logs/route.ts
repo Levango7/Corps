@@ -32,10 +32,7 @@ const querySchema = z.object({
 /**
  * GET /v1/workspaces/{wid}/permissions/audit-logs — 查询权限审计日志
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {
@@ -62,8 +59,7 @@ export async function GET(
       return NextResponse.json(
         {
           code: 400,
-          message:
-            parsed.error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          message: parsed.error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
           errors: parsed.error.errors,
         },
@@ -71,16 +67,8 @@ export async function GET(
       );
     }
 
-    const {
-      targetType,
-      granteeType,
-      operatorId,
-      action,
-      startDate,
-      endDate,
-      page,
-      pageSize,
-    } = parsed.data;
+    const { targetType, granteeType, operatorId, action, startDate, endDate, page, pageSize } =
+      parsed.data;
 
     const take = pageSize;
     const skip = (page - 1) * pageSize;

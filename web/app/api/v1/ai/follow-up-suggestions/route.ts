@@ -19,10 +19,7 @@ import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
-import {
-  buildFollowUpSystemPrompt,
-  buildFollowUpUserPrompt,
-} from "@/lib/ai/prompts/follow-up";
+import { buildFollowUpSystemPrompt, buildFollowUpUserPrompt } from "@/lib/ai/prompts/follow-up";
 import { apiMsg } from "@/lib/api-messages";
 
 const schema = z.object({

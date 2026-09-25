@@ -22,7 +22,11 @@ export async function PATCH(
 ) {
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   const denied = await requirePermission(ctx, "members", "update", req);
   if (denied) return denied;
 
@@ -36,7 +40,10 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+      { status: 400 },
+    );
   }
 
   try {
@@ -105,7 +112,11 @@ export async function DELETE(
 ) {
   const { wid, userId } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   const denied = await requirePermission(ctx, "members", "delete", req);
   if (denied) return denied;
   if (userId === ctx.payload.sub) {

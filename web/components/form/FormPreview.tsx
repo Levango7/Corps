@@ -174,22 +174,14 @@ function FieldRenderer({
       return (
         <div>
           {labelNode}
-          <input
-            type="number"
-            {...commonProps}
-            className={`${controlClass} disabled:opacity-60`}
-          />
+          <input type="number" {...commonProps} className={`${controlClass} disabled:opacity-60`} />
         </div>
       );
     case "date":
       return (
         <div>
           {labelNode}
-          <input
-            type="date"
-            {...commonProps}
-            className={`${controlClass} disabled:opacity-60`}
-          />
+          <input type="date" {...commonProps} className={`${controlClass} disabled:opacity-60`} />
         </div>
       );
     case "select":
@@ -212,7 +204,10 @@ function FieldRenderer({
           {labelNode}
           <div className="flex flex-col gap-1.5">
             {(field.options ?? []).map((opt) => (
-              <label key={opt} className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg)]">
+              <label
+                key={opt}
+                className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg)]"
+              >
                 <input
                   type="radio"
                   name={id}
@@ -234,7 +229,10 @@ function FieldRenderer({
           {labelNode}
           <div className="flex flex-col gap-1.5">
             {(field.options ?? []).map((opt) => (
-              <label key={opt} className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg)]">
+              <label
+                key={opt}
+                className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg)]"
+              >
                 <input
                   type="checkbox"
                   checked={value === opt}

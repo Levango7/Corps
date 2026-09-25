@@ -139,10 +139,9 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
     setLoading(true);
     setError("");
     try {
-      const data = await api<Agent[]>(
-        `/api/v1/ai/agents?wid=${encodeURIComponent(wid)}`,
-        { signal: ac.signal },
-      );
+      const data = await api<Agent[]>(`/api/v1/ai/agents?wid=${encodeURIComponent(wid)}`, {
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       setAgents(data);
       // 默认选中第一个 Agent
@@ -150,8 +149,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
         setSelectedId(data[0].id);
       }
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[MultiAgentPanel] loadAgents error:", e);
       setError(t("loadFailed"));
@@ -177,9 +175,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
           name: agent.name,
           role: agent.role,
           capabilities: Array.isArray(agent.capabilities)
-            ? (agent.capabilities as string[]).filter(
-                (c) => typeof c === "string",
-              )
+            ? (agent.capabilities as string[]).filter((c) => typeof c === "string")
             : [],
           systemPrompt: agent.systemPrompt,
           model: agent.model,
@@ -223,9 +219,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
           name: agent.name,
           role: agent.role,
           capabilities: Array.isArray(agent.capabilities)
-            ? (agent.capabilities as string[]).filter(
-                (c) => typeof c === "string",
-              )
+            ? (agent.capabilities as string[]).filter((c) => typeof c === "string")
             : [],
           systemPrompt: agent.systemPrompt,
           model: agent.model,
@@ -274,9 +268,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
             }),
           },
         );
-        setAgents((prev) =>
-          prev.map((a) => (a.id === selectedId ? updated ?? a : a)),
-        );
+        setAgents((prev) => prev.map((a) => (a.id === selectedId ? (updated ?? a) : a)));
         toast("success", t("edit"));
       }
       setEditing(false);
@@ -296,10 +288,9 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
     if (!window.confirm(t("confirmDelete", { name: formData.name }))) return;
 
     try {
-      await api(
-        `/api/v1/ai/agents/${selectedId}?wid=${encodeURIComponent(wid)}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/ai/agents/${selectedId}?wid=${encodeURIComponent(wid)}`, {
+        method: "DELETE",
+      });
       setAgents((prev) => prev.filter((a) => a.id !== selectedId));
       setSelectedId(null);
       setEditing(false);
@@ -330,13 +321,10 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
     setError("");
     setResult(null);
     try {
-      const data = await api<CoordinationResult>(
-        "/api/v1/ai/agents/coordinate",
-        {
-          method: "POST",
-          body: JSON.stringify({ wid, task: task.trim() }),
-        },
-      );
+      const data = await api<CoordinationResult>("/api/v1/ai/agents/coordinate", {
+        method: "POST",
+        body: JSON.stringify({ wid, task: task.trim() }),
+      });
       setResult(data);
       if (data.assignments.length === 0) {
         toast("warning", t("noAgents"));
@@ -352,9 +340,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
     }
   }
 
-  const selectedAgent = selectedId
-    ? agents.find((a) => a.id === selectedId)
-    : null;
+  const selectedAgent = selectedId ? agents.find((a) => a.id === selectedId) : null;
 
   return (
     <div
@@ -444,14 +430,10 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                   }`}
                 >
                   <Bot size={14} className="shrink-0" />
-                  <span className="flex-1 truncate text-[length:var(--text-sm)]">
-                    {agent.name}
-                  </span>
+                  <span className="flex-1 truncate text-[length:var(--text-sm)]">{agent.name}</span>
                   <span
                     className={`shrink-0 w-1.5 h-1.5 rounded-full ${
-                      agent.enabled
-                        ? "bg-[var(--success-fg)]"
-                        : "bg-[var(--meta)]"
+                      agent.enabled ? "bg-[var(--success-fg)]" : "bg-[var(--meta)]"
                     }`}
                     title={agent.enabled ? t("enabled") : t("disabled")}
                   />
@@ -603,9 +585,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                         }))
                       }
                       className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
-                        formData.enabled
-                          ? "bg-[var(--accent)]"
-                          : "bg-[var(--border)]"
+                        formData.enabled ? "bg-[var(--accent)]" : "bg-[var(--border)]"
                       }`}
                       aria-checked={formData.enabled}
                     >
@@ -642,11 +622,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                     <button
                       type="button"
                       onClick={saveAgent}
-                      disabled={
-                        saving ||
-                        !formData.name.trim() ||
-                        !formData.systemPrompt.trim()
-                      }
+                      disabled={saving || !formData.name.trim() || !formData.systemPrompt.trim()}
                       className="inline-flex items-center gap-1.5 h-8 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                     >
                       {saving ? (
@@ -679,9 +655,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                         }`}
                       >
                         <Power size={12} />
-                        {selectedAgent.enabled
-                          ? t("enabled")
-                          : t("disabled")}
+                        {selectedAgent.enabled ? t("enabled") : t("disabled")}
                       </span>
                       <button
                         type="button"
@@ -695,26 +669,16 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
 
                   <div className="grid grid-cols-2 gap-[var(--space-2)] text-[length:var(--text-sm)]">
                     <div>
-                      <span className="text-[var(--muted)]">
-                        {t("role")}:
-                      </span>
+                      <span className="text-[var(--muted)]">{t("role")}:</span>
                       <span className="ml-1.5 text-[var(--fg)]">
-                        {ROLE_OPTIONS.find(
-                          (r) => r.value === selectedAgent.role,
-                        )?.labelKey
-                          ? t(ROLE_OPTIONS.find(
-                              (r) => r.value === selectedAgent.role,
-                            )!.labelKey)
+                        {ROLE_OPTIONS.find((r) => r.value === selectedAgent.role)?.labelKey
+                          ? t(ROLE_OPTIONS.find((r) => r.value === selectedAgent.role)!.labelKey)
                           : selectedAgent.role}
                       </span>
                     </div>
                     <div>
-                      <span className="text-[var(--muted)]">
-                        {t("model")}:
-                      </span>
-                      <span className="ml-1.5 text-[var(--fg)]">
-                        {selectedAgent.model}
-                      </span>
+                      <span className="text-[var(--muted)]">{t("model")}:</span>
+                      <span className="ml-1.5 text-[var(--fg)]">{selectedAgent.model}</span>
                     </div>
                   </div>
 
@@ -725,16 +689,14 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                           {t("capabilities")}
                         </span>
                         <div className="flex flex-wrap gap-1 mt-1.5">
-                          {(selectedAgent.capabilities as string[]).map(
-                            (cap) => (
-                              <span
-                                key={cap}
-                                className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] bg-[var(--accent-soft)] text-[var(--accent-fg)]"
-                              >
-                                {cap}
-                              </span>
-                            ),
-                          )}
+                          {(selectedAgent.capabilities as string[]).map((cap) => (
+                            <span
+                              key={cap}
+                              className="inline-flex items-center px-2 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] bg-[var(--accent-soft)] text-[var(--accent-fg)]"
+                            >
+                              {cap}
+                            </span>
+                          ))}
                         </div>
                       </div>
                     )}
@@ -817,18 +779,13 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                           className="p-2.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] space-y-1.5"
                         >
                           <div className="flex items-center gap-2">
-                            <Bot
-                              size={14}
-                              className="text-[var(--accent)] shrink-0"
-                            />
+                            <Bot size={14} className="text-[var(--accent)] shrink-0" />
                             <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                               {assignment.agentName}
                             </span>
                           </div>
                           <div className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                            <span className="font-[weight:var(--weight-medium)]">
-                              {t("task")}:
-                            </span>{" "}
+                            <span className="font-[weight:var(--weight-medium)]">{t("task")}:</span>{" "}
                             {assignment.subtask}
                           </div>
                           <div className="text-[length:var(--text-xs)] text-[var(--meta)]">

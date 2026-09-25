@@ -10,13 +10,7 @@
  */
 
 import { Link } from "@/lib/i18n-navigation";
-import {
-  AtSign,
-  UserPlus,
-  RefreshCw,
-  MessageSquare,
-  FileText,
-} from "lucide-react";
+import { AtSign, UserPlus, RefreshCw, MessageSquare, FileText } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useWidgetData } from "./useWidgetData";
 import { WidgetError, WidgetEmpty, WidgetSkeleton } from "./WidgetStates";
@@ -47,10 +41,7 @@ const TYPE_META: Record<NotificationType, { icon: typeof AtSign; color: string }
 export default function RecentActivityWidget({ wid }: { wid: string }) {
   const t = useTranslations("dashboard");
   const tTime = useTranslations("time");
-  const { data, loading, error, retry } = useWidgetData<RecentActivityData>(
-    wid,
-    "recent-activity",
-  );
+  const { data, loading, error, retry } = useWidgetData<RecentActivityData>(wid, "recent-activity");
 
   if (loading) return <WidgetSkeleton lines={5} />;
   if (error || !data) return <WidgetError message={error} onRetry={retry} />;
@@ -68,11 +59,7 @@ export default function RecentActivityWidget({ wid }: { wid: string }) {
               href={`/w/${wid}/task/${item.entityId}`}
               className="flex items-center gap-2 px-3 py-2 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             >
-              <Icon
-                size={13}
-                className="shrink-0"
-                style={{ color: meta.color }}
-              />
+              <Icon size={13} className="shrink-0" style={{ color: meta.color }} />
               <span
                 className={`flex-1 min-w-0 text-[length:var(--text-xs)] truncate ${
                   item.read ? "text-[var(--muted)]" : "text-[var(--fg)]"

@@ -14,11 +14,7 @@ import { KnowledgeBase } from "@/components/KnowledgeBase";
  * KnowledgeBase 自身管理移动端抽屉状态（内部 mobileOpen），
  * 本页面仅负责布局容器。
  */
-export default async function DocumentsListPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default async function DocumentsListPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   return (
     <div className="flex min-h-0">

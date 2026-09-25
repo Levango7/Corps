@@ -98,7 +98,8 @@ export function TemplateList({ wid, onCreate, onEdit, onApply, onDelete }: Templ
       setItems((prev) => prev.filter((i) => i.id !== tpl.id));
       onDelete(tpl);
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("deleteFailed");
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("deleteFailed");
       setError(msg);
     }
   }
@@ -162,7 +163,9 @@ export function TemplateList({ wid, onCreate, onEdit, onApply, onDelete }: Templ
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-4)]">
           {items.map((tpl) => {
-            const taskCount = tpl.taskCount ?? (Array.isArray(tpl.templateData?.tasks) ? tpl.templateData.tasks.length : 0);
+            const taskCount =
+              tpl.taskCount ??
+              (Array.isArray(tpl.templateData?.tasks) ? tpl.templateData.tasks.length : 0);
             return (
               <article
                 key={tpl.id}

@@ -57,7 +57,6 @@ interface CalendarScheduleResult {
   suggestions: ScheduleSuggestion[];
 }
 
-
 /** 校验并规范化 LLM 返回的排程建议列表，丢弃非法条目 */
 function normalizeSuggestions(raw: unknown): ScheduleSuggestion[] {
   if (!Array.isArray(raw)) return [];
@@ -72,10 +71,7 @@ function normalizeSuggestions(raw: unknown): ScheduleSuggestion[] {
       title: obj.title.slice(0, 200),
       startTime: obj.startTime,
       endTime: obj.endTime,
-      duration:
-        typeof obj.duration === "number" && obj.duration > 0
-          ? Math.round(obj.duration)
-          : 0,
+      duration: typeof obj.duration === "number" && obj.duration > 0 ? Math.round(obj.duration) : 0,
       reason: typeof obj.reason === "string" ? obj.reason : "",
       conflicts: typeof obj.conflicts === "string" ? obj.conflicts : null,
     });
@@ -185,7 +181,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       code: 200,
       data: result,
-
     });
   } catch (error) {
     console.error("[POST ai/calendar-schedule] error:", error);

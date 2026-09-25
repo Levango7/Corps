@@ -90,9 +90,11 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       try {
         const [status, members, labels, me] = await Promise.all([
           api<{ plan: string }>(`/api/v1/workspaces/${wid}/billing/status`),
-          api<{ items: Array<{ id: string; name: string | null; email: string }>; total: number; hasMore: boolean }>(
-            `/api/v1/workspaces/${wid}/members`,
-          ),
+          api<{
+            items: Array<{ id: string; name: string | null; email: string }>;
+            total: number;
+            hasMore: boolean;
+          }>(`/api/v1/workspaces/${wid}/members`),
           api<Array<{ id: string; name: string; color: string }>>(
             `/api/v1/workspaces/${wid}/labels`,
           ),
@@ -119,7 +121,9 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     const fq = filterToQuery(taskFilter);
     const query =
       msQuery || fq ? `?${[msQuery, fq.replace(/^\?/, "")].filter(Boolean).join("&")}` : "";
-    api<{ items: Task[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/tasks${query}`)
+    api<{ items: Task[]; total: number; hasMore: boolean }>(
+      `/api/v1/workspaces/${wid}/tasks${query}`,
+    )
       .then((data) => {
         setError(null);
         setTasks(data.items);
@@ -142,7 +146,9 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       const fq = filterToQuery(taskFilter);
       const query =
         msQuery || fq ? `?${[msQuery, fq.replace(/^\?/, "")].filter(Boolean).join("&")}` : "";
-      const resp = await api<{ items: Task[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/tasks${query}`);
+      const resp = await api<{ items: Task[]; total: number; hasMore: boolean }>(
+        `/api/v1/workspaces/${wid}/tasks${query}`,
+      );
       setTasks(resp.items);
     } catch (e) {
       setError(
@@ -373,14 +379,14 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           className="mb-[var(--space-4)] flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 rounded-[var(--radius-md)] border bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
         >
           <AlertCircle size={16} className="shrink-0" />
-          <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">{dragError}</span>
+          <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
+            {dragError}
+          </span>
         </div>
       )}
 
       {error && (
-        <div
-          className="mb-[var(--space-4)] rounded-[var(--radius-md)] p-3 text-[length:var(--text-sm)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
-        >
+        <div className="mb-[var(--space-4)] rounded-[var(--radius-md)] p-3 text-[length:var(--text-sm)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]">
           <span>{error}</span>
           <button
             onClick={() => {
@@ -404,11 +410,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
           action={{ label: tStatus("newTask"), onClick: () => setShowNew(true) }}
         />
       ) : (
-        <div
-          onTouchStart={handlePullStart}
-          onTouchMove={handlePullMove}
-          onTouchEnd={handlePullEnd}
-        >
+        <div onTouchStart={handlePullStart} onTouchMove={handlePullMove} onTouchEnd={handlePullEnd}>
           {/* 下拉刷新指示器（M3 移动端手势）：高度随下拉距离变化，超过阈值显示 spinner */}
           <div
             className="flex items-center justify-center overflow-hidden transition-[height] duration-[var(--motion-base)]"

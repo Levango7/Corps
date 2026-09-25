@@ -23,10 +23,7 @@ import {
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import {
-  runAssistant,
-  type TaskPhase,
-} from "@/lib/ai/assistant/orchestrator";
+import { runAssistant, type TaskPhase } from "@/lib/ai/assistant/orchestrator";
 import { buildTaskContext } from "@/lib/ai/assistant/context-builder";
 import { logger } from "@/lib/logger";
 

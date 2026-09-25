@@ -75,7 +75,10 @@ export async function POST(req: NextRequest) {
   try {
     const session = await auth.api.getSession({ headers: req.headers });
     if (!session?.user?.id) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "noActiveSession"), data: null }, { status: 401 });
+      return NextResponse.json(
+        { code: 401, message: apiMsg(req, "noActiveSession"), data: null },
+        { status: 401 },
+      );
     }
 
     const body = await req.json().catch(() => ({}));
@@ -91,7 +94,10 @@ export async function POST(req: NextRequest) {
       session.user.id,
     );
     if (members.length === 0) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "noWorkspace"), data: null }, { status: 401 });
+      return NextResponse.json(
+        { code: 401, message: apiMsg(req, "noWorkspace"), data: null },
+        { status: 401 },
+      );
     }
 
     const target = members.find((m) => m.workspaceId === workspaceId) ?? members[0];
@@ -160,6 +166,9 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("Refresh error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

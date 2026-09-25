@@ -145,9 +145,7 @@ export function SettingsProfile({ onError }: SettingsProfileProps) {
           {t("save")}
         </button>
         {!userDirty && !userBusy && (
-          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("noChanges")}
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noChanges")}</span>
         )}
         {userSaved && (
           <span className="flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--success-fg)]">

@@ -136,10 +136,9 @@ describe("会议创建 POST /meetings", () => {
 
 describe("会议查询 GET /meetings", () => {
   it("列表返回分页格式且包含 creator 关联", async () => {
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings?page=1&limit=10`,
-      { headers: authHeader(token) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings?page=1&limit=10`, {
+      headers: authHeader(token),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -153,10 +152,9 @@ describe("会议查询 GET /meetings", () => {
   });
 
   it("按状态筛选 scheduled", async () => {
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings?status=scheduled`,
-      { headers: authHeader(token) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings?status=scheduled`, {
+      headers: authHeader(token),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -197,10 +195,9 @@ describe("会议详情 GET /meetings/{mid}", () => {
     });
     const created = await createRes.json();
 
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}`,
-      { headers: authHeader(token) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}`, {
+      headers: authHeader(token),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -228,14 +225,11 @@ describe("会议更新 PATCH /meetings/{mid}", () => {
     });
     const created = await createRes.json();
 
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}`,
-      {
-        method: "PATCH",
-        headers: { ...authHeader(token), "Content-Type": "application/json" },
-        body: JSON.stringify({ title: "新标题" }),
-      },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}`, {
+      method: "PATCH",
+      headers: { ...authHeader(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "新标题" }),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -251,14 +245,11 @@ describe("会议更新 PATCH /meetings/{mid}", () => {
     });
     const created = await createRes.json();
 
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}`,
-      {
-        method: "PATCH",
-        headers: { ...authHeader(token), "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "cancelled" }),
-      },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}`, {
+      method: "PATCH",
+      headers: { ...authHeader(token), "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "cancelled" }),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -276,20 +267,16 @@ describe("会议结束 DELETE /meetings/{mid}", () => {
     });
     const created = await createRes.json();
 
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}`,
-      {
-        method: "DELETE",
-        headers: authHeader(token),
-      },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}`, {
+      method: "DELETE",
+      headers: authHeader(token),
+    });
     expect(res.status).toBe(200);
 
     // 验证状态已更新
-    const getRes = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}`,
-      { headers: authHeader(token) },
-    );
+    const getRes = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}`, {
+      headers: authHeader(token),
+    });
     const getJson = await getRes.json();
     expect(getJson.data.status).toBe("ended");
   });
@@ -305,14 +292,11 @@ describe("会议加入/离开 POST join/leave", () => {
     });
     const created = await createRes.json();
 
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}/join`,
-      {
-        method: "POST",
-        headers: { ...authHeader(token), "Content-Type": "application/json" },
-        body: JSON.stringify({}),
-      },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}/join`, {
+      method: "POST",
+      headers: { ...authHeader(token), "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
 
     // LiveKit 未配置时返回 503；已配置时返回 200
     expect([200, 503]).toContain(res.status);
@@ -337,17 +321,14 @@ describe("会议加入/离开 POST join/leave", () => {
     const created = await createRes.json();
 
     // 用另一个用户加入（不传密码）
-    const joinRes = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}/join`,
-      {
-        method: "POST",
-        headers: {
-          ...authHeader(otherToken),
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({}),
+    const joinRes = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}/join`, {
+      method: "POST",
+      headers: {
+        ...authHeader(otherToken),
+        "Content-Type": "application/json",
       },
-    );
+      body: JSON.stringify({}),
+    });
 
     // otherToken 用户不是工作区成员，可能返回 401/403
     // 如果是成员且会议有密码，不传密码应返回 403
@@ -363,13 +344,10 @@ describe("会议加入/离开 POST join/leave", () => {
     });
     const created = await createRes.json();
 
-    const res = await fetch(
-      `${BASE}/workspaces/${wid}/meetings/${created.data.id}/leave`,
-      {
-        method: "POST",
-        headers: authHeader(token),
-      },
-    );
+    const res = await fetch(`${BASE}/workspaces/${wid}/meetings/${created.data.id}/leave`, {
+      method: "POST",
+      headers: authHeader(token),
+    });
     expect(res.status).toBe(200);
   });
 });

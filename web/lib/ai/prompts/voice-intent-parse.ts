@@ -129,14 +129,9 @@ export function buildVoiceIntentSystemPrompt(): string {
  * @param transcript 语音转录文本
  * @param workspaceContext 工作区上下文摘要（如当前页面、最近任务等，可为空字符串）
  */
-export function buildVoiceIntentPrompt(
-  transcript: string,
-  workspaceContext: string,
-): string {
+export function buildVoiceIntentPrompt(transcript: string, workspaceContext: string): string {
   const ctxSection =
-    workspaceContext.trim().length > 0
-      ? `## 工作区上下文\n${workspaceContext}\n`
-      : "";
+    workspaceContext.trim().length > 0 ? `## 工作区上下文\n${workspaceContext}\n` : "";
 
   return `${ctxSection}## 用户语音转录文本
 ${transcript}

@@ -107,13 +107,10 @@ export function ShareDialog({
       setSaving(true);
       setError("");
       try {
-        await api(
-          `/api/v1/workspaces/${workspaceId}/documents/${docId}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ visibility: next }),
-          },
-        );
+        await api(`/api/v1/workspaces/${workspaceId}/documents/${docId}`, {
+          method: "PATCH",
+          body: JSON.stringify({ visibility: next }),
+        });
         setVisibility(next);
       } catch (e) {
         setError(e instanceof Error ? e.message : t("visibilityUpdateFailed"));
@@ -174,9 +171,7 @@ export function ShareDialog({
 
         <div className="px-5 py-4 space-y-[var(--space-4)]">
           {/* 文档标题 */}
-          <p className="text-[length:var(--text-sm)] text-[var(--muted)] truncate">
-            {docTitle}
-          </p>
+          <p className="text-[length:var(--text-sm)] text-[var(--muted)] truncate">{docTitle}</p>
 
           {error && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger)] text-[length:var(--text-xs)]">

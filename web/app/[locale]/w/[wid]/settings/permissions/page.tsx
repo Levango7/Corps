@@ -360,7 +360,8 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
                 const rowEditable =
                   canEdit &&
                   !isOwner &&
-                  (currentRole === "owner" || (currentRole === "admin" && (role === "member" || role === "viewer")));
+                  (currentRole === "owner" ||
+                    (currentRole === "admin" && (role === "member" || role === "viewer")));
                 const rowLocked = isOwner || !rowEditable;
 
                 return (
@@ -438,7 +439,9 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
           )}
 
           {!dirty && !saving && !saved && (
-            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{/* 无变更占位 */}</span>
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+              {/* 无变更占位 */}
+            </span>
           )}
 
           {saved && (

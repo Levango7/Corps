@@ -27,9 +27,9 @@ beforeAll(async () => {
     headers: authHeader(owner.accessToken),
   });
   const lj = (await list.json()) as {
-    data: Array<{ id: string; email: string; role: string; isSelf: boolean }>;
+    data: { items: Array<{ id: string; email: string; role: string; isSelf: boolean }> };
   };
-  const memEntry = (lj.data || []).find((m) => !m.isSelf);
+  const memEntry = (lj.data.items || []).find((m) => !m.isSelf);
 
   fx = {
     wid: owner.workspace.id,

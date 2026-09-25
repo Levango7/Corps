@@ -58,8 +58,10 @@ export default function CustomChartWidget({ wid }: { wid: string }) {
 /** 根据 chartType 分发到对应 SVG 图表 */
 function CustomChart({ data, ariaLabel }: { data: CustomChartData; ariaLabel: string }) {
   const { chartType, labels, values, total } = data;
-  if (chartType === "pie") return <PieChart labels={labels} values={values} total={total} ariaLabel={ariaLabel} />;
-  if (chartType === "line") return <LineChart labels={labels} values={values} ariaLabel={ariaLabel} />;
+  if (chartType === "pie")
+    return <PieChart labels={labels} values={values} total={total} ariaLabel={ariaLabel} />;
+  if (chartType === "line")
+    return <LineChart labels={labels} values={values} ariaLabel={ariaLabel} />;
   return <BarChart labels={labels} values={values} ariaLabel={ariaLabel} />;
 }
 
@@ -140,9 +142,7 @@ function LineChart({
     x: PAD + i * stepX,
     y: PAD + innerH - (v / maxV) * innerH,
   }));
-  const pathD = points
-    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-    .join(" ");
+  const pathD = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ");
   const areaD =
     points.length > 0
       ? `${pathD} L ${points[points.length - 1].x} ${PAD + innerH} L ${points[0].x} ${PAD + innerH} Z`

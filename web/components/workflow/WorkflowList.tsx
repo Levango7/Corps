@@ -42,7 +42,13 @@ interface WorkflowListProps {
   refreshKey: number;
 }
 
-export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshKey }: WorkflowListProps) {
+export function WorkflowList({
+  wid,
+  onCreate,
+  onEdit,
+  onShowExecutions,
+  refreshKey,
+}: WorkflowListProps) {
   const t = useTranslations("workflow");
   const [items, setItems] = useState<WorkflowItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -146,7 +152,10 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
       ) : (
         <ul className="divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]">
           {items.map((wf) => (
-            <li key={wf.id} className="px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]">
+            <li
+              key={wf.id}
+              className="px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
+            >
               <div className="flex items-center gap-2">
                 <WorkflowIcon size={15} className="shrink-0 text-[var(--muted)]" />
                 <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
@@ -162,7 +171,9 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                 </span>
               </div>
               {wf.description && (
-                <p className="mt-1 ml-6 text-[length:var(--text-xs)] text-[var(--meta)] truncate">{wf.description}</p>
+                <p className="mt-1 ml-6 text-[length:var(--text-xs)] text-[var(--meta)] truncate">
+                  {wf.description}
+                </p>
               )}
               <div className="mt-1 ml-6 flex items-center gap-3 text-[length:var(--text-xs)] text-[var(--muted)]">
                 <span>
@@ -179,7 +190,11 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                   title={wf.active ? t("inactive") : t("active")}
                   className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                 >
-                  {togglingId === wf.id ? <Loader2 size={12} className="animate-spin" /> : <Power size={12} />}
+                  {togglingId === wf.id ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Power size={12} />
+                  )}
                   <span className="hidden sm:inline">{wf.active ? t("disable") : t("enable")}</span>
                 </button>
 
@@ -227,7 +242,11 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                           disabled={deletingId === wf.id}
                           className="flex items-center gap-2 w-full px-3 py-2 text-[length:var(--text-sm)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                         >
-                          {deletingId === wf.id ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
+                          {deletingId === wf.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Trash2 size={14} />
+                          )}
                           {t("delete")}
                         </button>
                       </div>
@@ -255,7 +274,11 @@ export function WorkflowList({ wid, onCreate, onEdit, onShowExecutions, refreshK
                   disabled={deletingId === wf.id}
                   className="hidden md:inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                 >
-                  {deletingId === wf.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  {deletingId === wf.id ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={12} />
+                  )}
                   {t("delete")}
                 </button>
               </div>

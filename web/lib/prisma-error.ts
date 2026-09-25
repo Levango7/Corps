@@ -127,13 +127,8 @@ export function classifyPrismaError(error: unknown): PrismaErrorClass {
  * 响应 body 格式与现有路由一致：`{ code: number, message: string }`
  * 额外包含 `prismaCode?: string` 便于客户端按 Prisma 错误码做精细处理。
  */
-export function handlePrismaError(
-  error: unknown,
-  req?: NextRequest,
-): NextResponse {
+export function handlePrismaError(error: unknown, req?: NextRequest): NextResponse {
   const { status, code, msgKey } = classifyPrismaError(error);
-  const message = req
-    ? apiMsg(req, msgKey)
-    : API_MESSAGES[msgKey].en; // 非路由上下文回退英文
+  const message = req ? apiMsg(req, msgKey) : API_MESSAGES[msgKey].en; // 非路由上下文回退英文
   return NextResponse.json({ code: status, message, prismaCode: code, data: null }, { status });
 }

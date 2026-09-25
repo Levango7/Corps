@@ -10,7 +10,11 @@ import { apiMsg } from "@/lib/api-messages";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, data: null, message: apiMsg(req, "unauthorized") }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, data: null, message: apiMsg(req, "unauthorized") },
+      { status: 401 },
+    );
 
   try {
     const result = await syncAllTasks(ctx.payload.sub);
@@ -24,6 +28,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     });
   } catch (error) {
     console.error("[calendar sync] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "calendarSyncFailed") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "calendarSyncFailed") },
+      { status: 500 },
+    );
   }
 }

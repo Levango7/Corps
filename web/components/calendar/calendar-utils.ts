@@ -34,8 +34,12 @@ export function taskToCalendarEvent(task: TaskSummary): CalendarEvent | null {
   const due = new Date(task.dueDate);
   if (isNaN(due.getTime())) return null;
   // 用 UTC 年月日构造 09:00/10:00 UTC 时间，避免本地时区偏移导致 deadline 显示在错误日期
-  const startAt = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 9, 0, 0));
-  const endAt = new Date(Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 10, 0, 0));
+  const startAt = new Date(
+    Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 9, 0, 0),
+  );
+  const endAt = new Date(
+    Date.UTC(due.getUTCFullYear(), due.getUTCMonth(), due.getUTCDate(), 10, 0, 0),
+  );
   return {
     id: `${TASK_EVENT_ID_PREFIX}${task.id}`,
     title: task.title,

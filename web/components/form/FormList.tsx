@@ -186,7 +186,11 @@ export function FormList({ wid }: FormListProps) {
                   disabled={deletingId === form.id}
                   className="inline-flex items-center gap-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--danger-fg)] hover:bg-[var(--danger-soft)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
                 >
-                  {deletingId === form.id ? <Loader2 size={12} className="animate-spin" /> : <Trash2 size={12} />}
+                  {deletingId === form.id ? (
+                    <Loader2 size={12} className="animate-spin" />
+                  ) : (
+                    <Trash2 size={12} />
+                  )}
                   {t("delete")}
                 </button>
               </div>
@@ -212,10 +216,7 @@ export function FormList({ wid }: FormListProps) {
 
       {/* ── 预览弹窗 ── */}
       {modal.kind === "preview" && (
-        <ModalShell
-          title={t("preview")}
-          onClose={() => setModal({ kind: "none" })}
-        >
+        <ModalShell title={t("preview")} onClose={() => setModal({ kind: "none" })}>
           <FormPreview
             wid={wid}
             form={modal.form}
@@ -226,15 +227,8 @@ export function FormList({ wid }: FormListProps) {
 
       {/* ── 提交列表弹窗 ── */}
       {modal.kind === "submissions" && (
-        <ModalShell
-          title={t("submissions")}
-          onClose={() => setModal({ kind: "none" })}
-        >
-          <FormSubmissionList
-            wid={wid}
-            form={modal.form}
-            refreshKey={refreshSubmissions}
-          />
+        <ModalShell title={t("submissions")} onClose={() => setModal({ kind: "none" })}>
+          <FormSubmissionList wid={wid} form={modal.form} refreshKey={refreshSubmissions} />
         </ModalShell>
       )}
     </div>

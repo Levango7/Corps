@@ -70,8 +70,8 @@ const zhMessages = requireJson("../../messages/zh.json") as { pricing: Record<st
 vi.mock("@/lib/i18n-navigation", async () => {
   const React = await import("react");
   return {
-    Link: React.forwardRef<HTMLAnchorElement, Record<string, unknown>>(
-      (props, ref) => React.createElement("a", { ...props, ref }),
+    Link: React.forwardRef<HTMLAnchorElement, Record<string, unknown>>((props, ref) =>
+      React.createElement("a", { ...props, ref }),
     ),
     useRouter: () => ({ push: vi.fn(), replace: vi.fn(), back: vi.fn(), prefetch: vi.fn() }),
     usePathname: () => "/",

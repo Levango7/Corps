@@ -100,9 +100,7 @@ export async function POST(
           return { kind: "sameRole" as const };
         }
 
-        const expiresAt = new Date(
-          Date.now() + body.durationHours * 60 * 60 * 1000,
-        );
+        const expiresAt = new Date(Date.now() + body.durationHours * 60 * 60 * 1000);
 
         // upsert：同一 (userId, workspaceId) 唯一，重新授权覆盖现有记录
         const grant = await tx.temporaryGrant.upsert({

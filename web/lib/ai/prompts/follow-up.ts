@@ -13,7 +13,8 @@ import type { FeedbackExample } from "@/lib/ai/feedback";
  * 追问建议系统 prompt：定义 AI 角色、任务与输出格式。
  */
 export function buildFollowUpSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是企业知识助手的追问建议生成器。
+  return appendFeedbackShot(
+    `你是企业知识助手的追问建议生成器。
 根据用户的问题和 AI 的回答，生成 3 个有价值的后续追问建议。
 
 生成规则：
@@ -53,7 +54,9 @@ AI 回答：今天有 2 个会议：10:00 产品评审会、14:00 技术方案�
 用户问题：OKR 进度如何？
 AI 回答：当前 Q1 OKR 整体进度 65%，其中关键结果 KR1 已完成、KR2 进行中（80%）、KR3 风险中（30%）。
 输出：
-["KR3 风险中的具体原因是什么？", "KR2 预计什么时候能完成？", "有哪些措施可以推进 KR3？"]`, feedbackExamples);
+["KR3 风险中的具体原因是什么？", "KR2 预计什么时候能完成？", "有哪些措施可以推进 KR3？"]`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -64,8 +67,10 @@ AI 回答：当前 Q1 OKR 整体进度 65%，其中关键结果 KR1 已完成、
  */
 export function buildFollowUpUserPrompt(question: string, answer: string): string {
   // P2-5: 截断过长的 question 和 answer，避免超出模型上下文窗口
-  const truncatedQuestion = question.length > 1000 ? question.slice(0, 1000) + "\n\n[问题已截断]" : question;
-  const truncatedAnswer = answer.length > 4000 ? answer.slice(0, 4000) + "\n\n[回答已截断]" : answer;
+  const truncatedQuestion =
+    question.length > 1000 ? question.slice(0, 1000) + "\n\n[问题已截断]" : question;
+  const truncatedAnswer =
+    answer.length > 4000 ? answer.slice(0, 4000) + "\n\n[回答已截断]" : answer;
   return `## 用户问题
 ${truncatedQuestion}
 

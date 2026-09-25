@@ -55,9 +55,7 @@ export default function DecisionActionsWidget({ wid }: { wid: string }) {
     <ul className="divide-y divide-[var(--border-soft)]">
       {data.items.slice(0, 8).map((item) => {
         const due = sharedDueMeta(item.dueDate, tTime);
-        const href = item.taskId
-          ? `/w/${wid}/task/${item.taskId}`
-          : `/w/${wid}/decisions`;
+        const href = item.taskId ? `/w/${wid}/task/${item.taskId}` : `/w/${wid}/decisions`;
         return (
           <li key={item.id}>
             <Link
@@ -69,11 +67,7 @@ export default function DecisionActionsWidget({ wid }: { wid: string }) {
                 {item.title}
               </span>
               {item.priority && (item.priority === "high" || item.priority === "urgent") && (
-                <Flag
-                  size={11}
-                  className="shrink-0"
-                  style={{ color: PRIO_COLOR[item.priority] }}
-                />
+                <Flag size={11} className="shrink-0" style={{ color: PRIO_COLOR[item.priority] }} />
               )}
               {due && (
                 <span

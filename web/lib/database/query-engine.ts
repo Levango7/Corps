@@ -18,15 +18,7 @@
 
 /** 字段类型（与 Prisma DatabaseField.type 对应，运行时为 string） */
 export type FieldType =
-  | "text"
-  | "number"
-  | "select"
-  | "multiselect"
-  | "date"
-  | "checkbox"
-  | "user"
-  | "url"
-  | "email";
+  "text" | "number" | "select" | "multiselect" | "date" | "checkbox" | "user" | "url" | "email";
 
 /** 筛选操作符 */
 export type FilterOperator =

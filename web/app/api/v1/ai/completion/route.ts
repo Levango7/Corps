@@ -6,7 +6,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel } from "@/lib/ai/deepseek";
-import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import {
+  getUserIdAndWorkspaceId,
+  unauthorizedResponse,
+  aiNotConfiguredResponse,
+  isAiConfigured,
+} from "@/lib/ai/shared";
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -41,7 +46,10 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+      { status: 400 },
+    );
   }
 
   // 4) 流式续写

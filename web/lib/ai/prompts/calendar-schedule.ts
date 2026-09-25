@@ -19,7 +19,8 @@ export interface CalendarScheduleInput {
  * 不在工作区内的事件上下文由用户提示注入，系统提示仅声明输出契约与排程规则。
  */
 export function buildCalendarSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是日历智能排程助手。根据用户的自然语言描述和工作区日历上下文，生成合理的会议/事件排程建议。
+  return appendFeedbackShot(
+    `你是日历智能排程助手。根据用户的自然语言描述和工作区日历上下文，生成合理的会议/事件排程建议。
 要求：
 1) 返回 JSON，格式：{"suggestions":[{"title":"string","startTime":"ISO 8601","endTime":"ISO 8601","duration":number,"reason":"string","conflicts":"string|null"}]}
 2) suggestions 数组包含 1-3 个排程方案
@@ -42,18 +43,18 @@ export function buildCalendarSystemPrompt(feedbackExamples?: FeedbackExample[]):
 ## 示例
 输入：下周二下午开产品评审会，2 小时
 输出：
-{"suggestions":[{"title":"产品评审会","startTime":"2026-09-15T14:00:00+08:00","endTime":"2026-09-15T16:00:00+08:00","duration":120,"reason":"下周二下午无已有事件，适合安排评审会","conflicts":null}]}`, feedbackExamples);
+{"suggestions":[{"title":"产品评审会","startTime":"2026-09-15T14:00:00+08:00","endTime":"2026-09-15T16:00:00+08:00","duration":120,"reason":"下周二下午无已有事件，适合安排评审会","conflicts":null}]}`,
+    feedbackExamples,
+  );
 }
 
 /**
  * 用户提示：拼接排程需求 + 工作区日历上下文。
  * 空字段（如未提供 duration / attendees）自动滤除，保持提示紧凑。
  */
-export function buildCalendarUserPrompt(
-  context: string,
-  input: CalendarScheduleInput,
-): string {
-  const truncated = context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
+export function buildCalendarUserPrompt(context: string, input: CalendarScheduleInput): string {
+  const truncated =
+    context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
   const lines = [
     `排程需求：${input.description}`,
     input.duration ? `期望时长：${input.duration} 分钟` : "",

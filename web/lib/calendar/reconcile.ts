@@ -102,10 +102,7 @@ async function reconcileErrorConnections(result: ReconcileResult): Promise<void>
           `previousError=${conn.syncError?.slice(0, 100) ?? "unknown"}`,
       );
     } catch (err) {
-      console.warn(
-        `[calendar-reconcile] 重置连接失败: connectionId=${conn.id}`,
-        err,
-      );
+      console.warn(`[calendar-reconcile] 重置连接失败: connectionId=${conn.id}`, err);
     }
   }
 
@@ -123,10 +120,7 @@ async function reconcileStaleConnections(result: ReconcileResult): Promise<void>
   const staleConnections = await runWithAuthOp("calendar", (tx) =>
     tx.calendarConnection.findMany({
       where: {
-        OR: [
-          { lastSyncAt: { lt: staleBefore } },
-          { lastSyncAt: null },
-        ],
+        OR: [{ lastSyncAt: { lt: staleBefore } }, { lastSyncAt: null }],
         syncStatus: "idle",
       },
       select: { id: true, provider: true, userId: true, lastSyncAt: true },
@@ -197,10 +191,7 @@ async function reconcileOrphanMappings(result: ReconcileResult): Promise<void> {
           `taskId=${orphan.taskId} externalEventId=${orphan.externalEventId}`,
       );
     } catch (err) {
-      console.warn(
-        `[calendar-reconcile] 清理孤儿映射失败: mappingId=${orphan.id}`,
-        err,
-      );
+      console.warn(`[calendar-reconcile] 清理孤儿映射失败: mappingId=${orphan.id}`, err);
     }
   }
 }

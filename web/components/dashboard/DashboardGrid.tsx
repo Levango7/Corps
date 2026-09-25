@@ -40,11 +40,7 @@ import { useTranslations } from "next-intl";
 import { motion } from "framer-motion";
 import { api } from "@/lib/api";
 import { springSmooth, useMotionTokens } from "@/lib/motion-tokens";
-import {
-  WIDGET_REGISTRY,
-  getDefaultLayout,
-  type RGLItem,
-} from "./default-layouts";
+import { WIDGET_REGISTRY, getDefaultLayout, type RGLItem } from "./default-layouts";
 import { SIZE_PRESETS } from "@/lib/default-layouts";
 import WidgetCard from "./WidgetCard";
 import { getWidgetComponent, getWidgetIcon, getWidgetTitleKey } from "./widgets";
@@ -82,7 +78,6 @@ const DENSITY_MARGIN: Record<Density, readonly [number, number]> = {
 function toDensity(v: string | undefined | null): Density {
   return v === "compact" || v === "comfortable" || v === "spacious" ? v : "comfortable";
 }
-
 
 /** Widget 配置映射：widgetId → 配置对象 */
 type WidgetConfigs = Record<string, WidgetConfig>;
@@ -254,7 +249,17 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
   // Layout = readonly LayoutItem[]，LayoutItem 含 RGL 内部附加字段，需规范化为 RGLItem
   // 用 readonly unknown[] 宽松接收，内部按 LayoutItem 形态提取字段
   const handleLayoutChange = useCallback(
-    (current: readonly { i: string; x: number; y: number; w: number; h: number; minW?: number; minH?: number }[]) => {
+    (
+      current: readonly {
+        i: string;
+        x: number;
+        y: number;
+        w: number;
+        h: number;
+        minW?: number;
+        minH?: number;
+      }[],
+    ) => {
       if (!initializedRef.current) return;
       const normalized: RGLItem[] = current.map((item) => ({
         i: item.i,
@@ -358,9 +363,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
 
   // ─── 导出布局 ───
   const exportLayout = useCallback(async (): Promise<LayoutTemplate> => {
-    const res = await api<ExportResponse>(
-      `/api/v1/workspaces/${wid}/dashboard/layout/export`,
-    );
+    const res = await api<ExportResponse>(`/api/v1/workspaces/${wid}/dashboard/layout/export`);
     return {
       layout: res.layout,
       widgetConfigs: res.widgetConfigs ?? {},
@@ -441,7 +444,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       {error && (
         <div className="mb-2 text-[length:var(--text-xs)] text-[var(--danger-fg)]">{error}</div>
       )}
-      { }
+      {}
       <ResponsiveGridLayoutWithWidth
         className="layout"
         layouts={layouts}

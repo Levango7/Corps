@@ -52,7 +52,13 @@ export interface KeyModifiers {
 /** 输入事件联合类型（判别联合，type 字段区分） */
 export type InputEvent =
   | { type: "mouse-move"; x: number; y: number }
-  | { type: "mouse-click"; x: number; y: number; button: MouseButton; action: "down" | "up" | "double" }
+  | {
+      type: "mouse-click";
+      x: number;
+      y: number;
+      button: MouseButton;
+      action: "down" | "up" | "double";
+    }
   | { type: "mouse-scroll"; x: number; y: number; deltaY: number }
   | { type: "key-press"; key: string; modifiers?: KeyModifiers; action: "down" | "up" };
 

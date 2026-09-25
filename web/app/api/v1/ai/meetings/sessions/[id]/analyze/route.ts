@@ -37,8 +37,7 @@ import {
 } from "@/lib/ai/prompts/meeting-transcript-analysis";
 
 /** UUID 正则校验 */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 从 URL 路径提取会话 ID */
 function extractSessionId(req: NextRequest): string | null {
@@ -106,8 +105,7 @@ function normalizeAnalysisResult(raw: unknown): AnalysisResult | null {
   if (raw == null || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
 
-  const summary =
-    typeof obj.summary === "string" ? obj.summary.slice(0, 5000) : "";
+  const summary = typeof obj.summary === "string" ? obj.summary.slice(0, 5000) : "";
 
   const actionItems: NormalizedActionItem[] = [];
   if (Array.isArray(obj.actionItems)) {
@@ -142,8 +140,7 @@ function normalizeAnalysisResult(raw: unknown): AnalysisResult | null {
       if (item == null || typeof item !== "object") continue;
       const d = item as Record<string, unknown>;
       if (typeof d.content !== "string" || !d.content.trim()) continue;
-      const context =
-        typeof d.context === "string" ? d.context.slice(0, 5000) : null;
+      const context = typeof d.context === "string" ? d.context.slice(0, 5000) : null;
       const participants = Array.isArray(d.participants)
         ? (d.participants.filter((p) => typeof p === "string") as string[])
         : [];
@@ -263,14 +260,8 @@ export async function POST(req: NextRequest) {
     const workspaceContext = `会议标题: ${sessionData.title}\n参与人数: ${sessionData.participantCount}`;
 
     // 9) withUsageTracking 包装 AI 调用
-    const systemPrompt = withCoT(
-      buildMeetingAnalysisSystemPrompt(),
-      requireReasonerModel(),
-    );
-    const userPrompt = buildMeetingAnalysisPrompt(
-      transcriptText,
-      workspaceContext,
-    );
+    const systemPrompt = withCoT(buildMeetingAnalysisSystemPrompt(), requireReasonerModel());
+    const userPrompt = buildMeetingAnalysisPrompt(transcriptText, workspaceContext);
 
     const analysisResult = await withUsageTracking(
       {
@@ -292,12 +283,7 @@ export async function POST(req: NextRequest) {
         try {
           parsed = JSON.parse(cleaned);
         } catch (e) {
-          console.error(
-            "[ai/meetings/analyze] JSON.parse 失败:",
-            e,
-            "raw:",
-            cleaned.slice(0, 200),
-          );
+          console.error("[ai/meetings/analyze] JSON.parse 失败:", e, "raw:", cleaned.slice(0, 200));
           throw new Error("AI 返回结果解析失败", { cause: e });
         }
 

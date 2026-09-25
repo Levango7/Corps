@@ -26,11 +26,17 @@ import { apiMsg } from "@/lib/api-messages";
 export async function GET(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return NextResponse.json({ code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null },
+      { status: 500 },
+    );
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   }
 
   try {
@@ -97,6 +103,9 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: result });
   } catch (error) {
     console.error("[cron check-overdue-actions] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

@@ -157,10 +157,7 @@ export const DecisionMark = Node.create<DecisionMarkOptions>({
   },
 
   renderHTML({ HTMLAttributes }) {
-    return [
-      "div",
-      mergeAttributes(HTMLAttributes, { "data-type": "decision-mark" }),
-    ];
+    return ["div", mergeAttributes(HTMLAttributes, { "data-type": "decision-mark" })];
   },
 
   addNodeView() {

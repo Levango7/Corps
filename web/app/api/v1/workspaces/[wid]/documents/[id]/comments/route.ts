@@ -156,9 +156,7 @@ export async function POST(
         });
 
         // 批量创建 mention 通知（排除评论作者自己）
-        const notifyTargets = validMentions.filter(
-          (uid) => uid && uid !== ctx.payload.sub,
-        );
+        const notifyTargets = validMentions.filter((uid) => uid && uid !== ctx.payload.sub);
         if (notifyTargets.length > 0) {
           await tx.notification.createMany({
             data: notifyTargets.map((userId) => ({

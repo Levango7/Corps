@@ -35,14 +35,7 @@ export interface QuickActionMenuProps {
   children?: ReactNode;
 }
 
-export function QuickActionMenu({
-  open,
-  onClose,
-  actions,
-  x,
-  y,
-  _children,
-}: QuickActionMenuProps) {
+export function QuickActionMenu({ open, onClose, actions, x, y, _children }: QuickActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Esc 关闭
@@ -59,10 +52,7 @@ export function QuickActionMenu({
   useEffect(() => {
     if (!open) return;
     const handleClickOutside = (e: MouseEvent) => {
-      if (
-        menuRef.current &&
-        !menuRef.current.contains(e.target as Node)
-      ) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
         onClose();
       }
     };
@@ -89,8 +79,8 @@ export function QuickActionMenu({
       if (!menuRef.current) return [];
       return Array.from(
         menuRef.current.querySelectorAll<HTMLElement>(
-          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-        )
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
+        ),
       ).filter((el) => !el.hasAttribute("disabled"));
     };
 
@@ -164,9 +154,7 @@ export function QuickActionMenu({
                   onClose();
                 }}
                 className={`flex w-full items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] text-left text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--hover-soft)] ${
-                  action.danger
-                    ? "text-[var(--danger)]"
-                    : "text-[var(--fg)]"
+                  action.danger ? "text-[var(--danger)]" : "text-[var(--fg)]"
                 }`}
               >
                 <Icon size={16} className="shrink-0" />

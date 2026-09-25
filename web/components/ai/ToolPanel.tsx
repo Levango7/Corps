@@ -156,17 +156,14 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
           if (coerced !== undefined) args[key] = coerced;
         }
 
-        const data = await api<{ result: ToolResult }>(
-          "/api/v1/ai/tools/execute",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              toolName: tool.name,
-              args,
-              workspaceId,
-            }),
-          },
-        );
+        const data = await api<{ result: ToolResult }>("/api/v1/ai/tools/execute", {
+          method: "POST",
+          body: JSON.stringify({
+            toolName: tool.name,
+            args,
+            workspaceId,
+          }),
+        });
         if (ac.signal.aborted) return;
         setResult(data.result);
       } catch (e) {
@@ -250,15 +247,9 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                   className="flex w-full items-center gap-[var(--space-3)] px-[var(--space-3)] py-[var(--space-3)] text-left transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                 >
                   {expanded ? (
-                    <ChevronDown
-                      size={14}
-                      className="shrink-0 text-[var(--muted)]"
-                    />
+                    <ChevronDown size={14} className="shrink-0 text-[var(--muted)]" />
                   ) : (
-                    <ChevronRight
-                      size={14}
-                      className="shrink-0 text-[var(--muted)]"
-                    />
+                    <ChevronRight size={14} className="shrink-0 text-[var(--muted)]" />
                   )}
                   <div className="flex min-w-0 flex-col gap-[2px]">
                     <span className="font-mono text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
@@ -284,15 +275,10 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                           const isBoolean = schema.type === "boolean";
                           const isRequired = requiredSet.has(key);
                           return (
-                            <label
-                              key={key}
-                              className="flex flex-col gap-[var(--space-3)]"
-                            >
+                            <label key={key} className="flex flex-col gap-[var(--space-3)]">
                               <span className="flex items-center gap-[var(--space-3)] text-[length:var(--text-xs)] text-[var(--fg-2)]">
                                 <span className="font-mono">{key}</span>
-                                {isRequired && (
-                                  <span className="text-[var(--danger)]">*</span>
-                                )}
+                                {isRequired && <span className="text-[var(--danger)]">*</span>}
                                 {schema.description && (
                                   <span className="truncate text-[var(--muted)]">
                                     — {schema.description}
@@ -302,9 +288,7 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                               {isEnum ? (
                                 <select
                                   value={(params[key] as string) ?? ""}
-                                  onChange={(e) =>
-                                    handle_param_change(key, e.target.value)
-                                  }
+                                  onChange={(e) => handle_param_change(key, e.target.value)}
                                   className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-3)] py-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                                 >
                                   <option value="">—</option>
@@ -318,23 +302,18 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                                 <input
                                   type="checkbox"
                                   checked={params[key] === true}
-                                  onChange={(e) =>
-                                    handle_param_change(key, e.target.checked)
-                                  }
+                                  onChange={(e) => handle_param_change(key, e.target.checked)}
                                   className="h-4 w-4 rounded-[var(--radius-md)] border border-[var(--border)] accent-[var(--accent)]"
                                 />
                               ) : (
                                 <input
                                   type={
-                                    schema.type === "number" ||
-                                    schema.type === "integer"
+                                    schema.type === "number" || schema.type === "integer"
                                       ? "number"
                                       : "text"
                                   }
                                   value={(params[key] as string) ?? ""}
-                                  onChange={(e) =>
-                                    handle_param_change(key, e.target.value)
-                                  }
+                                  onChange={(e) => handle_param_change(key, e.target.value)}
                                   placeholder={schema.description ?? ""}
                                   className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-3)] py-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                                 />
@@ -388,22 +367,14 @@ export function ToolPanel({ workspaceId }: ToolPanelProps) {
                       <div className="mt-[var(--space-3)] flex flex-col gap-[var(--space-3)]">
                         <div className="flex items-center gap-[var(--space-3)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] uppercase tracking-wide text-[var(--muted)]">
                           {result.success ? (
-                            <CheckCircle
-                              size={14}
-                              className="text-[var(--success)]"
-                            />
+                            <CheckCircle size={14} className="text-[var(--success)]" />
                           ) : (
-                            <XCircle
-                              size={14}
-                              className="text-[var(--danger)]"
-                            />
+                            <XCircle size={14} className="text-[var(--danger)]" />
                           )}
                           {t("outputResult")}
                           <span
                             className={
-                              result.success
-                                ? "text-[var(--success)]"
-                                : "text-[var(--danger)]"
+                              result.success ? "text-[var(--success)]" : "text-[var(--danger)]"
                             }
                           >
                             {result.success ? t("success") : t("failed")}

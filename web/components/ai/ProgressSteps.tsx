@@ -1,4 +1,3 @@
-
 /**
  * AI 流式进度步骤指示器。
  *
@@ -25,11 +24,7 @@ export interface ProgressStepsProps {
   currentMessage?: string;
 }
 
-export function ProgressSteps({
-  currentStage,
-  stageNames,
-  currentMessage,
-}: ProgressStepsProps) {
+export function ProgressSteps({ currentStage, stageNames, currentMessage }: ProgressStepsProps) {
   return (
     <div
       className="flex flex-col gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-2)] px-[var(--space-4)] py-[var(--space-3)]"
@@ -45,19 +40,12 @@ export function ProgressSteps({
           <div
             key={stage}
             className={`flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] ${
-              isCurrent
-                ? "text-[var(--fg)]"
-                : isDone
-                  ? "text-[var(--fg-2)]"
-                  : "text-[var(--meta)]"
+              isCurrent ? "text-[var(--fg)]" : isDone ? "text-[var(--fg-2)]" : "text-[var(--meta)]"
             }`}
           >
             {/* 阶段图标：完成=打勾, 当前=spinner, 未开始=空心圆 */}
             {isDone ? (
-              <CheckCircle2
-                size={14}
-                className="shrink-0 text-[var(--success)]"
-              />
+              <CheckCircle2 size={14} className="shrink-0 text-[var(--success)]" />
             ) : isCurrent ? (
               <Loader2
                 size={14}

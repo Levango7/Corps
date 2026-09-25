@@ -11,10 +11,32 @@
  *  - 点击"批量导出"：POST /documents/batch-export → 打开 ExportPreview 批量模式预览
  */
 
-import { useEffect, useRef, useState, useDeferredValue, type ComponentProps, type FormEvent } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  useDeferredValue,
+  type ComponentProps,
+  type FormEvent,
+} from "react";
 import { useTranslations } from "next-intl";
 import { useRouter, Link } from "@/lib/i18n-navigation";
-import { Plus, Search, FileText, Loader2, X, Download, CheckSquare, Square, Eye, MoreHorizontal, Share2, Pencil, Trash2, FolderInput } from "lucide-react";
+import {
+  Plus,
+  Search,
+  FileText,
+  Loader2,
+  X,
+  Download,
+  CheckSquare,
+  Square,
+  Eye,
+  MoreHorizontal,
+  Share2,
+  Pencil,
+  Trash2,
+  FolderInput,
+} from "lucide-react";
 import { DocumentPreview } from "@/components/DocumentPreview";
 import { useToast } from "@/components/Toast";
 import { api } from "@/lib/api";
@@ -48,7 +70,9 @@ export function DocumentListView({ wid }: { wid: string }) {
   const [creating, setCreating] = useState(false);
   const [error, setError] = useState("");
   const { toast } = useToast();
-  const [previewDocument, setPreviewDocument] = useState<ComponentProps<typeof DocumentPreview>["document"] | null>(null);
+  const [previewDocument, setPreviewDocument] = useState<
+    ComponentProps<typeof DocumentPreview>["document"] | null
+  >(null);
   const [previewId, setPreviewId] = useState<string | null>(null);
   const [menuId, setMenuId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -111,7 +135,8 @@ export function DocumentListView({ wid }: { wid: string }) {
   useEffect(() => {
     if (!menuId) return;
     const closeMenu = (event: PointerEvent) => {
-      if (!(event.target instanceof Element) || !event.target.closest("[data-document-actions]")) setMenuId(null);
+      if (!(event.target instanceof Element) || !event.target.closest("[data-document-actions]"))
+        setMenuId(null);
     };
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") setMenuId(null);
@@ -134,7 +159,8 @@ export function DocumentListView({ wid }: { wid: string }) {
         `/api/v1/workspaces/${wid}/documents/${item.id}`,
         { signal: controller.signal },
       );
-      if (!controller.signal.aborted) setPreviewDocument({ title: doc.title, content: doc.markdown, type: "markdown" });
+      if (!controller.signal.aborted)
+        setPreviewDocument({ title: doc.title, content: doc.markdown, type: "markdown" });
     } catch {
       if (!controller.signal.aborted) toast("error", t("loadFailed"));
     } finally {
@@ -156,7 +182,9 @@ export function DocumentListView({ wid }: { wid: string }) {
         });
         if (!result.shareUrl) throw new Error("Missing share URL");
         try {
-          await navigator.clipboard.writeText(new URL(result.shareUrl, window.location.origin).href);
+          await navigator.clipboard.writeText(
+            new URL(result.shareUrl, window.location.origin).href,
+          );
           toast("success", t("shareLinkCopied"));
         } catch {
           toast("error", t("shareCopyFailed"));
@@ -167,11 +195,24 @@ export function DocumentListView({ wid }: { wid: string }) {
           body: JSON.stringify({ format: "html" }),
         });
         if (typeof result.content !== "string") throw new Error("Invalid converted content");
-        const url = URL.createObjectURL(new Blob([result.content], { type: "text/html;charset=utf-8" }));
+        const url = URL.createObjectURL(
+          new Blob([result.content], { type: "text/html;charset=utf-8" }),
+        );
         const link = document.createElement("a");
         try {
           link.href = url;
-          link.download = `${item.title.replace(new RegExp("[<>:\"/\\\\|?*" + String.fromCharCode(0) + "-" + String.fromCharCode(31) + "]", "g"), "_").slice(0, 120).trim() || item.id}.html`;
+          link.download = `${
+            item.title
+              .replace(
+                new RegExp(
+                  '[<>:"/\\\\|?*' + String.fromCharCode(0) + "-" + String.fromCharCode(31) + "]",
+                  "g",
+                ),
+                "_",
+              )
+              .slice(0, 120)
+              .trim() || item.id
+          }.html`;
           document.body.appendChild(link);
           link.click();
           toast("success", t("exportStarted"));
@@ -296,8 +337,7 @@ export function DocumentListView({ wid }: { wid: string }) {
     try {
       const docs: BatchDocument[] = [];
       // 匹配每个 doc-section（排除 toc section）
-      const sectionRegex =
-        /<section class="doc-section" id="doc-(\d+)">([\s\S]*?)<\/section>/g;
+      const sectionRegex = /<section class="doc-section" id="doc-(\d+)">([\s\S]*?)<\/section>/g;
       let match: RegExpExecArray | null;
       while ((match = sectionRegex.exec(html)) !== null) {
         const sectionContent = match[2];
@@ -305,15 +345,11 @@ export function DocumentListView({ wid }: { wid: string }) {
         const titleMatch = sectionContent.match(/<h1>([\s\S]*?)<\/h1>/);
         const title = titleMatch ? titleMatch[1].trim() : t("untitledDoc");
         // 提取 <div class="doc-meta"> 后的内容作为 markdown（HTML 形式）
-        const contentMatch = sectionContent.match(
-          /<div class="doc-meta">[\s\S]*?<\/div>([\s\S]*)/,
-        );
+        const contentMatch = sectionContent.match(/<div class="doc-meta">[\s\S]*?<\/div>([\s\S]*)/);
         const contentHtml = contentMatch ? contentMatch[1].trim() : sectionContent;
         docs.push({ title, markdown: contentHtml });
       }
-      return docs.length > 0
-        ? docs
-        : [{ title: tExport("batchExport"), markdown: html }];
+      return docs.length > 0 ? docs : [{ title: tExport("batchExport"), markdown: html }];
     } catch {
       return [{ title: tExport("batchExport"), markdown: html }];
     }
@@ -380,13 +416,21 @@ export function DocumentListView({ wid }: { wid: string }) {
             disabled={batchExporting}
             className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-sm)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
           >
-            {batchExporting ? <Loader2 size={14} className="animate-spin" /> : <Download size={14} />}
+            {batchExporting ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
             {tExport("exportBatch")}
           </button>
         </div>
       )}
 
-      {error && <p className="mb-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
+      {error && (
+        <p className="mb-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--danger)]">
+          {error}
+        </p>
+      )}
 
       {loading ? (
         <DocumentListSkeleton count={5} />
@@ -462,20 +506,69 @@ export function DocumentListView({ wid }: { wid: string }) {
                       <div className="mt-[var(--space-1)] ml-6 text-[length:var(--text-xs)] text-[var(--muted)] flex items-center gap-2">
                         {author && <span>{author}</span>}
                         <span>·</span>
-                        <span>{t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}</span>
+                        <span>
+                          {t("updatedAt", { date: new Date(d.updatedAt).toLocaleString() })}
+                        </span>
                       </div>
                     </Link>
-                    <div data-document-actions className="absolute right-[var(--space-3)] top-[var(--space-3)] flex items-center gap-1">
-                      <button type="button" onClick={() => openPreview(d)} disabled={previewId === d.id} aria-label={t("previewMode")} title={t("previewMode")} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]">
-                        {previewId === d.id ? <Loader2 size={14} className="animate-spin" /> : <Eye size={14} />}
+                    <div
+                      data-document-actions
+                      className="absolute right-[var(--space-3)] top-[var(--space-3)] flex items-center gap-1"
+                    >
+                      <button
+                        type="button"
+                        onClick={() => openPreview(d)}
+                        disabled={previewId === d.id}
+                        aria-label={t("previewMode")}
+                        title={t("previewMode")}
+                        className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                      >
+                        {previewId === d.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Eye size={14} />
+                        )}
                       </button>
-                      <button type="button" onClick={() => setMenuId(menuId === d.id ? null : d.id)} disabled={busyId !== null} aria-label={t("moreActions")} aria-expanded={menuId === d.id} aria-controls={`document-actions-${d.id}`} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]">
-                        {busyId === d.id ? <Loader2 size={14} className="animate-spin" /> : <MoreHorizontal size={14} />}
+                      <button
+                        type="button"
+                        onClick={() => setMenuId(menuId === d.id ? null : d.id)}
+                        disabled={busyId !== null}
+                        aria-label={t("moreActions")}
+                        aria-expanded={menuId === d.id}
+                        aria-controls={`document-actions-${d.id}`}
+                        className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-50 focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                      >
+                        {busyId === d.id ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <MoreHorizontal size={14} />
+                        )}
                       </button>
                       {menuId === d.id && (
-                        <div id={`document-actions-${d.id}`} className="absolute right-0 top-full z-20 min-w-40 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]" onBlur={(event) => { if (!event.currentTarget.parentElement?.contains(event.relatedTarget)) setMenuId(null); }}>
-                          <button type="button" onClick={() => runDocumentAction(d, "share")} className="flex w-full items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"><Share2 size={14} />{t("share")}</button>
-                          <button type="button" onClick={() => runDocumentAction(d, "convert")} className="flex w-full items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"><Download size={14} />{t("export")}</button>
+                        <div
+                          id={`document-actions-${d.id}`}
+                          className="absolute right-0 top-full z-20 min-w-40 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-sm)]"
+                          onBlur={(event) => {
+                            if (!event.currentTarget.parentElement?.contains(event.relatedTarget))
+                              setMenuId(null);
+                          }}
+                        >
+                          <button
+                            type="button"
+                            onClick={() => runDocumentAction(d, "share")}
+                            className="flex w-full items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                          >
+                            <Share2 size={14} />
+                            {t("share")}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => runDocumentAction(d, "convert")}
+                            className="flex w-full items-center gap-2 px-3 py-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                          >
+                            <Download size={14} />
+                            {t("export")}
+                          </button>
                         </div>
                       )}
                     </div>
@@ -494,13 +587,27 @@ export function DocumentListView({ wid }: { wid: string }) {
         onClick={(event) => {
           if (event.target === event.currentTarget) {
             const bounds = event.currentTarget.getBoundingClientRect();
-            if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) previewDialog.current?.close();
+            if (
+              event.clientX < bounds.left ||
+              event.clientX > bounds.right ||
+              event.clientY < bounds.top ||
+              event.clientY > bounds.bottom
+            )
+              previewDialog.current?.close();
           }
         }}
         className="m-auto w-[calc(100%-var(--space-8))] max-w-4xl max-h-[90dvh] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] text-[var(--fg)] shadow-[var(--elev-sm)] backdrop:bg-[var(--overlay)]"
       >
         <div className="flex justify-end mb-[var(--space-2)]">
-          <button type="button" autoFocus onClick={() => previewDialog.current?.close()} aria-label={t("close")} className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"><X size={16} /></button>
+          <button
+            type="button"
+            autoFocus
+            onClick={() => previewDialog.current?.close()}
+            aria-label={t("close")}
+            className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            <X size={16} />
+          </button>
         </div>
         {previewDocument && <DocumentPreview document={previewDocument} />}
       </dialog>

@@ -118,8 +118,7 @@ function MemberRow({
   // Viewer 角色提示：选中 viewer 时在角色选择下方显示只读说明
   const showViewerHint = m.role === "viewer";
   // 临时授权是否有效（未过期）
-  const tempGrantActive =
-    tempGrant && new Date(tempGrant.expiresAt).getTime() > Date.now();
+  const tempGrantActive = tempGrant && new Date(tempGrant.expiresAt).getTime() > Date.now();
 
   if (layout === "row") {
     return (
@@ -139,7 +138,11 @@ function MemberRow({
             {tempGrantActive && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warn)_15%,transparent)] text-[length:var(--text-xs)] text-[var(--warn-fg)]"
-                title={t("tempGrantActive", { role: tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"), time: formatExpiry(tempGrant!.expiresAt, t) })}
+                title={t("tempGrantActive", {
+                  role:
+                    tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"),
+                  time: formatExpiry(tempGrant!.expiresAt, t),
+                })}
               >
                 <Clock size={10} />
                 {tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember")}
@@ -149,7 +152,9 @@ function MemberRow({
           <div className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
             {m.email}
             {tempGrantActive && (
-              <span className="ml-2 text-[var(--meta)]">· {formatExpiry(tempGrant!.expiresAt, t)}</span>
+              <span className="ml-2 text-[var(--meta)]">
+                · {formatExpiry(tempGrant!.expiresAt, t)}
+              </span>
             )}
           </div>
         </div>
@@ -210,7 +215,9 @@ function MemberRow({
                   ? "bg-[var(--danger-soft)] text-[var(--danger)]"
                   : "hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)]"
               }`}
-              aria-label={confirming ? t("removeConfirm", { name: label }) : t("remove") + " " + label}
+              aria-label={
+                confirming ? t("removeConfirm", { name: label }) : t("remove") + " " + label
+              }
               title={confirming ? t("removeConfirm", { name: label }) : undefined}
             >
               <Trash2 size={16} />
@@ -245,7 +252,11 @@ function MemberRow({
             {tempGrantActive && (
               <span
                 className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[color-mix(in_srgb,var(--warn)_15%,transparent)] text-[length:var(--text-xs)] text-[var(--warn-fg)]"
-                title={t("tempGrantActive", { role: tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"), time: formatExpiry(tempGrant!.expiresAt, t) })}
+                title={t("tempGrantActive", {
+                  role:
+                    tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"),
+                  time: formatExpiry(tempGrant!.expiresAt, t),
+                })}
               >
                 <Clock size={10} />
                 {tempGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember")}
@@ -326,7 +337,9 @@ function MemberRow({
                 ? "bg-[var(--danger-soft)] text-[var(--danger)]"
                 : "hover:bg-[var(--danger-soft)] text-[var(--meta)] hover:text-[var(--danger)]"
             }`}
-            aria-label={confirming ? t("removeConfirm", { name: label }) : t("remove") + " " + label}
+            aria-label={
+              confirming ? t("removeConfirm", { name: label }) : t("remove") + " " + label
+            }
             title={confirming ? t("removeConfirm", { name: label }) : undefined}
           >
             <Trash2 size={16} />

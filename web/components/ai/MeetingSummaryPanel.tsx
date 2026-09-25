@@ -66,7 +66,6 @@ interface MeetingSummary {
   participants: string[];
 }
 
-
 // ── 样式常量 ──
 
 /** 输入框样式（design token） */
@@ -116,7 +115,6 @@ export default function MeetingSummaryPanel({
 }: MeetingSummaryPanelProps) {
   const t = useTranslations("ai.meetingSummary");
   const { toast } = useToast();
-
 
   // ── 状态 ──
 
@@ -186,9 +184,7 @@ export default function MeetingSummaryPanel({
           method: "POST",
           body: JSON.stringify({
             title: item.title,
-            description: item.assignee
-              ? t("assigneePrefix", { name: item.assignee })
-              : undefined,
+            description: item.assignee ? t("assigneePrefix", { name: item.assignee }) : undefined,
             priority: item.priority,
             dueDate: dueDateIso,
           }),
@@ -198,8 +194,7 @@ export default function MeetingSummaryPanel({
       } catch (e) {
         if (process.env.NODE_ENV === "development")
           console.error("[MeetingSummaryPanel] addToTask error:", e);
-        const msg =
-          e instanceof ApiError ? e.message : t("addFailed");
+        const msg = e instanceof ApiError ? e.message : t("addFailed");
         toast("error", msg);
       } finally {
         setAddingIndex(null);
@@ -322,32 +317,18 @@ export default function MeetingSummaryPanel({
             </button>
           )}
           {summary && !editing && (
-            <button
-              type="button"
-              onClick={startEdit}
-              className={ghostBtn}
-              title={t("edit")}
-            >
+            <button type="button" onClick={startEdit} className={ghostBtn} title={t("edit")}>
               <Edit size={16} />
               {t("edit")}
             </button>
           )}
           {editing && (
             <>
-              <button
-                type="button"
-                onClick={saveEdit}
-                className={primaryBtn}
-                title={t("save")}
-              >
+              <button type="button" onClick={saveEdit} className={primaryBtn} title={t("save")}>
                 <Save size={16} />
                 {t("save")}
               </button>
-              <button
-                type="button"
-                onClick={cancelEdit}
-                className={ghostBtn}
-              >
+              <button type="button" onClick={cancelEdit} className={ghostBtn}>
                 <X size={16} />
               </button>
             </>
@@ -404,10 +385,7 @@ export default function MeetingSummaryPanel({
               className={primaryBtn}
             >
               {generating ? (
-                <Loader2
-                  size={16}
-                  className="animate-spin motion-reduce:animate-none"
-                />
+                <Loader2 size={16} className="animate-spin motion-reduce:animate-none" />
               ) : (
                 <Sparkles size={16} />
               )}
@@ -424,10 +402,7 @@ export default function MeetingSummaryPanel({
         {/* 加载态 */}
         {generating && (
           <div className="flex items-center justify-center py-8 text-[var(--muted)] text-[length:var(--text-sm)]">
-            <Loader2
-              size={16}
-              className="animate-spin mr-2 motion-reduce:animate-none"
-            />
+            <Loader2 size={16} className="animate-spin mr-2 motion-reduce:animate-none" />
             {t("generating")}
           </div>
         )}
@@ -450,9 +425,7 @@ export default function MeetingSummaryPanel({
                   type="text"
                   value={editBuffer?.title ?? ""}
                   onChange={(e) =>
-                    setEditBuffer((prev) =>
-                      prev ? { ...prev, title: e.target.value } : prev,
-                    )
+                    setEditBuffer((prev) => (prev ? { ...prev, title: e.target.value } : prev))
                   }
                   className={`${fieldControl} text-[length:var(--text-md)] font-[weight:var(--weight-semibold)]`}
                   aria-label={t("meetingTitle")}
@@ -513,9 +486,7 @@ export default function MeetingSummaryPanel({
                         />
                       ) : (
                         <>
-                          <span className="shrink-0 text-[var(--accent)] mt-0.5">
-                            •
-                          </span>
+                          <span className="shrink-0 text-[var(--accent)] mt-0.5">•</span>
                           <span className="flex-1">{point}</span>
                         </>
                       )}
@@ -645,8 +616,7 @@ export default function MeetingSummaryPanel({
                                     const next = [...prev.actionItems];
                                     next[i] = {
                                       ...next[i],
-                                      priority: e.target
-                                        .value as ActionItem["priority"],
+                                      priority: e.target.value as ActionItem["priority"],
                                     };
                                     return { ...prev, actionItems: next };
                                   })
@@ -682,8 +652,8 @@ export default function MeetingSummaryPanel({
                                 )}
                                 <span
                                   className={`inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] ${priorityColor(
-                                  item.priority,
-                                )}`}
+                                    item.priority,
+                                  )}`}
                                 >
                                   {item.priority}
                                 </span>

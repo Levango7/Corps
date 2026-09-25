@@ -13,9 +13,7 @@ import type { AiUserBehavior } from "@prisma/client";
 
 /** 推荐类型枚举 */
 export type PersonalizationType =
-  | "capability_recommendation"
-  | "prompt_optimization"
-  | "workflow_suggestion";
+  "capability_recommendation" | "prompt_optimization" | "workflow_suggestion";
 
 /** 单条推荐内容结构 */
 export interface RecommendationContent {
@@ -125,10 +123,7 @@ export function buildPersonalizationSystemPrompt(): string {
  * @param behaviors 用户行为历史（已按时间排序）
  * @param type 推荐类型（用于引导模型聚焦生成方向）
  */
-export function buildPersonalizationPrompt(
-  behaviors: AiUserBehavior[],
-  type: string,
-): string {
+export function buildPersonalizationPrompt(behaviors: AiUserBehavior[], type: string): string {
   if (behaviors.length === 0) {
     return `## 用户行为数据
 无行为记录
@@ -170,10 +165,7 @@ ${type}
     .join("\n");
 
   // 截断行为明细，避免超出上下文窗口
-  const truncatedBehaviors =
-    recentBehaviors.length > 0
-      ? recentBehaviors.join("\n")
-      : "无";
+  const truncatedBehaviors = recentBehaviors.length > 0 ? recentBehaviors.join("\n") : "无";
 
   return `## 用户行为数据
 

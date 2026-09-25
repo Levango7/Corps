@@ -7,27 +7,19 @@ describe("computeProgress - OKR 进度计算", () => {
   });
 
   it("单个 KR 100% 完成 → 100", () => {
-    expect(
-      computeProgress([{ currentValue: 100, targetValue: 100, weight: 1 }]),
-    ).toBe(100);
+    expect(computeProgress([{ currentValue: 100, targetValue: 100, weight: 1 }])).toBe(100);
   });
 
   it("单个 KR 50% 完成 → 50", () => {
-    expect(
-      computeProgress([{ currentValue: 50, targetValue: 100, weight: 1 }]),
-    ).toBe(50);
+    expect(computeProgress([{ currentValue: 50, targetValue: 100, weight: 1 }])).toBe(50);
   });
 
   it("单个 KR 0% 完成 → 0", () => {
-    expect(
-      computeProgress([{ currentValue: 0, targetValue: 100, weight: 1 }]),
-    ).toBe(0);
+    expect(computeProgress([{ currentValue: 0, targetValue: 100, weight: 1 }])).toBe(0);
   });
 
   it("targetValue=0 的 KR 进度计为 0（避免除零）", () => {
-    expect(
-      computeProgress([{ currentValue: 10, targetValue: 0, weight: 1 }]),
-    ).toBe(0);
+    expect(computeProgress([{ currentValue: 10, targetValue: 0, weight: 1 }])).toBe(0);
   });
 
   it("总权重为 0 时进度为 0", () => {
@@ -51,15 +43,11 @@ describe("computeProgress - OKR 进度计算", () => {
   });
 
   it("进度超过 100 时钳制为 100", () => {
-    expect(
-      computeProgress([{ currentValue: 200, targetValue: 100, weight: 1 }]),
-    ).toBe(100);
+    expect(computeProgress([{ currentValue: 200, targetValue: 100, weight: 1 }])).toBe(100);
   });
 
   it("进度为负数时钳制为 0", () => {
-    expect(
-      computeProgress([{ currentValue: -50, targetValue: 100, weight: 1 }]),
-    ).toBe(0);
+    expect(computeProgress([{ currentValue: -50, targetValue: 100, weight: 1 }])).toBe(0);
   });
 
   it("混合 targetValue=0 和正常 KR", () => {

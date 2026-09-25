@@ -36,7 +36,10 @@ export async function POST(req: NextRequest) {
       where: { email: validated.email },
     });
     if (existingUser) {
-      return NextResponse.json({ code: 409, message: apiMsg(req, "emailAlreadyRegistered"), data: null }, { status: 409 });
+      return NextResponse.json(
+        { code: 409, message: apiMsg(req, "emailAlreadyRegistered"), data: null },
+        { status: 409 },
+      );
     }
 
     // 1) Better Auth 创建用户 + 会话（写入 cookie）
@@ -152,6 +155,9 @@ export async function POST(req: NextRequest) {
       );
     }
     console.error("Register error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

@@ -21,7 +21,11 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerAdminInvite"), data: null },
@@ -108,7 +112,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
               result.plan === "pro"
                 ? apiMsg(req, "seatsFullRenew")
                 : apiMsg(req, "seatsFullUpgrade"),
-            data: { seatLimit: result.seatLimit }
+            data: { seatLimit: result.seatLimit },
           },
           { status: 402 },
         );
@@ -212,10 +216,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         {
           code: 402,
           message:
-            result.plan === "pro"
-              ? apiMsg(req, "seatsFullRenew")
-              : apiMsg(req, "seatsFullUpgrade"),
-          data: { seatLimit: result.seatLimit }
+            result.plan === "pro" ? apiMsg(req, "seatsFullRenew") : apiMsg(req, "seatsFullUpgrade"),
+          data: { seatLimit: result.seatLimit },
         },
         { status: 402 },
       );

@@ -77,9 +77,7 @@ export function FileGridItem({
               : "bg-[var(--surface)] border-[var(--border)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 hover:border-[var(--accent)]")
           }
         >
-          {selected && (
-            <Check size={12} className="text-[var(--accent-fg)]" strokeWidth={3} />
-          )}
+          {selected && <Check size={12} className="text-[var(--accent-fg)]" strokeWidth={3} />}
         </button>
       )}
 

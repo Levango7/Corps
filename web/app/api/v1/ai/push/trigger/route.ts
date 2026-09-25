@@ -27,11 +27,7 @@ import {
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import {
-  CAPABILITIES,
-  type PushCapability,
-  generatePush,
-} from "@/lib/ai/push-runner";
+import { CAPABILITIES, type PushCapability, generatePush } from "@/lib/ai/push-runner";
 
 const triggerSchema = z.object({
   wid: z.string().uuid(),

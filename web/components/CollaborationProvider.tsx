@@ -201,8 +201,7 @@ interface CollaborationProviderProps {
 }
 
 /** 默认 WS 服务端地址（开发态回退）。 */
-const DEFAULT_WS_URL =
-  process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? "ws://localhost:1234";
+const DEFAULT_WS_URL = process.env.NEXT_PUBLIC_COLLAB_WS_URL ?? "ws://localhost:1234";
 
 export function CollaborationProvider({
   documentId,
@@ -215,16 +214,12 @@ export function CollaborationProvider({
   // 协同上下文对象在首次挂载时创建，卸载时销毁。
   // 用 ref 持有，避免 React 严格模式双调用 effect 时重复创建（effect 内做幂等守卫）。
   const ctxRef = useRef<CollaborationContextValue | null>(null);
-  const [connectionStatus, setConnectionStatus] =
-    useState<ConnectionStatus>("connecting");
+  const [connectionStatus, setConnectionStatus] = useState<ConnectionStatus>("connecting");
   const [offlineSynced, setOfflineSynced] = useState(false);
   const [offlineTooLong, setOfflineTooLong] = useState(false);
 
   /** 关闭"离线过长"提示。 */
-  const dismissOfflineTooLong = useCallback(
-    () => setOfflineTooLong(false),
-    [],
-  );
+  const dismissOfflineTooLong = useCallback(() => setOfflineTooLong(false), []);
 
   // 稳定的用户信息（color 由 id 哈希得出），写入 awareness。
   const collabUser = useMemo<CollaborationUser>(
@@ -257,17 +252,12 @@ export function CollaborationProvider({
 
     // WebSocket 协同：CRDT 同步 + awareness 广播。
     // connect: false — 先不连接，等 IndexedDB synced 后再 connect()。
-    const wsProvider = new WebsocketProvider(
-      resolvedWsUrl,
-      documentId,
-      ydoc,
-      {
-        // 延迟连接：等离线数据加载完成后再 connect()，避免空文档闪现。
-        connect: false,
-        // 透传 token params（undefined 时 y-websocket 忽略）。
-        params: tokenParams,
-      },
-    );
+    const wsProvider = new WebsocketProvider(resolvedWsUrl, documentId, ydoc, {
+      // 延迟连接：等离线数据加载完成后再 connect()，避免空文档闪现。
+      connect: false,
+      // 透传 token params（undefined 时 y-websocket 忽略）。
+      params: tokenParams,
+    });
 
     // 写入 awareness user 信息（光标颜色 / 名称 / 头像）。
     // CollaborationCursor 扩展自动维护 cursor 字段，这里只设置 user 元数据。

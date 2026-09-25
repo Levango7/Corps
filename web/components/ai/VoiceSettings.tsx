@@ -129,9 +129,7 @@ export function VoiceSettings() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("loading")}
-        </div>
+        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("loading")}</div>
       </div>
     );
   }
@@ -174,9 +172,7 @@ export function VoiceSettings() {
           aria-label={t("enabled")}
           onClick={() => setEnabled(!enabled)}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
-            enabled
-              ? "bg-[var(--accent)]"
-              : "bg-[var(--surface-3)]"
+            enabled ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
           <span
@@ -263,11 +259,7 @@ export function VoiceSettings() {
           disabled={saving || !enabled}
           className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--accent)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--accent-fg)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50"
         >
-          {saving ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Save size={14} />
-          )}
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           <span>{saving ? t("saving") : t("save")}</span>
         </button>
         {saved && (

@@ -88,10 +88,9 @@ export function UsageLimitSettings({ wid }: UsageLimitSettingsProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await api<UsageLimit | null>(
-        `/api/v1/ai/usage/limits?workspaceId=${wid}`,
-        { signal: ac.signal },
-      );
+      const result = await api<UsageLimit | null>(`/api/v1/ai/usage/limits?workspaceId=${wid}`, {
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       if (result) {
         setForm({
@@ -160,10 +159,7 @@ export function UsageLimitSettings({ wid }: UsageLimitSettingsProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <Loader2
-          size={16}
-          className="animate-spin text-[var(--muted)]"
-        />
+        <Loader2 size={16} className="animate-spin text-[var(--muted)]" />
       </div>
     );
   }
@@ -171,9 +167,7 @@ export function UsageLimitSettings({ wid }: UsageLimitSettingsProps) {
   if (error) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <div className="text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </div>
+        <div className="text-[length:var(--text-sm)] text-[var(--danger)]">{error}</div>
       </div>
     );
   }
@@ -231,11 +225,7 @@ export function UsageLimitSettings({ wid }: UsageLimitSettingsProps) {
           disabled={saving}
           className="inline-flex items-center gap-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--accent)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
         >
-          {saving ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Save size={16} />
-          )}
+          {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
           {t("save")}
         </button>
       </div>

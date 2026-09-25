@@ -3,12 +3,11 @@
 import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
-export function buildProjectInsightSystemPrompts(feedbackExamples?: FeedbackExample[]): Record<
-  "progress" | "risk" | "summary" | "weekly",
-  string
-> {
+export function buildProjectInsightSystemPrompts(
+  feedbackExamples?: FeedbackExample[],
+): Record<"progress" | "risk" | "summary" | "weekly", string> {
   const prompts: Record<"progress" | "risk" | "summary" | "weekly", string> = {
-  progress: `你是项目进度分析助手。根据项目数据分析进度状况。
+    progress: `你是项目进度分析助手。根据项目数据分析进度状况。
 要求：1) 计算完成率 2) 识别趋势 3) 预测风险 4) markdown 格式 5) 仅基于给定数据
 
 ## 推理步骤
@@ -24,7 +23,7 @@ export function buildProjectInsightSystemPrompts(feedbackExamples?: FeedbackExam
 输入：总任务20，已完成12，进行中5
 输出：
 完成率 **60%**，趋势平稳。5 项进行中，3 项待启动，需关注资源分配。`,
-  risk: `你是项目风险识别助手。根据项目数据识别潜在风险。
+    risk: `你是项目风险识别助手。根据项目数据识别潜在风险。
 要求：1) 列出阻塞任务 2) 列出逾期任务 3) 识别 OKR 落后 4) markdown 格式 5) 仅基于给定数据
 
 ## 推理步骤
@@ -45,7 +44,7 @@ export function buildProjectInsightSystemPrompts(feedbackExamples?: FeedbackExam
 - **权限模块开发**（逾期 3 天）
 ## OKR 落后
 - Q3 用户增长目标进度 40%，预期 60%`,
-  summary: `你是项目概览助手。用简洁的语言总结当前项目状态。
+    summary: `你是项目概览助手。用简洁的语言总结当前项目状态。
 要求：1) 一句话总结 2) 关键指标 3) 注意事项 4) markdown 格式 5) 仅基于给定数据
 
 ## 推理步骤
@@ -63,7 +62,7 @@ export function buildProjectInsightSystemPrompts(feedbackExamples?: FeedbackExam
 项目 A 整体进度 70%，基本符合预期，需关注 2 项交付风险。
 - 完成率：70% | 进行中：6 | 逾期：1
 - 注意：接口联调任务存在依赖风险`,
-  weekly: `你是项目周报生成助手。根据本周数据生成工作周报。
+    weekly: `你是项目周报生成助手。根据本周数据生成工作周报。
 格式：1) markdown 2) 分"本周进展"、"风险与问题"、"下周建议"三部分 3) 用数据和事实说话 4) 不添加虚构内容
 
 ## 推理步骤
@@ -98,6 +97,7 @@ export function buildUserPrompt(
   context: string,
   scope: "progress" | "risk" | "summary" | "weekly",
 ): string {
-  const truncatedContext = context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
+  const truncatedContext =
+    context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
   return `分析维度：${scope}\n\n项目数据：\n${truncatedContext}`;
 }

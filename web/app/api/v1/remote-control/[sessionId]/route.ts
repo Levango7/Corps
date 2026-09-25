@@ -113,8 +113,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           code: 400,
-          message:
-            parsed.error.issues[0]?.message ?? apiMsg(req, "invalidBody"),
+          message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidBody"),
           data: null,
         },
         { status: 400 },
@@ -250,7 +249,10 @@ export async function PATCH(
 
     // 处理错误
     if (result.error) {
-      const errorMap: Record<string, { code: number; status: number; key: Parameters<typeof apiMsg>[1] }> = {
+      const errorMap: Record<
+        string,
+        { code: number; status: number; key: Parameters<typeof apiMsg>[1] }
+      > = {
         notFound: { code: 404, status: 404, key: "remoteControlSessionNotFound" },
         notParticipant: { code: 403, status: 403, key: "remoteControlNotParticipant" },
         notTarget: { code: 403, status: 403, key: "remoteControlNotTarget" },
@@ -387,7 +389,10 @@ export async function DELETE(
     );
 
     if (result.error) {
-      const errorMap: Record<string, { code: number; status: number; key: Parameters<typeof apiMsg>[1] }> = {
+      const errorMap: Record<
+        string,
+        { code: number; status: number; key: Parameters<typeof apiMsg>[1] }
+      > = {
         notFound: { code: 404, status: 404, key: "remoteControlSessionNotFound" },
         notParticipant: { code: 403, status: 403, key: "remoteControlNotParticipant" },
       };

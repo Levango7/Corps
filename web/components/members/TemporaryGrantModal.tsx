@@ -83,8 +83,7 @@ export function TemporaryGrantModal({
   );
   const [durationHours, setDurationHours] = useState(24);
   const [reason, setReason] = useState(existingGrant?.reason ?? "");
-  const existingActive =
-    existingGrant && new Date(existingGrant.expiresAt).getTime() > Date.now();
+  const existingActive = existingGrant && new Date(existingGrant.expiresAt).getTime() > Date.now();
 
   return (
     <div
@@ -113,14 +112,20 @@ export function TemporaryGrantModal({
         </div>
 
         <p className="text-[length:var(--text-sm)] text-[var(--muted)] mb-4">
-          {t("tempGrantDesc")} <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{target.name || target.email}</span>
+          {t("tempGrantDesc")}{" "}
+          <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
+            {target.name || target.email}
+          </span>
         </p>
 
         {/* 当前授权状态 */}
         {existingActive && (
           <div className="mb-4 px-3 py-2 rounded-[var(--radius-md)] bg-[color-mix(in_srgb,var(--warn)_10%,transparent)] border border-[color-mix(in_srgb,var(--warn)_20%,transparent)]">
             <div className="text-[length:var(--text-sm)] text-[var(--warn-fg)] font-[weight:var(--weight-medium)]">
-              {t("tempGrantCurrent", { role: existingGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember") })}
+              {t("tempGrantCurrent", {
+                role:
+                  existingGrant!.tempRole === "admin" ? t("tempGrantAdmin") : t("tempGrantMember"),
+              })}
             </div>
             <div className="text-[length:var(--text-xs)] text-[var(--meta)] mt-0.5">
               {formatExpiry(existingGrant!.expiresAt, t)}
@@ -203,7 +208,11 @@ export function TemporaryGrantModal({
             disabled={busy}
             className="h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
-            {busy ? t("tempGrantSubmitting") : existingActive ? t("tempGrantUpdate") : t("grantTempPermission")}
+            {busy
+              ? t("tempGrantSubmitting")
+              : existingActive
+                ? t("tempGrantUpdate")
+                : t("grantTempPermission")}
           </button>
         </div>
       </div>

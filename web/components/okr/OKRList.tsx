@@ -105,9 +105,7 @@ export function OKRList({
         </button>
       </div>
 
-      {error && (
-        <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>
-      )}
+      {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {loading ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">

@@ -60,9 +60,7 @@ export function ObjectiveDetailPanel({
     setLoading(true);
     setError("");
     try {
-      const data = await api<ObjectiveDetailData>(
-        `/api/v1/workspaces/${wid}/objectives/${oid}`,
-      );
+      const data = await api<ObjectiveDetailData>(`/api/v1/workspaces/${wid}/objectives/${oid}`);
       setObj(data);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("noObjectives"));
@@ -93,10 +91,9 @@ export function ObjectiveDetailPanel({
   async function deleteKr(krid: string) {
     if (!window.confirm(t("confirmDelete"))) return;
     try {
-      await api(
-        `/api/v1/workspaces/${wid}/objectives/${oid}/key-results/${krid}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/workspaces/${wid}/objectives/${oid}/key-results/${krid}`, {
+        method: "DELETE",
+      });
       await fetchDetail();
       onChanged?.();
     } catch (e) {

@@ -9,21 +9,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
 /** 合法角色枚举（与 schema 注释保持一致） */
-const ROLE_VALUES = [
-  "task_breaker",
-  "doc_writer",
-  "follow_upper",
-  "analyst",
-] as const;
+const ROLE_VALUES = ["task_breaker", "doc_writer", "follow_upper", "analyst"] as const;
 
 /** 合法模型枚举（与 deepseek.ts 保持一致） */
 const MODEL_VALUES = ["deepseek-chat", "deepseek-reasoner"] as const;
@@ -40,8 +32,7 @@ const updateSchema = z.object({
 });
 
 /** UUID 正则校验 */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 从 URL 路径提取 Agent ID，并校验是否为合法 UUID */
 function extractId(req: NextRequest): string | null {

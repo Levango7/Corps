@@ -111,7 +111,9 @@ describe("DocumentEditor - 导出 PDF", () => {
   });
 
   it("打印容器（print-area）含标题与 markdown 渲染结果", () => {
-    const { container } = renderWithToast(<DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />);
+    const { container } = renderWithToast(
+      <DocumentEditor wid="ws-1" id="doc-1" initial={INITIAL} />,
+    );
     const area = container.querySelector(".print-area");
     expect(area).not.toBeNull();
     expect(area).toHaveTextContent("测试文档");

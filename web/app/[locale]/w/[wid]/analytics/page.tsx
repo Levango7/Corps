@@ -151,7 +151,10 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       </div>
 
       {/* 北极星卡 + 概览卡 — 轻微视差（应用内 ≤ 10px） */}
-      <Parallax offset={5} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <Parallax
+        offset={5}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]"
+      >
         {/* WAW 北极星卡（占 2 列，突出展示） */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)]">
           <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-2)]">
@@ -180,7 +183,10 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
       </Parallax>
 
       {/* 次级概览：会话数 + 日均事件 + 活跃用户（过渡） — 轻微视差 */}
-      <Parallax offset={3} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]">
+      <Parallax
+        offset={3}
+        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)] mb-[var(--space-6)]"
+      >
         <StatCard icon={Layers} label={t("sessions")} value={data.sessions} color="var(--accent)" />
         <StatCard
           icon={TrendingUp}
@@ -345,7 +351,9 @@ function FunnelSection({
         <Filter size={16} className="text-[var(--muted)]" />
         {title}
       </h2>
-      <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-4)]">{description}</p>
+      <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-4)]">
+        {description}
+      </p>
       <div className="space-y-[var(--space-3)]">
         {steps.map((step, i) => {
           const widthPct = (step.users / maxFunnel) * 100;
@@ -546,7 +554,10 @@ function AnalyticsSkeleton() {
         <Skeleton className="h-5 w-28 mb-[var(--space-4)]" />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[var(--space-3)]">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-[var(--space-3)]">
+            <div
+              key={i}
+              className="bg-[var(--surface-2)] rounded-[var(--radius-sm)] p-[var(--space-3)]"
+            >
               <Skeleton className="h-3 w-8 mx-auto mb-[var(--space-2)]" />
               <Skeleton className="h-7 w-12 mx-auto mb-[var(--space-1)]" />
               <Skeleton className="h-3 w-10 mx-auto" />

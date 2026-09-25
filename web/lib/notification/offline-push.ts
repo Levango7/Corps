@@ -291,9 +291,7 @@ export async function dispatchOfflineNotification(
  * 创建应用内 Notification 记录（工作区级，走 RLS 事务）。
  * 失败时记错误但不抛出（尽力而为，不阻断调用方业务流程）。
  */
-async function createNotificationRecord(
-  opts: DispatchOfflineNotificationOpts,
-): Promise<void> {
+async function createNotificationRecord(opts: DispatchOfflineNotificationOpts): Promise<void> {
   try {
     await runWithWorkspace(
       opts.workspaceId,

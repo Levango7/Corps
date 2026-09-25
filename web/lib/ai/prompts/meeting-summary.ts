@@ -80,21 +80,15 @@ JSON schema：
  * @param meetingTitle 可选的会议标题（如已知道会议名称，传入可提升生成质量）
  * @returns user prompt 字符串
  */
-export function buildMeetingSummaryUserPrompt(
-  transcript: string,
-  meetingTitle?: string,
-): string {
+export function buildMeetingSummaryUserPrompt(transcript: string, meetingTitle?: string): string {
   // 截断过长的转写文本，避免超出 DeepSeek context window
   const MAX_TRANSCRIPT_LENGTH = 30000;
   const truncatedTranscript =
     transcript.length > MAX_TRANSCRIPT_LENGTH
-      ? transcript.slice(0, MAX_TRANSCRIPT_LENGTH) +
-        "\n\n[... 转录文本已截断 ...]"
+      ? transcript.slice(0, MAX_TRANSCRIPT_LENGTH) + "\n\n[... 转录文本已截断 ...]"
       : transcript;
 
-  const titleLine = meetingTitle?.trim()
-    ? `会议标题：${meetingTitle.trim()}\n\n`
-    : "";
+  const titleLine = meetingTitle?.trim() ? `会议标题：${meetingTitle.trim()}\n\n` : "";
 
   return `${titleLine}会议转写文本：
 ${truncatedTranscript}

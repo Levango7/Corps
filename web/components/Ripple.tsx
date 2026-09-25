@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  useState,
-  useRef,
-  useCallback,
-  type ReactNode,
-  type MouseEvent,
-} from "react";
+import { useState, useRef, useCallback, type ReactNode, type MouseEvent } from "react";
 
 /**
  * Ripple — 按钮点击涟漪扩散效果。
@@ -59,10 +53,7 @@ export function Ripple({ children, className }: RippleProps) {
   }, []);
 
   return (
-    <span
-      className={`relative overflow-hidden ${className ?? ""}`}
-      onClick={handleClick}
-    >
+    <span className={`relative overflow-hidden ${className ?? ""}`} onClick={handleClick}>
       {children}
       {ripples.map((r) => (
         <span

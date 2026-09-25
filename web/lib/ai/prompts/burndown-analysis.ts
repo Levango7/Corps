@@ -10,7 +10,6 @@
 //     "insights": string[]
 //   }
 
-
 import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
@@ -35,7 +34,8 @@ export interface AnalysisPeriod {
  * @param feedbackExamples 可选的正面反馈 few-shot 示例
  */
 export function buildBurndownSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是项目管理专家，擅长燃尽图分析。根据任务数据生成燃尽图分析结果。
+  return appendFeedbackShot(
+    `你是项目管理专家，擅长燃尽图分析。根据任务数据生成燃尽图分析结果。
 要求：
 1) 计算理想燃尽线（从期初任务总量线性递减到 0）
 2) 计算实际燃尽线（按日期累计已完成任务数，剩余 = 总量 - 已完成）
@@ -69,7 +69,9 @@ export function buildBurndownSystemPrompt(feedbackExamples?: FeedbackExample[]):
 ## 示例
 输入：周期 2026-09-09 至 2026-09-15，10 个任务，截至 09-13 完成 6 个
 输出：
-{"summary":"进度符合预期，预计按期完成","idealLine":[{"date":"2026-09-09","remaining":10},{"date":"2026-09-10","remaining":8},{"date":"2026-09-11","remaining":6},{"date":"2026-09-12","remaining":4},{"date":"2026-09-13","remaining":2},{"date":"2026-09-14","remaining":1},{"date":"2026-09-15","remaining":0}],"actualLine":[{"date":"2026-09-09","remaining":10},{"date":"2026-09-10","remaining":9},{"date":"2026-09-11","remaining":7},{"date":"2026-09-12","remaining":5},{"date":"2026-09-13","remaining":4}],"predictedCompletion":"2026-09-15","deviation":"基本吻合","insights":["进度符合预期","建议关注剩余 4 个任务的资源分配"]}`, feedbackExamples);
+{"summary":"进度符合预期，预计按期完成","idealLine":[{"date":"2026-09-09","remaining":10},{"date":"2026-09-10","remaining":8},{"date":"2026-09-11","remaining":6},{"date":"2026-09-12","remaining":4},{"date":"2026-09-13","remaining":2},{"date":"2026-09-14","remaining":1},{"date":"2026-09-15","remaining":0}],"actualLine":[{"date":"2026-09-09","remaining":10},{"date":"2026-09-10","remaining":9},{"date":"2026-09-11","remaining":7},{"date":"2026-09-12","remaining":5},{"date":"2026-09-13","remaining":4}],"predictedCompletion":"2026-09-15","deviation":"基本吻合","insights":["进度符合预期","建议关注剩余 4 个任务的资源分配"]}`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -78,10 +80,7 @@ export function buildBurndownSystemPrompt(feedbackExamples?: FeedbackExample[]):
  * @param tasks 任务列表
  * @param period 分析周期
  */
-export function buildBurndownUserPrompt(
-  tasks: BurndownTask[],
-  period: AnalysisPeriod,
-): string {
+export function buildBurndownUserPrompt(tasks: BurndownTask[], period: AnalysisPeriod): string {
   const startStr = period.start.toISOString().split("T")[0];
   const endStr = period.end.toISOString().split("T")[0];
   const taskLines = tasks.map((t) => {
@@ -90,9 +89,10 @@ export function buildBurndownUserPrompt(
     const updated = t.updatedAt.toISOString().split("T")[0];
     return `- 标题: ${t.title} | 状态: ${t.status} | 截止: ${due} | 创建: ${created} | 更新: ${updated}`;
   });
-  const truncated = taskLines.length > 200
-    ? taskLines.slice(0, 200).join("\n") + "\n\n[任务列表已截断，仅显示前 200 条]"
-    : taskLines.join("\n");
+  const truncated =
+    taskLines.length > 200
+      ? taskLines.slice(0, 200).join("\n") + "\n\n[任务列表已截断，仅显示前 200 条]"
+      : taskLines.join("\n");
   return `分析周期：${startStr} 至 ${endStr}
 
 任务数据（共 ${tasks.length} 条）：

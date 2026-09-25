@@ -1,4 +1,3 @@
-
 import { Fragment, type ReactNode } from "react";
 
 /**
@@ -122,7 +121,7 @@ function renderBlocks(md: string): ReactNode[] {
           : level === 2
             ? "text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mt-[var(--space-3)] mb-[var(--space-2)]"
             : "text-[length:var(--text-base)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mt-[var(--space-3)] mb-[var(--space-1)]";
-      const Tag = (`h${level}` as "h1" | "h2" | "h3");
+      const Tag = `h${level}` as "h1" | "h2" | "h3";
       blocks.push(
         <Tag key={`blk-${key++}`} className={cls}>
           {renderInline(text, `h-${key}`)}
@@ -172,7 +171,10 @@ function renderBlocks(md: string): ReactNode[] {
         i++;
       }
       blocks.push(
-        <ul key={`blk-${key++}`} className="my-[var(--space-2)] ml-[var(--space-5)] list-disc text-[var(--fg)] space-y-1">
+        <ul
+          key={`blk-${key++}`}
+          className="my-[var(--space-2)] ml-[var(--space-5)] list-disc text-[var(--fg)] space-y-1"
+        >
           {items.map((item, ii) => (
             <li key={`li-${key}-${ii}`}>{renderInline(item, `li-${key}-${ii}`)}</li>
           ))}
@@ -189,7 +191,10 @@ function renderBlocks(md: string): ReactNode[] {
         i++;
       }
       blocks.push(
-        <ol key={`blk-${key++}`} className="my-[var(--space-2)] ml-[var(--space-5)] list-decimal text-[var(--fg)] space-y-1">
+        <ol
+          key={`blk-${key++}`}
+          className="my-[var(--space-2)] ml-[var(--space-5)] list-decimal text-[var(--fg)] space-y-1"
+        >
           {items.map((item, ii) => (
             <li key={`ol-${key}-${ii}`}>{renderInline(item, `ol-${key}-${ii}`)}</li>
           ))}
@@ -215,7 +220,10 @@ function renderBlocks(md: string): ReactNode[] {
     }
     if (paraLines.length > 0) {
       blocks.push(
-        <p key={`blk-${key++}`} className="my-[var(--space-2)] text-[var(--fg)] leading-[var(--leading-relaxed)]">
+        <p
+          key={`blk-${key++}`}
+          className="my-[var(--space-2)] text-[var(--fg)] leading-[var(--leading-relaxed)]"
+        >
           {paraLines.map((p, pi) => (
             <Fragment key={`p-${key}-${pi}`}>
               {renderInline(p, `p-${key}-${pi}`)}

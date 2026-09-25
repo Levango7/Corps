@@ -17,15 +17,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Workflow,
-  Zap,
-  Loader2,
-  CheckCircle2,
-  XCircle,
-  AlertCircle,
-  X,
-} from "lucide-react";
+import { Workflow, Zap, Loader2, CheckCircle2, XCircle, AlertCircle, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { FeedbackButtons } from "./FeedbackButtons";
@@ -160,9 +152,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
   async function executeSelected() {
     if (executing || !plan) return;
     // 选中 action 的全集索引，按升序排列——用于建立"全集索引 → results 数组索引"映射
-    const selectedIndexArray = Array.from(selectedIndices).sort(
-      (a, b) => a - b,
-    );
+    const selectedIndexArray = Array.from(selectedIndices).sort((a, b) => a - b);
     const selectedActions = selectedIndexArray.map((i) => plan.actions[i]);
     if (selectedActions.length === 0) return;
 
@@ -290,9 +280,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
               <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)]">
                 {t("summary")}
               </span>
-              <p className="text-[length:var(--text-sm)] text-[var(--fg)] mt-0.5">
-                {plan.summary}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--fg)] mt-0.5">{plan.summary}</p>
             </div>
 
             {/* reasoning */}
@@ -313,19 +301,14 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                 </span>
               </div>
               {plan.actions.length === 0 ? (
-                <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-                  {t("noActions")}
-                </p>
+                <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noActions")}</p>
               ) : (
                 <ul className="space-y-2">
                   {plan.actions.map((action, idx) => {
                     const checked = selectedIndices.has(idx);
                     const result = results?.get(idx);
                     return (
-                      <li
-                        key={idx}
-                        className="flex items-start gap-2 text-[length:var(--text-sm)]"
-                      >
+                      <li key={idx} className="flex items-start gap-2 text-[length:var(--text-sm)]">
                         {/* checkbox */}
                         <button
                           type="button"
@@ -334,12 +317,8 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                           disabled={executing}
                           className="shrink-0 mt-0.5 w-4 h-4 flex items-center justify-center rounded border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-1 focus-visible:ring-offset-[var(--bg)] disabled:opacity-50"
                           style={{
-                            borderColor: checked
-                              ? "var(--accent)"
-                              : "var(--border)",
-                            backgroundColor: checked
-                              ? "var(--accent)"
-                              : "transparent",
+                            borderColor: checked ? "var(--accent)" : "var(--border)",
+                            backgroundColor: checked ? "var(--accent)" : "transparent",
                           }}
                           aria-label={`${t("selectActions")} ${action.type}`}
                           aria-checked={checked}
@@ -376,9 +355,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                             <span
                               className="flex items-center gap-1 mt-1 text-[length:var(--text-xs)]"
                               style={{
-                                color: result.success
-                                  ? "var(--success-fg)"
-                                  : "var(--danger-fg)",
+                                color: result.success ? "var(--success-fg)" : "var(--danger-fg)",
                               }}
                             >
                               {result.success ? (
@@ -386,9 +363,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                               ) : (
                                 <XCircle size={14} className="shrink-0" />
                               )}
-                              {result.success
-                                ? t("success")
-                                : t("failure")}
+                              {result.success ? t("success") : t("failure")}
                             </span>
                           )}
                         </div>
@@ -405,10 +380,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
                 <button
                   type="button"
                   onClick={executeSelected}
-                  disabled={
-                    executing ||
-                    selectedIndices.size === 0
-                  }
+                  disabled={executing || selectedIndices.size === 0}
                   className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                 >
                   {executing ? (
@@ -431,11 +403,7 @@ export default function OrchestrationPanel({ wid }: OrchestrationPanelProps) {
         {/* AI 结果反馈按钮 */}
         {plan && (
           <div className="px-5 py-3.5 border-t border-[var(--border-soft)]">
-            <FeedbackButtons
-              capability="orchestrate"
-              workspaceId={wid}
-              originalOutput={plan}
-            />
+            <FeedbackButtons capability="orchestrate" workspaceId={wid} originalOutput={plan} />
           </div>
         )}
       </div>

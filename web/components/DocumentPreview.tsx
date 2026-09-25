@@ -16,12 +16,7 @@
 
 import { useMemo } from "react";
 import { useTranslations } from "next-intl";
-import {
-  FileText,
-  Code2,
-  Image as ImageIcon,
-  Eye,
-} from "lucide-react";
+import { FileText, Code2, Image as ImageIcon, Eye } from "lucide-react";
 import Markdown from "@/components/Markdown";
 
 /** 预览文档类型 */
@@ -54,14 +49,11 @@ function detectLang(content: string, hint?: string): string {
   return "text";
 }
 
-export function DocumentPreview({
-  document: doc,
-  maxHeight = "70dvh",
-}: DocumentPreviewProps) {
+export function DocumentPreview({ document: doc, maxHeight = "70dvh" }: DocumentPreviewProps) {
   const t = useTranslations("document");
 
   const lang = useMemo(
-    () => (doc.type === "code" ? detectLang(doc.content, doc.lang) : doc.lang ?? ""),
+    () => (doc.type === "code" ? detectLang(doc.content, doc.lang) : (doc.lang ?? "")),
     [doc.type, doc.content, doc.lang],
   );
 
@@ -94,10 +86,7 @@ export function DocumentPreview({
       </header>
 
       {/* 内容区 */}
-      <div
-        className="flex-1 min-h-0 overflow-auto"
-        style={{ maxHeight }}
-      >
+      <div className="flex-1 min-h-0 overflow-auto" style={{ maxHeight }}>
         {doc.type === "markdown" && (
           <div className="prose prose-sm max-w-none p-[var(--space-6)]">
             <Markdown source={doc.content} />

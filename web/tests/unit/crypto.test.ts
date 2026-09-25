@@ -50,10 +50,7 @@ describe("crypto - AES-256-GCM 加密/解密", () => {
 
   it("支持 base64 编码的密钥", () => {
     // 32 字节 base64
-    vi.stubEnv(
-      "CALENDAR_CRYPTO_KEY",
-      Buffer.alloc(32, 7).toString("base64"),
-    );
+    vi.stubEnv("CALENDAR_CRYPTO_KEY", Buffer.alloc(32, 7).toString("base64"));
     const plaintext = "with base64 key";
     const encrypted = encrypt(plaintext);
     const decrypted = decrypt(encrypted);

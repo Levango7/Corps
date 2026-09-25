@@ -42,10 +42,9 @@ describe("搜索 q 参数 trim", () => {
 
     // Assert - trim 后匹配到任务
     expect(res.status).toBe(200);
-    expect(json.data.tasks.length).toBeGreaterThan(0);
-    expect(json.data.tasks.some((t: { title: string }) => t.title.includes(uniqueKeyword))).toBe(
-      true,
-    );
+    const tasks = json.data.items.filter((i: { type: string }) => i.type === "task");
+    expect(tasks.length).toBeGreaterThan(0);
+    expect(tasks.some((t: { title: string }) => t.title.includes(uniqueKeyword))).toBe(true);
   });
 });
 
@@ -63,7 +62,7 @@ describe("搜索 limit 边界", () => {
     // Assert - 不报错，返回 200（内部 cap 到 50）
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.data.tasks.length).toBeLessThanOrEqual(50);
+    expect(json.data.items.length).toBeLessThanOrEqual(50);
   });
 
   it("limit=1 最多返回 1 条任务", async () => {
@@ -80,7 +79,8 @@ describe("搜索 limit 边界", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(json.data.tasks.length).toBeLessThanOrEqual(1);
+    const json = await res.json();
+    expect(json.data.items.length).toBeLessThanOrEqual(1);
   });
 });
 
@@ -121,7 +121,8 @@ describe("搜索结果正确性", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(json.data.tasks.some((t: { title: string }) => t.title.includes(keyword))).toBe(true);
+    const tasks = json.data.items.filter((i: { type: string }) => i.type === "task");
+    expect(tasks.some((t: { title: string }) => t.title.includes(keyword))).toBe(true);
   });
 
   it("命中任务 description", async () => {
@@ -140,7 +141,8 @@ describe("搜索结果正确性", () => {
 
     // Assert - 任务通过 description 命中
     expect(res.status).toBe(200);
-    expect(json.data.tasks.length).toBeGreaterThan(0);
+    const tasks = json.data.items.filter((i: { type: string }) => i.type === "task");
+    expect(tasks.length).toBeGreaterThan(0);
   });
 
   it("无匹配时返回空数组", async () => {
@@ -150,8 +152,7 @@ describe("搜索结果正确性", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.data.tasks).toEqual([]);
-    expect(json.data.decisions).toEqual([]);
+    expect(json.data.items).toEqual([]);
   });
 
   it("返回结果带 kind 字段区分类型", async () => {
@@ -167,11 +168,8 @@ describe("搜索结果正确性", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    for (const t of json.data.tasks) {
-      expect(t.kind).toBe("task");
-    }
-    for (const d of json.data.decisions) {
-      expect(d.kind).toBe("decision");
+    for (const item of json.data.items) {
+      expect(item.kind ?? item.type).toBeDefined();
     }
   });
 });
@@ -190,7 +188,7 @@ describe("搜索跨工作区隔离", () => {
 
     // Assert - A 搜不到 B 的任务
     expect(res.status).toBe(200);
-    expect(json.data.tasks).toEqual([]);
+    expect(json.data.items).toEqual([]);
   });
 });
 

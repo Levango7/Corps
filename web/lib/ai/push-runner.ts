@@ -27,10 +27,7 @@ import {
   buildDailyBriefingUserPrompt,
   type WorkspaceContext,
 } from "@/lib/ai/prompts/daily-briefing";
-import {
-  buildRiskAlertPrompt,
-  buildRiskAlertUserPrompt,
-} from "@/lib/ai/prompts/risk-alert";
+import { buildRiskAlertPrompt, buildRiskAlertUserPrompt } from "@/lib/ai/prompts/risk-alert";
 import {
   buildProgressAnomalyPrompt,
   buildProgressAnomalyUserPrompt,
@@ -38,11 +35,7 @@ import {
 import { logger } from "@/lib/logger";
 
 /** 推送能力枚举 */
-export const CAPABILITIES = [
-  "daily_briefing",
-  "risk_alert",
-  "progress_anomaly",
-] as const;
+export const CAPABILITIES = ["daily_briefing", "risk_alert", "progress_anomaly"] as const;
 export type PushCapability = (typeof CAPABILITIES)[number];
 
 /** 各 capability 的上下文聚合范围 */
@@ -62,12 +55,7 @@ export const SCOPES_BY_CAPABILITY: Record<PushCapability, AiContextScope[]> = {
     "okr:progress",
     "approvals:overdue",
   ],
-  progress_anomaly: [
-    "okr:progress",
-    "time:week",
-    "tasks:completed:today",
-    "tasks:created:today",
-  ],
+  progress_anomaly: ["okr:progress", "time:week", "tasks:completed:today", "tasks:created:today"],
 };
 
 /** 各 capability 的 prompt builder（system + user） */
@@ -114,8 +102,7 @@ export function extractPushContent(
     typeof obj.title === "string" && obj.title.trim()
       ? safeSlice(obj.title, 200)
       : `${capability} 推送`;
-  const summary =
-    typeof obj.summary === "string" ? safeSlice(obj.summary, 5000) : "";
+  const summary = typeof obj.summary === "string" ? safeSlice(obj.summary, 5000) : "";
 
   return { title, summary, detail: obj as Prisma.InputJsonValue };
 }

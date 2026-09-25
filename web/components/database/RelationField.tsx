@@ -19,13 +19,7 @@
  */
 
 import type { DatabaseField, DatabaseRecord } from "@prisma/client";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactElement,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type ReactElement } from "react";
 import { Link2, Plus, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -52,10 +46,7 @@ export interface RelationFieldProps {
  * 安全读取 DatabaseRecord.data 中某个字段的值并转为显示字符串。
  * data 是 Prisma JsonValue，仅当为非数组 object 时按字段键读取。
  */
-function readFieldDisplayValue(
-  record: DatabaseRecord,
-  fieldId: string,
-): string {
+function readFieldDisplayValue(record: DatabaseRecord, fieldId: string): string {
   const data = record.data;
   if (typeof data !== "object" || data === null || Array.isArray(data)) {
     return "";
@@ -77,11 +68,7 @@ function resolveDisplayFieldId(
   targetFields: DatabaseField[],
 ): string | undefined {
   const opts = field.options;
-  if (
-    typeof opts === "object" &&
-    opts !== null &&
-    !Array.isArray(opts)
-  ) {
+  if (typeof opts === "object" && opts !== null && !Array.isArray(opts)) {
     const raw = opts as Record<string, unknown>;
     if (typeof raw.displayFieldId === "string") {
       return raw.displayFieldId;
@@ -114,10 +101,7 @@ export function RelationField({
 
   // 规范化当前值为 string[]
   const ids: string[] = useMemo(
-    () =>
-      Array.isArray(value)
-        ? value.filter((v): v is string => typeof v === "string")
-        : [],
+    () => (Array.isArray(value) ? value.filter((v): v is string => typeof v === "string") : []),
     [value],
   );
 
@@ -136,10 +120,7 @@ export function RelationField({
   useEffect(() => {
     if (!searchOpen) return;
     function handleMouseDown(e: MouseEvent): void {
-      if (
-        containerRef.current &&
-        !containerRef.current.contains(e.target as Node)
-      ) {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
         setSearchOpen(false);
         setQuery("");
       }
@@ -162,9 +143,7 @@ export function RelationField({
     return relatedRecords.filter((r) => {
       if (ids.includes(r.id)) return false;
       if (q === "") return true;
-      const label = displayFieldId
-        ? readFieldDisplayValue(r, displayFieldId)
-        : r.id;
+      const label = displayFieldId ? readFieldDisplayValue(r, displayFieldId) : r.id;
       return label.toLowerCase().includes(q);
     });
   }, [searchOpen, query, relatedRecords, ids, displayFieldId]);
@@ -186,10 +165,7 @@ export function RelationField({
   // 渲染 chip
   const renderChip = (id: string, editable: boolean): ReactElement => {
     const record = relatedMap.get(id);
-    const label =
-      record && displayFieldId
-        ? readFieldDisplayValue(record, displayFieldId)
-        : id;
+    const label = record && displayFieldId ? readFieldDisplayValue(record, displayFieldId) : id;
     return (
       <span
         key={id}
@@ -232,9 +208,7 @@ export function RelationField({
     <div ref={containerRef} className="relative w-full h-full">
       <div className="w-full h-full flex items-center gap-1 px-2 flex-wrap content-center">
         {ids.length === 0 && !searchOpen && (
-          <span className="text-[length:var(--text-sm)] text-[var(--meta)]">
-            {t("noRelation")}
-          </span>
+          <span className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noRelation")}</span>
         )}
         {ids.map((id) => renderChip(id, true))}
         <button
@@ -271,9 +245,7 @@ export function RelationField({
               </div>
             ) : (
               filteredRecords.map((r) => {
-                const label = displayFieldId
-                  ? readFieldDisplayValue(r, displayFieldId)
-                  : r.id;
+                const label = displayFieldId ? readFieldDisplayValue(r, displayFieldId) : r.id;
                 return (
                   <button
                     key={r.id}

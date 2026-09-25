@@ -253,20 +253,23 @@ export default function TemplateMarket({
                 <div className="flex items-center justify-between mb-2">
                   <span
                     className="inline-flex items-center h-6 px-2 rounded-[var(--radius-pill)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]"
-                    style={{ backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`, color }}
+                    style={{
+                      backgroundColor: `color-mix(in srgb, ${color} 12%, transparent)`,
+                      color,
+                    }}
                   >
                     {t(tpl.category as "project" | "meeting" | "review" | "onboarding" | "custom")}
                   </span>
                   <span className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--meta)]">
                     {tpl.isPublic ? (
                       <>
-        <Users size={14} />
-        <span>{t("public")}</span>
+                        <Users size={14} />
+                        <span>{t("public")}</span>
                       </>
                     ) : (
                       <>
-        <X size={14} />
-        <span>{t("private")}</span>
+                        <X size={14} />
+                        <span>{t("private")}</span>
                       </>
                     )}
                   </span>
@@ -289,9 +292,7 @@ export default function TemplateMarket({
                           key={`${step.capability}_${idx}`}
                           className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
                         >
-                          <span
-                            className="shrink-0 w-4 h-4 flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--meta)] font-[weight:var(--weight-medium)]"
-                          >
+                          <span className="shrink-0 w-4 h-4 flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--meta)] font-[weight:var(--weight-medium)]">
                             {idx + 1}
                           </span>
                           <span className="truncate">{step.name}</span>

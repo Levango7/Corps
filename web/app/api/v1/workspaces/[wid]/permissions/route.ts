@@ -48,10 +48,7 @@ function permsToMap(
 
 // ─── GET：返回所有角色的合并权限矩阵 ───
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -132,10 +129,7 @@ const patchSchema = z.object({
   actions: z.array(z.enum(["read", "create", "update", "delete"])),
 });
 
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

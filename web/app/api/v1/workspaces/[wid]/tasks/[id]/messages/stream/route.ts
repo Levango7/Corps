@@ -3,7 +3,6 @@ import { getWorkspaceContext, runWithWorkspace, withGuc } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
-
   emitChatEvent,
   acquireSseSlot,
   subscribeChatEvents,
@@ -57,7 +56,10 @@ export async function GET(
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   }
 
   // 校验任务确实属于本工作区（防跨租户订阅）
@@ -67,11 +69,13 @@ export async function GET(
     ctx.payload.sub,
   );
   if (!taskExists) {
-    return NextResponse.json({ code: 404, message: apiMsg(req, "taskNotFound"), data: null }, { status: 404 });
+    return NextResponse.json(
+      { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
+      { status: 404 },
+    );
   }
 
   const userId = ctx.payload.sub;
-
 
   // 断线重连补偿：补拉 since 之后的所有消息
   const sinceParam = req.nextUrl.searchParams.get("since");

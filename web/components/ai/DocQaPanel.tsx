@@ -162,10 +162,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
         // Resolvable 函数：每次请求时解析，读 ref 最新值
         body: () => ({
           wid,
-          docIds:
-            selectedDocIdsRef.current.size > 0
-              ? [...selectedDocIdsRef.current]
-              : undefined,
+          docIds: selectedDocIdsRef.current.size > 0 ? [...selectedDocIdsRef.current] : undefined,
         }),
         // 将 AI SDK 标准的 { messages } 转为后端自定义的 { wid, question, docIds }
         prepareSendMessagesRequest: ({ messages, body }) => {
@@ -313,10 +310,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
   );
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--surface)]"
-      aria-label={t("title")}
-    >
+    <div className="flex h-full flex-col bg-[var(--surface)]" aria-label={t("title")}>
       {/* 标题栏 */}
       <header className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
@@ -346,9 +340,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
         {/* 错误提示 */}
         {hasError && (
           <div className="mb-[var(--space-3)] flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--danger-soft)] px-[var(--space-3)] py-[var(--space-2)]">
-            <span className="text-[length:var(--text-sm)] text-[var(--danger)]">
-              {t("error")}
-            </span>
+            <span className="text-[length:var(--text-sm)] text-[var(--danger)]">{t("error")}</span>
           </div>
         )}
 
@@ -365,9 +357,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
               <div className="mt-[var(--space-2)]">
                 <div className="flex items-center gap-[var(--space-2)] text-[var(--muted)]">
                   <FileText size={14} />
-                  <span className="text-[length:var(--text-sm)]">
-                    {t("sources")}
-                  </span>
+                  <span className="text-[length:var(--text-sm)]">{t("sources")}</span>
                 </div>
                 <ul className="mt-[var(--space-1)] flex flex-wrap gap-[var(--space-2)]">
                   {currentSources.map((src, i) => (
@@ -386,17 +376,13 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
           /* Typing indicator */
           <div className="flex items-center gap-[var(--space-2)] rounded-[var(--radius-md)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-3)]">
             <Loader2 size={14} className="animate-spin text-[var(--muted)]" />
-            <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("asking")}
-            </span>
+            <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("asking")}</span>
           </div>
         ) : !hasError && history.length === 0 ? (
           /* 空状态 */
           <div className="flex items-center gap-[var(--space-2)] text-[var(--muted)]">
             <MessageSquare size={14} />
-            <span className="text-[length:var(--text-sm)]">
-              {t("noAnswer")}
-            </span>
+            <span className="text-[length:var(--text-sm)]">{t("noAnswer")}</span>
           </div>
         ) : null}
 
@@ -405,9 +391,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
           <div className="mt-[var(--space-4)]">
             <div className="mb-[var(--space-2)] flex items-center gap-[var(--space-2)] text-[var(--muted)]">
               <MessageSquare size={14} />
-              <span className="text-[length:var(--text-sm)]">
-                {t("history")}
-              </span>
+              <span className="text-[length:var(--text-sm)]">{t("history")}</span>
             </div>
             <div className="flex flex-col gap-[var(--space-2)]">
               {history.map((item) => (
@@ -453,9 +437,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
             className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-2)] py-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-3)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           >
             <FileText size={14} />
-            <span>
-              {selectedDocIds.size === 0 ? t("allDocs") : t("selectDocs")}
-            </span>
+            <span>{selectedDocIds.size === 0 ? t("allDocs") : t("selectDocs")}</span>
             {showDocSelect ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
             {selectedDocIds.size > 0 && (
               <span className="rounded-full bg-[var(--accent)] px-1.5 text-[var(--on-accent)]">
@@ -468,9 +450,7 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
               {docListLoading ? (
                 <div className="flex items-center gap-[var(--space-2)] py-[var(--space-2)] text-[var(--muted)]">
                   <Loader2 size={14} className="animate-spin" />
-                  <span className="text-[length:var(--text-xs)]">
-                    {t("noSources")}
-                  </span>
+                  <span className="text-[length:var(--text-xs)]">{t("noSources")}</span>
                 </div>
               ) : docList.length === 0 ? (
                 <p className="py-[var(--space-2)] text-center text-[length:var(--text-xs)] text-[var(--muted)]">

@@ -97,25 +97,15 @@ export function parseFieldOptions(options: unknown): FieldOptions {
   const parsed: FieldOptions = {};
   if (Array.isArray(raw.choices)) {
     parsed.choices = raw.choices
-      .filter(
-        (c): c is Record<string, unknown> =>
-          typeof c === "object" && c !== null,
-      )
-      .filter(
-        (c) => typeof c.id === "string" && typeof c.label === "string",
-      )
+      .filter((c): c is Record<string, unknown> => typeof c === "object" && c !== null)
+      .filter((c) => typeof c.id === "string" && typeof c.label === "string")
       .map((c, i) => {
         const choice: FieldChoice = {
           id: c.id as string,
           label: c.label as string,
         };
         const color = c.color;
-        if (
-          color === "accent" ||
-          color === "success" ||
-          color === "warn" ||
-          color === "danger"
-        ) {
+        if (color === "accent" || color === "success" || color === "warn" || color === "danger") {
           choice.color = color;
         } else {
           choice.color = COLOR_POOL[i % COLOR_POOL.length];
@@ -215,11 +205,7 @@ function TextControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
   const t = useTranslations("database.fieldControls");
   const str = typeof value === "string" ? value : "";
   if (readOnly) {
-    return (
-      <div className={str ? readonlyClass : emptyClass}>
-        {str || t("empty")}
-      </div>
-    );
+    return <div className={str ? readonlyClass : emptyClass}>{str || t("empty")}</div>;
   }
   return (
     <input
@@ -336,12 +322,7 @@ function SelectControl({ field, value, onChange, readOnly }: FieldControlProps):
 }
 
 // ─── 4. multiselect ─────────────────────────────────────────────────────────
-function MultiSelectControl({
-  field,
-  value,
-  onChange,
-  readOnly,
-}: FieldControlProps): ReactElement {
+function MultiSelectControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const opts = parseFieldOptions(field.options);
   const choices = opts.choices ?? [];
@@ -481,9 +462,7 @@ function DateControl({ field, value, onChange, readOnly }: FieldControlProps): R
           type="date"
           className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[length:var(--text-sm)] text-[var(--fg)]"
           value={start}
-          onChange={(e) =>
-            onChange({ start: e.target.value, end: end || undefined })
-          }
+          onChange={(e) => onChange({ start: e.target.value, end: end || undefined })}
         />
         <span className="text-[var(--meta)] text-[length:var(--text-sm)]">~</span>
         <input
@@ -532,9 +511,7 @@ function UserControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
   const t = useTranslations("database.fieldControls");
   const userId = typeof value === "string" ? value : "";
   if (readOnly) {
-    return (
-      <div className={userId ? readonlyClass : emptyClass}>{userId || t("empty")}</div>
-    );
+    return <div className={userId ? readonlyClass : emptyClass}>{userId || t("empty")}</div>;
   }
   return (
     <input
@@ -581,9 +558,7 @@ function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactEl
   const t = useTranslations("database.fieldControls");
   const email = typeof value === "string" ? value : "";
   if (readOnly) {
-    return (
-      <div className={email ? readonlyClass : emptyClass}>{email || t("empty")}</div>
-    );
+    return <div className={email ? readonlyClass : emptyClass}>{email || t("empty")}</div>;
   }
   return (
     <input
@@ -600,16 +575,8 @@ function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactEl
 function FormulaControl({ value }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const text =
-    typeof value === "string"
-      ? value
-      : value !== null && value !== undefined
-        ? String(value)
-        : "";
-  return (
-    <div className={text ? readonlyClass : emptyClass}>
-      {text || t("emptyDash")}
-    </div>
-  );
+    typeof value === "string" ? value : value !== null && value !== undefined ? String(value) : "";
+  return <div className={text ? readonlyClass : emptyClass}>{text || t("emptyDash")}</div>;
 }
 
 // ─── 11. relation ───────────────────────────────────────────────────────────
@@ -657,16 +624,8 @@ function RelationControl({ value, onChange, readOnly }: FieldControlProps): Reac
 function RollupControl({ value }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const text =
-    typeof value === "string"
-      ? value
-      : value !== null && value !== undefined
-        ? String(value)
-        : "";
-  return (
-    <div className={text ? readonlyClass : emptyClass}>
-      {text || t("emptyDash")}
-    </div>
-  );
+    typeof value === "string" ? value : value !== null && value !== undefined ? String(value) : "";
+  return <div className={text ? readonlyClass : emptyClass}>{text || t("emptyDash")}</div>;
 }
 
 // ─── 分发器 ─────────────────────────────────────────────────────────────────

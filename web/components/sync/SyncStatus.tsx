@@ -147,9 +147,7 @@ export default function SyncStatus({ workspaceId, size = "md" }: SyncStatusProps
 
       {/* 最后同步时间（synced/error 状态显示） */}
       {status === "synced" && lastSync !== null && (
-        <span className="text-[var(--meta)]">
-          · {formatRelativeTime(lastSync, t)}
-        </span>
+        <span className="text-[var(--meta)]">· {formatRelativeTime(lastSync, t)}</span>
       )}
 
       {/* 待同步操作数 badge */}

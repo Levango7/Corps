@@ -15,16 +15,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Bell,
-  Plus,
-  Trash2,
-  Power,
-  Loader2,
-  Zap,
-  Clock,
-  X,
-} from "lucide-react";
+import { Bell, Plus, Trash2, Power, Loader2, Zap, Clock, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 
@@ -143,10 +134,9 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
     async (schedule: PushSchedule) => {
       setActionLoading(`delete-${schedule.id}`);
       try {
-        await api(
-          `/api/v1/ai/push/schedules/${schedule.id}?wid=${encodeURIComponent(wid)}`,
-          { method: "DELETE" },
-        );
+        await api(`/api/v1/ai/push/schedules/${schedule.id}?wid=${encodeURIComponent(wid)}`, {
+          method: "DELETE",
+        });
         await loadSchedules();
       } catch (e) {
         console.error("[AiPushSettings] delete failed:", e);
@@ -261,9 +251,7 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
 
               {/* cron 表达式 */}
               <label className="flex flex-col gap-[var(--space-1)]">
-                <span className="text-[length:var(--text-xs)] text-[var(--fg-2)]">
-                  {t("cron")}
-                </span>
+                <span className="text-[length:var(--text-xs)] text-[var(--fg-2)]">{t("cron")}</span>
                 <input
                   type="text"
                   value={formCron}
@@ -287,9 +275,7 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
               </label>
 
               {formError && (
-                <p className="text-[length:var(--text-xs)] text-[var(--danger)]">
-                  {formError}
-                </p>
+                <p className="text-[length:var(--text-xs)] text-[var(--danger)]">{formError}</p>
               )}
 
               <button
@@ -312,14 +298,15 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
         {/* 计划列表 */}
         {loading ? (
           <div className="flex items-center justify-center py-[var(--space-8)]">
-            <Loader2 size={20} className="animate-spin text-[var(--meta)] motion-reduce:animate-none" />
+            <Loader2
+              size={20}
+              className="animate-spin text-[var(--meta)] motion-reduce:animate-none"
+            />
           </div>
         ) : schedules.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-[var(--space-2)] py-[var(--space-8)] text-center">
             <Bell size={24} className="text-[var(--meta)]" />
-            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("noRecords")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noRecords")}</p>
           </div>
         ) : (
           <ul className="flex flex-col gap-[var(--space-3)]">
@@ -332,9 +319,7 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
                   {/* 启用状态指示 */}
                   <span
                     className={`inline-block h-2 w-2 rounded-full ${
-                      schedule.enabled
-                        ? "bg-[var(--success)]"
-                        : "bg-[var(--meta)]"
+                      schedule.enabled ? "bg-[var(--success)]" : "bg-[var(--meta)]"
                     }`}
                     aria-label={schedule.enabled ? t("enabled") : t("disabled")}
                   />
@@ -345,9 +330,7 @@ export function AiPushSettings({ wid }: AiPushSettingsProps) {
                     </span>
                     <span className="flex items-center gap-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--fg-2)]">
                       <Clock size={14} className="text-[var(--meta)]" />
-                      <code className="font-[family-name:var(--font-mono)]">
-                        {schedule.cron}
-                      </code>
+                      <code className="font-[family-name:var(--font-mono)]">{schedule.cron}</code>
                       <span className="text-[var(--meta)]">·</span>
                       <span>{formatLastRun(schedule.lastRunAt)}</span>
                     </span>

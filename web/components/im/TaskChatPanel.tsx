@@ -77,14 +77,11 @@ export function TaskChatPanel({ workspaceId, taskId, currentUserId }: TaskChatPa
         </div>
         <div className="flex-1 flex flex-col items-center justify-center px-[var(--space-4)]">
           <AlertCircle size={24} className="text-[var(--danger)] mb-[var(--space-2)]" />
-          <p className="text-[length:var(--text-sm)] text-[var(--muted)] text-center">
-            {error}
-          </p>
+          <p className="text-[length:var(--text-sm)] text-[var(--muted)] text-center">{error}</p>
         </div>
       </div>
     );
   }
-
 
   // 正常显示聊天窗口
   if (!activeConversation) {
@@ -97,9 +94,7 @@ export function TaskChatPanel({ workspaceId, taskId, currentUserId }: TaskChatPa
           </span>
         </div>
         <div className="flex-1 flex items-center justify-center">
-          <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
-            {t("empty")}
-          </span>
+          <span className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("empty")}</span>
         </div>
       </div>
     );

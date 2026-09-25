@@ -61,8 +61,7 @@ export async function GET(req: NextRequest) {
 
   try {
     // 普通用户只能看自己的日志；owner/admin 可看全部
-    const isManager =
-      ctx.member.role === "owner" || ctx.member.role === "admin";
+    const isManager = ctx.member.role === "owner" || ctx.member.role === "admin";
 
     const where: { workspaceId: string; capability?: string; userId?: string } = {
       workspaceId: parsed.workspaceId,

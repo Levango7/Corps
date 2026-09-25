@@ -78,12 +78,7 @@ export interface MeetingRoomProps {
 }
 
 /** 连接状态机 */
-type ConnectionState =
-  | "joining"
-  | "connected"
-  | "reconnecting"
-  | "disconnected"
-  | "error";
+type ConnectionState = "joining" | "connected" | "reconnecting" | "disconnected" | "error";
 
 /** 录制状态 */
 type RecordingState = "idle" | "starting" | "active" | "stopping";
@@ -147,10 +142,9 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
     if (leftRef.current) return;
     leftRef.current = true;
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`,
-        { method: "POST" },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/leave`, {
+        method: "POST",
+      });
     } catch {
       // 离开失败不阻塞 UI
     }
@@ -202,13 +196,10 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
   const sendCallEndedMessage = useCallback(async () => {
     if (!conversationId) return;
     try {
-      await api(
-        `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`,
-        {
-          method: "POST",
-          body: JSON.stringify({ type: "call_ended", body: "" }),
-        },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`, {
+        method: "POST",
+        body: JSON.stringify({ type: "call_ended", body: "" }),
+      });
     } catch {
       // 发送 call_ended 失败不阻塞离开流程
     }
@@ -231,10 +222,9 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       if (conversationId) {
         try {
           const messagesUrl = `/api/v1/workspaces/${workspaceId}/conversations/${conversationId}/messages`;
-          const blob = new Blob(
-            [JSON.stringify({ type: "call_ended", body: "" })],
-            { type: "application/json" },
-          );
+          const blob = new Blob([JSON.stringify({ type: "call_ended", body: "" })], {
+            type: "application/json",
+          });
           navigator.sendBeacon(messagesUrl, blob);
         } catch {
           // sendBeacon 不可用时不阻塞
@@ -294,24 +284,19 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         try {
           const [me, detail] = await Promise.all([
             api<{ id: string }>("/api/v1/users/me"),
-            api<MeetingDetailForHost>(
-              `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}`,
-            ),
+            api<MeetingDetailForHost>(`/api/v1/workspaces/${workspaceId}/meetings/${meetingId}`),
           ]);
           if (cancelled) return;
           // host = 会议创建者 或 参与者中 role=host
           const isCreator = detail.createdBy === me.id;
-          const participantRole = detail.participants.find(
-            (p) => p.userId === me.id,
-          )?.role;
+          const participantRole = detail.participants.find((p) => p.userId === me.id)?.role;
           setIsHost(isCreator || participantRole === "host");
         } catch {
           // 获取 host 权限失败不阻塞会议，只是不显示录制按钮
         }
       } catch (e) {
         if (cancelled) return;
-        const is503 =
-          e instanceof ApiError && (e.status === 503 || e.code === 503);
+        const is503 = e instanceof ApiError && (e.status === 503 || e.code === 503);
         if (mountedRef.current) {
           setServiceUnavailable(is503);
           setErrorMsg(e instanceof Error ? e.message : t("connectionFailed"));
@@ -433,10 +418,9 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       // 开始录制
       setRecording("starting");
       try {
-        await api(
-          `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/recording/start`,
-          { method: "POST" },
-        );
+        await api(`/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/recording/start`, {
+          method: "POST",
+        });
         if (mountedRef.current) setRecording("active");
       } catch {
         if (mountedRef.current) setRecording("idle");
@@ -445,10 +429,9 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
       // 停止录制
       setRecording("stopping");
       try {
-        await api(
-          `/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/recording/stop`,
-          { method: "POST" },
-        );
+        await api(`/api/v1/workspaces/${workspaceId}/meetings/${meetingId}/recording/stop`, {
+          method: "POST",
+        });
         if (mountedRef.current) setRecording("idle");
       } catch {
         if (mountedRef.current) setRecording("active");
@@ -465,9 +448,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         aria-live="polite"
       >
         <Loader2 size={28} className="animate-spin text-[var(--accent)] mb-3" />
-        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("joining")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("joining")}</p>
       </div>
     );
   }
@@ -481,12 +462,8 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         aria-live="polite"
       >
         <Loader2 size={28} className="animate-spin text-[var(--accent)] mb-3" />
-        <p className="text-[length:var(--text-sm)] text-[var(--fg)] mb-2">
-          {t("reconnecting")}
-        </p>
-        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          {t("connectionFailed")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--fg)] mb-2">{t("reconnecting")}</p>
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("connectionFailed")}</p>
       </div>
     );
   }
@@ -542,9 +519,7 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         aria-live="polite"
       >
         <WifiOff size={28} className="text-[var(--muted)] mb-3" />
-        <p className="text-[length:var(--text-sm)] text-[var(--fg)] mb-4">
-          {t("disconnected")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--fg)] mb-4">{t("disconnected")}</p>
         <button
           type="button"
           onClick={handleBack}
@@ -704,9 +679,7 @@ function MeetingRoomControls({ isHost }: { isHost: boolean }) {
   const [transferTarget, setTransferTarget] = useState("");
   const handleTransferHost = useCallback(() => {
     if (!transferTarget) return;
-    const payload = new TextEncoder().encode(
-      JSON.stringify({ newHostId: transferTarget }),
-    );
+    const payload = new TextEncoder().encode(JSON.stringify({ newHostId: transferTarget }));
     void sendHostTransfer(payload, { reliable: true });
     setTransferTarget("");
   }, [transferTarget, sendHostTransfer]);
@@ -744,10 +717,7 @@ function MeetingRoomControls({ isHost }: { isHost: boolean }) {
             const raised = raisedHands[p.identity];
             const isLocal = p.identity === localParticipant.identity;
             return (
-              <li
-                key={p.identity}
-                className="flex items-center gap-1.5 py-0.5"
-              >
+              <li key={p.identity} className="flex items-center gap-1.5 py-0.5">
                 <span className="truncate flex-1">
                   {p.name ?? p.identity}
                   {isLocal && ` (${t("me")})`}
@@ -764,9 +734,7 @@ function MeetingRoomControls({ isHost }: { isHost: boolean }) {
                   <VideoOff size={11} className="text-[var(--muted)]" />
                 )}
                 {/* 举手标记 */}
-                {raised && (
-                  <Hand size={11} className="text-[var(--accent)] fill-current" />
-                )}
+                {raised && <Hand size={11} className="text-[var(--accent)] fill-current" />}
               </li>
             );
           })}

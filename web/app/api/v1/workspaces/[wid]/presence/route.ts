@@ -32,10 +32,7 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
  * 前端登录后每 2 分钟调用一次，刷新在线状态。
  * 响应：{ code: 0, data: { onlineAt: ISO }, message: "OK" }
  */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {
@@ -83,10 +80,7 @@ export async function POST(
  * 查询工作区所有成员 + 其 onlineAt 时间戳，最近 5 分钟内有心跳的标记为在线。
  * 响应：{ code: 0, data: { items: [{ userId, name, image, role, online, onlineAt }], total, onlineCount }, message }
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {

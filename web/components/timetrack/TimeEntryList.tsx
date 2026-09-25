@@ -100,7 +100,9 @@ export function TimeEntryList({ wid, refreshKey }: { wid: string; refreshKey?: n
         </button>
       </div>
 
-      {error && <p className="px-4 py-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
+      {error && (
+        <p className="px-4 py-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>
+      )}
 
       {loading ? (
         <div className="py-8 text-center text-[var(--muted)]">
@@ -152,7 +154,10 @@ export function TimeEntryList({ wid, refreshKey }: { wid: string; refreshKey?: n
                       <div>
                         {t("startTime")}: {new Date(e.startTime).toLocaleString()}
                         {e.endTime && (
-                          <> · {t("endTime")}: {new Date(e.endTime).toLocaleString()}</>
+                          <>
+                            {" "}
+                            · {t("endTime")}: {new Date(e.endTime).toLocaleString()}
+                          </>
                         )}
                       </div>
                       {e.task && (
@@ -160,9 +165,7 @@ export function TimeEntryList({ wid, refreshKey }: { wid: string; refreshKey?: n
                           {t("task")}: <span className="text-[var(--fg-2)]">{e.task.title}</span>
                         </div>
                       )}
-                      {e.description && (
-                        <div className="text-[var(--fg-2)]">{e.description}</div>
-                      )}
+                      {e.description && <div className="text-[var(--fg-2)]">{e.description}</div>}
                       {e.hourlyRate != null && e.hourlyRate > 0 && (
                         <div>
                           {t("hourlyRate")}: {e.hourlyRate}/h
@@ -274,7 +277,11 @@ function EditRow({
         <label className="flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5">
           {t("description")}
         </label>
-        <input value={description} onChange={(e) => setDescription(e.target.value)} className={fieldControl} />
+        <input
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className={fieldControl}
+        />
       </div>
       <div>
         <button

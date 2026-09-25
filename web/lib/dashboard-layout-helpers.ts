@@ -1,9 +1,5 @@
 import { z } from "zod";
-import {
-  normalizePrefData,
-  type DashboardPrefData,
-  type RGLItem,
-} from "./default-layouts";
+import { normalizePrefData, type DashboardPrefData, type RGLItem } from "./default-layouts";
 
 /**
  * F3 Widget 仪表盘 — 布局偏好 API 共享 helpers。

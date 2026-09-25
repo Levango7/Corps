@@ -166,48 +166,45 @@ export function MessageInput({
   }, [body]);
 
   // —— @提及检测：从光标位置往前找最近的 @ ——
-  const detectMention = useCallback(
-    (value: string, cursorPos: number) => {
-      // 从光标往前找 @
-      const before = value.slice(0, cursorPos);
-      const atIdx = before.lastIndexOf("@");
-      if (atIdx === -1) {
+  const detectMention = useCallback((value: string, cursorPos: number) => {
+    // 从光标往前找 @
+    const before = value.slice(0, cursorPos);
+    const atIdx = before.lastIndexOf("@");
+    if (atIdx === -1) {
+      setMention(null);
+      return;
+    }
+    // @ 后到光标的文本
+    const query = before.slice(atIdx + 1);
+    // @ 必须在行首或前面是空格（避免匹配邮箱里的 @）
+    if (atIdx > 0) {
+      const prevChar = before[atIdx - 1];
+      if (prevChar !== " " && prevChar !== "\n") {
         setMention(null);
         return;
       }
-      // @ 后到光标的文本
-      const query = before.slice(atIdx + 1);
-      // @ 必须在行首或前面是空格（避免匹配邮箱里的 @）
-      if (atIdx > 0) {
-        const prevChar = before[atIdx - 1];
-        if (prevChar !== " " && prevChar !== "\n") {
-          setMention(null);
-          return;
-        }
-      }
-      // query 中不能含空格或换行（提及词是连续的）
-      if (/\s/.test(query)) {
-        setMention(null);
-        return;
-      }
-      // 计算弹窗位置：textarea 上方
-      const el = textareaRef.current;
-      if (!el) {
-        setMention(null);
-        return;
-      }
-      const rect = el.getBoundingClientRect();
-      setMention({
-        start: atIdx,
-        query,
-        position: {
-          top: rect.top - 8, // 弹窗在输入框上方，留 8px 间距
-          left: rect.left,
-        },
-      });
-    },
-    [],
-  );
+    }
+    // query 中不能含空格或换行（提及词是连续的）
+    if (/\s/.test(query)) {
+      setMention(null);
+      return;
+    }
+    // 计算弹窗位置：textarea 上方
+    const el = textareaRef.current;
+    if (!el) {
+      setMention(null);
+      return;
+    }
+    const rect = el.getBoundingClientRect();
+    setMention({
+      start: atIdx,
+      query,
+      position: {
+        top: rect.top - 8, // 弹窗在输入框上方，留 8px 间距
+        left: rect.left,
+      },
+    });
+  }, []);
 
   // —— 文本变化处理 ——
   const handleChange = useCallback(
@@ -522,8 +519,7 @@ export function MessageInput({
   const overLimit = body.length > MAX_BODY_LENGTH;
   // 有附件正在上传时禁用发送，避免发出未完成上传的附件
   const hasUploading = uploadingIds.size > 0;
-  const canSend =
-    body.trim().length > 0 && !sending && !disabled && !overLimit && !hasUploading;
+  const canSend = body.trim().length > 0 && !sending && !disabled && !overLimit && !hasUploading;
   const showCount = body.length > MAX_BODY_LENGTH * 0.8; // 超过 80% 时显示计数
 
   return (
@@ -698,11 +694,7 @@ export function MessageInput({
           aria-label={t("sendAria")}
           className="shrink-0 w-9 h-9 flex items-center justify-center bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)]"
         >
-          {sending ? (
-            <Loader2 size={16} className="animate-spin" />
-          ) : (
-            <Send size={16} />
-          )}
+          {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
         </button>
       </div>
 
@@ -740,7 +732,6 @@ export function MessageInput({
           position={mention.position}
         />
       )}
-
 
       {/* 分享任务弹窗 */}
       {taskPickerOpen && (

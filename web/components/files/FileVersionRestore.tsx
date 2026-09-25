@@ -70,11 +70,7 @@ export function FileVersionRestore({
       >
         {/* 头部 */}
         <div className="flex items-center gap-2 px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border)]">
-          <AlertTriangle
-            size={14}
-            className="text-[var(--warn)]"
-            aria-hidden="true"
-          />
+          <AlertTriangle size={14} className="text-[var(--warn)]" aria-hidden="true" />
           <h3
             id="file-version-restore-title"
             className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
@@ -88,9 +84,7 @@ export function FileVersionRestore({
           <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
             {t("confirmBody", { fileName, version })}
           </p>
-          <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            {t("hint")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("hint")}</p>
         </div>
 
         {/* 操作按钮 */}

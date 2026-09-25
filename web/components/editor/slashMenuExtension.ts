@@ -170,11 +170,7 @@ function buildCommands(editor: Editor, options: SlashMenuOptions): SlashCommandI
       keywords: "table 表格 grid",
       icon: Table as LucideIcon,
       command: () =>
-        editor
-          .chain()
-          .focus()
-          .insertTable({ rows: 3, cols: 3, withHeaderRow: true })
-          .run(),
+        editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run(),
     },
     {
       key: "image",
@@ -251,8 +247,7 @@ function renderSlashMenu() {
     },
     query: props.query,
     emptyText:
-      (props.editor.storage as { slashMenuEmptyText?: string }).slashMenuEmptyText ??
-      "No results",
+      (props.editor.storage as { slashMenuEmptyText?: string }).slashMenuEmptyText ?? "No results",
   });
 
   return {
@@ -370,8 +365,7 @@ export const SlashMenuExtension = Extension.create<SlashMenuOptions>({
     const options = this.options;
 
     // emptyText 同步到 storage（onBeforeCreate 后 options 可能被 configure 更新）
-    (editor.storage as { slashMenuEmptyText?: string }).slashMenuEmptyText =
-      options.emptyText;
+    (editor.storage as { slashMenuEmptyText?: string }).slashMenuEmptyText = options.emptyText;
 
     const plugin = Suggestion<SlashCommandItem>({
       editor,

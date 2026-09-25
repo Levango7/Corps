@@ -200,9 +200,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           code: 400,
-          message:
-            parsed.error.issues[0]?.message ??
-            apiMsg(req, "remoteControlSignalInvalid"),
+          message: parsed.error.issues[0]?.message ?? apiMsg(req, "remoteControlSignalInvalid"),
           data: null,
         },
         { status: 400 },

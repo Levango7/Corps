@@ -19,10 +19,7 @@ type Tx = Prisma.TransactionClient;
  *
  * 认证：getWorkspaceContext 校验成员身份 + 注入 RLS。
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -62,9 +59,7 @@ async function loadMilestoneTimeline(tx: Tx, wid: string) {
     const taskCount = m.tasks.length;
     const statuses = m.tasks.map((t) => t.status);
     const allDone = taskCount > 0 && statuses.every((s) => s === "done");
-    const hasInProgress = statuses.some(
-      (s) => s === "in_progress" || s === "review",
-    );
+    const hasInProgress = statuses.some((s) => s === "in_progress" || s === "review");
     const status: "done" | "in_progress" | "pending" = allDone
       ? "done"
       : hasInProgress

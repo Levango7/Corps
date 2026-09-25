@@ -45,11 +45,7 @@ function shortDate(dateStr: string): string {
   return `${parts[1]}-${parts[2]}`;
 }
 
-export function BurndownChart({
-  idealLine,
-  actualLine,
-  predictedCompletion,
-}: BurndownChartProps) {
+export function BurndownChart({ idealLine, actualLine, predictedCompletion }: BurndownChartProps) {
   const t = useTranslations("ai.aiAnalysis");
 
   /** 计算坐标系（合并所有数据点取并集） */
@@ -69,8 +65,7 @@ export function BurndownChart({
       allDates.length <= 1
         ? PADDING.left + plotWidth / 2
         : PADDING.left + (idx / (allDates.length - 1)) * plotWidth;
-    const yScale = (val: number) =>
-      PADDING.top + plotHeight - (val / maxY) * plotHeight;
+    const yScale = (val: number) => PADDING.top + plotHeight - (val / maxY) * plotHeight;
     return { allDates, maxY, xScale, yScale };
   }, [idealLine, actualLine]);
 
@@ -215,15 +210,7 @@ export function BurndownChart({
           if (idx < 0) return null;
           const x = xScale(idx);
           const y = yScale(p.remaining);
-          return (
-            <circle
-              key={`actual-pt-${i}`}
-              cx={x}
-              cy={y}
-              r={3}
-              fill="var(--accent)"
-            />
-          );
+          return <circle key={`actual-pt-${i}`} cx={x} cy={y} r={3} fill="var(--accent)" />;
         })}
 
         {/* 预测完成日期标注 */}
@@ -278,14 +265,7 @@ export function BurndownChart({
             {t("burndown")} (ideal)
           </text>
           {/* 实际线图例 */}
-          <line
-            x1={130}
-            y1={6}
-            x2={154}
-            y2={6}
-            stroke="var(--accent)"
-            strokeWidth={2.5}
-          />
+          <line x1={130} y1={6} x2={154} y2={6} stroke="var(--accent)" strokeWidth={2.5} />
           <text x={160} y={10} fontSize={11} fill="var(--muted)">
             {t("burndown")} (actual)
           </text>

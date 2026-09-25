@@ -189,10 +189,7 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
       if (e instanceof Error && e.name === "AbortError") return;
       setError(true);
       setResult(null);
-      if (
-        process.env.NODE_ENV === "development" &&
-        (e instanceof ApiError || e instanceof Error)
-      ) {
+      if (process.env.NODE_ENV === "development" && (e instanceof ApiError || e instanceof Error)) {
         console.error("[SemanticSearchPanel] error:", e.message);
       }
     } finally {
@@ -300,18 +297,14 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
       {loading && (
         <div className="flex items-center justify-center gap-[var(--space-2)] py-[var(--space-4)]">
           <Loader2 size={16} className="shrink-0 animate-spin text-[var(--muted)]" />
-          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("searching")}
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("searching")}</span>
         </div>
       )}
 
       {/* 错误状态 */}
       {error && !loading && (
         <div className="flex items-center justify-center py-[var(--space-3)]">
-          <p className="text-[length:var(--text-xs)] text-[var(--danger)]">
-            {t("noResults")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--danger)]">{t("noResults")}</p>
         </div>
       )}
 
@@ -384,11 +377,7 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
 
           {/* Wiki 结果分组 */}
           {result.wikis.length > 0 && (
-            <ResultGroup
-              icon={FileText}
-              label={t("resultWikis")}
-              count={result.wikis.length}
-            >
+            <ResultGroup icon={FileText} label={t("resultWikis")} count={result.wikis.length}>
               {result.wikis.map((w) => (
                 <li
                   key={w.id}
@@ -413,11 +402,7 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
 
           {/* 待办结果分组 */}
           {result.todos.length > 0 && (
-            <ResultGroup
-              icon={CheckSquare}
-              label={t("resultTodos")}
-              count={result.todos.length}
-            >
+            <ResultGroup icon={CheckSquare} label={t("resultTodos")} count={result.todos.length}>
               {result.todos.map((todo) => (
                 <li
                   key={todo.id}
@@ -439,9 +424,7 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
                     <span className="rounded-[var(--radius-sm)] bg-[var(--surface-3)] px-[var(--space-2)] py-[0.125rem]">
                       {todo.priority}
                     </span>
-                    {todo.assigneeName && (
-                      <span>{todo.assigneeName}</span>
-                    )}
+                    {todo.assigneeName && <span>{todo.assigneeName}</span>}
                   </div>
                   {todo.description && (
                     <p className="break-words text-[length:var(--text-xs)] leading-relaxed text-[var(--meta)]">
@@ -455,11 +438,7 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
 
           {/* 决策结果分组 */}
           {result.decisions.length > 0 && (
-            <ResultGroup
-              icon={Gavel}
-              label={t("resultDecisions")}
-              count={result.decisions.length}
-            >
+            <ResultGroup icon={Gavel} label={t("resultDecisions")} count={result.decisions.length}>
               {result.decisions.map((d) => (
                 <li
                   key={d.id}

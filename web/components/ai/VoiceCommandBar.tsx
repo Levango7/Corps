@@ -329,9 +329,7 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
           <div className="mb-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--muted)]">
             {t("transcript")}
           </div>
-          <p className="text-[length:var(--text-sm)] text-[var(--fg)]">
-            {transcript}
-          </p>
+          <p className="text-[length:var(--text-sm)] text-[var(--fg)]">{transcript}</p>
         </div>
       )}
 
@@ -349,9 +347,7 @@ export function VoiceCommandBar({ wid }: VoiceCommandBarProps) {
           </div>
 
           {/* AI 响应 */}
-          <p className="text-[length:var(--text-sm)] text-[var(--fg)]">
-            {result.response}
-          </p>
+          <p className="text-[length:var(--text-sm)] text-[var(--fg)]">{result.response}</p>
 
           {/* 参数（如有） */}
           {Object.keys(result.parameters).length > 0 && (

@@ -15,7 +15,8 @@ import type { FeedbackExample } from "@/lib/ai/feedback";
  * 回答时引用来源文档，并在末尾以"## 来源"段落列出引用的文档标题。
  */
 export function buildDocQaSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是项目文档问答助手，基于检索到的项目文档（Wiki 页面）回答用户问题。
+  return appendFeedbackShot(
+    `你是项目文档问答助手，基于检索到的项目文档（Wiki 页面）回答用户问题。
 回答规则：
 1. 只基于提供的文档内容回答，不要编造不存在的信息
 2. 如果文档中没有相关信息，明确告知用户"文档中未找到相关内容"，并建议用户补充文档或换个问题
@@ -44,7 +45,9 @@ export function buildDocQaSystemPrompt(feedbackExamples?: FeedbackExample[]): st
 3. 在生产环境执行滚动更新
 
 ## 来源
-- 生产环境部署规范`, feedbackExamples);
+- 生产环境部署规范`,
+    feedbackExamples,
+  );
 }
 
 /**

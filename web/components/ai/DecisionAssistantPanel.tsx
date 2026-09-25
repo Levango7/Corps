@@ -67,7 +67,6 @@ interface DecisionAssistantResult {
   historicalRefs: HistoricalRef[];
 }
 
-
 // ── 样式常量 ──
 
 /** 输入框样式（design token） */
@@ -87,12 +86,9 @@ interface DecisionAssistantPanelProps {
 
 // ── 组件实现 ──
 
-export default function DecisionAssistantPanel({
-  wid,
-}: DecisionAssistantPanelProps) {
+export default function DecisionAssistantPanel({ wid }: DecisionAssistantPanelProps) {
   const t = useTranslations("ai.decisionAssistant");
   const { toast } = useToast();
-
 
   // ── 状态 ──
 
@@ -109,17 +105,14 @@ export default function DecisionAssistantPanel({
     setAnalyzing(true);
     setError("");
     try {
-      const data = await api<DecisionAssistantResult>(
-        "/api/v1/ai/decision-assistant",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            wid,
-            question: question.trim(),
-            context: context.trim() || undefined,
-          }),
-        },
-      );
+      const data = await api<DecisionAssistantResult>("/api/v1/ai/decision-assistant", {
+        method: "POST",
+        body: JSON.stringify({
+          wid,
+          question: question.trim(),
+          context: context.trim() || undefined,
+        }),
+      });
       setResult(data);
       if (data.options.length === 0) {
         toast("warning", t("noResults"));
@@ -231,10 +224,7 @@ export default function DecisionAssistantPanel({
         {/* 加载态 */}
         {analyzing && (
           <div className="flex items-center justify-center py-8 text-[var(--muted)] text-[length:var(--text-sm)]">
-            <Loader2
-              size={16}
-              className="animate-spin mr-2 motion-reduce:animate-none"
-            />
+            <Loader2 size={16} className="animate-spin mr-2 motion-reduce:animate-none" />
             {t("analyzing")}
           </div>
         )}
@@ -326,10 +316,7 @@ export default function DecisionAssistantPanel({
                                   key={`con-${i}`}
                                   className="flex items-start gap-1 text-[length:var(--text-xs)] text-[var(--fg-2)]"
                                 >
-                                  <X
-                                    size={14}
-                                    className="shrink-0 mt-0.5 text-[var(--meta)]"
-                                  />
+                                  <X size={14} className="shrink-0 mt-0.5 text-[var(--meta)]" />
                                   <span className="flex-1">{con}</span>
                                 </li>
                               ))}

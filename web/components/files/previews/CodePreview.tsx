@@ -40,9 +40,7 @@ export async function CodePreview({ content, fileName, language }: CodePreviewPr
             >
               {i + 1}
             </span>
-            <code className="flex-1 pl-3 pr-4 whitespace-pre text-[var(--fg)]">
-              {line}
-            </code>
+            <code className="flex-1 pl-3 pr-4 whitespace-pre text-[var(--fg)]">{line}</code>
           </div>
         ))}
       </div>

@@ -200,7 +200,10 @@ export default function NewTaskDialog({
           </button>
         </header>
 
-        <form onSubmit={submit} className="px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-4)] space-y-[var(--space-4)]">
+        <form
+          onSubmit={submit}
+          className="px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-4)] space-y-[var(--space-4)]"
+        >
           <div>
             <label className={fieldLabel} htmlFor="nt-title">
               {t("fieldTitle")}
@@ -393,7 +396,9 @@ export default function NewTaskDialog({
             <button
               type="submit"
               disabled={!title.trim() || submitting}
-              title={!title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : undefined}
+              title={
+                !title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : undefined
+              }
               className="inline-flex items-center gap-1.5 h-9 px-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
               {submitting && <Loader2 size={14} className="animate-spin" />}

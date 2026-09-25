@@ -15,15 +15,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Bell,
-  Check,
-  Loader2,
-  Inbox,
-  AlertTriangle,
-  TrendingDown,
-  Sun,
-} from "lucide-react";
+import { Bell, Check, Loader2, Inbox, AlertTriangle, TrendingDown, Sun } from "lucide-react";
 import { api } from "@/lib/api";
 import { relativeTime } from "@/lib/format";
 
@@ -100,9 +92,7 @@ export function AiPushFeed({ wid }: AiPushFeedProps) {
         if (filterValue !== "all") params.set("capability", filterValue);
         params.set("limit", "20");
 
-        const data = await api<RecordsResponse>(
-          `/api/v1/ai/push/records?${params.toString()}`,
-        );
+        const data = await api<RecordsResponse>(`/api/v1/ai/push/records?${params.toString()}`);
         setRecords(data.items);
         setHasMore(data.hasMore);
         setCursor(data.nextCursor);
@@ -126,9 +116,7 @@ export function AiPushFeed({ wid }: AiPushFeedProps) {
       if (filter !== "all") params.set("capability", filter);
       params.set("limit", "20");
 
-      const data = await api<RecordsResponse>(
-        `/api/v1/ai/push/records?${params.toString()}`,
-      );
+      const data = await api<RecordsResponse>(`/api/v1/ai/push/records?${params.toString()}`);
       setRecords((prev) => [...prev, ...data.items]);
       setHasMore(data.hasMore);
       setCursor(data.nextCursor);
@@ -156,9 +144,7 @@ export function AiPushFeed({ wid }: AiPushFeedProps) {
           body: JSON.stringify({ wid, read: true }),
         });
         // 本地更新状态，避免重新拉取
-        setRecords((prev) =>
-          prev.map((r) => (r.id === record.id ? { ...r, read: true } : r)),
-        );
+        setRecords((prev) => prev.map((r) => (r.id === record.id ? { ...r, read: true } : r)));
       } catch (e) {
         console.error("[AiPushFeed] markRead failed:", e);
         setError(t("error"));
@@ -230,14 +216,15 @@ export function AiPushFeed({ wid }: AiPushFeedProps) {
 
         {loading ? (
           <div className="flex items-center justify-center py-[var(--space-8)]">
-            <Loader2 size={20} className="animate-spin text-[var(--meta)] motion-reduce:animate-none" />
+            <Loader2
+              size={20}
+              className="animate-spin text-[var(--meta)] motion-reduce:animate-none"
+            />
           </div>
         ) : records.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-[var(--space-2)] py-[var(--space-8)] text-center">
             <Inbox size={24} className="text-[var(--meta)]" />
-            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("noRecords")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noRecords")}</p>
           </div>
         ) : (
           <>

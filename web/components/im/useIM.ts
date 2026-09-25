@@ -24,12 +24,7 @@ import { useState, useEffect, useCallback, useRef } from "react";
 import { useIMWebSocket } from "@/lib/im/ws-client";
 import { api } from "@/lib/api";
 import type { ServerMessage, MessagePayload } from "@/lib/im/types";
-import type {
-  Conversation,
-  Message,
-  SendMessageOptions,
-  CreateConversationParams,
-} from "./types";
+import type { Conversation, Message, SendMessageOptions, CreateConversationParams } from "./types";
 
 /** 消息分页每页条数（与后端 limit 上限 200 对齐，取 50 平衡首屏性能） */
 const MESSAGES_PAGE_SIZE = 50;
@@ -121,10 +116,7 @@ export interface UseIMResult {
  * @param t i18n 翻译函数（useTranslations("chat") 的返回值），用于错误消息本地化
  * @returns IM 状态和操作方法
  */
-export function useIM(
-  workspaceId: string,
-  t?: (key: string) => string,
-): UseIMResult {
+export function useIM(workspaceId: string, t?: (key: string) => string): UseIMResult {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [activeConversation, setActiveConversation] = useState<Conversation | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
@@ -159,12 +151,14 @@ export function useIM(
     setLoading(true);
     setError(null);
     try {
-      const data = await api<Conversation[]>(
-        `/api/v1/workspaces/${workspaceId}/conversations`,
-      );
+      const data = await api<Conversation[]>(`/api/v1/workspaces/${workspaceId}/conversations`);
       setConversations(data ?? []);
     } catch (err) {
-      setError(err instanceof Error ? err.message : (t?.("loadConversationsFailed") ?? "Failed to load conversations"));
+      setError(
+        err instanceof Error
+          ? err.message
+          : (t?.("loadConversationsFailed") ?? "Failed to load conversations"),
+      );
     } finally {
       setLoading(false);
     }
@@ -206,22 +200,23 @@ export function useIM(
 
         // 4. 标记已读（best-effort，失败不影响展示）
         try {
-          await api(
-            `/api/v1/workspaces/${workspaceId}/conversations/${cid}/read`,
-            { method: "POST" },
-          );
+          await api(`/api/v1/workspaces/${workspaceId}/conversations/${cid}/read`, {
+            method: "POST",
+          });
         } catch {
           // 标记已读失败静默忽略
         }
 
         // 5. 更新会话列表中的未读数
-        setConversations((prev) =>
-          prev.map((c) => (c.id === cid ? { ...c, unreadCount: 0 } : c)),
-        );
+        setConversations((prev) => prev.map((c) => (c.id === cid ? { ...c, unreadCount: 0 } : c)));
       } catch (err) {
         // 竞态检查：错误响应也需丢弃旧请求
         if (seq !== requestSeqRef.current) return;
-        setError(err instanceof Error ? err.message : (t?.("loadConversationFailed") ?? "Failed to load conversation"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("loadConversationFailed") ?? "Failed to load conversation"),
+        );
       } finally {
         // 竞态检查：仅当前请求才复位 loading
         if (seq === requestSeqRef.current) {
@@ -243,7 +238,11 @@ export function useIM(
         );
         await selectConversation(conv.id);
       } catch (err) {
-        setError(err instanceof Error ? err.message : (t?.("loadTaskConversationFailed") ?? "Failed to load task conversation"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("loadTaskConversationFailed") ?? "Failed to load task conversation"),
+        );
       }
     },
     [workspaceId, selectConversation],
@@ -264,9 +263,7 @@ export function useIM(
         const hasMoreMessages = result?.hasMore ?? false;
         // prepend 更早的消息到列表头部（时间线正序：旧在前）
         setMessages((prev) => [...olderMessages, ...prev]);
-        setActiveConversation((prev) =>
-          prev ? { ...prev, hasMoreMessages } : prev,
-        );
+        setActiveConversation((prev) => (prev ? { ...prev, hasMoreMessages } : prev));
       } catch (err) {
         console.error("[useIM] Failed to load more messages:", err);
       } finally {
@@ -303,7 +300,11 @@ export function useIM(
         // 乐观更新：立即追加到消息列表
         setMessages((prev) => [...prev, msg]);
       } catch (err) {
-        setError(err instanceof Error ? err.message : (t?.("sendMessageFailed") ?? "Failed to send message"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("sendMessageFailed") ?? "Failed to send message"),
+        );
         throw err;
       }
     },
@@ -320,7 +321,11 @@ export function useIM(
         );
         setMessages((prev) => prev.map((m) => (m.id === mid ? msg : m)));
       } catch (err) {
-        setError(err instanceof Error ? err.message : (t?.("editMessageFailed") ?? "Failed to edit message"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("editMessageFailed") ?? "Failed to edit message"),
+        );
         throw err;
       }
     },
@@ -331,18 +336,19 @@ export function useIM(
   const revokeMessage = useCallback(
     async (cid: string, mid: string) => {
       try {
-        await api(
-          `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages/${mid}`,
-          { method: "DELETE" },
-        );
+        await api(`/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages/${mid}`, {
+          method: "DELETE",
+        });
         // 本地标记撤回（WS 也会推送，此处乐观更新）
         setMessages((prev) =>
-          prev.map((m) =>
-            m.id === mid ? { ...m, revokedAt: new Date().toISOString() } : m,
-          ),
+          prev.map((m) => (m.id === mid ? { ...m, revokedAt: new Date().toISOString() } : m)),
         );
       } catch (err) {
-        setError(err instanceof Error ? err.message : (t?.("revokeMessageFailed") ?? "Failed to revoke message"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("revokeMessageFailed") ?? "Failed to revoke message"),
+        );
         throw err;
       }
     },
@@ -353,15 +359,19 @@ export function useIM(
   const createConversation = useCallback(
     async (params: CreateConversationParams): Promise<Conversation> => {
       try {
-        const conv = await api<Conversation>(
-          `/api/v1/workspaces/${workspaceId}/conversations`,
-          { method: "POST", body: JSON.stringify(params) },
-        );
+        const conv = await api<Conversation>(`/api/v1/workspaces/${workspaceId}/conversations`, {
+          method: "POST",
+          body: JSON.stringify(params),
+        });
         // 追加到会话列表
         setConversations((prev) => [...prev, conv]);
         return conv;
       } catch (err) {
-        setError(err instanceof Error ? err.message : (t?.("createConversationFailed") ?? "Failed to create conversation"));
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("createConversationFailed") ?? "Failed to create conversation"),
+        );
         throw err;
       }
     },
@@ -379,12 +389,8 @@ export function useIM(
               const newMessage = payloadToMessage(msg.message);
               // 如果收到 call_ended 或 call_rejected 消息，
               // 更新同会话中最近的 call_invite 消息的 callStatus
-              if (
-                newMessage.type === "call_ended" ||
-                newMessage.type === "call_rejected"
-              ) {
-                const callStatus =
-                  newMessage.type === "call_ended" ? "ended" : "rejected";
+              if (newMessage.type === "call_ended" || newMessage.type === "call_rejected") {
+                const callStatus = newMessage.type === "call_ended" ? "ended" : "rejected";
                 setMessages((prev) => {
                   // 从末尾向前查找最近的 call_invite 消息
                   const updated = [...prev];
@@ -412,13 +418,10 @@ export function useIM(
                 Notification.permission === "granted"
               ) {
                 try {
-                  const notification = new Notification(
-                    msg.message.authorName || "新消息",
-                    {
-                      body: msg.message.body,
-                      icon: msg.message.authorImage || undefined,
-                    },
-                  );
+                  const notification = new Notification(msg.message.authorName || "新消息", {
+                    body: msg.message.body,
+                    icon: msg.message.authorImage || undefined,
+                  });
                   // MVP：通知点击时聚焦窗口（暂不实现跳转到对应会话）
                   notification.onclick = () => {
                     window.focus();
@@ -436,10 +439,7 @@ export function useIM(
                   ? {
                       ...c,
                       lastMessageAt: msg.message.createdAt,
-                      unreadCount:
-                        c.id === activeCidRef.current
-                          ? 0
-                          : (c.unreadCount ?? 0) + 1,
+                      unreadCount: c.id === activeCidRef.current ? 0 : (c.unreadCount ?? 0) + 1,
                     }
                   : c,
               ),
@@ -451,9 +451,7 @@ export function useIM(
             if (msg.conversationId === activeCidRef.current) {
               setMessages((prev) =>
                 prev.map((m) =>
-                  m.id === msg.messageId
-                    ? { ...m, body: msg.body, editedAt: msg.editedAt }
-                    : m,
+                  m.id === msg.messageId ? { ...m, body: msg.body, editedAt: msg.editedAt } : m,
                 ),
               );
             }
@@ -463,9 +461,7 @@ export function useIM(
             // 撤回消息 → 更新消息列表
             if (msg.conversationId === activeCidRef.current) {
               setMessages((prev) =>
-                prev.map((m) =>
-                  m.id === msg.messageId ? { ...m, revokedAt: msg.revokedAt } : m,
-                ),
+                prev.map((m) => (m.id === msg.messageId ? { ...m, revokedAt: msg.revokedAt } : m)),
               );
             }
             break;

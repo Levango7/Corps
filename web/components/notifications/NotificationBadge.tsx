@@ -190,11 +190,7 @@ export function NotificationBadge({ workspaceId }: NotificationBadgeProps) {
       {open && (
         <>
           {/* 点击外部关闭 */}
-          <div
-            className="fixed inset-0 z-10"
-            onClick={() => setOpen(false)}
-            aria-hidden="true"
-          />
+          <div className="fixed inset-0 z-10" onClick={() => setOpen(false)} aria-hidden="true" />
 
           <div
             className="absolute right-0 top-full z-20 mt-[var(--space-2)] w-80 max-w-[calc(100vw-2rem)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)]"

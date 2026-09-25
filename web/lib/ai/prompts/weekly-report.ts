@@ -10,7 +10,6 @@
 //     "insights": string[]
 //   }
 
-
 import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
@@ -51,7 +50,8 @@ export interface WorkspaceContext {
  * 构造周报 system prompt。
  */
 export function buildWeeklyReportSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是项目周报生成助手。根据本周工作数据生成结构化周报。
+  return appendFeedbackShot(
+    `你是项目周报生成助手。根据本周工作数据生成结构化周报。
 要求：
 1) completed：本周完成的任务（status=done 且 updatedAt 在本周内），按完成时间倒序
 2) planned：下周计划任务（未完成且 dueDate 在下周内，或高优先级未完成任务）
@@ -86,16 +86,15 @@ export function buildWeeklyReportSystemPrompt(feedbackExamples?: FeedbackExample
 ## 示例
 输入：本周完成 5 个任务，1 个风险，1 个里程碑
 输出：
-{"summary":"本周完成 5 项任务，登录模块上线，搜索性能优化","completed":[{"title":"完成登录接口开发","owner":"张三","date":"2026-09-14"},{"title":"修复搜索分页 Bug","owner":"李四","date":"2026-09-15"}],"planned":[{"title":"数据导出功能联调","owner":"张三","dueDate":"2026-09-18"}],"risks":[{"description":"数据导出依赖的第三方服务不稳定","level":"medium"}],"milestones":[{"title":"V2.0 登录模块","status":"已达成"}],"insights":["本周进度符合预期","建议下周关注第三方服务稳定性"]}`, feedbackExamples);
+{"summary":"本周完成 5 项任务，登录模块上线，搜索性能优化","completed":[{"title":"完成登录接口开发","owner":"张三","date":"2026-09-14"},{"title":"修复搜索分页 Bug","owner":"李四","date":"2026-09-15"}],"planned":[{"title":"数据导出功能联调","owner":"张三","dueDate":"2026-09-18"}],"risks":[{"description":"数据导出依赖的第三方服务不稳定","level":"medium"}],"milestones":[{"title":"V2.0 登录模块","status":"已达成"}],"insights":["本周进度符合预期","建议下周关注第三方服务稳定性"]}`,
+    feedbackExamples,
+  );
 }
 
 /**
  * 构造周报 user prompt。
  */
-export function buildWeeklyReportUserPrompt(
-  ctx: WorkspaceContext,
-  weekData: WeekData,
-): string {
+export function buildWeeklyReportUserPrompt(ctx: WorkspaceContext, weekData: WeekData): string {
   const startStr = weekData.weekStart.toISOString().split("T")[0];
   const endStr = weekData.weekEnd.toISOString().split("T")[0];
   const taskLines = weekData.tasks.map((t) => {

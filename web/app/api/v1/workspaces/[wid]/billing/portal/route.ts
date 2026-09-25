@@ -7,7 +7,11 @@ import { requirePermission } from "@/lib/permissions";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   const denied = await requirePermission(ctx, "billing", "update", req);
   if (denied) return denied;
 
@@ -44,11 +48,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     if (error instanceof PaymentProviderError) {
       if (error.code === "no_customer") {
         console.error("[billing portal] no_customer:", error.message);
-        return NextResponse.json({ code: 400, message: apiMsg(req, "noCustomerAccount"), data: null }, { status: 400 });
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "noCustomerAccount"), data: null },
+          { status: 400 },
+        );
       }
       if (error.code === "not_configured") {
         console.error("[billing portal] not_configured:", error.message);
-        return NextResponse.json({ code: 501, message: apiMsg(req, "portalNotSupported"), data: null }, { status: 501 });
+        return NextResponse.json(
+          { code: 501, message: apiMsg(req, "portalNotSupported"), data: null },
+          { status: 501 },
+        );
       }
     }
     console.error("Billing portal error:", error);

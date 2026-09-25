@@ -272,7 +272,13 @@ export function BatchToolbar({ selectedIds, onClear, onUpdate, onDelete }: Batch
       <button
         onClick={handleDelete}
         disabled={busy}
-        title={busy ? t("batchDeleteFailed") : confirmDelete ? t("batchDeleteConfirm", { count: selectedIds.length }) : undefined}
+        title={
+          busy
+            ? t("batchDeleteFailed")
+            : confirmDelete
+              ? t("batchDeleteConfirm", { count: selectedIds.length })
+              : undefined
+        }
         className={`flex items-center gap-1.5 h-8 px-2.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
           confirmDelete
             ? "bg-[var(--danger)] text-[var(--accent-fg)] font-[weight:var(--weight-medium)] animate-pulse"

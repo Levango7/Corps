@@ -50,11 +50,17 @@ export async function POST(req: NextRequest) {
     // not_configured → 500 拒收（现状 L13–18 语义；L1：改用 apiMsg 收口硬编码英文）
     if (err instanceof PaymentProviderError && err.code === "not_configured") {
       console.error("Webhook not configured:", err.message);
-      return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError"), data: null }, { status: 500 });
+      return NextResponse.json(
+        { code: 500, message: apiMsg(req, "handlerError"), data: null },
+        { status: 500 },
+      );
     }
     // M2：解析错误补 data:null，与全站 ErrorEnvelope 一致
     console.error("Webhook parse error:", err);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "handlerError"), data: null },
+      { status: 500 },
+    );
   }
 
   // 未知/忽略事件（非 subscription 模式、未知 type、缺失 metadata 等）→ 直接应答 received
@@ -260,7 +266,10 @@ export async function POST(req: NextRequest) {
     console.error("Webhook handler error:", err);
     // 事务已自动回滚（含幂等占位），无需手动 deleteMany（DL-1）
     // M3：补 data:null，与全站 ErrorEnvelope 一致
-    return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "handlerError"), data: null },
+      { status: 500 },
+    );
   }
 
   if (duplicate) {

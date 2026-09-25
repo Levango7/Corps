@@ -238,9 +238,7 @@ export async function deleteAccount(userId: string): Promise<{ deletedWorkspaces
     userId,
   );
   if (remaining > 0) {
-    console.warn(
-      `[account-deletion] ${remaining} workspaces remain after step 3, forcing cleanup`,
-    );
+    console.warn(`[account-deletion] ${remaining} workspaces remain after step 3, forcing cleanup`);
     const stale = await runWithAuthOp(
       "provision",
       (tx) => tx.workspace.findMany({ where: { ownerId: userId }, select: { id: true } }),

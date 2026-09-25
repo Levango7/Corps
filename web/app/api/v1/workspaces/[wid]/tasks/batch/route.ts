@@ -33,7 +33,11 @@ const batchSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = batchSchema.parse(await req.json());
@@ -87,7 +91,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         if (body.status !== undefined) patchData.status = body.status;
         if (body.priority !== undefined) patchData.priority = body.priority;
         if (body.assigneeId !== undefined) patchData.assigneeId = body.assigneeId;
-        if (body.dueDate !== undefined) patchData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
+        if (body.dueDate !== undefined)
+          patchData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
 
         if (Object.keys(patchData).length === 0) {
           return { updated: 0, deleted: 0, skipped };
@@ -115,6 +120,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
     console.error("[POST tasks/batch] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

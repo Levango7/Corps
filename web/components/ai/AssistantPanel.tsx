@@ -22,15 +22,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Send,
-  Sparkles,
-  Loader2,
-  Plus,
-  History,
-  MessageSquare,
-  ChevronRight,
-} from "lucide-react";
+import { Send, Sparkles, Loader2, Plus, History, MessageSquare, ChevronRight } from "lucide-react";
 import { logger } from "@/lib/logger";
 
 /**
@@ -234,9 +226,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
     setMessages([]);
     setLoading(true);
     try {
-      const res = await fetch(
-        `/api/v1/ai/assistant/conversations?wid=${wid}&id=${convId}`,
-      );
+      const res = await fetch(`/api/v1/ai/assistant/conversations?wid=${wid}&id=${convId}`);
       const json = await res.json();
       if (json.data?.messages) {
         // 后端返回的消息可能没有 id 字段，逐条生成唯一 id 用作 React key
@@ -267,10 +257,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
   };
 
   return (
-    <div
-      className="flex h-full flex-col"
-      style={{ height: "calc(100dvh - var(--space-16))" }}
-    >
+    <div className="flex h-full flex-col" style={{ height: "calc(100dvh - var(--space-16))" }}>
       {/* ─── 顶部工具栏：标题 + 历史对话 + 新对话 ─── */}
       <div
         className="relative flex items-center justify-between border-b border-[var(--border)]"
@@ -332,9 +319,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
                     size={14}
                     strokeWidth={2}
                     className={
-                      conv.id === conversationId
-                        ? "text-[var(--accent)]"
-                        : "text-[var(--muted)]"
+                      conv.id === conversationId ? "text-[var(--accent)]" : "text-[var(--muted)]"
                     }
                   />
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -346,11 +331,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
                     </span>
                   </div>
                   {conv.id === conversationId && (
-                    <ChevronRight
-                      size={12}
-                      strokeWidth={2}
-                      className="text-[var(--accent)]"
-                    />
+                    <ChevronRight size={12} strokeWidth={2} className="text-[var(--accent)]" />
                   )}
                 </button>
               ))
@@ -367,9 +348,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
             <p className="text-[length:var(--text-lg)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
               {t("welcome")}
             </p>
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("welcomeDesc")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("welcomeDesc")}</p>
           </div>
         )}
         {messages.map((msg) => (
@@ -379,8 +358,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
               style={{
                 alignSelf: msg.role === "user" ? "flex-end" : "flex-start",
                 maxWidth: "80%",
-                background:
-                  msg.role === "user" ? "var(--accent)" : "var(--surface)",
+                background: msg.role === "user" ? "var(--accent)" : "var(--surface)",
                 color: msg.role === "user" ? "var(--accent-fg)" : "var(--fg)",
                 border: msg.role === "user" ? "none" : "1px solid var(--border)",
               }}
@@ -399,9 +377,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
               )}
               <p className="whitespace-pre-wrap text-[length:var(--text-sm)] leading-[var(--leading-relaxed)]">
                 {/* 超长消息安全截断：按 Unicode 码点切分，避免截断 emoji 代理对 */}
-                {msg.content.length > 10000
-                  ? truncateSafe(msg.content, 10000)
-                  : msg.content}
+                {msg.content.length > 10000 ? truncateSafe(msg.content, 10000) : msg.content}
               </p>
               {/* 跟进建议（点击填入输入框） */}
               {msg.suggestions && msg.suggestions.length > 0 && (
@@ -426,11 +402,7 @@ export function AssistantPanel({ wid }: { wid: string }) {
                   className="mt-2 flex w-full items-center gap-1.5 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-transparent px-2 py-1.5 text-left transition-colors hover:bg-[var(--accent)] hover:text-[var(--accent-fg)]"
                   style={{ marginTop: "var(--space-2)" }}
                 >
-                  <Sparkles
-                    size={14}
-                    strokeWidth={2}
-                    className="text-[var(--accent)]"
-                  />
+                  <Sparkles size={14} strokeWidth={2} className="text-[var(--accent)]" />
                   <span className="text-[length:var(--text-xs)] text-[var(--accent)]">
                     {t("nextStep")}:
                   </span>

@@ -38,7 +38,10 @@ const patchSchema = z.object({
  * 进度重算：currentValue/targetValue/weight 变更后，父 Objective.progress
  * 按 computeProgress 加权公式重算（与嵌套端点逻辑一致）。
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string; kid: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; kid: string }> },
+) {
   const { wid, kid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -133,7 +136,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 /**
  * DELETE /v1/workspaces/{wid}/key-results/{kid} — 删除关键结果并重算父目标进度
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string; kid: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; kid: string }> },
+) {
   const { wid, kid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

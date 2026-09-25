@@ -5,10 +5,7 @@
 // 安全：通过 getWorkspaceContext 校验工作区成员资格，runWithWorkspace 注入 RLS
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -99,10 +96,7 @@ export async function GET(req: NextRequest) {
         const edges = await tx.knowledgeEdge.findMany({
           where: {
             workspaceId: wid,
-            OR: [
-              { sourceNodeId: { in: nodeIds } },
-              { targetNodeId: { in: nodeIds } },
-            ],
+            OR: [{ sourceNodeId: { in: nodeIds } }, { targetNodeId: { in: nodeIds } }],
           },
           select: {
             id: true,

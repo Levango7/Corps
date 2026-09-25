@@ -63,13 +63,12 @@ function parseRecommendations(raw: string): PersonalizationResult {
     const recommendations = obj.recommendations
       .filter((r): r is Record<string, unknown> => r != null && typeof r === "object")
       .map((r) => {
-        const type = typeof r.type === "string" && VALID_TYPES.has(r.type)
-          ? (r.type as PersonalizationType)
-          : "capability_recommendation";
+        const type =
+          typeof r.type === "string" && VALID_TYPES.has(r.type)
+            ? (r.type as PersonalizationType)
+            : "capability_recommendation";
         const content = (r.content ?? {}) as Record<string, unknown>;
-        const score = typeof r.score === "number" && r.score >= 0 && r.score <= 1
-          ? r.score
-          : 0;
+        const score = typeof r.score === "number" && r.score >= 0 && r.score <= 1 ? r.score : 0;
         return {
           type,
           content: {
@@ -81,9 +80,7 @@ function parseRecommendations(raw: string): PersonalizationResult {
         };
       })
       // 过滤掉 description + suggestion 均为空的无效推荐
-      .filter(
-        (r) => r.content.description.trim() !== "" || r.content.suggestion.trim() !== "",
-      )
+      .filter((r) => r.content.description.trim() !== "" || r.content.suggestion.trim() !== "")
       // 最多保留 5 条
       .slice(0, 5);
 

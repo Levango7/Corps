@@ -19,10 +19,7 @@ import { useRouter, useParams } from "next/navigation";
 import type { Conversation, Message, SendMessageOptions } from "./types";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
-import {
-  IncomingCallNotification,
-  type IncomingCallData,
-} from "./IncomingCallNotification";
+import { IncomingCallNotification, type IncomingCallData } from "./IncomingCallNotification";
 import { api } from "@/lib/api";
 
 /** 通话超时：5 分钟内对方未加入则自动发送 call_ended */
@@ -70,9 +67,7 @@ export function ChatWindow({
   const [replyTo, setReplyTo] = useState<Message | null>(null);
   const [isCalling, setIsCalling] = useState(false);
   const [isVoiceCalling, setIsVoiceCalling] = useState(false);
-  const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(
-    null,
-  );
+  const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null);
   const callTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const incomingCallRef = useRef<IncomingCallData | null>(null);
 
@@ -140,8 +135,8 @@ export function ChatWindow({
     ? conversation.members.find((m) => m.userId !== currentUserId)
     : null;
   const title = isGroup
-    ? conversation.title ?? t("groupConversation")
-    : otherMember?.user.name ?? otherMember?.user.email ?? t("unknownUser");
+    ? (conversation.title ?? t("groupConversation"))
+    : (otherMember?.user.name ?? otherMember?.user.email ?? t("unknownUser"));
 
   /**
    * 发起通话（视频或语音）：
@@ -163,24 +158,20 @@ export function ChatWindow({
       }
       try {
         // 创建即时会议
-        const meeting = await api<{ id: string }>(
-          `/api/v1/workspaces/${wid}/meetings`,
-          {
-            method: "POST",
-            body: JSON.stringify({
-              title: videoEnabled ? tIm("videoCall") : tIm("voiceCall"),
-              type: "instant",
-              videoEnabled,
-            }),
-          },
-        );
+        const meeting = await api<{ id: string }>(`/api/v1/workspaces/${wid}/meetings`, {
+          method: "POST",
+          body: JSON.stringify({
+            title: videoEnabled ? tIm("videoCall") : tIm("voiceCall"),
+            type: "instant",
+            videoEnabled,
+          }),
+        });
 
         // 发送 call_invite 消息（body 包含会议链接，对方可点击加入）
         const meetingUrl = `/${locale}/w/${wid}/meetings/${meeting.id}`;
-        onSend(
-          `${videoEnabled ? tIm("callInvite") : tIm("voiceCallInvite")}: ${meetingUrl}`,
-          { type: "call_invite" },
-        );
+        onSend(`${videoEnabled ? tIm("callInvite") : tIm("voiceCallInvite")}: ${meetingUrl}`, {
+          type: "call_invite",
+        });
 
         // 设置超时：如果对方未加入，自动发送 call_ended 消息
         const meetingId = meeting.id;
@@ -194,8 +185,7 @@ export function ChatWindow({
               participants: Array<{ userId: string; joinedAt: string }>;
             }>(`/api/v1/workspaces/${wid}/meetings/${meetingId}`);
             // 会议已结束 或 无其他参与者（只有发起者自己）→ 发送 call_ended
-            const hasOtherParticipants =
-              (meetingData?.participants ?? []).length > 1;
+            const hasOtherParticipants = (meetingData?.participants ?? []).length > 1;
             if (meetingData?.status === "ended" || !hasOtherParticipants) {
               onSend(tIm("callEnded"), { type: "call_ended" });
             }
@@ -206,9 +196,7 @@ export function ChatWindow({
         }, CALL_TIMEOUT_MS);
 
         // 跳转到会议页面，跳过大厅直接进入会议室（skipLobby=true）
-        router.push(
-          `${meetingUrl}?conversationId=${conversation.id}&skipLobby=true`,
-        );
+        router.push(`${meetingUrl}?conversationId=${conversation.id}&skipLobby=true`);
       } catch {
         // 静默失败：网络错误时用户可重试
       } finally {
@@ -263,10 +251,13 @@ export function ChatWindow({
   );
 
   /** 点击回复 */
-  const handleReply = useCallback((mid: string) => {
-    const msg = messages.find((m) => m.id === mid);
-    if (msg) setReplyTo(msg);
-  }, [messages]);
+  const handleReply = useCallback(
+    (mid: string) => {
+      const msg = messages.find((m) => m.id === mid);
+      if (msg) setReplyTo(msg);
+    },
+    [messages],
+  );
 
   /** 取消回复 */
   const handleCancelReply = useCallback(() => {
@@ -356,16 +347,10 @@ export function ChatWindow({
             type="button"
             onClick={handleVoiceCall}
             disabled={isVoiceCalling || isCalling}
-            aria-label={
-              isVoiceCalling ? tIm("calling") : tIm("voiceCall")
-            }
+            aria-label={isVoiceCalling ? tIm("calling") : tIm("voiceCall")}
             className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--muted)]"
           >
-            {isVoiceCalling ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Phone size={16} />
-            )}
+            {isVoiceCalling ? <Loader2 size={16} className="animate-spin" /> : <Phone size={16} />}
           </button>
           {/* 视频通话按钮：创建即时视频会议 → 发送 call_invite → 跳转会议页 */}
           <button
@@ -375,11 +360,7 @@ export function ChatWindow({
             aria-label={isCalling ? tIm("calling") : tIm("videoCall")}
             className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:bg-transparent disabled:hover:text-[var(--muted)]"
           >
-            {isCalling ? (
-              <Loader2 size={16} className="animate-spin" />
-            ) : (
-              <Video size={16} />
-            )}
+            {isCalling ? <Loader2 size={16} className="animate-spin" /> : <Video size={16} />}
           </button>
           {/* 设置按钮 */}
           {onSettings && (
@@ -409,13 +390,8 @@ export function ChatWindow({
 
       {/* 正在输入指示器：紧贴输入框上方，仅当有 typing 文本时显示 */}
       {typingText && (
-        <div
-          className="px-[var(--space-4)] pt-[var(--space-2)] animate-pulse"
-          aria-live="polite"
-        >
-          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            {typingText}
-          </span>
+        <div className="px-[var(--space-4)] pt-[var(--space-2)] animate-pulse" aria-live="polite">
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{typingText}</span>
         </div>
       )}
 

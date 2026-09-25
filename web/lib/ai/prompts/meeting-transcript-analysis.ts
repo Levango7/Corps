@@ -68,16 +68,12 @@ JSON schema：
  * @param workspaceContext 工作区上下文（成员名单、项目信息等，用于辅助识别负责人）
  * @returns user prompt 字符串
  */
-export function buildMeetingAnalysisPrompt(
-  transcript: string,
-  workspaceContext: string,
-): string {
+export function buildMeetingAnalysisPrompt(transcript: string, workspaceContext: string): string {
   // 截断过长的转录文本，避免超出 DeepSeek context window
   const MAX_TRANSCRIPT_LENGTH = 15000;
   const truncatedTranscript =
     transcript.length > MAX_TRANSCRIPT_LENGTH
-      ? transcript.slice(0, MAX_TRANSCRIPT_LENGTH) +
-        "\n\n[... 转录文本已截断 ...]"
+      ? transcript.slice(0, MAX_TRANSCRIPT_LENGTH) + "\n\n[... 转录文本已截断 ...]"
       : transcript;
 
   const truncatedContext =

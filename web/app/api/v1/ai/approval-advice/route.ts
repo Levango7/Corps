@@ -41,7 +41,6 @@ interface ApprovalAdvice {
   }[];
 }
 
-
 /** 日期 → YYYY-MM-DD */
 function dateStr(d: Date): string {
   return d.toISOString().split("T")[0];
@@ -86,9 +85,7 @@ function buildContext(
       (h) =>
         `- ${h.title} (结果: ${h.status === "approved" ? "通过" : "驳回"}, 提交: ${dateStr(h.submittedAt)})`,
     );
-    sections.push(
-      `## 同类型历史审批（最近 ${history.length} 条）\n${lines.join("\n")}`,
-    );
+    sections.push(`## 同类型历史审批（最近 ${history.length} 条）\n${lines.join("\n")}`);
   } else {
     sections.push("## 同类型历史审批\n无");
   }
@@ -202,10 +199,7 @@ export async function POST(req: NextRequest) {
             return buildUserPrompt(context);
           } catch (e) {
             // 内部错误不泄露给前端（可能包含 Prisma 错误消息等敏感信息）
-            if (
-              e instanceof Error &&
-              e.message === "approval instance not found"
-            ) {
+            if (e instanceof Error && e.message === "approval instance not found") {
               throw new Error("审批实例不存在", { cause: e });
             }
             throw new Error("获取审批数据失败", { cause: e });
@@ -217,12 +211,9 @@ export async function POST(req: NextRequest) {
             return {
               riskLevel: parsed.riskLevel ?? "low",
               riskFactors: Array.isArray(parsed.riskFactors)
-                ? parsed.riskFactors.filter(
-                    (f): f is string => typeof f === "string",
-                  )
+                ? parsed.riskFactors.filter((f): f is string => typeof f === "string")
                 : [],
-              suggestion:
-                typeof parsed.suggestion === "string" ? parsed.suggestion : "",
+              suggestion: typeof parsed.suggestion === "string" ? parsed.suggestion : "",
               similarCases: Array.isArray(parsed.similarCases)
                 ? parsed.similarCases.filter(
                     (c): c is ApprovalAdvice["similarCases"][number] =>

@@ -16,7 +16,15 @@
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
 import { Link } from "@/lib/i18n-navigation";
-import { Search, Loader2, ChevronRight, X, Sparkles, ClipboardCopy, ListChecks } from "lucide-react";
+import {
+  Search,
+  Loader2,
+  ChevronRight,
+  X,
+  Sparkles,
+  ClipboardCopy,
+  ListChecks,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import { useToast } from "@/components/Toast";
@@ -409,7 +417,8 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                                   className="absolute inset-y-0 left-0 rounded-full transition-[width] duration-[var(--motion-base)]"
                                   style={{
                                     width: `${Math.round(
-                                      ((d.actionItemCompleted ?? 0) / (d.actionItemCount ?? 1)) * 100,
+                                      ((d.actionItemCompleted ?? 0) / (d.actionItemCount ?? 1)) *
+                                        100,
                                     )}%`,
                                     background:
                                       (d.actionItemCompleted ?? 0) >= (d.actionItemCount ?? 0)
@@ -491,7 +500,9 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                 className="w-full px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] resize-y font-[family-name:var(--font-mono)]"
               />
               {aiErr && (
-                <p className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--danger-fg)]">{aiErr}</p>
+                <p className="mt-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--danger-fg)]">
+                  {aiErr}
+                </p>
               )}
               {aiResult && (
                 <div className="mt-[var(--space-4)] border border-[var(--border)] rounded-[var(--radius-md)] overflow-hidden">
@@ -584,4 +595,3 @@ function DecisionsSkeleton({ count = 4 }: { count?: number }) {
  * 空状态已统一使用 @/components/EmptyState（6 种 SVG 插画）。
  * 搜索无结果 → type="search"；工作区无决策 → type="folder"。
  */
-

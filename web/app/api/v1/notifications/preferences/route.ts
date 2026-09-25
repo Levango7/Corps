@@ -21,9 +21,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { prisma } from "@/lib/prisma";
 
 /** HH:mm 时间格式校验 */
-const timeString = z
-  .string()
-  .regex(/^([01]\d|2[0-3]):[0-5]\d$/, "时间格式必须为 HH:mm");
+const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "时间格式必须为 HH:mm");
 
 /** PATCH 更新 schema（所有字段可选） */
 const updateSchema = z.object({

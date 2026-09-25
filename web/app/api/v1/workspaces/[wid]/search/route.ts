@@ -71,7 +71,6 @@ function buildSnippet(text: string | null | undefined, query: string): string {
   return prefix + content.slice(start, end) + suffix;
 }
 
-
 /** GET /v1/workspaces/{wid}/search — 跨内容全文搜索 */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
@@ -91,7 +90,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }

@@ -291,8 +291,7 @@ export async function POST(req: NextRequest) {
         content: w.content,
         updatedAt: w.updatedAt.toISOString(),
         matchCount:
-          countKeywordMatches(w.title, keywords) +
-          countKeywordMatches(w.content, keywords),
+          countKeywordMatches(w.title, keywords) + countKeywordMatches(w.content, keywords),
       }))
       .sort((a, b) => b.matchCount - a.matchCount || b.updatedAt.localeCompare(a.updatedAt))
       .slice(0, body.limit);

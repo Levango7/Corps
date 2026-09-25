@@ -79,8 +79,20 @@ export type SignalingMessage =
       workspaceId: string;
     }
   | { type: "accept-control"; fromUserId: string; toUserId: string; sessionId: string }
-  | { type: "reject-control"; fromUserId: string; toUserId: string; sessionId: string; reason?: string }
-  | { type: "end-control"; fromUserId: string; toUserId: string; sessionId: string; reason?: string };
+  | {
+      type: "reject-control";
+      fromUserId: string;
+      toUserId: string;
+      sessionId: string;
+      reason?: string;
+    }
+  | {
+      type: "end-control";
+      fromUserId: string;
+      toUserId: string;
+      sessionId: string;
+      reason?: string;
+    };
 
 /** SSE 端点推送的信令信封（含时间戳用于排序/去重） */
 export interface SignalingEnvelope {
@@ -288,10 +300,7 @@ export class SignalingClient {
   private scheduleReconnect(): void {
     if (this.disposed) return;
     this.setState("error");
-    const delay = Math.min(
-      1000 * Math.pow(2, this.reconnectAttempts),
-      this.maxReconnectIntervalMs,
-    );
+    const delay = Math.min(1000 * Math.pow(2, this.reconnectAttempts), this.maxReconnectIntervalMs);
     this.reconnectAttempts++;
     this.reconnectTimer = setTimeout(() => {
       void this.connect();

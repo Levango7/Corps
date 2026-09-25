@@ -68,8 +68,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -201,10 +200,7 @@ export async function POST(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json(
-      { code: 0, data: session, message: "OK" },
-      { status: 201 },
-    );
+    return NextResponse.json({ code: 0, data: session, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/meetings/sessions] error:", error);
     return NextResponse.json(

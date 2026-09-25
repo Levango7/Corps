@@ -25,9 +25,7 @@ const subscribeSchema = z.object({
       (url) => {
         try {
           const host = new URL(url).hostname.toLowerCase();
-          return ALLOWED_PUSH_HOSTS.some(
-            (h) => host === h || host.endsWith("." + h),
-          );
+          return ALLOWED_PUSH_HOSTS.some((h) => host === h || host.endsWith("." + h));
         } catch {
           return false;
         }

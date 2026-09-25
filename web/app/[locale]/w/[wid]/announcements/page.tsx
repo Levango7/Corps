@@ -69,7 +69,9 @@ function loadReadIds(wid: string): Set<string> {
     const raw = window.localStorage.getItem(readStorageKey(wid));
     if (!raw) return new Set();
     const arr = JSON.parse(raw) as unknown;
-    return Array.isArray(arr) ? new Set(arr.filter((x): x is string => typeof x === "string")) : new Set();
+    return Array.isArray(arr)
+      ? new Set(arr.filter((x): x is string => typeof x === "string"))
+      : new Set();
   } catch {
     return new Set();
   }
@@ -351,9 +353,7 @@ export default function AnnouncementsPage({ params }: { params: Promise<{ wid: s
     if (!search.trim()) return items;
     const q = search.trim().toLowerCase();
     return items.filter(
-      (a) =>
-        a.title.toLowerCase().includes(q) ||
-        summarize(a.content).toLowerCase().includes(q),
+      (a) => a.title.toLowerCase().includes(q) || summarize(a.content).toLowerCase().includes(q),
     );
   }, [items, search]);
 
@@ -394,19 +394,25 @@ export default function AnnouncementsPage({ params }: { params: Promise<{ wid: s
           <div className="flex flex-wrap items-center gap-3 mb-[var(--space-4)] px-4 py-3 rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)]">
             <span className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)]">
               <Megaphone size={14} className="text-[var(--muted)]" />
-              <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{stats.total}</span>
+              <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
+                {stats.total}
+              </span>
               {t("overview")}
             </span>
             <span className="text-[var(--meta)]">·</span>
             <span className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)]">
               <Check size={14} className="text-[var(--accent)]" />
-              <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{stats.read}</span>
+              <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
+                {stats.read}
+              </span>
               {t("statsRead")}
             </span>
             <span className="text-[var(--meta)]">·</span>
             <span className="inline-flex items-center gap-1.5 text-[length:var(--text-sm)] text-[var(--fg-2)]">
               <Megaphone size={14} className="text-[var(--muted)]" />
-              <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{stats.unread}</span>
+              <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
+                {stats.unread}
+              </span>
               {t("statsUnread")}
             </span>
             {stats.unread > 0 && (
@@ -480,7 +486,9 @@ export default function AnnouncementsPage({ params }: { params: Promise<{ wid: s
             className="mb-[var(--space-4)] flex items-center gap-2 px-4 py-2.5 rounded-[var(--radius-md)] border bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
           >
             <AlertCircle size={16} className="shrink-0" />
-            <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">{actionError}</span>
+            <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
+              {actionError}
+            </span>
           </div>
         )}
 
@@ -530,7 +538,9 @@ export default function AnnouncementsPage({ params }: { params: Promise<{ wid: s
                 <li
                   key={item.id}
                   className={`rounded-[var(--radius-md)] border bg-[var(--surface)] overflow-hidden transition-shadow duration-[var(--motion-fast)] ${
-                    expanded ? "border-[var(--accent)] shadow-[var(--elev-md)]" : "border-[var(--border)]"
+                    expanded
+                      ? "border-[var(--accent)] shadow-[var(--elev-md)]"
+                      : "border-[var(--border)]"
                   }`}
                 >
                   <div className="flex items-start gap-3 px-[var(--space-4)] py-[var(--space-3)]">

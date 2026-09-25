@@ -55,7 +55,10 @@ export async function GET(
           }),
           tx.databaseField.count({ where: { databaseId: dbid } }),
         ]);
-        return { kind: "ok" as const, data: { items: fields, total, hasMore: skip + take < total } };
+        return {
+          kind: "ok" as const,
+          data: { items: fields, total, hasMore: skip + take < total },
+        };
       },
       ctx.payload.sub,
     );

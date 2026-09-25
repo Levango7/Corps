@@ -47,8 +47,8 @@
       --shimmer-hi 为高光条色，混入微量 accent 提供品牌色调。
       来源：design-tokens.css — 此处保留是 globals.css :root 块完整性需要 —— */
   --shimmer-from: var(--surface-2);
-  --shimmer-to:   var(--surface-3);
-  --shimmer-hi:   color-mix(in srgb, var(--surface) 60%, var(--p-accent) 4%);
+  --shimmer-to: var(--surface-3);
+  --shimmer-hi: color-mix(in srgb, var(--surface) 60%, var(--p-accent) 4%);
 
   /* —— ripple 涟漪色（accent 极淡派生，跟随主题自动切换）——
       来源：design-tokens.css — 此处保留是 globals.css :root 块完整性需要 */
@@ -286,7 +286,6 @@ svg {
   box-shadow: var(--elev-sm);
 }
 
-
 /* 淡入动画 */
 .fade-in {
   animation: fadeIn var(--motion-enter) ease-out both;
@@ -350,7 +349,6 @@ svg {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--muted);
 }
-
 
 /* Firefox 滚动条 */
 * {
@@ -749,18 +747,42 @@ svg {
 }
 
 /* 便捷：前 12 个子项自动分配 stagger-index（无需 JS 设置） */
-.stagger-list > .stagger-item:nth-child(1)  { --stagger-index: 0; }
-.stagger-list > .stagger-item:nth-child(2)  { --stagger-index: 1; }
-.stagger-list > .stagger-item:nth-child(3)  { --stagger-index: 2; }
-.stagger-list > .stagger-item:nth-child(4)  { --stagger-index: 3; }
-.stagger-list > .stagger-item:nth-child(5)  { --stagger-index: 4; }
-.stagger-list > .stagger-item:nth-child(6)  { --stagger-index: 5; }
-.stagger-list > .stagger-item:nth-child(7)  { --stagger-index: 6; }
-.stagger-list > .stagger-item:nth-child(8)  { --stagger-index: 7; }
-.stagger-list > .stagger-item:nth-child(9)  { --stagger-index: 8; }
-.stagger-list > .stagger-item:nth-child(10) { --stagger-index: 9; }
-.stagger-list > .stagger-item:nth-child(11) { --stagger-index: 10; }
-.stagger-list > .stagger-item:nth-child(12) { --stagger-index: 11; }
+.stagger-list > .stagger-item:nth-child(1) {
+  --stagger-index: 0;
+}
+.stagger-list > .stagger-item:nth-child(2) {
+  --stagger-index: 1;
+}
+.stagger-list > .stagger-item:nth-child(3) {
+  --stagger-index: 2;
+}
+.stagger-list > .stagger-item:nth-child(4) {
+  --stagger-index: 3;
+}
+.stagger-list > .stagger-item:nth-child(5) {
+  --stagger-index: 4;
+}
+.stagger-list > .stagger-item:nth-child(6) {
+  --stagger-index: 5;
+}
+.stagger-list > .stagger-item:nth-child(7) {
+  --stagger-index: 6;
+}
+.stagger-list > .stagger-item:nth-child(8) {
+  --stagger-index: 7;
+}
+.stagger-list > .stagger-item:nth-child(9) {
+  --stagger-index: 8;
+}
+.stagger-list > .stagger-item:nth-child(10) {
+  --stagger-index: 9;
+}
+.stagger-list > .stagger-item:nth-child(11) {
+  --stagger-index: 10;
+}
+.stagger-list > .stagger-item:nth-child(12) {
+  --stagger-index: 11;
+}
 
 /* ----------------------------------------------------------------------------
  * 微交互增强 · spring / bounce 变体

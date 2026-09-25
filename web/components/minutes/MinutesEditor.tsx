@@ -164,9 +164,7 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
     setAttendees((prev) => prev.filter((_, i) => i !== idx));
   }
   function updateAttendee(idx: number, field: keyof Attendee, value: string) {
-    setAttendees((prev) =>
-      prev.map((a, i) => (i === idx ? { ...a, [field]: value } : a)),
-    );
+    setAttendees((prev) => prev.map((a, i) => (i === idx ? { ...a, [field]: value } : a)));
   }
 
   // ── 行动项操作 ──
@@ -176,14 +174,8 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
   function removeActionItem(idx: number) {
     setActionItems((prev) => prev.filter((_, i) => i !== idx));
   }
-  function updateActionItem(
-    idx: number,
-    field: keyof ActionItem,
-    value: string | boolean,
-  ) {
-    setActionItems((prev) =>
-      prev.map((a, i) => (i === idx ? { ...a, [field]: value } : a)),
-    );
+  function updateActionItem(idx: number, field: keyof ActionItem, value: string | boolean) {
+    setActionItems((prev) => prev.map((a, i) => (i === idx ? { ...a, [field]: value } : a)));
   }
 
   async function save(e: FormEvent) {
@@ -257,7 +249,7 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
       const newActions: ActionItem[] = summary.actionItems.map((a) => ({
         title: a.title,
         assigneeId: a.assignee ?? undefined,
-        dueDate: a.dueDate ? safeDateToIso(a.dueDate) ?? undefined : undefined,
+        dueDate: a.dueDate ? (safeDateToIso(a.dueDate) ?? undefined) : undefined,
         done: false,
       }));
       setActionItems((prev) => [...prev, ...newActions]);
@@ -348,9 +340,7 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
 
       {/* AI 未配置提示 */}
       {!aiConfigured && (
-        <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-          {tf("aiNotConfigured")}
-        </p>
+        <p className="text-[length:var(--text-xs)] text-[var(--meta)]">{tf("aiNotConfigured")}</p>
       )}
 
       {/* AI 生成摘要面板 */}
@@ -416,7 +406,9 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
         <label className={fieldLabel}>{t("content")}</label>
         {showPreview ? (
           <div className="min-h-[300px] px-4 py-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] whitespace-pre-wrap">
-            {renderMarkdown(content) || <span className="text-[var(--muted)]">{t("contentEmpty")}</span>}
+            {renderMarkdown(content) || (
+              <span className="text-[var(--muted)]">{t("contentEmpty")}</span>
+            )}
           </div>
         ) : (
           <textarea
@@ -443,7 +435,9 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
           </button>
         </div>
         {attendees.length === 0 ? (
-          <p className="text-[length:var(--text-xs)] text-[var(--muted)] py-2">{t("noAttendees")}</p>
+          <p className="text-[length:var(--text-xs)] text-[var(--muted)] py-2">
+            {t("noAttendees")}
+          </p>
         ) : (
           <ul className="space-y-2">
             {attendees.map((a, idx) => (

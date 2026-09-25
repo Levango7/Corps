@@ -35,16 +35,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Mail,
-  PenLine,
-  FileText,
-  Tags,
-  Reply,
-  Copy,
-  Loader2,
-  Check,
-} from "lucide-react";
+import { Mail, PenLine, FileText, Tags, Reply, Copy, Loader2, Check } from "lucide-react";
 import Markdown from "@/components/Markdown";
 import { consumeAiStream } from "@/components/editor/aiStream";
 import { api, ApiError } from "@/lib/api";
@@ -71,7 +62,6 @@ interface ReplySuggestion {
 interface MailAssistantPanelProps {
   wid: string;
 }
-
 
 // ─── 类别 / 语气视觉映射 ───
 
@@ -151,7 +141,6 @@ const TABS: ReadonlyArray<{
 export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
   const t = useTranslations("ai.mailAssistant");
 
-
   const [action, setAction] = useState<MailAction>("draft");
   const [content, setContent] = useState("");
   const [context, setContext] = useState("");
@@ -214,52 +203,43 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
       } else {
         // 非流式：summarize / classify / reply
         if (action === "summarize") {
-          const data = await api<{ summary: string }>(
-            "/api/v1/ai/mail-assistant",
-            {
-              method: "POST",
-              body: JSON.stringify({
-                wid,
-                action,
-                content,
-                context: context.trim() || undefined,
-              }),
-              signal: ac.signal,
-            },
-          );
+          const data = await api<{ summary: string }>("/api/v1/ai/mail-assistant", {
+            method: "POST",
+            body: JSON.stringify({
+              wid,
+              action,
+              content,
+              context: context.trim() || undefined,
+            }),
+            signal: ac.signal,
+          });
           if (ac.signal.aborted) return;
           setSummary(data?.summary ?? "");
         } else if (action === "classify") {
-          const data = await api<ClassifyResult>(
-            "/api/v1/ai/mail-assistant",
-            {
-              method: "POST",
-              body: JSON.stringify({
-                wid,
-                action,
-                content,
-                context: context.trim() || undefined,
-              }),
-              signal: ac.signal,
-            },
-          );
+          const data = await api<ClassifyResult>("/api/v1/ai/mail-assistant", {
+            method: "POST",
+            body: JSON.stringify({
+              wid,
+              action,
+              content,
+              context: context.trim() || undefined,
+            }),
+            signal: ac.signal,
+          });
           if (ac.signal.aborted) return;
           setClassifyResult(data);
         } else {
           // reply
-          const data = await api<{ suggestions: ReplySuggestion[] }>(
-            "/api/v1/ai/mail-assistant",
-            {
-              method: "POST",
-              body: JSON.stringify({
-                wid,
-                action,
-                content,
-                context: context.trim() || undefined,
-              }),
-              signal: ac.signal,
-            },
-          );
+          const data = await api<{ suggestions: ReplySuggestion[] }>("/api/v1/ai/mail-assistant", {
+            method: "POST",
+            body: JSON.stringify({
+              wid,
+              action,
+              content,
+              context: context.trim() || undefined,
+            }),
+            signal: ac.signal,
+          });
           if (ac.signal.aborted) return;
           setSuggestions(Array.isArray(data?.suggestions) ? data.suggestions : []);
         }
@@ -270,10 +250,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
       if (e instanceof Error && e.name === "AbortError") return;
       setError(t("error"));
       // 仅在开发环境输出错误日志，避免生产环境噪音
-      if (
-        process.env.NODE_ENV === "development" &&
-        (e instanceof ApiError || e instanceof Error)
-      ) {
+      if (process.env.NODE_ENV === "development" && (e instanceof ApiError || e instanceof Error)) {
         console.error("[MailAssistantPanel] error:", e.message);
       }
     } finally {
@@ -556,9 +533,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
                               ) : (
                                 <Copy size={16} className="shrink-0" />
                               )}
-                              <span className="sr-only">
-                                {isCopied ? t("copied") : t("copy")}
-                              </span>
+                              <span className="sr-only">{isCopied ? t("copied") : t("copy")}</span>
                             </button>
                           </div>
                           {/* 回复文本 */}
@@ -578,6 +553,5 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
     </div>
   );
 }
-
 
 export default MailAssistantPanel;

@@ -71,8 +71,12 @@ export function TimeTracker({ wid, onStopped }: { wid: string; onStopped?: () =>
       setLoading(true);
       try {
         const [listData, taskData] = await Promise.all([
-          api<{ items: TimeEntry[] }>(`/api/v1/workspaces/${wid}/time-entries?limit=50`).catch(() => ({ items: [] })),
-          api<{ items: TaskOption[] }>(`/api/v1/workspaces/${wid}/tasks?limit=100`).catch(() => ({ items: [] })),
+          api<{ items: TimeEntry[] }>(`/api/v1/workspaces/${wid}/time-entries?limit=50`).catch(
+            () => ({ items: [] }),
+          ),
+          api<{ items: TaskOption[] }>(`/api/v1/workspaces/${wid}/tasks?limit=100`).catch(() => ({
+            items: [],
+          })),
         ]);
         if (cancelled) return;
         setTasks(taskData.items || []);
@@ -228,7 +232,9 @@ export function TimeTracker({ wid, onStopped }: { wid: string; onStopped?: () =>
               >
                 <span
                   className={`inline-block w-3.5 h-3.5 rounded-[var(--radius-sm)] border ${
-                    billable ? "border-[var(--accent)] bg-[var(--accent)]" : "border-[var(--border)]"
+                    billable
+                      ? "border-[var(--accent)] bg-[var(--accent)]"
+                      : "border-[var(--border)]"
                   }`}
                 />
                 {billable ? t("billableYes") : t("billableNo")}

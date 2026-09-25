@@ -14,15 +14,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import {
-  X,
-  Loader2,
-  Plus,
-  Trash2,
-  ChevronUp,
-  ChevronDown,
-  Flag,
-} from "lucide-react";
+import { X, Loader2, Plus, Trash2, ChevronUp, ChevronDown, Flag } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import type { TemplateListItem } from "./TemplateList";
 
@@ -167,7 +159,8 @@ export function TemplateEditor({ wid, template, open, onClose, onSaved }: Templa
       onSaved();
       onClose();
     } catch (e) {
-      const msg = e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("saveFailed");
+      const msg =
+        e instanceof ApiError ? e.message : e instanceof Error ? e.message : t("saveFailed");
       setError(msg);
     } finally {
       setSubmitting(false);

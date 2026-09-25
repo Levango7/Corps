@@ -44,10 +44,16 @@ export async function POST(req: NextRequest) {
     // not_configured → 500 拒收
     if (err instanceof PaymentProviderError && err.code === "not_configured") {
       console.error("[wechat-webhook] not_configured:", err.message);
-      return NextResponse.json({ code: 500, message: apiMsg(req, "billingUnavailable"), data: null }, { status: 500 });
+      return NextResponse.json(
+        { code: 500, message: apiMsg(req, "billingUnavailable"), data: null },
+        { status: 500 },
+      );
     }
     console.error("[wechat-webhook] parse error:", err);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "handlerError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "handlerError"), data: null },
+      { status: 500 },
+    );
   }
 
   // 未知/忽略事件 → 应答 received

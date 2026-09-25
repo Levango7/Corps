@@ -20,17 +20,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
-import {
-  Check,
-  Clock,
-  Eye,
-  GitCompare,
-  History,
-  Loader2,
-  Plus,
-  RotateCcw,
-  X,
-} from "lucide-react";
+import { Check, Clock, Eye, GitCompare, History, Loader2, Plus, RotateCcw, X } from "lucide-react";
 
 // ── 类型定义（对应设计文档 §2.3.2 Prisma schema）──
 
@@ -176,9 +166,12 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
     setBusy(true);
     setError("");
     try {
-      await api(`/api/v1/workspaces/${wid}/documents/${docId}/versions/${rollbackTarget.id}/restore`, {
-        method: "POST",
-      });
+      await api(
+        `/api/v1/workspaces/${wid}/documents/${docId}/versions/${rollbackTarget.id}/restore`,
+        {
+          method: "POST",
+        },
+      );
       setRollbackTarget(null);
       await loadVersions();
     } catch (e) {
@@ -518,7 +511,9 @@ function VersionContentModal({
               {t("versionViewTitle", { version: version.version })}
             </h4>
             <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)]">
-              {new Date(version.createdAt).toLocaleString(locale.startsWith("zh") ? "zh-CN" : "en-US")}
+              {new Date(version.createdAt).toLocaleString(
+                locale.startsWith("zh") ? "zh-CN" : "en-US",
+              )}
               {version.message && ` · ${version.message}`}
             </p>
           </div>

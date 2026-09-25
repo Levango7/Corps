@@ -18,12 +18,7 @@
 import { AnimatePresence, motion } from "framer-motion";
 import { usePathname } from "next/navigation";
 import type { ReactNode } from "react";
-import {
-  useMotionTokens,
-  fadeVariants,
-  slideVariants,
-  scaleVariants,
-} from "@/lib/motion-tokens";
+import { useMotionTokens, fadeVariants, slideVariants, scaleVariants } from "@/lib/motion-tokens";
 
 export type PageTransitionMode = "fade" | "slide" | "scale";
 
@@ -49,9 +44,7 @@ export function PageTransition({
         : slideVariants;
 
   // var(--motion-slow) 220ms + var(--ease-standard)；reduced 时 duration 0
-  const transition = reduced
-    ? { duration: 0 }
-    : { duration: slow, ease: easeStandard };
+  const transition = reduced ? { duration: 0 } : { duration: slow, ease: easeStandard };
 
   return (
     <AnimatePresence mode="wait" initial={false}>

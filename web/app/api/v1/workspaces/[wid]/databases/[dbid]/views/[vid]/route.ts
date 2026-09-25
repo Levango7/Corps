@@ -57,8 +57,7 @@ export async function PATCH(
         } = {};
         if (validated.name !== undefined) data.name = validated.name;
         if (validated.type !== undefined) data.type = validated.type;
-        if (validated.config !== undefined)
-          data.config = validated.config as Prisma.InputJsonValue;
+        if (validated.config !== undefined) data.config = validated.config as Prisma.InputJsonValue;
         if (validated.sortOrder !== undefined) data.sortOrder = validated.sortOrder;
 
         const updated = await tx.databaseView.update({ where: { id: vid }, data });

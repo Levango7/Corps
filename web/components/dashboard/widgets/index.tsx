@@ -50,17 +50,28 @@ type WidgetComponent = ComponentType<WidgetProps> | ((props: WidgetProps) => Pro
  * - icon：标题栏图标（lucide-react）
  * - titleKey：dashboard i18n 命名空间下的标题翻译 key
  */
-const WIDGET_COMPONENTS: Record<string, { component: WidgetComponent; icon: LucideIcon; titleKey: string }> = {
+const WIDGET_COMPONENTS: Record<
+  string,
+  { component: WidgetComponent; icon: LucideIcon; titleKey: string }
+> = {
   "task-stats": { component: TaskStatsWidget, icon: BarChart3, titleKey: "taskStats" },
   "my-tasks": { component: MyTasksWidget, icon: CheckSquare, titleKey: "myTasks" },
-  "decision-actions": { component: DecisionActionsWidget, icon: ClipboardList, titleKey: "decisionActions" },
+  "decision-actions": {
+    component: DecisionActionsWidget,
+    icon: ClipboardList,
+    titleKey: "decisionActions",
+  },
   "due-this-week": { component: DueThisWeekWidget, icon: CalendarClock, titleKey: "dueThisWeek" },
   "team-load": { component: TeamLoadWidget, icon: Users, titleKey: "teamLoad" },
-  "burndown": { component: BurndownWidget, icon: TrendingDown, titleKey: "burndown" },
+  burndown: { component: BurndownWidget, icon: TrendingDown, titleKey: "burndown" },
   "priority-dist": { component: PriorityDistWidget, icon: PieChart, titleKey: "priorityDist" },
   "recent-activity": { component: RecentActivityWidget, icon: Bell, titleKey: "recentActivity" },
   "gantt-chart": { component: GanttWidget, icon: GanttChartSquare, titleKey: "ganttChart" },
-  "milestone-timeline": { component: MilestoneTimelineWidget, icon: Milestone, titleKey: "milestoneTimeline" },
+  "milestone-timeline": {
+    component: MilestoneTimelineWidget,
+    icon: Milestone,
+    titleKey: "milestoneTimeline",
+  },
   "custom-chart": { component: CustomChartWidget, icon: BarChart3, titleKey: "customChart" },
 };
 

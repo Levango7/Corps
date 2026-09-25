@@ -79,8 +79,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },

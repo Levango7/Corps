@@ -73,7 +73,6 @@ interface WorkflowDefinition {
   explanation: string;
 }
 
-
 // ── 节点类型样式映射 ──
 
 /** 节点类型 → 颜色标签样式（design token） */
@@ -141,7 +140,6 @@ const fieldControl =
 const primaryBtn =
   "inline-flex items-center gap-1.5 h-9 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
 
-
 /** 卡片样式 */
 const card =
   "rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] p-3";
@@ -155,12 +153,9 @@ interface WorkflowOrchestratorPanelProps {
 
 // ── 组件实现 ──
 
-export default function WorkflowOrchestratorPanel({
-  wid,
-}: WorkflowOrchestratorPanelProps) {
+export default function WorkflowOrchestratorPanel({ wid }: WorkflowOrchestratorPanelProps) {
   const t = useTranslations("ai.workflowOrchestrator");
   const { toast } = useToast();
-
 
   // ── 状态 ──
 
@@ -179,16 +174,13 @@ export default function WorkflowOrchestratorPanel({
     setError("");
     setConfirmed(false);
     try {
-      const data = await api<WorkflowDefinition>(
-        "/api/v1/ai/workflow-orchestrator",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            wid,
-            description: description.trim(),
-          }),
-        },
-      );
+      const data = await api<WorkflowDefinition>("/api/v1/ai/workflow-orchestrator", {
+        method: "POST",
+        body: JSON.stringify({
+          wid,
+          description: description.trim(),
+        }),
+      });
       setWorkflow(data);
     } catch (e) {
       if (process.env.NODE_ENV === "development")
@@ -279,10 +271,7 @@ export default function WorkflowOrchestratorPanel({
               className={primaryBtn}
             >
               {generating ? (
-                <Loader2
-                  size={16}
-                  className="animate-spin motion-reduce:animate-none"
-                />
+                <Loader2 size={16} className="animate-spin motion-reduce:animate-none" />
               ) : (
                 <Sparkles size={16} />
               )}
@@ -299,10 +288,7 @@ export default function WorkflowOrchestratorPanel({
         {/* 加载态 */}
         {generating && (
           <div className="flex items-center justify-center py-8 text-[var(--muted)] text-[length:var(--text-sm)]">
-            <Loader2
-              size={16}
-              className="animate-spin mr-2 motion-reduce:animate-none"
-            />
+            <Loader2 size={16} className="animate-spin mr-2 motion-reduce:animate-none" />
             {t("generating")}
           </div>
         )}
@@ -332,9 +318,7 @@ export default function WorkflowOrchestratorPanel({
                   </code>
                 </div>
                 <div className="flex items-start gap-2 text-[length:var(--text-xs)]">
-                  <span className="text-[var(--meta)] shrink-0">
-                    {t("triggerConditions")}：
-                  </span>
+                  <span className="text-[var(--meta)] shrink-0">{t("triggerConditions")}：</span>
                   {workflow.trigger.conditions.length > 0 ? (
                     <div className="flex flex-wrap gap-1">
                       {workflow.trigger.conditions.map((c, i) => (
@@ -390,8 +374,7 @@ export default function WorkflowOrchestratorPanel({
                         <code>{node.id}</code>
                         {Object.keys(node.config).length > 0 && (
                           <span className="truncate">
-                            {t("config")}:{" "}
-                            {JSON.stringify(node.config).slice(0, 80)}
+                            {t("config")}: {JSON.stringify(node.config).slice(0, 80)}
                             {JSON.stringify(node.config).length > 80 ? "…" : ""}
                           </span>
                         )}
@@ -428,17 +411,13 @@ export default function WorkflowOrchestratorPanel({
                           </span>
                         )}
                         <ArrowRight size={14} className="shrink-0 text-[var(--meta)]" />
-                        <span className="truncate max-w-[120px]">
-                          {toNode?.name ?? edge.to}
-                        </span>
+                        <span className="truncate max-w-[120px]">{toNode?.name ?? edge.to}</span>
                       </div>
                     );
                   })}
                 </div>
               ) : (
-                <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                  {t("noEdges")}
-                </p>
+                <p className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("noEdges")}</p>
               )}
             </div>
 
@@ -462,10 +441,7 @@ export default function WorkflowOrchestratorPanel({
                 className={primaryBtn}
               >
                 {confirming ? (
-                  <Loader2
-                    size={16}
-                    className="animate-spin motion-reduce:animate-none"
-                  />
+                  <Loader2 size={16} className="animate-spin motion-reduce:animate-none" />
                 ) : confirmed ? (
                   <CheckCircle2 size={16} />
                 ) : (

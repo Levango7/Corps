@@ -79,18 +79,15 @@ export function MinutesList({ wid }: { wid: string }) {
     setCreating(true);
     setError("");
     try {
-      const res = await api<{ id: string }>(
-        `/api/v1/workspaces/${wid}/meeting-minutes`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            title: t("untitled"),
-            content: "",
-            attendees: [],
-            actionItems: [],
-          }),
-        },
-      );
+      const res = await api<{ id: string }>(`/api/v1/workspaces/${wid}/meeting-minutes`, {
+        method: "POST",
+        body: JSON.stringify({
+          title: t("untitled"),
+          content: "",
+          attendees: [],
+          actionItems: [],
+        }),
+      });
       router.push(`/w/${wid}/meeting-minutes/${res.id}`);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("createFailed"));

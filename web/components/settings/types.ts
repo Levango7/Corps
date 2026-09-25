@@ -75,12 +75,14 @@ export function loadNotifPref(): NotifPref {
       const parsed: unknown = JSON.parse(raw);
       if (parsed && typeof parsed === "object") {
         return {
-          emailEnabled: typeof (parsed as Record<string, unknown>).emailEnabled === "boolean"
-            ? (parsed as Record<string, boolean>).emailEnabled
-            : defaults.emailEnabled,
-          mentionEnabled: typeof (parsed as Record<string, unknown>).mentionEnabled === "boolean"
-            ? (parsed as Record<string, boolean>).mentionEnabled
-            : defaults.mentionEnabled,
+          emailEnabled:
+            typeof (parsed as Record<string, unknown>).emailEnabled === "boolean"
+              ? (parsed as Record<string, boolean>).emailEnabled
+              : defaults.emailEnabled,
+          mentionEnabled:
+            typeof (parsed as Record<string, unknown>).mentionEnabled === "boolean"
+              ? (parsed as Record<string, boolean>).mentionEnabled
+              : defaults.mentionEnabled,
         };
       }
     }

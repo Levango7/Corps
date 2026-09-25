@@ -38,13 +38,7 @@ export interface RelationFieldOptions {
 }
 
 /** rollup 聚合方式 */
-export type RollupAggregation =
-  | "count"
-  | "sum"
-  | "avg"
-  | "min"
-  | "max"
-  | "array";
+export type RollupAggregation = "count" | "sum" | "avg" | "min" | "max" | "array";
 
 /** rollup 字段的 options 配置 */
 export interface RollupFieldOptions {
@@ -102,14 +96,7 @@ function toStr(v: unknown): string {
 
 /** 判断值是否为合法的 RollupAggregation */
 function isRollupAggregation(v: unknown): v is RollupAggregation {
-  return (
-    v === "count" ||
-    v === "sum" ||
-    v === "avg" ||
-    v === "min" ||
-    v === "max" ||
-    v === "array"
-  );
+  return v === "count" || v === "sum" || v === "avg" || v === "min" || v === "max" || v === "array";
 }
 
 /** 安全将 field.options（Prisma JsonValue）转为 Record<string, unknown>，非法返回 null */
@@ -253,9 +240,7 @@ export function computeRollup(
  * const opts = readRelationOptions(field);
  * if (opts) { /* opts.targetDatabaseId 可安全使用 *\/ }
  */
-export function readRelationOptions(
-  field: DatabaseField,
-): RelationFieldOptions | null {
+export function readRelationOptions(field: DatabaseField): RelationFieldOptions | null {
   const raw = optionsToRecord(field.options);
   if (raw === null) return null;
 
@@ -282,9 +267,7 @@ export function readRelationOptions(
  * const opts = readRollupOptions(field);
  * if (opts) { computeRollup(records, opts.targetFieldId, opts.aggregation) }
  */
-export function readRollupOptions(
-  field: DatabaseField,
-): RollupFieldOptions | null {
+export function readRollupOptions(field: DatabaseField): RollupFieldOptions | null {
   const raw = optionsToRecord(field.options);
   if (raw === null) return null;
 

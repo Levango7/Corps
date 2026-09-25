@@ -186,10 +186,10 @@ export function ConversationCreate({
         memberIds: Array.from(selected),
       };
       if (mode === "group") body.title = groupTitle.trim();
-      const conv = await api<{ id: string }>(
-        `/api/v1/workspaces/${workspaceId}/conversations`,
-        { method: "POST", body: JSON.stringify(body) },
-      );
+      const conv = await api<{ id: string }>(`/api/v1/workspaces/${workspaceId}/conversations`, {
+        method: "POST",
+        body: JSON.stringify(body),
+      });
       onCreated(conv.id);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("createFailed"));
@@ -206,11 +206,7 @@ export function ConversationCreate({
       aria-label={t("createConversation")}
     >
       {/* 遮罩 */}
-      <div
-        className="absolute inset-0 bg-[var(--overlay)]"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-[var(--overlay)]" onClick={onClose} aria-hidden="true" />
 
       {/* 弹窗主体 */}
       <div className="relative w-full max-w-md flex flex-col bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] max-h-[80vh]">
@@ -366,20 +362,14 @@ export function ConversationCreate({
                       type="button"
                       onClick={() => toggleMember(m.userId)}
                       className={`w-full flex items-center gap-[var(--space-3)] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] text-left transition-colors duration-[var(--motion-fast)] ${
-                        isSel
-                          ? "bg-[var(--accent-soft)]"
-                          : "hover:bg-[var(--surface-2)]"
+                        isSel ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--surface-2)]"
                       }`}
                     >
                       {/* 头像 */}
                       <span className="shrink-0 w-8 h-8 rounded-full bg-[var(--surface-3)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] overflow-hidden">
                         {m.user.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={m.user.image}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={m.user.image} alt="" className="w-full h-full object-cover" />
                         ) : (
                           name.charAt(0).toUpperCase()
                         )}
@@ -394,9 +384,7 @@ export function ConversationCreate({
                           </span>
                         )}
                       </span>
-                      {isSel && (
-                        <Check size={16} className="shrink-0 text-[var(--accent)]" />
-                      )}
+                      {isSel && <Check size={16} className="shrink-0 text-[var(--accent)]" />}
                     </button>
                   </li>
                 );
@@ -408,9 +396,7 @@ export function ConversationCreate({
         {/* 错误提示 */}
         {error && (
           <div className="px-[var(--space-4)] pb-[var(--space-2)]">
-            <p className="text-[length:var(--text-xs)] text-[var(--danger)]">
-              {error}
-            </p>
+            <p className="text-[length:var(--text-xs)] text-[var(--danger)]">{error}</p>
           </div>
         )}
 

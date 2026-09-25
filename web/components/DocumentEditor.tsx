@@ -33,7 +33,6 @@ import {
   Trash2,
   ChevronDown,
   Lock,
-
   Plus,
   MessageSquare,
   MoreHorizontal,
@@ -148,7 +147,6 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
 
   // ── 评论/批注面板（可折叠）──
   const [commentsOpen, setCommentsOpen] = useState(false);
-
 
   /** 快速图表对话框：插入 ```mermaid 块到正文（追加到末尾，编辑器语义里"出一张图"） */
   const [quickDiagramOpen, setQuickDiagramOpen] = useState(false);
@@ -460,224 +458,230 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       <Parallax offset={4}>
         {/* 标题 */}
         <input
-        value={title}
-        onChange={(e) => setTitle(e.target.value)}
-        onBlur={() => save()}
-        maxLength={255}
-        placeholder={t("titlePlaceholder")}
-        className="w-full px-0 py-[var(--space-2)] bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
-      />
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          onBlur={() => save()}
+          maxLength={255}
+          placeholder={t("titlePlaceholder")}
+          className="w-full px-0 py-[var(--space-2)] bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
+        />
 
-      {/* 工具栏 */}
-      <div className="flex items-center justify-between mt-[var(--space-3)] mb-[var(--space-4)] gap-[var(--space-2)] flex-nowrap overflow-x-auto scrollbar-hide">
-        <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--muted)] min-w-0">
-          {/* LI-10：自动保存中指示器 */}
-          {busy === "save" && (
-            <span className="inline-flex items-center gap-1">
-              <Loader2 size={14} className="animate-spin" />
-              {t("saving")}
-            </span>
-          )}
-          {/* 自动保存成功反馈：短暂显示"已保存"提示 */}
-          {savedFlash && busy !== "save" && (
-            <span className="inline-flex items-center gap-1 text-[var(--success)]">
-              <Check size={14} />
-              {t("saved")}
-            </span>
-          )}
-          {publishedAt && (
-            <span>
-              {t("publishedAt", {
-                date: new Date(publishedAt).toLocaleString(),
-              })}
-            </span>
-          )}
-        </div>
-        <div className="flex items-center gap-[var(--space-2)] flex-nowrap justify-end shrink-0">
-          <button
-            onClick={back}
-            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-          >
-            <X size={14} />
-            <span className="hidden md:inline">{t("backToList")}</span>
-          </button>
-          <button
-            onClick={() => setPreview((v) => !v)}
-            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-          >
-            <Eye size={14} />
-            <span className="hidden md:inline">{preview ? t("editMode") : t("previewMode")}</span>
-          </button>
-          <button
-            onClick={() => {
-              setSplit((v) => !v);
-              setPreview(false);
-            }}
-            aria-pressed={split}
-            className={`inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
-              split
-                ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
-                : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
-            }`}
-            title={t("splitHint")}
-          >
-            <Columns2 size={14} />
-            <span className="hidden md:inline">{t("splitMode")}</span>
-          </button>
-          {/* 窄屏"更多"菜单：折叠快速图表 + 插入模板 */}
-          <div className="relative md:hidden">
-            <button
-              onClick={() => setMoreMenuOpen((v) => !v)}
-              title={t("moreActions")}
-              aria-label={t("moreActions")}
-              aria-expanded={moreMenuOpen}
-              aria-haspopup="menu"
-              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-            >
-              <MoreHorizontal size={14} />
-            </button>
-            {moreMenuOpen && (
-              <>
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setMoreMenuOpen(false)}
-                  aria-hidden="true"
-                />
-                <ul
-                  role="menu"
-                  aria-label={t("moreActions")}
-                  className="absolute right-0 top-9 z-20 min-w-[180px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
-                >
-                  <li role="menuitem">
-                    <button
-                      onClick={() => { setQuickDiagramOpen(true); setMoreMenuOpen(false); }}
-                      className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-                    >
-                      <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
-                        <Zap size={14} />
-                        {tDiagram("title")}
-                      </div>
-                    </button>
-                  </li>
-                  <li role="menuitem">
-                    <button
-                      onClick={() => { setTemplateMenuOpen(true); setMoreMenuOpen(false); }}
-                      className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-                    >
-                      <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
-                        <Plus size={14} />
-                        {tDecision("insertTemplate")}
-                      </div>
-                    </button>
-                  </li>
-                </ul>
-              </>
+        {/* 工具栏 */}
+        <div className="flex items-center justify-between mt-[var(--space-3)] mb-[var(--space-4)] gap-[var(--space-2)] flex-nowrap overflow-x-auto scrollbar-hide">
+          <div className="flex items-center gap-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--muted)] min-w-0">
+            {/* LI-10：自动保存中指示器 */}
+            {busy === "save" && (
+              <span className="inline-flex items-center gap-1">
+                <Loader2 size={14} className="animate-spin" />
+                {t("saving")}
+              </span>
+            )}
+            {/* 自动保存成功反馈：短暂显示"已保存"提示 */}
+            {savedFlash && busy !== "save" && (
+              <span className="inline-flex items-center gap-1 text-[var(--success)]">
+                <Check size={14} />
+                {t("saved")}
+              </span>
+            )}
+            {publishedAt && (
+              <span>
+                {t("publishedAt", {
+                  date: new Date(publishedAt).toLocaleString(),
+                })}
+              </span>
             )}
           </div>
-          {/* 快速图表（宽屏显示）：不进正文也能出图，确认后一键插入（v0.6 增补） */}
-          <button
-            onClick={() => setQuickDiagramOpen(true)}
-            className="hidden md:inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-            title={tDiagram("title")}
-          >
-            <Zap size={14} />
-            <span>{tDiagram("title")}</span>
-          </button>
-          {/* F1 增强：插入行动项模板（宽屏显示，下拉菜单，复用 ACTION_TEMPLATES） */}
-          <div className="relative hidden md:block">
+          <div className="flex items-center gap-[var(--space-2)] flex-nowrap justify-end shrink-0">
             <button
-              onClick={() => setTemplateMenuOpen((v) => !v)}
-              title={tDecision("insertTemplate")}
-              aria-label={tDecision("insertTemplate")}
-              aria-expanded={templateMenuOpen}
-              aria-haspopup="menu"
+              onClick={back}
+              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              <X size={14} />
+              <span className="hidden md:inline">{t("backToList")}</span>
+            </button>
+            <button
+              onClick={() => setPreview((v) => !v)}
               className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >
-              <Plus size={14} />
-              <span className="hidden sm:inline">{tDecision("insertTemplate")}</span>
-              <ChevronDown size={14} className="text-[var(--muted)]" />
+              <Eye size={14} />
+              <span className="hidden md:inline">{preview ? t("editMode") : t("previewMode")}</span>
             </button>
-            {templateMenuOpen && (
-              <>
-                {/* 点击外部关闭 */}
-                <div
-                  className="fixed inset-0 z-10"
-                  onClick={() => setTemplateMenuOpen(false)}
-                  aria-hidden="true"
-                />
-                <ul
-                  role="menu"
-                  aria-label={tDecision("templateMenuOpen")}
-                  className="absolute right-0 top-9 z-20 min-w-[220px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
-                >
-                  {ACTION_TEMPLATES.map((tpl) => (
-                    <li key={tpl.id} role="menuitem">
+            <button
+              onClick={() => {
+                setSplit((v) => !v);
+                setPreview(false);
+              }}
+              aria-pressed={split}
+              className={`inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+                split
+                  ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
+                  : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
+              }`}
+              title={t("splitHint")}
+            >
+              <Columns2 size={14} />
+              <span className="hidden md:inline">{t("splitMode")}</span>
+            </button>
+            {/* 窄屏"更多"菜单：折叠快速图表 + 插入模板 */}
+            <div className="relative md:hidden">
+              <button
+                onClick={() => setMoreMenuOpen((v) => !v)}
+                title={t("moreActions")}
+                aria-label={t("moreActions")}
+                aria-expanded={moreMenuOpen}
+                aria-haspopup="menu"
+                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              >
+                <MoreHorizontal size={14} />
+              </button>
+              {moreMenuOpen && (
+                <>
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setMoreMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <ul
+                    role="menu"
+                    aria-label={t("moreActions")}
+                    className="absolute right-0 top-9 z-20 min-w-[180px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
+                  >
+                    <li role="menuitem">
                       <button
-                        onClick={() => handleInsertTemplate(tpl.markdown)}
+                        onClick={() => {
+                          setQuickDiagramOpen(true);
+                          setMoreMenuOpen(false);
+                        }}
                         className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                       >
-                        <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
-                          {tpl.name}
-                        </div>
-                        <div className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                          {tpl.description}
+                        <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                          <Zap size={14} />
+                          {tDiagram("title")}
                         </div>
                       </button>
                     </li>
-                  ))}
-                </ul>
-              </>
-            )}
+                    <li role="menuitem">
+                      <button
+                        onClick={() => {
+                          setTemplateMenuOpen(true);
+                          setMoreMenuOpen(false);
+                        }}
+                        className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                      >
+                        <div className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                          <Plus size={14} />
+                          {tDecision("insertTemplate")}
+                        </div>
+                      </button>
+                    </li>
+                  </ul>
+                </>
+              )}
+            </div>
+            {/* 快速图表（宽屏显示）：不进正文也能出图，确认后一键插入（v0.6 增补） */}
+            <button
+              onClick={() => setQuickDiagramOpen(true)}
+              className="hidden md:inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              title={tDiagram("title")}
+            >
+              <Zap size={14} />
+              <span>{tDiagram("title")}</span>
+            </button>
+            {/* F1 增强：插入行动项模板（宽屏显示，下拉菜单，复用 ACTION_TEMPLATES） */}
+            <div className="relative hidden md:block">
+              <button
+                onClick={() => setTemplateMenuOpen((v) => !v)}
+                title={tDecision("insertTemplate")}
+                aria-label={tDecision("insertTemplate")}
+                aria-expanded={templateMenuOpen}
+                aria-haspopup="menu"
+                className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              >
+                <Plus size={14} />
+                <span className="hidden sm:inline">{tDecision("insertTemplate")}</span>
+                <ChevronDown size={14} className="text-[var(--muted)]" />
+              </button>
+              {templateMenuOpen && (
+                <>
+                  {/* 点击外部关闭 */}
+                  <div
+                    className="fixed inset-0 z-10"
+                    onClick={() => setTemplateMenuOpen(false)}
+                    aria-hidden="true"
+                  />
+                  <ul
+                    role="menu"
+                    aria-label={tDecision("templateMenuOpen")}
+                    className="absolute right-0 top-9 z-20 min-w-[220px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
+                  >
+                    {ACTION_TEMPLATES.map((tpl) => (
+                      <li key={tpl.id} role="menuitem">
+                        <button
+                          onClick={() => handleInsertTemplate(tpl.markdown)}
+                          className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                        >
+                          <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                            {tpl.name}
+                          </div>
+                          <div className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                            {tpl.description}
+                          </div>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </>
+              )}
+            </div>
+            {/* F5：分享按钮 → 打开分享设置对话框 */}
+            <button
+              ref={shareTriggerRef}
+              onClick={openShareDialog}
+              disabled={busy !== null}
+              title={busy !== null ? t("saving") : undefined}
+              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              <Share2 size={14} />
+              <span className="hidden md:inline">{t("share")}</span>
+            </button>
+            {/* F4：导出按钮 → 打开 ExportPreview 模态框 */}
+            <button
+              onClick={() => setExportOpen(true)}
+              title={t("exportHint")}
+              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              <Download size={14} />
+              <span className="hidden md:inline">{t("export")}</span>
+            </button>
+            {/* 评论/批注面板开关 */}
+            <button
+              onClick={() => setCommentsOpen((v) => !v)}
+              aria-pressed={commentsOpen}
+              title={t("comments")}
+              className={`inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
+                commentsOpen
+                  ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
+                  : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
+              }`}
+            >
+              <MessageSquare size={14} />
+              <span className="hidden md:inline">{t("comments")}</span>
+            </button>
+            <button
+              onClick={() => save({ publish: true })}
+              disabled={busy !== null}
+              title={busy !== null ? t("saving") : undefined}
+              className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              {busy === "publish" ? (
+                <Loader2 size={14} className="animate-spin" />
+              ) : (
+                <Globe size={14} />
+              )}
+              <Ripple>{t("publish")}</Ripple>
+            </button>
           </div>
-          {/* F5：分享按钮 → 打开分享设置对话框 */}
-          <button
-            ref={shareTriggerRef}
-            onClick={openShareDialog}
-            disabled={busy !== null}
-            title={busy !== null ? t("saving") : undefined}
-            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-          >
-            <Share2 size={14} />
-            <span className="hidden md:inline">{t("share")}</span>
-          </button>
-          {/* F4：导出按钮 → 打开 ExportPreview 模态框 */}
-          <button
-            onClick={() => setExportOpen(true)}
-            title={t("exportHint")}
-            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-          >
-            <Download size={14} />
-            <span className="hidden md:inline">{t("export")}</span>
-          </button>
-          {/* 评论/批注面板开关 */}
-          <button
-            onClick={() => setCommentsOpen((v) => !v)}
-            aria-pressed={commentsOpen}
-            title={t("comments")}
-            className={`inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] border text-[length:var(--text-sm)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
-              commentsOpen
-                ? "border-[var(--accent)] text-[var(--accent)] bg-[var(--surface-2)]"
-                : "border-[var(--border)] text-[var(--fg-2)] hover:bg-[var(--surface-2)]"
-            }`}
-          >
-            <MessageSquare size={14} />
-            <span className="hidden md:inline">{t("comments")}</span>
-          </button>
-          <button
-            onClick={() => save({ publish: true })}
-            disabled={busy !== null}
-            title={busy !== null ? t("saving") : undefined}
-            className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-          >
-            {busy === "publish" ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Globe size={14} />
-            )}
-            <Ripple>{t("publish")}</Ripple>
-          </button>
         </div>
-      </div>
       </Parallax>
 
       {/* 分享链接条（快捷展示，详细设置在对话框内） */}
@@ -1038,7 +1042,9 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       {/* 打印专用容器：仅在导出模态未打开时渲染（避免与 ExportPreview 的 print-area 重复） */}
       {!exportOpen && (
         <div className="hidden print:block print-area" aria-hidden="true">
-          <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-2">{title}</h1>
+          <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] mb-2">
+            {title}
+          </h1>
           <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-[var(--space-4)]">
             corps · {new Date().toLocaleString()}
           </p>

@@ -35,9 +35,7 @@ export function IMBadge({ workspaceId }: IMBadgeProps) {
 
   useEffect(() => {
     const fetchUnread = () => {
-      api<UnreadCountResponse>(
-        `/api/v1/workspaces/${workspaceId}/conversations/unread-count`,
-      )
+      api<UnreadCountResponse>(`/api/v1/workspaces/${workspaceId}/conversations/unread-count`)
         .then((data) => setUnreadCount(data.totalUnread))
         .catch(() => {});
     };

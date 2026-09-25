@@ -15,14 +15,9 @@ import type { ContactItem, ContactGroupItem } from "@/components/contact/types";
  * 布局：左侧分组侧栏 + 中间联系人列表 + 右侧详情侧栏（选中时）
  * 新建：内联弹窗 POST /contacts
  */
-export default function ContactsPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default function ContactsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const t = useTranslations("contact");
-
 
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(null);
   const [selectedContact, setSelectedContact] = useState<ContactItem | null>(null);
@@ -141,9 +136,9 @@ function CreateContactDialog({
   });
 
   useEffect(() => {
-    api<ContactGroupItem[]>(`/api/v1/workspaces/${wid}/contact-groups`).catch(
-      () => [] as ContactGroupItem[],
-    ).then(setGroups);
+    api<ContactGroupItem[]>(`/api/v1/workspaces/${wid}/contact-groups`)
+      .catch(() => [] as ContactGroupItem[])
+      .then(setGroups);
   }, [wid]);
 
   useEffect(() => {
@@ -160,21 +155,18 @@ function CreateContactDialog({
     setSubmitting(true);
     setError("");
     try {
-      const created = await api<ContactItem>(
-        `/api/v1/workspaces/${wid}/contacts`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            name: form.name.trim(),
-            email: form.email.trim() || null,
-            phone: form.phone.trim() || null,
-            department: form.department.trim() || null,
-            position: form.position.trim() || null,
-            notes: form.notes.trim() || null,
-            groupId: form.groupId || null,
-          }),
-        },
-      );
+      const created = await api<ContactItem>(`/api/v1/workspaces/${wid}/contacts`, {
+        method: "POST",
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          department: form.department.trim() || null,
+          position: form.position.trim() || null,
+          notes: form.notes.trim() || null,
+          groupId: form.groupId || null,
+        }),
+      });
       onCreated(created);
     } catch (err) {
       setError(err instanceof Error ? err.message : t("createFailed"));

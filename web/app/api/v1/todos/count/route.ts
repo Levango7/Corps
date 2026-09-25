@@ -8,10 +8,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -49,11 +46,7 @@ const countQuerySchema = z.object({
 /**
  * 判断审批实例当前节点是否需要指定用户审批。
  */
-function isCurrentApprover(
-  nodes: unknown,
-  currentNode: number,
-  userId: string,
-): boolean {
+function isCurrentApprover(nodes: unknown, currentNode: number, userId: string): boolean {
   if (!Array.isArray(nodes)) return false;
   const node = nodes[currentNode] as ApprovalNode | undefined;
   if (!node) return false;
@@ -86,8 +79,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },

@@ -201,10 +201,9 @@ export function ConversationSettings({
     async (userId: string) => {
       setError(null);
       try {
-        await api(
-          `/api/v1/workspaces/${wid}/conversations/${cid}/members/${userId}`,
-          { method: "DELETE" },
-        );
+        await api(`/api/v1/workspaces/${wid}/conversations/${cid}/members/${userId}`, {
+          method: "DELETE",
+        });
         setMembers((prev) => prev.filter((m) => m.userId !== userId));
       } catch (err) {
         setError(err instanceof Error ? err.message : t("settingsRemoveFailed"));
@@ -214,13 +213,10 @@ export function ConversationSettings({
   );
 
   /** 请求移除成员（弹出确认弹窗） */
-  const requestRemoveMember = useCallback(
-    (userId: string) => {
-      setConfirmRemoveUserId(userId);
-      setConfirmAction("removeMember");
-    },
-    [],
-  );
+  const requestRemoveMember = useCallback((userId: string) => {
+    setConfirmRemoveUserId(userId);
+    setConfirmAction("removeMember");
+  }, []);
 
   /** 打开添加成员面板 */
   const openAddPanel = useCallback(async () => {
@@ -322,9 +318,7 @@ export function ConversationSettings({
       );
     }
     return (
-      <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-        {t("roleMember")}
-      </span>
+      <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("roleMember")}</span>
     );
   };
 
@@ -336,11 +330,7 @@ export function ConversationSettings({
       aria-label={t("settings")}
     >
       {/* 遮罩 */}
-      <div
-        className="absolute inset-0 bg-[var(--overlay)]"
-        onClick={onClose}
-        aria-hidden="true"
-      />
+      <div className="absolute inset-0 bg-[var(--overlay)]" onClick={onClose} aria-hidden="true" />
 
       {/* 侧滑面板 */}
       <div className="relative w-full max-w-md h-full flex flex-col bg-[var(--surface)] border-l border-[var(--border)] shadow-[var(--elev-lg)]">
@@ -416,7 +406,11 @@ export function ConversationSettings({
               className="w-full flex items-center justify-between gap-[var(--space-3)] py-[var(--space-1)]"
             >
               <span className="flex items-center gap-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)]">
-                {muted ? <BellOff size={16} className="text-[var(--muted)]" /> : <Bell size={16} className="text-[var(--fg-2)]" />}
+                {muted ? (
+                  <BellOff size={16} className="text-[var(--muted)]" />
+                ) : (
+                  <Bell size={16} className="text-[var(--fg-2)]" />
+                )}
                 {muted ? t("unmuteNotifications") : t("muteNotifications")}
               </span>
               <span
@@ -470,11 +464,7 @@ export function ConversationSettings({
                       <span className="shrink-0 w-8 h-8 rounded-full bg-[var(--surface-3)] flex items-center justify-center text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] overflow-hidden">
                         {m.user.image ? (
                           // eslint-disable-next-line @next/next/no-img-element
-                          <img
-                            src={m.user.image}
-                            alt=""
-                            className="w-full h-full object-cover"
-                          />
+                          <img src={m.user.image} alt="" className="w-full h-full object-cover" />
                         ) : (
                           name.charAt(0).toUpperCase()
                         )}
@@ -490,9 +480,7 @@ export function ConversationSettings({
                             )}
                           </span>
                         </span>
-                        <span className="mt-0.5 block">
-                          {renderRoleBadge(m.role)}
-                        </span>
+                        <span className="mt-0.5 block">{renderRoleBadge(m.role)}</span>
                       </span>
                       {/* 管理操作 */}
                       {canManage && !isSelf && isGroup && (

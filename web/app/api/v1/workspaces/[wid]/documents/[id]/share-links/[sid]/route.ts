@@ -86,12 +86,7 @@ export async function PATCH(
     const validated = updateShareLinkSchema.parse(body);
 
     // 鉴权：需 manage 权限 / 作者 / owner / admin
-    const allowed = await canManageDoc(
-      wid,
-      did,
-      ctx.payload.sub,
-      ctx.member.role,
-    );
+    const allowed = await canManageDoc(wid, did, ctx.payload.sub, ctx.member.role);
     if (!allowed) {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noManagePermission"), data: null },
@@ -167,8 +162,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           code: 400,
-          message:
-            error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
           errors: error.errors,
         },
@@ -200,12 +194,7 @@ export async function DELETE(
 
   try {
     // 鉴权：需 manage 权限 / 作者 / owner / admin
-    const allowed = await canManageDoc(
-      wid,
-      did,
-      ctx.payload.sub,
-      ctx.member.role,
-    );
+    const allowed = await canManageDoc(wid, did, ctx.payload.sub, ctx.member.role);
     if (!allowed) {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noManagePermission"), data: null },

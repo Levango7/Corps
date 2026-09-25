@@ -1,4 +1,3 @@
-
 /**
  * 截止日期标签 —— 共享组件。
  *
@@ -24,6 +23,7 @@ export function DueTag({ dueDate, inline = false }: DueTagProps) {
       : due.tone === "today"
         ? "text-[var(--warn)]"
         : "text-[var(--muted)]";
-  if (inline) return <span className={`text-[length:var(--text-xs)] ${toneClass}`}>· {due.text}</span>;
+  if (inline)
+    return <span className={`text-[length:var(--text-xs)] ${toneClass}`}>· {due.text}</span>;
   return <p className={`text-[length:var(--text-xs)] mt-1 ${toneClass}`}>{due.text}</p>;
 }

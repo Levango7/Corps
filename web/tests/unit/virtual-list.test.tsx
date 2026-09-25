@@ -92,9 +92,7 @@ describe("VirtualList 基础渲染", () => {
 
   it("外层容器含 overflow:auto 与 contain:strict 样式", () => {
     useVirtualizerMock.mockReturnValue(makeVirtualizer([], 0));
-    const { container } = render(
-      <VirtualList items={[] as string[]} renderItem={() => null} />,
-    );
+    const { container } = render(<VirtualList items={[] as string[]} renderItem={() => null} />);
 
     const outer = container.firstChild as HTMLElement;
     expect(outer.style.overflow).toBe("auto");

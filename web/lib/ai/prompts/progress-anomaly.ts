@@ -69,8 +69,6 @@ JSON schema：
  */
 export function buildProgressAnomalyUserPrompt(ctx: WorkspaceContext): string {
   const truncatedContext =
-    ctx.context.length > 12000
-      ? ctx.context.slice(0, 12000) + "\n\n[上下文已截断]"
-      : ctx.context;
+    ctx.context.length > 12000 ? ctx.context.slice(0, 12000) + "\n\n[上下文已截断]" : ctx.context;
   return `工作区进度数据：\n${truncatedContext}`;
 }

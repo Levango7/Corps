@@ -139,9 +139,7 @@ ${sourceText}`;
     return null;
   }
   const suggestedTags: string[] = Array.isArray(parsed.suggestedTags)
-    ? parsed.suggestedTags
-        .filter((t: unknown) => typeof t === "string")
-        .slice(0, 10)
+    ? parsed.suggestedTags.filter((t: unknown) => typeof t === "string").slice(0, 10)
     : [];
 
   return { title: parsed.title, markdown: parsed.markdown, suggestedTags };
@@ -150,10 +148,17 @@ ${sourceText}`;
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   // 仅 member 及以上；viewer 也不可调用（前端也不应出现入口）
   if (!["owner", "admin", "member"].includes(ctx.member.role)) {
-    return NextResponse.json({ code: 403, message: apiMsg(req, "noPermission"), data: null }, { status: 403 });
+    return NextResponse.json(
+      { code: 403, message: apiMsg(req, "noPermission"), data: null },
+      { status: 403 },
+    );
   }
 
   let body: z.infer<typeof schema>;
@@ -166,7 +171,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+      { status: 400 },
+    );
   }
 
   // 1) AI 已配置时优先用 LLM（deepseek-reasoner）提取

@@ -21,15 +21,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Activity,
-  Coins,
-  Cpu,
-  TrendingUp,
-  Clock,
-  CheckCircle2,
-  XCircle,
-} from "lucide-react";
+import { Activity, Coins, Cpu, TrendingUp, Clock, CheckCircle2, XCircle } from "lucide-react";
 import { api } from "@/lib/api";
 
 interface UsageDashboardProps {
@@ -118,10 +110,9 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
     setLoading(true);
     setError(null);
     try {
-      const result = await api<DashboardData>(
-        `/api/v1/ai/usage/dashboard?workspaceId=${wid}`,
-        { signal: ac.signal },
-      );
+      const result = await api<DashboardData>(`/api/v1/ai/usage/dashboard?workspaceId=${wid}`, {
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       setData(result);
     } catch (e) {
@@ -148,9 +139,7 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("dashboard")}
-        </div>
+        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("dashboard")}</div>
       </div>
     );
   }
@@ -158,9 +147,7 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
   if (error || !data) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <div className="text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </div>
+        <div className="text-[length:var(--text-sm)] text-[var(--danger)]">{error}</div>
       </div>
     );
   }
@@ -196,14 +183,8 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
           </div>
           <div className="flex flex-col gap-[var(--space-1)]">
             <StatRow label={t("calls")} value={String(data.today.calls)} />
-            <StatRow
-              label={t("tokens")}
-              value={formatTokens(data.today.tokens)}
-            />
-            <StatRow
-              label={t("cost")}
-              value={formatCost(data.today.cost)}
-            />
+            <StatRow label={t("tokens")} value={formatTokens(data.today.tokens)} />
+            <StatRow label={t("cost")} value={formatCost(data.today.cost)} />
           </div>
         </div>
 
@@ -217,14 +198,8 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
           </div>
           <div className="flex flex-col gap-[var(--space-1)]">
             <StatRow label={t("calls")} value={String(data.month.calls)} />
-            <StatRow
-              label={t("tokens")}
-              value={formatTokens(data.month.tokens)}
-            />
-            <StatRow
-              label={t("cost")}
-              value={formatCost(data.month.cost)}
-            />
+            <StatRow label={t("tokens")} value={formatTokens(data.month.tokens)} />
+            <StatRow label={t("cost")} value={formatCost(data.month.cost)} />
           </div>
         </div>
       </section>
@@ -237,8 +212,7 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
               {t("dailyTokenLimit")}
             </span>
             <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-              {formatTokens(data.today.tokens)} /{" "}
-              {formatTokens(data.limit.dailyTokenLimit!)}
+              {formatTokens(data.today.tokens)} / {formatTokens(data.limit.dailyTokenLimit!)}
             </span>
           </div>
           <div
@@ -274,7 +248,9 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
               >
                 <span className="text-[var(--fg)]">{cap.capability}</span>
                 <div className="flex items-center gap-[var(--space-4)] text-[var(--muted)]">
-                  <span>{cap.calls} {t("calls")}</span>
+                  <span>
+                    {cap.calls} {t("calls")}
+                  </span>
                   <span>{formatTokens(cap.tokens)}</span>
                   <span className="flex items-center gap-[var(--space-1)]">
                     <Coins size={16} className="text-[var(--muted)]" />
@@ -310,11 +286,7 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
                       aria-label={t("success")}
                     />
                   ) : (
-                    <XCircle
-                      size={16}
-                      className="text-[var(--danger)]"
-                      aria-label={t("failed")}
-                    />
+                    <XCircle size={16} className="text-[var(--danger)]" aria-label={t("failed")} />
                   )}
                   <span className="text-[var(--fg)]">{log.capability}</span>
                   <span className="text-[var(--muted)]">
@@ -339,9 +311,7 @@ function StatRow({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between text-[length:var(--text-sm)]">
       <span className="text-[var(--muted)]">{label}</span>
-      <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
-        {value}
-      </span>
+      <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{value}</span>
     </div>
   );
 }

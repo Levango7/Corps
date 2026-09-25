@@ -10,7 +10,19 @@
 
 import { memo, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
-import { Plus, Kanban, GripVertical, ChevronUp, ChevronDown, AlertTriangle, Check, Copy, Archive, Trash2, Share2 } from "lucide-react";
+import {
+  Plus,
+  Kanban,
+  GripVertical,
+  ChevronUp,
+  ChevronDown,
+  AlertTriangle,
+  Check,
+  Copy,
+  Archive,
+  Trash2,
+  Share2,
+} from "lucide-react";
 import { Skeleton, BoardColumnSkeleton } from "@/components/Skeleton";
 import { DueTag } from "@/components/DueTag";
 import { TaskLabels } from "@/components/TaskLabels";
@@ -92,16 +104,18 @@ export function BoardColumn({
         if (taskId) onDropOnColumn(taskId, column.id);
       }}
     >
-            <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-4)] pb-[var(--space-2)] border-b border-[var(--border)]">
+      <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-4)] pb-[var(--space-2)] border-b border-[var(--border)]">
         <div className="w-2 h-2 rounded-full" style={{ background: column.color }} />
-        <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">{tStatus(column.titleKey)}</span>
+        <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
+          {tStatus(column.titleKey)}
+        </span>
         <span className="ml-auto text-[length:var(--text-xs)] text-[var(--muted)] bg-[var(--surface)] px-2 py-0.5 rounded-full">
           {columnTasks.length}
         </span>
       </div>
 
       <LayoutGroup id={`column-${column.id}`}>
-            <div className="space-y-[var(--space-2)]">
+        <div className="space-y-[var(--space-2)]">
           <AnimatePresence mode="popLayout" initial={false}>
             {columnTasks.map((task) => (
               <BoardCard
@@ -207,173 +221,173 @@ function BoardCardImpl({
 
   return (
     <>
-    <motion.div
-      layout="position"
-      draggable={!selectionMode}
-      role="button"
-      tabIndex={0}
-      {...longPressHandlers}
-      // hover 抬升 2px（y: -2）；拖拽中 / 降级时不抬升，避免与拖拽视觉冲突
-      whileHover={reduceMotion || draggingId === task.id ? undefined : { y: -2 }}
-      // 进出动画：AnimatePresence 驱动卡片增删时的淡入/淡出 + 微缩放
-      initial={{ opacity: 0, scale: 0.92 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.92 }}
-      transition={{ duration: MOTION.fast, ease: MOTION.easeStandard }}
-      onClick={(e) => {
-        if (selectionMode) {
-          e.preventDefault();
-          onToggleSelect(task.id);
-          return;
-        }
-        // 拖拽与点击冲突：若拖拽距离 > 5px，视为拖拽而非点击，不触发跳转
-        const start = dragStartRef.current;
-        if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5) {
-          return;
-        }
-        router.push(`/w/${wid}/task/${task.id}`);
-      }}
-      onKeyDown={(e) => {
-        if (selectionMode && (e.key === " " || e.key === "Enter")) {
-          e.preventDefault();
-          onToggleSelect(task.id);
-          return;
-        }
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
+      <motion.div
+        layout="position"
+        draggable={!selectionMode}
+        role="button"
+        tabIndex={0}
+        {...longPressHandlers}
+        // hover 抬升 2px（y: -2）；拖拽中 / 降级时不抬升，避免与拖拽视觉冲突
+        whileHover={reduceMotion || draggingId === task.id ? undefined : { y: -2 }}
+        // 进出动画：AnimatePresence 驱动卡片增删时的淡入/淡出 + 微缩放
+        initial={{ opacity: 0, scale: 0.92 }}
+        animate={{ opacity: 1, scale: 1 }}
+        exit={{ opacity: 0, scale: 0.92 }}
+        transition={{ duration: MOTION.fast, ease: MOTION.easeStandard }}
+        onClick={(e) => {
+          if (selectionMode) {
+            e.preventDefault();
+            onToggleSelect(task.id);
+            return;
+          }
+          // 拖拽与点击冲突：若拖拽距离 > 5px，视为拖拽而非点击，不触发跳转
+          const start = dragStartRef.current;
+          if (start && Math.hypot(e.clientX - start.x, e.clientY - start.y) > 5) {
+            return;
+          }
           router.push(`/w/${wid}/task/${task.id}`);
-        }
-      }}
-      className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
-        draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
-      } ${selected ? "ring-2 ring-[var(--accent)]" : ""} ${
-        dragOverCard ? "ring-2 ring-[var(--accent-ring)]" : ""
-      }`}
-      style={{
-        borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
-      }}
-      onDragStart={(e) => {
-        // motion.div 的 onDragStart 类型被 framer-motion gesture 覆盖为
-        // MouseEvent | TouchEvent | PointerEvent，但运行时 HTML5 draggable
-        // 仍触发原生 DragEvent，故断言为 React.DragEvent 以访问 dataTransfer / clientX
-        const ev = e as unknown as DragEvent<HTMLDivElement>;
-        ev.dataTransfer.setData("text/plain", task.id);
-        dragStartRef.current = { x: ev.clientX, y: ev.clientY };
-        setDraggingId(task.id);
-      }}
-      onDragEnd={() => {
-        setDraggingId(null);
-        dragStartRef.current = null;
-      }}
-      onDragOver={(e) => {
-        e.preventDefault();
-        setDragOverCard(true);
-      }}
-      onDragLeave={() => setDragOverCard(false)}
-      onDrop={(e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        const sourceId = e.dataTransfer.getData("text/plain");
-        if (sourceId) onDropOnTask(sourceId, task.id);
-        setDragOverCard(false);
-      }}
-    >
-      <div className="flex items-start gap-2">
-        {/* 多选模式下显示复选框 */}
-        {selectionMode && (
-          <input
-            type="checkbox"
-            checked={selected}
-            onChange={() => onToggleSelect(task.id)}
-            onClick={(e) => e.stopPropagation()}
-            className="mt-0.5 shrink-0 accent-[var(--accent)]"
-            aria-label={t("selectTask", { title: task.title })}
-          />
-        )}
-        <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-1)]">
-            <span className="text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--muted)]">
-              {formatTaskId(task.id)}
-            </span>
-          </div>
-          <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
-            {task.title}
-          </p>
-          <div className="flex items-center gap-1.5 flex-wrap">
-            {task.dueDate && <DueTag dueDate={task.dueDate} />}
-            {/* 子任务进度徽标（v0.4.0：有子任务的父任务显示 done/total） */}
-            {(task.subtaskTotal ?? 0) > 0 && (
-              <span className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
-                <span className="inline-block w-8 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden align-middle">
-                  <span
-                    className="block h-full rounded-full"
-                    style={{
-                      width: `${Math.round(((task.subtaskDone ?? 0) / (task.subtaskTotal ?? 1)) * 100)}%`,
-                      background:
-                        (task.subtaskDone ?? 0) === (task.subtaskTotal ?? 0)
-                          ? "var(--success)"
-                          : "var(--accent)",
-                    }}
-                  />
-                </span>
-                {task.subtaskDone}/{task.subtaskTotal}
-              </span>
-            )}
-            {/* 阻塞徽标 */}
-            {task.blocked && (
-              <span
-                className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-xs)]"
-                title={task.blockedReason ?? undefined}
-              >
-                <AlertTriangle size={14} />
-              </span>
-            )}
-          </div>
-          {task.labels && task.labels.length > 0 && <TaskLabels labels={task.labels} />}
-          {task.assignee && (
-            <div className="flex items-center gap-[var(--space-1)] mt-[var(--space-2)]">
-              <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
-                {task.assignee.name?.[0]}
-              </div>
-              <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
-                {task.assignee.name}
+        }}
+        onKeyDown={(e) => {
+          if (selectionMode && (e.key === " " || e.key === "Enter")) {
+            e.preventDefault();
+            onToggleSelect(task.id);
+            return;
+          }
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            router.push(`/w/${wid}/task/${task.id}`);
+          }
+        }}
+        className={`bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5 cursor-pointer hover:shadow-[var(--elev-hover)] hover:border-[var(--muted)] transition-[box-shadow,border-color,opacity] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none ${
+          draggingId === task.id ? "opacity-50 rotate-2 scale-95" : ""
+        } ${selected ? "ring-2 ring-[var(--accent)]" : ""} ${
+          dragOverCard ? "ring-2 ring-[var(--accent-ring)]" : ""
+        }`}
+        style={{
+          borderLeft: `3px solid ${PRIORITY_BAR_COLORS[task.priority]}`,
+        }}
+        onDragStart={(e) => {
+          // motion.div 的 onDragStart 类型被 framer-motion gesture 覆盖为
+          // MouseEvent | TouchEvent | PointerEvent，但运行时 HTML5 draggable
+          // 仍触发原生 DragEvent，故断言为 React.DragEvent 以访问 dataTransfer / clientX
+          const ev = e as unknown as DragEvent<HTMLDivElement>;
+          ev.dataTransfer.setData("text/plain", task.id);
+          dragStartRef.current = { x: ev.clientX, y: ev.clientY };
+          setDraggingId(task.id);
+        }}
+        onDragEnd={() => {
+          setDraggingId(null);
+          dragStartRef.current = null;
+        }}
+        onDragOver={(e) => {
+          e.preventDefault();
+          setDragOverCard(true);
+        }}
+        onDragLeave={() => setDragOverCard(false)}
+        onDrop={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const sourceId = e.dataTransfer.getData("text/plain");
+          if (sourceId) onDropOnTask(sourceId, task.id);
+          setDragOverCard(false);
+        }}
+      >
+        <div className="flex items-start gap-2">
+          {/* 多选模式下显示复选框 */}
+          {selectionMode && (
+            <input
+              type="checkbox"
+              checked={selected}
+              onChange={() => onToggleSelect(task.id)}
+              onClick={(e) => e.stopPropagation()}
+              className="mt-0.5 shrink-0 accent-[var(--accent)]"
+              aria-label={t("selectTask", { title: task.title })}
+            />
+          )}
+          <GripVertical size={14} className="text-[var(--meta)] mt-0.5 shrink-0 cursor-grab" />
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-1)]">
+              <span className="text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--muted)]">
+                {formatTaskId(task.id)}
               </span>
             </div>
-          )}
+            <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
+              {task.title}
+            </p>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {task.dueDate && <DueTag dueDate={task.dueDate} />}
+              {/* 子任务进度徽标（v0.4.0：有子任务的父任务显示 done/total） */}
+              {(task.subtaskTotal ?? 0) > 0 && (
+                <span className="inline-flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
+                  <span className="inline-block w-8 h-1 rounded-full bg-[var(--surface-3)] overflow-hidden align-middle">
+                    <span
+                      className="block h-full rounded-full"
+                      style={{
+                        width: `${Math.round(((task.subtaskDone ?? 0) / (task.subtaskTotal ?? 1)) * 100)}%`,
+                        background:
+                          (task.subtaskDone ?? 0) === (task.subtaskTotal ?? 0)
+                            ? "var(--success)"
+                            : "var(--accent)",
+                      }}
+                    />
+                  </span>
+                  {task.subtaskDone}/{task.subtaskTotal}
+                </span>
+              )}
+              {/* 阻塞徽标 */}
+              {task.blocked && (
+                <span
+                  className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--danger-soft)] text-[var(--danger-fg)] text-[length:var(--text-xs)]"
+                  title={task.blockedReason ?? undefined}
+                >
+                  <AlertTriangle size={14} />
+                </span>
+              )}
+            </div>
+            {task.labels && task.labels.length > 0 && <TaskLabels labels={task.labels} />}
+            {task.assignee && (
+              <div className="flex items-center gap-[var(--space-1)] mt-[var(--space-2)]">
+                <div className="w-5 h-5 rounded-full bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-xs)] flex items-center justify-center shrink-0">
+                  {task.assignee.name?.[0]}
+                </div>
+                <span className="text-[length:var(--text-xs)] text-[var(--muted)] truncate">
+                  {task.assignee.name}
+                </span>
+              </div>
+            )}
+          </div>
+          {/* 移动端上下移动按钮：触摸设备不支持 HTML5 DnD，提供显式按钮 */}
+          <div className="md:hidden flex flex-col gap-0.5 shrink-0 -mr-1">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveByStep(task.id, -1);
+              }}
+              className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              aria-label={t("moveUp")}
+            >
+              <ChevronUp size={14} />
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onMoveByStep(task.id, 1);
+              }}
+              className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+              aria-label={t("moveDown")}
+            >
+              <ChevronDown size={14} />
+            </button>
+          </div>
         </div>
-        {/* 移动端上下移动按钮：触摸设备不支持 HTML5 DnD，提供显式按钮 */}
-        <div className="md:hidden flex flex-col gap-0.5 shrink-0 -mr-1">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveByStep(task.id, -1);
-            }}
-            className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-            aria-label={t("moveUp")}
-          >
-            <ChevronUp size={14} />
-          </button>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onMoveByStep(task.id, 1);
-            }}
-            className="p-1 rounded-[var(--radius-sm)] hover:bg-[var(--surface-2)] text-[var(--muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
-            aria-label={t("moveDown")}
-          >
-            <ChevronDown size={14} />
-          </button>
-        </div>
-      </div>
-    </motion.div>
-    <QuickActionMenu
-      open={longPressOpen}
-      onClose={() => setLongPressOpen(false)}
-      actions={quickActions}
-      x={longPressX}
-      y={longPressY}
-    />
+      </motion.div>
+      <QuickActionMenu
+        open={longPressOpen}
+        onClose={() => setLongPressOpen(false)}
+        actions={quickActions}
+        x={longPressX}
+        y={longPressY}
+      />
     </>
   );
 }
@@ -405,13 +419,27 @@ export function ListTable({
       <table className="w-full text-[length:var(--text-sm)]">
         <thead>
           <tr className="border-b border-[var(--border)] text-left text-[var(--muted)]">
-            {selectionMode && <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10 w-10" />}
-            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("title")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("assignee")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("priority")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("status")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("dueDate")}</th>
-            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">{t("label")}</th>
+            {selectionMode && (
+              <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10 w-10" />
+            )}
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">
+              {t("title")}
+            </th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">
+              {t("assignee")}
+            </th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">
+              {t("priority")}
+            </th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">
+              {t("status")}
+            </th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">
+              {t("dueDate")}
+            </th>
+            <th className="font-[weight:var(--weight-medium)] px-[var(--space-4)] h-10">
+              {t("label")}
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -459,7 +487,9 @@ export function ListTable({
                 <td className="px-[var(--space-4)] h-10 text-[var(--fg)] font-[weight:var(--weight-medium)] truncate max-w-xs">
                   {task.title}
                 </td>
-                <td className="px-[var(--space-4)] h-10 text-[var(--muted)]">{task.assignee?.name ?? "—"}</td>
+                <td className="px-[var(--space-4)] h-10 text-[var(--muted)]">
+                  {task.assignee?.name ?? "—"}
+                </td>
                 <td className="px-[var(--space-4)] h-10">
                   <span
                     className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)]"
@@ -559,7 +589,9 @@ export function ListCards({
                     aria-label={t("selectTask", { title: task.title })}
                   />
                 )}
-                <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate flex-1">{task.title}</p>
+                <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate flex-1">
+                  {task.title}
+                </p>
               </div>
               <span
                 className="text-[length:var(--text-xs)] px-1.5 py-0.5 rounded-[var(--radius-sm)] shrink-0"
@@ -607,19 +639,22 @@ export function BoardSkeleton() {
             key={col.id}
             className="bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-[var(--space-4)] min-h-[var(--board-col-min-h)] min-w-[var(--board-col-min-w)] flex-shrink-0 lg:min-w-0"
           >
-      <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-4)] pb-[var(--space-2)] border-b border-[var(--border)]">
+            <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-4)] pb-[var(--space-2)] border-b border-[var(--border)]">
               <Skeleton className="w-2 h-2 rounded-full" />
               <Skeleton className="h-4 w-14" />
               <Skeleton className="ml-auto h-5 w-8 rounded-full" />
             </div>
-        <div className="space-y-[var(--space-2)]">
+            <div className="space-y-[var(--space-2)]">
               {Array.from({ length: 3 }).map((_, i) => (
                 <div
                   key={i}
                   className="bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-md)] p-2.5"
                 >
                   <Skeleton className="h-3 w-16 mb-2" />
-                  <Skeleton className="h-4 w-full mb-[var(--space-1)]" style={{ maxWidth: `${70 + i * 8}%` }} />
+                  <Skeleton
+                    className="h-4 w-full mb-[var(--space-1)]"
+                    style={{ maxWidth: `${70 + i * 8}%` }}
+                  />
                   <Skeleton className="h-3 w-20 mt-[var(--space-2)]" />
                 </div>
               ))}

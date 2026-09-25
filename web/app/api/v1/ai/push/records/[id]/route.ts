@@ -15,10 +15,7 @@ const patchSchema = z.object({
 });
 
 /** PATCH /api/v1/ai/push/records/{id} — 标记已读（或未读） */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);

@@ -60,13 +60,7 @@ function normalizeStats(payload: TaskStatsPayload | null | undefined): TaskStats
 }
 
 /** 圆环进度图（纯 SVG）—— 完成率 = done / total */
-function ProgressRing({
-  percent,
-  size = 72,
-}: {
-  percent: number;
-  size?: number;
-}) {
+function ProgressRing({ percent, size = 72 }: { percent: number; size?: number }) {
   const stroke = 6;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -139,14 +133,8 @@ function StatItem({
     <div className="flex items-center gap-[var(--space-2)]">
       <Icon size={14} className="shrink-0" style={{ color }} aria-hidden />
       <div className="flex flex-col">
-        <span
-          className="text-[length:var(--text-xs)] text-[var(--muted)]"
-        >
-          {label}
-        </span>
-        <span
-          className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
-        >
+        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{label}</span>
+        <span className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
           {value}
         </span>
       </div>
@@ -161,9 +149,7 @@ export default function TaskSummaryWidget({ wid }: TaskSummaryWidgetProps) {
 
   const load = useCallback(async () => {
     try {
-      const payload = await api<TaskStatsPayload>(
-        `/api/v1/workspaces/${wid}/analytics/overview`,
-      );
+      const payload = await api<TaskStatsPayload>(`/api/v1/workspaces/${wid}/analytics/overview`);
       setStats(normalizeStats(payload));
       setError(false);
     } catch {
@@ -217,46 +203,27 @@ export default function TaskSummaryWidget({ wid }: TaskSummaryWidgetProps) {
       <div className="flex items-center gap-[var(--space-4)]">
         <ProgressRing percent={percent} />
         <div className="flex flex-col">
-          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            任务总数
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">任务总数</span>
           <span className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             {total}
           </span>
           {error && (
-            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-              数据加载失败
-            </span>
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">数据加载失败</span>
           )}
         </div>
       </div>
 
       {/* 统计网格 */}
       <div className="grid grid-cols-2 gap-[var(--space-3)]">
-        <StatItem
-          icon={CheckCircle2}
-          label="已完成"
-          value={done}
-          color="var(--success)"
-        />
-        <StatItem
-          icon={Clock}
-          label="进行中"
-          value={inProgress}
-          color="var(--accent)"
-        />
+        <StatItem icon={CheckCircle2} label="已完成" value={done} color="var(--success)" />
+        <StatItem icon={Clock} label="进行中" value={inProgress} color="var(--accent)" />
         <StatItem
           icon={ListTodo}
           label="待处理"
           value={Math.max(0, total - done - inProgress)}
           color="var(--muted)"
         />
-        <StatItem
-          icon={AlertCircle}
-          label="逾期"
-          value={overdue}
-          color="var(--danger)"
-        />
+        <StatItem icon={AlertCircle} label="逾期" value={overdue} color="var(--danger)" />
       </div>
     </div>
   );

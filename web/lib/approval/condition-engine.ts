@@ -218,7 +218,10 @@ export function evaluateCondition(conditionNode: ConditionNode, formData: FormDa
  * // cache = { "cond-1": "manager-approval", "cond-2": "ceo-approval" }
  * ```
  */
-export function evaluateAllConditions(graph: ApprovalNodeGraph, formData: FormData): ConditionCache {
+export function evaluateAllConditions(
+  graph: ApprovalNodeGraph,
+  formData: FormData,
+): ConditionCache {
   const cache: ConditionCache = {};
 
   for (const node of graph.nodes) {
@@ -352,9 +355,7 @@ export function getActiveNodes(
  * ]);
  * ```
  */
-export function buildNodeGraph(
-  nodes: FlatApprovalNode[] | ApprovalNodeGraph,
-): ApprovalNodeGraph {
+export function buildNodeGraph(nodes: FlatApprovalNode[] | ApprovalNodeGraph): ApprovalNodeGraph {
   // 如果已经是图结构，直接返回
   if (!Array.isArray(nodes) && "nodes" in nodes && "edges" in nodes) {
     return nodes as ApprovalNodeGraph;

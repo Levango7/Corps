@@ -96,13 +96,11 @@ export function ConversationItem({
 
   // 名称
   const displayName = isGroup
-    ? conversation.title ?? tChat("groupConversation")
-    : otherMember?.user.name ?? otherMember?.user.email ?? tChat("unknownUser");
+    ? (conversation.title ?? tChat("groupConversation"))
+    : (otherMember?.user.name ?? otherMember?.user.email ?? tChat("unknownUser"));
 
   // 头像
-  const avatarUrl = isGroup
-    ? conversation.avatar
-    : otherMember?.user.image ?? null;
+  const avatarUrl = isGroup ? conversation.avatar : (otherMember?.user.image ?? null);
   const initial = isGroup
     ? getInitial(conversation.title)
     : getInitial(otherMember?.user.name ?? otherMember?.user.email ?? null);
@@ -111,7 +109,7 @@ export function ConversationItem({
   const lastMessage = conversation.messages?.[conversation.messages.length - 1];
   const preview = lastMessage
     ? truncate(lastMessage.body, PREVIEW_MAX_LENGTH)
-    : conversation.description ?? "";
+    : (conversation.description ?? "");
 
   // 时间
   const timeStr = formatRelativeTime(conversation.lastMessageAt, t, locale);

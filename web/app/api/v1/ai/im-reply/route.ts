@@ -21,10 +21,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
-import {
-  buildImReplySystemPrompt,
-  buildImReplyUserPrompt,
-} from "@/lib/ai/prompts/im-reply";
+import { buildImReplySystemPrompt, buildImReplyUserPrompt } from "@/lib/ai/prompts/im-reply";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -38,7 +35,6 @@ interface ImReplySuggestion {
   text: string;
   tone: "formal" | "casual" | "concise";
 }
-
 
 export async function POST(req: NextRequest) {
   // 1) 认证
@@ -151,9 +147,7 @@ export async function POST(req: NextRequest) {
               (s): s is ImReplySuggestion =>
                 s != null &&
                 typeof s.text === "string" &&
-                (s.tone === "formal" ||
-                  s.tone === "casual" ||
-                  s.tone === "concise"),
+                (s.tone === "formal" || s.tone === "casual" || s.tone === "concise"),
             )
             .slice(0, 3)
         : [];

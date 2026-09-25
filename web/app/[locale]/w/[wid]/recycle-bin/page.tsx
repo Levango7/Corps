@@ -10,11 +10,7 @@ import { RecycleBin } from "@/components/RecycleBin";
  * 标题、筛选、列表、分页均在 RecycleBin 组件内。
  * 面包屑由工作区 layout 的工作区切换器承担（与 documents 页同模式）。
  */
-export default async function RecycleBinPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default async function RecycleBinPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   return (
     <main className="flex-1 min-w-0">

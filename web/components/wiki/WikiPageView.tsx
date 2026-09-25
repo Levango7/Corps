@@ -42,9 +42,7 @@ export function WikiPageView({ wid, pageId }: { wid: string; pageId: string }) {
       setNotFound(false);
       setError("");
       try {
-        const data = await api<WikiPageDetail>(
-          `/api/v1/workspaces/${wid}/wiki/${pageId}`,
-        );
+        const data = await api<WikiPageDetail>(`/api/v1/workspaces/${wid}/wiki/${pageId}`);
         if (!cancelled) setPage(data);
       } catch (e) {
         if (cancelled) return;
@@ -109,12 +107,7 @@ export function WikiPageView({ wid, pageId }: { wid: string; pageId: string }) {
             {error}
           </div>
         ) : page ? (
-          <WikiEditor
-            wid={wid}
-            page={page}
-            onSaved={handleSaved}
-            onDeleted={handleDeleted}
-          />
+          <WikiEditor wid={wid} page={page} onSaved={handleSaved} onDeleted={handleDeleted} />
         ) : null}
       </div>
     </div>

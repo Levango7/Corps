@@ -135,9 +135,7 @@ export function FileVersionList({
             className="text-[var(--meta)] opacity-50 mb-[var(--space-2)]"
             aria-hidden="true"
           />
-          <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-            {t("empty")}
-          </p>
+          <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("empty")}</p>
         </div>
       ) : (
         <ul className="divide-y divide-[var(--border-soft)]">

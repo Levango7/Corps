@@ -43,14 +43,7 @@ interface FavoriteRecord {
 }
 
 /** 收藏目标类型 */
-type TargetType =
-  | "task"
-  | "document"
-  | "message"
-  | "wiki"
-  | "whiteboard"
-  | "form"
-  | "meeting";
+type TargetType = "task" | "document" | "message" | "wiki" | "whiteboard" | "form" | "meeting";
 
 /** 类型 → 图标映射 */
 const TYPE_ICON: Record<TargetType, typeof Star> = {
@@ -97,10 +90,7 @@ const TYPE_ORDER: TargetType[] = [
 ];
 
 /** 格式化收藏时间（简短相对时间） */
-function formatFavoriteTime(
-  iso: string,
-  t: ReturnType<typeof useTranslations>,
-): string {
+function formatFavoriteTime(iso: string, t: ReturnType<typeof useTranslations>): string {
   const date = new Date(iso);
   const now = Date.now();
   const diffMs = now - date.getTime();
@@ -149,8 +139,7 @@ export default function FavoriteList({ workspaceId }: FavoriteListProps) {
       if (ac.signal.aborted) return;
       setFavorites(data);
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[FavoriteList] loadFavorites error:", e);
       setError(t("error"));
@@ -172,10 +161,9 @@ export default function FavoriteList({ workspaceId }: FavoriteListProps) {
     if (removingId) return;
     setRemovingId(id);
     try {
-      await api(
-        `/api/v1/favorites/${id}?wid=${encodeURIComponent(workspaceId)}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/favorites/${id}?wid=${encodeURIComponent(workspaceId)}`, {
+        method: "DELETE",
+      });
       setFavorites((prev) => prev.filter((f) => f.id !== id));
       toast("success", t("removed"));
     } catch (e) {
@@ -212,9 +200,7 @@ export default function FavoriteList({ workspaceId }: FavoriteListProps) {
           <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
           {t("title")}
         </h2>
-        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          {favorites.length}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{favorites.length}</span>
       </header>
 
       {/* ── 正文 ── */}
@@ -275,10 +261,7 @@ export default function FavoriteList({ workspaceId }: FavoriteListProps) {
                           className="group flex items-center gap-2.5 px-2.5 py-2 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors"
                         >
                           {/* 类型图标 */}
-                          <Icon
-                            size={14}
-                            className="shrink-0 text-[var(--accent)]"
-                          />
+                          <Icon size={14} className="shrink-0 text-[var(--accent)]" />
 
                           {/* 主要内容（可点击跳转） */}
                           <button

@@ -50,10 +50,12 @@ export function FormSubmissionList({ wid, form, refreshKey }: FormSubmissionList
   function dataSummary(data: Record<string, unknown>): string {
     const entries = Object.entries(data);
     if (entries.length === 0) return "—";
-    return entries
-      .slice(0, 3)
-      .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
-      .join(", ") + (entries.length > 3 ? "…" : "");
+    return (
+      entries
+        .slice(0, 3)
+        .map(([k, v]) => `${k}: ${typeof v === "object" ? JSON.stringify(v) : String(v)}`)
+        .join(", ") + (entries.length > 3 ? "…" : "")
+    );
   }
 
   return (
@@ -101,9 +103,13 @@ export function FormSubmissionList({ wid, form, refreshKey }: FormSubmissionList
                 </button>
               </div>
               <div className="mt-1 flex items-center gap-2 text-[length:var(--text-xs)] text-[var(--muted)]">
-                <span>{t("submittedBy")}: {sub.submitter?.name || sub.submitter?.email || "—"}</span>
+                <span>
+                  {t("submittedBy")}: {sub.submitter?.name || sub.submitter?.email || "—"}
+                </span>
                 <span>·</span>
-                <span>{t("submittedAt")}: {new Date(sub.submittedAt).toLocaleString()}</span>
+                <span>
+                  {t("submittedAt")}: {new Date(sub.submittedAt).toLocaleString()}
+                </span>
               </div>
             </li>
           ))}

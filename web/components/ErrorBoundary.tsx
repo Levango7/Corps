@@ -27,16 +27,18 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return this.props.fallback ?? (
-        <div className="flex flex-col items-center justify-center gap-2 p-8 rounded-lg bg-[var(--surface-2)] text-[var(--text-secondary)]">
-          <p className="text-sm">组件加载失败，请刷新重试</p>
-          <button
-            onClick={() => this.setState({ hasError: false, error: null })}
-            className="text-xs text-[var(--accent-fg)] hover:underline"
-          >
-            重试
-          </button>
-        </div>
+      return (
+        this.props.fallback ?? (
+          <div className="flex flex-col items-center justify-center gap-2 p-8 rounded-lg bg-[var(--surface-2)] text-[var(--text-secondary)]">
+            <p className="text-sm">组件加载失败，请刷新重试</p>
+            <button
+              onClick={() => this.setState({ hasError: false, error: null })}
+              className="text-xs text-[var(--accent-fg)] hover:underline"
+            >
+              重试
+            </button>
+          </div>
+        )
       );
     }
     return this.props.children;

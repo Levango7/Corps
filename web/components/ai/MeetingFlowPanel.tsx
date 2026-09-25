@@ -92,7 +92,6 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
     };
   }, []);
 
-
   /** Step 1→2：AI 分析转写文本，生成会议纪要 */
   async function handleAnalyze() {
     const text = transcript.trim();
@@ -131,13 +130,24 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
     setLoading(true);
     setError(null);
     try {
-      const data = await api<{ title: string; markdown: string; suggestedTags: string[]; provider: string }>(
-        `/api/v1/workspaces/${wid}/decisions/extract`,
-        { method: "POST", body: JSON.stringify({ sourceText: summary }), signal: ac.signal },
-      );
+      const data = await api<{
+        title: string;
+        markdown: string;
+        suggestedTags: string[];
+        provider: string;
+      }>(`/api/v1/workspaces/${wid}/decisions/extract`, {
+        method: "POST",
+        body: JSON.stringify({ sourceText: summary }),
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       setDecisions([
-        { id: nextLocalId(), title: data.title, markdown: data.markdown, suggestedTags: data.suggestedTags },
+        {
+          id: nextLocalId(),
+          title: data.title,
+          markdown: data.markdown,
+          suggestedTags: data.suggestedTags,
+        },
       ]);
       setStep("decisions");
     } catch (e) {
@@ -266,7 +276,13 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
   function addActionItem() {
     setActionItems([
       ...actionItems,
-      { id: nextLocalId(), title: "", description: "", suggestedAssignee: null, suggestedDueDate: null },
+      {
+        id: nextLocalId(),
+        title: "",
+        description: "",
+        suggestedAssignee: null,
+        suggestedDueDate: null,
+      },
     ]);
   }
 
@@ -436,7 +452,9 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
               </button>
             </div>
             {actionItems.length === 0 ? (
-              <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("noActionItems")}</p>
+              <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
+                {t("noActionItems")}
+              </p>
             ) : (
               actionItems.map((a) => (
                 <div
@@ -454,7 +472,9 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
                       />
                       <textarea
                         value={a.description}
-                        onChange={(e) => updateActionItem(a.id, { description: e.currentTarget.value })}
+                        onChange={(e) =>
+                          updateActionItem(a.id, { description: e.currentTarget.value })
+                        }
                         placeholder={t("actionDescPlaceholder")}
                         aria-label={t("actionDescLabel")}
                         rows={2}
@@ -527,11 +547,7 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
             </p>
 
             {/* AI 结果反馈按钮 */}
-            <FeedbackButtons
-              capability="meeting-flow"
-              workspaceId={wid}
-              originalOutput={summary}
-            />
+            <FeedbackButtons capability="meeting-flow" workspaceId={wid} originalOutput={summary} />
           </div>
         )}
       </div>
@@ -575,7 +591,11 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
                 disabled={loading}
                 className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--on-accent)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               >
-                {loading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
+                {loading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ChevronRight size={14} />
+                )}
                 {t("next")}
               </button>
             )}
@@ -587,7 +607,11 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
                 disabled={loading}
                 className="inline-flex items-center gap-1 rounded-[var(--radius-md)] bg-[var(--accent)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--on-accent)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               >
-                {loading ? <Loader2 size={14} className="animate-spin" /> : <ChevronRight size={14} />}
+                {loading ? (
+                  <Loader2 size={14} className="animate-spin" />
+                ) : (
+                  <ChevronRight size={14} />
+                )}
                 {t("next")}
               </button>
             )}

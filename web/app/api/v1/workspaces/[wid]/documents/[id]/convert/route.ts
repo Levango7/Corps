@@ -42,15 +42,12 @@ function inlineMdToHtml(text: string): string {
   // 斜体 *xxx*
   out = out.replace(/\*([^*]+)\*/g, "<em>$1</em>");
   // 链接 [label](href) —— href 仅放行 http(s) 与站内路径
-  out = out.replace(
-    /\[([^\]]+)\]\(([^)\s]+)\)/g,
-    (_m, label: string, href: string) => {
-      const safe = /^(https?:\/\/|\/[^/\\]|\/$|#)/.test(href) ? href : "#";
-      const rel = safe.startsWith("http") ? ' rel="noopener noreferrer"' : "";
-      const target = safe.startsWith("http") ? ' target="_blank"' : "";
-      return `<a href="${safe}"${target}${rel}>${label}</a>`;
-    },
-  );
+  out = out.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, (_m, label: string, href: string) => {
+    const safe = /^(https?:\/\/|\/[^/\\]|\/$|#)/.test(href) ? href : "#";
+    const rel = safe.startsWith("http") ? ' rel="noopener noreferrer"' : "";
+    const target = safe.startsWith("http") ? ' target="_blank"' : "";
+    return `<a href="${safe}"${target}${rel}>${label}</a>`;
+  });
   return out;
 }
 
@@ -74,9 +71,7 @@ function markdownToHtml(md: string): string {
       }
       i++; // 跳过收尾
       const langAttr = lang ? ` data-lang="${escapeHtml(lang)}"` : "";
-      html.push(
-        `<pre${langAttr}><code>${escapeHtml(buf.join("\n"))}</code></pre>`,
-      );
+      html.push(`<pre${langAttr}><code>${escapeHtml(buf.join("\n"))}</code></pre>`);
       continue;
     }
 

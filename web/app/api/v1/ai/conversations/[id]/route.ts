@@ -5,10 +5,7 @@
 // 安全：通过 workspaceId + userId 双重过滤确保用户只能访问自己的对话
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -18,10 +15,7 @@ function extractId(req: NextRequest): string | null {
   const segments = new URL(req.url).pathname.split("/");
   const id = segments[segments.length - 1];
   // P2-3: 校验 UUID 格式，非法 ID 直接返回 null（400）
-  if (
-    !id ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-  ) {
+  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
     return null;
   }
   return id;
@@ -84,7 +78,11 @@ export async function GET(req: NextRequest) {
     );
 
     // 二次校验：对话不属于该用户或不在该工作区
-    if (!conversation || conversation.workspaceId !== wid || conversation.userId !== ctx.payload.sub) {
+    if (
+      !conversation ||
+      conversation.workspaceId !== wid ||
+      conversation.userId !== ctx.payload.sub
+    ) {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "itemNotFound"), data: null },
         { status: 404 },
@@ -112,7 +110,10 @@ export async function DELETE(req: NextRequest) {
   if (!userId) return unauthorizedResponse(req);
 
   // 1.5) 限流：60s 内最多 10 次
-  const limited = await checkRateLimit(req, "ai-conversation-delete", { windowMs: 60_000, max: 10 });
+  const limited = await checkRateLimit(req, "ai-conversation-delete", {
+    windowMs: 60_000,
+    max: 10,
+  });
   if (limited) return limited;
 
   // 2) 参数提取

@@ -49,9 +49,7 @@ const REQUEST_TIMEOUT_MS = 30_000;
  *
  * @returns { success: boolean, error?: string }
  */
-export async function sendPushEmail(
-  opts: SendPushEmailOpts,
-): Promise<SendPushEmailResult> {
+export async function sendPushEmail(opts: SendPushEmailOpts): Promise<SendPushEmailResult> {
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
     logger.warn("[ai/push-email] RESEND_API_KEY not configured", {
@@ -63,8 +61,7 @@ export async function sendPushEmail(
 
   // from 解析与 web/lib/email.ts 的 sendViaResend 一致：
   // EMAIL_FROM 优先，MAIL_FROM 历史兼容，缺省 noreply@corps.app
-  const from =
-    process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app";
+  const from = process.env.EMAIL_FROM ?? process.env.MAIL_FROM ?? "noreply@corps.app";
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);

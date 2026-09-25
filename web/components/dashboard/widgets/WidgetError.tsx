@@ -11,18 +11,16 @@ import { AlertTriangle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 /** 错误状态：图标 + 文案 + 重试按钮 */
-export function WidgetError({
-  message,
-  onRetry,
-}: {
-  message: string | null;
-  onRetry: () => void;
-}) {
+export function WidgetError({ message, onRetry }: { message: string | null; onRetry: () => void }) {
   const t = useTranslations("dashboard");
   const tButton = useTranslations("button");
   return (
     <div className="p-3 flex flex-col items-center text-center">
-      <AlertTriangle size={20} className="text-[var(--muted)] opacity-50 mb-1.5" strokeWidth={1.5} />
+      <AlertTriangle
+        size={20}
+        className="text-[var(--muted)] opacity-50 mb-1.5"
+        strokeWidth={1.5}
+      />
       <p className="text-[length:var(--text-xs)] text-[var(--fg-2)]">{t("loadFailed")}</p>
       {message && (
         <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)] truncate max-w-full">

@@ -21,9 +21,7 @@ interface ApprovalListPageClientProps {
   workspaceId: string;
 }
 
-export function ApprovalListPageClient({
-  workspaceId,
-}: ApprovalListPageClientProps) {
+export function ApprovalListPageClient({ workspaceId }: ApprovalListPageClientProps) {
   const t = useTranslations("approval");
   const [submitOpen, setSubmitOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);

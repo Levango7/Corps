@@ -118,9 +118,7 @@ export function ContactList({
                   type="button"
                   onClick={() => onSelect(c)}
                   className={`w-full text-left px-[var(--space-4)] py-[var(--space-3)] transition-colors duration-[var(--motion-fast)] ${
-                    isSelected
-                      ? "bg-[var(--surface-2)]"
-                      : "hover:bg-[var(--surface-2)]"
+                    isSelected ? "bg-[var(--surface-2)]" : "hover:bg-[var(--surface-2)]"
                   }`}
                 >
                   <div className="flex items-center gap-2.5">

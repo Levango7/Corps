@@ -150,11 +150,8 @@ export async function checkPermission(
 ): Promise<boolean> {
   // 临时授权生效判定：存在且未过期 → 使用 tempRole
   const now = new Date();
-  const tempGrantActive =
-    ctx.temporaryGrant && ctx.temporaryGrant.expiresAt > now;
-  const effectiveRole = tempGrantActive
-    ? ctx.temporaryGrant!.tempRole
-    : ctx.member.role;
+  const tempGrantActive = ctx.temporaryGrant && ctx.temporaryGrant.expiresAt > now;
+  const effectiveRole = tempGrantActive ? ctx.temporaryGrant!.tempRole : ctx.member.role;
 
   // Owner 短路：永远放行（临时授权不会降级 owner）
   if (effectiveRole === "owner") return true;
@@ -263,9 +260,7 @@ export function getDefaultPermissions(role: string): Record<string, Action[]> {
   const result: Record<string, Action[]> = {};
   for (const mod of MODULES) {
     const def = DEFAULT_PERMISSIONS[role]?.[mod] ?? "";
-    result[mod] = [...def]
-      .map((c) => CODE_ACTION[c])
-      .filter((a): a is Action => a !== undefined);
+    result[mod] = [...def].map((c) => CODE_ACTION[c]).filter((a): a is Action => a !== undefined);
   }
   return result;
 }

@@ -20,7 +20,11 @@ export async function PATCH(
 ) {
   const { wid, id, did } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const validated = updateDecisionSchema.parse(await req.json());
@@ -89,7 +93,7 @@ export async function PATCH(
         {
           code: 409,
           message: apiMsg(req, "optimisticLockConflict"),
-          data: { currentVersion: result.currentVersion }
+          data: { currentVersion: result.currentVersion },
         },
         { status: 409 },
       );
@@ -99,7 +103,11 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -111,6 +119,9 @@ export async function PATCH(
       );
     }
     console.error("Update decision error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

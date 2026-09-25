@@ -41,11 +41,7 @@ interface MailComposerProps {
   onCancel?: () => void;
 }
 
-export default function MailComposer({
-  workspaceId,
-  onSent,
-  onCancel,
-}: MailComposerProps) {
+export default function MailComposer({ workspaceId, onSent, onCancel }: MailComposerProps) {
   const t = useTranslations("mail");
   const { toast } = useToast();
 
@@ -79,8 +75,7 @@ export default function MailComposer({
       const defaultAcc = data.find((a) => a.isDefault) ?? data[0];
       if (defaultAcc) setAccountId(defaultAcc.id);
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[MailComposer] loadAccounts error:", e);
       setError(t("error"));
@@ -124,8 +119,7 @@ export default function MailComposer({
       toast("success", t("sentOk"));
       onSent?.();
     } catch (e) {
-      if (process.env.NODE_ENV === "development")
-        console.error("[MailComposer] send error:", e);
+      if (process.env.NODE_ENV === "development") console.error("[MailComposer] send error:", e);
       setError(t("sendFailed"));
       toast("error", t("sendFailed"));
     } finally {
@@ -304,11 +298,7 @@ export default function MailComposer({
             disabled={sending || !accountId || !to.trim() || !subject.trim()}
             className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--accent-fg)] bg-[var(--accent)] hover:bg-[var(--accent-hover)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {sending ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Send size={14} />
-            )}
+            {sending ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
             {sending ? t("sending") : t("send")}
           </button>
         </div>

@@ -30,7 +30,6 @@ import {
 } from "lucide-react";
 import {
   RemoteControlSession,
-
   type RemoteControlSessionState,
   mouseMove,
   mouseClick,
@@ -57,20 +56,13 @@ export interface RemoteViewerProps {
 
 // ─── 组件 ──────────────────────────────────────────────────────
 
-export function RemoteViewer({
-  sessionId,
-  workspaceId,
-  _role,
-  session,
-  onEnd,
-}: RemoteViewerProps) {
+export function RemoteViewer({ sessionId, workspaceId, _role, session, onEnd }: RemoteViewerProps) {
   const t = useTranslations("remoteControl");
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [remoteStream, setRemoteStream] = useState<MediaStream | null>(null);
-  const [sessionState, setSessionState] =
-    useState<RemoteControlSessionState>(session.state);
+  const [sessionState, setSessionState] = useState<RemoteControlSessionState>(session.state);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [error, setError] = useState("");
 
@@ -235,10 +227,9 @@ export function RemoteViewer({
   const handleEnd = useCallback(async () => {
     session.close();
     try {
-      await api(
-        `/api/v1/remote-control/${sessionId}?workspaceId=${workspaceId}`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/remote-control/${sessionId}?workspaceId=${workspaceId}`, {
+        method: "DELETE",
+      });
     } catch (err) {
       console.error("[RemoteViewer] end session failed:", err);
     }
@@ -249,9 +240,7 @@ export function RemoteViewer({
 
   const isConnected = sessionState === "connected";
   const isConnecting =
-    sessionState === "connecting" ||
-    sessionState === "initiating" ||
-    sessionState === "accepting";
+    sessionState === "connecting" || sessionState === "initiating" || sessionState === "accepting";
 
   return (
     <div
@@ -340,9 +329,7 @@ export function RemoteViewer({
         {isConnecting && (
           <div className="absolute inset-0 flex flex-col items-center justify-center bg-[var(--bg)] bg-opacity-80">
             <Loader2 size={32} className="animate-spin text-[var(--accent)] mb-[var(--space-3)]" />
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("connecting")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("connecting")}</p>
           </div>
         )}
 
@@ -367,9 +354,7 @@ export function RemoteViewer({
         {!remoteStream && !isConnecting && !error && (
           <div className="flex flex-col items-center justify-center">
             <Monitor size={48} className="text-[var(--muted)] mb-[var(--space-3)]" />
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("screenShare")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("screenShare")}</p>
           </div>
         )}
       </div>

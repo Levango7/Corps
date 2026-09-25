@@ -50,24 +50,17 @@ export interface DecisionContext {
  * @param context 工作区上下文（任务/决策/进度）
  * @returns system prompt 字符串
  */
-export function buildDecisionAssistantSystemPrompt(
-  context: DecisionContext,
-): string {
+export function buildDecisionAssistantSystemPrompt(context: DecisionContext): string {
   // 组装工作区上下文摘要
   const taskLines =
     context.tasks.length > 0
-      ? context.tasks
-          .map((t) => `- [${t.status}/${t.priority}] ${t.title}`)
-          .join("\n")
+      ? context.tasks.map((t) => `- [${t.status}/${t.priority}] ${t.title}`).join("\n")
       : "（暂无任务）";
 
   const decisionLines =
     context.decisions.length > 0
       ? context.decisions
-          .map(
-            (d) =>
-              `- ${d.taskTitle}（${d.createdAt}）：${d.markdown.slice(0, 200)}`,
-          )
+          .map((d) => `- ${d.taskTitle}（${d.createdAt}）：${d.markdown.slice(0, 200)}`)
           .join("\n")
       : "（暂无历史决策）";
 
@@ -139,10 +132,7 @@ ${decisionLines}
  * @param extraContext 可选的补充背景信息
  * @returns user prompt 字符串
  */
-export function buildDecisionAssistantUserPrompt(
-  question: string,
-  extraContext?: string,
-): string {
+export function buildDecisionAssistantUserPrompt(question: string, extraContext?: string): string {
   const base = `决策问题：${question}`;
   if (extraContext && extraContext.trim()) {
     return `${base}\n\n补充背景：${extraContext}`;

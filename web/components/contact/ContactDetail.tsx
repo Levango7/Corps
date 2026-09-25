@@ -67,7 +67,9 @@ export function ContactDetail({
       api<ContactDetail>(`/api/v1/workspaces/${wid}/contacts/${contactId}`).catch((e) => {
         throw e;
       }),
-      api<ContactGroupItem[]>(`/api/v1/workspaces/${wid}/contact-groups`).catch(() => [] as ContactGroupItem[]),
+      api<ContactGroupItem[]>(`/api/v1/workspaces/${wid}/contact-groups`).catch(
+        () => [] as ContactGroupItem[],
+      ),
     ])
       .then(([c, g]) => {
         if (cancelled) return;
@@ -100,21 +102,18 @@ export function ContactDetail({
     setSaving(true);
     setError("");
     try {
-      const updated = await api<ContactDetail>(
-        `/api/v1/workspaces/${wid}/contacts/${contactId}`,
-        {
-          method: "PATCH",
-          body: JSON.stringify({
-            name: form.name.trim(),
-            email: form.email.trim() || null,
-            phone: form.phone.trim() || null,
-            department: form.department.trim() || null,
-            position: form.position.trim() || null,
-            notes: form.notes.trim() || null,
-            groupId: form.groupId || null,
-          }),
-        },
-      );
+      const updated = await api<ContactDetail>(`/api/v1/workspaces/${wid}/contacts/${contactId}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          name: form.name.trim(),
+          email: form.email.trim() || null,
+          phone: form.phone.trim() || null,
+          department: form.department.trim() || null,
+          position: form.position.trim() || null,
+          notes: form.notes.trim() || null,
+          groupId: form.groupId || null,
+        }),
+      });
       setContact(updated);
       setEditing(false);
       onUpdated(updated);
@@ -208,9 +207,7 @@ export function ContactDetail({
       ) : confirmDelete ? (
         <div className="flex-1 flex flex-col items-center justify-center px-[var(--space-6)] text-center">
           <Trash2 size={28} className="mb-3 text-[var(--danger)]" />
-          <p className="mb-4 text-[length:var(--text-sm)] text-[var(--fg)]">
-            {t("confirmDelete")}
-          </p>
+          <p className="mb-4 text-[length:var(--text-sm)] text-[var(--fg)]">{t("confirmDelete")}</p>
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -231,7 +228,10 @@ export function ContactDetail({
           </div>
         </div>
       ) : editing ? (
-        <form onSubmit={save} className="flex-1 overflow-y-auto px-[var(--space-4)] py-[var(--space-4)] space-y-4">
+        <form
+          onSubmit={save}
+          className="flex-1 overflow-y-auto px-[var(--space-4)] py-[var(--space-4)] space-y-4"
+        >
           <div>
             <label className={fieldLabel} htmlFor="cd-name">
               <User size={13} />

@@ -54,12 +54,32 @@ const leaveTemplate: BuiltinTemplate = {
   icon: "calendar-off",
   flowType: "sequential",
   nodes: [
-    { id: "node-1", type: "approval", name: "直属主管审批", approverRole: "admin", order: 1, mode: "sequential" },
-    { id: "node-2", type: "approval", name: "HR审批", approverRole: "admin", order: 2, mode: "sequential" },
+    {
+      id: "node-1",
+      type: "approval",
+      name: "直属主管审批",
+      approverRole: "admin",
+      order: 1,
+      mode: "sequential",
+    },
+    {
+      id: "node-2",
+      type: "approval",
+      name: "HR审批",
+      approverRole: "admin",
+      order: 2,
+      mode: "sequential",
+    },
   ],
   formSchema: {
     fields: [
-      { name: "leaveType", label: "请假类型", type: "select", options: ["年假", "事假", "病假", "调休"], required: true },
+      {
+        name: "leaveType",
+        label: "请假类型",
+        type: "select",
+        options: ["年假", "事假", "病假", "调休"],
+        required: true,
+      },
       { name: "startDate", label: "开始时间", type: "date", required: true },
       { name: "endDate", label: "结束时间", type: "date", required: true },
       { name: "reason", label: "请假原因", type: "textarea", required: true },
@@ -74,12 +94,32 @@ const expenseTemplate: BuiltinTemplate = {
   icon: "receipt",
   flowType: "sequential",
   nodes: [
-    { id: "node-1", type: "approval", name: "直属主管审批", approverRole: "admin", order: 1, mode: "sequential" },
-    { id: "node-2", type: "approval", name: "财务审批", approverRole: "admin", order: 2, mode: "sequential" },
+    {
+      id: "node-1",
+      type: "approval",
+      name: "直属主管审批",
+      approverRole: "admin",
+      order: 1,
+      mode: "sequential",
+    },
+    {
+      id: "node-2",
+      type: "approval",
+      name: "财务审批",
+      approverRole: "admin",
+      order: 2,
+      mode: "sequential",
+    },
   ],
   formSchema: {
     fields: [
-      { name: "expenseType", label: "报销类型", type: "select", options: ["差旅费", "办公费", "招待费", "其他"], required: true },
+      {
+        name: "expenseType",
+        label: "报销类型",
+        type: "select",
+        options: ["差旅费", "办公费", "招待费", "其他"],
+        required: true,
+      },
       { name: "amount", label: "报销金额", type: "number", required: true },
       { name: "reason", label: "报销事由", type: "textarea", required: true },
       { name: "attachment", label: "附件", type: "file", required: false },
@@ -94,8 +134,22 @@ const purchaseTemplate: BuiltinTemplate = {
   icon: "shopping-cart",
   flowType: "sequential",
   nodes: [
-    { id: "node-1", type: "approval", name: "直属主管审批", approverRole: "admin", order: 1, mode: "sequential" },
-    { id: "node-2", type: "approval", name: "采购部审批", approverRole: "admin", order: 2, mode: "sequential" },
+    {
+      id: "node-1",
+      type: "approval",
+      name: "直属主管审批",
+      approverRole: "admin",
+      order: 1,
+      mode: "sequential",
+    },
+    {
+      id: "node-2",
+      type: "approval",
+      name: "采购部审批",
+      approverRole: "admin",
+      order: 2,
+      mode: "sequential",
+    },
   ],
   formSchema: {
     fields: [
@@ -114,9 +168,30 @@ const contractTemplate: BuiltinTemplate = {
   icon: "file-signature",
   flowType: "sequential",
   nodes: [
-    { id: "node-1", type: "approval", name: "法务审批", approverRole: "admin", order: 1, mode: "sequential" },
-    { id: "node-2", type: "approval", name: "财务审批", approverRole: "admin", order: 2, mode: "sequential" },
-    { id: "node-3", type: "approval", name: "总经理审批", approverRole: "admin", order: 3, mode: "sequential" },
+    {
+      id: "node-1",
+      type: "approval",
+      name: "法务审批",
+      approverRole: "admin",
+      order: 1,
+      mode: "sequential",
+    },
+    {
+      id: "node-2",
+      type: "approval",
+      name: "财务审批",
+      approverRole: "admin",
+      order: 2,
+      mode: "sequential",
+    },
+    {
+      id: "node-3",
+      type: "approval",
+      name: "总经理审批",
+      approverRole: "admin",
+      order: 3,
+      mode: "sequential",
+    },
   ],
   formSchema: {
     fields: [
@@ -135,8 +210,22 @@ const onboardingTemplate: BuiltinTemplate = {
   icon: "user-plus",
   flowType: "sequential",
   nodes: [
-    { id: "node-1", type: "approval", name: "HR审批", approverRole: "admin", order: 1, mode: "sequential" },
-    { id: "node-2", type: "approval", name: "部门负责人审批", approverRole: "admin", order: 2, mode: "sequential" },
+    {
+      id: "node-1",
+      type: "approval",
+      name: "HR审批",
+      approverRole: "admin",
+      order: 1,
+      mode: "sequential",
+    },
+    {
+      id: "node-2",
+      type: "approval",
+      name: "部门负责人审批",
+      approverRole: "admin",
+      order: 2,
+      mode: "sequential",
+    },
   ],
   formSchema: {
     fields: [

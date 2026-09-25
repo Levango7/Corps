@@ -16,16 +16,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Brain,
-  Search,
-  Filter,
-  Trash2,
-  X,
-  Loader2,
-  AlertTriangle,
-  Network,
-} from "lucide-react";
+import { Brain, Search, Filter, Trash2, X, Loader2, AlertTriangle, Network } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
@@ -95,10 +86,7 @@ const NODE_RADIUS = 24;
  * 简化力导向布局：圆形初始排列 + 几轮弹簧松弛。
  * 不引入外部图库，用原生数学计算。
  */
-function computeLayout(
-  nodes: KnowledgeNode[],
-  edges: KnowledgeEdge[],
-): PositionedNode[] {
+function computeLayout(nodes: KnowledgeNode[], edges: KnowledgeEdge[]): PositionedNode[] {
   if (nodes.length === 0) return [];
 
   const n = nodes.length;
@@ -190,9 +178,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
   const [hasError, setHasError] = useState(false);
   const [selectedNode, setSelectedNode] = useState<KnowledgeNode | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTypes, setActiveTypes] = useState<Set<string>>(
-    new Set(NODE_TYPES),
-  );
+  const [activeTypes, setActiveTypes] = useState<Set<string>>(new Set(NODE_TYPES));
   const [deleting, setDeleting] = useState(false);
 
   /** 加载知识图谱 */
@@ -231,8 +217,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
       setNodes((prev) => prev.filter((n) => n.id !== selectedNode.id));
       setEdges((prev) =>
         prev.filter(
-          (e) =>
-            e.sourceNodeId !== selectedNode.id && e.targetNodeId !== selectedNode.id,
+          (e) => e.sourceNodeId !== selectedNode.id && e.targetNodeId !== selectedNode.id,
         ),
       );
       setSelectedNode(null);
@@ -253,26 +238,19 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
       if (!activeTypes.has(n.type)) return false;
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
-        return (
-          n.label.toLowerCase().includes(q) ||
-          n.content.toLowerCase().includes(q)
-        );
+        return n.label.toLowerCase().includes(q) || n.content.toLowerCase().includes(q);
       }
       return true;
     });
   }, [nodes, activeTypes, searchQuery]);
 
   /** 过滤后的节点 ID 集合 */
-  const filteredNodeIds = useMemo(
-    () => new Set(filteredNodes.map((n) => n.id)),
-    [filteredNodes],
-  );
+  const filteredNodeIds = useMemo(() => new Set(filteredNodes.map((n) => n.id)), [filteredNodes]);
 
   /** 过滤后的边 */
   const filteredEdges = useMemo(() => {
     return edges.filter(
-      (e) =>
-        filteredNodeIds.has(e.sourceNodeId) && filteredNodeIds.has(e.targetNodeId),
+      (e) => filteredNodeIds.has(e.sourceNodeId) && filteredNodeIds.has(e.targetNodeId),
     );
   }, [edges, filteredNodeIds]);
 
@@ -305,10 +283,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
   }, [selectedNode, edges]);
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--surface)]"
-      aria-label={t("title")}
-    >
+    <div className="flex h-full flex-col bg-[var(--surface)]" aria-label={t("title")}>
       {/* 标题栏 */}
       <header className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
@@ -406,10 +381,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                   refY="3"
                   orient="auto"
                 >
-                  <polygon
-                    points="0 0, 8 3, 0 6"
-                    fill="var(--muted)"
-                  />
+                  <polygon points="0 0, 8 3, 0 6" fill="var(--muted)" />
                 </marker>
               </defs>
               {filteredEdges.map((edge) => {
@@ -426,9 +398,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                     stroke="var(--muted)"
                     strokeWidth={1 + edge.weight}
                     strokeDasharray={EDGE_DASH[edge.relation] ?? "none"}
-                    markerEnd={
-                      edge.relation === "depends_on" ? "url(#arrowhead)" : undefined
-                    }
+                    markerEnd={edge.relation === "depends_on" ? "url(#arrowhead)" : undefined}
                     opacity={0.6}
                   />
                 );
@@ -456,9 +426,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                     fontSize="10"
                     fill="var(--fg)"
                   >
-                    {node.label.length > 8
-                      ? node.label.slice(0, 8) + "…"
-                      : node.label}
+                    {node.label.length > 8 ? node.label.slice(0, 8) + "…" : node.label}
                   </text>
                 </g>
               ))}
@@ -485,9 +453,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
             <div className="flex-1 overflow-auto p-[var(--space-3)]">
               <dl className="flex flex-col gap-[var(--space-3)]">
                 <div>
-                  <dt className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                    {t("type")}
-                  </dt>
+                  <dt className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("type")}</dt>
                   <dd className="flex items-center gap-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--fg)]">
                     <span
                       className="inline-block h-2 w-2 rounded-full"
@@ -499,9 +465,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                   </dd>
                 </div>
                 <div>
-                  <dt className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                    {t("label")}
-                  </dt>
+                  <dt className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("label")}</dt>
                   <dd className="text-[length:var(--text-sm)] text-[var(--fg)]">
                     {selectedNode.label}
                   </dd>
@@ -528,9 +492,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                   </dt>
                   <dd>
                     {selectedNodeEdges.length === 0 ? (
-                      <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
-                        —
-                      </span>
+                      <span className="text-[length:var(--text-sm)] text-[var(--muted)]">—</span>
                     ) : (
                       <ul className="flex flex-col gap-[var(--space-1)]">
                         {selectedNodeEdges.map((edge) => {
@@ -539,8 +501,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                               ? edge.targetNodeId
                               : edge.sourceNodeId;
                           const otherNode = nodes.find((n) => n.id === otherId);
-                          const direction =
-                            edge.sourceNodeId === selectedNode.id ? "→" : "←";
+                          const direction = edge.sourceNodeId === selectedNode.id ? "→" : "←";
                           return (
                             <li
                               key={edge.id}
@@ -568,11 +529,7 @@ export function KnowledgeGraphView({ wid }: KnowledgeGraphViewProps) {
                 disabled={deleting}
                 className="inline-flex w-full items-center justify-center gap-[var(--space-1)] rounded-[var(--radius-sm)] border border-[var(--danger)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--danger)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--danger)] hover:text-[var(--surface)] disabled:cursor-not-allowed disabled:opacity-40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               >
-                {deleting ? (
-                  <Loader2 size={14} className="animate-spin" />
-                ) : (
-                  <Trash2 size={14} />
-                )}
+                {deleting ? <Loader2 size={14} className="animate-spin" /> : <Trash2 size={14} />}
                 {t("deleteNode")}
               </button>
             </div>

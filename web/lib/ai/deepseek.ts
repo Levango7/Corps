@@ -94,7 +94,8 @@ export function getReasonerModel(): LanguageModelV4 | null {
  */
 export function requireDefaultModel(): LanguageModelV4 {
   const model = getDefaultModel();
-  if (!model) throw new Error("No AI provider configured (DEEPSEEK_API_KEY or OPENAI_API_KEY required)");
+  if (!model)
+    throw new Error("No AI provider configured (DEEPSEEK_API_KEY or OPENAI_API_KEY required)");
   return model;
 }
 
@@ -105,7 +106,8 @@ export function requireDefaultModel(): LanguageModelV4 {
  */
 export function requireReasonerModel(): LanguageModelV4 {
   const model = getReasonerModel();
-  if (!model) throw new Error("No AI provider configured (DEEPSEEK_API_KEY or OPENAI_API_KEY required)");
+  if (!model)
+    throw new Error("No AI provider configured (DEEPSEEK_API_KEY or OPENAI_API_KEY required)");
   return model;
 }
 
@@ -136,10 +138,7 @@ export function isReasonerModel(model: LanguageModelV4): boolean {
  * @param model 模型实例（LanguageModel）
  * @returns 处理后的 system prompt（非推理模型移除 CoT 段落）
  */
-export function withCoT(
-  systemPrompt: string,
-  model: LanguageModelV4,
-): string {
+export function withCoT(systemPrompt: string, model: LanguageModelV4): string {
   // 推理模型保留 CoT
   if (isReasonerModel(model)) return systemPrompt;
   // 非推理模型移除 ## 推理步骤 段落（到下一个 ## 或字符串末尾）

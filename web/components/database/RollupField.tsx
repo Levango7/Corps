@@ -31,8 +31,7 @@ export interface RollupFieldProps {
 
 // ─── 共享样式 ───────────────────────────────────────────────
 
-const containerClass =
-  "w-full h-full flex items-center gap-1.5 px-2 text-[length:var(--text-sm)]";
+const containerClass = "w-full h-full flex items-center gap-1.5 px-2 text-[length:var(--text-sm)]";
 
 // ─── 组件 ───────────────────────────────────────────────────
 
@@ -42,10 +41,7 @@ export async function RollupField({ value }: RollupFieldProps): Promise<ReactEle
   // ─── null / undefined：空值 ──────────────────────────────
   if (value === null || value === undefined) {
     return (
-      <div
-        className={containerClass}
-        style={{ color: "var(--muted)" }}
-      >
+      <div className={containerClass} style={{ color: "var(--muted)" }}>
         <Sigma size={14} className="shrink-0" />
         <span>{t("empty")}</span>
       </div>
@@ -67,10 +63,7 @@ export async function RollupField({ value }: RollupFieldProps): Promise<ReactEle
   if (Array.isArray(value)) {
     if (value.length === 0) {
       return (
-        <div
-          className={containerClass}
-          style={{ color: "var(--muted)" }}
-        >
+        <div className={containerClass} style={{ color: "var(--muted)" }}>
           <Sigma size={14} className="shrink-0" />
           <span>{t("empty")}</span>
         </div>
@@ -79,9 +72,7 @@ export async function RollupField({ value }: RollupFieldProps): Promise<ReactEle
     return (
       <div className={containerClass}>
         <Sigma size={14} className="shrink-0 text-[var(--meta)]" />
-        <span className="truncate text-[var(--fg)]">
-          {value.join(", ")}
-        </span>
+        <span className="truncate text-[var(--fg)]">{value.join(", ")}</span>
       </div>
     );
   }
@@ -89,10 +80,7 @@ export async function RollupField({ value }: RollupFieldProps): Promise<ReactEle
   // ─── string：文本 ────────────────────────────────────────
   if (value === "") {
     return (
-      <div
-        className={containerClass}
-        style={{ color: "var(--muted)" }}
-      >
+      <div className={containerClass} style={{ color: "var(--muted)" }}>
         <Sigma size={14} className="shrink-0" />
         <span>{t("empty")}</span>
       </div>

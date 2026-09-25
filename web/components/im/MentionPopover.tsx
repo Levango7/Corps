@@ -117,8 +117,7 @@ export function MentionPopover({
   if (filtered.length === 0) return null;
 
   /** 获取成员显示名 */
-  const getDisplayName = (m: MentionableMember): string =>
-    m.user.name ?? m.user.email ?? m.user.id;
+  const getDisplayName = (m: MentionableMember): string => m.user.name ?? m.user.email ?? m.user.id;
 
   /** 获取头像首字母 */
   const getInitial = (m: MentionableMember): string =>
@@ -147,9 +146,7 @@ export function MentionPopover({
               onSelect(m.userId, name);
             }}
             className={`flex items-center gap-[var(--space-2)] px-[var(--space-3)] py-[var(--space-2)] cursor-pointer transition-colors duration-[var(--motion-fast)] ${
-              isActive
-                ? "bg-[var(--accent-soft)]"
-                : "hover:bg-[var(--surface-2)]"
+              isActive ? "bg-[var(--accent-soft)]" : "hover:bg-[var(--surface-2)]"
             }`}
           >
             {/* 头像 */}

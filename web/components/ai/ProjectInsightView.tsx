@@ -153,10 +153,7 @@ export function ProjectInsightView({ wid }: ProjectInsightViewProps) {
   const canSave = activeScope === "weekly" && !!content && !loading && !hasError;
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--surface)]"
-      aria-label={t("title")}
-    >
+    <div className="flex h-full flex-col bg-[var(--surface)]" aria-label={t("title")}>
       {/* 标题栏 */}
       <header className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
         <div className="flex items-center gap-[var(--space-2)]">
@@ -255,9 +252,7 @@ export function ProjectInsightView({ wid }: ProjectInsightViewProps) {
       {canSave && (
         <footer className="flex items-center justify-end gap-[var(--space-2)] border-t border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
           {saveStatus === "saved" && (
-            <span className="text-[length:var(--text-sm)] text-[var(--success)]">
-              {t("saved")}
-            </span>
+            <span className="text-[length:var(--text-sm)] text-[var(--success)]">{t("saved")}</span>
           )}
           {saveStatus === "error" && (
             <span className="text-[length:var(--text-sm)] text-[var(--danger)]">

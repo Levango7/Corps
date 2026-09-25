@@ -4,10 +4,7 @@
 // 边的 onDelete: Cascade 已在 schema 中配置，删除节点时相关边自动级联删除。
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -16,10 +13,7 @@ import { apiMsg } from "@/lib/api-messages";
 function extractId(req: NextRequest): string | null {
   const segments = new URL(req.url).pathname.split("/");
   const id = segments[segments.length - 1];
-  if (
-    !id ||
-    !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)
-  ) {
+  if (!id || !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
     return null;
   }
   return id;

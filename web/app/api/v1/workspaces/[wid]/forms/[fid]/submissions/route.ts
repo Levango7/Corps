@@ -9,10 +9,17 @@ import { apiMsg } from "@/lib/api-messages";
  * Query: ?take=&skip= 分页
  * 返回按 submittedAt 降序
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string; fid: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; fid: string }> },
+) {
   const { wid, fid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const url = new URL(req.url);
@@ -22,7 +29,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -35,7 +47,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ctx.payload.sub,
     );
     if (!form || form.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, data: null, message: apiMsg(req, "formNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, data: null, message: apiMsg(req, "formNotFound") },
+        { status: 404 },
+      );
     }
 
     const where = { formId: fid, workspaceId: wid };
@@ -61,7 +76,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 0, data: { items, total, skip, take } });
   } catch (error) {
     console.error("[GET form submissions] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 
@@ -75,10 +93,17 @@ const createSubmissionSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/forms/{fid}/submissions — 提交表单 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string; fid: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; fid: string }> },
+) {
   const { wid, fid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json();
@@ -87,14 +112,21 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 先确认表单存在、属于该工作区且处于启用状态
     const form = await runWithWorkspace(
       wid,
-      (tx) => tx.form.findUnique({ where: { id: fid }, select: { workspaceId: true, active: true } }),
+      (tx) =>
+        tx.form.findUnique({ where: { id: fid }, select: { workspaceId: true, active: true } }),
       ctx.payload.sub,
     );
     if (!form || form.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, data: null, message: apiMsg(req, "formNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, data: null, message: apiMsg(req, "formNotFound") },
+        { status: 404 },
+      );
     }
     if (!form.active) {
-      return NextResponse.json({ code: 400, data: null, message: apiMsg(req, "validationFailed") }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, data: null, message: apiMsg(req, "validationFailed") },
+        { status: 400 },
+      );
     }
 
     const submission = await runWithWorkspace(
@@ -115,11 +147,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }
     console.error("[POST form submission] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

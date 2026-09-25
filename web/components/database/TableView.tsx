@@ -1,12 +1,6 @@
 "use client";
 
-import type {
-  Database,
-  DatabaseField,
-  DatabaseRecord,
-  DatabaseView,
-  Prisma,
-} from "@prisma/client";
+import type { Database, DatabaseField, DatabaseRecord, DatabaseView, Prisma } from "@prisma/client";
 import {
   useEffect,
   useMemo,
@@ -95,8 +89,7 @@ function useColumnResize() {
     document.body.style.userSelect = "none";
   };
 
-  const getWidth = (fieldId: string): number =>
-    widths[fieldId] ?? DEFAULT_COL_WIDTH;
+  const getWidth = (fieldId: string): number => widths[fieldId] ?? DEFAULT_COL_WIDTH;
 
   return { getWidth, startResize };
 }
@@ -147,12 +140,7 @@ function TableCell({
           : undefined
       }
     >
-      <FieldControl
-        field={field}
-        value={value}
-        onChange={onEditChange}
-        readOnly={!isEditing}
-      />
+      <FieldControl field={field} value={value} onChange={onEditChange} readOnly={!isEditing} />
     </div>
   );
 }
@@ -217,9 +205,7 @@ export function TableView({
 
   // 计算总宽度（用于水平滚动）
   const totalWidth = useMemo(
-    () =>
-      HANDLE_WIDTH +
-      sortedFields.reduce((sum, f) => sum + getWidth(f.id), 0),
+    () => HANDLE_WIDTH + sortedFields.reduce((sum, f) => sum + getWidth(f.id), 0),
     [sortedFields, getWidth],
   );
 
@@ -278,8 +264,7 @@ export function TableView({
         {/* 数据列 */}
         {sortedFields.map((field) => {
           const isEditing =
-            editingCell?.recordId === record.id &&
-            editingCell?.fieldId === field.id;
+            editingCell?.recordId === record.id && editingCell?.fieldId === field.id;
           return (
             <div
               key={field.id}
@@ -293,9 +278,7 @@ export function TableView({
                 editValue={editingCell?.value ?? null}
                 onStartEdit={() => startEditing(record, field)}
                 onEditChange={(v) =>
-                  setEditingCell((prev) =>
-                    prev ? { ...prev, value: v } : prev,
-                  )
+                  setEditingCell((prev) => (prev ? { ...prev, value: v } : prev))
                 }
                 onCommit={commitEditing}
               />
@@ -313,9 +296,7 @@ export function TableView({
     <div className="flex flex-col h-full bg-[var(--surface)] rounded-[var(--radius-sm)] border border-[var(--border)] overflow-hidden">
       {/* 数据库标题栏 */}
       <div className="flex items-center gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-2)]">
-        {database.emoji && (
-          <span className="text-[length:var(--text-md)]">{database.emoji}</span>
-        )}
+        {database.emoji && <span className="text-[length:var(--text-md)]">{database.emoji}</span>}
         <span className="text-[length:var(--text-sm)] font-medium text-[var(--fg)] truncate">
           {database.title}
         </span>
@@ -325,10 +306,7 @@ export function TableView({
       </div>
 
       {/* 表头 + 虚拟滚动容器 */}
-      <div
-        ref={scrollRef}
-        className="flex-1 overflow-auto min-h-0 relative"
-      >
+      <div ref={scrollRef} className="flex-1 overflow-auto min-h-0 relative">
         {/* 表头（sticky） */}
         <div
           className="sticky top-0 z-10 flex items-stretch bg-[var(--surface-2)] border-b border-[var(--border)]"
@@ -360,12 +338,10 @@ export function TableView({
                 style={{ background: "transparent" }}
                 onMouseDown={(e) => startResize(field.id, e)}
                 onMouseOver={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "var(--accent)";
+                  (e.currentTarget as HTMLDivElement).style.background = "var(--accent)";
                 }}
                 onMouseOut={(e) => {
-                  (e.currentTarget as HTMLDivElement).style.background =
-                    "transparent";
+                  (e.currentTarget as HTMLDivElement).style.background = "transparent";
                 }}
               />
             </div>
@@ -422,9 +398,7 @@ export function TableView({
           onClick={onRecordCreate}
         >
           <Plus size={14} className="text-[var(--meta)]" />
-          <span className="text-[length:var(--text-sm)] text-[var(--meta)]">
-            {t("addRow")}
-          </span>
+          <span className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("addRow")}</span>
         </div>
       )}
     </div>

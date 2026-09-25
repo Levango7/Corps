@@ -29,15 +29,9 @@ export interface AgentBrief {
  * @param task 待分配的任务描述
  * @returns system prompt 字符串
  */
-export function buildAgentCoordinationPrompt(
-  agents: AgentBrief[],
-  task: string,
-): string {
+export function buildAgentCoordinationPrompt(agents: AgentBrief[], task: string): string {
   const agentLines = agents
-    .map(
-      (a) =>
-        `- ${a.name}（角色: ${a.role}，能力: ${a.capabilities.join(", ") || "通用"}）`,
-    )
+    .map((a) => `- ${a.name}（角色: ${a.role}，能力: ${a.capabilities.join(", ") || "通用"}）`)
     .join("\n");
 
   return `你是多 Agent 协同协调器。分析任务并分配给各 Agent，每个子任务指定一个最合适的 Agent。

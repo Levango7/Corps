@@ -4,7 +4,8 @@ import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
 export function buildWorkflowSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是工作流设计专家。根据用户的自然语言描述，生成工作流定义。
+  return appendFeedbackShot(
+    `你是工作流设计专家。根据用户的自然语言描述，生成工作流定义。
 返回 JSON 格式：
 {
   "name": "工作流名称",
@@ -45,7 +46,9 @@ export function buildWorkflowSystemPrompt(feedbackExamples?: FeedbackExample[]):
 ## 示例
 输入：当任务完成时通知负责人并创建跟进任务
 输出：
-{"name":"任务完成通知与跟进","description":"任务完成后通知负责人并创建跟进任务","trigger":{"event":"task.completed","conditions":{}},"actions":[{"type":"notify","config":{"target":"assignee"},"order":1},{"type":"create_task","config":{"title":"跟进任务"},"order":2}]}`, feedbackExamples);
+{"name":"任务完成通知与跟进","description":"任务完成后通知负责人并创建跟进任务","trigger":{"event":"task.completed","conditions":{}},"actions":[{"type":"notify","config":{"target":"assignee"},"order":1},{"type":"create_task","config":{"title":"跟进任务"},"order":2}]}`,
+    feedbackExamples,
+  );
 }
 
 export function buildWorkflowUserPrompt(description: string): string {

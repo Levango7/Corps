@@ -88,24 +88,22 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
               include: { author: { select: { id: true, name: true, image: true } } },
             },
           },
-          orderBy: [
-            { lastMessageAt: { sort: "desc", nulls: "last" } },
-            { id: "desc" },
-          ],
+          orderBy: [{ lastMessageAt: { sort: "desc", nulls: "last" } }, { id: "desc" }],
           take: limit + 1,
           ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
         });
 
         const hasMore = conversations.length > limit;
         const page = hasMore ? conversations.slice(0, limit) : conversations;
-        const nextCursor = hasMore ? page[page.length - 1]?.id ?? null : null;
+        const nextCursor = hasMore ? (page[page.length - 1]?.id ?? null) : null;
 
         // 批量计算每个会话的未读数（消除 N+1：单次 raw SQL 聚合查询）
         // 未读定义：createdAt > member.lastReadAt 且 authorId != userId
         // lastReadAt 为 null 时，统计所有非自己发送的消息
         const conversationIds = page.map((conv) => conv.id);
-        const unreadResults = conversationIds.length > 0
-          ? await tx.$queryRaw<{ conversation_id: string; unread_count: bigint }[]>`
+        const unreadResults =
+          conversationIds.length > 0
+            ? await tx.$queryRaw<{ conversation_id: string; unread_count: bigint }[]>`
               SELECT m.conversation_id, COUNT(*)::bigint AS unread_count
               FROM messages m
               JOIN conversation_members cm
@@ -115,7 +113,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
                 AND m.author_id IS DISTINCT FROM ${userId}::uuid
                 AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
               GROUP BY m.conversation_id`
-          : [];
+            : [];
         const unreadMap = new Map<string, number>(
           unreadResults.map((r) => [r.conversation_id, Number(r.unread_count)]),
         );
@@ -238,10 +236,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
             where: {
               workspaceId: wid,
               type: "direct",
-              AND: [
-                { members: { some: { userId: a } } },
-                { members: { some: { userId: b } } },
-              ],
+              AND: [{ members: { some: { userId: a } } }, { members: { some: { userId: b } } }],
             },
             include: {
               members: {
@@ -285,7 +280,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
 
     if ("error" in result && result.error === "not_workspace_member") {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "usersNotWorkspaceMembers"), data: { nonMemberIds: result.nonMemberIds } },
+        {
+          code: 400,
+          message: apiMsg(req, "usersNotWorkspaceMembers"),
+          data: { nonMemberIds: result.nonMemberIds },
+        },
         { status: 400 },
       );
     }

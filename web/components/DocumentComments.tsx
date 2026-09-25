@@ -21,16 +21,7 @@
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
-import {
-  Check,
-  CheckCheck,
-  Loader2,
-  MessageSquare,
-  Pencil,
-  Reply,
-  Trash2,
-  X,
-} from "lucide-react";
+import { Check, CheckCheck, Loader2, MessageSquare, Pencil, Reply, Trash2, X } from "lucide-react";
 
 // ── 类型定义（对应设计文档 §2.4.1 Prisma schema）──
 
@@ -187,9 +178,7 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
         },
       );
       setComments((prev) =>
-        prev.map((c) =>
-          c.id === parentId ? { ...c, replies: [...c.replies, reply] } : c,
-        ),
+        prev.map((c) => (c.id === parentId ? { ...c, replies: [...c.replies, reply] } : c)),
       );
       setReplyBody("");
       setReplyingTo(null);
@@ -319,7 +308,11 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
                 : "text-[var(--meta)] hover:text-[var(--fg-2)]"
             }`}
           >
-            {f === "open" ? t("commentFilterOpen") : f === "all" ? t("commentFilterAll") : t("commentFilterResolved")}
+            {f === "open"
+              ? t("commentFilterOpen")
+              : f === "all"
+                ? t("commentFilterAll")
+                : t("commentFilterResolved")}
           </button>
         ))}
       </div>
@@ -380,7 +373,10 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
           </div>
         ) : filteredComments.length === 0 ? (
           <div className="flex flex-col items-center justify-center text-center px-[var(--space-4)] py-[var(--space-12)]">
-            <MessageSquare size={36} className="text-[var(--meta)] opacity-50 mb-[var(--space-3)]" />
+            <MessageSquare
+              size={36}
+              className="text-[var(--meta)] opacity-50 mb-[var(--space-3)]"
+            />
             <p className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
               {totalCount === 0 ? t("commentEmpty") : t("commentNoMatch")}
             </p>
@@ -493,7 +489,10 @@ function CommentItem({
 
       {/* 评论内容 / 编辑输入 */}
       {isEditing ? (
-        <form onSubmit={(e) => onSaveEdit(comment.id, e)} className="mt-[var(--space-2)] flex gap-2">
+        <form
+          onSubmit={(e) => onSaveEdit(comment.id, e)}
+          className="mt-[var(--space-2)] flex gap-2"
+        >
           <input
             value={editBody}
             onChange={(e) => onSetEditBody(e.target.value)}
@@ -528,7 +527,10 @@ function CommentItem({
             const replyAuthor = displayName(reply.author, t("unknownAuthor"));
             const isEditingReply = editingId === reply.id;
             return (
-              <li key={reply.id} className="border-l-2 border-[var(--border-soft)] pl-[var(--space-2)]">
+              <li
+                key={reply.id}
+                className="border-l-2 border-[var(--border-soft)] pl-[var(--space-2)]"
+              >
                 <div className="flex items-center gap-[var(--space-2)]">
                   <Avatar name={replyAuthor} size="sm" />
                   <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">

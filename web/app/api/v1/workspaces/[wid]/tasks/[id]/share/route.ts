@@ -57,9 +57,7 @@ export async function PATCH(
           shareSlug?: string | null;
         } = {};
         if (validated.expiresAt !== undefined) {
-          data.shareExpiresAt = validated.expiresAt
-            ? new Date(validated.expiresAt)
-            : null;
+          data.shareExpiresAt = validated.expiresAt ? new Date(validated.expiresAt) : null;
         }
         if (validated.password !== undefined) {
           data.sharePassword = validated.password
@@ -105,7 +103,11 @@ export async function PATCH(
         shareSlug: task.shareSlug,
         shareExpiresAt: task.shareExpiresAt,
         hasPassword: task.sharePassword !== null,
-        shareUrl: task.shareSlug ? `/s/${task.shareSlug}` : task.shareToken ? `/s/${task.shareToken}` : null,
+        shareUrl: task.shareSlug
+          ? `/s/${task.shareSlug}`
+          : task.shareToken
+            ? `/s/${task.shareToken}`
+            : null,
       },
     });
   } catch (error) {
@@ -119,10 +121,7 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
@@ -180,7 +179,11 @@ export async function GET(
         shareSlug: task.shareSlug,
         shareExpiresAt: task.shareExpiresAt,
         hasPassword: task.sharePassword !== null,
-        shareUrl: task.shareSlug ? `/s/${task.shareSlug}` : task.shareToken ? `/s/${task.shareToken}` : null,
+        shareUrl: task.shareSlug
+          ? `/s/${task.shareSlug}`
+          : task.shareToken
+            ? `/s/${task.shareToken}`
+            : null,
       },
     });
   } catch (error) {

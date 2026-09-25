@@ -9,10 +9,7 @@ import type { Prisma } from "@prisma/client";
  * Query: ?page=1&limit=20&meetingId=<uuid>（可选，按会议过滤）
  * 返回按 createdAt 倒序，统一分页格式 { items, page, limit, total, hasMore }
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -127,10 +124,7 @@ const createMinutesSchema = z.object({
   actionItems: z.array(actionItemSchema).default([]),
 });
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

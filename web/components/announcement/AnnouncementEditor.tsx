@@ -1,7 +1,17 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { X, Loader2, Pin, PinOff, Calendar, Megaphone, AlertTriangle, Info, AlertOctagon } from "lucide-react";
+import {
+  X,
+  Loader2,
+  Pin,
+  PinOff,
+  Calendar,
+  Megaphone,
+  AlertTriangle,
+  Info,
+  AlertOctagon,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { useTranslations } from "next-intl";
@@ -50,7 +60,8 @@ const AUDIENCE_OPTS: { value: TargetAudience["type"]; labelKey: string }[] = [
   { value: "department", labelKey: "audienceDepartment" },
 ];
 
-const fieldLabel = "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
+const fieldLabel =
+  "flex items-center gap-1.5 text-[length:var(--text-xs)] text-[var(--meta)] mb-1.5";
 const fieldControl =
   "w-full h-9 px-2.5 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
 
@@ -93,7 +104,9 @@ export default function AnnouncementEditor({
       setAudienceType(announcement.targetAudience.type);
       setAudienceValue((announcement.targetAudience.value ?? []).join(", "));
       setPinned(announcement.pinned);
-      setExpiresAt(announcement.expiresAt ? toLocalDateString(new Date(announcement.expiresAt)) : "");
+      setExpiresAt(
+        announcement.expiresAt ? toLocalDateString(new Date(announcement.expiresAt)) : "",
+      );
     } else {
       setTitle("");
       setContent("");
@@ -152,7 +165,12 @@ export default function AnnouncementEditor({
       const targetAudience: TargetAudience = {
         type: audienceType,
         ...(audienceType !== "all"
-          ? { value: audienceValue.split(",").map((s) => s.trim()).filter(Boolean) }
+          ? {
+              value: audienceValue
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean),
+            }
           : {}),
       };
       const payload = {
@@ -305,7 +323,11 @@ export default function AnnouncementEditor({
                   className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                   aria-pressed={pinned}
                 >
-                  {pinned ? <Pin size={14} className="text-[var(--accent)]" /> : <PinOff size={14} />}
+                  {pinned ? (
+                    <Pin size={14} className="text-[var(--accent)]" />
+                  ) : (
+                    <PinOff size={14} />
+                  )}
                   {pinned ? t("pinned") : t("unpin")}
                 </button>
               </label>

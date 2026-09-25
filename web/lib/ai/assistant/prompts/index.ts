@@ -59,10 +59,7 @@ export interface PromptContext {
 }
 
 /** 12 个能力的 prompt builder map */
-export const ASSISTANT_PROMPT_BUILDERS: Record<
-  AssistantCapabilityId,
-  CapabilityPromptBuilder
-> = {
+export const ASSISTANT_PROMPT_BUILDERS: Record<AssistantCapabilityId, CapabilityPromptBuilder> = {
   task_breakdown: taskBreakdownBuilder,
   todo_extract: todoExtractBuilder,
   progress_anomaly: progressAnomalyBuilder,
@@ -93,8 +90,7 @@ export function summarizeHistory(
   const recent = history.slice(-12);
   const lines = recent.map((m) => {
     const role = m.role === "user" ? "用户" : "助理";
-    const content =
-      m.content.length > 500 ? m.content.slice(0, 500) + "…" : m.content;
+    const content = m.content.length > 500 ? m.content.slice(0, 500) + "…" : m.content;
     return `${role}：${content}`;
   });
   return `【对话历史】\n${lines.join("\n")}`;

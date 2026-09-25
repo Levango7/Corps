@@ -11,11 +11,7 @@
 
 import { IMClient } from "@/components/im/IMClient";
 
-export default async function IMPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default async function IMPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   return <IMClient workspaceId={wid} />;
 }

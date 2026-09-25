@@ -103,7 +103,8 @@ export default function AiChatPanel({ documentContent, onClose }: AiChatPanelPro
           return {
             body: {
               question,
-              documentContent: (body as { documentContent?: string } | undefined)?.documentContent ?? "",
+              documentContent:
+                (body as { documentContent?: string } | undefined)?.documentContent ?? "",
               history,
             },
           };
@@ -216,9 +217,7 @@ export default function AiChatPanel({ documentContent, onClose }: AiChatPanelPro
         {messages.length === 0 ? (
           /* 空状态 */
           <div className="flex h-full flex-col items-center justify-center gap-[var(--space-2)] text-center">
-            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">
-              {t("emptyState")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("emptyState")}</p>
           </div>
         ) : (
           <div className="flex flex-col gap-[var(--space-3)]">

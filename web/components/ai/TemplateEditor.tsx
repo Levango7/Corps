@@ -16,15 +16,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  X,
-  Loader2,
-  Plus,
-  Trash2,
-  Save,
-  GripVertical,
-  Pencil,
-} from "lucide-react";
+import { X, Loader2, Plus, Trash2, Save, GripVertical, Pencil } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 
@@ -151,10 +143,7 @@ export default function TemplateEditor({
   }
 
   function addStep() {
-    setSteps((prev) => [
-      ...prev,
-      { name: "", capability: "task-breakdown", config: {} },
-    ]);
+    setSteps((prev) => [...prev, { name: "", capability: "task-breakdown", config: {} }]);
     setConfigTexts((prev) => [...prev, "{}"]);
   }
 
@@ -174,10 +163,7 @@ export default function TemplateEditor({
       const parsed = tryParseJson(configTexts[i]);
       if (parsed === null) {
         setError(t("error"));
-        console.error(
-          `[TemplateEditor] step ${i + 1} config JSON 无效:`,
-          configTexts[i],
-        );
+        console.error(`[TemplateEditor] step ${i + 1} config JSON 无效:`, configTexts[i]);
         return;
       }
       parsedConfigs.push(parsed);
@@ -259,7 +245,11 @@ export default function TemplateEditor({
             id="ai-template-editor-title"
             className="flex items-center gap-2 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
           >
-            {isEdit ? <Pencil size={16} className="text-[var(--accent)]" /> : <Plus size={16} className="text-[var(--accent)]" />}
+            {isEdit ? (
+              <Pencil size={16} className="text-[var(--accent)]" />
+            ) : (
+              <Plus size={16} className="text-[var(--accent)]" />
+            )}
             {isEdit ? t("edit") : t("create")}
           </h2>
           <button

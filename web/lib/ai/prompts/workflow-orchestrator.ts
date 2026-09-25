@@ -44,8 +44,7 @@ export function buildWorkflowOrchestratorSystemPrompt(
     existingWorkflows && existingWorkflows.length > 0
       ? `\n\n## 已有工作流\n当前工作区已有以下工作流，生成时请避免重复，可基于已有工作流增强或补充：\n${existingWorkflows
           .map(
-            (w, i) =>
-              `${i + 1}. ${w.name}（触发事件：${w.triggerEvent}，${w.nodeCount} 个节点）`,
+            (w, i) => `${i + 1}. ${w.name}（触发事件：${w.triggerEvent}，${w.nodeCount} 个节点）`,
           )
           .join("\n")}\n`
       : "";

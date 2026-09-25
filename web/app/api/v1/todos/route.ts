@@ -15,10 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -68,11 +65,7 @@ const listQuerySchema = z.object({
  * ApprovalInstance.nodes 是审批节点配置快照（JSON），currentNode 指向当前节点序号。
  * 若当前节点的 approverUserId 等于 userId，则该用户需要审批此实例。
  */
-function isCurrentApprover(
-  nodes: unknown,
-  currentNode: number,
-  userId: string,
-): boolean {
+function isCurrentApprover(nodes: unknown, currentNode: number, userId: string): boolean {
   if (!Array.isArray(nodes)) return false;
   const node = nodes[currentNode] as ApprovalNode | undefined;
   if (!node) return false;
@@ -125,8 +118,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -223,9 +215,7 @@ export async function GET(req: NextRequest) {
 
           for (const inst of instances) {
             // 应用层过滤：当前节点审批人是否为当前用户
-            if (
-              !isCurrentApprover(inst.nodes, inst.currentNode, currentUserId)
-            ) {
+            if (!isCurrentApprover(inst.nodes, inst.currentNode, currentUserId)) {
               continue;
             }
 
@@ -284,8 +274,7 @@ export async function GET(req: NextRequest) {
               dueDate: meeting.scheduledAt?.toISOString() ?? undefined,
               priority: undefined,
               sourceUrl: `/dashboard/meetings/${meeting.id}`,
-              status:
-                meeting.status === "ended" ? "completed" : "pending",
+              status: meeting.status === "ended" ? "completed" : "pending",
               createdAt: meeting.createdAt.toISOString(),
             });
           }
@@ -320,9 +309,7 @@ export async function GET(req: NextRequest) {
               id: comment.id,
               type: "document",
               title: comment.body.slice(0, 100), // 评论内容截断作为标题
-              description: comment.body.length > 100
-                ? comment.body.slice(0, 200)
-                : undefined,
+              description: comment.body.length > 100 ? comment.body.slice(0, 200) : undefined,
               dueDate: undefined,
               priority: undefined,
               sourceUrl: `/dashboard/documents/${comment.documentId}`,

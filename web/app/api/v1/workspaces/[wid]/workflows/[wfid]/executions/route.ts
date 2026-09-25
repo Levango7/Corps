@@ -10,10 +10,17 @@ import { logger } from "@/lib/logger";
  * GET /v1/workspaces/{wid}/workflows/{wfid}/executions — 执行历史
  * Query: ?take=&skip= 分页
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string; wfid: string }> }) {
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; wfid: string }> },
+) {
   const { wid, wfid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const url = new URL(req.url);
@@ -23,7 +30,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -36,7 +48,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       ctx.payload.sub,
     );
     if (!wf || wf.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, data: null, message: apiMsg(req, "workflowNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, data: null, message: apiMsg(req, "workflowNotFound") },
+        { status: 404 },
+      );
     }
 
     const where = { workflowId: wfid, workspaceId: wid };
@@ -55,7 +70,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 0, data: { items, total, skip, take } });
   } catch (error) {
     console.error("[GET workflow executions] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }
 
@@ -72,10 +90,17 @@ const triggerSchema = z.object({
  * POST /v1/workspaces/{wid}/workflows/{wfid}/executions — 手动触发执行
  * 创建 WorkflowExecution 记录，status 设为 "pending"
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string; wfid: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; wfid: string }> },
+) {
   const { wid, wfid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -84,11 +109,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // 确认工作流存在且属于该工作区
     const wf = await runWithWorkspace(
       wid,
-      (tx) => tx.workflow.findUnique({ where: { id: wfid }, select: { workspaceId: true, trigger: true } }),
+      (tx) =>
+        tx.workflow.findUnique({
+          where: { id: wfid },
+          select: { workspaceId: true, trigger: true },
+        }),
       ctx.payload.sub,
     );
     if (!wf || wf.workspaceId !== wid) {
-      return NextResponse.json({ code: 404, data: null, message: apiMsg(req, "workflowNotFound") }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, data: null, message: apiMsg(req, "workflowNotFound") },
+        { status: 404 },
+      );
     }
 
     const execution = await runWithWorkspace(
@@ -127,11 +159,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }
     console.error("[POST workflow execution] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

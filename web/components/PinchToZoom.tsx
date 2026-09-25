@@ -33,11 +33,7 @@ export interface PinchToZoomProps {
   maxScale?: number;
 }
 
-export function PinchToZoom({
-  children,
-  minScale = 0.5,
-  maxScale = 2,
-}: PinchToZoomProps) {
+export function PinchToZoom({ children, minScale = 0.5, maxScale = 2 }: PinchToZoomProps) {
   const prefersReduced = useReducedMotion();
   const scale = useMotionValue(1);
 
@@ -67,10 +63,7 @@ export function PinchToZoom({
       const currentDistance = getDistance(e.touches);
       if (currentDistance > 0 && initialDistanceRef.current > 0) {
         const ratio = currentDistance / initialDistanceRef.current;
-        const nextScale = Math.min(
-          Math.max(startScaleRef.current * ratio, minScale),
-          maxScale,
-        );
+        const nextScale = Math.min(Math.max(startScaleRef.current * ratio, minScale), maxScale);
         scale.set(nextScale);
       }
     }

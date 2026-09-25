@@ -37,12 +37,7 @@ const schema = z.object({
 /** 合法节点类型白名单 */
 const VALID_NODE_TYPES = new Set(["concept", "entity", "fact", "procedure"]);
 /** 合法关系类型白名单 */
-const VALID_RELATIONS = new Set([
-  "depends_on",
-  "relates_to",
-  "part_of",
-  "authored_by",
-]);
+const VALID_RELATIONS = new Set(["depends_on", "relates_to", "part_of", "authored_by"]);
 
 /** 提取结果 JSON 契约 */
 interface ExtractedNode {
@@ -171,8 +166,7 @@ function normalizeExtractResult(raw: unknown): ExtractedResult {
       ) {
         continue;
       }
-      const rawWeight =
-        typeof edge.weight === "number" ? edge.weight : 1.0;
+      const rawWeight = typeof edge.weight === "number" ? edge.weight : 1.0;
       edges.push({
         sourceLabel: edge.sourceLabel.slice(0, 200),
         targetLabel: edge.targetLabel.slice(0, 200),
@@ -251,10 +245,7 @@ export async function POST(req: NextRequest) {
     }
 
     // 6.2) AI 提取（非流式，withUsageTracking 包装）
-    const systemPrompt = buildKnowledgeExtractPrompt(
-      body.sourceType,
-      sourceContent,
-    );
+    const systemPrompt = buildKnowledgeExtractPrompt(body.sourceType, sourceContent);
 
     const extractResult = await withUsageTracking(
       {
@@ -285,12 +276,7 @@ export async function POST(req: NextRequest) {
     try {
       parsed = JSON.parse(cleaned);
     } catch (e) {
-      console.error(
-        "[ai/knowledge/extract] JSON.parse 失败:",
-        e,
-        "raw:",
-        cleaned.slice(0, 200),
-      );
+      console.error("[ai/knowledge/extract] JSON.parse 失败:", e, "raw:", cleaned.slice(0, 200));
       return NextResponse.json(
         { code: 500, message: apiMsg(req, "internalError"), data: null },
         { status: 500 },

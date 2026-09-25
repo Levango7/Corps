@@ -201,9 +201,7 @@ export async function POST(req: NextRequest) {
       bottlenecks: Array.isArray(obj.bottlenecks)
         ? (obj.bottlenecks as BottleneckResult["bottlenecks"])
         : [],
-      criticalPath: Array.isArray(obj.criticalPath)
-        ? (obj.criticalPath as string[])
-        : [],
+      criticalPath: Array.isArray(obj.criticalPath) ? (obj.criticalPath as string[]) : [],
       insights: Array.isArray(obj.insights) ? (obj.insights as string[]) : [],
     };
 

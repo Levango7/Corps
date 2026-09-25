@@ -22,7 +22,20 @@
  */
 
 import { use, useCallback, useEffect, useRef, useState } from "react";
-import { Plus, Pencil, Check, LayoutDashboard, Download, Upload, LayoutGrid, Move, Minimize2, Square, Maximize2, ChevronDown } from "lucide-react";
+import {
+  Plus,
+  Pencil,
+  Check,
+  LayoutDashboard,
+  Download,
+  Upload,
+  LayoutGrid,
+  Move,
+  Minimize2,
+  Square,
+  Maximize2,
+  ChevronDown,
+} from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { useToast } from "@/components/Toast";
@@ -109,7 +122,9 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
   useEffect(() => {
     api<{ items?: unknown[] } | unknown[]>(`/api/v1/workspaces/${wid}/tasks`)
       .then((res) => {
-        const count = Array.isArray(res) ? res.length : (res as { items?: unknown[] }).items?.length ?? 0;
+        const count = Array.isArray(res)
+          ? res.length
+          : ((res as { items?: unknown[] }).items?.length ?? 0);
         setTaskCount(count);
       })
       .catch(() => {
@@ -182,17 +197,31 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             <LayoutDashboard size={20} className="text-[var(--muted)]" />
             {tNav("menu.overview")}
           </h1>
-          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">
-            {t("subtitle")}
-          </p>
+          <p className="mt-1 text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
         </div>
         <div className="relative flex items-center justify-end gap-2 flex-wrap">
-          <div className="flex items-center gap-1 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]" role="group" aria-label={t("homeView")}>
-            <button type="button" className={toolbarBtnClass(homeView === "dashboard")} aria-pressed={homeView === "dashboard"} onClick={() => changeHomeView("dashboard")}>
-              <LayoutGrid size={16} />{t("gridMode")}
+          <div
+            className="flex items-center gap-1 p-1 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)]"
+            role="group"
+            aria-label={t("homeView")}
+          >
+            <button
+              type="button"
+              className={toolbarBtnClass(homeView === "dashboard")}
+              aria-pressed={homeView === "dashboard"}
+              onClick={() => changeHomeView("dashboard")}
+            >
+              <LayoutGrid size={16} />
+              {t("gridMode")}
             </button>
-            <button type="button" className={toolbarBtnClass(homeView === "widgets")} aria-pressed={homeView === "widgets"} onClick={() => changeHomeView("widgets")}>
-              <Move size={16} />{t("widgetView")}
+            <button
+              type="button"
+              className={toolbarBtnClass(homeView === "widgets")}
+              aria-pressed={homeView === "widgets"}
+              onClick={() => changeHomeView("widgets")}
+            >
+              <Move size={16} />
+              {t("widgetView")}
             </button>
           </div>
           {/* 编辑布局开关 */}
@@ -222,14 +251,23 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                 className="flex items-center gap-1.5 h-9 px-3 lg:hidden rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
               >
                 <LayoutGrid size={16} />
-                <ChevronDown size={14} className={`transition-transform duration-[var(--motion-fast)] ${toolbarMenuOpen ? "rotate-180" : ""}`} />
+                <ChevronDown
+                  size={14}
+                  className={`transition-transform duration-[var(--motion-fast)] ${toolbarMenuOpen ? "rotate-180" : ""}`}
+                />
               </button>
               {/* < lg：下拉菜单面板 */}
               {toolbarMenuOpen && (
                 <div className="lg:hidden absolute right-0 top-full mt-1 z-50 min-w-[200px] p-2 rounded-[var(--radius-md)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-md)]">
                   {/* 布局模式切换 */}
-                  <div className="px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] font-[weight:var(--weight-medium)]">{t("layoutMode")}</div>
-                  <div className="flex items-center gap-1 p-1" role="group" aria-label={t("layoutMode")}>
+                  <div className="px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] font-[weight:var(--weight-medium)]">
+                    {t("layoutMode")}
+                  </div>
+                  <div
+                    className="flex items-center gap-1 p-1"
+                    role="group"
+                    aria-label={t("layoutMode")}
+                  >
                     <button
                       type="button"
                       onClick={() => handleFreeModeChange(false)}
@@ -254,8 +292,14 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                   {/* 分隔线 */}
                   <div className="h-px my-1 bg-[var(--border)]" aria-hidden="true" />
                   {/* 密度选择器 */}
-                  <div className="px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] font-[weight:var(--weight-medium)]">{t("layoutDensity")}</div>
-                  <div className="flex items-center gap-1 p-1" role="group" aria-label={t("layoutDensity")}>
+                  <div className="px-2 py-1 text-[length:var(--text-xs)] text-[var(--muted)] font-[weight:var(--weight-medium)]">
+                    {t("layoutDensity")}
+                  </div>
+                  <div
+                    className="flex items-center gap-1 p-1"
+                    role="group"
+                    aria-label={t("layoutDensity")}
+                  >
                     <button
                       type="button"
                       onClick={() => handleDensityChange("compact")}
@@ -292,7 +336,10 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                   {/* 导出/导入布局 */}
                   <button
                     type="button"
-                    onClick={() => { handleExportLayout(); setToolbarMenuOpen(false); }}
+                    onClick={() => {
+                      handleExportLayout();
+                      setToolbarMenuOpen(false);
+                    }}
                     className="w-full flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
                   >
                     <Download size={15} />
@@ -300,7 +347,10 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                   </button>
                   <button
                     type="button"
-                    onClick={() => { fileInputRef.current?.click(); setToolbarMenuOpen(false); }}
+                    onClick={() => {
+                      fileInputRef.current?.click();
+                      setToolbarMenuOpen(false);
+                    }}
                     className="w-full flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
                   >
                     <Upload size={15} />
@@ -338,7 +388,11 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
                 {/* 分隔线 */}
                 <span className="w-px h-5 bg-[var(--border)]" aria-hidden="true" />
                 {/* 密度选择器：紧凑 / 舒适 / 宽敞 */}
-                <div className="flex items-center gap-1" role="group" aria-label={t("layoutDensity")}>
+                <div
+                  className="flex items-center gap-1"
+                  role="group"
+                  aria-label={t("layoutDensity")}
+                >
                   <button
                     type="button"
                     onClick={() => handleDensityChange("compact")}
@@ -404,14 +458,16 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
             </>
           )}
           {/* 添加 Widget 仅适用于原仪表盘 */}
-          {homeView === "dashboard" && <button
-            type="button"
-            onClick={() => setAddDialogOpen(true)}
-            className="flex items-center gap-1.5 h-9 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-          >
-            <Plus size={15} />
-            <span className="hidden sm:inline">{t("addWidgetTitle")}</span>
-          </button>}
+          {homeView === "dashboard" && (
+            <button
+              type="button"
+              onClick={() => setAddDialogOpen(true)}
+              className="flex items-center gap-1.5 h-9 px-3 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+            >
+              <Plus size={15} />
+              <span className="hidden sm:inline">{t("addWidgetTitle")}</span>
+            </button>
+          )}
         </div>
       </div>
 
@@ -430,9 +486,24 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
           key={wid}
           readOnly={!editing}
           widgets={[
-            { id: "summary", title: t("taskStats"), component: <TaskSummaryWidget wid={wid} />, defaultPosition: { x: 0, y: 0, w: 4, h: 5 } },
-            { id: "activity", title: t("recentActivity"), component: <ActivityWidget wid={wid} />, defaultPosition: { x: 4, y: 0, w: 4, h: 5 } },
-            { id: "insight", title: t("aiInsight"), component: <AiInsightWidget wid={wid} />, defaultPosition: { x: 8, y: 0, w: 4, h: 5 } },
+            {
+              id: "summary",
+              title: t("taskStats"),
+              component: <TaskSummaryWidget wid={wid} />,
+              defaultPosition: { x: 0, y: 0, w: 4, h: 5 },
+            },
+            {
+              id: "activity",
+              title: t("recentActivity"),
+              component: <ActivityWidget wid={wid} />,
+              defaultPosition: { x: 4, y: 0, w: 4, h: 5 },
+            },
+            {
+              id: "insight",
+              title: t("aiInsight"),
+              component: <AiInsightWidget wid={wid} />,
+              defaultPosition: { x: 8, y: 0, w: 4, h: 5 },
+            },
           ]}
         />
       ) : (

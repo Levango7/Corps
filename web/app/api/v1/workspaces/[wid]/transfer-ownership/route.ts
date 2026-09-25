@@ -20,7 +20,11 @@ const schema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerTransfer"), data: null },
@@ -38,12 +42,18 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+      { status: 400 },
+    );
   }
 
   // 不能转给自己
   if (body.newOwnerUserId === ctx.payload.sub) {
-    return NextResponse.json({ code: 400, message: apiMsg(req, "alreadyOwner"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "alreadyOwner"), data: null },
+      { status: 400 },
+    );
   }
 
   // M4 修复：二次密码确认——防止会话被劫持后恶意转让所有权
@@ -123,6 +133,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       );
     }
     console.error("[PATCH transfer] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

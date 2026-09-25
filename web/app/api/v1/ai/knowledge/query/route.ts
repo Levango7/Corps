@@ -131,10 +131,7 @@ export async function POST(req: NextRequest) {
     const contextMarkdown =
       relatedNodes.length > 0
         ? relatedNodes
-            .map(
-              (n) =>
-                `### ${n.label}（类型：${n.type}）\n${n.content}\n来源：${n.sourceType}`,
-            )
+            .map((n) => `### ${n.label}（类型：${n.type}）\n${n.content}\n来源：${n.sourceType}`)
             .join("\n\n")
         : "（未检索到相关知识点）";
 

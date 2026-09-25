@@ -30,7 +30,8 @@ const PAGE_SIZE = 20;
 /** 统一活动项 */
 interface Activity {
   id: string;
-  type: "task.created" | "task.updated" | "comment.created" | "decision.created" | "decision.updated";
+  type:
+    "task.created" | "task.updated" | "comment.created" | "decision.created" | "decision.updated";
   actorId: string | null;
   actorName: string | null;
   entityType: "task" | "comment" | "decision";
@@ -39,10 +40,7 @@ interface Activity {
   createdAt: string;
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx) {

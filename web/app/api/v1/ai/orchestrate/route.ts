@@ -122,11 +122,7 @@ export async function POST(req: NextRequest) {
         model: "deepseek-reasoner",
       },
       async () => {
-        const res = await suggestOrchestration(
-          body.wid,
-          ctx.payload.sub,
-          body.userRequest,
-        );
+        const res = await suggestOrchestration(body.wid, ctx.payload.sub, body.userRequest);
         return { result: res };
       },
     );

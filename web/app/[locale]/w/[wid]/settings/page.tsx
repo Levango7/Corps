@@ -47,7 +47,11 @@ function SettingsPageSkeleton() {
   );
 
   return (
-    <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] sm:px-0" aria-busy="true" aria-live="polite">
+    <div
+      className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] sm:px-0"
+      aria-busy="true"
+      aria-live="polite"
+    >
       {/* 页头 */}
       <div className="mb-6">
         <div className="flex items-center gap-2">
@@ -254,9 +258,7 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
       <SettingsPreferences />
 
       {/* 数据导出（P4：CSV 导出） */}
-      {ws && (
-        <SettingsDataExport wid={wid} wsSlug={ws.slug} onError={setError} />
-      )}
+      {ws && <SettingsDataExport wid={wid} wsSlug={ws.slug} onError={setError} />}
 
       {/* 概况 */}
       {ws && <SettingsOverview ws={ws} />}

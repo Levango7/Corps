@@ -6,7 +6,12 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel } from "@/lib/ai/deepseek";
-import { getUserIdAndWorkspaceId, unauthorizedResponse, aiNotConfiguredResponse, isAiConfigured } from "@/lib/ai/shared";
+import {
+  getUserIdAndWorkspaceId,
+  unauthorizedResponse,
+  aiNotConfiguredResponse,
+  isAiConfigured,
+} from "@/lib/ai/shared";
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -48,14 +53,14 @@ export async function POST(req: NextRequest) {
         { status: 400 },
       );
     }
-    return NextResponse.json({ code: 400, message: apiMsg(req, "invalidBody"), data: null }, { status: 400 });
+    return NextResponse.json(
+      { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+      { status: 400 },
+    );
   }
 
   // 4) 组装消息：history（过往对话）+ 当前 question
-  const messages = [
-    ...(body.history ?? []),
-    { role: "user" as const, content: body.question },
-  ];
+  const messages = [...(body.history ?? []), { role: "user" as const, content: body.question }];
 
   // 5) 流式问答：system 注入文档内容作为上下文
   try {

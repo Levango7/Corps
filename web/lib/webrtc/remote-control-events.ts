@@ -42,10 +42,7 @@ export interface SignalingEnvelope {
  * 发布信令消息到目标用户的通道（供 POST /signal 调用）。
  * 静默处理无监听器情况（目标用户离线时消息丢弃，由前端超时重试）。
  */
-export function emitSignalingMessage(
-  targetUserId: string,
-  message: unknown,
-): void {
+export function emitSignalingMessage(targetUserId: string, message: unknown): void {
   const envelope: SignalingEnvelope = {
     message,
     timestamp: Date.now(),

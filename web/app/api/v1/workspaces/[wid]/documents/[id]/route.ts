@@ -17,7 +17,11 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const doc = await runWithWorkspace(wid, (tx) =>
@@ -47,13 +51,7 @@ export async function GET(
 
     if (!isPrivileged && userId) {
       if (doc.visibility !== "workspace" && doc.authorId !== userId) {
-        const canView = await checkDocumentPermission(
-          userId,
-          doc.id,
-          "view",
-          wid,
-          role,
-        );
+        const canView = await checkDocumentPermission(userId, doc.id, "view", wid, role);
         if (!canView) {
           return NextResponse.json(
             { code: 403, message: apiMsg(req, "forbidden"), data: null },
@@ -95,7 +93,11 @@ export async function PATCH(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json();
@@ -196,7 +198,11 @@ export async function PATCH(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -222,7 +228,11 @@ export async function DELETE(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     // 权限检查：owner/admin 可删除任何文档，其他角色需有 manage 级别权限

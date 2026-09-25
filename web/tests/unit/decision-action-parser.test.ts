@@ -1,9 +1,5 @@
 import { describe, it, expect } from "vitest";
-import {
-  parseActionItems,
-  ACTION_TEMPLATES,
-
-} from "@/lib/decision-action-parser";
+import { parseActionItems, ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 
 describe("parseActionItems", () => {
   it("解析未勾选的行动项", () => {

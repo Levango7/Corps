@@ -69,10 +69,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
   }, [form]);
 
   function addField() {
-    setFields((prev) => [
-      ...prev,
-      { id: genFieldId(), type: "text", label: "", required: false },
-    ]);
+    setFields((prev) => [...prev, { id: genFieldId(), type: "text", label: "", required: false }]);
   }
 
   function removeField(id: string) {

@@ -94,8 +94,14 @@ export function AnnouncementBanner({ wid }: { wid: string }) {
         >
           {banner.title}
         </span>
-        <span className="hidden md:inline truncate text-[length:var(--text-xs)] opacity-80" style={{ color: tok.softFg }}>
-          {banner.content.replace(/[#*`>_~\n]/g, " ").trim().slice(0, 120)}
+        <span
+          className="hidden md:inline truncate text-[length:var(--text-xs)] opacity-80"
+          style={{ color: tok.softFg }}
+        >
+          {banner.content
+            .replace(/[#*`>_~\n]/g, " ")
+            .trim()
+            .slice(0, 120)}
         </span>
       </div>
       <button

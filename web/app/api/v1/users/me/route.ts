@@ -40,7 +40,10 @@ export async function GET(req: NextRequest) {
   try {
     const userId = await getUserId(req);
     if (!userId) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+      return NextResponse.json(
+        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+        { status: 401 },
+      );
     }
 
     const user = await prisma.user.findUnique({
@@ -48,13 +51,19 @@ export async function GET(req: NextRequest) {
       select: userSelect,
     });
     if (!user) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "userNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "userNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     return NextResponse.json({ code: 200, data: user });
   } catch (error) {
     console.error("Get user error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
 
@@ -76,7 +85,10 @@ export async function PATCH(req: NextRequest) {
   try {
     const userId = await getUserId(req);
     if (!userId) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+      return NextResponse.json(
+        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+        { status: 401 },
+      );
     }
 
     const body = await req.json();
@@ -103,6 +115,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
     console.error("Update user error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

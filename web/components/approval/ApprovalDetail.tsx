@@ -36,10 +36,7 @@ import {
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 import { useToast } from "@/components/Toast";
-import {
-  ApprovalFlowDiagram,
-  type ApprovalFlowNode,
-} from "./ApprovalFlowDiagram";
+import { ApprovalFlowDiagram, type ApprovalFlowNode } from "./ApprovalFlowDiagram";
 
 /** 审批实例详情（与后端 GET /instances/{aid} 响应一致） */
 interface ApprovalInstanceDetail {
@@ -200,10 +197,7 @@ function getActionColor(action: ApprovalOperation["action"]) {
   }
 }
 
-export function ApprovalDetail({
-  approvalId,
-  workspaceId,
-}: ApprovalDetailProps) {
+export function ApprovalDetail({ approvalId, workspaceId }: ApprovalDetailProps) {
   const t = useTranslations("approval");
   const tButton = useTranslations("button");
   const { toast } = useToast();
@@ -261,11 +255,7 @@ export function ApprovalDetail({
         }
       } catch (e) {
         if (cancelled) return;
-        setError(
-          e instanceof ApiError || e instanceof Error
-            ? e.message
-            : t("loadFailed"),
-        );
+        setError(e instanceof ApiError || e instanceof Error ? e.message : t("loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -324,9 +314,7 @@ export function ApprovalDetail({
         body = JSON.stringify(payload);
       } else {
         // approve/reject/withdraw：只需要备注
-        body = comment.trim()
-          ? JSON.stringify({ comment: comment.trim() })
-          : undefined;
+        body = comment.trim() ? JSON.stringify({ comment: comment.trim() }) : undefined;
       }
 
       await api(
@@ -350,9 +338,7 @@ export function ApprovalDetail({
       setTargetUserId("");
     } catch (e) {
       setActionError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("operationFailed"),
+        e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"),
       );
     } finally {
       setSubmitting(false);
@@ -371,9 +357,7 @@ export function ApprovalDetail({
   if (error) {
     return (
       <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] py-[var(--space-6)]">
-        <p className="text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>
       </div>
     );
   }
@@ -381,9 +365,7 @@ export function ApprovalDetail({
   if (!detail) {
     return (
       <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] py-[var(--space-6)]">
-        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("noApprovals")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noApprovals")}</p>
       </div>
     );
   }
@@ -397,8 +379,7 @@ export function ApprovalDetail({
     "—";
 
   // 权限判定
-  const isApplicant =
-    currentUserId !== null && currentUserId === detail.applicantId;
+  const isApplicant = currentUserId !== null && currentUserId === detail.applicantId;
   // 当前用户是否可审批：必须 pending 且其 ID 在 currentApproverIds 中
   const isCurrentApprover =
     currentUserId !== null &&
@@ -408,9 +389,7 @@ export function ApprovalDetail({
   const canApproveOrReject = isCurrentApprover;
 
   // 审批内容键值对
-  const contentEntries = detail.content
-    ? Object.entries(detail.content)
-    : [];
+  const contentEntries = detail.content ? Object.entries(detail.content) : [];
 
   // 操作记录（按时间倒序展示，最新的在上）
   const operations = (detail.operations ?? []).slice().reverse();
@@ -447,9 +426,7 @@ export function ApprovalDetail({
           <dt className="text-[length:var(--text-xs)] text-[var(--meta)] mb-0.5">
             {t("applicant")}
           </dt>
-          <dd className="text-[length:var(--text-sm)] text-[var(--fg)]">
-            {applicant}
-          </dd>
+          <dd className="text-[length:var(--text-sm)] text-[var(--fg)]">{applicant}</dd>
         </div>
         <div>
           <dt className="text-[length:var(--text-xs)] text-[var(--meta)] mb-0.5">
@@ -474,9 +451,7 @@ export function ApprovalDetail({
             <dt className="text-[length:var(--text-xs)] text-[var(--meta)] mb-0.5">
               {t("selectTemplate")}
             </dt>
-            <dd className="text-[length:var(--text-sm)] text-[var(--fg)]">
-              {detail.templateName}
-            </dd>
+            <dd className="text-[length:var(--text-sm)] text-[var(--fg)]">{detail.templateName}</dd>
           </div>
         )}
       </dl>
@@ -627,12 +602,7 @@ export function ApprovalDetail({
           </h2>
           <div className="rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] divide-y divide-[var(--border-soft)]">
             {ccUsers.map((cc) => {
-              const ccName =
-                cc.user?.name ||
-                cc.user?.email ||
-                cc.userName ||
-                cc.userEmail ||
-                "—";
+              const ccName = cc.user?.name || cc.user?.email || cc.userName || cc.userEmail || "—";
               return (
                 <div
                   key={cc.id}
@@ -838,9 +808,7 @@ export function ApprovalDetail({
                 />
               </div>
               {actionError && (
-                <p className="text-[length:var(--text-sm)] text-[var(--danger)]">
-                  {actionError}
-                </p>
+                <p className="text-[length:var(--text-sm)] text-[var(--danger)]">{actionError}</p>
               )}
               <div className="flex items-center justify-end gap-2 pt-1">
                 <button
@@ -855,9 +823,7 @@ export function ApprovalDetail({
                   disabled={submitting}
                   className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                 >
-                  {submitting && (
-                    <Loader2 size={14} className="animate-spin" />
-                  )}
+                  {submitting && <Loader2 size={14} className="animate-spin" />}
                   {tButton("confirm")}
                 </button>
               </div>

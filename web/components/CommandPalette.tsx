@@ -297,7 +297,9 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
               {searchError
                 ? t("searchFailed")
                 : query.trim()
-                  ? (isSearching ? t("searching") : tSearch("noResults"))
+                  ? isSearching
+                    ? t("searching")
+                    : tSearch("noResults")
                   : t("noItems")}
             </li>
           )}
@@ -307,8 +309,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
             const prev = items[idx - 1];
             // 分组标题显示：搜索态下，当前项 kind 与前一项不同时显示分组标题。
             // 搜索态 items 只含搜索结果（不含 nav），prev 为 undefined（首项）或不同 kind 时触发。
-            const showGroupHeader =
-              showGroups && item.kind !== "nav" && prev?.kind !== item.kind;
+            const showGroupHeader = showGroups && item.kind !== "nav" && prev?.kind !== item.kind;
             return (
               <Fragment key={item.id}>
                 {showGroupHeader && (

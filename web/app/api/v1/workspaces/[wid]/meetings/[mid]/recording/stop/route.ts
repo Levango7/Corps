@@ -58,15 +58,11 @@ export async function POST(
 
         // 权限：创建者或 admin/owner
         const isCreator = meeting.createdBy === ctx.payload.sub;
-        const isAdmin =
-          ctx.member.role === "owner" || ctx.member.role === "admin";
+        const isAdmin = ctx.member.role === "owner" || ctx.member.role === "admin";
         if (!isCreator && !isAdmin) return { kind: "forbidden" as const };
 
         // 录制必须已启动（recordingUrl 以 egress: 开头）
-        if (
-          !meeting.recordingUrl ||
-          !meeting.recordingUrl.startsWith("egress:")
-        ) {
+        if (!meeting.recordingUrl || !meeting.recordingUrl.startsWith("egress:")) {
           return { kind: "notStarted" as const };
         }
 
@@ -93,11 +89,7 @@ export async function POST(
       );
 
     // 事务外调用 LiveKit EgressClient 停止录制
-    const egressClient = new EgressClient(
-      livekitApiHost(livekitUrl),
-      apiKey,
-      apiSecret,
-    );
+    const egressClient = new EgressClient(livekitApiHost(livekitUrl), apiKey, apiSecret);
     await egressClient.stopEgress(check.egressId);
 
     // 更新 meeting：标记录制已停止，最终 URL 等 webhook 回填

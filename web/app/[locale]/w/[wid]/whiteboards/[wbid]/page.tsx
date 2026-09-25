@@ -31,11 +31,7 @@ export default function WhiteboardEditPage({
   return <WhiteboardEditPageClient params={params} />;
 }
 
-function WhiteboardEditPageClient({
-  params,
-}: {
-  params: Promise<{ wid: string; wbid: string }>;
-}) {
+function WhiteboardEditPageClient({ params }: { params: Promise<{ wid: string; wbid: string }> }) {
   const t = useTranslations("whiteboard");
   const [wid, setWid] = useState<string | null>(null);
   const [wbid, setWbid] = useState<string | null>(null);
@@ -78,12 +74,7 @@ function WhiteboardEditPageClient({
   }
   return (
     <SafeComponent name="白板编辑器">
-      <WhiteboardCanvas
-        wid={wid}
-        wbid={wbid}
-        initialTitle={data.title}
-        initialData={data.data}
-      />
+      <WhiteboardCanvas wid={wid} wbid={wbid} initialTitle={data.title} initialData={data.data} />
     </SafeComponent>
   );
 }

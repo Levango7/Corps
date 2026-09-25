@@ -23,12 +23,7 @@ import { logger } from "@/lib/logger";
  */
 
 /** cron 字段匹配（支持 * / , - / 步进语法，与标准 cron 语义一致） */
-function matchesCronField(
-  field: string,
-  value: number,
-  min: number,
-  _max: number,
-): boolean {
+function matchesCronField(field: string, value: number, min: number, _max: number): boolean {
   if (field === "*") return true;
   for (const part of field.split(",")) {
     if (part.includes("/")) {

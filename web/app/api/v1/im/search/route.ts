@@ -182,12 +182,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       : await runWithWorkspace(
           parsed.workspaceId,
           (tx) =>
-            tx.$queryRawUnsafe<MessageSearchRow[]>(
-              sql,
-              parsed.q,
-              parsed.workspaceId,
-              parsed.limit,
-            ),
+            tx.$queryRawUnsafe<MessageSearchRow[]>(sql, parsed.q, parsed.workspaceId, parsed.limit),
           ctx.payload.sub,
         );
 

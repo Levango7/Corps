@@ -50,13 +50,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 /** @提及浮窗最大显示成员数 */
 const MENTION_MAX_ITEMS = 8;
 
-
-function MessageInputImpl({
-  onSend,
-  onUploadFile,
-  sending,
-  members,
-}: MessageInputProps) {
+function MessageInputImpl({ onSend, onUploadFile, sending, members }: MessageInputProps) {
   const t = useTranslations("chat");
   const [draft, setDraft] = useState("");
   const [pendingAttachments, setPendingAttachments] = useState<AttachmentMeta[]>([]);
@@ -268,14 +262,17 @@ function MessageInputImpl({
   );
 
   /** 拖拽上传处理 */
-  const handleDragOver = useCallback((e: DragEvent<HTMLDivElement>) => {
-    // 仅当拖入文件时才阻止默认行为并显示遮罩
-    if (e.dataTransfer.types.includes("Files")) {
-      e.preventDefault();
-      e.dataTransfer.dropEffect = "copy";
-      if (!dragOver) setDragOver(true);
-    }
-  }, [dragOver]);
+  const handleDragOver = useCallback(
+    (e: DragEvent<HTMLDivElement>) => {
+      // 仅当拖入文件时才阻止默认行为并显示遮罩
+      if (e.dataTransfer.types.includes("Files")) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = "copy";
+        if (!dragOver) setDragOver(true);
+      }
+    },
+    [dragOver],
+  );
 
   const handleDragLeave = useCallback((e: DragEvent<HTMLDivElement>) => {
     // 仅当离开根容器时才关闭遮罩（避免子元素切换闪烁）

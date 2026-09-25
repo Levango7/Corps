@@ -16,10 +16,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -182,10 +179,7 @@ export async function POST(req: NextRequest) {
     });
   } catch (error) {
     // SMTP 连接/发送失败 → 503
-    console.error(
-      "[POST mail/send] SMTP error:",
-      error instanceof Error ? error.message : error,
-    );
+    console.error("[POST mail/send] SMTP error:", error instanceof Error ? error.message : error);
     return NextResponse.json(
       { code: 503, data: null, message: apiMsg(req, "mailSmtpError") },
       { status: 503 },

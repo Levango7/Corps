@@ -1,4 +1,3 @@
-
 /**
  * 视频预览组件
  *
@@ -18,11 +17,7 @@ export function VideoPreview({ src }: VideoPreviewProps) {
       className="flex items-center justify-center w-full h-full bg-[var(--surface-2)]"
       data-testid="video-preview"
     >
-      <video
-        src={src}
-        controls
-        className="max-w-full max-h-full"
-      />
+      <video src={src} controls className="max-w-full max-h-full" />
     </div>
   );
 }

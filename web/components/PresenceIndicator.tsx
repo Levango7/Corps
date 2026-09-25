@@ -110,9 +110,7 @@ export function OnlineAvatars({ max = 5, avatarSize = 28 }: OnlineAvatarsProps) 
         </div>
       ))}
       {overflow > 0 && (
-        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          +{overflow}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--muted)]">+{overflow}</span>
       )}
     </div>
   );

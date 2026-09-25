@@ -82,10 +82,7 @@ function computeSha256(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -154,10 +151,7 @@ export async function POST(
 
     // 可选的 folderId（从 formData 获取）
     const folderIdRaw = formData.get("folderId");
-    const folderId =
-      typeof folderIdRaw === "string" && folderIdRaw.length > 0
-        ? folderIdRaw
-        : null;
+    const folderId = typeof folderIdRaw === "string" && folderIdRaw.length > 0 ? folderIdRaw : null;
 
     // 校验 folderId 格式（若提供则必须是合法 UUID，防止注入非法值）
     if (folderId !== null) {
@@ -173,9 +167,7 @@ export async function POST(
     // 可选的版本说明（从 formData 获取）
     const messageRaw = formData.get("message");
     const versionMessage =
-      typeof messageRaw === "string" && messageRaw.length > 0
-        ? messageRaw
-        : null;
+      typeof messageRaw === "string" && messageRaw.length > 0 ? messageRaw : null;
 
     // 去重逻辑：同 workspace 内按 sha256 查找已有文件
     const result = await runWithWorkspace(

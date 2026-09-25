@@ -48,10 +48,7 @@ function sseHeartbeatFrame(): Uint8Array {
   return encoder.encode(`: heartbeat\n\n`);
 }
 
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   // SSE 连接建立限流：每客户端每分钟最多 20 次连接建立
   const limited = await checkRateLimit(req, "sse", { windowMs: 60_000, max: 20 });
   if (limited) return limited;

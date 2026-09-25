@@ -22,15 +22,7 @@
  * markdownMode 键，覆盖删除线 / 任务列表 / 撤销 / 重做 / 模式切换文案。
  */
 
-import {
-  useState,
-  useRef,
-  useEffect,
-  useImperativeHandle,
-  forwardRef,
-  useMemo,
-
-} from "react";
+import { useState, useRef, useEffect, useImperativeHandle, forwardRef, useMemo } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
 import Placeholder from "@tiptap/extension-placeholder";
@@ -102,7 +94,10 @@ function inlineMdToHtml(s: string): string {
   r = r.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
   // 还原行内代码
   const NUL = String.fromCharCode(0);
-  r = r.replace(new RegExp(NUL + "CODE(\\d+)" + NUL, "g"), (_m, idx) => `<code>${codes[Number(idx)]}</code>`);
+  r = r.replace(
+    new RegExp(NUL + "CODE(\\d+)" + NUL, "g"),
+    (_m, idx) => `<code>${codes[Number(idx)]}</code>`,
+  );
   return r;
 }
 
@@ -271,8 +266,7 @@ function inlineToMd(node: DocNode): string {
 
 /** 递归把节点序列化为 markdown 片段 */
 function nodeToMd(node: DocNode, depth = 0): string {
-  const inline = (n: DocNode): string =>
-    n.content?.map(inlineToMd).join("") ?? inlineToMd(n);
+  const inline = (n: DocNode): string => n.content?.map(inlineToMd).join("") ?? inlineToMd(n);
 
   switch (node.type) {
     case "heading": {
@@ -284,9 +278,7 @@ function nodeToMd(node: DocNode, depth = 0): string {
     case "bulletList":
       return (node.content ?? []).map((n) => listItemToMd(n, "- ")).join("");
     case "orderedList":
-      return (node.content ?? [])
-        .map((n, idx) => listItemToMd(n, `${idx + 1}. `))
-        .join("");
+      return (node.content ?? []).map((n, idx) => listItemToMd(n, `${idx + 1}. `)).join("");
     case "taskList":
       return (node.content ?? []).map((n) => taskItemToMd(n)).join("");
     case "blockquote":
@@ -336,17 +328,13 @@ function nodeToMd(node: DocNode, depth = 0): string {
 
 function listItemToMd(node: DocNode, marker: string): string {
   // listItem.content 通常是 paragraph[]
-  const inner = (node.content ?? [])
-    .map((n) => nodeToMd(n).trimEnd())
-    .join("\n");
+  const inner = (node.content ?? []).map((n) => nodeToMd(n).trimEnd()).join("\n");
   return `${marker}${inner.replace(/\n/g, "\n  ")}\n`;
 }
 
 function taskItemToMd(node: DocNode): string {
   const checked = Boolean(node.attrs?.checked);
-  const inner = (node.content ?? [])
-    .map((n) => nodeToMd(n).trimEnd())
-    .join("\n");
+  const inner = (node.content ?? []).map((n) => nodeToMd(n).trimEnd()).join("\n");
   return `- [${checked ? "x" : " "}] ${inner}\n`;
 }
 

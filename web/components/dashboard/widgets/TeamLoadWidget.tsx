@@ -119,10 +119,7 @@ export default function TeamLoadWidget({ wid }: { wid: string }) {
             key={leg.range}
             className="flex items-center gap-1 text-[length:var(--text-xs)] text-[var(--meta)]"
           >
-            <span
-              className="w-2 h-2 rounded-full"
-              style={{ backgroundColor: leg.color }}
-            />
+            <span className="w-2 h-2 rounded-full" style={{ backgroundColor: leg.color }} />
             {leg.range}
           </span>
         ))}

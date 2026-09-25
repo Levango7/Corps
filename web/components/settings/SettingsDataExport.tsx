@@ -35,7 +35,9 @@ export function SettingsDataExport({ wid, wsSlug, onError }: SettingsDataExportP
     setExportingTasks(true);
     onError("");
     try {
-      const resp = await api<{ items: CsvTask[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/tasks`);
+      const resp = await api<{ items: CsvTask[]; total: number; hasMore: boolean }>(
+        `/api/v1/workspaces/${wid}/tasks`,
+      );
       exportTasksCsv(resp.items, wsSlug);
     } catch (e) {
       onError(e instanceof Error ? e.message : tExport("tasksFailed"));
@@ -50,7 +52,9 @@ export function SettingsDataExport({ wid, wsSlug, onError }: SettingsDataExportP
     setExportingDecisions(true);
     onError("");
     try {
-      const resp = await api<{ items: CsvDecision[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/decisions`);
+      const resp = await api<{ items: CsvDecision[]; total: number; hasMore: boolean }>(
+        `/api/v1/workspaces/${wid}/decisions`,
+      );
       exportDecisionsCsv(resp.items, wsSlug);
     } catch (e) {
       onError(e instanceof Error ? e.message : tExport("decisionsFailed"));
@@ -72,11 +76,7 @@ export function SettingsDataExport({ wid, wsSlug, onError }: SettingsDataExportP
           disabled={exportingTasks}
           className="w-full sm:w-auto h-9 px-4 border border-[var(--border)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
-          {exportingTasks ? (
-            <Loader2 size={15} className="animate-spin" />
-          ) : (
-            <Download size={15} />
-          )}
+          {exportingTasks ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
           {tExport("tasks")}
         </button>
         <button

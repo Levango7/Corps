@@ -139,11 +139,7 @@ export function DecisionMarkView({ node, editor }: ReactNodeViewProps) {
         data-status={status}
       >
         {/* 左侧图标：决策锤（Gavel） */}
-        <Gavel
-          size={16}
-          className="mt-0.5 shrink-0 text-[var(--accent)]"
-          aria-hidden="true"
-        />
+        <Gavel size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden="true" />
 
         {/* 中间：标题 + 元信息 */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">

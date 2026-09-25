@@ -198,9 +198,7 @@ async function executeAction(
           entityTitle: action.message.slice(0, 255),
         },
       });
-      console.info(
-        `[ai-executor] notify: id=${created.id} to=${action.userId} wid=${wid}`,
-      );
+      console.info(`[ai-executor] notify: id=${created.id} to=${action.userId} wid=${wid}`);
       return { success: true, result: created };
     }
 

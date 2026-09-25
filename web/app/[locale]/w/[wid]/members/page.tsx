@@ -50,7 +50,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   const load = useCallback(async () => {
     try {
       const [list, ws] = await Promise.all([
-        api<{ items: Member[]; total: number; hasMore: boolean }>(`/api/v1/workspaces/${wid}/members`),
+        api<{ items: Member[]; total: number; hasMore: boolean }>(
+          `/api/v1/workspaces/${wid}/members`,
+        ),
         api<WorkspaceMeta>(`/api/v1/workspaces/${wid}`),
       ]);
       setMembers(list.items);
@@ -204,13 +206,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
     setError("");
     setBusy(true);
     try {
-      await api(
-        `/api/v1/workspaces/${wid}/members/${target.id}/temporary-grants`,
-        {
-          method: "POST",
-          body: JSON.stringify({ tempRole, durationHours, reason: reason || undefined }),
-        },
-      );
+      await api(`/api/v1/workspaces/${wid}/members/${target.id}/temporary-grants`, {
+        method: "POST",
+        body: JSON.stringify({ tempRole, durationHours, reason: reason || undefined }),
+      });
       setGrantModalTarget(null);
       toast("success", t("tempGrantSuccess"));
       await load();
@@ -227,10 +226,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
   async function revokeTemporaryRole(userId: string) {
     setError("");
     try {
-      await api(
-        `/api/v1/workspaces/${wid}/members/${userId}/temporary-grants`,
-        { method: "DELETE" },
-      );
+      await api(`/api/v1/workspaces/${wid}/members/${userId}/temporary-grants`, {
+        method: "DELETE",
+      });
       toast("success", t("tempRevokeSuccess"));
       await load();
     } catch (e) {
@@ -248,7 +246,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
             <Users size={20} className="text-[var(--muted)]" />
             {t("title")}
           </h1>
-          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">{t("subtitle")}</p>
+          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">
+            {t("subtitle")}
+          </p>
         </div>
         {seatsTotal > 0 && (
           <div className="w-full sm:w-auto sm:text-right sm:shrink-0 order-first sm:order-none mb-[var(--space-4)] sm:mb-0">
@@ -322,7 +322,10 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
       {seatsFull && canManage && (
         <div className="mb-[var(--space-6)] px-[var(--space-4)] py-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--warn-soft)] text-[var(--warn-fg)] text-[length:var(--text-sm)]">
           {t("seatsFullPrefix")}{" "}
-          <Link href={`/w/${wid}/billing`} className="underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
+          <Link
+            href={`/w/${wid}/billing`}
+            className="underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
             {t("seatsFullBillingLink")}
           </Link>{" "}
           {t("seatsFullSuffix")}
@@ -352,7 +355,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
           <p className="text-[length:var(--text-base)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
             {t("emptyTitle")}
           </p>
-          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">{t("emptyDesc")}</p>
+          <p className="mt-[var(--space-1)] text-[length:var(--text-sm)] text-[var(--muted)]">
+            {t("emptyDesc")}
+          </p>
         </div>
       ) : (
         <MemberList
@@ -378,7 +383,9 @@ export default function MembersPage({ params }: { params: Promise<{ wid: string 
         />
       )}
 
-      <p className="mt-[var(--space-4)] text-[length:var(--text-xs)] text-[var(--meta)]">{t("inviteNote")}</p>
+      <p className="mt-[var(--space-4)] text-[length:var(--text-xs)] text-[var(--meta)]">
+        {t("inviteNote")}
+      </p>
     </div>
   );
 }

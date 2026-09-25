@@ -29,12 +29,10 @@ function isNonCacheableApi(url) {
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches
-      .open(CACHE_VERSION)
-      .then((cache) =>
-        // 预缓存核心资源 + 关键路由；任一失败不阻断激活
-        cache.addAll([...CORE_ASSETS, ...CORE_ROUTES]).catch(() => {})
-      )
+    caches.open(CACHE_VERSION).then((cache) =>
+      // 预缓存核心资源 + 关键路由；任一失败不阻断激活
+      cache.addAll([...CORE_ASSETS, ...CORE_ROUTES]).catch(() => {}),
+    ),
   );
   self.skipWaiting();
 });
@@ -44,11 +42,9 @@ self.addEventListener("activate", (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(
-          keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key))
-        )
+        Promise.all(keys.filter((key) => key !== CACHE_VERSION).map((key) => caches.delete(key))),
       )
-      .then(() => self.clients.claim())
+      .then(() => self.clients.claim()),
   );
 });
 
@@ -95,6 +91,6 @@ self.addEventListener("fetch", (event) => {
         status: 503,
         statusText: "Service Unavailable",
       });
-    })
+    }),
   );
 });

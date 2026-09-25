@@ -29,11 +29,7 @@ import {
   ArrowUpFromLine,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import {
-  SignalingClient,
-  type SignalingMessage,
-} from "@/lib/webrtc/signaling";
-
+import { SignalingClient, type SignalingMessage } from "@/lib/webrtc/signaling";
 
 // ─── 类型 ──────────────────────────────────────────────────────
 
@@ -170,8 +166,7 @@ export function RemoteControlPanel({
       setSelectedUserId("");
       await loadSessions();
     } catch (err) {
-      const msg =
-        err instanceof ApiError ? err.message : t("failed");
+      const msg = err instanceof ApiError ? err.message : t("failed");
       setError(msg);
     } finally {
       setActioningId(null);
@@ -180,10 +175,7 @@ export function RemoteControlPanel({
 
   // 接受/拒绝/结束会话
   const handleSessionAction = useCallback(
-    async (
-      sessionId: string,
-      action: "accept" | "reject" | "end",
-    ) => {
+    async (sessionId: string, action: "accept" | "reject" | "end") => {
       setError("");
       setActioningId(sessionId);
       try {
@@ -194,9 +186,7 @@ export function RemoteControlPanel({
             body: JSON.stringify({ action }),
           },
         );
-        setSessions((prev) =>
-          prev.map((s) => (s.id === sessionId ? updated : s)),
-        );
+        setSessions((prev) => prev.map((s) => (s.id === sessionId ? updated : s)));
         // 若接受且当前用户是发起方，触发远程查看器
         if (
           action === "accept" &&
@@ -206,8 +196,7 @@ export function RemoteControlPanel({
           onActiveSession?.(updated);
         }
       } catch (err) {
-        const msg =
-          err instanceof ApiError ? err.message : t("failed");
+        const msg = err instanceof ApiError ? err.message : t("failed");
         setError(msg);
       } finally {
         setActioningId(null);
@@ -235,9 +224,7 @@ export function RemoteControlPanel({
     return (
       <div className="flex flex-col items-center justify-center py-[var(--space-12)]">
         <Loader2 size={24} className="animate-spin text-[var(--accent)] mb-[var(--space-2)]" />
-        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("connecting")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("connecting")}</p>
       </div>
     );
   }
@@ -413,8 +400,7 @@ function SessionGroup({
             >
               <div className="flex flex-col gap-[var(--space-1)] min-w-0">
                 <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
-                  {isInitiator ? t("youAreControlling") : t("beingControlled")}{" "}
-                  {otherName}
+                  {isInitiator ? t("youAreControlling") : t("beingControlled")} {otherName}
                 </span>
                 <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
                   {s.status === "pending" && t("waitingForAccept")}

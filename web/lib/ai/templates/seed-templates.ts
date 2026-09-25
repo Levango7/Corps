@@ -18,12 +18,7 @@ export interface TemplateStep {
 }
 
 /** 模板分类枚举 */
-export type TemplateCategory =
-  | "project"
-  | "meeting"
-  | "review"
-  | "onboarding"
-  | "custom";
+export type TemplateCategory = "project" | "meeting" | "review" | "onboarding" | "custom";
 
 /** 种子模板定义（不含 id / 时间戳 / usageCount，由 DB 填充） */
 export interface SeedTemplate {
@@ -47,8 +42,7 @@ export interface SeedTemplate {
 export const SEED_TEMPLATES: readonly SeedTemplate[] = [
   {
     name: "新产品上线流程",
-    description:
-      "从需求评审到上线发布的完整流程，覆盖评审、排期、开发、测试与上线五个关键节点。",
+    description: "从需求评审到上线发布的完整流程，覆盖评审、排期、开发、测试与上线五个关键节点。",
     category: "project",
     isPublic: true,
     steps: [
@@ -81,8 +75,7 @@ export const SEED_TEMPLATES: readonly SeedTemplate[] = [
   },
   {
     name: "周会跟进流程",
-    description:
-      "周会全流程闭环：议程收集 → 会议纪要 → 行动项分配 → 跟进复盘，确保会议决议落地。",
+    description: "周会全流程闭环：议程收集 → 会议纪要 → 行动项分配 → 跟进复盘，确保会议决议落地。",
     category: "meeting",
     isPublic: true,
     steps: [
@@ -110,8 +103,7 @@ export const SEED_TEMPLATES: readonly SeedTemplate[] = [
   },
   {
     name: "项目复盘流程",
-    description:
-      "项目结束后的结构化复盘：数据收集 → 分析 → 复盘会议 → 改进项，沉淀经验教训。",
+    description: "项目结束后的结构化复盘：数据收集 → 分析 → 复盘会议 → 改进项，沉淀经验教训。",
     category: "review",
     isPublic: true,
     steps: [
@@ -139,8 +131,7 @@ export const SEED_TEMPLATES: readonly SeedTemplate[] = [
   },
   {
     name: "新人 onboarding",
-    description:
-      "新人入职引导流程：账号开通 → 文档阅读 → 任务分配 → 一周检查，加速融入团队。",
+    description: "新人入职引导流程：账号开通 → 文档阅读 → 任务分配 → 一周检查，加速融入团队。",
     category: "onboarding",
     isPublic: true,
     steps: [
@@ -168,8 +159,7 @@ export const SEED_TEMPLATES: readonly SeedTemplate[] = [
   },
   {
     name: "需求评审流程",
-    description:
-      "轻量需求评审闭环：需求收集 → 评审会议 → 优先级排序 → 排期，适合迭代规划。",
+    description: "轻量需求评审闭环：需求收集 → 评审会议 → 优先级排序 → 排期，适合迭代规划。",
     category: "project",
     isPublic: true,
     steps: [
@@ -197,8 +187,7 @@ export const SEED_TEMPLATES: readonly SeedTemplate[] = [
   },
   {
     name: "Bug 修复流程",
-    description:
-      "标准 Bug 修复流水线：确认 → 定位 → 修复 → 验证 → 关闭，附带风险评级与公告。",
+    description: "标准 Bug 修复流水线：确认 → 定位 → 修复 → 验证 → 关闭，附带风险评级与公告。",
     category: "project",
     isPublic: true,
     steps: [

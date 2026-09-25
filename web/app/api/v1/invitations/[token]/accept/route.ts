@@ -41,7 +41,11 @@ async function getUserId(req: NextRequest): Promise<{ id: string; email: string 
  */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
   const user = await getUserId(req);
-  if (!user) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!user)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const { token } = await params;
@@ -55,7 +59,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       }),
     );
     if (!invitation) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "invitationNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "invitationNotFound"), data: null },
+        { status: 404 },
+      );
     }
     if (invitation.acceptedAt || invitation.expiresAt <= new Date()) {
       return NextResponse.json(
@@ -128,7 +135,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           message:
             result.plan === "pro"
               ? apiMsg(req, "seatsFullContactRenew")
-              : apiMsg(req, "seatsFullContactUpgrade"), data: null
+              : apiMsg(req, "seatsFullContactUpgrade"),
+          data: null,
         },
         { status: 402 },
       );
@@ -174,6 +182,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       );
     }
     console.error("[invitation accept] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

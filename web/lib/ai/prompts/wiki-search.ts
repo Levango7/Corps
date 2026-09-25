@@ -4,7 +4,8 @@ import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
 export function buildWikiSearchSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是 Wiki 语义搜索助手。根据用户查询，对候选 Wiki 页面进行相关性排序和摘要。
+  return appendFeedbackShot(
+    `你是 Wiki 语义搜索助手。根据用户查询，对候选 Wiki 页面进行相关性排序和摘要。
 返回 JSON 格式：
 {
   "results": [
@@ -38,7 +39,9 @@ export function buildWikiSearchSystemPrompt(feedbackExamples?: FeedbackExample[]
 ## 示例
 输入：查询"部署流程"相关页面
 输出：
-{"results":[{"pageId":"p12","title":"生产环境部署规范","relevanceScore":0.95,"summary":"描述生产环境部署的标准流程与回滚策略","highlight":"部署前需通过预发环境验证"}]}`, feedbackExamples);
+{"results":[{"pageId":"p12","title":"生产环境部署规范","relevanceScore":0.95,"summary":"描述生产环境部署的标准流程与回滚策略","highlight":"部署前需通过预发环境验证"}]}`,
+    feedbackExamples,
+  );
 }
 
 export function buildWikiSearchUserPrompt(

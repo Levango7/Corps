@@ -34,7 +34,12 @@ const createShareSchema = z.object({
   /** 可见性：public=公开（无需登录）；private=私密（需密码或工作区成员） */
   visibility: z.enum(["public", "private"]).default("public"),
   /** 有效期（小时）；不传或 0 = 永不过期 */
-  expiresIn: z.number().int().min(0).max(24 * 365).optional(),
+  expiresIn: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 365)
+    .optional(),
 });
 
 /** PATCH /v1/workspaces/{wid}/documents/{id}/share — 更新分享有效期/密码 */
@@ -73,9 +78,7 @@ export async function PATCH(
           shareSlug?: string | null;
         } = {};
         if (validated.expiresAt !== undefined) {
-          data.shareExpiresAt = validated.expiresAt
-            ? new Date(validated.expiresAt)
-            : null;
+          data.shareExpiresAt = validated.expiresAt ? new Date(validated.expiresAt) : null;
         }
         if (validated.password !== undefined) {
           data.sharePassword = validated.password
@@ -121,7 +124,11 @@ export async function PATCH(
         shareSlug: doc.shareSlug,
         shareExpiresAt: doc.shareExpiresAt,
         hasPassword: doc.sharePassword !== null,
-        shareUrl: doc.shareSlug ? `/s/${doc.shareSlug}` : doc.shareToken ? `/s/${doc.shareToken}` : null,
+        shareUrl: doc.shareSlug
+          ? `/s/${doc.shareSlug}`
+          : doc.shareToken
+            ? `/s/${doc.shareToken}`
+            : null,
       },
     });
   } catch (error) {
@@ -135,10 +142,7 @@ export async function PATCH(
         { status: 400 },
       );
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
         { status: 404 },
@@ -196,7 +200,11 @@ export async function GET(
         shareSlug: doc.shareSlug,
         shareExpiresAt: doc.shareExpiresAt,
         hasPassword: doc.sharePassword !== null,
-        shareUrl: doc.shareSlug ? `/s/${doc.shareSlug}` : doc.shareToken ? `/s/${doc.shareToken}` : null,
+        shareUrl: doc.shareSlug
+          ? `/s/${doc.shareSlug}`
+          : doc.shareToken
+            ? `/s/${doc.shareToken}`
+            : null,
       },
     });
   } catch (error) {
@@ -247,9 +255,7 @@ export async function POST(
 
     const token = randomBytes(24).toString("base64url");
     const expiresAt =
-      expiresIn && expiresIn > 0
-        ? new Date(Date.now() + expiresIn * 3600_000)
-        : null;
+      expiresIn && expiresIn > 0 ? new Date(Date.now() + expiresIn * 3600_000) : null;
 
     const result = await runWithWorkspace(
       wid,
@@ -315,10 +321,7 @@ export async function POST(
         { status: 400 },
       );
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
         { status: 404 },
@@ -398,10 +401,7 @@ export async function DELETE(
       message: apiMsg(req, "ok"),
     });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "documentNotFound"), data: null },
         { status: 404 },

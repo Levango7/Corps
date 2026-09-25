@@ -76,8 +76,7 @@ export function buildTodoExtractUserPrompt(
   content: string,
   context?: TodoExtractContext,
 ): string {
-  const sourceLabel =
-    source === "message" ? "消息" : source === "document" ? "文档" : "邮件";
+  const sourceLabel = source === "message" ? "消息" : source === "document" ? "文档" : "邮件";
   let prompt = `源类型：${sourceLabel}\n\n内容：\n${content}`;
   if (context?.assignees && context.assignees.length > 0) {
     prompt += `\n\n候选人列表（用于匹配负责人）：${context.assignees.join("、")}`;

@@ -30,7 +30,10 @@ async function getUserId(req: NextRequest): Promise<string | null> {
 export async function GET(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   }
 
   try {
@@ -38,7 +41,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ code: 200, data: preview });
   } catch (error) {
     console.error("[deletion-preview] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
 
@@ -50,7 +56,10 @@ const deleteSchema = z.object({
 export async function DELETE(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   }
 
   try {
@@ -58,7 +67,10 @@ export async function DELETE(req: NextRequest) {
     const session = await auth.api.getSession({ headers: req.headers });
     const email = session?.user?.email;
     if (!email) {
-      return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+      return NextResponse.json(
+        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+        { status: 401 },
+      );
     }
     // 邮箱二次确认（大小写不敏感）：不匹配即 400，绝不删除
     if (body.confirmEmail.toLowerCase() !== email.toLowerCase()) {
@@ -88,11 +100,18 @@ export async function DELETE(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+        },
         { status: 400 },
       );
     }
     console.error("[delete-account] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

@@ -450,8 +450,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
       {isOwner && (
         <div className="mb-4 flex items-center gap-2">
           <button
-              onClick={() => setBillingPeriod("monthly")}
-              className={`h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+            onClick={() => setBillingPeriod("monthly")}
+            className={`h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "monthly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -460,8 +460,8 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             {t("periodMonthly")}
           </button>
           <button
-              onClick={() => setBillingPeriod("yearly")}
-              className={`h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
+            onClick={() => setBillingPeriod("yearly")}
+            className={`h-9 px-3 rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${
               billingPeriod === "yearly"
                 ? "bg-[var(--accent)] text-[var(--accent-fg)]"
                 : "bg-[var(--surface-2)] text-[var(--fg-2)] hover:bg-[var(--surface-3)]"
@@ -615,7 +615,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <div className="flex flex-col items-center">
               {/* R8B-06：本地生成 QR 码（qrcode npm 包），避免订单 code_url 发送第三方 API */}
               {/* M8 修复：保留 onError 兜底；referrerPolicy/crossOrigin 对 Data URL 无害但保留 */}
-              { }
+              {}
               {qrDataUrl && (
                 <img
                   src={qrDataUrl}

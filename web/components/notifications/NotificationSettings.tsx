@@ -62,10 +62,9 @@ export function NotificationSettings() {
     setLoading(true);
     setError(null);
     try {
-      const data = await api<NotificationPreference>(
-        "/api/v1/notifications/preferences",
-        { signal: ac.signal },
-      );
+      const data = await api<NotificationPreference>("/api/v1/notifications/preferences", {
+        signal: ac.signal,
+      });
       if (ac.signal.aborted) return;
       setEmailNotify(data.emailNotify);
       setPushNotify(data.pushNotify);
@@ -121,9 +120,7 @@ export function NotificationSettings() {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("loading")}
-        </div>
+        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("loading")}</div>
       </div>
     );
   }
@@ -164,9 +161,7 @@ export function NotificationSettings() {
           aria-label={t("emailNotify")}
           onClick={() => setEmailNotify(!emailNotify)}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
-            emailNotify
-              ? "bg-[var(--accent)]"
-              : "bg-[var(--surface-3)]"
+            emailNotify ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
           <span
@@ -192,9 +187,7 @@ export function NotificationSettings() {
           aria-label={t("pushNotify")}
           onClick={() => setPushNotify(!pushNotify)}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
-            pushNotify
-              ? "bg-[var(--accent)]"
-              : "bg-[var(--surface-3)]"
+            pushNotify ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
           <span
@@ -212,9 +205,7 @@ export function NotificationSettings() {
             <Moon size={14} className="text-[var(--muted)]" />
             {t("dnd")}
           </span>
-          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            {t("dndHint")}
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("dndHint")}</span>
         </div>
         <button
           type="button"
@@ -223,9 +214,7 @@ export function NotificationSettings() {
           aria-label={t("dnd")}
           onClick={() => setDndEnabled(!dndEnabled)}
           className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
-            dndEnabled
-              ? "bg-[var(--accent)]"
-              : "bg-[var(--surface-3)]"
+            dndEnabled ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
           <span
@@ -240,10 +229,7 @@ export function NotificationSettings() {
       {dndEnabled && (
         <div className="flex items-center gap-[var(--space-4)] pl-[var(--space-6)]">
           <div className="flex flex-col gap-[var(--space-1)]">
-            <label
-              htmlFor="dnd-start"
-              className="text-[length:var(--text-xs)] text-[var(--muted)]"
-            >
+            <label htmlFor="dnd-start" className="text-[length:var(--text-xs)] text-[var(--muted)]">
               {t("dndStart")}
             </label>
             <input
@@ -257,10 +243,7 @@ export function NotificationSettings() {
           </div>
           <span className="text-[length:var(--text-sm)] text-[var(--muted)]">—</span>
           <div className="flex flex-col gap-[var(--space-1)]">
-            <label
-              htmlFor="dnd-end"
-              className="text-[length:var(--text-xs)] text-[var(--muted)]"
-            >
+            <label htmlFor="dnd-end" className="text-[length:var(--text-xs)] text-[var(--muted)]">
               {t("dndEnd")}
             </label>
             <input
@@ -283,11 +266,7 @@ export function NotificationSettings() {
           disabled={saving}
           className="inline-flex items-center gap-[var(--space-1)] rounded-[var(--radius-sm)] bg-[var(--accent)] px-[var(--space-4)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--accent-fg)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--accent-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] disabled:opacity-50"
         >
-          {saving ? (
-            <Loader2 size={14} className="animate-spin" />
-          ) : (
-            <Save size={14} />
-          )}
+          {saving ? <Loader2 size={14} className="animate-spin" /> : <Save size={14} />}
           <span>{saving ? t("loading") : t("save")}</span>
         </button>
         {saved && (

@@ -13,10 +13,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
  */
 
 /** GET /v1/workspaces/{wid}/spaces — 列出工作区所有空间 */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -55,10 +52,7 @@ const createSpaceSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/spaces — 创建空间（仅 owner/admin） */
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -110,15 +104,11 @@ export async function POST(
   }
 }
 
-
 /** PATCH /v1/workspaces/{wid}/spaces — 更新空间（名称/图标/颜色/排序）
  *  Body: { id, name?, icon?, color?, sortOrder? }
  *  权限：仅 owner/admin
  */
-export async function PATCH(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -215,10 +205,7 @@ const deleteSpaceSchema = z.object({
  *  权限：仅 owner/admin
  *  语义：空间删除后，其下文档的 spaceId/folderId 被 SetNull 置空，归入"未分类"
  */
-export async function DELETE(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

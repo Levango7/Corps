@@ -20,10 +20,7 @@ const listCcQuerySchema = z.object({
  *  4. include instance（审批实例）的 title、applicant、status
  *  5. 返回分页格式
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

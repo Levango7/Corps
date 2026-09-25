@@ -89,8 +89,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         {
           code: 400,
-          message:
-            parsed.error.issues[0]?.message ?? apiMsg(req, "invalidBody"),
+          message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidBody"),
           data: null,
         },
         { status: 400 },
@@ -191,10 +190,7 @@ export async function POST(req: NextRequest) {
       updatedAt: session.session!.updatedAt.toISOString(),
     };
 
-    return NextResponse.json(
-      { code: 0, data: dto, message: apiMsg(req, "ok") },
-      { status: 201 },
-    );
+    return NextResponse.json({ code: 0, data: dto, message: apiMsg(req, "ok") }, { status: 201 });
   } catch (error) {
     console.error("[POST remote-control] error:", error);
     return NextResponse.json(
@@ -234,8 +230,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },

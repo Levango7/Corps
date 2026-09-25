@@ -56,7 +56,11 @@ const MAX_EVENT_LIMIT = 50_000;
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   // 仅 analytics:read 权限可见分析数据
   const denied = await requirePermission(ctx, "analytics", "read", req);

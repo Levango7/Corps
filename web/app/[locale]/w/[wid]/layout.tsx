@@ -42,10 +42,10 @@ import { listFavorites, type FavoriteEntry } from "@/lib/favorites";
 import dynamic from "next/dynamic";
 
 // P0-2: code splitting — CommandPalette 改为 dynamic import 懒加载（快捷键触发，非常适合懒加载）
-const CommandPalette = dynamic(
-  () => import("@/components/CommandPalette"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
+const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
 import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
@@ -327,26 +327,77 @@ export default function WorkspaceLayout({
         { href: `/w/${wid}`, label: t("menu.overview"), icon: LayoutDashboard, exact: true },
         { href: `/w/${wid}/board`, label: t("menu.board"), icon: Kanban, exact: false },
         { href: `/w/${wid}/my-tasks`, label: t("menu.myTasks"), icon: CheckSquare, exact: false },
-        { href: `/w/${wid}/im`, label: t("menu.messages"), icon: MessageSquare, exact: false, badge: imUnreadCount },
+        {
+          href: `/w/${wid}/im`,
+          label: t("menu.messages"),
+          icon: MessageSquare,
+          exact: false,
+          badge: imUnreadCount,
+        },
         { href: `/w/${wid}/meetings`, label: t("menu.meetings"), icon: Video, exact: false },
-        { href: `/w/${wid}/approvals`, label: t("menu.approvals"), icon: CheckCircle2, exact: false },
+        {
+          href: `/w/${wid}/approvals`,
+          label: t("menu.approvals"),
+          icon: CheckCircle2,
+          exact: false,
+        },
         { href: `/w/${wid}/decisions`, label: t("menu.decisions"), icon: FileText, exact: false },
         { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
         { href: `/w/${wid}/contacts`, label: t("menu.contacts"), icon: ContactIcon, exact: false },
         { href: `/w/${wid}/workflows`, label: t("menu.workflows"), icon: GitBranch, exact: false },
         { href: `/w/${wid}/okr`, label: t("menu.okr"), icon: Target, exact: false },
-        { href: `/w/${wid}/templates`, label: t("menu.templates"), icon: LayoutTemplate, exact: false },
-        { href: `/w/${wid}/time-tracking`, label: t("menu.timeTracking"), icon: Clock, exact: false },
-        { href: `/w/${wid}/whiteboards`, label: t("menu.whiteboards"), icon: PenTool, exact: false },
+        {
+          href: `/w/${wid}/templates`,
+          label: t("menu.templates"),
+          icon: LayoutTemplate,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/time-tracking`,
+          label: t("menu.timeTracking"),
+          icon: Clock,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/whiteboards`,
+          label: t("menu.whiteboards"),
+          icon: PenTool,
+          exact: false,
+        },
         { href: `/w/${wid}/forms`, label: t("menu.forms"), icon: ClipboardList, exact: false },
-        { href: `/w/${wid}/meeting-minutes`, label: t("menu.meetingMinutes"), icon: NotebookPen, exact: false },
-        { href: `/w/${wid}/announcements`, label: t("menu.announcements"), icon: Megaphone, exact: false },
+        {
+          href: `/w/${wid}/meeting-minutes`,
+          label: t("menu.meetingMinutes"),
+          icon: NotebookPen,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/announcements`,
+          label: t("menu.announcements"),
+          icon: Megaphone,
+          exact: false,
+        },
         { href: `/w/${wid}/wiki`, label: t("menu.wiki"), icon: BookOpen, exact: false },
         { href: `/w/${wid}/calendar`, label: t("menu.calendar"), icon: CalendarIcon, exact: false },
-        { href: `/w/${wid}/daily-report`, label: t("menu.dailyReport"), icon: Sparkles, exact: false },
+        {
+          href: `/w/${wid}/daily-report`,
+          label: t("menu.dailyReport"),
+          icon: Sparkles,
+          exact: false,
+        },
         { href: `/w/${wid}/insight`, label: t("menu.insight"), icon: Sparkles, exact: false },
-        { href: `/w/${wid}/knowledge-qa`, label: t("menu.knowledgeQa"), icon: Sparkles, exact: false },
-        { href: `/w/${wid}/announcement-draft`, label: t("menu.announcementDraft"), icon: Sparkles, exact: false },
+        {
+          href: `/w/${wid}/knowledge-qa`,
+          label: t("menu.knowledgeQa"),
+          icon: Sparkles,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/announcement-draft`,
+          label: t("menu.announcementDraft"),
+          icon: Sparkles,
+          exact: false,
+        },
         { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Sparkles, exact: false },
         { href: `/w/${wid}/recycle-bin`, label: t("menu.recycleBin"), icon: Trash2, exact: false },
       ],

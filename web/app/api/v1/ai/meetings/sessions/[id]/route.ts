@@ -17,8 +17,7 @@ import { apiMsg } from "@/lib/api-messages";
 const STATUS_VALUES = ["active", "paused", "ended"] as const;
 
 /** UUID 正则校验 */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 从 URL 路径提取会话 ID（"sessions" 段后紧跟的段） */
 function extractSessionId(req: NextRequest): string | null {
@@ -73,8 +72,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -212,12 +210,7 @@ export async function PATCH(req: NextRequest) {
     return NextResponse.json({ code: 0, data: session, message: "OK" });
   } catch (error) {
     // P2025: 记录不存在（update where 条件不匹配）
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "P2025"
-    ) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },
@@ -262,8 +255,7 @@ export async function DELETE(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -295,12 +287,7 @@ export async function DELETE(req: NextRequest) {
 
     return NextResponse.json({ code: 0, data: null, message: "OK" });
   } catch (error) {
-    if (
-      typeof error === "object" &&
-      error !== null &&
-      "code" in error &&
-      error.code === "P2025"
-    ) {
+    if (typeof error === "object" && error !== null && "code" in error && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "sessionNotFound"), data: null },
         { status: 404 },

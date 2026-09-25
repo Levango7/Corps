@@ -152,10 +152,9 @@ export function createAiProgressStream(
       try {
         await writer.merge(result.toUIMessageStream());
       } catch (e) {
-        throw new Error(
-          `[ai-stream] 流合并失败: ${e instanceof Error ? e.message : String(e)}`,
-          { cause: e },
-        );
+        throw new Error(`[ai-stream] 流合并失败: ${e instanceof Error ? e.message : String(e)}`, {
+          cause: e,
+        });
       }
     },
   });

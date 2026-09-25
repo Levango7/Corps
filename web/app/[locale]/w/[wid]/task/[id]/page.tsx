@@ -11,10 +11,10 @@ import { SubtaskSection } from "@/components/SubtaskSection";
 import dynamic from "next/dynamic";
 
 // P0-2: code splitting — TaskBreakdownDialog 改为 dynamic import 懒加载（对话框，点击时才需要）
-const TaskBreakdownDialog = dynamic(
-  () => import("@/components/ai/TaskBreakdownDialog"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
+const TaskBreakdownDialog = dynamic(() => import("@/components/ai/TaskBreakdownDialog"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
 import { useTranslations } from "next-intl";
 import { TaskDetailHeader } from "@/components/task/TaskDetailHeader";
 import { TaskDecisions } from "@/components/task/TaskDecisions";
@@ -91,7 +91,9 @@ export default function TaskDetailPage({
       const [taskData, c, d, m] = await Promise.all([
         api<Task>(`${base}/tasks/${id}`),
         api<Comment[]>(`${base}/tasks/${id}/comments`),
-        api<{ items: Decision[]; total: number; hasMore: boolean }>(`${base}/tasks/${id}/decisions`),
+        api<{ items: Decision[]; total: number; hasMore: boolean }>(
+          `${base}/tasks/${id}/decisions`,
+        ),
         api<{ items: Person[]; total: number; hasMore: boolean }>(`${base}/members`),
       ]);
       setTask(taskData);
@@ -217,11 +219,7 @@ export default function TaskDetailPage({
           title={tButton("delete")}
           className="inline-flex items-center justify-center gap-1.5 min-w-[44px] sm:min-w-[32px] px-2.5 min-h-[44px] sm:h-8 rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--muted)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
         >
-          {deleting ? (
-            <Loader2 size={15} className="animate-spin" />
-          ) : (
-            <Trash2 size={15} />
-          )}
+          {deleting ? <Loader2 size={15} className="animate-spin" /> : <Trash2 size={15} />}
           <span className="hidden sm:inline">{tButton("delete")}</span>
         </button>
       </div>

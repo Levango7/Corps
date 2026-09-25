@@ -13,10 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 
-import {
-  getSuggestionsForPhase,
-  type TaskPhase,
-} from "@/lib/ai/assistant/orchestrator";
+import { getSuggestionsForPhase, type TaskPhase } from "@/lib/ai/assistant/orchestrator";
 
 /** 合法阶段集合（与 orchestrator.ts TaskPhase 保持一致） */
 const VALID_PHASES = new Set<TaskPhase>([

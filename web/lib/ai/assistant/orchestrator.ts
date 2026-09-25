@@ -28,12 +28,7 @@ import {
 } from "@/lib/ai/assistant/prompts";
 
 /** 任务生命周期阶段 */
-export type TaskPhase =
-  | "created"
-  | "in_progress"
-  | "review"
-  | "completed"
-  | "blocked";
+export type TaskPhase = "created" | "in_progress" | "review" | "completed" | "blocked";
 
 /** AI 助理能力定义 */
 export interface AssistantCapability {
@@ -140,10 +135,7 @@ knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_a
 只返回能力 ID（如 task_breakdown），不要其他内容。`;
 
   // 30s 超时防护：意图识别应快速返回，长尾请求直接降级为 semantic_search
-  const { signal, cleanup } = createAbortTimeout(
-    DEFAULT_TIMEOUT_MS,
-    "recognizeIntent",
-  );
+  const { signal, cleanup } = createAbortTimeout(DEFAULT_TIMEOUT_MS, "recognizeIntent");
 
   try {
     const result = await withUsageTracking(
@@ -199,21 +191,12 @@ knowledge_extract（知识提取）、semantic_search（语义搜索）、risk_a
  * @param ctx 助理上下文（workspaceId/userId/phase/message 等）
  * @returns AssistantResult；调用失败返回 null
  */
-export async function runAssistant(
-  ctx: AssistantContext,
-): Promise<AssistantResult | null> {
-  const capabilityId = await recognizeIntent(
-    ctx.message,
-    ctx.phase,
-    ctx.workspaceId,
-    ctx.userId,
-  );
+export async function runAssistant(ctx: AssistantContext): Promise<AssistantResult | null> {
+  const capabilityId = await recognizeIntent(ctx.message, ctx.phase, ctx.workspaceId, ctx.userId);
 
   // 按能力选择模型 + 超时（推理模型 60s，普通模型 30s）
   const model = needsReasoner(capabilityId) ? requireReasonerModel() : requireDefaultModel();
-  const timeoutMs = needsReasoner(capabilityId)
-    ? REASONER_TIMEOUT_MS
-    : DEFAULT_TIMEOUT_MS;
+  const timeoutMs = needsReasoner(capabilityId) ? REASONER_TIMEOUT_MS : DEFAULT_TIMEOUT_MS;
   const { signal: abortSignal, cleanup: abortCleanup } = createAbortTimeout(
     timeoutMs,
     `runAssistant:${capabilityId}`,
@@ -289,16 +272,12 @@ export async function runAssistant(
     return {
       capabilityId,
       phase: ctx.phase,
-      content:
-        typeof raw.content === "string" ? raw.content : llmResult.text,
+      content: typeof raw.content === "string" ? raw.content : llmResult.text,
       suggestions: Array.isArray(raw.suggestions)
-        ? raw.suggestions.filter(
-            (s): s is string => typeof s === "string",
-          )
+        ? raw.suggestions.filter((s): s is string => typeof s === "string")
         : undefined,
       nextPhase:
-        typeof raw.nextPhase === "string" &&
-        VALID_PHASES.has(raw.nextPhase as TaskPhase)
+        typeof raw.nextPhase === "string" && VALID_PHASES.has(raw.nextPhase as TaskPhase)
           ? (raw.nextPhase as TaskPhase)
           : undefined,
       recommendedNext,
@@ -335,10 +314,7 @@ export async function runAssistant(
 export function getSuggestionsForPhase(
   phase: TaskPhase,
 ): Array<{ id: string; labelKey: string; descKey: string }> {
-  const SUGGESTIONS: Record<
-    TaskPhase,
-    Array<{ id: string; labelKey: string; descKey: string }>
-  > = {
+  const SUGGESTIONS: Record<TaskPhase, Array<{ id: string; labelKey: string; descKey: string }>> = {
     created: [
       {
         id: "task_breakdown",
@@ -420,10 +396,7 @@ export function getSuggestionsForPhase(
  * （角色 + 输出 JSON schema + 推理步骤）。
  * 未命中专门 builder 时降级为通用 prompt。
  */
-function buildCapabilityPrompt(
-  capabilityId: string,
-  ctx: AssistantContext,
-): string {
+function buildCapabilityPrompt(capabilityId: string, ctx: AssistantContext): string {
   const builder = ASSISTANT_PROMPT_BUILDERS[capabilityId as AssistantCapabilityId];
   if (builder) {
     return builder.buildSystem({
@@ -446,19 +419,13 @@ function buildCapabilityPrompt(
  * 由专门 builder 的 buildPrompt 生成，已内置前序上下文与历史摘要拼接。
  * 未命中专门 builder 时降级为简单拼接。
  */
-function buildCapabilityUserPrompt(
-  capabilityId: string,
-  ctx: PromptContext,
-): string {
+function buildCapabilityUserPrompt(capabilityId: string, ctx: PromptContext): string {
   const builder = ASSISTANT_PROMPT_BUILDERS[capabilityId as AssistantCapabilityId];
   if (builder) {
     return builder.buildPrompt(ctx);
   }
   // 降级：简单拼接用户消息 + 前序上下文
-  return (
-    ctx.message +
-    (ctx.previousOutput ? `\n\n前序上下文：\n${ctx.previousOutput}` : "")
-  );
+  return ctx.message + (ctx.previousOutput ? `\n\n前序上下文：\n${ctx.previousOutput}` : "");
 }
 
 /**

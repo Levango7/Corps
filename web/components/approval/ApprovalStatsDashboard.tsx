@@ -25,16 +25,7 @@
 
 import { useEffect, useState, useMemo } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Clock,
-  CheckCircle2,
-  XCircle,
-  Timer,
-  Loader2,
-  AlertCircle,
-
-  FileText,
-} from "lucide-react";
+import { Clock, CheckCircle2, XCircle, Timer, Loader2, AlertCircle, FileText } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
 /** 审批统计数据结构（与后端 GET /stats 响应一致） */
@@ -96,9 +87,7 @@ const PRIORITY_LABEL_KEYS: Record<string, string> = {
   critical: "priorityCritical",
 };
 
-export function ApprovalStatsDashboard({
-  workspaceId,
-}: ApprovalStatsDashboardProps) {
+export function ApprovalStatsDashboard({ workspaceId }: ApprovalStatsDashboardProps) {
   const t = useTranslations("approval");
   const [data, setData] = useState<ApprovalStatsData | null>(null);
   const [loading, setLoading] = useState(true);
@@ -130,11 +119,7 @@ export function ApprovalStatsDashboard({
         setData(result);
       } catch (e) {
         if (cancelled) return;
-        setError(
-          e instanceof ApiError || e instanceof Error
-            ? e.message
-            : t("statsLoadFailed"),
-        );
+        setError(e instanceof ApiError || e instanceof Error ? e.message : t("statsLoadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -207,9 +192,7 @@ export function ApprovalStatsDashboard({
       {error && (
         <div className="mb-[var(--space-4)] flex items-center gap-2 p-3 rounded-[var(--radius-md)] border border-[var(--danger)] bg-[var(--danger-soft,var(--surface-2))]">
           <AlertCircle size={16} className="shrink-0 text-[var(--danger)]" />
-          <span className="text-[length:var(--text-sm)] text-[var(--danger)]">
-            {error}
-          </span>
+          <span className="text-[length:var(--text-sm)] text-[var(--danger)]">{error}</span>
         </div>
       )}
 
@@ -307,9 +290,7 @@ export function ApprovalStatsDashboard({
                         <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
                           {item.count}
                         </span>
-                        <span className="text-[var(--muted)]">
-                          {item.percent}%
-                        </span>
+                        <span className="text-[var(--muted)]">{item.percent}%</span>
                       </div>
                     ))}
                   </div>
@@ -387,14 +368,9 @@ export function ApprovalStatsDashboard({
               <ul className="divide-y divide-[var(--border-soft)]">
                 {sortedTemplates.map((template, index) => {
                   const maxCount = sortedTemplates[0]?.count || 1;
-                  const barWidth = Math.round(
-                    (template.count / maxCount) * 100,
-                  );
+                  const barWidth = Math.round((template.count / maxCount) * 100);
                   return (
-                    <li
-                      key={template.templateId}
-                      className="flex items-center gap-3 py-2"
-                    >
+                    <li key={template.templateId} className="flex items-center gap-3 py-2">
                       <span className="text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--muted)] w-5 shrink-0 text-right">
                         {index + 1}
                       </span>
@@ -441,9 +417,7 @@ function StatCard({
     <div className="p-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] transition-colors duration-[var(--motion-fast)] hover:border-[var(--border-strong)]">
       <div className="flex items-center gap-2 mb-[var(--space-1)]">
         <span style={{ color }}>{icon}</span>
-        <span className="text-[length:var(--text-xs)] text-[var(--fg-2)] truncate">
-          {label}
-        </span>
+        <span className="text-[length:var(--text-xs)] text-[var(--fg-2)] truncate">{label}</span>
       </div>
       <p
         className="text-[length:var(--text-2xl)] font-[weight:var(--weight-bold)] tracking-[var(--tracking-tight)]"

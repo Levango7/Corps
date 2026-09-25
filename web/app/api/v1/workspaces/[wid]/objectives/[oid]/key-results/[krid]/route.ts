@@ -16,10 +16,17 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/objectives/{oid}/key-results/{krid} — 更新关键结果并重算父目标进度 */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string; krid: string }> }) {
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string; krid: string }> },
+) {
   const { wid, oid, krid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-key-result-update", { windowMs: 60_000, max: 60 });
   if (limited) return limited;
@@ -30,11 +37,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.keyResult.findUnique({ where: { id: krid }, select: { id: true, objectiveId: true } }),
+      (tx) =>
+        tx.keyResult.findUnique({ where: { id: krid }, select: { id: true, objectiveId: true } }),
       ctx.payload.sub,
     );
     if (!existing || existing.objectiveId !== oid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "keyResultNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "keyResultNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     const updated = await runWithWorkspace(
@@ -44,7 +55,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
           where: { id: krid },
           data: {
             ...validated,
-            dueDate: validated.dueDate === null ? null : validated.dueDate ? new Date(validated.dueDate) : undefined,
+            dueDate:
+              validated.dueDate === null
+                ? null
+                : validated.dueDate
+                  ? new Date(validated.dueDate)
+                  : undefined,
           },
         });
 
@@ -67,7 +83,12 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }
@@ -80,10 +101,17 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
 }
 
 /** DELETE /v1/workspaces/{wid}/objectives/{oid}/key-results/{krid} — 删除关键结果并重算父目标进度 */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string; oid: string; krid: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; oid: string; krid: string }> },
+) {
   const { wid, oid, krid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   const limited = await checkRateLimit(req, "okr-key-result-delete", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
@@ -91,11 +119,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   try {
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.keyResult.findUnique({ where: { id: krid }, select: { id: true, objectiveId: true } }),
+      (tx) =>
+        tx.keyResult.findUnique({ where: { id: krid }, select: { id: true, objectiveId: true } }),
       ctx.payload.sub,
     );
     if (!existing || existing.objectiveId !== oid) {
-      return NextResponse.json({ code: 404, message: apiMsg(req, "keyResultNotFound"), data: null }, { status: 404 });
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "keyResultNotFound"), data: null },
+        { status: 404 },
+      );
     }
 
     await runWithWorkspace(

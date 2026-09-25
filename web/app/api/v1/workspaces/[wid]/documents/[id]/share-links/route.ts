@@ -166,12 +166,7 @@ export async function POST(
     const validated = createShareLinkSchema.parse(body);
 
     // 鉴权：需 manage 权限 / 作者 / owner / admin
-    const allowed = await canManageDoc(
-      wid,
-      did,
-      ctx.payload.sub,
-      ctx.member.role,
-    );
+    const allowed = await canManageDoc(wid, did, ctx.payload.sub, ctx.member.role);
     if (!allowed) {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noManagePermission"), data: null },
@@ -241,18 +236,14 @@ export async function POST(
       return NextResponse.json(
         {
           code: 400,
-          message:
-            error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
           errors: error.errors,
         },
         { status: 400 },
       );
     }
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2002"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
       return NextResponse.json(
         { code: 409, message: apiMsg(req, "prismaUniqueConstraint"), data: null },
         { status: 409 },

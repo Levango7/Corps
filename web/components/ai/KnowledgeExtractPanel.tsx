@@ -20,7 +20,6 @@ import {
   CheckSquare,
   Loader2,
   CheckCircle2,
-
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
@@ -57,9 +56,7 @@ export function KnowledgeExtractPanel({ wid }: KnowledgeExtractPanelProps) {
   const [sourceType, setSourceType] = useState<string>("document");
   const [sourceId, setSourceId] = useState("");
   const [extracting, setExtracting] = useState(false);
-  const [result, setResult] = useState<{ nodes: number; edges: number } | null>(
-    null,
-  );
+  const [result, setResult] = useState<{ nodes: number; edges: number } | null>(null);
 
   /** 提取知识 */
   const handleExtract = useCallback(async () => {
@@ -77,16 +74,10 @@ export function KnowledgeExtractPanel({ wid }: KnowledgeExtractPanelProps) {
       const nodeCount = data?.nodes?.length ?? 0;
       const edgeCount = data?.edges?.length ?? 0;
       setResult({ nodes: nodeCount, edges: edgeCount });
-      toast(
-        "success",
-        t("extracted", { nodes: nodeCount, edges: edgeCount }),
-      );
+      toast("success", t("extracted", { nodes: nodeCount, edges: edgeCount }));
     } catch (e) {
       if (process.env.NODE_ENV === "development") {
-        console.error(
-          "[KnowledgeExtractPanel] extract error:",
-          e instanceof Error ? e.message : e,
-        );
+        console.error("[KnowledgeExtractPanel] extract error:", e instanceof Error ? e.message : e);
       }
       toast("error", t("error"));
     } finally {
@@ -95,10 +86,7 @@ export function KnowledgeExtractPanel({ wid }: KnowledgeExtractPanelProps) {
   }, [wid, sourceType, sourceId, t, toast]);
 
   return (
-    <div
-      className="flex h-full flex-col bg-[var(--surface)]"
-      aria-label={t("extract")}
-    >
+    <div className="flex h-full flex-col bg-[var(--surface)]" aria-label={t("extract")}>
       {/* 标题栏 */}
       <header className="flex items-center gap-[var(--space-2)] border-b border-[var(--border)] px-[var(--space-5)] py-[var(--space-3)]">
         <Sparkles size={16} className="text-[var(--accent)]" />

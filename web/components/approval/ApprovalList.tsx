@@ -171,9 +171,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
       try {
         if (tab === "cc") {
           // 抄送列表使用不同的 API 端点
-          const data = await api<
-            PaginatedResponse<ApprovalCcRecord> | ApprovalCcRecord[]
-          >(
+          const data = await api<PaginatedResponse<ApprovalCcRecord> | ApprovalCcRecord[]>(
             `/api/v1/workspaces/${workspaceId}/approvals/cc?page=${page}&limit=${PAGE_LIMIT}`,
           );
           if (cancelled) return;
@@ -200,9 +198,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
           }
           const data = await api<
             PaginatedResponse<ApprovalInstanceListItem> | ApprovalInstanceListItem[]
-          >(
-            `/api/v1/workspaces/${workspaceId}/approvals/instances?${params.toString()}`,
-          );
+          >(`/api/v1/workspaces/${workspaceId}/approvals/instances?${params.toString()}`);
           if (cancelled) return;
           // 兼容分页信封与裸数组两种响应
           if (Array.isArray(data)) {
@@ -217,11 +213,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
         }
       } catch (e) {
         if (cancelled) return;
-        setError(
-          e instanceof ApiError || e instanceof Error
-            ? e.message
-            : t("loadFailed"),
-        );
+        setError(e instanceof ApiError || e instanceof Error ? e.message : t("loadFailed"));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -246,10 +238,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
           item.applicantName ||
           item.applicantEmail ||
           "";
-        return (
-          item.title.toLowerCase().includes(q) ||
-          applicantName.toLowerCase().includes(q)
-        );
+        return item.title.toLowerCase().includes(q) || applicantName.toLowerCase().includes(q);
       });
     }
     return result;
@@ -312,15 +301,10 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
       <div className="flex items-center gap-3 mb-[var(--space-4)] flex-wrap">
         {/* 优先级筛选 */}
         <div className="relative inline-flex items-center">
-          <Filter
-            size={14}
-            className="absolute left-2 text-[var(--muted)] pointer-events-none"
-          />
+          <Filter size={14} className="absolute left-2 text-[var(--muted)] pointer-events-none" />
           <select
             value={priorityFilter}
-            onChange={(e) =>
-              setPriorityFilter(e.target.value as PriorityFilter)
-            }
+            onChange={(e) => setPriorityFilter(e.target.value as PriorityFilter)}
             className="h-8 pl-7 pr-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] cursor-pointer"
             aria-label={t("priority")}
           >
@@ -334,10 +318,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
 
         {/* 搜索框 */}
         <div className="relative inline-flex items-center flex-1 min-w-[200px]">
-          <Search
-            size={14}
-            className="absolute left-2 text-[var(--muted)] pointer-events-none"
-          />
+          <Search size={14} className="absolute left-2 text-[var(--muted)] pointer-events-none" />
           <input
             type="text"
             value={searchQuery}
@@ -348,11 +329,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
         </div>
       </div>
 
-      {error && (
-        <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">
-          {error}
-        </p>
-      )}
+      {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
 
       {loading ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">
@@ -382,10 +359,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
                     className="block px-[var(--space-4)] py-3 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
                   >
                     <div className="flex items-center gap-2">
-                      <FileText
-                        size={15}
-                        className="shrink-0 text-[var(--muted)]"
-                      />
+                      <FileText size={15} className="shrink-0 text-[var(--muted)]" />
                       <span className="flex-1 min-w-0 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">
                         {item.title}
                       </span>
@@ -398,18 +372,17 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
                       </span>
                     </div>
                     <div className="mt-1 ml-6 text-[length:var(--text-xs)] text-[var(--muted)] flex items-center gap-2 flex-wrap">
-                      <span>{t("applicant")}: {applicant}</span>
+                      <span>
+                        {t("applicant")}: {applicant}
+                      </span>
                       <span>·</span>
                       <span>
-                        {t("submittedAt")}:{" "}
-                        {new Date(item.submittedAt).toLocaleString()}
+                        {t("submittedAt")}: {new Date(item.submittedAt).toLocaleString()}
                       </span>
                       {item.templateName && (
                         <>
                           <span>·</span>
-                          <span className="truncate max-w-[200px]">
-                            {item.templateName}
-                          </span>
+                          <span className="truncate max-w-[200px]">{item.templateName}</span>
                         </>
                       )}
                     </div>
@@ -439,9 +412,7 @@ export function ApprovalList({ workspaceId }: ApprovalListProps) {
                   {t("page", { page, total: totalPages })}
                 </span>
                 <button
-                  onClick={() =>
-                    setPage((p) => Math.min(totalPages, p + 1))
-                  }
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                   disabled={page >= totalPages}
                   className="inline-flex items-center gap-1 h-8 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
                   aria-label={t("nextPage")}

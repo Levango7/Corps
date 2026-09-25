@@ -67,10 +67,7 @@ function confidenceLabel(confidence?: number): string {
   return "低置信";
 }
 
-export default function AiInsightWidget({
-  wid,
-  limit = 3,
-}: AiInsightWidgetProps) {
+export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps) {
   const [data, setData] = useState<AiInsightData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notAvailable, setNotAvailable] = useState(false);
@@ -78,9 +75,7 @@ export default function AiInsightWidget({
 
   const load = useCallback(async () => {
     try {
-      const result = await api<AiInsightData>(
-        `/api/v1/workspaces/${wid}/ai/insights`,
-      );
+      const result = await api<AiInsightData>(`/api/v1/workspaces/${wid}/ai/insights`);
       setData(result);
       setNotAvailable(false);
       setError(false);
@@ -109,10 +104,7 @@ export default function AiInsightWidget({
         aria-label="加载 AI 洞察"
       >
         {Array.from({ length: 3 }).map((_, i) => (
-          <div
-            key={i}
-            className="flex flex-col gap-[var(--space-1)]"
-          >
+          <div key={i} className="flex flex-col gap-[var(--space-1)]">
             <span className="h-3 w-2/3 rounded bg-[var(--surface-3)] animate-pulse" />
             <span className="h-2 w-full rounded bg-[var(--surface-3)] animate-pulse" />
           </div>
@@ -128,11 +120,7 @@ export default function AiInsightWidget({
         className="flex flex-col items-center gap-[var(--space-2)] p-[var(--space-4)] text-center"
         role="status"
       >
-        <Sparkles
-          size={16}
-          className="text-[var(--muted)]"
-          aria-hidden
-        />
+        <Sparkles size={16} className="text-[var(--muted)]" aria-hidden />
         <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
           AI 洞察暂未启用
         </span>
@@ -162,17 +150,9 @@ export default function AiInsightWidget({
   // 空状态
   if (items.length === 0) {
     return (
-      <div
-        className="flex flex-col items-center gap-[var(--space-2)] p-[var(--space-4)] text-center"
-      >
-        <Sparkles
-          size={16}
-          className="text-[var(--muted)]"
-          aria-hidden
-        />
-        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          暂无 AI 洞察
-        </span>
+      <div className="flex flex-col items-center gap-[var(--space-2)] p-[var(--space-4)] text-center">
+        <Sparkles size={16} className="text-[var(--muted)]" aria-hidden />
+        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">暂无 AI 洞察</span>
         <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
           AI 助理将在积累更多数据后生成洞察
         </span>
@@ -188,11 +168,7 @@ export default function AiInsightWidget({
     >
       {/* 头部：AI 图标 + 标题 */}
       <div className="flex items-center gap-[var(--space-2)]">
-        <Sparkles
-          size={14}
-          className="text-[var(--accent)]"
-          aria-hidden
-        />
+        <Sparkles size={14} className="text-[var(--accent)]" aria-hidden />
         <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
           AI 洞察
         </span>
@@ -210,12 +186,7 @@ export default function AiInsightWidget({
               className="flex flex-col gap-[var(--space-1)] rounded-[var(--radius-sm)] border border-[var(--border-soft)] bg-[var(--surface)] p-[var(--space-2)]"
             >
               <div className="flex items-center gap-[var(--space-2)]">
-                <Icon
-                  size={14}
-                  className="shrink-0"
-                  style={{ color: meta.color }}
-                  aria-hidden
-                />
+                <Icon size={14} className="shrink-0" style={{ color: meta.color }} aria-hidden />
                 <span className="flex-1 truncate text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                   {insight.title}
                 </span>
@@ -236,9 +207,7 @@ export default function AiInsightWidget({
               </p>
               {/* 置信度（如有） */}
               {confLabel && (
-                <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-                  {confLabel}
-                </span>
+                <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{confLabel}</span>
               )}
             </li>
           );

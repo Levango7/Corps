@@ -178,16 +178,12 @@ export function TaskComments({ comments, members, onSend, relTime }: TaskComment
             className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5 rounded-[var(--radius-md)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
           >
             <div className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full bg-[var(--surface-3)] text-[var(--fg-2)] flex items-center justify-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)]">
-              {(c.author
-                ? c.author.name || c.author.email
-                : t("deletedUser"))[0]?.toUpperCase()}
+              {(c.author ? c.author.name || c.author.email : t("deletedUser"))[0]?.toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline gap-[var(--space-2)]">
                 <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
-                  {c.author
-                    ? c.author.name || c.author.email.split("@")[0]
-                    : t("deletedUser")}
+                  {c.author ? c.author.name || c.author.email.split("@")[0] : t("deletedUser")}
                 </span>
                 <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
                   {relTime(c.createdAt)}

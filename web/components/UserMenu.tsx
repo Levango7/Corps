@@ -14,7 +14,16 @@
 import { useEffect, useRef, useState, useTransition } from "react";
 import { Link, usePathname, useRouter } from "@/lib/i18n-navigation";
 import { useLocale, useTranslations } from "next-intl";
-import { Sun, Moon, Monitor, ChevronDown, Languages, LogOut, Settings, Loader2 } from "lucide-react";
+import {
+  Sun,
+  Moon,
+  Monitor,
+  ChevronDown,
+  Languages,
+  LogOut,
+  Settings,
+  Loader2,
+} from "lucide-react";
 import { locales, type Locale, localeNames } from "@/lib/i18n";
 import { type ThemePref, readThemePref, applyTheme } from "@/components/ThemeToggle";
 

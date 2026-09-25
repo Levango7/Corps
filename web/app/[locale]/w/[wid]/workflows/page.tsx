@@ -8,11 +8,7 @@ import { WorkflowPageClient } from "@/components/workflow/WorkflowPageClient";
  *
  * 参考 approvals/page.tsx 模式。
  */
-export default async function WorkflowsPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default async function WorkflowsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   return (
     <main className="flex-1 min-w-0">

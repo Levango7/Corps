@@ -84,8 +84,7 @@ function normalizeOptions(raw: unknown): DecisionOption[] {
     result.push({
       // title 截断防超长（与 Task.title VarChar(255) 对齐）
       title: obj.title.slice(0, 255),
-      description:
-        typeof obj.description === "string" ? obj.description.slice(0, 1000) : "",
+      description: typeof obj.description === "string" ? obj.description.slice(0, 1000) : "",
       pros: normalizeStringArray(obj.pros, 100),
       cons: normalizeStringArray(obj.cons, 100),
       risks: normalizeStringArray(obj.risks, 100),
@@ -197,33 +196,32 @@ export async function POST(req: NextRequest) {
         });
 
         // 项目进度统计（排除软删除任务）
-        const [totalTasks, completedTasks, inProgressTasks, blockedTasks] =
-          await Promise.all([
-            tx.task.count({
-              where: { workspaceId: body.wid, deletedAt: null },
-            }),
-            tx.task.count({
-              where: {
-                workspaceId: body.wid,
-                status: "done",
-                deletedAt: null,
-              },
-            }),
-            tx.task.count({
-              where: {
-                workspaceId: body.wid,
-                status: "in_progress",
-                deletedAt: null,
-              },
-            }),
-            tx.task.count({
-              where: {
-                workspaceId: body.wid,
-                blocked: true,
-                deletedAt: null,
-              },
-            }),
-          ]);
+        const [totalTasks, completedTasks, inProgressTasks, blockedTasks] = await Promise.all([
+          tx.task.count({
+            where: { workspaceId: body.wid, deletedAt: null },
+          }),
+          tx.task.count({
+            where: {
+              workspaceId: body.wid,
+              status: "done",
+              deletedAt: null,
+            },
+          }),
+          tx.task.count({
+            where: {
+              workspaceId: body.wid,
+              status: "in_progress",
+              deletedAt: null,
+            },
+          }),
+          tx.task.count({
+            where: {
+              workspaceId: body.wid,
+              blocked: true,
+              deletedAt: null,
+            },
+          }),
+        ]);
 
         return {
           tasks: tasks.map((t) => ({
@@ -298,10 +296,7 @@ export async function POST(req: NextRequest) {
       const historicalRefs = normalizeHistoricalRefs(obj.historicalRefs);
       result = { options, recommendation, historicalRefs };
     } catch (parseError) {
-      console.error(
-        "[POST ai/decision-assistant] JSON parse error:",
-        parseError,
-      );
+      console.error("[POST ai/decision-assistant] JSON parse error:", parseError);
       return NextResponse.json(
         { code: 500, message: apiMsg(req, "internalError"), data: null },
         { status: 500 },

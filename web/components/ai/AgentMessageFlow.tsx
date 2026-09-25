@@ -13,15 +13,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  MessageSquare,
-  ArrowRight,
-  Radio,
-  Loader2,
-  AlertCircle,
-  X,
-  Filter,
-} from "lucide-react";
+import { MessageSquare, ArrowRight, Radio, Loader2, AlertCircle, X, Filter } from "lucide-react";
 import { api } from "@/lib/api";
 
 /** Agent 消息类型（与后端 AiAgentMessage 一致） */
@@ -50,23 +42,14 @@ interface MessageListResponse {
 }
 
 /** 合法消息类型 */
-const MESSAGE_TYPES = [
-  "request",
-  "response",
-  "notification",
-  "handoff",
-] as const;
+const MESSAGE_TYPES = ["request", "response", "notification", "handoff"] as const;
 
 /** type → 颜色样式映射（design token） */
 const TYPE_STYLES: Record<string, string> = {
-  request:
-    "bg-[var(--accent-soft)] text-[var(--accent-fg)] border-[var(--accent)]",
-  response:
-    "bg-[var(--success-soft)] text-[var(--success-fg)] border-[var(--success-fg)]",
-  notification:
-    "bg-[var(--warning-soft)] text-[var(--warning-fg)] border-[var(--warning-fg)]",
-  handoff:
-    "bg-[var(--surface-2)] text-[var(--fg-2)] border-[var(--border)]",
+  request: "bg-[var(--accent-soft)] text-[var(--accent-fg)] border-[var(--accent)]",
+  response: "bg-[var(--success-soft)] text-[var(--success-fg)] border-[var(--success-fg)]",
+  notification: "bg-[var(--warning-soft)] text-[var(--warning-fg)] border-[var(--warning-fg)]",
+  handoff: "bg-[var(--surface-2)] text-[var(--fg-2)] border-[var(--border)]",
 };
 
 /** 格式化时间显示 */
@@ -93,10 +76,7 @@ interface AgentMessageFlowProps {
   agentId?: string;
 }
 
-export default function AgentMessageFlow({
-  wid,
-  agentId,
-}: AgentMessageFlowProps) {
+export default function AgentMessageFlow({ wid, agentId }: AgentMessageFlowProps) {
   const t = useTranslations("ai.aiAgent");
 
   const [messages, setMessages] = useState<AgentMessage[]>([]);
@@ -123,10 +103,9 @@ export default function AgentMessageFlow({
               `/api/v1/ai/agents/${agentId}/messages?wid=${encodeURIComponent(wid)}&take=100`,
               { signal: ac.signal },
             )
-          : api<MessageListResponse>(
-              `/api/v1/ai/agents?wid=${encodeURIComponent(wid)}`,
-              { signal: ac.signal },
-            ).then(async (agents) => {
+          : api<MessageListResponse>(`/api/v1/ai/agents?wid=${encodeURIComponent(wid)}`, {
+              signal: ac.signal,
+            }).then(async (agents) => {
               // 无 agentId 时聚合所有 Agent 的消息
               if (!Array.isArray(agents) || agents.length === 0) {
                 return { items: [], total: 0, skip: 0, take: 100 };
@@ -141,11 +120,7 @@ export default function AgentMessageFlow({
               );
               const items = allMessages
                 .flatMap((m) => m.items)
-                .sort(
-                  (a, b) =>
-                    new Date(b.createdAt).getTime() -
-                    new Date(a.createdAt).getTime(),
-                )
+                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                 .slice(0, 100);
               return { items, total: items.length, skip: 0, take: 100 };
             }),
@@ -161,8 +136,7 @@ export default function AgentMessageFlow({
       (agentList as Agent[]).forEach((a) => map.set(a.id, a.name));
       setAgents(map);
     } catch (e) {
-      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError"))
-        return;
+      if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
       if (process.env.NODE_ENV === "development")
         console.error("[AgentMessageFlow] loadMessages error:", e);
       setError(t("loadFailed"));
@@ -185,9 +159,7 @@ export default function AgentMessageFlow({
   }
 
   /** 过滤后的消息 */
-  const filteredMessages = typeFilter
-    ? messages.filter((m) => m.type === typeFilter)
-    : messages;
+  const filteredMessages = typeFilter ? messages.filter((m) => m.type === typeFilter) : messages;
 
   return (
     <div
@@ -218,9 +190,7 @@ export default function AgentMessageFlow({
             <button
               key={type}
               type="button"
-              onClick={() =>
-                setTypeFilter(typeFilter === type ? null : type)
-              }
+              onClick={() => setTypeFilter(typeFilter === type ? null : type)}
               className={`px-2 py-0.5 rounded-[var(--radius-sm)] text-[length:var(--text-xs)] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
                 typeFilter === type
                   ? "bg-[var(--accent)] text-[var(--accent-fg)]"
@@ -283,10 +253,7 @@ export default function AgentMessageFlow({
                       {agentName(msg.fromAgentId)}
                     </span>
                     {/* 箭头 */}
-                    <ArrowRight
-                      size={12}
-                      className="text-[var(--muted)] shrink-0"
-                    />
+                    <ArrowRight size={12} className="text-[var(--muted)] shrink-0" />
                     {/* to Agent 或广播 */}
                     {msg.toAgentId ? (
                       <span className="font-[weight:var(--weight-medium)] text-[var(--fg)] truncate">

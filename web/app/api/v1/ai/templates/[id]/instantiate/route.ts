@@ -55,10 +55,7 @@ function stepsToActions(steps: TemplateStep[]): Array<{
   }));
 }
 
-export async function POST(
-  req: NextRequest,
-  { params }: { params: Promise<{ id: string }> },
-) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -189,10 +186,7 @@ export async function POST(
       }),
     ]);
 
-    return NextResponse.json(
-      { code: 0, data: workflow, message: "OK" },
-      { status: 201 },
-    );
+    return NextResponse.json({ code: 0, data: workflow, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/templates/[id]/instantiate] error:", error);
     return NextResponse.json(

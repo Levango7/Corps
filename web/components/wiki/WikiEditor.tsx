@@ -147,9 +147,7 @@ export function WikiEditor({ wid, page, onSaved, onDeleted }: WikiEditorProps) {
           {saveStatus === "saved" && !dirty && (
             <span className="text-[var(--accent)]">{t("saved")}</span>
           )}
-          {saveStatus === "error" && (
-            <span className="text-[var(--danger)]">{t("saveError")}</span>
-          )}
+          {saveStatus === "error" && <span className="text-[var(--danger)]">{t("saveError")}</span>}
         </div>
 
         {/* 手动保存 */}
@@ -176,7 +174,9 @@ export function WikiEditor({ wid, page, onSaved, onDeleted }: WikiEditorProps) {
       </div>
 
       {error && (
-        <p className="px-[var(--space-4)] py-2 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>
+        <p className="px-[var(--space-4)] py-2 text-[length:var(--text-sm)] text-[var(--danger)]">
+          {error}
+        </p>
       )}
 
       {/* 编辑区 / 预览区 */}

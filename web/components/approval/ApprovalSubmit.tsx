@@ -54,11 +54,7 @@ const fieldLabel =
 const fieldControl =
   "w-full h-9 px-2.5 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]";
 
-export function ApprovalSubmit({
-  workspaceId,
-  onClose,
-  onSubmitted,
-}: ApprovalSubmitProps) {
+export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSubmitProps) {
   const t = useTranslations("approval");
   const tButton = useTranslations("button");
 
@@ -67,9 +63,9 @@ export function ApprovalSubmit({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   // 审批内容键值对
-  const [contentFields, setContentFields] = useState<
-    { key: string; value: string }[]
-  >([{ key: "", value: "" }]);
+  const [contentFields, setContentFields] = useState<{ key: string; value: string }[]>([
+    { key: "", value: "" },
+  ]);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [loadingTemplates, setLoadingTemplates] = useState(true);
@@ -88,9 +84,9 @@ export function ApprovalSubmit({
           api<ApprovalTemplate[] | { items: ApprovalTemplate[] }>(
             `/api/v1/workspaces/${workspaceId}/approvals/templates`,
           ),
-          api<Member[] | { items: Member[] }>(
-            `/api/v1/workspaces/${workspaceId}/members`,
-          ).catch(() => ({ items: [] as Member[] })),
+          api<Member[] | { items: Member[] }>(`/api/v1/workspaces/${workspaceId}/members`).catch(
+            () => ({ items: [] as Member[] }),
+          ),
         ]);
         if (cancelled) return;
         const list = Array.isArray(tplData) ? tplData : (tplData.items ?? []);
@@ -143,11 +139,7 @@ export function ApprovalSubmit({
 
   const selectedTemplate = templates.find((tpl) => tpl.id === templateId);
 
-  function updateContentField(
-    idx: number,
-    field: "key" | "value",
-    val: string,
-  ) {
+  function updateContentField(idx: number, field: "key" | "value", val: string) {
     setContentFields((prev) =>
       prev.map((item, i) => (i === idx ? { ...item, [field]: val } : item)),
     );
@@ -159,9 +151,7 @@ export function ApprovalSubmit({
 
   function removeContentField(idx: number) {
     setContentFields((prev) =>
-      prev.length > 1
-        ? prev.filter((_, i) => i !== idx)
-        : [{ key: "", value: "" }],
+      prev.length > 1 ? prev.filter((_, i) => i !== idx) : [{ key: "", value: "" }],
     );
   }
 
@@ -195,28 +185,21 @@ export function ApprovalSubmit({
               approverIds: [selectedApproverId],
             },
           ];
-      await api(
-        `/api/v1/workspaces/${workspaceId}/approvals/instances`,
-        {
-          method: "POST",
-          body: JSON.stringify({
-            templateId: templateId || undefined,
-            title: title.trim(),
-            description: description.trim() || undefined,
-            // 确保 content 有默认值，避免 undefined 导致后端校验失败
-            content: Object.keys(content).length > 0 ? content : "",
-            nodes: defaultNodes,
-          }),
-        },
-      );
+      await api(`/api/v1/workspaces/${workspaceId}/approvals/instances`, {
+        method: "POST",
+        body: JSON.stringify({
+          templateId: templateId || undefined,
+          title: title.trim(),
+          description: description.trim() || undefined,
+          // 确保 content 有默认值，避免 undefined 导致后端校验失败
+          content: Object.keys(content).length > 0 ? content : "",
+          nodes: defaultNodes,
+        }),
+      });
       onSubmitted();
       onClose();
     } catch (err) {
-      setError(
-        err instanceof ApiError || err instanceof Error
-          ? err.message
-          : t("submitFailed"),
-      );
+      setError(err instanceof ApiError || err instanceof Error ? err.message : t("submitFailed"));
     } finally {
       setSubmitting(false);
     }
@@ -273,36 +256,29 @@ export function ApprovalSubmit({
               ))}
             </select>
             {/* 模板节点预览 */}
-            {selectedTemplate?.nodes &&
-              selectedTemplate.nodes.length > 0 && (
-                <div className="mt-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)]">
-                  <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-1">
-                    {t("nodes")}
-                  </p>
-                  <ol className="space-y-0.5">
-                    {[...selectedTemplate.nodes]
-                      .sort((a, b) => a.order - b.order)
-                      .map((node, i) => (
-                        <li
-                          key={i}
-                          className="text-[length:var(--text-xs)] text-[var(--fg-2)] flex items-center gap-1.5"
-                        >
-                          <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--meta)]">
-                            {node.order}
-                          </span>
-                          <span className="font-[weight:var(--weight-medium)]">
-                            {node.name}
-                          </span>
-                          {node.approverRole && (
-                            <span className="text-[var(--meta)]">
-                              · {node.approverRole}
-                            </span>
-                          )}
-                        </li>
-                      ))}
-                  </ol>
-                </div>
-              )}
+            {selectedTemplate?.nodes && selectedTemplate.nodes.length > 0 && (
+              <div className="mt-2 px-3 py-2 rounded-[var(--radius-md)] bg-[var(--surface-2)] border border-[var(--border-soft)]">
+                <p className="text-[length:var(--text-xs)] text-[var(--meta)] mb-1">{t("nodes")}</p>
+                <ol className="space-y-0.5">
+                  {[...selectedTemplate.nodes]
+                    .sort((a, b) => a.order - b.order)
+                    .map((node, i) => (
+                      <li
+                        key={i}
+                        className="text-[length:var(--text-xs)] text-[var(--fg-2)] flex items-center gap-1.5"
+                      >
+                        <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-[var(--surface)] border border-[var(--border)] text-[var(--meta)]">
+                          {node.order}
+                        </span>
+                        <span className="font-[weight:var(--weight-medium)]">{node.name}</span>
+                        {node.approverRole && (
+                          <span className="text-[var(--meta)]">· {node.approverRole}</span>
+                        )}
+                      </li>
+                    ))}
+                </ol>
+              </div>
+            )}
           </div>
 
           {/* 不选模板时，需指定默认审批人 */}
@@ -368,18 +344,14 @@ export function ApprovalSubmit({
                 <div key={idx} className="flex items-center gap-2">
                   <input
                     value={field.key}
-                    onChange={(e) =>
-                      updateContentField(idx, "key", e.target.value)
-                    }
+                    onChange={(e) => updateContentField(idx, "key", e.target.value)}
                     maxLength={100}
                     placeholder={t("contentKeyPlaceholder")}
                     className={`${fieldControl} flex-1`}
                   />
                   <input
                     value={field.value}
-                    onChange={(e) =>
-                      updateContentField(idx, "value", e.target.value)
-                    }
+                    onChange={(e) => updateContentField(idx, "value", e.target.value)}
                     maxLength={500}
                     placeholder={t("contentValuePlaceholder")}
                     className={`${fieldControl} flex-1`}
@@ -429,18 +401,10 @@ export function ApprovalSubmit({
             </button>
             <button
               type="submit"
-              disabled={
-                !title.trim() ||
-                submitting ||
-                (!templateId && !selectedApproverId)
-              }
+              disabled={!title.trim() || submitting || (!templateId && !selectedApproverId)}
               className="inline-flex items-center gap-1.5 h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
-              {submitting ? (
-                <Loader2 size={14} className="animate-spin" />
-              ) : (
-                <FileText size={14} />
-              )}
+              {submitting ? <Loader2 size={14} className="animate-spin" /> : <FileText size={14} />}
               {submitting ? t("creating") : t("submit")}
             </button>
           </div>

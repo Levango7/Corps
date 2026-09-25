@@ -48,7 +48,11 @@ interface DateGroup {
 }
 
 /** 格式化日期标签 */
-function formatDateLabel(iso: string, locale: string, t: (key: string, values?: { time?: string }) => string): string {
+function formatDateLabel(
+  iso: string,
+  locale: string,
+  t: (key: string, values?: { time?: string }) => string,
+): string {
   const date = new Date(iso);
   const now = new Date();
   const isToday = date.toDateString() === now.toDateString();
@@ -63,7 +67,11 @@ function formatDateLabel(iso: string, locale: string, t: (key: string, values?: 
 }
 
 /** 按日期分组 */
-function groupByDate(messages: Message[], locale: string, t: (key: string, values?: { time?: string }) => string): DateGroup[] {
+function groupByDate(
+  messages: Message[],
+  locale: string,
+  t: (key: string, values?: { time?: string }) => string,
+): DateGroup[] {
   const groups: DateGroup[] = [];
   let currentGroup: DateGroup | null = null;
   let prevDateStr: string | null = null;
@@ -238,9 +246,7 @@ export function MessageList({
           </div>
         ) : messages.length === 0 ? (
           <div className="flex items-center justify-center h-full">
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("empty")}
-            </p>
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("empty")}</p>
           </div>
         ) : (
           groups.map((group, gi) => (

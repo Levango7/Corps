@@ -19,7 +19,6 @@ import { Video, ArrowLeft, Loader2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
 
 export interface MeetingLobbyProps {
-
   meetingTitle: string;
   /** 当前用户名（预填到 PreJoin 输入框） */
   currentUserName?: string;
@@ -74,9 +73,7 @@ export function MeetingLobby({
         <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] mb-[var(--space-1)]">
           {meetingTitle}
         </h1>
-        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("lobbySubtitle")}
-        </p>
+        <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("lobbySubtitle")}</p>
       </div>
 
       {/* 设备预览区 */}
@@ -94,13 +91,8 @@ export function MeetingLobby({
 
         {joining ? (
           <div className="flex flex-col items-center justify-center py-[var(--space-8)]">
-            <Loader2
-              size={24}
-              className="animate-spin text-[var(--accent)] mb-[var(--space-2)]"
-            />
-            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-              {t("joining")}
-            </p>
+            <Loader2 size={24} className="animate-spin text-[var(--accent)] mb-[var(--space-2)]" />
+            <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("joining")}</p>
           </div>
         ) : (
           <PreJoin

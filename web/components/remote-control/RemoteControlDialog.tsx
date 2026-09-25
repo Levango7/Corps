@@ -16,13 +16,7 @@
 
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Monitor,
-  Check,
-  X,
-  Loader2,
-  Clock,
-} from "lucide-react";
+import { Monitor, Check, X, Loader2, Clock } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
 // ─── 类型 ──────────────────────────────────────────────────────
@@ -245,9 +239,7 @@ export function RemoteControlDialog({
           <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] mb-[var(--space-2)]">
             {requesterName} {t("request")} {t("screenShare")}
           </p>
-          <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
-            {t("beingControlled")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("beingControlled")}</p>
 
           {/* 错误提示 */}
           {error && (
@@ -265,11 +257,7 @@ export function RemoteControlDialog({
             disabled={actioning}
             className="flex-1 flex items-center justify-center gap-[var(--space-1)] h-10 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
           >
-            {actioning ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <X size={14} />
-            )}
+            {actioning ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />}
             {t("reject")}
           </button>
           <button
@@ -278,11 +266,7 @@ export function RemoteControlDialog({
             disabled={actioning}
             className="flex-1 flex items-center justify-center gap-[var(--space-1)] h-10 rounded-[var(--radius-md)] bg-[var(--success)] text-[var(--success-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--success-soft)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
           >
-            {actioning ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Check size={14} />
-            )}
+            {actioning ? <Loader2 size={14} className="animate-spin" /> : <Check size={14} />}
             {t("accept")}
           </button>
         </div>

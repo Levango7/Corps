@@ -87,20 +87,14 @@ export function MobileBottomNav() {
                 layoutId={INDICATOR_LAYOUT_ID}
                 className="absolute top-0 left-1/2 -translate-x-1/2 w-8 h-0.5 rounded-full bg-[var(--accent)]"
                 transition={
-                  reduceMotion
-                    ? { duration: 0 }
-                    : { type: "spring", stiffness: 400, damping: 32 }
+                  reduceMotion ? { duration: 0 } : { type: "spring", stiffness: 400, damping: 32 }
                 }
               />
             )}
             <Icon
               size={24}
               strokeWidth={2}
-              className={
-                active
-                  ? "text-[var(--accent)]"
-                  : "text-[var(--muted)]"
-              }
+              className={active ? "text-[var(--accent)]" : "text-[var(--muted)]"}
             />
             <span
               className={

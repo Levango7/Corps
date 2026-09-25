@@ -19,7 +19,11 @@
  *  - 纯函数库放在 lib/ 下，按领域子目录组织（lib/mail/）。
  */
 
-import nodemailer, { type Transporter, type SendMailOptions, type SentMessageInfo } from "nodemailer";
+import nodemailer, {
+  type Transporter,
+  type SendMailOptions,
+  type SentMessageInfo,
+} from "nodemailer";
 import type { EmailAccount } from "@prisma/client";
 import { encrypt, decrypt } from "@/lib/crypto";
 

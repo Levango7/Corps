@@ -47,8 +47,13 @@ export function CalendarMonth({
 
   // 星期标题
   const weekHeaders = [
-    t("sunday"), t("monday"), t("tuesday"), t("wednesday"),
-    t("thursday"), t("friday"), t("saturday"),
+    t("sunday"),
+    t("monday"),
+    t("tuesday"),
+    t("wednesday"),
+    t("thursday"),
+    t("friday"),
+    t("saturday"),
   ];
 
   // 生成 42 个格子（6行×7列）
@@ -174,15 +179,14 @@ export function CalendarMonth({
       </div>
 
       {/* sm 以上：7列网格 */}
-      <div className="hidden sm:grid grid-cols-7 grid-rows-6 gap-px flex-1" style={{ background: "var(--border)" }}>
+      <div
+        className="hidden sm:grid grid-cols-7 grid-rows-6 gap-px flex-1"
+        style={{ background: "var(--border)" }}
+      >
         {cells.map((date, i) => {
           if (!date) {
             return (
-              <div
-                key={i}
-                className="p-1 min-h-[80px]"
-                style={{ background: "var(--surface)" }}
-              />
+              <div key={i} className="p-1 min-h-[80px]" style={{ background: "var(--surface)" }} />
             );
           }
           const dayEvents = getEventsOnDate(events, date);

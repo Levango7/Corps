@@ -4,7 +4,8 @@ import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
 export function buildApprovalAdviceSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是审批风控分析助手。根据审批内容和历史数据，为审批人提供风险分析建议。
+  return appendFeedbackShot(
+    `你是审批风控分析助手。根据审批内容和历史数据，为审批人提供风险分析建议。
 要求：
 1) 识别异常因素（金额异常/频率异常/内容不一致）
 2) 与历史同类审批对比
@@ -27,10 +28,13 @@ export function buildApprovalAdviceSystemPrompt(feedbackExamples?: FeedbackExamp
 ## 示例
 输入：采购申请 50000 元，历史同类平均 8000 元
 输出：
-{"riskLevel":"high","riskFactors":["金额远超历史同类均值（50000 vs 8000）"],"suggestion":"建议核实大额采购的必要性与审批链路","similarCases":[{"title":"办公设备采购","result":"approved","amount":8500}]}`, feedbackExamples);
+{"riskLevel":"high","riskFactors":["金额远超历史同类均值（50000 vs 8000）"],"suggestion":"建议核实大额采购的必要性与审批链路","similarCases":[{"title":"办公设备采购","result":"approved","amount":8500}]}`,
+    feedbackExamples,
+  );
 }
 
 export function buildUserPrompt(context: string): string {
-  const truncatedContext = context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
+  const truncatedContext =
+    context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
   return `审批数据：\n${truncatedContext}`;
 }

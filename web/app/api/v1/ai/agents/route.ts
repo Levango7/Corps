@@ -9,21 +9,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
 /** 合法角色枚举（与 schema 注释保持一致） */
-const ROLE_VALUES = [
-  "task_breaker",
-  "doc_writer",
-  "follow_upper",
-  "analyst",
-] as const;
+const ROLE_VALUES = ["task_breaker", "doc_writer", "follow_upper", "analyst"] as const;
 
 /** 合法模型枚举（与 deepseek.ts 保持一致） */
 const MODEL_VALUES = ["deepseek-chat", "deepseek-reasoner"] as const;
@@ -74,8 +66,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -198,10 +189,7 @@ export async function POST(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json(
-      { code: 0, data: agent, message: "OK" },
-      { status: 201 },
-    );
+    return NextResponse.json({ code: 0, data: agent, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/agents] error:", error);
     return NextResponse.json(

@@ -8,7 +8,10 @@ import dynamic from "next/dynamic";
 // P0-2: code splitting — DocumentEditor 改为 dynamic import 懒加载
 const DocumentEditor = dynamic(
   () => import("@/components/DocumentEditor").then((m) => m.DocumentEditor),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
 );
 import { PermissionManager } from "@/components/doc/PermissionManager";
 import { SafeComponent } from "@/components/SafeComponent";
@@ -97,9 +100,9 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
           // 获取当前用户 ID
           api<{ id: string }>("/api/v1/users/me").catch(() => ({ id: "" })),
           // 获取工作区成员列表以判断当前用户角色
-          api<{ items: Member[] } | Member[]>(`/api/v1/workspaces/${w}/members`).catch(
-            () => ({ items: [] as Member[] }),
-          ),
+          api<{ items: Member[] } | Member[]>(`/api/v1/workspaces/${w}/members`).catch(() => ({
+            items: [] as Member[],
+          })),
         ]);
         if (cancelled) return;
         setData({
@@ -117,13 +120,7 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
         const myMember = memberList.find((m) => m.userId === currentUserId);
         const myRole = myMember?.role ?? "";
 
-        const canManageDoc = await checkCanManageDoc(
-          w,
-          i,
-          currentUserId,
-          authorId,
-          myRole,
-        );
+        const canManageDoc = await checkCanManageDoc(w, i, currentUserId, authorId, myRole);
         setCanManage(canManageDoc);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t("loadFailed"));

@@ -24,14 +24,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Sparkles,
-  Check,
-  X,
-  RefreshCw,
-  Lightbulb,
-  TrendingUp,
-} from "lucide-react";
+import { Sparkles, Check, X, RefreshCw, Lightbulb, TrendingUp } from "lucide-react";
 import { api } from "@/lib/api";
 import { BehaviorStats, type CapabilityStat } from "./BehaviorStats";
 
@@ -115,8 +108,7 @@ function aggregateStats(behaviors: Behavior[]): {
 
   const capabilities: CapabilityStat[] = [...statsMap.entries()]
     .map(([capability, stat]) => {
-      const total =
-        stat.useCount + stat.acceptCount + stat.rejectCount + stat.editCount;
+      const total = stat.useCount + stat.acceptCount + stat.rejectCount + stat.editCount;
       const denom = stat.acceptCount + stat.rejectCount;
       return {
         capability,
@@ -200,10 +192,7 @@ export function PersonalizationPanel({ wid }: PersonalizationPanelProps) {
         },
       );
       // 将新生成的推荐 prepend 到列表顶部
-      setRecommendations((prev) => [
-        ...(result.recommendations ?? []),
-        ...prev,
-      ]);
+      setRecommendations((prev) => [...(result.recommendations ?? []), ...prev]);
     } catch (e) {
       if (e instanceof Error && e.name === "AbortError") return;
       setError(t("error"));
@@ -219,17 +208,12 @@ export function PersonalizationPanel({ wid }: PersonalizationPanelProps) {
   const handleMark = useCallback(
     async (id: string, applied: boolean) => {
       // 乐观更新：先改本地状态
-      setRecommendations((prev) =>
-        prev.map((r) => (r.id === id ? { ...r, applied } : r)),
-      );
+      setRecommendations((prev) => prev.map((r) => (r.id === id ? { ...r, applied } : r)));
       try {
-        await api(
-          `/api/v1/ai/personalization/recommendations/${id}`,
-          {
-            method: "PATCH",
-            body: JSON.stringify({ wid, applied }),
-          },
-        );
+        await api(`/api/v1/ai/personalization/recommendations/${id}`, {
+          method: "PATCH",
+          body: JSON.stringify({ wid, applied }),
+        });
         // 标记成功后重新加载行为统计（采纳/拒绝行为已记录）
         // 不阻塞 UI，后台静默刷新
         void loadData();
@@ -254,9 +238,7 @@ export function PersonalizationPanel({ wid }: PersonalizationPanelProps) {
   if (loading) {
     return (
       <div className="flex h-full items-center justify-center bg-[var(--surface)]">
-        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">
-          {t("generating")}
-        </div>
+        <div className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("generating")}</div>
       </div>
     );
   }
@@ -293,10 +275,7 @@ export function PersonalizationPanel({ wid }: PersonalizationPanelProps) {
       )}
 
       {/* 行为统计图表 */}
-      <BehaviorStats
-        capabilities={capabilities}
-        totalBehaviors={totalBehaviors}
-      />
+      <BehaviorStats capabilities={capabilities} totalBehaviors={totalBehaviors} />
 
       {/* 推荐列表 */}
       <section className="flex flex-col gap-[var(--space-3)]">
@@ -359,9 +338,7 @@ function RecommendationCard({
   return (
     <div
       className={`rounded-[var(--radius-md)] border bg-[var(--surface-2)] px-[var(--space-4)] py-[var(--space-3)] transition-colors duration-[var(--motion-fast)] ${
-        applied
-          ? "border-[var(--success)] bg-[var(--success-soft)]"
-          : "border-[var(--border)]"
+        applied ? "border-[var(--success)] bg-[var(--success-soft)]" : "border-[var(--border)]"
       }`}
     >
       {/* 头部：类型 + 分数 + 操作按钮 */}

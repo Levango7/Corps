@@ -76,8 +76,6 @@ JSON schema：
  */
 export function buildDailyBriefingUserPrompt(ctx: WorkspaceContext): string {
   const truncatedContext =
-    ctx.context.length > 12000
-      ? ctx.context.slice(0, 12000) + "\n\n[上下文已截断]"
-      : ctx.context;
+    ctx.context.length > 12000 ? ctx.context.slice(0, 12000) + "\n\n[上下文已截断]" : ctx.context;
   return `今日工作数据：\n${truncatedContext}`;
 }

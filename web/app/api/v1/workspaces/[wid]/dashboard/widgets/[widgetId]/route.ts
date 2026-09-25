@@ -87,7 +87,6 @@ export async function GET(
   }
 }
 
-
 /**
  * 按 widgetId 分发到对应数据加载器。
  * 各加载器返回任意结构（由前端 Widget 组件约定消费形态）。

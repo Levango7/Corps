@@ -176,9 +176,7 @@ export default function TodoExtractDialog({
       if (ac.signal.aborted) return;
       if (e instanceof Error && e.name === "AbortError") return;
       // 不直接显示后端 error.message，用 i18n 错误提示
-      setError(
-        e instanceof ApiError ? e.message : t("extractFailed"),
-      );
+      setError(e instanceof ApiError ? e.message : t("extractFailed"));
     } finally {
       if (!ac.signal.aborted) setLoading(false);
     }
@@ -194,9 +192,7 @@ export default function TodoExtractDialog({
   // ── 切换单条选中 ──
   function toggleSelect(localId: string) {
     setTodos((prev) =>
-      prev.map((todo) =>
-        todo.localId === localId ? { ...todo, selected: !todo.selected } : todo,
-      ),
+      prev.map((todo) => (todo.localId === localId ? { ...todo, selected: !todo.selected } : todo)),
     );
   }
 
@@ -383,9 +379,7 @@ export default function TodoExtractDialog({
                 className="animate-spin text-[var(--accent)]"
                 aria-label={t("extracting")}
               />
-              <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-                {t("extracting")}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("extracting")}</p>
             </div>
           )}
 
@@ -420,9 +414,7 @@ export default function TodoExtractDialog({
                       <li
                         key={todo.localId}
                         className={`rounded-[var(--radius-md)] border bg-[var(--surface)] p-[var(--space-3)] transition-colors duration-[var(--motion-fast)] ${
-                          todo.selected
-                            ? "border-[var(--accent)]"
-                            : "border-[var(--border)]"
+                          todo.selected ? "border-[var(--accent)]" : "border-[var(--border)]"
                         }`}
                       >
                         <div className="flex items-start gap-[var(--space-3)]">
@@ -443,9 +435,7 @@ export default function TodoExtractDialog({
                             <input
                               type="text"
                               value={todo.title}
-                              onChange={(e) =>
-                                updateTodo(todo.localId, { title: e.target.value })
-                              }
+                              onChange={(e) => updateTodo(todo.localId, { title: e.target.value })}
                               maxLength={255}
                               placeholder={t("todoTitle")}
                               aria-label={t("todoTitle")}
@@ -485,11 +475,7 @@ export default function TodoExtractDialog({
                                 <input
                                   id={`due-${todo.localId}`}
                                   type="date"
-                                  value={
-                                    todo.dueDate
-                                      ? todo.dueDate.slice(0, 10)
-                                      : ""
-                                  }
+                                  value={todo.dueDate ? todo.dueDate.slice(0, 10) : ""}
                                   onChange={(e) =>
                                     updateTodo(todo.localId, {
                                       dueDate: e.target.value || null,
@@ -557,11 +543,7 @@ export default function TodoExtractDialog({
                         className="w-full flex items-center gap-2 px-[var(--space-3)] py-2 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] rounded-[var(--radius-md)]"
                         aria-expanded={reasoningOpen}
                       >
-                        {reasoningOpen ? (
-                          <ChevronDown size={14} />
-                        ) : (
-                          <ChevronRight size={14} />
-                        )}
+                        {reasoningOpen ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                         {t("reasoning")}
                       </button>
                       {reasoningOpen && (

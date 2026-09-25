@@ -6,18 +6,13 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 
 const querySchema = z.object({
   wid: z.string().uuid(),
-  type: z
-    .enum(["burndown", "team_performance", "bottleneck", "weekly_report"])
-    .optional(),
+  type: z.enum(["burndown", "team_performance", "bottleneck", "weekly_report"]).optional(),
   page: z.coerce.number().int().min(1).default(1),
   pageSize: z.coerce.number().int().min(1).max(100).default(20),
 });

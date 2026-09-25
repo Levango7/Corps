@@ -29,7 +29,6 @@ const MESSAGE_INCLUDE = {
   },
 } as const;
 
-
 /**
  * 将 Prisma Message 行转换为 WebSocket 广播所需的 MessagePayload。
  *
@@ -140,7 +139,12 @@ export async function GET(
           replyToId: string | null;
           mentions: string[];
           createdAt: Date;
-          author: { id: string; name: string | null; email: string | null; image: string | null } | null;
+          author: {
+            id: string;
+            name: string | null;
+            email: string | null;
+            image: string | null;
+          } | null;
           attachments: Array<{
             id: string;
             messageId: string;
@@ -186,9 +190,7 @@ export async function GET(
         const ordered = after ? page : page.reverse();
 
         // 撤回消息 body 置空（保留记录）
-        const messages = ordered.map((m) =>
-          m.revokedAt ? { ...m, body: "" } : m,
-        );
+        const messages = ordered.map((m) => (m.revokedAt ? { ...m, body: "" } : m));
 
         return { messages, hasMore };
       },
@@ -259,10 +261,7 @@ const sendMessageSchema = z.object({
     .array(
       z.object({
         filename: z.string().min(1).max(255),
-        url: z
-          .string()
-          .url()
-          .refine(isAttachmentUrlAllowed, "附件 URL 域名不在允许的白名单中"),
+        url: z.string().url().refine(isAttachmentUrlAllowed, "附件 URL 域名不在允许的白名单中"),
         mimeType: z.string().min(1).max(100),
         size: z.number().int().positive(),
       }),
@@ -403,10 +402,7 @@ export async function POST(
       imManager.broadcastToConversation(cid, serverMsg, userId);
     }
 
-    return NextResponse.json(
-      { code: 201, data: result.message },
-      { status: 201 },
-    );
+    return NextResponse.json({ code: 201, data: result.message }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

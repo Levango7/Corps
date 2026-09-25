@@ -11,11 +11,7 @@
  */
 
 import { useTranslations } from "next-intl";
-import {
-  SidebarNavClient,
-  type NavItem,
-  type NavGroup,
-} from "./SidebarNavClient";
+import { SidebarNavClient, type NavItem, type NavGroup } from "./SidebarNavClient";
 
 export type { NavItem, NavGroup };
 

@@ -16,10 +16,7 @@ import type { AiUserBehavior, Prisma } from "@prisma/client";
 
 /** 合法行为类型 */
 export type BehaviorAction =
-  | "use_capability"
-  | "accept_suggestion"
-  | "reject_suggestion"
-  | "edit_output";
+  "use_capability" | "accept_suggestion" | "reject_suggestion" | "edit_output";
 
 /** getUserBehaviors 查询选项 */
 export interface GetBehaviorsOptions {
@@ -67,7 +64,10 @@ export interface BehaviorStats {
  * 分母为 acceptCount + rejectCount（不含 use_capability / edit_output），
  * 分母为 0 时返回 0（避免除零）。
  */
-function computeRates(acceptCount: number, rejectCount: number): {
+function computeRates(
+  acceptCount: number,
+  rejectCount: number,
+): {
   acceptRate: number;
   rejectRate: number;
 } {
@@ -201,12 +201,8 @@ export async function getBehaviorStats(
   // 转换为 CapabilityStat[] 并按 total 降序
   const capabilities: CapabilityStat[] = [...statsMap.entries()]
     .map(([capability, stat]) => {
-      const total =
-        stat.useCount + stat.acceptCount + stat.rejectCount + stat.editCount;
-      const { acceptRate, rejectRate } = computeRates(
-        stat.acceptCount,
-        stat.rejectCount,
-      );
+      const total = stat.useCount + stat.acceptCount + stat.rejectCount + stat.editCount;
+      const { acceptRate, rejectRate } = computeRates(stat.acceptCount, stat.rejectCount);
       return {
         capability,
         total,
@@ -226,4 +222,3 @@ export async function getBehaviorStats(
     totalCapabilities: capabilities.length,
   };
 }
-

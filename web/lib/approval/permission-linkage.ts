@@ -189,10 +189,7 @@ export async function applyPermissionOnApproval(
       });
     } catch (error) {
       // P2002: 唯一约束冲突 — 并发场景下可能已由其他事务创建，视为幂等成功
-      if (
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        error.code === "P2002"
-      ) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002") {
         continue;
       }
       // 其他错误向上抛出，由调用方处理

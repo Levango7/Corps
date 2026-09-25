@@ -65,10 +65,10 @@ export function ContactGroupSidebar({
     setCreating(true);
     setError("");
     try {
-      const created = await api<ContactGroupItem>(
-        `/api/v1/workspaces/${wid}/contact-groups`,
-        { method: "POST", body: JSON.stringify({ name }) },
-      );
+      const created = await api<ContactGroupItem>(`/api/v1/workspaces/${wid}/contact-groups`, {
+        method: "POST",
+        body: JSON.stringify({ name }),
+      });
       setGroups((prev) =>
         [...prev, { ...created, _count: { contacts: 0 } }].sort((a, b) =>
           a.name.localeCompare(b.name),

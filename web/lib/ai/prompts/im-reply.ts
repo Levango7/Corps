@@ -4,7 +4,8 @@ import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
 export function buildImReplySystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是 IM 智能回复助手。根据聊天上下文，生成 3 个合适的回复建议。
+  return appendFeedbackShot(
+    `你是 IM 智能回复助手。根据聊天上下文，生成 3 个合适的回复建议。
 返回 JSON 数组格式：
 [
   { "text": "回复内容1", "tone": "formal|casual|concise" },
@@ -31,7 +32,9 @@ export function buildImReplySystemPrompt(feedbackExamples?: FeedbackExample[]): 
 ## 示例
 输入：[10:00] 张三: 今天的报告交了吗？
 输出：
-[{"text":"已提交，请查收。","tone":"concise"},{"text":"您好，今天的报告我已经提交了，请您查阅。","tone":"formal"},{"text":"交啦，麻烦看下~","tone":"casual"}]`, feedbackExamples);
+[{"text":"已提交，请查收。","tone":"concise"},{"text":"您好，今天的报告我已经提交了，请您查阅。","tone":"formal"},{"text":"交啦，麻烦看下~","tone":"casual"}]`,
+    feedbackExamples,
+  );
 }
 
 export function buildImReplyUserPrompt(

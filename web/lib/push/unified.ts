@@ -173,9 +173,7 @@ async function sendHuaweiPush(token: string, payload: PushPayload): Promise<void
   const appSecret = process.env.HUAWEI_APP_SECRET;
 
   if (!appId || !appSecret) {
-    console.warn(
-      "[push/Huawei] HUAWEI_APP_ID/HUAWEI_APP_SECRET 未配置，跳过 HarmonyOS 推送",
-    );
+    console.warn("[push/Huawei] HUAWEI_APP_ID/HUAWEI_APP_SECRET 未配置，跳过 HarmonyOS 推送");
     return;
   }
 
@@ -270,15 +268,10 @@ export async function sendPush(target: PushTarget, payload: PushPayload): Promis
  * 抛出聚合错误——调用方可 catch 后记录日志，不影响其他业务流程。
  * 推送是尽力而为通道，部分失败属正常（如设备卸载后 token 失效）。
  */
-export async function sendPushBatch(
-  targets: PushTarget[],
-  payload: PushPayload,
-): Promise<void> {
+export async function sendPushBatch(targets: PushTarget[], payload: PushPayload): Promise<void> {
   if (targets.length === 0) return;
 
-  const results = await Promise.allSettled(
-    targets.map((target) => sendPush(target, payload)),
-  );
+  const results = await Promise.allSettled(targets.map((target) => sendPush(target, payload)));
 
   const errors: string[] = [];
   for (let i = 0; i < results.length; i++) {
@@ -303,10 +296,7 @@ export async function sendPushBatch(
  * PushToken 表通过 userId 索引快速查找。不经过 RLS 事务（推送是用户级
  * 全局数据，不绑定工作区），直接用 prisma 查询。
  */
-export async function sendPushToUser(
-  userId: string,
-  payload: PushPayload,
-): Promise<void> {
+export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
   const tokens = await prisma.pushToken.findMany({
     where: { userId },
     select: { platform: true, token: true },

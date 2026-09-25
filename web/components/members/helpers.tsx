@@ -1,4 +1,3 @@
-
 // 成员管理共享辅助：Avatar / formatExpiry / durationKey / DURATION_HOURS。
 // 拆分自 members/page.tsx 第 31-74 行。
 
@@ -28,7 +27,10 @@ export function durationKey(hours: number): string {
 }
 
 /** 格式化到期时间（相对时间 + 绝对时间） — 接受 i18n 翻译函数 */
-export function formatExpiry(expiresAt: string, t: (key: string, vars?: Record<string, string | number>) => string): string {
+export function formatExpiry(
+  expiresAt: string,
+  t: (key: string, vars?: Record<string, string | number>) => string,
+): string {
   const now = Date.now();
   const expiry = new Date(expiresAt).getTime();
   const diffMs = expiry - now;

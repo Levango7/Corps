@@ -18,10 +18,7 @@ const listFilesQuerySchema = z.object({
 });
 
 /** GET /v1/workspaces/{wid}/files — 列出工作区文件（分页，支持 folderId 筛选） */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
@@ -35,12 +32,7 @@ export async function GET(
     // folderId 支持空字符串表示根目录（folderId IS NULL）
     const folderIdRaw = url.searchParams.get("folderId");
     const parsed = listFilesQuerySchema.safeParse({
-      folderId:
-        folderIdRaw === null
-          ? undefined
-          : folderIdRaw === ""
-            ? null
-            : folderIdRaw,
+      folderId: folderIdRaw === null ? undefined : folderIdRaw === "" ? null : folderIdRaw,
       page: url.searchParams.get("page") ?? undefined,
       limit: url.searchParams.get("limit") ?? undefined,
     });

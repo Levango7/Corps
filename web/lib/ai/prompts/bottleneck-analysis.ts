@@ -8,7 +8,6 @@
 //     "insights": string[]
 //   }
 
-
 import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
@@ -37,7 +36,8 @@ export interface TaskDep {
  * 构造瓶颈分析 system prompt。
  */
 export function buildBottleneckSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是项目管理专家，擅长识别项目瓶颈与关键路径。根据任务与依赖数据识别瓶颈任务。
+  return appendFeedbackShot(
+    `你是项目管理专家，擅长识别项目瓶颈与关键路径。根据任务与依赖数据识别瓶颈任务。
 要求：
 1) bottlenecks：识别阻塞任务（blocked=true）、逾期任务、长期未更新的进行中任务、高优先级但未分配的任务
 2) criticalPath：按依赖关系推导关键路径（最长依赖链上的任务标题序列）
@@ -69,7 +69,9 @@ export function buildBottleneckSystemPrompt(feedbackExamples?: FeedbackExample[]
 ## 示例
 输入：1 个阻塞任务，1 个逾期任务
 输出：
-{"summary":"存在 2 个瓶颈任务，影响关键路径","bottlenecks":[{"taskTitle":"数据迁移","reason":"被外部接口阻塞","impact":"阻塞下游 3 个任务","suggestion":"协调外部接口方加快进度，或准备降级方案"}],"criticalPath":["需求评审","数据迁移","报表开发","上线"],"insights":["数据迁移是关键瓶颈，建议优先解决","建议为高优先级任务分配明确负责人"]}`, feedbackExamples);
+{"summary":"存在 2 个瓶颈任务，影响关键路径","bottlenecks":[{"taskTitle":"数据迁移","reason":"被外部接口阻塞","impact":"阻塞下游 3 个任务","suggestion":"协调外部接口方加快进度，或准备降级方案"}],"criticalPath":["需求评审","数据迁移","报表开发","上线"],"insights":["数据迁移是关键瓶颈，建议优先解决","建议为高优先级任务分配明确负责人"]}`,
+    feedbackExamples,
+  );
 }
 
 /**
@@ -83,7 +85,9 @@ export function buildBottleneckUserPrompt(
     const due = t.dueDate ? t.dueDate.toISOString().split("T")[0] : "无";
     return `- id: ${t.id} | 标题: ${t.title} | 状态: ${t.status} | 优先级: ${t.priority} | 负责人: ${t.assigneeId ?? "未分配"} | 截止: ${due} | 阻塞: ${t.blocked} | 阻塞原因: ${t.blockedReason ?? "无"} | 父任务: ${t.parentId ?? "无"} | 里程碑: ${t.milestoneId ?? "无"}`;
   });
-  const depLines = dependencies.map((d) => `- ${d.sourceTaskId} --[${d.relation}]--> ${d.targetTaskId}`);
+  const depLines = dependencies.map(
+    (d) => `- ${d.sourceTaskId} --[${d.relation}]--> ${d.targetTaskId}`,
+  );
   const truncate = (lines: string[], limit: number) =>
     lines.length > limit
       ? lines.slice(0, limit).join("\n") + `\n\n[已截断，仅显示前 ${limit} 条]`

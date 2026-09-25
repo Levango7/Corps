@@ -10,25 +10,11 @@
  */
 
 import { useTranslations } from "next-intl";
-import {
-  MousePointer2,
-  StickyNote,
-  Type,
-  Square,
-  Circle,
-  ArrowRight,
-  Trash2,
-} from "lucide-react";
+import { MousePointer2, StickyNote, Type, Square, Circle, ArrowRight, Trash2 } from "lucide-react";
 
 /** 画布工具枚举 */
 export type WhiteboardTool =
-  | "select"
-  | "sticky"
-  | "text"
-  | "rectangle"
-  | "ellipse"
-  | "arrow"
-  | "delete";
+  "select" | "sticky" | "text" | "rectangle" | "ellipse" | "arrow" | "delete";
 
 interface ToolDef {
   id: WhiteboardTool;

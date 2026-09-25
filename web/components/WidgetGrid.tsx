@@ -284,12 +284,7 @@ export default function WidgetGrid({
   );
 
   return (
-    <div
-      className="widget-grid"
-      style={gridStyle}
-      role="region"
-      aria-label="可拖拽卡片网格"
-    >
+    <div className="widget-grid" style={gridStyle} role="region" aria-label="可拖拽卡片网格">
       {widgets.map((widget) => {
         const pos = layout[widget.id] ?? widget.defaultPosition;
         const isDragging = draggingId === widget.id;
@@ -327,11 +322,7 @@ export default function WidgetGrid({
             {/* 卡片头部：拖拽手柄 + 标题 */}
             <div className="widget-grid__header">
               {!readOnly && (
-                <span
-                  className="widget-grid__grip"
-                  aria-hidden
-                  title="拖拽移动"
-                >
+                <span className="widget-grid__grip" aria-hidden title="拖拽移动">
                   <GripVertical size={14} />
                 </span>
               )}

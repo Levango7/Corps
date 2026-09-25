@@ -32,12 +32,7 @@ export interface AddWidgetDialogProps {
   onClose: () => void;
 }
 
-export default function AddWidgetDialog({
-  open,
-  addedIds,
-  onAdd,
-  onClose,
-}: AddWidgetDialogProps) {
+export default function AddWidgetDialog({ open, addedIds, onAdd, onClose }: AddWidgetDialogProps) {
   const t = useTranslations("dashboard");
   const dialogRef = useRef<HTMLDivElement>(null);
 

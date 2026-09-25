@@ -216,7 +216,7 @@ function Hero({ t }: { t: TranslateFn }) {
     >
       {/* 背景装饰 SVG —— 抽象几何形状，纯装饰 aria-hidden */}
       {/* 背景层视差（营销页大幅 30px） */}
-      <Parallax offset={30} className="pointer-events-none absolute inset-0 select-none" >
+      <Parallax offset={30} className="pointer-events-none absolute inset-0 select-none">
         {/* 右上角大圆环 */}
         <svg
           className="absolute -top-24 -right-24 w-96 h-96 opacity-[0.04]"
@@ -525,10 +525,16 @@ function Footer({ t }: { t: TranslateFn }) {
         <span>{t("footer.copyright")}</span>
         <div className="flex gap-4">
           {/* 法务文档页（审计 TODO(legal) 已修复；隐私政策与服务条款已实现，见 /legal/privacy 与 /legal/terms） */}
-          <Link href="/legal/terms" className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
+          <Link
+            href="/legal/terms"
+            className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
             {t("footer.terms")}
           </Link>
-          <Link href="/legal/privacy" className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2">
+          <Link
+            href="/legal/privacy"
+            className="hover:text-[var(--fg-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+          >
             {t("footer.privacy")}
           </Link>
         </div>

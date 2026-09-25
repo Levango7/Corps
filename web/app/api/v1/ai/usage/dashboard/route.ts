@@ -71,36 +71,35 @@ export async function GET(req: NextRequest) {
     const monthWhere = { ...wsWhere, createdAt: { gte: monthStart } } as const;
 
     // 并行查询：今日/本月聚合 + Top 能力 + 最近日志 + 限额配置
-    const [todayAgg, monthAgg, topCapabilitiesRaw, recentLogs, limit] =
-      await Promise.all([
-        prisma.aiUsageLog.aggregate({
-          where: todayWhere,
-          _sum: { totalTokens: true, cost: true },
-          _count: true,
-        }),
-        prisma.aiUsageLog.aggregate({
-          where: monthWhere,
-          _sum: { totalTokens: true, cost: true },
-          _count: true,
-        }),
-        prisma.aiUsageLog.groupBy({
-          by: ["capability"],
-          where: monthWhere,
-          _sum: { totalTokens: true, cost: true },
-          _count: true,
-          orderBy: { _count: { capability: "desc" } },
-          take: 5,
-        }),
-        prisma.aiUsageLog.findMany({
-          where: wsWhere,
-          orderBy: { createdAt: "desc" },
-          take: 10,
-        }),
-        // 工作空间级默认限额（userId = null）
-        prisma.aiUsageLimit.findFirst({
-          where: { workspaceId: parsed.workspaceId, userId: null },
-        }),
-      ]);
+    const [todayAgg, monthAgg, topCapabilitiesRaw, recentLogs, limit] = await Promise.all([
+      prisma.aiUsageLog.aggregate({
+        where: todayWhere,
+        _sum: { totalTokens: true, cost: true },
+        _count: true,
+      }),
+      prisma.aiUsageLog.aggregate({
+        where: monthWhere,
+        _sum: { totalTokens: true, cost: true },
+        _count: true,
+      }),
+      prisma.aiUsageLog.groupBy({
+        by: ["capability"],
+        where: monthWhere,
+        _sum: { totalTokens: true, cost: true },
+        _count: true,
+        orderBy: { _count: { capability: "desc" } },
+        take: 5,
+      }),
+      prisma.aiUsageLog.findMany({
+        where: wsWhere,
+        orderBy: { createdAt: "desc" },
+        take: 10,
+      }),
+      // 工作空间级默认限额（userId = null）
+      prisma.aiUsageLimit.findFirst({
+        where: { workspaceId: parsed.workspaceId, userId: null },
+      }),
+    ]);
 
     const result = {
       today: {

@@ -274,9 +274,7 @@ export default function Onboarding({
       : "animate-[onboarding-slide-in-back_0.3s_ease-out]";
 
   return (
-    <div
-      className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4 bg-[var(--overlay)]"
-    >
+    <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center px-4 bg-[var(--overlay)]">
       <div
         ref={modalRef}
         onKeyDown={handleTrapKeyDown}
@@ -367,7 +365,6 @@ export default function Onboarding({
           </button>
         </div>
       </div>
-
     </div>
   );
 }

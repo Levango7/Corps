@@ -38,9 +38,7 @@ export async function buildTaskContext(
       },
     });
     if (task) {
-      parts.push(
-        `当前任务：${task.title}（状态：${task.status}，优先级：${task.priority}）`,
-      );
+      parts.push(`当前任务：${task.title}（状态：${task.status}，优先级：${task.priority}）`);
       if (task.description) parts.push(`描述：${task.description}`);
       if (task.dueDate) parts.push(`截止日期：${task.dueDate.toISOString()}`);
     }
@@ -63,10 +61,7 @@ export async function buildTaskContext(
  * @param result 前一步结果（可选，预留用于条件化建议）
  * @returns 建议文案；无匹配阶段时返回 null
  */
-export function phaseTransitionAdvice(
-  currentPhase: string,
-  result?: string,
-): string | null {
+export function phaseTransitionAdvice(currentPhase: string, result?: string): string | null {
   if (!result) return null;
   const TRANSITIONS: Record<string, string> = {
     created: "任务已创建，建议拆解子任务并分配。",

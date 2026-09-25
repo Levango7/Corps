@@ -4,7 +4,8 @@ import { appendFeedbackShot } from "./feedback-shot";
 import type { FeedbackExample } from "@/lib/ai/feedback";
 
 export function buildDailyReportSystemPrompt(feedbackExamples?: FeedbackExample[]): string {
-  return appendFeedbackShot(`你是工作日报生成助手。根据用户当天的工作数据，生成一份结构化的日报。
+  return appendFeedbackShot(
+    `你是工作日报生成助手。根据用户当天的工作数据，生成一份结构化的日报。
 格式要求：
 1) markdown 格式
 2) 分"今日完成"、"进行中"、"问题与风险"、"明日计划"四个部分
@@ -34,7 +35,9 @@ export function buildDailyReportSystemPrompt(feedbackExamples?: FeedbackExample[
 ## 问题与风险
 - 无
 ## 明日计划
-- 完成导出功能测试`, feedbackExamples);
+- 完成导出功能测试`,
+    feedbackExamples,
+  );
 }
 
 export function buildUserPrompt(context: string, input: { date?: string }): string {
@@ -43,6 +46,7 @@ export function buildUserPrompt(context: string, input: { date?: string }): stri
     return `## 日期无效\n无法解析日期 "${input.date}"，请提供有效的日期格式（如 2026-09-14）。`;
   }
   const dateStr = date.toISOString().split("T")[0];
-  const truncatedContext = context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
+  const truncatedContext =
+    context.length > 12000 ? context.slice(0, 12000) + "\n\n[上下文已截断]" : context;
   return `日期：${dateStr}\n\n今日工作数据：\n${truncatedContext}`;
 }

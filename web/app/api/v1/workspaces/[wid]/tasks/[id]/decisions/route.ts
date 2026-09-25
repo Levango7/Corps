@@ -12,7 +12,11 @@ export async function GET(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   // API-015：补 try-catch，避免 runWithWorkspace 抛错变成未处理异常
   try {
@@ -47,7 +51,11 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const validated = createDecisionSchema.parse(await req.json());
@@ -62,7 +70,7 @@ export async function POST(
       // 决策记录只追加不覆盖：版本号在事务内自增（AC-10 可追溯）
       // 并发保护：先对 Task 行加 FOR UPDATE 行锁，防止两个并发请求同时读到
       // 相同的 _max.version 导致版本号重复（来源：经验库 prisma-interactive-transaction）
-      await tx.$queryRaw`SELECT id FROM "Task" WHERE id = ${id} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "tasks" WHERE id = ${id} FOR UPDATE`;
       const agg = await tx.decision.aggregate({ where: { taskId: id }, _max: { version: true } });
       const version = (agg._max.version ?? 0) + 1;
 
@@ -133,7 +141,12 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

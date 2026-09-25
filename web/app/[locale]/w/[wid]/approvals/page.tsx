@@ -8,11 +8,7 @@ import { ApprovalListPageClient } from "@/components/approval/ApprovalListPageCl
  *
  * 参考 documents/page.tsx 模式。
  */
-export default async function ApprovalsListPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default async function ApprovalsListPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   return (
     <main className="flex-1 min-w-0">

@@ -47,10 +47,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // 验证认证（复用工作区无关的 authenticate，仅校验 token 有效性）
   const payload = await authenticate(req);
   if (!payload) {
-    return NextResponse.json(
-      { code: 401, message: "Unauthorized", data: null },
-      { status: 401 },
-    );
+    return NextResponse.json({ code: 401, message: "Unauthorized", data: null }, { status: 401 });
   }
 
   // 已认证但 Next.js Route Handler 无法处理 WebSocket upgrade

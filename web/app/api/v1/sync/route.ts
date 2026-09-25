@@ -15,10 +15,7 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import {
-  getUserId,
-  unauthorizedResponse,
-} from "@/lib/ai/shared";
+import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
@@ -133,8 +130,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json(
       {
         code: 400,
-        message:
-          parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
+        message: parsed.error.issues[0]?.message ?? apiMsg(req, "invalidParams"),
         data: null,
       },
       { status: 400 },
@@ -388,11 +384,7 @@ export async function POST(req: NextRequest) {
 async function processOperation(
   op: z.infer<typeof operationSchema>,
   userId: string,
-): Promise<
-  | { kind: "accepted" }
-  | { kind: "conflict"; remote: unknown }
-  | { kind: "ignored" }
-> {
+): Promise<{ kind: "accepted" } | { kind: "conflict"; remote: unknown } | { kind: "ignored" }> {
   const wid = op.workspaceId;
   const clientTs = new Date(op.createdAt);
 
@@ -417,11 +409,7 @@ async function processTaskOp(
   userId: string,
   wid: string,
   clientTs: Date,
-): Promise<
-  | { kind: "accepted" }
-  | { kind: "conflict"; remote: unknown }
-  | { kind: "ignored" }
-> {
+): Promise<{ kind: "accepted" } | { kind: "conflict"; remote: unknown } | { kind: "ignored" }> {
   if (op.op === "delete") {
     await runWithWorkspace(
       wid,
@@ -450,7 +438,10 @@ async function processTaskOp(
     if (existing && op.op === "update") {
       // LWW：远程较新则冲突
       if (existing.updatedAt > clientTs) {
-        return { kind: "conflict", remote: { ...existing, updatedAt: existing.updatedAt.toISOString() } };
+        return {
+          kind: "conflict",
+          remote: { ...existing, updatedAt: existing.updatedAt.toISOString() },
+        };
       }
     }
 
@@ -480,14 +471,19 @@ async function processTaskOp(
     } else if (op.op === "update" && existing) {
       const data: Record<string, unknown> = {};
       if (payload.title != null) data.title = String(payload.title);
-      if (payload.description !== undefined) data.description = payload.description != null ? String(payload.description) : null;
+      if (payload.description !== undefined)
+        data.description = payload.description != null ? String(payload.description) : null;
       if (payload.status != null) data.status = String(payload.status);
       if (payload.priority != null) data.priority = String(payload.priority);
-      if (payload.assigneeId !== undefined) data.assigneeId = payload.assigneeId != null ? String(payload.assigneeId) : null;
-      if (payload.dueDate !== undefined) data.dueDate = payload.dueDate != null ? new Date(String(payload.dueDate)) : null;
+      if (payload.assigneeId !== undefined)
+        data.assigneeId = payload.assigneeId != null ? String(payload.assigneeId) : null;
+      if (payload.dueDate !== undefined)
+        data.dueDate = payload.dueDate != null ? new Date(String(payload.dueDate)) : null;
       if (typeof payload.sortOrder === "number") data.sortOrder = payload.sortOrder;
-      if (payload.parentId !== undefined) data.parentId = payload.parentId != null ? String(payload.parentId) : null;
-      if (payload.milestoneId !== undefined) data.milestoneId = payload.milestoneId != null ? String(payload.milestoneId) : null;
+      if (payload.parentId !== undefined)
+        data.parentId = payload.parentId != null ? String(payload.parentId) : null;
+      if (payload.milestoneId !== undefined)
+        data.milestoneId = payload.milestoneId != null ? String(payload.milestoneId) : null;
 
       if (Object.keys(data).length > 0) {
         await runWithWorkspace(
@@ -513,11 +509,7 @@ async function processDecisionOp(
   userId: string,
   wid: string,
   clientTs: Date,
-): Promise<
-  | { kind: "accepted" }
-  | { kind: "conflict"; remote: unknown }
-  | { kind: "ignored" }
-> {
+): Promise<{ kind: "accepted" } | { kind: "conflict"; remote: unknown } | { kind: "ignored" }> {
   if (op.op === "delete") {
     await runWithWorkspace(
       wid,
@@ -540,7 +532,10 @@ async function processDecisionOp(
 
     if (existing && op.op === "update") {
       if (existing.updatedAt > clientTs) {
-        return { kind: "conflict", remote: { ...existing, updatedAt: existing.updatedAt.toISOString() } };
+        return {
+          kind: "conflict",
+          remote: { ...existing, updatedAt: existing.updatedAt.toISOString() },
+        };
       }
     }
 
@@ -587,11 +582,7 @@ async function processDocumentOp(
   userId: string,
   wid: string,
   clientTs: Date,
-): Promise<
-  | { kind: "accepted" }
-  | { kind: "conflict"; remote: unknown }
-  | { kind: "ignored" }
-> {
+): Promise<{ kind: "accepted" } | { kind: "conflict"; remote: unknown } | { kind: "ignored" }> {
   if (op.op === "delete") {
     await runWithWorkspace(
       wid,
@@ -614,7 +605,10 @@ async function processDocumentOp(
 
     if (existing && op.op === "update") {
       if (existing.updatedAt > clientTs) {
-        return { kind: "conflict", remote: { ...existing, updatedAt: existing.updatedAt.toISOString() } };
+        return {
+          kind: "conflict",
+          remote: { ...existing, updatedAt: existing.updatedAt.toISOString() },
+        };
       }
     }
 

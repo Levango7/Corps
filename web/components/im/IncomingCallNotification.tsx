@@ -77,7 +77,7 @@ export function IncomingCallNotification({
               className="w-full h-full object-cover"
             />
           ) : (
-            (callData.callerName ?? "?")[0]?.toUpperCase() ?? "?"
+            ((callData.callerName ?? "?")[0]?.toUpperCase() ?? "?")
           )}
         </div>
 
@@ -117,11 +117,7 @@ export function IncomingCallNotification({
             aria-label={t("acceptCall")}
             className="inline-flex items-center gap-1.5 h-8 px-3 rounded-[var(--radius-md)] bg-[var(--success)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--success-hover)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--success-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface)]"
           >
-            {isVideo ? (
-              <Video size={14} />
-            ) : (
-              <Phone size={14} />
-            )}
+            {isVideo ? <Video size={14} /> : <Phone size={14} />}
             {t("acceptCall")}
           </button>
         </div>

@@ -174,9 +174,7 @@ export function ImReplySuggestions({
         </header>
         <div className="flex items-center justify-center gap-[var(--space-2)] py-[var(--space-4)]">
           <Loader2 size={14} className="shrink-0 animate-spin text-[var(--muted)]" />
-          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("loading")}
-          </span>
+          <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("loading")}</span>
         </div>
       </aside>
     );
@@ -196,9 +194,7 @@ export function ImReplySuggestions({
           </h2>
         </header>
         <div className="flex flex-col items-center gap-[var(--space-3)] py-[var(--space-3)]">
-          <p className="text-[length:var(--text-xs)] text-[var(--danger)]">
-            {t("error")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--danger)]">{t("error")}</p>
           <button
             type="button"
             onClick={() => void generate()}
@@ -287,9 +283,7 @@ export function ImReplySuggestions({
                     ) : (
                       <Copy size={14} className="shrink-0" />
                     )}
-                    <span className="sr-only">
-                      {isCopied ? t("copied") : t("copy")}
-                    </span>
+                    <span className="sr-only">{isCopied ? t("copied") : t("copy")}</span>
                   </button>
                 </div>
                 {/* 回复文本 */}
@@ -303,11 +297,7 @@ export function ImReplySuggestions({
       </ul>
 
       {/* AI 结果反馈按钮 */}
-      <FeedbackButtons
-        capability="im-reply"
-        workspaceId={wid}
-        originalOutput={suggestions}
-      />
+      <FeedbackButtons capability="im-reply" workspaceId={wid} originalOutput={suggestions} />
     </aside>
   );
 }

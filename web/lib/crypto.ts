@@ -1,7 +1,10 @@
 import { createCipheriv, createDecipheriv, randomBytes } from "crypto";
 // F5：分享密码哈希复用 better-auth/crypto 的 scrypt 实现，与登录认证同源同算法。
 // 此处包装为通用 hash/verify 接口，供分享路由使用（避免各路由直接依赖 better-auth）。
-import { hashPassword as baHashPassword, verifyPassword as baVerifyPassword } from "better-auth/crypto";
+import {
+  hashPassword as baHashPassword,
+  verifyPassword as baVerifyPassword,
+} from "better-auth/crypto";
 
 /**
  * AES-256-GCM 对称加密工具：用于日历 OAuth token 加密存储。

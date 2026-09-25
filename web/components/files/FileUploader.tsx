@@ -15,13 +15,7 @@
  * 动效：transition 用 var(--motion-fast/base)，motion-reduce 时禁用。
  */
 
-import {
-  useState,
-  useRef,
-  useCallback,
-  type DragEvent,
-  type ChangeEvent,
-} from "react";
+import { useState, useRef, useCallback, type DragEvent, type ChangeEvent } from "react";
 import { UploadCloud, X, Check, AlertCircle, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -102,9 +96,7 @@ export function FileUploader({
         xhr.upload.onprogress = (e) => {
           if (e.lengthComputable) {
             const progress = (e.loaded / e.total) * 100;
-            setTasks((prev) =>
-              prev.map((t) => (t.id === taskId ? { ...t, progress } : t)),
-            );
+            setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, progress } : t)));
           }
         };
 
@@ -112,9 +104,7 @@ export function FileUploader({
         xhr.onload = () => {
           if (xhr.status >= 200 && xhr.status < 300) {
             setTasks((prev) =>
-              prev.map((t) =>
-                t.id === taskId ? { ...t, status: "done", progress: 100 } : t,
-              ),
+              prev.map((t) => (t.id === taskId ? { ...t, status: "done", progress: 100 } : t)),
             );
           } else {
             let error = t("uploadFailed");
@@ -125,9 +115,7 @@ export function FileUploader({
               // 响应非 JSON，使用默认错误消息
             }
             setTasks((prev) =>
-              prev.map((t) =>
-                t.id === taskId ? { ...t, status: "error", error } : t,
-              ),
+              prev.map((t) => (t.id === taskId ? { ...t, status: "error", error } : t)),
             );
           }
           resolve();
@@ -167,9 +155,7 @@ export function FileUploader({
       setTasks((prev) => [...prev, ...newTasks]);
 
       // 并行上传，等待全部完成
-      await Promise.all(
-        files.map((file, i) => uploadOne(file, newTasks[i].id)),
-      );
+      await Promise.all(files.map((file, i) => uploadOne(file, newTasks[i].id)));
 
       // 全部完成，通知父组件刷新列表
       onUploadComplete?.();
@@ -264,9 +250,7 @@ export function FileUploader({
           <p className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
             {isDragging ? t("releaseToUpload") : t("clickOrDrop")}
           </p>
-          <p className="text-[length:var(--text-xs)] text-[var(--meta)]">
-            {t("hint")}
-          </p>
+          <p className="text-[length:var(--text-xs)] text-[var(--meta)]">{t("hint")}</p>
         </div>
       )}
 
@@ -300,7 +284,7 @@ export function FileUploader({
                   </span>
                   <span className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)] tabular-nums">
                     {task.status === "error"
-                      ? task.error ?? t("error")
+                      ? (task.error ?? t("error"))
                       : task.status === "done"
                         ? formatFileSize(task.fileSize)
                         : `${Math.round(task.progress)}%`}

@@ -79,10 +79,7 @@ function safeParseJson(text: string): unknown | null {
  *
  * 校验：assignments 为数组，每项含 agentName/subtask/reason 字符串。
  */
-function normalizeAssignments(
-  raw: unknown,
-  validAgentNames: Set<string>,
-): Assignment[] {
+function normalizeAssignments(raw: unknown, validAgentNames: Set<string>): Assignment[] {
   if (raw == null || typeof raw !== "object") return [];
   const obj = raw as Record<string, unknown>;
   if (!Array.isArray(obj.assignments)) return [];
@@ -120,8 +117,7 @@ function normalizeAgentResponse(raw: unknown): {
   if (raw == null || typeof raw !== "object") return null;
   const obj = raw as Record<string, unknown>;
   if (typeof obj.response !== "string") return null;
-  const handoff =
-    typeof obj.handoff === "string" ? obj.handoff : null;
+  const handoff = typeof obj.handoff === "string" ? obj.handoff : null;
   return {
     response: obj.response.slice(0, 8000),
     handoff: handoff ? handoff.slice(0, 4000) : null,
@@ -191,9 +187,7 @@ export async function POST(req: NextRequest) {
               where: {
                 workspaceId: body.wid,
                 enabled: true,
-                ...(body.agentIds && body.agentIds.length > 0
-                  ? { id: { in: body.agentIds } }
-                  : {}),
+                ...(body.agentIds && body.agentIds.length > 0 ? { id: { in: body.agentIds } } : {}),
               },
               select: {
                 id: true,
@@ -227,10 +221,7 @@ export async function POST(req: NextRequest) {
         }));
 
         const validAgentNames = new Set(agents.map((a) => a.name));
-        const coordinationSystemPrompt = buildAgentCoordinationPrompt(
-          agentBriefs,
-          body.task,
-        );
+        const coordinationSystemPrompt = buildAgentCoordinationPrompt(agentBriefs, body.task);
 
         let assignments: Assignment[] = [];
         try {
@@ -295,10 +286,7 @@ export async function POST(req: NextRequest) {
               handoff: null,
             } satisfies AgentResponse;
           } catch (e) {
-            console.error(
-              `[ai/agents/coordinate] Agent ${agent.name} 响应失败:`,
-              e,
-            );
+            console.error(`[ai/agents/coordinate] Agent ${agent.name} 响应失败:`, e);
             return {
               agentId: agent.id,
               agentName: agent.name,
@@ -321,9 +309,7 @@ export async function POST(req: NextRequest) {
               for (let i = 0; i < assignments.length; i++) {
                 const assignment = assignments[i];
                 const response = responses[i];
-                const agent = agents.find(
-                  (a) => a.name === assignment.agentName,
-                );
+                const agent = agents.find((a) => a.name === assignment.agentName);
                 if (!agent) continue;
 
                 // request 消息：协调器（用第一个 Agent 或特殊标记）→ 目标 Agent

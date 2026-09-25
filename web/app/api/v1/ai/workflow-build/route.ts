@@ -60,7 +60,6 @@ interface WorkflowDefinition {
   actions: WorkflowAction[];
 }
 
-
 /** 校验并规范化 LLM 返回的工作流定义 */
 function normalizeWorkflow(raw: unknown): WorkflowDefinition | null {
   if (raw == null || typeof raw !== "object") return null;
@@ -71,16 +70,12 @@ function normalizeWorkflow(raw: unknown): WorkflowDefinition | null {
   const name = obj.name.slice(0, 200);
 
   // description：可选，截断至 500
-  const description =
-    typeof obj.description === "string" ? obj.description.slice(0, 500) : "";
+  const description = typeof obj.description === "string" ? obj.description.slice(0, 500) : "";
 
   // trigger：必填对象，event 必须在枚举内
   if (obj.trigger == null || typeof obj.trigger !== "object") return null;
   const triggerRaw = obj.trigger as Record<string, unknown>;
-  if (
-    typeof triggerRaw.event !== "string" ||
-    !VALID_EVENTS.has(triggerRaw.event)
-  ) {
+  if (typeof triggerRaw.event !== "string" || !VALID_EVENTS.has(triggerRaw.event)) {
     return null;
   }
   const conditions =

@@ -65,17 +65,16 @@ export function WikiHome({ wid }: { wid: string }) {
         >
           <X size={16} />
         </button>
-        <WikiSidebar
-          wid={wid}
-          onSelect={handleSelect}
-          refreshKey={refreshKey}
-        />
+        <WikiSidebar wid={wid} onSelect={handleSelect} refreshKey={refreshKey} />
       </div>
 
       {/* 右侧：欢迎/选择提示 */}
       <div className="flex-1 flex items-center justify-center min-w-0">
         <div className="text-center">
-          <BookOpen size={48} className="mx-auto mb-[var(--space-4)] text-[var(--muted)] opacity-50" />
+          <BookOpen
+            size={48}
+            className="mx-auto mb-[var(--space-4)] text-[var(--muted)] opacity-50"
+          />
           <h1 className="text-[length:var(--text-xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-2">
             {t("title")}
           </h1>

@@ -39,40 +39,52 @@ import { SafeComponent } from "@/components/SafeComponent";
 // P0-2: code splitting — 重型 AI 面板组件改为 dynamic import 懒加载
 const SemanticSearchPanel = dynamic(
   () => import("@/components/ai/SemanticSearchPanel").then((m) => m.SemanticSearchPanel),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
 );
 const MailAssistantPanel = dynamic(
   () => import("@/components/ai/MailAssistantPanel").then((m) => m.MailAssistantPanel),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
 );
-const TodoExtractDialog = dynamic(
-  () => import("@/components/ai/TodoExtractDialog"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
-const MeetingSummaryPanel = dynamic(
-  () => import("@/components/ai/MeetingSummaryPanel"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
-const DocQaPanel = dynamic(
-  () => import("@/components/ai/DocQaPanel").then((m) => m.DocQaPanel),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
-const DecisionAssistantPanel = dynamic(
-  () => import("@/components/ai/DecisionAssistantPanel"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
+const TodoExtractDialog = dynamic(() => import("@/components/ai/TodoExtractDialog"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const MeetingSummaryPanel = dynamic(() => import("@/components/ai/MeetingSummaryPanel"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const DocQaPanel = dynamic(() => import("@/components/ai/DocQaPanel").then((m) => m.DocQaPanel), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const DecisionAssistantPanel = dynamic(() => import("@/components/ai/DecisionAssistantPanel"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
 const WorkflowOrchestratorPanel = dynamic(
   () => import("@/components/ai/WorkflowOrchestratorPanel"),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
 );
 const AiPushSettings = dynamic(
   () => import("@/components/ai/AiPushSettings").then((m) => m.AiPushSettings),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
 );
-const AiPushFeed = dynamic(
-  () => import("@/components/ai/AiPushFeed").then((m) => m.AiPushFeed),
-  { ssr: false, loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" /> },
-);
+const AiPushFeed = dynamic(() => import("@/components/ai/AiPushFeed").then((m) => m.AiPushFeed), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
 
 // ─── Tab 定义 ──────────────────────────────────────────────────────────────────
 
@@ -176,11 +188,7 @@ const TAB_IDLE =
 
 // ─── 页面组件 ──────────────────────────────────────────────────────────────────
 
-export default function AiToolsPage({
-  params,
-}: {
-  params: Promise<{ wid: string }>;
-}) {
+export default function AiToolsPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const t = useTranslations("ai.aiTools");
   const [activeTab, setActiveTab] = useState<TabId>("semanticSearch");
@@ -206,10 +214,7 @@ export default function AiToolsPage({
   );
 
   /** 获取 Tab 标签（带回退） */
-  const tabLabel = useCallback(
-    (tab: TabConfig): string => tf(tab.labelKey, tab.fallbackZh),
-    [tf],
-  );
+  const tabLabel = useCallback((tab: TabConfig): string => tf(tab.labelKey, tab.fallbackZh), [tf]);
 
   return (
     <main className="flex-1 min-w-0">
@@ -333,7 +338,8 @@ function TodoExtractTabContent({
           {label}
         </h2>
         <p className="max-w-md text-[length:var(--text-sm)] text-[var(--muted)]">
-          从消息、文档或邮件内容中提取隐含的待办事项，AI 自动识别标题、负责人、截止日期与优先级，支持批量入库。
+          从消息、文档或邮件内容中提取隐含的待办事项，AI
+          自动识别标题、负责人、截止日期与优先级，支持批量入库。
         </p>
       </div>
       <button
@@ -394,9 +400,7 @@ function AiPushTabContent({ wid }: { wid: string }) {
 function AiFallback({ name }: { name: string }) {
   return (
     <div className="flex flex-col items-center justify-center gap-3 p-8 rounded-[var(--radius-md)] bg-[var(--surface-2)]">
-      <p className="text-sm text-[var(--text-secondary)]">
-        {name} 服务暂时不可用，请重试
-      </p>
+      <p className="text-sm text-[var(--text-secondary)]">{name} 服务暂时不可用，请重试</p>
       <button
         onClick={() => window.location.reload()}
         className="text-xs text-[var(--accent-fg)] hover:underline"

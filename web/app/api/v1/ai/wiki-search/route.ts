@@ -40,7 +40,6 @@ interface WikiSearchResult {
   highlight: string;
 }
 
-
 export async function POST(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);

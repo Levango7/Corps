@@ -60,7 +60,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     });
     if (!parsed.success) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationFailed"), errors: parsed.error.errors, data: null },
+        {
+          code: 400,
+          message: apiMsg(req, "validationFailed"),
+          errors: parsed.error.errors,
+          data: null,
+        },
         { status: 400 },
       );
     }
@@ -68,7 +73,9 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
     // 默认最近30天
     const now = new Date();
-    const start = startDate ? new Date(startDate) : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    const start = startDate
+      ? new Date(startDate)
+      : new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const end = endDate ? new Date(endDate) : now;
 
     // 构建 where 条件
@@ -79,50 +86,56 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     };
 
     // 并行执行所有统计查询
-    const [total, statusGroups, priorityGroups, templateGroups, completedInstances, pendingInstances] =
-      await runWithWorkspace(wid, (tx) =>
-        Promise.all([
-          // 总数
-          tx.approvalInstance.count({ where }),
+    const [
+      total,
+      statusGroups,
+      priorityGroups,
+      templateGroups,
+      completedInstances,
+      pendingInstances,
+    ] = await runWithWorkspace(wid, (tx) =>
+      Promise.all([
+        // 总数
+        tx.approvalInstance.count({ where }),
 
-          // 按状态分组
-          tx.approvalInstance.groupBy({
-            by: ["status"],
-            where,
-            _count: { _all: true },
-          }),
+        // 按状态分组
+        tx.approvalInstance.groupBy({
+          by: ["status"],
+          where,
+          _count: { _all: true },
+        }),
 
-          // 按优先级分组
-          tx.approvalInstance.groupBy({
-            by: ["priority"],
-            where,
-            _count: { _all: true },
-          }),
+        // 按优先级分组
+        tx.approvalInstance.groupBy({
+          by: ["priority"],
+          where,
+          _count: { _all: true },
+        }),
 
-          // 按模板分组（仅 templateId 非 null 的）
-          tx.approvalInstance.groupBy({
-            by: ["templateId"],
-            where: { ...where, templateId: { not: null } },
-            _count: { _all: true },
-          }),
+        // 按模板分组（仅 templateId 非 null 的）
+        tx.approvalInstance.groupBy({
+          by: ["templateId"],
+          where: { ...where, templateId: { not: null } },
+          _count: { _all: true },
+        }),
 
-          // 已完成的审批实例（用于计算平均处理时长）
-          tx.approvalInstance.findMany({
-            where: {
-              ...where,
-              status: { in: ["approved", "rejected", "withdrawn"] },
-              completedAt: { not: null },
-            },
-            select: { createdAt: true, completedAt: true },
-          }),
+        // 已完成的审批实例（用于计算平均处理时长）
+        tx.approvalInstance.findMany({
+          where: {
+            ...where,
+            status: { in: ["approved", "rejected", "withdrawn"] },
+            completedAt: { not: null },
+          },
+          select: { createdAt: true, completedAt: true },
+        }),
 
-          // pending 实例（用于计算 pendingMine）
-          tx.approvalInstance.findMany({
-            where: { ...where, status: "pending" },
-            select: { nodes: true, currentNode: true },
-          }),
-        ]),
-      );
+        // pending 实例（用于计算 pendingMine）
+        tx.approvalInstance.findMany({
+          where: { ...where, status: "pending" },
+          select: { nodes: true, currentNode: true },
+        }),
+      ]),
+    );
 
     // 组装 byStatus
     const byStatus: Record<string, number> = { pending: 0, approved: 0, rejected: 0, withdrawn: 0 };

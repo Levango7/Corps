@@ -13,7 +13,11 @@ import { cachedQuery } from "@/lib/cache";
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     // 缓存 labels 查询：workspace 级别共享数据，60s 重验证，tag=labels:${wid}
@@ -37,7 +41,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return NextResponse.json({ code: 200, data: labels });
   } catch (error) {
     console.error("[GET labels] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
 
@@ -49,7 +56,11 @@ const createLabelSchema = z.object({
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerAdminCreateLabels"), data: null },
@@ -89,7 +100,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
     console.error("[POST label] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
 
@@ -104,7 +118,11 @@ const deleteLabelSchema = z.object({
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "noPermission"), data: null },
@@ -151,7 +169,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
       );
     }
     console.error("[DELETE label] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }
 
@@ -168,7 +189,11 @@ const patchLabelSchema = z.object({
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "noPermission"), data: null },
@@ -229,6 +254,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       );
     }
     console.error("[PATCH label] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

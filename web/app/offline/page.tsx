@@ -3,10 +3,15 @@ import { useTranslations } from "next-intl";
 export default function OfflinePage() {
   const t = useTranslations("offline");
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6" style={{ minHeight: "100dvh" }}>
+    <main
+      className="flex min-h-dvh flex-col items-center justify-center gap-4 p-6"
+      style={{ minHeight: "100dvh" }}
+    >
       <div className="flex flex-col items-center gap-3 text-center">
         <div className="rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-6 shadow-[var(--elev-sm)]">
-          <p className="text-[length:var(--text-lg)] font-[weight:var(--weight-medium)] text-[var(--fg)]">{t("title")}</p>
+          <p className="text-[length:var(--text-lg)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
+            {t("title")}
+          </p>
           <p className="mt-2 text-[length:var(--text-sm)] text-[var(--muted)]">{t("message")}</p>
           <button
             type="button"

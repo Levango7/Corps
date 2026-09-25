@@ -20,7 +20,6 @@
 import {
   useCallback,
   useEffect,
-
   useRef,
   useState,
   type DragEvent,
@@ -239,13 +238,10 @@ export function KnowledgeBase({ wid, className }: KnowledgeBaseProps) {
     setBusy(true);
     setError("");
     try {
-      const newFolder = await api<Folder>(
-        `/api/v1/workspaces/${wid}/spaces/${spaceId}/folders`,
-        {
-          method: "POST",
-          body: JSON.stringify({ parentId, name: name.trim() }),
-        },
-      );
+      const newFolder = await api<Folder>(`/api/v1/workspaces/${wid}/spaces/${spaceId}/folders`, {
+        method: "POST",
+        body: JSON.stringify({ parentId, name: name.trim() }),
+      });
       // 插入到对应空间的文件夹树
       setSpaces((prev) =>
         prev.map((s) => {
@@ -297,7 +293,9 @@ export function KnowledgeBase({ wid, className }: KnowledgeBaseProps) {
           method: "PATCH",
           body: JSON.stringify({ name: newName.trim() }),
         });
-        setSpaces((prev) => prev.map((s) => ({ ...s, folders: updateFolderName(s.folders, id, newName.trim()) })));
+        setSpaces((prev) =>
+          prev.map((s) => ({ ...s, folders: updateFolderName(s.folders, id, newName.trim()) })),
+        );
       }
       setRenaming(null);
     } catch (e) {
@@ -446,7 +444,9 @@ export function KnowledgeBase({ wid, className }: KnowledgeBaseProps) {
 
   if (loading) {
     return (
-      <div className={`flex items-center justify-center py-[var(--space-12)] text-[var(--muted)] ${className ?? ""}`}>
+      <div
+        className={`flex items-center justify-center py-[var(--space-12)] text-[var(--muted)] ${className ?? ""}`}
+      >
         <Loader2 size={16} className="animate-spin mr-2" />
         <span className="text-[length:var(--text-sm)]">{t("loading")}</span>
       </div>
@@ -829,13 +829,20 @@ function FolderNode({
         }`}
         draggable
         onDragStart={(e) =>
-          onDragStart(e, { kind: "folder", id: folder.id, fromSpaceId: spaceId, fromFolderId: folder.parentId })
+          onDragStart(e, {
+            kind: "folder",
+            id: folder.id,
+            fromSpaceId: spaceId,
+            fromFolderId: folder.parentId,
+          })
         }
         onDragOver={(e) => onDragOver(e, folder.id)}
         onDragLeave={onDragLeave}
         onDrop={(e) => onDropOnFolder(e, spaceId, folder.id)}
         onClick={() => onToggle(folder.id)}
-        onContextMenu={(e) => onContextMenu(e, "folder", folder.id, folder.name, spaceId, folder.parentId)}
+        onContextMenu={(e) =>
+          onContextMenu(e, "folder", folder.id, folder.name, spaceId, folder.parentId)
+        }
       >
         <button
           type="button"
@@ -923,7 +930,12 @@ function DocumentNode({ doc, spaceId, folderId, onNavigate, onDragStart }: Docum
         className="group flex items-center gap-1 px-[var(--space-2)] py-[var(--space-1)] rounded-[var(--radius-sm)] cursor-pointer hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
         draggable
         onDragStart={(e) =>
-          onDragStart(e, { kind: "document", id: doc.id, fromSpaceId: spaceId, fromFolderId: folderId })
+          onDragStart(e, {
+            kind: "document",
+            id: doc.id,
+            fromSpaceId: spaceId,
+            fromFolderId: folderId,
+          })
         }
         onClick={() => onNavigate(doc.id)}
       >
@@ -1010,7 +1022,10 @@ function CreateInput({
   }
 
   return (
-    <form onSubmit={handleSubmit} className="mt-[var(--space-2)] flex items-center gap-1 px-[var(--space-2)]">
+    <form
+      onSubmit={handleSubmit}
+      className="mt-[var(--space-2)] flex items-center gap-1 px-[var(--space-2)]"
+    >
       <Plus size={14} className="shrink-0 text-[var(--muted)]" />
       <input
         ref={inputRef}

@@ -38,15 +38,17 @@ function aggResult(sumTokens: number | null, count: number) {
 }
 
 /** 构造限额配置记录 */
-function limitRecord(overrides: Partial<{
-  id: string;
-  workspaceId: string;
-  userId: string | null;
-  dailyTokenLimit: number | null;
-  monthlyTokenLimit: number | null;
-  dailyCallLimit: number | null;
-  monthlyCallLimit: number | null;
-}> = {}) {
+function limitRecord(
+  overrides: Partial<{
+    id: string;
+    workspaceId: string;
+    userId: string | null;
+    dailyTokenLimit: number | null;
+    monthlyTokenLimit: number | null;
+    dailyCallLimit: number | null;
+    monthlyCallLimit: number | null;
+  }> = {},
+) {
   return {
     id: "limit-1",
     workspaceId: WORKSPACE_ID,

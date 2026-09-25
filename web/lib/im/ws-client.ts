@@ -169,7 +169,10 @@ export function useIMWebSocket(workspaceId: string): {
 
     // 已有连接且处于连接中/已连接状态，不重复连接
     const existing = wsRef.current;
-    if (existing && (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)) {
+    if (
+      existing &&
+      (existing.readyState === WebSocket.OPEN || existing.readyState === WebSocket.CONNECTING)
+    ) {
       return;
     }
 
@@ -346,19 +349,16 @@ export function useIMWebSocket(workspaceId: string): {
    * 支持多次注册（内部用 Set 存储）。返回取消注册函数，
    * 在组件卸载或依赖变更时调用以避免内存泄漏。
    */
-  const onMessage = useCallback(
-    (handler: (msg: ServerMessage) => void): (() => void) => {
-      handlersRef.current.add(handler);
-      // 返回取消注册函数（幂等）
-      let removed = false;
-      return () => {
-        if (removed) return;
-        removed = true;
-        handlersRef.current.delete(handler);
-      };
-    },
-    [],
-  );
+  const onMessage = useCallback((handler: (msg: ServerMessage) => void): (() => void) => {
+    handlersRef.current.add(handler);
+    // 返回取消注册函数（幂等）
+    let removed = false;
+    return () => {
+      if (removed) return;
+      removed = true;
+      handlersRef.current.delete(handler);
+    };
+  }, []);
 
   // 自动连接/断开：组件挂载时连接，卸载时断开
   useEffect(() => {

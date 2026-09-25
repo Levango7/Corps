@@ -233,9 +233,7 @@ export default function MyTasksPage({ params }: { params: Promise<{ wid: string 
                 color={group.color}
                 count={groupTasks.length}
                 tasks={groupTasks}
-                renderTask={(task) => (
-                  <TaskCard task={task} href={`/w/${wid}/task/${task.id}`} />
-                )}
+                renderTask={(task) => <TaskCard task={task} href={`/w/${wid}/task/${task.id}`} />}
               />
             );
           })}
@@ -283,7 +281,10 @@ function StatusGroup<T extends { id: string }>({
         <VirtualList
           items={tasks}
           renderItem={(task) => (
-            <AnimatedItem key={task.id} className="border-b border-[var(--border-soft)] last:border-b-0">
+            <AnimatedItem
+              key={task.id}
+              className="border-b border-[var(--border-soft)] last:border-b-0"
+            >
               {renderTask(task)}
             </AnimatedItem>
           )}
@@ -344,11 +345,7 @@ function TaskCard({ task, href }: { task: Task; href: string }) {
 function EmptyState() {
   const tEmpty = useTranslations("empty");
   return (
-    <EmptyStateBase
-      type="inbox"
-      title={tEmpty("noTasks")}
-      description={tEmpty("noTasksForYou")}
-    />
+    <EmptyStateBase type="inbox" title={tEmpty("noTasks")} description={tEmpty("noTasksForYou")} />
   );
 }
 
@@ -391,7 +388,10 @@ function MyTasksSkeleton() {
             {/* 卡片行骨架 × 3 */}
             <div className="divide-y divide-[var(--border-soft)]">
               {Array.from({ length: 3 }).map((_, j) => (
-                <div key={j} className="flex items-center gap-[var(--space-3)] px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-3)]">
+                <div
+                  key={j}
+                  className="flex items-center gap-[var(--space-3)] px-[var(--space-4)] sm:px-[var(--space-5)] py-[var(--space-3)]"
+                >
                   <Skeleton
                     className="flex-1 h-4"
                     // 宽度在 65%~94% 间错落，避免机械感

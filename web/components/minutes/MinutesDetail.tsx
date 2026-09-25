@@ -205,7 +205,9 @@ export function MinutesDetail({ wid, mid, data }: MinutesDetailProps) {
         <h2 className="flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--meta)] mb-2 uppercase tracking-wide">
           <Users size={14} />
           {t("attendees")}
-          <span className="text-[var(--muted)] normal-case tracking-normal">({attendees.length})</span>
+          <span className="text-[var(--muted)] normal-case tracking-normal">
+            ({attendees.length})
+          </span>
         </h2>
         {attendees.length === 0 ? (
           <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noAttendees")}</p>
@@ -218,7 +220,9 @@ export function MinutesDetail({ wid, mid, data }: MinutesDetailProps) {
               >
                 <span className="font-[weight:var(--weight-medium)]">{a.name}</span>
                 {a.role && (
-                  <span className="text-[length:var(--text-xs)] text-[var(--meta)]">· {a.role}</span>
+                  <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                    · {a.role}
+                  </span>
                 )}
               </li>
             ))}
@@ -253,9 +257,7 @@ export function MinutesDetail({ wid, mid, data }: MinutesDetailProps) {
                 </span>
                 <span
                   className={`flex-1 min-w-0 text-[length:var(--text-sm)] ${
-                    a.done
-                      ? "text-[var(--muted)] line-through"
-                      : "text-[var(--fg)]"
+                    a.done ? "text-[var(--muted)] line-through" : "text-[var(--fg)]"
                   }`}
                 >
                   {a.title}

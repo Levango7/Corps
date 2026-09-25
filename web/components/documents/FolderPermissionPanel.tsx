@@ -19,14 +19,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import {
-  Loader2,
-  Trash2,
-  Plus,
-  Shield,
-  X,
-  ChevronDown,
-} from "lucide-react";
+import { Loader2, Trash2, Plus, Shield, X, ChevronDown } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
 /** 权限级别 */
@@ -78,7 +71,11 @@ const PERMISSION_LEVELS: PermissionLevel[] = ["view", "comment", "edit", "manage
 const GRANTEE_TYPES: GranteeType[] = ["user", "role"];
 
 /** 根据 targetType 构建权限 API 基础路径 */
-function buildBasePath(workspaceId: string, targetType: "folder" | "space", targetId: string): string {
+function buildBasePath(
+  workspaceId: string,
+  targetType: "folder" | "space",
+  targetId: string,
+): string {
   if (targetType === "folder") {
     return `/api/v1/workspaces/${workspaceId}/folders/${targetId}/permissions`;
   }
@@ -132,11 +129,7 @@ export function FolderPermissionPanel({
       const list = Array.isArray(data) ? data : (data.items ?? []);
       setPermissions(list);
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("loadFailed"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("loadFailed"));
     } finally {
       setLoading(false);
     }
@@ -152,11 +145,7 @@ export function FolderPermissionPanel({
       await api(`${basePath}/${permission.id}`, { method: "DELETE" });
       setPermissions((prev) => prev.filter((p) => p.id !== permission.id));
     } catch (e) {
-      setError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("removePermission"),
-      );
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("removePermission"));
     }
   }
 
@@ -186,11 +175,7 @@ export function FolderPermissionPanel({
       setInheritable(false);
       loadPermissions();
     } catch (e) {
-      setFormError(
-        e instanceof ApiError || e instanceof Error
-          ? e.message
-          : t("save"),
-      );
+      setFormError(e instanceof ApiError || e instanceof Error ? e.message : t("save"));
     } finally {
       setSubmitting(false);
     }

@@ -50,10 +50,7 @@ export function useSwipeDismiss({
       _: unknown,
       info: { offset: { x: number; y: number }; velocity: { x: number; y: number } },
     ) => {
-      if (
-        info.offset.x > threshold ||
-        info.velocity.x > velocityThreshold
-      ) {
+      if (info.offset.x > threshold || info.velocity.x > velocityThreshold) {
         onDismiss();
       }
     },

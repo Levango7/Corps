@@ -20,12 +20,7 @@ import type { CSSProperties } from "react";
 
 /** 基础 Skeleton 块：shimmer 扫光渐变 + radius-sm 圆角 */
 export function Skeleton({ className, style }: { className?: string; style?: CSSProperties }) {
-  return (
-    <div
-      style={style}
-      className={`shimmer rounded-[var(--radius-sm)] ${className ?? ""}`}
-    />
-  );
+  return <div style={style} className={`shimmer rounded-[var(--radius-sm)] ${className ?? ""}`} />;
 }
 
 /**
@@ -95,7 +90,13 @@ export function StatCardSkeleton({ className }: { className?: string }) {
  * 第二行：作者 + 更新日期（text-xs, muted）
  * 容器与正式列表一致：divide-y, rounded-md, border, bg-surface
  */
-export function DocumentListSkeleton({ count = 5, className }: { count?: number; className?: string }) {
+export function DocumentListSkeleton({
+  count = 5,
+  className,
+}: {
+  count?: number;
+  className?: string;
+}) {
   return (
     <ul
       className={`divide-y divide-[var(--border-soft)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] ${className ?? ""}`}
@@ -133,7 +134,13 @@ export function DocumentListSkeleton({ count = 5, className }: { count?: number;
  *   卡片项：count 个卡片骨架（拖拽手柄 + 标题 + 副字段）
  * 容器与正式列一致：bg-surface-2, rounded-lg, p-3, min-w-board-col-min-w
  */
-export function BoardColumnSkeleton({ count = 4, className }: { count?: number; className?: string }) {
+export function BoardColumnSkeleton({
+  count = 4,
+  className,
+}: {
+  count?: number;
+  className?: string;
+}) {
   return (
     <div
       className={`bg-[var(--surface-2)] rounded-[var(--radius-lg)] p-3 min-w-[var(--board-col-min-w)] flex-shrink-0 ${className ?? ""}`}
@@ -161,10 +168,7 @@ export function BoardColumnSkeleton({ count = 4, className }: { count?: number; 
               <Skeleton className="shrink-0 w-[14px] h-[14px] mt-0.5" />
               <div className="flex-1 min-w-0">
                 {/* 标题占位：宽度错落 */}
-                <Skeleton
-                  className="h-[14px]"
-                  style={{ maxWidth: `${60 + ((i * 37) % 36)}%` }}
-                />
+                <Skeleton className="h-[14px]" style={{ maxWidth: `${60 + ((i * 37) % 36)}%` }} />
                 {/* 副字段占位 */}
                 <Skeleton className="mt-1 w-16 h-[10px]" />
               </div>
@@ -246,10 +250,7 @@ export function TaskDetailSkeleton({ className }: { className?: string }) {
         {/* 2 条评论骨架 */}
         <div className="divide-y divide-[var(--border-soft)]">
           {Array.from({ length: 2 }).map((_, i) => (
-            <div
-              key={i}
-              className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5"
-            >
+            <div key={i} className="flex gap-[var(--space-3)] px-[var(--space-2)] py-1.5">
               {/* 头像占位（w-7 h-7 sm:w-8 sm:h-8） */}
               <Skeleton className="w-7 h-7 sm:w-8 sm:h-8 shrink-0 rounded-full" />
               <div className="min-w-0 flex-1">
@@ -259,7 +260,10 @@ export function TaskDetailSkeleton({ className }: { className?: string }) {
                   <Skeleton className="w-10 h-[10px]" />
                 </div>
                 {/* 评论内容占位（2 行错落） */}
-                <Skeleton className="mt-0.5 h-[14px]" style={{ maxWidth: `${60 + ((i * 37) % 36)}%` }} />
+                <Skeleton
+                  className="mt-0.5 h-[14px]"
+                  style={{ maxWidth: `${60 + ((i * 37) % 36)}%` }}
+                />
                 <Skeleton className="mt-1 h-[14px]" style={{ maxWidth: "85%" }} />
               </div>
             </div>
@@ -276,9 +280,6 @@ export function TaskDetailSkeleton({ className }: { className?: string }) {
  */
 export function CircleSkeleton({ size = 24, className }: { size?: number; className?: string }) {
   return (
-    <Skeleton
-      className={`rounded-full ${className ?? ""}`}
-      style={{ width: size, height: size }}
-    />
+    <Skeleton className={`rounded-full ${className ?? ""}`} style={{ width: size, height: size }} />
   );
 }

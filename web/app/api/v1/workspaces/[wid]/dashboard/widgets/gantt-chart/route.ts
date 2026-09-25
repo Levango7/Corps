@@ -18,10 +18,7 @@ type Tx = Prisma.TransactionClient;
  *
  * 认证：getWorkspaceContext 校验成员身份 + 注入 RLS。
  */
-export async function GET(
-  req: NextRequest,
-  { params }: { params: Promise<{ wid: string }> },
-) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)

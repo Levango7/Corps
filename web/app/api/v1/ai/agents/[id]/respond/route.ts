@@ -38,8 +38,7 @@ const schema = z.object({
 });
 
 /** UUID 正则校验 */
-const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** 从 URL 路径提取 Agent ID（倒数第二段，因为最后一段是 respond） */
 function extractAgentId(req: NextRequest): string | null {
@@ -199,10 +198,7 @@ export async function POST(req: NextRequest) {
             responseText = llmResult.text.slice(0, 8000) || "（无响应）";
           }
         } catch (e) {
-          console.error(
-            `[ai/agents/[id]/respond] Agent ${agent.name} 响应失败:`,
-            e,
-          );
+          console.error(`[ai/agents/[id]/respond] Agent ${agent.name} 响应失败:`, e);
           responseText = `Agent ${agent.name} 响应失败`;
         }
 

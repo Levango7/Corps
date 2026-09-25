@@ -7,7 +7,13 @@
 import { useTranslations, useLocale } from "next-intl";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
-import { getEventsOnDate, getEventColor, isSameDay, formatTime, isTaskDeadline } from "./calendar-utils";
+import {
+  getEventsOnDate,
+  getEventColor,
+  isSameDay,
+  formatTime,
+  isTaskDeadline,
+} from "./calendar-utils";
 
 /** 日视图公共 props */
 interface CalendarDayProps {
@@ -123,12 +129,19 @@ export function CalendarDay({
                       onClick={() => onEventClick(event)}
                     >
                       <div className="font-[weight:var(--weight-medium)] text-[length:var(--text-sm)] flex items-center gap-1">
-                        {isTaskDeadline(event) && <CheckCircle2 size={14} className="shrink-0" style={{ color: getEventColor(event) }} />}
+                        {isTaskDeadline(event) && (
+                          <CheckCircle2
+                            size={14}
+                            className="shrink-0"
+                            style={{ color: getEventColor(event) }}
+                          />
+                        )}
                         <span className="truncate">{event.title}</span>
                       </div>
                       {!event.allDay && (
                         <div className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                          {formatTime(new Date(event.startAt))} - {formatTime(new Date(event.endAt))}
+                          {formatTime(new Date(event.startAt))} -{" "}
+                          {formatTime(new Date(event.endAt))}
                           {event.location && ` · ${event.location}`}
                         </div>
                       )}

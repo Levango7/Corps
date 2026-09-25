@@ -59,7 +59,6 @@ const ALLOWED_TYPES: Record<string, string[]> = {
   "application/zip": ["zip"],
 };
 
-
 /** 图片 MIME type 集合 */
 const IMAGE_TYPES = new Set(["image/jpeg", "image/png", "image/gif", "image/webp"]);
 
@@ -80,13 +79,20 @@ export async function POST(
 ) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const formData = await req.formData();
     const file = formData.get("file");
     if (!(file instanceof File)) {
-      return NextResponse.json({ code: 400, message: apiMsg(req, "missingFile"), data: null }, { status: 400 });
+      return NextResponse.json(
+        { code: 400, message: apiMsg(req, "missingFile"), data: null },
+        { status: 400 },
+      );
     }
 
     // 附件上限按套餐区分：免费版 10MB，Pro 50MB（v2 定价）
@@ -171,6 +177,9 @@ export async function POST(
     return NextResponse.json({ code: 201, data: meta }, { status: 201 });
   } catch (error) {
     console.error("Upload attachment error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

@@ -36,8 +36,7 @@ export interface RecordAiUsageParams {
  */
 export async function recordAiUsage(params: RecordAiUsageParams) {
   const totalTokens = params.inputTokens + params.outputTokens;
-  const cost =
-    params.cost ?? estimateCost(params.model, params.inputTokens, params.outputTokens);
+  const cost = params.cost ?? estimateCost(params.model, params.inputTokens, params.outputTokens);
 
   return prisma.aiUsageLog.create({
     data: {
@@ -64,11 +63,7 @@ export async function recordAiUsage(params: RecordAiUsageParams) {
  *
  * 未命中定价表的模型回退到 deepseek-chat 费率（保守低估值，避免高估账单）。
  */
-export function estimateCost(
-  model: string,
-  inputTokens: number,
-  outputTokens: number,
-): number {
+export function estimateCost(model: string, inputTokens: number, outputTokens: number): number {
   const pricing: Record<string, { input: number; output: number }> = {
     "deepseek-chat": { input: 0.14 / 1_000_000, output: 0.28 / 1_000_000 },
     "deepseek-reasoner": { input: 0.55 / 1_000_000, output: 2.19 / 1_000_000 },

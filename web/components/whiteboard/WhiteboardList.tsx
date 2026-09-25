@@ -129,10 +129,7 @@ export function WhiteboardList({ wid }: { wid: string }) {
                 className="block px-[var(--space-4)] py-[var(--space-4)]"
               >
                 <div className="flex items-start gap-2 mb-2">
-                  <PenSquare
-                    size={16}
-                    className="shrink-0 mt-0.5 text-[var(--muted)]"
-                  />
+                  <PenSquare size={16} className="shrink-0 mt-0.5 text-[var(--muted)]" />
                   <h2 className="flex-1 min-w-0 text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] truncate">
                     {wb.title || t("untitled")}
                   </h2>

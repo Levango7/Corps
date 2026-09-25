@@ -204,10 +204,7 @@ export async function consumeAiProgressStream(
             case "data-progress":
               if (obj.data && typeof obj.data === "object") {
                 const progress = obj.data as AiProgressPart;
-                if (
-                  typeof progress.stage === "number" &&
-                  typeof progress.message === "string"
-                ) {
+                if (typeof progress.stage === "number" && typeof progress.message === "string") {
                   options?.onProgress?.(progress);
                 }
               }

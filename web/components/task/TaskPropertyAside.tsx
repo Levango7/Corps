@@ -11,7 +11,14 @@ import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { STATUS_META } from "@/lib/task-meta";
 import CalendarSyncBadge from "@/components/CalendarSyncBadge";
 import { useToast } from "@/components/Toast";
-import { PRIORITY_META, type Person, type Status, type Priority, type Task, type TaskPatch } from "./types";
+import {
+  PRIORITY_META,
+  type Person,
+  type Status,
+  type Priority,
+  type Task,
+  type TaskPatch,
+} from "./types";
 
 interface TaskPropertyAsideProps {
   task: Task;
@@ -182,8 +189,7 @@ export function TaskPropertyAside({
               value={taskShareUrl}
               onFocus={(e) => e.target.select()}
               className={
-                fieldControl +
-                " text-[length:var(--text-xs)] font-[family-name:var(--font-mono)]"
+                fieldControl + " text-[length:var(--text-xs)] font-[family-name:var(--font-mono)]"
               }
             />
             <button

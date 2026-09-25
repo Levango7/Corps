@@ -67,9 +67,7 @@ function cursorBuilder(user: CursorUser): HTMLElement {
  * 选区装饰构造器：返回 ProseMirror DecorationAttrs。
  * 用 class + CSS 变量，背景色由 CSS 用 color-mix 派生（半透明选区高亮）。
  */
-function selectionBuilder(
-  user: CursorUser,
-): { class: string; style: string } {
+function selectionBuilder(user: CursorUser): { class: string; style: string } {
   const styleVar = user.color ? `--user-color: ${user.color}` : "";
   return {
     class: "collaboration-cursor__selection",

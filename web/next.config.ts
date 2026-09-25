@@ -56,7 +56,6 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ["lucide-react", "next-intl"],
   },
 
-
   async headers() {
     return [
       {

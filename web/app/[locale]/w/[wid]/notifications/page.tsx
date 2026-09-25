@@ -49,7 +49,7 @@ import { useTranslations } from "next-intl";
 const NOTIFICATIONS_VIRTUAL_THRESHOLD = 30;
 
 type NotificationType =
-  | "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated" | "ai_push";
+  "mention" | "task_assigned" | "task_updated" | "comment_added" | "decision_updated" | "ai_push";
 
 interface Notification {
   id: string;
@@ -293,7 +293,10 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 const text = tNotif(meta.textKey, { title: n.entityTitle });
                 return (
                   <AnimatedItem key={n.id}>
-                    <SwipeToDismiss onDismiss={() => dismissNotification(n)} dismissLabel={tNotif("markRead")}>
+                    <SwipeToDismiss
+                      onDismiss={() => dismissNotification(n)}
+                      dismissLabel={tNotif("markRead")}
+                    >
                       <button
                         type="button"
                         onClick={() => openNotification(n)}
@@ -340,7 +343,10 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
                 const text = tNotif(meta.textKey, { title: n.entityTitle });
                 return (
                   <AnimatedItem key={n.id}>
-                    <SwipeToDismiss onDismiss={() => dismissNotification(n)} dismissLabel={tNotif("markRead")}>
+                    <SwipeToDismiss
+                      onDismiss={() => dismissNotification(n)}
+                      dismissLabel={tNotif("markRead")}
+                    >
                       <button
                         type="button"
                         onClick={() => openNotification(n)}
@@ -427,11 +433,5 @@ function EmptyState({ filter }: { filter: Filter }) {
   if (filter === "assigned") {
     return <EmptyStateBase type="users" title={t("noAssignedNotifications")} />;
   }
-  return (
-    <EmptyStateBase
-      type="inbox"
-      title={t("noNotifications")}
-      description={t("emptyHint")}
-    />
-  );
+  return <EmptyStateBase type="inbox" title={t("noNotifications")} description={t("emptyHint")} />;
 }

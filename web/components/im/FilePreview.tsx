@@ -126,17 +126,11 @@ export function FilePreview({ attachment, onClick }: FilePreviewProps) {
         <div className="truncate text-[length:var(--text-sm)] text-[var(--fg)] font-[weight:var(--weight-medium)]">
           {attachment.fileName}
         </div>
-        <div className="text-[length:var(--text-xs)] text-[var(--meta)]">
-          {sizeText}
-        </div>
+        <div className="text-[length:var(--text-xs)] text-[var(--meta)]">{sizeText}</div>
       </div>
 
       {/* 下载图标 */}
-      <Download
-        size={14}
-        className="shrink-0 text-[var(--muted)]"
-        aria-label={t("attachFile")}
-      />
+      <Download size={14} className="shrink-0 text-[var(--muted)]" aria-label={t("attachFile")} />
     </a>
   );
 }

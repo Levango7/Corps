@@ -98,8 +98,7 @@ export function TaskEmbedView({ node, editor }: ReactNodeViewProps) {
   const { taskId, title, status, assigneeName, dueDate } = attrs;
 
   // 从扩展 options 拿 wid（TaskEmbed.configure({ wid }) 注入）
-  const wid =
-    (editor.extensionStorage as { taskEmbed?: { wid?: string } }).taskEmbed?.wid ?? "";
+  const wid = (editor.extensionStorage as { taskEmbed?: { wid?: string } }).taskEmbed?.wid ?? "";
 
   const locale = detectLocale();
   const dueText = formatDueDate(dueDate, locale);
@@ -137,11 +136,7 @@ export function TaskEmbedView({ node, editor }: ReactNodeViewProps) {
         data-status={status}
       >
         {/* 左侧图标：任务清单（ListTodo） */}
-        <ListTodo
-          size={16}
-          className="mt-0.5 shrink-0 text-[var(--accent)]"
-          aria-hidden="true"
-        />
+        <ListTodo size={16} className="mt-0.5 shrink-0 text-[var(--accent)]" aria-hidden="true" />
 
         {/* 中间：标题 + 元信息 */}
         <div className="flex-1 min-w-0 flex flex-col gap-1">

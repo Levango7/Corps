@@ -89,7 +89,12 @@ function PriorityPie({ data }: { data: PriorityDistData }) {
   });
 
   return (
-    <svg viewBox="0 0 80 80" className="w-20 h-20 shrink-0" role="img" aria-label={t("priorityDistAriaLabel")}>
+    <svg
+      viewBox="0 0 80 80"
+      className="w-20 h-20 shrink-0"
+      role="img"
+      aria-label={t("priorityDistAriaLabel")}
+    >
       {arcs.map((arc) => {
         if (arc.count === 0) return null;
         // 整圆特殊处理（避免 path 闭合问题）

@@ -30,8 +30,7 @@ interface BeforeInstallPromptEvent extends Event {
 
 export function PwaRegister() {
   const t = useTranslations("pwa");
-  const [installEvent, setInstallEvent] =
-    useState<BeforeInstallPromptEvent | null>(null);
+  const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
   const [dismissed, setDismissed] = useState(false);
   const [installed, setInstalled] = useState(false);
 
@@ -86,11 +85,7 @@ export function PwaRegister() {
         role="dialog"
         aria-label={t("installPrompt")}
       >
-        <Download
-          size={20}
-          strokeWidth={2}
-          className="shrink-0 text-[var(--accent)]"
-        />
+        <Download size={20} strokeWidth={2} className="shrink-0 text-[var(--accent)]" />
         <p className="flex-1 text-[length:var(--text-sm)] leading-[var(--leading-snug)] text-[var(--fg)]">
           {t("installPrompt")}
         </p>

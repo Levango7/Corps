@@ -119,10 +119,7 @@ export async function POST(req: NextRequest) {
       tx.task.findMany({
         where: {
           deletedAt: null,
-          OR: [
-            { createdAt: { lte: period.end } },
-            { status: { not: "done" } },
-          ],
+          OR: [{ createdAt: { lte: period.end } }, { status: { not: "done" } }],
         },
         select: {
           title: true,
@@ -182,8 +179,11 @@ export async function POST(req: NextRequest) {
     result = {
       summary: typeof obj.summary === "string" ? obj.summary : "",
       idealLine: Array.isArray(obj.idealLine) ? (obj.idealLine as BurndownResult["idealLine"]) : [],
-      actualLine: Array.isArray(obj.actualLine) ? (obj.actualLine as BurndownResult["actualLine"]) : [],
-      predictedCompletion: typeof obj.predictedCompletion === "string" ? obj.predictedCompletion : "",
+      actualLine: Array.isArray(obj.actualLine)
+        ? (obj.actualLine as BurndownResult["actualLine"])
+        : [],
+      predictedCompletion:
+        typeof obj.predictedCompletion === "string" ? obj.predictedCompletion : "",
       deviation: typeof obj.deviation === "string" ? obj.deviation : "",
       insights: Array.isArray(obj.insights) ? (obj.insights as string[]) : [],
     };

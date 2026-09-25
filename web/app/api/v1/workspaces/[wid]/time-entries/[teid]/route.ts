@@ -19,7 +19,11 @@ export async function GET(
 ) {
   const { wid, teid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const entry = await runWithWorkspace(
@@ -58,7 +62,11 @@ export async function PATCH(
 ) {
   const { wid, teid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json();
@@ -144,12 +152,20 @@ export async function DELETE(
 ) {
   const { wid, teid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const existing = await runWithWorkspace(
       wid,
-      (tx) => tx.timeEntry.findFirst({ where: { id: teid, workspaceId: wid }, select: { id: true, userId: true } }),
+      (tx) =>
+        tx.timeEntry.findFirst({
+          where: { id: teid, workspaceId: wid },
+          select: { id: true, userId: true },
+        }),
       ctx.payload.sub,
     );
     if (!existing) {
@@ -169,7 +185,11 @@ export async function DELETE(
       );
     }
 
-    await runWithWorkspace(wid, (tx) => tx.timeEntry.delete({ where: { id: teid } }), ctx.payload.sub);
+    await runWithWorkspace(
+      wid,
+      (tx) => tx.timeEntry.delete({ where: { id: teid } }),
+      ctx.payload.sub,
+    );
 
     return NextResponse.json({ code: 200, data: null });
   } catch (error) {

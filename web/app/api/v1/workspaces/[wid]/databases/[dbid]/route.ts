@@ -110,8 +110,7 @@ export async function PATCH(
         if (validated.folderId !== undefined) data.folderId = validated.folderId;
         if (validated.icon !== undefined) data.icon = validated.icon;
         if (validated.emoji !== undefined) data.emoji = validated.emoji;
-        if (validated.description !== undefined)
-          data.description = validated.description;
+        if (validated.description !== undefined) data.description = validated.description;
         if (validated.sortOrder !== undefined) data.sortOrder = validated.sortOrder;
 
         const updated = await tx.database.update({ where: { id: dbid }, data });

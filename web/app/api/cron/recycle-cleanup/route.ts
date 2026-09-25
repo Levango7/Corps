@@ -16,16 +16,26 @@ import { apiMsg } from "@/lib/api-messages";
 export async function POST(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
-    return NextResponse.json({ code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "cronSecretNotConfigured"), data: null },
+      { status: 500 },
+    );
   }
   const authHeader = req.headers.get("authorization");
   if (authHeader !== `Bearer ${secret}`) {
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
   }
 
   // 保留期（天）：环境变量 RECYCLE_RETENTION_DAYS，默认 30
   const retentionDays = Number(process.env.RECYCLE_RETENTION_DAYS) || 30;
-  const cutoff = new Date(new Date().getFullYear(), new Date().getMonth(), new Date().getDate() - retentionDays);
+  const cutoff = new Date(
+    new Date().getFullYear(),
+    new Date().getMonth(),
+    new Date().getDate() - retentionDays,
+  );
 
   try {
     const result = await runWithAuthOp("cron", async (tx) => {
@@ -45,6 +55,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ code: 200, data: result });
   } catch (error) {
     console.error("[cron recycle-cleanup] error:", error);
-    return NextResponse.json({ code: 500, message: apiMsg(req, "internalError"), data: null }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
   }
 }

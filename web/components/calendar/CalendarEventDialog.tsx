@@ -141,7 +141,21 @@ export function CalendarEventDialog({
     } finally {
       setSaving(false);
     }
-  }, [title, description, startAt, endAt, allDay, location, color, isEdit, event, wid, t, onSaved, onClose]);
+  }, [
+    title,
+    description,
+    startAt,
+    endAt,
+    allDay,
+    location,
+    color,
+    isEdit,
+    event,
+    wid,
+    t,
+    onSaved,
+    onClose,
+  ]);
 
   const handleDelete = useCallback(async () => {
     if (!event) return;
@@ -191,7 +205,9 @@ export function CalendarEventDialog({
         <div className="flex flex-col gap-[var(--space-4)]">
           {/* 标题 */}
           <div className="flex flex-col gap-1">
-            <label className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("eventTitle")}</label>
+            <label className="text-[length:var(--text-sm)] text-[var(--muted)]">
+              {t("eventTitle")}
+            </label>
             <input
               type="text"
               value={title}
@@ -204,7 +220,9 @@ export function CalendarEventDialog({
 
           {/* 描述 */}
           <div className="flex flex-col gap-1">
-            <label className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("eventDescription")}</label>
+            <label className="text-[length:var(--text-sm)] text-[var(--muted)]">
+              {t("eventDescription")}
+            </label>
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
@@ -228,7 +246,9 @@ export function CalendarEventDialog({
           {/* 开始/结束时间 */}
           <div className="grid grid-cols-2 gap-[var(--space-3)]">
             <div className="flex flex-col gap-1">
-              <label className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("startDate")}</label>
+              <label className="text-[length:var(--text-sm)] text-[var(--muted)]">
+                {t("startDate")}
+              </label>
               <input
                 type="datetime-local"
                 value={startAt}
@@ -238,7 +258,9 @@ export function CalendarEventDialog({
               />
             </div>
             <div className="flex flex-col gap-1">
-              <label className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("endDate")}</label>
+              <label className="text-[length:var(--text-sm)] text-[var(--muted)]">
+                {t("endDate")}
+              </label>
               <input
                 type="datetime-local"
                 value={endAt}
@@ -251,7 +273,9 @@ export function CalendarEventDialog({
 
           {/* 地点 */}
           <div className="flex flex-col gap-1">
-            <label className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("location")}</label>
+            <label className="text-[length:var(--text-sm)] text-[var(--muted)]">
+              {t("location")}
+            </label>
             <input
               type="text"
               value={location}

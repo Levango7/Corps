@@ -115,12 +115,14 @@ export interface MotionTokens {
  */
 export function useMotionTokens(): MotionTokens {
   const prefersReduced = useReducedMotion();
-  const [tokens, setTokens] = useState<{ fast: number; base: number; slow: number; enter: number }>({
-    fast: MOTION.fast,
-    base: MOTION.base,
-    slow: MOTION.slow,
-    enter: MOTION.enter,
-  });
+  const [tokens, setTokens] = useState<{ fast: number; base: number; slow: number; enter: number }>(
+    {
+      fast: MOTION.fast,
+      base: MOTION.base,
+      slow: MOTION.slow,
+      enter: MOTION.enter,
+    },
+  );
 
   useEffect(() => {
     setTokens({

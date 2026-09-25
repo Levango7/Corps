@@ -36,7 +36,11 @@ export async function POST(
 ) {
   const { wid, aid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     const body = await req.json().catch(() => ({}));
@@ -111,9 +115,7 @@ export async function POST(
           });
           const approvedSet = new Set(approvedOps.map((op) => op.operatorId));
           // 检查所有审批人是否都已 approve
-          shouldAdvance = Array.from(allApproverIds).every((id) =>
-            approvedSet.has(id),
-          );
+          shouldAdvance = Array.from(allApproverIds).every((id) => approvedSet.has(id));
         } else if (nodeMode === "countersign") {
           // 会签：只需 requiredCount 数量的人通过即可
           const requiredCount = currentNode.requiredCount ?? 1;
@@ -132,12 +134,8 @@ export async function POST(
           where: { id: aid },
           data: {
             currentNode:
-              shouldAdvance && !isLastNode
-                ? instance.currentNode + 1
-                : instance.currentNode,
-            ...(shouldAdvance && isLastNode
-              ? { status: "approved", completedAt: new Date() }
-              : {}),
+              shouldAdvance && !isLastNode ? instance.currentNode + 1 : instance.currentNode,
+            ...(shouldAdvance && isLastNode ? { status: "approved", completedAt: new Date() } : {}),
           },
           include: {
             applicant: { select: { id: true, name: true, email: true } },
@@ -204,7 +202,12 @@ export async function POST(
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"), data: null, errors: error.errors },
+        {
+          code: 400,
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          data: null,
+          errors: error.errors,
+        },
         { status: 400 },
       );
     }

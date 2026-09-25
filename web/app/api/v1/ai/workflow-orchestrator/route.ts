@@ -155,8 +155,7 @@ function normalizeWorkflowDefinition(raw: unknown): WorkflowDefinition | null {
     const n = item as Record<string, unknown>;
     if (typeof n.id !== "string" || !n.id.trim()) continue;
     if (nodeIdSet.has(n.id)) continue; // 去重
-    if (typeof n.type !== "string" || !VALID_NODE_TYPES.has(n.type as WorkflowNodeType))
-      continue;
+    if (typeof n.type !== "string" || !VALID_NODE_TYPES.has(n.type as WorkflowNodeType)) continue;
     if (typeof n.name !== "string" || !n.name.trim()) continue;
 
     const nodeId = safeSlice(n.id, 50);

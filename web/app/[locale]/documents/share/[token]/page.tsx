@@ -130,9 +130,7 @@ function ShareClient({ params }: { params: Promise<{ token: string }> }) {
           setRemainingAttempts(json.remainingAttempts as number);
         } else {
           // 未知剩余次数，递减显示
-          setRemainingAttempts((prev) =>
-            prev === undefined ? 2 : Math.max(0, prev - 1),
-          );
+          setRemainingAttempts((prev) => (prev === undefined ? 2 : Math.max(0, prev - 1)));
         }
       } else if (res.status === 429) {
         // 锁定：5 分钟后重试

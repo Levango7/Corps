@@ -27,7 +27,10 @@ export async function POST(
   const { wid, wfid, eid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
   if (!ctx)
-    return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     // 1. 查询执行记录，确认存在且属于该工作区 + workflowId 匹配
@@ -104,6 +107,9 @@ export async function POST(
       );
     }
     console.error("[POST workflow execution retry] error:", error);
-    return NextResponse.json({ code: 500, data: null, message: apiMsg(req, "internalError") }, { status: 500 });
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
   }
 }

@@ -173,7 +173,10 @@ export function WikiSidebar({ wid, selectedId, onSelect, refreshKey = 0 }: WikiS
       {/* 搜索框 */}
       <div className="px-[var(--space-3)] py-[var(--space-2)] border-b border-[var(--border-soft)]">
         <div className="relative">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" />
+          <Search
+            size={14}
+            className="absolute left-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)]"
+          />
           <input
             type="text"
             value={search}
@@ -187,7 +190,9 @@ export function WikiSidebar({ wid, selectedId, onSelect, refreshKey = 0 }: WikiS
       {/* 页面树 */}
       <div className="flex-1 overflow-y-auto px-[var(--space-2)] py-[var(--space-2)]">
         {error && (
-          <p className="px-[var(--space-2)] py-2 text-[length:var(--text-xs)] text-[var(--danger)]">{error}</p>
+          <p className="px-[var(--space-2)] py-2 text-[length:var(--text-xs)] text-[var(--danger)]">
+            {error}
+          </p>
         )}
         {loading ? (
           <div className="py-[var(--space-6)] text-center text-[var(--muted)] text-[length:var(--text-sm)]">

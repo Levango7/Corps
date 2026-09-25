@@ -40,11 +40,7 @@ export async function ApprovalFlowDiagram({
   const t = await getTranslations("approval");
 
   if (!nodes || nodes.length === 0) {
-    return (
-      <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-        {t("noContent")}
-      </p>
-    );
+    return <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("noContent")}</p>;
   }
 
   // 按 order 升序排序
@@ -63,10 +59,8 @@ export async function ApprovalFlowDiagram({
               : status === "rejected"
                 ? nodeIdx < currentNode
                 : nodeIdx < currentNode;
-          const isCurrent =
-            status === "pending" && nodeIdx === currentNode;
-          const isRejected =
-            status === "rejected" && nodeIdx === currentNode;
+          const isCurrent = status === "pending" && nodeIdx === currentNode;
+          const isRejected = status === "rejected" && nodeIdx === currentNode;
 
           // 边框 / 文本 / 背景色
           let borderColor = "var(--border)";
@@ -88,9 +82,7 @@ export async function ApprovalFlowDiagram({
             borderColor = "var(--accent)";
             textColor = "var(--accent)";
             bgColor = "var(--surface)";
-            iconEl = (
-              <Clock size={14} className="shrink-0 animate-pulse" />
-            );
+            iconEl = <Clock size={14} className="shrink-0 animate-pulse" />;
           }
 
           const approverLabel = node.approverDisplayName
@@ -100,10 +92,7 @@ export async function ApprovalFlowDiagram({
               : null;
 
           return (
-            <li
-              key={`${node.order}-${idx}`}
-              className="flex items-center gap-[var(--space-2)]"
-            >
+            <li key={`${node.order}-${idx}`} className="flex items-center gap-[var(--space-2)]">
               <div
                 className="flex flex-col items-start gap-1 min-w-[140px] px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] border bg-[var(--surface)] transition-colors duration-[var(--motion-fast)]"
                 style={{
@@ -139,11 +128,7 @@ export async function ApprovalFlowDiagram({
                 </span>
               </div>
               {idx < sortedNodes.length - 1 && (
-                <ArrowRight
-                  size={16}
-                  className="shrink-0 text-[var(--muted)]"
-                  aria-hidden="true"
-                />
+                <ArrowRight size={16} className="shrink-0 text-[var(--muted)]" aria-hidden="true" />
               )}
             </li>
           );

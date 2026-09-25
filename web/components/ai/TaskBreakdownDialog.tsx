@@ -97,11 +97,9 @@ export default function TaskBreakdownDialog({
           signal: ac.signal,
         });
         if (cancelled || ac.signal.aborted) return;
-        setSubtasks(
-          result.subtasks.map((s) => ({ ...s, localId: nextLocalId() })),
-        );
+        setSubtasks(result.subtasks.map((s) => ({ ...s, localId: nextLocalId() })));
         setReasoning(result.reasoning);
-    } catch {
+      } catch {
         if (cancelled || ac.signal.aborted) return;
         if (e instanceof Error && e.name === "AbortError") return;
         // 不直接显示后端 error.message，用 i18n 错误提示
@@ -127,9 +125,7 @@ export default function TaskBreakdownDialog({
   }, [onClose, submitting]);
 
   function updateSubtask(localId: string, patch: Partial<EditableSubtask>) {
-    setSubtasks((prev) =>
-      prev.map((s) => (s.localId === localId ? { ...s, ...patch } : s)),
-    );
+    setSubtasks((prev) => prev.map((s) => (s.localId === localId ? { ...s, ...patch } : s)));
   }
 
   function removeSubtask(localId: string) {
@@ -239,9 +235,7 @@ export default function TaskBreakdownDialog({
                 className="animate-spin text-[var(--accent)]"
                 aria-label={t("loading")}
               />
-              <p className="text-[length:var(--text-sm)] text-[var(--muted)]">
-                {t("loading")}
-              </p>
+              <p className="text-[length:var(--text-sm)] text-[var(--muted)]">{t("loading")}</p>
             </div>
           )}
 
@@ -283,9 +277,7 @@ export default function TaskBreakdownDialog({
                           <input
                             type="text"
                             value={s.title}
-                            onChange={(e) =>
-                              updateSubtask(s.localId, { title: e.target.value })
-                            }
+                            onChange={(e) => updateSubtask(s.localId, { title: e.target.value })}
                             maxLength={255}
                             placeholder={t("titlePlaceholder")}
                             aria-label={t("titleLabel")}

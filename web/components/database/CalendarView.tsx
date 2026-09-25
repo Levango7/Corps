@@ -69,7 +69,15 @@ function dateKey(d: Date): string {
 }
 
 const DAY_MS = 86400000;
-const WEEKDAY_KEYS = ["weekdayMon", "weekdayTue", "weekdayWed", "weekdayThu", "weekdayFri", "weekdaySat", "weekdaySun"] as const;
+const WEEKDAY_KEYS = [
+  "weekdayMon",
+  "weekdayTue",
+  "weekdayWed",
+  "weekdayThu",
+  "weekdayFri",
+  "weekdaySat",
+  "weekdaySun",
+] as const;
 const MAX_EVENTS = 3;
 
 // ─── Props ──────────────────────────────────────────────────────
@@ -100,18 +108,12 @@ export function CalendarView({
   const [currentDate, setCurrentDate] = useState(() => new Date());
 
   // 周一~周日的显示标签（i18n）
-  const weekdayLabels = useMemo(
-    () => WEEKDAY_KEYS.map((key) => t(key)),
-    [t],
-  );
+  const weekdayLabels = useMemo(() => WEEKDAY_KEYS.map((key) => t(key)), [t]);
 
   const config = readConfig<CalendarViewConfig>(view);
   const dateField = config.dateField ? fields.find((f) => f.id === config.dateField) : undefined;
 
-  const titleField = useMemo(
-    () => fields.find((f) => f.type === "text") ?? fields[0],
-    [fields],
-  );
+  const titleField = useMemo(() => fields.find((f) => f.type === "text") ?? fields[0], [fields]);
 
   // 按日期分组记录
   const recordsByDate = useMemo(() => {
@@ -228,7 +230,13 @@ export function CalendarView({
                   : "text-[var(--muted)] hover:text-[var(--fg)]",
               ].join(" ")}
             >
-              {t(g === "month" ? "granularityMonth" : g === "week" ? "granularityWeek" : "granularityDay")}
+              {t(
+                g === "month"
+                  ? "granularityMonth"
+                  : g === "week"
+                    ? "granularityWeek"
+                    : "granularityDay",
+              )}
             </button>
           ))}
         </div>
@@ -254,7 +262,8 @@ export function CalendarView({
             const key = dateKey(d);
             const dayRecords = recordsByDate.get(key) ?? [];
             const isToday = key === todayKey;
-            const isCurrentMonth = granularity === "week" || d.getMonth() === currentDate.getMonth();
+            const isCurrentMonth =
+              granularity === "week" || d.getMonth() === currentDate.getMonth();
             const visible = dayRecords.slice(0, MAX_EVENTS);
             const remaining = dayRecords.length - visible.length;
             return (

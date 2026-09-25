@@ -17,7 +17,10 @@ import {
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
-import { buildProjectInsightSystemPrompts, buildUserPrompt } from "@/lib/ai/prompts/project-insight";
+import {
+  buildProjectInsightSystemPrompts,
+  buildUserPrompt,
+} from "@/lib/ai/prompts/project-insight";
 import { apiMsg } from "@/lib/api-messages";
 import { createAiProgressStream } from "@/lib/ai/stream";
 

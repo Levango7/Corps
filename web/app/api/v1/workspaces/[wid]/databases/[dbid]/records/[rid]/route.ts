@@ -46,8 +46,7 @@ export async function PATCH(
           data?: Prisma.InputJsonValue;
           sortOrder?: number;
         } = {};
-        if (validated.data !== undefined)
-          data.data = validated.data as Prisma.InputJsonValue;
+        if (validated.data !== undefined) data.data = validated.data as Prisma.InputJsonValue;
         if (validated.sortOrder !== undefined) data.sortOrder = validated.sortOrder;
 
         const updated = await tx.databaseRecord.update({ where: { id: rid }, data });

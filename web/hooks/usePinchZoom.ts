@@ -42,17 +42,13 @@ export function usePinchZoom(): UsePinchZoomResult {
     return Math.hypot(dx, dy);
   };
 
-  const clampScale = (value: number): number =>
-    Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
+  const clampScale = (value: number): number => Math.min(MAX_SCALE, Math.max(MIN_SCALE, value));
 
-  const onTouchStart = useCallback(
-    (e: React.TouchEvent) => {
-      if (e.touches.length === 2) {
-        initialDistanceRef.current = getDistance(e.touches);
-      }
-    },
-    [],
-  );
+  const onTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      initialDistanceRef.current = getDistance(e.touches);
+    }
+  }, []);
 
   const onTouchMove = useCallback(
     (e: React.TouchEvent) => {

@@ -56,9 +56,7 @@ function BurndownChart({ days, ariaLabel }: { days: BurndownDay[]; ariaLabel: st
     y: PAD + innerH - (d.remaining / maxRemaining) * innerH,
   }));
 
-  const pathD = points
-    .map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`))
-    .join(" ");
+  const pathD = points.map((p, i) => (i === 0 ? `M ${p.x} ${p.y}` : `L ${p.x} ${p.y}`)).join(" ");
   const areaD = `${pathD} L ${points[points.length - 1].x} ${PAD + innerH} L ${points[0].x} ${PAD + innerH} Z`;
 
   // 理想线：从首个数据点的剩余量线性递减到 0（项目按理想进度燃尽至完成）
@@ -73,12 +71,7 @@ function BurndownChart({ days, ariaLabel }: { days: BurndownDay[]; ariaLabel: st
   return (
     <div className="p-3">
       <div className="w-full overflow-x-auto">
-        <svg
-          viewBox={`0 0 ${W} ${H}`}
-          className="w-full h-auto"
-          role="img"
-          aria-label={ariaLabel}
-        >
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-auto" role="img" aria-label={ariaLabel}>
           <defs>
             {/* 面积渐变：accent 半透明 → 完全透明 */}
             <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">

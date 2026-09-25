@@ -43,13 +43,14 @@ async function canManageSpace(
   );
 }
 
-const updatePermissionSchema = z.object({
-  permission: z.enum(["view", "comment", "edit", "manage"]).optional(),
-  inheritable: z.boolean().optional(),
-}).refine(
-  (data) => data.permission !== undefined || data.inheritable !== undefined,
-  { message: "At least one of permission or inheritable must be provided" },
-);
+const updatePermissionSchema = z
+  .object({
+    permission: z.enum(["view", "comment", "edit", "manage"]).optional(),
+    inheritable: z.boolean().optional(),
+  })
+  .refine((data) => data.permission !== undefined || data.inheritable !== undefined, {
+    message: "At least one of permission or inheritable must be provided",
+  });
 
 /**
  * PATCH /v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid} — 更新权限级别或 inheritable 标记
@@ -70,12 +71,7 @@ export async function PATCH(
     const body = await req.json();
     const validated = updatePermissionSchema.parse(body);
 
-    const allowed = await canManageSpace(
-      wid,
-      spaceId,
-      ctx.payload.sub,
-      ctx.member.role,
-    );
+    const allowed = await canManageSpace(wid, spaceId, ctx.payload.sub, ctx.member.role);
     if (!allowed) {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noManagePermission"), data: null },
@@ -131,8 +127,7 @@ export async function PATCH(
       return NextResponse.json(
         {
           code: 400,
-          message:
-            error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
+          message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
           errors: error.errors,
         },
@@ -140,10 +135,7 @@ export async function PATCH(
       );
     }
     // P2025: 记录不存在（并发删除）
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "folderPermissionNotFound"), data: null },
         { status: 404 },
@@ -173,12 +165,7 @@ export async function DELETE(
     );
 
   try {
-    const allowed = await canManageSpace(
-      wid,
-      spaceId,
-      ctx.payload.sub,
-      ctx.member.role,
-    );
+    const allowed = await canManageSpace(wid, spaceId, ctx.payload.sub, ctx.member.role);
     if (!allowed) {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noManagePermission"), data: null },
@@ -215,10 +202,7 @@ export async function DELETE(
     }
     return NextResponse.json({ code: 200, data: { id: pid, deleted: true } });
   } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2025"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2025") {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "folderPermissionNotFound"), data: null },
         { status: 404 },

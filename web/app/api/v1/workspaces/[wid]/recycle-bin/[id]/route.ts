@@ -10,10 +10,17 @@ import { apiMsg } from "@/lib/api-messages";
  *
  * 响应：{ code: 200, data: null, message: "已恢复" }
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string; id: string }> }) {
+export async function POST(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; id: string }> },
+) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     // 先查 Task：必须是当前工作区且已软删除
@@ -110,10 +117,17 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
  *
  * 响应：{ code: 200, data: null, message: "已永久删除" }
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string; id: string }> }) {
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; id: string }> },
+) {
   const { wid, id } = await params;
   const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 401, message: apiMsg(req, "unauthorized"), data: null }, { status: 401 });
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
 
   try {
     // 先查 Task：必须是当前工作区且已软删除
@@ -128,12 +142,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
     );
 
     if (task) {
-      await runWithWorkspace(
-        wid,
-        (tx) => tx.task.delete({ where: { id } }),
-        ctx.payload.sub,
-      );
-      return NextResponse.json({ code: 200, data: null, message: apiMsg(req, "permanentlyDeleted") });
+      await runWithWorkspace(wid, (tx) => tx.task.delete({ where: { id } }), ctx.payload.sub);
+      return NextResponse.json({
+        code: 200,
+        data: null,
+        message: apiMsg(req, "permanentlyDeleted"),
+      });
     }
 
     // 再查 Document
@@ -148,12 +162,12 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
     );
 
     if (doc) {
-      await runWithWorkspace(
-        wid,
-        (tx) => tx.document.delete({ where: { id } }),
-        ctx.payload.sub,
-      );
-      return NextResponse.json({ code: 200, data: null, message: apiMsg(req, "permanentlyDeleted") });
+      await runWithWorkspace(wid, (tx) => tx.document.delete({ where: { id } }), ctx.payload.sub);
+      return NextResponse.json({
+        code: 200,
+        data: null,
+        message: apiMsg(req, "permanentlyDeleted"),
+      });
     }
 
     // 既不是已删除的 Task 也不是已删除的 Document

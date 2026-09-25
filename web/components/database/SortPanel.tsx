@@ -97,9 +97,7 @@ export function SortPanel({ fields, sorts, onChange }: SortPanelProps) {
           </select>
           {/* 升降序切换 */}
           <button
-            onClick={() =>
-              updateSort(i, { direction: sort.direction === "asc" ? "desc" : "asc" })
-            }
+            onClick={() => updateSort(i, { direction: sort.direction === "asc" ? "desc" : "asc" })}
             className="flex items-center gap-1 h-8 px-2 rounded-[var(--radius-sm)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
             aria-label={sort.direction === "asc" ? t("ascAria") : t("descAria")}
           >

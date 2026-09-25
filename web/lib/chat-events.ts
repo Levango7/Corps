@@ -100,22 +100,25 @@ const sseConnections = new Map<string, { count: number; lastActive: number }>();
 
 // 定期清理：零计数条目 + 僵尸条目（lastActive 超时且 count > 0）
 if (typeof setInterval !== "undefined") {
-  setInterval(() => {
-    const now = Date.now();
-    for (const [key, entry] of sseConnections) {
-      if (entry.count <= 0) {
-        // 零计数：正常清理
-        sseConnections.delete(key);
-      } else if (now - entry.lastActive > SSE_ZOMBIE_TIMEOUT_MS) {
-        // 僵尸条目：count > 0 但超过 10 分钟无活动，客户端可能崩溃未 release
-        console.warn(
-          `[chat-events] 清理僵尸 SSE 连接: userId=${key}, count=${entry.count}, ` +
-            `lastActive=${new Date(entry.lastActive).toISOString()}`,
-        );
-        sseConnections.delete(key);
+  setInterval(
+    () => {
+      const now = Date.now();
+      for (const [key, entry] of sseConnections) {
+        if (entry.count <= 0) {
+          // 零计数：正常清理
+          sseConnections.delete(key);
+        } else if (now - entry.lastActive > SSE_ZOMBIE_TIMEOUT_MS) {
+          // 僵尸条目：count > 0 但超过 10 分钟无活动，客户端可能崩溃未 release
+          console.warn(
+            `[chat-events] 清理僵尸 SSE 连接: userId=${key}, count=${entry.count}, ` +
+              `lastActive=${new Date(entry.lastActive).toISOString()}`,
+          );
+          sseConnections.delete(key);
+        }
       }
-    }
-  }, 5 * 60 * 1000).unref?.(); // unref 避免阻止进程退出
+    },
+    5 * 60 * 1000,
+  ).unref?.(); // unref 避免阻止进程退出
 }
 
 /** 该用户是否还有 SSE 连接额度（未达并发上限） */
@@ -176,7 +179,10 @@ export function emitChatEvent(taskId: string, event: ChatEvent): void {
  *   // 连接断开时：
  *   unsubscribe();
  */
-export function subscribeChatEvents(taskId: string, listener: (event: ChatEvent) => void): () => void {
+export function subscribeChatEvents(
+  taskId: string,
+  listener: (event: ChatEvent) => void,
+): () => void {
   const channel = chatChannel(taskId);
   chatEvents.on(channel, listener);
   let unsubscribed = false;
