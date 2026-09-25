@@ -6,7 +6,7 @@ import { ArrowLeft, Trash2, Loader2, Sparkles } from "lucide-react";
 import { api } from "@/lib/api";
 import { relTime as sharedRelTime } from "@/lib/format";
 import { isFavorite, toggleFavorite } from "@/lib/favorites";
-import ChatPanel from "@/components/ChatPanel";
+import { TaskChatPanel } from "@/components/im/TaskChatPanel";
 import { SubtaskSection } from "@/components/SubtaskSection";
 import dynamic from "next/dynamic";
 
@@ -56,6 +56,12 @@ export default function TaskDetailPage({
 
   // 星标（本地 localStorage，便携收藏） — 初次挂载 + task 加载完成后同步
   const [starred, setStarred] = useState(false);
+  const [currentUserId, setCurrentUserId] = useState("");
+  useEffect(() => {
+    api<{ id: string }>("/api/v1/users/me")
+      .then((u) => setCurrentUserId(u.id ?? ""))
+      .catch(() => {});
+  }, []);
   useEffect(() => {
     if (task) setStarred(isFavorite(task.id));
   }, [task]);
@@ -280,7 +286,7 @@ export default function TaskDetailPage({
           />
 
           {/* 聊天（v2 F1：IM 转沟通 MVP）*/}
-          <ChatPanel wid={wid} taskId={id} />
+          <TaskChatPanel workspaceId={wid} taskId={id} currentUserId={currentUserId} />
 
           {/* 评论 */}
           <TaskComments

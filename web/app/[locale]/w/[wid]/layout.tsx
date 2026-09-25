@@ -50,6 +50,7 @@ import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
+import { IMBadge } from "@/components/shell/IMBadge";
 import { useToast } from "@/components/Toast";
 import type { WorkspaceSummary } from "@/lib/types";
 
@@ -627,8 +628,9 @@ export default function WorkspaceLayout({
           </button>
         </div>
 
-        {/* 右侧：通知 → 用户下拉（内含设置/语言/主题/退出） */}
+        {/* 右侧：IM 未读徽标 → 通知 → 用户下拉（内含设置/语言/主题/退出） */}
         <div className="flex items-center gap-[var(--space-1)] ml-auto">
+          <IMBadge workspaceId={wid} />
           {user ? (
             <UserMenu
               user={user}
