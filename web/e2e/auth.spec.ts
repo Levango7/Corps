@@ -79,7 +79,6 @@ test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () 
     });
   });
 
-
   test("登录后访问工作区概览页，统计卡片渲染", async ({ page }) => {
     // 先登录建立会话
     await page.goto("/auth/login");
