@@ -33,9 +33,11 @@ export interface QuickActionMenuProps {
   y: number;
   /** 子元素（触发长按的元素） */
   children?: ReactNode;
+  /** ESLint unused-args 兼容：内部别名 */
+  _children?: ReactNode;
 }
 
-export function QuickActionMenu({ open, onClose, actions, x, y, children }: QuickActionMenuProps) {
+export function QuickActionMenu({ open, onClose, actions, x, y, _children }: QuickActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Esc 关闭

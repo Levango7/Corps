@@ -73,6 +73,8 @@ interface MessageItemProps {
   onReply?: (mid: string) => void;
   /** 该 call_invite 消息对应的通话是否已结束（仅 call_invite 类型使用） */
   callEnded?: boolean;
+  /** ESLint unused-args 兼容：内部别名 */
+  _callEnded?: boolean;
 }
 
 /** 相对时间格式化（i18n） */
@@ -235,7 +237,7 @@ function MessageItemImpl({
   onEdit,
   onRevoke,
   onReply,
-  callEnded = false,
+  _callEnded = false,
 }: MessageItemProps) {
   const t = useTranslations("chat");
   const tIm = useTranslations("im");

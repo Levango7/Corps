@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
+import { Prisma } from "@prisma/client";
 import { prisma, withDbRetry } from "./prisma";
 import { verifyAccessToken, type JWTPayload } from "./jwt";
 import { sendResetPasswordEmail } from "./email";
@@ -170,10 +171,10 @@ export async function getWorkspaceContext(
 type Tx = Prisma.TransactionClient;
 
 // 审计 F-07/T3.7：GUC key 白名单映射到固定 SQL，杜绝 $executeRawUnsafe 拼接模式
-// 使用 $queryRaw 替代 $executeRawUnsafe：set_config 返回结果集（text），
+// 使用 $executeRaw + Prisma.sql 替代 $executeRawUnsafe：set_config 返回结果集（text），
 // $executeRawUnsafe 期望非结果集语句（INSERT/UPDATE/DELETE），对 SELECT 可能
 // 在某些 Prisma 版本/驱动下行为不一致（不报错但 GUC 未生效）。
-// $queryRaw 专为返回结果集的查询设计，保证 set_config 副作用可靠执行。
+// $executeRaw + Prisma.sql 使用 tagged template，参数化安全且保证 set_config 副作用可靠执行。
 const GUC_SQL: Record<string, string> = {
   auth_op: "SELECT set_config('app.auth_op', $1, true)",
   user_id: "SELECT set_config('app.user_id', $1, true)",
@@ -186,7 +187,7 @@ async function setGucs(tx: Tx, gucs: Record<string, string | undefined>) {
     if (value === undefined) continue;
     const sql = GUC_SQL[key];
     if (!sql) throw new Error(`未知的 RLS GUC key: ${key}`);
-    await tx.$queryRawUnsafe(sql, value);
+    await tx.$executeRaw(Prisma.sql([sql], value));
   }
 }
 
@@ -284,7 +285,7 @@ export async function runWithWorkspace<T>(
 export async function setTxGuc(tx: Tx, key: string, value: string): Promise<void> {
   const sql = GUC_SQL[key];
   if (!sql) throw new Error(`未知的 RLS GUC key: ${key}`);
-  await tx.$queryRawUnsafe(sql, value);
+  await tx.$executeRaw(Prisma.sql([sql], value));
 }
 
 /**

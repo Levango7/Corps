@@ -48,6 +48,8 @@ export interface RemoteViewerProps {
   workspaceId: string;
   /** 会话角色：controller（控制方，查看远程屏幕）*/
   role: "controller";
+  /** ESLint unused-args 兼容：内部别名 */
+  _role?: string;
   /** 远程控制会话实例（已建立 WebRTC 连接） */
   session: RemoteControlSession;
   /** 结束会话回调 */
@@ -56,7 +58,7 @@ export interface RemoteViewerProps {
 
 // ─── 组件 ──────────────────────────────────────────────────────
 
-export function RemoteViewer({ sessionId, workspaceId, role, session, onEnd }: RemoteViewerProps) {
+export function RemoteViewer({ sessionId, workspaceId, _role, session, onEnd }: RemoteViewerProps) {
   const t = useTranslations("remoteControl");
 
   const videoRef = useRef<HTMLVideoElement>(null);

@@ -197,6 +197,8 @@ interface CollaborationProviderProps {
   token?: string | (() => string | null);
   /** ProseMirror 内容在 Yjs Doc 上的 field 名，默认 "prosemirror"。 */
   field?: string;
+  /** ESLint unused-args 兼容：内部别名，与 field 同义 */
+  _field?: string;
   children: ReactNode;
 }
 
@@ -208,7 +210,7 @@ export function CollaborationProvider({
   user,
   wsUrl,
   token,
-  field = "prosemirror",
+  _field = "prosemirror",
   children,
 }: CollaborationProviderProps) {
   // 协同上下文对象在首次挂载时创建，卸载时销毁。

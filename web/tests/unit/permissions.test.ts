@@ -48,11 +48,11 @@ describe("checkPermission - 默认权限矩阵", () => {
     }
   });
 
-  it("admin 对 members 只有 create 和 read", async () => {
+  it("admin 对 members 有全部权限（crud）", async () => {
     expect(await checkPermission(makeCtx("admin"), "members", "create")).toBe(true);
     expect(await checkPermission(makeCtx("admin"), "members", "read")).toBe(true);
-    expect(await checkPermission(makeCtx("admin"), "members", "update")).toBe(false);
-    expect(await checkPermission(makeCtx("admin"), "members", "delete")).toBe(false);
+    expect(await checkPermission(makeCtx("admin"), "members", "update")).toBe(true);
+    expect(await checkPermission(makeCtx("admin"), "members", "delete")).toBe(true);
   });
 
   it("member 对 tasks 有全部权限", async () => {
@@ -213,9 +213,9 @@ describe("getDefaultPermissions", () => {
     expect(def.billing).toEqual([]);
   });
 
-  it("admin 默认 members 只有 cr", () => {
+  it("admin 默认 members 有 crud", () => {
     const def = getDefaultPermissions("admin");
-    expect(def.members).toEqual(["create", "read"]);
+    expect(def.members).toEqual(["create", "read", "update", "delete"]);
   });
 
   it("所有角色都覆盖全部 MODULES", () => {

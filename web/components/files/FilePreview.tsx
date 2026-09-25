@@ -36,6 +36,8 @@ export interface FilePreviewProps {
   fileName: string;
   /** 文件类型（扩展名，如 "pdf"、"docx"） */
   fileType: string;
+  /** ESLint unused-args 兼容：内部别名 */
+  _fileType?: string;
   /** 关闭回调 */
   onClose: () => void;
 }
@@ -157,7 +159,7 @@ const HEADER_BTN =
 
 // ─── 主组件 ──────────────────────────────────────────────────────
 
-export function FilePreview({ url, fileName, fileType, onClose }: FilePreviewProps) {
+export function FilePreview({ url, fileName, _fileType, onClose }: FilePreviewProps) {
   const t = useTranslations("files.preview");
   const category = getFileCategory(fileName);
 
