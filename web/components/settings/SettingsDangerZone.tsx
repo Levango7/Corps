@@ -25,7 +25,7 @@ interface SettingsDangerZoneProps {
 export function SettingsDangerZone({ ws, wid, onError }: SettingsDangerZoneProps) {
   const t = useTranslations("settings");
   const tAccount = useTranslations("accountDeletion");
-  const tErr = useTranslations("error");
+
   const tRole = useTranslations("role");
   const router = useRouter();
 

@@ -123,8 +123,9 @@ export function ImReplySuggestions({
         console.error("[ImReplySuggestions] error:", e.message);
       }
     } finally {
-      if (cancelledRef.current || ac.signal.aborted) return;
-      setLoading(false);
+      if (!cancelledRef.current && !ac.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
 

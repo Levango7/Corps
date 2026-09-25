@@ -327,7 +327,7 @@ function compareValues(a: unknown, b: unknown, fieldType: string): number {
 }
 
 /** 将字段值转为分组 key 数组（多值字段一条记录可属多个分组） */
-function toGroupKeys(value: unknown, fieldType: string): string[] {
+function toGroupKeys(value: unknown, _fieldType: string): string[] {
   if (isEmptyValue(value)) return [UNGROUPED_KEY];
   if (Array.isArray(value)) {
     // multiselect/user 多值：每个元素一个分组

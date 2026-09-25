@@ -38,7 +38,7 @@ export function parseActionItems(markdown: string): ParsedActionItem[] {
     const dateMatch = rest.match(/(\d{4}-\d{2}-\d{2})/);
     const prioMatch = rest.match(/#(low|medium|high|urgent)/i);
     // 清理 title
-    let title = rest
+    const title = rest
       .replace(/@\S+/g, "")
       .replace(/\d{4}-\d{2}-\d{2}/g, "")
       .replace(/#(low|medium|high|urgent)/gi, "")

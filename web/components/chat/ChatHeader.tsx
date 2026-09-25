@@ -11,7 +11,7 @@
  * 搜索交互逻辑委托给 ChatHeaderClient 子组件。
  */
 
-import { MessageCircle } from "lucide-react";
+
 import { useTranslations } from "next-intl";
 import type { Person } from "./types";
 import { ChatHeaderClient } from "./ChatHeaderClient";

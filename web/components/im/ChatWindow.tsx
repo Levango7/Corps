@@ -242,7 +242,7 @@ export function ChatWindow({
     (callData: IncomingCallData) => {
       setIncomingCall(null);
       incomingCallRef.current = null;
-      const wid = conversation.workspaceId;
+
       const locale = params?.locale ?? "zh";
       // 跳转到会议页面，跳过大厅直接进入会议室
       router.push(
@@ -254,7 +254,7 @@ export function ChatWindow({
 
   /** 拒绝来电：发送 call_rejected 消息 */
   const handleRejectCall = useCallback(
-    (callData: IncomingCallData) => {
+    (_callData: IncomingCallData) => {
       setIncomingCall(null);
       incomingCallRef.current = null;
       onSend(tIm("callRejected"), { type: "call_rejected" });

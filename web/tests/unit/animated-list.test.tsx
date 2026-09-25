@@ -25,9 +25,9 @@ const { useReducedMotionMock } = vi.hoisted(() => ({
 
 vi.mock("framer-motion", () => ({
   motion: {
-    div: ({ children, className }: any) => <div className={className}>{children}</div>,
+    div: ({ children, className }: Record<string, unknown>) => <div className={className as string}>{children}</div>,
   },
-  AnimatePresence: ({ children }: any) => <>{children}</>,
+  AnimatePresence: ({ children }: Record<string, unknown>) => <>{children}</>,
   useReducedMotion: useReducedMotionMock,
 }));
 

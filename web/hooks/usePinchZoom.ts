@@ -11,7 +11,7 @@
  */
 
 import { useMotionValue, useReducedMotion } from "framer-motion";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useRef } from "react";
 
 const MIN_SCALE = 0.5;
 const MAX_SCALE = 3;

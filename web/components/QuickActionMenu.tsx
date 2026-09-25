@@ -41,7 +41,7 @@ export function QuickActionMenu({
   actions,
   x,
   y,
-  children,
+  _children,
 }: QuickActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 

@@ -27,7 +27,7 @@ function matchesCronField(
   field: string,
   value: number,
   min: number,
-  max: number,
+  _max: number,
 ): boolean {
   if (field === "*") return true;
   for (const part of field.split(",")) {

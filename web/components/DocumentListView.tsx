@@ -171,7 +171,7 @@ export function DocumentListView({ wid }: { wid: string }) {
         const link = document.createElement("a");
         try {
           link.href = url;
-          link.download = `${item.title.replace(/[<>:"/\\\\|?*\u0000-\u001f]/g, "_").slice(0, 120).trim() || item.id}.html`;
+          link.download = `${item.title.replace(new RegExp("[<>:\"/\\\\|?*" + String.fromCharCode(0) + "-" + String.fromCharCode(31) + "]", "g"), "_").slice(0, 120).trim() || item.id}.html`;
           document.body.appendChild(link);
           link.click();
           toast("success", t("exportStarted"));

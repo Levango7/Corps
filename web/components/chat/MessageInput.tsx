@@ -50,18 +50,6 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 /** @提及浮窗最大显示成员数 */
 const MENTION_MAX_ITEMS = 8;
 
-/** 在 textarea 光标位置插入文本，并返回新光标位置 */
-function insertAtCursor(el: HTMLTextAreaElement, text: string): number {
-  const start = el.selectionStart ?? el.value.length;
-  const end = el.selectionEnd ?? el.value.length;
-  const next = el.value.slice(0, start) + text + el.value.slice(end);
-  // 截断到最大长度
-  const capped = next.slice(0, MAX_BODY_LENGTH);
-  el.value = capped;
-  const pos = Math.min(start + text.length, capped.length);
-  el.setSelectionRange(pos, pos);
-  return pos;
-}
 
 function MessageInputImpl({
   onSend,

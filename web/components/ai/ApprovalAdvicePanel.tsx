@@ -19,7 +19,7 @@
  *    来源：经验 2026-09-11-design-token-missing-semantic-fallback
  */
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Sparkles,
@@ -149,9 +149,10 @@ export function ApprovalAdvicePanel({
         }
       }
     } finally {
-      if (cancelledRef.current || controller.signal.aborted) return;
-      setLoading(false);
-      setProgressStage(null);
+      if (!cancelledRef.current && !controller.signal.aborted) {
+        setLoading(false);
+        setProgressStage(null);
+      }
     }
   };
 

@@ -68,7 +68,7 @@ function permKey(level: PermissionLevel): string {
 function granteeLabel(
   perm: DocPermission,
   members: Member[],
-  t: (k: string) => string,
+  _t: (k: string) => string,
 ): string {
   if (perm.granteeType === "role") {
     return perm.granteeId;

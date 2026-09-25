@@ -97,7 +97,7 @@ export async function GET(
     }
 
     // 响应：扁平化 templateName + currentApproverIds，保留 applicant/operator 嵌套对象
-    const { template, ...instanceRest } = result.instance;
+    const { template: _template, ...instanceRest } = result.instance;
 
     // M6: 从 content JSON 中提取 entityType / entityId（支持审批关联到任务/文档/自定义实体）
     const contentObj = result.instance.content as Record<string, unknown> | null;

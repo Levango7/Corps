@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import {
   RemoteControlSession,
-  type InputEvent,
+
   type RemoteControlSessionState,
   mouseMove,
   mouseClick,
@@ -60,7 +60,7 @@ export interface RemoteViewerProps {
 export function RemoteViewer({
   sessionId,
   workspaceId,
-  role,
+  _role,
   session,
   onEnd,
 }: RemoteViewerProps) {

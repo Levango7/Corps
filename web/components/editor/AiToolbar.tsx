@@ -80,7 +80,7 @@ export function AiToolbar({ editor }: AiToolbarProps) {
         body.targetLang = targetLang;
       }
 
-      let result = "";
+      let result: string;
       try {
         result = await consumeAiStream(url, body, { signal: ac.signal });
       } catch (e) {

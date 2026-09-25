@@ -30,7 +30,7 @@ export async function GET(req: NextRequest) {
         uptimeSec: Math.round(process.uptime()),
       },
     });
-  } catch (error) {
+  } catch {
     logger.error("database probe failed", { endpoint: "health" });
     return NextResponse.json(
       {

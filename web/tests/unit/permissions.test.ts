@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import {
   checkPermission,
-  requirePermission,
+
   checkTemporaryGrant,
   getMergedPermissions,
   getDefaultPermissions,

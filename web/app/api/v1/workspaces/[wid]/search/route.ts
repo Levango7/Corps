@@ -71,18 +71,6 @@ function buildSnippet(text: string | null | undefined, query: string): string {
   return prefix + content.slice(start, end) + suffix;
 }
 
-/**
- * HTML 转义：防 snippet 注入 XSS（<>&"' 五个字符）。
- * 保留供非 React 客户端（如导出、邮件）使用；前端 React JSX 渲染自动转义。
- */
-function escapeHtml(s: string): string {
-  return s
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-}
 
 /** GET /v1/workspaces/{wid}/search — 跨内容全文搜索 */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {

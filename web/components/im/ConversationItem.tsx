@@ -19,7 +19,7 @@
  */
 
 import { useTranslations, useLocale } from "next-intl";
-import { BellOff } from "lucide-react";
+
 import type { Conversation } from "./types";
 import { ConversationItemClient } from "./ConversationItemClient";
 

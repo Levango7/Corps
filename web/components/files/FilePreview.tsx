@@ -154,7 +154,7 @@ const HEADER_BTN =
 
 // ─── 主组件 ──────────────────────────────────────────────────────
 
-export function FilePreview({ url, fileName, fileType, onClose }: FilePreviewProps) {
+export function FilePreview({ url, fileName, _fileType, onClose }: FilePreviewProps) {
   const t = useTranslations("files.preview");
   const category = getFileCategory(fileName);
 

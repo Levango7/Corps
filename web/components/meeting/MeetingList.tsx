@@ -77,7 +77,7 @@ export interface MeetingListProps {
 
 export function MeetingList({ workspaceId }: MeetingListProps) {
   const t = useTranslations("meeting");
-  const tButton = useTranslations("button");
+
   const router = useRouter();
 
   const [items, setItems] = useState<MeetingItem[]>([]);
@@ -398,7 +398,7 @@ function MeetingGroup({
   actioningId: string | null;
   canEdit: (meeting: MeetingItem) => boolean;
 }) {
-  const t = useTranslations("meeting");
+
   return (
     <section>
       <h2 className="text-[length:var(--text-sm)] font-[weight:var(--weight-semibold)] text-[var(--meta)] uppercase tracking-wide mb-[var(--space-2)]">

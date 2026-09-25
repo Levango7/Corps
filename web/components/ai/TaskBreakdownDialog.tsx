@@ -101,7 +101,7 @@ export default function TaskBreakdownDialog({
           result.subtasks.map((s) => ({ ...s, localId: nextLocalId() })),
         );
         setReasoning(result.reasoning);
-      } catch (e) {
+    } catch {
         if (cancelled || ac.signal.aborted) return;
         if (e instanceof Error && e.name === "AbortError") return;
         // 不直接显示后端 error.message，用 i18n 错误提示
@@ -176,7 +176,7 @@ export default function TaskBreakdownDialog({
       toast("success", t("createSuccess", { count: valid.length }));
       onCreated?.();
       onClose();
-    } catch (e) {
+    } catch {
       // 部分失败：提示已创建数量（当前批次仅 1 个失败）
       if (created > 0) {
         toast("warning", t("partialCreateSuccess", { created, failed: 1 }));

@@ -441,7 +441,7 @@ const DashboardGrid = forwardRef<DashboardGridHandle, DashboardGridProps>(functi
       {error && (
         <div className="mb-2 text-[length:var(--text-xs)] text-[var(--danger-fg)]">{error}</div>
       )}
-      {/* eslint-disable-next-line @typescript-eslint/no-explicit-any -- RGL legacy dynamic import 类型推断为 any，运行时 props 由 legacy 接口保证 */}
+      { }
       <ResponsiveGridLayoutWithWidth
         className="layout"
         layouts={layouts}

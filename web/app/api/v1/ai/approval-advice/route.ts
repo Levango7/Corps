@@ -206,9 +206,9 @@ export async function POST(req: NextRequest) {
               e instanceof Error &&
               e.message === "approval instance not found"
             ) {
-              throw new Error("审批实例不存在");
+              throw new Error("审批实例不存在", { cause: e });
             }
-            throw new Error("获取审批数据失败");
+            throw new Error("获取审批数据失败", { cause: e });
           }
         },
         parseResult: (text: string): ApprovalAdvice => {

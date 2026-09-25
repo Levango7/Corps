@@ -43,7 +43,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
 
   const t = useTranslations("dashboard");
   const tNav = useTranslations("nav");
-  const tTask = useTranslations("task");
+
   const { toast } = useToast();
 
   // workspace context（获取 role + 判断 onboarding）

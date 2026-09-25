@@ -12,7 +12,7 @@
  * lucide-react 图标尺寸用 14/16（项目约定）。
  */
 
-import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 /** 可提及的成员项 */
 interface MentionableMember {

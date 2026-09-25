@@ -615,7 +615,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
             <div className="flex flex-col items-center">
               {/* R8B-06：本地生成 QR 码（qrcode npm 包），避免订单 code_url 发送第三方 API */}
               {/* M8 修复：保留 onError 兜底；referrerPolicy/crossOrigin 对 Data URL 无害但保留 */}
-              {/* eslint-disable-next-line @next/next/no-img-element -- 本地生成的 QR Data URL，next/image 无需代理 */}
+              { }
               {qrDataUrl && (
                 <img
                   src={qrDataUrl}

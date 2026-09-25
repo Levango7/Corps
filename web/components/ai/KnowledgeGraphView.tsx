@@ -14,7 +14,7 @@
  * 删除节点：DELETE /api/v1/ai/knowledge/nodes/[id]?wid=xxx
  */
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import {
   Brain,

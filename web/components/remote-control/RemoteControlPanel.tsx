@@ -33,10 +33,7 @@ import {
   SignalingClient,
   type SignalingMessage,
 } from "@/lib/webrtc/signaling";
-import {
-  subscribeSessionEvents,
-  type RemoteControlSessionEvent,
-} from "@/lib/webrtc/remote-control-events";
+
 
 // ─── 类型 ──────────────────────────────────────────────────────
 
@@ -142,7 +139,7 @@ export function RemoteControlPanel({
     const client = new SignalingClient({ workspaceId });
     signalingRef.current = client;
 
-    const unsubscribe = client.onMessage((msg: SignalingMessage) => {
+    const unsubscribe = client.onMessage((_msg: SignalingMessage) => {
       // 收到信令消息时刷新会话列表（简化处理）
       void loadSessions();
     });

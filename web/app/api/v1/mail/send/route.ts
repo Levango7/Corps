@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   }
 
   // 4) 查询账户（含 credential，用于创建 transporter）
-  let account: Prisma.EmailAccountGetPayload<{}> | null;
+  let account: Prisma.EmailAccountGetPayload<Record<string, unknown>> | null;
   try {
     account = await runWithWorkspace(
       body.wid,

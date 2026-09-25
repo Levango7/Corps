@@ -120,7 +120,7 @@ export function CalendarWeek({
           {(() => {
             const date = weekDays[mobileDayIndex];
             const dayEvents = getEventsOnDate(events, date);
-            const isToday = isSameDay(date, today);
+            const _isToday = isSameDay(date, today);
             if (dayEvents.length === 0) {
               return (
                 <div className="flex items-center justify-center h-32 text-[length:var(--text-sm)] text-[var(--muted)]">

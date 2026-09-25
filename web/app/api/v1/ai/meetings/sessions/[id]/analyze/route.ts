@@ -298,7 +298,7 @@ export async function POST(req: NextRequest) {
             "raw:",
             cleaned.slice(0, 200),
           );
-          throw new Error("AI 返回结果解析失败");
+          throw new Error("AI 返回结果解析失败", { cause: e });
         }
 
         const normalized = normalizeAnalysisResult(parsed);

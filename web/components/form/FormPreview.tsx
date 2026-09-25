@@ -132,7 +132,7 @@ function FieldRenderer({
   readOnly,
   labelClass,
   controlClass,
-  t,
+  _t,
 }: {
   field: FormFieldDefinition;
   value: string;
@@ -140,7 +140,7 @@ function FieldRenderer({
   readOnly?: boolean;
   labelClass: string;
   controlClass: string;
-  t: (key: string) => string;
+  _t: (key: string) => string;
 }) {
   const id = `fp-${field.id}`;
   const labelNode = (

@@ -20,7 +20,7 @@ import {
   AlertCircle,
   MoreVertical,
 } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { api } from "@/lib/api";
 
 export interface WorkflowItem {
   id: string;

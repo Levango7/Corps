@@ -277,8 +277,9 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
         console.error("[MailAssistantPanel] error:", e.message);
       }
     } finally {
-      if (ac.signal.aborted) return;
-      setLoading(false);
+      if (!ac.signal.aborted) {
+        setLoading(false);
+      }
     }
   }, [action, content, context, loading, wid]);
 

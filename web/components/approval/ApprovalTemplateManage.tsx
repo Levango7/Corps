@@ -88,7 +88,7 @@ export function ApprovalTemplateManage({
   workspaceId,
 }: ApprovalTemplateManageProps) {
   const t = useTranslations("approval");
-  const tButton = useTranslations("button");
+
 
   const [templates, setTemplates] = useState<ApprovalTemplate[]>([]);
   const [members, setMembers] = useState<Member[]>([]);

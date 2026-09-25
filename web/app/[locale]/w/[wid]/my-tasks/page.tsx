@@ -2,7 +2,7 @@
 
 import { use, useCallback, useEffect, useState, type ReactNode } from "react";
 import { Link } from "@/lib/i18n-navigation";
-import { ClipboardList, ChevronDown, SearchX } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyStateBase from "@/components/EmptyState";

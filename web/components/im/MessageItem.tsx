@@ -230,7 +230,7 @@ function MessageItemImpl({
   onEdit,
   onRevoke,
   onReply,
-  callEnded = false,
+  _callEnded = false,
 }: MessageItemProps) {
   const t = useTranslations("chat");
   const tIm = useTranslations("im");

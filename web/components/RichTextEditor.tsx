@@ -29,8 +29,7 @@ import {
   useImperativeHandle,
   forwardRef,
   useMemo,
-  type RefObject,
-  type KeyboardEvent,
+
 } from "react";
 import { useEditor, EditorContent } from "@tiptap/react";
 import StarterKit from "@tiptap/starter-kit";
@@ -102,7 +101,8 @@ function inlineMdToHtml(s: string): string {
   r = r.replace(/~~([^~]+)~~/g, "<s>$1</s>");
   r = r.replace(/\[([^\]]+)\]\(([^)\s]+)\)/g, '<a href="$2">$1</a>');
   // 还原行内代码
-  r = r.replace(/\u0000CODE(\d+)\u0000/g, (_m, idx) => `<code>${codes[Number(idx)]}</code>`);
+  const NUL = String.fromCharCode(0);
+  r = r.replace(new RegExp(NUL + "CODE(\\d+)" + NUL, "g"), (_m, idx) => `<code>${codes[Number(idx)]}</code>`);
   return r;
 }
 

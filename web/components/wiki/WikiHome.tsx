@@ -17,7 +17,7 @@ import { useRouter } from "next/navigation";
 export function WikiHome({ wid }: { wid: string }) {
   const t = useTranslations("wiki");
   const router = useRouter();
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [refreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const handleSelect = useCallback(

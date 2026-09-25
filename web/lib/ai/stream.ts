@@ -113,6 +113,7 @@ export function createAiProgressStream(
       } catch (e) {
         throw new Error(
           `[ai-stream] buildPrompt 失败: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
         );
       }
 
@@ -144,6 +145,7 @@ export function createAiProgressStream(
         }
         throw new Error(
           `[ai-stream] streamText 初始化失败: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
         );
       }
       // await 确保 LLM 流完整合并后再结束 execute，避免流提前关闭
@@ -152,6 +154,7 @@ export function createAiProgressStream(
       } catch (e) {
         throw new Error(
           `[ai-stream] 流合并失败: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
         );
       }
     },
@@ -212,6 +215,7 @@ export function createAiJsonProgressStream<T>(
       } catch (e) {
         throw new Error(
           `[ai-stream] buildPrompt 失败: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
         );
       }
 
@@ -237,6 +241,7 @@ export function createAiJsonProgressStream<T>(
         }
         throw new Error(
           `[ai-stream] generateText 失败: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
         );
       }
 
@@ -260,6 +265,7 @@ export function createAiJsonProgressStream<T>(
       } catch (e) {
         throw new Error(
           `[ai-stream] parseResult 失败: ${e instanceof Error ? e.message : String(e)}`,
+          { cause: e },
         );
       }
       writer.write({

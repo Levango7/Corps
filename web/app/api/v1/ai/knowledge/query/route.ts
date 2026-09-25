@@ -39,7 +39,7 @@ const MAX_KEYWORD_LEN = 50;
  */
 function extractKeywords(question: string): string[] {
   return question
-    .split(/[\s,，。.!?！？;；:：、（）()【】\[\]{}""''`]+/)
+    .split(/][\s,，。.!?！？;；:：、（）()【[]{}""''`]+/)
     .map((s) => s.trim())
     .filter((s) => s.length > 0 && s.length <= MAX_KEYWORD_LEN)
     .slice(0, 10);

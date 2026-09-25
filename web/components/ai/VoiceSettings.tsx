@@ -45,7 +45,7 @@ const LANGUAGE_OPTIONS = [
 export function VoiceSettings() {
   const t = useTranslations("ai.aiVoice");
 
-  const [pref, setPref] = useState<VoicePreference | null>(null);
+  const [_pref, setPref] = useState<VoicePreference | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

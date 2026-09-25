@@ -94,7 +94,7 @@ const RECONNECT_TIMEOUT_MS = 30_000;
 export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }: MeetingRoomProps) {
   const t = useTranslations("meetings.room");
   const tMeetings = useTranslations("meetings");
-  const tButton = useTranslations("button");
+
   const router = useRouter();
 
   const [state, setState] = useState<ConnectionState>("joining");
@@ -650,8 +650,7 @@ function MeetingRoomControls({ isHost }: { isHost: boolean }) {
 
   // 获取所有参与者 + 本地参与者设备状态
   const participants = useParticipants();
-  const { localParticipant, isMicrophoneEnabled, isCameraEnabled } =
-    useLocalParticipant();
+  const { localParticipant } = useLocalParticipant();
 
   // 举手状态（本地）
   const [handRaised, setHandRaised] = useState(false);

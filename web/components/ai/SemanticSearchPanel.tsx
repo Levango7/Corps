@@ -196,8 +196,9 @@ export function SemanticSearchPanel({ wid }: SemanticSearchPanelProps) {
         console.error("[SemanticSearchPanel] error:", e.message);
       }
     } finally {
-      if (cancelledRef.current || ac.signal.aborted) return;
-      setLoading(false);
+      if (!cancelledRef.current && !ac.signal.aborted) {
+        setLoading(false);
+      }
     }
   };
 

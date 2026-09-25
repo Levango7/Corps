@@ -332,43 +332,7 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
     await fetchList();
   }
 
-  // ─── 批量永久删除（带确认对话框） ───────────────────────
-  function handleBatchDeleteClick() {
-    if (batchLoading || selectedKeys.size === 0) return;
-    openConfirm(t("confirmBatchDeleteTitle"), t("confirmBatchDelete"), () => {
-      runBatchDelete();
-    });
-  }
 
-  async function runBatchDelete() {
-    setConfirmLoading(true);
-    setBatchLoading(true);
-    const selectedItems = items.filter((it) => selectedKeys.has(itemKey(it)));
-    let successCount = 0;
-    let lastError = "";
-    for (const item of selectedItems) {
-      try {
-        await api(`/api/v1/workspaces/${workspaceId}/recycle-bin/${item.id}`, {
-          method: "DELETE",
-        });
-        successCount++;
-      } catch (e) {
-        lastError = e instanceof Error ? e.message : t("deleteFailed");
-      }
-    }
-    if (successCount > 0) {
-      setTotal((prev) => Math.max(0, prev - successCount));
-      clearSelection();
-      toast("success", t("batchDeleted", { count: successCount }));
-      closeConfirm();
-    }
-    if (lastError) {
-      toast("error", lastError);
-    }
-    setConfirmLoading(false);
-    setBatchLoading(false);
-    await fetchList();
-  }
 
   // ─── 清空回收站（带确认对话框） ─────────────────────────
   function handleClearAllClick() {

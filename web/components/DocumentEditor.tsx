@@ -33,7 +33,7 @@ import {
   Trash2,
   ChevronDown,
   Lock,
-  AlertTriangle,
+
   Plus,
   MessageSquare,
   MoreHorizontal,
@@ -44,7 +44,7 @@ import { RichTextEditor, type RichTextEditorHandle } from "@/components/RichText
 import { QuickDiagram } from "@/components/QuickDiagram";
 import { useToast } from "@/components/Toast";
 import { ExportPreview } from "@/components/ExportPreview";
-import { DocumentComments } from "@/components/DocumentComments";
+
 import { Ripple } from "@/components/Ripple";
 import { ACTION_TEMPLATES } from "@/lib/decision-action-parser";
 import { Parallax } from "@/components/Parallax";

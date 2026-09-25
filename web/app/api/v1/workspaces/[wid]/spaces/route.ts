@@ -110,12 +110,6 @@ export async function POST(
   }
 }
 
-const updateSpaceSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  icon: z.string().max(50).optional(),
-  color: z.string().max(50).optional(),
-  sortOrder: z.number().optional(),
-});
 
 /** PATCH /v1/workspaces/{wid}/spaces — 更新空间（名称/图标/颜色/排序）
  *  Body: { id, name?, icon?, color?, sortOrder? }

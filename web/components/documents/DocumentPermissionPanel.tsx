@@ -27,7 +27,7 @@ import {
   Shield,
   Crown,
   Layers,
-  X,
+
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 

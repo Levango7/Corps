@@ -7,7 +7,7 @@
 import { useTranslations } from "next-intl";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
-import { getEventsOnDate, getEventColor, isSameDay, addMonths, isTaskDeadline } from "./calendar-utils";
+import { getEventsOnDate, getEventColor, isSameDay, isTaskDeadline } from "./calendar-utils";
 
 /** 月视图公共 props */
 interface CalendarMonthProps {
