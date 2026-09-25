@@ -1,6 +1,7 @@
 import js from "@eslint/js";
 import ts from "typescript-eslint";
 import nextPlugin from "@next/eslint-plugin-next";
+import reactHooks from "eslint-plugin-react-hooks";
 
 export default [
   // 基础推荐规则
@@ -13,6 +14,15 @@ export default [
     rules: {
       ...nextPlugin.configs.recommended.rules,
       ...nextPlugin.configs["core-web-vitals"].rules,
+    },
+  },
+
+  // React Hooks 推荐规则（手动配置，因为 recommended-latest 的 plugins 格式不兼容 flat config）
+  {
+    plugins: { "react-hooks": reactHooks },
+    rules: {
+      "react-hooks/rules-of-hooks": "error",
+      "react-hooks/exhaustive-deps": "warn",
     },
   },
 
