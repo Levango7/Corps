@@ -108,7 +108,7 @@ export async function POST(
         if (!targetVersion) return { kind: "versionNotFound" as const, data: null };
 
         // 并发保护：对 Document 行加 FOR UPDATE 行锁
-        await tx.$queryRaw`SELECT id FROM "documents" WHERE id = ${id} FOR UPDATE`;
+        await tx.$queryRaw`SELECT id FROM "documents" WHERE id = ${id}::uuid FOR UPDATE`;
 
         // 锁后重新读取 currentVersion，避免 READ COMMITTED 隔离级别下
         // 并发事务读到相同版本号导致版本号重复

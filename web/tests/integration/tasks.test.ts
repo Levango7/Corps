@@ -179,10 +179,12 @@ describe("任务查询 GET /tasks", () => {
 
     // Assert
     expect(res.status).toBe(200);
-    expect(json.data.items.every((t: { assigneeId?: string }) => t.assigneeId === owner.user.id)).toBe(
+    expect(
+      json.data.items.every((t: { assigneeId?: string }) => t.assigneeId === owner.user.id),
+    ).toBe(true);
+    expect(json.data.items.some((t: { id: string }) => t.id === assignedToMe.body.data!.id)).toBe(
       true,
     );
-    expect(json.data.items.some((t: { id: string }) => t.id === assignedToMe.body.data!.id)).toBe(true);
   });
 });
 

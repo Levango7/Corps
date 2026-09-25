@@ -70,7 +70,7 @@ export async function POST(
       // 决策记录只追加不覆盖：版本号在事务内自增（AC-10 可追溯）
       // 并发保护：先对 Task 行加 FOR UPDATE 行锁，防止两个并发请求同时读到
       // 相同的 _max.version 导致版本号重复（来源：经验库 prisma-interactive-transaction）
-      await tx.$queryRaw`SELECT id FROM "tasks" WHERE id = ${id} FOR UPDATE`;
+      await tx.$queryRaw`SELECT id FROM "tasks" WHERE id = ${id}::uuid FOR UPDATE`;
       const agg = await tx.decision.aggregate({ where: { taskId: id }, _max: { version: true } });
       const version = (agg._max.version ?? 0) + 1;
 

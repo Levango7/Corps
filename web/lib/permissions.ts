@@ -95,7 +95,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     decisions: "crud",
     documents: "crud",
     messages: "crud",
-    members: "cr",
+    members: "crud",
     billing: "",
     analytics: "r",
     settings: "r",
