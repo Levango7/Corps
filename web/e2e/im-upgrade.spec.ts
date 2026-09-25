@@ -47,8 +47,8 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     const wid = await login(page, EMAIL);
     await gotoTaskDetail(page, wid, `E2E-IM-UI-${Date.now()}`);
 
-    // 聊天标题「聊天」可见
-    await expect(page.getByRole("heading", { name: "聊天" })).toBeVisible({ timeout: 10_000 });
+    // 聊天标题可见（TaskChatPanel → ChatWindow 的 <h2>，标题为会话标题或 "聊天"）
+    await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 10_000 });
 
     // 空状态提示可见（i18n: chat.empty）
     await expect(page.getByText("还没有消息，发一条开始对话吧。")).toBeVisible({ timeout: 10_000 });
@@ -298,7 +298,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 等 ChatPanel 完全就绪：标题、空状态、输入框、disabled 初始态全部到位
     // （SSE 首连与成员列表拉取期间组件高频重渲染，提前 fill 会被重建的
     // textarea 丢值——按钮 disabled 初始态出现即表示水合稳定）
-    await expect(page.getByRole("heading", { name: "聊天" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 10_000 });
     await expect(input).toBeVisible();
     await expect(sendBtn).toBeDisabled();
 

@@ -48,10 +48,14 @@ test.describe.serial("冒烟：注册 → 工作区 → 新建任务", () => {
     await page.getByRole("button", { name: /登录/ }).click();
     await page.waitForURL(/\/w\//, { timeout: 20_000 });
 
+    // 首页已改为 Widget 仪表盘，导航到看板页寻找「新建任务」按钮
+    const wid = page.url().match(/\/w\/([0-9a-f-]{36})/)?.[1];
+    await page.goto(`/w/${wid}/board`);
+
     const newTaskBtn = page.getByRole("button", { name: "新建任务" }).first();
     await expect(newTaskBtn).toBeVisible();
     await newTaskBtn.click();
-    // 点击后弹出 NewTaskDialog，标题输入框 placeholder 见 components/NewTaskDialog.tsx:192
+    // 点击后弹出 NewTaskDialog，标题输入框 placeholder 见 components/NewTaskDialog.tsx
     await expect(page.getByPlaceholder("一句话说清要做什么")).toBeVisible({ timeout: 10_000 });
   });
 });

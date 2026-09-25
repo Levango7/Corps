@@ -40,12 +40,12 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     await gotoCalendarSettings(page, wid);
 
     // 页面标题（i18n: calendar.title）
-    await expect(page.getByRole("heading", { name: "日历集成" })).toBeVisible({
+    await expect(page.getByRole("heading", { name: "日历" })).toBeVisible({
       timeout: 10_000,
     });
 
     // 副标题（i18n: calendar.subtitle）
-    await expect(page.getByText("将任务截止日期同步到外部日历，避免遗漏。")).toBeVisible();
+    await expect(page.getByText("同步外部日历，将任务截止日期与提醒推送到日历应用")).toBeVisible();
 
     // Google Calendar 卡片标题
     await expect(page.getByRole("heading", { name: "Google Calendar" })).toBeVisible();
@@ -68,16 +68,16 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     });
 
     // Google 连接按钮（i18n: calendar.connectGoogle）
-    await expect(page.getByRole("button", { name: "连接 Google" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "连接 Google 日历" })).toBeVisible();
 
     // Outlook 连接按钮（i18n: calendar.connectOutlook）
-    await expect(page.getByRole("button", { name: "连接 Outlook" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "连接 Outlook 日历" })).toBeVisible();
 
     // Google 提示文案（i18n: calendar.googleHint）
-    await expect(page.getByText("同步任务截止日期到 Google 日历")).toBeVisible();
+    await expect(page.getByText("连接 Google 日历，将任务截止日期同步到日历")).toBeVisible();
 
     // Outlook 提示文案（i18n: calendar.outlookHint）
-    await expect(page.getByText("同步任务截止日期到 Outlook 日历")).toBeVisible();
+    await expect(page.getByText("连接 Outlook 日历，将任务截止日期同步到日历")).toBeVisible();
   });
 
   // ── OAuth 连接按钮点击行为 ──
@@ -86,7 +86,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     await gotoCalendarSettings(page, wid);
 
     // 等待页面加载完成
-    await expect(page.getByRole("button", { name: "连接 Google" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "连接 Google 日历" })).toBeVisible({
       timeout: 10_000,
     });
 
@@ -99,7 +99,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     // 监听导航：点击后要么到 Google 授权页，要么返回 500 错误 JSON
     // 由于 E2E 环境通常未配置真实 OAuth 凭证，点击后会跳转到 connect 端点
     // connect 端点未配置 client_id 时返回 500 JSON
-    await page.getByRole("button", { name: "连接 Google" }).click();
+    await page.getByRole("button", { name: "连接 Google 日历" }).click();
 
     // 等待导航完成（重定向到 connect 端点或 Google 授权页）
     await page.waitForTimeout(3000);
@@ -119,12 +119,12 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     const wid = await login(page, EMAIL);
     await gotoCalendarSettings(page, wid);
 
-    await expect(page.getByRole("button", { name: "连接 Outlook" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "连接 Outlook 日历" })).toBeVisible({
       timeout: 10_000,
     });
 
     const currentUrl = page.url();
-    await page.getByRole("button", { name: "连接 Outlook" }).click();
+    await page.getByRole("button", { name: "连接 Outlook 日历" }).click();
     await page.waitForTimeout(3000);
 
     const newUrl = page.url();
@@ -149,13 +149,13 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
     // 三个复选框（i18n: calendar.syncDueDateOnly / remindOneDay / remindOneHour）
     const syncDueCheckbox = page
-      .locator("label", { hasText: "仅同步有截止日期的任务" })
+      .locator("label", { hasText: "仅同步截止日期" })
       .locator('input[type="checkbox"]');
     const remindDayCheckbox = page
-      .locator("label", { hasText: "同步前 1 天提醒" })
+      .locator("label", { hasText: "提前 1 天提醒" })
       .locator('input[type="checkbox"]');
     const remindHourCheckbox = page
-      .locator("label", { hasText: "同步前 1 小时提醒" })
+      .locator("label", { hasText: "提前 1 小时提醒" })
       .locator('input[type="checkbox"]');
 
     // 默认值：syncDueDateOnly=true, remindOneDay=true, remindOneHour=false
@@ -183,7 +183,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
     // 修改 remindOneHour 为选中
     const remindHourCheckbox = page
-      .locator("label", { hasText: "同步前 1 小时提醒" })
+      .locator("label", { hasText: "提前 1 小时提醒" })
       .locator('input[type="checkbox"]');
     await remindHourCheckbox.check();
     await expect(remindHourCheckbox).toBeChecked();
@@ -198,7 +198,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
     // remindOneHour 应保持选中状态（从 localStorage 恢复）
     const remindHourAfterReload = page
-      .locator("label", { hasText: "同步前 1 小时提醒" })
+      .locator("label", { hasText: "提前 1 小时提醒" })
       .locator('input[type="checkbox"]');
     await expect(remindHourAfterReload).toBeChecked();
   });
@@ -211,7 +211,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     await page.goto(`/w/${wid}/settings/calendar?connected=google`);
 
     // 等待页面加载
-    await expect(page.getByRole("heading", { name: "日历集成" })).toBeVisible({
+    await expect(page.getByRole("heading", { name: "日历" })).toBeVisible({
       timeout: 10_000,
     });
 
@@ -229,7 +229,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     const errorMsg = "授权被用户取消";
     await page.goto(`/w/${wid}/settings/calendar?error=${encodeURIComponent(errorMsg)}`);
 
-    await expect(page.getByRole("heading", { name: "日历集成" })).toBeVisible({
+    await expect(page.getByRole("heading", { name: "日历" })).toBeVisible({
       timeout: 10_000,
     });
 
@@ -246,7 +246,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     await gotoCalendarSettings(page, wid);
 
     // 等待页面加载完成（status API 已调用）
-    await expect(page.getByRole("button", { name: "连接 Google" })).toBeVisible({
+    await expect(page.getByRole("button", { name: "连接 Google 日历" })).toBeVisible({
       timeout: 10_000,
     });
 
@@ -264,8 +264,8 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
   test("CalendarSyncBadge 在任务详情页加载完成", async ({ page }) => {
     const wid = await login(page, EMAIL);
 
-    // 创建任务并进入详情页
-    await page.goto(`/w/${wid}`);
+    // 创建任务并进入详情页（首页已改为 Widget 仪表盘，需在看板页创建任务）
+    await page.goto(`/w/${wid}/board`);
     await page.getByRole("button", { name: "新建任务" }).first().click();
     await page.getByPlaceholder("一句话说清要做什么").fill(`E2E日历徽章任务-${Date.now()}`);
     await page.getByRole("button", { name: "创建", exact: true }).click();

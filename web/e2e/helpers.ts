@@ -65,10 +65,18 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
 /**
  * 在工作区内创建一条任务（通过 NewTaskDialog）。
  *
- * 前置：page 已在工作区首页或看板页（有「新建任务」按钮）。
+ * 首页已改为 Widget 仪表盘，没有「新建任务」按钮。
+ * 如果当前不在看板页（/w/<uuid>/board），先导航到看板页。
+ *
  * @returns 任务标题（供后续在看板/详情页定位）
  */
 export async function createTask(page: Page, title: string): Promise<string> {
+  // 确保在看板页操作（首页没有「新建任务」按钮）
+  const currentUrl = page.url();
+  if (!currentUrl.includes("/board")) {
+    const wid = extractWorkspaceId(currentUrl);
+    await page.goto(`/w/${wid}/board`);
+  }
   await page.getByRole("button", { name: "新建任务" }).first().click();
   await page.getByPlaceholder("一句话说清要做什么").fill(title);
   await page.getByRole("button", { name: "创建", exact: true }).click();

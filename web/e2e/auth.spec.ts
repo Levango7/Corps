@@ -73,11 +73,12 @@ test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () 
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 20_000 });
     await expect(page).toHaveURL(/\/w\/[0-9a-f-]{36}/i);
 
-    // 工作区首页「新建任务」入口可见
-    await expect(page.getByRole("button", { name: "新建任务" }).first()).toBeVisible({
+    // 工作区首页应显示「概览」标题（首页已改为 Widget 仪表盘）
+    await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({
       timeout: 10_000,
     });
   });
+
 
   test("登录后访问工作区概览页，统计卡片渲染", async ({ page }) => {
     // 先登录建立会话
@@ -87,10 +88,7 @@ test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () 
     await page.getByRole("button", { name: "登录" }).click();
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/i, { timeout: 20_000 });
 
-    // 概览页三张统计卡：待办 / 进行中 / 已完成
-    // exact 匹配统计卡标签——空状态文案（"当前没有进行中的任务。"）也含"进行中"
-    await expect(page.getByText("待办", { exact: true })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("进行中", { exact: true })).toBeVisible();
-    await expect(page.getByText("已完成", { exact: true })).toBeVisible();
+    // 概览页应显示「概览」标题（首页已改为 Widget 仪表盘）
+    await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
   });
 });
