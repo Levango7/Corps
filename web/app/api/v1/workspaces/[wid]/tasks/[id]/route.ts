@@ -108,9 +108,7 @@ export async function PATCH(
       }
     }
 
-    const result = await runWithWorkspace(
-      wid,
-      async (tx) => {
+    const result = await runWithWorkspace(wid, async (tx) => {
         // 先检查任务存在且属于该工作区（防跨租户写入）
         const existing = await tx.task.findFirst({
           where: { id, workspaceId: wid },
@@ -156,33 +154,21 @@ export async function PATCH(
           validated.assigneeId !== null &&
           validated.assigneeId !== ctx.payload.sub
         ) {
-          try {
-            await tx.notification.create({
-              data: {
-                userId: validated.assigneeId,
-                workspaceId: wid,
-                type: "task_assigned",
-                entityId: id,
-                entityTitle: task.title,
-              },
-            });
-          } catch (notifErr) {
-            // DEBUG:1: RLS 策略调试——捕获通知创建失败时的 GUC 值
-            const gucCheck = await tx.$queryRawUnsafe<{ ws_id: string | null }[]>(
-              "SELECT current_setting('app.workspace_id', true) as ws_id",
-            );
-            throw new Error(
-              `[notif RLS debug] GUC ws_id=${gucCheck[0]?.ws_id} wid=${wid} match=${gucCheck[0]?.ws_id === wid} err=${String(notifErr)}`,
-            );
-          }
+          await tx.notification.create({
+            data: {
+              userId: validated.assigneeId,
+              workspaceId: wid,
+              type: "task_assigned",
+              entityId: id,
+              entityTitle: task.title,
+            },
+          });
         }
 
         // prevAssigneeId = 更新前的负责人，供事务外邮件分支判定"是否真的改派"。
         // task 是更新后的行，其 assigneeId 恒等于 validated.assigneeId，不能作比较基准。
         return { kind: "ok" as const, task, prevAssigneeId: existing.assigneeId };
-      },
-      ctx.payload.sub,
-    );
+      });
 
     if (result.kind === "notFound") {
       return NextResponse.json(
@@ -286,7 +272,7 @@ export async function PATCH(
     }
     console.error("Update task error:", error);
     return NextResponse.json(
-      { code: 500, message: String(error?.message ?? error), data: null },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
       { status: 500 },
     );
   }

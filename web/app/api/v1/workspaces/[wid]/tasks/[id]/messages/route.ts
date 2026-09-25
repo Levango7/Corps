@@ -130,9 +130,7 @@ export async function POST(
         }
 
         return created;
-      },
-      ctx.payload.sub,
-    );
+      });
 
     if (!result)
       return NextResponse.json(
