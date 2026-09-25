@@ -99,7 +99,7 @@ export default function TaskBreakdownDialog({
         if (cancelled || ac.signal.aborted) return;
         setSubtasks(result.subtasks.map((s) => ({ ...s, localId: nextLocalId() })));
         setReasoning(result.reasoning);
-      } catch {
+      } catch (e) {
         if (cancelled || ac.signal.aborted) return;
         if (e instanceof Error && e.name === "AbortError") return;
         // 不直接显示后端 error.message，用 i18n 错误提示

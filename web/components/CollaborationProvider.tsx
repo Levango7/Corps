@@ -208,7 +208,7 @@ export function CollaborationProvider({
   user,
   wsUrl,
   token,
-  _field = "prosemirror",
+  field = "prosemirror",
   children,
 }: CollaborationProviderProps) {
   // 协同上下文对象在首次挂载时创建，卸载时销毁。

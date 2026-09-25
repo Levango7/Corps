@@ -56,7 +56,7 @@ export interface RemoteViewerProps {
 
 // ─── 组件 ──────────────────────────────────────────────────────
 
-export function RemoteViewer({ sessionId, workspaceId, _role, session, onEnd }: RemoteViewerProps) {
+export function RemoteViewer({ sessionId, workspaceId, role, session, onEnd }: RemoteViewerProps) {
   const t = useTranslations("remoteControl");
 
   const videoRef = useRef<HTMLVideoElement>(null);

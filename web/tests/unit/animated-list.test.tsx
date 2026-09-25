@@ -2,6 +2,7 @@
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
+import type { ReactNode } from "react";
 
 /**
  * AnimatedList / AnimatedItem 单元测试
@@ -26,10 +27,10 @@ const { useReducedMotionMock } = vi.hoisted(() => ({
 vi.mock("framer-motion", () => ({
   motion: {
     div: ({ children, className }: Record<string, unknown>) => (
-      <div className={className as string}>{children}</div>
+      <div className={className as string}>{children as ReactNode}</div>
     ),
   },
-  AnimatePresence: ({ children }: Record<string, unknown>) => <>{children}</>,
+  AnimatePresence: ({ children }: Record<string, unknown>) => <>{children as ReactNode}</>,
   useReducedMotion: useReducedMotionMock,
 }));
 

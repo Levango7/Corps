@@ -235,7 +235,7 @@ function MessageItemImpl({
   onEdit,
   onRevoke,
   onReply,
-  _callEnded = false,
+  callEnded = false,
 }: MessageItemProps) {
   const t = useTranslations("chat");
   const tIm = useTranslations("im");

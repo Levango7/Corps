@@ -35,7 +35,7 @@ export interface QuickActionMenuProps {
   children?: ReactNode;
 }
 
-export function QuickActionMenu({ open, onClose, actions, x, y, _children }: QuickActionMenuProps) {
+export function QuickActionMenu({ open, onClose, actions, x, y, children }: QuickActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   // Esc 关闭

@@ -82,7 +82,7 @@ export function FormPreview({ wid, form, readOnly, onSubmitSuccess }: FormPrevie
           readOnly={readOnly}
           labelClass={fieldLabel}
           controlClass={fieldControl}
-          t={t}
+          _t={t}
         />
       ))}
 
