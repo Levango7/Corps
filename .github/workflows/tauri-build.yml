@@ -64,21 +64,26 @@ jobs:
 
       # pnpm 虚拟存储中 .prisma/client 与 @prisma/client 不在同一目录层级，
       # 导致 @prisma/client/default.js 的 require('.prisma/client/default') 无法解析。
-      # 用 cp -r 将 .prisma 复制到 pnpm 虚拟存储中 @prisma/client 的上级目录，
-      # 使 Node.js 的 require 逐级向上查找时能找到 .prisma/client/default。
-      # （不用 ln -s：Windows Git Bash 无权限创建符号链接）
-      - name: Copy .prisma to pnpm virtual store (Prisma runtime fix)
+      # 在 @prisma/client 目录下创建 node_modules/.prisma/client/ 子目录，
+      # 使 Node.js require 逐级向上查找时第一步就能找到 .prisma/client/default。
+      - name: Copy .prisma into @prisma/client (Prisma runtime fix)
         shell: bash
         run: |
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
-          echo "Junction path: $PRISMA_CLIENT_DIR"
-          echo "Real path:     $REAL_DIR"
-          TARGET_DIR=$(dirname "$REAL_DIR")
-          echo "Target dir:    $TARGET_DIR"
-          cp -r node_modules/.prisma "$TARGET_DIR/"
-          echo "Copied .prisma to $TARGET_DIR/"
-          ls -la "$TARGET_DIR/.prisma/client/" | head -5
+          echo "Prisma client dir: $REAL_DIR"
+          PRISMA_GEN_DIR=$(dirname "$REAL_DIR")/.prisma/client
+          echo "Prisma generated:  $PRISMA_GEN_DIR"
+          if [ -d "$PRISMA_GEN_DIR" ]; then
+            mkdir -p "$REAL_DIR/node_modules/.prisma/client"
+            cp -r "$PRISMA_GEN_DIR"/* "$REAL_DIR/node_modules/.prisma/client/"
+            echo "Copied .prisma/client into @prisma/client/node_modules/.prisma/client/"
+            ls "$REAL_DIR/node_modules/.prisma/client/" | head -5
+          else
+            echo "ERROR: .prisma/client not found at $PRISMA_GEN_DIR"
+            find . -name ".prisma" -type d 2>/dev/null | head -10
+            exit 1
+          fi
         working-directory: web
 
       # Install desktop/ dependencies (no lockfile, standalone package)

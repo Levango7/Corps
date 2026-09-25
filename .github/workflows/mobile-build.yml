@@ -71,18 +71,24 @@ jobs:
         run: npx prisma generate
         working-directory: web
 
-      - name: Copy .prisma to pnpm virtual store (Prisma runtime fix)
+      - name: Copy .prisma into @prisma/client (Prisma runtime fix)
         shell: bash
         run: |
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
-          echo "Junction path: $PRISMA_CLIENT_DIR"
-          echo "Real path:     $REAL_DIR"
-          TARGET_DIR=$(dirname "$REAL_DIR")
-          echo "Target dir:    $TARGET_DIR"
-          cp -r node_modules/.prisma "$TARGET_DIR/"
-          echo "Copied .prisma to $TARGET_DIR/"
-          ls -la "$TARGET_DIR/.prisma/client/" | head -5
+          echo "Prisma client dir: $REAL_DIR"
+          PRISMA_GEN_DIR=$(dirname "$REAL_DIR")/.prisma/client
+          echo "Prisma generated:  $PRISMA_GEN_DIR"
+          if [ -d "$PRISMA_GEN_DIR" ]; then
+            mkdir -p "$REAL_DIR/node_modules/.prisma/client"
+            cp -r "$PRISMA_GEN_DIR"/* "$REAL_DIR/node_modules/.prisma/client/"
+            echo "Copied .prisma/client into @prisma/client/node_modules/.prisma/client/"
+            ls "$REAL_DIR/node_modules/.prisma/client/" | head -5
+          else
+            echo "ERROR: .prisma/client not found at $PRISMA_GEN_DIR"
+            find . -name ".prisma" -type d 2>/dev/null | head -10
+            exit 1
+          fi
         working-directory: web
 
       - name: Install desktop dependencies
@@ -145,18 +151,24 @@ jobs:
         run: npx prisma generate
         working-directory: web
 
-      - name: Copy .prisma to pnpm virtual store (Prisma runtime fix)
+      - name: Copy .prisma into @prisma/client (Prisma runtime fix)
         shell: bash
         run: |
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
-          echo "Junction path: $PRISMA_CLIENT_DIR"
-          echo "Real path:     $REAL_DIR"
-          TARGET_DIR=$(dirname "$REAL_DIR")
-          echo "Target dir:    $TARGET_DIR"
-          cp -r node_modules/.prisma "$TARGET_DIR/"
-          echo "Copied .prisma to $TARGET_DIR/"
-          ls -la "$TARGET_DIR/.prisma/client/" | head -5
+          echo "Prisma client dir: $REAL_DIR"
+          PRISMA_GEN_DIR=$(dirname "$REAL_DIR")/.prisma/client
+          echo "Prisma generated:  $PRISMA_GEN_DIR"
+          if [ -d "$PRISMA_GEN_DIR" ]; then
+            mkdir -p "$REAL_DIR/node_modules/.prisma/client"
+            cp -r "$PRISMA_GEN_DIR"/* "$REAL_DIR/node_modules/.prisma/client/"
+            echo "Copied .prisma/client into @prisma/client/node_modules/.prisma/client/"
+            ls "$REAL_DIR/node_modules/.prisma/client/" | head -5
+          else
+            echo "ERROR: .prisma/client not found at $PRISMA_GEN_DIR"
+            find . -name ".prisma" -type d 2>/dev/null | head -10
+            exit 1
+          fi
         working-directory: web
 
       # desktop 是独立包（非 pnpm workspace 成员），用 npm install 避免workspace 干扰
