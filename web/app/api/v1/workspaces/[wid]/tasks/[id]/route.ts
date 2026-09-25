@@ -109,66 +109,66 @@ export async function PATCH(
     }
 
     const result = await runWithWorkspace(wid, async (tx) => {
-        // 先检查任务存在且属于该工作区（防跨租户写入）
-        const existing = await tx.task.findFirst({
-          where: { id, workspaceId: wid },
-          select: { id: true, assigneeId: true, title: true },
-        });
-        if (!existing) return { kind: "notFound" as const };
-
-        // 被指派人必须属于当前工作区（assignee_id 是跨表引用，RLS 不覆盖 users）
-        if (validated.assigneeId) {
-          const member = await tx.member.findUnique({
-            where: { userId_workspaceId: { userId: validated.assigneeId, workspaceId: wid } },
-            select: { userId: true },
-          });
-          if (!member) return { kind: "invalidAssignee" as const };
-        }
-
-        // 分享 token 特殊语义："rotate" 生成新随机 token；null 取消；undefined 不动
-        let shareTokenValue: string | null | undefined = undefined;
-        if (validated.shareToken === "rotate") {
-          const { randomBytes } = await import("crypto");
-          shareTokenValue = randomBytes(24).toString("base64url");
-        } else if (validated.shareToken !== undefined) {
-          shareTokenValue = validated.shareToken;
-        }
-
-        // S-1: dueDate 需从 ISO 字符串转为 Date（与 tasks/route.ts:239、tasks/batch/route.ts:88 对齐）
-        // Prisma 期望 dueDate 为 DateTime，直接传字符串会导致类型不匹配。
-        const { dueDate, ...restValidated } = validated;
-        const task = await tx.task.update({
-          where: { id },
-          data: {
-            ...restValidated,
-            shareToken: shareTokenValue,
-            ...(dueDate !== undefined ? { dueDate: dueDate ? new Date(dueDate) : null } : {}),
-          },
-          include: { assignee: { select: { id: true, name: true, email: true } } },
-        });
-
-        // A-3: assignee 变更且新 assignee 不是操作者时，创建 task_assigned 通知
-        if (
-          validated.assigneeId !== undefined &&
-          validated.assigneeId !== existing.assigneeId &&
-          validated.assigneeId !== null &&
-          validated.assigneeId !== ctx.payload.sub
-        ) {
-          await tx.notification.create({
-            data: {
-              userId: validated.assigneeId,
-              workspaceId: wid,
-              type: "task_assigned",
-              entityId: id,
-              entityTitle: task.title,
-            },
-          });
-        }
-
-        // prevAssigneeId = 更新前的负责人，供事务外邮件分支判定"是否真的改派"。
-        // task 是更新后的行，其 assigneeId 恒等于 validated.assigneeId，不能作比较基准。
-        return { kind: "ok" as const, task, prevAssigneeId: existing.assigneeId };
+      // 先检查任务存在且属于该工作区（防跨租户写入）
+      const existing = await tx.task.findFirst({
+        where: { id, workspaceId: wid },
+        select: { id: true, assigneeId: true, title: true },
       });
+      if (!existing) return { kind: "notFound" as const };
+
+      // 被指派人必须属于当前工作区（assignee_id 是跨表引用，RLS 不覆盖 users）
+      if (validated.assigneeId) {
+        const member = await tx.member.findUnique({
+          where: { userId_workspaceId: { userId: validated.assigneeId, workspaceId: wid } },
+          select: { userId: true },
+        });
+        if (!member) return { kind: "invalidAssignee" as const };
+      }
+
+      // 分享 token 特殊语义："rotate" 生成新随机 token；null 取消；undefined 不动
+      let shareTokenValue: string | null | undefined = undefined;
+      if (validated.shareToken === "rotate") {
+        const { randomBytes } = await import("crypto");
+        shareTokenValue = randomBytes(24).toString("base64url");
+      } else if (validated.shareToken !== undefined) {
+        shareTokenValue = validated.shareToken;
+      }
+
+      // S-1: dueDate 需从 ISO 字符串转为 Date（与 tasks/route.ts:239、tasks/batch/route.ts:88 对齐）
+      // Prisma 期望 dueDate 为 DateTime，直接传字符串会导致类型不匹配。
+      const { dueDate, ...restValidated } = validated;
+      const task = await tx.task.update({
+        where: { id },
+        data: {
+          ...restValidated,
+          shareToken: shareTokenValue,
+          ...(dueDate !== undefined ? { dueDate: dueDate ? new Date(dueDate) : null } : {}),
+        },
+        include: { assignee: { select: { id: true, name: true, email: true } } },
+      });
+
+      // A-3: assignee 变更且新 assignee 不是操作者时，创建 task_assigned 通知
+      if (
+        validated.assigneeId !== undefined &&
+        validated.assigneeId !== existing.assigneeId &&
+        validated.assigneeId !== null &&
+        validated.assigneeId !== ctx.payload.sub
+      ) {
+        await tx.notification.create({
+          data: {
+            userId: validated.assigneeId,
+            workspaceId: wid,
+            type: "task_assigned",
+            entityId: id,
+            entityTitle: task.title,
+          },
+        });
+      }
+
+      // prevAssigneeId = 更新前的负责人，供事务外邮件分支判定"是否真的改派"。
+      // task 是更新后的行，其 assigneeId 恒等于 validated.assigneeId，不能作比较基准。
+      return { kind: "ok" as const, task, prevAssigneeId: existing.assigneeId };
+    });
 
     if (result.kind === "notFound") {
       return NextResponse.json(

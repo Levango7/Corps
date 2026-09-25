@@ -96,41 +96,39 @@ export async function POST(
   try {
     const validated = createMessageSchema.parse(await req.json());
 
-    const result = await runWithWorkspace(
-      wid,
-      async (tx) => {
-        // 校验任务确实属于本工作区（防跨租户写入）
-        const task = await tx.task.findFirst({
-          where: { id, workspaceId: wid },
-          select: { id: true, assigneeId: true, title: true },
-        });
-        if (!task) return null;
-
-        const created = await tx.message.create({
-          data: {
-            taskId: id,
-            workspaceId: wid,
-            authorId: ctx.payload.sub,
-            body: validated.body,
-          },
-          include: { author: { select: { id: true, name: true, email: true, image: true } } },
-        });
-
-        // 通知任务指派人有新聊天消息（排除发送者自己）
-        if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
-          await tx.notification.create({
-            data: {
-              userId: task.assigneeId,
-              workspaceId: wid,
-              type: "comment_added",
-              entityId: id,
-              entityTitle: task.title,
-            },
-          });
-        }
-
-        return created;
+    const result = await runWithWorkspace(wid, async (tx) => {
+      // 校验任务确实属于本工作区（防跨租户写入）
+      const task = await tx.task.findFirst({
+        where: { id, workspaceId: wid },
+        select: { id: true, assigneeId: true, title: true },
       });
+      if (!task) return null;
+
+      const created = await tx.message.create({
+        data: {
+          taskId: id,
+          workspaceId: wid,
+          authorId: ctx.payload.sub,
+          body: validated.body,
+        },
+        include: { author: { select: { id: true, name: true, email: true, image: true } } },
+      });
+
+      // 通知任务指派人有新聊天消息（排除发送者自己）
+      if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
+        await tx.notification.create({
+          data: {
+            userId: task.assigneeId,
+            workspaceId: wid,
+            type: "comment_added",
+            entityId: id,
+            entityTitle: task.title,
+          },
+        });
+      }
+
+      return created;
+    });
 
     if (!result)
       return NextResponse.json(

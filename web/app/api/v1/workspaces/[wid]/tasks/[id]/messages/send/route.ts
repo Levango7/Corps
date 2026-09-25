@@ -59,69 +59,67 @@ export async function POST(
   try {
     const validated = sendMessageSchema.parse(await req.json());
 
-    const result = await runWithWorkspace(
-      wid,
-      async (tx) => {
-        // 校验任务确实属于本工作区（防跨租户写入）
-        const task = await tx.task.findFirst({
-          where: { id, workspaceId: wid },
-          select: { id: true, assigneeId: true, title: true },
-        });
-        if (!task) return null;
-
-        const created = await tx.message.create({
-          data: {
-            taskId: id,
-            workspaceId: wid,
-            authorId: ctx.payload.sub,
-            body: validated.body,
-            // 同时创建附件记录（如果有）——写入租户归属（workspaceId），
-            // 下载端点据此做归属校验（20260831000000 迁移配套）
-            ...(validated.attachments && validated.attachments.length > 0
-              ? {
-                  attachments: {
-                    create: validated.attachments.map((a) => ({
-                      // 租户归属用关系 connect（Prisma checked 嵌套 create 类型要求关系
-                      // 而非标量 workspaceId；RLS 谓词与下载归属校验均依赖该列）
-                      workspace: { connect: { id: wid } },
-                      fileName: a.fileName,
-                      fileSize: a.fileSize,
-                      fileType: a.fileType,
-                      url: a.url,
-                      thumbnailUrl: a.thumbnailUrl ?? null,
-                    })),
-                  },
-                }
-              : {}),
-          },
-          include: {
-            author: { select: { id: true, name: true, email: true, image: true } },
-            reads: { select: { userId: true, readAt: true } },
-            attachments: true,
-          },
-        });
-
-        // 通知任务指派人有新聊天消息（排除发送者自己）
-        if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
-          await tx.notification.create({
-            data: {
-              userId: task.assigneeId,
-              workspaceId: wid,
-              type: "comment_added",
-              entityId: id,
-              entityTitle: task.title,
-            },
-          });
-        }
-
-        // 更新关联 Conversation.lastMessageAt（如果任务有关联会话）
-        await tx.conversation.updateMany({
-          where: { taskId: id, workspaceId: wid },
-          data: { lastMessageAt: created.createdAt },
-        });
-
-        return created;
+    const result = await runWithWorkspace(wid, async (tx) => {
+      // 校验任务确实属于本工作区（防跨租户写入）
+      const task = await tx.task.findFirst({
+        where: { id, workspaceId: wid },
+        select: { id: true, assigneeId: true, title: true },
       });
+      if (!task) return null;
+
+      const created = await tx.message.create({
+        data: {
+          taskId: id,
+          workspaceId: wid,
+          authorId: ctx.payload.sub,
+          body: validated.body,
+          // 同时创建附件记录（如果有）——写入租户归属（workspaceId），
+          // 下载端点据此做归属校验（20260831000000 迁移配套）
+          ...(validated.attachments && validated.attachments.length > 0
+            ? {
+                attachments: {
+                  create: validated.attachments.map((a) => ({
+                    // 租户归属用关系 connect（Prisma checked 嵌套 create 类型要求关系
+                    // 而非标量 workspaceId；RLS 谓词与下载归属校验均依赖该列）
+                    workspace: { connect: { id: wid } },
+                    fileName: a.fileName,
+                    fileSize: a.fileSize,
+                    fileType: a.fileType,
+                    url: a.url,
+                    thumbnailUrl: a.thumbnailUrl ?? null,
+                  })),
+                },
+              }
+            : {}),
+        },
+        include: {
+          author: { select: { id: true, name: true, email: true, image: true } },
+          reads: { select: { userId: true, readAt: true } },
+          attachments: true,
+        },
+      });
+
+      // 通知任务指派人有新聊天消息（排除发送者自己）
+      if (task.assigneeId && task.assigneeId !== ctx.payload.sub) {
+        await tx.notification.create({
+          data: {
+            userId: task.assigneeId,
+            workspaceId: wid,
+            type: "comment_added",
+            entityId: id,
+            entityTitle: task.title,
+          },
+        });
+      }
+
+      // 更新关联 Conversation.lastMessageAt（如果任务有关联会话）
+      await tx.conversation.updateMany({
+        where: { taskId: id, workspaceId: wid },
+        data: { lastMessageAt: created.createdAt },
+      });
+
+      return created;
+    });
 
     if (!result)
       return NextResponse.json(
