@@ -77,7 +77,7 @@ jobs:
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
           echo "Prisma client dir: $REAL_DIR"
-          PRISMA_GEN_DIR=$(dirname "$REAL_DIR")/.prisma/client
+          PRISMA_GEN_DIR=$(dirname "$(dirname "$REAL_DIR")")/.prisma/client
           echo "Prisma generated:  $PRISMA_GEN_DIR"
           if [ -d "$PRISMA_GEN_DIR" ]; then
             mkdir -p "$REAL_DIR/node_modules/.prisma/client"
@@ -157,7 +157,7 @@ jobs:
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
           echo "Prisma client dir: $REAL_DIR"
-          PRISMA_GEN_DIR=$(dirname "$REAL_DIR")/.prisma/client
+          PRISMA_GEN_DIR=$(dirname "$(dirname "$REAL_DIR")")/.prisma/client
           echo "Prisma generated:  $PRISMA_GEN_DIR"
           if [ -d "$PRISMA_GEN_DIR" ]; then
             mkdir -p "$REAL_DIR/node_modules/.prisma/client"
