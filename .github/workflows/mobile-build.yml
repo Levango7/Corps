@@ -67,6 +67,13 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: web
 
+      # desktop install 必须在 prisma generate 之前运行，与 tauri-build.yml 保持一致。
+      # 虽然 mobile-build.yml 的 desktop 用 npm install（不创建 pnpm 虚拟存储），
+      # 但保持步骤顺序一致可避免将来切换包管理器时引入隐蔽的 Prisma 运行时加载问题。
+      - name: Install desktop dependencies
+        run: npm install
+        working-directory: desktop
+
       - name: Generate Prisma client
         run: npx prisma generate
         working-directory: web
@@ -90,10 +97,6 @@ jobs:
             exit 1
           fi
         working-directory: web
-
-      - name: Install desktop dependencies
-        run: npm install
-        working-directory: desktop
 
       - name: Prepare mobile config (set CORPS_WEB_URL)
         run: node scripts/prepare-mobile.mjs
@@ -147,6 +150,14 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: web
 
+      # desktop install 必须在 prisma generate 之前运行，与 tauri-build.yml 保持一致。
+      # 虽然 mobile-build.yml 的 desktop 用 npm install（不创建 pnpm 虚拟存储），
+      # 但保持步骤顺序一致可避免将来切换包管理器时引入隐蔽的 Prisma 运行时加载问题。
+      # desktop 是独立包（非 pnpm workspace 成员），用 npm install 避免workspace 干扰
+      - name: Install desktop dependencies
+        run: npm install
+        working-directory: desktop
+
       - name: Generate Prisma client
         run: npx prisma generate
         working-directory: web
@@ -170,11 +181,6 @@ jobs:
             exit 1
           fi
         working-directory: web
-
-      # desktop 是独立包（非 pnpm workspace 成员），用 npm install 避免workspace 干扰
-      - name: Install desktop dependencies
-        run: npm install
-        working-directory: desktop
 
       - name: Prepare mobile config (set CORPS_WEB_URL)
         run: node scripts/prepare-mobile.mjs
