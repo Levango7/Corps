@@ -156,6 +156,18 @@ export async function PATCH(
           validated.assigneeId !== null &&
           validated.assigneeId !== ctx.payload.sub
         ) {
+          // DEBUG: RLS 策略调试——打印 GUC 值和通知数据
+          const gucCheck = await tx.$queryRawUnsafe<{ ws_id: string | null }[]>(
+            "SELECT current_setting('app.workspace_id', true) as ws_id",
+          );
+          console.error(
+            "[DEBUG notif RLS] GUC app.workspace_id:",
+            gucCheck[0]?.ws_id,
+            "wid:",
+            wid,
+            "match:",
+            gucCheck[0]?.ws_id === wid,
+          );
           await tx.notification.create({
             data: {
               userId: validated.assigneeId,
