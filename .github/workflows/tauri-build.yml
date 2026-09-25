@@ -64,20 +64,21 @@ jobs:
 
       # pnpm 虚拟存储中 .prisma/client 与 @prisma/client 不在同一目录层级，
       # 导致 @prisma/client/default.js 的 require('.prisma/client/default') 无法解析。
-      # 在 pnpm 虚拟存储的实际路径（非 Junction/符号链接路径）创建符号链接。
-      - name: Link .prisma to @prisma/client (pnpm virtual store fix)
+      # 用 cp -r 将 .prisma 复制到 pnpm 虚拟存储中 @prisma/client 的上级目录，
+      # 使 Node.js 的 require 逐级向上查找时能找到 .prisma/client/default。
+      # （不用 ln -s：Windows Git Bash 无权限创建符号链接）
+      - name: Copy .prisma to pnpm virtual store (Prisma runtime fix)
         shell: bash
         run: |
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
           echo "Junction path: $PRISMA_CLIENT_DIR"
           echo "Real path:     $REAL_DIR"
-          if [ ! -e "$REAL_DIR/.prisma" ]; then
-            ln -s ../.prisma "$REAL_DIR/.prisma"
-            echo "Created symlink: $REAL_DIR/.prisma → ../.prisma"
-          else
-            echo ".prisma already exists at $REAL_DIR/.prisma"
-          fi
+          TARGET_DIR=$(dirname "$REAL_DIR")
+          echo "Target dir:    $TARGET_DIR"
+          cp -r node_modules/.prisma "$TARGET_DIR/"
+          echo "Copied .prisma to $TARGET_DIR/"
+          ls -la "$TARGET_DIR/.prisma/client/" | head -5
         working-directory: web
 
       # Install desktop/ dependencies (no lockfile, standalone package)

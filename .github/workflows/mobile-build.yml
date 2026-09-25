@@ -71,19 +71,18 @@ jobs:
         run: npx prisma generate
         working-directory: web
 
-      - name: Link .prisma to @prisma/client (pnpm virtual store fix)
+      - name: Copy .prisma to pnpm virtual store (Prisma runtime fix)
         shell: bash
         run: |
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
           echo "Junction path: $PRISMA_CLIENT_DIR"
           echo "Real path:     $REAL_DIR"
-          if [ ! -e "$REAL_DIR/.prisma" ]; then
-            ln -s ../.prisma "$REAL_DIR/.prisma"
-            echo "Created symlink: $REAL_DIR/.prisma → ../.prisma"
-          else
-            echo ".prisma already exists at $REAL_DIR/.prisma"
-          fi
+          TARGET_DIR=$(dirname "$REAL_DIR")
+          echo "Target dir:    $TARGET_DIR"
+          cp -r node_modules/.prisma "$TARGET_DIR/"
+          echo "Copied .prisma to $TARGET_DIR/"
+          ls -la "$TARGET_DIR/.prisma/client/" | head -5
         working-directory: web
 
       - name: Install desktop dependencies
@@ -146,19 +145,18 @@ jobs:
         run: npx prisma generate
         working-directory: web
 
-      - name: Link .prisma to @prisma/client (pnpm virtual store fix)
+      - name: Copy .prisma to pnpm virtual store (Prisma runtime fix)
         shell: bash
         run: |
           PRISMA_CLIENT_DIR=$(node -e "console.log(require('path').dirname(require.resolve('@prisma/client')))")
           REAL_DIR=$(realpath "$PRISMA_CLIENT_DIR")
           echo "Junction path: $PRISMA_CLIENT_DIR"
           echo "Real path:     $REAL_DIR"
-          if [ ! -e "$REAL_DIR/.prisma" ]; then
-            ln -s ../.prisma "$REAL_DIR/.prisma"
-            echo "Created symlink: $REAL_DIR/.prisma → ../.prisma"
-          else
-            echo ".prisma already exists at $REAL_DIR/.prisma"
-          fi
+          TARGET_DIR=$(dirname "$REAL_DIR")
+          echo "Target dir:    $TARGET_DIR"
+          cp -r node_modules/.prisma "$TARGET_DIR/"
+          echo "Copied .prisma to $TARGET_DIR/"
+          ls -la "$TARGET_DIR/.prisma/client/" | head -5
         working-directory: web
 
       # desktop 是独立包（非 pnpm workspace 成员），用 npm install 避免workspace 干扰
