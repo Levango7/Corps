@@ -286,7 +286,7 @@ export async function PATCH(
     }
     console.error("Update task error:", error);
     return NextResponse.json(
-      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { code: 500, message: String(error?.message ?? error), data: null },
       { status: 500 },
     );
   }
