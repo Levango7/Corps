@@ -49,10 +49,10 @@ fn kill_sidecar(app: &tauri::AppHandle) {
 
 /// 构建系统托盘菜单：显示 / 隐藏 / 分隔 / 退出
 fn build_tray_menu(app: &tauri::AppHandle) -> tauri::Result<Menu<tauri::Wry>> {
-    let show = MenuItem::with_id(app, "show", SHOW_LABEL, true, None)?;
-    let hide = MenuItem::with_id(app, "hide", HIDE_LABEL, true, None)?;
+    let show = MenuItem::with_id(app, "show", SHOW_LABEL, true, None::<&str>)?;
+    let hide = MenuItem::with_id(app, "hide", HIDE_LABEL, true, None::<&str>)?;
     let sep = PredefinedMenuItem::separator(app)?;
-    let quit = MenuItem::with_id(app, "quit", QUIT_LABEL, true, None)?;
+    let quit = MenuItem::with_id(app, "quit", QUIT_LABEL, true, None::<&str>)?;
     Menu::with_items(app, &[&show, &hide, &sep, &quit])
 }
 
@@ -248,7 +248,7 @@ fn main() {
         .on_window_event(|window, event| {
             if let WindowEvent::CloseRequested { api, .. } = event {
                 // 阻止默认关闭，改为隐藏到托盘
-                api.prevent_close!();
+                api.prevent_close();
                 let _ = window.hide();
             }
         })
