@@ -283,7 +283,7 @@ jobs:
       - name: Start production server and wait for readiness
         shell: bash
         run: |
-          nohup node .next/standalone/server.js > next-start.log 2>&1 &
+          nohup npx next start -p 3000 > next-start.log 2>&1 &
           echo $! > next.pid
           for i in $(seq 1 30); do
             if curl -sf http://localhost:3000/api/health > /dev/null; then
