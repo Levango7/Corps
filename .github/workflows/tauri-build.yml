@@ -57,7 +57,19 @@ jobs:
         run: pnpm install --frozen-lockfile --ignore-scripts
         working-directory: web
 
-      # Prisma client generation — next build imports @prisma/client at build time
+      # Install desktop/ dependencies (no lockfile, standalone package)
+      # --ignore-scripts: pnpm 11 blocks dependency build scripts by default;
+      # same workaround as web install step (ERR_PNPM_IGNORED_BUILDS)
+      # 注意：此步骤必须在 prisma generate 之前运行！
+      # pnpm install 在 desktop/ 目录运行时会在根目录创建 node_modules/.pnpm/ 虚拟存储，
+      # 修改 web/node_modules/@prisma/client 的符号链接指向。
+      # 如果 prisma generate 在此之前运行，.prisma/client/ 会生成到错误的虚拟存储位置。
+      - name: Install desktop dependencies
+        run: pnpm install --no-frozen-lockfile --ignore-scripts
+        working-directory: desktop
+
+      # Prisma client generation —必须在 desktop install 之后运行，
+      # 确保 @prisma/client 的符号链接已指向最终的 pnpm 虚拟存储位置。
       - name: Generate Prisma client
         run: npx prisma generate
         working-directory: web
@@ -85,13 +97,6 @@ jobs:
             exit 1
           fi
         working-directory: web
-
-      # Install desktop/ dependencies (no lockfile, standalone package)
-      # --ignore-scripts: pnpm 11 blocks dependency build scripts by default;
-      # same workaround as web install step (ERR_PNPM_IGNORED_BUILDS)
-      - name: Install desktop dependencies
-        run: pnpm install --no-frozen-lockfile --ignore-scripts
-        working-directory: desktop
 
       # Build Tauri app — triggers beforeBuildCommand:
       #   cd ../web && pnpm build && node ../desktop/copy-standalone.mjs
