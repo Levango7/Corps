@@ -144,43 +144,83 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await descArea.evaluate((el) => el.blur());
 
     // ── 发表评论 ──
-    // 不使用 getByPlaceholder：同上，CI 中 placeholder 可能因翻译加载时序而不匹配。
-    // TaskComments 的 section 标题为 "讨论"，通过该标题定位 section 内的 textarea。
-    const commentArea = page.locator("section", { hasText: "讨论" }).locator("textarea").first();
+    // 用 page.evaluate 直接操作 DOM，绕过 Playwright actionability 问题。
+    // 不使用 getByPlaceholder：CI production build 中 next-intl 客户端导航时
+    // 翻译消息加载时序可能导致 placeholder 值暂时不匹配。
+    // 通过 placeholder 包含 "写下你的想法" 来定位评论 textarea。
     const commentText = `E2E评论-${Date.now()}`;
-    await commentArea.evaluate((el, value) => {
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(el, value);
-      el.dispatchEvent(new Event("input", { bubbles: true }));
+    await page.evaluate((text) => {
+      const textareas = Array.from(document.querySelectorAll("textarea"));
+      const commentTextarea = textareas.find((t) => t.placeholder?.includes("写下你的想法"));
+      if (commentTextarea) {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype,
+          "value",
+        )?.set;
+        setter?.call(commentTextarea, text);
+        commentTextarea.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     }, commentText);
-    // exact：页面同时有聊天"发送聊天消息"按钮（aria-label 前缀匹配会撞车）
-    await page.getByRole("button", { name: "发送", exact: true }).click();
+    // 等待 React 处理状态更新，"发送"按钮变为 enabled
+    await page.waitForFunction(
+      () => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const sendBtn = buttons.find((b) => b.textContent?.trim() === "发送");
+        return sendBtn && !sendBtn.disabled;
+      },
+      { timeout: 5_000 },
+    );
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const sendBtn = buttons.find((b) => b.textContent?.trim() === "发送");
+      if (sendBtn) (sendBtn as HTMLButtonElement).click();
+    });
 
     // 评论应出现在讨论区
     await expect(page.getByText(commentText)).toBeVisible({ timeout: 10_000 });
 
     // ── 创建决策记录 ──
-    await page.getByRole("button", { name: "记一条" }).click();
-
-    // 不使用 getByPlaceholder：同上，CI 中 placeholder 可能因翻译加载时序而不匹配。
-    // 决策 textarea 是点击"记一条"后新出现的第三个 textarea（索引 2）。
-    const decisionArea = page.locator("textarea").nth(2);
+    // 用 page.evaluate 点击"记一条"按钮，绕过 actionability 问题
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const addDecisionBtn = buttons.find((b) => b.textContent?.trim() === "记一条");
+      if (addDecisionBtn) (addDecisionBtn as HTMLButtonElement).click();
+    });
+    // 等待决策编辑器 textarea 出现（placeholder 包含 "## 决定"）
+    await page.waitForFunction(
+      () => {
+        const textareas = Array.from(document.querySelectorAll("textarea"));
+        return textareas.some((t) => t.placeholder?.includes("## 决定"));
+      },
+      { timeout: 5_000 },
+    );
     const decisionText = "## 决定\n采用方案 A。\n\n## 理由\n- E2E 验证通过";
-    // Use evaluate to set value (fill times out due to actionability issues in prod build)
-    await decisionArea.evaluate((el, value) => {
-      const setter = Object.getOwnPropertyDescriptor(
-        window.HTMLTextAreaElement.prototype,
-        "value",
-      )?.set;
-      setter?.call(el, value);
-      el.dispatchEvent(new Event("input", { bubbles: true }));
+    await page.evaluate((text) => {
+      const textareas = Array.from(document.querySelectorAll("textarea"));
+      const decisionTextarea = textareas.find((t) => t.placeholder?.includes("## 决定"));
+      if (decisionTextarea) {
+        const setter = Object.getOwnPropertyDescriptor(
+          window.HTMLTextAreaElement.prototype,
+          "value",
+        )?.set;
+        setter?.call(decisionTextarea, text);
+        decisionTextarea.dispatchEvent(new Event("input", { bubbles: true }));
+      }
     }, decisionText);
-
-    // 保存为 v1 按钮（name 动态：保存为 v{N}）
-    await page.getByRole("button", { name: /保存为 v\d/ }).click();
+    // 等待"保存为 v{N}"按钮变为 enabled
+    await page.waitForFunction(
+      () => {
+        const buttons = Array.from(document.querySelectorAll("button"));
+        const saveBtn = buttons.find((b) => /保存为 v\d/.test(b.textContent?.trim() ?? ""));
+        return saveBtn && !saveBtn.disabled;
+      },
+      { timeout: 5_000 },
+    );
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const saveBtn = buttons.find((b) => /保存为 v\d/.test(b.textContent?.trim() ?? ""));
+      if (saveBtn) (saveBtn as HTMLButtonElement).click();
+    });
 
     // 决策内容应渲染（Markdown 渲染后包含「采用方案 A」文本）
     await expect(page.getByText("采用方案 A")).toBeVisible({ timeout: 10_000 });

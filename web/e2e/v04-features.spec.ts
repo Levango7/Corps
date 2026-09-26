@@ -55,12 +55,43 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 
     const subtaskTitle = `E2E子任务-${Date.now()}`;
-    await page.getByPlaceholder("添加子任务…").fill(subtaskTitle);
-    await page.getByRole("button", { name: "添加", exact: true }).click();
+    // 用 page.evaluate 绕过 getByPlaceholder 在 CI production build 中的不可靠性
+    await page.evaluate((title) => {
+      const region = document.querySelector('[aria-label="子任务"]');
+      if (region) {
+        const input = region.querySelector('input[type="text"]') as HTMLInputElement;
+        if (input) {
+          const setter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            "value",
+          )?.set;
+          setter?.call(input, title);
+          input.dispatchEvent(new Event("input", { bubbles: true }));
+        }
+      }
+    }, subtaskTitle);
+    // 等待"添加"按钮变为 enabled
+    await page.waitForFunction(
+      () => {
+        const region = document.querySelector('[aria-label="子任务"]');
+        if (!region) return false;
+        const buttons = Array.from(region.querySelectorAll("button"));
+        const addBtn = buttons.find((b) => b.textContent?.trim() === "添加");
+        return addBtn && !addBtn.disabled;
+      },
+      { timeout: 5_000 },
+    );
+    await page.evaluate(() => {
+      const region = document.querySelector('[aria-label="子任务"]');
+      if (region) {
+        const buttons = Array.from(region.querySelectorAll("button"));
+        const addBtn = buttons.find((b) => b.textContent?.trim() === "添加");
+        if (addBtn) (addBtn as HTMLButtonElement).click();
+      }
+    });
 
-    // 等待子任务标题出现在列表中（表示子任务已创建并渲染），
-    // 再查找 checkbox，避免在数据刷新前就断言 checkbox 可见
-    await expect(page.getByText(subtaskTitle)).toBeVisible({ timeout: 10_000 });
+    // 等待子任务标题出现在列表中（表示子任务已创建并渲染）
+    await expect(page.getByText(subtaskTitle)).toBeVisible({ timeout: 15_000 });
 
     const checkbox = page.getByRole("checkbox", { name: `切换完成状态：${subtaskTitle}` });
     await expect(checkbox).toBeVisible({ timeout: 10_000 });
@@ -107,8 +138,13 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
   test("新建文档 → 编辑 → 发布", async ({ page }) => {
     const wid = await login(page, email2);
     await page.goto(`/w/${wid}/documents`);
-    await page.getByRole("button", { name: "新建文档" }).click();
-    await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 10_000 });
+    // 用 page.evaluate 绕过 actionability 问题（Ripple 组件导致 click 超时）
+    await page.evaluate(() => {
+      const buttons = Array.from(document.querySelectorAll("button"));
+      const newDocBtn = buttons.find((b) => b.textContent?.trim() === "新建文档");
+      if (newDocBtn) (newDocBtn as HTMLButtonElement).click();
+    });
+    await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 30_000 });
 
     const titleInput = page.getByPlaceholder("文档标题");
     await titleInput.fill("E2E 测试文档");

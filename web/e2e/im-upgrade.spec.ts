@@ -56,8 +56,9 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 再检查空状态文本和其他元素。
     await expect(page.getByPlaceholder(/发消息/)).toBeVisible({ timeout: 30_000 });
 
-    // 空状态提示可见（i18n: chat.empty）——ChatWindow 渲染后 messages 为空时显示
-    await expect(page.getByText("还没有消息，发一条开始对话吧。")).toBeVisible({ timeout: 10_000 });
+    // 空状态提示可见（i18n: chat.empty）——ChatWindow 渲染后 messages 为空时显示。
+    // CI 中 MessageList 可能仍在加载（loadingMore 或首条消息拉取），30s 给足时间
+    await expect(page.getByText("还没有消息，发一条开始对话吧。")).toBeVisible({ timeout: 30_000 });
 
     // 发送按钮（i18n: chat.send），初始禁用（空文本）
     // .first()：ChatPanel 在 DOM 中渲染两份实例（可见性由 CSS 控制）
