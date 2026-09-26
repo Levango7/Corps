@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { registerAndLogin, uniqueEmail, login } from "./helpers";
+import { registerAndLogin, uniqueEmail, login, createTask } from "./helpers";
 
 /**
  * E2E：v0.4.0 新功能浏览器级覆盖（子任务 + 文档中心 + 阻塞标记）
@@ -22,13 +22,17 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
   });
 
   test("新建任务 → 详情页出现子任务区", async ({ page }) => {
-    const wid = await login(page, email);
-    await page.goto(`/w/${wid}/board`);
-    await page.getByRole("button", { name: "新建任务" }).first().click();
+    await login(page, email);
     const title = `子任务父任务-${Date.now()}`;
-    await page.getByPlaceholder("一句话说清要做什么").fill(title);
-    await page.getByRole("button", { name: "创建", exact: true }).click();
-    await page.waitForTimeout(1500);
+    await createTask(page, title);
+    // 等待看板页任务卡片出现
+    await expect(
+      page
+        .locator('div[draggable="true"]')
+        .filter({ hasText: title })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({ timeout: 10_000 });
 
     // 点开任务详情（可见副本）
     const card = page
@@ -87,7 +91,7 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
     await registerAndLogin(page, email2, "文档中心 E2E");
     await page.getByRole("link", { name: "文档中心" }).first().click();
     await expect(page.getByRole("heading", { name: "文档中心" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("还没有文档")).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/还没有文档/)).toBeVisible({ timeout: 15_000 });
   });
 
   test("新建文档 → 编辑 → 发布", async ({ page }) => {

@@ -1,4 +1,4 @@
-import type { Page } from "@playwright/test";
+import { expect, type Page } from "@playwright/test";
 
 /**
  * E2E 测试共享辅助函数。
@@ -78,7 +78,15 @@ export async function createTask(page: Page, title: string): Promise<string> {
     await page.goto(`/w/${wid}/board`);
   }
   await page.getByRole("button", { name: "新建任务" }).first().click();
-  await page.getByPlaceholder("一句话说清要做什么").fill(title);
-  await page.getByRole("button", { name: "创建", exact: true }).click();
+  const titleInput = page.getByPlaceholder("一句话说清要做什么");
+  await expect(titleInput).toBeVisible({ timeout: 10_000 });
+  await titleInput.fill(title);
+  // 等待 React 状态传播：按钮从 disabled 变为 enabled
+  const submitBtn = page.getByRole("button", { name: "创建", exact: true });
+  await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
+  // force: true 绕过 Ripple 组件导致的 actionability "not stable" 问题
+  await submitBtn.click({ force: true });
+  // 等待对话框关闭（任务创建成功）
+  await expect(titleInput).not.toBeVisible({ timeout: 10_000 });
   return title;
 }

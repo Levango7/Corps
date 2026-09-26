@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { uniqueEmail, registerAndLogin, login } from "./helpers";
+import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
 
 /**
  * E2E：日历集成 —— OAuth 连接 / 断开 / 同步状态 / 设置页面 / SyncBadge。
@@ -264,11 +264,9 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
   test("CalendarSyncBadge 在任务详情页加载完成", async ({ page }) => {
     const wid = await login(page, EMAIL);
 
-    // 创建任务并进入详情页（首页已改为 Widget 仪表盘，需在看板页创建任务）
-    await page.goto(`/w/${wid}/board`);
-    await page.getByRole("button", { name: "新建任务" }).first().click();
-    await page.getByPlaceholder("一句话说清要做什么").fill(`E2E日历徽章任务-${Date.now()}`);
-    await page.getByRole("button", { name: "创建", exact: true }).click();
+    // 创建任务并进入详情页（createTask 会自动导航到看板页）
+    const taskTitle = `E2E日历徽章任务-${Date.now()}`;
+    await createTask(page, taskTitle);
 
     await page.goto(`/w/${wid}/board`);
     // .first()：BoardView 为移动/桌面断点各渲染一份卡片
