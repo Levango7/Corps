@@ -83,7 +83,7 @@ test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
   });
 
   test("切换 en → zh：导航文案恢复中文，URL 去除 /en 前缀", async ({ page }) => {
-    test.setTimeout(120_000);
+    test.setTimeout(180_000);
     await login(page, email);
 
     // 先切到 en

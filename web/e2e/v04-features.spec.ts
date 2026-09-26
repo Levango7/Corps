@@ -54,12 +54,14 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
     await firstCard.click();
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 
-    const subtaskTitle = `E2E子任务-${Date.now()}`;
-    // 用 force: true 绕过 actionability 检查，但保留 Playwright 事件分发（与 React 兼容）
+    // 等待任务详情页加载完成（子任务区域出现）
     const subtaskRegion = page.getByRole("region", { name: "子任务" });
+    await expect(subtaskRegion).toBeVisible({ timeout: 15_000 });
+
+    const subtaskTitle = `E2E子任务-${Date.now()}`;
     const subtaskInput = subtaskRegion.locator('input[type="text"]');
-    await subtaskInput.fill(subtaskTitle, { force: true });
-    await subtaskRegion.getByRole("button", { name: "添加", exact: true }).click({ force: true });
+    await subtaskInput.fill(subtaskTitle);
+    await subtaskRegion.getByRole("button", { name: "添加", exact: true }).click();
 
     // 等待子任务标题出现在列表中（表示子任务已创建并渲染）
     await expect(page.getByText(subtaskTitle)).toBeVisible({ timeout: 15_000 });
@@ -109,8 +111,9 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
   test("新建文档 → 编辑 → 发布", async ({ page }) => {
     const wid = await login(page, email2);
     await page.goto(`/w/${wid}/documents`);
-    // 用 force: true 绕过 actionability 问题（Ripple 组件导致 click 超时）
-    await page.getByRole("button", { name: "新建文档" }).click({ force: true });
+    // 等待文档列表页加载完成（"新建文档"按钮可见）
+    await expect(page.getByRole("button", { name: "新建文档" })).toBeVisible({ timeout: 15_000 });
+    await page.getByRole("button", { name: "新建文档" }).click();
     await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 30_000 });
 
     const titleInput = page.getByPlaceholder("文档标题");
