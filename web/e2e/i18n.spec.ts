@@ -1,25 +1,15 @@
 import { expect, test, type Page } from "@playwright/test";
 import { uniqueEmail, registerAndLogin, login } from "./helpers";
 
-/** 用 evaluate 点击 UserMenu 触发按钮，绕过 Playwright actionability 检查 */
+/** 用 force click 点击 UserMenu 触发按钮，绕过 Playwright actionability 检查 */
 async function openUserMenu(page: Page) {
-  await page.evaluate(() => {
-    const btn = document.querySelector('button[aria-haspopup="menu"]') as HTMLButtonElement;
-    if (btn) btn.click();
-  });
-  await page.waitForSelector('[role="menu"]', { state: "visible", timeout: 5_000 });
+  await page.locator('button[aria-haspopup="menu"]').click({ force: true });
+  await page.waitForSelector('[role="menu"]', { state: "visible", timeout: 10_000 });
 }
 
 /** 在已打开的 UserMenu 中点击指定语言选项 */
 async function clickLanguageOption(page: Page, langName: string) {
-  await page.evaluate((name) => {
-    const menu = document.querySelector('[role="menu"]');
-    if (menu) {
-      const buttons = Array.from(menu.querySelectorAll("button"));
-      const langBtn = buttons.find((b) => b.textContent?.trim() === name);
-      if (langBtn) (langBtn as HTMLButtonElement).click();
-    }
-  }, langName);
+  await page.locator('[role="menu"] button', { hasText: langName }).click({ force: true });
 }
 
 /**

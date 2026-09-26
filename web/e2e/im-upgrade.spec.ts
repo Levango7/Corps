@@ -44,6 +44,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── ChatPanel UI 渲染 ──
   test("任务详情页渲染 ChatPanel：标题/空状态/输入框/发送按钮", async ({ page }) => {
+    test.setTimeout(120_000);
     const wid = await login(page, EMAIL);
     await gotoTaskDetail(page, wid, `E2E-IM-UI-${Date.now()}`);
 
@@ -54,7 +55,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 加载详情/消息），CI 环境耗时可能超过 15s。输入框只在 ChatWindow 中渲染
     // （activeConversation 存在时），是组件进入正常状态的可靠标志——先等它出现，
     // 再检查空状态文本和其他元素。
-    await expect(page.getByPlaceholder(/发消息/)).toBeVisible({ timeout: 30_000 });
+    await expect(page.getByPlaceholder(/发消息/)).toBeVisible({ timeout: 60_000 });
 
     // 空状态提示可见（i18n: chat.empty）——ChatWindow 渲染后 messages 为空时显示。
     // CI 中 MessageList 可能仍在加载（loadingMore 或首条消息拉取），30s 给足时间
