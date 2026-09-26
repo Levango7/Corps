@@ -69,6 +69,7 @@ export default function NewTaskDialog({
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [milestoneId, setMilestoneId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -86,6 +87,7 @@ export default function NewTaskDialog({
     setSelectedLabelIds(new Set());
     setMilestoneId("");
     setError("");
+    setLoading(true);
     Promise.all([
       api<Person[]>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
       api<Label[]>(`/api/v1/workspaces/${wid}/labels`).catch(() => [] as Label[]),
@@ -94,6 +96,8 @@ export default function NewTaskDialog({
       setMembers(m);
       setLabels(l);
       setMilestones(ms);
+    }).finally(() => {
+      setLoading(false);
     });
   }, [open, wid]);
 
@@ -395,9 +399,9 @@ export default function NewTaskDialog({
             </button>
             <button
               type="submit"
-              disabled={!title.trim() || submitting}
+              disabled={!title.trim() || submitting || loading}
               title={
-                !title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : undefined
+                !title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : loading ? t("actionCreate") : undefined
               }
               className="inline-flex items-center gap-1.5 h-9 px-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >

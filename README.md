@@ -51,7 +51,7 @@ corps 已从"项目管理工具"升级为 **AI 原生办公平台**：17 个核�
 
 ## 工程上的硬承诺
 
-- **数据库引擎级租户隔离**：19 张业务表全部 FORCE ROW LEVEL SECURITY，跨工作区请求在 PostgreSQL 层被直接拦截——不靠应用代码自觉
+- **租户隔离（双层防御）**：26/99 数据模型已启用 PostgreSQL FORCE ROW LEVEL SECURITY（引擎级拦截），其余模型通过应用层 workspaceId 过滤实现租户隔离；RLS 覆盖率持续扩展中
 - **CI 七道关卡**：lint / 安全审计 / 单测 / **加固模式回归**（以最小权限角色 + RLS 激活跑全量集成测试）/ 生产构建 / 浏览器 E2E / 镜像发布——每个 commit 都过
 - **可复现的部署**：镜像发布到 GHCR，`docker compose up -d` 一键起全栈（app + PostgreSQL + Redis + cron 调度器）
 - **AI 安全约束**：所有 AI 建议均需用户确认后才落位（写入任务/文档/日程），AI 不直接修改业务数据；AI 使用量按工作区计量与限额（Token / 调用次数 / 成本），反馈数据隔离存储
@@ -62,9 +62,8 @@ corps 已从"项目管理工具"升级为 **AI 原生办公平台**：17 个核�
 # 1. 准备 .env（参考 .env.example，必填项见 docs/runbook-deploy.md）
 cp .env.example .env
 
-# 2. 拉取官方镜像并启动全栈
-docker pull ghcr.io/levango7/corps:latest
-docker compose up -d
+# 2. 本地构建镜像并启动全栈（docker-compose.yml 使用本地镜像 corps-web:latest）
+docker compose up -d --build
 
 # 3. 健康检查
 curl http://localhost:3000/api/health
@@ -97,10 +96,10 @@ e2e/          # Playwright 浏览器级测试（58 项）
 
 ## 链接
 
-- **在线体验**：部署中（v0.7.0 已发布）
+- **在线体验**：部署中（v0.7.1 已发布）
 - **变更日志**：[CHANGELOG.md](./CHANGELOG.md)
 - **部署手册**：[docs/runbook-deploy.md](./docs/runbook-deploy.md)
-- **镜像**：`docker pull ghcr.io/levango7/corps:0.7.0`
+- **镜像**：`docker pull ghcr.io/levango7/corps:0.7.1`
 - **定价**：内置定价页（Free 21 项 / Pro ¥29.9）
 
 ---

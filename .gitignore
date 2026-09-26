@@ -8,6 +8,9 @@ node_modules/
 out/
 build/
 
+# 生成产物（从 design/design-tokens.css 复制，不应入库）
+web/app/design-tokens.css
+
 # Production
 dist/
 

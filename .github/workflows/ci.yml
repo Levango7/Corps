@@ -134,7 +134,7 @@ jobs:
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           # 集成测试同源高频请求会被限流拦截，测试环境关闭限流
           RATE_LIMIT_DISABLED: "1"
-      - run: npx vitest run
+      - run: npx vitest run --coverage
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
           JWT_ACCESS_SECRET: ci-test-access-secret

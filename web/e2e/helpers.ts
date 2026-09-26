@@ -1,4 +1,4 @@
-import { expect, type Page } from "@playwright/test";
+import { type Page } from "@playwright/test";
 
 /**
  * E2E 测试共享辅助函数。
@@ -63,21 +63,29 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
 }
 
 /**
- * 在工作区内创建一条任务（通过 API）。
+ * 在工作区内通过 NewTaskDialog UI 创建一条任务。
  *
- * 注意：此前通过 NewTaskDialog UI 创建，但 Ripple 组件 + useEffect 异步拉取
- * 导致 Playwright actionability check 持续超时（fill/click/evaluate 均失败）。
- * 改用 API 创建任务，UI 交互已由 smoke.spec.ts 覆盖（对话框打开验证）。
+ * 2026-09-27 修复：此前因 Ripple 组件 pointer-events 拦截 + useEffect 异步拉取
+ * 导致 Playwright actionability check 持续超时，曾改用 API 绕过。现已修复产品代码：
+ *  1. Ripple 外层 span 添加 pointer-events-none，不再拦截按钮点击
+ *  2. NewTaskDialog 添加 loading 状态，数据加载完成前 disable 提交按钮
+ * 因此恢复 UI 交互方式创建任务。
  *
  * @returns 任务标题（供后续在看板/详情页定位）
  */
 export async function createTask(page: Page, title: string): Promise<string> {
   const wid = extractWorkspaceId(page.url());
-  const response = await page.request.post(`/api/v1/workspaces/${wid}/tasks`, {
-    data: { title },
-  });
-  expect(response.ok()).toBeTruthy();
-  // 导航到看板页，确保任务卡片可见
+  // 点击"新建任务"按钮打开对话框
+  await page.getByRole("button", { name: /新建任务|New Task/ }).click();
+  // 等待对话框出现
+  await page.getByRole("dialog").waitFor({ state: "visible" });
+  // 填写标题
+  await page.getByLabel(/标题|Title/).fill(title);
+  // 点击创建按钮（提交表单）
+  await page.getByRole("button", { name: /创建|Create/ }).click();
+  // 等待对话框关闭
+  await page.getByRole("dialog").waitFor({ state: "detached" });
+  // 导航到看板页，确保任务卡片可见（与此前 API 版本行为一致）
   await page.goto(`/w/${wid}/board`);
   return title;
 }

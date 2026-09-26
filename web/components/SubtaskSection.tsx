@@ -43,8 +43,9 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
   const total = subtasks.length;
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
 
-  async function addSubtask() {
-    const title = draft.trim();
+  async function addSubtask(titleFromEvent?: string) {
+    // 优先使用事件传入的值（绕过 React state 时序问题：fill() 后 press("Enter") 时 draft 可能尚未更新）
+    const title = (titleFromEvent ?? draft).trim();
     if (!title || busy) return;
     setBusy(true);
     setError("");
@@ -159,16 +160,23 @@ export function SubtaskSection({ wid, taskId, subtasks, onChanged }: SubtaskSect
       {/* 添加子任务 */}
       <div className="flex items-center gap-[var(--space-2)]">
         <input
+          id="subtask-input"
           type="text"
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && addSubtask()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addSubtask((e.currentTarget as HTMLInputElement).value);
+            }
+          }}
           placeholder={t("subtaskPlaceholder")}
           maxLength={255}
           className="flex-1 h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
         />
         <button
-          onClick={addSubtask}
+          type="button"
+          onClick={() => addSubtask()}
           disabled={!draft.trim() || busy}
           className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
         >

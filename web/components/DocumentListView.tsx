@@ -55,6 +55,12 @@ interface DocumentListItem {
   author: { id: string; name: string | null; email: string } | null;
 }
 
+/** API 返回的文档列表响应结构（{ code, data: { items, total } } 信封由 api() 解包后剩余的 data 部分） */
+interface DocumentListResponse {
+  items: DocumentListItem[];
+  total: number;
+}
+
 export function DocumentListView({ wid }: { wid: string }) {
   const t = useTranslations("document");
   const tExport = useTranslations("exportPreview");
@@ -244,10 +250,10 @@ export function DocumentListView({ wid }: { wid: string }) {
       try {
         const params = new URLSearchParams();
         if (deferredQ) params.set("q", deferredQ);
-        const data = await api<DocumentListItem[]>(
+        const data = await api<DocumentListResponse>(
           `/api/v1/workspaces/${wid}/documents?${params.toString()}`,
         );
-        if (!cancelled) setItems(data);
+        if (!cancelled) setItems(Array.isArray(data?.items) ? data.items : []);
       } catch (e) {
         if (!cancelled) setError(e instanceof Error ? e.message : t("loadFailed"));
       } finally {
@@ -367,7 +373,7 @@ export function DocumentListView({ wid }: { wid: string }) {
         <button
           onClick={createDoc}
           disabled={creating}
-          className="inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
+          className="relative z-10 inline-flex items-center gap-1.5 h-9 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)]"
         >
           {creating ? <Loader2 size={14} className="animate-spin" /> : <Plus size={14} />}
           {t("newDocument")}
