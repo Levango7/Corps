@@ -111,8 +111,8 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await taskCard.click();
     await page.waitForURL(/\/task\//, { timeout: 10_000 });
 
-    // 等待任务详情页加载完成（骨架屏消失，textarea 出现）
-    await page.waitForSelector("textarea", { timeout: 30_000 });
+    // 等待任务详情页加载完成（骨架屏消失，标题+描述两个 textarea 都出现）
+    await page.locator("textarea").nth(1).waitFor({ state: "visible", timeout: 30_000 });
 
     // ── 编辑标题（失焦自动保存）──
     const titleArea = page.locator("textarea").first();

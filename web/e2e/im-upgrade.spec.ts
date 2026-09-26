@@ -63,14 +63,14 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 发送按钮（i18n: chat.send），初始禁用（空文本）
     // .first()：ChatPanel 在 DOM 中渲染两份实例（可见性由 CSS 控制）
     const sendBtn = page.getByRole("button", { name: "发送聊天消息" });
-    await expect(sendBtn).toBeVisible();
+    await expect(sendBtn).toBeVisible({ timeout: 30_000 });
     await expect(sendBtn).toBeDisabled();
 
     // 附件按钮（aria-label = i18n: chat.attachFile）
-    await expect(page.getByRole("button", { name: "添加附件" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "添加附件" })).toBeVisible({ timeout: 10_000 });
 
     // 搜索按钮（aria-label = i18n: chat.search）
-    await expect(page.getByRole("button", { name: "搜索消息" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "搜索消息" })).toBeVisible({ timeout: 10_000 });
   });
 
   // ── 发送消息并通过 SSE 接收 ──

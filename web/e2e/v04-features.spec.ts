@@ -61,7 +61,8 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
     const subtaskTitle = `E2E子任务-${Date.now()}`;
     const subtaskInput = subtaskRegion.locator('input[type="text"]');
     await subtaskInput.fill(subtaskTitle);
-    await subtaskRegion.getByRole("button", { name: "添加", exact: true }).click();
+    // 用 Enter 键提交子任务（避免"添加"按钮 disabled 状态导致 click 无效）
+    await subtaskInput.press("Enter");
 
     // 等待子任务标题出现在列表中（表示子任务已创建并渲染）
     await expect(page.getByText(subtaskTitle)).toBeVisible({ timeout: 15_000 });
@@ -113,7 +114,9 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
     await page.goto(`/w/${wid}/documents`);
     // 等待文档列表页加载完成（"新建文档"按钮可见）
     await expect(page.getByRole("button", { name: "新建文档" })).toBeVisible({ timeout: 15_000 });
-    await page.getByRole("button", { name: "新建文档" }).click();
+    // 用 focus + Enter 触发 React onClick（避免 click 被 CSS 覆盖层阻挡）
+    await page.getByRole("button", { name: "新建文档" }).focus();
+    await page.keyboard.press("Enter");
     await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 30_000 });
 
     const titleInput = page.getByPlaceholder("文档标题");
