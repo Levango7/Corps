@@ -84,23 +84,11 @@ test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
     });
 
     // 切回中文：en locale 下 UserMenu trigger 文案为 "Profile settings"
-    // 使用 page.evaluate 直接操作 DOM（绕过 Playwright actionability 问题）
-    await page.evaluate(() => {
-      const btn = document.querySelector(
-        'button[aria-label="Profile settings"]',
-      ) as HTMLButtonElement;
-      if (btn) btn.click();
-    });
-    // 等待 dropdown 渲染后再点击"中文"按钮（同样用 evaluate 绕过 actionability）
-    await page.waitForTimeout(500);
-    await page.evaluate(() => {
-      const btns = document.querySelectorAll("button");
-      const chineseBtn = Array.from(btns).find((b) => b.textContent?.trim() === "中文");
-      if (chineseBtn) (chineseBtn as HTMLButtonElement).click();
-    });
+    await page.getByRole("button", { name: "Profile settings" }).click();
+    await page.getByRole("button", { name: "中文", exact: true }).click();
 
     // URL 应去除 /en 前缀（as-needed 模式下 zh 不带前缀）
-    await page.waitForURL(/\/w\/[0-9a-f-]{36}/, { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.startsWith("/w/"), { timeout: 10_000 });
 
     // 导航菜单恢复中文（限定桌面侧栏实例，同上）
     await expect(page.getByRole("link", { name: "看板", exact: true }).first()).toBeVisible({

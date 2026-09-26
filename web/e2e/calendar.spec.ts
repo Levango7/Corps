@@ -513,8 +513,8 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
     await expect(page.getByText("time-test@gmail.com")).toBeVisible({ timeout: 10_000 });
 
-    // 应显示「最后同步」标签（i18n: calendar.lastSync）
-    await expect(page.getByText(/最后同步/)).toBeVisible();
+    // 应显示「上次同步」标签（i18n: calendar.lastSync = "上次同步"）
+    await expect(page.getByText(/上次同步/)).toBeVisible();
 
     // 应显示相对时间「5 分钟前」
     await expect(page.getByText(/5 分钟前/)).toBeVisible({ timeout: 10_000 });

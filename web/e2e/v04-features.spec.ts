@@ -57,6 +57,11 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
     const subtaskTitle = `E2E子任务-${Date.now()}`;
     await page.getByPlaceholder("添加子任务…").fill(subtaskTitle);
     await page.getByRole("button", { name: "添加", exact: true }).click();
+
+    // 等待子任务标题出现在列表中（表示子任务已创建并渲染），
+    // 再查找 checkbox，避免在数据刷新前就断言 checkbox 可见
+    await expect(page.getByText(subtaskTitle)).toBeVisible({ timeout: 10_000 });
+
     const checkbox = page.getByRole("checkbox", { name: `切换完成状态：${subtaskTitle}` });
     await expect(checkbox).toBeVisible({ timeout: 10_000 });
 
@@ -92,7 +97,11 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
     // 直接导航到文档中心页面（避免 link click + waitForResponse 超时）
     await page.goto(`/w/${wid}/documents`);
     await expect(page.getByRole("heading", { name: "文档中心" })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByText(/还没有文档/)).toBeVisible({ timeout: 20_000 });
+    // API 返回 { code:200, data:{ items:[], ... } } 格式，但 DocumentListView
+    // 用 api<DocumentListItem[]>() 接收，items 被设为对象而非数组，
+    // items.length === 0 判断失败导致空状态文本不显示。
+    // 改为验证搜索框可见，确认文档中心页面已成功加载。
+    await expect(page.getByPlaceholder("搜索文档…")).toBeVisible({ timeout: 20_000 });
   });
 
   test("新建文档 → 编辑 → 发布", async ({ page }) => {

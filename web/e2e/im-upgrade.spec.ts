@@ -50,12 +50,14 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 聊天标题可见（TaskChatPanel → ChatWindow 的 <h2>，标题为会话标题或 "聊天"）
     await expect(page.getByRole("heading").first()).toBeVisible({ timeout: 10_000 });
 
-    // 空状态提示可见（i18n: chat.empty）
-    await expect(page.getByText("还没有消息，发一条开始对话吧。")).toBeVisible({ timeout: 10_000 });
+    // 会话创建是两步 API 调用链（selectTaskConversation POST + selectConversation
+    // 加载详情/消息），CI 环境耗时可能超过 15s。输入框只在 ChatWindow 中渲染
+    // （activeConversation 存在时），是组件进入正常状态的可靠标志——先等它出现，
+    // 再检查空状态文本和其他元素。
+    await expect(page.getByPlaceholder(/发消息/)).toBeVisible({ timeout: 30_000 });
 
-    // 输入框 placeholder（i18n: chat.placeholder）
-    // 会话创建（selectTaskConversation POST）需要时间，放宽超时
-    await expect(page.getByPlaceholder(/发消息/)).toBeVisible({ timeout: 15_000 });
+    // 空状态提示可见（i18n: chat.empty）——ChatWindow 渲染后 messages 为空时显示
+    await expect(page.getByText("还没有消息，发一条开始对话吧。")).toBeVisible({ timeout: 10_000 });
 
     // 发送按钮（i18n: chat.send），初始禁用（空文本）
     // .first()：ChatPanel 在 DOM 中渲染两份实例（可见性由 CSS 控制）

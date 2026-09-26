@@ -128,7 +128,10 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await expect(page.getByText(newTitle)).toBeVisible({ timeout: 10_000 });
 
     // ── 编辑描述 ──
-    const descArea = page.getByPlaceholder("补充背景、验收标准，或粘贴相关链接…");
+    // 不使用 getByPlaceholder：CI production build 中 next-intl 客户端导航时
+    // 翻译消息加载时序可能导致 placeholder 值暂时不匹配（空串或 key 名）。
+    // 描述 textarea 是页面上第二个 textarea（标题是第一个），用索引定位更可靠。
+    const descArea = page.locator("textarea").nth(1);
     const descText = "这是 E2E 测试添加的描述。";
     await descArea.evaluate((el, value) => {
       const setter = Object.getOwnPropertyDescriptor(
@@ -141,7 +144,9 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     await descArea.evaluate((el) => el.blur());
 
     // ── 发表评论 ──
-    const commentArea = page.getByPlaceholder(/写下你的想法/);
+    // 不使用 getByPlaceholder：同上，CI 中 placeholder 可能因翻译加载时序而不匹配。
+    // TaskComments 的 section 标题为 "讨论"，通过该标题定位 section 内的 textarea。
+    const commentArea = page.locator("section", { hasText: "讨论" }).locator("textarea").first();
     const commentText = `E2E评论-${Date.now()}`;
     await commentArea.evaluate((el, value) => {
       const setter = Object.getOwnPropertyDescriptor(
@@ -160,7 +165,9 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     // ── 创建决策记录 ──
     await page.getByRole("button", { name: "记一条" }).click();
 
-    const decisionArea = page.getByPlaceholder(/## 决定/);
+    // 不使用 getByPlaceholder：同上，CI 中 placeholder 可能因翻译加载时序而不匹配。
+    // 决策 textarea 是点击"记一条"后新出现的第三个 textarea（索引 2）。
+    const decisionArea = page.locator("textarea").nth(2);
     const decisionText = "## 决定\n采用方案 A。\n\n## 理由\n- E2E 验证通过";
     // Use evaluate to set value (fill times out due to actionability issues in prod build)
     await decisionArea.evaluate((el, value) => {
