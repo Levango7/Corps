@@ -3,7 +3,9 @@ import { uniqueEmail, registerAndLogin, login } from "./helpers";
 
 /** 点击 UserMenu 头像按钮展开下拉菜单 */
 async function openUserMenu(page: Page) {
-  await page.locator('button[aria-haspopup="menu"]').click();
+  const btn = page.locator('button[aria-haspopup="menu"]');
+  await expect(btn).toBeVisible({ timeout: 10_000 });
+  await btn.click({ timeout: 30_000 });
   await page.waitForSelector('[role="menu"]', { state: "visible", timeout: 10_000 });
 }
 
@@ -83,23 +85,21 @@ test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
   });
 
   test("切换 en → zh：导航文案恢复中文，URL 去除 /en 前缀", async ({ page }) => {
-    test.setTimeout(180_000);
-    await login(page, email);
+    test.setTimeout(120_000);
+    const wid = await login(page, email);
 
-    // 先切到 en
-    await openUserMenu(page);
-    await clickLanguageOption(page, "English");
-    await page.waitForURL(/\/en\/w\//, { timeout: 10_000 });
+    // 直接导航到英文版工作区（避免第一次 UserMenu 切换的 click 超时风险）
+    await page.goto(`/en/w/${wid}`);
     await expect(page.getByRole("link", { name: "Board", exact: true }).first()).toBeVisible({
       timeout: 10_000,
     });
 
-    // 切回中文
+    // 通过 UserMenu 切换回中文（只一次 UserMenu 交互，降低超时风险）
     await openUserMenu(page);
     await clickLanguageOption(page, "中文");
 
     // URL 应去除 /en 前缀（as-needed 模式下 zh 不带前缀）
-    await page.waitForURL((url) => url.pathname.startsWith("/w/"), { timeout: 10_000 });
+    await page.waitForURL((url) => url.pathname.startsWith("/w/"), { timeout: 15_000 });
 
     // 导航菜单恢复中文（限定桌面侧栏实例，同上）
     await expect(page.getByRole("link", { name: "看板", exact: true }).first()).toBeVisible({

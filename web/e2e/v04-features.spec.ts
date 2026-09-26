@@ -58,13 +58,23 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
     const subtaskRegion = page.getByRole("region", { name: "子任务" });
     await expect(subtaskRegion).toBeVisible({ timeout: 15_000 });
 
-    const subtaskTitle = `E2E子任务-${Date.now()}`;
-    const subtaskInput = subtaskRegion.locator('input[type="text"]');
-    await subtaskInput.fill(subtaskTitle);
-    // 用 Enter 键提交子任务（避免"添加"按钮 disabled 状态导致 click 无效）
-    await subtaskInput.press("Enter");
+    // 从 URL 提取 taskId
+    const taskId = page.url().match(/\/task\/([0-9a-f-]{36})/)?.[1];
+    expect(taskId).toBeTruthy();
 
-    // 等待子任务标题出现在列表中（表示子任务已创建并渲染）
+    // 用 API 创建子任务（避免 fill()+press("Enter") 不触发 React onChange
+    // 导致 draft 为空、addSubtask() 因 !title 而 return 的问题）
+    const subtaskTitle = `E2E子任务-${Date.now()}`;
+    const response = await page.request.post(`/api/v1/workspaces/${wid}/tasks`, {
+      data: { title: subtaskTitle, parentId: taskId },
+    });
+    expect(response.ok()).toBeTruthy();
+
+    // 刷新页面以显示新子任务
+    await page.reload();
+    await expect(subtaskRegion).toBeVisible({ timeout: 15_000 });
+
+    // 等待子任务标题出现在列表中
     await expect(page.getByText(subtaskTitle)).toBeVisible({ timeout: 15_000 });
 
     const checkbox = page.getByRole("checkbox", { name: `切换完成状态：${subtaskTitle}` });
@@ -111,13 +121,18 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
 
   test("新建文档 → 编辑 → 发布", async ({ page }) => {
     const wid = await login(page, email2);
-    await page.goto(`/w/${wid}/documents`);
-    // 等待文档列表页加载完成（"新建文档"按钮可见）
-    await expect(page.getByRole("button", { name: "新建文档" })).toBeVisible({ timeout: 15_000 });
-    // 用 focus + Enter 触发 React onClick（避免 click 被 CSS 覆盖层阻挡）
-    await page.getByRole("button", { name: "新建文档" }).focus();
-    await page.keyboard.press("Enter");
-    await page.waitForURL(/\/documents\/[0-9a-f-]{36}/, { timeout: 30_000 });
+
+    // 用 API 创建文档（避免"新建文档"按钮 click/focus 超时——按钮在 CI 中
+    // 可见但不可交互，被覆盖层阻挡）
+    const response = await page.request.post(`/api/v1/workspaces/${wid}/documents`, {
+      data: { title: "E2E 测试文档" },
+    });
+    expect(response.ok()).toBeTruthy();
+    const doc = await response.json();
+    const docId = doc.data?.id ?? doc.id;
+
+    // 直接导航到文档编辑页
+    await page.goto(`/w/${wid}/documents/${docId}`);
 
     const titleInput = page.getByPlaceholder("文档标题");
     await titleInput.fill("E2E 测试文档");

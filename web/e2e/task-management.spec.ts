@@ -133,10 +133,14 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
 
     // ── 发表评论 ──
 
-    // 通过 placeholder 包含 "写下你的想法" 来定位评论 textarea（CSS 属性选择器，
-    // 不依赖 Playwright 的 i18n-aware getByPlaceholder）。
+    // 通过"讨论"标题定位评论区 section，再在 section 内找 textarea
+    // （不用 placeholder CSS 选择器——CI production build 中 i18n 时序
+    // 可能导致 placeholder 值暂时不匹配）
     const commentText = `E2E评论-${Date.now()}`;
-    const commentArea = page.locator('textarea[placeholder*="写下你的想法"]');
+    const commentSection = page.locator("section").filter({
+      has: page.getByRole("heading", { name: "讨论" }),
+    });
+    const commentArea = commentSection.locator("textarea").first();
     await commentArea.fill(commentText);
     // exact：页面同时有聊天"发送聊天消息"按钮（aria-label 前缀匹配会撞车）
     await page.getByRole("button", { name: "发送", exact: true }).click();
