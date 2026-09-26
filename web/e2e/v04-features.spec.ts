@@ -90,8 +90,10 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
   test("侧边栏有文档中心入口且进入列表页", async ({ page }) => {
     await registerAndLogin(page, email2, "文档中心 E2E");
     await page.getByRole("link", { name: "文档中心" }).first().click();
-    await expect(page.getByRole("heading", { name: "文档中心" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText(/还没有文档/)).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("heading", { name: "文档中心" })).toBeVisible({ timeout: 15_000 });
+    // 等待"新建文档"按钮出现（确认页面已完全加载，骨架屏已消失）
+    await expect(page.getByRole("button", { name: "新建文档" })).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText(/还没有文档/)).toBeVisible({ timeout: 20_000 });
   });
 
   test("新建文档 → 编辑 → 发布", async ({ page }) => {

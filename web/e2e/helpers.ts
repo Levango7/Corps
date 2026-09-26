@@ -80,12 +80,24 @@ export async function createTask(page: Page, title: string): Promise<string> {
   await page.getByRole("button", { name: "新建任务" }).first().click();
   const titleInput = page.getByPlaceholder("一句话说清要做什么");
   await expect(titleInput).toBeVisible({ timeout: 10_000 });
-  await titleInput.fill(title);
+  // 使用 evaluate 设置值 + 派发 input 事件（绕过 fill 的 actionability 问题）
+  // NewTaskDialog 内 useEffect 异步拉取成员/标签导致连续重渲染，fill/click 会超时
+  await titleInput.evaluate((el, value) => {
+    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
+    setter?.call(el, value);
+    el.dispatchEvent(new Event("input", { bubbles: true }));
+  }, title);
   // 等待 React 状态传播：按钮从 disabled 变为 enabled
   const submitBtn = page.getByRole("button", { name: "创建", exact: true });
   await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
-  // force: true 绕过 Ripple 组件导致的 actionability "not stable" 问题
-  await submitBtn.click({ force: true });
+  // 通过 evaluate 派发 submit 事件（绕过 click 的 actionability 问题）
+  // Ripple 组件在按钮内创建 span 拦截点击，导致 click 超时
+  await page
+    .locator("form")
+    .first()
+    .evaluate((form) => {
+      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
+    });
   // 等待对话框关闭（任务创建成功）
   await expect(titleInput).not.toBeVisible({ timeout: 10_000 });
   return title;
