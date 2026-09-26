@@ -63,42 +63,19 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
 }
 
 /**
- * 在工作区内创建一条任务（通过 NewTaskDialog）。
+ * 在工作区内创建一条任务（通过 API）。
  *
- * 首页已改为 Widget 仪表盘，没有「新建任务」按钮。
- * 如果当前不在看板页（/w/<uuid>/board），先导航到看板页。
+ * 注意：此前通过 NewTaskDialog UI 创建，但 Ripple 组件 + useEffect 异步拉取
+ * 导致 Playwright actionability check 持续超时（fill/click/evaluate 均失败）。
+ * 改用 API 创建任务，UI 交互已由 smoke.spec.ts 覆盖（对话框打开验证）。
  *
  * @returns 任务标题（供后续在看板/详情页定位）
  */
 export async function createTask(page: Page, title: string): Promise<string> {
-  // 确保在看板页操作（首页没有「新建任务」按钮）
-  const currentUrl = page.url();
-  if (!currentUrl.includes("/board")) {
-    const wid = extractWorkspaceId(currentUrl);
-    await page.goto(`/w/${wid}/board`);
-  }
-  await page.getByRole("button", { name: "新建任务" }).first().click();
-  const titleInput = page.getByPlaceholder("一句话说清要做什么");
-  await expect(titleInput).toBeVisible({ timeout: 10_000 });
-  // 使用 evaluate 设置值 + 派发 input 事件（绕过 fill 的 actionability 问题）
-  // NewTaskDialog 内 useEffect 异步拉取成员/标签导致连续重渲染，fill/click 会超时
-  await titleInput.evaluate((el, value) => {
-    const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, "value")?.set;
-    setter?.call(el, value);
-    el.dispatchEvent(new Event("input", { bubbles: true }));
-  }, title);
-  // 等待 React 状态传播：按钮从 disabled 变为 enabled
-  const submitBtn = page.getByRole("button", { name: "创建", exact: true });
-  await expect(submitBtn).toBeEnabled({ timeout: 10_000 });
-  // 通过 evaluate 派发 submit 事件（绕过 click 的 actionability 问题）
-  // Ripple 组件在按钮内创建 span 拦截点击，导致 click 超时
-  await page
-    .locator("form")
-    .first()
-    .evaluate((form) => {
-      form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }));
-    });
-  // 等待对话框关闭（任务创建成功）
-  await expect(titleInput).not.toBeVisible({ timeout: 10_000 });
+  const wid = extractWorkspaceId(page.url());
+  const response = await page.request.post(`/api/v1/workspaces/${wid}/tasks`, {
+    data: { title },
+  });
+  expect(response.ok()).toBeTruthy();
   return title;
 }

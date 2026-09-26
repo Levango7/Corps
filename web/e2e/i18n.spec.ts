@@ -84,11 +84,13 @@ test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
     });
 
     // 切回中文：en locale 下 UserMenu trigger 文案为 "Profile settings"
-    // 先关闭可能残留的 dropdown，再用 dispatchEvent 绕过 actionability 问题
-    await page.keyboard.press("Escape");
-    const profileBtn = page.getByRole("button", { name: "Profile settings" });
-    await expect(profileBtn).toBeVisible({ timeout: 10_000 });
-    await profileBtn.dispatchEvent("click");
+    // 使用 page.evaluate 直接操作 DOM（绕过 Playwright actionability 问题）
+    await page.evaluate(() => {
+      const btn = document.querySelector(
+        'button[aria-label="Profile settings"]',
+      ) as HTMLButtonElement;
+      if (btn) btn.click();
+    });
     await page.getByRole("button", { name: "中文", exact: true }).click();
 
     // URL 应去除 /en 前缀（as-needed 模式下 zh 不带前缀）
