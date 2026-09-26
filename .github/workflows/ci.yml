@@ -35,6 +35,17 @@ jobs:
       # 显式类型检查（next build 也含 tsc，但 lint job 更早失败反馈更快）
       - run: node node_modules/typescript/bin/tsc --noEmit
 
+  # RLS 覆盖率防回归：扫描 schema.prisma 中含 workspaceId 的模型，
+  # 与 rls-activate.sql 的 RLS 表名列表求差集。差集非空则 CI 失败。
+  # 轻量 job（仅需 checkout + Python），与其他 job 并行运行。
+  rls-coverage:
+    name: RLS Coverage Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check RLS coverage (schema vs rls-activate.sql)
+        run: python scripts/check_rls_coverage.py
+
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
   # 独立 job 并行运行，与 test job 互不阻塞，缩短 CI 总时长
   audit:
@@ -397,6 +408,9 @@ jobs:
             type=semver,pattern={{version}}
             type=semver,pattern={{major}}.{{minor}}
             type=sha,format=long
+            # :latest tag 仅在 push 到 main 时产出（来源：CI/CD 发布门经验——
+            # docker/metadata-action 默认不产 latest，需显式 type=raw 声明）
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
       - name: Build and push
         uses: docker/build-push-action@v6
         with:

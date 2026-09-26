@@ -50,7 +50,20 @@ BEGIN
     'conversations','conversation_members',
     'chat_presences','message_reads','calendar_connections','task_calendar_events',
     'documents','temporary_grants',
-    'push_subscriptions','ai_push_schedules','ai_push_records'
+    'push_subscriptions','ai_push_schedules','ai_push_records',
+    -- ── 55 张补齐 RLS 的租户表（纯 workspace_id 谓词）──
+    'ai_agent_messages','ai_agents','ai_conversations','ai_feedback','ai_meeting_action_items',
+    'ai_meeting_decisions','ai_meeting_sessions','ai_personalizations','ai_usage_limits',
+    'ai_usage_logs','ai_user_behaviors','ai_workflow_templates','ai_analysis_reports',
+    'ai_voice_commands','announcements','approval_cc_records','approval_delegates',
+    'approval_instances','approval_operations','approval_templates','assistant_conversations',
+    'calendar_events','contact_groups','contacts','databases','document_comments',
+    'document_permissions','document_versions','email_accounts','favorites','file_assets',
+    'folder_permissions','folders','forms','form_submissions','knowledge_edges','knowledge_nodes',
+    'mails','meeting_minutes','meetings','member_permissions','objectives',
+    'permission_audit_logs','project_templates','remote_control_sessions',
+    'share_link_permissions','spaces','time_entries','user_dashboard_prefs','whiteboards',
+    'wiki_pages','workflows','workflow_executions'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -506,3 +519,805 @@ CREATE POLICY p_conversation_members_rls ON conversation_members FOR ALL
     conversation_id IN (SELECT c.id FROM conversations c
                         WHERE c.workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   );
+-- ===========================================================================
+-- ─── 55 张补齐 RLS 租户表策略（纯 workspace_id 谓词）────────────────────────
+-- 每张表 4 类策略：SELECT / INSERT / UPDATE / DELETE
+-- 命名约定：p_{table_name}_{operation}
+-- 谓词模式：workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+-- UPDATE 的 WITH CHECK 同 USING，防止借 UPDATE 篡改 workspace_id 跨租户挪动。
+-- ===========================================================================
+
+-- ── ai_agent_messages ──
+DROP POLICY IF EXISTS p_ai_agent_messages_select ON ai_agent_messages;
+CREATE POLICY p_ai_agent_messages_select ON ai_agent_messages FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_agent_messages_insert ON ai_agent_messages;
+CREATE POLICY p_ai_agent_messages_insert ON ai_agent_messages FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_agent_messages_update ON ai_agent_messages;
+CREATE POLICY p_ai_agent_messages_update ON ai_agent_messages FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_agent_messages_delete ON ai_agent_messages;
+CREATE POLICY p_ai_agent_messages_delete ON ai_agent_messages FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_agents ──
+DROP POLICY IF EXISTS p_ai_agents_select ON ai_agents;
+CREATE POLICY p_ai_agents_select ON ai_agents FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_agents_insert ON ai_agents;
+CREATE POLICY p_ai_agents_insert ON ai_agents FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_agents_update ON ai_agents;
+CREATE POLICY p_ai_agents_update ON ai_agents FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_agents_delete ON ai_agents;
+CREATE POLICY p_ai_agents_delete ON ai_agents FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_conversations ──
+DROP POLICY IF EXISTS p_ai_conversations_select ON ai_conversations;
+CREATE POLICY p_ai_conversations_select ON ai_conversations FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_conversations_insert ON ai_conversations;
+CREATE POLICY p_ai_conversations_insert ON ai_conversations FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_conversations_update ON ai_conversations;
+CREATE POLICY p_ai_conversations_update ON ai_conversations FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_conversations_delete ON ai_conversations;
+CREATE POLICY p_ai_conversations_delete ON ai_conversations FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_feedback ──
+DROP POLICY IF EXISTS p_ai_feedback_select ON ai_feedback;
+CREATE POLICY p_ai_feedback_select ON ai_feedback FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_feedback_insert ON ai_feedback;
+CREATE POLICY p_ai_feedback_insert ON ai_feedback FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_feedback_update ON ai_feedback;
+CREATE POLICY p_ai_feedback_update ON ai_feedback FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_feedback_delete ON ai_feedback;
+CREATE POLICY p_ai_feedback_delete ON ai_feedback FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_meeting_action_items ──
+DROP POLICY IF EXISTS p_ai_meeting_action_items_select ON ai_meeting_action_items;
+CREATE POLICY p_ai_meeting_action_items_select ON ai_meeting_action_items FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_action_items_insert ON ai_meeting_action_items;
+CREATE POLICY p_ai_meeting_action_items_insert ON ai_meeting_action_items FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_action_items_update ON ai_meeting_action_items;
+CREATE POLICY p_ai_meeting_action_items_update ON ai_meeting_action_items FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_action_items_delete ON ai_meeting_action_items;
+CREATE POLICY p_ai_meeting_action_items_delete ON ai_meeting_action_items FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_meeting_decisions ──
+DROP POLICY IF EXISTS p_ai_meeting_decisions_select ON ai_meeting_decisions;
+CREATE POLICY p_ai_meeting_decisions_select ON ai_meeting_decisions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_decisions_insert ON ai_meeting_decisions;
+CREATE POLICY p_ai_meeting_decisions_insert ON ai_meeting_decisions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_decisions_update ON ai_meeting_decisions;
+CREATE POLICY p_ai_meeting_decisions_update ON ai_meeting_decisions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_decisions_delete ON ai_meeting_decisions;
+CREATE POLICY p_ai_meeting_decisions_delete ON ai_meeting_decisions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_meeting_sessions ──
+DROP POLICY IF EXISTS p_ai_meeting_sessions_select ON ai_meeting_sessions;
+CREATE POLICY p_ai_meeting_sessions_select ON ai_meeting_sessions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_sessions_insert ON ai_meeting_sessions;
+CREATE POLICY p_ai_meeting_sessions_insert ON ai_meeting_sessions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_sessions_update ON ai_meeting_sessions;
+CREATE POLICY p_ai_meeting_sessions_update ON ai_meeting_sessions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_meeting_sessions_delete ON ai_meeting_sessions;
+CREATE POLICY p_ai_meeting_sessions_delete ON ai_meeting_sessions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_personalizations ──
+DROP POLICY IF EXISTS p_ai_personalizations_select ON ai_personalizations;
+CREATE POLICY p_ai_personalizations_select ON ai_personalizations FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_personalizations_insert ON ai_personalizations;
+CREATE POLICY p_ai_personalizations_insert ON ai_personalizations FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_personalizations_update ON ai_personalizations;
+CREATE POLICY p_ai_personalizations_update ON ai_personalizations FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_personalizations_delete ON ai_personalizations;
+CREATE POLICY p_ai_personalizations_delete ON ai_personalizations FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_usage_limits ──
+DROP POLICY IF EXISTS p_ai_usage_limits_select ON ai_usage_limits;
+CREATE POLICY p_ai_usage_limits_select ON ai_usage_limits FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_usage_limits_insert ON ai_usage_limits;
+CREATE POLICY p_ai_usage_limits_insert ON ai_usage_limits FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_usage_limits_update ON ai_usage_limits;
+CREATE POLICY p_ai_usage_limits_update ON ai_usage_limits FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_usage_limits_delete ON ai_usage_limits;
+CREATE POLICY p_ai_usage_limits_delete ON ai_usage_limits FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_usage_logs ──
+DROP POLICY IF EXISTS p_ai_usage_logs_select ON ai_usage_logs;
+CREATE POLICY p_ai_usage_logs_select ON ai_usage_logs FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_usage_logs_insert ON ai_usage_logs;
+CREATE POLICY p_ai_usage_logs_insert ON ai_usage_logs FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_usage_logs_update ON ai_usage_logs;
+CREATE POLICY p_ai_usage_logs_update ON ai_usage_logs FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_usage_logs_delete ON ai_usage_logs;
+CREATE POLICY p_ai_usage_logs_delete ON ai_usage_logs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_user_behaviors ──
+DROP POLICY IF EXISTS p_ai_user_behaviors_select ON ai_user_behaviors;
+CREATE POLICY p_ai_user_behaviors_select ON ai_user_behaviors FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_user_behaviors_insert ON ai_user_behaviors;
+CREATE POLICY p_ai_user_behaviors_insert ON ai_user_behaviors FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_user_behaviors_update ON ai_user_behaviors;
+CREATE POLICY p_ai_user_behaviors_update ON ai_user_behaviors FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_user_behaviors_delete ON ai_user_behaviors;
+CREATE POLICY p_ai_user_behaviors_delete ON ai_user_behaviors FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_workflow_templates ──
+DROP POLICY IF EXISTS p_ai_workflow_templates_select ON ai_workflow_templates;
+CREATE POLICY p_ai_workflow_templates_select ON ai_workflow_templates FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_workflow_templates_insert ON ai_workflow_templates;
+CREATE POLICY p_ai_workflow_templates_insert ON ai_workflow_templates FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_workflow_templates_update ON ai_workflow_templates;
+CREATE POLICY p_ai_workflow_templates_update ON ai_workflow_templates FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_workflow_templates_delete ON ai_workflow_templates;
+CREATE POLICY p_ai_workflow_templates_delete ON ai_workflow_templates FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_analysis_reports ──
+DROP POLICY IF EXISTS p_ai_analysis_reports_select ON ai_analysis_reports;
+CREATE POLICY p_ai_analysis_reports_select ON ai_analysis_reports FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_analysis_reports_insert ON ai_analysis_reports;
+CREATE POLICY p_ai_analysis_reports_insert ON ai_analysis_reports FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_analysis_reports_update ON ai_analysis_reports;
+CREATE POLICY p_ai_analysis_reports_update ON ai_analysis_reports FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_analysis_reports_delete ON ai_analysis_reports;
+CREATE POLICY p_ai_analysis_reports_delete ON ai_analysis_reports FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── ai_voice_commands ──
+DROP POLICY IF EXISTS p_ai_voice_commands_select ON ai_voice_commands;
+CREATE POLICY p_ai_voice_commands_select ON ai_voice_commands FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_voice_commands_insert ON ai_voice_commands;
+CREATE POLICY p_ai_voice_commands_insert ON ai_voice_commands FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_voice_commands_update ON ai_voice_commands;
+CREATE POLICY p_ai_voice_commands_update ON ai_voice_commands FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_ai_voice_commands_delete ON ai_voice_commands;
+CREATE POLICY p_ai_voice_commands_delete ON ai_voice_commands FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── announcements ──
+DROP POLICY IF EXISTS p_announcements_select ON announcements;
+CREATE POLICY p_announcements_select ON announcements FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_announcements_insert ON announcements;
+CREATE POLICY p_announcements_insert ON announcements FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_announcements_update ON announcements;
+CREATE POLICY p_announcements_update ON announcements FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_announcements_delete ON announcements;
+CREATE POLICY p_announcements_delete ON announcements FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── approval_cc_records ──
+DROP POLICY IF EXISTS p_approval_cc_records_select ON approval_cc_records;
+CREATE POLICY p_approval_cc_records_select ON approval_cc_records FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_cc_records_insert ON approval_cc_records;
+CREATE POLICY p_approval_cc_records_insert ON approval_cc_records FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_cc_records_update ON approval_cc_records;
+CREATE POLICY p_approval_cc_records_update ON approval_cc_records FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_cc_records_delete ON approval_cc_records;
+CREATE POLICY p_approval_cc_records_delete ON approval_cc_records FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── approval_delegates ──
+DROP POLICY IF EXISTS p_approval_delegates_select ON approval_delegates;
+CREATE POLICY p_approval_delegates_select ON approval_delegates FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_delegates_insert ON approval_delegates;
+CREATE POLICY p_approval_delegates_insert ON approval_delegates FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_delegates_update ON approval_delegates;
+CREATE POLICY p_approval_delegates_update ON approval_delegates FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_delegates_delete ON approval_delegates;
+CREATE POLICY p_approval_delegates_delete ON approval_delegates FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── approval_instances ──
+DROP POLICY IF EXISTS p_approval_instances_select ON approval_instances;
+CREATE POLICY p_approval_instances_select ON approval_instances FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_instances_insert ON approval_instances;
+CREATE POLICY p_approval_instances_insert ON approval_instances FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_instances_update ON approval_instances;
+CREATE POLICY p_approval_instances_update ON approval_instances FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_instances_delete ON approval_instances;
+CREATE POLICY p_approval_instances_delete ON approval_instances FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── approval_operations ──
+DROP POLICY IF EXISTS p_approval_operations_select ON approval_operations;
+CREATE POLICY p_approval_operations_select ON approval_operations FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_operations_insert ON approval_operations;
+CREATE POLICY p_approval_operations_insert ON approval_operations FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_operations_update ON approval_operations;
+CREATE POLICY p_approval_operations_update ON approval_operations FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_operations_delete ON approval_operations;
+CREATE POLICY p_approval_operations_delete ON approval_operations FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── approval_templates ──
+DROP POLICY IF EXISTS p_approval_templates_select ON approval_templates;
+CREATE POLICY p_approval_templates_select ON approval_templates FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_templates_insert ON approval_templates;
+CREATE POLICY p_approval_templates_insert ON approval_templates FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_templates_update ON approval_templates;
+CREATE POLICY p_approval_templates_update ON approval_templates FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_approval_templates_delete ON approval_templates;
+CREATE POLICY p_approval_templates_delete ON approval_templates FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── assistant_conversations ──
+DROP POLICY IF EXISTS p_assistant_conversations_select ON assistant_conversations;
+CREATE POLICY p_assistant_conversations_select ON assistant_conversations FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_assistant_conversations_insert ON assistant_conversations;
+CREATE POLICY p_assistant_conversations_insert ON assistant_conversations FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_assistant_conversations_update ON assistant_conversations;
+CREATE POLICY p_assistant_conversations_update ON assistant_conversations FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_assistant_conversations_delete ON assistant_conversations;
+CREATE POLICY p_assistant_conversations_delete ON assistant_conversations FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── calendar_events ──
+DROP POLICY IF EXISTS p_calendar_events_select ON calendar_events;
+CREATE POLICY p_calendar_events_select ON calendar_events FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_calendar_events_insert ON calendar_events;
+CREATE POLICY p_calendar_events_insert ON calendar_events FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_calendar_events_update ON calendar_events;
+CREATE POLICY p_calendar_events_update ON calendar_events FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_calendar_events_delete ON calendar_events;
+CREATE POLICY p_calendar_events_delete ON calendar_events FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── contact_groups ──
+DROP POLICY IF EXISTS p_contact_groups_select ON contact_groups;
+CREATE POLICY p_contact_groups_select ON contact_groups FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_contact_groups_insert ON contact_groups;
+CREATE POLICY p_contact_groups_insert ON contact_groups FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_contact_groups_update ON contact_groups;
+CREATE POLICY p_contact_groups_update ON contact_groups FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_contact_groups_delete ON contact_groups;
+CREATE POLICY p_contact_groups_delete ON contact_groups FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── contacts ──
+DROP POLICY IF EXISTS p_contacts_select ON contacts;
+CREATE POLICY p_contacts_select ON contacts FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_contacts_insert ON contacts;
+CREATE POLICY p_contacts_insert ON contacts FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_contacts_update ON contacts;
+CREATE POLICY p_contacts_update ON contacts FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_contacts_delete ON contacts;
+CREATE POLICY p_contacts_delete ON contacts FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── databases ──
+DROP POLICY IF EXISTS p_databases_select ON databases;
+CREATE POLICY p_databases_select ON databases FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_databases_insert ON databases;
+CREATE POLICY p_databases_insert ON databases FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_databases_update ON databases;
+CREATE POLICY p_databases_update ON databases FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_databases_delete ON databases;
+CREATE POLICY p_databases_delete ON databases FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── document_comments ──
+DROP POLICY IF EXISTS p_document_comments_select ON document_comments;
+CREATE POLICY p_document_comments_select ON document_comments FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_comments_insert ON document_comments;
+CREATE POLICY p_document_comments_insert ON document_comments FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_comments_update ON document_comments;
+CREATE POLICY p_document_comments_update ON document_comments FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_comments_delete ON document_comments;
+CREATE POLICY p_document_comments_delete ON document_comments FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── document_permissions ──
+DROP POLICY IF EXISTS p_document_permissions_select ON document_permissions;
+CREATE POLICY p_document_permissions_select ON document_permissions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_permissions_insert ON document_permissions;
+CREATE POLICY p_document_permissions_insert ON document_permissions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_permissions_update ON document_permissions;
+CREATE POLICY p_document_permissions_update ON document_permissions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_permissions_delete ON document_permissions;
+CREATE POLICY p_document_permissions_delete ON document_permissions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── document_versions ──
+DROP POLICY IF EXISTS p_document_versions_select ON document_versions;
+CREATE POLICY p_document_versions_select ON document_versions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_versions_insert ON document_versions;
+CREATE POLICY p_document_versions_insert ON document_versions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_versions_update ON document_versions;
+CREATE POLICY p_document_versions_update ON document_versions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_document_versions_delete ON document_versions;
+CREATE POLICY p_document_versions_delete ON document_versions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── email_accounts ──
+DROP POLICY IF EXISTS p_email_accounts_select ON email_accounts;
+CREATE POLICY p_email_accounts_select ON email_accounts FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_email_accounts_insert ON email_accounts;
+CREATE POLICY p_email_accounts_insert ON email_accounts FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_email_accounts_update ON email_accounts;
+CREATE POLICY p_email_accounts_update ON email_accounts FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_email_accounts_delete ON email_accounts;
+CREATE POLICY p_email_accounts_delete ON email_accounts FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── favorites ──
+DROP POLICY IF EXISTS p_favorites_select ON favorites;
+CREATE POLICY p_favorites_select ON favorites FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_favorites_insert ON favorites;
+CREATE POLICY p_favorites_insert ON favorites FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_favorites_update ON favorites;
+CREATE POLICY p_favorites_update ON favorites FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_favorites_delete ON favorites;
+CREATE POLICY p_favorites_delete ON favorites FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── file_assets ──
+DROP POLICY IF EXISTS p_file_assets_select ON file_assets;
+CREATE POLICY p_file_assets_select ON file_assets FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_file_assets_insert ON file_assets;
+CREATE POLICY p_file_assets_insert ON file_assets FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_file_assets_update ON file_assets;
+CREATE POLICY p_file_assets_update ON file_assets FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_file_assets_delete ON file_assets;
+CREATE POLICY p_file_assets_delete ON file_assets FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── folder_permissions ──
+DROP POLICY IF EXISTS p_folder_permissions_select ON folder_permissions;
+CREATE POLICY p_folder_permissions_select ON folder_permissions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_folder_permissions_insert ON folder_permissions;
+CREATE POLICY p_folder_permissions_insert ON folder_permissions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_folder_permissions_update ON folder_permissions;
+CREATE POLICY p_folder_permissions_update ON folder_permissions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_folder_permissions_delete ON folder_permissions;
+CREATE POLICY p_folder_permissions_delete ON folder_permissions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── folders ──
+DROP POLICY IF EXISTS p_folders_select ON folders;
+CREATE POLICY p_folders_select ON folders FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_folders_insert ON folders;
+CREATE POLICY p_folders_insert ON folders FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_folders_update ON folders;
+CREATE POLICY p_folders_update ON folders FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_folders_delete ON folders;
+CREATE POLICY p_folders_delete ON folders FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── forms ──
+DROP POLICY IF EXISTS p_forms_select ON forms;
+CREATE POLICY p_forms_select ON forms FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_forms_insert ON forms;
+CREATE POLICY p_forms_insert ON forms FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_forms_update ON forms;
+CREATE POLICY p_forms_update ON forms FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_forms_delete ON forms;
+CREATE POLICY p_forms_delete ON forms FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── form_submissions ──
+DROP POLICY IF EXISTS p_form_submissions_select ON form_submissions;
+CREATE POLICY p_form_submissions_select ON form_submissions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_form_submissions_insert ON form_submissions;
+CREATE POLICY p_form_submissions_insert ON form_submissions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_form_submissions_update ON form_submissions;
+CREATE POLICY p_form_submissions_update ON form_submissions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_form_submissions_delete ON form_submissions;
+CREATE POLICY p_form_submissions_delete ON form_submissions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── knowledge_edges ──
+DROP POLICY IF EXISTS p_knowledge_edges_select ON knowledge_edges;
+CREATE POLICY p_knowledge_edges_select ON knowledge_edges FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_knowledge_edges_insert ON knowledge_edges;
+CREATE POLICY p_knowledge_edges_insert ON knowledge_edges FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_knowledge_edges_update ON knowledge_edges;
+CREATE POLICY p_knowledge_edges_update ON knowledge_edges FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_knowledge_edges_delete ON knowledge_edges;
+CREATE POLICY p_knowledge_edges_delete ON knowledge_edges FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── knowledge_nodes ──
+DROP POLICY IF EXISTS p_knowledge_nodes_select ON knowledge_nodes;
+CREATE POLICY p_knowledge_nodes_select ON knowledge_nodes FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_knowledge_nodes_insert ON knowledge_nodes;
+CREATE POLICY p_knowledge_nodes_insert ON knowledge_nodes FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_knowledge_nodes_update ON knowledge_nodes;
+CREATE POLICY p_knowledge_nodes_update ON knowledge_nodes FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_knowledge_nodes_delete ON knowledge_nodes;
+CREATE POLICY p_knowledge_nodes_delete ON knowledge_nodes FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── mails ──
+DROP POLICY IF EXISTS p_mails_select ON mails;
+CREATE POLICY p_mails_select ON mails FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_mails_insert ON mails;
+CREATE POLICY p_mails_insert ON mails FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_mails_update ON mails;
+CREATE POLICY p_mails_update ON mails FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_mails_delete ON mails;
+CREATE POLICY p_mails_delete ON mails FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── meeting_minutes ──
+DROP POLICY IF EXISTS p_meeting_minutes_select ON meeting_minutes;
+CREATE POLICY p_meeting_minutes_select ON meeting_minutes FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_meeting_minutes_insert ON meeting_minutes;
+CREATE POLICY p_meeting_minutes_insert ON meeting_minutes FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_meeting_minutes_update ON meeting_minutes;
+CREATE POLICY p_meeting_minutes_update ON meeting_minutes FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_meeting_minutes_delete ON meeting_minutes;
+CREATE POLICY p_meeting_minutes_delete ON meeting_minutes FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── meetings ──
+DROP POLICY IF EXISTS p_meetings_select ON meetings;
+CREATE POLICY p_meetings_select ON meetings FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_meetings_insert ON meetings;
+CREATE POLICY p_meetings_insert ON meetings FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_meetings_update ON meetings;
+CREATE POLICY p_meetings_update ON meetings FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_meetings_delete ON meetings;
+CREATE POLICY p_meetings_delete ON meetings FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── member_permissions ──
+DROP POLICY IF EXISTS p_member_permissions_select ON member_permissions;
+CREATE POLICY p_member_permissions_select ON member_permissions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_member_permissions_insert ON member_permissions;
+CREATE POLICY p_member_permissions_insert ON member_permissions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_member_permissions_update ON member_permissions;
+CREATE POLICY p_member_permissions_update ON member_permissions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_member_permissions_delete ON member_permissions;
+CREATE POLICY p_member_permissions_delete ON member_permissions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── objectives ──
+DROP POLICY IF EXISTS p_objectives_select ON objectives;
+CREATE POLICY p_objectives_select ON objectives FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_objectives_insert ON objectives;
+CREATE POLICY p_objectives_insert ON objectives FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_objectives_update ON objectives;
+CREATE POLICY p_objectives_update ON objectives FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_objectives_delete ON objectives;
+CREATE POLICY p_objectives_delete ON objectives FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── permission_audit_logs ──
+DROP POLICY IF EXISTS p_permission_audit_logs_select ON permission_audit_logs;
+CREATE POLICY p_permission_audit_logs_select ON permission_audit_logs FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_permission_audit_logs_insert ON permission_audit_logs;
+CREATE POLICY p_permission_audit_logs_insert ON permission_audit_logs FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_permission_audit_logs_update ON permission_audit_logs;
+CREATE POLICY p_permission_audit_logs_update ON permission_audit_logs FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_permission_audit_logs_delete ON permission_audit_logs;
+CREATE POLICY p_permission_audit_logs_delete ON permission_audit_logs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── project_templates ──
+DROP POLICY IF EXISTS p_project_templates_select ON project_templates;
+CREATE POLICY p_project_templates_select ON project_templates FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_project_templates_insert ON project_templates;
+CREATE POLICY p_project_templates_insert ON project_templates FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_project_templates_update ON project_templates;
+CREATE POLICY p_project_templates_update ON project_templates FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_project_templates_delete ON project_templates;
+CREATE POLICY p_project_templates_delete ON project_templates FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── remote_control_sessions ──
+DROP POLICY IF EXISTS p_remote_control_sessions_select ON remote_control_sessions;
+CREATE POLICY p_remote_control_sessions_select ON remote_control_sessions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_remote_control_sessions_insert ON remote_control_sessions;
+CREATE POLICY p_remote_control_sessions_insert ON remote_control_sessions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_remote_control_sessions_update ON remote_control_sessions;
+CREATE POLICY p_remote_control_sessions_update ON remote_control_sessions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_remote_control_sessions_delete ON remote_control_sessions;
+CREATE POLICY p_remote_control_sessions_delete ON remote_control_sessions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── share_link_permissions ──
+DROP POLICY IF EXISTS p_share_link_permissions_select ON share_link_permissions;
+CREATE POLICY p_share_link_permissions_select ON share_link_permissions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_share_link_permissions_insert ON share_link_permissions;
+CREATE POLICY p_share_link_permissions_insert ON share_link_permissions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_share_link_permissions_update ON share_link_permissions;
+CREATE POLICY p_share_link_permissions_update ON share_link_permissions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_share_link_permissions_delete ON share_link_permissions;
+CREATE POLICY p_share_link_permissions_delete ON share_link_permissions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── spaces ──
+DROP POLICY IF EXISTS p_spaces_select ON spaces;
+CREATE POLICY p_spaces_select ON spaces FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_spaces_insert ON spaces;
+CREATE POLICY p_spaces_insert ON spaces FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_spaces_update ON spaces;
+CREATE POLICY p_spaces_update ON spaces FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_spaces_delete ON spaces;
+CREATE POLICY p_spaces_delete ON spaces FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── time_entries ──
+DROP POLICY IF EXISTS p_time_entries_select ON time_entries;
+CREATE POLICY p_time_entries_select ON time_entries FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_time_entries_insert ON time_entries;
+CREATE POLICY p_time_entries_insert ON time_entries FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_time_entries_update ON time_entries;
+CREATE POLICY p_time_entries_update ON time_entries FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_time_entries_delete ON time_entries;
+CREATE POLICY p_time_entries_delete ON time_entries FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── user_dashboard_prefs ──
+DROP POLICY IF EXISTS p_user_dashboard_prefs_select ON user_dashboard_prefs;
+CREATE POLICY p_user_dashboard_prefs_select ON user_dashboard_prefs FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_user_dashboard_prefs_insert ON user_dashboard_prefs;
+CREATE POLICY p_user_dashboard_prefs_insert ON user_dashboard_prefs FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_user_dashboard_prefs_update ON user_dashboard_prefs;
+CREATE POLICY p_user_dashboard_prefs_update ON user_dashboard_prefs FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_user_dashboard_prefs_delete ON user_dashboard_prefs;
+CREATE POLICY p_user_dashboard_prefs_delete ON user_dashboard_prefs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── whiteboards ──
+DROP POLICY IF EXISTS p_whiteboards_select ON whiteboards;
+CREATE POLICY p_whiteboards_select ON whiteboards FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_whiteboards_insert ON whiteboards;
+CREATE POLICY p_whiteboards_insert ON whiteboards FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_whiteboards_update ON whiteboards;
+CREATE POLICY p_whiteboards_update ON whiteboards FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_whiteboards_delete ON whiteboards;
+CREATE POLICY p_whiteboards_delete ON whiteboards FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── wiki_pages ──
+DROP POLICY IF EXISTS p_wiki_pages_select ON wiki_pages;
+CREATE POLICY p_wiki_pages_select ON wiki_pages FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_wiki_pages_insert ON wiki_pages;
+CREATE POLICY p_wiki_pages_insert ON wiki_pages FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_wiki_pages_update ON wiki_pages;
+CREATE POLICY p_wiki_pages_update ON wiki_pages FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_wiki_pages_delete ON wiki_pages;
+CREATE POLICY p_wiki_pages_delete ON wiki_pages FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── workflows ──
+DROP POLICY IF EXISTS p_workflows_select ON workflows;
+CREATE POLICY p_workflows_select ON workflows FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_workflows_insert ON workflows;
+CREATE POLICY p_workflows_insert ON workflows FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_workflows_update ON workflows;
+CREATE POLICY p_workflows_update ON workflows FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_workflows_delete ON workflows;
+CREATE POLICY p_workflows_delete ON workflows FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── workflow_executions ──
+DROP POLICY IF EXISTS p_workflow_executions_select ON workflow_executions;
+CREATE POLICY p_workflow_executions_select ON workflow_executions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_workflow_executions_insert ON workflow_executions;
+CREATE POLICY p_workflow_executions_insert ON workflow_executions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_workflow_executions_update ON workflow_executions;
+CREATE POLICY p_workflow_executions_update ON workflow_executions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_workflow_executions_delete ON workflow_executions;
+CREATE POLICY p_workflow_executions_delete ON workflow_executions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
