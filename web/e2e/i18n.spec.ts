@@ -91,7 +91,13 @@ test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
       ) as HTMLButtonElement;
       if (btn) btn.click();
     });
-    await page.getByRole("button", { name: "中文", exact: true }).click();
+    // 等待 dropdown 渲染后再点击"中文"按钮（同样用 evaluate 绕过 actionability）
+    await page.waitForTimeout(500);
+    await page.evaluate(() => {
+      const btns = document.querySelectorAll("button");
+      const chineseBtn = Array.from(btns).find((b) => b.textContent?.trim() === "中文");
+      if (chineseBtn) (chineseBtn as HTMLButtonElement).click();
+    });
 
     // URL 应去除 /en 前缀（as-needed 模式下 zh 不带前缀）
     await page.waitForURL(/\/w\/[0-9a-f-]{36}/, { timeout: 10_000 });

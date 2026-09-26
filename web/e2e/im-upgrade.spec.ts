@@ -54,7 +54,8 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     await expect(page.getByText("还没有消息，发一条开始对话吧。")).toBeVisible({ timeout: 10_000 });
 
     // 输入框 placeholder（i18n: chat.placeholder）
-    await expect(page.getByPlaceholder(/发消息/)).toBeVisible();
+    // 会话创建（selectTaskConversation POST）需要时间，放宽超时
+    await expect(page.getByPlaceholder(/发消息/)).toBeVisible({ timeout: 15_000 });
 
     // 发送按钮（i18n: chat.send），初始禁用（空文本）
     // .first()：ChatPanel 在 DOM 中渲染两份实例（可见性由 CSS 控制）

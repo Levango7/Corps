@@ -423,8 +423,8 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
     await expect(syncBtn).toBeVisible();
     await syncBtn.click();
 
-    // 等待同步完成，应显示成功提示（i18n: calendar.syncSuccess = "任务已同步"）
-    await expect(page.getByText("任务已同步")).toBeVisible({ timeout: 10_000 });
+    // 等待同步完成，应显示成功提示（i18n: calendar.syncSuccess = "同步成功"）
+    await expect(page.getByText("同步成功")).toBeVisible({ timeout: 10_000 });
 
     // 验证 sync API 被调用
     expect(syncCalled).toBeTruthy();

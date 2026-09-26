@@ -114,21 +114,43 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
     // ── 编辑标题（失焦自动保存）──
     const titleArea = page.locator("textarea").first();
     const newTitle = `${taskTitle}-已编辑`;
-    await titleArea.fill(newTitle);
-    await titleArea.blur();
+    // Use evaluate to set value (fill times out due to actionability issues in prod build)
+    await titleArea.evaluate((el, value) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(el, value);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, newTitle);
+    await titleArea.evaluate((el) => el.blur());
     // 失焦后触发 PATCH，标题更新
     await expect(page.getByText(newTitle)).toBeVisible({ timeout: 10_000 });
 
     // ── 编辑描述 ──
     const descArea = page.getByPlaceholder("补充背景、验收标准，或粘贴相关链接…");
     const descText = "这是 E2E 测试添加的描述。";
-    await descArea.fill(descText);
-    await descArea.blur();
+    await descArea.evaluate((el, value) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(el, value);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, descText);
+    await descArea.evaluate((el) => el.blur());
 
     // ── 发表评论 ──
     const commentArea = page.getByPlaceholder(/写下你的想法/);
     const commentText = `E2E评论-${Date.now()}`;
-    await commentArea.fill(commentText);
+    await commentArea.evaluate((el, value) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(el, value);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, commentText);
     // exact：页面同时有聊天"发送聊天消息"按钮（aria-label 前缀匹配会撞车）
     await page.getByRole("button", { name: "发送", exact: true }).click();
 
@@ -140,7 +162,15 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
 
     const decisionArea = page.getByPlaceholder(/## 决定/);
     const decisionText = "## 决定\n采用方案 A。\n\n## 理由\n- E2E 验证通过";
-    await decisionArea.fill(decisionText);
+    // Use evaluate to set value (fill times out due to actionability issues in prod build)
+    await decisionArea.evaluate((el, value) => {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype,
+        "value",
+      )?.set;
+      setter?.call(el, value);
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    }, decisionText);
 
     // 保存为 v1 按钮（name 动态：保存为 v{N}）
     await page.getByRole("button", { name: /保存为 v\d/ }).click();

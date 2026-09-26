@@ -77,5 +77,7 @@ export async function createTask(page: Page, title: string): Promise<string> {
     data: { title },
   });
   expect(response.ok()).toBeTruthy();
+  // 导航到看板页，确保任务卡片可见
+  await page.goto(`/w/${wid}/board`);
   return title;
 }
