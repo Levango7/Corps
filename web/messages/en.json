@@ -3087,6 +3087,8 @@
     "confirmApprove": "Confirm approval?",
     "confirmReject": "Confirm rejection?",
     "confirmWithdraw": "Confirm withdrawal?",
+    "confirmComment": "Submit comment",
+    "commentRequired": "Comment cannot be empty",
     "noApprovals": "No approvals",
     "templateManage": "Template Management",
     "templateName": "Template Name",

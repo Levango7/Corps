@@ -3087,6 +3087,8 @@
     "confirmApprove": "确认同意此审批？",
     "confirmReject": "确认拒绝此审批？",
     "confirmWithdraw": "确认撤回此审批？",
+    "confirmComment": "提交评论",
+    "commentRequired": "评论内容不能为空",
     "noApprovals": "暂无审批",
     "templateManage": "模板管理",
     "templateName": "模板名称",

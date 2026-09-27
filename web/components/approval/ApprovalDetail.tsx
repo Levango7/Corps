@@ -35,7 +35,6 @@ import {
   Users,
 } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
-import { useToast } from "@/components/Toast";
 import { ApprovalFlowDiagram, type ApprovalFlowNode } from "./ApprovalFlowDiagram";
 
 /** 审批实例详情（与后端 GET /instances/{aid} 响应一致） */
@@ -200,7 +199,7 @@ function getActionColor(action: ApprovalOperation["action"]) {
 export function ApprovalDetail({ approvalId, workspaceId }: ApprovalDetailProps) {
   const t = useTranslations("approval");
   const tButton = useTranslations("button");
-  const { toast } = useToast();
+
   const [detail, setDetail] = useState<ApprovalInstanceDetail | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -209,7 +208,7 @@ export function ApprovalDetail({ approvalId, workspaceId }: ApprovalDetailProps)
   // 操作弹窗状态
   const [actionDialog, setActionDialog] = useState<
     | {
-        type: "approve" | "reject" | "withdraw";
+        type: "approve" | "reject" | "withdraw" | "comment";
         confirmKey: string;
       }
     | {
@@ -287,6 +286,12 @@ export function ApprovalDetail({ approvalId, workspaceId }: ApprovalDetailProps)
       !targetUserId.trim()
     ) {
       setActionError(t("selectUser"));
+      return;
+    }
+
+    // 评论：正文即评论本身，必须非空（服务端 zod 的 min(1) 亦有兜底）
+    if (actionDialog.type === "comment" && !comment.trim()) {
+      setActionError(t("commentRequired"));
       return;
     }
 
@@ -728,10 +733,10 @@ export function ApprovalDetail({ approvalId, workspaceId }: ApprovalDetailProps)
             </button>
           )}
 
-          {/* TODO: 评论功能预留 — schema 已支持，待实现 API 和交互逻辑 */}
+          {/* 评论：复用通用 actionDialog 流程（提交至 .../comment，见 handleAction） */}
           {(canApproveOrReject || canWithdraw) && (
             <button
-              onClick={() => toast("info", "Coming soon")}
+              onClick={() => setActionDialog({ type: "comment", confirmKey: "confirmComment" })}
               className="inline-flex items-center gap-1.5 h-9 px-4 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
             >
               <MessageSquare size={14} />
