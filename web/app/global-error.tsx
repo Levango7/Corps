@@ -70,6 +70,23 @@ export default function GlobalError({
 
   useEffect(() => {
     console.error("[global-error] 全局错误边界捕获：", error);
+    // 远端上报（fire-and-forget）。要点：
+    //  1) 动态 import —— 本组件位于 root layout 之上，必须避免任何可能在
+    //     错误页渲染阶段引入新失败面的静态依赖（见文件头约束）。
+    //  2) 无 DSN 配置时 lib/observability 为 no-op，仅保留上面的本地日志。
+    //  3) 任何加载/上报失败都被吞掉：错误页必须始终可用。
+    void import("@/lib/observability")
+      .then(({ captureError }) => {
+        captureError(error, {
+          source: "global-error-boundary",
+          digest: error.digest,
+          path: window.location.pathname,
+          userAgent: navigator.userAgent,
+        });
+      })
+      .catch(() => {
+        /* 上报模块不可用：忽略，不影响错误页展示 */
+      });
   }, [error]);
 
   // navigator 仅在客户端可用，故放在 useEffect 中读取

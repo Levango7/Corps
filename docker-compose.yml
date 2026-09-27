@@ -181,6 +181,14 @@ services:
       S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
       S3_SECRET_KEY: ${S3_SECRET_KEY:-}
       S3_REGION: ${S3_REGION:-us-east-1}
+      # 可观测性 / 错误上报（可选；均未配置时仅本地结构化日志，
+      # 见 web/lib/observability.ts。Sentry 走 Envelope HTTP API 直传，无需 SDK）
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      NEXT_PUBLIC_SENTRY_DSN: ${NEXT_PUBLIC_SENTRY_DSN:-}
+      SENTRY_ENVIRONMENT: ${SENTRY_ENVIRONMENT:-}
+      SENTRY_RELEASE: ${SENTRY_RELEASE:-}
+      # 告警 webhook（兼容飞书/企业微信/Slack 自定义机器人）
+      ERROR_WEBHOOK_URL: ${ERROR_WEBHOOK_URL:-}
     ports:
       - "127.0.0.1:3000:3000"
     volumes:

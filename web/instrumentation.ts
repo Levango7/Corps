@@ -5,6 +5,11 @@
 export async function register() {
   // 仅在服务端执行（非 Edge Runtime）
   if (process.env.NEXT_RUNTIME === "nodejs") {
+    // 进程级未处理异常捕获（最先安装：确保后续环境校验/启动阶段抛出的
+    // unhandledRejection / uncaughtException 也能被上报，见 lib/observability.ts）
+    const { installProcessErrorHandlers } = await import("./lib/observability");
+    installProcessErrorHandlers();
+
     // 环境变量校验（fail-fast）
     const { getEnv } = await import("./lib/env");
     try {
