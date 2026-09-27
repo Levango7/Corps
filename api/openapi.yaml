@@ -3,14 +3,17 @@ info:
   title: corps (团队) API
   version: 0.6.0
   description: >
-    MVP API for the corps multi-tenant collaboration SaaS. This document is the
-    single contract for frontend and backend in Phase 3. All paths are prefixed with
-    /api/v1/. Every response uses the uniform envelope { code, data, message }.
+    MVP API for the corps multi-tenant collaboration SaaS. All paths are prefixed
+    with /api/v1/. Every response uses the uniform envelope { code, data, message }.
     Multi-tenant access control: every {wid} route verifies the caller's membership
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    This contract currently defines 66 paths (updated 2026-09-11).
+    Coverage: this contract declares 80 paths (updated 2026-09-27). The service also
+    exposes additional routes that are not yet documented here; the authoritative
+    gap list and its drift guard live in scripts/check_api_contract.py and
+    scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
+    recorded in that baseline.
   contact:
     name: MVP Dev Expert Team — Architecture
 servers:

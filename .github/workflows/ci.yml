@@ -46,6 +46,18 @@ jobs:
       - name: Check RLS coverage (schema vs rls-activate.sql)
         run: python scripts/check_rls_coverage.py
 
+  # API 契约防漂移：扫描 web/app/api/**/route.ts 得到实际路由，与
+  # api/openapi.yaml 的 path 声明的差集不得超过 scripts/api-contract-baseline.txt。
+  # 基线只允许收缩：新增路由必须同步契约，或显式追加到基线。
+  # 轻量 job（仅需 checkout + Python），与其他 job 并行运行。
+  api-contract:
+    name: API Contract Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check API contract drift
+        run: python scripts/check_api_contract.py
+
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
   # 独立 job 并行运行，与 test job 互不阻塞，缩短 CI 总时长
   audit:
