@@ -29,6 +29,9 @@ import NewTaskDialog from "@/components/NewTaskDialog";
 import { ViewToggle } from "@/components/ViewToggle";
 import { BatchToolbar } from "@/components/BatchToolbar";
 import { MilestoneFilter } from "@/components/MilestoneFilter";
+import { ConfirmDialog } from "@/components/task/ConfirmDialog";
+import { useToast } from "@/components/Toast";
+import type { BoardQuickAction } from "@/components/board-parts";
 import EmptyState from "@/components/EmptyState";
 import {
   BoardColumn,
@@ -46,6 +49,7 @@ const LIST_PAGE_SIZE = 50;
 export default function BoardPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
   const t = useTranslations("task");
+  const { toast } = useToast();
   const tErr = useTranslations("error");
   const tButton = useTranslations("button");
   const tEmpty = useTranslations("empty");
@@ -351,6 +355,87 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
     return resp;
   }
 
+  // ─── 长按快捷菜单（完成 / 复制 / 分享 / 删除） ────────────────
+  // 卡片组件只派发动作，副作用集中在此实现：复用拖拽那套已测试的乐观更新与
+  // load() 刷新，避免在卡片里重复造一份 API 调用逻辑。
+  const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  async function handleQuickAction(action: BoardQuickAction, task: Task) {
+    if (action === "complete") {
+      // 直接复用列内落位：乐观更新 + PATCH + 失败回滚，与拖拽同一代码路径
+      await handleDropOnColumn(task.id, "done");
+      return;
+    }
+
+    if (action === "duplicate") {
+      // 复制 = 用既有创建接口按同字段新建一条（无专用 duplicate 后端接口）
+      try {
+        await api(`/api/v1/workspaces/${wid}/tasks`, {
+          method: "POST",
+          body: JSON.stringify({
+            title: task.title,
+            ...(task.description ? { description: task.description } : {}),
+            status: task.status,
+            priority: task.priority,
+            ...(task.assigneeId ? { assigneeId: task.assigneeId } : {}),
+            ...(task.dueDate ? { dueDate: task.dueDate } : {}),
+            ...(task.milestoneId ? { milestoneId: task.milestoneId } : {}),
+          }),
+        });
+        await load();
+        toast("success", t("duplicated"));
+      } catch {
+        toast("error", t("quickActionFailed"));
+      }
+      return;
+    }
+
+    if (action === "share") {
+      try {
+        // 列表态的 Task 不含 shareToken，需查分享状态；无 token 时按 TaskPropertyAside
+        // 的同一约定用 PATCH shareToken="rotate" 生成（不可每次 rotate，否则作废旧链接）
+        const current = await api<{ shareToken: string | null }>(
+          `/api/v1/workspaces/${wid}/tasks/${task.id}/share`,
+        );
+        const token =
+          current.shareToken ??
+          (
+            await api<{ shareToken: string | null }>(`/api/v1/workspaces/${wid}/tasks/${task.id}`, {
+              method: "PATCH",
+              body: JSON.stringify({ shareToken: "rotate" }),
+            })
+          ).shareToken;
+        if (!token) throw new Error("share token unavailable");
+        // 公开页路由为 /tasks/share/[token]（与 TaskPropertyAside 推导一致）
+        await navigator.clipboard.writeText(`${window.location.origin}/tasks/share/${token}`);
+        toast("success", t("shareLinkCopied"));
+      } catch {
+        toast("error", t("quickActionFailed"));
+      }
+      return;
+    }
+
+    // 删除为硬删除（后端 tx.task.delete，评论与决策记录级联消失），必须先确认
+    setDeleteTarget(task);
+  }
+
+  async function confirmQuickDelete() {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await api(`/api/v1/workspaces/${wid}/tasks/${deleteTarget.id}`, {
+        method: "DELETE",
+      });
+      setDeleteTarget(null);
+      await load();
+    } catch {
+      toast("error", t("quickActionFailed"));
+    } finally {
+      setDeleting(false);
+    }
+  }
+
   // ─── 列表视图排序 + 分页 ─────────────────────────────────
 
   const sortedListTasks = tasks.slice().sort((a, b) => {
@@ -494,6 +579,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
               onDropOnTask={handleDropOnTask}
               onDropOnColumn={handleDropOnColumn}
               onMoveByStep={moveTaskByStep}
+              onQuickAction={handleQuickAction}
             />
           ) : (
             <ListView
@@ -513,6 +599,15 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
       )}
 
       <NewTaskDialog wid={wid} open={showNew} onClose={() => setShowNew(false)} onCreated={load} />
+
+      {/* 快捷菜单删除确认：复用任务详情页同款无障碍确认弹窗（硬删除不可撤销） */}
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        onClose={() => setDeleteTarget(null)}
+        onConfirm={confirmQuickDelete}
+        deleting={deleting}
+        taskTitle={deleteTarget?.title ?? ""}
+      />
 
       {/* P2 批量操作工具栏 */}
       <BatchToolbar
@@ -542,6 +637,7 @@ interface BoardViewProps {
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onDropOnColumn: (sourceId: string, status: Status) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
+  onQuickAction: (action: BoardQuickAction, task: Task) => void;
 }
 
 function BoardView(props: BoardViewProps) {

@@ -19,7 +19,6 @@ import {
   AlertTriangle,
   Check,
   Copy,
-  Archive,
   Trash2,
   Share2,
 } from "lucide-react";
@@ -45,6 +44,10 @@ import { MOTION } from "@/lib/motion-tokens";
 /** 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转 */
 export type DragStart = { x: number; y: number } | null;
 
+/** 长按快捷菜单的动作种类：具体副作用由看板页实现（本组件不直连 API）；
+ *  未提供 onQuickAction 时不渲染快捷菜单——与 WidgetCard 的「按可用性动态构建」一致。 */
+export type BoardQuickAction = "complete" | "duplicate" | "share" | "delete";
+
 interface BoardColumnProps {
   column: (typeof COLUMNS)[number];
   columnTasks: Task[];
@@ -58,6 +61,7 @@ interface BoardColumnProps {
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onDropOnColumn: (sourceId: string, status: Task["status"]) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
+  onQuickAction?: (action: BoardQuickAction, task: Task) => void;
   loading?: boolean;
 }
 
@@ -75,6 +79,7 @@ export function BoardColumn({
   onDropOnTask,
   onDropOnColumn,
   onMoveByStep,
+  onQuickAction,
   loading,
 }: BoardColumnProps) {
   const [dragOver, setDragOver] = useState(false);
@@ -130,6 +135,7 @@ export function BoardColumn({
                 onToggleSelect={onToggleSelect}
                 onDropOnTask={onDropOnTask}
                 onMoveByStep={onMoveByStep}
+                onQuickAction={onQuickAction}
               />
             ))}
           </AnimatePresence>
@@ -151,6 +157,8 @@ interface BoardCardProps {
 
   onDropOnTask: (sourceId: string, targetId: string) => Promise<void>;
   onMoveByStep: (taskId: string, delta: -1 | 1) => Promise<void>;
+  /** 长按快捷菜单回调；缺省（如数据库看板复用本组件时）不渲染快捷菜单 */
+  onQuickAction?: (action: BoardQuickAction, task: Task) => void;
 }
 
 /** 单个看板卡片：可拖拽 + 可选中 + 可点击跳转。
@@ -168,6 +176,7 @@ function BoardCardImpl({
   onToggleSelect,
   onDropOnTask,
   onMoveByStep,
+  onQuickAction,
 }: BoardCardProps) {
   const [dragOverCard, setDragOverCard] = useState(false);
   const router = useRouter();
@@ -188,36 +197,36 @@ function BoardCardImpl({
     setLongPressOpen(true);
   });
 
-  // TODO: P3 — QuickAction 操作目前均为跳转到任务详情页的占位实现，
-  // 后续需接入实际 API（完成任务/复制任务/归档任务/分享链接/删除任务）
-  const quickActions: QuickAction[] = [
-    {
-      icon: Check,
-      label: t("complete"),
-      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
-    },
-    {
-      icon: Copy,
-      label: t("copy"),
-      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
-    },
-    {
-      icon: Archive,
-      label: t("archive"),
-      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
-    },
-    {
-      icon: Share2,
-      label: t("share"),
-      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
-    },
-    {
-      icon: Trash2,
-      label: t("delete"),
-      onClick: () => router.push(`/w/${wid}/task/${task.id}`),
-      danger: true,
-    },
-  ];
+  // 长按快捷菜单：本组件只呈现与派发，副作用全部由看板页实现
+  // （与 WidgetCard「按可用性动态构建」一致：无 onQuickAction 则不渲染菜单）。
+  // 注：原「归档」项已移除——Task.status 枚举只有 todo/in_progress/review/done，
+  // 且无 archived 字段（schema 中 deletedAt 仅存在于注释掉的软删除草案里），
+  // 后端无对应能力；宁可少一项，也不留一个点了没反应的按钮。
+  const quickActions: QuickAction[] = onQuickAction
+    ? [
+        {
+          icon: Check,
+          label: t("complete"),
+          onClick: () => onQuickAction("complete", task),
+        },
+        {
+          icon: Copy,
+          label: t("copy"),
+          onClick: () => onQuickAction("duplicate", task),
+        },
+        {
+          icon: Share2,
+          label: t("share"),
+          onClick: () => onQuickAction("share", task),
+        },
+        {
+          icon: Trash2,
+          label: t("delete"),
+          danger: true,
+          onClick: () => onQuickAction("delete", task),
+        },
+      ]
+    : [];
 
   return (
     <>
@@ -381,13 +390,15 @@ function BoardCardImpl({
           </div>
         </div>
       </motion.div>
-      <QuickActionMenu
-        open={longPressOpen}
-        onClose={() => setLongPressOpen(false)}
-        actions={quickActions}
-        x={longPressX}
-        y={longPressY}
-      />
+      {quickActions.length > 0 && (
+        <QuickActionMenu
+          open={longPressOpen}
+          onClose={() => setLongPressOpen(false)}
+          actions={quickActions}
+          x={longPressX}
+          y={longPressY}
+        />
+      )}
     </>
   );
 }
