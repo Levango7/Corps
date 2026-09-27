@@ -1,4 +1,6 @@
-/* eslint-disable */
+/* eslint-disable -- 开发/CI 辅助脚本（非应用代码，不参与生产构建）：通过
+   Playwright 驱动多档视口截图，脚本内直接操作浏览器上下文与文件系统，应用侧的
+   lint 规则不适用。如需收紧请按规则名逐个替换。 */
 // 响应式验证截图：PC / iPad / iPhone 三档，登录页 + 工作区四页
 // 用法：node scripts/responsive-shots.mjs（dev server 须在 localhost:3000）
 import { chromium } from "@playwright/test";

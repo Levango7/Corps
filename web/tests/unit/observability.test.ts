@@ -274,7 +274,10 @@ describe("失败降级（不影响业务）", () => {
 
   it("HTTP 非 2xx 时记录 warn 且不抛错", async () => {
     vi.stubEnv("ERROR_WEBHOOK_URL", "https://example.com/alert");
-    vi.stubGlobal("fetch", vi.fn(async () => ({ ok: false, status: 500 }) as Response));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => ({ ok: false, status: 500 }) as Response),
+    );
 
     expect(() => captureError(new Error("bad status"), { source: "unit-test" })).not.toThrow();
     await vi.waitFor(() => expect(logger.warn).toHaveBeenCalled());
@@ -309,4 +312,3 @@ describe("installProcessErrorHandlers", () => {
     onSpy.mockRestore();
   });
 });
-

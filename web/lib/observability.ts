@@ -196,7 +196,13 @@ async function sendToSentry(
     environment: process.env.SENTRY_ENVIRONMENT ?? process.env.NODE_ENV,
     release: process.env.SENTRY_RELEASE,
     exception: {
-      values: [{ type: err.name, value: err.message, stacktrace: err.stack ? { raw: err.stack } : undefined }],
+      values: [
+        {
+          type: err.name,
+          value: err.message,
+          stacktrace: err.stack ? { raw: err.stack } : undefined,
+        },
+      ],
     },
     tags,
     extra: redact(context) as Record<string, unknown>,
@@ -350,5 +356,3 @@ export function installProcessErrorHandlers(): void {
 export function __resetHandlersFlag(): void {
   handlersInstalled = false;
 }
-
-

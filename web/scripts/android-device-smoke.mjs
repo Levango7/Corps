@@ -1,4 +1,6 @@
-/* eslint-disable */
+/* eslint-disable -- CI/开发辅助脚本（非应用代码，不参与生产构建）：依赖 Playwright
+   实验性 Android API（_android）驱动云模拟器真机 Chrome，其类型定义与 lint 约定
+   不适用于应用侧规则。保留整文件禁用以免逐条 noise，如需收紧请按规则名逐个替换。 */
 // Android 云真机冒烟（mobile-matrix.yml android-chrome-emulator job 调用）：
 // Playwright 实验性 Android API（_android）驱动云模拟器内的真实系统 Chrome——
 // 覆盖桌面 chromium 近似不到的档位：Android 视口/系统 Chrome 行为/触控层。

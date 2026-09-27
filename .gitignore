@@ -69,7 +69,10 @@ Dockerfile.hotfix
 *.log
 web/uploads/
 
-# 审计文档
-docs/audit/
+# 审计文档：正式审计报告入库留存（与 docs/security/ 下渗透测试报告的做法一致），
+# 仅忽略 agent/工具产出的临时快照与草稿，避免中间产物污染版本库
+docs/audit/*.tmp.md
+docs/audit/*.draft.md
+docs/audit/tmp/
 # Tauri/移动端构建产物
 desktop/artifacts/

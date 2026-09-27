@@ -1,4 +1,6 @@
-/* eslint-disable */
+/* eslint-disable -- 开发/CI 辅助脚本（非应用代码，不参与生产构建）：在
+   page.evaluate 内执行浏览器上下文代码并处理三引擎返回的动态结构，应用侧的
+   lint 规则（类型收紧、浏览器 API 用法等）不适用。如需收紧请按规则名逐个替换。 */
 // 程序化布局崩点检测（替代人眼截图审阅）：
 //  1) 横向溢出（元素超出视口）
 //  2) 文本截断（scrollWidth > clientWidth 且非刻意的 truncate）
