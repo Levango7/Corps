@@ -10,6 +10,7 @@
 
 import { memo, useState, type DragEvent } from "react";
 import { useRouter } from "next/navigation";
+import type { TaskQuickAction } from "@/lib/task-quick-actions";
 import {
   Plus,
   Kanban,
@@ -44,9 +45,9 @@ import { MOTION } from "@/lib/motion-tokens";
 /** 拖拽起始位置：用于区分"拖拽"与"点击"，避免拖拽结束误触发跳转 */
 export type DragStart = { x: number; y: number } | null;
 
-/** 长按快捷菜单的动作种类：具体副作用由看板页实现（本组件不直连 API）；
+/** 长按快捷菜单的动作种类：复用 lib 里的单一编辑源，避免前后端动作枚举漂移；
  *  未提供 onQuickAction 时不渲染快捷菜单——与 WidgetCard 的「按可用性动态构建」一致。 */
-export type BoardQuickAction = "complete" | "duplicate" | "share" | "delete";
+export type BoardQuickAction = TaskQuickAction;
 
 interface BoardColumnProps {
   column: (typeof COLUMNS)[number];

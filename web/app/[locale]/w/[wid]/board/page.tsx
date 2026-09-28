@@ -32,6 +32,7 @@ import { MilestoneFilter } from "@/components/MilestoneFilter";
 import { ConfirmDialog } from "@/components/task/ConfirmDialog";
 import { useToast } from "@/components/Toast";
 import type { BoardQuickAction } from "@/components/board-parts";
+import { runTaskQuickAction, deleteTaskNow, type QuickActionDeps } from "@/lib/task-quick-actions";
 import EmptyState from "@/components/EmptyState";
 import {
   BoardColumn,
@@ -356,84 +357,35 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
   }
 
   // ─── 长按快捷菜单（完成 / 复制 / 分享 / 删除） ────────────────
-  // 卡片组件只派发动作，副作用集中在此实现：复用拖拽那套已测试的乐观更新与
-  // load() 刷新，避免在卡片里重复造一份 API 调用逻辑。
+  // 副作用实现在 lib/task-quick-actions.ts（依赖可注入，便于单测覆盖全部分支）；
+  // 这里只做接线：注入拖拽那套乐观更新与 load() 刷新，并托管删除确认弹窗的状态。
   const [deleteTarget, setDeleteTarget] = useState<Task | null>(null);
   const [deleting, setDeleting] = useState(false);
 
-  async function handleQuickAction(action: BoardQuickAction, task: Task) {
-    if (action === "complete") {
-      // 直接复用列内落位：乐观更新 + PATCH + 失败回滚，与拖拽同一代码路径
-      await handleDropOnColumn(task.id, "done");
-      return;
-    }
+  const quickActionDeps: QuickActionDeps = {
+    wid,
+    // 复用列内落位：乐观更新 + PATCH + 失败回滚，与拖拽同一代码路径
+    onComplete: (task) => handleDropOnColumn(task.id, "done"),
+    onRequestDelete: (task) => setDeleteTarget(task),
+    refresh: load,
+    toast,
+    messages: {
+      duplicated: t("duplicated"),
+      shareLinkCopied: t("shareLinkCopied"),
+      failed: t("quickActionFailed"),
+    },
+  };
 
-    if (action === "duplicate") {
-      // 复制 = 用既有创建接口按同字段新建一条（无专用 duplicate 后端接口）
-      try {
-        await api(`/api/v1/workspaces/${wid}/tasks`, {
-          method: "POST",
-          body: JSON.stringify({
-            title: task.title,
-            ...(task.description ? { description: task.description } : {}),
-            status: task.status,
-            priority: task.priority,
-            ...(task.assigneeId ? { assigneeId: task.assigneeId } : {}),
-            ...(task.dueDate ? { dueDate: task.dueDate } : {}),
-            ...(task.milestoneId ? { milestoneId: task.milestoneId } : {}),
-          }),
-        });
-        await load();
-        toast("success", t("duplicated"));
-      } catch {
-        toast("error", t("quickActionFailed"));
-      }
-      return;
-    }
-
-    if (action === "share") {
-      try {
-        // 列表态的 Task 不含 shareToken，需查分享状态；无 token 时按 TaskPropertyAside
-        // 的同一约定用 PATCH shareToken="rotate" 生成（不可每次 rotate，否则作废旧链接）
-        const current = await api<{ shareToken: string | null }>(
-          `/api/v1/workspaces/${wid}/tasks/${task.id}/share`,
-        );
-        const token =
-          current.shareToken ??
-          (
-            await api<{ shareToken: string | null }>(`/api/v1/workspaces/${wid}/tasks/${task.id}`, {
-              method: "PATCH",
-              body: JSON.stringify({ shareToken: "rotate" }),
-            })
-          ).shareToken;
-        if (!token) throw new Error("share token unavailable");
-        // 公开页路由为 /tasks/share/[token]（与 TaskPropertyAside 推导一致）
-        await navigator.clipboard.writeText(`${window.location.origin}/tasks/share/${token}`);
-        toast("success", t("shareLinkCopied"));
-      } catch {
-        toast("error", t("quickActionFailed"));
-      }
-      return;
-    }
-
-    // 删除为硬删除（后端 tx.task.delete，评论与决策记录级联消失），必须先确认
-    setDeleteTarget(task);
+  function handleQuickAction(action: BoardQuickAction, task: Task) {
+    void runTaskQuickAction(action, task, quickActionDeps);
   }
 
   async function confirmQuickDelete() {
     if (!deleteTarget) return;
     setDeleting(true);
-    try {
-      await api(`/api/v1/workspaces/${wid}/tasks/${deleteTarget.id}`, {
-        method: "DELETE",
-      });
-      setDeleteTarget(null);
-      await load();
-    } catch {
-      toast("error", t("quickActionFailed"));
-    } finally {
-      setDeleting(false);
-    }
+    // 成功才关弹窗：失败时保留目标，用户可直接重试或手动关闭
+    if (await deleteTaskNow(deleteTarget, quickActionDeps)) setDeleteTarget(null);
+    setDeleting(false);
   }
 
   // ─── 列表视图排序 + 分页 ─────────────────────────────────

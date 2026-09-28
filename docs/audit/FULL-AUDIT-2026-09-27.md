@@ -117,7 +117,7 @@
 
 1. `web/app/[locale]/pricing/page.tsx:527` — 法务页，**已修复**，注释留存说明
 2. `web/components/approval/ApprovalDetail.tsx:731` — 评论功能 → **已实现**：`POST /approvals/instances/[aid]/comment` + 详情页既有对话框（`c7d2247`）
-3. `web/components/board-parts.tsx:191` — QuickAction 占位 → **已实现**（本次提交）：完成/复制/分享/删除四项接入真实 API，副作用集中在看板页（复用拖拽的乐观更新与 `load()` 刷新）；原「归档」项因 `Task.status` 枚举无 `archived`、schema 亦无软删除字段而移除，不留无实效按钮
+3. `web/components/board-parts.tsx:191` — QuickAction 占位 → **已实现**（`4471180f` + 本次提交）：完成/复制/分享/删除四项接入真实 API；副作用已抽到 `web/lib/task-quick-actions.ts`（依赖可注入），看板页只做接线（复用拖拽的乐观更新与 `load()` 刷新）；配套 `lib/clipboard.ts` 提供安全上下文降级；单测 16 例覆盖全部动作分支。原「归档」项因 `Task.status` 枚举无 `archived`、schema 亦无软删除字段而移除，不留无实效按钮
 
 ---
 
@@ -214,7 +214,7 @@
 |---|---|---|---|---|
 | 3 | **路由级测试密度不足** | 286 路由 vs 14 集成测试文件 | 大量端点无回归保护，改动易引入静默破坏 | 对高危端点（auth/payment/invite/document-share）优先补集成测试 |
 | 4 | E2E 覆盖面 vs 路由规模 | E2E **58 个用例 / 9 个 spec**（auth·billing·calendar·i18n·im-upgrade·invitation·smoke·task-management·v04-features），**实测零 skip** | 仅覆盖核心流程，长尾功能无浏览器级验证 | 随功能增长补充，优先支付/邀请/权限等高风险链路 |
-| 5 | ~~**两处功能半成品**~~ → **已修复** | `ApprovalDetail.tsx` 评论已实现（`c7d2247`）、`board-parts.tsx` QuickAction 已接入真实 API（完成/复制/分享/删除） | ~~用户可点但无实效~~ 体验断点已消除 | 无遗留；「归档」需后端先补 `archived` 状态或软删除字段再评估 |
+| 5 | ~~**两处功能半成品**~~ → **已修复** | `ApprovalDetail.tsx` 评论已实现（`c7d2247`）、`board-parts.tsx` QuickAction 已接入真实 API（`4471180f`），副作用抽至 `lib/task-quick-actions.ts` 并加 16 例单测 | ~~用户可点但无实效~~ 体验断点已消除，且关键分支有回归保护 | 无遗留；「归档」需后端先补 `archived` 状态或软删除字段再评估 |
 | 6 | **监控文档与实现不匹配** | 有 `runbook-monitoring.md`，但无监控工具 | Runbook 无法执行，事故时手忙脚乱 | 落地工具后回填 Runbook 真实步骤，或先精简为"待建设" |
 
 ### 🟡 P2 — 工程卫生，可择机处理
