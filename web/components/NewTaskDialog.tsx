@@ -69,14 +69,21 @@ export default function NewTaskDialog({
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [milestoneId, setMilestoneId] = useState<string>("");
   const [submitting, setSubmitting] = useState(false);
-  const [loading, setLoading] = useState(false);
+  // 成员/标签/里程碑三个列表的就绪状态。仅作可访问性/就绪信号（aria-busy）暴露：
+  // 不能拿它当提交门禁——这些列表都是可选字段，请求悬挂（无超时）会把「创建」永久锁死。
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const dialogRef = useRef<HTMLDivElement>(null);
   const descRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (!open) return;
+    if (!open) {
+      // 关闭即复位就绪标记：重开时首个渲染帧就是 aria-busy="true"，不给外部观察者
+      // （屏幕阅读器 / E2E 的显式等待）留下"看似已就绪"的窗口
+      setLoading(true);
+      return;
+    }
     // 重置 + 拉取成员/标签/里程碑列表
     setTitle("");
     setDescription("");
@@ -92,13 +99,15 @@ export default function NewTaskDialog({
       api<Person[]>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
       api<Label[]>(`/api/v1/workspaces/${wid}/labels`).catch(() => [] as Label[]),
       api<Milestone[]>(`/api/v1/workspaces/${wid}/milestones`).catch(() => [] as Milestone[]),
-    ]).then(([m, l, ms]) => {
-      setMembers(m);
-      setLabels(l);
-      setMilestones(ms);
-    }).finally(() => {
-      setLoading(false);
-    });
+    ])
+      .then(([m, l, ms]) => {
+        setMembers(m);
+        setLabels(l);
+        setMilestones(ms);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
   }, [open, wid]);
 
   useEffect(() => {
@@ -179,6 +188,7 @@ export default function NewTaskDialog({
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
+      aria-busy={loading}
       aria-labelledby="new-task-title"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-[var(--space-4)] sm:p-[var(--space-8)] overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
@@ -399,9 +409,9 @@ export default function NewTaskDialog({
             </button>
             <button
               type="submit"
-              disabled={!title.trim() || submitting || loading}
+              disabled={!title.trim() || submitting}
               title={
-                !title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : loading ? t("actionCreate") : undefined
+                !title.trim() ? t("titlePlaceholder") : submitting ? t("actionCreate") : undefined
               }
               className="inline-flex items-center gap-1.5 h-9 px-[var(--space-4)] bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
             >

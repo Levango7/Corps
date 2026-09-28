@@ -133,7 +133,11 @@
 
 - **286 个路由 vs 14 个集成测试文件** — 路由级覆盖密度不足，多数端点无针对性测试
 - 近期 E2E 提交显示曾用变通手段修测试：`90645fa9`（移除 `page.evaluate`/`force:true`，方向正确）→ `7b4aec5e`（普通 click 替代）→ `d1ce552d`（**URL 导航替代 UserMenu + skip ChatPanel**）
-  - ⚠️ **被 skip 的测试必须有跟踪项**，否则形成覆盖黑洞
+- **静态守卫自身缺陷（本次已修，教训：红灯长期无人处理 = 守卫名存实亡）**
+  - `rls-bare-query-guard.test.ts` 的 RLS 清单是**手工常量（20 表）**，而 `rls-activate.sql` 已覆盖 79 表 → **59 张表（含全部 ai_*/approval_*/document_* 等）的裸查无人看守**
+  - 同文件的漂移检查按逗号裸切 `ARRAY[...]`，把其中的 SQL 注释（`-- ── 55 张补齐…`）当成表名，自 `dd828ee4` 起**恒红**
+  - 现已改为双向派生：表清单取 SQL 引号内标识符，模型名以 `schema.prisma` 的 `@@map` 为准（`meeting_minutes`→`MeetingMinutes`、`time_entries`→`TimeEntry` 这类非机械命名不再漏检）。覆盖 20 → **79 模型**，扫描零违规
+  - `NewTaskDialog` 提交按钮曾把 `loading`（成员/标签/里程碑三个**可选**列表）作为门禁：请求悬挂时创建按钮**永久禁用**（三个请求均无超时）。已改为只依赖标题与提交态；加载中就绪状态改由 `aria-busy` 暴露（`e2e/helpers.ts` 显式等待替代原先"靠禁用按钮制造时序"），31 例单测全绿（含"悬挂请求不锁死提交"回归锚点）
 
 ---
 

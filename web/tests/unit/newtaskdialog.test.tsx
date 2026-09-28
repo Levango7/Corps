@@ -199,6 +199,42 @@ describe("NewTaskDialog - 空标题时提交按钮 disabled", () => {
   });
 });
 
+describe("NewTaskDialog - 就绪信号（aria-busy）与提交门禁", () => {
+  it("列表就绪后 aria-busy 归位为 false", async () => {
+    // Arrange & Act
+    renderOpen();
+
+    // Assert：对话框把「成员/标签/里程碑拉取中」暴露给外部（屏幕阅读器、E2E 等待）
+    await waitFor(() => {
+      expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "false");
+    });
+  });
+
+  it("列表请求悬挂时提交按钮不被锁死，提交仍真实发出", async () => {
+    // Arrange：三个列表永不返回（模拟慢/挂起的网络，这些请求均无超时）
+    apiMock.mockImplementation((path: string, init?: RequestInit) => {
+      if (init?.method === "POST") return Promise.resolve({ id: "task-1" });
+      return new Promise(() => {}); // members/labels/milestones 一直挂起
+    });
+    renderOpen();
+    const titleInput = screen.getByPlaceholderText("一句话说清要做什么");
+    const submitButton = screen.getByRole("button", { name: /创建/ });
+
+    // Act
+    fireEvent.change(titleInput, { target: { value: "悬挂也要能建" } });
+
+    // Assert：成员/标签/里程碑都是可选字段，不得以其加载状态锁死创建按钮
+    // （回归警示：曾经 disabled={!title || submitting || loading}）
+    expect(submitButton).not.toBeDisabled();
+    expect(screen.getByRole("dialog")).toHaveAttribute("aria-busy", "true");
+
+    fireEvent.submit(screen.getByRole("dialog").querySelector("form")!);
+    await waitFor(() => {
+      expect(findPostCall()[0]).toContain("/tasks");
+    });
+  });
+});
+
 describe("NewTaskDialog - 标题 maxLength 限制", () => {
   it("标题输入框 maxLength=200", () => {
     // Arrange & Act

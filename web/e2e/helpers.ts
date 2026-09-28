@@ -66,10 +66,10 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
  * 在工作区内通过 NewTaskDialog UI 创建一条任务。
  *
  * 2026-09-27 修复：此前因 Ripple 组件 pointer-events 拦截 + useEffect 异步拉取
- * 导致 Playwright actionability check 持续超时，曾改用 API 绕过。现已修复产品代码：
+ * 导致 Playwright actionability check 持续超时，曾改用 API 绕过。产品代码已修复：
  *  1. Ripple 外层 span 添加 pointer-events-none，不再拦截按钮点击
- *  2. NewTaskDialog 添加 loading 状态，数据加载完成前 disable 提交按钮
- * 因此恢复 UI 交互方式创建任务。
+ *  2. NewTaskDialog 用 aria-busy 暴露「成员/标签/里程碑列表加载中」——本 helper 显式等待
+ *     其就绪再点击。注意别再靠"加载中禁用提交按钮"制造时序：请求悬挂时按钮会永久禁用。
  *
  * @returns 任务标题（供后续在看板/详情页定位）
  */
@@ -77,8 +77,9 @@ export async function createTask(page: Page, title: string): Promise<string> {
   const wid = extractWorkspaceId(page.url());
   // 点击"新建任务"按钮打开对话框
   await page.getByRole("button", { name: /新建任务|New Task/ }).click();
-  // 等待对话框出现
+  // 等待对话框出现，再等内部三个列表就绪（aria-busy=false），避免点击落在异步重渲染中间
   await page.getByRole("dialog").waitFor({ state: "visible" });
+  await page.locator('[role="dialog"][aria-busy="false"]').waitFor({ state: "attached" });
   // 填写标题
   await page.getByLabel(/标题|Title/).fill(title);
   // 点击创建按钮（提交表单）
