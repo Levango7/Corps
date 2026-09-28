@@ -8,7 +8,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { X, Loader2, Calendar } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import { useTranslations } from "next-intl";
 
@@ -76,7 +76,7 @@ export default function KeyResultEditor({
     setOwnerId(kr?.ownerId ?? "");
     setDueDate(kr?.dueDate ? toLocalDateString(new Date(kr.dueDate)) : "");
     setError("");
-    api<Person[]>(`/api/v1/workspaces/${wid}/members`)
+    apiList<Person>(`/api/v1/workspaces/${wid}/members`)
       .catch(() => [] as Person[])
       .then(setMembers);
   }, [open, wid, kr]);

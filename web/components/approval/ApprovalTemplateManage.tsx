@@ -34,7 +34,7 @@ import {
   CheckCircle2,
   XCircle,
 } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, apiList } from "@/lib/api";
 
 /** 审批模板 */
 interface ApprovalTemplate {
@@ -116,7 +116,7 @@ export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManagePr
   useEffect(() => {
     loadTemplates();
     // 拉取成员列表用于节点审批人选择
-    api<Member[]>(`/api/v1/workspaces/${workspaceId}/members`)
+    apiList<Member>(`/api/v1/workspaces/${workspaceId}/members`)
       .then(setMembers)
       .catch(() => {
         // 成员列表加载失败不阻塞模板管理

@@ -21,7 +21,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Search, X, Users, User, Loader2, Check, AlertCircle, ArrowRight } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import type { UserSummary, Conversation } from "./types";
 
 /** 工作区成员项（与 /workspaces/{wid}/members 响应对齐） */
@@ -66,11 +66,11 @@ export function ConversationCreate({
   useEffect(() => {
     let active = true;
     setLoading(true);
-    api<WorkspaceMember[]>(`/api/v1/workspaces/${workspaceId}/members`)
+    apiList<WorkspaceMember>(`/api/v1/workspaces/${workspaceId}/members`)
       .then((list) => {
         if (!active) return;
         // 排除自己
-        setMembers((list ?? []).filter((m) => m.userId !== currentUserId));
+        setMembers(list.filter((m) => m.userId !== currentUserId));
       })
       .catch(() => {
         if (!active) return;

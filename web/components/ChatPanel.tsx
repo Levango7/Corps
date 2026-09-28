@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import { useTranslations } from "next-intl";
 import { RefreshCw } from "lucide-react";
 import type { ChatMessage, Person, AttachmentMeta } from "./chat/types";
@@ -86,7 +86,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
   /** 加载工作区成员（用于在线状态头像 + 当前用户 ID） */
   const loadMembers = useCallback(async () => {
     try {
-      const data = await api<(Person & { isSelf?: boolean })[]>(membersUrl);
+      const data = await apiList<Person & { isSelf?: boolean }>(membersUrl);
       setMembers(data);
       // 从 isSelf 字段获取当前用户 ID
       const self = data.find((m) => m.isSelf);

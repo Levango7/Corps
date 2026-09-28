@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { X, Loader2, Flag, Calendar, Tag, Milestone as MilestoneIcon } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import { toLocalDateString, localDateToISOString } from "@/lib/date";
 import type { Label, Milestone } from "@/lib/types";
 import { PRIORITY_COLORS } from "@/lib/task-meta";
@@ -96,7 +96,7 @@ export default function NewTaskDialog({
     setError("");
     setLoading(true);
     Promise.all([
-      api<Person[]>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
+      apiList<Person>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
       api<Label[]>(`/api/v1/workspaces/${wid}/labels`).catch(() => [] as Label[]),
       api<Milestone[]>(`/api/v1/workspaces/${wid}/milestones`).catch(() => [] as Milestone[]),
     ])

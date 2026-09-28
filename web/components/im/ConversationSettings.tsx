@@ -39,7 +39,7 @@ import {
   Check,
 } from "lucide-react";
 import { useTranslations } from "next-intl";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import type { Conversation, ConversationMember, UserSummary } from "./types";
 
 /** 可选成员（工作区成员，用于添加成员时列出候选） */
@@ -225,10 +225,10 @@ export function ConversationSettings({
     setAddQuery("");
     setAddLoading(true);
     try {
-      const list = await api<WorkspaceMember[]>(`/api/v1/workspaces/${wid}/members`);
+      const list = await apiList<WorkspaceMember>(`/api/v1/workspaces/${wid}/members`);
       // 排除已在会话中的成员
       const existingIds = new Set(members.map((m) => m.userId));
-      setAddCandidates((list ?? []).filter((m) => !existingIds.has(m.userId)));
+      setAddCandidates(list.filter((m) => !existingIds.has(m.userId)));
     } catch {
       setError(t("createLoadMembersFailed"));
     } finally {

@@ -44,7 +44,13 @@ const MS_PER_DAY = 86_400_000;
 
 /**
  * GET /api/v1/workspaces/:wid/dashboard/widgets/:widgetId
- * 响应：{ code: 200, data: { widget: widgetId, data: any } }
+ * 响应：{ code: 200, data: <widget 载荷> }
+ *
+ * data 直接就是该 widget 的载荷（recent-activity → { items: [...] }，
+ * task-stats → { todo, ..., total }），不要额外包 { widget, data } 一层：
+ * 11 个 widget 组件、3 个专用路由（gantt-chart / milestone-timeline / custom-chart）
+ * 与 api/openapi.yaml 的 Envelope_WidgetData 均按"直接载荷"约定消费，
+ * 多包一层会让所有 widget 读到 undefined 并触发路由级错误边界。
  */
 export async function GET(
   req: NextRequest,
@@ -80,7 +86,7 @@ export async function GET(
       userId,
     );
 
-    return NextResponse.json({ code: 200, data: { widget: widgetId, data } });
+    return NextResponse.json({ code: 200, data });
   } catch (error) {
     console.error(`[GET dashboard/widgets/${widgetId}] error:`, error);
     return handlePrismaError(error, req);

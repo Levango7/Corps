@@ -48,9 +48,21 @@ vi.mock("next-intl", () => ({
   useTranslations: (ns: string) => (key: string) => zhFlat[`${ns}.${key}`] ?? key,
 }));
 
-vi.mock("@/lib/api", () => ({
-  api: apiMock,
-}));
+vi.mock("@/lib/api", () => {
+  /** 与 lib/api.ts 的 itemsOf 同语义：分页信封 `{items}` 或裸数组 → 数组 */
+  const itemsOf = (data: unknown): unknown[] => {
+    if (Array.isArray(data)) return data;
+    const items = (data as { items?: unknown } | null | undefined)?.items;
+    return Array.isArray(items) ? (items as unknown[]) : [];
+  };
+  return {
+    api: apiMock,
+    // 组件通过 apiList()（内部 itemsOf(api())）拉列表，mock 必须以同语义实现，
+    // 否则 apiList 是 undefined，所有列表请求都会炸。
+    apiList: (path: string, opts?: RequestInit) =>
+      Promise.resolve(apiMock(path, opts) as unknown).then(itemsOf),
+  };
+});
 
 import NewTaskDialog from "@/components/NewTaskDialog";
 
@@ -63,6 +75,9 @@ beforeEach(() => {
   // 默认：按请求路由返回空列表（组件打开时并发拉取 members/labels/milestones 三个列表）
   apiMock.mockImplementation((path: string, init?: RequestInit) => {
     if (init?.method === "POST") return Promise.resolve({ id: "task-1" });
+    // /members 真实端点是分页信封（R8C-06 统一格式），labels/milestones 才是裸数组。
+    // 若这里用裸数组 mock /members，"组件把分页对象当数组 .map" 的缺陷就测不出来。
+    if (path.endsWith("/members")) return Promise.resolve(pageOf([]));
     return Promise.resolve([]);
   });
 });
@@ -76,6 +91,16 @@ afterEach(() => {
  * 组件 v2 起打开时并发拉取 members/labels/milestones 三个列表，
  * 用例不得假设固定调用顺序；POST /tasks 的行为由 opts 显式指定。
  */
+/**
+ * /members 真实端点返回分页信封 `{ items, page, limit, total, hasMore }`
+ * （R8C-06 统一格式，见 app/api/v1/workspaces/[wid]/members/route.ts），
+ * labels/milestones 才是裸数组。用裸数组 mock /members 会让
+ * 「组件把分页对象当数组 .map」这类缺陷完全测不出来。
+ */
+function pageOf<T>(items: T[]) {
+  return { items, page: 1, limit: 50, total: items.length, hasMore: false };
+}
+
 function routeApi(
   opts: {
     members?: unknown;
@@ -90,7 +115,8 @@ function routeApi(
       if (opts.postError) return Promise.reject(opts.postError);
       return Promise.resolve(opts.post ?? { id: "task-1" });
     }
-    if (path.endsWith("/members")) return Promise.resolve(opts.members ?? []);
+    if (path.endsWith("/members"))
+      return Promise.resolve(pageOf((opts.members ?? []) as unknown[]));
     if (path.endsWith("/labels")) return Promise.resolve(opts.labels ?? []);
     if (path.endsWith("/milestones")) return Promise.resolve(opts.milestones ?? []);
     return Promise.resolve([]);

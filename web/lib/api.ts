@@ -71,3 +71,25 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
   }
   return json.data as T;
 }
+
+/**
+ * 列表载荷归一化。
+ *
+ * GET 列表端点统一分页格式 `{ items, page, limit, total, hasMore }`（R8C-06），
+ * 但历史调用方按裸数组消费：`api()` 解包后拿到分页对象，直接 `.map/.filter`
+ * 会在运行时抛 "xxx is not a function"（NewTaskDialog 曾因此把整个看板页打进
+ * 路由级错误边界）。兼容两种形状，避免每个调用点各写一遍 Array.isArray 分支。
+ */
+export function itemsOf<T>(data: unknown): T[] {
+  if (Array.isArray(data)) return data as T[];
+  const items = (data as { items?: unknown } | null | undefined)?.items;
+  return Array.isArray(items) ? (items as T[]) : [];
+}
+
+/**
+ * GET 列表端点的便捷封装：请求 + 归一化，一次拿到数组。
+ * 新增列表请求请用它，不要再手写 `api<T[]>()`（分页信封会让 `.map` 直接崩）。
+ */
+export async function apiList<T>(path: string, opts?: RequestInit): Promise<T[]> {
+  return itemsOf<T>(await api<unknown>(path, opts));
+}

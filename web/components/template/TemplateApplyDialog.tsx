@@ -15,7 +15,7 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { X, Loader2, Flag, Milestone as MilestoneIcon, CheckCircle2 } from "lucide-react";
-import { api, ApiError } from "@/lib/api";
+import { api, ApiError, apiList } from "@/lib/api";
 import type { TemplateListItem } from "./TemplateList";
 
 interface Person {
@@ -71,7 +71,7 @@ export function TemplateApplyDialog({
     setError("");
     setSuccessCount(null);
     Promise.all([
-      api<Person[]>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
+      apiList<Person>(`/api/v1/workspaces/${wid}/members`).catch(() => [] as Person[]),
       api<Milestone[]>(`/api/v1/workspaces/${wid}/milestones`).catch(() => [] as Milestone[]),
     ]).then(([m, ms]) => {
       setMembers(m);

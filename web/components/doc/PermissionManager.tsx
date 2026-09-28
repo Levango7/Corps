@@ -19,7 +19,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Plus, Trash2, Shield, User, Users, AlertCircle } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 
 /** 权限级别 */
 type PermissionLevel = "view" | "edit" | "manage";
@@ -85,7 +85,7 @@ export function PermissionManager({ docId, workspaceId }: { docId: string; works
         api<{ items: DocPermission[] }>(
           `/api/v1/workspaces/${workspaceId}/documents/${docId}/permissions`,
         ).catch(() => ({ items: [] as DocPermission[] })),
-        api<Member[]>(`/api/v1/workspaces/${workspaceId}/members`).catch(() => [] as Member[]),
+        apiList<Member>(`/api/v1/workspaces/${workspaceId}/members`).catch(() => [] as Member[]),
       ]);
       setPermissions(permData.items);
       setMembers(memberData);

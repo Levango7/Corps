@@ -75,7 +75,11 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
  */
 export async function createTask(page: Page, title: string): Promise<string> {
   const wid = extractWorkspaceId(page.url());
-  // 点击"新建任务"按钮打开对话框
+  // 「新建任务」入口只存在于看板页：空状态 action 与标题行工具栏的 create 按钮，
+  // 两处文案均为「新建任务」（task.create / status.newTask）。概览页从未有该入口，
+  // 而 6 个调用点大多停在概览页——所以这里显式导航到看板，让所有调用点行为一致。
+  await page.goto(`/w/${wid}/board`);
+  // 点击"新建任务"按钮打开对话框（看板上有且仅有一个同名按钮：空状态与工具栏互斥）
   await page.getByRole("button", { name: /新建任务|New Task/ }).click();
   // 等待对话框出现，再等内部三个列表就绪（aria-busy=false），避免点击落在异步重渲染中间
   await page.getByRole("dialog").waitFor({ state: "visible" });
