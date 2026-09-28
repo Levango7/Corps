@@ -5,7 +5,7 @@
  * 背景：.env.example / compose 的环境变量缺口已出现三次（支付类 →
  * CRON_SECRET → 日历类，详见审计 P1-B）——新增服务端 env 时漏传 compose
  * 导致按文档部署后功能静默不可用。本测试从**代码事实**出发：扫描
- * web/lib + web/app 的全部 process.env.X 引用，断言每个都被 compose
+ * web/lib + web/app 的全部 process.env.X 引用（含 envFlag("X") 封装读取），断言每个都被 compose
  * app environment 透传（豁免清单除外）。
  *
  * 豁免（代码引用但非 compose 部署所需，逐条理由）：
@@ -98,6 +98,12 @@ function collectCodeEnvRefs(): Set<string> {
     for (const f of walk(dir)) {
       const s = readFileSync(f, "utf8");
       for (const m of s.matchAll(/process\.env\.([A-Z_][A-Z0-9_]*)/g)) {
+        envs.add(m[1]);
+      }
+      // envFlag("X") 这类封装读取（函数体是 process.env[name]，静态扫不到）同样是
+      // 真实引用：不识别会让豁免条目被误判成"已腐烂"，更会让今后改用封装读取的
+      // 新 env 静默脱离 compose 覆盖检查。
+      for (const m of s.matchAll(/\benvFlag\(\s*["']([A-Z_][A-Z0-9_]*)["']/g)) {
         envs.add(m[1]);
       }
     }
