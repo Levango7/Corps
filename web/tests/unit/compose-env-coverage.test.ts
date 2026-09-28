@@ -24,7 +24,7 @@
  *    密钥对，可选支付渠道，未配置时走 Stripe
  */
 import { describe, it, expect } from "vitest";
-import { readFileSync, readdirSync, statSync } from "fs";
+import { readFileSync, readdirSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
@@ -66,16 +66,32 @@ const EXEMPT = new Set([
   "APNS_BUNDLE_ID",
 ]);
 
+/**
+ * 遍历目录收集 .ts/.tsx 文件。
+ *
+ * 用 withFileTypes 直接拿目录项类型，省掉每个条目的 statSync——这是本测试的主要开销：
+ * 全树 496 个文件 + 约 1000 次 stat，在 CI/本地并行 worker 满载时会把默认 15s 超时打穿
+ * （实测：独占 1.1s，满载 >15s 超时）。语义与逐个 stat 完全一致。
+ */
 function walk(dir: string, out: string[] = []): string[] {
-  for (const e of readdirSync(dir)) {
-    const p = join(dir, e);
-    if (statSync(p).isDirectory()) walk(p, out);
-    else if (/\.tsx?$/.test(e)) out.push(p);
+  for (const e of readdirSync(dir, { withFileTypes: true })) {
+    const p = join(dir, e.name);
+    if (e.isDirectory()) walk(p, out);
+    else if (/\.tsx?$/.test(e.name)) out.push(p);
   }
   return out;
 }
 
+/**
+ * 代码内 process.env 引用集合（进程内缓存）。
+ *
+ * 两个用例都需要这份数据；不缓存就要把 496 个文件读两遍。目录树在单个测试进程生命周期
+ * 内不会变化（vitest 每个文件一个进程），缓存安全且把 IO 减半。
+ */
+let cachedEnvRefs: Set<string> | null = null;
+
 function collectCodeEnvRefs(): Set<string> {
+  if (cachedEnvRefs) return cachedEnvRefs;
   const dirs = [join(REPO_ROOT, "web/lib"), join(REPO_ROOT, "web/app")];
   const envs = new Set<string>();
   for (const dir of dirs) {
@@ -86,8 +102,16 @@ function collectCodeEnvRefs(): Set<string> {
       }
     }
   }
+  cachedEnvRefs = envs;
   return envs;
 }
+
+/**
+ * 全树同步扫描的显式超时预算。默认 15s 是给普通单测的；本测试的耗时随仓库文件数线性增长，
+ * 且与并行 worker 争抢磁盘 CPU——CI 上偶发超时并不代表逻辑回归。逻辑本身仍是全量断言，
+ * 这里只放宽"等机器"的时间。
+ */
+const SCAN_TIMEOUT_MS = 60_000;
 
 function collectComposeEnvKeys(): Set<string> {
   const dc = readFileSync(join(REPO_ROOT, "docker-compose.yml"), "utf8");
@@ -96,24 +120,32 @@ function collectComposeEnvKeys(): Set<string> {
 }
 
 describe("compose env 全量覆盖（代码 process.env 引用 ⊆ compose 透传）", () => {
-  it("代码引用的每个服务端 env 都被 compose app environment 透传（豁免除外）", () => {
-    const codeEnvs = collectCodeEnvRefs();
-    const composeKeys = collectComposeEnvKeys();
-    const missing = [...codeEnvs]
-      .filter((v) => !EXEMPT.has(v))
-      .filter((v) => !composeKeys.has(v))
-      .sort();
-    expect(
-      missing,
-      `代码引用但 compose 未透传（新增服务端 env 时必须同步 compose app ` +
-        `environment 与 .env.example，豁免需在 EXEMPT 注明理由）:\n${missing.join("\n")}`,
-    ).toEqual([]);
-  });
+  it(
+    "代码引用的每个服务端 env 都被 compose app environment 透传（豁免除外）",
+    () => {
+      const codeEnvs = collectCodeEnvRefs();
+      const composeKeys = collectComposeEnvKeys();
+      const missing = [...codeEnvs]
+        .filter((v) => !EXEMPT.has(v))
+        .filter((v) => !composeKeys.has(v))
+        .sort();
+      expect(
+        missing,
+        `代码引用但 compose 未透传（新增服务端 env 时必须同步 compose app ` +
+          `environment 与 .env.example，豁免需在 EXEMPT 注明理由）:\n${missing.join("\n")}`,
+      ).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 
-  it("豁免清单本身仍被代码真实引用（防豁免腐烂成死条目）", () => {
-    const codeEnvs = collectCodeEnvRefs();
-    for (const v of EXEMPT) {
-      expect(codeEnvs.has(v), `豁免 ${v} 已无代码引用，应从 EXEMPT 移除`).toBe(true);
-    }
-  });
+  it(
+    "豁免清单本身仍被代码真实引用（防豁免腐烂成死条目）",
+    () => {
+      const codeEnvs = collectCodeEnvRefs();
+      for (const v of EXEMPT) {
+        expect(codeEnvs.has(v), `豁免 ${v} 已无代码引用，应从 EXEMPT 移除`).toBe(true);
+      }
+    },
+    SCAN_TIMEOUT_MS,
+  );
 });

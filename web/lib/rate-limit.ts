@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import type Redis from "ioredis";
 import { apiMsg } from "@/lib/api-messages";
+import { envFlag } from "@/lib/env";
 
 /**
  * 限流器（Spec 安全基线）：固定窗口计数，两种存储模式按环境自动选择。
@@ -371,7 +372,7 @@ export async function checkRateLimit(
   bucket: string,
   rule: RateLimitRule,
 ): Promise<NextResponse | null> {
-  if (process.env.RATE_LIMIT_DISABLED === "1") {
+  if (envFlag("RATE_LIMIT_DISABLED")) {
     return null;
   }
   const result = await hitStore(`${bucket}:${clientKey(req)}`, rule.max, rule.windowMs);

@@ -7,6 +7,7 @@ import { sendResetPasswordEmail } from "./email";
 import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
+import { envFlag } from "./env";
 
 /**
  * Better Auth 服务端实例（Spec §4：认证 = Better Auth）。
@@ -47,7 +48,7 @@ export const auth = betterAuth({
   },
   // T2.5：Better Auth 内置限流（login/register/refresh 等端点）
   rateLimit: {
-    enabled: process.env.RATE_LIMIT_DISABLED !== "1",
+    enabled: !envFlag("RATE_LIMIT_DISABLED"),
     window: 60, // 60 秒窗口
     max: 10, // 每窗口最多 10 次请求
   },

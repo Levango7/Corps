@@ -287,3 +287,63 @@ corps 是一个**工程成熟度 8.4/10** 的项目：安全与数据层达到�
 **教训**：commit message 的措辞不等于代码事实，必须以源码为准。
 
 
+
+
+---
+
+## 修复期发现（2026-09-29 补充）
+
+审计后进入修复阶段，实测暴露三类**系统性**缺陷。共同特征：单元/E2E 各自绿灯，组合起来才崩——即"改了一侧忘另一侧"。
+
+### D1 响应信封不一致（P0，影响面最广）
+
+**A. 仪表盘 widget 双重包裹**：动态路由把载荷再包一层，返回 `{code, data:{widget, data}}`，而其余 5 个来源（前端 3 个 widget 组件、3 个专用 widget 路由、`docs/openapi/*` 契约）一律是 `{code, data:<payload>}`。前端 `RecentActivityWidget` 读 `data.tasks` → `undefined.map` → **所有仪表盘 widget 一打开就崩**。
+
+**B. 分页信封被当裸数组消费**：`GET /members` 自 R8C-06 起统一返回 `{items, page, limit, total, hasMore}`，但 **8 个组件仍按裸数组消费**，运行时抛 `xxx is not a function`：
+
+| 组件 | 崩溃点 |
+|---|---|
+| `components/NewTaskDialog.tsx` | `members.map` → 看板页整页进错误边界 |
+| `components/ChatPanel.tsx` | `setMembers(分页对象)` → 渲染时崩 |
+| `components/im/ConversationCreate.tsx` / `ConversationSettings.tsx` | `.filter` on object |
+| `components/doc/PermissionManager.tsx` | `.filter` / `.find` |
+| `components/approval/ApprovalTemplateManage.tsx` | 渲染时崩 |
+| `components/okr/KeyResultEditor.tsx` | 渲染时崩 |
+| `components/template/TemplateApplyDialog.tsx` | 渲染时崩 |
+
+`labels` / `milestones` 经核对仍返回裸数组（`data: labels`），仅 `/members` 为分页——**同一 API 前缀下两种形状并存**是本缺陷的根源。
+
+**修复**：`lib/api.ts` 新增 `itemsOf()`（`{items}` 与裸数组双兼容）+ `apiList<T>()`（请求即归一化），8 处调用点统一改用 `apiList`；widget 动态路由改为 `{code, data:<payload>}`。
+
+**防护**：新增 `tests/integration/dashboard-widgets.test.ts` 断言信封形状；`tests/unit/newtaskdialog.test.tsx` 的 `/members` mock 改为**真实分页信封**（此前用裸数组 mock，正是该缺陷测不出来的原因）。
+
+### D2 RLS 裸查询守卫假阴性（P0，安全）
+
+守卫报告"全部覆盖"，实际漏掉 **59 张表**：
+
+1. 自 `dd828ee4` 起 SQL 改用 `ARRAY[...]` 写法，守卫仍以 `split(",")` 解析，把 `-- 注释` 当表名，比对结果失真；
+2. 守卫内硬编码 `RLS_MODELS`（20 个模型）与 `db/rls-activate.sql`（79 个模型）长期漂移。
+
+**修复**：守卫改为从 `rls-activate.sql` + `schema.prisma` 双向推导受保护模型集合（20 → 79），并修正注释解析。
+
+### D3 可选请求锁死提交路径（P1，可用性）
+
+`NewTaskDialog` 的提交门禁包含 `loading`，负责人/标签/里程碑三个**可选**列表任一缓慢即锁死"创建任务"；E2E 表现为按钮 `disabled` 超时。
+
+**修复**：`loading` 移出提交门禁，就绪状态改由 `aria-busy` 暴露（供自动化与读屏器观测，不参与门禁）；同步修正关闭时的 reset 竞态。回归测试：列表请求永久悬挂时，提交仍真实发出。
+
+### D4 环境变量读取的尾随空格（P1，静默失效）
+
+cmd 的 `set X=1 && cmd` 会把值读成 `"1 "`，严格 `=== "1"` 判定失败 → `RATE_LIMIT_DISABLED` 等开关**静默失效**（限流照常生效，测试期表现为随机 429）。
+
+**修复**：`lib/env.ts` 新增 `envFlag()`（trim 后判定），`lib/rate-limit.ts`、`lib/auth.ts` 改用。
+
+### 修正与教训
+
+| 事项 | 结论 |
+|---|---|
+| 单测 mock 形状 | **mock 必须与真实端点同形状**。用裸数组 mock 分页端点，等于把该类缺陷从测试中抹掉 |
+| 组件测试的 mock 模块 | 新增 API 客户端导出（`apiList`）后，`vi.mock("@/lib/api")` 未同步 → 30/31 用例崩；补 mock 即恢复 |
+| 后台产物目录 | 不要把验证产物写进 `art/`：`predev` 的 `pnpm run clean` 会删除它，导致重定向静默失败 |
+
+**共同根因**：契约变更（信封格式、受保护表集合、开关语义）没有单一事实来源，消费方各自复制。建议后续把"列表端点必须经 `apiList`"与"widget 信封形状"纳入静态检查或契约测试。

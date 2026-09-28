@@ -32,6 +32,17 @@ const envSchema = z.object({
 export type Env = z.infer<typeof envSchema>;
 
 /**
+ * 读取布尔语义的 env 开关（默认 "1" 视为开启）。
+ *
+ * 容忍首尾空白：`set X=1 && cmd`（cmd 会把空格并入值）、`.env` 手写空格、
+ * Docker/K8s YAML 结尾空格都会把 "1" 变成 "1 "，而严格比较会让开关静默失效
+ * ——测试环境限流关不掉会大面积假失败，加固类开关失效则更危险。只比较 trim 后的值。
+ */
+export function envFlag(name: string, on = "1"): boolean {
+  return (process.env[name] ?? "").trim() === on;
+}
+
+/**
  * 解析并验证环境变量
  * 在开发环境下缺失必需变量时抛出详细错误信息
  * 在测试环境下跳过验证（返回 process.env as Env）
