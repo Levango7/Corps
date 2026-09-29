@@ -35,6 +35,7 @@ import {
   BookOpen,
   Calendar as CalendarIcon,
   Sparkles,
+  Table2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
@@ -363,6 +364,12 @@ export default function WorkspaceLayout({
           href: `/w/${wid}/whiteboards`,
           label: t("menu.whiteboards"),
           icon: PenTool,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/databases`,
+          label: t("menu.databases"),
+          icon: Table2,
           exact: false,
         },
         { href: `/w/${wid}/forms`, label: t("menu.forms"), icon: ClipboardList, exact: false },
