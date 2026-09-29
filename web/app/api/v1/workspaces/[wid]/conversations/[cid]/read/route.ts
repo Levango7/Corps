@@ -37,7 +37,24 @@ export async function POST(
     );
 
   try {
-    const body = markReadSchema.parse(await req.json());
+    // body 可省略：markReadSchema 的唯一字段 lastReadAt 是 optional，语义就是"标到此刻"。
+    // 此前直接 `await req.json()`，而 components/im/useIM.ts:203 的 POST 不带 body →
+    // req.json() 抛 SyntaxError，被下方兜底 catch 成 500 并刷错误日志
+    // （一次生产 E2E 里实测 467 次）。显式取 text：空 body 按 {} 处理，
+    // 非空但非法 JSON 才 400。
+    const raw = await req.text();
+    let parsedJson: unknown = {};
+    if (raw.trim()) {
+      try {
+        parsedJson = JSON.parse(raw);
+      } catch {
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "invalidBody"), data: null },
+          { status: 400 },
+        );
+      }
+    }
+    const body = markReadSchema.parse(parsedJson);
     const userId = ctx.payload.sub;
     // 优先使用客户端传入的 lastReadAt，否则用当前时间
     const lastReadAt = body.lastReadAt ? new Date(body.lastReadAt) : new Date();

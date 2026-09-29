@@ -6,6 +6,7 @@ import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import { SettingsProfile } from "@/components/settings/SettingsProfile";
 import { SettingsPreferences } from "@/components/settings/SettingsPreferences";
+import { NotificationSettings } from "@/components/notifications/NotificationSettings";
 import { SettingsDataExport } from "@/components/settings/SettingsDataExport";
 import { SettingsOverview } from "@/components/settings/SettingsOverview";
 import { SettingsDangerZone } from "@/components/settings/SettingsDangerZone";
@@ -256,6 +257,11 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
 
       {/* 偏好设置（默认视图 + 通知 + 外观 + 密度 + 强调色 + 动画） */}
       <SettingsPreferences />
+
+      {/* 通知与免打扰偏好：唯一写入 NotificationPreference 的界面。
+          它此前无人挂载，导致 lib/notification/offline-push.ts 读的 dnd/push 偏好
+          永远是库默认值——用户界面不可达，"免打扰"就只是代码里的一个分支。 */}
+      <NotificationSettings />
 
       {/* 数据导出（P4：CSV 导出） */}
       {ws && <SettingsDataExport wid={wid} wsSlug={ws.slug} onError={setError} />}

@@ -5,14 +5,14 @@
 //
 // 认证/事务模式：
 //  - isUserOnline：跨工作区查询 ChatPresence，走 runWithAuthOp("cron") 逃逸通道
-//  - NotificationPreference：用户级数据（无 workspaceId），直接 prisma
+//  - NotificationPreference：用户级数据（无 workspaceId），经 lib/notification/preferences.ts 读取
 //  - EmailAccount / Notification：工作区级，走 runWithWorkspace（RLS 事务）
 //
 // 经验来源：2026-09-15-ai-route-unified-pattern-audit-checklist
 //  - DB 操作用 try-catch 包裹，失败不阻断业务流程
 
-import { prisma } from "@/lib/prisma";
 import { runWithWorkspace, runWithAuthOp } from "@/lib/auth";
+import { getNotificationPreferences, isDndActive } from "@/lib/notification/preferences";
 import { decrypt } from "@/lib/crypto";
 import nodemailer, { type Transporter } from "nodemailer";
 
@@ -46,13 +46,6 @@ export interface DispatchOfflineNotificationOpts {
   bodySnippet?: string;
 }
 
-/** NotificationPreference 的 DND 相关字段子集 */
-interface DndPreference {
-  dndEnabled: boolean;
-  dndStart: string;
-  dndEnd: string;
-}
-
 /**
  * 检查用户是否在线：任何 ChatPresence 记录的 lastSeen 在 60s 内即视为在线。
  * 跨工作区查询，走 runWithAuthOp("cron") 系统级逃逸通道（不受 RLS 约束）。
@@ -78,35 +71,6 @@ export async function isUserOnline(userId: string): Promise<boolean> {
     // 查询失败时保守视为离线，确保通知不丢失
     return false;
   }
-}
-
-/**
- * 检查当前时间是否在免打扰时段。
- * 支持跨午夜区间（如 dndStart=22:00, dndEnd=08:00）。
- *
- * @param preference 包含 dndEnabled / dndStart / dndEnd 的偏好对象
- * @returns true 表示当前处于 DND 时段，应抑制推送
- */
-export function isDndActive(preference: DndPreference): boolean {
-  if (!preference.dndEnabled) return false;
-
-  const now = new Date();
-  const currentMinutes = now.getHours() * 60 + now.getMinutes();
-
-  const startParts = preference.dndStart.split(":").map(Number);
-  const endParts = preference.dndEnd.split(":").map(Number);
-  const startMinutes = (startParts[0] ?? 0) * 60 + (startParts[1] ?? 0);
-  const endMinutes = (endParts[0] ?? 0) * 60 + (endParts[1] ?? 0);
-
-  // 起止相同 → 空区间，不抑制
-  if (startMinutes === endMinutes) return false;
-
-  if (startMinutes < endMinutes) {
-    // 同日区间，如 09:00-18:00
-    return currentMinutes >= startMinutes && currentMinutes < endMinutes;
-  }
-  // 跨午夜区间，如 22:00-08:00
-  return currentMinutes >= startMinutes || currentMinutes < endMinutes;
 }
 
 /**
@@ -212,38 +176,8 @@ export async function dispatchOfflineNotification(
     return;
   }
 
-  // 2) 获取通知偏好（用户级，直接 prisma）
-  let preference: {
-    emailNotify: boolean;
-    pushNotify: boolean;
-    dndEnabled: boolean;
-    dndStart: string;
-    dndEnd: string;
-  };
-  try {
-    preference = await prisma.notificationPreference.upsert({
-      where: { userId: opts.userId },
-      create: { userId: opts.userId },
-      update: {},
-      select: {
-        emailNotify: true,
-        pushNotify: true,
-        dndEnabled: true,
-        dndStart: true,
-        dndEnd: true,
-      },
-    });
-  } catch (error) {
-    console.error("[offline-push] get preference error:", error);
-    // 查询失败用默认值，确保通知不丢失
-    preference = {
-      emailNotify: true,
-      pushNotify: true,
-      dndEnabled: false,
-      dndStart: "22:00",
-      dndEnd: "08:00",
-    };
-  }
+  // 2) 获取通知偏好（读失败回退默认值的语义在 preferences.ts 内单一实现）
+  const preference = await getNotificationPreferences(opts.userId);
 
   // 3) 检查 DND 时段
   const dndActive = isDndActive(preference);

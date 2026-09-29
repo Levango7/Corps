@@ -6,6 +6,31 @@
 
 ### Fixed
 
+- **会话"标记已读"每次调用都返回 500**：`app/api/v1/workspaces/[wid]/conversations/[cid]/read/route.ts`
+  直接 `await req.json()`，而唯一字段 `lastReadAt` 是 optional、语义上允许空 body；
+  线上调用方 `components/im/useIM.ts:203` 的 POST **不带 body** → `req.json()` 抛
+  `SyntaxError: Unexpected end of JSON input` → 落进兜底 catch 返回 500。
+  一次生产 E2E 跑动里该日志实测出现 **467 次**（IM 每次聚焦/订阅都触发），
+  而该端点此前**零测试覆盖**，所以缺陷一路活到生产。
+  改为显式读 text：空 body 按 `{}` 处理（语义即"标到此刻"），非空但非法 JSON 返回 **400** 而非 500。
+  新增 `tests/integration/conversation-read.test.ts` 6 例：空 body 200 / `{}` 200 /
+  未来游标回写 / **旧游标不得把已读位置拉回**（route.ts:74-84 取 max 的既有语义）/ 非法 JSON 400 / 未认证 401。
+  每条自带前置状态，不依赖执行顺序（早前用 2098 时被同文件 2099 的游标盖住，已改为 2999 自给）。
+  验证：新文件 6 例全绿；`tests/integration + tests/api` 全量 **17 文件 / 181 例全绿，退出 0**。
+- **通知偏好"写了没人读"，且设置界面根本不存在**：`notification_preferences` 表只被
+  `lib/notification/offline-push.ts` 读取，而该模块全仓 0 调用；`NotificationSettings.tsx`
+  也没有任何页面挂载 → 用户既看不到"邮件/推送/免打扰"三个开关，看到也不改变任何在跑的行为。
+  本轮：① 抽出 `lib/notification/preferences.ts` 作为偏好的唯一读取与判定入口
+  （`getNotificationPreferences` / `isDndActive` / `shouldSendEmail` / `shouldSendPush`；
+  读失败回退"全开、不免打扰"，确保通知不因查询失败而丢失），`offline-push.ts` 改用它，
+  并删除自带的重复实现与内联 upsert（连带不再需要的 `prisma` 直接依赖）；
+  ② 把 `NotificationSettings` 挂进 `app/[locale]/w/[wid]/settings/page.tsx`（置于偏好区之后）。
+  新增 `tests/unit/notification-preferences.test.ts` 9 例覆盖判定语义：关闭邮件只抑制邮件、
+  关闭推送只抑制推送、DND 同时抑制两者、跨午夜区间与"起止相同=空区间"、读失败被捕获并回退。
+  **仍未完成（如实记账，不装作已解决）**：`dispatchOfflineNotification` 依然 0 调用方——
+  它会自建 Notification 记录，与十余处写 handler 里的 `tx.notification.create` 语义冲突，
+  接线前必须先拆成"仅扇出"与"仅落记录"两个入口，否则每个通知都会重复投递一遍。
+
 - **集成腿的超时预算低于实测成本，会在满载时把绿的套件打成假红**：`vitest.config.ts` 原
   `hookTimeout: 30_000` / `testTimeout: 15_000`，而实测 `tests/integration/rbac.test.ts` 的
   `beforeAll` **单独热跑就要 27.34s**（只剩 9% 余量），`tests/unit/rls-bare-query-guard.test.ts`
