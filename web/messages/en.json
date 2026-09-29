@@ -122,6 +122,7 @@
       "templates": "Templates",
       "timeTracking": "Time Tracking",
       "whiteboards": "Whiteboards",
+      "databases": "Databases",
       "forms": "Forms",
       "meetingMinutes": "Meeting Minutes",
       "announcements": "Announcements",
@@ -2157,6 +2158,35 @@
       "moveDownAria": "Decrease priority",
       "removeAria": "Remove sort condition",
       "addSort": "Add sort"
+    },
+    "list": {
+      "title": "Databases",
+      "subtitle": "Organize structured data in table, board, calendar and gantt views",
+      "create": "New database",
+      "createConfirm": "Create",
+      "creating": "Creating…",
+      "createFailed": "Failed to create",
+      "cancel": "Cancel",
+      "delete": "Delete",
+      "deleteFailed": "Failed to delete",
+      "confirmDelete": "Deleting this removes its fields, records and views. Continue?",
+      "empty": "No databases yet",
+      "emptyNoPermission": "Only owners and admins can create databases",
+      "loading": "Loading…",
+      "loadFailed": "Failed to load",
+      "nameLabel": "Name",
+      "namePlaceholder": "e.g. Customer requests",
+      "openAria": "Open {title}",
+      "lastUpdated": "Updated {date}",
+      "untitled": "Untitled database",
+      "defaultFieldName": "Title",
+      "defaultViewName": "Table view"
+    },
+    "detail": {
+      "back": "Back to databases",
+      "loadFailed": "Failed to load",
+      "saveFailed": "Failed to save",
+      "viewNotPersisted": "Your role cannot save view settings — this change applies to the current page only"
     }
   },
   "files": {
