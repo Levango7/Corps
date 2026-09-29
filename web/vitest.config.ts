@@ -25,6 +25,9 @@ export default defineConfig({
       // 后续可逐步提高 thresholds.lines/branches/functions/statements
       provider: "v8",
       reporter: ["text", "json-summary", "html"],
+      // 默认为 false：任一测试变红时 Vitest 直接跳过覆盖率评估，门禁等于没跑。
+      // 本仓库 CI 连红期间从未产出覆盖率数字，成因之一即在此。
+      reportOnFailure: true,
       include: ["app/api/**/*.ts", "lib/**/*.ts", "components/**/*.tsx"],
       exclude: ["**/*.config.*", "**/node_modules/**"],
       thresholds: {

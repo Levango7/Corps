@@ -11,16 +11,16 @@ check_api_contract.py — OpenAPI 契约覆盖率防回归检查
       2. 解析 api/openapi.yaml 得到已声明 path
       3. 差集 = 未声明路由；与基线文件 scripts/api-contract-baseline.txt 比对
          - 出现基线外的新未声明路由 → FAIL（契约漂移，需同步契约或显式入基线）
-         - 基线中存在但已声明/已删除的条目 → 仅提示（不阻断），提示收缩基线
+         - 基线中存在但已声明/已删除的条目 → FAIL（豁免腐烂，必须删行）
 
-    即：基线只允许收缩，不允许被"静默扩大"。
+    即：基线只允许收缩，不允许被"静默扩大"，也不允许修好后仍挂在豁免清单上。
 
 运行方式：
     python scripts/check_api_contract.py
 
 退出码：
-    0 — 无新增未声明路由
-    1 — 出现新的未声明路由（契约漂移）
+    0 — 无新增未声明路由，且基线无已修未删条目
+    1 — 出现新的未声明路由（契约漂移），或基线含已声明/已删除的条目（豁免腐烂）
 """
 
 import re
@@ -149,7 +149,7 @@ def main() -> int:
 
     # 1) 防恶化：基线外的新未声明路由 → 失败
     new_drift = missing - baseline
-    # 2) 基线收缩提示：已声明或已删除的基线条目 → 仅提示
+    # 2) 防豁免腐烂：已声明或已删除的基线条目 → 同样失败
     stale = baseline - missing
 
     failed = False
@@ -165,9 +165,15 @@ def main() -> int:
         )
 
     if stale:
-        print(f"\nNote: {len(stale)} baseline entr(ies) no longer undeclared — please shrink the baseline:")
+        failed = True
+        print(f"\nFAIL: {len(stale)} baseline entr(ies) no longer undeclared — 基线只允许收缩:")
         for route in sorted(stale):
             print(f"  - {route}")
+        print(
+            f"\nFix: 这些路由已在 api/openapi.yaml 声明或已删除，从 {BASELINE_PATH.name} 中删掉对应行。"
+            "\n（此前只 print 不 fail：docstring 声称「基线只允许收缩」，但豁免清单可以只增不减，"
+            "实际是单向棘轮的假象。）"
+        )
 
     if failed:
         return 1
