@@ -11,15 +11,20 @@
  * - 返回按钮使用 i18n 感知的 Link 跳转到 /auth/login
  */
 
-import { getTranslations, setRequestLocale } from "next-intl/server";
+import { getLocale, getTranslations } from "next-intl/server";
 import { AlertTriangle, Home } from "lucide-react";
 import { Logo } from "@/components/Logo";
 import { Link } from "@/lib/i18n-navigation";
 
-export default async function LocaleNotFound({ params }: { params: Promise<{ locale: string }> }) {
-  const { locale } = await params;
-  // 启用 RSC 静态渲染注水（next-intl App Router 推荐）
-  setRequestLocale(locale);
+/**
+ * 注意：Next.js 不会给 not-found.tsx 传 props（App Router 的固定限制），
+ * 所以此前 `const { locale } = await params` 在生产构建里必然抛
+ * `TypeError: Cannot destructure property 'locale' of ... undefined`，
+ * 于是任何一个 404 都渲染成全局 ErrorBoundary（"页面出错了"）而不是 404 页。
+ * locale 改由请求上下文取（[locale] 段的 next-intl request 已由 middleware 配置）。
+ */
+export default async function LocaleNotFound() {
+  const locale = await getLocale();
   const t = await getTranslations({ locale, namespace: "error" });
 
   return (

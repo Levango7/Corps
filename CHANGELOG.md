@@ -6,6 +6,31 @@
 
 ### Fixed
 
+- **任何一个 404 都会渲染成全局错误页而非 404 页**：`app/[locale]/not-found.tsx:20` 写的是
+  `const { locale } = await params`，但 **Next.js 不给 `not-found.tsx` 传 props**（App Router 固定限制），
+  于是 `params` 为 undefined → `TypeError: Cannot destructure property 'locale' of ... undefined`
+  （dev 栈直接指向该文件行号，digest 恒定）。后果不是"日志脏"而是**用户看到的 404 页其实是
+  ErrorBoundary 的"页面出错了 + 重试/刷新页面"**——E2E 的 DOM 快照实测到这一点。
+  改为 `const locale = await getLocale()`（从 [locale] 段已配置的 next-intl request 取），
+  并删掉不再适用的 `setRequestLocale`。全仓同类文件已扫：`app/**/{not-found,error,global-error}.tsx`
+  中只有这一处依赖 params。
+  验证：dev 下单测 404 路径返回含"页面不存在"文案的正常 404 页、`Cannot destructure` 计数不再增长；
+  重建生产包后 `next start` 跑 E2E 期间该错误 0 次。
+- **访客中断一个请求就能把整个实例打掉**：`lib/observability.ts` 的 uncaughtException 处理器
+  无条件 `process.exit(1)`（延时 500ms 上报后），而客户端在响应写完前断连时 Node HTTP server 会
+  把 `Error: aborted` / ECONNRESET 冒到 uncaughtException —— 这属正常流量，不代表进程状态不可信。
+  另 `lib/shutdown.ts:57-65` 还注册了**第二套**处理器，对 uncaughtException 与 unhandledRejection
+  都直接 `exit(1)`，与 observability 文档里"rejection 仅上报、不改变进程行为"的声明互相矛盾，
+  且真正杀掉进程的是它。
+  实测证据：本机 dev 服务在 Playwright 跑用例中途消失，日志正是
+  `[shutdown] uncaughtException: Error: aborted (code: 'ECONNRESET')`，随后 `netstat` 端口无人监听，
+  后续用例全以 `net::ERR_CONNECTION_REFUSED` 失败——即"测试假红"的直接来源。
+  修法：新增 `isBenignTransportError()`（ECONNRESET/ECONNABORTED/ETIMEDOUT/EPIPE/
+  ERR_STREAM_PREMATURE_CLOSE 与 aborted、socket hang up、premature close 文案），命中则
+  **不上报不退出**（降为 debug 级，保留可见性）；真异常仍按原 fail-fast 语义退出。
+  `shutdown.ts` 删除第二套处理器，进程级异常策略由 `installProcessErrorHandlers()` 单一持有。
+  验证：`tests/unit/observability.test.ts` 22 例全绿（新增 3 例：断连类识别、
+  真异常与畸形输入不误判、断连不 exit 而真异常仍延时 `exit(1)`）。
 - **`viewer` 角色在 API 上根本无法赋予，前端"只读成员"点了直接 400（P0 级功能不可达）**：
   `lib/permissions.ts:56` 的 `ROLES`、`schema.prisma` 的 role 注释、前端角色下拉
   （`components/members/MemberList.tsx:170/293` 的 `roleViewer`）都承认 viewer，

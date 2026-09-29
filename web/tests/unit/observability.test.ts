@@ -11,6 +11,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
  *  - 脱敏：敏感键（password/token/secret/authorization…）被替换为 [REDACTED]
  *  - 防风暴：单 sink 每分钟超过上限后丢弃
  *  - installProcessErrorHandlers：幂等、注册两类进程级异常
+ *  - 传输层噪声（客户端断连）不得触发 process.exit，真异常仍延时退出
  *
  * Mock 策略：mock @/lib/logger 避免污染测试输出并便于断言；用 vi.stubEnv 控制
  * 环境变量、vi.stubGlobal 替换 fetch。所有 env 读取都在函数内部（无模块级常量
@@ -33,6 +34,7 @@ import {
   toError,
   isRemoteReportingEnabled,
   installProcessErrorHandlers,
+  isBenignTransportError,
   __resetRateLimit,
   __resetHandlersFlag,
 } from "@/lib/observability";
@@ -310,5 +312,65 @@ describe("installProcessErrorHandlers", () => {
     expect(rejectionRegs).toHaveLength(1);
     expect(exceptionRegs).toHaveLength(1);
     onSpy.mockRestore();
+  });
+
+  // 起因：客户端在响应写完前断开连接时，Node 会把 `Error: aborted`/ECONNRESET 冒到
+  // uncaughtException；旧策略一律 process.exit(1)，等于任何访客 abort 一个请求就能
+  // 打掉整个实例（本机实测：dev 服务在 Playwright 跑用例中途因此消失）。
+  describe("传输层噪声不得杀进程", () => {
+    it("isBenignTransportError 认出断连类错误", () => {
+      const aborted = Object.assign(new Error("aborted"), { code: "ECONNABORTED" });
+      const reset = Object.assign(new Error("socket hang up"), { code: "ECONNRESET" });
+      const epipe = Object.assign(new Error("write EPIPE"), { code: "EPIPE" });
+      const premature = Object.assign(new Error("Premature close"), {
+        code: "ERR_STREAM_PREMATURE_CLOSE",
+      });
+      for (const e of [aborted, reset, epipe, premature]) {
+        expect(isBenignTransportError(e)).toBe(true);
+      }
+    });
+
+    it("isBenignTransportError 不放过真正的业务异常与畸形输入", () => {
+      expect(isBenignTransportError(new TypeError("Cannot read properties of undefined"))).toBe(
+        false,
+      );
+      expect(isBenignTransportError(Object.assign(new Error("nope"), { code: "ENOENT" }))).toBe(
+        false,
+      );
+      expect(isBenignTransportError(null)).toBe(false);
+      expect(isBenignTransportError("ECONNRESET")).toBe(false);
+      expect(isBenignTransportError({})).toBe(false);
+    });
+
+    it("断连类 uncaughtException 不触发 process.exit，真异常仍按原语义延时退出", () => {
+      vi.useFakeTimers();
+      let handler: ((error: unknown) => void) | undefined;
+      const onSpy = vi.spyOn(process, "on").mockImplementation(((
+        event: string,
+        cb: (e: unknown) => void,
+      ) => {
+        if (event === "uncaughtException") handler = cb;
+        return process;
+      }) as unknown as typeof process.on);
+      const exitSpy = vi.spyOn(process, "exit").mockImplementation((() => process) as never);
+
+      __resetHandlersFlag();
+      installProcessErrorHandlers();
+      expect(handler, "uncaughtException 处理器应已注册").toBeTypeOf("function");
+
+      const aborted = Object.assign(new Error("aborted"), { code: "ECONNABORTED" });
+      handler!(aborted);
+      vi.advanceTimersByTime(1000);
+      expect(exitSpy, "客户端断连不该杀进程").not.toHaveBeenCalled();
+
+      handler!(new TypeError("Cannot read properties of undefined"));
+      vi.advanceTimersByTime(1000);
+      expect(exitSpy, "真异常仍须 fail-fast 退出").toHaveBeenCalledWith(1);
+
+      onSpy.mockRestore();
+      exitSpy.mockRestore();
+      __resetHandlersFlag();
+      vi.useRealTimers();
+    });
   });
 });

@@ -53,14 +53,11 @@ export function setupGracefulShutdown(): void {
   process.on("SIGTERM", () => shutdown("SIGTERM"));
   process.on("SIGINT", () => shutdown("SIGINT"));
 
-  // 未捕获异常 — 记录后退出
-  process.on("uncaughtException", (err) => {
-    console.error("[shutdown] uncaughtException:", err);
-    process.exit(1);
-  });
-
-  process.on("unhandledRejection", (reason) => {
-    console.error("[shutdown] unhandledRejection:", reason);
-    process.exit(1);
-  });
+  // 刻意**不**在此注册 uncaughtException / unhandledRejection：
+  // 本文件此前也注册了一份，且直接 process.exit(1)。两条后果都很实在——
+  // ① 与 lib/observability.ts 声明的"rejection 仅上报、不改进程行为"互相矛盾，
+  //    谁先注册都不影响结果，因为 shutdown 那份会立即退出；
+  // ② 客户端中断请求冒出的 `Error: aborted` / ECONNRESET 会因此杀掉整个实例。
+  // 进程级异常策略由 observability.installProcessErrorHandlers() 单一持有
+  // （instrumentation.ts 先安装它）。
 }

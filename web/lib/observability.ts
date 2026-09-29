@@ -319,6 +319,30 @@ export function isRemoteReportingEnabled(): boolean {
 const UNCAUGHT_EXIT_DELAY_MS = 500;
 
 /**
+ * 传输层噪声错误：客户端在响应写完前断开连接时，Node 的 HTTP server 会把
+ * `Error: aborted` / ECONNRESET / socket hang up 之类错误冒泡出来。
+ * 这类错误在真实流量里天天发生（用户跳页、代理超时、测试客户端 abort），
+ * **不代表进程状态不可信**，若因此退出进程 = 任何访客都能远程打挂服务。
+ * 判据：来源是 HTTP/socket 层且错误码或文案落在已知集合内。
+ */
+export function isBenignTransportError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false;
+  const e = error as { code?: unknown; message?: unknown; errno?: unknown };
+  const code = typeof e.code === "string" ? e.code : "";
+  const msg = typeof e.message === "string" ? e.message : "";
+  const benignCodes = [
+    "ECONNRESET",
+    "ECONNABORTED",
+    "ETIMEDOUT",
+    "ERR_STREAM_PREMATURE_CLOSE",
+    "EPIPE",
+  ];
+  if (benignCodes.includes(code)) return true;
+  const benignMessages = ["aborted", "socket hang up", "premature close"];
+  return benignMessages.some((m) => msg.toLowerCase().includes(m));
+}
+
+/**
  * 注册进程级未处理异常捕获（供 instrumentation.ts 在 Node 运行时调用）。
  *
  * 语义说明：
@@ -343,6 +367,19 @@ export function installProcessErrorHandlers(): void {
   });
 
   process.on("uncaughtException", (error) => {
+    // 传输层噪声（客户端断连等）既不上报也不退出：它不代表进程状态不可信，
+    // 而是浏览/代理/测试客户端中断请求的日常结果。若因此退出，
+    // 等于任何访客 abort 一个连接就能把整个实例打掉。
+    if (isBenignTransportError(error)) {
+      logger.debug("忽略传输层未捕获异常（客户端断连类）", {
+        message: error instanceof Error ? error.message : String(error),
+        code:
+          error && typeof error === "object" && "code" in error
+            ? String((error as { code: unknown }).code)
+            : undefined,
+      });
+      return;
+    }
     captureError(error, { source: "uncaughtException" });
     setTimeout(() => process.exit(1), UNCAUGHT_EXIT_DELAY_MS).unref();
   });
