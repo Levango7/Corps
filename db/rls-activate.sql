@@ -92,11 +92,13 @@ CREATE POLICY p_members_insert ON members FOR INSERT WITH CHECK (
   OR (current_setting('app.auth_op', true) = 'provision'
       AND user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
 );
+DROP POLICY IF EXISTS p_members_update ON members;
 CREATE POLICY p_members_update ON members FOR UPDATE USING (
   workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
 ) WITH CHECK (
   workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
 );
+DROP POLICY IF EXISTS p_members_delete ON members;
 CREATE POLICY p_members_delete ON members FOR DELETE USING (
   workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
 );
@@ -113,6 +115,7 @@ DROP POLICY IF EXISTS p_tasks_cron_select ON tasks;
 CREATE POLICY p_tasks_cron_select ON tasks FOR SELECT
   USING (current_setting('app.auth_op', true) = 'cron');
 -- 任务公开只读分享（v0.4 队列第 6 项）：放行 share_token 或 share_slug 与 GUC 相等的行
+DROP POLICY IF EXISTS p_tasks_share_select ON tasks;
 CREATE POLICY p_tasks_share_select ON tasks FOR SELECT
   USING (
     (task_share_token IS NOT NULL
@@ -313,9 +316,11 @@ CREATE POLICY p_notifications_select ON notifications FOR SELECT
     )
   );
 
+DROP POLICY IF EXISTS p_notifications_insert ON notifications;
 CREATE POLICY p_notifications_insert ON notifications FOR INSERT
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_notifications_update ON notifications;
 CREATE POLICY p_notifications_update ON notifications FOR UPDATE
   USING (
     workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
@@ -332,6 +337,7 @@ CREATE POLICY p_notifications_update ON notifications FOR UPDATE
     )
   );
 
+DROP POLICY IF EXISTS p_notifications_delete ON notifications;
 CREATE POLICY p_notifications_delete ON notifications FOR DELETE
   USING (
     workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
@@ -383,6 +389,7 @@ CREATE POLICY p_workspaces_select ON workspaces FOR SELECT USING (
   OR current_setting('app.auth_op', true) IN ('provision', 'webhook', 'invite', 'cron')
 );
 
+DROP POLICY IF EXISTS p_workspaces_insert ON workspaces;
 CREATE POLICY p_workspaces_insert ON workspaces FOR INSERT WITH CHECK (
   owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
   OR current_setting('app.auth_op', true) = 'webhook'
@@ -390,6 +397,7 @@ CREATE POLICY p_workspaces_insert ON workspaces FOR INSERT WITH CHECK (
       AND owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
 );
 
+DROP POLICY IF EXISTS p_workspaces_update ON workspaces;
 CREATE POLICY p_workspaces_update ON workspaces FOR UPDATE
   USING (
     owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid
@@ -412,6 +420,7 @@ CREATE POLICY p_workspaces_update ON workspaces FOR UPDATE
     )
   );
 
+DROP POLICY IF EXISTS p_workspaces_delete ON workspaces;
 CREATE POLICY p_workspaces_delete ON workspaces FOR DELETE
   USING (owner_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
 -- ─── F2（任务 186）：临时权限授权表 ──────────────────────────────────────────
@@ -432,13 +441,16 @@ CREATE POLICY p_temporary_grants_select ON temporary_grants FOR SELECT
     OR current_setting('app.auth_op', true) = 'cron'
   );
 
+DROP POLICY IF EXISTS p_temporary_grants_insert ON temporary_grants;
 CREATE POLICY p_temporary_grants_insert ON temporary_grants FOR INSERT
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_temporary_grants_update ON temporary_grants;
 CREATE POLICY p_temporary_grants_update ON temporary_grants FOR UPDATE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_temporary_grants_delete ON temporary_grants;
 CREATE POLICY p_temporary_grants_delete ON temporary_grants FOR DELETE
   USING (
     workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
@@ -448,17 +460,21 @@ CREATE POLICY p_temporary_grants_delete ON temporary_grants FOR DELETE
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS p_push_subscriptions_select ON push_subscriptions;
 CREATE POLICY p_push_subscriptions_select ON push_subscriptions FOR SELECT
   USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
          OR current_setting('app.auth_op', true) = 'cron');
 
+DROP POLICY IF EXISTS p_push_subscriptions_insert ON push_subscriptions;
 CREATE POLICY p_push_subscriptions_insert ON push_subscriptions FOR INSERT
   WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_push_subscriptions_update ON push_subscriptions;
 CREATE POLICY p_push_subscriptions_update ON push_subscriptions FOR UPDATE
   USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
   WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_push_subscriptions_delete ON push_subscriptions;
 CREATE POLICY p_push_subscriptions_delete ON push_subscriptions FOR DELETE
   USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
 
@@ -466,17 +482,21 @@ CREATE POLICY p_push_subscriptions_delete ON push_subscriptions FOR DELETE
 ALTER TABLE ai_push_schedules ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_push_schedules FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS p_ai_push_schedules_select ON ai_push_schedules;
 CREATE POLICY p_ai_push_schedules_select ON ai_push_schedules FOR SELECT
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
          OR current_setting('app.auth_op', true) = 'cron');
 
+DROP POLICY IF EXISTS p_ai_push_schedules_insert ON ai_push_schedules;
 CREATE POLICY p_ai_push_schedules_insert ON ai_push_schedules FOR INSERT
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_ai_push_schedules_update ON ai_push_schedules;
 CREATE POLICY p_ai_push_schedules_update ON ai_push_schedules FOR UPDATE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
+DROP POLICY IF EXISTS p_ai_push_schedules_delete ON ai_push_schedules;
 CREATE POLICY p_ai_push_schedules_delete ON ai_push_schedules FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
@@ -484,20 +504,24 @@ CREATE POLICY p_ai_push_schedules_delete ON ai_push_schedules FOR DELETE
 ALTER TABLE ai_push_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE ai_push_records FORCE ROW LEVEL SECURITY;
 
+DROP POLICY IF EXISTS p_ai_push_records_select ON ai_push_records;
 CREATE POLICY p_ai_push_records_select ON ai_push_records FOR SELECT
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
          OR current_setting('app.auth_op', true) = 'cron');
 
+DROP POLICY IF EXISTS p_ai_push_records_insert ON ai_push_records;
 CREATE POLICY p_ai_push_records_insert ON ai_push_records FOR INSERT
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
               OR current_setting('app.auth_op', true) = 'cron');
 
+DROP POLICY IF EXISTS p_ai_push_records_update ON ai_push_records;
 CREATE POLICY p_ai_push_records_update ON ai_push_records FOR UPDATE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
          OR current_setting('app.auth_op', true) = 'cron')
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
               OR current_setting('app.auth_op', true) = 'cron');
 
+DROP POLICY IF EXISTS p_ai_push_records_delete ON ai_push_records;
 CREATE POLICY p_ai_push_records_delete ON ai_push_records FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 -- ─── IM 会话表 RLS 补齐（安全修复）──────────────────────────────────────────
