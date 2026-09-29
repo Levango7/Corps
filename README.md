@@ -1,8 +1,10 @@
 # corps — 讨论结论自动落位成任务
 
+![CI](https://github.com/Levango7/Corps/actions/workflows/ci.yml/badge.svg)
+
 面向 **5–30 人中小团队**的轻量协作 SaaS：以工作区任务看板为锚点，让每一次讨论的结论自动固化为**决策记录**（版本留痕、双向回链任务）——"为什么这么定"永远可查，不再散落在聊天记录里。
 
-> 15 分钟上手 · 中英双语 · 免费版 10 人全功能
+> 15 分钟上手 · 中英双语 · 免费版最多 10 人（非"全功能"，受限项见下方定价行）
 
 ---
 
@@ -23,7 +25,7 @@ corps 把这个断点补上：
 | **中英双语** | 全站 UI 完整双语，`/en` 前缀路由 + 一键切换 |
 | **AI 原生能力** | 17 个核心 AI 能力贯穿全流程（续写/摘要/翻译/问答/任务拆解/工作流构建/日报/项目洞察…），多轮对话 + 反馈循环 + 使用量统计，所有建议需用户确认后落位 |
 
-**全部 Free 可用（21 项）** · Pro ¥29.9/人/月解锁无限席位、附件 50MB、每周任务摘要邮件。
+**Free 可用 17 项（22 项功能中：14 项全量 + 3 项受限——≤10 人 / 最近 10 条决策 / 10MB 附件）** · Pro ¥29.9/人/月（年付 ¥299）。逐项 Free/Pro 归属以站内定价页 `web/lib/pricing.ts` 的矩阵为准，本文件不再重复罗列，避免两处口径漂移。
 
 ## AI 原生能力
 
@@ -51,10 +53,10 @@ corps 已从"项目管理工具"升级为 **AI 原生办公平台**：17 个核�
 
 ## 工程上的硬承诺
 
-- **租户隔离（双层防御）**：26/99 数据模型已启用 PostgreSQL FORCE ROW LEVEL SECURITY（引擎级拦截），其余模型通过应用层 workspaceId 过滤实现租户隔离；RLS 覆盖率持续扩展中
-- **CI 七道关卡**：lint / 安全审计 / 单测 / **加固模式回归**（以最小权限角色 + RLS 激活跑全量集成测试）/ 生产构建 / 浏览器 E2E / 镜像发布——每个 commit 都过
-- **可复现的部署**：镜像发布到 GHCR，`docker compose up -d` 一键起全栈（app + PostgreSQL + Redis + cron 调度器）
-- **AI 安全约束**：所有 AI 建议均需用户确认后才落位（写入任务/文档/日程），AI 不直接修改业务数据；AI 使用量按工作区计量与限额（Token / 调用次数 / 成本），反馈数据隔离存储
+- **租户隔离（双层防御）**：`schema.prisma` 中 71 个含 `workspaceId` 的租户模型（对应 79 张表）全部启用 PostgreSQL `FORCE ROW LEVEL SECURITY`，共 264 条策略；由 CI 的 `schema-drift`（schema ↔ 已部署库逐项比对）与 `rls-coverage`（ENABLE + FORCE + 策略三态齐备）双门禁守护。另有 20 张仅带父级外键的子表依赖应用层 `workspaceId` 过滤，未入引擎层
+- **CI 关卡**：lint（eslint + prettier + `tsc --noEmit`）/ RLS 覆盖率 / schema 漂移 / API 契约 / 安全审计 / 单测+集成 / **加固模式回归**（以 `NOBYPASSRLS` 最小权限角色 + RLS 激活跑集成测试）/ 浏览器 E2E / 生产构建 / 镜像发布。状态见页首徽章——**徽章是刻意加的：此前长红三周无人发现，正因为仓库里没有任何 CI 状态出口**
+- **可复现的部署**：镜像发布到 GHCR，`docker compose up -d` 一键起全栈（app + PostgreSQL + Redis + cron 调度器 + LiveKit）
+- **AI 安全约束**：所有 AI 建议均需用户确认后才落位（写入任务/文档/日程），AI 不直接修改业务数据；AI 用量按工作区**计量**（Token / 调用次数 / 成本三维，写入 `AiUsageLog`），限额配置见 `AiUsageLimit`
 
 ## 快速开始（自部署）
 
@@ -86,12 +88,13 @@ Next.js 16（App Router / Turbopack）· React 19 · Tailwind CSS 4 · Prisma 6 
 ## 仓库结构
 
 ```
-web/          # Next.js 应用（app/ + components/ + lib/ + prisma/）
-db/           # rls-activate.sql（加固模式一键激活）
+web/          # Next.js 应用（app/ + components/ + lib/ + prisma/ + e2e/ + tests/）
+db/           # rls-activate.sql（加固模式一键激活）+ rls-smoke.sh（引擎级冒烟）
+scripts/      # CI 门禁脚本：check_rls_coverage / check_schema_migration_drift / check_api_contract
 docs/         # ADR 决策记录 / runbook / 市场与定价文档
 design/       # 设计系统（design-tokens.css 双主题）
-e2e/          # Playwright 浏览器级测试（58 项）
-.github/      # CI 七关卡 workflow
+api/          # openapi.yaml 契约
+.github/      # CI workflow
 ```
 
 ## 链接

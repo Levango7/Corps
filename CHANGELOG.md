@@ -2,6 +2,76 @@
 
 本文件记录 corps 的版本变更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 惯例，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Fixed
+
+- **数据库迁移漂移（P0，一条根因同时导致加固模式 CI 连红、部署两条路不通、引擎层 RLS 实际未生效）**：
+  `schema.prisma` 有 3 个模型（`ai_conversations` / `ai_messages` / `push_tokens`）从未进过迁移链，
+  只靠 `db push` 之类的旁路存在于开发库里。`prisma migrate deploy` 建出的新库因此缺表 →
+  `db/rls-activate.sql:71` 的 FOREACH 块在 `ALTER TABLE ai_conversations FORCE RLS` 处
+  `relation does not exist` 报错；该 DO 块是原子的，**79 张表的 ENABLE/FORCE 与 264 条策略一条都不会落地**。
+  后果链：CI 的 `rls-smoke` 步骤先于 `vitest` 失败（单测关卡根本没执行到）、`e2e`/`build`/`docker-publish`
+  因 `needs` 长期 skipped、`web/docker/entrypoint.sh`（`set -e` + `ON_ERROR_STOP=1`）在 `RLS_ACTIVATE=true`
+  时容器直接中断。新增迁移 `20260929000000_add_missing_ai_conversation_and_push_tables`，
+  DDL 由 `prisma migrate diff --from-migrations ... --shadow-database-url ...` 生成而非手写。
+- **5 个字段漏写 `@map` 导致新库列名对不上（P0）**：`AiMeetingActionItem.extractedBy`、
+  `AiMeetingSession.participantCount`、`AiVoicePreference.wakeWord`、`Favorite.targetType`、
+  `Mail.toAddr` 的库内真实列名是 snake_case，但字段未标 `@map`，Prisma 按 camelCase 查列 →
+  新部署库上运行期 P2022。已补 `@map`（与同文件内既有约定一致）。
+  刻意**未**按 `migrate diff` 的全量输出重建库：其中包含删除 `messages.body_tsv` /
+  `wiki_pages.content_tsv` 的语句，这两列是裸 SQL 建的 tsvector，被 `v1/search` 与 `v1/im/search` 真实使用。
+- **`db/rls-activate.sql` 不幂等（P0 运维）**：24 条 `CREATE POLICY` 缺前置 `DROP POLICY IF EXISTS`，
+  第二次执行即 `policy already exists` 报错；而 entrypoint 每次容器启动都会跑它，等于
+  **首次成功之后任何一次重启都会让容器起不来**。文件头原本自称"幂等可重复执行"。
+- **`docker compose` 文档路径断在 env**：`.env.example` 完全没有 `JWT_ACCESS_SECRET` 的赋值行
+  （只在注释里提到该变量名），而 `docker-compose.yml:119` 以 `${JWT_ACCESS_SECRET:?}` 硬必填；
+  `CORPS_APP_PASSWORD=` 值为空同样触发 `:?` 失败。按 README 的 `cp .env.example .env` 走会在
+  compose 解析阶段中止。实测口径：`docker compose --env-file <example副本> config`。
+- **看板长按菜单三个 i18n 键两侧皆缺**：`task.complete` / `task.copy` / `task.share` 在 `zh.json`
+  与 `en.json` 中都不存在，`dev.log` 里每条各抛 164 次 `MISSING_MESSAGE`。原 `i18n-keys` 测试
+  只比对 zh↔en 键集合相等，因此对这种"两边都缺"完全无感。
+- **审批评论路由未入契约门禁**：`c7d2247c` 新增 `approvals/instances/{aid}/comment` 后
+  `api-contract` job 恒红，已补入基线。
+- **仪表盘 widget 测试文件格式化不合规**使 `lint` job 的 `prettier --check` 失败，已修正。
+
+### Security
+
+- **公开分享链接的密码与有效期此前只在服务端"不管"**：`GET /api/documents/share/{token}` 的
+  `select` 不含 `sharePassword` / `shareExpiresAt`，因此无条件返回 `publishedMarkdown` 全文；
+  带密码校验的 verify 路由只存在于 workspace 版（需登录），其自身注释即写明公开路径"此处不覆盖"；
+  前端 POST 的 `/api/documents/share/{token}/verify` 路径**根本不存在**，且 `hasPassword`
+  永远拿不到值 → 密码门是死代码。现改为服务端强制：未过期且（无密码或密码校验通过）才下发正文，
+  并新增公开 `POST /api/documents/share/{token}/verify`（scrypt 比对 + IP 锁定 + 访问日志），
+  契约同步入 `api/openapi.yaml`。响应体仍不含密码哈希本身。
+- **Stripe 价格可由请求体指定**：`billing/checkout` 把 `body.priceId` 原样作为 `priceOverride`
+  透传进 `line_items`，无服务端白名单 → 具备 billing 权限的成员可绑定账户内任意价格
+  （含测试价、超低价）。现只允许服务端自己配置的 `STRIPE_PRICE_ID` / `STRIPE_PRICE_ID_YEARLY`，
+  越界返回 400。
+
+### Added
+
+- `scripts/check_schema_migration_drift.py` — schema ↔ 迁移/已部署库 的**单向**漂移门禁。
+  权威模式直连 `information_schema`（零 SQL 文本解析、零假阳性），静态回退模式只比表名。
+  刻意不做双向相等断言：库里存在、schema 未声明的列（tsvector 等）是有意的。
+  新增 `schema-drift` CI job 并挂进 `build` 的 `needs`。
+- `scripts/check_rls_coverage.py` 从"表名集合求差"升级为三态断言（ENABLE + FORCE + 至少一条策略），
+  并在解析前剥离 SQL 注释——旧版会把 `-- '某表名'` 注释内容当表名，既能造成恒红误报、
+  也能被用来伪造覆盖；旧版亦完全不查 FORCE 与策略是否存在。
+- `web/tests/unit/i18n-usage.test.ts` + `web/tests/i18n-usage-baseline.txt` — 校验"代码引用的 i18n 键
+  必须真的存在于两份词条"，现存 27 处历史缺口入"只允许收缩"基线，只挡新增。
+  静态解析按**变量名**绑定命名空间（同文件多个 `useTranslations` 时否则会成批假阳性），
+  并跳过 `t("diagram" + k)` 这类动态拼接。
+- `README.md` 页首加 CI 徽章。此前长红三周无人发现，直接原因之一就是仓库里没有任何 CI 状态出口。
+
+### Changed
+
+- `README.md` 若干宣称与代码对齐：RLS 覆盖 `26/99` → 71 个含 `workspaceId` 的模型（79 张表、264 策略）
+  并注明 20 张子表仍在引擎层之外；"CI 七道关卡" → 按 `ci.yml` 实际 job 列表述；
+  Free 项数 `21` → 17（22 个功能行中 14 全量 + 3 受限），并把逐项归属指向
+  `web/lib/pricing.ts` 单一事实源而非在 README 重复罗列；"AI 使用量…计量与限额" → 只宣称计量
+  （限额判定此前在生产的调用点为零）；仓库结构里的 `e2e/` 路径修正为 `web/e2e/`。
+
 ## [0.7.1] - 2026-09-24
 
 全栈审查修复版本：6 波次审查-修复循环覆盖 UI 响应式、后端安全、组件视觉一致性、cron 时间计算、API 行为优化，累计 40 文件 +945/-421 行。
