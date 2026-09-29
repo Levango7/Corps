@@ -54,7 +54,7 @@ corps 已从"项目管理工具"升级为 **AI 原生办公平台**：17 个核�
 ## 工程上的硬承诺
 
 - **租户隔离（双层防御）**：`schema.prisma` 中 71 个含 `workspaceId` 的租户模型（对应 79 张表）全部启用 PostgreSQL `FORCE ROW LEVEL SECURITY`，共 264 条策略；由 CI 的 `schema-drift`（schema ↔ 已部署库逐项比对）与 `rls-coverage`（ENABLE + FORCE + 策略三态齐备）双门禁守护。另有 20 张仅带父级外键的子表依赖应用层 `workspaceId` 过滤，未入引擎层
-- **CI 关卡**：lint（eslint + prettier + `tsc --noEmit`）/ RLS 覆盖率 / schema 漂移 / API 契约 / 安全审计 / 单测+集成 / **加固模式回归**（以 `NOBYPASSRLS` 最小权限角色 + RLS 激活跑集成测试）/ 浏览器 E2E / 生产构建 / 镜像发布。状态见页首徽章——**徽章是刻意加的：此前长红三周无人发现，正因为仓库里没有任何 CI 状态出口**
+- **CI 关卡**（12 个 job）：lint（eslint + prettier + `tsc --noEmit`）/ 覆盖率棘轮 / RLS 覆盖率 / schema 漂移 / API 契约 / **角色权限门禁**（写 handler 是否真的调用权限矩阵，四档基线只允许收缩）/ 安全审计 / 单测+集成 / **加固模式回归**（以 `NOBYPASSRLS` 最小权限角色 + RLS 激活跑集成测试）/ 浏览器 E2E / 生产构建 / 镜像发布。状态见页首徽章——**徽章是刻意加的：此前长红三周无人发现，正因为仓库里没有任何 CI 状态出口**
 - **可复现的部署**：镜像发布到 GHCR，`docker compose up -d` 一键起全栈（app + PostgreSQL + Redis + cron 调度器 + LiveKit）
 - **AI 安全约束**：所有 AI 建议均需用户确认后才落位（写入任务/文档/日程），AI 不直接修改业务数据；AI 用量按工作区**计量**（Token / 调用次数 / 成本三维，写入 `AiUsageLog`），限额配置见 `AiUsageLimit`
 
