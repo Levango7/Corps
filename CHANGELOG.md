@@ -6,6 +6,45 @@
 
 ### Fixed
 
+- **`viewer` 角色在 API 上根本无法赋予，前端"只读成员"点了直接 400（P0 级功能不可达）**：
+  `lib/permissions.ts:56` 的 `ROLES`、`schema.prisma` 的 role 注释、前端角色下拉
+  （`components/members/MemberList.tsx:170/293` 的 `roleViewer`）都承认 viewer，
+  唯独 `app/api/v1/workspaces/[wid]/members/[userId]/route.ts:16` 的
+  `role: z.enum(["admin", "member"])` 不含它 → 改角色为只读返回 400。
+  `f2f926ed` 落 viewer 只读时补的集成测试（`rbac.test.ts:130`）正是因此是红的——
+  该用例当时本机跑不了、留给 CI 首跑，而 CI 已连续三周没跑到这一步。
+  现已把 `viewer` 加入枚举并同步契约（`api/openapi.yaml` 的 PATCH 请求/响应枚举、
+  工作区详情 `role` 枚举与说明）。**验证**：`tests/integration/rbac.test.ts` 由
+  24 例扩至 34 例（本条 + 下条安全项），实跑 **34 passed / 退出 0**。
+  注：邀请端 `members/invite/route.ts:15` 的枚举仍不含 viewer——当前邀请 UI 不提供该选项，
+  未臆造需求，留作待决项。
+- **在途多维表格 UI 引用 26 个中英双缺的 i18n 键，单测腿因此恒红**：
+  新增的 `app/[locale]/w/[wid]/databases/`（列表页 + 详情页 + shared.ts）使用
+  `database.list.*` 21 键、`database.detail.*` 4 键与侧边栏 `nav.menu.databases`，
+  而 `messages/zh.json` 的 `database` 命名空间只有 `editor`。触发的是
+  `f5018f09` 自己加的守卫 `tests/unit/i18n-usage.test.ts:117`——门禁按设计抓住了未完成的功能。
+  已按各调用点语义补齐全 26 键（含 `openAria {title}` / `lastUpdated {date}` 插值，zh/en 对称）。
+  **验证**：`npx vitest run tests/unit` → **46 文件 / 560 例全绿，退出 0**（此前 2 failed）。
+- **覆盖率门禁在 CI 里根本没被执行到（P0，"有覆盖率关卡"这句宣称此前不成立）**：两条独立成因，
+  都取到了实测证据。① `ci.yml` 的 Test job 把 `npx vitest run --coverage` 排在
+  `bash db/rls-smoke.sh` **之后**，smoke 一失败整个 job 即终止——拉取失败运行 36481491352 的
+  全量日志，搜不到任何覆盖率表；② Vitest 的 `coverage.reportOnFailure` 默认 **false**，
+  任一测试变红就跳过覆盖率评估。而真实覆盖率实测只有
+  **lines 3.98% / statements 3.98% / functions 58.6% / branches 73.7%**（unit-only，
+  706 个被统计文件中 646 个行覆盖率为 0），配置阈值却是 20/15/20/20。
+  修法：`vitest.config.ts` 置 `coverage.reportOnFailure: true`；`ci.yml` 新增**不依赖数据库**的
+  `coverage` job（unit-only 棘轮 3.5/3.5/55/70，注释写明"只允许上调，为变绿而下调需单独说明并经确认"），
+  Test job 的合并腿阈值保持不动。
+  **变异验证**：棘轮命令本地实跑退出 0（3.98% > 3.5%）；抬高到 4.5% 与 99% → 均退出 1 并报
+  "does not meet global threshold"，证明这道门真的会咬。
+  注：该 job 定义在并发会话中被 `064b6e23` 一并提交，本条为追记。
+- **API 契约基线的"只允许收缩"是单向假象**：`check_api_contract.py` 只对"基线外的新未声明路由"
+  失败，对"已声明/已删除却仍留在基线里的条目"只 print 不 fail（`:167-170`），
+  与 docstring 第 16 行的承诺相反；失败提示的第 2 个选项还直接教人"append it to baseline"。
+  实测契约覆盖率 26.0%（277 条可纳入路由中声明 81 条，205 条全压在基线里）。
+  已把"已修未删"改为 **FAIL** 并同步 docstring 与退出码说明。
+  **变异验证**：正常态退出 0（当前 stale=0，不引入红灯）；注入一条伪基线 → **退出 1** 并列出"豁免腐烂"，
+  随后按 md5 逐字节还原基线文件。
 - **数据库迁移漂移（P0，一条根因同时导致加固模式 CI 连红、部署两条路不通、引擎层 RLS 实际未生效）**：
   `schema.prisma` 有 3 个模型（`ai_conversations` / `ai_messages` / `push_tokens`）从未进过迁移链，
   只靠 `db push` 之类的旁路存在于开发库里。`prisma migrate deploy` 建出的新库因此缺表 →
@@ -47,6 +86,26 @@
 
 ### Security
 
+- **只读成员（viewer）可经"多维表格记录面"与"AI 落位面"写入业务数据**：矩阵一直声明 viewer 对
+  tasks/documents/decisions/announcements 只有 `r`，但这两条链路只做**成员资格**校验、不看角色。
+  ① `…/databases/[dbid]/records/route.ts:210` 与 `…/records/[rid]/route.ts:25,97`
+  的 POST/PATCH/DELETE 只调 `getWorkspaceContext`（注释本身写着"member 可写"，viewer 一并放过），
+  前端 `canManageDatabases` 只隐藏按钮、不构成执行边界；
+  ② `ai/tools/execute`（`create_task` → `tx.task.create`）与 `ai/orchestrate` PATCH
+  （createTask/createDocument/createDecision/sendAnnouncement）同样无角色判断——
+  "AI 建议需用户确认后落位"约束的是幻觉，不是授权。
+  修法按本仓既有口径走矩阵而非 ad-hoc：`lib/permissions.ts` 新增 `databases`（容器：owner/admin `crud`、
+  member `r`、viewer `r`）与 `databaseRecords`（member `crud`、viewer `r`）两个模块，
+  语义与既有实现等价（不放宽也不额外收紧），5 个写 handler 接 `requirePermission`；
+  AI 侧按 action→模块映射接矩阵（`tasks`/`documents`/`decisions`/`announcements`，
+  与对应手工路由用同一规则；`scheduleMeeting`/`notify`/`linkToOkr` 矩阵里尚无模块，不臆断）。
+  另把 `ai/orchestrate` 的 `isAiConfigured()` 检查**移到鉴权之后**——原顺序在无 AI key 的环境
+  （含 CI）会先返回 503，使鉴权分支永远测不到。
+  **验证**（隔离环境：自建 PG18 + 生产构建，非静态推断）：新增 10 条集成断言——viewer 读放行、
+  建/改/删记录 403、member 未被一并锁死、容器级 owner/admin 门禁未被放宽、
+  viewer 经两条 AI 链路 403、member 侧 `not.toBe(403)` 锚点；
+  `rbac.test.ts` 34 例全绿，全量集成+api **16 文件 / 175 例全绿，退出 0**。
+  `scripts/check_permission_gates.py` 的 T3 基线同步删除已收口的 5 条（170 → **165**），门禁退出 0。
 - **公开分享链接的密码与有效期此前只在服务端"不管"**：`GET /api/documents/share/{token}` 的
   `select` 不含 `sharePassword` / `shareExpiresAt`，因此无条件返回 `publishedMarkdown` 全文；
   带密码校验的 verify 路由只存在于 workspace 版（需登录），其自身注释即写明公开路径"此处不覆盖"；

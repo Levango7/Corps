@@ -1,5 +1,6 @@
 > [!IMPORTANT] 时效声明（2026-08-29 复核）
 > 本报告核对截止 **2026-08-23**。此后项目发生重大变更：IM（SSE 实时消息/已读/附件）、日历集成（Google/Outlook OAuth）、附件租户隔离（workspaceId + RLS + 下载鉴权）、i18n 补全、openapi 扩展等。「综合 9.2/10」「API 契约一致 10/10」等结论已失效，仅作历史参考。最新状态以 git 提交与 `api/openapi.yaml` 为准。
+> 「API 契约一致 10/10」已由 `docs/audit/REVERIFY-2026-09-29.md` §4 量化为**契约覆盖率 26.0%**（277 条可纳入路由中 openapi 声明 81 条，其余 205 条压在 `scripts/api-contract-baseline.txt` 豁免清单里）；该豁免清单现由 `check_api_contract.py` 强制"只允许收缩"。
 
 # corps Spec ↔ 实现 全局核对报告
 

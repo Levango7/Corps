@@ -1,5 +1,10 @@
 # corps 团队 SaaS - MVP 落地报告
 
+> [!WARNING] 历史快照（勿作现状引用）
+> 本文数字已被后续开发全面超过：文中「15 表 DDL + RLS」「72 个端点」「ADR 6 份」
+> 对应实测现状为 **99 张表 / 79 张 FORCE RLS 表 / 264 条策略**、**289 个 `route.ts`（445 个 handler）**。
+> 现状与逐项证据见 `docs/audit/REVERIFY-2026-09-29.md`。
+
 > 落地日期：2026-08-22
 > 项目路径：`F:\Nexus\corps\`
 
