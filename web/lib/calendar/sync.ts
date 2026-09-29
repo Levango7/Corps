@@ -305,11 +305,9 @@ export async function syncTaskToCalendar(
               `[calendar-sync] S4 补偿删除外部事件成功: connectionId=${connectionId} externalEventId=${externalEventId}`,
             );
           } catch (compensateErr) {
-            // 补偿也失败：孤儿事件残留，记日志供对账任务清理
-            // R9D-09：对账任务已实现（web/lib/calendar/reconcile.ts 的 reconcileCalendarSync）。
-            //   定期扫描外部日历事件与本地 task_calendar_events 映射表，清理孤儿事件、
-            //   重置错误状态连接、检测过期同步。当前补偿删除失败时仅记日志，
-            //   孤儿事件由对账任务在下次运行时清理。
+            // 补偿也失败：外部孤儿事件残留，只能记日志。cron 调的 /api/cron/calendar-reconcile
+            // （reconcile.ts，每周日 05:00）只回收本地 task_calendar_events 映射行，
+            // 不会扫描外部日历，外部孤儿事件仍需人工删除或另做清理。
             console.error(
               `[calendar-sync] S4 补偿删除外部事件失败，产生孤儿: connectionId=${connectionId} externalEventId=${externalEventId}`,
               compensateErr,
