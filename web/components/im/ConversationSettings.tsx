@@ -130,10 +130,13 @@ export function ConversationSettings({
   const refreshMembers = useCallback(async () => {
     setLoadingMembers(true);
     try {
-      const list = await api<ConversationMember[]>(
+      // GET /conversations/{cid}/members 返回分页信封 data:{ items, total, hasMore }
+      // ——成员数组挂在 items 上（**没有 members 键**）。曾按 data.members 取，被
+      // Array.isArray 兜底成 [] 后成员列表恒为空且不报错；改用 apiList 归一化。
+      const data = await apiList<ConversationMember>(
         `/api/v1/workspaces/${wid}/conversations/${cid}/members`,
       );
-      setMembers(list ?? []);
+      setMembers(data);
     } catch {
       // 静默忽略，使用现有成员
     } finally {

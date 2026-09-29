@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { api, ApiError } from "@/lib/api";
+import { api, apiList, ApiError } from "@/lib/api";
 import { Check, Clock, Eye, GitCompare, History, Loader2, Plus, RotateCcw, X } from "lucide-react";
 
 // ── 类型定义（对应设计文档 §2.3.2 Prisma schema）──
@@ -124,7 +124,11 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
     setLoading(true);
     setError("");
     try {
-      const data = await api<DocumentVersion[]>(
+      // GET /documents/{id}/versions 返回分页信封 data:{ items, page, limit, total, hasMore }
+      // ——route.ts 里 items 的取值是 result.versions，**响应键仍是 items**。
+      // 曾按 data.versions 取（错键），Array.isArray 兜底成 [] 后版本历史恒为空且不报错；
+      // 用 apiList 归一化（它同时吃 { items } 与裸数组），改口径不会再静默失效。
+      const data = await apiList<DocumentVersion>(
         `/api/v1/workspaces/${wid}/documents/${docId}/versions`,
       );
       setVersions(data);
