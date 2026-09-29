@@ -157,7 +157,7 @@
 
 其他工作流：`deploy-pages`、`mobile-build`、`mobile-matrix`、`smoke`、`tauri-build`；依赖更新：`dependabot.yml`。
 
-**观察**：`desktop/`（Electron，51 文件）与 `tauri-build`/`mobile-*` 工作流**并存**，存在两套桌面/移动方案，建议明确主次（见第四节）。
+**观察（2026-09-29 复核后修正）**：~~`desktop/`（Electron，51 文件）与 `tauri-build`/`mobile-*` 工作流并存，存在两套桌面/移动方案，建议明确主次~~ —— **此判断有误**。实测：`desktop/package.json` 的脚本是 `tauri dev` / `tauri build`（`@tauri-apps/cli ^2`），全仓**没有 Electron 实现**（`electron` 只出现在 `desktop/README.md` 的对比表述、`pnpm-lock.yaml` 与法务文案里）；`mobile-build.yml` 与 `tauri-build.yml` 是**同一套 Tauri 栈的不同目标**（桌面 Sidecar / Android+iOS+HarmonyOS），`mobile-matrix.yml` 更是**真机与浏览器测试矩阵**而非第二套打包方案。桌面/移动只有一条技术栈，"停用冗余流水线以省 CI 分钟数"的建议随之作废。
 
 ---
 
@@ -226,7 +226,7 @@
 | # | 事项 | 证据 | 建议 |
 |---|---|---|---|
 | 7 | `dangerouslySetInnerHTML` 9 处待核查 | `git grep` 计数 | 逐一确认上游有消毒（DOMPurify/自建 sanitize）；如需可加 lint 规则限制新增 |
-| 8 | 桌面/移动方案并存 | `desktop/`（Electron）+ `tauri-build`/`mobile-*` 工作流 | 明确主次，停用冗余流水线以省 CI 分钟数 |
+| 8 | ~~桌面/移动方案并存~~ → **判断有误（2026-09-29 复核）** | `desktop/` 是 **Tauri v2**（非 Electron；`desktop/package.json:7-15`），`mobile-build.yml`/`tauri-build.yml` 是同栈不同目标，`mobile-matrix.yml` 是测试矩阵 | 无需处置：不存在双方案，也没有可停用的冗余流水线 |
 | 9 | `eslint-disable` 60 处 | 分散于组件（单文件 2-3） | 抽查是否集中在 `react-hooks/exhaustive-deps`；若是，考虑重构依赖而非禁用 |
 | 10 | 工作区日志残留 | `dev*.log`、`e.log`、`p*.log`、`rbac.log` 等（**已被 `.gitignore:69` 的 `*.log` 忽略**，仅占磁盘） | 定期清理即可，非配置缺陷 |
 | 11 | **`docs/audit/` 忽略规则与既有文件冲突** | `.gitignore:73` 忽略 `docs/audit/`，但 `docs/audit/SPEC-vs-IMPL-AUDIT.md` **仍在库中跟踪** | 规则生效前已提交的文件成"孤儿"（删除后无法重新加入）。建议：明确 audit 是否入库——若要入库则移除忽略规则（可改为 `docs/audit/*.tmp` 等精细规则）；若不入库，将 SPEC-vs-IMPL-AUDIT.md 移出至 `docs/standards/` 或 `docs/spec/` |
@@ -239,7 +239,7 @@
 | 5 | ⏸ 未处理 | 两处半成品属**功能开发**，非"易修项"范畴，需产品决策 |
 | 6 | ✅ **已修复** | `runbook-monitoring.md` 修正 4 处：§2 移除已下线的 CloudBase、§3 改为远端上报入口、§4 更新为已实现的上报层、集成用例数口径（18 → 14 文件/140 用例） |
 | 7 | ✅ **已核实（非缺陷）** | 9 处 grep 命中中 **6 处为注释、3 处为真实使用且均为模块级硬编码常量（零用户输入）**；已修正 `csp.ts` 中"代码库无 dangerouslySetInnerHTML"的失实表述，并标注 nonce 传播为"待实测验证项"（不据推测动代码） |
-| 8 | ⏸ 未处理 | Electron + Tauri/mobile 双方案**并存需产品决策**，非纯技术可决 |
+| 8 | ✅ **已核实（推翻原结论）** | 桌面/移动**只有一条 Tauri 栈**，无 Electron 实现、无双方案并存，原"需产品决策"的前提不成立。教训：把 commit message / 工作流名称当作技术栈事实，而不读 `package.json` 的 scripts，就会造出这类"看起来有理"的空缺口 |
 | 9 | ✅ **已审计** | 60 处分布：`exhaustive-deps` 23、`no-img-element` 26、文件级禁用 3、`no-console` 4、`any` 2、其他 2。文件级禁用 3 处（`web/scripts/*.mjs`）**已补写理由**；其余 44 处为常规局部禁用，无需处置 |
 | 10 | ✅ 说明性澄清 | 实测已被 `.gitignore:69` 的 `*.log` 覆盖，仅占磁盘、不污染仓库，原"加入 .gitignore"的建议作废 |
 | 11 | ✅ **已修复** | `.gitignore` 改为只忽略 `*.tmp.md`/`*.draft.md`/`tmp/`（依据：`docs/security/` 下渗透报告均入库的既有做法），孤儿状态消除，本报告得以入库 |
@@ -283,8 +283,11 @@ corps 是一个**工程成熟度 8.4/10** 的项目：安全与数据层达到�
 | "E2E 存在 skip 黑洞（`d1ce552d` skip ChatPanel）" | **E2E 实测零 skip**，58 个用例 / 9 spec，ChatPanel 测试存在于 `web/e2e/im-upgrade.spec.ts`（"任务详情页渲染 ChatPanel…"） | 初判依据为 commit message 措辞（"skip ChatPanel测试"），经 `git grep` 全量核验 E2E 目录**无任何 `skip`**；该 commit 实际做的是"用 API 调用替代不可靠 UI 交互"，属合理工程手段 |
 | "根目录日志文件堆积，建议加入 .gitignore" | 日志**已被 `.gitignore:69` 的 `*.log` 覆盖** | 未先读 `.gitignore` 全文即下判断；实际仅占本地磁盘，非配置缺陷 |
 | "57 个测试文件" | **48 个 `.test.ts`**（另 9 个 setup/helpers） | 首次统计含非测试文件，精确 glob 后修正 |
+| "`desktop/`（Electron）与 tauri/mobile 工作流并存，需明确主次" | **只有一条 Tauri 栈**，无 Electron 实现；`mobile-matrix` 是测试矩阵不是打包方案（见 §6 与 §四 #8） | 把工作流名称与 README 里的对比表述当成技术栈事实，未读 `desktop/package.json` 的 scripts |
+| **安全维度 9.0**（"RLS 达企业级、传输层防线齐全"） | **依据不成立，实测应显著下调**。矩阵存在、单测存在，但边界大量不调用：`f2f926ed` 只接了 2 个 handler；截至 2026-09-29 的实测分档为——矩阵域内零角色判断 **33** 个、矩阵域内仅 ad-hoc 判断 **20** 个待复核、**矩阵域外 170 个写 handler 完全无角色判断且矩阵未定义其权限**（含 60 个 AI 写 handler 与新加的 `databases/{dbid}/records` 记录写端点）。viewer 只读因此可经 `POST /api/v1/ai/tools/execute`（`lib/ai/tools/builtins.ts:162` `tx.task.create`）、`PATCH /api/v1/ai/orchestrate`（`lib/ai/executor.ts:145`）等多条旁路绕过 | "看到有矩阵、有单测"即判通过。**函数正确 ≠ 函数被调用**；安全维度必须核边界调用点计数 |
+| 权限缺口门禁 `permission-gate-baseline.txt` = 44 条 | 拆为四档基线（T1 33 / T2 20 / T3 170 / T4 33）。旧基线里 **11 条实为误分类**——它们有 `["owner","admin"].includes(ctx.member.role)` 式 ad-hoc 门禁（例：`tasks/[id]/comments/route.ts:229-231` 判"作者本人或 owner/admin"），旧正则只认 `role ===` 因而把有效门禁记成缺口；同时旧扫描根 `v1/workspaces/[wid]` 使矩阵域外 203 个写 handler 完全不可见 | 门禁自身的判定口径也是被测对象：正则过窄会**双向**出错（既可能假绿、也可能把已修的记成未修），扫描范围过窄则把盲区当成"无问题" |
 
-**教训**：commit message 的措辞不等于代码事实，必须以源码为准。
+**教训**：commit message 的措辞不等于代码事实，必须以源码为准；同理，"有实现/有测试/有基线数字"也不等于边界已接线，必须给出**生产调用点计数**。
 
 
 

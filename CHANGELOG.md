@@ -34,6 +34,16 @@
 - **审批评论路由未入契约门禁**：`c7d2247c` 新增 `approvals/instances/{aid}/comment` 后
   `api-contract` job 恒红，已补入基线。
 - **仪表盘 widget 测试文件格式化不合规**使 `lint` job 的 `prettier --check` 失败，已修正。
+- **两处文档失实（审计文档自身的事实错误）**：
+  ① `docs/audit/FULL-AUDIT-2026-09-27.md` 称 `desktop/` 是 Electron 且与 `tauri-build`/`mobile-*`
+  构成"两套桌面/移动方案"、建议"停用冗余流水线"——实测 `desktop/package.json:7-15` 是
+  `tauri dev` / `tauri build` + `@tauri-apps/cli ^2`，全仓无 Electron 实现（`electron` 仅命中
+  `desktop/README.md` 的对比表述、`pnpm-lock.yaml` 与法务文案），`mobile-matrix.yml` 是测试矩阵而非打包方案，
+  该建议已作废并在其"审核修正记录"附录留痕。
+  ② `README.md` 同篇并存"Free 可用 17 项"与"Free 21 项"两个数字而无口径说明：前者是
+  `PRICING_MATRIX` 功能对比表（22 功能行 = Free 全量 14 + 受限 3 + 不可用 5），
+  后者是 `PRICING_PLANS.free.features` 套餐卡要点（21 条，`pricing.features.free.f01–f21`，中英齐备）。
+  已改为分别标注来源与构成，避免读者当成矛盾数字。
 
 ### Security
 
@@ -48,6 +58,18 @@
   透传进 `line_items`，无服务端白名单 → 具备 billing 权限的成员可绑定账户内任意价格
   （含测试价、超低价）。现只允许服务端自己配置的 `STRIPE_PRICE_ID` / `STRIPE_PRICE_ID_YEARLY`，
   越界返回 400。
+- **`scripts/check_permission_gates.py` 的判定口径双向失真，且扫描范围只覆盖三成写面**：
+  旧版"是否已接门禁"的正则只认 `requirePermission(` / `checkPermission(` / `role ===`，
+  于是把 `if (!["owner","admin"].includes(ctx.member.role))` 这类**真实有效的 ad-hoc 角色判断**
+  误记成零缺口——旧基线 44 条里 11 条属此类（证据：`tasks/[id]/comments/route.ts:229-231`
+  判"作者本人或 owner/admin"）。反向问题更大：扫描根写死 `v1/workspaces/[wid]`，
+  矩阵域外的写 handler 一个都不看。现按"矩阵域内零判断 / 矩阵域内仅 ad-hoc / 矩阵外零判断 / 矩阵外仅 ad-hoc"
+  分四档，各持一份只允许收缩的基线（T1 33 / T2 20 / T3 170 / T4 33，共 256 个写 handler 待收敛），
+  扫描根扩到 `web/app/api/**`（沿用 `check_api_contract.py` 的 `INTERNAL_PREFIXES` 排除 cron/健康检查/auth/uploads，
+  并跳过路由组 `(group)` 段）。四档均已做**注入式变异验证**：探针落位后各自正确变红、
+  已接 `requirePermission` 的探针与 cron 探针不被误报、删基线一行能报"豁免腐烂"。
+  口径修正过程本身也被变异测试抓出一个 bug：`[wid]` 与路由组都不进 `static_core`，
+  资源段索引取 3 会让深层路由按**叶子段**误判档位（首轮实测的 T1=9/T3=194 即为此错），现固定取 2。
 
 ### Added
 
