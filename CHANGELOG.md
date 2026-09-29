@@ -6,6 +6,83 @@
 
 ### Fixed
 
+- **文档版本历史与会话成员列表两处「按错键取分页信封」静默失效（在途改动里的错法，本轮纠正）**：
+  `GET …/documents/{id}/versions` 的载荷是 `data:{ items, page, limit, total, hasMore }`
+  （`route.ts:88-93` 里 items 的取值是 `result.versions`，**响应键仍是 `items`**）；`GET …/conversations/{cid}/members`
+  同理（`route.ts:87-101`，成员数组挂在 `items` 上，**没有 `members` 键**）。先前两处分别按
+  `data.versions` / `data.members` 取键，又被 `Array.isArray(...) ? … : []` 兜底成空数组 →
+  **列表恒空却不报错、不崩**，比崩溃更难发现。这是同一契约缺陷的第二种形态：第一种是
+  `api<X[]>()` 把信封当裸数组直接抛 `TypeError`（见上一条），第二种是"读错键 + 兜底"。
+  修法：两处统一改用 `apiList`（`lib/api.ts` 里 `{ items }` 与裸数组双兼容）。
+  覆盖：这两个端点此前**零测试覆盖**（`tests/` + `e2e/` 共 78 个文件全量 grep
+  `versions|版本历史|DocumentVersionHistory|ConversationSettings` 命中 0，所以错键不会被任何
+  既有用例拦住）——现补 `tests/integration/document-versions.test.ts` 与
+  `conversations-list.test.ts` 的成员用例，断言"数组在 `data.items`、且不存在 `versions`/`members` 键"。
+  实跑：`vitest run tests/integration/conversations-list.test.ts tests/integration/document-versions.test.ts`
+  → **2 files / 5 tests passed**。
+- **新增「分页信封消费口径」静态守卫**（`tests/unit/api-envelope-consumers.test.ts`）：先扫
+  `app/api/**/route.ts` 的 GET/POST handler 判定"分页信封端点"（列表键 + 分页键；兼容 `data:{…}` 内联
+  与 `return { items, nextCursor }` 变量两种装配形态——后者骗过过一次纯正则扫描），再扫
+  `app`/`components`/`hooks`/`lib` 的两类调用点：`api<X[]>(字面量 URL)`（命中分页端点即违规）与
+  `api<{ 键?: X[] }>(字面量 URL)`（读了端点载荷没有的键即违规，对应当前这两处事故）。
+  实测口径：**56** 个分页端点 / **22** 个字面量调用点 / **2** 个无法静态归因；自带 4 类自检——
+  数量下界（防静默退化）、真实端点形状 canary（形状变更必须被人重审）、合成违规必被抓（防"永远绿灯"）、
+  扫描根覆盖。开发过程中它先失败两次（检测器漏认 `{ items, total }` 内联写法与 `{ unread }` 简写键），
+  修正后才绿；`vitest run tests/unit/api-envelope-consumers.test.ts` → **7 passed**。
+- **文档中心整页在生产构建里崩溃（`TypeError: e is not iterable`）**：`GET /api/v1/workspaces/{wid}/spaces`
+  返回分页信封 `data:{items,total}`（route.ts:37），而 `components/KnowledgeBase.tsx:171` 写成
+  `api<Space[]>()` 并按裸数组消费（:175 `for (const s of data)`、`sortByOrder` 里 `[...items]`）→
+  render 期抛错，被路由级错误边界接管成"页面出错了 + 重试/刷新页面"。
+  这是 `793edfd1`（列表/widget 响应信封统一消费口径，修 8 处）漏掉的**第 9 处**，
+  也是 `E2E v04-features.spec.ts:110/122` 恒红的真因——不是选择器写错。
+  连带第二个缺陷：该路由**从未 include `folders` / `documents`**，所以即使不崩，知识库树也永远是空的。
+  修法：服务端改为三次扁平查询 + 内存装配完整树（Prisma 不支持递归 include；父级缺失时按根级挂，
+  不让子树静默消失），客户端改用仓库自带的 `apiList`（`lib/api.ts` 里正是为这种崩法写的），
+  并给 `sortByOrder` 加非数组护栏（任一层形状异常都不该把整页送进错误边界）。
+  验证（浏览器一手，非推断）：文档中心页恢复，`搜索文档…` 输入框与空状态文案均可见；
+  树装配实测正确 `取证空间 → 父文件夹 → [子文件夹]`。
+  附带说明：`POST /documents` 不接受 `spaceId/folderId`、归入文件夹须走 `/documents/{id}/move`——
+  这是既有设计，本轮未改。
+- **`GET /conversations` 与 `GET /conversations/unread-count` 恒 500（PG 42883）**：
+  两处未读数聚合写的是 `WHERE m.conversation_id IN (${Prisma.join(conversationIds)})`，
+  Prisma 把 JS 数组绑成 **text** 参数，与 uuid 列比较即
+  `ERROR: operator does not exist: uuid = text`（SQLSTATE 42883，Prisma code P2010）→ 端点 500。
+  生产 E2E 日志里 `[GET conversations] error` / `[GET unread-count] error` 各出现多次，
+  表现为任务详情页 ChatPanel 渲染不出来（`im-upgrade.spec.ts:48` 的头两条断言因此红）。
+  改为 `= ANY(${conversationIds}::uuid[])`：保留 uuid 语义与 `conversation_id` 索引可用性
+  （另一可选写法 `conversation_id::text IN (...)` 实测也能过，但会让索引失效，未采用）。
+  unread-count 这条还顺带去掉了对 `Prisma.join` 空数组的隐式依赖——它原先没有长度守卫，
+  无会话时 `Prisma.join([])` 本身就是崩点。
+  新增 `tests/integration/conversations-list.test.ts` 3 例（这两个端点此前**零集成覆盖**，
+  所以缺陷能活到生产；空列表走不到那段 SQL，故用例刻意先建两个会话再查）。
+  **变异验证**：把 cast 去掉（退化为 text 比较）→ 端点立刻 500、用例精准报
+  `未修 cast 前这里是 500: expected 500 to be 200`；还原后按 md5 确认逐字节一致并复绿。
+- **service worker 把鉴权接口响应缓存成"跨账号可读的旧副本"**：`public/sw.js` 对**所有同源 GET**
+  做 stale-while-revalidate，`isNonCacheableApi` 只排除 auth 路由，于是 `/api/v1/**` 的 JSON 进
+  Cache Storage，而缓存 key 只有 URL、不含身份。两条实测事故：
+  ① 变更后读不到自己：新建子任务后 reload 任务详情页，页面自己发出的 `GET /tasks/{id}` 仍返回
+  `children=[]`，而同一时刻绕过 SW 的 `APIRequestContext` 请求能拿到那条子任务
+  （`e2e/v04-features.spec.ts:50` 因此长期红；此前只记到"子任务不显示"，未定性）。
+  ② 跨账号泄漏：A 登录后页面读 `/api/v1/workspaces/{A 的 wid}/tasks` 得 200 + 任务标题；
+  同一浏览器换成 B 账号再请求同一 URL，SW 把 A 那份原样回给 B（200 + A 的数据），
+  而服务端对 B 是 401。Cache Storage 不随登录态清理，共享/公用设备上就是上一位用户的租户残留。
+  修法：`isNonCacheableApi` 扩到整个 `/api/` 一律不缓存，`CACHE_VERSION` v2→v3
+  让已被污染的旧缓存在 activate 时删除（离线仍靠页面 shell，不受影响）。
+  验证：同一探针修前 200+含 A 的标题、修后 401 且不含；子任务用例由红转绿。
+- **`GET /api/v1/im/search` 恒 500，消息搜索在生产里从未可用**：`$queryRawUnsafe` 里
+  `WHERE m.workspace_id = $2` 与 `AND m.conversation_id = $4` 把 uuid 列与 Prisma 绑成 text 的参数
+  直接比较 → PG 42883 `operator does not exist: uuid = text`（日志 `[GET /api/v1/im/search] error`，
+  UI 显示"服务器内部错误"）。`docs/design/im-architecture.md:866` 却记着"消息搜索 ✅ 已实现"。
+  修法：两处补 `::uuid`。另实测 `'simple'` 解析器下**无空格整段只生成一个 token**——
+  `to_tsvector('simple','可搜索消息UniqueToken123') @@ plainto_tsquery('simple','UniqueToken')` 为
+  false，带空格的完整 token 才为 true，所以中文/粘连串的子串搜索并不成立。本轮只修 500，
+  分词口径（pg_trgm / zhparser）作为产品决策留档；e2e 用例改为按实现能力搜完整 token，
+  并把入口从任务详情面板（TaskChatPanel 无搜索控件）挪到真正实现了搜索的 `/im` 页。
+- **`/api` 响应此前不带任何 `Cache-Control`**：middleware 现在对 `/api` 统一回
+  `Cache-Control: no-store`（`/api/uploads/**` 与 `files/{fid}/download` 自己声明 max-age 的
+  二进制路由除外）。如实说明：**这条不是上面 SW 事故的成因**——SW 的 `cache.put` 只看
+  `type==="basic" && status===200`，压根不看缓存头；这里只是把浏览器 HTTP 缓存那一层也堵住的
+  纵深防御，实测 401/200 响应均已带头。
 - **权限门禁把矩阵模块清单复制了一份，导致多维表格的 9 个写 handler 被归错档**：
   `check_permission_gates.py` 的 `MODULE_BY_SEGMENT` 硬编码"17 段 → 12 模块"，而
   `web/lib/permissions.ts` 的 `MODULES` 已扩到 14（新增 `databases`、`databaseRecords`）。
