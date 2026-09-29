@@ -2725,6 +2725,7 @@
       "topCapabilities": "热门能力",
       "recentLogs": "最近记录",
       "limitSettings": "限额设置",
+      "quotaWarningTitle": "已超出 AI 用量限额（仍可继续使用，仅提示）",
       "dailyTokenLimit": "日 Token 限额",
       "monthlyTokenLimit": "月 Token 限额",
       "dailyCallLimit": "日调用次数限额",

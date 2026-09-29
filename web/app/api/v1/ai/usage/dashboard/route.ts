@@ -6,6 +6,7 @@
 //   topCapabilities: [{ capability, calls, tokens, cost }],
 //   recentLogs: AiUsageLog[],
 //   limit: AiUsageLimit | null,
+//   quota: { ok, reason?, usagePercent? } | null,   // 限额状态（提示用，不阻断调用）
 // }
 
 import { NextRequest, NextResponse } from "next/server";
@@ -15,6 +16,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { prisma } from "@/lib/prisma";
 import { getWorkspaceContext } from "@/lib/auth";
+import { checkAiUsageLimit } from "@/lib/ai/usage-limit";
 
 const querySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -70,8 +72,8 @@ export async function GET(req: NextRequest) {
     const todayWhere = { ...wsWhere, createdAt: { gte: todayStart } } as const;
     const monthWhere = { ...wsWhere, createdAt: { gte: monthStart } } as const;
 
-    // 并行查询：今日/本月聚合 + Top 能力 + 最近日志 + 限额配置
-    const [todayAgg, monthAgg, topCapabilitiesRaw, recentLogs, limit] = await Promise.all([
+    // 并行查询：今日/本月聚合 + Top 能力 + 最近日志 + 限额配置 + 限额达成状态
+    const [todayAgg, monthAgg, topCapabilitiesRaw, recentLogs, limit, quota] = await Promise.all([
       prisma.aiUsageLog.aggregate({
         where: todayWhere,
         _sum: { totalTokens: true, cost: true },
@@ -99,6 +101,10 @@ export async function GET(req: NextRequest) {
       prisma.aiUsageLimit.findFirst({
         where: { workspaceId: parsed.workspaceId, userId: null },
       }),
+      // 限额达成状态。此前 checkAiUsageLimit 在生产链路里零调用点（只有单测引用），
+      // 所以 README 的"按工作区限额"实际从未生效。按产品决定改为**提示不阻断**：
+      // 本结果只用于用量页提示，不影响 AI 调用本身是否放行。
+      checkAiUsageLimit(userId, parsed.workspaceId),
     ]);
 
     const result = {
@@ -120,6 +126,7 @@ export async function GET(req: NextRequest) {
       })),
       recentLogs,
       limit,
+      quota,
     };
 
     return NextResponse.json({ code: 0, data: result, message: "OK" });

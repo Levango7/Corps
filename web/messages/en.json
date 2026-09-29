@@ -2725,6 +2725,7 @@
       "topCapabilities": "Top Capabilities",
       "recentLogs": "Recent Logs",
       "limitSettings": "Limit Settings",
+      "quotaWarningTitle": "AI usage limit exceeded (still usable — advisory only)",
       "dailyTokenLimit": "Daily Token Limit",
       "monthlyTokenLimit": "Monthly Token Limit",
       "dailyCallLimit": "Daily Call Limit",

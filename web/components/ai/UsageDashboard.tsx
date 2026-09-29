@@ -21,7 +21,16 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Activity, Coins, Cpu, TrendingUp, Clock, CheckCircle2, XCircle } from "lucide-react";
+import {
+  Activity,
+  Coins,
+  Cpu,
+  TrendingUp,
+  Clock,
+  CheckCircle2,
+  XCircle,
+  AlertTriangle,
+} from "lucide-react";
 import { api } from "@/lib/api";
 
 interface UsageDashboardProps {
@@ -56,6 +65,12 @@ interface DashboardData {
     monthlyTokenLimit: number | null;
     dailyCallLimit: number | null;
     monthlyCallLimit: number | null;
+  } | null;
+  /** 限额达成状态（来自 checkAiUsageLimit）。仅用于提示，不阻断任何 AI 调用。 */
+  quota: {
+    ok: boolean;
+    reason?: string;
+    usagePercent?: number;
   } | null;
 }
 
@@ -203,6 +218,24 @@ export function UsageDashboard({ wid }: UsageDashboardProps) {
           </div>
         </div>
       </section>
+
+      {/* 限额提示：超限时给出可读原因，但不阻断任何 AI 调用（产品决定：提示即可） */}
+      {data.quota && !data.quota.ok && (
+        <section
+          role="status"
+          className="flex items-start gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--warn)] bg-[var(--warn-soft)] px-[var(--space-4)] py-[var(--space-3)]"
+        >
+          <AlertTriangle size={14} className="mt-[2px] shrink-0 text-[var(--warn)]" />
+          <div className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
+            <p className="font-[weight:var(--weight-medium)]">{t("quotaWarningTitle")}</p>
+            {data.quota.reason && (
+              <p className="mt-[var(--space-1)] text-[length:var(--text-xs)] text-[var(--muted)]">
+                {data.quota.reason}
+              </p>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* 限额进度条 */}
       {data.limit && dailyTokenPercent !== null && (
