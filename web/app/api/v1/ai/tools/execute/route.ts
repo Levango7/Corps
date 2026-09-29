@@ -9,6 +9,7 @@
 //  1) 认证 + 限流
 //  2) zod 校验请求体
 //  3) getWorkspaceContext 验证工作区成员资格（wid 守卫 + RLS）
+//  3.5) 写类工具按权限矩阵放行（create_task → tasks/create），只读成员 403
 //  4) runWithWorkspace 在 RLS 事务内执行工具，注入 tx 上下文
 //  5) 返回 ToolResult（success / data / error）
 
@@ -17,6 +18,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { apiMsg } from "@/lib/api-messages";
 import { toolRegistry } from "@/lib/ai/tools/registry";
 // 触发内置工具自注册
@@ -80,7 +82,19 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  // 6) 在 RLS 事务内执行工具
+  // 6) 写类工具接权限矩阵：create_task 与手工 POST /tasks 走同一条规则（tasks/create）。
+  //    此前本端点只校验成员资格，只读成员可经 AI 落位绕过 viewer 只读——
+  //    "AI 建议需用户确认后落位"的保护的是幻觉，不是授权。
+  const toolPerms: Record<string, { module: string; action: "create" }> = {
+    create_task: { module: "tasks", action: "create" },
+  };
+  const need = toolPerms[body.toolName];
+  if (need) {
+    const denied = await requirePermission(ctx, need.module, need.action, req);
+    if (denied) return denied;
+  }
+
+  // 7) 在 RLS 事务内执行工具
   try {
     const result = await runWithWorkspace(
       body.workspaceId,

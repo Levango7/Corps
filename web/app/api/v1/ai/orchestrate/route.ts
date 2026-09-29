@@ -28,6 +28,7 @@ import {
   type OrchestrationPlan,
 } from "@/lib/ai/orchestrator";
 import type { AiAction, AiActionResult } from "@/lib/ai/executor";
+import { requirePermission } from "@/lib/permissions";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { getWorkspaceContext } from "@/lib/auth";
@@ -158,9 +159,9 @@ export async function PATCH(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
-  // 2) AI 服务配置检查
-  if (!isAiConfigured()) return aiNotConfiguredResponse(req);
-
+  // 2) AI 服务配置检查放在权限门禁之后（见步骤 7.5）：
+  //    "调用者有没有权限写"与"服务端有没有配 AI"是两件事，先答后者会让无 key 环境
+  //    （含 CI）永远测不到鉴权分支，只返回 503。
   // 3) 速率限制：每分钟 5 次
   const limited = await checkRateLimit(req, "ai-orchestrate-execute", {
     windowMs: 60_000,
@@ -212,7 +213,27 @@ export async function PATCH(req: NextRequest) {
     }
   }
 
-  // 7) 执行联动方案（RLS 事务内原子执行）
+  // 7) 写面对齐权限矩阵（与各自主工路由同规则）：此前只做成员资格校验，
+  //    只读成员可经 AI 落位写任务/文档/决策/公告，绕过 lib/permissions.ts 的 viewer 只读声明。
+  //    scheduleMeeting / notify / linkToOkr 在矩阵里尚无对应模块，此处不臆断其应有权限。
+  const actionPerms: Record<string, { module: string; action: "create" | "update" | "delete" }> = {
+    createTask: { module: "tasks", action: "create" },
+    updateTaskStatus: { module: "tasks", action: "update" },
+    createDocument: { module: "documents", action: "create" },
+    createDecision: { module: "decisions", action: "create" },
+    sendAnnouncement: { module: "announcements", action: "create" },
+  };
+  for (const action of body.actions) {
+    const need = actionPerms[action.type];
+    if (!need) continue;
+    const denied = await requirePermission(ctx, need.module, need.action, req);
+    if (denied) return denied;
+  }
+
+  // 7.5) AI 服务配置检查（鉴权之后才做，见步骤 2 的说明）
+  if (!isAiConfigured()) return aiNotConfiguredResponse(req);
+
+  // 8) 执行联动方案（RLS 事务内原子执行）
   try {
     // z.enum 已校验 type ∈ 8 种合法枚举，validateActionFields 已校验必填字段 + 枚举值，
     // passthrough 保留所有字段，断言安全

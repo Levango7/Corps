@@ -319,7 +319,7 @@ paths:
                       seatLimit: { type: integer }
                       memberCount: { type: integer }
                       taskCount: { type: integer }
-                      role: { type: string, enum: [owner, admin, member] }
+                      role: { type: string, enum: [owner, admin, member, viewer] }
                       createdAt: { type: string, format: date-time }
         '401':
           $ref: '#/components/responses/Unauthorized'
@@ -719,7 +719,8 @@ paths:
       tags: [members]
       summary: Change a member's role (owner/admin)
       description: >
-        Owner/Admin only (member → 403). Allowed target roles are `admin` / `member`;
+        Owner/Admin only (member → 403). Allowed target roles are `admin` / `member` /
+        `viewer`（viewer = 只读成员，与 lib/permissions.ts 的 ROLES 及前端角色下拉一致）;
         the workspace owner's role cannot be changed (403). Unknown member → 404.
       operationId: updateMemberRole
       parameters:
@@ -735,7 +736,7 @@ paths:
               properties:
                 role:
                   type: string
-                  enum: [admin, member]
+                  enum: [admin, member, viewer]
       responses:
         '200':
           description: Role updated
@@ -749,7 +750,7 @@ paths:
                     type: object
                     properties:
                       id: { type: string, format: uuid }
-                      role: { type: string, enum: [admin, member] }
+                      role: { type: string, enum: [admin, member, viewer] }
         '400':
           $ref: '#/components/responses/BadRequest'
         '403':

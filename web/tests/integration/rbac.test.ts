@@ -392,3 +392,159 @@ describe("RBAC: viewer 只读角色（矩阵 tasks=r，此前零覆盖）", () =
     expect([200, 201]).toContain(res.status);
   });
 });
+
+describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵）", () => {
+  let dbId = "";
+  let recordId = "";
+
+  beforeAll(async () => {
+    // owner 建库（容器级 owner/admin 门禁保持原样，未改动）
+    const db = await fetch(`${BASE}/workspaces/${fixture.wid}/databases`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.owner.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "viewer 权限用例库" }),
+    });
+    expect(db.status, "owner 建多维表格应成功").toBe(201);
+    const dbJson = await db.json();
+    dbId = dbJson?.data?.id ?? "";
+    expect(dbId).toBeTruthy();
+
+    // owner 建一条记录供 viewer 改/删
+    const rec = await fetch(`${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.owner.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { 标题: "owner 的记录" } }),
+    });
+    expect(rec.status, "owner 建记录应成功").toBe(201);
+    const recJson = await rec.json();
+    recordId = recJson?.data?.id ?? "";
+    expect(recordId).toBeTruthy();
+  });
+
+  it("viewer 可读记录（r 权限放行）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records`, {
+      headers: authHeader(fixture.viewer.accessToken),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("viewer 创建记录返回 403（此前仅有成员资格校验，可直接写入）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { 标题: "viewer 不该建成的记录" } }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("viewer 改记录返回 403", async () => {
+    const res = await fetch(
+      `${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records/${recordId}`,
+      {
+        method: "PATCH",
+        headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+        body: JSON.stringify({ data: { 标题: "viewer 不该改动的记录" } }),
+      },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("viewer 删记录返回 403", async () => {
+    const res = await fetch(
+      `${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records/${recordId}`,
+      { method: "DELETE", headers: authHeader(fixture.viewer.accessToken) },
+    );
+    expect(res.status).toBe(403);
+  });
+
+  it("member 仍可创建记录（回归锚点：矩阵给 member 的是 crud，别一并锁死）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.member.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ data: { 标题: "member 应可写入" } }),
+    });
+    expect([200, 201]).toContain(res.status);
+  });
+
+  it("viewer 仍不能建多维表格（容器级 owner/admin 门禁未被放宽）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/databases`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "viewer 不该建成的库" }),
+    });
+    expect(res.status).toBe(403);
+  });
+});
+
+/**
+ * AI 落位面（ai/tools/execute、ai/orchestrate）此前只做成员资格校验，
+ * 只读成员可经"AI 建议 → 用户确认"这条链路写任务，绕过矩阵里 tasks=r 的声明。
+ * 修法是与手工路由共用同一条规则（requirePermission("tasks","create")），
+ * 并把鉴权判定提到"AI 服务是否配置"之前——否则无 key 环境（含 CI）永远测不到这条分支。
+ */
+describe("RBAC: viewer 不能经 AI 落位绕过只读", () => {
+  it("viewer 经 ai/tools/execute 建任务返回 403", async () => {
+    const res = await fetch(`${BASE}/ai/tools/execute`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toolName: "create_task",
+        args: { title: "viewer 不该经 AI 建成的任务" },
+        workspaceId: fixture.wid,
+      }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("member 经 ai/tools/execute 可建任务（回归锚点：别把 member 一起锁死）", async () => {
+    const res = await fetch(`${BASE}/ai/tools/execute`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.member.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        toolName: "create_task",
+        args: { title: "member 应可经 AI 落位的任务" },
+        workspaceId: fixture.wid,
+      }),
+    });
+    expect(res.status, "member 不该被 403").toBe(200);
+  });
+
+  it("viewer 经 ai/orchestrate 落位 createTask 返回 403", async () => {
+    const res = await fetch(`${BASE}/ai/orchestrate`, {
+      method: "PATCH",
+      headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wid: fixture.wid,
+        actions: [
+          {
+            type: "createTask",
+            title: "viewer 不该经联动建成的任务",
+            description: "",
+            priority: "medium",
+          },
+        ],
+      }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("member 经 ai/orchestrate 不被鉴权拦截（无 AI key 时到 503，说明已过权限门禁）", async () => {
+    const res = await fetch(`${BASE}/ai/orchestrate`, {
+      method: "PATCH",
+      headers: { ...authHeader(fixture.member.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({
+        wid: fixture.wid,
+        actions: [
+          {
+            type: "createTask",
+            title: "member 应通过鉴权段的联动任务",
+            description: "",
+            priority: "medium",
+          },
+        ],
+      }),
+    });
+    // 断言的是"权限段没拦住"：403 才是回归；后续 503（无 key）/200（有 key）都不算失败
+    expect(res.status, `member 不该被 403，实际 ${res.status}`).not.toBe(403);
+  });
+});

@@ -20,7 +20,6 @@ DELETE /api/v1/workspaces/{wid}/approvals/delegates/{did}
 DELETE /api/v1/workspaces/{wid}/approvals/instances/{aid}
 DELETE /api/v1/workspaces/{wid}/calendar/events/{eventId}
 DELETE /api/v1/workspaces/{wid}/contact-groups
-DELETE /api/v1/workspaces/{wid}/databases/{dbid}/records/{rid}
 DELETE /api/v1/workspaces/{wid}/folders/{fid}/permissions/{pid}
 DELETE /api/v1/workspaces/{wid}/forms/{fid}
 DELETE /api/v1/workspaces/{wid}/key-results/{kid}
@@ -36,7 +35,6 @@ PATCH /api/v1/ai/agents/{id}
 PATCH /api/v1/ai/meetings/sessions/{id}
 PATCH /api/v1/ai/meetings/sessions/{id}/actions
 PATCH /api/v1/ai/meetings/sessions/{id}/decisions
-PATCH /api/v1/ai/orchestrate
 PATCH /api/v1/ai/personalization/recommendations/{id}
 PATCH /api/v1/ai/push/records/{id}
 PATCH /api/v1/ai/push/schedules
@@ -55,7 +53,6 @@ PATCH /api/v1/users/me
 PATCH /api/v1/workspaces/{wid}/approvals/delegates/{did}
 PATCH /api/v1/workspaces/{wid}/calendar/events/{eventId}
 PATCH /api/v1/workspaces/{wid}/contact-groups
-PATCH /api/v1/workspaces/{wid}/databases/{dbid}/records/{rid}
 PATCH /api/v1/workspaces/{wid}/files/{fid}/move
 PATCH /api/v1/workspaces/{wid}/folders/{fid}/permissions/{pid}
 PATCH /api/v1/workspaces/{wid}/forms/{fid}
@@ -105,7 +102,6 @@ POST /api/v1/ai/task-breakdown
 POST /api/v1/ai/templates
 POST /api/v1/ai/templates/{id}/instantiate
 POST /api/v1/ai/todo-extract
-POST /api/v1/ai/tools/execute
 POST /api/v1/ai/translate
 POST /api/v1/ai/voice/command
 POST /api/v1/ai/wiki-search
@@ -147,7 +143,6 @@ POST /api/v1/workspaces/{wid}/calendar/events
 POST /api/v1/workspaces/{wid}/calendar/sync
 POST /api/v1/workspaces/{wid}/contact-groups
 POST /api/v1/workspaces/{wid}/dashboard/layout/import
-POST /api/v1/workspaces/{wid}/databases/{dbid}/records
 POST /api/v1/workspaces/{wid}/files/upload
 POST /api/v1/workspaces/{wid}/files/{fid}/versions/{vid}/restore
 POST /api/v1/workspaces/{wid}/folders/{fid}/permissions

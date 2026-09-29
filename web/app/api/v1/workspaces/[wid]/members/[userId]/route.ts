@@ -13,7 +13,10 @@ import { handlePrismaError } from "@/lib/prisma-error";
 import { requirePermission } from "@/lib/permissions";
 
 const updateSchema = z.object({
-  role: z.enum(["admin", "member"]),
+  // viewer 必须在此枚举内：lib/permissions.ts:56 的 ROLES、schema.prisma 的 role 注释
+  // 与前端角色下拉（MemberList.tsx:170/293 的 roleViewer）都承认只读成员，
+  // 唯独这里漏了它 → 用户选"只读成员"直接 400，声明的 viewer 矩阵根本无法赋予任何人。
+  role: z.enum(["admin", "member", "viewer"]),
 });
 
 export async function PATCH(

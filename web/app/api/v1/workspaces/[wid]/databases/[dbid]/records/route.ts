@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
@@ -8,7 +9,7 @@ import { apiMsg } from "@/lib/api-messages";
  * 多维表格记录 API · /api/v1/workspaces/{wid}/databases/{dbid}/records
  *
  * - GET：列出记录（支持筛选/排序/分页，query params: page, limit, filters, sorts）
- * - POST：创建记录（member 可写）
+ * - POST：创建记录（databaseRecords 矩阵：member 及以上可写，viewer 只读）
  *
  * 筛选/排序说明：
  *  - filters：JSON 字符串，格式 [{ fieldId, op, value }]，op 支持 eq/ne/contains
@@ -213,6 +214,11 @@ export async function POST(
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+
+  // 角色门禁：此前只有成员资格校验，只读成员（viewer）可直接建记录。
+  // databaseRecords 对 member 为 crud、对 viewer 为 r（lib/permissions.ts）。
+  const denied = await requirePermission(ctx, "databaseRecords", "create", req);
+  if (denied) return denied;
 
   try {
     const validated = createRecordSchema.parse(await req.json());

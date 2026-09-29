@@ -50,6 +50,11 @@ export const MODULES = [
   "timetrack",
   "announcements",
   "contacts",
+  // 多维表格拆两个模块：容器（建库/删库/改元数据）历史上仅 owner/admin，
+  // 记录与字段/视图数据面历史上 member 可写。合一个模块会同时误伤两者，
+  // 故按既有语义分层定义，viewer 两模块均只读。
+  "databases",
+  "databaseRecords",
 ] as const;
 
 /** 角色列表 */
@@ -89,6 +94,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     timetrack: "crud",
     announcements: "crud",
     contacts: "crud",
+    databases: "crud",
+    databaseRecords: "crud",
   },
   admin: {
     tasks: "crud",
@@ -103,6 +110,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     timetrack: "crud",
     announcements: "crud",
     contacts: "crud",
+    databases: "crud",
+    databaseRecords: "crud",
   },
   member: {
     tasks: "crud",
@@ -117,6 +126,9 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     timetrack: "crud",
     announcements: "r",
     contacts: "cr",
+    // 容器仍限 owner/admin（与既有 ad-hoc 门禁等价），数据面 member 可写（等价既有行为）
+    databases: "r",
+    databaseRecords: "crud",
   },
   viewer: {
     tasks: "r",
@@ -131,6 +143,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     timetrack: "r",
     announcements: "r",
     contacts: "r",
+    databases: "r",
+    databaseRecords: "r",
   },
 };
 

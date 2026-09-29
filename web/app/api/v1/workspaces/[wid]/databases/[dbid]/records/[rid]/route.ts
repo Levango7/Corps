@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
@@ -7,8 +8,8 @@ import { apiMsg } from "@/lib/api-messages";
 /**
  * 多维表格记录详情 API · /api/v1/workspaces/{wid}/databases/{dbid}/records/{rid}
  *
- * - PATCH：更新记录数据（member 可写）
- * - DELETE：删除记录（member 可写）
+ * - PATCH：更新记录数据（databaseRecords 矩阵：member 及以上可写，viewer 只读）
+ * - DELETE：删除记录（同上）
  */
 
 const updateRecordSchema = z.object({
@@ -28,6 +29,10 @@ export async function PATCH(
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+
+  // 角色门禁：只读成员此前可改记录（仅有成员资格校验）。
+  const denied = await requirePermission(ctx, "databaseRecords", "update", req);
+  if (denied) return denied;
 
   try {
     const validated = updateRecordSchema.parse(await req.json());
@@ -100,6 +105,10 @@ export async function DELETE(
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+
+  // 角色门禁：只读成员此前可删记录（仅有成员资格校验）。
+  const denied = await requirePermission(ctx, "databaseRecords", "delete", req);
+  if (denied) return denied;
 
   try {
     const result = await runWithWorkspace(
