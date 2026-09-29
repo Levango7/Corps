@@ -94,6 +94,12 @@ export async function PATCH(
       { status: 401 },
     );
 
+  // 矩阵声明 viewer 对 tasks 只有 "r"；PATCH 此前只卡"改指派人需 admin/owner"，
+  // 对标题/描述/状态等普通字段没有任何角色判断，只读成员因此仍能改任务本体。
+  // 与同文件 DELETE 的 requirePermission("tasks","delete") 口径对齐。
+  const deniedUpdate = await requirePermission(ctx, "tasks", "update", req);
+  if (deniedUpdate) return deniedUpdate;
+
   try {
     const body = await req.json();
     const validated = updateTaskSchema.parse(body);

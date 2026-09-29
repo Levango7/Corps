@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { sendTaskAssignedEmail, isEmailConfigured } from "@/lib/email";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { requirePermission } from "@/lib/permissions";
 import { handlePrismaError } from "@/lib/prisma-error";
 // M4 实时协作：任务创建后通过 workspace-events 总线广播 task.created 事件，
 // SSE 端点 /events/stream 订阅者（看板/详情页）实时刷新。
@@ -264,6 +265,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+  // 矩阵声明 viewer 对 tasks 只有 "r"，但创建路径此前只认证不判角色，
+  // 只读成员因此可以直接建任务。与同文件 DELETE/批量的口径对齐。
+  const denied = await requirePermission(ctx, "tasks", "create", req);
+  if (denied) return denied;
 
   try {
     const body = await req.json();

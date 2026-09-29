@@ -87,7 +87,6 @@ jobs:
       - name: Assert schema.prisma objects all exist in deployed db
         run: python scripts/check_schema_migration_drift.py --database-url "postgresql://postgres:test@localhost:5432/corps_drift"
 
-
   # API 契约防漂移：扫描 web/app/api/**/route.ts 得到实际路由，与
   # api/openapi.yaml 的 path 声明的差集不得超过 scripts/api-contract-baseline.txt。
   # 基线只允许收缩：新增路由必须同步契约，或显式追加到基线。
@@ -99,6 +98,18 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check API contract drift
         run: python scripts/check_api_contract.py
+
+  # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
+  # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
+  # 基线 scripts/permission-gate-baseline.txt 只允许收缩。
+  # 轻量 job（仅需 checkout + Python），与其他 job 并行运行。
+  permission-gate:
+    name: Permission Gate Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check role-permission enforcement coverage (shrink-only)
+        run: python scripts/check_permission_gates.py
 
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
   # 独立 job 并行运行，与 test job 互不阻塞，缩短 CI 总时长

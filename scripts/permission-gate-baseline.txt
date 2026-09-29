@@ -1,0 +1,56 @@
+# 角色权限矩阵尚未落地的写 handler —— 只允许收缩
+#
+# 用途：check_permission_gates.py 用它区分「历史遗留」与「新增缺口」。
+#   - 基线内的无门禁写 handler：允许存在（逐步补齐）
+#   - 基线外的新增：CI 失败（新写接口必须在认证后调用 requirePermission）
+#   - 基线里已修复却未删除：同样失败（防豁免腐烂）
+#
+# 判定口径是 handler 级而非文件级：同文件内 DELETE 有门禁、PATCH 没有的情形真实存在，
+# 按文件统计会把这类缺口算成「已覆盖」。
+# 已显式排除（语义上不是写租户内容，按矩阵一刀切会误伤 viewer）：*/read、*/share/verify
+# 重建方式：删除本文件后运行 python scripts/check_permission_gates.py 读取打印的清单
+
+DELETE /api/v1/workspaces/{wid}/announcements/{aid}
+DELETE /api/v1/workspaces/{wid}/contacts/{cid}
+DELETE /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
+DELETE /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
+DELETE /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
+DELETE /api/v1/workspaces/{wid}/labels
+DELETE /api/v1/workspaces/{wid}/milestones
+DELETE /api/v1/workspaces/{wid}/tasks/{id}/comments
+DELETE /api/v1/workspaces/{wid}/whiteboards/{wbid}
+PATCH /api/v1/workspaces/{wid}/announcements/{aid}
+PATCH /api/v1/workspaces/{wid}/contacts/{cid}
+PATCH /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}
+PATCH /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
+PATCH /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
+PATCH /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
+PATCH /api/v1/workspaces/{wid}/labels
+PATCH /api/v1/workspaces/{wid}/milestones
+PATCH /api/v1/workspaces/{wid}/tasks/{id}/comments
+PATCH /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}
+PATCH /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}
+PATCH /api/v1/workspaces/{wid}/whiteboards/{wbid}
+POST /api/v1/workspaces/{wid}/conversations
+POST /api/v1/workspaces/{wid}/conversations/{cid}/messages
+POST /api/v1/workspaces/{wid}/decisions/extract
+POST /api/v1/workspaces/{wid}/documents
+POST /api/v1/workspaces/{wid}/documents/{id}/comments
+POST /api/v1/workspaces/{wid}/documents/{id}/permissions
+POST /api/v1/workspaces/{wid}/documents/{id}/share-links
+POST /api/v1/workspaces/{wid}/documents/{id}/versions
+POST /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}
+POST /api/v1/workspaces/{wid}/labels
+POST /api/v1/workspaces/{wid}/members/invite
+POST /api/v1/workspaces/{wid}/milestones
+POST /api/v1/workspaces/{wid}/tasks/{id}/comments
+POST /api/v1/workspaces/{wid}/tasks/{id}/conversation
+POST /api/v1/workspaces/{wid}/tasks/{id}/decisions
+POST /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/sync-actions
+POST /api/v1/workspaces/{wid}/tasks/{id}/messages
+POST /api/v1/workspaces/{wid}/tasks/{id}/messages/attachments
+POST /api/v1/workspaces/{wid}/tasks/{id}/messages/send
+POST /api/v1/workspaces/{wid}/time-entries
+POST /api/v1/workspaces/{wid}/time-entries/start
+POST /api/v1/workspaces/{wid}/time-entries/stop
+POST /api/v1/workspaces/{wid}/whiteboards

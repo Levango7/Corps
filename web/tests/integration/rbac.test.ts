@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { BASE, registerUser, inviteMember, authHeader } from "../helpers";
+import { BASE, registerUser, inviteMember, authHeader, createTask } from "../helpers";
 
 /**
  * RBAC 权限集成测试
@@ -13,13 +13,20 @@ import { BASE, registerUser, inviteMember, authHeader } from "../helpers";
  * │ 移除成员 │ ✓        │ ✓        │ ✗ 403    │ 401     │
  * │ 计费    │ ✓        │ ✗ 403    │ ✗ 403    │ 401     │
  * │ 读任务  │ ✓        │ ✓        │ ✓        │ 401     │
+ * │ 建任务  │ ✓        │ ✓        │ ✓        │ 401     │
  * └─────────┴──────────┴──────────┴──────────┴─────────┘
+ *
+ * 另有独立的 "RBAC: viewer 只读角色" 用例组。viewer 列是后补的：
+ * lib/permissions.ts 的矩阵一直声明 viewer 全只读，但本文件原先只有
+ * owner/admin/member/outsider 四列、viewer 零覆盖，于是"只读成员可以建/改任务"
+ * 长期无人发现。
  */
 
 interface TestFixture {
   owner: { user: { id: string; email: string }; accessToken: string; workspace: { id: string } };
   admin: { user: { id: string; email: string }; accessToken: string };
   member: { user: { id: string; email: string }; accessToken: string };
+  viewer: { user: { id: string; email: string }; accessToken: string };
   outsider: { user: { id: string; email: string }; accessToken: string; workspace: { id: string } };
   wid: string;
 }
@@ -103,6 +110,42 @@ beforeAll(async () => {
     ?.split("=")[1]
     ?.split(";")[0];
 
+  // viewer 只读成员：矩阵声明 viewer 对 tasks 只有 "r"，此前整条矩阵没有 viewer 用例，
+  // 所以"只读成员可写"这个缺陷长期无人发现。
+  const viewerUser = await registerUser({ prefix: "rbac-viewer" });
+  const inviteViewer = await inviteMember(
+    owner.accessToken,
+    owner.workspace.id,
+    viewerUser.user.email,
+  );
+  expect(inviteViewer.status).toBe(201);
+  const setViewerRes = await fetch(
+    `${BASE}/workspaces/${owner.workspace.id}/members/${viewerUser.user.id}`,
+    {
+      method: "PATCH",
+      headers: { ...authHeader(owner.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ role: "viewer" }),
+    },
+  );
+  expect(setViewerRes.status).toBe(200);
+
+  const viewerLogin = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: viewerUser.user.email, password: "Test123456!" }),
+  });
+  const viewerCookies = viewerLogin.headers.getSetCookie?.() ?? [];
+  const viewerRefresh = await fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    headers: { Cookie: viewerCookies.join("; "), "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId: owner.workspace.id }),
+  });
+  const viewerRefreshCookies = viewerRefresh.headers.getSetCookie?.() ?? [];
+  const viewerWidToken = viewerRefreshCookies
+    .find((c) => c.startsWith("access_token="))
+    ?.split("=")[1]
+    ?.split(";")[0];
+
   fixture = {
     owner: {
       user: { id: owner.user.id, email: owner.user.email },
@@ -116,6 +159,10 @@ beforeAll(async () => {
     member: {
       user: { id: memberUser.user.id, email: memberUser.user.email },
       accessToken: memberWidToken ?? "",
+    },
+    viewer: {
+      user: { id: viewerUser.user.id, email: viewerUser.user.email },
+      accessToken: viewerWidToken ?? "",
     },
     outsider: {
       user: { id: outsider.user.id, email: outsider.user.email },
@@ -289,5 +336,59 @@ describe("RBAC: 任务读权限（所有成员可读）", () => {
       headers: authHeader(fixture.outsider.accessToken),
     });
     expect([401, 403, 404]).toContain(res.status);
+  });
+});
+
+describe("RBAC: viewer 只读角色（矩阵 tasks=r，此前零覆盖）", () => {
+  let taskId: string;
+
+  beforeAll(async () => {
+    const created = await createTask(fixture.owner.accessToken, fixture.wid, {
+      title: "viewer 权限用例目标任务",
+    });
+    taskId = created.body?.data?.id ?? "";
+    expect(taskId, `owner 建任务应成功，实际 ${created.status}`).toBeTruthy();
+  });
+
+  it("viewer 可以读任务列表（r 权限应放行）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks`, {
+      headers: authHeader(fixture.viewer.accessToken),
+    });
+    expect(res.status).toBe(200);
+  });
+
+  it("viewer 创建任务返回 403", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "viewer 不该建成的任务" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("viewer 修改任务字段返回 403（PATCH 本体，非改指派人）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks/${taskId}`, {
+      method: "PATCH",
+      headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "viewer 不该改动的标题" }),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("viewer 删除任务返回 403", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks/${taskId}`, {
+      method: "DELETE",
+      headers: authHeader(fixture.viewer.accessToken),
+    });
+    expect(res.status).toBe(403);
+  });
+
+  it("member 仍可创建任务（回归锚点：别把 member 一起锁死）", async () => {
+    const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks`, {
+      method: "POST",
+      headers: { ...authHeader(fixture.member.accessToken), "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "member 应可创建" }),
+    });
+    expect([200, 201]).toContain(res.status);
   });
 });
