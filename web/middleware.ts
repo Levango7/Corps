@@ -137,6 +137,17 @@ export function middleware(req: NextRequest) {
   const nonce = generateNonce();
   res.headers.set("x-nonce", nonce);
 
+  // 鉴权型 JSON 接口一律不可缓存。此前 /api 的 GET 不带任何 Cache-Control，
+  // 生产浏览器按启发式复用旧响应：实测新建子任务后 reload 任务详情页，
+  // GET /tasks/{id} 返回的仍是创建前的 children=[]（e2e v04-features :50 的红因）。
+  // 二进制下载/上传路由自己声明了 max-age，保留它们的口径。
+  const isBinaryAsset =
+    pathname.startsWith("/api/uploads/") ||
+    /\/api\/v1\/workspaces\/[^/]+\/files\/[^/]+\/download$/.test(pathname);
+  if (isApiPath(pathname) && !isBinaryAsset) {
+    res.headers.set("Cache-Control", "no-store");
+  }
+
   // CORS 响应头：仅对白名单命中的跨源请求回显（同源请求无 Origin，行为不变）
   if (corsOrigin) {
     res.headers.set("Access-Control-Allow-Origin", corsOrigin);

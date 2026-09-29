@@ -71,8 +71,11 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 附件按钮（aria-label = i18n: chat.attachFile）
     await expect(page.getByRole("button", { name: "添加附件" })).toBeVisible({ timeout: 10_000 });
 
-    // 搜索按钮（aria-label = i18n: chat.search）
-    await expect(page.getByRole("button", { name: "搜索消息" })).toBeVisible({ timeout: 10_000 });
+    // 消息搜索不在这个面板：IM 升级把搜索从任务详情挪到 /im 页
+    // （docs/design/im-architecture.md:36、72 —— /v1/workspaces/{wid}/tasks/{id}/messages
+    // 换成 /v1/im/search，组件是 components/im/MessageSearch.tsx，由 IMClient 挂载）。
+    // 此处曾断言旧 ChatPanel 的「搜索消息」开关，TaskChatPanel/ChatWindow 没有该控件，
+    // 所以恒红；搜索的真实覆盖放在下面的「IM 页跨会话搜索」用例。
   });
 
   // ── 发送消息并通过 SSE 接收 ──
@@ -136,27 +139,33 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     await gotoTaskDetail(page, wid, `E2E-IM-Search-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
-    const searchableText = `可搜索消息UniqueToken${Date.now()}`;
+    // 后端全文检索用 'simple' 解析器：整段无空格文本只生成一个 token，子串搜不到
+    // （实测 to_tsvector('simple','可搜索消息UniqueToken123')
+    //   @@ plainto_tsquery('simple','UniqueToken') = false，
+    //   而 '可搜索消息 UniqueToken123 结尾' 用完整 token 查 = true）。
+    // 所以关键词必须用空格独立成词，这里按实现能力搜完整 token。
+    const token = `UniqueToken${Date.now()}`;
+    const searchableText = `可搜索消息 ${token} 结尾`;
     await input.fill(searchableText);
     await page.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(page.getByText(searchableText)).toBeVisible({ timeout: 10_000 });
 
-    // 打开搜索框
+    // 搜索入口在 /im 页的 MessageSearch（跨会话全文搜索 /v1/im/search），
+    // 不在任务详情的聊天面板里——见 docs/design/im-architecture.md:36,72。
+    // 面板上没有搜索按钮，所以这里改为走真正实现了搜索的那一面，覆盖不减少。
+    await page.goto(`/w/${wid}/im`);
+    // 搜索面板默认收起，先展开（按钮名 = im.search 的开关）
     await page.getByRole("button", { name: "搜索消息" }).click();
+    const searchInput = page.getByPlaceholder(/搜索消息/);
+    await expect(searchInput).toBeVisible({ timeout: 20_000 });
 
-    // 输入搜索关键词
-    const searchInput = page.getByPlaceholder("搜索消息");
-    await searchInput.fill("UniqueToken");
+    // 输入命中的关键词：结果里出现那条消息（/v1/im/search 此前恒 500，见 uuid 转换修复）
+    await searchInput.fill(token);
+    await expect(page.getByText(token).first()).toBeVisible({ timeout: 20_000 });
 
-    // 消息仍可见（匹配）
-    await expect(page.getByText(searchableText)).toBeVisible({ timeout: 10_000 });
-
-    // 输入不匹配的关键词
+    // 输入不匹配的关键词：显示无结果提示（i18n: im.search.noResults）
     await searchInput.fill("不存在的关键词XYZ123");
-
-    // 应显示无结果提示（i18n: chat.noResults；.first()：ChatPanel 计数条与
-    // MessageList 空态各渲染一处）
-    await expect(page.getByText("无搜索结果").first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/未找到包含/).first()).toBeVisible({ timeout: 20_000 });
   });
 
   // ── 文件附件上传（≤10MB 限制）──

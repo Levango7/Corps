@@ -22,7 +22,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useIMWebSocket } from "@/lib/im/ws-client";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import type { ServerMessage, MessagePayload } from "@/lib/im/types";
 import type { Conversation, Message, SendMessageOptions, CreateConversationParams } from "./types";
 
@@ -151,8 +151,11 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
     setLoading(true);
     setError(null);
     try {
-      const data = await api<Conversation[]>(`/api/v1/workspaces/${workspaceId}/conversations`);
-      setConversations(data ?? []);
+      // GET /conversations 返回分页信封 { items, nextCursor, hasMore }，不是裸数组。
+      // 曾把信封直接存进 conversations，下一次 setConversations(prev => prev.map(...))
+      // 就在渲染期抛 TypeError，任务详情页整体被打进路由级错误边界。
+      const list = await apiList<Conversation>(`/api/v1/workspaces/${workspaceId}/conversations`);
+      setConversations(list);
     } catch (err) {
       setError(
         err instanceof Error

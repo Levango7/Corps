@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { api, ApiError } from "@/lib/api";
+import { api, apiList, ApiError } from "@/lib/api";
 import { Check, CheckCheck, Loader2, MessageSquare, Pencil, Reply, Trash2, X } from "lucide-react";
 
 // ── 类型定义（对应设计文档 §2.4.1 Prisma schema）──
@@ -114,7 +114,8 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
     setLoading(true);
     setError("");
     try {
-      const data = await api<DocumentComment[]>(
+      // GET /documents/{id}/comments 是分页信封 { items, total }，不是裸数组
+      const data = await apiList<DocumentComment>(
         `/api/v1/workspaces/${wid}/documents/${docId}/comments`,
       );
       setComments(data);

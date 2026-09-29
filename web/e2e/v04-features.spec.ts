@@ -138,7 +138,11 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
     await titleInput.fill("E2E 测试文档");
     await titleInput.blur();
 
+    // 编辑器默认模式是 TipTap 富文本（contenteditable），textarea 只在「Markdown」源码模式挂载；
+    // 此前直接找 textarea 会等 60s 超时——先切模式再灌 Markdown 源码
+    await page.getByRole("button", { name: "Markdown", exact: true }).click();
     const editor = page.locator("textarea").filter({ visible: true }).last();
+    await expect(editor).toBeVisible({ timeout: 10_000 });
     await editor.fill("# 一级标题\n\n这是**加粗**正文");
     await editor.blur();
 

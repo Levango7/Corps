@@ -140,10 +140,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
          FROM messages m
          LEFT JOIN users u ON u.id = m.author_id
          LEFT JOIN conversations c ON c.id = m.conversation_id
-         WHERE m.workspace_id = $2
+         WHERE m.workspace_id = $2::uuid
            AND m.body_tsv @@ plainto_tsquery('simple', $1)
            AND m.revoked_at IS NULL
-           AND m.conversation_id = $4
+           AND m.conversation_id = $4::uuid
          ORDER BY rank DESC, m.created_at DESC
          LIMIT $3`
       : `SELECT
@@ -160,7 +160,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
          FROM messages m
          LEFT JOIN users u ON u.id = m.author_id
          LEFT JOIN conversations c ON c.id = m.conversation_id
-         WHERE m.workspace_id = $2
+         WHERE m.workspace_id = $2::uuid
            AND m.body_tsv @@ plainto_tsquery('simple', $1)
            AND m.revoked_at IS NULL
          ORDER BY rank DESC, m.created_at DESC

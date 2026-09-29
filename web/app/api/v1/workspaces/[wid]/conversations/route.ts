@@ -2,7 +2,6 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
-import { Prisma } from "@prisma/client";
 
 /**
  * 独立 IM 会话 API（任务 212）
@@ -101,6 +100,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         // 未读定义：createdAt > member.lastReadAt 且 authorId != userId
         // lastReadAt 为 null 时，统计所有非自己发送的消息
         const conversationIds = page.map((conv) => conv.id);
+        // uuid 列须显式 cast 成 uuid[]：JS 数组会被绑成 text，
+        // 直接 IN (text…) 在 PG 报 42883 operator does not exist: uuid = text
         const unreadResults =
           conversationIds.length > 0
             ? await tx.$queryRaw<{ conversation_id: string; unread_count: bigint }[]>`
@@ -109,7 +110,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
               JOIN conversation_members cm
                 ON m.conversation_id = cm.conversation_id
                AND cm.user_id = ${userId}::uuid
-              WHERE m.conversation_id IN (${Prisma.join(conversationIds)})
+              WHERE m.conversation_id = ANY(${conversationIds}::uuid[])
                 AND m.author_id IS DISTINCT FROM ${userId}::uuid
                 AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
               GROUP BY m.conversation_id`

@@ -45,7 +45,7 @@ import {
   Trash2,
 } from "lucide-react";
 import Markdown from "@/components/Markdown";
-import { api } from "@/lib/api";
+import { apiList } from "@/lib/api";
 
 interface DocQaPanelProps {
   /** 工作区 ID */
@@ -202,10 +202,12 @@ export function DocQaPanel({ wid }: DocQaPanelProps) {
   useEffect(() => {
     let cancelled = false;
     setDocListLoading(true);
-    api<WikiPageNode[]>(`/api/v1/workspaces/${wid}/wiki`)
+    apiList<WikiPageNode>(`/api/v1/workspaces/${wid}/wiki`)
       .then((data) => {
         if (cancelled) return;
-        setDocList(flattenWikiPages(Array.isArray(data) ? data : []));
+        // GET /wiki 是分页信封 { items, total, hasMore }；此前按裸数组消费并被
+        // Array.isArray 兜底成 []，等于文档列表永远为空（静默失效，不报错）
+        setDocList(flattenWikiPages(data));
       })
       .catch(() => {
         if (cancelled) return;

@@ -3,7 +3,7 @@
 import { useEffect, useState, use, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Plus, Loader2, X } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import { ContactGroupSidebar } from "@/components/contact/ContactGroupSidebar";
 import { ContactList } from "@/components/contact/ContactList";
 import { ContactDetail } from "@/components/contact/ContactDetail";
@@ -136,7 +136,7 @@ function CreateContactDialog({
   });
 
   useEffect(() => {
-    api<ContactGroupItem[]>(`/api/v1/workspaces/${wid}/contact-groups`)
+    apiList<ContactGroupItem>(`/api/v1/workspaces/${wid}/contact-groups`)
       .catch(() => [] as ContactGroupItem[])
       .then(setGroups);
   }, [wid]);

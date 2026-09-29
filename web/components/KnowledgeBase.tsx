@@ -28,7 +28,7 @@ import {
 } from "react";
 import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
-import { api, ApiError } from "@/lib/api";
+import { api, apiList, ApiError } from "@/lib/api";
 import {
   Book,
   ChevronRight,
@@ -124,6 +124,9 @@ function getIcon(name: string, fallback: IconName = "file-text") {
 
 /** 按 sortOrder 升序排列 */
 function sortByOrder<T extends { sortOrder: number }>(items: T[]): T[] {
+  // 缺数组时返回空而不是抛 "is not iterable"：本组件在 space/folder/document 三层都调用它，
+  // 任一层数据形状异常都不该把整个文档中心页送进路由级错误边界。
+  if (!Array.isArray(items)) return [];
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
@@ -168,13 +171,17 @@ export function KnowledgeBase({ wid, className }: KnowledgeBaseProps) {
     setLoading(true);
     setError("");
     try {
-      const data = await api<Space[]>(`/api/v1/workspaces/${wid}/spaces`);
+      // 必须用 apiList：GET /spaces 返回分页信封 { items, total }，
+      // 此前写成 api<Space[]>() 再把结果当数组迭代（for...of / [...items]），
+      // 在生产构建里直接抛 TypeError: e is not iterable，整页进错误边界。
+      const data = await apiList<Space>(`/api/v1/workspaces/${wid}/spaces`);
       setSpaces(data);
       // 初始化展开状态：所有空间默认展开，文件夹按 expanded 字段
       const expanded = new Set<string>();
       for (const s of data) {
         expanded.add(s.id);
         const initFolderExpanded = (folders: Folder[]) => {
+          if (!Array.isArray(folders)) return;
           for (const f of folders) {
             if (f.expanded) expanded.add(f.id);
             initFolderExpanded(f.children);

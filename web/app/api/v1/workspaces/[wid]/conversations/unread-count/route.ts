@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
-import { Prisma } from "@prisma/client";
 
 /**
  * 未读消息计数 API
@@ -39,6 +38,8 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         }
 
         // 2. 批量计算每个会话的未读数（消除 N+1：单次 raw SQL 聚合查询）
+        //    uuid 列须显式 cast 成 uuid[]：JS 数组会被绑成 text，
+        //    IN (text…) 与 uuid 列比较在 PG 直接 42883 operator does not exist
         const conversationIds = memberships.map((m) => m.conversationId);
         const unreadResults = await tx.$queryRaw<
           { conversation_id: string; unread_count: bigint }[]
@@ -48,7 +49,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           JOIN conversation_members cm
             ON m.conversation_id = cm.conversation_id
            AND cm.user_id = ${userId}::uuid
-          WHERE m.conversation_id IN (${Prisma.join(conversationIds)})
+          WHERE m.conversation_id = ANY(${conversationIds}::uuid[])
             AND m.author_id IS DISTINCT FROM ${userId}::uuid
             AND (cm.last_read_at IS NULL OR m.created_at > cm.last_read_at)
           GROUP BY m.conversation_id`;

@@ -12,7 +12,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
  * - POST：创建空间（仅 owner/admin）
  */
 
-/** GET /v1/workspaces/{wid}/spaces — 列出工作区所有空间 */
+/** GET /v1/workspaces/{wid}/spaces — 列出工作区所有空间（含 KnowledgeBase 渲染所需的整棵树） */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContext(req, wid);
@@ -23,18 +23,101 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
 
   try {
-    const spaces = await runWithWorkspace(
+    // Prisma 不支持递归 include，故三次扁平查询后在内存里装配（单工作区规模有界，各带 take 兜底）。
+    // 必须连树一起返回：components/KnowledgeBase.tsx 渲染 space.folders / space.documents /
+    // folder.children，此前本路由只返回 space 标量 → 前端拿到 undefined 后 `[...items]` 抛
+    // TypeError: e is not iterable，整个文档中心页被路由级错误边界接管。
+    const [spaceRows, folderRows, docRows] = await runWithWorkspace(
       wid,
-      (tx) =>
-        tx.space.findMany({
+      async (tx) => [
+        await tx.space.findMany({
           where: { workspaceId: wid },
           orderBy: { sortOrder: "asc" },
-          // 上限保护：单工作区空间数量不会很多，取 200 兜底
           take: 200,
+          select: { id: true, name: true, icon: true, color: true, sortOrder: true },
         }),
+        await tx.folder.findMany({
+          where: { space: { workspaceId: wid } },
+          orderBy: { sortOrder: "asc" },
+          take: 2000,
+          select: {
+            id: true,
+            name: true,
+            icon: true,
+            sortOrder: true,
+            expanded: true,
+            parentId: true,
+            spaceId: true,
+          },
+        }),
+        await tx.document.findMany({
+          where: { workspaceId: wid, spaceId: { not: null } },
+          orderBy: { sortOrder: "asc" },
+          take: 2000,
+          select: {
+            id: true,
+            title: true,
+            icon: true,
+            emoji: true,
+            sortOrder: true,
+            updatedAt: true,
+            spaceId: true,
+            folderId: true,
+          },
+        }),
+      ],
       ctx.payload.sub,
     );
-    return NextResponse.json({ code: 200, data: { items: spaces, total: spaces.length } });
+
+    type DocNode = (typeof docRows)[number];
+    type FolderNode = (typeof folderRows)[number] & {
+      children: FolderNode[];
+      documents: DocNode[];
+    };
+
+    const docsByFolder = new Map<string, DocNode[]>();
+    const docsBySpaceRoot = new Map<string, DocNode[]>();
+    for (const d of docRows) {
+      if (!d.spaceId) continue;
+      if (d.folderId) {
+        const list = docsByFolder.get(d.folderId) ?? [];
+        list.push(d);
+        docsByFolder.set(d.folderId, list);
+      } else {
+        const list = docsBySpaceRoot.get(d.spaceId) ?? [];
+        list.push(d);
+        docsBySpaceRoot.set(d.spaceId, list);
+      }
+    }
+
+    const folderNodes = new Map<string, FolderNode>();
+    for (const f of folderRows) {
+      folderNodes.set(f.id, {
+        ...f,
+        children: [],
+        documents: docsByFolder.get(f.id) ?? [],
+      });
+    }
+    const rootsBySpace = new Map<string, FolderNode[]>();
+    for (const f of folderRows) {
+      const node = folderNodes.get(f.id)!;
+      const parent = f.parentId ? folderNodes.get(f.parentId) : undefined;
+      // parent 不存在（父级被删或跨空间脏数据）时按根级处理，避免子树静默消失
+      if (parent) parent.children.push(node);
+      else {
+        const list = rootsBySpace.get(f.spaceId) ?? [];
+        list.push(node);
+        rootsBySpace.set(f.spaceId, list);
+      }
+    }
+
+    const items = spaceRows.map((s) => ({
+      ...s,
+      folders: rootsBySpace.get(s.id) ?? [],
+      documents: docsBySpaceRoot.get(s.id) ?? [],
+    }));
+
+    return NextResponse.json({ code: 200, data: { items, total: items.length } });
   } catch (error) {
     console.error("[GET spaces] error:", error);
     return NextResponse.json(

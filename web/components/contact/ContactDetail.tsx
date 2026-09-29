@@ -21,7 +21,7 @@ import {
   FileText,
   User,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { api, apiList } from "@/lib/api";
 import type { ContactDetail, ContactGroupItem } from "./types";
 
 export function ContactDetail({
@@ -67,7 +67,7 @@ export function ContactDetail({
       api<ContactDetail>(`/api/v1/workspaces/${wid}/contacts/${contactId}`).catch((e) => {
         throw e;
       }),
-      api<ContactGroupItem[]>(`/api/v1/workspaces/${wid}/contact-groups`).catch(
+      apiList<ContactGroupItem>(`/api/v1/workspaces/${wid}/contact-groups`).catch(
         () => [] as ContactGroupItem[],
       ),
     ])
