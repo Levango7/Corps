@@ -4,9 +4,6 @@
 # 判定口径为 handler 级；重建本文件前请逐条确认语义。
 DELETE /api/v1/im/messages/{id}
 DELETE /api/v1/workspaces/{wid}/approvals/templates/{tid}
-DELETE /api/v1/workspaces/{wid}/databases/{dbid}
-DELETE /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
-DELETE /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
 DELETE /api/v1/workspaces/{wid}/files/{fid}
 DELETE /api/v1/workspaces/{wid}/meeting-minutes/{mid}
 DELETE /api/v1/workspaces/{wid}/meetings/{mid}
@@ -14,9 +11,6 @@ DELETE /api/v1/workspaces/{wid}/spaces
 DELETE /api/v1/workspaces/{wid}/spaces/{spaceId}/folders
 PATCH /api/v1/workspaces/{wid}
 PATCH /api/v1/workspaces/{wid}/approvals/templates/{tid}
-PATCH /api/v1/workspaces/{wid}/databases/{dbid}
-PATCH /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
-PATCH /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
 PATCH /api/v1/workspaces/{wid}/meeting-minutes/{mid}
 PATCH /api/v1/workspaces/{wid}/meetings/{mid}
 PATCH /api/v1/workspaces/{wid}/spaces
@@ -27,9 +21,6 @@ POST /api/v1/ai/daily-report
 POST /api/v1/ai/feedback
 POST /api/v1/ai/knowledge-qa
 POST /api/v1/remote-control
-POST /api/v1/workspaces/{wid}/databases
-POST /api/v1/workspaces/{wid}/databases/{dbid}/fields
-POST /api/v1/workspaces/{wid}/databases/{dbid}/views
 POST /api/v1/workspaces/{wid}/meetings/{mid}/recording/start
 POST /api/v1/workspaces/{wid}/meetings/{mid}/recording/stop
 POST /api/v1/workspaces/{wid}/spaces

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-check_permission_gates.py — 角色权限矩阵落地缺口门禁（三档，均只允许收缩）
+check_permission_gates.py — 角色权限矩阵落地缺口门禁（五档，均只允许收缩）
 
 背景：lib/permissions.ts 声明了 owner/admin/member/viewer 的角色矩阵（viewer 全只读），
 但写接口只有少数调用 requirePermission，导致"声明"与"执行"脱节。
@@ -8,7 +8,7 @@ check_permission_gates.py — 角色权限矩阵落地缺口门禁（三档，�
 判定口径是 **handler 级**而非文件级：同一文件里 DELETE 有门禁、PATCH 没有的情形真实存在，
 按文件统计会把这类缺口算成"已覆盖"（本仓库真实存在此情形）。
 
-三档划分（关键改动：把"扫描盲区"变成"显式挂账"，不让门禁只对它看得见的那部分负责）：
+五档划分（关键改动：把"扫描盲区"变成"显式挂账"，不让门禁只对它看得见的那部分负责）：
 
   T1 MATRIX_NONE     矩阵可判定域内、**完全没有任何角色判断**的写 handler → 真缺口。
   T2 MATRIX_ADHOC    矩阵可判定域内、只有 ad-hoc 角色比较而没走矩阵的写 handler。
@@ -17,26 +17,40 @@ check_permission_gates.py — 角色权限矩阵落地缺口门禁（三档，�
   T3 UNSCOPED_NONE   矩阵未定义该资源域（databases / approvals / ai / okr …）且**完全无角色判断**
                      的写 handler → 只读成员在这些域上的可写面，未评估、挂账防增长。
   T4 UNSCOPED_ADHOC  矩阵外、但有 ad-hoc 角色判断 → 待产品定义矩阵模块后再收敛到 requirePermission。
+  T5 MODULE_UNWIRED  permissions.ts 的 MODULES 里声明了、但生产代码**零 requirePermission 调用点**
+                     的模块 → 矩阵对这些模块的约束只是声明。这是本项目反复出现的形态在本脚本里的
+                     落点："函数正确 ≠ 函数被调用"，此处为"模块存在 ≠ 模块被接线"。
 
-口径修正记录（2026-09-29）：旧版只扫 `v1/workspaces/[wid]`，且把 `role ===` 当唯一门禁信号，
-于是 `if (!["owner","admin"].includes(ctx.member.role))` 这类**真实存在的 ad-hoc 门禁**
-被误判为缺口——旧基线的 44 条里 35 条属此类（T2），真零判断只有 9 条（T1）。
-反向问题更严重：矩阵域外的 243 个写 handler 旧版根本不看（T3/T4）。
+模块清单的**唯一真源是 web/lib/permissions.ts 的 MODULES**（运行时解析，不复制）；
+`MODULE_BY_SEGMENT` 只做"路径段 → 模块名"映射，启动时校验映射目标都存在，否则 exit 2。
+理由：同一事实声明两遍、只改一处必烂另一处——2026-09-30 的覆盖率阈值红就是同形问题
+（CI 的 coverage job 用 CLI 3.5%，而 vitest.config.ts 里还留着没人同步的 20%）。
 
-扫描根：web/app/api/**（此前只扫 v1/workspaces/[wid]，矩阵域外 100+ 个写 handler 完全不可见）。
+口径修正记录：
+  2026-09-29  旧版只扫 `v1/workspaces/[wid]`，且把 `role ===` 当唯一门禁信号，于是
+    `if (!["owner","admin"].includes(ctx.member.role))` 这类**真实存在的 ad-hoc 门禁**被误判为缺口——
+    旧基线 44 条里 11 条属此类（迁 T2），真零判断 33 条（T1）。反向问题更大：矩阵域外的写 handler
+    旧版一个都不看。扫描根因此扩到 `web/app/api/**`。
+    同日的**首轮计数 9/194 是错的**：资源段索引取 3（应为 2，因 `[wid]` 与路由组不进 static_core），
+    深层路由按叶子段误判档位。该错由注入式变异测试抓出，非肉眼复核。
+  2026-09-30  MODULES 由 12 扩到 14（新增 databases、databaseRecords）后，本脚本改为读真源；
+    多维表格 9 个容器/字段/视图写 handler 由 T4 正确落回 T2（20 → 29，T4 33 → 24）。
+
 T3 排除内部端点（cron 调度、探活、Better Auth 托管、上传代理、兜底路由），口径与
 check_api_contract.py 的 INTERNAL_PREFIXES 一致。
 
-语义排除（三档共用）：标记已读类（*/read）与分享解锁类（*/share/verify）——
+语义排除（各档共用）：标记已读类（*/read）与分享解锁类（*/share/verify）——
 按矩阵一刀切会把 viewer 的"标已读"也 403 掉，属误伤，故显式跳过并在此说明。
 
 运行方式：
     python scripts/check_permission_gates.py
-    python scripts/check_permission_gates.py --write-baselines   # 重建三档基线
+    python scripts/check_permission_gates.py --write-baselines   # 只重建 T3/T4/T5
 
 退出码：
-    0 — 三档缺口集合与各自基线一致或已收缩
-    1 — 任一档出现基线之外的新增，或基线里有已修复项未删除（豁免腐烂）
+    0 — 五档集合与各自基线一致或已收缩
+    1 — 任一档出现基线之外的新增、基线里有已修复项未删除（豁免腐烂），
+        或代码调用了矩阵中不存在的模块名（unknown，必须清零、不配基线）
+    2 — 无法从 permissions.ts 解析 MODULES，或 MODULE_BY_SEGMENT 指向不存在的模块
 """
 
 import re
@@ -49,6 +63,7 @@ BASELINE_T1 = ROOT / "scripts" / "permission-gate-baseline.txt"
 BASELINE_T2 = ROOT / "scripts" / "permission-gate-adhoc-baseline.txt"
 BASELINE_T3 = ROOT / "scripts" / "permission-gate-unscoped-baseline.txt"
 BASELINE_T4 = ROOT / "scripts" / "permission-gate-unscoped-adhoc-baseline.txt"
+BASELINE_T5 = ROOT / "scripts" / "permission-gate-modules-unwired-baseline.txt"
 
 MODULE_BY_SEGMENT = {
     "tasks": "tasks",
@@ -68,7 +83,61 @@ MODULE_BY_SEGMENT = {
     "contacts": "contacts",
     "labels": "tasks",
     "milestones": "tasks",
+    # 多维表格在矩阵里是**两个**模块（容器 vs 记录数据面），按路径段区分：
+    # /databases、/databases/{dbid}、/databases/{dbid}/fields|views → databases
+    # /databases/{dbid}/records[...]                                       → databaseRecords
+    "databases": "databases",
 }
+
+# 矩阵里"合法模块名"的唯一真源是 web/lib/permissions.ts 的 MODULES 常量。
+# 本脚本**不复制**那份清单——否则又造出一个"同一事实两处声明、改一处烂一处"的债
+# （2026-09-30 覆盖率阈值就是这么红的）。这里只做"路径段 → 模块名"的映射，
+# 并校验映射结果确实存在于 MODULES，不存在即报错退出。
+PERMISSIONS_TS = ROOT / "web" / "lib" / "permissions.ts"
+
+
+def load_matrix_modules() -> set[str]:
+    src = PERMISSIONS_TS.read_text(encoding="utf-8")
+    m = re.search(r"export const MODULES = \[(.*?)\]\s*as const", src, re.S)
+    if not m:
+        print(
+            f"ERROR: 无法在 {PERMISSIONS_TS} 中解析 `export const MODULES = [...] as const`；"
+            "矩阵模块清单改了写法，本脚本的判定口径需要跟着改（不要静默当作没有模块）。",
+            file=sys.stderr,
+        )
+        sys.exit(2)
+    mods = set(re.findall(r"[\"'](\w+)[\"']", m.group(1)))
+    if not mods:
+        print("ERROR: MODULES 解析结果为空，拒绝继续（空集合会让所有路由都被判为矩阵外）", file=sys.stderr)
+        sys.exit(2)
+    return mods
+
+
+def resolve_module(static_core: list[str], in_wid: bool) -> str | None:
+    """返回该路由归属的矩阵模块名；不在矩阵里则返回 None。"""
+    if not in_wid or len(static_core) < 3:
+        return None
+    first = static_core[2]
+    seg = MODULE_BY_SEGMENT.get(first)
+    if seg is None:
+        return None
+    if first == "databases" and "records" in static_core:
+        return "databaseRecords"
+    return seg
+
+
+MATRIX_MODULES = load_matrix_modules()
+
+# 映射表与真源的一致性检查：MODULE_BY_SEGMENT 指到矩阵里没有的模块名，
+# 说明 permissions.ts 改了模块而这里没跟上——此时必须报错，不能把该域静默降级为"矩阵外"。
+_unknown = sorted({m for m in MODULE_BY_SEGMENT.values()} - MATRIX_MODULES)
+if _unknown:
+    print(
+        f"ERROR: MODULE_BY_SEGMENT 指向矩阵中不存在的模块 {_unknown}；"
+        f"请同步 web/lib/permissions.ts 的 MODULES（当前 {len(MATRIX_MODULES)} 个）。",
+        file=sys.stderr,
+    )
+    sys.exit(2)
 
 WRITE_METHODS = ("POST", "PATCH", "PUT", "DELETE")
 
@@ -131,6 +200,42 @@ def is_internal(path: str) -> bool:
     return path in INTERNAL_EXACT or any(path.startswith(p) for p in INTERNAL_PREFIXES)
 
 
+def find_wired_modules() -> tuple[set[str], list[str]]:
+    """扫全仓 requirePermission 调用，返回 (被用到的模块名, 用到但矩阵未声明的模块名)。
+
+    必须剔除注释：注释里写到 `requirePermission("tasks","delete")` 这种说明语，
+    会被朴素正则当成真实调用点，从而把动作名 `"delete"` 误读成模块名并误报"未知模块"
+    （实测命中：tasks/[id]/route.ts:99 的口径对齐注释）。判定方式是"匹配点之前同一行
+    已有 // 就跳过"，同时要求匹配片段本身不跨注释。
+    """
+    used: set[str] = set()
+    call_re = re.compile(r"requirePermission\s*\(\s*[^,]+,\s*[\"'](\w+)[\"']")
+    targets = list(API_ALL.rglob("route.ts")) + list((ROOT / "web" / "lib").rglob("*.ts"))
+    for p in targets:
+        txt = p.read_text(encoding="utf-8", errors="ignore")
+        for m in call_re.finditer(txt):
+            span = m.group(0)
+            if "//" in span:
+                continue
+            line_start = txt.rfind("\n", 0, m.start()) + 1
+            if "//" in txt[line_start : m.start()]:
+                continue
+            used.add(m.group(1))
+    return used, sorted(used - MATRIX_MODULES)
+
+
+def check_module_wiring() -> tuple[list[str], list[str], list[str]]:
+    """矩阵与接线的双向一致性：
+      unwired = 矩阵声明了但生产代码 0 调用点 → "viewer 只读"对这些模块只是声明；
+      unknown = 代码传了矩阵里没有的模块名 → checkPermission 的
+                `DEFAULT_PERMISSIONS[role]?.[module] ?? ""` 恒判无权限，除 owner 外一律 403，
+                等于把接口对普通成员永久关死（多为拼写错误/模块改名后调用点没跟上）。
+    两者都必须只允许收缩，且 unknown 为空集时才算健康（不配基线：它只可能是缺陷，不可能是债务）。
+    """
+    used, unknown = find_wired_modules()
+    return sorted(MATRIX_MODULES - used), unknown, sorted(used & MATRIX_MODULES)
+
+
 def classify() -> dict[str, set[str]]:
     tiers: dict[str, set[str]] = {"t1": set(), "t2": set(), "t3": set(), "t4": set()}
     if not API_ALL.is_dir():
@@ -151,8 +256,8 @@ def classify() -> dict[str, set[str]]:
         # [wid] 是动态段、不进 static_core，因此资源段固定落在索引 2：
         # static_core = ['v1', 'workspaces', '<资源段>', ...]
         # （路由组 (group) 同样被跳过，所以有/无路由组都成立）
-        first = static_core[2] if in_wid and len(static_core) >= 3 else ""
-        in_matrix = in_wid and first in MODULE_BY_SEGMENT
+        module = resolve_module(static_core, in_wid)
+        in_matrix = module is not None and module in MATRIX_MODULES
 
         src = route.read_text(encoding="utf-8")
         for method, block in handler_blocks(src):
@@ -199,13 +304,23 @@ TIER_META = {
         BASELINE_T4,
         "修法：该资源域进入矩阵后，把 ad-hoc 比较替换为 requirePermission 并从基线删除。",
     ),
+    "t5": (
+        "矩阵声明了但生产代码零调用点的模块（声明未接线）",
+        BASELINE_T5,
+        "修法：给该模块的写 handler 接上 requirePermission(ctx, <该模块>, <action>, req) 后，从基线删除该行。",
+    ),
 }
 
 
 def write_baselines(tiers: dict[str, set[str]]) -> int:
-    """只生成 T2/T3/T4。T1 基线由人工维护（它的表头记录了矩阵判定口径与排除语义，
-    且规则要求"修好一条就删一行"，机器整体覆写会抹掉这些说明并掩盖豁免扩大）。"""
-    for key in ("t2", "t3", "t4"):
+    """只生成 T3/T4/T5。
+    T1 与 T2 **禁止机器覆写**：T1 表头记录矩阵判定口径与排除语义，T2 表头记录逐条人工复核结论
+    （按轴归类、哪些改动会放宽权限）。机器覆写会把这两份结论静默抹掉——2026-09-30 实测发生过一次，
+    `--write-baselines` 把 T2 的复核表头冲成了通用表头。规则：修好一条就手工删一行。"""
+    unwired, _, _ = check_module_wiring()
+    tiers = dict(tiers)
+    tiers["t5"] = {f"MODULE {name}" for name in unwired}
+    for key in ("t3", "t4", "t5"):
         entries = tiers[key]
         title, path, hint = TIER_META[key]
         path.write_text(
@@ -224,9 +339,11 @@ def main() -> int:
         return write_baselines(classify())
 
     tiers = classify()
+    unwired, unknown, wired = check_module_wiring()
+    tiers["t5"] = {f"MODULE {name}" for name in unwired}
     failed = False
     print(f"{'档':<4} {'当前':>5} {'基线':>5} {'新增':>5} {'已修未删':>8}  状态")
-    for key in ("t1", "t2", "t3", "t4"):
+    for key in ("t1", "t2", "t3", "t4", "t5"):
         title, path, _ = TIER_META[key]
         gaps, base = tiers[key], load_baseline(path)
         if not path.exists():
@@ -246,12 +363,23 @@ def main() -> int:
                 for it in items:
                     print(f"      {it}")
 
+    print(
+        f"\n矩阵模块接线：声明 {len(MATRIX_MODULES)} 个，已接线 {len(wired)} 个，"
+        f"零调用点 {len(unwired)} 个 {unwired}"
+    )
+    if unknown:
+        print(
+            f"FAIL: 代码调用了矩阵中不存在的模块 {unknown} —— checkPermission 对这些名字恒判无权限，"
+            "除 owner 外所有成员都会拿到 403（多为模块改名/拼写后调用点未跟上）。此项不配基线，必须清零。"
+        )
+        failed = True
+
     print()
     if failed:
-        for key in ("t1", "t2", "t3", "t4"):
+        for key in ("t1", "t2", "t3", "t4", "t5"):
             print(TIER_META[key][2])
         return 1
-    print("PASS: 四档权限门禁盲区均未增长。")
+    print("PASS: 五档权限门禁盲区均未增长。")
     return 0
 
 

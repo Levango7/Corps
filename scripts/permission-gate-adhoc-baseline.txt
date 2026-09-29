@@ -1,24 +1,31 @@
 # T2 基线 · 矩阵域内仅有 ad-hoc 角色判断的写 handler —— 只允许收缩
 #
 # 语义：这些 handler **不是缺陷清单**。它们有角色判断，只是没走 lib/permissions.ts 的矩阵，
-# 且其中 12/20 条依赖矩阵里不存在的轴，机械换成 requirePermission 会改变行为。
-# 复核结论与逐条证据见 docs/audit/TIER2-ADHOC-REVIEW-2026-09-29.md（2026-09-29，只读精读）。
+# 且多数依赖矩阵里不存在的轴，机械换成 requirePermission 会改变行为。
+# 逐条复核结论与证据见 docs/audit/TIER2-ADHOC-REVIEW-2026-09-29.md（只读精读，20 条全部为有效门禁，
+# "宽松匹配可能只校验目标角色因而实际零门禁"的假设已被推翻）。
 #
-# 2026-09-29 复核要点：
-#   - 20 条全部为有效门禁；建档时"可能只校验目标对象角色因而实际零门禁"的假设已被实测推翻。
-#   - 按轴归类：单轴可入矩阵 8（labels×3 / milestones×3 / members-invite / documents-batch-permissions）
-#     会话角色轴 6（conversations 与其 members/messages 子路由）
-#     文档权限轴 2（documents/{id} PATCH、DELETE）
-#     属主+角色混合 4（tasks 与 documents 的 comments PATCH、DELETE）
-#   - 收敛前置：先决定 labels/milestones/batch-permissions 到底谁可写（现状比矩阵严，
-#     改成矩阵口径等于给 member 放宽，属安全回归方向）；评论的"作者本人"分支比矩阵松
-#     （降级为 viewer 者仍可改删自己旧评论），需显式表达；退群与静音自己属自我操作，需与 */read 同列豁免。
+# 按轴归类（原 20 条）：单轴可入矩阵 8（labels×3 / milestones×3 / members-invite / documents-batch-permissions）
+#   会话角色轴 6（conversations 及其 members/messages 子路由）
+#   文档权限轴 2（documents/{id} PATCH、DELETE）
+#   属主+角色混合 4（tasks 与 documents 的 comments PATCH、DELETE）
 #
-# 由 `python scripts/check_permission_gates.py --write-baselines` 生成（只允许收缩）
-# 判定口径为 handler 级；重建本文件前请逐条确认语义。
+# ── 2026-09-30 重分类（20 → 29）──────────────────────────────────────────────
+# 脚本原来把模块清单硬编码成 12 个，而 web/lib/permissions.ts 的 MODULES 已扩到 14
+# （新增 databases 与 databaseRecords）。改为**从 permissions.ts 读真源**后，
+# 多维表格的 9 个容器/字段/视图写 handler（POST/PATCH/DELETE databases、fields、views）
+# 从 T4（矩阵外）正确落到 T2（矩阵内 ad-hoc）——它们用的是
+# ["owner","admin"].includes(ctx.member.role)，而不是矩阵调用。T4 相应 33 → 24。
+# 注意：矩阵里 databases 模块**零调用点**（见 T5），即这 9 条正是该模块尚未接线的部分。
+#
+# 本文件含人工复核结论，因此**不由 --write-baselines 覆写**；修好一条就删一行。
+# 判定口径为 handler 级。
 DELETE /api/v1/workspaces/{wid}/conversations/{cid}
 DELETE /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}
 DELETE /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}
+DELETE /api/v1/workspaces/{wid}/databases/{dbid}
+DELETE /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
+DELETE /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
 DELETE /api/v1/workspaces/{wid}/documents/{id}
 DELETE /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
 DELETE /api/v1/workspaces/{wid}/labels
@@ -26,12 +33,18 @@ DELETE /api/v1/workspaces/{wid}/milestones
 DELETE /api/v1/workspaces/{wid}/tasks/{id}/comments
 PATCH /api/v1/workspaces/{wid}/conversations/{cid}
 PATCH /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}
+PATCH /api/v1/workspaces/{wid}/databases/{dbid}
+PATCH /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
+PATCH /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
 PATCH /api/v1/workspaces/{wid}/documents/{id}
 PATCH /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
 PATCH /api/v1/workspaces/{wid}/labels
 PATCH /api/v1/workspaces/{wid}/milestones
 PATCH /api/v1/workspaces/{wid}/tasks/{id}/comments
 POST /api/v1/workspaces/{wid}/conversations/{cid}/members
+POST /api/v1/workspaces/{wid}/databases
+POST /api/v1/workspaces/{wid}/databases/{dbid}/fields
+POST /api/v1/workspaces/{wid}/databases/{dbid}/views
 POST /api/v1/workspaces/{wid}/documents/batch-permissions
 POST /api/v1/workspaces/{wid}/labels
 POST /api/v1/workspaces/{wid}/members/invite

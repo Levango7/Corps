@@ -6,6 +6,34 @@
 
 ### Fixed
 
+- **权限门禁把矩阵模块清单复制了一份，导致多维表格的 9 个写 handler 被归错档**：
+  `check_permission_gates.py` 的 `MODULE_BY_SEGMENT` 硬编码"17 段 → 12 模块"，而
+  `web/lib/permissions.ts` 的 `MODULES` 已扩到 14（新增 `databases`、`databaseRecords`）。
+  后果：`/databases/**` 全子树被当成"矩阵域外"，其 9 个容器/字段/视图写 handler 落在 T4，
+  而按矩阵实际语义它们属 T2（矩阵域内、仅 ad-hoc 判断）。这与当天覆盖率阈值那次红是**同一种形态**
+  ——同一事实声明两遍、只改一处。现改为运行时从 `MODULES` 解析真源，脚本不再复制清单；
+  `MODULE_BY_SEGMENT` 只做段→模块映射，并在启动时校验映射目标都存在（否则 exit 2），
+  `databases` 段按是否含 `records` 分流到 `databaseRecords`。重分类结果：T2 20 → 29、T4 33 → 24。
+- **新增 T5 档：矩阵声明了但生产代码零调用点的模块**。这是本项目那条老判据在门禁里的落点
+  （"函数正确 ≠ 函数被调用" → "模块存在 ≠ 模块被接线"）。实测当前 14 个模块里 **5 个零接线**：
+  `databases`、`decisions`、`messages`、`timetrack`、`whiteboards` —— 即 viewer 只读对这五个模块
+  目前仍然只是声明。同一一致性检查还反向硬失败：代码若调用矩阵中不存在的模块名，
+  `checkPermission` 走 `DEFAULT_PERMISSIONS[role]?.[module] ?? ""` 恒判无权限，
+  除 owner 外一律 403（等于把接口对普通成员永久关死），此项不配基线、必须清零。
+- **我自己的两处 false positive 与一处自伤，均已修并留证**：
+  ① 新加的"未知模块"检查最初把 `tasks/[id]/route.ts:99` **注释里**的
+  `requirePermission("tasks","delete")` 当成调用点，于是报"模块 delete 不存在"；现按
+  "匹配点前同行有 // 则跳过 + 匹配片段不含 //"剔除注释后 unknown 归零。
+  ② `--write-baselines` 曾把 T2 表头的人工复核结论（按轴归类、哪些改法会放宽权限）覆写成通用表头——
+  我为 T1 设了"禁止机器覆写"却没为同样承载人工结论的 T2 设防；现 T1/T2 均只许手工删行，
+  并已恢复表头。
+  ③ 旧版脚本模块名列表也随 `permissions.ts` 一起烂掉过一次：`MODULE_BY_SEGMENT` 缺 `databases` 段，
+  而 T5 报出的 5 个零接线模块里，`databases` 恰恰是本轮**新加**的模块——说明加模块与接线的
+  顺序颠倒了（先声明、后接线，中间那段窗口没有任何东西拦着）。
+  验证：五档全部 PASS（T1 33 / T2 29 / T3 165 / T4 24 / T5 5）；注入式变异测试五项全过——
+  容器路径零判断落 T1、records 路径落 T1、容器路径 ad-hoc 落 T2（而非 T4）、
+  调用不存在模块名被 unknown 抓到、探针不污染 T5 计数；删 T5 一行报豁免腐烂。
+
 - **覆盖率阈值被声明了两遍，其中一份从没被执行到过**：`vitest.config.ts` 里留着
   `thresholds: { lines: 20, branches: 15, functions: 20, statements: 20 }`，而 CI 的
   `Unit Coverage Ratchet` job 用 CLI 传 `--coverage.thresholds.lines=3.5`。两条腿吃不同的值：

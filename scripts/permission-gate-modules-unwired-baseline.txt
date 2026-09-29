@@ -1,0 +1,9 @@
+# 由 `python scripts/check_permission_gates.py --write-baselines` 生成（只允许收缩）
+# 档位：矩阵声明了但生产代码零调用点的模块（声明未接线）
+# 修法：给该模块的写 handler 接上 requirePermission(ctx, <该模块>, <action>, req) 后，从基线删除该行。
+# 判定口径为 handler 级；重建本文件前请逐条确认语义。
+MODULE databases
+MODULE decisions
+MODULE messages
+MODULE timetrack
+MODULE whiteboards

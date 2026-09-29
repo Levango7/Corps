@@ -135,19 +135,22 @@ jobs:
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
-  # 扫描根为整个 web/app/api/**，分四档各持一份只允许收缩的基线：
+  # 扫描根为整个 web/app/api/**，分五档各持一份只允许收缩的基线：
   #   T1 permission-gate-baseline.txt              矩阵域内、完全无角色判断（真缺口）
   #   T2 permission-gate-adhoc-baseline.txt        矩阵域内、仅 ad-hoc 角色比较（需复核）
   #   T3 permission-gate-unscoped-baseline.txt     矩阵外资源域、完全无角色判断（未评估）
   #   T4 permission-gate-unscoped-adhoc-baseline.txt 矩阵外资源域、有 ad-hoc 判断
-  # 四份基线必须与脚本同批提交，缺任一文件该 job 直接 FAIL（防"基线缺失=静默放行"）。
+  #   T5 permission-gate-modules-unwired-baseline.txt  矩阵声明了但生产零调用的模块
+  # 另有硬失败：代码调用矩阵中不存在的模块名（除 owner 外一律 403），不配基线、必须清零。
+  # 矩阵模块清单从 web/lib/permissions.ts 的 MODULES 读取，脚本不复制一份（避免两处声明）。
+  # 五份基线必须与脚本同批提交，缺任一文件该 job 直接 FAIL（防"基线缺失=静默放行"）。
   # 轻量 job（仅需 checkout + Python），与其他 job 并行运行。
   permission-gate:
     name: Permission Gate Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Check role-permission enforcement coverage (4 tiers, shrink-only)
+      - name: Check role-permission enforcement coverage (5 tiers, shrink-only)
         run: python scripts/check_permission_gates.py
 
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
