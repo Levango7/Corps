@@ -1,0 +1,40 @@
+# i18n「代码引用但词条缺失」基线 —— 只允许收缩
+#
+# 维护规则（与 scripts/api-contract-baseline.txt 同口径）：
+#   - 基线内的条目：已知历史缺口，门禁放行；
+#   - 基线外的新缺口：CI 失败（新代码引用 i18n 键时必须同步补 messages/zh.json 与 en.json）；
+#   - 修好一条就删掉对应一行，否则 tests/unit/i18n-usage.test.ts 会以"豁免腐烂"失败。
+#
+# 重建方式：cd web && npx vitest run tests/unit/i18n-usage.test.ts  →  读取断言里列出的清单
+#
+# 背景：i18n-keys.test.ts 只比对 zh/en 两份的键集合相等，所以"两边都缺同一个键"
+# 依然全绿，而运行期会抛 MISSING_MESSAGE。已确证的实例：task.complete / task.copy /
+# task.share 三个键曾两边皆无，看板长按菜单三条菜单项各抛 164 次（已修复，故不在此列）。
+
+chat.confirm
+chat.confirmDeleteGroup
+chat.confirmLeaveGroup
+chat.confirmRemoveMember
+chat.confirmRevoke
+chat.sent
+dashboard.layoutOptions
+document.delete
+document.move
+document.rename
+im.acceptCall
+im.incomingVideoCall
+im.incomingVoiceCall
+im.rejectCall
+im.voiceCallInvite
+permissions.adminCanOverride
+permissions.copyFailed
+permissions.loadFailed
+permissions.ownerLocked
+permissions.reset
+permissions.resetSuccess
+permissions.saveFailed
+permissions.saveSuccess
+permissions.saving
+permissions.shareFailed
+permissions.subtitle
+permissions.viewerHint
