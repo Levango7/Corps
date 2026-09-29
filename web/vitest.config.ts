@@ -37,12 +37,11 @@ export default defineConfig({
       reportOnFailure: true,
       include: ["app/api/**/*.ts", "lib/**/*.ts", "components/**/*.tsx"],
       exclude: ["**/*.config.*", "**/node_modules/**"],
-      thresholds: {
-        lines: 20,
-        branches: 15,
-        functions: 20,
-        statements: 20,
-      },
+      // 阈值**只在一处声明**：CI 的 `coverage` job 用 CLI 传
+      // --coverage.thresholds.lines=…（棘轮，只许上调）。
+      // 这里原另有一份 lines:20/branches:15/…，与那份互不相干地并存：`test` job 跑裸
+      // `vitest run --coverage` 时吃到的是本文件的 20%，而实测覆盖率约 4%，于是整条腿判红
+      // （2026-09-30 首跑就是如此）。同一指标两处声明 = 改一处、另一处静默腐烂。
     },
   },
   resolve: {

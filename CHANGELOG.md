@@ -6,6 +6,20 @@
 
 ### Fixed
 
+- **覆盖率阈值被声明了两遍，其中一份从没被执行到过**：`vitest.config.ts` 里留着
+  `thresholds: { lines: 20, branches: 15, functions: 20, statements: 20 }`，而 CI 的
+  `Unit Coverage Ratchet` job 用 CLI 传 `--coverage.thresholds.lines=3.5`。两条腿吃不同的值：
+  ratchet job 按 3.5% 判绿，`Test` job 跑裸 `npx vitest run --coverage` 按 20% 判红——实测约 4%
+  （All files 行 lines=4%）。修掉前一个根因（rls-smoke 缺表）后 `Test` 才第一次跑到 vitest，
+  这个并存已久的错配当场暴露：`ERROR: Coverage for lines (4%) does not meet global threshold (20%)`，
+  并连带让 `Build`/`E2E`/`Publish image` 因 needs 被 skip。
+  现删除配置里那份阈值声明，阈值只在 coverage job 的 CLI 一处声明（棘轮只许上调）。
+  与 CI 同命令复验：`npx vitest run --coverage` 在干净环境（仓库外 worktree + 强制重建空库 +
+  `rls-smoke` 通过 + 冷编译单实例 dev server）全绿、无阈值报错、exit 0。
+  同一条命令此前一轮报过 5 例超时 + 1 例 `expected 500 to be 201`，事后确认那轮**库并未真的重建**
+  （`DROP DATABASE` 被 15 个在用的连接挡住，而我的命令仍打了"成功"）——脏库 + 同机并发抢 CPU 才是成因。
+  教训入档：清理类操作按观察值判定（`information_schema.tables` 计数=0），不看退出码。
+
 - **会话"标记已读"每次调用都返回 500**：`app/api/v1/workspaces/[wid]/conversations/[cid]/read/route.ts`
   直接 `await req.json()`，而唯一字段 `lastReadAt` 是 optional、语义上允许空 body；
   线上调用方 `components/im/useIM.ts:203` 的 POST **不带 body** → `req.json()` 抛
