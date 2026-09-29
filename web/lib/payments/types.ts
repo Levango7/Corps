@@ -189,6 +189,7 @@ export class PaymentProviderError extends Error {
     message: string,
     readonly code:
       | "not_configured" // 密钥/价格未配置（对齐现状 STRIPE_PRICE_ID 400 先例）
+      | "invalid_price" // 调用方传入的 priceId 不在服务端允许列表内（400）
       | "unsupported_period" // yearly 未配置价格（D1-④）
       | "no_customer" // 尚无通道客户（对齐现状 portal 400 文案）
       | "channel_error", // 通道侧失败（对齐现状 500 兜底文案）

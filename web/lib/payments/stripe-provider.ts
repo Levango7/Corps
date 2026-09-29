@@ -80,6 +80,15 @@ export class StripeProvider implements PaymentProvider {
     const period: BillingPeriod = req.period ?? "monthly";
     let priceId: string | undefined;
     if (req.priceOverride) {
+      // 安全：priceOverride 源自请求体（billing/checkout 的 body.priceId），
+      // 若不校验即可让调用方绑定 Stripe 账户内任意价格（含测试价、超低价），
+      // 因此只允许服务端自己配置过的那两个价格 ID。
+      const allowed = new Set(
+        [STRIPE_PRICE_ID, STRIPE_PRICE_ID_YEARLY].filter((v): v is string => Boolean(v)),
+      );
+      if (!allowed.has(req.priceOverride)) {
+        throw new PaymentProviderError("priceId 不在服务端允许的价格列表内", "invalid_price");
+      }
       priceId = req.priceOverride;
     } else if (period === "yearly") {
       if (!STRIPE_PRICE_ID_YEARLY) {

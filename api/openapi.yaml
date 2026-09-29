@@ -1954,6 +1954,10 @@ paths:
         revoke by PATCHing with shareToken=null. RLS hardened mode reads via
         app.public_token; field whitelist omits author.email and other sensitive
         fields.
+        Access gating is enforced **server-side**: when the share has a password or
+        has passed shareExpiresAt, publishedMarkdown is withheld (empty string) and
+        the caller must obtain the body from the /verify endpoint below. The
+        response never carries the password hash itself.
       security: []
       operationId: getSharedDocument
       parameters:
@@ -1964,9 +1968,57 @@ paths:
           schema: { type: string }
       responses:
         '200':
-          description: Shared document (title + publishedMarkdown + workspace name + author name)
+          description: >
+            Shared document metadata; publishedMarkdown is empty when the share is
+            password-protected or expired
         '404':
           description: Share link invalid, revoked, or document never published
+        '500':
+          description: Internal server error
+  /api/documents/share/{token}/verify:
+    post:
+      tags: [documents]
+      summary: Unlock a password-protected / expired public share
+      description: >
+        Public counterpart to the GET above — the share page posts here when the
+        GET response reports hasPassword (or when the caller wants the body after
+        an expiry check). Verifies the password against the stored scrypt hash,
+        re-checks shareExpiresAt server-side, records a ShareAccessLog row, and
+        returns the body only on success. Failed attempts count towards an
+        IP-scoped lockout (3 failures → temporary 429).
+      security: []
+      operationId: verifySharedDocument
+      parameters:
+        - name: token
+          in: path
+          required: true
+          description: Share token or custom slug.
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [password]
+              properties:
+                password:
+                  type: string
+                  minLength: 1
+                  maxLength: 128
+      responses:
+        '200':
+          description: Unlocked document body (id + title + markdown)
+        '400':
+          description: Missing or malformed password
+        '401':
+          description: Password incorrect (counts towards lockout)
+        '403':
+          description: Share link expired
+        '404':
+          description: Share link invalid or document never published
+        '429':
+          description: Too many failed attempts from this IP
         '500':
           description: Internal server error
   # ===========================================================================

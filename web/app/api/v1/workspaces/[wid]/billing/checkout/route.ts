@@ -134,6 +134,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     // 错误映射：not_configured/unsupported_period → 400；其余 → 500
     if (error instanceof PaymentProviderError) {
+      if (error.code === "invalid_price") {
+        return NextResponse.json(
+          { code: 400, message: apiMsg(req, "validationError"), data: null },
+          { status: 400 },
+        );
+      }
       if (error.code === "unsupported_period") {
         return NextResponse.json(
           { code: 400, message: apiMsg(req, "yearlyPriceNotConfigured"), data: null },
