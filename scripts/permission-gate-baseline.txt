@@ -9,25 +9,31 @@
 # 按文件统计会把这类缺口算成「已覆盖」。
 # 已显式排除（语义上不是写租户内容，按矩阵一刀切会误伤 viewer）：*/read、*/share/verify
 # 重建方式：删除本文件后运行 python scripts/check_permission_gates.py 读取打印的清单
-
+#
+# 本档（T1）语义 = 矩阵可判定域内、**完全没有任何角色判断**的写 handler。
+#
+# ── 2026-09-29 口径修正（44 → 33）───────────────────────────────────────────
+# 旧版门禁判定"是否已覆盖"的正则只认 requirePermission( / checkPermission( / `role ===`，
+# 于是把 `if (!["owner","admin"].includes(ctx.member.role))` 这类**真实存在的 ad-hoc 角色判断**
+# 误算成"零门禁"。本文件因此混入了 11 条并非无门禁的 handler
+# （labels / milestones / tasks/{id}/comments / documents/{id}/comments / members/invite），
+# 已迁到 T2（permission-gate-adhoc-baseline.txt：矩阵域内仅有 ad-hoc 判断，需人工复核）。
+# 抽查证据：tasks/[id]/comments/route.ts:229-231 用「作者本人或 owner/admin」判定，是有效门禁。
+#
+# 同版修正还把扫描根从 `v1/workspaces/[wid]` 扩到整个 `web/app/api`：
+# 矩阵域外的写 handler 此前完全不可见，现挂账在 T3（170 条零判断）与 T4（33 条 ad-hoc）。
+# 注意 in_wid 的资源段索引：[wid] 与路由组不进 static_core，故资源段固定在 static_core[2]。
+# 变异验证：python scripts/check_permission_gates.py 注入探针后四档均能正确 FAIL（见 CHANGELOG）。
 DELETE /api/v1/workspaces/{wid}/announcements/{aid}
 DELETE /api/v1/workspaces/{wid}/contacts/{cid}
-DELETE /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
 DELETE /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
 DELETE /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
-DELETE /api/v1/workspaces/{wid}/labels
-DELETE /api/v1/workspaces/{wid}/milestones
-DELETE /api/v1/workspaces/{wid}/tasks/{id}/comments
 DELETE /api/v1/workspaces/{wid}/whiteboards/{wbid}
 PATCH /api/v1/workspaces/{wid}/announcements/{aid}
 PATCH /api/v1/workspaces/{wid}/contacts/{cid}
 PATCH /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}
-PATCH /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
 PATCH /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
 PATCH /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
-PATCH /api/v1/workspaces/{wid}/labels
-PATCH /api/v1/workspaces/{wid}/milestones
-PATCH /api/v1/workspaces/{wid}/tasks/{id}/comments
 PATCH /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}
 PATCH /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}
 PATCH /api/v1/workspaces/{wid}/whiteboards/{wbid}
@@ -40,9 +46,6 @@ POST /api/v1/workspaces/{wid}/documents/{id}/permissions
 POST /api/v1/workspaces/{wid}/documents/{id}/share-links
 POST /api/v1/workspaces/{wid}/documents/{id}/versions
 POST /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}
-POST /api/v1/workspaces/{wid}/labels
-POST /api/v1/workspaces/{wid}/members/invite
-POST /api/v1/workspaces/{wid}/milestones
 POST /api/v1/workspaces/{wid}/tasks/{id}/comments
 POST /api/v1/workspaces/{wid}/tasks/{id}/conversation
 POST /api/v1/workspaces/{wid}/tasks/{id}/decisions

@@ -1,0 +1,24 @@
+# 由 `python scripts/check_permission_gates.py --write-baselines` 生成（只允许收缩）
+# 档位：矩阵域内仅有 ad-hoc 角色比较（需人工复核）
+# 修法：确认比较的是**调用者**角色（ctx.member.role / 本人的 membership.role）后改为 requirePermission；若比较的是目标对象角色（被加入会话者、被改角色者），该写接口实际零门禁，按 T1 补。
+# 判定口径为 handler 级；重建本文件前请逐条确认语义。
+DELETE /api/v1/workspaces/{wid}/conversations/{cid}
+DELETE /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}
+DELETE /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}
+DELETE /api/v1/workspaces/{wid}/documents/{id}
+DELETE /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
+DELETE /api/v1/workspaces/{wid}/labels
+DELETE /api/v1/workspaces/{wid}/milestones
+DELETE /api/v1/workspaces/{wid}/tasks/{id}/comments
+PATCH /api/v1/workspaces/{wid}/conversations/{cid}
+PATCH /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}
+PATCH /api/v1/workspaces/{wid}/documents/{id}
+PATCH /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
+PATCH /api/v1/workspaces/{wid}/labels
+PATCH /api/v1/workspaces/{wid}/milestones
+PATCH /api/v1/workspaces/{wid}/tasks/{id}/comments
+POST /api/v1/workspaces/{wid}/conversations/{cid}/members
+POST /api/v1/workspaces/{wid}/documents/batch-permissions
+POST /api/v1/workspaces/{wid}/labels
+POST /api/v1/workspaces/{wid}/members/invite
+POST /api/v1/workspaces/{wid}/milestones

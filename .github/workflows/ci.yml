@@ -35,6 +35,40 @@ jobs:
       # 显式类型检查（next build 也含 tsc，但 lint job 更早失败反馈更快）
       - run: node node_modules/typescript/bin/tsc --noEmit
 
+  # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
+  # 存在的理由（两条都是实测踩过的）：
+  #   1) Test job 里 `vitest run --coverage` 排在 `bash db/rls-smoke.sh` 之后，
+  #      smoke 一炸整个 job 终止 → 覆盖率步骤在 CI 连红期间一次都没执行过；
+  #   2) Vitest 的 coverage.reportOnFailure 默认 false → 任一测试变红时覆盖率根本不评估。
+  # 阈值来自 2026-09-29 本地实测（unit-only）：lines 3.98% / statements 3.98% /
+  # functions 58.91% / branches 73.71%。这是**棘轮下界，只允许上调**；
+  # 为了变绿而下调阈值等于削测试强度，需要单独说明理由并经用户确认。
+  # Test job 的 20/15/20/20 阈值（unit+integration 合并腿）保持不动。
+  coverage:
+    name: Unit Coverage Ratchet
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v7
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 11
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: "pnpm"
+          cache-dependency-path: web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: npx prisma generate
+      - run: >
+          npx vitest run tests/unit --coverage
+          --coverage.thresholds.lines=3.5
+          --coverage.thresholds.statements=3.5
+          --coverage.thresholds.functions=55
+          --coverage.thresholds.branches=70
+
   # RLS 覆盖率防回归：对 schema.prisma 中每个含 workspaceId 的租户表，核验
   # rls-activate.sql 是否给齐 ENABLE + FORCE + 至少一条 CREATE POLICY 三态。
   # 同时做表级 schema↔迁移漂移检查（无库可连的静态回退模式）。
@@ -101,14 +135,19 @@ jobs:
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
-  # 基线 scripts/permission-gate-baseline.txt 只允许收缩。
+  # 扫描根为整个 web/app/api/**，分四档各持一份只允许收缩的基线：
+  #   T1 permission-gate-baseline.txt              矩阵域内、完全无角色判断（真缺口）
+  #   T2 permission-gate-adhoc-baseline.txt        矩阵域内、仅 ad-hoc 角色比较（需复核）
+  #   T3 permission-gate-unscoped-baseline.txt     矩阵外资源域、完全无角色判断（未评估）
+  #   T4 permission-gate-unscoped-adhoc-baseline.txt 矩阵外资源域、有 ad-hoc 判断
+  # 四份基线必须与脚本同批提交，缺任一文件该 job 直接 FAIL（防"基线缺失=静默放行"）。
   # 轻量 job（仅需 checkout + Python），与其他 job 并行运行。
   permission-gate:
     name: Permission Gate Coverage
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - name: Check role-permission enforcement coverage (shrink-only)
+      - name: Check role-permission enforcement coverage (4 tiers, shrink-only)
         run: python scripts/check_permission_gates.py
 
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断

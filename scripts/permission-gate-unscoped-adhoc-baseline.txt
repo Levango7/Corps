@@ -1,0 +1,37 @@
+# 由 `python scripts/check_permission_gates.py --write-baselines` 生成（只允许收缩）
+# 档位：矩阵外资源域、有 ad-hoc 角色判断（待收敛到矩阵）
+# 修法：该资源域进入矩阵后，把 ad-hoc 比较替换为 requirePermission 并从基线删除。
+# 判定口径为 handler 级；重建本文件前请逐条确认语义。
+DELETE /api/v1/im/messages/{id}
+DELETE /api/v1/workspaces/{wid}/approvals/templates/{tid}
+DELETE /api/v1/workspaces/{wid}/databases/{dbid}
+DELETE /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
+DELETE /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
+DELETE /api/v1/workspaces/{wid}/files/{fid}
+DELETE /api/v1/workspaces/{wid}/meeting-minutes/{mid}
+DELETE /api/v1/workspaces/{wid}/meetings/{mid}
+DELETE /api/v1/workspaces/{wid}/spaces
+DELETE /api/v1/workspaces/{wid}/spaces/{spaceId}/folders
+PATCH /api/v1/workspaces/{wid}
+PATCH /api/v1/workspaces/{wid}/approvals/templates/{tid}
+PATCH /api/v1/workspaces/{wid}/databases/{dbid}
+PATCH /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
+PATCH /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
+PATCH /api/v1/workspaces/{wid}/meeting-minutes/{mid}
+PATCH /api/v1/workspaces/{wid}/meetings/{mid}
+PATCH /api/v1/workspaces/{wid}/spaces
+PATCH /api/v1/workspaces/{wid}/spaces/{spaceId}/folders
+PATCH /api/v1/workspaces/{wid}/transfer-ownership
+POST /api/v1/ai/assistant/chat
+POST /api/v1/ai/daily-report
+POST /api/v1/ai/feedback
+POST /api/v1/ai/knowledge-qa
+POST /api/v1/remote-control
+POST /api/v1/workspaces/{wid}/databases
+POST /api/v1/workspaces/{wid}/databases/{dbid}/fields
+POST /api/v1/workspaces/{wid}/databases/{dbid}/views
+POST /api/v1/workspaces/{wid}/meetings/{mid}/recording/start
+POST /api/v1/workspaces/{wid}/meetings/{mid}/recording/stop
+POST /api/v1/workspaces/{wid}/spaces
+POST /api/v1/workspaces/{wid}/spaces/{spaceId}/folders
+PUT /api/v1/ai/usage/limits
