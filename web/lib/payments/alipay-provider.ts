@@ -33,8 +33,8 @@ import {
  *  - ALIPAY_APP_ID：应用 ID
  *  - ALIPAY_PRIVATE_KEY：应用私钥（纯 base64 或 PEM 格式）
  *  - ALIPAY_PUBLIC_KEY：支付宝公钥（纯 base64 或 PEM 格式）
- *  - ALIPAY_PRICE_CENTS_MONTHLY：月付单价（分），默认 5900（¥59）
- *  - ALIPAY_PRICE_CENTS_YEARLY：年付单价（分），默认 59000（¥590）
+ *  - ALIPAY_PRICE_CENTS_MONTHLY：月付单价（分），默认 2990（¥29.9，pricing-redesign-v2）
+ *  - ALIPAY_PRICE_CENTS_YEARLY：年付单价（分），默认 29900（¥299）
  *  - ALIPAY_NOTIFY_URL：异步回调地址，缺省由 NEXT_PUBLIC_APP_URL 拼接
  *  - ALIPAY_GATEWAY：网关地址，缺省正式环境
  */
@@ -49,10 +49,12 @@ const ALIPAY_NOTIFY_URL = process.env.ALIPAY_NOTIFY_URL;
 /** 支付宝网关。沙箱：https://openapi-sandbox.dl.alipaydev.com/gateway.do */
 const ALIPAY_GATEWAY = process.env.ALIPAY_GATEWAY ?? "https://openapi.alipay.com/gateway.do";
 
-/** 月付单价（分）：环境变量优先，缺省 5900 = ¥59（ADR-003 定价） */
-const PRICE_MONTHLY_CENTS = Number(ALIPAY_PRICE_CENTS_MONTHLY ?? 5900);
-/** 年付单价（分）：环境变量优先，缺省 59000 = ¥590（ADR-003 定价） */
-const PRICE_YEARLY_CENTS = Number(ALIPAY_PRICE_CENTS_YEARLY ?? 59000);
+/** 月付单价（分）：环境变量优先，缺省 2990 = ¥29.9
+ *  （定价以 docs/market/pricing-redesign-v2.md 为准——2026-09-02 用户拍板 ACCEPTED，
+ *   成交价 ¥29.9/人·月、¥299/人·年，替代 ADR-003 早期的 ¥59/¥590） */
+const PRICE_MONTHLY_CENTS = Number(ALIPAY_PRICE_CENTS_MONTHLY ?? 2990);
+/** 年付单价（分）：环境变量优先，缺省 29900 = ¥299（付 10 个月用 12 个月） */
+const PRICE_YEARLY_CENTS = Number(ALIPAY_PRICE_CENTS_YEARLY ?? 29900);
 
 /** 订单号前缀 */
 const OUT_TRADE_NO_PREFIX = "corps_";

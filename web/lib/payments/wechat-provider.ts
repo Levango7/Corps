@@ -40,8 +40,8 @@ import {
  *  - WECHAT_CERT_SERIAL_NO：商户证书序列号
  *  - WECHAT_PRIVATE_KEY_PEM：商户 RSA 私钥（PEM 格式，S8 修复：用于请求 RSA-SHA256 签名）
  *  - WECHAT_PLATFORM_PUBLIC_KEY_PEM：微信平台公钥（PEM 格式，用于回调 RSA-SHA256 验签）
- *  - WECHAT_PRICE_CENTS_MONTHLY：月付单价（分），默认 5900（¥59，ADR-003 定价）
- *  - WECHAT_PRICE_CENTS_YEARLY：年付单价（分），默认 59000（¥590）
+ *  - WECHAT_PRICE_CENTS_MONTHLY：月付单价（分），默认 2990（¥29.9，pricing-redesign-v2）
+ *  - WECHAT_PRICE_CENTS_YEARLY：年付单价（分），默认 29900（¥299）
  *  - WECHAT_NOTIFY_URL：回调通知地址，缺省由 NEXT_PUBLIC_APP_URL 拼接
  */
 
@@ -58,10 +58,12 @@ const WECHAT_NOTIFY_URL = process.env.WECHAT_NOTIFY_URL;
 /** 微信支付 V3 网关。沙箱可经 WECHAT_API_BASE 覆盖（环境隔离） */
 const WECHAT_API_BASE = process.env.WECHAT_API_BASE ?? "https://api.mch.weixin.qq.com";
 
-/** 月付单价（分）：环境变量优先，缺省 5900 = ¥59（ADR-003 定价） */
-const PRICE_MONTHLY_CENTS = Number(WECHAT_PRICE_CENTS_MONTHLY ?? 5900);
-/** 年付单价（分）：环境变量优先，缺省 59000 = ¥590（ADR-003 定价，10/11 折扣） */
-const PRICE_YEARLY_CENTS = Number(WECHAT_PRICE_CENTS_YEARLY ?? 59000);
+/** 月付单价（分）：环境变量优先，缺省 2990 = ¥29.9
+ *  （定价以 docs/market/pricing-redesign-v2.md 为准——2026-09-02 用户拍板 ACCEPTED，
+ *   成交价 ¥29.9/人·月、¥299/人·年，替代 ADR-003 早期的 ¥59/¥590） */
+const PRICE_MONTHLY_CENTS = Number(WECHAT_PRICE_CENTS_MONTHLY ?? 2990);
+/** 年付单价（分）：环境变量优先，缺省 29900 = ¥299（付 10 个月用 12 个月） */
+const PRICE_YEARLY_CENTS = Number(WECHAT_PRICE_CENTS_YEARLY ?? 29900);
 
 /** 订单号前缀，便于在通道侧对账时识别来源 */
 const OUT_TRADE_NO_PREFIX = "corps_";
