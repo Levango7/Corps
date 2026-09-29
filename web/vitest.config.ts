@@ -12,14 +12,19 @@ export default defineConfig({
     globals: true,
     // 收集 tests/ 下的测试：工具函数用例 .test.ts，组件用例 .test.tsx
     include: ["tests/**/*.test.ts", "tests/**/*.test.tsx"],
-    // 超时预算按**实测成本**设定，不按感觉设定（2026-09-30 在纯 HEAD 的隔离环境实测）：
-    //  - tests/integration/rbac.test.ts 的 beforeAll 单独跑（服务已热、无并发）耗时 27.34s，
-    //    旧 hookTimeout=30_000 只剩 9% 余量；全量 62 文件并发时两次跑出同一红：
-    //    "Hook timed out in 30000ms"（rbac.test.ts:36）。
-    //  - tests/unit/rls-bare-query-guard.test.ts 的静态扫描单独跑耗时 13.30s（Windows 下
-    //    walk+statSync 偏慢），旧 testTimeout=15_000 只剩 1.27 倍余量，负载下已复现超时红。
-    // 抬的是 setup/扫描的预算，**没有任何断言被放宽或删除**；真正的失败仍会照常变红，
-    // 只是最多晚 45s/90s 才报出来。待办：把裸查守卫的扫描本身做快（那是根因，抬预算是止血）。
+    // 超时预算按**分条件实测**取值，冷/热两种条件都必须写清，否则数字会误导人
+    // （2026-09-30 复算修正：本注释此前把冷启动值误标成"服务已热"，见 CHANGELOG 同日修正条目）：
+    //  - tests/integration/rbac.test.ts：热态单跑 tests=5.32s（并发会话独立测得 5.27s，互相印证）；
+    //    但**冷启动首次命中**（dev server 刚起、路由未编译、62 文件并发）把同一个 beforeAll 推到 27s+，
+    //    放大约 5 倍——成因是 Next 懒编译的首次命中成本，不是用例本身慢。
+    //    旧 hookTimeout=30_000 在冷态几乎无余量，本地两次复现同一红：Hook timed out in 30000ms。
+    //  - tests/unit/rls-bare-query-guard.test.ts：热态 tests=0.94s；首次命中 8.67s，负载下测过 13.30s。
+    //    旧 testTimeout=15_000 对首次命中只留 1.1~1.7 倍余量。
+    // CI 永远是冷启动，所以预算必须按冷态取值，不能按热态。抬的是 setup/扫描预算，
+    // **没有放宽任何断言**：真实失败仍会照常变红，只是最晚 45s/90s 才报。
+    // 另一半修复在调用点：rbac-members.test.ts 与 auth-flow.test.ts 原写死 `, 30_000`，
+    // 会直接盖掉这里的全局值——只改本文件对那两个文件无效（字面量已删，配置为单一来源）。
+    // 遗留：守卫扫描首次命中 8.67s 本身偏慢（walk+statSync），做快它才是治本，抬预算是止血。
     testTimeout: 45_000,
     hookTimeout: 90_000,
     // 并发隔离：每个测试文件独立进程，避免模块级共享状态串扰
