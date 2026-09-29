@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { apiMsg, type ApiMsgKey } from "@/lib/api-messages";
@@ -82,6 +83,10 @@ export async function PATCH(
       },
       userId,
     );
+
+    // 角色门禁：lib/permissions.ts 声明 messages 对 viewer 仅 "r"，此前只认证不判角色。
+    const deniedRole = await requirePermission(ctx, "messages", "update", req);
+    if (deniedRole) return deniedRole;
 
     if (result.status === "notFound") return fail(404, "messageNotFound");
     if (result.status === "forbidden") return fail(403, "forbidden");

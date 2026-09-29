@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/permissions";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -71,6 +72,10 @@ export async function PATCH(
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+
+  // 角色门禁：lib/permissions.ts 声明 whiteboards 对 viewer 仅 "r"，此前只认证不判角色。
+  const deniedRole = await requirePermission(ctx, "whiteboards", "update", req);
+  if (deniedRole) return deniedRole;
 
   try {
     const body = await req.json();
@@ -145,6 +150,10 @@ export async function DELETE(
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },
     );
+
+  // 角色门禁：lib/permissions.ts 声明 whiteboards 对 viewer 仅 "r"，此前只认证不判角色。
+  const deniedRole = await requirePermission(ctx, "whiteboards", "delete", req);
+  if (deniedRole) return deniedRole;
 
   try {
     const deleted = await runWithWorkspace(

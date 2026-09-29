@@ -20,6 +20,9 @@
 #
 # 本文件含人工复核结论，因此**不由 --write-baselines 覆写**；修好一条就删一行。
 # 判定口径为 handler 级。
+# 2026-09-30 分档修正：helper 式授权与多元素角色白名单此前被 LOOSE_RE 漏判，
+#   导致 8 条已接授权的路被记成"零判断"缺口；现已迁入 T2（T1 相应从 33 降至 1）。
+
 DELETE /api/v1/workspaces/{wid}/conversations/{cid}
 DELETE /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}
 DELETE /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}
@@ -28,6 +31,8 @@ DELETE /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
 DELETE /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
 DELETE /api/v1/workspaces/{wid}/documents/{id}
 DELETE /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
+DELETE /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
+DELETE /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
 DELETE /api/v1/workspaces/{wid}/labels
 DELETE /api/v1/workspaces/{wid}/milestones
 DELETE /api/v1/workspaces/{wid}/tasks/{id}/comments
@@ -38,6 +43,8 @@ PATCH /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}
 PATCH /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
 PATCH /api/v1/workspaces/{wid}/documents/{id}
 PATCH /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
+PATCH /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
+PATCH /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
 PATCH /api/v1/workspaces/{wid}/labels
 PATCH /api/v1/workspaces/{wid}/milestones
 PATCH /api/v1/workspaces/{wid}/tasks/{id}/comments
@@ -45,7 +52,11 @@ POST /api/v1/workspaces/{wid}/conversations/{cid}/members
 POST /api/v1/workspaces/{wid}/databases
 POST /api/v1/workspaces/{wid}/databases/{dbid}/fields
 POST /api/v1/workspaces/{wid}/databases/{dbid}/views
+POST /api/v1/workspaces/{wid}/decisions/extract
 POST /api/v1/workspaces/{wid}/documents/batch-permissions
+POST /api/v1/workspaces/{wid}/documents/{id}/permissions
+POST /api/v1/workspaces/{wid}/documents/{id}/share-links
 POST /api/v1/workspaces/{wid}/labels
 POST /api/v1/workspaces/{wid}/members/invite
 POST /api/v1/workspaces/{wid}/milestones
+POST /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/sync-actions

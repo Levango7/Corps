@@ -150,11 +150,19 @@ INTERNAL_EXACT = ("/api/[...path]",)
 
 # T1/T2 分流用的严格信号：确实调用了矩阵
 STRICT_RE = re.compile(r"requirePermission\s*\(|checkPermission\s*\(")
-# 宽松信号：任何角色字面量比较或角色数组 includes
+# 宽松信号：任何角色字面量比较、角色数组白名单、或 helper 式授权判定。
+# 三条补充各对应一次实测漏判（漏判的后果是把已接授权的路记成"零判断"缺口，
+# 久而久之没人相信这份清单）：
+#   1) 角色白名单元素个数不固定（["owner","admin"] / ["owner","admin","member"] 都有），
+#      原先写死两元素的正则对三元素数组失效；
+#   2) `.includes(ctx.member.role)` 里 role 在**右操作数**，原先只认 `role ... .includes(` 这一方向；
+#   3) 授权判断被抽成 helper（canManageDoc / checkDocumentPermission / hasPermission 等），
+#      文件内根本不出现 role 字样。documents/{id}/permissions 与 share-links 全族即属此类。
 LOOSE_RE = re.compile(
     r"\brole\s*(?:===|!==|==|!=)\s*[\"']"
-    r"|\[\s*\"owner\"\s*,\s*\"admin\"\s*\]"
-    r"|\brole\b[^;\n]{0,60}\.includes\s*\("
+    r"|\[[^\]]*\"(?:owner|admin|member|viewer)\"[^\]]*\]\s*\.includes\s*\("
+    r"|\.includes\s*\(\s*[\w.]*\.role\b"
+    r"|\b(?:canManage|canView|canEdit|checkDocumentPermission|hasPermission|assertRole|ensureRole)\w*\s*\("
 )
 
 START_RE = re.compile(r"^\s*export\s+async\s+function\s+(%s)\b" % "|".join(WRITE_METHODS))

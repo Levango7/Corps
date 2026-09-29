@@ -20,14 +20,12 @@ DELETE /api/v1/workspaces/{wid}/approvals/delegates/{did}
 DELETE /api/v1/workspaces/{wid}/approvals/instances/{aid}
 DELETE /api/v1/workspaces/{wid}/calendar/events/{eventId}
 DELETE /api/v1/workspaces/{wid}/contact-groups
-DELETE /api/v1/workspaces/{wid}/folders/{fid}/permissions/{pid}
 DELETE /api/v1/workspaces/{wid}/forms/{fid}
 DELETE /api/v1/workspaces/{wid}/key-results/{kid}
 DELETE /api/v1/workspaces/{wid}/objectives/{oid}
 DELETE /api/v1/workspaces/{wid}/objectives/{oid}/key-results/{krid}
 DELETE /api/v1/workspaces/{wid}/project-templates/{tid}
 DELETE /api/v1/workspaces/{wid}/recycle-bin/{id}
-DELETE /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid}
 DELETE /api/v1/workspaces/{wid}/wiki/{pageId}
 DELETE /api/v1/workspaces/{wid}/workflows/{wfid}
 DELETE /api/{path}
@@ -54,14 +52,12 @@ PATCH /api/v1/workspaces/{wid}/approvals/delegates/{did}
 PATCH /api/v1/workspaces/{wid}/calendar/events/{eventId}
 PATCH /api/v1/workspaces/{wid}/contact-groups
 PATCH /api/v1/workspaces/{wid}/files/{fid}/move
-PATCH /api/v1/workspaces/{wid}/folders/{fid}/permissions/{pid}
 PATCH /api/v1/workspaces/{wid}/forms/{fid}
 PATCH /api/v1/workspaces/{wid}/key-results/{kid}
 PATCH /api/v1/workspaces/{wid}/notifications
 PATCH /api/v1/workspaces/{wid}/objectives/{oid}
 PATCH /api/v1/workspaces/{wid}/objectives/{oid}/key-results/{krid}
 PATCH /api/v1/workspaces/{wid}/project-templates/{tid}
-PATCH /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid}
 PATCH /api/v1/workspaces/{wid}/wiki/{pageId}
 PATCH /api/v1/workspaces/{wid}/workflows/{wfid}
 PATCH /api/{path}
@@ -86,7 +82,6 @@ POST /api/v1/ai/im-reply
 POST /api/v1/ai/knowledge/extract
 POST /api/v1/ai/knowledge/query
 POST /api/v1/ai/mail-assistant
-POST /api/v1/ai/meeting-flow
 POST /api/v1/ai/meeting-summary
 POST /api/v1/ai/meetings/sessions
 POST /api/v1/ai/meetings/sessions/{id}/analyze
@@ -127,7 +122,6 @@ POST /api/v1/remote-control/signal
 POST /api/v1/sync
 POST /api/v1/webhooks/livekit
 POST /api/v1/workspaces
-POST /api/v1/workspaces/{wid}/action-items/generate
 POST /api/v1/workspaces/{wid}/approvals/delegates
 POST /api/v1/workspaces/{wid}/approvals/instances
 POST /api/v1/workspaces/{wid}/approvals/instances/{aid}/add-sign
@@ -145,7 +139,6 @@ POST /api/v1/workspaces/{wid}/contact-groups
 POST /api/v1/workspaces/{wid}/dashboard/layout/import
 POST /api/v1/workspaces/{wid}/files/upload
 POST /api/v1/workspaces/{wid}/files/{fid}/versions/{vid}/restore
-POST /api/v1/workspaces/{wid}/folders/{fid}/permissions
 POST /api/v1/workspaces/{wid}/forms
 POST /api/v1/workspaces/{wid}/forms/{fid}/submissions
 POST /api/v1/workspaces/{wid}/meeting-minutes
@@ -158,7 +151,6 @@ POST /api/v1/workspaces/{wid}/presence
 POST /api/v1/workspaces/{wid}/project-templates
 POST /api/v1/workspaces/{wid}/project-templates/{tid}/apply
 POST /api/v1/workspaces/{wid}/recycle-bin/{id}
-POST /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions
 POST /api/v1/workspaces/{wid}/wiki
 POST /api/v1/workspaces/{wid}/workflows
 POST /api/v1/workspaces/{wid}/workflows/{wfid}/executions

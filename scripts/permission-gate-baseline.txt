@@ -24,36 +24,7 @@
 # 矩阵域外的写 handler 此前完全不可见，现挂账在 T3（170 条零判断）与 T4（33 条 ad-hoc）。
 # 注意 in_wid 的资源段索引：[wid] 与路由组不进 static_core，故资源段固定在 static_core[2]。
 # 变异验证：python scripts/check_permission_gates.py 注入探针后四档均能正确 FAIL（见 CHANGELOG）。
-DELETE /api/v1/workspaces/{wid}/announcements/{aid}
-DELETE /api/v1/workspaces/{wid}/contacts/{cid}
-DELETE /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
-DELETE /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
-DELETE /api/v1/workspaces/{wid}/whiteboards/{wbid}
-PATCH /api/v1/workspaces/{wid}/announcements/{aid}
-PATCH /api/v1/workspaces/{wid}/contacts/{cid}
-PATCH /api/v1/workspaces/{wid}/conversations/{cid}/messages/{mid}
-PATCH /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}
-PATCH /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
-PATCH /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}
-PATCH /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}
-PATCH /api/v1/workspaces/{wid}/whiteboards/{wbid}
+# 2026-09-30 分档修正：helper 式授权与多元素角色白名单此前被 LOOSE_RE 漏判，
+#   导致 8 条已接授权的路被记成"零判断"缺口；现已迁入 T2（T1 相应从 33 降至 1）。
+
 POST /api/v1/workspaces/{wid}/conversations
-POST /api/v1/workspaces/{wid}/conversations/{cid}/messages
-POST /api/v1/workspaces/{wid}/decisions/extract
-POST /api/v1/workspaces/{wid}/documents
-POST /api/v1/workspaces/{wid}/documents/{id}/comments
-POST /api/v1/workspaces/{wid}/documents/{id}/permissions
-POST /api/v1/workspaces/{wid}/documents/{id}/share-links
-POST /api/v1/workspaces/{wid}/documents/{id}/versions
-POST /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}
-POST /api/v1/workspaces/{wid}/tasks/{id}/comments
-POST /api/v1/workspaces/{wid}/tasks/{id}/conversation
-POST /api/v1/workspaces/{wid}/tasks/{id}/decisions
-POST /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/sync-actions
-POST /api/v1/workspaces/{wid}/tasks/{id}/messages
-POST /api/v1/workspaces/{wid}/tasks/{id}/messages/attachments
-POST /api/v1/workspaces/{wid}/tasks/{id}/messages/send
-POST /api/v1/workspaces/{wid}/time-entries
-POST /api/v1/workspaces/{wid}/time-entries/start
-POST /api/v1/workspaces/{wid}/time-entries/stop
-POST /api/v1/workspaces/{wid}/whiteboards
