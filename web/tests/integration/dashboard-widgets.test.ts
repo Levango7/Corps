@@ -34,10 +34,9 @@ describe("dashboard widget 端点：data 即载荷（无 {widget,data} 二层包
   it("task-stats 返回状态计数与 total", async () => {
     const { workspace, accessToken } = await registerUser({ prefix: "wgt-stats" });
 
-    const res = await fetch(
-      `${BASE}/workspaces/${workspace.id}/dashboard/widgets/task-stats`,
-      { headers: authHeader(accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${workspace.id}/dashboard/widgets/task-stats`, {
+      headers: authHeader(accessToken),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -54,10 +53,9 @@ describe("dashboard widget 端点：data 即载荷（无 {widget,data} 二层包
   it("burndown 返回 days 数组（燃尽图按日取数）", async () => {
     const { workspace, accessToken } = await registerUser({ prefix: "wgt-burn" });
 
-    const res = await fetch(
-      `${BASE}/workspaces/${workspace.id}/dashboard/widgets/burndown`,
-      { headers: authHeader(accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${workspace.id}/dashboard/widgets/burndown`, {
+      headers: authHeader(accessToken),
+    });
     const json = await res.json();
 
     expect(res.status).toBe(200);
@@ -67,10 +65,9 @@ describe("dashboard widget 端点：data 即载荷（无 {widget,data} 二层包
   it("未知 widgetId 返回 404（白名单外）", async () => {
     const { workspace, accessToken } = await registerUser({ prefix: "wgt-404" });
 
-    const res = await fetch(
-      `${BASE}/workspaces/${workspace.id}/dashboard/widgets/not-a-widget`,
-      { headers: authHeader(accessToken) },
-    );
+    const res = await fetch(`${BASE}/workspaces/${workspace.id}/dashboard/widgets/not-a-widget`, {
+      headers: authHeader(accessToken),
+    });
 
     expect(res.status).toBe(404);
   });

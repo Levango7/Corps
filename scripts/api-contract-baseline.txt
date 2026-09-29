@@ -122,6 +122,7 @@
 /api/v1/workspaces/{wid}/approvals/instances/{aid}/add-sign
 /api/v1/workspaces/{wid}/approvals/instances/{aid}/approve
 /api/v1/workspaces/{wid}/approvals/instances/{aid}/cc
+/api/v1/workspaces/{wid}/approvals/instances/{aid}/comment
 /api/v1/workspaces/{wid}/approvals/instances/{aid}/delegate
 /api/v1/workspaces/{wid}/approvals/instances/{aid}/reject
 /api/v1/workspaces/{wid}/approvals/instances/{aid}/transfer
