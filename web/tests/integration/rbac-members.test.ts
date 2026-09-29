@@ -37,7 +37,9 @@ beforeAll(async () => {
     ownerId: owner.user.id,
     memberId: memEntry?.id ?? mem.user.id,
   };
-}, 30_000);
+  // 不写死 hook 超时：让它继承 vitest.config.ts 的全局预算（配置里有实测依据）。
+  // 此处原为 30_000，会在并发跑全量时把 beforeAll（两次 registerUser）卡成假红。
+});
 
 describe("RBAC：PATCH /members/{userId}", () => {
   it("owner 可把 member 提升为 admin", async () => {

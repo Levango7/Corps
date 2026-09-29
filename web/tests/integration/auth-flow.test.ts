@@ -264,7 +264,8 @@ describe("刷新端点 session token 一次性轮换（TC-AUTH-05）", () => {
     const thirdCookie = cookies3.find((c) => c.startsWith(`${SESSION_COOKIE}=`));
     expect(thirdCookie).toBeDefined();
     expect(parseCookie(thirdCookie!).value).not.toBe(parsedNew.value);
-  }, 30_000);
+    // 不写死超时：继承 vitest.config.ts 的全局预算（原 30_000 会盖掉配置里的实测余量）
+  });
 });
 
 describe("认证边界条件", () => {

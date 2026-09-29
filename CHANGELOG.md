@@ -6,6 +6,25 @@
 
 ### Fixed
 
+- **集成腿的超时预算低于实测成本，会在满载时把绿的套件打成假红**：`vitest.config.ts` 原
+  `hookTimeout: 30_000` / `testTimeout: 15_000`，而实测 `tests/integration/rbac.test.ts` 的
+  `beforeAll` **单独热跑就要 27.34s**（只剩 9% 余量），`tests/unit/rls-bare-query-guard.test.ts`
+  的静态扫描**单独跑要 13.30s**（只剩 1.27 倍）；62 文件并发 + Next 懒编译时两者都越界。
+  更关键的是这两个字面量还被写死在调用点上盖掉全局配置：`rbac-members.test.ts:40` 的
+  `beforeAll(..., 30_000)`、`auth-flow.test.ts:267` 的 `it(..., 30_000)` —— 只抬全局值对这两个文件无效。
+  现改为全局 `90_000` / `45_000`，并删掉调用点的写死值让配置成为单一来源。
+  **没有放宽任何断言**：抬的只是 setup/扫描的时间预算，真实失败仍会变红，只是最晚 45s/90s 才报。
+  另记一条判定坑：`beforeAll` 挂掉时该套件的用例会**被 Vitest 计成 skipped**，所以
+  `Tests … skipped` 那行会把整个失败的套件伪装成"这些没跑"（实测同一 HEAD 从 38 skipped 变 8 skipped
+  就是 rbac 修好的信号），判红必须读 `Test Files` 那一行。
+  验证（纯 HEAD 的隔离环境：仓库外 `git worktree` + 新建 `corps-prepush-pg` + 冷编译 dev server，
+  端口 3210 避开本机其他实例）：空库 `prisma migrate deploy` exit 0 → 容器内 `bash db/rls-smoke.sh`
+  exit 0（引擎层实测 `relforcerowsecurity` 79 表 / `pg_policies` 264 条 / `corps_app.rolbypassrls=f`）→
+  `npx vitest run` **62 文件 / 735 用例全通过、0 skipped、exit 0**（含传入 `RLS_SMOKE_*` 后
+  `rls-engine` 那 8 例由条件跳过转为真跑）。
+  过程中我自己造成过一次假红并如实记录：只 `kill` 了 `npx` 包装进程而真 `next` 仍在监听，
+  随后 `rm -rf .next` 把那个活着的 server 的构建目录删了 → 该轮 19 个 500、14 文件红全部作废，
+  改为**按端口反查 PID** 清理后重跑才取得上面的结果。
 - **任何一个 404 都会渲染成全局错误页而非 404 页**：`app/[locale]/not-found.tsx:20` 写的是
   `const { locale } = await params`，但 **Next.js 不给 `not-found.tsx` 传 props**（App Router 固定限制），
   于是 `params` 为 undefined → `TypeError: Cannot destructure property 'locale' of ... undefined`
