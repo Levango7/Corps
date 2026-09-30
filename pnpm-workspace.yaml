@@ -9,6 +9,8 @@ allowBuilds:
   - esbuild
   - prisma
 # 强制升级 sharp 到 >=0.35.4 修复 GHSA-rgj7-g3m4-5g8c（libheif 漏洞）
-# sharp 是 next 的间接依赖，next 16.3.3 默认拉取 <0.35.4 的版本
+# sharp 是 next 的间接依赖，旧版 next 默认拉取 <0.35.4 的版本
+# 注意：本文件的 overrides 不会进 web/pnpm-lock.yaml —— CI（working-directory: web）
+# 与镜像构建（上下文 ./web）都由 web/pnpm-workspace.yaml 决定。生效副本在那边。
 overrides:
   sharp: ">=0.35.4"

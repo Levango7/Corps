@@ -16,3 +16,16 @@ minimumReleaseAgeExclude:
 overrides:
   effect: ^3.20.0
   deepmerge-ts: ^8.0.0
+  # 注意：pnpm 在 web/ 下安装时只读本文件（CI 的 working-directory: web、
+  # Dockerfile 的构建上下文 ./web 都属这种情况）。仓库根 pnpm-workspace.yaml 里的
+  # overrides 不会进锁文件——此前那条 sharp 覆盖就是死配置，故在此重述一遍。
+  # sharp >=0.35.4 修 GHSA-rgj7-g3m4-5g8c（libheif）
+  sharp: ">=0.35.4"
+  # undici 三条 high（DoS via unrequested WebSocket subprotocol / TLS 证书校验绕过 /
+  # cross-origin cache poisoning）分属两个大版本，各自按声明范围覆盖并**加上界**：
+  # 若写成 ">=7.29.1" 无上界，pnpm 会把 7.x 的请求解析到 8.10.0 —— 既跨了大版本、
+  # 又仍是未修复版本（实测踩过）。故两条都锁在本大版本内。
+  #   @ai-sdk/provider-utils 声明 ^7.29.0 → 修复版 7.29.1（<8 保住大版本）
+  #   jsdom（经 vitest 带入，且被 --prod 审计计入）声明 ^8.9.0 → 修复版 >=8.10.2
+  'undici@^7.29.0': ">=7.29.1 <8"
+  'undici@^8.9.0': ">=8.10.2 <9"
