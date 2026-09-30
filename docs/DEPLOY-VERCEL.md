@@ -1,8 +1,10 @@
 # Vercel 部署指南
 
-本文档介绍如何将 corps 部署到 Vercel。面向国内用户，默认部署到香港区域（`hng1`）。
+本文档介绍如何将 corps 部署到 Vercel。面向国内用户，默认部署到新加坡区域（`sin1`，ap-southeast-1）。
 
-> 仓库根目录的 `vercel.json` 已指定 `web/` 为项目根目录、Next.js 框架与香港区域，无需在 Vercel Dashboard 重复配置 Root Directory。
+> Vercel 的 19 个可用 Function 区域中**不存在** `hng1` 这个 slug；香港的正确写法是 `hkg1`，但 OpenAI 自 2025-07-09 起拒绝来自 `hkg1` 的 Function 请求，会让 `web/lib/ai/deepseek.ts` 的 OpenAI 备用通道失效，因此本项目不选它。
+
+> 仓库根目录的 `vercel.json` 已指定 `web/` 为项目根目录、Next.js 框架与新加坡区域，无需在 Vercel Dashboard 重复配置 Root Directory。
 
 ---
 
@@ -185,11 +187,19 @@ cd web && npx prisma generate && npx prisma migrate deploy && pnpm build
 
 **解决**：在 Stripe Dashboard → Developers → Webhooks 中核对 endpoint URL 与 Signing Secret，更新 Vercel 环境变量后 Redeploy。
 
-### 区域不支持 / 延迟高
+### 部署直接失败：`Deployment failed — Invalid region`
+
+**原因**：`vercel.json` 的 `regions` 写了 Vercel 不存在的 slug。非法区域在**构建开始之前**就让部署失败，报错文本不含 slug 名，容易被误读成权限或套餐问题。
+
+**解决**：`regions` 只能取以下 19 个 slug 之一：
+`arn1 bom1 cdg1 cle1 cpt1 dub1 fra1 gru1 hkg1 hnd1 iad1 icn1 kix1 lhr1 pdx1 sfo1 sin1 syd1 yul1`
+（清单见 [Vercel regions](https://vercel.com/docs/regions#region-list)）。另注意套餐限制：Hobby 仅单区域，Pro 最多 5 个；配超了同样会在构建前失败。
+
+### 延迟高
 
 **原因**：`vercel.json` 中 `regions` 与数据库区域不匹配。
 
-**解决**：确认数据库区域与 `hng1`（香港）就近；若使用 Neon，创建项目时选择 `ap-southeast-1`（新加坡）或邻近区域。
+**解决**：Function 应与数据库同区域或就近。本项目取 `sin1`（新加坡，ap-southeast-1）；若使用 Neon，创建项目时同样选 `ap-southeast-1`。
 
 ### 自定义域名 HTTPS 证书未签发
 
