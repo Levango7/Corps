@@ -98,10 +98,10 @@ api/          # openapi.yaml 契约
 ```
 
 ## 链接
-
+- **在线体验**：尚无公开实例（无 URL 可给；此项待真实部署后回填）
 - **在线体验**：部署中（v0.7.1 已发布）
 - **变更日志**：[CHANGELOG.md](./CHANGELOG.md)
-- **部署手册**：[docs/runbook-deploy.md](./docs/runbook-deploy.md)
+- **镜像**：`docker pull ghcr.io/levango7/corps:0.7.2`（由 `v0.7.2` tag 触发的 CI 发布；历史 `0.7.1` 镜像实际不存在，此前该行为失实宣称）
 - **镜像**：`docker pull ghcr.io/levango7/corps:0.7.1`
 - **定价**：内置定价页（Pro ¥29.9/人/月，年付 ¥299）。两处数字分属两张表，勿混用——`web/lib/pricing.ts` 的 `PRICING_MATRIX` 是**功能对比表**：22 个功能行中 Free 全量 14 行 + 受限 3 行（决策条数 / 人数 / 附件大小）= 可用 17 行；同文件 `PRICING_PLANS.free.features` 是**套餐卡要点列表**：21 条（`pricing.features.free.f01–f21`，中英词条齐备）。逐项 Free/Pro 归属以 `PRICING_MATRIX` 为准。
 
