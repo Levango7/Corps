@@ -6,6 +6,24 @@
 
 ### Fixed
 
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
+
 - **文档版本历史与会话成员列表两处「按错键取分页信封」静默失效（在途改动里的错法，本轮纠正）**：
   `GET …/documents/{id}/versions` 的载荷是 `data:{ items, page, limit, total, hasMore }`
   （`route.ts:88-93` 里 items 的取值是 `result.versions`，**响应键仍是 `items`**）；`GET …/conversations/{cid}/members`
@@ -356,6 +374,24 @@
 
 ### Fixed
 
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
+
 - **UI 响应式修复（8 高严重度 + 16 中 + 23 低）**：
   - 日历月/周视图手机单列布局 + 工具栏两行 + i18n 日期格式。
   - Wiki/会议/工作流侧边栏移动端抽屉 + 操作按钮下拉菜单。
@@ -418,6 +454,24 @@ AI 原生办公平台升级版本：从"项目管理工具"升级为 AI 原生�
 
 ### Fixed
 
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
+
 - **SSE 单用户并发连接硬上限**：此前只有 20 次/分钟的建立限流，单用户理论上可累积约百条长连接占句柄。补 per-user 计数（上限 5，多端登录正常 1-3），超限返回 429；额度获取放在最后一个可能抛错的 await 之后，无泄漏路径。
 - **编辑器模板 i18n bug**：表格模板硬编码"列A|列B"、三个决策模板（方案对比/事故复盘/立项决议）硬编码中文——`/en` 用户插入的是中文模板。改为 i18n 键，zh/en 双端对称。
 - notifications PATCH 的 zod refine 校验移入 handler（模块级 schema 无法按请求语言本地化，校验语义不变）。
@@ -443,6 +497,24 @@ AI 原生办公平台升级版本：从"项目管理工具"升级为 AI 原生�
 
 ### Fixed
 
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
+
 - **RBAC 三处修正**：runWithWorkspace 已内包 prisma.$transaction，transfer 内再嵌事务会被 Prisma 6 拒绝（改为直接在 tx 内顺序 update，原子性不变）；成员 PATCH 顺序改为先 self 后 ownerImmutable（owner 改自己曾被误拦为 403）；admin 改 member 角色放行。
 - **SSE 单用户并发连接硬上限**：连接建立限流（20 次/分钟）只约束建立频率不约束存活数，单用户理论上可累积约百条长连接占句柄。补 per-user 计数（上限 5，多端登录正常值 1-3），超限返回 429；额度获取放在最后一个可能抛错的 await 之后，不留泄漏路径。
 - 概览页"全部 →"链接触控目标 20px → 28px（负 margin 补偿，视觉不变）。
@@ -467,6 +539,24 @@ AI 原生办公平台升级版本：从"项目管理工具"升级为 AI 原生�
 - **任务公开只读分享**：任务属性栏生成只读外链给工作区外的人（客户/外包/顾问）看实时视图——标题/描述/状态/优先级/截止日/负责人名/子任务列表；可复制可撤销；脱敏不含 email/评论/聊天/附件。
 
 ### Fixed
+
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
 
 - **任务分享与文档分享的加固模式 RLS 缺陷**：公开读接口曾用裸 prisma 查询，corps_app + FORCE RLS 下恒返 null。修复为 `p_tasks_share_select`/`p_documents_share_select` 策略（share_token = app.public_token GUC 放行）+ runWithShareToken 分步关联读。
 - E2E 回归：PDF 打印容器常驻 DOM 导致 getByText 命中 2 元素（strict violation）——改条件渲染（点导出才挂载，afterprint 自动卸载）。
@@ -494,6 +584,24 @@ AI 原生办公平台升级版本：从"项目管理工具"升级为 AI 原生�
 关键修复版本：解决 0.2.0 生产镜像全站无样式的问题。
 
 ### Fixed
+
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
 
 - **生产构建全站样式缺失（0.2.0 最严重缺陷）**：`next build` 生产路径不自动接入 `@tailwindcss/postcss`（dev 会），导致镜像内 CSS 仅剩 ~6.5KB design-tokens 变量、所有 Tailwind 工具类缺失，UI 布局崩坏。补 `postcss.config.mjs` 显式接入后产物 CSS ~60KB（fecc6ca）。
 - **生产构建登录页中英混排**：0.2.0 镜像打包时 i18n 提取尚未完成，登录表单 label 为"翻译 + 硬编码中文"残留（如 "Email密码"式混排）。0.2.1 打包自 i18n 收口后的完整源码（94ebdad）。
@@ -527,6 +635,24 @@ AI 原生办公平台升级版本：从"项目管理工具"升级为 AI 原生�
 - **CI 加固模式回归**：test-hardened job 以 corps_app 角色连接 + FORCE RLS 激活后跑全量集成测试，与生产同构。
 
 ### Fixed
+
+- **带附件的消息恒 400，IM 附件功能在生产里从未可用**：上传端点返回 `storageKey`，前端拼成
+  `/uploads/${storageKey}`（`components/im/MessageInput.tsx:355-356`）并由 `components/im/useIM.ts:291`
+  原样透传；而 `sendMessageSchema` 要求 `url: z.string().url()`、`isAttachmentUrlAllowed` 又用
+  `new URL(url)` 解析——**相对路径两者都拒绝** → 消息创建恒失败。修法：放行应用内相对路径
+  （限 `/uploads/` 前缀且不含 `..`），绝对 URL 仍走协议 + 域名白名单（SSRF 防护语义不变）。
+- **超过 10MB 的文件被静默丢弃，用户毫无反馈**：`processFiles` 里 `if (file.size > MAX_FILE_SIZE) continue;`
+  不给任何提示，而 i18n 的 `chat.fileTooLarge`（`messages/zh.json:865` / `en.json:865`）早就写好、
+  **从无任何代码引用**。修法：命中即 `setUploadError(t("fileTooLarge"))`，且逐个跳过不中断
+  （其余合规附件仍正常加入）。
+- **两处 E2E 期望与实现契约不符（测试侧修正，非产品缺陷）**：
+  ① 附件用例需先输入文本再断言可发送——契约是"附件必须伴随文本"：服务端 `body: z.string().min(1)`，
+  前端 `canSend` 要求 `body.trim().length > 0`，`handleSend` 空文本直接 return；
+  ② 消息列表与看板卡片按移动/桌面断点各渲染一份，`.first()` 会命中断点下**隐藏**的那份
+  （症状 `received "hidden"`），改用仓库既有口径 `.filter({ visible: true }).first()`。
+
+  验证：im-upgrade 整链 **12 passed (4.8m)**、viewer-readonly + v04-features + task-management
+  **11 passed (2.7m)**（真实浏览器 + 真实 PG，非推断）；eslint / prettier / tsc 均通过。
 
 - IM 附件孤儿文件清理落地（cron 化，磁盘不再单调增长）。
 - 日历同步在 RLS 加固模式下的跨工作区扫描修复（`calendar` op 逃生口）。

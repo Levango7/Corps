@@ -235,8 +235,22 @@ function getAllowedAttachmentDomains(): string[] {
   return [defaultDomain];
 }
 
-/** 验证附件 URL 的域名是否在白名单中 */
+/**
+ * 验证附件 URL 是否受信任。
+ *
+ * 放行两类：
+ *  1) **应用内相对路径 `/uploads/<storageKey>`** —— 这是本系统上传产物的标准存储格式：
+ *     上传端点返回 `storageKey`，前端拼成 `/uploads/${storageKey}`（MessageInput.tsx:355-356），
+ *     消息表的 url 字段存的就是这个形状。此前这里只接受绝对 URL，导致**带附件的消息 POST
+ *     恒 400**（z.string().url() 与 new URL("/uploads/…") 都会拒绝），附件消息在生产里从未
+ *     发出去过；E2E `im-upgrade.spec.ts` 的附件用例就是被这条挡下（E2E: 发送后消息里始终
+ *     看不到文件卡片）。
+ *  2) **绝对 URL** 且协议为 http/https、域名在白名单内（防 SSRF / 钓鱼，保持原语义）。
+ *
+ * 相对路径必须限制在 `/uploads/` 前缀下，不放行任意相对路径。
+ */
 function isAttachmentUrlAllowed(url: string): boolean {
+  if (url.startsWith("/uploads/") && !url.includes("..")) return true;
   try {
     const parsed = new URL(url);
     const protocol = parsed.protocol;
@@ -262,7 +276,16 @@ const sendMessageSchema = z.object({
     .array(
       z.object({
         filename: z.string().min(1).max(255),
-        url: z.string().url().refine(isAttachmentUrlAllowed, "附件 URL 域名不在允许的白名单中"),
+        // 不用 z.string().url()：它会先一步拒绝本系统标准的 /uploads/<key> 相对路径
+        // （上传端点返回 storageKey，前端拼相对路径），使带附件的消息恒 400。
+        url: z
+          .string()
+          .min(1)
+          .max(2048)
+          .refine(
+            isAttachmentUrlAllowed,
+            "附件 URL 不在允许范围（仅本应用 /uploads/ 路径或白名单域名）",
+          ),
         mimeType: z.string().min(1).max(100),
         size: z.number().int().positive(),
       }),

@@ -189,7 +189,12 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 附件预览应显示文件名（等待上传完成）
     await expect(page.getByText(pdfName)).toBeVisible({ timeout: 10_000 });
 
-    // 发送带附件的消息
+    // 发送带附件的消息。
+    // 注意：本产品的契约是"附件必须伴随文本"——服务端 `sendMessageSchema` 要求
+    // body.min(1)（conversations/[cid]/messages/route.ts:253-254），前端 canSend 同样是
+    // `body.trim().length > 0 && …`（components/im/MessageInput.tsx:522），handleSend 在空文本时直接 return。
+    // 所以这里必须先输入文本再断言可发送；"纯附件消息"目前不支持，若要支持需改 API schema + 前端（产品决策）。
+    await page.getByPlaceholder(/发消息/).fill("带附件的消息");
     const sendBtn = page.getByRole("button", { name: "发送聊天消息" });
     await expect(sendBtn).toBeEnabled();
     await sendBtn.click();
@@ -324,12 +329,24 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
       await input.fill(text);
       await expect(sendBtn).toBeEnabled({ timeout: 10_000 });
       await input.press("Control+Enter");
-      await expect(page.getByText(`E2E滚动消息${i}-`).first()).toBeVisible({
+      // 消息区同样按移动/桌面断点渲染两份，`.first()` 会命中断点下隐藏的那份
+      // （症状是 received "hidden" / element(s) not found）——按可见性过滤，
+      // 口径同本文件与 task-management.spec.ts。
+      await expect(
+        page.getByText(`E2E滚动消息${i}-`).filter({ visible: true }).first(),
+      ).toBeVisible({
         timeout: 10_000,
       });
     }
 
     // 最后一条消息应可见（自动滚动到底部）
-    await expect(page.getByText(/E2E滚动消息4-/).first()).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page
+        .getByText(/E2E滚动消息4-/)
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });

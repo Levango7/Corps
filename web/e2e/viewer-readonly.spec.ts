@@ -22,6 +22,9 @@ function asList<T>(payload: unknown): T[] {
 }
 
 test("viewer 可读看板、可看任务详情，但写入被服务端拒绝", async ({ browser }) => {
+  // 链路较长（双账号注册 + 邀请 + 切工作区上下文 + 建任务 + 3 次写校验 + 页面渲染），
+  // 默认 60s 在 CI 上不够：实测本用例在 CI 与本地都曾在断言等待 20s 后撞总超时。
+  test.setTimeout(120_000);
   // 1) 先注册"将来只读"的账号（它自带一个独立工作区，不影响后面的断言）
   const viewerCtx = await browser.newContext();
   const vp = await viewerCtx.newPage();
@@ -78,9 +81,17 @@ test("viewer 可读看板、可看任务详情，但写入被服务端拒绝", a
   await expect(vp.getByRole("heading", { name: /看板|任务看板/ })).toBeVisible({
     timeout: 20_000,
   });
-  // BoardView 为移动/桌面断点各渲染一份卡片，取第一份
-  await expect(vp.getByText(taskTitle).first()).toBeVisible({ timeout: 20_000 });
-  await expect(vp.locator('[role="alert"]')).toHaveCount(0);
+  // BoardView 为移动/桌面断点各渲染一份卡片；`.first()` 会命中断点下隐藏的那份
+  //（实测 locator 已解析到该 <p> 但 received "hidden"），须按可见性过滤，
+  //  口径同 task-management.spec.ts 里的 .filter({ visible: true }).first()
+  await expect(vp.getByText(taskTitle).filter({ visible: true }).first()).toBeVisible({
+    timeout: 20_000,
+  });
+  // 页面不能是路由级错误边界（error.tsx 的 role="alert" + "页面出错了"文案）。
+  // 注意：**不要**直接统计 `[role="alert"]`——`next dev` 的 DevTools 浮层也注入一个空 alert
+  //（实测本地失败点快照里那个 alert 就紧跟 "Open Next.js Dev Tools"），会把本应在生产
+  // 构建下通过的页面在本地判红。断言文案才有意义。
+  await expect(vp.getByText(/页面出错了|Something went wrong/)).toHaveCount(0);
 
   // 6) 写：创建任务必须被服务端拒绝
   const create = await viewerCtx.request.post(`/api/v1/workspaces/${wid}/tasks`, {

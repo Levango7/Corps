@@ -307,7 +307,11 @@ export function MessageInput({
       const list = Array.from(files);
       for (const file of list) {
         if (file.size > MAX_FILE_SIZE) {
-          // 超过大小限制，跳过（UI 上由字数提示区域显示警告）
+          // 超限必须**告诉用户**：此前这里只 `continue` 静默丢弃文件，界面毫无反馈
+          // （E2E `im-upgrade.spec.ts` 的"超过 10MB 被拦截并提示"用例因此长红，
+          //  而 i18n 的 chat.fileTooLarge 键早就写好、从未被任何代码引用）。
+          // 逐个跳过不中断：其余合规附件仍应正常加入。
+          setUploadError(t("fileTooLarge"));
           continue;
         }
         const isImage = file.type.startsWith("image/");
