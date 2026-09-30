@@ -18,7 +18,7 @@
 
 | 层 | 技术 | 版本 |
 |----|------|------|
-| 前端框架 | Next.js (App Router) | 16.3.3 |
+| 前端框架 | Next.js (App Router) | 16.3.6 |
 | 运行时 | React | 19.2.8 |
 | CSS | Tailwind CSS | 4.3.3 |
 | ORM | Prisma | 6.15.0 |

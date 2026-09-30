@@ -69,7 +69,7 @@
 
 | 层 | 技术 | 实际版本 | 锁定原因 |
 |----|------|----------|----------|
-| 前端 | Next.js (App Router) + React | next@16.3.3 / react@19.2.8 | Web 优先 + 多租户 SaaS 部署成熟 + 单语言贯通前后端 |
+| 前端 | Next.js (App Router) + React | next@16.3.6 / react@19.2.8 | Web 优先 + 多租户 SaaS 部署成熟 + 单语言贯通前后端 |
 | 前端 UI | Tailwind CSS + Radix UI | tailwindcss@4.3.3 / radix-ui 最新稳定 | 无样式可访问原语 + Token 映射反硬编码 |
 | 图标 | Lucide (lucide-react) | 钉确切版本（非 ^/latest） | P0 锁定一套 SVG，禁 emoji/禁混用 |
 | 后端 | Next.js Route Handlers（全栈起步） | 同前端 | 最小部署目标、最快跑通 |
