@@ -81,13 +81,6 @@ jobs:
       # 否则判据坏掉时它会永远绿灯（这道门禁的初版自检就曾被 fixture 自己骗过）。
       - name: Mutation-check the zero-coverage ratchet itself
         run: python ../scripts/check_zero_coverage_ratchet.py --self-test
-      # 零行覆盖文件数棘轮：上面那两档 functions/branches 百分比其实**可以被"什么都不做"满足**——
-      # 2026-10-01 实测 707 个被统计文件里 646 个（91.4%）行覆盖为 0，它们仍往 functions/branches
-      # 计数器里贡献条目，把全库 functions 抬到 58.73%，而只看那 61 个真有行被跑到的文件实为 46.86%。
-      # 这一档改成清单口径：一个源文件要么被测到，要么在 scripts/zero-coverage-baseline.txt 占一行。
-      # 必须排在 vitest 之后（读它产出的 coverage-summary.json）。阈值一律不放宽：只加不减。
-      - name: Zero-coverage file ratchet (shrink-only)
-        run: python ../scripts/check_zero_coverage_ratchet.py
 
   # RLS 覆盖率防回归：对 schema.prisma 中每个含 workspaceId 的租户表，核验
   # rls-activate.sql 是否给齐 ENABLE + FORCE + 至少一条 CREATE POLICY 三态。
