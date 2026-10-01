@@ -56,7 +56,7 @@ corps 已从"项目管理工具"升级为 **AI 原生办公平台**：17 个核�
 - **租户隔离（双层防御）**：`schema.prisma` 共 99 张表（99 个模型，全部显式 `@@map`，表名不靠猜）。其中 **71 张含 `workspaceId` 的租户表全部启用 `ENABLE + FORCE ROW LEVEL SECURITY` 并配有策略，另有 8 张虽无 `workspaceId` 但也已入引擎层**（`workspaces` 按成员资格、`conversation_members` / `chat_presences` / `message_reads` / `calendar_connections` / `task_calendar_events` / `task_labels` / `push_subscriptions` 按用户或成员关系），合计 **79 张受保护、264 条策略**——这 8 张的存在同时说明"按 `app.user_id` 做引擎层判定"的机制在生产里已经在用，不是纸面能力。由 CI 的 `rls-coverage`（租户表 ENABLE + FORCE + 策略三态齐备）、`schema-drift`（schema ↔ 已部署库逐项比对）与 `check_rls_exemptions.py`（**豁免登记表，只允许收缩**）三道门禁守护。
 
   余下 **20 张未入引擎层**，按成因分四类，处置代价并不相同（详见 `docs/decisions/ADR-010-RLS豁免登记表.md`）：**P · 有租户父级 10 张**（`ai_messages`、`assistant_messages`、`database_fields`/`database_records`/`database_views`、`decision_action_items`、`file_versions`、`key_results`、`meeting_participants`、`yjs_persistence`）——同事务内会被父表策略拒绝而整体回滚，属**纵深防御少一层**而非当前越权面，但独立事务写或只改子表的路径拦不住；**G1 · Better Auth 身份域 4 张**（`users`/`sessions`/`accounts`/`verifications`，无租户键、由认证层自管，永久豁免）；**G2 · 支付幂等 2 张**（`processed_payment_events`/`processed_stripe_events`，webhook 须跨租户判重，永久豁免）；**G3 · 用户级有主表 3 张**（`notification_preferences`/`push_tokens`/`ai_voice_preferences`，都有 `userId → users`，机制现成，是**最便宜的可收编项**）；**G4 · 无任何归属键 1 张**（`share_access_logs`，只有 `entityType`/`entityId`/`ip`/`userAgent`，装的是分享访问审计含 IP/UA，是这 20 张里最该处理的一张）。这 20 张**一张都没有 `workspaceId` 列**，因此都不受"应用层 workspaceId 过滤"的保护
-- **CI 关卡**（12 个 job）：lint（eslint + prettier + `tsc --noEmit`）/ 覆盖率棘轮 / RLS 覆盖率 / schema 漂移 / API 契约 / **角色权限门禁**（写 handler 是否真的调用权限矩阵，四档基线只允许收缩）/ 安全审计 / 单测+集成 / **加固模式回归**（以 `NOBYPASSRLS` 最小权限角色 + RLS 激活跑集成测试）/ 浏览器 E2E / 生产构建 / 镜像发布。状态见页首徽章——**徽章是刻意加的：此前长红三周无人发现，正因为仓库里没有任何 CI 状态出口**
+- **CI 关卡**（12 个 job）：lint（eslint + prettier + `tsc --noEmit`）/ 覆盖率棘轮（四档百分比 + **零行覆盖文件清单只允许收缩**：实测 707 个文件里 646 个行覆盖为 0，而它们照样往 functions/branches 计数器里送条目，把全库 functions 抬成 58.73%、只看被测到的那 61 个文件实为 46.86%——所以百分比之外另立清单口径）/ RLS 覆盖率（租户表 ENABLE+FORCE+策略三态 + **豁免登记表**）/ schema 漂移 / API 契约 / **角色权限门禁**（写 handler 是否真的调用权限矩阵，四档基线只允许收缩）/ 安全审计 / 单测+集成 / **加固模式回归**（以 `NOBYPASSRLS` 最小权限角色 + RLS 激活跑集成测试）/ 浏览器 E2E / 生产构建 / 镜像发布。**新增的两道登记表门禁自身也进 CI 跑注入式自检**（RLS 豁免登记表 4 类红因 / 5 条变异，零覆盖棘轮 3 类红因 / 6 条变异），防止判据悄悄失效后永远绿灯。状态见页首徽章——**徽章是刻意加的：此前长红三周无人发现，正因为仓库里没有任何 CI 状态出口**
 - **可复现的部署**：镜像发布到 GHCR，`docker compose up -d` 一键起全栈（app + PostgreSQL + Redis + cron 调度器 + LiveKit）
 - **AI 安全约束**：所有 AI 建议均需用户确认后才落位（写入任务/文档/日程），AI 不直接修改业务数据；AI 用量按工作区**计量**（Token / 调用次数 / 成本三维，写入 `AiUsageLog`），限额配置见 `AiUsageLimit`
 
@@ -92,7 +92,7 @@ Next.js 16（App Router / Turbopack）· React 19 · Tailwind CSS 4 · Prisma 6 
 ```
 web/          # Next.js 应用（app/ + components/ + lib/ + prisma/ + e2e/ + tests/）
 db/           # rls-activate.sql（加固模式一键激活）+ rls-smoke.sh（引擎级冒烟）
-scripts/      # CI 门禁脚本：check_rls_coverage / check_schema_migration_drift / check_api_contract
+scripts/      # CI 门禁脚本：check_rls_coverage / check_rls_exemptions / check_schema_migration_drift / check_api_contract / check_zero_coverage_ratchet
 docs/         # ADR 决策记录 / runbook / 市场与定价文档
 design/       # 设计系统（design-tokens.css 双主题）
 api/          # openapi.yaml 契约
