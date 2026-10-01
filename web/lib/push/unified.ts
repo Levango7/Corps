@@ -19,7 +19,7 @@
  */
 
 import jwt from "jsonwebtoken";
-import { prisma } from "@/lib/prisma";
+import { withGuc } from "@/lib/auth";
 
 // ─── 类型定义 ───────────────────────────────────────────────
 
@@ -293,14 +293,17 @@ export async function sendPushBatch(targets: PushTarget[], payload: PushPayload)
  * 按 userId 发送推送：查库获取该用户所有设备的 PushToken，批量下发。
  *
  * 用户可能有多台设备（手机 + 平板）且跨平台（Android + iOS），全部遍历发送。
- * PushToken 表通过 userId 索引快速查找。不经过 RLS 事务（推送是用户级
- * 全局数据，不绑定工作区），直接用 prisma 查询。
+ * PushToken 表通过 userId 索引快速查找。push_tokens 已纳入引擎层 RLS（ADR-010
+ * G3）：以【目标用户】身份 withGuc 注入 app.user_id 后查询——读取对象就是该
+ * 用户本人，不存在跨用户场景，故策略无 cron 逃生口。
  */
 export async function sendPushToUser(userId: string, payload: PushPayload): Promise<void> {
-  const tokens = await prisma.pushToken.findMany({
-    where: { userId },
-    select: { platform: true, token: true },
-  });
+  const tokens = await withGuc({ user_id: userId }, (tx) =>
+    tx.pushToken.findMany({
+      where: { userId },
+      select: { platform: true, token: true },
+    }),
+  );
 
   if (tokens.length === 0) {
     console.warn(`[push/user] 用户 ${userId} 无已注册推送 token，跳过`);

@@ -72,3 +72,14 @@ CI 的 `rls-coverage` job 同时跑 `--self-test`：五类注入变异各自断�
 1. **G3 三张是否立刻收编**：机制现成，代价是必须验证"所有读写这三张的路径都注入了 `app.user_id`"，尤其 cron 与分享态（`app.public_token` 有 4 处）下会拿不到 user_id ⇒ 需要 `NOBYPASSRLS` 加固模式回归跑一遍才知道会不会静默变空。
 2. **G4 `share_access_logs` 的归属键**：写入时反查 `workspaceId`（多一次查询）还是改成只记哈希化标识以缩小个人面。
 3. **P 类 10 张是否逐张补独立策略**：现在只有"同事务回滚"这一层；要不要给它们也上 `workspaceId` 派生策略，取决于是否接受"跨表批量写/独立事务写"这类路径的残余风险。
+
+## 实施记录（2026-10-01 起，按推荐组合逐项独立提交）
+
+1. **G3 · 单表试点已实施（`push_tokens`）**——受保护表 79→80、策略 264→268、基线 20→19。四处改动：
+   - `db/rls-activate.sql`：增四条用户级策略（SELECT/INSERT/UPDATE/DELETE）。**无 cron 逃生口**——唯一跨用户读路径 `sendPushToUser` 以【目标用户】身份 `withGuc({user_id})` 查库，不存在"以系统身份跨用户读"的时刻；
+   - `web/app/api/v1/push/register/route.ts`（upsert / deleteMany）与 `web/lib/push/unified.ts`（findMany）：裸 prisma 直调改为 `withGuc` 注入 `app.user_id`；
+   - `db/rls-smoke.sh`：新增引擎级断言四条（自可见=1 / 跨用户读=0 / 跨用户 UPDATE=0 行 / 未注入 GUC=0）；
+   - `web/tests/integration/push-tokens.test.ts`：写入注册/注销/鉴权/幂等路径，随 `NOBYPASSRLS` 加固回归两腿都跑。
+   `notification_preferences` / `ai_voice_preferences` 暂留基线，观察单表试点在加固 CI 的表现后按同法逐张收编。
+2. **G4（已决、待实施）**：`share_access_logs` 写入时反查 `entityId → workspaceId` 存成列，再按租户表收编。
+3. **P 类 10 张（已决、待实施）**：维持"同事务回滚"兜底，登记为"已接受残余风险"。

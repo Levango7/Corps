@@ -1,10 +1,10 @@
 // POST   /api/v1/push/register — 注册设备推送 token（FCM/APNs/Huawei Push Kit）
 // DELETE /api/v1/push/register — 注销设备推送 token
 //
-// 认证模式：getUserId → checkRateLimit → prisma（用户级数据，不绑定工作区）
+// 认证模式：getUserId → checkRateLimit → withGuc({ user_id })（用户级数据，不绑定工作区）
 // 与 /api/v1/push/subscribe（浏览器 Web Push）正交，覆盖原生 App 推送通道。
-// PushToken 是用户级数据（无 workspaceId），不通过 runWithWorkspace 的 RLS 事务，
-// 直接用 prisma 操作。userId 已通过 getUserId 认证。
+// PushToken 是用户级数据（无 workspaceId），已纳入引擎层 RLS（ADR-010 G3）：
+// 读写都经 withGuc 注入 app.user_id，裸 prisma 调用在加固模式下会被策略拦空。
 //
 // 约定：{ code, data, message }
 
@@ -13,7 +13,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
+import { withGuc } from "@/lib/auth";
 
 /** 平台枚举（与 PushToken.platform 一致） */
 const platformEnum = z.enum(["android", "ios", "harmonyos"]);
@@ -71,23 +71,25 @@ export async function POST(req: NextRequest) {
 
   try {
     // 3) upsert 推送 token（userId+platform+token 唯一）
-    await prisma.pushToken.upsert({
-      where: {
-        userId_platform_token: {
+    await withGuc({ user_id: userId }, (tx) =>
+      tx.pushToken.upsert({
+        where: {
+          userId_platform_token: {
+            userId,
+            platform: body.platform,
+            token: body.token,
+          },
+        },
+        create: {
           userId,
           platform: body.platform,
           token: body.token,
         },
-      },
-      create: {
-        userId,
-        platform: body.platform,
-        token: body.token,
-      },
-      update: {
-        // upsert 的 update 分支：token 已存在，仅刷新 updatedAt（updatedAt @updatedAt 自动更新）
-      },
-    });
+        update: {
+          // upsert 的 update 分支：token 已存在，仅刷新 updatedAt（updatedAt @updatedAt 自动更新）
+        },
+      }),
+    );
 
     return NextResponse.json({
       code: 0,
@@ -144,13 +146,15 @@ export async function DELETE(req: NextRequest) {
 
   try {
     // 3) 删除推送 token（限定 userId 防越权）
-    await prisma.pushToken.deleteMany({
-      where: {
-        userId,
-        platform: body.platform,
-        token: body.token,
-      },
-    });
+    await withGuc({ user_id: userId }, (tx) =>
+      tx.pushToken.deleteMany({
+        where: {
+          userId,
+          platform: body.platform,
+          token: body.token,
+        },
+      }),
+    );
 
     return NextResponse.json({
       code: 0,

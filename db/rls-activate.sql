@@ -50,7 +50,7 @@ BEGIN
     'conversations','conversation_members',
     'chat_presences','message_reads','calendar_connections','task_calendar_events',
     'documents','temporary_grants',
-    'push_subscriptions','ai_push_schedules','ai_push_records',
+    'push_subscriptions','push_tokens','ai_push_schedules','ai_push_records',
     -- ── 55 张补齐 RLS 的租户表（纯 workspace_id 谓词）──
     'ai_agent_messages','ai_agents','ai_conversations','ai_feedback','ai_meeting_action_items',
     'ai_meeting_decisions','ai_meeting_sessions','ai_personalizations','ai_usage_limits',
@@ -476,6 +476,31 @@ CREATE POLICY p_push_subscriptions_update ON push_subscriptions FOR UPDATE
 
 DROP POLICY IF EXISTS p_push_subscriptions_delete ON push_subscriptions;
 CREATE POLICY p_push_subscriptions_delete ON push_subscriptions FOR DELETE
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+-- ── push_tokens（用户级，按 user_id 隔离；ADR-010 G3 收编试点）────────────
+-- 无 cron 逃生口：唯一跨用户读路径 sendPushToUser 以【目标用户】身份注入
+-- app.user_id 后查询，不存在"以系统身份跨用户读"的时刻。
+-- 同时登记进批量数组：rls-bare-query-guard 只解析文件首个 ARRAY，不入列则
+-- 该表的裸查不受看守。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE push_tokens ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_tokens FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_push_tokens_select ON push_tokens;
+CREATE POLICY p_push_tokens_select ON push_tokens FOR SELECT
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_push_tokens_insert ON push_tokens;
+CREATE POLICY p_push_tokens_insert ON push_tokens FOR INSERT
+  WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_push_tokens_update ON push_tokens;
+CREATE POLICY p_push_tokens_update ON push_tokens FOR UPDATE
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid)
+  WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+
+DROP POLICY IF EXISTS p_push_tokens_delete ON push_tokens;
+CREATE POLICY p_push_tokens_delete ON push_tokens FOR DELETE
   USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
 
 -- ── ai_push_schedules（工作区级，按 workspace_id + user_id 隔离）──────────
