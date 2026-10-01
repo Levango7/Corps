@@ -20,7 +20,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
-import { Bell, Mail, Moon, Save, Loader2, AlertCircle, Check } from "lucide-react";
+import { Bell, Mail, Moon, Save, Loader2, AlertCircle, Check, Info } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
 
 /** 通知偏好（对应 /api/v1/notifications/preferences 响应） */
@@ -137,6 +137,14 @@ export function NotificationSettings() {
           {t("settings")}
         </h2>
       </header>
+
+      {/* 未接线声明：服务端投递/落库链路当前不读 notification_preferences（2026-10-01 取证：
+          isDndActive 生产零调用，offline-push.ts 整模块无人引用）。
+          在真正接线之前，这里必须如实说出来 —— 否则用户以为拨了开关就静音了。 */}
+      <div className="flex items-start gap-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-3)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
+        <Info size={14} className="mt-[2px] shrink-0" />
+        <span>{t("notEnforced")}</span>
+      </div>
 
       {/* 错误提示 */}
       {error && (
