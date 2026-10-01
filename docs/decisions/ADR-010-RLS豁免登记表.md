@@ -81,5 +81,9 @@ CI 的 `rls-coverage` job 同时跑 `--self-test`：五类注入变异各自断�
    - `db/rls-smoke.sh`：新增引擎级断言四条（自可见=1 / 跨用户读=0 / 跨用户 UPDATE=0 行 / 未注入 GUC=0）；
    - `web/tests/integration/push-tokens.test.ts`：写入注册/注销/鉴权/幂等路径，随 `NOBYPASSRLS` 加固回归两腿都跑。
    `notification_preferences` / `ai_voice_preferences` 暂留基线，观察单表试点在加固 CI 的表现后按同法逐张收编。
-2. **G4（已决、待实施）**：`share_access_logs` 写入时反查 `entityId → workspaceId` 存成列，再按租户表收编。
+2. **G4 · 已实施（`share_access_logs`，反查落列方案）**——受保护表 80→81、策略 268→272、基线 19→18，"无任何归属键"一类清零。改动：
+   - `web/prisma/migrations/20261001000001_add_share_access_logs_workspace_id/`：加可空 `workspace_id` 列 + 按 `entity_type` 从 `tasks`/`documents` 回填存量行 + 索引 + `ON DELETE CASCADE` 外键。可空是设计：历史孤儿行（实体已删）反查不到归属，落 NULL 后不匹配任何 GUC，对应用与公开路径均不可见——宁可审计行不可读，也不放错行；
+   - `web/prisma/schema.prisma`：`ShareAccessLog.workspaceId String?` + 关系 + `@@index`，Workspace 补反向关系；
+   - 三个写入/读取点：两条 workspace 版 verify 路由创建时直接落 `workspaceId: wid`；公开路径 `/api/documents/share/[token]/verify` 凭 token 读出文档行后，用 `setTxGuc(tx, "workspace_id", doc.workspaceId)` 临时放行本事务日志写入（`runWithShareToken` 只有 `public_token`，不能靠它写租户表）；`share/logs` 读取路由本就跑在 `runWithWorkspace` 下，零改动；
+   - `db/rls-activate.sql`：批量数组登记 + 四条工作区级策略（无 `auth_op` 逃生口）；`db/rls-smoke.sh` 增至 8 步（自可见=1 含孤儿行不可见 / 跨租户读=0 / 跨租户 UPDATE=0 行 / 孤儿行 UPDATE=0 行 / 未注入 GUC=0）。
 3. **P 类 10 张（已决、待实施）**：维持"同事务回滚"兜底，登记为"已接受残余风险"。

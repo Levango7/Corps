@@ -10,7 +10,7 @@
 //  - 密码用 scrypt 比对（lib/crypto），比对失败计入 IP 锁定；
 //  - 绝不把 sharePassword 哈希下发给客户端。
 import { NextRequest, NextResponse } from "next/server";
-import { runWithShareToken } from "@/lib/auth";
+import { runWithShareToken, setTxGuc } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { verify as verifySharePassword } from "@/lib/crypto";
@@ -53,6 +53,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
           publishedMarkdown: true,
           sharePassword: true,
           shareExpiresAt: true,
+          workspaceId: true,
         },
       });
       if (!doc?.publishedMarkdown) return { kind: "notFound" as const };
@@ -71,10 +72,19 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
       }
 
       clearFailures(lockKey);
-      // share_access_logs 无 RLS 策略，public_token GUC 下可写；写失败不该阻断取文，
+      // ADR-010 G4：share_access_logs 已有 RLS 策略（按 app.workspace_id 隔离）。
+      // 本入口是匿名公开路径，只有 public_token GUC，读到这里已凭 token 取到文档行；
+      // setTxGuc 按行上的 workspace_id 临时放行本事务内的日志写入。写失败不该阻断取文，
       // 但这里保持与 workspace 版 verify 路由同一口径（同一事务内写）。
+      await setTxGuc(tx, "workspace_id", doc.workspaceId);
       await tx.shareAccessLog.create({
-        data: { entityType: "document", entityId: doc.id, ip, userAgent },
+        data: {
+          workspaceId: doc.workspaceId,
+          entityType: "document",
+          entityId: doc.id,
+          ip,
+          userAgent,
+        },
       });
 
       return { kind: "ok" as const, doc };

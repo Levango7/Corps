@@ -63,7 +63,9 @@ BEGIN
     'mails','meeting_minutes','meetings','member_permissions','objectives',
     'permission_audit_logs','project_templates','remote_control_sessions',
     'share_link_permissions','spaces','time_entries','user_dashboard_prefs','whiteboards',
-    'wiki_pages','workflows','workflow_executions'
+    'wiki_pages','workflows','workflow_executions',
+    -- ADR-010 G4 收编：share_access_logs（workspace_id 写入时反查落列）
+    'share_access_logs'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -1369,4 +1371,28 @@ CREATE POLICY p_workflow_executions_update ON workflow_executions FOR UPDATE
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 DROP POLICY IF EXISTS p_workflow_executions_delete ON workflow_executions;
 CREATE POLICY p_workflow_executions_delete ON workflow_executions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── share_access_logs（工作区级，按 workspace_id 隔离；ADR-010 G4 收编）──
+-- workspace_id 在写入时从实体行反查落列（迁移 20261001000001 已对存量行回填）。
+-- 历史孤儿行（实体已删除）反查不到归属、workspace_id 为 NULL——NULL 不匹配任何
+-- GUC，对应用与公开路径均不可见；此为设计取舍：宁可审计行不可读，也不放错行。
+-- 公开路径 /api/documents/share/[token]/verify 凭 token 读出文档行后，用
+-- setTxGuc 注入该行 workspace_id 再写日志（见 web/lib/auth.ts setTxGuc）。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE share_access_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE share_access_logs FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_share_access_logs_select ON share_access_logs;
+CREATE POLICY p_share_access_logs_select ON share_access_logs FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_share_access_logs_insert ON share_access_logs;
+CREATE POLICY p_share_access_logs_insert ON share_access_logs FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_share_access_logs_update ON share_access_logs;
+CREATE POLICY p_share_access_logs_update ON share_access_logs FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_share_access_logs_delete ON share_access_logs;
+CREATE POLICY p_share_access_logs_delete ON share_access_logs FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);

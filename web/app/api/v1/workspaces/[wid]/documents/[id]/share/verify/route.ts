@@ -84,9 +84,10 @@ export async function POST(
           if (!ok) return { kind: "wrongPassword" as const };
         }
 
-        // 记录访问日志
+        // 记录访问日志（workspaceId 写入时落列，RLS 按 app.workspace_id 隔离）
         await tx.shareAccessLog.create({
           data: {
+            workspaceId: wid,
             entityType: "document",
             entityId: id,
             ip,

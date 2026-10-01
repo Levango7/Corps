@@ -25,8 +25,9 @@ import re
 import sys
 from pathlib import Path
 
-# 未被引擎层 RLS 覆盖的 19 张表 —— 2026-10-01 以 Prisma 自身的 @relation(fields:[...Id]) 取证冻结；
-# 同日 G3 试点收编 push_tokens（20→19），删行依据：db/rls-activate.sql 已 ENABLE+FORCE+策略齐备。
+# 未被引擎层 RLS 覆盖的 18 张表 —— 2026-10-01 以 Prisma 自身的 @relation(fields:[...Id]) 取证冻结；
+# 同日 G3 试点收编 push_tokens（20→19）、G4 反查落列收编 share_access_logs（19→18），
+# 删行依据均为：db/rls-activate.sql 已 ENABLE+FORCE+策略齐备。
 # P 类 = 父表已 ENABLE RLS，同事务写入会被父表策略拒绝而整体回滚（纵深防御少一层，非当前越权面）
 # G 类 = 无租户键也无租户父级（身份域 / 支付幂等 / 用户级配置）
 BASELINE = {
@@ -36,7 +37,6 @@ BASELINE = {
     "users", "sessions", "accounts", "verifications",
     "processed_payment_events", "processed_stripe_events",
     "notification_preferences", "ai_voice_preferences",
-    "share_access_logs",
 }
 
 MODEL_RE = re.compile(r"^model\s+(\w+)\s*\{(.*?)\n\}", re.M | re.S)

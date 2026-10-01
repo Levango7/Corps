@@ -283,6 +283,8 @@ model Workspace {
   mails                Mail[]
   // 方向 K：远程控制会话
   remoteControlSessions RemoteControlSession[]
+  // ADR-010 G4：分享访问日志（写入时反查归属工作区）
+  shareAccessLogs        ShareAccessLog[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -1118,13 +1120,18 @@ model UserDashboardPref {
 // 记录通过分享链接访问文档/任务的日志，用于审计和安全性分析。
 
 model ShareAccessLog {
-  id         String   @id @default(uuid()) @db.Uuid
-  entityType String   @map("entity_type") @db.VarChar(20) // "document" | "task"
-  entityId   String   @map("entity_id") @db.Uuid
-  ip         String?  @db.VarChar(45)
-  userAgent  String?  @map("user_agent") @db.Text
-  accessedAt DateTime @default(now()) @map("accessed_at") @db.Timestamptz
+  id          String   @id @default(uuid()) @db.Uuid
+  // ADR-010 G4：写入时从实体行反查归属；历史孤儿行（实体已删）为 NULL，对应用不可见
+  workspaceId String?  @map("workspace_id") @db.Uuid
+  entityType  String   @map("entity_type") @db.VarChar(20) // "document" | "task"
+  entityId    String   @map("entity_id") @db.Uuid
+  ip          String?  @db.VarChar(45)
+  userAgent   String?  @map("user_agent") @db.Text
+  accessedAt  DateTime @default(now()) @map("accessed_at") @db.Timestamptz
 
+  workspace Workspace? @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId])
   @@index([entityType, entityId, accessedAt])
   @@map("share_access_logs")
 }
