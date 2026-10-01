@@ -1,4 +1,5 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import { apiMsg } from "@/lib/api-messages";
 
 /**
  * Prometheus 指标端点 — /api/metrics
@@ -9,11 +10,21 @@ import { NextResponse } from "next/server";
  * - corps_memory_heap_used_bytes: 堆内存使用
  * - corps_node_version: Node.js 版本（info metric）
  *
- * 注意：本端点不要求认证（Prometheus scraper 无 cookie），
- * 但在生产应通过网络层（防火墙/ingress）限制访问。
+ * 注意：默认不要求认证（Prometheus scraper 无 cookie），生产应通过网络层
+ * （防火墙/ingress）限制访问；若需端点级控制，设置 METRICS_TOKEN 后即要求
+ * `Authorization: Bearer <token>`（见 docs/runbook-deploy.md §8.2）。
  */
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  // 可选令牌门：设置了 METRICS_TOKEN 才校验，未设置维持开放的"网络层负责"姿态。
+  const metricsToken = process.env.METRICS_TOKEN;
+  if (metricsToken && req.headers.get("authorization") !== `Bearer ${metricsToken}`) {
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
+  }
+
   const mem = process.memoryUsage();
   const uptime = process.uptime();
 

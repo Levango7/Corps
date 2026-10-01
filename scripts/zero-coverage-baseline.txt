@@ -25,7 +25,6 @@ app/api/cron/weekly-digest/route.ts
 app/api/documents/share/[token]/route.ts
 app/api/documents/share/[token]/verify/route.ts
 app/api/health/route.ts
-app/api/metrics/route.ts
 app/api/tasks/share/[token]/route.ts
 app/api/uploads/[...path]/route.ts
 app/api/v1/ai/agents/[id]/messages/route.ts

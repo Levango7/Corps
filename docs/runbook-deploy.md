@@ -343,7 +343,7 @@ find /opt/corps/uploads -type f -mtime +90 -delete
   - `corps_memory_external_bytes` — 外部内存
   - `corps_node_version{version="..."}` — Node.js 版本（info metric）
   - `corps_process_pid` — 进程 ID
-- **安全**：本端点不要求认证，生产环境应通过网络层（防火墙/ingress）限制访问
+- **安全**：默认不要求认证（Prometheus scraper 无 cookie），生产环境应通过网络层（防火墙/ingress）限制访问；如需端点级控制，设置 `METRICS_TOKEN` 后即要求 `Authorization: Bearer <token>`，未携带/错误返回 401
 - **Prometheus scrape 配置示例**：
   ```yaml
   scrape_configs:
@@ -352,6 +352,10 @@ find /opt/corps/uploads -type f -mtime +90 -delete
       static_configs:
         - targets: ['localhost:3000']
       metrics_path: /api/metrics
+      # 配置了 METRICS_TOKEN 时启用（值与 .env 一致）；未配置则删除这两行
+      authorization:
+        type: Bearer
+        credentials: '<METRICS_TOKEN 值>'
   ```
 
 ### 8.3 结构化日志
