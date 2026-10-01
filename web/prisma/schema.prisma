@@ -869,9 +869,11 @@ model Account {
   id                    String    @id @default(uuid()) @db.Uuid
   accountId             String    @map("account_id") @db.Text
   providerId            String    @map("provider_id") @db.Text
-  // Better Auth 1.7.1 新增字段：标识 account 的签发者（credential 端为 "local:credential"，
-  // OAuth 端为 provider 的 issuer URL）。与 accountId 组成唯一键，区分同一用户在不同 provider 的账户。
-  issuer                String    @map("issuer") @db.Text
+  // Better Auth 1.7.1 引入、1.7.3+ 起不再写入也不再要求：官方 1.7 升级指南要求放宽为空
+  //（"dropping the constraint is enough, and it is reversible"），并移除 (issuer, accountId)
+  // 复合唯一键——之后账户以 (providerId, accountId) 识别。可空形态对 1.7.2 与 1.7.6 双向兼容：
+  // 1.7.2 仍会显式写 issuer，1.7.6 省略该列（DB 保留 DEFAULT，缺省时落 "local:credential"）。
+  issuer                String?   @map("issuer") @db.Text
   userId                String    @map("user_id") @db.Uuid
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
   accessToken           String?   @map("access_token") @db.Text
@@ -884,7 +886,6 @@ model Account {
   createdAt             DateTime  @default(now()) @map("created_at") @db.Timestamptz
   updatedAt             DateTime  @updatedAt @map("updated_at") @db.Timestamptz
 
-  @@unique([issuer, accountId])
   @@index([userId])
   @@map("accounts")
 }
