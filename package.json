@@ -1,7 +1,0 @@
-{
-  "name": "corps",
-  "version": "0.0.0",
-  "private": true,
-  "packageManager": "pnpm@11.22.0",
-  "description": "仓库根清单：Vercel 只读「项目根」（Root Directory=仓库根，日志里的 /vercel/path0）的 packageManager 字段来决定 pnpm 版本；缺这一行它会退回自带旧版 pnpm，读不了 web/pnpm-lock.yaml 的 lockfileVersion 9.0，于是丢弃锁文件后在 --frozen-lockfile 上报「Headless installation requires a pnpm-lock.yaml file」。版本与 web/package.json 保持一致以免双源。应用本体在 web/，安装与构建由 vercel.json 显式 cd web 指定；工作区成员清单仍以 pnpm-workspace.yaml 为单一来源，故此处不写 workspaces 字段。"
-}
