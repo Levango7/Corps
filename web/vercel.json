@@ -1,10 +1,10 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "framework": "nextjs",
-  "buildCommand": "cd web && npx --yes pnpm@11.22.0 exec prisma generate && npx --yes pnpm@11.22.0 run build",
-  "installCommand": "cd web && npx --yes pnpm@11.22.0 install --frozen-lockfile --ignore-scripts",
-  "outputDirectory": "web/.next",
-  "devCommand": "cd web && pnpm dev",
+  "buildCommand": "npx --yes pnpm@11.22.0 exec prisma generate && npx --yes pnpm@11.22.0 run build",
+  "installCommand": "npx --yes pnpm@11.22.0 install --frozen-lockfile --ignore-scripts",
+  "outputDirectory": ".next",
+  "devCommand": "npx --yes pnpm@11.22.0 run dev",
   "regions": ["sin1"],
   "cleanUrls": true,
   "trailingSlash": false,
@@ -19,7 +19,10 @@
         { "key": "X-Frame-Options", "value": "SAMEORIGIN" },
         { "key": "Referrer-Policy", "value": "strict-origin-when-cross-origin" },
         { "key": "Permissions-Policy", "value": "camera=(), microphone=(), geolocation=()" },
-        { "key": "Strict-Transport-Security", "value": "max-age=63072000; includeSubDomains; preload" }
+        {
+          "key": "Strict-Transport-Security",
+          "value": "max-age=63072000; includeSubDomains; preload"
+        }
       ]
     }
   ],

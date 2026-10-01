@@ -4,10 +4,12 @@
 
 > Vercel 的 19 个可用 Function 区域中**不存在** `hng1` 这个 slug；香港的正确写法是 `hkg1`，但 OpenAI 自 2025-07-09 起拒绝来自 `hkg1` 的 Function 请求，会让 `web/lib/ai/deepseek.ts` 的 OpenAI 备用通道失效，因此本项目不选它。
 
-> 仓库根目录的 `vercel.json` 以 `framework: nextjs` 声明框架、用 `buildCommand`/`installCommand` 里的 `cd web` 指向应用本体（`web/`），因此 Dashboard 的 **Root Directory 保持默认（仓库根）** 即可，无需重复配置。
+> **Root Directory 必须设为 `web`**（不是默认的仓库根）。本仓库的应用本体在 `web/`，而 Vercel 的 Next.js 构建器按「项目根」做两件事：读 `package.json` 里的 `next` 依赖来识别框架版本、读锁文件来推断包管理器版本。项目根留在仓库根时这两项都落空，日志里的实测报错是：
+> `Error: No Next.js version detected. Make sure your package.json has "next" in either "dependencies" or "devDependencies". Also check your Root Directory setting matches the directory of your package.json file.`
+> 把 Root Directory 设成 `web` 后两项同时成立——`web/package.json` 有 `next`，`web/pnpm-lock.yaml` 存在。配置文件也随之外移：**`web/vercel.json`**（仓库根不再放 `vercel.json`，避免双源）。
 >
-> **为什么 `installCommand`/`buildCommand` 里要把 pnpm 版本写死为 `pnpm@11.22.0`**（2026-10-02 由真实构建日志定位）：Vercel 按「项目根」的锁文件推断包管理器版本，而本仓库的锁文件在 `web/pnpm-lock.yaml`、仓库根没有 ⇒ 走 `installCommand` 覆盖时 Vercel 用构建容器里**最旧的 pnpm（6.x）**，它认不出 `lockfileVersion: '9.0'`，会先 `WARN Ignoring not compatible lockfile` 丢弃锁文件，再在 `--frozen-lockfile` 上以 `ERROR Headless installation requires a pnpm-lock.yaml file` 秒退。
-> 两个走不通的替代方案，别再试：① 改根 `package.json` 的 `packageManager`——该字段只在项目启用 Corepack 时才被读取，对这个项目无效；② 就算生效也与 `ci.yml` 冲突——`pnpm/action-setup` 的 `version` 输入与仓库根 `packageManager` 同时存在时，action 直接失败并报 `Multiple versions of pnpm specified`（实测打红 6 个 job）。
+> **为什么 `installCommand`/`buildCommand` 里仍要把 pnpm 版本写死为 `pnpm@11.22.0`**（2026-10-02 由真实构建日志定位）：Vercel 对 `lockfileVersion: '9.0'` 只会选 pnpm 9 或 10（官方 docs/package-managers 的版本推断表），而本仓库的锁文件与 `pnpm-workspace.yaml` 由 pnpm 11 维护；更早在项目根为仓库根时，Vercel 走覆盖式 `installCommand` 直接取容器里**最旧的 pnpm（6.x）**，pnpm 6 认不出 9.0 锁文件，会先 `WARN Ignoring not compatible lockfile` 丢弃锁文件、再在 `--frozen-lockfile` 上以 `ERROR Headless installation requires a pnpm-lock.yaml file` 秒退。命令里钉版本 = 不依赖 Vercel 的推断。
+> 两个走不通的替代方案，别再试：① 在仓库根加 `package.json` 写 `packageManager`——该字段只在项目启用 Corepack 时才被 Vercel 读取，对本项目无效；而且 `pnpm/action-setup` 的 `version` 输入与仓库根 `packageManager` 同时存在时 action 直接失败并报 `Multiple versions of pnpm specified`（实测打红 6 个 job）。② 只加仓库根 `package.json` 而不带 `next` 依赖——Vercel 依旧识别不到 Next 版本。
 > 这里钉的版本串需与 `web/package.json` 的 `packageManager` 保持一致。
 
 ---
@@ -30,8 +32,8 @@
    - 若未授权，点击 **Adjust GitHub App Permissions**，授权对应仓库访问权限。
 4. 点击 **Import**，进入项目配置页。
 5. **Framework Preset** 应自动识别为 **Next.js**；若未识别，手动选择 `Next.js`。
-6. **Root Directory** 保持默认（仓库根），`vercel.json` 中的 `buildCommand` 已通过 `cd web` 切换到 `web/` 目录。
-7. **Build Command** 与 **Output Directory** 由 `vercel.json` 覆盖，无需手动填写。
+6. **Root Directory 必须改为 `web`**（默认是仓库根，保持默认会构建失败，原因见开头那条注记）。这一步不能省：Vercel 只在项目根读 `package.json`/锁文件来识别 Next.js 版本与包管理器版本，而它们都在 `web/` 下。
+7. **Build Command / Install Command / Output Directory** 由 `web/vercel.json` 提供，无需在 Dashboard 手填（不要退回默认值，默认会挑到 Vercel 自己的 pnpm 版本推断）。
 8. 暂不点击 **Deploy**，先完成环境变量配置（步骤 2）。
 
 ---
