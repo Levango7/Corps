@@ -2,12 +2,14 @@ packages:
   - web
   - desktop
 
+# pnpm 11.28.3 起 allowBuilds 只接受对象（包名 → 布尔）；数组形式会在任何
+# pnpm 命令解析本文件时直接报错（setup-node 的 pnpm store path 首当其冲）。
 allowBuilds:
-  - '@prisma/client'
-  - '@prisma/engines'
-  - better-sqlite3
-  - esbuild
-  - prisma
+  '@prisma/client': true
+  '@prisma/engines': true
+  better-sqlite3: true
+  esbuild: true
+  prisma: true
 # 强制升级 sharp 到 >=0.35.4 修复 GHSA-rgj7-g3m4-5g8c（libheif 漏洞）
 # sharp 是 next 的间接依赖，旧版 next 默认拉取 <0.35.4 的版本
 # 注意：本文件的 overrides 不会进 web/pnpm-lock.yaml —— CI（working-directory: web）
