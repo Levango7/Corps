@@ -1859,6 +1859,17 @@ Phase 4 (依赖 Phase 1 的知识库结构)
 | M7: Phase 3 完成 | 第 9 周末 | 甘特/日历视图 + 公式 + relation |
 | M8: Phase 4 完成 | 第 11 周末 | 云盘 + 文件预览 + 版本管理 |
 
+> **实现现状（2026-10-01 核对）**：M1 富文本编辑器已上线（`app/[locale]/w/[wid]/documents/[id]/page.tsx`）；
+> **M4 协同编辑的客户端与服务端已实现但未接线，当前不可用**——
+> - 客户端：`web/components/CollaborationProvider.tsx`、`CollaborationCursor.tsx`、`PresenceIndicator.tsx`
+>   （web 内零生产引用；`messages/{zh,en}.json` 的 `collaboration` 命名空间仅它们消费）。
+> - 服务端：`server/collab/y-websocket-server.ts` + `persistence.ts`（JWT 鉴权 + PG 持久化；
+>   无 package.json、未进 docker-compose、未进部署 runbook ⇒ 不可部署）。
+>   Yjs 存储表迁移 `20260912000004_add_yjs_persistence` 已入库保留待用。
+> - 接线清单：① `server/collab` 独立打包（ws/jsonwebtoken/yjs/lib0）② compose 服务 + Nginx `/collab` 反代
+>   ③ 配置 `NEXT_PUBLIC_COLLAB_WS_URL` ④ 文档编辑页挂载 Provider / Cursor / Presence ⑤ E2E 与 10 人压测（§9.4）。
+> - 另有旧方案的 `web/components/OnlinePresence.tsx`（轮询 presence API）同样未接线。
+
 ### 9.4 质量保障
 
 | 保障项 | 方案 |
