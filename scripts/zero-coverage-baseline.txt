@@ -497,7 +497,6 @@ components/minutes/MinutesDetail.tsx
 components/minutes/MinutesEditor.tsx
 components/minutes/MinutesList.tsx
 components/notifications/NotificationBadge.tsx
-components/notifications/NotificationSettings.tsx
 components/okr/KeyResultEditor.tsx
 components/okr/OKRList.tsx
 components/okr/ObjectiveDetail.tsx
