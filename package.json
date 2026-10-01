@@ -1,6 +1,0 @@
-{
-  "name": "corps",
-  "version": "0.0.0",
-  "private": true,
-  "description": "仓库根清单，仅为满足 Vercel 在 Root Directory=仓库根 时的 Next.js 初始化读取；应用本体在 web/（构建与安装命令由 vercel.json 显式 cd web 指定）。pnpm 工作区成员见 pnpm-workspace.yaml，本文件不列 workspaces 以免与它双源。"
-}
