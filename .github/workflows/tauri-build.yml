@@ -20,10 +20,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      # pnpm 11 — same version as web/package.json packageManager field
+      # pnpm 版本取自 web/package.json 的 packageManager（与 web/Dockerfile 的 corepack 同源）
       - uses: pnpm/action-setup@v6
         with:
-          version: 11
+          package_json_file: web/package.json
 
       - uses: actions/setup-node@v7
         with:
