@@ -1,4 +1,4 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 // better-auth/crypto 导出公开的 hashPassword，使用与 Better Auth 一致的哈希算法
 // （默认 scrypt）。seed 必须用此函数哈希密码，否则登录时 signInEmail 验证失败。
 import { hashPassword } from "better-auth/crypto";
@@ -60,6 +60,22 @@ async function ensureUser(email: string, name: string, password: string) {
   return user;
 }
 
+/**
+ * seed 的幂等入口：任务/决策没有 (workspaceId,title) 之类的唯一约束可 upsert，
+ * 所以先查后建。此前两者都是裸 create，重复跑 seed 会成倍累积（实测 tasks 6→12）。
+ */
+async function ensureTask(args: { data: Prisma.TaskUncheckedCreateInput }) {
+  const hit = await prisma.task.findFirst({
+    where: { workspaceId: args.data.workspaceId, title: args.data.title },
+  });
+  return hit ?? prisma.task.create(args);
+}
+
+async function ensureDecision(args: { data: Prisma.DecisionUncheckedCreateInput }) {
+  const hit = await prisma.decision.findFirst({ where: { taskId: args.data.taskId } });
+  return hit ?? prisma.decision.create(args);
+}
+
 async function main() {
   // 生产环境保护——禁止运行 seed
   if (process.env.NODE_ENV === "production") {
@@ -111,7 +127,7 @@ async function main() {
 
   // 4. 创建演示任务
   const tasks = await Promise.all([
-    prisma.task.create({
+    ensureTask({
       data: {
         workspaceId: demoWs.id,
         title: "完成 corps MVP 需求评审",
@@ -122,7 +138,7 @@ async function main() {
         createdBy: demoUser.id,
       },
     }),
-    prisma.task.create({
+    ensureTask({
       data: {
         workspaceId: demoWs.id,
         title: "实现多租户 RLS 隔离",
@@ -133,7 +149,7 @@ async function main() {
         createdBy: demoUser.id,
       },
     }),
-    prisma.task.create({
+    ensureTask({
       data: {
         workspaceId: demoWs.id,
         title: "搭建前端 UI 对齐设计原型",
@@ -144,7 +160,7 @@ async function main() {
         createdBy: alice.id,
       },
     }),
-    prisma.task.create({
+    ensureTask({
       data: {
         workspaceId: demoWs.id,
         title: "接入 Stripe 计费 webhook",
@@ -154,7 +170,7 @@ async function main() {
         createdBy: alice.id,
       },
     }),
-    prisma.task.create({
+    ensureTask({
       data: {
         workspaceId: demoWs.id,
         title: "编写端到端测试（AC-01~AC-06）",
@@ -165,7 +181,7 @@ async function main() {
         createdBy: demoUser.id,
       },
     }),
-    prisma.task.create({
+    ensureTask({
       data: {
         workspaceId: demoWs.id,
         title: "配置 CI/CD 流水线",
@@ -180,7 +196,7 @@ async function main() {
 
   // 5. 创建决策记录
   const taskForDecision = tasks[0]; // "完成 corps MVP 需求评审"
-  await prisma.decision.create({
+  await ensureDecision({
     data: {
       taskId: taskForDecision.id,
       workspaceId: demoWs.id,
