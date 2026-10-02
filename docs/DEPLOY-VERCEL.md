@@ -51,10 +51,8 @@
 | `JWT_ACCESS_SECRET` | 业务 JWT 签名密钥，≥32 字符 | `openssl rand -hex 32` 生成 |
 | `JWT_REFRESH_SECRET` | refresh token 密钥，≥32 字符（启动校验项，缺一即退出） | `openssl rand -hex 32` 生成 |
 | `NEXT_PUBLIC_APP_URL` | 应用正式域名（生产环境必填） | `https://corps.vercel.app` |
-| `CORPS_APP_PASSWORD` | RLS 运行时角色密码（与 `rls-activate.sql` 一致） | `openssl rand -hex 16` 生成 |
-| `RLS_ACTIVATE` | RLS 加固开关 | `true` |
 
-> **Build 成功 ≠ 部署可用。** 上表前五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）缺任何一项，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码，只会在 "Collecting page data" 阶段留几行日志。真正的后果在运行时：
+> **Build 成功 ≠ 部署可用。** 上表五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）缺任何一项，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码，只会在 "Collecting page data" 阶段留几行日志。真正的后果在运行时：
 >
 > **1. 启动即退出。** `web/instrumentation.ts:14` 调 `getEnv()`（`lib/env.ts` 的 zod schema 正是这五项），`:21-23` 是
 > ```ts
@@ -70,6 +68,34 @@
 > **3. 一次实测反证**（2026-10-02，commit 9b94821 的 Vercel 构建日志）：三项都未配置时构建仍然 `✓ Compiled successfully in 47s` / `Build Completed in /vercel/output [2m]` / `Deployment completed` —— 部署显示成功，应用其实起不来。所以配完环境变量后不能只看部署状态，要真的打开一次页面。
 >
 > 启用 Vercel Cron（`vercel.json` 的 `crons`）时再加 `CRON_SECRET`：`/api/cron/*` 以 `Authorization: Bearer ${CRON_SECRET}` 鉴权，未配置则所有 cron 路由拒绝请求（它是 `lib/env.ts` 之外的读取项，不会触发启动退出）。
+
+### Docker/K8s 专用项（在 Vercel 上设了也没用）
+
+`RLS_ACTIVATE` 与 `CORPS_APP_PASSWORD` **不是 Vercel 的必填项**。全仓读取它们的只有三处，都在容器/脚本侧：
+
+| 读取点 | 作用 |
+|---|---|
+| `web/docker/entrypoint.sh:28,44` | `RLS_ACTIVATE=true` 且有 `DATABASE_OWNER_URL` + `CORPS_APP_PASSWORD` 时，用 `psql` 执行 `db/rls-activate.sql`；缺任一项则报错退出 |
+| `docker-compose.yml:111,115,165` | 把两者传进容器，并让 app 的连接串走 `corps_app` 角色 |
+| `db/rls-smoke.sh:24,37` | 手工冒烟脚本：`CORPS_APP_PASSWORD` 未设即中止，并用它执行激活脚本 |
+
+Vercel 侧不存在 entrypoint（`web/vercel.json` 的 `buildCommand` 只有 `prisma generate && next build`，运行的是 Serverless 函数，没有容器启动脚本），应用代码里对这两个名字的引用全是注释文本 —— 所以在 Vercel 设 `RLS_ACTIVATE=true` 不会产生任何效果，白白多配一项。
+
+要在 Vercel 部署上获得引擎层隔离，得手工做 Docker 路径由 entrypoint 自动完成的那一步：
+
+```bash
+# 1. 用 owner 连接串激活（幂等，可重复执行）
+psql "$DATABASE_OWNER_URL" -v ON_ERROR_STOP=1 \
+     -v app_password="$CORPS_APP_PASSWORD" -f db/rls-activate.sql
+
+# 2. 把 Vercel 的 DATABASE_URL 换成最小权限角色 corps_app（对齐 docker-compose.yml:111）
+#    postgresql://corps_app:<CORPS_APP_PASSWORD>@ep-xxx.neon.tech/corps?schema=public&sslmode=require
+```
+
+两点注意：
+
+- `rls-activate.sql` 建的 `corps_app` 是 `NOBYPASSRLS` 角色，脚本同时给全部租户表加 `ENABLE + FORCE ROW LEVEL SECURITY`（FORCE 的意义正是堵表 owner 的旁路）。激活后若继续用 owner 连接串，未设置 `app.*` GUC 的查询会**静默返回空集**而不是全集 —— `lib/payments/types.ts:69`、`stripe-provider.ts:144`、`billing/portal/route.ts:22` 记录的三类历史缺陷就是这个形态（订阅查不到 → 恒 400）。
+- **未跑激活脚本时线上是什么状态**：整个迁移目录里只有一张表把 RLS 写进了迁移 —— `web/prisma/migrations/20260912000002_add_temporary_grants/migration.sql:31-52`，对 `temporary_grants` 做 `ENABLE + FORCE ROW LEVEL SECURITY` 并建 4 条策略（策略读 `app.workspace_id`，另给 `app.auth_op='cron'` 开了口子）。其余租户表的 ENABLE/FORCE 与策略**只存在于 `db/rls-activate.sql`**（该脚本按清单动态下发，不是在迁移里逐表写死），`prisma migrate deploy` 不会带来它们。所以只用 Neon owner 连接串部署时，租户隔离实际依赖应用层的 `workspaceId` 过滤；别因为 ADR/巡检报告里记着"81 张受保护表 / 272 条策略"就认为线上已经通电 —— 那组数字是 `scripts/check_rls_exemptions.py:144-151` **静态解析 `db/rls-activate.sql` 文本**得出的，证明的是"脚本会建这些策略"，不证明"目标库执行过这个脚本"。要在具体库上确认，得直接查数据库状态（`pg_class.relrowsecurity` / `relforcerowsecurity` 与 `pg_policies`）。
 
 ### 计费相关（可选，未配置则计费页隐藏升级入口）
 
@@ -149,8 +175,8 @@ npx prisma generate
 # 4. 部署迁移（生产环境用 deploy，不会交互式提问）
 npx prisma migrate deploy
 
-# 5. （可选）激活 RLS
-#    需设置 CORPS_APP_PASSWORD 并执行 db/rls-activate.sql
+# 5. （可选）激活 RLS —— Vercel 没有 entrypoint，必须手工执行
+#    见上文「Docker/K8s 专用项」：先跑 db/rls-activate.sql，再把 DATABASE_URL 换成 corps_app
 ```
 
 ### 方式 B：Vercel Build 时自动执行
