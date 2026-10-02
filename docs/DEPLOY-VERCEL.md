@@ -52,7 +52,7 @@
 | `JWT_REFRESH_SECRET` | refresh token 密钥，≥32 字符（启动校验项，缺一即退出） | `openssl rand -hex 32` 生成 |
 | `NEXT_PUBLIC_APP_URL` | 应用正式域名（生产环境必填） | `https://corps.vercel.app` |
 
-> **Build 成功 ≠ 部署可用。** 上表五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）缺任何一项，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码，只会在 "Collecting page data" 阶段留几行日志。真正的后果在运行时：
+> **Build 成功 ≠ 部署可用；但构建日志也不是判据。** 上表五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）缺任何一项，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码。真正的后果在运行时：
 >
 > **1. 启动即退出。** `web/instrumentation.ts:14` 调 `getEnv()`（`lib/env.ts` 的 zod schema 正是这五项），`:21-23` 是
 > ```ts
@@ -60,12 +60,25 @@
 > ```
 > Vercel 运行时 `NODE_ENV=production`，所以少任一项 ⇒ 进程打印 `[instrumentation] 环境变量校验失败` 后 `exit(1)`，所有请求都拿不到响应。开发环境只警告不退出，因此本地能跑≠线上能跑。
 >
-> **2. 即便绕过 1，还有两处会抛：**
-> - `BETTER_AUTH_SECRET` 缺失 → better-auth 的 `validateSecret`（`better-auth/dist/context/create-context.mjs:42`）`if (isDefaultSecret && isProduction) throw`，凡 import `lib/auth.ts` 的页面/接口 500。构建日志里对应 `[Error [BetterAuthError]: You are using the default secret...]`。
+> **2. 运行时还会各抛一次：**
+> - `BETTER_AUTH_SECRET` 缺失 → better-auth 的 `validateSecret`（`better-auth/dist/context/create-context.mjs:42`）`if (isDefaultSecret && isProduction) throw`，凡 import `lib/auth.ts` 的页面/接口 500。
 > - `JWT_ACCESS_SECRET` 缺失 → `lib/jwt.ts:14-20` 的 `requireSecret()` 抛 `Missing required env var: JWT_ACCESS_SECRET`（刻意不回退默认值）。
-> - `NEXT_PUBLIC_APP_URL` 缺失/与实际域名不一致 → 构建里先打 `Base URL is not set`（`lib/auth.ts:19` 用它作 `baseURL`），`lib/jwt.ts:3` 的 `issuer` 也会退化成 `http://localhost:3000`。
+> - `NEXT_PUBLIC_APP_URL` 缺失/与实际域名不一致 → `lib/auth.ts:19` 的 `baseURL` 与 `lib/jwt.ts:3` 的 `issuer` 会退化成 `http://localhost:3000`。
 >
-> **3. 一次实测反证**（2026-10-02，commit 9b94821 的 Vercel 构建日志）：三项都未配置时构建仍然 `✓ Compiled successfully in 47s` / `Build Completed in /vercel/output [2m]` / `Deployment completed` —— 部署显示成功，应用其实起不来。所以配完环境变量后不能只看部署状态，要真的打开一次页面。
+> **3. 别拿构建日志里那两行 better-auth 提示当故障信号。** 本项目实测（2026-10-03，`corps` 项目）：`BETTER_AUTH_SECRET` / `NEXT_PUBLIC_APP_URL` 早在 31 天前就配好且 target 含 Production+Preview，但 `vercel build` 的 "Collecting page data" 阶段仍然打印
+> ```
+> WARN [Better Auth]: Base URL is not set. ...
+> [Error [BetterAuthError]: You are using the default secret. ...]
+> ```
+> 原因是这些变量的 `type=sensitive`（`vercel env ls --project corps --json` 可见），而 **sensitive 变量不注入构建沙箱**，只在函数运行时可见。用本地构建产物可以复核"运行时才查表"这一点：`grep -rl <构建期哨兵值> .next/server` = 0 命中，而 `.next/server` 里 `process.env.BETTER_AUTH_SECRET` 字面量有 2 处 —— 值没有被烤进产物，运行时读的是真实环境。
+>
+> 推论与例外：`NEXT_PUBLIC_*` 走的是**构建期内联**，若某段 `"use client"` 代码读 `process.env.NEXT_PUBLIC_APP_URL`，用 sensitive 存就会把它烤成 `undefined`。当前全仓客户端读取点为 0（按 `"use client"` 文件筛 `NEXT_PUBLIC_APP_URL` 无命中），所以没踩到；一旦需要客户端读它，就把该变量改成 **Config** 类型。
+>
+> **4. 正确的验收方式**：看运行时，不看构建日志。
+> ```bash
+> npx vercel logs <deployment-url>          # 或 vercel logs --follow，配合浏览器打一次
+> ```
+> 判据是运行时日志里出现 `[instrumentation] 环境变量校验通过`（`instrumentation.ts:17`），且没有 `环境变量校验失败`。注意本机若访问不通 `*.vercel.app`（本项目所在开发机实测 `curl https://corps-five.vercel.app/api/health` 20s 超时），就只能靠 Vercel 侧日志或换网络打一次请求。
 >
 > 启用 Vercel Cron（`vercel.json` 的 `crons`）时再加 `CRON_SECRET`：`/api/cron/*` 以 `Authorization: Bearer ${CRON_SECRET}` 鉴权，未配置则所有 cron 路由拒绝请求（它是 `lib/env.ts` 之外的读取项，不会触发启动退出）。
 
