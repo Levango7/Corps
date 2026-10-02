@@ -11,3 +11,6 @@ next-env.d.ts
 # Playwright
 test-results/
 playwright-report/
+
+# CI 加固腿的 vitest JSON 报告（守卫输入，产物不入库）
+vitest-integration.json

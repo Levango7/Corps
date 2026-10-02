@@ -363,10 +363,25 @@ jobs:
           BETTER_AUTH_SECRET: ci-test-better-auth-secret
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
-      - run: npx vitest run tests/integration
+      # 引擎级 RLS 断言（rls-engine.test.ts，corps_app 直连）此前恒被 describe.skip——
+      # .github 里从未注入过 RLS_SMOKE_*。这里注入两条连接串，并用守卫逐条核对
+      # assertionResults：vitest 的 JSON 报告会把"四条全跳过"的 suite 也标成 passed，
+      # 只看文件在不在或只看 suite 状态都是假绿。守卫自身两向验过（注入→绿、缺失→判红）。
+      - name: Run integration tests (含引擎级 RLS 断言，禁止静默 skip)
+        shell: bash
+        run: |
+          set -euo pipefail
+          : "${RLS_SMOKE_OWNER_URL:?未注入：rls-engine.test.ts 会退成 describe.skip}"
+          : "${RLS_SMOKE_APP_URL:?未注入：rls-engine.test.ts 会退成 describe.skip}"
+          npx vitest run tests/integration \
+            --reporter=default --reporter=json --outputFile.json=vitest-integration.json
+          node scripts/assert-rls-engine-ran.mjs vitest-integration.json
         env:
           TEST_BASE_URL: http://localhost:3000/api/v1
           RATE_LIMIT_DISABLED: "1"
+          # 表主：幂等写双租户夹具；corps_app（NOBYPASSRLS）：断言引擎层隔离真实生效
+          RLS_SMOKE_OWNER_URL: postgresql://postgres:test@localhost:5432/corps_test
+          RLS_SMOKE_APP_URL: postgresql://corps_app:hardened-ci-app-password@localhost:5432/corps_test
       - name: Stop dev server
         working-directory: web
         shell: bash
