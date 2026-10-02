@@ -355,8 +355,8 @@ model Task {
   shareToken     String?   @unique @map("task_share_token") @db.VarChar(64)
   // F5: 分享过期时间（null = 永不过期）
   shareExpiresAt DateTime? @map("share_expires_at") @db.Timestamptz
-  // F5: 分享密码 hash（null = 无密码；scrypt hash）
-  sharePassword  String?   @map("share_password") @db.VarChar(100)
+  // F5: 分享密码 hash（null = 无密码；scrypt hash，better-auth 产出 161 字符）
+  sharePassword  String?   @map("share_password") @db.VarChar(255)
   // F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符）
   shareSlug      String?   @map("share_slug") @db.VarChar(100)
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
@@ -657,7 +657,7 @@ model Document {
   /**
    * F5: 分享密码 hash（null = 无密码；scrypt hash）
    */
-  sharePassword     String?   @map("share_password") @db.VarChar(100)
+  sharePassword     String?   @map("share_password") @db.VarChar(255)
   /**
    * F5: 自定义分享路径（null = 使用默认 shareToken；小写字母/数字/连字符，3-50 字符）
    */
