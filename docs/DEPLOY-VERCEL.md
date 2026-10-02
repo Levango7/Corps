@@ -48,9 +48,28 @@
 |--------|------|--------|
 | `DATABASE_URL` | PostgreSQL 连接字符串（含 schema 参数） | `postgresql://user:pass@host:5432/corps?schema=public` |
 | `BETTER_AUTH_SECRET` | 认证密钥，32 字节十六进制 | `openssl rand -hex 32` 生成 |
+| `JWT_ACCESS_SECRET` | 业务 JWT 签名密钥，≥32 字符 | `openssl rand -hex 32` 生成 |
+| `JWT_REFRESH_SECRET` | refresh token 密钥，≥32 字符（启动校验项，缺一即退出） | `openssl rand -hex 32` 生成 |
 | `NEXT_PUBLIC_APP_URL` | 应用正式域名（生产环境必填） | `https://corps.vercel.app` |
 | `CORPS_APP_PASSWORD` | RLS 运行时角色密码（与 `rls-activate.sql` 一致） | `openssl rand -hex 16` 生成 |
 | `RLS_ACTIVATE` | RLS 加固开关 | `true` |
+
+> **Build 成功 ≠ 部署可用。** 上表前五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）缺任何一项，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码，只会在 "Collecting page data" 阶段留几行日志。真正的后果在运行时：
+>
+> **1. 启动即退出。** `web/instrumentation.ts:14` 调 `getEnv()`（`lib/env.ts` 的 zod schema 正是这五项），`:21-23` 是
+> ```ts
+> if (process.env.NODE_ENV === "production") { process.exit(1); }
+> ```
+> Vercel 运行时 `NODE_ENV=production`，所以少任一项 ⇒ 进程打印 `[instrumentation] 环境变量校验失败` 后 `exit(1)`，所有请求都拿不到响应。开发环境只警告不退出，因此本地能跑≠线上能跑。
+>
+> **2. 即便绕过 1，还有两处会抛：**
+> - `BETTER_AUTH_SECRET` 缺失 → better-auth 的 `validateSecret`（`better-auth/dist/context/create-context.mjs:42`）`if (isDefaultSecret && isProduction) throw`，凡 import `lib/auth.ts` 的页面/接口 500。构建日志里对应 `[Error [BetterAuthError]: You are using the default secret...]`。
+> - `JWT_ACCESS_SECRET` 缺失 → `lib/jwt.ts:14-20` 的 `requireSecret()` 抛 `Missing required env var: JWT_ACCESS_SECRET`（刻意不回退默认值）。
+> - `NEXT_PUBLIC_APP_URL` 缺失/与实际域名不一致 → 构建里先打 `Base URL is not set`（`lib/auth.ts:19` 用它作 `baseURL`），`lib/jwt.ts:3` 的 `issuer` 也会退化成 `http://localhost:3000`。
+>
+> **3. 一次实测反证**（2026-10-02，commit 9b94821 的 Vercel 构建日志）：三项都未配置时构建仍然 `✓ Compiled successfully in 47s` / `Build Completed in /vercel/output [2m]` / `Deployment completed` —— 部署显示成功，应用其实起不来。所以配完环境变量后不能只看部署状态，要真的打开一次页面。
+>
+> 启用 Vercel Cron（`vercel.json` 的 `crons`）时再加 `CRON_SECRET`：`/api/cron/*` 以 `Authorization: Bearer ${CRON_SECRET}` 鉴权，未配置则所有 cron 路由拒绝请求（它是 `lib/env.ts` 之外的读取项，不会触发启动退出）。
 
 ### 计费相关（可选，未配置则计费页隐藏升级入口）
 
