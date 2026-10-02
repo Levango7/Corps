@@ -629,7 +629,6 @@ lib/format.ts
 lib/i18n-navigation.ts
 lib/i18n-routing.ts
 lib/im/types.ts
-lib/im/ws-client.ts
 lib/im/ws-server.ts
 lib/livekit-utils.ts
 lib/mail/transporter.ts
