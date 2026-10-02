@@ -26,12 +26,18 @@ async function ensureUser(email: string, name: string, password: string) {
         data: {
           userId: existing.id,
           providerId: "credential",
-          accountId: email,
-          // Better Auth 1.7.1 account.issuer 为 required；credential provider
-          // 的合成 issuer = createLocalAccountIssuer("credential") = "local:credential"
-          issuer: "local:credential",
+          // Better Auth ≥1.7.3 的 credential 行以「用户 id」作为 accountId 检索
+          // （旧 seed 按 1.7.1 语义写 email ⇒ signInEmail 查不到 ⇒ 恒 401）
+          accountId: existing.id,
+          // createLocalAccountIssuer("credential") 与库列默认值一致，留空即由 DB 填充
           password: hashed,
         },
+      });
+    } else if (credAccount.accountId !== existing.id) {
+      // 自愈：把按旧语义（accountId=email）写入的行改回用户 id
+      await prisma.account.update({
+        where: { id: credAccount.id },
+        data: { accountId: existing.id },
       });
     }
     return existing;
@@ -45,15 +51,14 @@ async function ensureUser(email: string, name: string, password: string) {
       password: hashedPassword,
     },
   });
-  // Better Auth signInEmail 通过 accounts(providerId="credential") 验证密码
+  // Better Auth signInEmail 通过 accounts(providerId="credential") 验证密码；
+  // ≥1.7.3 用「用户 id」作为 accountId 检索，issuer 省略即由 DB DEFAULT 落
+  // "local:credential"（与 better-auth 自建账号实测一致）。
   await prisma.account.create({
     data: {
       userId: user.id,
       providerId: "credential",
-      accountId: email,
-      // Better Auth 1.7.1 account.issuer 为 required；credential provider
-      // 的合成 issuer = createLocalAccountIssuer("credential") = "local:credential"
-      issuer: "local:credential",
+      accountId: user.id,
       password: hashedPassword,
     },
   });
