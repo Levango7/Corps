@@ -25,7 +25,7 @@
  *  useEffect(() => { subscribe(conversationId) }, [subscribe, conversationId])
  */
 
-import { useRef, useEffect, useCallback, useState } from "react";
+import { useRef, useEffect, useCallback, useMemo, useState } from "react";
 import type { ClientMessage, ServerMessage, ConnectionStatus } from "./types";
 
 /** 心跳间隔：30 秒 */
@@ -368,5 +368,13 @@ export function useIMWebSocket(workspaceId: string): {
     };
   }, [connect, disconnect]);
 
-  return { status, send, subscribe, unsubscribe, onMessage, connect, disconnect };
+  // 必须 memo：调用方（useIM → selectConversation → selectTaskConversation）把这个返回值
+  // 放进 useCallback 依赖，而 TaskChatPanel 又用 [taskId, selectTaskConversation] 作
+  // useEffect 依赖。返回新对象字面量会让 effect 每次渲染自重跑，实测一次页面停留
+  // 打出 687 次 POST /tasks/{id}/conversation（≈100 req/s），消息渲染被自激循环拖垮。
+  // 依赖里只有 status 会变（disconnected→connecting→connected），故挂载期最多重建两次。
+  return useMemo(
+    () => ({ status, send, subscribe, unsubscribe, onMessage, connect, disconnect }),
+    [status, send, subscribe, unsubscribe, onMessage, connect, disconnect],
+  );
 }
