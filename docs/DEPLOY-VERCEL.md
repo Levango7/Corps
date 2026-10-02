@@ -52,13 +52,13 @@
 | `JWT_REFRESH_SECRET` | refresh token 密钥，≥32 字符（启动校验项，缺一即退出） | `openssl rand -hex 32` 生成 |
 | `NEXT_PUBLIC_APP_URL` | 应用正式域名（生产环境必填） | `https://corps.vercel.app` |
 
-> **Build 成功 ≠ 部署可用；但构建日志也不是判据。** 上表五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）缺任何一项，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码。真正的后果在运行时：
+> **Build 成功 ≠ 部署可用；但构建日志也不是判据。** 上表五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）**缺任何一项、或某一项的值不合 schema**，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码。"值不合 schema"这条是本项目实测出来的：2026-10-03 查线上时发现三项变量早在 31 天前就已配好且 target 含 Production+Preview，但值是占位串（`Invalid url`）或短密钥（`< 32 字符`），运行时照样起不来。真正的后果在运行时：
 >
 > **1. 启动即退出。** `web/instrumentation.ts:14` 调 `getEnv()`（`lib/env.ts` 的 zod schema 正是这五项），`:21-23` 是
 > ```ts
 > if (process.env.NODE_ENV === "production") { process.exit(1); }
 > ```
-> Vercel 运行时 `NODE_ENV=production`，所以少任一项 ⇒ 进程打印 `[instrumentation] 环境变量校验失败` 后 `exit(1)`，所有请求都拿不到响应。开发环境只警告不退出，因此本地能跑≠线上能跑。
+> Vercel 运行时 `NODE_ENV=production`，所以缺项**或值校验不过** ⇒ 进程打印 `[instrumentation] 环境变量校验失败` 后 `exit(1)`，所有请求都拿不到响应。校验不过时的原文（线上实测，逐项对应 `lib/env.ts:10-20`）：`DATABASE_URL: Invalid url`、`NEXT_PUBLIC_APP_URL: Invalid url`（都是 `z.string().url()`，值是占位串/空串/无协议头时命中），`BETTER_AUTH_SECRET: String must contain at least 32 character(s)`。注意报错文案里那句"必需变量：…"是硬编码列表，**不代表这些都没配** —— 只看它下面逐条列出的字段名。开发环境只警告不退出，因此本地能跑≠线上能跑。
 >
 > **2. 运行时还会各抛一次：**
 > - `BETTER_AUTH_SECRET` 缺失 → better-auth 的 `validateSecret`（`better-auth/dist/context/create-context.mjs:42`）`if (isDefaultSecret && isProduction) throw`，凡 import `lib/auth.ts` 的页面/接口 500。
@@ -78,7 +78,18 @@
 > ```bash
 > npx vercel logs <deployment-url>          # 或 vercel logs --follow，配合浏览器打一次
 > ```
-> 判据是运行时日志里出现 `[instrumentation] 环境变量校验通过`（`instrumentation.ts:17`），且没有 `环境变量校验失败`。注意本机若访问不通 `*.vercel.app`（本项目所在开发机实测 `curl https://corps-five.vercel.app/api/health` 20s 超时），就只能靠 Vercel 侧日志或换网络打一次请求。
+> 判据换两件事来验，别去找"校验通过"那行 —— 实测（2026-10-03，`corps` 项目）它**在 Vercel 的日志流里看不到**：函数冷启动发生在第一个请求之前，而 `vercel logs` 返回的是请求级记录（`λ` 服务器函数 / `ε` 边缘中间件），`instrumentation.ts:17` 那句 `console.log` 不在其中（`--follow -x` 连打多次探针均未捕获）。
+>
+> - **`--level error` 返空**：
+>   ```bash
+>   npx vercel logs <deployment-url> --level error    # 期望 No logs found
+>   ```
+>   这条判据是**双侧验证过**的：配坏的那条部署（`corps-hckspba94`）用同一条命令能打出成片的 `[instrumentation] 环境变量校验失败 …` + `Node.js process exited with exit status: 1`，配好后同一条命令返回 `No logs found`。先证明判据能命中，再拿它的空值下结论。
+> - **真请求拿到应用自己的 HTML**：首页 `302 → /en/auth/login`，页面 `<title>` 是 `corps · Team`；配坏时取回的是 Vercel 的 `500: This page couldn't load`。
+>
+> 本机访问不通 `*.vercel.app`（是 SNI/TCP 级阻断：`curl --resolve <domain>:443:<真边缘IP>` 仍 0.08s 被 RST，`vercel curl` 也是在本机跑 curl，绕不过）。两条替代路：换网络（手机流量）打开一次；或用墙外取回器代发 —— `curl "https://api.microlink.io/?url=<urlencoded>"` 的 `data.title` / `data.statusCode` / `data.url` 就是真结果，**而且这一发会在目标服务端留下运行时日志**，正好配合 `vercel logs`。注意没有流量就没有日志，且 `--follow` 单次上限 5 分钟（到点 `WARNING! Exceeded query duration limit`）。
+>
+> 还有一个有用的分层现象：`DATABASE_URL` **形状合法但库不可达**时，进程照常启动、页面照常渲染，只有真打库的接口报错（实测 `/api/health` → `prisma:error Invalid prisma.$queryRaw() invocation: Can't reach database server at db.invalid:5432`）。所以"页面能出"证明的是部署链路通，不证明数据库通 —— 两件事要分开验收。
 >
 > 启用 Vercel Cron（`vercel.json` 的 `crons`）时再加 `CRON_SECRET`：`/api/cron/*` 以 `Authorization: Bearer ${CRON_SECRET}` 鉴权，未配置则所有 cron 路由拒绝请求（它是 `lib/env.ts` 之外的读取项，不会触发启动退出）。
 
