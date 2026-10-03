@@ -140,7 +140,9 @@ export function NotificationSettings() {
 
       {/* 未接线声明：服务端投递/落库链路当前不读 notification_preferences（2026-10-01 取证：
           isDndActive 生产零调用，offline-push.ts 整模块无人引用）。
-          在真正接线之前，这里必须如实说出来 —— 否则用户以为拨了开关就静音了。 */}
+          在真正接线之前，这里必须如实说出来 —— 否则用户以为拨了开关就静音了。
+          2026-10-03：按裁决把三个开关与时段输入一并置 disabled（只灰免打扰会反向暗示
+          另两个生效，而告示说的是三者都不生效）；接线后恢复可点需同步撤掉 notEnforced。 */}
       <div className="flex items-start gap-[var(--space-2)] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-3)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--muted)]">
         <Info size={14} className="mt-[2px] shrink-0" />
         <span>{t("notEnforced")}</span>
@@ -166,9 +168,10 @@ export function NotificationSettings() {
           type="button"
           role="switch"
           aria-checked={emailNotify}
+          aria-disabled="true"
+          disabled
           aria-label={t("emailNotify")}
-          onClick={() => setEmailNotify(!emailNotify)}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-not-allowed items-center rounded-[var(--radius-pill)] opacity-60 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none ${
             emailNotify ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
@@ -192,9 +195,10 @@ export function NotificationSettings() {
           type="button"
           role="switch"
           aria-checked={pushNotify}
+          aria-disabled="true"
+          disabled
           aria-label={t("pushNotify")}
-          onClick={() => setPushNotify(!pushNotify)}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-not-allowed items-center rounded-[var(--radius-pill)] opacity-60 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none ${
             pushNotify ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
@@ -219,9 +223,10 @@ export function NotificationSettings() {
           type="button"
           role="switch"
           aria-checked={dndEnabled}
+          aria-disabled="true"
+          disabled
           aria-label={t("dnd")}
-          onClick={() => setDndEnabled(!dndEnabled)}
-          className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] ${
+          className={`relative inline-flex h-6 w-11 shrink-0 cursor-not-allowed items-center rounded-[var(--radius-pill)] opacity-60 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none ${
             dndEnabled ? "bg-[var(--accent)]" : "bg-[var(--surface-3)]"
           }`}
         >
@@ -245,7 +250,8 @@ export function NotificationSettings() {
               type="time"
               value={dndStart}
               onChange={(e) => setDndStart(e.target.value)}
-              className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+              disabled
+              className="cursor-not-allowed rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] opacity-60 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none"
               aria-label={t("dndStart")}
             />
           </div>
@@ -259,7 +265,8 @@ export function NotificationSettings() {
               type="time"
               value={dndEnd}
               onChange={(e) => setDndEnd(e.target.value)}
-              className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+              disabled
+              className="cursor-not-allowed rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-sm)] text-[var(--fg)] opacity-60 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none"
               aria-label={t("dndEnd")}
             />
           </div>

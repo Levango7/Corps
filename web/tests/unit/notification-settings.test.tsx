@@ -99,6 +99,17 @@ describe("NotificationSettings 文案诚实性", () => {
     });
   });
 
+  it("未接线前开关与时段输入必须只读（UI 不能假装可控）", async () => {
+    render(<NotificationSettings />);
+    await waitFor(() => expect(screen.getAllByRole("switch").length).toBeGreaterThanOrEqual(3));
+    for (const sw of screen.getAllByRole("switch")) {
+      expect(sw).toBeDisabled();
+      expect(sw).toHaveAttribute("aria-disabled", "true");
+    }
+    // 免打扰时段随开关一起只读（fixture 里 dndEnabled=true，所以输入框会渲染）
+    expect(document.querySelectorAll("#dnd-start[disabled], #dnd-end[disabled]").length).toBe(2);
+  });
+
   it("点保存确实把 dnd 三项发给服务端（写库通路完整）", async () => {
     render(<NotificationSettings />);
     await waitFor(() => expect(screen.getAllByRole("switch").length).toBeGreaterThanOrEqual(3));

@@ -1351,7 +1351,7 @@
     "dndStart": "Start Time",
     "dndEnd": "End Time",
     "dndHint": "Do-not-disturb window (intended: no email notifications during it)",
-    "notEnforced": "These switches only save your preference for now — they do not affect delivery yet, because the server-side send path does not read notification settings.",
+    "notEnforced": "These switches are read-only for now and do not affect delivery yet: the server-side send path does not read notification settings. They take effect once wired up.",
     "save": "Save",
     "saved": "Saved",
     "loading": "Loading…",
