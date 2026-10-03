@@ -18,13 +18,24 @@
  *   off             ：完全不介入。
  * 环境变量取值非法时按 enforce 处理（fail-closed），不允许拼错 env 就悄悄降级安全性。
  *
- * ─── 已知未收编项（下一步）──────────────────────────────────────────
- *  1. MemberPermission 行级覆盖：目前只按角色裁决，未读 ctx.permissions。
- *     给 viewer 显式开了某模块写权限的场景，仍会被这里拦下——登记在
- *     `scripts/write-access-registry.txt` 的 TODO 段，待 product 定义后接入。
- *  2. 不走 getWorkspaceContext 的写 handler（AI 部分端点、webhook、auth 自身）
- *     不在本 choke point 覆盖范围内，由 `scripts/check_write_access_registry.py`
- *     静态登记并防止新增。
+ * ─── MemberPermission 行级覆盖（2026-10-03 接入）──────────────────────
+ *  permissions.ts 的语义是「默认矩阵 ∪ 覆盖，覆盖只能放宽」。对应到这里：
+ *  角色本会被拒（如 viewer）但工作区给它显式配了某模块的写动作
+ *  （DB MemberPermission.actions 含 create/update/delete）时，放行该模块
+ *  的写请求。判定要素：
+ *    - 路径 → 模块：pathToWriteModule() 的映射表，与各路由
+ *      requirePermission(ctx, "<module>", ...) 的实参一致（全量核对过）；
+ *    - 方法 → 写码：POST→c、PUT/PATCH→u、DELETE→d，与 permissions.ts
+ *      的单字符动作代码一致；
+ *    - 覆盖 key：`${role}:${module}`，与 auth.ts 加载 Map 的口径一致。
+ *  fail-closed 边界：路径映射不到任何模块（如 okr、meetings 等 MODULES 之外
+ *  的域）或覆盖串里不含对应写码时，一律维持拒绝——覆盖只会放宽，不会越权。
+ *  owner/admin/member 不查覆盖（角色本身已允许写，覆盖对它们无意义）。
+ *
+ * ─── 剩余未收编项 ───────────────────────────────────────────────────
+ *  不走 getWorkspaceContext 的写 handler（AI 部分端点、webhook、auth 自身）
+ *  不在本 choke point 覆盖范围内，由 `scripts/check_write_access_registry.py`
+ *  静态登记并防止新增。
  */
 
 /** 会被裁决的写方法 */
@@ -32,6 +43,70 @@ export const WRITE_METHODS = ["POST", "PUT", "PATCH", "DELETE"] as const;
 
 /** 允许写工作区内容的角色。viewer 不在其中——这是产品的只读承诺 */
 export const WRITE_ALLOWED_ROLES = ["owner", "admin", "member"] as const;
+
+/** 写方法 → permissions.ts 的单字符动作代码（c=create u=update d=delete） */
+const METHOD_WRITE_CODE: Record<(typeof WRITE_METHODS)[number], string> = {
+  POST: "c",
+  PUT: "u",
+  PATCH: "u",
+  DELETE: "d",
+};
+
+/**
+ * 路径 → 权限模块 的映射（MemberPermission 行级覆盖的裁决依据）。
+ *
+ * 事实来源：各路由 requirePermission(ctx, "<module>", ...) 的实参（2026-10-03
+ * 全量核对）。注意模块名 ≠ 路径段的一一对应：tasks/{id}/comments 走 messages
+ * 模块、dashboard/widgets 走 analytics 模块、databases/{dbid}/records 走
+ * databaseRecords 模块——所以必须整表维护而不是按路径段猜。
+ *
+ * **顺序敏感**：具体前缀在前（records 先于 databases 容器、tasks/{id} 子路由
+ * 先于 tasks 兜底），匹配到第一条即返回。
+ * MODULES 之外的域（okr、meetings、wiki、forms、calendar 等）不在此表——
+ * 它们的写请求不享受覆盖放行（fail-closed，维持拒绝）。
+ * labels / milestones 两条是**语义归类**（任务标签/里程碑归属 tasks 域）而非
+ * requirePermission 实参核对——它们目前是零角色判断 handler，路由层没有模块调用。
+ */
+export const PATH_MODULE_RULES: ReadonlyArray<{ pattern: RegExp; module: string }> = [
+  {
+    pattern: /^\/api\/v1\/workspaces\/[^/]+\/databases\/[^/]+\/records(\/|$)/,
+    module: "databaseRecords",
+  },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/databases(\/|$)/, module: "databases" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/tasks\/[^/]+\/decisions(\/|$)/, module: "decisions" },
+  {
+    pattern: /^\/api\/v1\/workspaces\/[^/]+\/tasks\/[^/]+\/(comments|conversation|messages)(\/|$)/,
+    module: "messages",
+  },
+  {
+    pattern: /^\/api\/v1\/workspaces\/[^/]+\/documents\/[^/]+\/comments(\/|$)/,
+    module: "messages",
+  },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/conversations(\/|$)/, module: "messages" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/(labels|milestones)(\/|$)/, module: "tasks" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/tasks(\/|$)/, module: "tasks" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/decisions(\/|$)/, module: "decisions" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/documents(\/|$)/, module: "documents" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/members(\/|$)/, module: "members" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/billing(\/|$)/, module: "billing" },
+  {
+    pattern: /^\/api\/v1\/workspaces\/[^/]+\/(analytics|dashboard\/widgets)(\/|$)/,
+    module: "analytics",
+  },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/(permissions|settings)(\/|$)/, module: "settings" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/whiteboards(\/|$)/, module: "whiteboards" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/time-entries(\/|$)/, module: "timetrack" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/announcements(\/|$)/, module: "announcements" },
+  { pattern: /^\/api\/v1\/workspaces\/[^/]+\/contacts(\/|$)/, module: "contacts" },
+];
+
+/** 路径属于哪个权限模块；映射不到返回 null（调用方按无覆盖处理） */
+export function pathToWriteModule(pathname: string): string | null {
+  for (const rule of PATH_MODULE_RULES) {
+    if (rule.pattern.test(pathname)) return rule.module;
+  }
+  return null;
+}
 
 export type WritePolicyMode = "enforce" | "shadow" | "off";
 
@@ -55,6 +130,14 @@ export const SELF_SERVICE_WRITE_PATHS: ReadonlyArray<{ pattern: RegExp; why: str
     pattern: /^\/api\/v1\/ai\/(chat|completion|format|summarize|translate|feedback)$/,
     why: "纯文本生成/反馈，不落位业务对象；AI 的写操作需用户二次确认后才走独立端点",
   },
+  {
+    pattern: /^\/api\/v1\/workspaces\/[^/]+\/notifications(\/|$)/,
+    why: "标记自己的通知已读：handler 按 ctx.payload.sub 过滤，只动自己的数据（2026-10-03 choke point 误杀面排查中实测确认）",
+  },
+  {
+    pattern: /^\/api\/v1\/workspaces\/[^/]+\/presence(\/|$)/,
+    why: "上报自己的在线状态（onlineAt 时间戳），只写自己的 User 行；viewer 参与 IM 查看时也需心跳",
+  },
 ];
 
 export interface WorkspaceWriteInput {
@@ -64,12 +147,19 @@ export interface WorkspaceWriteInput {
   pathname: string;
   /** 生效角色：已把临时授权折算进来后的角色 */
   role: string;
+  /**
+   * MemberPermission 行级覆盖（auth.ts 按 `${role}:${module}` 加载，value 为
+   * 单字符动作代码串如 "cru"）。只在角色会被拒时才查（覆盖只放宽不收紧），
+   * owner/admin/member 传入也不会被使用。
+   */
+  overrides?: Map<string, string> | null;
 }
 
 export type WriteDenyReason =
   | "not-a-write"
   | "role-allowed"
   | "self-service"
+  | "module-override"
   | "role-denied"
   | "viewer-readonly"
   | "unknown-role";
@@ -140,6 +230,17 @@ export function decideWorkspaceWrite(
       shadowDenied: false,
       mode,
     };
+  }
+
+  // MemberPermission 行级覆盖：owner 给该角色显式配了此模块的写动作才放行。
+  // 查不到 / 模块映射不到 / 覆盖串不含本方法的写码 → 维持拒绝（fail-closed）。
+  const overrideModule = pathToWriteModule(pathname);
+  if (overrideModule && input.overrides) {
+    const codes = input.overrides.get(`${role}:${overrideModule}`);
+    const writeCode = METHOD_WRITE_CODE[method as (typeof WRITE_METHODS)[number]];
+    if (codes && writeCode && codes.includes(writeCode)) {
+      return { allowed: true, reason: "module-override", shadowDenied: false, mode };
+    }
   }
 
   const reason: WriteDenyReason = role === "viewer" ? "viewer-readonly" : "unknown-role";

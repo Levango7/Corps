@@ -179,6 +179,10 @@ export async function getWorkspaceContext(
         method: req.method,
         pathname: new URL(req.url).pathname,
         role: tempRole ?? member.role,
+        // MemberPermission 行级覆盖（key `${role}:${module}`，value 动作代码串）。
+        // 只在角色本会被拒时才被查询，覆盖只放宽——与 permissions.ts
+        // 「默认矩阵 ∪ 覆盖」的语义一致。
+        overrides: permissions ?? null,
       },
       writeMode,
     );

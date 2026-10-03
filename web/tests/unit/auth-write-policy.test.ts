@@ -172,3 +172,43 @@ describe("临时授权折算", () => {
     expect(res).toBeNull();
   });
 });
+
+describe("MemberPermission 行级覆盖接线：choke point 必须把覆盖传进裁决", () => {
+  // DB 行格式与 auth.ts 加载口径一致：module + actions（完整动作名数组）
+  const tasksWriteOverride = [
+    { role: "viewer", module: "tasks", actions: ["read", "create", "update"] },
+  ];
+
+  it("viewer + MemberPermission 给 tasks 配了 create/update → 写 tasks 放行", async () => {
+    txMock.member.findFirst.mockResolvedValue({ role: "viewer", workspaceId: "ws-A" });
+    txMock.memberPermission.findMany.mockResolvedValue(tasksWriteOverride);
+    const res = await getWorkspaceContext(makeRequest("POST", WS_TASK), "ws-A");
+    expect(res).not.toBeNull();
+  });
+
+  it("viewer + 覆盖只有 read → 同路径仍被拦（接线不得放大覆盖语义）", async () => {
+    txMock.member.findFirst.mockResolvedValue({ role: "viewer", workspaceId: "ws-A" });
+    txMock.memberPermission.findMany.mockResolvedValue([
+      { role: "viewer", module: "tasks", actions: ["read"] },
+    ]);
+    const res = await getWorkspaceContext(makeRequest("POST", WS_TASK), "ws-A");
+    expect(res).toBeNull();
+  });
+
+  it("viewer + tasks 覆盖 → 其他模块（members）的写仍被拦（覆盖是模块级的）", async () => {
+    txMock.member.findFirst.mockResolvedValue({ role: "viewer", workspaceId: "ws-A" });
+    txMock.memberPermission.findMany.mockResolvedValue(tasksWriteOverride);
+    const res = await getWorkspaceContext(
+      makeRequest("POST", "/api/v1/workspaces/ws-A/members"),
+      "ws-A",
+    );
+    expect(res).toBeNull();
+  });
+
+  it("viewer + 无覆盖（DB 空表）→ 维持 default-deny", async () => {
+    txMock.member.findFirst.mockResolvedValue({ role: "viewer", workspaceId: "ws-A" });
+    txMock.memberPermission.findMany.mockResolvedValue([]);
+    const res = await getWorkspaceContext(makeRequest("POST", WS_TASK), "ws-A");
+    expect(res).toBeNull();
+  });
+});

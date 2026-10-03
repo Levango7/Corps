@@ -54,16 +54,32 @@
 - `tests/unit/env-required-keys.test.ts`：zod 声明式必填 env 的部署侧覆盖检查
   （compose app environment + `.env.example` 双向），已做变异验证（删掉 compose 里那一行即变红）。
 
+### Added
+
+- **MemberPermission 行级覆盖接入写策略裁决**：owner 给 viewer 显式配了某模块的写动作
+  （DB `MemberPermission.actions` 含 create/update/delete）时，该模块的写请求放行——
+  与 `permissions.ts`「默认矩阵 ∪ 覆盖，覆盖只放宽」的语义闭环。实现要点：
+  `lib/write-policy.ts` 新增 `pathToWriteModule()` 路径→模块映射表（与各路由
+  `requirePermission` 实参全量核对；MODULES 之外的域映射不到即维持拒绝，fail-closed），
+  方法→写码映射（POST→c / PUT,PATCH→u / DELETE→d）与 permissions.ts 动作代码一致；
+  只在角色本会被拒时才查覆盖，owner/admin/member 不查。新增 13 例纯函数单测 + 4 例
+  choke point 接线单测钉住"覆盖真的被传进裁决"。
+- 自助类白名单补两条 choke point 误杀面修正（2026-10-03 排查实测确认）：工作区级
+  `PATCH /workspaces/{wid}/notifications`（标记自己的已读，按 `ctx.payload.sub` 过滤）
+  与 `POST /workspaces/{wid}/presence`（上报自己的 onlineAt 心跳）——均为"写的是用户
+  自己的数据"，viewer 亦应放行。
+
 ### Changed
 
 - viewer 写工作区数据的响应码由 403 变为 **401**：裁决点前移到 `getWorkspaceContext`（返回 null），
   handler 走既有的未授权分支。`rbac.test.ts` 与 `e2e/viewer-readonly.spec.ts` 的断言相应放宽为
   `[401, 403]`——断言的实质是"不许 2xx"，不是钉死状态码。精确 403 的收敛需给 handler 一个
   统一的错误出口，登记为下一步，不阻塞本次收口。
+  （CI 首跑后补：rbac 里 databaseRecords 与 AI 落位两块共 6 个 viewer 用例的 403 精确断言
+  同步放宽为 `[401, 403]`；member 越权 owner-only 端点的 403 断言不受 choke point 影响而保持原样。）
 
 ### Known gaps（本次未收编，见 `scripts/write-access-registry.txt` 头部）
 
-- `MemberPermission` 行级覆盖尚未接入裁决：给 viewer 显式开了某模块写权限的场景仍会被拦。
 - `POST /api/v1/ai/task-breakdown` 等在注册表里有"若开启自动落位必须进墙"的显式备注。
 
 ## [0.7.2] - 2026-10-01

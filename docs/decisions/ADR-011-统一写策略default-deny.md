@@ -60,9 +60,14 @@
    未授权分支。`rbac.test.ts` 与 `e2e/viewer-readonly.spec.ts` 的断言相应改为 `[401, 403]`——
    断言的实质是"不许 2xx"，不是钉死状态码。**精确 403 需要一个统一的错误出口**（类似 NextResponse 的
    deny 通道），登记为下一步，不阻塞本次收口。
-2. **`MemberPermission` 行级覆盖尚未接入裁决**：目前只看角色。给 viewer 显式开了某模块写权限的场景
-   仍会被拦。这是一个**收严**（原先这些端点压根不校验），不是回归；需要在产品确认语义后接进
-   `decideWorkspaceWrite()` 的输入。
+2. **`MemberPermission` 行级覆盖已接入裁决（2026-10-03 同日收编）**：`decideWorkspaceWrite()`
+   增加可选输入 `overrides`（auth.ts 按 `${role}:${module}` 加载的动作代码串）。角色本会被拒
+   时，若 `pathToWriteModule()` 把路径映射到模块 M、且覆盖串含本方法的写码
+   （POST→c / PUT,PATCH→u / DELETE→d），则放行（reason=module-override）。与
+   `permissions.ts`「默认矩阵 ∪ 覆盖，覆盖只放宽」语义闭环；路径映射不到模块（MODULES
+   之外的域）或覆盖不含写码时维持拒绝（fail-closed）。映射表与各路由 `requirePermission`
+   实参全量核对；接线由 `auth-write-policy.test.ts` 的 4 个用例钉住。
+   排查误杀面时确认两条自助路径（工作区级通知已读、presence 心跳）补入白名单。
 3. **84% 的写 handler 一夜之间进入"禁止 viewer 写"状态**，这在语义上是产品的既有承诺，
    但可能踩到"viewer 实际在用某些写能力"的历史习惯。上线前建议先用 `WRITE_POLICY_MODE=shadow`
    跑一轮真实流量，看 `[write-policy] shadow-deny` 日志里有没有意料之外的路径，再切回 `enforce`。

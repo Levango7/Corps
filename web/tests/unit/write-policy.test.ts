@@ -21,6 +21,7 @@ import { describe, it, expect } from "vitest";
 import {
   decideWorkspaceWrite,
   parseWritePolicyMode,
+  pathToWriteModule,
   SELF_SERVICE_WRITE_PATHS,
   WRITE_METHODS,
 } from "@/lib/write-policy";
@@ -157,5 +158,162 @@ describe("decideWorkspaceWrite — 灰度与开关", () => {
     );
     expect(d.allowed).toBe(true);
     expect(d.shadowDenied).toBe(false);
+  });
+});
+
+describe("pathToWriteModule — 路径→模块映射", () => {
+  // 有 requirePermission 实参背书的部分（2026-10-03 全量核对）
+  it("核心映射与 requirePermission 实参一致", () => {
+    expect(pathToWriteModule(`${WS}/tasks`)).toBe("tasks");
+    expect(pathToWriteModule(`${WS}/tasks/t-1`)).toBe("tasks");
+    expect(pathToWriteModule(`${WS}/tasks/t-1/comments`)).toBe("messages");
+    expect(pathToWriteModule(`${WS}/tasks/t-1/decisions`)).toBe("decisions");
+    expect(pathToWriteModule(`${WS}/documents/d-1/comments`)).toBe("messages");
+    expect(pathToWriteModule(`${WS}/documents/d-1/versions`)).toBe("documents");
+    expect(pathToWriteModule(`${WS}/conversations/c-1/messages`)).toBe("messages");
+    expect(pathToWriteModule(`${WS}/databases/db-1/records`)).toBe("databaseRecords");
+    expect(pathToWriteModule(`${WS}/databases`)).toBe("databases");
+    expect(pathToWriteModule(`${WS}/time-entries`)).toBe("timetrack");
+    expect(pathToWriteModule(`${WS}/dashboard/widgets/w-1`)).toBe("analytics");
+    expect(pathToWriteModule(`${WS}/permissions`)).toBe("settings");
+    // 语义归类（任务标签/里程碑归属 tasks 域）
+    expect(pathToWriteModule(`${WS}/labels`)).toBe("tasks");
+    expect(pathToWriteModule(`${WS}/milestones`)).toBe("tasks");
+  });
+
+  it("MODULES 之外的域映射不到（fail-closed：不享受覆盖放行）", () => {
+    for (const p of [
+      `${WS}/okr/objectives`,
+      `${WS}/meetings/m-1`,
+      `${WS}/wiki/pages`,
+      `${WS}/forms`,
+      "/api/v1/users/me",
+      "/api/v1/favorites",
+    ]) {
+      expect(pathToWriteModule(p), p).toBeNull();
+    }
+  });
+
+  it("相似前缀不做子串误配", () => {
+    expect(pathToWriteModule(`${WS}/taskforce`)).toBeNull();
+    expect(pathToWriteModule(`${WS}/timetravel`)).toBeNull();
+  });
+});
+
+describe("decideWorkspaceWrite — MemberPermission 行级覆盖", () => {
+  const ov = new Map([
+    ["viewer:tasks", "cru"],
+    ["viewer:messages", "r"],
+  ]);
+
+  it("viewer + 模块覆盖含本方法写码 → 放行（module-override）", () => {
+    const d = decideWorkspaceWrite({
+      method: "POST",
+      pathname: `${WS}/tasks`,
+      role: "viewer",
+      overrides: ov,
+    });
+    expect(d.allowed).toBe(true);
+    expect(d.reason).toBe("module-override");
+  });
+
+  it("写码逐方法对应：DELETE 要 d、PATCH 要 u", () => {
+    // "cru" 不含 d → DELETE 仍拒；含 u → PATCH 放行
+    const del = decideWorkspaceWrite({
+      method: "DELETE",
+      pathname: `${WS}/tasks/t-1`,
+      role: "viewer",
+      overrides: ov,
+    });
+    expect(del.allowed).toBe(false);
+    const patch = decideWorkspaceWrite({
+      method: "PATCH",
+      pathname: `${WS}/tasks/t-1`,
+      role: "viewer",
+      overrides: ov,
+    });
+    expect(patch.allowed).toBe(true);
+  });
+
+  it("覆盖串只有读码 → 写仍拒（覆盖不越权）", () => {
+    const d = decideWorkspaceWrite({
+      method: "POST",
+      pathname: `${WS}/conversations/c-1/messages`,
+      role: "viewer",
+      overrides: ov,
+    });
+    expect(d.allowed).toBe(false);
+    expect(d.reason).toBe("viewer-readonly");
+  });
+
+  it("覆盖是模块级的：tasks 的覆盖放不了 members 的写", () => {
+    const d = decideWorkspaceWrite({
+      method: "POST",
+      pathname: `${WS}/members`,
+      role: "viewer",
+      overrides: ov,
+    });
+    expect(d.allowed).toBe(false);
+  });
+
+  it("路径映射不到模块（MODULES 之外）→ 有覆盖也不放行", () => {
+    const d = decideWorkspaceWrite({
+      method: "POST",
+      pathname: `${WS}/okr/objectives`,
+      role: "viewer",
+      overrides: new Map([["viewer:tasks", "cru"]]),
+    });
+    expect(d.allowed).toBe(false);
+  });
+
+  it("key 不含该角色（覆盖配错角色）→ 拒绝（fail-closed）", () => {
+    const d = decideWorkspaceWrite({
+      method: "POST",
+      pathname: `${WS}/tasks`,
+      role: "ghost",
+      overrides: new Map([["viewer:tasks", "cru"]]),
+    });
+    expect(d.allowed).toBe(false);
+    expect(d.reason).toBe("unknown-role");
+  });
+
+  it("不传 overrides（undefined / null）→ 维持 viewer 只读", () => {
+    for (const overrides of [undefined, null]) {
+      const d = decideWorkspaceWrite({
+        method: "POST",
+        pathname: `${WS}/tasks`,
+        role: "viewer",
+        overrides,
+      });
+      expect(d.allowed).toBe(false);
+    }
+  });
+
+  it("member 角色不查覆盖（本就允许写，reason 恒为 role-allowed）", () => {
+    const d = decideWorkspaceWrite({
+      method: "POST",
+      pathname: `${WS}/tasks`,
+      role: "member",
+      overrides: new Map([["member:tasks", ""]]),
+    });
+    expect(d.allowed).toBe(true);
+    expect(d.reason).toBe("role-allowed");
+  });
+
+  it("shadow 下覆盖放行的请求不产生 shadowDenied", () => {
+    const d = decideWorkspaceWrite(
+      { method: "POST", pathname: `${WS}/tasks`, role: "viewer", overrides: ov },
+      "shadow",
+    );
+    expect(d.allowed).toBe(true);
+    expect(d.shadowDenied).toBe(false);
+  });
+
+  it("工作区级自助端点（通知已读 / 在线状态）对 viewer 放行——choke point 误杀面修正", () => {
+    for (const p of [`${WS}/notifications`, `${WS}/presence`]) {
+      const d = decideWorkspaceWrite({ method: "PATCH", pathname: p, role: "viewer" });
+      expect(d.allowed, p).toBe(true);
+      expect(d.reason, p).toBe("self-service");
+    }
   });
 });
