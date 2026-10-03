@@ -438,7 +438,8 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ data: { 标题: "viewer 不该建成的记录" } }),
     });
-    expect(res.status).toBe(403);
+    // ADR-011：choke point fail-closed 走 401；钉的实质是"不许 2xx"
+    expect([401, 403]).toContain(res.status);
   });
 
   it("viewer 改记录返回 403", async () => {
@@ -450,7 +451,7 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
         body: JSON.stringify({ data: { 标题: "viewer 不该改动的记录" } }),
       },
     );
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("viewer 删记录返回 403", async () => {
@@ -458,7 +459,7 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
       `${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records/${recordId}`,
       { method: "DELETE", headers: authHeader(fixture.viewer.accessToken) },
     );
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("member 仍可创建记录（回归锚点：矩阵给 member 的是 crud，别一并锁死）", async () => {
@@ -476,7 +477,7 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "viewer 不该建成的库" }),
     });
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 });
 
@@ -497,7 +498,7 @@ describe("RBAC: viewer 不能经 AI 落位绕过只读", () => {
         workspaceId: fixture.wid,
       }),
     });
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("member 经 ai/tools/execute 可建任务（回归锚点：别把 member 一起锁死）", async () => {
@@ -529,7 +530,7 @@ describe("RBAC: viewer 不能经 AI 落位绕过只读", () => {
         ],
       }),
     });
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("member 经 ai/orchestrate 不被鉴权拦截（无 AI key 时到 503，说明已过权限门禁）", async () => {

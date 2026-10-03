@@ -39,7 +39,11 @@ function collectSchemaKeys(src: string): { required: string[]; optional: string[
   while ((m = re.exec(src))) {
     const key = m[1];
     const expr = m[2];
-    /\boptional\b|\bdefault\(/.test(expr) ? optional.push(key) : required.push(key);
+    if (/\boptional\b|\bdefault\(/.test(expr)) {
+      optional.push(key);
+    } else {
+      required.push(key);
+    }
   }
   return { required, optional };
 }
