@@ -357,30 +357,34 @@ describe("RBAC: viewer 只读角色（矩阵 tasks=r，此前零覆盖）", () =
     expect(res.status).toBe(200);
   });
 
-  it("viewer 创建任务返回 403", async () => {
+  it("viewer 创建任务返回 401/403", async () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks`, {
       method: "POST",
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "viewer 不该建成的任务" }),
     });
-    expect(res.status).toBe(403);
+    // 2026-10-03 起 viewer 的写请求被统一 choke point 拦在 lib/auth.ts 的
+    // getWorkspaceContext 里（返回 null），handler 走既有的 401 分支；此前由
+    // requirePermission 在同一 handler 内部返回 403。两者都是"拒"，接受任一，
+    // 但**不允许 2xx**：断言收窄到"必须被拒"而非钉死某个状态码。
+    expect([401, 403]).toContain(res.status);
   });
 
-  it("viewer 修改任务字段返回 403（PATCH 本体，非改指派人）", async () => {
+  it("viewer 修改任务字段返回 401/403（PATCH 本体，非改指派人）", async () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks/${taskId}`, {
       method: "PATCH",
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "viewer 不该改动的标题" }),
     });
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 
-  it("viewer 删除任务返回 403", async () => {
+  it("viewer 删除任务返回 401/403", async () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks/${taskId}`, {
       method: "DELETE",
       headers: authHeader(fixture.viewer.accessToken),
     });
-    expect(res.status).toBe(403);
+    expect([401, 403]).toContain(res.status);
   });
 
   it("member 仍可创建任务（回归锚点：别把 member 一起锁死）", async () => {

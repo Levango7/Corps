@@ -1,0 +1,35 @@
+# 写接口登记册 —— 未经过 getWorkspaceContext 的写 handler 必须在此说明原因
+#
+# 格式：METHOD PATH reason=一句话说明为什么不进墙 review_by=YYYY-MM-DD
+#   - 进墙（文件调用了 getWorkspaceContext）的 handler 不得出现在这里，出现即 REGISTRY_ROT 红
+#   - review_by 过期同样红：登记表不是终身豁免书，到期必须重新论证
+# 由 python scripts/check_write_access_registry.py --emit 重刷于 2026-10-03
+#
+DELETE /api/v1/auth/calendar/disconnect/{provider} reason=账号级第三方授权解绑，不经工作区成员会话 review_by=2026-12-31
+DELETE /api/v1/push/register reason=删除自己的设备推送注册 review_by=2026-12-31
+DELETE /api/v1/users/me/account reason=注销自己的账号 review_by=2026-12-31
+PATCH /api/v1/ai/voice/preferences reason=自己的-AI-偏好 review_by=2026-12-31
+PATCH /api/v1/notifications/preferences reason=自己的通知偏好 review_by=2026-12-31
+PATCH /api/v1/users/me reason=改自己的账号资料 review_by=2026-12-31
+POST /api/documents/share/{token}/verify reason=以分享令牌授权，非成员会话 review_by=2026-12-31
+POST /api/v1/ai/chat reason=用户级-AI-对话，另有-usage-限额与人工确认才落位 review_by=2026-12-31
+POST /api/v1/ai/completion reason=用户级文本生成，不直接写业务对象 review_by=2026-12-31
+POST /api/v1/ai/format reason=用户级文本格式化，不直接写业务对象 review_by=2026-12-31
+POST /api/v1/ai/summarize reason=用户级摘要，不直接写业务对象 review_by=2026-12-31
+POST /api/v1/ai/task-breakdown reason=返回建议；落位需用户确认后走独立写端点（待复核：若开启自动落位必须进墙） review_by=2026-12-31
+POST /api/v1/ai/translate reason=用户级翻译，不直接写业务对象 review_by=2026-12-31
+POST /api/v1/auth/login reason=认证端点，此时尚无工作区上下文 review_by=2026-12-31
+POST /api/v1/auth/logout reason=认证端点，与角色无关 review_by=2026-12-31
+POST /api/v1/auth/refresh reason=认证端点，与角色无关 review_by=2026-12-31
+POST /api/v1/auth/register reason=注册端点，此时尚无工作区上下文 review_by=2026-12-31
+POST /api/v1/billing/webhook reason=Stripe-webhook，以签名授权而非成员会话 review_by=2026-12-31
+POST /api/v1/billing/webhook/alipay reason=支付宝-webhook，以签名授权 review_by=2026-12-31
+POST /api/v1/billing/webhook/wechat reason=微信支付-webhook，以签名授权 review_by=2026-12-31
+POST /api/v1/events reason=匿名埋点上报，事件名走白名单（wid-建立前也要能报） review_by=2026-12-31
+POST /api/v1/invitations/{token}/accept reason=以邀请令牌授权，接受后才建立成员关系 review_by=2026-12-31
+POST /api/v1/push/register reason=注册自己的设备 review_by=2026-12-31
+POST /api/v1/push/send reason=全局管理员操作，走-PUSH_ADMIN_USER_IDS-白名单且未配置即-fail-closed review_by=2026-12-31
+POST /api/v1/push/subscribe reason=订阅自己的设备推送 review_by=2026-12-31
+POST /api/v1/push/unsubscribe reason=退订自己的设备推送 review_by=2026-12-31
+POST /api/v1/webhooks/livekit reason=LiveKit-服务回调，以-webhook-鉴权 review_by=2026-12-31
+POST /api/v1/workspaces reason=创建工作区，调用者此时还不是任何工作区成员 review_by=2026-12-31

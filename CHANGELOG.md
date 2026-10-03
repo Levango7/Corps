@@ -2,6 +2,70 @@
 
 本文件记录 corps 的版本变更，遵循 [Keep a Changelog](https://keepachangelog.com/zh-CN/1.1.0/) 惯例，版本号遵循 [语义化版本](https://semver.org/lang/zh-CN/)。
 
+## [Unreleased]
+
+### Security
+
+- **写权限从"只有声明"变成"有执行点"——viewer 只读承诺落地（default-deny）**：`lib/permissions.ts`
+  一直声明 viewer 全只读，但 `check_permission_gates.py` 实测 T3 档有 **157 个写 handler 零角色判断**，
+  viewer 在这些端点上可以直接改工作区内容。逐个补 `requirePermission` 成本高且容易漏（每加一个端点
+  就要记得补一次），改为把写权限收敛到**单一 choke point**：`lib/auth.ts` 的 `getWorkspaceContext()`
+  内部调用新增的 `lib/write-policy.ts` 裁决，写方法（POST/PUT/PATCH/DELETE）默认拒绝，
+  只有 owner/admin/member 与"自助类"端点（自己的收藏/通知/设备/资料/纯文本 AI）放行。
+  实测覆盖：278 个写 handler 中 250 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
+  用户级自服务 / 创建工作区等本就没有成员上下文的端点）在 `scripts/write-access-registry.txt`
+  逐条登记 reason 与复核截止日，并由新脚本 `check_write_access_registry.py` 断言
+  "每个写 handler 要么进墙要么登记"（含三类注入变异自检），已接进 CI 的 permission-gate job。
+
+  灰度开关 `WRITE_POLICY_MODE`：enforce（默认，fail-closed，拼错也按 enforce 处理）/ shadow
+  （只打日志，用于上线前观察误杀面）/ off。
+
+### Fixed
+
+- **`docker compose up -d` 在一个干净环境里根本起不来（两处，均为启动即退出）**——
+  2026-10-03 在本机逐条复现，两处都在 `web/docker/entrypoint.sh` 之后：
+  ① entrypoint 把 `DATABASE_OWNER_URL` 原样交给 `psql`，而该连接串按 Prisma 约定带 `?schema=public`，
+  psql 报 `invalid URI query parameter: "schema"`，`set -e` 令容器在 RLS 激活这一步直接退出
+  （修法：剥掉查询串再给 psql，Prisma migrate deploy 仍用原值）；
+  ② `lib/env.ts` 把 `JWT_REFRESH_SECRET` 声明为必填（zod min(32)，缺失即 instrumentation `process.exit(1)`），
+  但它既不在 `docker-compose.yml` 的 app environment，也不在 `.env.example` ——
+  于是文档化的部署路径在任何干净机器上都会停在 `环境变量验证失败` 并 Exit 1。
+  修法：compose 补 `${JWT_REFRESH_SECRET:?...}` 硬必填、`.env.example` 补条目，
+  并新增单测 `tests/unit/env-required-keys.test.ts` 堵住成因——
+  `compose-env-coverage.test.ts` 只扫 `process.env.X` / `envFlag("X")` 两种写法，
+  **zod schema 里 `KEY: z.string()` 的声明形式不在其扫描口径内**，所以这条缺口一直没被抓到。
+
+  修复后本机实测（隔离容器，不复用任何既有实例）：`docker compose up -d db redis app`
+  → migrate deploy 通过 → RLS 加固执行完成 → app Ready →
+  `GET /api/health` = **HTTP 200 `{"status":"ok","db":"up","uptimeSec":18}`**，
+  这正是 Smoke workflow 的判据（原先 Smoke 因为从无生产实例而 100% skipped）。
+- **宿主机端口撞车导致 `docker compose up` 直接 Bind 失败**：app 端口原为硬编码 `127.0.0.1:3000`，
+  本机 3000 被另一个容器（opsmesh-grafana）占用，报错信息与 corps 毫无关系、极难定位。
+  改为 `"127.0.0.1:${APP_PORT:-3000}:3000"`，`.env.example` 补 `APP_PORT`（默认 3000，行为不变）。
+
+### Added
+
+- `lib/write-policy.ts` 与两份单测：`write-policy.test.ts`（15 例，纯函数裁决）
+  + `auth-write-policy.test.ts`（11 例，证明 choke point **真的被接线**——本仓库反复出现的形态是
+  "函数写对了但没人调"，因此这里专门钉住调用关系）。
+- `scripts/check_write_access_registry.py` + `scripts/write-access-registry.txt`：only-shrink 登记表，
+  并带 `--self-test` 变异自检（删除登记行 → UNGATED、给已进墙者补登记 → REGISTRY_ROT、
+  把复核日改成过去 → REVIEW_OVERDUE），本门禁自身也进 CI 跑。
+- `tests/unit/env-required-keys.test.ts`：zod 声明式必填 env 的部署侧覆盖检查
+  （compose app environment + `.env.example` 双向），已做变异验证（删掉 compose 里那一行即变红）。
+
+### Changed
+
+- viewer 写工作区数据的响应码由 403 变为 **401**：裁决点前移到 `getWorkspaceContext`（返回 null），
+  handler 走既有的未授权分支。`rbac.test.ts` 与 `e2e/viewer-readonly.spec.ts` 的断言相应放宽为
+  `[401, 403]`——断言的实质是"不许 2xx"，不是钉死状态码。精确 403 的收敛需给 handler 一个
+  统一的错误出口，登记为下一步，不阻塞本次收口。
+
+### Known gaps（本次未收编，见 `scripts/write-access-registry.txt` 头部）
+
+- `MemberPermission` 行级覆盖尚未接入裁决：给 viewer 显式开了某模块写权限的场景仍会被拦。
+- `POST /api/v1/ai/task-breakdown` 等在注册表里有"若开启自动落位必须进墙"的显式备注。
+
 ## [0.7.2] - 2026-10-01
 
 ### Fixed

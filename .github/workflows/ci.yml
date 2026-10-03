@@ -177,6 +177,15 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check role-permission enforcement coverage (5 tiers, shrink-only)
         run: python scripts/check_permission_gates.py
+      # 上面那份只统计"handler 源码里有没有角色判断"，看不见 2026-10-03 引入的
+      # 统一写策略 choke point：handler 只要不经过 getWorkspaceContext，就完全不在墙内，
+      # 而五档门禁会给它记一个"本来也没有角色判断"，等于默认放行。本脚本补这条线：
+      # 每个写 handler 必须二选一——进墙（调用 getWorkspaceContext），或登记并写明理由。
+      - name: Check write-access registry (covered-or-registered)
+        run: python scripts/check_write_access_registry.py
+      # 门禁自己也要被门禁：三类注入变异必须各自因正确的红因变红
+      - name: Mutation-check the write-access registry itself
+        run: python scripts/check_write_access_registry.py --self-test
 
   # 安全审计：high/critical 级别漏洞必须阻止 CI；moderate/low 仅报告不阻断
   # 独立 job 并行运行，与 test job 互不阻塞，缩短 CI 总时长

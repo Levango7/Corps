@@ -8,6 +8,7 @@ import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { envFlag } from "./env";
+import { decideWorkspaceWrite, parseWritePolicyMode } from "./write-policy";
 
 /**
  * Better Auth 服务端实例（Spec §4：认证 = Better Auth）。
@@ -163,6 +164,40 @@ export async function getWorkspaceContext(
         originalRole: grant.originalRole,
         expiresAt: grant.expiresAt,
       };
+    }
+  }
+
+  const writeMode = parseWritePolicyMode(process.env.WRITE_POLICY_MODE);
+  if (writeMode !== "off") {
+    // 折算临时授权：过期不看.permanent semantics 同 checkPermission（expiresAt > now）
+    const tempRole =
+      temporaryGrant && temporaryGrant.expiresAt.getTime() > Date.now()
+        ? temporaryGrant.tempRole
+        : null;
+    const decision = decideWorkspaceWrite(
+      {
+        method: req.method,
+        pathname: new URL(req.url).pathname,
+        role: tempRole ?? member.role,
+      },
+      writeMode,
+    );
+    if (!decision.allowed) {
+      console.error(
+        `[write-policy] denied method=${req.method} role=${member.role}` +
+          `${tempRole ? ` tempRole=${tempRole}` : ""} path=${new URL(req.url).pathname}` +
+          ` reason=${decision.reason}`,
+      );
+      // fail-closed：返回 null，由各 handler 走既有的 401 分支。
+      // 这里不返回专门的 403 是为了让 157 个 handler 零改动即受保护；
+      // 精确 403 与「登记式 allowlist」见 scripts/write-access-registry.txt 的下一步。
+      return null;
+    }
+    if (decision.shadowDenied) {
+      console.error(
+        `[write-policy] shadow-deny method=${req.method} role=${member.role}` +
+          ` path=${new URL(req.url).pathname} reason=${decision.reason}`,
+      );
     }
   }
 

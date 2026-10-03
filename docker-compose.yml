@@ -113,10 +113,19 @@ services:
       DATABASE_OWNER_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-corps}?schema=public
       # 默认开启 RLS 加固；显式置 false 可退回非加固模式（不推荐）
       RLS_ACTIVATE: ${RLS_ACTIVATE:-true}
+      # ── 统一写策略（lib/write-policy.ts）：默认 deny ──
+      # enforce（默认）viewer 写工作区数据即被拒；shadow 只记日志不拦（上线灰度观察误杀面用）；
+      # off 完全关闭。非法取值一律按 enforce 处理（fail-closed），拼错环境变量不会悄悄降级安全性
+      WRITE_POLICY_MODE: ${WRITE_POLICY_MODE:-enforce}
       # 认证密钥（必须为强随机值；未设置或为空时 compose 直接报错退出，
       # 杜绝带着空签名密钥启动导致 JWT 可被伪造——见 docs/runbook-deploy.md §5）
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?请在 .env 中设置 BETTER_AUTH_SECRET（openssl rand -hex 32）}
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:?请在 .env 中设置 JWT_ACCESS_SECRET（openssl rand -hex 32）}
+      # lib/env.ts 把下面两个列为**必填**（zod min(32)，缺失即 instrumentation process.exit(1)）。
+      # 2026-10-03 实测：JWT_REFRESH_SECRET 此前既不在 compose 也不在 .env.example，
+      # 于是文档化的 `docker compose up -d` 在任何干净环境都会启动失败——
+      # 修复口径见 docs/decisions/ADR-011 之外的新单测 env-required-keys.test.ts
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:?请在 .env 中设置 JWT_REFRESH_SECRET（openssl rand -hex 32）}
       # 应用 URL
       NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
       # Stripe（可选，未配置时计费页隐藏升级入口）
@@ -193,7 +202,10 @@ services:
       # 见 docs/runbook-deploy.md §8.2）
       METRICS_TOKEN: ${METRICS_TOKEN:-}
     ports:
-      - "127.0.0.1:3000:3000"
+      # 宿主机端口可用 APP_PORT 覆盖（默认 3000）。存在的理由：本机 3000 常被其他容器
+      # （如 opsmesh-grafana）占用，导致 `docker compose up` 直接 Bind 失败、而报错信息
+      # 与 corps 毫无关系，难以定位。生产走反向代理时同样建议显式指定。
+      - "127.0.0.1:${APP_PORT:-3000}:3000"
     volumes:
       # RLS 激活脚本（entrypoint 在 RLS_ACTIVATE=true 时执行）
       - ./db/rls-activate.sql:/app/db/rls-activate.sql:ro

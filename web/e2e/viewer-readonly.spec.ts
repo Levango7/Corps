@@ -94,16 +94,19 @@ test("viewer 可读看板、可看任务详情，但写入被服务端拒绝", a
   await expect(vp.getByText(/页面出错了|Something went wrong/)).toHaveCount(0);
 
   // 6) 写：创建任务必须被服务端拒绝
+  // 状态码口径（2026-10-03 起）：写请求先过 lib/auth.ts 的统一 choke point，
+  // viewer 在 getWorkspaceContext 就被拒（handler 走既有 401 分支），
+  // 因此这里接受 401 或 403；**断言的实质是"不许 2xx"**，不是钉死某个数字。
   const create = await viewerCtx.request.post(`/api/v1/workspaces/${wid}/tasks`, {
     data: { title: "viewer 不该建成的任务" },
   });
-  expect(create.status(), "只读成员创建任务应 403").toBe(403);
+  expect([401, 403]).toContain(create.status());
 
   // 7) 写：改已有任务也必须被拒绝
   const patch = await viewerCtx.request.patch(`/api/v1/workspaces/${wid}/tasks/${taskId}`, {
     data: { title: "viewer 不该改动的标题" },
   });
-  expect(patch.status(), "只读成员改任务应 403").toBe(403);
+  expect([401, 403]).toContain(patch.status());
 
   // 8) AI 落位面同样不得绕过：经 ai/tools/execute 建任务
   const aiExec = await viewerCtx.request.post("/api/v1/ai/tools/execute", {
@@ -113,7 +116,7 @@ test("viewer 可读看板、可看任务详情，但写入被服务端拒绝", a
       workspaceId: wid,
     },
   });
-  expect(aiExec.status(), "只读成员经 AI 工具落位应 403").toBe(403);
+  expect([401, 403]).toContain(aiExec.status());
 
   await ownerCtx.close();
   await viewerCtx.close();
