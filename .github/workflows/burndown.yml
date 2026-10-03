@@ -1,0 +1,31 @@
+name: Burndown
+
+# 与 CI 的分工：CI 里那批 scripts/check_*.py 全是**棘轮**（新增即红、已修未删即红），
+# 它们挡得住恶化，却对「什么都不做」永远绿灯——一个季度过去 643 个零覆盖文件还是 643 个，
+# CI 全绿。本 workflow 接的是 scripts/check_burndown.py：按 docs/ROADMAP-2026Q4.md §2
+# 的承诺做线性清偿校验，逾期未达标即红。
+#
+# 为什么必须带 schedule：只在 push 时跑的门禁抓不到「没有 push」——
+# 清偿停滞的表现恰恰是仓库安静。每周一跑一次，停滞本身就会变成红。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 每周一 03:17 UTC（= 北京 11:17），避开整点拥堵
+    - cron: "17 3 * * 1"
+  workflow_dispatch:
+
+jobs:
+  burndown:
+    name: Quality Baseline Burndown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      # 判据与承诺都在 scripts/burndown-plan.txt：改目标/截止日要走 PR，别把门禁调成绿灯
+      - name: Check burn-down commitments (promised improvement, not just ratchets)
+        run: python scripts/check_burndown.py
+      # 门禁自己也要被门禁：五种注入变异必须各自因正确的红因变红
+      - name: Mutation-check the burndown gate itself
+        run: python scripts/check_burndown.py --self-test

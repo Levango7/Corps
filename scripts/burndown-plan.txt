@@ -1,0 +1,27 @@
+# 质量基线 burn-down 计划 —— 机器可校验版
+#
+# 对应 docs/ROADMAP-2026Q4.md §2：那份是给人看的承诺，这份是给 CI 看的判据。
+# 背景：现有门禁全是「只防变坏」的棘轮（新增即红、已修未删即红），
+#       它们能挡住恶化，却对「什么都不做」永远绿灯。本表补的正是这一半——
+#       **承诺变好，并且逾期未达标就红。**
+#
+# 格式（一行一条，# 开头为注释）：
+#   BASELINE <key> start=<int> target=<int> start_date=YYYY-MM-DD due=YYYY-MM-DD \
+#            grace_days=<int> source=file:<相对仓库根的路径> doc_row=<路线图表格首列文本>
+#
+# 语义：
+#   - 当前值：由 source 量出（file: 数该基线文件的**非注释非空行**）。
+#     为什么可以直接数基线文件：每条基线都有配套的棘轮门禁强制「基线 == 实测集合」，
+#     基线行数就是实测值，且不需要跑 vitest --coverage，判据恒定可复现。
+#   - 今日应达 = start - (start - target) * 已过天数 / 总天数（线性清偿）
+#   - 宽限：允许落后 grace_days 天的额度（清偿是批量提交，不要求每天动）。
+#     当前值 > 今日应达 + 宽限额度 -> 红 BURND_BEHIND
+#   - 当前值 > start                -> 红 BURND_REGRESSED（棘轮本应挡住，此处二次确认）
+#   - 路线图 §2 表里的「当前」列与实测不符 -> 红 BURND_DOC_DRIFT（文档承诺不得与事实漂移）
+#
+# 改数字的规矩：清偿一批就顺手把 docs/ROADMAP-2026Q4.md §2 的「当前」列改成实测值；
+#               改目标/截止日要说明理由，别把门禁调成绿灯。
+#
+BASELINE zero-coverage start=643 target=550 start_date=2026-10-03 due=2026-12-31 grace_days=14 source=file:scripts/zero-coverage-baseline.txt doc_row=zero-coverage-baseline.txt
+BASELINE permission-gate-t3 start=157 target=80 start_date=2026-10-03 due=2026-12-31 grace_days=14 source=file:scripts/permission-gate-unscoped-baseline.txt doc_row=permission-gate
+BASELINE api-contract start=205 target=150 start_date=2026-10-03 due=2026-12-31 grace_days=14 source=file:scripts/api-contract-baseline.txt doc_row=api-contract
