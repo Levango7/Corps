@@ -10,13 +10,12 @@ name: Mobile Matrix (Cloud)
 #  - HarmonyOS：无公共 CI 云（DevEco 模拟器需嵌套虚拟化，CI 不给），引擎层
 #    ArkWeb=Chromium 已由现有 chromium 档覆盖，真机层走华为云远程真机（手动）
 #
-# 触发：手动 + 每周一 04:00 UTC（北京周一 12:00）——移动端回归是低频档，
-# 不挂 push（避免每 commit +15 分钟 CI；主链路仍由 ci.yml 保障）
+# 触发：仅手动（workflow_dispatch）。2026-10-03 起撤销每周一 04:00 的
+# schedule——移动端 0 用户、无发版节奏，每周自动跑 macOS+模拟器两个重型
+# job（合计约 40 分钟 runner 时间）纯属空烧；需要移动端回归时手动触发即可。
 
 on:
   workflow_dispatch:
-  schedule:
-    - cron: "0 4 * * 1"
 
 jobs:
   ios-safari:
