@@ -568,7 +568,7 @@ jobs:
             # docker/metadata-action 默认不产 latest，需显式 type=raw 声明）
             type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
       - name: Build and push
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: ./web
           push: true
