@@ -7,7 +7,8 @@ import { locales } from "@/lib/i18n";
 /**
  * /legal/privacy 隐私政策 —— 静态法务文档页。
  * 与实际实现对齐：邮件通知（Resend）、支付（Stripe/支付宝/微信）、
- * PostgreSQL RLS 多租户隔离、httpOnly cookie 会话、Docker 自托管部署。
+ * PostgreSQL RLS 多租户隔离、httpOnly cookie 会话、Docker 自托管部署、
+ * AI 功能的第三方模型服务（DeepSeek 首选 / OpenAI 备用，含跨境传输披露）。
  * 运营主体：个人开发者（无公司/个体牌照），联系邮箱见"运营者"条款。
  */
 
@@ -45,7 +46,8 @@ const ZH: Section[] = [
     body: [
       "除以下情形外，我们不会向第三方出售或共享您的个人信息：",
       "1. 服务提供商：邮件发送（Resend）、支付处理（Stripe / 支付宝 / 微信）——仅限其为提供服务所必需的最小范围；",
-      "2. 法律要求：依法律法规或有权机关的强制要求。",
+      "2. AI 模型服务：当您主动使用 AI 功能（对话、摘要、翻译、决策草稿等）时，您提交的文本将发送至大模型服务提供商的 API 处理——首选 DeepSeek（境内服务），备用 OpenAI（美国，**涉及信息跨境传输**）。模型服务商仅为完成您请求的生成任务而处理该文本；若不使用 AI 功能，您的任何内容都不会发送给模型服务商，停用相关功能即可随时停止上述传输；",
+      "3. 法律要求：依法律法规或有权机关的强制要求。",
     ],
   },
   {
@@ -101,7 +103,8 @@ const EN: Section[] = [
     body: [
       "We do not sell or share your personal information except with:",
       "1. Service providers: email delivery (Resend), payment processing (Stripe / Alipay / WeChat Pay) — limited to what is necessary;",
-      "2. Legal requirements: where compelled by applicable law or authorities.",
+      "2. AI model services: when you actively use AI features (chat, summarization, translation, decision drafting, etc.), the text you submit is sent to a large-model provider's API — DeepSeek (China-based) is the primary channel, OpenAI (United States) is the fallback channel, which **involves cross-border transfer of your information**. Model providers process that text solely to fulfill your generation request; if you do not use AI features, none of your content is sent to any model provider, and you can stop this transfer at any time by discontinuing those features;",
+      "3. Legal requirements: where compelled by applicable law or authorities.",
     ],
   },
   {

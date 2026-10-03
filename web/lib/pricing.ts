@@ -125,7 +125,7 @@ export const PRICING_FAQS: PricingFaq[] = [
     questionId: 2,
     question: "支持哪些付款方式？可以开发票吗？",
     answer:
-      "支持支付宝、微信扫码与外币卡。当前阶段提供电子收据（Receipt）；增值税发票能力将在国内主体就绪后开放（预计公开发布阶段），购买前如有开票刚需请先联系 support 邮箱确认。",
+      "当前通过 Stripe 支持外币卡（Visa / Mastercard 等）自动续费。支付宝与微信扫码通道已完成技术接入，将在国内运营主体与商户资质就绪后开放。当前阶段提供电子收据（Receipt）；增值税发票能力将随国内主体一并开放，购买前如有开票刚需请先联系 support 邮箱确认。",
   },
   {
     questionId: 3,
