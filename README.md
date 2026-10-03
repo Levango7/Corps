@@ -71,6 +71,9 @@ docker compose up -d --build
 
 # 3. 健康检查
 curl http://localhost:3000/api/health
+
+# 宿主机 3000 被别的服务占用时（例如本机 Grafana），改用 APP_PORT 避让：
+# 在 .env 里设 APP_PORT=3001，然后 curl http://localhost:3001/api/health
 ```
 
 本地开发：
@@ -100,7 +103,11 @@ api/          # openapi.yaml 契约
 ```
 
 ## 链接
-- **在线体验**：尚无公开实例（无 URL 可给；此项待真实部署后回填）
+- **在线体验**：暂无固定域名实例。2026-10-03 已验证「无 VPS 也能让 Smoke 变绿」的路径——用
+  Cloudflare 临时隧道（`cloudflared tunnel --url http://127.0.0.1:<APP_PORT>`）把本机 compose 实例
+  暴露为公网 URL，再把该 URL 配成仓库变量 `SMOKE_TARGET_URL`，Smoke 由长期 `skipped` 转为
+  **success**（run 37088570921，日志实测 `HTTP 200` + `{"status":"ok","db":"up"}`）。
+  隧道地址每次重启即变，**不作为对外实例**，正式域名待 VPS / 托管落地后回填。
 - **变更日志**：[CHANGELOG.md](./CHANGELOG.md)
 - **部署手册**：[docs/runbook-deploy.md](./docs/runbook-deploy.md)
 - **发布页**：[Releases](https://github.com/Levango7/Corps/releases)（v0.5.0–v0.7.2 已于 2026-10-01 补齐；其中 v0.7.1 无容器镜像）

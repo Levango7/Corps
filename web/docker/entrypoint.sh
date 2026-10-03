@@ -29,7 +29,12 @@ if [ "${RLS_ACTIVATE}" = "true" ]; then
   if [ -n "${DATABASE_OWNER_URL}" ] && [ -n "${CORPS_APP_PASSWORD}" ]; then
     if command -v psql >/dev/null 2>&1; then
       echo "[entrypoint] 激活 RLS 加固（corps_app 角色 + FORCE ROW LEVEL SECURITY）..."
-      psql "${DATABASE_OWNER_URL}" -v ON_ERROR_STOP=1 \
+      # psql 不接受 Prisma 风格连接串尾部的 `?schema=public`（报
+      # invalid URI query parameter: "schema"），而 DATABASE_OWNER_URL 按 Prisma 约定
+      # 必须带它。这里先剥掉查询串再交给 psql——DDL 默认打到目标库，无需 schema 参数。
+      # 剥串前不改动 DATABASE_OWNER_URL 本身：prisma migrate deploy 仍需要原值。
+      OWNER_PSQL_URL="${DATABASE_OWNER_URL%%\?*}"
+      psql "${OWNER_PSQL_URL}" -v ON_ERROR_STOP=1 \
         -v app_password="${CORPS_APP_PASSWORD}" \
         -f /app/db/rls-activate.sql >/dev/null
       echo "[entrypoint] RLS 激活完成"
