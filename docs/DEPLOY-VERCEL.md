@@ -256,6 +256,14 @@ cd web && npx prisma generate && npx prisma migrate deploy && pnpm build
 
 **解决**：确认 `BETTER_AUTH_SECRET` 在 Production 环境为固定值（不要每次部署都变）；`NEXT_PUBLIC_APP_URL` 与 Vercel 分配的域名完全一致（含 `https://` 协议头）。
 
+### 注册/登录恒 403：`Cross-origin request blocked (CSRF protection)`
+
+**原因**：`NEXT_PUBLIC_APP_URL` 是**构建期静态替换**进产物的（Next 对 `NEXT_PUBLIC_*` 在客户端与服务端 bundle 里都烤值），运行时再设同名环境变量**完全无效**。部署到 `https://xxx.vercel.app` 但构建时烤的是 `http://localhost:3000`，则 `web/middleware.ts:116` 的同源检查与 better-auth 的 baseURL 都会拒掉写操作。
+
+**实测**：同一份产物里能同时数出烤进去的旧值（`grep -rhoE "http://localhost:[0-9]{3}" .next/server` 命中 33 处），改成正确域名后必须**重新构建**才生效。
+
+**解决**：先定最终对外域名 → 填 `NEXT_PUBLIC_APP_URL`（用 **Config** 类型，见上文第 3 条例外）→ 再触发构建/Redeploy。顺序反了就会出现"部署 Ready 但注册 403"。
+
 ### Stripe Webhook 验签失败
 
 **原因**：`STRIPE_WEBHOOK_SECRET` 与 Stripe Dashboard 中 Webhook endpoint 的 Signing Secret 不一致，或 endpoint URL 未指向 `{NEXT_PUBLIC_APP_URL}/api/v1/billing/webhook/stripe`。
