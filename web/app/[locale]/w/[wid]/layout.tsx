@@ -336,30 +336,53 @@ export default function WorkspaceLayout({
           exact: false,
           badge: imUnreadCount,
         },
+        {
+          href: `/w/${wid}/decisions`,
+          label: t("menu.decisions"),
+          icon: FileText,
+          exact: false,
+        },
+      ],
+    },
+    // ─── 整合而非减法（2026-10-03）：28 个平铺入口按工作流归组 ───
+    // 所有功能保留，只是从"一个 28 项的长列表"变成"核心 5 项 + 四个有名字的组"。
+    // 长尾入口同时保留在 CommandPalette（Cmd+K）里，按名字直达。
+    {
+      label: t("menu.groupCollaboration"),
+      items: [
         { href: `/w/${wid}/meetings`, label: t("menu.meetings"), icon: Video, exact: false },
+        {
+          href: `/w/${wid}/meeting-minutes`,
+          label: t("menu.meetingMinutes"),
+          icon: NotebookPen,
+          exact: false,
+        },
         {
           href: `/w/${wid}/approvals`,
           label: t("menu.approvals"),
           icon: CheckCircle2,
           exact: false,
         },
-        { href: `/w/${wid}/decisions`, label: t("menu.decisions"), icon: FileText, exact: false },
-        { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
+        {
+          href: `/w/${wid}/announcements`,
+          label: t("menu.announcements"),
+          icon: Megaphone,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/calendar`,
+          label: t("menu.calendar"),
+          icon: CalendarIcon,
+          exact: false,
+        },
         { href: `/w/${wid}/contacts`, label: t("menu.contacts"), icon: ContactIcon, exact: false },
-        { href: `/w/${wid}/workflows`, label: t("menu.workflows"), icon: GitBranch, exact: false },
-        { href: `/w/${wid}/okr`, label: t("menu.okr"), icon: Target, exact: false },
-        {
-          href: `/w/${wid}/templates`,
-          label: t("menu.templates"),
-          icon: LayoutTemplate,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/time-tracking`,
-          label: t("menu.timeTracking"),
-          icon: Clock,
-          exact: false,
-        },
+      ],
+    },
+    {
+      label: t("menu.groupKnowledge"),
+      items: [
+        { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
+        { href: `/w/${wid}/wiki`, label: t("menu.wiki"), icon: BookOpen, exact: false },
         {
           href: `/w/${wid}/whiteboards`,
           label: t("menu.whiteboards"),
@@ -374,29 +397,51 @@ export default function WorkspaceLayout({
         },
         { href: `/w/${wid}/forms`, label: t("menu.forms"), icon: ClipboardList, exact: false },
         {
-          href: `/w/${wid}/meeting-minutes`,
-          label: t("menu.meetingMinutes"),
-          icon: NotebookPen,
+          href: `/w/${wid}/recycle-bin`,
+          label: t("menu.recycleBin"),
+          icon: Trash2,
+          exact: false,
+        },
+      ],
+    },
+    {
+      label: t("menu.groupPlanning"),
+      items: [
+        { href: `/w/${wid}/okr`, label: t("menu.okr"), icon: Target, exact: false },
+        {
+          href: `/w/${wid}/workflows`,
+          label: t("menu.workflows"),
+          icon: GitBranch,
           exact: false,
         },
         {
-          href: `/w/${wid}/announcements`,
-          label: t("menu.announcements"),
-          icon: Megaphone,
+          href: `/w/${wid}/templates`,
+          label: t("menu.templates"),
+          icon: LayoutTemplate,
           exact: false,
         },
-        { href: `/w/${wid}/wiki`, label: t("menu.wiki"), icon: BookOpen, exact: false },
-        { href: `/w/${wid}/calendar`, label: t("menu.calendar"), icon: CalendarIcon, exact: false },
         {
-          href: `/w/${wid}/daily-report`,
-          label: t("menu.dailyReport"),
-          icon: Sparkles,
+          href: `/w/${wid}/time-tracking`,
+          label: t("menu.timeTracking"),
+          icon: Clock,
           exact: false,
         },
+      ],
+    },
+    {
+      label: t("menu.groupAI"),
+      items: [
+        { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Sparkles, exact: false },
         { href: `/w/${wid}/insight`, label: t("menu.insight"), icon: Sparkles, exact: false },
         {
           href: `/w/${wid}/knowledge-qa`,
           label: t("menu.knowledgeQa"),
+          icon: Sparkles,
+          exact: false,
+        },
+        {
+          href: `/w/${wid}/daily-report`,
+          label: t("menu.dailyReport"),
           icon: Sparkles,
           exact: false,
         },
@@ -406,8 +451,6 @@ export default function WorkspaceLayout({
           icon: Sparkles,
           exact: false,
         },
-        { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Sparkles, exact: false },
-        { href: `/w/${wid}/recycle-bin`, label: t("menu.recycleBin"), icon: Trash2, exact: false },
       ],
     },
     // "我的星标"：localStorage 收藏的任务。当前工作区下最多展示 5 条；

@@ -14,6 +14,23 @@ import {
   Settings,
   Scale,
   X,
+  MessageSquare,
+  Video,
+  NotebookPen,
+  CheckCircle2,
+  Megaphone,
+  Calendar as CalendarIcon,
+  Contact as ContactIcon,
+  BookOpen,
+  PenTool,
+  Table2,
+  ClipboardList,
+  Trash2,
+  Target,
+  GitBranch,
+  LayoutTemplate,
+  Clock,
+  Sparkles,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
@@ -154,6 +171,174 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         icon: Kanban,
       },
       {
+        id: "nav-my-tasks",
+        titleKey: "nav.menu.myTasks",
+        kind: "nav",
+        href: `/w/${wid}/my-tasks`,
+        icon: CheckSquare,
+      },
+      {
+        id: "nav-im",
+        titleKey: "nav.menu.messages",
+        kind: "nav",
+        href: `/w/${wid}/im`,
+        icon: MessageSquare,
+      },
+      {
+        id: "nav-decisions",
+        titleKey: "nav.menu.decisions",
+        kind: "nav",
+        href: `/w/${wid}/decisions`,
+        icon: FileText,
+      },
+      {
+        id: "nav-meetings",
+        titleKey: "nav.menu.meetings",
+        kind: "nav",
+        href: `/w/${wid}/meetings`,
+        icon: Video,
+      },
+      {
+        id: "nav-meeting-minutes",
+        titleKey: "nav.menu.meetingMinutes",
+        kind: "nav",
+        href: `/w/${wid}/meeting-minutes`,
+        icon: NotebookPen,
+      },
+      {
+        id: "nav-approvals",
+        titleKey: "nav.menu.approvals",
+        kind: "nav",
+        href: `/w/${wid}/approvals`,
+        icon: CheckCircle2,
+      },
+      {
+        id: "nav-announcements",
+        titleKey: "nav.menu.announcements",
+        kind: "nav",
+        href: `/w/${wid}/announcements`,
+        icon: Megaphone,
+      },
+      {
+        id: "nav-calendar",
+        titleKey: "nav.menu.calendar",
+        kind: "nav",
+        href: `/w/${wid}/calendar`,
+        icon: CalendarIcon,
+      },
+      {
+        id: "nav-contacts",
+        titleKey: "nav.menu.contacts",
+        kind: "nav",
+        href: `/w/${wid}/contacts`,
+        icon: ContactIcon,
+      },
+      {
+        id: "nav-documents",
+        titleKey: "nav.menu.documents",
+        kind: "nav",
+        href: `/w/${wid}/documents`,
+        icon: FileText,
+      },
+      {
+        id: "nav-wiki",
+        titleKey: "nav.menu.wiki",
+        kind: "nav",
+        href: `/w/${wid}/wiki`,
+        icon: BookOpen,
+      },
+      {
+        id: "nav-whiteboards",
+        titleKey: "nav.menu.whiteboards",
+        kind: "nav",
+        href: `/w/${wid}/whiteboards`,
+        icon: PenTool,
+      },
+      {
+        id: "nav-databases",
+        titleKey: "nav.menu.databases",
+        kind: "nav",
+        href: `/w/${wid}/databases`,
+        icon: Table2,
+      },
+      {
+        id: "nav-forms",
+        titleKey: "nav.menu.forms",
+        kind: "nav",
+        href: `/w/${wid}/forms`,
+        icon: ClipboardList,
+      },
+      {
+        id: "nav-recycle-bin",
+        titleKey: "nav.menu.recycleBin",
+        kind: "nav",
+        href: `/w/${wid}/recycle-bin`,
+        icon: Trash2,
+      },
+      {
+        id: "nav-okr",
+        titleKey: "nav.menu.okr",
+        kind: "nav",
+        href: `/w/${wid}/okr`,
+        icon: Target,
+      },
+      {
+        id: "nav-workflows",
+        titleKey: "nav.menu.workflows",
+        kind: "nav",
+        href: `/w/${wid}/workflows`,
+        icon: GitBranch,
+      },
+      {
+        id: "nav-templates",
+        titleKey: "nav.menu.templates",
+        kind: "nav",
+        href: `/w/${wid}/templates`,
+        icon: LayoutTemplate,
+      },
+      {
+        id: "nav-time-tracking",
+        titleKey: "nav.menu.timeTracking",
+        kind: "nav",
+        href: `/w/${wid}/time-tracking`,
+        icon: Clock,
+      },
+      {
+        id: "nav-ai-tools",
+        titleKey: "nav.menu.aiTools",
+        kind: "nav",
+        href: `/w/${wid}/ai-tools`,
+        icon: Sparkles,
+      },
+      {
+        id: "nav-insight",
+        titleKey: "nav.menu.insight",
+        kind: "nav",
+        href: `/w/${wid}/insight`,
+        icon: Sparkles,
+      },
+      {
+        id: "nav-knowledge-qa",
+        titleKey: "nav.menu.knowledgeQa",
+        kind: "nav",
+        href: `/w/${wid}/knowledge-qa`,
+        icon: Sparkles,
+      },
+      {
+        id: "nav-daily-report",
+        titleKey: "nav.menu.dailyReport",
+        kind: "nav",
+        href: `/w/${wid}/daily-report`,
+        icon: Sparkles,
+      },
+      {
+        id: "nav-announcement-draft",
+        titleKey: "nav.menu.announcementDraft",
+        kind: "nav",
+        href: `/w/${wid}/announcement-draft`,
+        icon: Sparkles,
+      },
+      {
         id: "nav-members",
         titleKey: "nav.menu.members",
         kind: "nav",
@@ -168,6 +353,13 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         icon: CreditCard,
       },
       {
+        id: "nav-analytics",
+        titleKey: "nav.menu.analytics",
+        kind: "nav",
+        href: `/w/${wid}/analytics`,
+        icon: FileText,
+      },
+      {
         id: "nav-settings",
         titleKey: "nav.menu.settings",
         kind: "nav",
@@ -177,17 +369,24 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
     ];
 
     const q = query.trim().toLowerCase();
-    // query 为空：仅展示导航项（打开时不拉取所有任务，避免无谓请求）
-    if (!q) return navItems;
-    // query 非空：使用搜索端点返回的文档 + 任务 + 决策结果（分组显示）
+    // query 为空：仅展示核心导航项（避免 29 项长列表；完整入口在侧栏分组里）
+    if (!q) return navItems.slice(0, 8);
+    // query 非空：先本地匹配导航项（titleKey 翻译后 contains，零请求即时出），
+    // 再拼接搜索端点返回的文档 + 任务 + 决策结果（分组显示）
+    const matchedNav = navItems.filter((n) =>
+      tNav(n.titleKey ?? "")
+        .toLowerCase()
+        .includes(q),
+    );
     // 结果已按 updatedAt 倒序，但需按 type 分组：document → task → decision
     const typeOrder: Record<SearchType, number> = { document: 0, task: 1, decision: 2 };
-    return [...results].sort((a, b) => {
+    const sortedResults = [...results].sort((a, b) => {
       const ta = typeOrder[a.kind as SearchType];
       const tb = typeOrder[b.kind as SearchType];
       return ta - tb;
     });
-  }, [query, results, wid]);
+    return [...matchedNav, ...sortedResults];
+  }, [query, results, wid, tNav]);
 
   // 是否展示分组标题（仅搜索态下）
   const showGroups = query.trim().length > 0;
