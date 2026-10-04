@@ -20,8 +20,61 @@
   灰度开关 `WRITE_POLICY_MODE`：enforce（默认，fail-closed，拼错也按 enforce 处理）/ shadow
   （只打日志，用于上线前观察误杀面）/ off。
 
+- **登出后 Cache Storage 里仍留着上一位登录者的工作区页面**：`76853bd0` 把 `/api/` 全部排除出缓存后，
+  同一类暴露面剩下另一半——`public/sw.js` 对所有同源 GET 做 stale-while-revalidate，缓存 key 只有 URL、
+  不含身份，所以登录期间访问过的工作区页面（SSR HTML / RSC payload）会留在缓存里。
+  本轮补"登出即清"：`components/pwa/PwaRegister.tsx` 导出 `clearAppCaches()`（只删 `corps-sw*` 前缀），
+  工作区 layout 的登出回调在 logout POST 之后调用它。
+  **第一次全量 E2E 实测证明"清一次"不够**：`e2e/logout-cache.spec.ts` 单独跑 PASS，放进全量套件则残留
+  5 条 `/w/{wid}/decisions|meetings|meeting-minutes|approvals|announcements`——这 5 个页面用例并没有访问过，
+  是侧栏链接被 Next 预取、SW 的后台 revalidate（`sw.js:83` 的 `cache.put` 脱离请求链）在删除**之后**写回来的，
+  负载越高越容易命中。
+  最终按三层收口：① **写入侧断掉**——`sw.js` 新增 `isTenantPage()`，`/w/{wid}/…` 一律不读不写缓存
+  （导航请求仍保留 `/offline` 兜底），`CACHE_VERSION` v3→v4 让已被污染的旧桶在 activate 时删除；
+  ② 登出回调调 `clearAppCaches()`；③ `/auth/*` 页面挂载时再扫一遍。
+  用例也拆成两条确定性断言（不再靠"登出前后各拍一张快照"）：写入侧——登录后逛 3 个工作区页面并等 3s，
+  缓存里该工作区的条目必须为 0（并附"SW 确实缓存了别的东西"的反证控制，否则是空断言）；
+  清理侧——人工往桶里种一条 `/w/{wid}/board` 再登出，断言它被删掉。
+  **变异验证**：关掉 ①（`if (false && isTenantPage(url))`）→ 写入侧用例红，实测缓存里躺着 **43 条**该工作区条目；
+  同时关掉 ②③ → 清理侧用例红（种入的那条 8s 内没被删）。两处还原后按 md5 确认逐字节一致并复绿。
+  **已知未收口**：切换工作区（URL 仍在 `/w/` 下、不经过 `/auth`）不触发第③层——但第①层已保证租户内容从来不会被写入，
+  所以这一条只是少了一道兜底扫描，不再是残留面。
+
 ### Fixed
 
+- **任务聊天面板"发出去的消息自己看不到"（get-or-create 竞态，P1）**：
+  `POST /api/v1/workspaces/{wid}/tasks/{id}/conversation` 注释写的是"获取或创建"，实现是
+  `findFirst` → 查不到就 `create`。两个并发事务在 READ COMMITTED 下互相看不见对方未提交的行，
+  于是**每个并发请求都新建一条会话**。一手证据（2026-10-05 生产 E2E 的 trace.network）：一次任务详情页
+  打开就发出 3 个该 POST，**3 个都 201 且 conversation id 各不相同**；后果不只是脏数据——面板显示的会话
+  与消息真正写入的会话可能不是同一条，于是时间戳用例看到的是空状态，而同时刻 `POST /messages` 是 201。
+  该 spec 是 `describe.serial`，一条红 → 同链后续 7 条 `did not run`（这是 serial 结构的又一例代价）。
+  修法：在事务里先取按 taskId 的**事务级 advisory lock**
+  （`pg_advisory_xact_lock(hashtextextended(taskId, 0))`，随事务结束自动释放），
+  后到的请求会等前一个提交后再 `findFirst`，从而复用同一条会话。
+  验证：新增 `tests/integration/task-conversation-idempotent.test.ts` 2 例（并发 5 次 → 会话 id 集合大小为 1、
+  且 201 恰好一次）。修复前实测 **expected 4 to be 1**（5 个并发请求造出 4 条会话）→ 修复后 2 passed。
+  **存量数据未清**：隔离验证库里 79 个任务带 >1 条会话（249 条任务会话，约 170 条为重复），
+  全部由历次 E2E 造出；用户开发库实测 `task_id IS NOT NULL` 的会话为 **0 条**，未受影响。
+  本轮未加数据库唯一约束（需要先做去重迁移），advisory lock 已堵住新增，收敛为后续项。
+- **`dispatchOfflineNotification` 写了没人调**：它把"落 Notification 记录"和"离线补邮件"绑在一个函数里，
+  而仓库另有 21 处通知落库点（19 处 `tx.notification.create` + 2 处 `createMany`，分布在 19 个文件）
+  已经在自己的事务里写了记录，任何一处直接调它都会重复落一条——所以它长期零调用方，
+  `notification_preferences` 与 DND 判定在真实链路上依然没人读（REVERIFY §6.2 第 4 行记的"写了没人读"未完部分）。
+  修法：拆出 `fanOutOfflineEmail()`（判在线 → 读偏好 → 判 DND → 配了默认邮箱账户才发信，**不写记录**），
+  `dispatchOfflineNotification()` 保留为"先落记录 + 同一套扇出"，给自己不落库的调用方用；
+  `NOTIFICATION_TYPES` 补 `"action_overdue"`（第一个点位的类型此前不在白名单里，接不上）。
+  第一个点位接在 `app/api/cron/check-overdue-actions/route.ts:129`：事务内收集扇出目标、**提交后**再扇出——
+  SMTP 是网络 IO，不进 RLS 事务；响应形状 `{checked,notified,skipped}` 原样不动（api-contract 门禁按此比对）。
+  验证：`tests/unit/offline-push-fanout.test.ts` 8 例 + `tests/unit/cron-overdue-fanout.test.ts` 4 例，
+  各做变异验证（扇出改回 dispatch → 5 例红；删掉事务外的扇出调用 → 2 例红）。
+  **如实记录**：`dispatchOfflineNotification` 自身仍无生产调用方，其余 21 处落库点本轮未接扇出。
+- **邀请 E2E 把邀请链接的 origin 当成事实来源，在 CI 之外必然打空**：`e2e/invitation.spec.ts` 直接 `goto`
+  后端返回的绝对链接，而后端按 `NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"` 拼接
+  （`app/api/v1/workspaces/[wid]/members/invite/route.ts:123`）——CI 里应用正好监听 3000 所以恒绿，
+  本机 3000 是另一个项目的 Grafana 在占，于是 2026-10-05 全量 E2E 里该用例停在
+  "注册页应显示邀请上下文提示"（10s 超时、元素不存在）。改为只取链接的 path+query、
+  origin 按 playwright 配置的 `baseURL` 解析：用例真正要带过去的是 token，origin 属于运行环境而不是被测事实。
 - **`docker compose up -d` 在一个干净环境里根本起不来（两处，均为启动即退出）**——
   2026-10-03 在本机逐条复现，两处都在 `web/docker/entrypoint.sh` 之后：
   ① entrypoint 把 `DATABASE_OWNER_URL` 原样交给 `psql`，而该连接串按 Prisma 约定带 `?schema=public`，
@@ -39,6 +92,7 @@
   → migrate deploy 通过 → RLS 加固执行完成 → app Ready →
   `GET /api/health` = **HTTP 200 `{"status":"ok","db":"up","uptimeSec":18}`**，
   这正是 Smoke workflow 的判据（原先 Smoke 因为从无生产实例而 100% skipped）。
+
 - **宿主机端口撞车导致 `docker compose up` 直接 Bind 失败**：app 端口原为硬编码 `127.0.0.1:3000`，
   本机 3000 被另一个容器（opsmesh-grafana）占用，报错信息与 corps 毫无关系、极难定位。
   改为 `"127.0.0.1:${APP_PORT:-3000}:3000"`，`.env.example` 补 `APP_PORT`（默认 3000，行为不变）。
@@ -46,13 +100,19 @@
 ### Added
 
 - `lib/write-policy.ts` 与两份单测：`write-policy.test.ts`（15 例，纯函数裁决）
-  + `auth-write-policy.test.ts`（11 例，证明 choke point **真的被接线**——本仓库反复出现的形态是
-  "函数写对了但没人调"，因此这里专门钉住调用关系）。
+  - `auth-write-policy.test.ts`（11 例，证明 choke point **真的被接线**——本仓库反复出现的形态是
+    "函数写对了但没人调"，因此这里专门钉住调用关系）。
 - `scripts/check_write_access_registry.py` + `scripts/write-access-registry.txt`：only-shrink 登记表，
   并带 `--self-test` 变异自检（删除登记行 → UNGATED、给已进墙者补登记 → REGISTRY_ROT、
   把复核日改成过去 → REVIEW_OVERDUE），本门禁自身也进 CI 跑。
 - `tests/unit/env-required-keys.test.ts`：zod 声明式必填 env 的部署侧覆盖检查
   （compose app environment + `.env.example` 双向），已做变异验证（删掉 compose 里那一行即变红）。
+- **任务详情聊天面板补上"本会话消息搜索"入口**：`/im` 页早就有 `MessageSearch`，任务详情的 ChatPanel
+  一直没有入口——设计文档描述的面板搜索在产品里不可达（`docs/design/im-architecture.md`）。
+  `components/im/ChatWindow.tsx` 头部加开关（`aria-label` 用 `chat.search` 文案、带 `aria-expanded`），
+  展开后在消息列表上方渲染 `<MessageSearch workspaceId conversationId>`：复用既有实现、
+  带 cid 限定所以不越界到别的会话。`e2e/im-upgrade.spec.ts` 的搜索用例改成两条链一起断言
+  （面板内新入口 + `/im` 页原入口），新入口从此有回归保护。
 
 ### Added
 
