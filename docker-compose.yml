@@ -245,11 +245,37 @@ services:
     networks:
       - corps-net
 
+  # ─── 数据库定时备份 ────────────────────────────────────────────────────────
+  # 独立服务而非塞进 cron：备份与被备份数据分离失败域，且备份策略（频率/保留）
+  # 可独立演进，不污染业务定时任务。
+  # 恢复见 db/restore.sh；保留份数与位置见 docs/runbook-deploy.md §7.5。
+  backup:
+    image: postgres:18-alpine
+    container_name: corps-backup
+    restart: unless-stopped
+    entrypoint: ["sh", "/db/backup.sh"]
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      # 用 owner 连接：备份需绕过 RLS 读取全量数据
+      DATABASE_OWNER_URL: postgresql://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:?请在 .env 中设置 POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB:-corps}?schema=public
+      BACKUP_INTERVAL_SECONDS: ${BACKUP_INTERVAL_SECONDS:-86400}
+      BACKUP_RETENTION_DAYS: ${BACKUP_RETENTION_DAYS:-7}
+    volumes:
+      - ./db/backup.sh:/db/backup.sh:ro
+      - ./db/restore.sh:/db/restore.sh:ro
+      - backups_data:/backups
+    networks:
+      - corps-net
+
 volumes:
   postgres_data:
     name: corps-postgres-data
   uploads_data:
     name: corps-uploads-data
+  backups_data:
+    name: corps-backups-data
 
 networks:
   corps-net:
