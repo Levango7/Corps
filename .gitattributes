@@ -1,2 +1,10 @@
 # Shell 脚本强制 LF：Linux runner 上 bash/heredoc 对 CRLF 与 BOM 敏感
 *.sh text eol=lf
+
+# CSS 强制 LF：Tailwind v4 在解析 `@import` 内联时对 CRLF 敏感，CRLF 会让
+# postcss 报 "Missed semicolon" 导致 `next build` 失败。
+# 2026-10-04 实测故障形态：CI 全绿（Linux 检出为 LF），但 Windows 本机构建与
+# docker 构建（build context 取自 Windows 文件系统）双双失败——即
+# "自动化门禁全绿、开发者却无法构建镜像"。根因是 core.autocrlf=true 且此处
+# 未对 css 声明 eol，属典型的行尾策略缺失。
+*.css text eol=lf

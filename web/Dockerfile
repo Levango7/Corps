@@ -23,7 +23,14 @@ COPY prisma ./prisma
 # pnpm 11 默认会拒绝运行 prisma/esbuild/sharp 等的构建脚本并报错；
 # 用 --ignore-scripts 跳过所有构建脚本，后面手动 prisma generate 生成客户端。
 RUN pnpm install --frozen-lockfile --ignore-scripts
-RUN npx prisma generate
+# Prisma 引擎二进制默认从 binaries.prisma.sh 拉取，国内网络下常 ECONNRESET
+# （2026-10-04 实测：构建在 deps 阶段 7/7 失败退出，而本机已有镜像能跑，
+#   说明这是"能构建"与"不能构建"之间的网络脆弱性，不是代码问题）。
+# 处理：改用 npmmirror 的二进制镜像，并直接调用本地 bin 而非 npx。
+# 如需自建镜像，构建时覆盖：docker compose build --build-arg PRISMA_ENGINES_MIRROR=...
+ARG PRISMA_ENGINES_MIRROR=https://registry.npmmirror.com/-/binary/prisma
+ENV PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR}
+RUN ./node_modules/.bin/prisma generate
 
 # ===== 阶段2: 构建 =====
 FROM docker.m.daocloud.io/library/node:22-alpine AS builder
