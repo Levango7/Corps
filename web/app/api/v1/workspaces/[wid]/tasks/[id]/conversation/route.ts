@@ -53,6 +53,15 @@ export async function POST(
         });
         if (!task) return { status: "not_found" as const };
 
+        // 1.5 get-or-create 必须原子：并发的两次 POST 会各自 findFirst 都查不到，
+        // 于是都走 create ——一个任务被建出多条会话。实测（2026-10-05 生产 E2E 的
+        // trace.network）一次任务详情页打开就发出 3 个 POST 且 3 个都 201，
+        // 隔离库里 78 个任务带着 >1 条会话；后果不只是脏数据：面板显示的会话
+        // 与消息实际写入的会话可能不是同一条，用户"发出去的消息自己看不到"。
+        // 用事务级 advisory lock 按 taskId 串行化（锁随事务结束自动释放）：
+        // 后到的事务会等前一个提交，再 findFirst 就能看到已存在的会话。
+        await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtextextended(${id}, 0))`;
+
         // 2. 查找已关联的 Conversation（taskId = id）
         const existing = await tx.conversation.findFirst({
           where: { taskId: id, workspaceId: wid },
