@@ -31,6 +31,11 @@ const REFRESH_ENDPOINT = "/api/v1/auth/refresh";
 const JSON_CONTENT_TYPE = "application/json";
 /** 401 时未能在刷新后恢复身份的错误信息 */
 const UNAUTHORIZED_MESSAGE = "unauthorized";
+/**
+ * 会话有效但操作被权限策略拒绝时的错误信息。
+ * 对应 messages 的 error.forbidden（"无权访问"）。
+ */
+const FORBIDDEN_MESSAGE = "forbidden";
 
 /**
  * 统一 API 客户端：依赖 httpOnly access_token cookie（浏览器自动随请求发送），
@@ -54,6 +59,12 @@ export async function api<T = unknown>(path: string, opts: RequestInit = {}): Pr
     if (refreshed.ok) {
       // cookie 已更新，直接重试原请求
       res = await doFetch(headers);
+      // 刷新成功（会话有效）却仍 401 ⇒ 这是权限拒绝，不是身份过期。
+      // 后端为让 157 个 handler 零改动受保护，统一走 401 分支（见 lib/auth.ts:194 注释），
+      // 此处把语义还原为 403，避免上层把"无权限"误判为"需要重新登录"。
+      if (res.status === 401) {
+        throw new ApiError(FORBIDDEN_MESSAGE, 403, 403);
+      }
     } else {
       throw new ApiError(UNAUTHORIZED_MESSAGE, 401, 401);
     }
