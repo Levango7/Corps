@@ -5,7 +5,8 @@ import { prisma } from "@/lib/prisma";
 import { signAccessToken } from "@/lib/jwt";
 import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { apiMsg } from "@/lib/api-messages";
+import { apiMsg, apiLocale } from "@/lib/api-messages";
+import { zodMessage, zodFieldErrors } from "@/lib/zod-i18n";
 
 const refreshSchema = z.object({ workspaceId: z.string().uuid().optional() });
 
@@ -161,7 +162,14 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
+        {
+          code: 400,
+          // 字段级中文提示：让用户知道"是哪个字段、错在哪"，而非笼统的"参数校验错误"
+          message: zodMessage(error, apiLocale(req)),
+          errors: error.errors,
+          fieldErrors: zodFieldErrors(error, apiLocale(req)),
+          data: null,
+        },
         { status: 400 },
       );
     }

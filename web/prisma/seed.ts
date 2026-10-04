@@ -81,6 +81,22 @@ async function ensureDecision(args: { data: Prisma.DecisionUncheckedCreateInput 
   return hit ?? prisma.decision.create(args);
 }
 
+/** 文档幂等入口：按 (workspaceId, title) 先查后建，避免重复跑 seed 累积。 */
+async function ensureDocument(args: { data: Prisma.DocumentUncheckedCreateInput }) {
+  const hit = await prisma.document.findFirst({
+    where: { workspaceId: args.data.workspaceId, title: args.data.title },
+  });
+  return hit ?? prisma.document.create(args);
+}
+
+/** 评论幂等入口：按 (taskId, body) 先查后建。 */
+async function ensureComment(args: { data: Prisma.CommentUncheckedCreateInput }) {
+  const hit = await prisma.comment.findFirst({
+    where: { taskId: args.data.taskId, body: args.data.body },
+  });
+  return hit ?? prisma.comment.create(args);
+}
+
 async function main() {
   // 生产环境保护——禁止运行 seed
   if (process.env.NODE_ENV === "production") {
@@ -223,7 +239,169 @@ async function main() {
   });
   console.log("  ✓ 决策记录: 1 条");
 
-  console.log("\n🎉 Seed 完成！运行 `npm run dev` 后访问 http://localhost:3000");
+  // 6. 子任务（演示父任务看板卡上的 done/total 进度条）
+  const rlsTask = tasks[1]; // "实现多租户 RLS 隔离"
+  const subtasks = await Promise.all([
+    ensureTask({
+      data: {
+        workspaceId: demoWs.id,
+        title: "设计 RLS 策略矩阵（表 × 操作）",
+        description: "19 张业务表逐张定义 SELECT/INSERT/UPDATE/DELETE 四类策略",
+        status: "done",
+        priority: "high",
+        parentId: rlsTask.id,
+        createdBy: demoUser.id,
+      },
+    }),
+    ensureTask({
+      data: {
+        workspaceId: demoWs.id,
+        title: "编写 rls-activate.sql 幂等激活脚本",
+        description: "corps_app 最小权限角色 + FORCE ROW LEVEL SECURITY",
+        status: "done",
+        priority: "high",
+        parentId: rlsTask.id,
+        createdBy: bob.id,
+      },
+    }),
+    ensureTask({
+      data: {
+        workspaceId: demoWs.id,
+        title: "加固模式回归：以最小权限角色跑集成测试",
+        description: "验证跨租户请求在引擎层被拒（不依赖应用代码自觉）",
+        status: "in_progress",
+        priority: "medium",
+        parentId: rlsTask.id,
+        createdBy: bob.id,
+      },
+    }),
+  ]);
+  console.log(`  ✓ 子任务: ${subtasks.length} 条（父任务进度条演示）`);
+
+  // 7. 阻塞任务（演示"被依赖卡住"的红色徽标与原因展示）
+  await ensureTask({
+    data: {
+      workspaceId: demoWs.id,
+      title: "接入日历同步（Google / Outlook）",
+      description: "跨租户只读扫描任务与截止日，需先有 RLS 隔离基线",
+      status: "todo",
+      priority: "low",
+      blocked: true,
+      blockedReason: "依赖「实现多租户 RLS 隔离」完成——隔离未定型前不接入外部日历",
+      createdBy: alice.id,
+    },
+  });
+  console.log("  ✓ 阻塞任务: 1 条（阻塞徽标演示）");
+
+  // 8. 补充决策记录（演示"决策留痕 + 双向回链任务"）
+  await ensureDecision({
+    data: {
+      taskId: rlsTask.id,
+      workspaceId: demoWs.id,
+      markdown: `# 隔离方案决策：为什么选引擎层 RLS 而不是应用层过滤
+
+## 背景
+应用层"每个查询记得带 workspaceId"的模式，在多轮迭代后必然出现漏写。
+
+## 备选方案
+| 方案 | 隔离强度 | 维护成本 |
+|---|---|---|
+| 应用层过滤 | 依赖代码自觉 | 每加一个端点都要记得 |
+| 数据库 RLS | 引擎强制 | 一次性定义，之后自动生效 |
+
+## 决议
+采用 PostgreSQL RLS + \`corps_app\`（NOBYPASSRLS）+ FORCE ROW LEVEL SECURITY。
+跨租户请求在数据库层被直接拦截，**不依赖应用代码自觉**。
+
+## 风险与对策
+- 风险：新表忘记纳入 RLS → 对策：CI 门禁扫描 schema 与 RLS 名单求差集，非空即红
+- 风险：策略写错导致越权 → 对策：加固模式回归以最小权限角色跑全量集成测试`,
+      authorId: bob.id,
+    },
+  });
+  console.log("  ✓ 决策记录补充: 1 条（方案对比 + 风险对策）");
+
+  // 9. 演示文档（体现"文档中心"——团队公约沉淀 + 公开只读分享）
+  const guideMarkdown = `# 团队协作公约
+
+## 一、任务怎么流转
+1. 任何结论都先落到**任务卡**上，再开始做
+2. 大任务拆**子任务**，父任务卡自动显示 done/total 进度
+3. 被外部依赖卡住时**标记阻塞并写清原因**，不要让它悄悄烂在 todo 里
+
+## 二、决策为什么要留痕
+会议上的结论 30 天后必然失忆。corps 要求每条重要任务携带一份**决策记录**：
+- 写清"为什么这么定"，而不只是"定了什么"
+- 列出备选方案与被否决的原因
+- 决策变更时保留版本，旧版本仍可查
+
+> 目的：新成员加入时，能自己看懂历史决策的来龙去脉，不用反复问人。
+
+## 三、文档与任务的分工
+- **任务**：一次性的、有明确终点的执行单元
+- **文档**：长期沉淀的团队公约、规范、新人手册
+
+两者正交，不要用任务当文档用。`;
+
+  const docs = await Promise.all([
+    ensureDocument({
+      data: {
+        workspaceId: demoWs.id,
+        title: "团队协作公约",
+        markdown: guideMarkdown,
+        publishedMarkdown: guideMarkdown,
+        publishedAt: new Date(),
+        authorId: demoUser.id,
+      },
+    }),
+    ensureDocument({
+      data: {
+        workspaceId: demoWs.id,
+        title: "新人上手指南",
+        markdown: `# 新人上手指南
+
+## 第一天：先看懂
+1. 打开**任务看板**，按状态列浏览当前所有工作
+2. 随机点开 2–3 张卡片，读一遍里面的**决策记录**——这是本团队最重要的沉淀
+3. 到**文档中心**读「团队协作公约」
+
+## 第一周：开始参与
+1. 从看板认领一个 \`priority: low\` 的任务
+2. 在任务详情页用**轻沟通 IM** 提问，不要私聊
+3. 有结论就写进决策记录——**写下来才算数**
+
+## 常用入口
+- 看板：所有任务的唯一真相源
+- 决策：任务的"为什么"
+- 文档：团队的长期记忆
+- AI 助手：续写、摘要、翻译、任务拆解（所有建议需你确认后才落位）`,
+        authorId: alice.id,
+      },
+    }),
+  ]);
+  console.log(`  ✓ 文档: ${docs.length} 篇（含 1 篇已发布，可演示公开分享）`);
+
+  // 10. 评论（演示"任务内轻沟通"）
+  await ensureComment({
+    data: {
+      taskId: rlsTask.id,
+      workspaceId: demoWs.id,
+      authorId: alice.id,
+      body: "策略矩阵我review过了，`members` 表的 UPDATE 记得加 WITH CHECK，防止借 UPDATE 把 workspace_id 改到别的租户。",
+    },
+  });
+  await ensureComment({
+    data: {
+      taskId: rlsTask.id,
+      workspaceId: demoWs.id,
+      authorId: bob.id,
+      body: "已加，见 rls-activate.sql 的 p_members_update。另外补了一条 CI 门禁：schema 里含 workspaceId 的表与 RLS 名单求差集，差集非空直接失败。",
+    },
+  });
+  console.log("  ✓ 评论: 2 条（任务内轻沟通演示）");
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+  console.log(`\n🎉 Seed 完成！运行 \`npm run dev\` 后访问 ${appUrl}`);
 }
 
 main()
