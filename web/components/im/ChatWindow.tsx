@@ -237,7 +237,7 @@ export function ChatWindow({
         `/${locale}${callData.meetingUrl}?conversationId=${conversation.id}&skipLobby=true`,
       );
     },
-    [router, conversation.id, conversation.workspaceId, params],
+    [router, conversation.id, params],
   );
 
   /** 拒绝来电：发送 call_rejected 消息 */

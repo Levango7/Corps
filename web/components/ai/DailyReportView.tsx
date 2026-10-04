@@ -106,7 +106,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
     } finally {
       if (abortRef.current === ac) abortRef.current = null;
     }
-  }, [wid, date]);
+  }, [wid, date, t]);
 
   /** 保存为文档：POST /api/v1/workspaces/{wid}/documents */
   const handleSave = useCallback(async () => {
@@ -127,7 +127,7 @@ export function DailyReportView({ wid }: DailyReportViewProps) {
     } finally {
       setSaving(false);
     }
-  }, [content, saving, wid, date]);
+  }, [content, saving, wid, date, t]);
 
   const isStreaming = phase === "streaming";
   const hasContent = phase === "done" && content.length > 0;

@@ -263,7 +263,7 @@ export function DocumentListView({ wid }: { wid: string }) {
     return () => {
       cancelled = true;
     };
-  }, [wid, deferredQ]);
+  }, [wid, deferredQ, t]);
 
   async function createDoc(e: FormEvent) {
     e.preventDefault();

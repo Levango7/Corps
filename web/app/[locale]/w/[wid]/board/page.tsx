@@ -142,7 +142,7 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         setTasks([]);
       })
       .finally(() => setLoading(false));
-  }, [wid, milestoneFilter, taskFilter]);
+  }, [wid, milestoneFilter, taskFilter, tErr]);
 
   const load = useCallback(async () => {
     try {

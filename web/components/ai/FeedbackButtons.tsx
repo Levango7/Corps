@@ -83,7 +83,6 @@ export function FeedbackButtons({
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
     // handleCancel 是组件内闭包，依赖 comment/error 状态；此处仅依赖 showDialog
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showDialog]);
 
   /** 提交反馈到后端 */

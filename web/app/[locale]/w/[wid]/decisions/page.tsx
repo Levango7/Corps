@@ -206,7 +206,7 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
         setLoadingMore(false);
       }
     },
-    [base],
+    [base, t],
   );
 
   // 首次加载

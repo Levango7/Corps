@@ -16,7 +16,7 @@
  * 工作区成员列表（GET /members）用于代理人选择。
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Trash2, UserCog, CheckCircle2, XCircle, Plus } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -104,7 +104,7 @@ export function ApprovalDelegateSettings({ workspaceId }: ApprovalDelegateSettin
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  async function loadDelegates() {
+  const loadDelegates = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -117,7 +117,7 @@ export function ApprovalDelegateSettings({ workspaceId }: ApprovalDelegateSettin
     } finally {
       setLoading(false);
     }
-  }
+  }, [workspaceId, t]);
 
   useEffect(() => {
     loadDelegates();
@@ -130,7 +130,7 @@ export function ApprovalDelegateSettings({ workspaceId }: ApprovalDelegateSettin
       .catch(() => {
         // 成员列表加载失败不阻塞委托管理
       });
-  }, [workspaceId, t]);
+  }, [workspaceId, t, loadDelegates]);
 
   async function revokeDelegate(delegate: ApprovalDelegate) {
     if (!window.confirm(t("confirmDelegate"))) return;

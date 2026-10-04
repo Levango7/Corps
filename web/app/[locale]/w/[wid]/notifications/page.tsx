@@ -134,7 +134,7 @@ export default function NotificationsPage({ params }: { params: Promise<{ wid: s
     } finally {
       setLoaded(true);
     }
-  }, [wid]);
+  }, [wid, tErr]);
 
   useEffect(() => {
     load();

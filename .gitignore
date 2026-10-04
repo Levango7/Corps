@@ -81,5 +81,17 @@ desktop/artifacts/
 __pycache__/
 *.pyc
 
+# 本机自检的临时产物（deploy 包验证期间生成，文件头已声明不入库）
+# 通配覆盖所有后缀：实际出现过 .tmp-fake/（目录）、.tmp-pf.err、.tmp-pf.out，
+# 原按后缀列举的规则匹配不到它们（.err/.out 不在列表内，目录也不匹配）
+.tmp-*
+# Next.js 构建的过期产物目录（本机 build 被中断时留下，形如 .next.stale.<数字>）
+web/.next.stale.*
+
+# 部署配置里的真实环境文件（含 POSTGRES_PASSWORD / JWT_*_SECRET 等赋值）
+# 模板见 deploy/.env.prod.example —— 只有 .example 才入库
+deploy/.env.prod
+deploy/.env.prod.local
+
 # Tauri 打包资源里的运行时上传目录（内容为本地测试上传残留，不应入库）
 desktop/src-tauri/resources/standalone/uploads/

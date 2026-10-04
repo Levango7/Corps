@@ -126,7 +126,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
     } catch (e) {
       setError(e instanceof Error ? e.message : t("loadFailed"));
     }
-  }, [wid]);
+  }, [wid, t]);
 
   useEffect(() => {
     load();
@@ -617,6 +617,7 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
               {/* M8 修复：保留 onError 兜底；referrerPolicy/crossOrigin 对 Data URL 无害但保留 */}
               {}
               {qrDataUrl && (
+                // eslint-disable-next-line @next/next/no-img-element -- src 是本地 qrcode 包生成的 Data URL，next/image 对内联数据无优化意义，且需 onError 手动控制 fallback DOM
                 <img
                   src={qrDataUrl}
                   alt={t("wechatQr")}

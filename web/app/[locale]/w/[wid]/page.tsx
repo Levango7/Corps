@@ -163,7 +163,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
     } catch {
       toast("error", t("exportLayoutFailed"));
     }
-  }, []);
+  }, [t, toast]);
 
   // ─── 导入布局 ───
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -178,7 +178,7 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
       toast("error", t("importLayoutFailed"));
     }
     e.target.value = ""; // 重置以便重复导入同一文件
-  }, []);
+  }, [t, toast]);
 
   // ─── 工具栏按钮样式：激活态高亮，非激活态弱化 + hover ───
   const toolbarBtnClass = (active: boolean) =>

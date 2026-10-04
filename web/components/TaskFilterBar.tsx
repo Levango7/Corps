@@ -118,6 +118,7 @@ export function TaskFilterBar({
         isPro,
       });
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 埋点只随筛选组合变化打一次；activeCount/isPro 是派生值，入 deps 会导致它们自身变化时重复触发埋点
   }, [value]);
 
   const active = !isEmptyFilter(value);

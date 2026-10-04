@@ -14,7 +14,7 @@ export async function register() {
     const { getEnv } = await import("./lib/env");
     try {
       getEnv();
-      console.log("[instrumentation] 环境变量校验通过");
+      console.info("[instrumentation] 环境变量校验通过");
     } catch (err) {
       console.error("[instrumentation] 环境变量校验失败:", err);
       // 生产环境直接退出，开发环境警告但继续

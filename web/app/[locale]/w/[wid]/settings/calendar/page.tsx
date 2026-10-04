@@ -89,7 +89,7 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
     } finally {
       setLoading(false);
     }
-  }, [wid]);
+  }, [wid, t]);
 
   useEffect(() => {
     load();

@@ -223,7 +223,7 @@ export function ActionItemPanel({
     } finally {
       setLoading(false);
     }
-  }, [endpoint]);
+  }, [endpoint, t]);
 
   // 首次挂载：若无 initialItems 则拉取；有则跳过首次请求
   useEffect(() => {

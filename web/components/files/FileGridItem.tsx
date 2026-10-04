@@ -99,6 +99,7 @@ export function FileGridItem({
       {/* 缩略图 / 大图标区域 */}
       <div className="flex items-center justify-center h-28 border-b border-[var(--border-soft)] bg-[var(--surface-2)] overflow-hidden">
         {showThumbnail ? (
+          // eslint-disable-next-line @next/next/no-img-element -- src 是用户上传文件的 API 端点 URL（运行时动态），next/image 无法为其配置 remotePatterns
           <img
             src={thumbnailUrl}
             alt={file.fileName}

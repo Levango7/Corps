@@ -1,0 +1,146 @@
+# =============================================================================
+# deploy/docker-compose.prod.yml — 生产 overlay（叠加在根 docker-compose.yml 之上）
+# =============================================================================
+# 用法（不要单独 `docker compose -f deploy/docker-compose.prod.yml up`）：
+#
+#   docker compose -f docker-compose.yml -f deploy/docker-compose.prod.yml \
+#     --env-file deploy/.env.prod up -d
+#
+# 所有脚本（deploy/scripts/*.sh）内部已固定上述三参数组合，不要手工另拼。
+#
+# ── 为什么是 overlay 而不是复制一份 compose ──────────────────────────────────
+# 根 docker-compose.yml 是开发/自部署的单一事实源（服务定义、卷、网络、healthcheck
+# 都在那里）。复制一份生产 compose 会立刻产生双份漂移：改了一处忘了另一处，
+# 现场表现是"开发好好的，生产起不来"。overlay 只声明**生产差异**：
+#   - 镜像来源：从本地 build 改为 GHCR 预构建 tag（2C4G 禁现场 next build，会 OOM）
+#   - 网络暴露：db / app 收敛到仅 Caddy 可访问
+#   - 资源与日志：Redis 内存上限、容器日志轮转（防磁盘打满）
+#   - 新增 Caddy：唯一对外入口，持有 80/443
+# 根 compose 未提及的一切（服务定义、卷、网络名）自动继承，改根文件即生效。
+#
+# ── 覆盖语法的两个关键点（本文件正确性的根基）────────────────────────────────
+# Compose 对**列表**的默认行为是「追加合并」而非「替换」。所以：
+#   1. 要**清空** db/app 的 ports，用 `ports: !reset []`
+#      （只写 `ports: []` 会被追加成空列表，基线的 5433/3000 仍然对外暴露）
+#   2. 要**部分替换** livekit 的 ports（保留 UDP 媒体端口、去掉 7880），
+#      用 `ports: !override [...]` 整表替换
+#   3. 要**删除** app 的 build 段，用 `build: !reset null`
+#      （app 仍需本地挂载 entrypoint.sh / rls-activate.sql，故只删 build 不删 volumes）
+# `!reset` / `!override` 需要 Compose v2.24+；preflight.sh 会断言版本。
+# =============================================================================
+
+name: corps
+
+x-logging: &logging
+  # AC-05：容器日志必须有上界，否则单服务日志可涨到几十 GB 打满磁盘，
+  # 表现为"服务莫名重启"。50m × 3 = 单服务最多 150m。
+  driver: json-file
+  options:
+    max-size: "50m"
+    max-file: "3"
+
+services:
+  # ─── PostgreSQL ───────────────────────────────────────────────────────────
+  db:
+    # 生产：数据库**不得**有任何宿主机端口。基线的 127.0.0.1:5433 是开发期
+    # 用 psql 直连的便利口，生产保留等于多一条绕过 Caddy 的路径。
+    # 需要连库时用 `docker compose exec db psql`（见 deploy/README.md 排障段）。
+    ports: !reset []
+    logging: *logging
+
+  # ─── Redis（限流共享计数）──────────────────────────────────────────────────
+  redis:
+    # 基线无上限：Redis 默认吃满可用内存。在 2C4G 机器上这意味着把
+    # PostgreSQL 与应用一起挤到 OOM。计数键自带 PEXPIRE，无需持久化，
+    # 所以淘汰策略取 allkeys-lru（宁可丢缓存计数，也不拒绝新写入）。
+    command:
+      - redis-server
+      - --maxmemory
+      - ${REDIS_MAXMEMORY:-128mb}
+      - --maxmemory-policy
+      - allkeys-lru
+    logging: *logging
+
+  # ─── LiveKit（可选，音视频）──────────────────────────────────────────────
+  livekit:
+    # 7880 是 WebSocket/API 入口，生产由 Caddy 反代（见 Caddyfile.d/20-livekit.conf），
+    # 不再直接对宿主机暴露。7881(TCP) 与 50000-50100(UDP) 是 RTC 媒体通道，
+    # **必须**保留宿主机映射——Caddy 是 L7 HTTP 代理，转发不了 RTP/UDP 媒体流，
+    # 砍掉这两个等于视频通话在公网完全不可用（内网仍可通，易误判为配置成功）。
+    ports: !override
+      - "${LIVEKIT_RTC_TCP_PORT:-7881}:7881/tcp"
+      - "${LIVEKIT_RTC_UDP_START:-50000}-${LIVEKIT_RTC_UDP_END:-50100}:${LIVEKIT_RTC_UDP_START:-50000}-${LIVEKIT_RTC_UDP_END:-50100}/udp"
+    logging: *logging
+
+  # ─── Next.js 应用 ─────────────────────────────────────────────────────────
+  app:
+    # 生产只跑 CI 预构建镜像。2C4G 现场 `next build` 会 OOM（见 ADR-012 D4）。
+    build: !reset null
+    image: ghcr.io/levango7/corps:${CORPS_IMAGE_TAG:?请在 deploy/.env.prod 设置 CORPS_IMAGE_TAG（禁止 latest）}
+    # 生产不暴露宿主机端口：唯一入口是 Caddy。基线的 127.0.0.1:3000 保留
+    # 也不构成直接暴露（同 compose 网络内 Caddy 用服务名 app:3000），
+    # 但清掉可消除"绕过反代直连"的可能，也让 preflight 断言更干净。
+    ports: !reset []
+    environment:
+      # 生产必须是 https 域名：middleware 的 HSTS 与 secure cookie 都依赖它
+      # （runbook-deploy §7.6）。留 http:// 会让 secure cookie 失效、
+      # HSTS 头注入条件不成立。
+      NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:?请在 deploy/.env.prod 设置 NEXT_PUBLIC_APP_URL（https:// 开头）}
+    logging: *logging
+
+  # ─── cron 调度容器 ────────────────────────────────────────────────────────
+  cron:
+    # 与 app 同 tag：基线写死 corps-web:latest，生产必须跟随 CORPS_IMAGE_TAG，
+    # 否则会出现"app 已升级、cron 还在旧镜像"的不一致（cron 调的是 app 的路由，
+    # 跨版本路由不兼容会静默 404）。
+    image: ghcr.io/levango7/corps:${CORPS_IMAGE_TAG:?请在 deploy/.env.prod 设置 CORPS_IMAGE_TAG（禁止 latest）}
+    logging: *logging
+
+  # ─── Caddy（唯一对外入口）─────────────────────────────────────────────────
+  caddy:
+    image: caddy:${CADDY_VERSION:-2.10.2}-alpine
+    container_name: corps-caddy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"   # HTTP/3
+    environment:
+      # Caddyfile 与 Caddyfile.d/ 里用 {$VAR} 引用；值从 deploy/.env.prod 注入，
+      # 不落 Caddyfile。CORPS_SITE_ADDRESS 决定 Caddy 的 TLS 行为：
+      #   域名         → "example.com"，自动签发 + 自动续期 HTTPS
+      #   http://<IP>  → 备案期用法，显式 http:// 前缀关闭自动 HTTPS
+      CORPS_SITE_ADDRESS: ${CORPS_SITE_ADDRESS:?请在 deploy/.env.prod 设置 CORPS_SITE_ADDRESS（域名或 http://IP）}
+      # LiveKit 未启用时置空，Caddy 跳过该站点（见 Caddyfile.d/20-livekit.conf）
+      CORPS_LIVEKIT_SITE_ADDRESS: ${CORPS_LIVEKIT_SITE_ADDRESS:-}
+      ACME_EMAIL: ${ACME_EMAIL:?请在 deploy/.env.prod 设置 ACME_EMAIL（证书到期通知）}
+      APP_UPSTREAM: ${APP_UPSTREAM:-app:3000}
+      LIVEKIT_UPSTREAM: ${LIVEKIT_UPSTREAM:-livekit:7880}
+      CADDY_LOG_LEVEL: ${CADDY_LOG_LEVEL:-INFO}
+      REQUEST_MAX_SIZE: ${REQUEST_MAX_SIZE:-25MB}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      # Caddy 官方推荐把 Caddyfile.d 与主 Caddyfile 同目录（主文件用 import 引入）
+      - ./deploy/Caddyfile.d:/etc/caddy/Caddyfile.d:ro
+      - caddy_data:/data      # 自动 HTTPS 的证书与 ACME 账户，**必须持久化**
+      - caddy_config:/config
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://127.0.0.1:2019/config/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      app:
+        condition: service_healthy
+    networks:
+      - corps-net
+    logging: *logging
+
+volumes:
+  # 证书持久化：容器重建后 ACME 账户与证书丢失会触发 Let's Encrypt 速率限制
+  # （同域每周 5 次），严重时域名直接签不出证书。
+  caddy_data:
+    name: corps-caddy-data
+  caddy_config:
+    name: corps-caddy-config

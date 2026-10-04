@@ -241,7 +241,7 @@ export default function ChatPanel({ wid, taskId }: { wid: string; taskId: string
       const json = await res.json();
       return json.data as AttachmentMeta;
     },
-    [uploadUrl],
+    [uploadUrl, t],
   );
 
   // 搜索结果计数

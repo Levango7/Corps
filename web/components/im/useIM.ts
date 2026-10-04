@@ -165,7 +165,7 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
     } finally {
       setLoading(false);
     }
-  }, [workspaceId]);
+  }, [workspaceId, t]);
 
   /** 选择会话：加载详情 + 消息 + 订阅 WS + 标记已读 */
   const selectConversation = useCallback(
@@ -227,7 +227,7 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
         }
       }
     },
-    [workspaceId, ws],
+    [workspaceId, ws, t],
   );
 
   /** 从任务 ID 获取/创建关联会话（任务详情页内嵌聊天用） */
@@ -248,7 +248,7 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
         );
       }
     },
-    [workspaceId, selectConversation],
+    [workspaceId, selectConversation, t],
   );
 
   /** 加载更多历史消息（向上加载）：用当前最早消息的 createdAt 作 before 游标 */

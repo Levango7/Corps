@@ -42,6 +42,7 @@ export function SettingsProfile({ onError }: SettingsProfileProps) {
         setUserInitial({ name: u.name, image: u.image });
       })
       .catch(() => onError(tErr("loadFailed")));
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- 仅挂载时加载一次；onError 是父级 prop（每次渲染新引用），入 deps 会导致重复请求
   }, []);
 
   async function saveUserProfile() {

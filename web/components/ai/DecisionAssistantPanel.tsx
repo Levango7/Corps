@@ -125,7 +125,7 @@ export default function DecisionAssistantPanel({ wid }: DecisionAssistantPanelPr
     } finally {
       setAnalyzing(false);
     }
-  }, [analyzing, question, context, wid, toast]);
+  }, [analyzing, question, context, wid, toast, t]);
 
   // ── 推荐方案索引 ──
   const recommendedIndex = result?.recommendation.optionIndex ?? -1;

@@ -102,7 +102,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
     } finally {
       if (abortRef.current === ac) abortRef.current = null;
     }
-  }, [wid, topic]);
+  }, [wid, topic, t]);
 
   /** 保存为公告：POST /api/v1/workspaces/{wid}/announcements */
   const handleSave = useCallback(async () => {
@@ -125,7 +125,7 @@ export function AnnouncementDraftPanel({ wid }: AnnouncementDraftPanelProps) {
     } finally {
       setSaving(false);
     }
-  }, [content, saving, wid]);
+  }, [content, saving, wid, t]);
 
   const isStreaming = phase === "streaming";
   const hasContent = phase === "done" && content.length > 0;

@@ -258,7 +258,7 @@ export function MailAssistantPanel({ wid }: MailAssistantPanelProps) {
         setLoading(false);
       }
     }
-  }, [action, content, context, loading, wid]);
+  }, [action, content, context, loading, wid, t]);
 
   /** 切换 tab：重置结果区 */
   const handleTabChange = useCallback((next: MailAction) => {

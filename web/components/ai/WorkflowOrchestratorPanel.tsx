@@ -190,7 +190,7 @@ export default function WorkflowOrchestratorPanel({ wid }: WorkflowOrchestratorP
     } finally {
       setGenerating(false);
     }
-  }, [generating, description, wid]);
+  }, [generating, description, wid, t]);
 
   // ── 确认创建 ──
 
@@ -212,7 +212,7 @@ export default function WorkflowOrchestratorPanel({ wid }: WorkflowOrchestratorP
     } finally {
       setConfirming(false);
     }
-  }, [confirming, confirmed, workflow, toast]);
+  }, [confirming, confirmed, workflow, toast, t]);
 
   // ── 构建 node id → node 映射（用于 edges 展示节点名）──
 

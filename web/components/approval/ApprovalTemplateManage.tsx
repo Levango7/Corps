@@ -19,7 +19,7 @@
  * 工作区成员列表（GET /members）用于"指定用户"审批人选择。
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
   Plus,
@@ -97,7 +97,7 @@ export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManagePr
     template: ApprovalTemplate | null; // null = 新建
   } | null>(null);
 
-  async function loadTemplates() {
+  const loadTemplates = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -111,7 +111,7 @@ export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManagePr
     } finally {
       setLoading(false);
     }
-  }
+  }, [workspaceId, t]);
 
   useEffect(() => {
     loadTemplates();
@@ -121,7 +121,7 @@ export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManagePr
       .catch(() => {
         // 成员列表加载失败不阻塞模板管理
       });
-  }, [workspaceId, t]);
+  }, [workspaceId, t, loadTemplates]);
 
   async function toggleEnabled(tpl: ApprovalTemplate) {
     // 后端字段为 active（非 enabled）

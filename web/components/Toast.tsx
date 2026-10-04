@@ -168,9 +168,11 @@ export function ToastProvider({ children }: { children: ReactNode }) {
 
   // 组件卸载时清除所有定时器
   useEffect(() => {
+    // cleanup 运行时 ref.current 可能已被后续渲染替换——先拷贝到局部变量
+    const timers = timersRef.current;
     return () => {
-      timersRef.current.forEach((timer) => clearTimeout(timer));
-      timersRef.current.clear();
+      timers.forEach((timer) => clearTimeout(timer));
+      timers.clear();
     };
   }, []);
 

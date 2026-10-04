@@ -186,6 +186,7 @@ export function WhiteboardCanvas({
     return () => {
       if (saveTimerRef.current) clearTimeout(saveTimerRef.current);
       // 若有未保存的改动，立即执行保存（不 abort 进行中的请求）
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- 卸载 flush 场景必须读最新 ref（复制到局部变量会拿到挂载时的旧数据，导致保存过期版本）
       if (versionRef.current > savedVersionRef.current) {
         // 用最新 elements 引用发送保存请求
         api(`/api/v1/workspaces/${wid}/whiteboards/${wbid}`, {

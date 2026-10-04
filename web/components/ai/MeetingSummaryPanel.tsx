@@ -166,7 +166,7 @@ export default function MeetingSummaryPanel({
     } finally {
       setGenerating(false);
     }
-  }, [generating, transcript, meetingTitle, wid, toast]);
+  }, [generating, transcript, meetingTitle, wid, toast, t]);
 
   // ── 待办入库 ──
 
@@ -200,7 +200,7 @@ export default function MeetingSummaryPanel({
         setAddingIndex(null);
       }
     },
-    [addingIndex, addedIndices, wid, toast],
+    [addingIndex, addedIndices, wid, toast, t],
   );
 
   // ── 编辑/保存 ──
@@ -275,7 +275,7 @@ export default function MeetingSummaryPanel({
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
-  }, [summary, editBuffer, editing]);
+  }, [summary, editBuffer, editing, t]);
 
   // ── 渲染数据（编辑时用 editBuffer，否则用 summary） ──
 
