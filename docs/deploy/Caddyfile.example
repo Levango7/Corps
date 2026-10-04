@@ -1,0 +1,70 @@
+# ===========================================================================
+# corps 反向代理配置（Caddy 2）
+#
+# 为什么必须有这一层（而不是把 app 直接暴露到公网）：
+#
+# 1. **HTTPS 是硬性要求，不是优化项。**
+#    会话 cookie 为 `__Secure-better-auth.session_token`，带 `Secure` 属性 ——
+#    浏览器只在 HTTPS 下发送它。若直接以 HTTP 暴露，用户能登录成功但**立刻掉线**
+#    （后续请求全部 401）。本机 localhost 因浏览器的安全上下文例外而可用，
+#    所以这个问题在本地永远测不出来，只在生产暴露。
+#
+# 2. compose 已把 app 端口收敛为 `127.0.0.1:${APP_PORT}:3000`（仅本机可连），
+#    对外访问必须经过本层。
+#
+# 用法：
+#   1. 把 corps.example.com 换成你的域名，example@email.com 换成你的邮箱
+#   2. 将本文件放到 /etc/caddy/Caddyfile（或 docker 挂载）
+#   3. caddy reload
+#   Caddy 会自动申请并续期 Let's Encrypt 证书，无需手动配置证书路径。
+#
+# 注意：部署到中国内地服务器需先完成 ICP 备案，否则 80/443 会被拦截。
+# ===========================================================================
+
+corps.example.com {
+	# ─── 安全响应头 ────────────────────────────────────────────────────────
+	# 应用自身已注入 CSP / HSTS（见 web/middleware.ts），此处不重复设置，
+	# 避免两处策略不一致互相覆盖。仅补充反代层该管的项。
+	header {
+		-Server
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+	}
+
+	# ─── 上传体积 ──────────────────────────────────────────────────────────
+	# Free 版单附件上限 10MB，Pro 版 50MB；留出余量。
+	request_body {
+		max_size 60MB
+	}
+
+	# ─── 反代到 app 容器 ───────────────────────────────────────────────────
+	# 若 Caddy 跑在 compose 同一网络内，用服务名 `app:3000`；
+	# 若跑在宿主机，用 `127.0.0.1:3001`（与 .env 的 APP_PORT 一致）。
+	reverse_proxy app:3000 {
+		# 传递真实客户端 IP：应用侧限流（lib/rate-limit.ts）与
+		# 分享链接访问日志（share_access_logs）依赖它，否则会把所有请求
+		# 记成同一个 IP。
+		header_up X-Real-IP {remote_host}
+		header_up X-Forwarded-For {remote_host}
+		header_up X-Forwarded-Proto {scheme}
+
+		# SSE（IM 实时消息）与 WebSocket 需要长连接，禁用响应缓冲
+		flush_interval -1
+	}
+
+	# ─── 上传文件直出 ──────────────────────────────────────────────────────
+	# /uploads 由应用路由提供（含工作区成员校验），不要绕过应用直接映射磁盘，
+	# 否则会形成未授权读取面。
+	# 这里仅确保不被缓存，鉴权仍在应用层。
+
+	# ─── 日志 ──────────────────────────────────────────────────────────────
+	log {
+		output file /var/log/caddy/corps.log {
+			roll_size 50MB
+			roll_keep 5
+		}
+		format json
+	}
+
+	encode zstd gzip
+}

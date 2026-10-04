@@ -387,3 +387,82 @@ find /opt/corps/uploads -type f -mtime +90 -delete
 - **使用场景**：Docker stop/compose down（SIGTERM）、K8s pod termination（SIGTERM，30s grace period）、PM2 reload（SIGINT）
 - **启用方式**：在 Next.js standalone server 入口调用 `setupGracefulShutdown()`
 - **未捕获异常**：`uncaughtException` / `unhandledRejection` 记录后以退出码 1 退出
+
+---
+
+## 9. 上线前检查清单（2026-10-04 补）
+
+> 以下每一项都对应一次**实测踩过的坑**，不是理论风险。
+
+### 9.1 部署前：跑前置检查
+
+```bash
+python scripts/preflight.py
+```
+
+它会一次查出两类问题：
+
+| 检查 | 不修的后果 |
+|---|---|
+| compose 的 `${VAR:?}` 必填项在 `.env` 中缺失 | `docker compose up -d` **直接报错退出**（实测：LiveKit 凭据缺失导致整条部署路径断裂） |
+| `NEXT_PUBLIC_APP_URL` 端口 ≠ `APP_PORT` | 应用能起来，但**邀请链接 / 邮件 CTA / 支付回调全部指向错误地址**，且不报任何错 |
+
+配套 CI 门禁：`scripts/check_compose_env_sync.py`（已在 lint job 中）确保
+compose 新增必填变量时 `.env.example` 同步更新，防止"CI 全绿但新人按文档部署必失败"。
+
+### 9.2 HTTPS 是硬性要求（不是优化项）
+
+会话 cookie 名为 `__Secure-better-auth.session_token`，带 `Secure` 属性，
+**浏览器只在 HTTPS 下发送它**。以 HTTP 直接暴露的后果是：
+用户登录成功 → 跳转后立刻掉线 → 所有后续请求 401。
+
+这个问题**在本地测不出来**（localhost 有安全上下文例外），只在生产暴露。
+因此对外服务必须先有 HTTPS 反代：
+
+- Caddy（自动证书）：`docs/deploy/Caddyfile.example`
+- Nginx：`docs/deploy/nginx.conf.example`
+- compose 已把 app 收敛到 `127.0.0.1:${APP_PORT}:3000`，不经过反代无法从外部访问
+
+### 9.3 数据安全：确认备份在跑
+
+```bash
+docker compose up -d backup          # 启动备份服务（独立容器）
+docker logs corps-backup             # 应看到「成功：corps-<时间戳>.dump」
+```
+
+- 默认每日一次、保留 7 天，可用 `BACKUP_INTERVAL_SECONDS` / `BACKUP_RETENTION_DAYS` 调整
+- **恢复演练**（务必在正式使用前做一次，否则备份不可信）：
+  ```bash
+  docker compose exec backup sh
+  /db/restore.sh /backups/corps-<时间戳>.dump          # dry-run 校验
+  /db/restore.sh /backups/corps-<时间戳>.dump --yes    # 真正恢复
+  ```
+
+### 9.4 监控：不配置等于没有监控
+
+```bash
+gh variable set SMOKE_TARGET_URL --body https://你的域名
+```
+
+未配置时 `.github/workflows/smoke.yml` 的 job 会被跳过（`.github/workflows/smoke.yml:23`），
+**不会报红**——即"以为有监控、实际没有"。配置后每 15 分钟探测一次
+`/api/health`，检查 HTTP 200 且 `db=up`。
+
+### 9.5 实例清洁度（试用/演示前）
+
+```bash
+./scripts/reset-demo-db.sh          # dry-run
+./scripts/reset-demo-db.sh --yes    # 重置为干净演示实例
+```
+
+清掉历次测试残留的账号与工作区，只保留演示数据
+（demo 工作区：10 任务 / 3 子任务 / 1 阻塞 / 2 决策 / 2 文档 / 2 评论）。
+演示账号见脚本输出。
+
+### 9.6 上线后立即做
+
+1. `WRITE_POLICY_MODE=shadow` 跑一轮真实流量，确认 `[write-policy] shadow-deny`
+   日志无意外误杀，再切 `enforce`（见 ADR-011）
+2. 用演示账号走一遍：注册 → 建工作区 → 邀请成员 → 建任务 → 写决策 → 导出 PDF
+3. 确认邀请邮件真实到达（需先配 `RESEND_API_KEY` + 已验证域名的 `EMAIL_FROM`；
+   未配置时邀请链接需手工复制给对方）
