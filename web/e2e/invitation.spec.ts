@@ -52,15 +52,18 @@ test.describe.serial("邀请流程：管理员邀请 → 成员接受 → 加入
     expect(inviteUrl).toContain("invite=");
   });
 
-  test("受邀人用邀请链接注册并自动加入工作区", async ({ browser }) => {
+  test("受邀人用邀请链接注册并自动加入工作区", async ({ browser }, testInfo) => {
     // 用新 browser context 模拟受邀人（无 owner 会话）
     const inviteeContext = await browser.newContext();
     const inviteePage = await inviteeContext.newPage();
 
-    // 拼接完整 URL（inviteUrl 可能是相对路径或完整 URL）
-    const fullUrl = inviteUrl.startsWith("http")
-      ? inviteUrl
-      : new URL(inviteUrl, "http://localhost:3000").toString();
+    // 邀请链接是后端用 NEXT_PUBLIC_APP_URL 拼出来的**绝对地址**，未设置时默认
+    // http://localhost:3000（members/invite/route.ts:123）。直接信任它会和某个固定端口绑死：
+    // CI 里应用正好在 3000 所以看不出来，本机 3000 是别的项目占着的（实测：邀请页跳到了 Grafana）。
+    // 用例真正要带过去的是 token，所以只取 path+query，再按 playwright 配置的 baseURL 解析。
+    const base = testInfo.project.use.baseURL ?? "http://localhost:3000";
+    const parsed = new URL(inviteUrl, base);
+    const fullUrl = `${base}${parsed.pathname}${parsed.search}`;
 
     await inviteePage.goto(fullUrl);
 
