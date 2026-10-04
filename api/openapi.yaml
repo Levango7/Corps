@@ -4060,6 +4060,111 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/workspaces/{wid}/documents/{id}/versions/compare:
+    post:
+      tags: [Documents]
+      summary: Compare two document versions (line-level diff)
+      description: >
+        Authenticated endpoint (workspace membership required). Body:
+        { fromVersionId, toVersionId }. Returns line-level diff plus statistics.
+        Either version missing or not belonging to the document → 404.
+      operationId: compareDocumentVersions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [fromVersionId, toVersionId]
+              properties:
+                fromVersionId:
+                  type: string
+                  format: uuid
+                toVersionId:
+                  type: string
+                  format: uuid
+      responses:
+        '200':
+          description: Diff computed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  lines:
+                    type: array
+                    items:
+                      type: object
+                  stats:
+                    type: object
+                    properties:
+                      added:
+                        type: integer
+                      removed:
+                        type: integer
+                      unchanged:
+                        type: integer
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}/restore:
+    post:
+      tags: [Documents]
+      summary: Restore a document to a previous version (forced snapshot)
+      description: >
+        Authenticated endpoint requiring write permission. Before overwriting the
+        current content, it is snapshotted as a new version so the rollback stays
+        reversible. Body: { source?, message? } — both are ignored, the server
+        always writes its own values (snapshot step cannot be skipped by request
+        parameters). Viewer (read-only role) → 401/403. Unknown version → 404.
+      operationId: restoreDocumentVersion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+        - name: versionId
+          in: path
+          required: true
+          schema:
+            type: string
+            format: uuid
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                source:
+                  type: string
+                  description: Ignored; server forces its own value
+                message:
+                  type: string
+                  description: Ignored; server forces its own value
+      responses:
+        '200':
+          description: Restored successfully; snapshot of previous content created
+          content:
+            application/json:
+              schema:
+                type: object
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
   /api/v1/workspaces/{wid}/documents/{id}/share/verify:
     post:
       tags: [Sharing]

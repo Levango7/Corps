@@ -156,8 +156,6 @@
 /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}
 /api/v1/workspaces/{wid}/documents/{id}/versions
 /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}
-/api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}/restore
-/api/v1/workspaces/{wid}/documents/{id}/versions/compare
 /api/v1/workspaces/{wid}/events/stream
 /api/v1/workspaces/{wid}/files
 /api/v1/workspaces/{wid}/files/upload
