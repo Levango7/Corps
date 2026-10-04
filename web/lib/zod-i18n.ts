@@ -98,7 +98,9 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
       const validation = (issue as { validation?: unknown }).validation;
       const kind = typeof validation === "string" ? validation : "";
       if (kind === "email") {
-        return zh ? `${label}格式不正确，请检查是否包含 @` : `${label} is not a valid email address`;
+        return zh
+          ? `${label}格式不正确，请检查是否包含 @`
+          : `${label} is not a valid email address`;
       }
       if (kind === "url") {
         return zh ? `${label}必须是合法的链接` : `${label} must be a valid URL`;
@@ -112,7 +114,9 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
       const minimum = (issue as { minimum?: number }).minimum;
       const origin = (issue as { type?: string }).type;
       if (origin === "string" && typeof minimum === "number") {
-        return zh ? `${label}至少需要 ${minimum} 个字符` : `${label} must be at least ${minimum} characters`;
+        return zh
+          ? `${label}至少需要 ${minimum} 个字符`
+          : `${label} must be at least ${minimum} characters`;
       }
       return zh ? `${label}取值过小` : `${label} is too small`;
     }
@@ -120,14 +124,18 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
       const maximum = (issue as { maximum?: number }).maximum;
       const origin = (issue as { type?: string }).type;
       if (origin === "string" && typeof maximum === "number") {
-        return zh ? `${label}不能超过 ${maximum} 个字符` : `${label} must be at most ${maximum} characters`;
+        return zh
+          ? `${label}不能超过 ${maximum} 个字符`
+          : `${label} must be at most ${maximum} characters`;
       }
       return zh ? `${label}取值过大` : `${label} is too large`;
     }
     case "invalid_enum_value": {
       const options = (issue as { options?: unknown[] }).options;
       const list = Array.isArray(options) ? options.join(" / ") : "";
-      return zh ? `${label}取值不在允许范围内${list ? `（${list}）` : ""}` : `${label} is not an allowed value`;
+      return zh
+        ? `${label}取值不在允许范围内${list ? `（${list}）` : ""}`
+        : `${label} is not an allowed value`;
     }
     case "invalid_literal":
       return zh ? `${label}取值不正确` : `${label} has an invalid value`;
@@ -151,7 +159,10 @@ export function zodMessage(error: z.ZodError, locale: "zh" | "en" = "zh"): strin
  * 翻译全部问题为 `字段 → 消息` 映射（同字段多条时保留第一条）。
  * 供需要做字段级高亮的表单使用。
  */
-export function zodFieldErrors(error: z.ZodError, locale: "zh" | "en" = "zh"): Record<string, string> {
+export function zodFieldErrors(
+  error: z.ZodError,
+  locale: "zh" | "en" = "zh",
+): Record<string, string> {
   const out: Record<string, string> = {};
   for (const issue of error.issues) {
     const key = fieldOf(issue) ?? "_";
