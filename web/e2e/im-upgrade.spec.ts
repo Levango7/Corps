@@ -71,11 +71,11 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 附件按钮（aria-label = i18n: chat.attachFile）
     await expect(page.getByRole("button", { name: "添加附件" })).toBeVisible({ timeout: 10_000 });
 
-    // 消息搜索不在这个面板：IM 升级把搜索从任务详情挪到 /im 页
-    // （docs/design/im-architecture.md:36、72 —— /v1/workspaces/{wid}/tasks/{id}/messages
-    // 换成 /v1/im/search，组件是 components/im/MessageSearch.tsx，由 IMClient 挂载）。
-    // 此处曾断言旧 ChatPanel 的「搜索消息」开关，TaskChatPanel/ChatWindow 没有该控件，
-    // 所以恒红；搜索的真实覆盖放在下面的「IM 页跨会话搜索」用例。
+    // 面板内的消息搜索入口（ChatWindow 头部，aria-label = i18n: chat.search）。
+    // IM 升级时搜索只留在 /im 页（docs/design/im-architecture.md:36、72），
+    // 任务详情面板一度没有入口，此处曾因此恒红；现已由 ChatWindow 复用
+    // MessageSearch（带 cid 限定当前会话）补回，这里断言入口存在。
+    await expect(page.getByRole("button", { name: "搜索消息" })).toBeVisible({ timeout: 10_000 });
   });
 
   // ── 发送消息并通过 SSE 接收 ──
@@ -150,11 +150,18 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     await page.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(page.getByText(searchableText)).toBeVisible({ timeout: 10_000 });
 
-    // 搜索入口在 /im 页的 MessageSearch（跨会话全文搜索 /v1/im/search），
-    // 不在任务详情的聊天面板里——见 docs/design/im-architecture.md:36,72。
-    // 面板上没有搜索按钮，所以这里改为走真正实现了搜索的那一面，覆盖不减少。
+    // ① 任务详情面板内搜索：ChatWindow 把当前 conversation.id 当 cid 传给 MessageSearch，
+    //    所以这条链路的范围就是本会话
+    await page.getByRole("button", { name: "搜索消息" }).click();
+    const panelSearch = page.getByPlaceholder(/搜索消息/);
+    await expect(panelSearch).toBeVisible({ timeout: 20_000 });
+    await panelSearch.fill(token);
+    await expect(page.getByText(token).first()).toBeVisible({ timeout: 20_000 });
+    // 收起面板搜索，免得与下面 /im 页的同名控件互相干扰
+    await page.getByRole("button", { name: "搜索消息" }).click();
+
+    // ② /im 页的跨会话搜索（同一组件、不带 cid）
     await page.goto(`/w/${wid}/im`);
-    // 搜索面板默认收起，先展开（按钮名 = im.search 的开关）
     await page.getByRole("button", { name: "搜索消息" }).click();
     const searchInput = page.getByPlaceholder(/搜索消息/);
     await expect(searchInput).toBeVisible({ timeout: 20_000 });

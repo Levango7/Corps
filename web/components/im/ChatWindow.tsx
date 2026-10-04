@@ -3,7 +3,7 @@
 /**
  * 聊天窗口主体
  *
- * - 顶部：会话标题 + 成员数 + 设置按钮
+ * - 顶部：会话标题 + 成员数 + 本会话搜索 + 设置按钮
  * - 中间：MessageList（消息列表）
  * - 底部：MessageInput（消息输入区，支持 @提及/文件上传/字数计数）
  * - 回复引用：点击回复时由 MessageInput 上方显示被回复消息摘要
@@ -13,12 +13,13 @@
  */
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Settings, Users, Video, Phone, Loader2 } from "lucide-react";
+import { Settings, Users, Video, Phone, Loader2, Search, X } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useRouter, useParams } from "next/navigation";
 import type { Conversation, Message, SendMessageOptions } from "./types";
 import { MessageList } from "./MessageList";
 import { MessageInput } from "./MessageInput";
+import { MessageSearch } from "./MessageSearch";
 import { IncomingCallNotification, type IncomingCallData } from "./IncomingCallNotification";
 import { api } from "@/lib/api";
 
@@ -65,6 +66,8 @@ export function ChatWindow({
   const router = useRouter();
   const params = useParams<{ locale: string; wid: string }>();
   const [replyTo, setReplyTo] = useState<Message | null>(null);
+  /** 本会话消息搜索面板开关（搜索实现复用 /im 页的 MessageSearch，带 cid 限定） */
+  const [searchOpen, setSearchOpen] = useState(false);
   const [isCalling, setIsCalling] = useState(false);
   const [isVoiceCalling, setIsVoiceCalling] = useState(false);
   const [incomingCall, setIncomingCall] = useState<IncomingCallData | null>(null);
@@ -342,6 +345,16 @@ export function ChatWindow({
         </div>
         {/* 语音通话 + 视频通话 + 设置按钮 */}
         <div className="flex items-center gap-[var(--space-1)]">
+          {/* 本会话搜索开关：/im 页早已能搜消息，任务详情面板一直没有入口 */}
+          <button
+            type="button"
+            onClick={() => setSearchOpen((prev) => !prev)}
+            aria-label={t("search")}
+            aria-expanded={searchOpen}
+            className="shrink-0 w-8 h-8 flex items-center justify-center rounded-[var(--radius-md)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-2 focus-visible:outline-[var(--accent-ring)] focus-visible:outline-offset-2"
+          >
+            {searchOpen ? <X size={16} /> : <Search size={16} />}
+          </button>
           {/* 语音通话按钮：创建即时语音会议 → 发送 call_invite → 跳转会议页 */}
           <button
             type="button"
@@ -375,6 +388,14 @@ export function ChatWindow({
           )}
         </div>
       </div>
+
+      {/* 本会话内搜索结果。MessageSearch 的 conversationId 会映射成后端 cid，
+          所以这条链路的范围就是当前会话，不越界到别的工作区/会话 */}
+      {searchOpen && (
+        <div className="border-b border-[var(--border)] px-[var(--space-3)] py-[var(--space-2)]">
+          <MessageSearch workspaceId={params.wid} conversationId={conversation.id} />
+        </div>
+      )}
 
       {/* 消息列表 */}
       <MessageList
