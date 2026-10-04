@@ -26,6 +26,9 @@ export const NOTIFICATION_TYPES = [
   "task_updated",
   "comment_added",
   "decision_updated",
+  // 逾期行动项通知由 cron check-overdue-actions 落库，但此前不在白名单里，
+  // 导致该点位无法复用离线扇出（接不上类型）。
+  "action_overdue",
 ] as const;
 
 /** 派发离线通知的参数 */
@@ -154,71 +157,74 @@ function escapeHtml(s: string): string {
 }
 
 /**
- * 派发离线通知。
+ * 只做"离线扇出"：判在线 → 读偏好 → 判 DND → 需要时发邮件。
+ * **不写 Notification 记录**。
  *
- * 决策流程：
- *  1. 检查用户在线状态 → 在线则跳过邮件推送（WebSocket 已实时收到）
- *  2. 获取通知偏好（不存在则用默认值）
- *  3. 检查 DND 时段 → DND 时段跳过邮件推送
- *  4. 离线 && 非DND && emailNotify → 发送邮件（需有 EmailAccount）
- *  5. 始终创建 Notification 记录（应用内通知，上线后可见）
+ * 为什么要有这个入口：仓库里另有 21 处通知落库点（19 处 tx.notification.create + 2 处
+ * createMany，分布在 19 个文件）在自己的事务里写 Notification 行，
+ * 让它们直接调 dispatchOfflineNotification 会重复落一条记录。这些调用点只需要
+ * "在事务提交之后补一次离线扇出"，所以把扇出单独拆出来。
+ * 调用位置必须在事务外：sendOfflineEmail 是 SMTP 网络 IO，挂在 RLS 事务里会长时间
+ * 占用连接并把事务隔离窗口拉到网络往返上。
+ */
+export async function fanOutOfflineEmail(opts: DispatchOfflineNotificationOpts): Promise<void> {
+  // 1) 在线用户由 WebSocket/SSE 实时收到，不补邮件
+  if (await isUserOnline(opts.userId)) return;
+
+  // 2) 通知偏好（读失败回退默认值的语义在 preferences.ts 内单一实现）
+  const preference = await getNotificationPreferences(opts.userId);
+
+  // 3) DND 时段跳过
+  if (isDndActive(preference)) return;
+
+  if (!preference.emailNotify) return;
+
+  // 4) 发送（失败不抛出，保持"尽力而为"）
+  try {
+    // 查询用户在工作区的默认邮箱账户
+    const emailAccount = await runWithWorkspace(
+      opts.workspaceId,
+      (tx) =>
+        tx.emailAccount.findFirst({
+          where: {
+            workspaceId: opts.workspaceId,
+            userId: opts.userId,
+            isDefault: true,
+          },
+          select: {
+            email: true,
+            displayName: true,
+            smtpHost: true,
+            smtpPort: true,
+            smtpSecure: true,
+            credential: true,
+          },
+        }),
+      opts.userId,
+    );
+
+    if (emailAccount) {
+      const content = buildEmailContent(opts);
+      await sendOfflineEmail(emailAccount, content.subject, content.text, content.html);
+    }
+  } catch (error) {
+    console.error("[offline-push] email dispatch error (non-blocking):", error);
+  }
+}
+
+/**
+ * 派发离线通知（落记录 + 离线扇出）。
  *
- * 邮件发送失败不阻断 Notification 记录创建。
+ * 只给"自己不落通知记录"的调用方用；已经在自己的事务里 `notification.create`
+ * 的调用点请改用 `fanOutOfflineEmail`，否则会重复落一条记录。
  */
 export async function dispatchOfflineNotification(
   opts: DispatchOfflineNotificationOpts,
 ): Promise<void> {
-  // 1) 检查在线状态
-  const online = await isUserOnline(opts.userId);
-  if (online) {
-    // 在线：WebSocket 已实时推送，仅创建通知记录（通知中心可见）
-    await createNotificationRecord(opts);
-    return;
-  }
-
-  // 2) 获取通知偏好（读失败回退默认值的语义在 preferences.ts 内单一实现）
-  const preference = await getNotificationPreferences(opts.userId);
-
-  // 3) 检查 DND 时段
-  const dndActive = isDndActive(preference);
-
-  // 4) 离线 && 非DND && emailNotify → 发送邮件
-  if (!dndActive && preference.emailNotify) {
-    try {
-      // 查询用户在工作区的默认邮箱账户
-      const emailAccount = await runWithWorkspace(
-        opts.workspaceId,
-        (tx) =>
-          tx.emailAccount.findFirst({
-            where: {
-              workspaceId: opts.workspaceId,
-              userId: opts.userId,
-              isDefault: true,
-            },
-            select: {
-              email: true,
-              displayName: true,
-              smtpHost: true,
-              smtpPort: true,
-              smtpSecure: true,
-              credential: true,
-            },
-          }),
-        opts.userId,
-      );
-
-      if (emailAccount) {
-        const content = buildEmailContent(opts);
-        await sendOfflineEmail(emailAccount, content.subject, content.text, content.html);
-      }
-    } catch (error) {
-      // 邮件发送失败不阻断通知记录创建
-      console.error("[offline-push] email dispatch error (non-blocking):", error);
-    }
-  }
-
-  // 5) 始终创建 Notification 记录
+  // 始终创建 Notification 记录（应用内通知，上线后可见）
   await createNotificationRecord(opts);
+  // 再按在线状态/偏好/DND 决定是否补邮件
+  await fanOutOfflineEmail(opts);
 }
 
 /**
