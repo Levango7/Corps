@@ -93,17 +93,28 @@ export async function POST(
             where: fromId
               ? { id: fromId, documentId: id, workspaceId: wid }
               : { documentId: id, workspaceId: wid, version: from },
-            select: { id: true, version: true, markdown: true, createdAt: true, author: { select: { name: true } } },
+            select: {
+              id: true,
+              version: true,
+              markdown: true,
+              createdAt: true,
+              author: { select: { name: true } },
+            },
           }),
           tx.documentVersion.findFirst({
             where: toId
               ? { id: toId, documentId: id, workspaceId: wid }
               : { documentId: id, workspaceId: wid, version: to },
-            select: { id: true, version: true, markdown: true, createdAt: true, author: { select: { name: true } } },
+            select: {
+              id: true,
+              version: true,
+              markdown: true,
+              createdAt: true,
+              author: { select: { name: true } },
+            },
           }),
         ]);
-        if (!fromVersion || !toVersion)
-          return { kind: "versionNotFound" as const, data: null };
+        if (!fromVersion || !toVersion) return { kind: "versionNotFound" as const, data: null };
 
         return { kind: "ok" as const, data: { fromVersion, toVersion } };
       },

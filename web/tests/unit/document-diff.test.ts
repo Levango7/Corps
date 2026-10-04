@@ -19,7 +19,7 @@ describe("diffMarkdown — 相同内容", () => {
     expect(d.stats).toEqual({ additions: 0, deletions: 0, modifications: 0 });
   });
 
-  it("空串与空串无差异（不得因 [\"\"] 与 [] 的实现差异产生假差异）", () => {
+  it('空串与空串无差异（不得因 [""] 与 [] 的实现差异产生假差异）', () => {
     const d = diffMarkdown("", "");
     expect(d.stats.additions + d.stats.deletions + d.stats.modifications).toBe(0);
   });

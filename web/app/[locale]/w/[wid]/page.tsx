@@ -167,18 +167,21 @@ export default function HomePage({ params }: { params: Promise<{ wid: string }> 
 
   // ─── 导入布局 ───
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const handleImportLayout = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    try {
-      const text = await file.text();
-      const data = JSON.parse(text);
-      await gridRef.current?.importLayout(data);
-    } catch {
-      toast("error", t("importLayoutFailed"));
-    }
-    e.target.value = ""; // 重置以便重复导入同一文件
-  }, [t, toast]);
+  const handleImportLayout = useCallback(
+    async (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+      try {
+        const text = await file.text();
+        const data = JSON.parse(text);
+        await gridRef.current?.importLayout(data);
+      } catch {
+        toast("error", t("importLayoutFailed"));
+      }
+      e.target.value = ""; // 重置以便重复导入同一文件
+    },
+    [t, toast],
+  );
 
   // ─── 工具栏按钮样式：激活态高亮，非激活态弱化 + hover ───
   const toolbarBtnClass = (active: boolean) =>

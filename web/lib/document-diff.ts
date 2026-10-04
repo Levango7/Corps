@@ -168,7 +168,12 @@ function foldModified(ops: Op[]): LineDiff {
  */
 export function diffMarkdown(from: string, to: string): LineDiff {
   if (from === to) {
-    return { added: [], removed: [], modified: [], stats: { additions: 0, deletions: 0, modifications: 0 } };
+    return {
+      added: [],
+      removed: [],
+      modified: [],
+      stats: { additions: 0, deletions: 0, modifications: 0 },
+    };
   }
   const a = splitLines(from);
   const b = splitLines(to);

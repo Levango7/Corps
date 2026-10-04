@@ -54,7 +54,11 @@ async function listVersions(token: string, wid = fx.wid, docId = fx.docId): Prom
 }
 
 /** 读文档当前 markdown（绕过编辑器，直接看服务端状态） */
-async function readDoc(token: string, wid = fx.wid, docId = fx.docId): Promise<{ markdown: string }> {
+async function readDoc(
+  token: string,
+  wid = fx.wid,
+  docId = fx.docId,
+): Promise<{ markdown: string }> {
   const res = await fetch(`${BASE}/workspaces/${wid}/documents/${docId}`, {
     headers: authHeader(token),
   });
@@ -163,7 +167,8 @@ beforeAll(async () => {
 describe("POST /documents/{id}/versions/{versionId}/restore — 强制快照防丢数据", () => {
   it("回滚后，回滚前的当前内容仍能通过版本列表 API 取回（快照真的建了且内容正确）", async () => {
     // 复刻真实丢数据时序：用户输入了一段**从未进过版本行**的内容
-    const typedOnlyInMemory = "# v2\n\n第二版内容\n修改过的行\n新增行\n用户在 blur 前敲的未保存内容";
+    const typedOnlyInMemory =
+      "# v2\n\n第二版内容\n修改过的行\n新增行\n用户在 blur 前敲的未保存内容";
     expect(await patchMarkdown(fx.ownerToken, typedOnlyInMemory)).toBe(200);
 
     const before = await listVersions(fx.ownerToken);
@@ -205,20 +210,16 @@ describe("POST /documents/{id}/versions/{versionId}/restore — 强制快照防�
     const after = await readDoc(fx.ownerToken);
     expect(after.markdown, "被拒回滚不得改动文档内容").toBe(before.markdown);
     const versionsAfter = await listVersions(fx.ownerToken);
-    expect(
-      versionsAfter.length,
-      "被拒回滚不得留下任何快照（否则会污染版本历史）",
-    ).toBe(versionsBefore.length);
+    expect(versionsAfter.length, "被拒回滚不得留下任何快照（否则会污染版本历史）").toBe(
+      versionsBefore.length,
+    );
   });
 
   it("版本不存在返回 404，且文档内容未变", async () => {
     const before = await readDoc(fx.ownerToken);
     const versionsBefore = await listVersions(fx.ownerToken);
 
-    const res = await restore(
-      fx.ownerToken,
-      "00000000-0000-4000-8000-000000000000",
-    );
+    const res = await restore(fx.ownerToken, "00000000-0000-4000-8000-000000000000");
     expect(res.status, "不存在的版本必须 404").toBe(404);
 
     const after = await readDoc(fx.ownerToken);
@@ -245,9 +246,7 @@ describe("POST /documents/{id}/versions/{versionId}/restore — 强制快照防�
     const r2 = await restore(fx.ownerToken, fx.v1Id);
     expect(r2.status).toBe(200);
     const afterSecond = await listVersions(fx.ownerToken);
-    expect(afterSecond.length, "第二次回滚也必须独立新增一条快照").toBe(
-      beforeSecond.length + 1,
-    );
+    expect(afterSecond.length, "第二次回滚也必须独立新增一条快照").toBe(beforeSecond.length + 1);
 
     // 两条快照都还在，且各自内容不同 —— 若被覆盖，只会剩一条且内容相同
     const aSnapshot = afterSecond.find((v) => v.markdown === typedA);
@@ -282,9 +281,10 @@ describe("POST /documents/{id}/versions/{versionId}/restore — 强制快照防�
     expect(after.length, "带任何 body 也必须建快照").toBe(before.length + 1);
     const snap = after.find((v) => v.markdown === typed);
     expect(snap?.source, "source 必须恒为 auto，客户端无法改写").toBe("auto");
-    expect(after.some((v) => v.source === "collaborative"), "客户端指定的 source 不得生效").toBe(
-      false,
-    );
+    expect(
+      after.some((v) => v.source === "collaborative"),
+      "客户端指定的 source 不得生效",
+    ).toBe(false);
   });
 });
 
@@ -329,7 +329,11 @@ describe("POST /documents/{id}/versions/compare — 版本比对", () => {
 
     const noArgs = await fetch(
       `${BASE}/workspaces/${fx.wid}/documents/${fx.docId}/versions/compare`,
-      { method: "POST", headers: { ...authHeader(fx.ownerToken), "Content-Type": "application/json" }, body: "{}" },
+      {
+        method: "POST",
+        headers: { ...authHeader(fx.ownerToken), "Content-Type": "application/json" },
+        body: "{}",
+      },
     );
     expect(noArgs.status, "缺参数应 400 而不是 200").toBe(400);
   });
