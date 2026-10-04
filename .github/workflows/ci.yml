@@ -37,6 +37,18 @@ jobs:
       - run: npx prettier --check .
       # 显式类型检查（next build 也含 tsc，但 lint job 更早失败反馈更快）
       - run: node node_modules/typescript/bin/tsc --noEmit
+      # 部署配置门禁（2026-10-04 补）：compose 用 ${VAR:?} 声明必填变量，
+      # 若 .env.example 漏了对应条目，CI 全绿但新人按文档 `docker compose up -d` 会直接失败
+      # ——即"文档化部署路径断裂而门禁沉默"。这两步把该缺口堵上。
+      - run: python ../scripts/check_compose_env_sync.py
+      # 对模板自身跑一遍前置检查：同时验证 URL 端口与 APP_PORT 自洽（不一致会让
+      # 邀请链接/邮件/支付回调静默指向错误地址）
+      - run: python ../scripts/preflight.py ../.env.example
+      # design-tokens.css 同步门禁：web/app/ 下是构建用副本（Dockerfile 的上下文是
+      # ./web，拿不到仓库根 design/，只能复用入库副本），两份文件会静默漂移。
+      # 实测曾漂移 521 行、且源文件被 autocrlf 转成 CRLF 导致 next build 报
+      # "CssSyntaxError: Missed semicolon"。此处钉死"逐字节一致 + 均为 LF"。
+      - run: python ../scripts/check_design_tokens_sync.py
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
