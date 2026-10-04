@@ -52,6 +52,7 @@ import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 import { IMBadge } from "@/components/shell/IMBadge";
+import { clearAppCaches } from "@/components/pwa/PwaRegister";
 import { useToast } from "@/components/Toast";
 import type { WorkspaceSummary } from "@/lib/types";
 
@@ -691,6 +692,10 @@ export default function WorkspaceLayout({
                 } catch {
                   /* 即使 logout 请求失败也跳转 */
                 }
+                // 登出后把本应用写过的 Cache Storage 清掉：sw.js 虽已不再缓存 /api 响应，
+                // 但页面 shell / RSC payload 里可能带着上一位登录者的租户内容，
+                // 共享设备上是同一类暴露面的另一半。失败不阻断登出。
+                await clearAppCaches().catch(() => {});
                 toast("info", t("user.logoutDone"));
                 router.push("/auth/login");
               }}

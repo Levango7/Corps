@@ -28,6 +28,21 @@ interface BeforeInstallPromptEvent extends Event {
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 }
 
+/**
+ * 清掉本应用写进 Cache Storage 的内容，登出 / 切换工作区时调用。
+ *
+ * public/sw.js 已不再缓存任何 /api 响应，但页面 shell 与 RSC payload 仍可能带着
+ * 上一位登录者的租户内容留在缓存里——共享/公用设备上这是一个暴露面（同一类问题的
+ * 另一半，见 sw.js 里 isNonCacheableApi 的注释）。只删 corps-sw* 前缀，不碰其它来源。
+ */
+export async function clearAppCaches(): Promise<void> {
+  if (typeof window === "undefined" || !("caches" in window)) return;
+  const keys = await caches.keys();
+  await Promise.all(
+    keys.filter((key) => key.startsWith("corps-sw")).map((key) => caches.delete(key)),
+  );
+}
+
 export function PwaRegister() {
   const t = useTranslations("pwa");
   const [installEvent, setInstallEvent] = useState<BeforeInstallPromptEvent | null>(null);
@@ -40,9 +55,17 @@ export function PwaRegister() {
     if (typeof window === "undefined") return;
     if (!("serviceWorker" in navigator)) return;
 
+    // 未认证页面（/auth/*）先扫一遍缓存。
+    // 为什么登出时那一次清理不够：SW 后台 revalidate 是脱离请求链的 promise
+    // （sw.js 里 networkUpdate → cache.put），登出导航时仍有侧栏预取在飞行中，
+    // 它们会在"删除之后"把租户页面写回同一个桶——生产实测登出后残留 5 条 /w/{wid}/*。
+    // 共享设备上下一位使用者必然是从 /auth 进来，所以在这里兜一次底：
+    // 让"没有任何租户内容"成为进入登录/注册页时的不变量。
+    if (window.location.pathname.includes("/auth/")) void clearAppCaches();
+
     navigator.serviceWorker
       .register("/sw.js")
-      .catch((err) => console.warn("[pwa] service worker register failed:", err));
+      .catch((err) => console.info("[pwa] service worker register failed:", err));
 
     const onBeforeInstall = (e: Event) => {
       e.preventDefault();

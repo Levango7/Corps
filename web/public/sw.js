@@ -7,14 +7,16 @@
  *  - fetch：
  *    · 仅拦截同源 GET；POST/PUT 等与跨域请求直接放行。
  *    · /api/ 下的请求全部不缓存（鉴权型 JSON 既会被读到旧值，也会跨账号复用）。
+ *    · /w/{wid}/… 工作区页面全部不缓存（身份无关的 key 会把上一位的内容留给下一个账号）。
  *    · 其余同源 GET 走 stale-while-revalidate：有缓存先返回，后台并发更新。
  *    · 离线时导航请求回退到 /offline，其他请求回退缓存或 503。
  *  - 来源：M3 移动端体验优化（任务 327）。
  * ========================================================================== */
 
 // v2 → v3：v2 期间 /api/v1 的响应被写进了 Cache Storage，且 key 不含身份。
+// v3 → v4：v3 期间 /w/{wid}/… 的页面 shell 与 RSC payload 仍被 SWR 写入。
 // activate 会删掉非当前版本的缓存，抬版本号就是让已被污染的旧缓存失效。
-const CACHE_VERSION = "corps-sw-v3";
+const CACHE_VERSION = "corps-sw-v4";
 const CORE_ASSETS = ["/", "/offline", "/manifest.json", "/favicon.svg"];
 // 关键路由：核心页面离线可访问（预缓存 + 运行时 SWR 持续更新）
 const CORE_ROUTES = ["/dashboard", "/board", "/my-tasks"];
@@ -36,6 +38,23 @@ const CORE_ROUTES = ["/dashboard", "/board", "/my-tasks"];
 function isNonCacheableApi(url) {
   if (!url.pathname.startsWith("/api/")) return false;
   return true;
+}
+
+/**
+ * 工作区页面（/w/{wid}/…）一律不写缓存。
+ *
+ * /api 排除之后还剩这一半：运行时 SWR 会把租户页面的 SSR shell 与 RSC payload
+ * （/w/{wid}/board?_rsc=…）写进 Cache Storage，而 key 只有 URL、不含身份，
+ * 共享设备上等于把上一位登录者的内容留在盘上。
+ * 单靠"登出时清"挡不住：2026-10-05 全量 E2E 实测登出后仍残留 5 条 /w/{wid}/*
+ * ——那些页面用例没访问过，是侧栏被 Next 预取、后台 revalidate 在删除**之后**才 put 回来的。
+ * 从写入侧断掉，"缓存里没有工作区内容"才是不随负载与时序变化的性质。
+ *
+ * 不缓存 ≠ 不能离线打开：这里仍然给导航请求保留 /offline 兜底，
+ * 与"回退上一版租户页面"的区别是——前者是明确的离线提示页，后者是别人的数据。
+ */
+function isTenantPage(url) {
+  return /^\/[^/]+\/w\/[^/]+/.test(url.pathname) || /^\/w\/[^/]+/.test(url.pathname);
 }
 
 self.addEventListener("install", (event) => {
@@ -69,6 +88,20 @@ self.addEventListener("fetch", (event) => {
 
   // API 请求中 auth 路由不缓存，直接走网络（避免缓存敏感数据 / 登录态串扰）
   if (isNonCacheableApi(url)) return;
+
+  // 租户页面：不读也不写缓存，只保留离线导航兜底（详见 isTenantPage 注释）
+  if (isTenantPage(url)) {
+    event.respondWith(
+      fetch(request).catch(async () => {
+        if (request.mode === "navigate") {
+          const offline = await caches.match("/offline");
+          if (offline) return offline;
+        }
+        return new Response("Offline", { status: 503, statusText: "Service Unavailable" });
+      }),
+    );
+    return;
+  }
 
   // stale-while-revalidate：先返回缓存（stale），同时后台拉取更新（revalidate）
   event.respondWith(
