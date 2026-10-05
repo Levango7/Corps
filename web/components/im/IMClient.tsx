@@ -22,6 +22,7 @@ import { useTranslations } from "next-intl";
 import { useRouter } from "@/lib/i18n-navigation";
 import { useIM } from "./useIM";
 import { ConversationList } from "./ConversationList";
+import OnlinePresence from "../OnlinePresence";
 import { ChatWindow } from "./ChatWindow";
 import { MessageSearch } from "./MessageSearch";
 import { ConversationCreate } from "./ConversationCreate";
@@ -160,16 +161,28 @@ export function IMClient({
       <div
         className={`${
           isSingleMode ? "hidden" : mobileView === "list" ? "flex" : "hidden"
-        } md:${isSingleMode ? "hidden" : "flex"} w-full md:w-72 lg:w-80 shrink-0`}
+        } md:${isSingleMode ? "hidden" : "flex"} w-full md:w-72 lg:w-80 shrink-0 flex-col`}
       >
-        <ConversationList
-          conversations={conversations}
-          activeId={activeConversation?.id ?? null}
-          currentUserId={currentUserId}
-          onSelect={handleSelect}
-          onSearch={() => setSearchOpen(true)}
-          onCreate={() => setCreateOpen(true)}
-        />
+        {/*
+          在线成员条：/presence 端点（GET 列表 + POST 心跳）与 OnlinePresence 组件
+          此前都写好了但全仓零挂载点 —— 端点没有任何生产调用方。放在会话列表上方，
+          只在多会话模式显示：单会话模式（任务详情内嵌聊天）不该替用户起 2 分钟心跳。
+        */}
+        {!isSingleMode && (
+          <div className="shrink-0 px-[var(--space-3)] py-[var(--space-2)] border-b border-[var(--border)]">
+            <OnlinePresence wid={workspaceId} max={6} />
+          </div>
+        )}
+        <div className="flex-1 min-h-0">
+          <ConversationList
+            conversations={conversations}
+            activeId={activeConversation?.id ?? null}
+            currentUserId={currentUserId}
+            onSelect={handleSelect}
+            onSearch={() => setSearchOpen(true)}
+            onCreate={() => setCreateOpen(true)}
+          />
+        </div>
       </div>
 
       {/* 右侧聊天窗口（桌面常驻 / 移动端 chat 视图 / 单会话模式始终显示） */}
