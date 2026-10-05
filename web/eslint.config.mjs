@@ -56,6 +56,10 @@ export default [
   {
     ignores: [
       ".next/**",
+      // 验证流程里常把旧构建目录改名保留（.gitignore 也有 web/.next.stale.* 这条）；
+      // 不忽略就会被 `eslint .` 吞进来：实测一次扫到 4990 个 minified chunk、
+      // 报出 43.6 万条与代码无关的红，而 CI 是干净 checkout 所以从没露出来。
+      ".next.stale.*/**",
       "node_modules/**",
       "prisma/generated/**",
       // 浏览器直载脚本（不经打包器，运行于页面环境）
