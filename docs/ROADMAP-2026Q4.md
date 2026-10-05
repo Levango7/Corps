@@ -16,7 +16,7 @@
 | 部署 | 本机 compose 全栈 healthy（127.0.0.1:3001）；Smoke 经临时隧道 success——正式实例为 0 |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 5 个 Actions PR 已收编；TS6/Prisma7/Stripe22 挂账见 issue #32（含实测结论） |
-| 质量基线 | 零覆盖 641（10-05 实测，快照日为 10-03 时的 643）/ T3 157 / 契约豁免 205——burn-down 计划见 §2 |
+| 质量基线 | 零覆盖 633（10-06 实测，10-03 为 643、10-05 为 641）/ T3 157 / 契约豁免 205——burn-down 计划见 §2 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -31,11 +31,10 @@
 
 已知的功能性缺口（体检实测确认，都是"做成熟"的必做项）：
 
-- **文档实时协同服务端从未部署**：前端 CollaborationProvider 连
-  `NEXT_PUBLIC_COLLAB_WS_URL`（默认 ws://localhost:1234），服务端 `server/collab/`
-  存在但无 package.json、不在 workspace、不在 compose——当前部署下协同是
-  "连不上、靠 IndexedDB 离线降级"。收编它（补 package.json + compose 服务 +
-  令牌鉴权）或明确降级为"离线编辑+版本历史"，二选一。
+- ~~**文档实时协同服务端从未部署**：……收编它或明确降级，二选一。~~
+  **已决策（2026-10-04，ADR-012）**：降级为"本地编辑 + 版本历史"，`server/collab/`
+  保留但不收编——该 WS 服务端零鉴权，先收编等于用一个卖点换 P0 跨租户漏洞。
+  收编前置条件（含令牌鉴权）见 ADR-012 末节；本条不再作为待办。
 - 401/403 语义统一（choke point 拒绝走 401）——需要统一错误出口设计。
 - lint 的 40 条 warning 清零（React hooks 依赖缺失等）。
 
@@ -76,7 +75,7 @@
 
 | 基线 | 当前（2026-10-03） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
-| `zero-coverage-baseline.txt` | 641 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
+| `zero-coverage-baseline.txt` | 633 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
 | `permission-gate` T3 | 157 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
 | `api-contract` undeclared | 205 | **150** | 每周契约化 ≥5 条路由 |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
@@ -84,7 +83,7 @@
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）
 > 是按 `doc_row` 定位行后取该列**第一个数字**，掺进措辞会让承诺轨迹不可读——10-05 就把 643
 > 写成过 "641（…10-03 记为 643）"，实测门禁照样 PASS，但自测的字面注入落空、Burndown workflow 变红。
-> 历史值记在这里：zero-coverage 10-03 起算 **643** → 10-05 实测 **641**。
+> 历史值记在这里：zero-coverage 10-03 起算 **643** → 10-05 **641** → 10-06 **633**（补上多维表格三个入口的组件测试，连带把编辑器组件图与 query-engine 跑出覆盖）。
 
 ---
 
