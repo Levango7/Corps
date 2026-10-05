@@ -512,7 +512,7 @@ jobs:
       # outputDir 默认 test-results/，HTML 报告默认 playwright-report/，JSON 报告 pw-report.json。
       # working-directory=web，故产物在 web/ 下；if: failure() 确保仅失败时上传，节省存储。
       - name: Upload Playwright artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         if: failure()
         with:
           name: playwright-report
