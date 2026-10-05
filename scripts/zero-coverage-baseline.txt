@@ -16,7 +16,6 @@ app/api/auth/[...all]/route.ts
 app/api/cron/ai-push-runner/route.ts
 app/api/cron/ai-push-web/route.ts
 app/api/cron/calendar-reconcile/route.ts
-app/api/cron/check-expired-permissions/route.ts
 app/api/cron/cleanup-uploads/route.ts
 app/api/cron/due-reminders/route.ts
 app/api/cron/recycle-cleanup/route.ts
@@ -550,7 +549,6 @@ lib/ai/assistant/prompts/semantic-search.ts
 lib/ai/assistant/prompts/task-breakdown.ts
 lib/ai/assistant/prompts/todo-extract.ts
 lib/ai/behavior-tracker.ts
-lib/ai/context.ts
 lib/ai/deepseek.ts
 lib/ai/executor.ts
 lib/ai/orchestrator.ts
@@ -613,7 +611,6 @@ lib/dashboard-layout-helpers.ts
 lib/database/formula-engine.ts
 lib/database/relation-resolver.ts
 lib/default-layouts.ts
-lib/document-permission-check.ts
 lib/favorites.ts
 lib/format.ts
 lib/i18n-navigation.ts

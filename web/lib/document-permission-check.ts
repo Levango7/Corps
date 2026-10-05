@@ -31,7 +31,7 @@ const LEVEL_INDEX: Record<PermissionLevel, number> = {
   share: 4,
 };
 
-/** 判断 required 是否 >= actual（即用户拥有的权限是否满足要求） */
+/** 判断用户实际权限 actual 是否覆盖所需级别 required（actual >= required） */
 function hasPermissionLevel(actual: PermissionLevel, required: PermissionLevel): boolean {
   return LEVEL_INDEX[actual] >= LEVEL_INDEX[required];
 }
