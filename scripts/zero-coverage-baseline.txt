@@ -630,7 +630,6 @@ lib/push/unified.ts
 lib/shutdown.ts
 lib/slug.ts
 lib/sync/offline-cache.ts
-lib/sync/sync-manager.ts
 lib/uploads-cleanup.ts
 lib/use-long-press.ts
 lib/web-push.ts
