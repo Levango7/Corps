@@ -76,10 +76,15 @@
 
 | 基线 | 当前（2026-10-03） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
-| `zero-coverage-baseline.txt` | 641（2026-10-05 实测，10-03 记为 643） | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
+| `zero-coverage-baseline.txt` | 641 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
 | `permission-gate` T3 | 157 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
 | `api-contract` undeclared | 205 | **150** | 每周契约化 ≥5 条路由 |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
+
+> **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）
+> 是按 `doc_row` 定位行后取该列**第一个数字**，掺进措辞会让承诺轨迹不可读——10-05 就把 643
+> 写成过 "641（…10-03 记为 643）"，实测门禁照样 PASS，但自测的字面注入落空、Burndown workflow 变红。
+> 历史值记在这里：zero-coverage 10-03 起算 **643** → 10-05 实测 **641**。
 
 ---
 
