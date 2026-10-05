@@ -115,7 +115,7 @@ jobs:
         working-directory: desktop
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: android-apk
           path: desktop/src-tauri/gen/android/app/build/outputs/apk/**/*.apk
@@ -221,7 +221,7 @@ jobs:
         working-directory: desktop
 
       - name: Upload iOS IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ios-unsigned-ipa
           path: |
