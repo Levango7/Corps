@@ -1,5 +1,13 @@
 "use client";
 
+/**
+ * ⚠️ 未挂载的旧聊天实现（2026-10-06 实测：全仓没有页面 import 本文件）。
+ * 团队协作聊天走 `components/im/*`，文档 AI 助手走 `components/editor/AiChatPanel.tsx`。
+ *
+ * 不要在新页面里直接引用它——那会让两套实现同时在生产里点亮。
+ * 保留是为了等一次显式的整合决策（把 chat/ 里确有价值的输入框/头部设计逐文件
+ * 迁进 IM，或迁移后整棵删除）。判据与决策见 `docs/decisions/ADR-013-旧聊天实现树登记为待整合.md`。
+ */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, apiList } from "@/lib/api";
 import { useTranslations } from "next-intl";
