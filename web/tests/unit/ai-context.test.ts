@@ -127,17 +127,26 @@ describe("buildAiContext 的时间边界", () => {
   });
 
   it("展示日期/时间按本地时区，不是 UTC", async () => {
-    vi.useFakeTimers();
-    vi.setSystemTime(local(2026, 4, 15, 12, 0));
+    // 必须显式钉时区：CI runner 是 UTC，届时「本地取值」与「UTC 取值」重合，
+    // 这条断言会退化成永真、改坏也看不出来。东八区下才咬得住。
+    const prevTz = process.env.TZ;
+    process.env.TZ = "Asia/Shanghai";
+    try {
+      vi.useFakeTimers();
+      vi.setSystemTime(local(2026, 4, 15, 12, 0));
 
-    const out = await run(["meetings:upcoming"], {
-      meeting: {
-        rows: [{ title: "评审", scheduledAt: local(2026, 4, 15, 23, 30), status: "planned" }],
-      },
-    });
-    expect(out).toContain("2026-04-15 23:30");
-    // toISOString 在 UTC+8 会把 23:30 显示成 15:30
-    expect(out).not.toContain("15:30");
+      const out = await run(["meetings:upcoming"], {
+        meeting: {
+          rows: [{ title: "评审", scheduledAt: local(2026, 4, 15, 23, 30), status: "planned" }],
+        },
+      });
+      expect(out).toContain("2026-04-15 23:30");
+      // toISOString/UTC 取值在东八区会把 23:30 显示成 15:30
+      expect(out).not.toContain("15:30");
+    } finally {
+      if (prevTz === undefined) delete process.env.TZ;
+      else process.env.TZ = prevTz;
+    }
   });
 });
 
