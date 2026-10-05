@@ -464,7 +464,6 @@ components/im/ConversationItemClient.tsx
 components/im/ConversationList.tsx
 components/im/ConversationSettings.tsx
 components/im/FilePreview.tsx
-components/im/IMClient.tsx
 components/im/IncomingCallNotification.tsx
 components/im/MentionPopover.tsx
 components/im/MessageInput.tsx
