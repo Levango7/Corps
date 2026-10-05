@@ -425,16 +425,9 @@ components/dashboard/widgets/WidgetStates.tsx
 components/dashboard/widgets/index.tsx
 components/database/BoardView.tsx
 components/database/CalendarView.tsx
-components/database/DatabaseEditor.tsx
-components/database/FieldControls.tsx
-components/database/FilterPanel.tsx
 components/database/GanttView.tsx
-components/database/GroupControl.tsx
-components/database/GroupControlClient.tsx
 components/database/RelationField.tsx
 components/database/RollupField.tsx
-components/database/SortPanel.tsx
-components/database/TableView.tsx
 components/doc/PermissionManager.tsx
 components/doc/ShareDialog.tsx
 components/documents/DocumentPermissionPanel.tsx
@@ -619,7 +612,6 @@ lib/calendar/sync.ts
 lib/csv-export.ts
 lib/dashboard-layout-helpers.ts
 lib/database/formula-engine.ts
-lib/database/query-engine.ts
 lib/database/relation-resolver.ts
 lib/default-layouts.ts
 lib/document-permission-check.ts
