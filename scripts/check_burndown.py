@@ -322,9 +322,26 @@ def self_test() -> int:
     cases.append(("窗口跑完仍未达标 -> BURND_BEHIND", overdue, None, {"BURND_BEHIND"}))
 
     # 5. 路线图数字与实测不符 -> BURND_DOC_DRIFT
+    #    不能靠字面串替换（如 "| 643 |"）：路线图一改措辞或数字，替换就落空，
+    #    于是「注入没生效」被误报成「门禁失效」。这里按 doc_row 定位行，
+    #    只把该行「当前」列的第一个数字改成 999，保证注入必然生效。
     doc = tmp / "roadmap.md"
     src_doc = ROADMAP.read_text(encoding="utf-8", errors="ignore") if ROADMAP.exists() else ""
-    doc.write_text(src_doc.replace("| 643 |", "| 999 |"), encoding="utf-8")
+    row_m = re.search(r"^BASELINE\s+\S+.*\bdoc_row=(\S+)", original, re.M)
+    row_key = row_m.group(1) if row_m else "zero-coverage-baseline.txt"
+    mutated, hits = [], 0
+    for ln in src_doc.splitlines():
+        if ln.lstrip().startswith("|"):
+            cells = [c.strip() for c in ln.strip().strip("|").split("|")]
+            if len(cells) >= 3 and row_key in cells[0]:
+                cells[1], n = re.subn(r"\d+", "999", cells[1], count=1)
+                if n == 0:
+                    cells[1] = "999"
+                hits += 1
+                ln = "| " + " | ".join(cells) + " |"
+        mutated.append(ln)
+    doc.write_text("\n".join(mutated) + "\n", encoding="utf-8")
+    assert hits >= 1, f"self-test 无法在路线图里定位 doc_row={row_key} 的行（注入会失效）"
     cases.append(("路线图数字漂移 -> BURND_DOC_DRIFT", original, str(doc), {"BURND_DOC_DRIFT"}))
 
     for name, plan_text, doc_override, expected in cases:
