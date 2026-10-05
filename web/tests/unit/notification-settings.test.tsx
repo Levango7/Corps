@@ -125,4 +125,33 @@ describe("NotificationSettings 文案诚实性", () => {
       expect(body).toMatchObject({ dndEnabled: true, dndStart: "22:00", dndEnd: "08:00" });
     });
   });
+
+  it("卸载必须清掉「已保存」定时器（这是全绿却 rc=1 的根因）", async () => {
+    // 症状：jsdom 先拆除、2 秒后定时器才回调 setSaved，react-dom 摸已失效的
+    // window → 未捕获异常，vitest 整体退出码 1，而用例全 passed。
+    const setSpy = vi.spyOn(globalThis, "setTimeout");
+    const clearSpy = vi.spyOn(globalThis, "clearTimeout");
+    const { unmount } = render(<NotificationSettings />);
+    await waitFor(() => expect(screen.getAllByRole("switch").length).toBeGreaterThanOrEqual(3));
+
+    const timerCountBefore = setSpy.mock.calls.length;
+    fireEvent.click(screen.getByRole("button", { name: new RegExp(zhFlat["notifications.save"]) }));
+    await waitFor(() =>
+      expect(apiMock.mock.calls.some((c) => String(c[1]?.method) === "PATCH")).toBe(true),
+    );
+
+    // waitFor 自己也会起定时器，所以只取「点保存之后」新调度的那一批再求交集
+    const scheduledAfterSave = setSpy.mock.results
+      .slice(timerCountBefore)
+      .map((r) => r.value as unknown);
+    expect(scheduledAfterSave.length).toBeGreaterThan(0);
+
+    clearSpy.mockClear();
+    unmount();
+    const cleared = clearSpy.mock.calls.map(([id]) => id as unknown);
+    expect(cleared.some((id) => scheduledAfterSave.includes(id))).toBe(true);
+
+    setSpy.mockRestore();
+    clearSpy.mockRestore();
+  });
 });

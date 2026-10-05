@@ -52,6 +52,13 @@ export function NotificationSettings() {
 
   // AbortController：组件卸载时中止进行中的请求
   const abortRef = useRef<AbortController | null>(null);
+  /**
+   * 「已保存」提示的自动消失定时器。必须记账并在卸载时 clear：
+   * 之前它没被清理，测试里 jsdom 先拆除、2 秒后定时器才触发 setSaved，
+   * react-dom 去摸已失效的 window → 整个 vitest 进程以未捕获异常退出（rc=1），
+   * 而 684 个用例全 passed —— 全绿却红。
+   */
+  const savedTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   /** 加载偏好 */
   const loadPreference = useCallback(async () => {
@@ -87,7 +94,13 @@ export function NotificationSettings() {
 
   useEffect(() => {
     void loadPreference();
-    return () => abortRef.current?.abort();
+    return () => {
+      abortRef.current?.abort();
+      if (savedTimerRef.current !== null) {
+        clearTimeout(savedTimerRef.current);
+        savedTimerRef.current = null;
+      }
+    };
   }, [loadPreference]);
 
   /** 保存偏好 */
@@ -101,7 +114,11 @@ export function NotificationSettings() {
         body: JSON.stringify({ emailNotify, pushNotify, dndEnabled, dndStart, dndEnd }),
       });
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      if (savedTimerRef.current !== null) clearTimeout(savedTimerRef.current);
+      savedTimerRef.current = setTimeout(() => {
+        savedTimerRef.current = null;
+        setSaved(false);
+      }, 2000);
     } catch (e) {
       if (e instanceof ApiError && e.status === 401) {
         setError(t("error"));
