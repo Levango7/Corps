@@ -16,7 +16,7 @@
 | 部署 | 本机 compose 全栈 healthy（127.0.0.1:3001）；Smoke 经临时隧道 success——正式实例为 0 |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 5 个 Actions PR 已收编；TS6/Prisma7/Stripe22 挂账见 issue #32（含实测结论） |
-| 质量基线 | 零覆盖 643 / T3 157 / 契约豁免 205——burn-down 计划见 §2 |
+| 质量基线 | 零覆盖 641（10-05 实测，快照日为 10-03 时的 643）/ T3 157 / 契约豁免 205——burn-down 计划见 §2 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -76,7 +76,7 @@
 
 | 基线 | 当前（2026-10-03） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
-| `zero-coverage-baseline.txt` | 643 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
+| `zero-coverage-baseline.txt` | 641（2026-10-05 实测，10-03 记为 643） | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
 | `permission-gate` T3 | 157 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
 | `api-contract` undeclared | 205 | **150** | 每周契约化 ≥5 条路由 |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
