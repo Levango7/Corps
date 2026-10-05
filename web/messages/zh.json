@@ -2056,6 +2056,13 @@
       "fieldTypeUser": "成员",
       "fieldTypeUrl": "链接",
       "fieldTypeEmail": "邮箱",
+      "fieldNameAria": "字段名称：{name}",
+      "deleteField": "删除字段",
+      "deleteFieldAria": "删除该字段",
+      "deleteFieldLastHint": "至少保留一个字段",
+      "deleteView": "删除视图",
+      "deleteViewAria": "删除该视图",
+      "deleteViewLastHint": "至少保留一个视图",
       "filterAria": "筛选",
       "sortAria": "排序",
       "groupAria": "分组",
@@ -2216,7 +2223,9 @@
       "loadFailed": "加载失败",
       "saveFailed": "保存失败",
       "viewNotPersisted": "你的角色无法保存视图配置，本次调整仅在当前页面生效",
-      "confirmDeleteRecord": "确定删除这条记录？该操作不可撤销。"
+      "confirmDeleteRecord": "确定删除这条记录？该操作不可撤销。",
+      "confirmDeleteField": "删除后该列在所有记录中的值都不再显示（值仍留在记录数据里，服务端不会清理），且此操作不可撤销。确定继续？",
+      "confirmDeleteView": "确定删除这个视图？记录本身不受影响，且此操作不可撤销。"
     }
   },
   "files": {

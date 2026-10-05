@@ -2056,6 +2056,13 @@
       "fieldTypeUser": "Member",
       "fieldTypeUrl": "URL",
       "fieldTypeEmail": "Email",
+      "fieldNameAria": "Field name: {name}",
+      "deleteField": "Delete field",
+      "deleteFieldAria": "Delete this field",
+      "deleteFieldLastHint": "Keep at least one field",
+      "deleteView": "Delete view",
+      "deleteViewAria": "Delete this view",
+      "deleteViewLastHint": "Keep at least one view",
       "filterAria": "Filter",
       "sortAria": "Sort",
       "groupAria": "Group",
@@ -2216,7 +2223,9 @@
       "loadFailed": "Failed to load",
       "saveFailed": "Failed to save",
       "viewNotPersisted": "Your role cannot save view settings — this change applies to the current page only",
-      "confirmDeleteRecord": "Delete this record? This cannot be undone."
+      "confirmDeleteRecord": "Delete this record? This cannot be undone.",
+      "confirmDeleteField": "After deletion the column's values stop showing in every record (the values stay in the record data — the server does not clean them up), and this cannot be undone. Continue?",
+      "confirmDeleteView": "Delete this view? Records are unaffected and this cannot be undone."
     }
   },
   "files": {

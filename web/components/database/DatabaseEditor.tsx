@@ -16,7 +16,7 @@
  * 动效：transition 用 var(--motion-base)，motion-reduce 时禁用。
  */
 
-import { useState, useMemo, useCallback, type FormEvent } from "react";
+import { Fragment, useState, useMemo, useCallback, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
   Table2,
@@ -27,6 +27,8 @@ import {
   ArrowUpDown,
   Group,
   Plus,
+  Trash2,
+  X,
   type LucideIcon,
 } from "lucide-react";
 import type { Database, DatabaseField, DatabaseRecord, DatabaseView } from "@prisma/client";
@@ -90,6 +92,17 @@ export interface DatabaseEditorProps {
   onFieldCreate?: (input: { name: string; type: string }) => void;
   /** 建视图。给了才会解锁 board/gantt/calendar（此前无任何路径产生非 table 视图行） */
   onViewCreate?: (input: { name: string; type: string }) => void;
+  /**
+   * 改字段（改名/改类型）。服务端 `PATCH …/fields/{fid}` 一直存在但零调用方。
+   */
+  onFieldUpdate?: (id: string, patch: { name?: string; type?: string }) => void;
+  /** 删字段。服务端**不保护最后一个字段**，故单字段时按钮禁用（见 fields 面板） */
+  onFieldDelete?: (id: string) => void;
+  /**
+   * 删视图。服务端**不保护最后一个视图**，而删空后 `!currentView` 会早退到空状态
+   * ——所以这里双保险：单视图时禁用，同时空状态里也给出「新建视图」的出口。
+   */
+  onViewDelete?: (id: string) => void;
   /** 行删除，转交给 TableView */
   onRecordDelete?: (id: string) => void;
 }
@@ -193,6 +206,9 @@ export function DatabaseEditor({
   onViewUpdate,
   onFieldCreate,
   onViewCreate,
+  onFieldUpdate,
+  onFieldDelete,
+  onViewDelete,
   onRecordDelete,
 }: DatabaseEditorProps) {
   const t = useTranslations("database.editor");
@@ -314,6 +330,28 @@ export function DatabaseEditor({
     [newFieldName, newFieldType, onFieldCreate],
   );
 
+  /**
+   * 字段改名的草稿。只在失焦/回车时提交，且空值与未变更都不发请求。
+   * 刻意不开放改类型：已有记录按原类型存值，改 type 会让 normalizeRecordData
+   * 拿到形状对不上的数据 —— 那是需要数据迁移的另一件事，不在本入口里顺手做。
+   */
+  const [nameDrafts, setNameDrafts] = useState<Record<string, string>>({});
+
+  const commitRename = useCallback(
+    (field: DatabaseField) => {
+      const draft = nameDrafts[field.id];
+      if (draft === undefined) return;
+      const next = draft.trim();
+      if (next && next !== field.name) onFieldUpdate?.(field.id, { name: next });
+      setNameDrafts((prev) => {
+        const clone = { ...prev };
+        delete clone[field.id];
+        return clone;
+      });
+    },
+    [nameDrafts, onFieldUpdate],
+  );
+
   // ─── 激活态指示 ──────────────────────────────────────────────
 
   const hasFilters = (viewConfig.filters?.length ?? 0) > 0;
@@ -325,10 +363,46 @@ export function DatabaseEditor({
   if (!currentView) {
     return (
       <div
-        className="flex items-center justify-center h-full min-h-[400px] text-[var(--muted)]"
+        className="flex flex-col items-center justify-center gap-3 h-full min-h-[400px] text-[var(--muted)]"
         data-testid="database-editor-empty"
       >
         <p className="text-[length:var(--text-sm)]">{t("noView")}</p>
+        {/* 服务端不保护最后一个视图，删空就会走到这里；不给出口就等于把表格废掉 */}
+        {onViewCreate && (
+          <form
+            onSubmit={handleViewCreateSubmit}
+            className="flex flex-wrap items-center justify-center gap-2"
+            data-testid="create-view-form"
+          >
+            <input
+              value={newViewName}
+              onChange={(e) => setNewViewName(e.target.value)}
+              placeholder={t("newViewNamePlaceholder")}
+              aria-label={t("newViewNameAria")}
+              maxLength={100}
+              className="min-w-[160px] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+            <select
+              value={newViewType}
+              onChange={(e) => setNewViewType(e.target.value as typeof newViewType)}
+              aria-label={t("newViewTypeAria")}
+              className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[length:var(--text-sm)] text-[var(--fg)]"
+            >
+              {CREATABLE_VIEW_TYPES.map((vt) => (
+                <option key={vt} value={vt}>
+                  {t(VIEW_LABEL_KEYS[vt] ?? "viewTable")}
+                </option>
+              ))}
+            </select>
+            <button
+              type="submit"
+              disabled={!newViewName.trim()}
+              className="rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1 text-[length:var(--text-sm)] text-[var(--accent-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t("create")}
+            </button>
+          </form>
+        )}
       </div>
     );
   }
@@ -359,22 +433,38 @@ export function DatabaseEditor({
             const labelKey = VIEW_LABEL_KEYS[view.type];
             const label = labelKey ? t(labelKey) : view.name;
             const isActive = view.id === currentView.id;
+            // 服务端不保护最后一个视图，删空就没有可切换的 tab —— 单视图时禁用删除
+            const canDelete = !!onViewDelete && views.length > 1;
             return (
-              <button
-                key={view.id}
-                role="tab"
-                aria-selected={isActive}
-                onClick={() => handleViewSwitch(view.id)}
-                className={
-                  VIEW_TAB_BASE +
-                  (isActive
-                    ? " bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]"
-                    : " text-[var(--fg-2)] hover:bg-[var(--surface-2)]")
-                }
-              >
-                <Icon size={14} />
-                <span>{label}</span>
-              </button>
+              <Fragment key={view.id}>
+                <button
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  onClick={() => handleViewSwitch(view.id)}
+                  className={
+                    VIEW_TAB_BASE +
+                    (isActive
+                      ? " bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]"
+                      : " text-[var(--fg-2)] hover:bg-[var(--surface-2)]")
+                  }
+                >
+                  <Icon size={14} />
+                  <span>{label}</span>
+                </button>
+                {onViewDelete && (
+                  <button
+                    type="button"
+                    onClick={() => canDelete && onViewDelete(view.id)}
+                    disabled={!canDelete}
+                    aria-label={t("deleteViewAria")}
+                    title={canDelete ? t("deleteView") : t("deleteViewLastHint")}
+                    className="flex items-center justify-center rounded-[var(--radius-sm)] px-1 py-1 text-[var(--meta)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger-fg)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--meta)]"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </Fragment>
             );
           })}
           {onViewCreate && (
@@ -499,16 +589,47 @@ export function DatabaseEditor({
           )}
           {showFields && onFieldCreate && (
             <div className="flex flex-col gap-2" data-testid="fields-panel">
-              <ul className="flex flex-wrap gap-1.5">
-                {fields.map((f) => (
-                  <li
-                    key={f.id}
-                    className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border)] px-2 py-0.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
-                  >
-                    <span className="truncate">{f.name}</span>
-                    <span className="uppercase tracking-wider text-[var(--meta)]">{f.type}</span>
-                  </li>
-                ))}
+              <ul className="flex flex-col gap-1">
+                {fields.map((f) => {
+                  // 服务端不保护最后一个字段，删光就没有列可编辑了
+                  const canDeleteField = !!onFieldDelete && fields.length > 1;
+                  return (
+                    <li key={f.id} className="flex items-center gap-2">
+                      <input
+                        value={nameDrafts[f.id] ?? f.name}
+                        onChange={(e) =>
+                          setNameDrafts((prev) => ({ ...prev, [f.id]: e.target.value }))
+                        }
+                        onBlur={() => commitRename(f)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            e.preventDefault();
+                            commitRename(f);
+                          }
+                        }}
+                        aria-label={t("fieldNameAria", { name: f.name })}
+                        disabled={!onFieldUpdate}
+                        maxLength={100}
+                        className="w-40 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-0.5 text-[length:var(--text-sm)] text-[var(--fg)] disabled:opacity-60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                      />
+                      <span className="text-[length:var(--text-xs)] uppercase tracking-wider text-[var(--meta)]">
+                        {f.type}
+                      </span>
+                      {onFieldDelete && (
+                        <button
+                          type="button"
+                          onClick={() => canDeleteField && onFieldDelete(f.id)}
+                          disabled={!canDeleteField}
+                          aria-label={t("deleteFieldAria")}
+                          title={canDeleteField ? t("deleteField") : t("deleteFieldLastHint")}
+                          className="flex items-center justify-center rounded-[var(--radius-sm)] p-1 text-[var(--meta)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger-fg)] focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-[var(--meta)]"
+                        >
+                          <Trash2 size={12} />
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
               </ul>
               <form
                 onSubmit={handleFieldCreateSubmit}

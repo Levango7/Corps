@@ -199,6 +199,57 @@ function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
     [wid, dbid, t],
   );
 
+  /** 改字段名（PATCH /fields/{fid}）。只发 name——改类型要连带迁移已有值，另议。 */
+  const handleFieldUpdate = useCallback(
+    async (fid: string, patch: { name?: string }) => {
+      try {
+        const updated = await api<DatabaseFieldDto>(
+          `/api/v1/workspaces/${wid}/databases/${dbid}/fields/${fid}`,
+          { method: "PATCH", body: JSON.stringify(patch) },
+        );
+        setFields((prev) => prev.map((f) => (f.id === fid ? updated : f)));
+        setLoadError("");
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : t("saveFailed"));
+      }
+    },
+    [wid, dbid, t],
+  );
+
+  const handleFieldDelete = useCallback(
+    async (fid: string) => {
+      if (!window.confirm(t("confirmDeleteField"))) return;
+      setFields((prev) => prev.filter((f) => f.id !== fid));
+      try {
+        await api(`/api/v1/workspaces/${wid}/databases/${dbid}/fields/${fid}`, {
+          method: "DELETE",
+        });
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : t("saveFailed"));
+      }
+    },
+    [wid, dbid, t],
+  );
+
+  const handleViewDelete = useCallback(
+    async (vid: string) => {
+      if (!window.confirm(t("confirmDeleteView"))) return;
+      // 删的正是当前视图就切到剩下的第一个，否则编辑器会停在看不见的视图上。
+      // 不用函数式 updater：里面套 setCurrentViewId 会在 StrictMode 下双跑。
+      const next = views.filter((v) => v.id !== vid);
+      setViews(next);
+      if (currentViewId === vid) setCurrentViewId(next[0]?.id);
+      try {
+        await api(`/api/v1/workspaces/${wid}/databases/${dbid}/views/${vid}`, {
+          method: "DELETE",
+        });
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : t("saveFailed"));
+      }
+    },
+    [wid, dbid, views, currentViewId, t],
+  );
+
   /** 删记录：破坏性动作，先 confirm；服务端 requirePermission 拒的就是这里没拦住的 viewer */
   const handleRecordDelete = useCallback(
     async (rid: string) => {
@@ -275,7 +326,10 @@ function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
             onViewChange={handleViewChange}
             onViewUpdate={handleViewUpdate}
             onFieldCreate={canManage ? handleFieldCreate : undefined}
+            onFieldUpdate={canManage ? handleFieldUpdate : undefined}
+            onFieldDelete={canManage ? handleFieldDelete : undefined}
             onViewCreate={canManage ? handleViewCreate : undefined}
+            onViewDelete={canManage ? handleViewDelete : undefined}
           />
         </SafeComponent>
       </div>

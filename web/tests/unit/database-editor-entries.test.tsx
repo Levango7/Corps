@@ -125,6 +125,73 @@ describe("多维表格三个入口", () => {
     renderEditor();
     expect(captured.tableView?.onRecordDelete).toBeUndefined();
   });
+
+  it("最后一个字段不给删（服务端不保护，删光就没有可编辑的列）", () => {
+    renderEditor({ onFieldCreate: vi.fn(), onFieldUpdate: vi.fn(), onFieldDelete: vi.fn() });
+    fireEvent.click(screen.getByRole("button", { name: /fields/ }));
+    expect(screen.getByLabelText(/deleteFieldAria/)).toBeDisabled();
+  });
+
+  it("多字段时可删，回调收到被点那一行的字段 id", () => {
+    const onFieldDelete = vi.fn();
+    const field2 = { id: "f2", name: "状态", type: "select", sortOrder: 1 } as never;
+    renderEditor({ fields: [field, field2], onFieldCreate: vi.fn(), onFieldDelete });
+    fireEvent.click(screen.getByRole("button", { name: /fields/ }));
+    const buttons = screen.getAllByLabelText(/deleteFieldAria/);
+    expect(buttons).toHaveLength(2);
+    expect(buttons[0]).toBeEnabled();
+    fireEvent.click(buttons[1]);
+    expect(onFieldDelete).toHaveBeenCalledWith("f2");
+  });
+
+  it("字段改名：失焦才提交，且改回原名不发请求", () => {
+    const onFieldUpdate = vi.fn();
+    renderEditor({ onFieldCreate: vi.fn(), onFieldUpdate });
+    fireEvent.click(screen.getByRole("button", { name: /fields/ }));
+    const input = screen.getByLabelText(/fieldNameAria/) as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "  " } });
+    fireEvent.blur(input);
+    expect(onFieldUpdate).not.toHaveBeenCalled(); // 空值不提交
+
+    fireEvent.change(input, { target: { value: "标题" } });
+    fireEvent.blur(input);
+    expect(onFieldUpdate).not.toHaveBeenCalled(); // 与原名相同不提交
+
+    fireEvent.change(input, { target: { value: "任务标题" } });
+    fireEvent.blur(input);
+    expect(onFieldUpdate).toHaveBeenCalledWith("f1", { name: "任务标题" });
+  });
+
+  it("最后一个视图不给删；多视图时可删并回传视图 id", () => {
+    const onViewDelete = vi.fn();
+    renderEditor({ onViewDelete });
+    expect(screen.getByLabelText(/deleteViewAria/)).toBeDisabled();
+
+    const view2 = { id: "v2", name: "看板", type: "board", config: {}, sortOrder: 1 } as never;
+    cleanup();
+    renderEditor({ views: [view, view2], onViewDelete });
+    const buttons = screen.getAllByLabelText(/deleteViewAria/);
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[0]);
+    expect(onViewDelete).toHaveBeenCalledWith("v1");
+  });
+
+  it("视图被删空后，空状态里仍给得出「新建视图」的出口", () => {
+    const onViewCreate = vi.fn();
+    renderEditor({ views: [], onViewCreate });
+    expect(screen.getByTestId("database-editor-empty")).toBeInTheDocument();
+    // 关键：空状态不再是一堵墙，能在原地重建第一个视图
+    fireEvent.change(screen.getByLabelText(/newViewNameAria/), { target: { value: "表格" } });
+    fireEvent.change(screen.getByLabelText(/newViewTypeAria/), { target: { value: "table" } });
+    fireEvent.click(screenWithin(screen.getByTestId("create-view-form"), "create"));
+    expect(onViewCreate).toHaveBeenCalledWith({ name: "表格", type: "table" });
+  });
+
+  it("空状态下没给 onViewCreate 就不渲染重建表单（不给假出口）", () => {
+    renderEditor({ views: [] });
+    expect(screen.queryByTestId("create-view-form")).not.toBeInTheDocument();
+  });
 });
 
 /** 面板内可能有多个同名按钮，用局部查询避免跨面板误命中 */
