@@ -17,7 +17,6 @@ app/api/cron/ai-push-runner/route.ts
 app/api/cron/ai-push-web/route.ts
 app/api/cron/calendar-reconcile/route.ts
 app/api/cron/check-expired-permissions/route.ts
-app/api/cron/check-overdue-actions/route.ts
 app/api/cron/cleanup-uploads/route.ts
 app/api/cron/due-reminders/route.ts
 app/api/cron/recycle-cleanup/route.ts
@@ -632,7 +631,6 @@ lib/im/types.ts
 lib/im/ws-server.ts
 lib/livekit-utils.ts
 lib/mail/transporter.ts
-lib/notification/offline-push.ts
 lib/payments/alipay-provider.ts
 lib/payments/index.ts
 lib/payments/stripe-provider.ts
