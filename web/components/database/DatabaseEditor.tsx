@@ -16,7 +16,7 @@
  * 动效：transition 用 var(--motion-base)，motion-reduce 时禁用。
  */
 
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
   Table2,
@@ -26,6 +26,7 @@ import {
   Filter,
   ArrowUpDown,
   Group,
+  Plus,
   type LucideIcon,
 } from "lucide-react";
 import type { Database, DatabaseField, DatabaseRecord, DatabaseView } from "@prisma/client";
@@ -82,7 +83,54 @@ export interface DatabaseEditorProps {
   onRecordCreate?: () => void;
   onViewChange?: (viewId: string) => void;
   onViewUpdate?: (viewId: string, config: Record<string, unknown>) => void;
+  /**
+   * 建字段。端点 `POST …/fields` 早已存在，缺的只是入口——10-05 实测全仓
+   * 客户端只在「建库」时硬编码 type:"text"，事后无法加列。
+   */
+  onFieldCreate?: (input: { name: string; type: string }) => void;
+  /** 建视图。给了才会解锁 board/gantt/calendar（此前无任何路径产生非 table 视图行） */
+  onViewCreate?: (input: { name: string; type: string }) => void;
+  /** 行删除，转交给 TableView */
+  onRecordDelete?: (id: string) => void;
 }
+
+/**
+ * 可新建的字段类型 = query-engine 真正会算的那 9 种
+ * （lib/database/query-engine.ts:20-21）。
+ * 刻意不提供 formula/relation/rollup：三种引擎（formula-engine /
+ * relation-resolver / 关系解析）目前非测试引用数为 0，建出来只会得到
+ * 「FieldControls 里显示成字符串/计数」的死字段。引擎接线后再补进本表。
+ */
+const CREATABLE_FIELD_TYPES = [
+  "text",
+  "number",
+  "select",
+  "multiselect",
+  "date",
+  "checkbox",
+  "user",
+  "url",
+  "email",
+] as const;
+
+/** 可新建的视图类型（四种在 :364-400 都有渲染分支） */
+const CREATABLE_VIEW_TYPES = ["table", "board", "gantt", "calendar"] as const;
+
+/**
+ * 字段类型 → i18n 键。逐个写死而不是 `fieldType${x}` 拼串：仓库有
+ * 「引用键存在性」门禁，动态拼接的键无法静态校验，真漏了键要等到运行时才炸。
+ */
+const FIELD_TYPE_LABEL_KEYS: Record<(typeof CREATABLE_FIELD_TYPES)[number], string> = {
+  text: "fieldTypeText",
+  number: "fieldTypeNumber",
+  select: "fieldTypeSelect",
+  multiselect: "fieldTypeMultiselect",
+  date: "fieldTypeDate",
+  checkbox: "fieldTypeCheckbox",
+  user: "fieldTypeUser",
+  url: "fieldTypeUrl",
+  email: "fieldTypeEmail",
+};
 
 // ─── 辅助函数 ──────────────────────────────────────────────────
 
@@ -143,6 +191,9 @@ export function DatabaseEditor({
   onRecordCreate,
   onViewChange,
   onViewUpdate,
+  onFieldCreate,
+  onViewCreate,
+  onRecordDelete,
 }: DatabaseEditorProps) {
   const t = useTranslations("database.editor");
 
@@ -150,6 +201,12 @@ export function DatabaseEditor({
   const [showFilter, setShowFilter] = useState(false);
   const [showSort, setShowSort] = useState(false);
   const [showGroup, setShowGroup] = useState(false);
+  const [showFields, setShowFields] = useState(false);
+  const [showAddView, setShowAddView] = useState(false);
+  const [newViewName, setNewViewName] = useState("");
+  const [newViewType, setNewViewType] = useState<(typeof CREATABLE_VIEW_TYPES)[number]>("board");
+  const [newFieldName, setNewFieldName] = useState("");
+  const [newFieldType, setNewFieldType] = useState<(typeof CREATABLE_FIELD_TYPES)[number]>("text");
 
   // ─── 当前视图解析 ────────────────────────────────────────────
 
@@ -233,6 +290,30 @@ export function DatabaseEditor({
     [onViewChange],
   );
 
+  /** 提交新建视图：交给宿主落库；成功后清空名字并收起面板 */
+  const handleViewCreateSubmit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      const name = newViewName.trim();
+      if (!name || !onViewCreate) return;
+      onViewCreate({ name, type: newViewType });
+      setNewViewName("");
+      setShowAddView(false);
+    },
+    [newViewName, newViewType, onViewCreate],
+  );
+
+  const handleFieldCreateSubmit = useCallback(
+    (e: FormEvent) => {
+      e.preventDefault();
+      const name = newFieldName.trim();
+      if (!name || !onFieldCreate) return;
+      onFieldCreate({ name, type: newFieldType });
+      setNewFieldName("");
+    },
+    [newFieldName, newFieldType, onFieldCreate],
+  );
+
   // ─── 激活态指示 ──────────────────────────────────────────────
 
   const hasFilters = (viewConfig.filters?.length ?? 0) > 0;
@@ -296,6 +377,18 @@ export function DatabaseEditor({
               </button>
             );
           })}
+          {onViewCreate && (
+            <button
+              type="button"
+              onClick={() => setShowAddView((v) => !v)}
+              aria-pressed={showAddView}
+              aria-label={t("addViewAria")}
+              className={VIEW_TAB_BASE + " text-[var(--fg-2)] hover:bg-[var(--surface-2)]"}
+            >
+              <Plus size={14} />
+              <span>{t("addView")}</span>
+            </button>
+          )}
         </nav>
 
         {/* 工具栏：筛选/排序/分组 */}
@@ -332,11 +425,24 @@ export function DatabaseEditor({
             <Group size={14} />
             <span>{t("group")}</span>
           </button>
+          {onFieldCreate && (
+            <button
+              type="button"
+              onClick={() => setShowFields((v) => !v)}
+              aria-pressed={showFields}
+              aria-label={t("fieldsAria")}
+              className={`${TOOL_BTN_BASE} ${showFields ? TOOL_BTN_ACTIVE : ""}`}
+            >
+              <Columns3 size={14} />
+              <span>{t("fields")}</span>
+              <span className={COUNT_BADGE}>{fields.length}</span>
+            </button>
+          )}
         </div>
       </header>
 
       {/* ─── 可折叠面板区 ─── */}
-      {(showFilter || showSort || showGroup) && (
+      {(showFilter || showSort || showGroup || showAddView || showFields) && (
         <div className="flex flex-col gap-2 px-4 py-2 border-b border-[var(--border)] bg-[var(--surface-2)]">
           {showFilter && (
             <FilterPanel
@@ -356,6 +462,88 @@ export function DatabaseEditor({
               onChange={handleGroupChange}
             />
           )}
+          {showAddView && onViewCreate && (
+            <form
+              onSubmit={handleViewCreateSubmit}
+              className="flex flex-wrap items-center gap-2"
+              data-testid="create-view-form"
+            >
+              <input
+                value={newViewName}
+                onChange={(e) => setNewViewName(e.target.value)}
+                placeholder={t("newViewNamePlaceholder")}
+                aria-label={t("newViewNameAria")}
+                maxLength={100}
+                className="min-w-[160px] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+              />
+              <select
+                value={newViewType}
+                onChange={(e) => setNewViewType(e.target.value as typeof newViewType)}
+                aria-label={t("newViewTypeAria")}
+                className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[length:var(--text-sm)] text-[var(--fg)]"
+              >
+                {CREATABLE_VIEW_TYPES.map((vt) => (
+                  <option key={vt} value={vt}>
+                    {t(VIEW_LABEL_KEYS[vt] ?? "viewTable")}
+                  </option>
+                ))}
+              </select>
+              <button
+                type="submit"
+                disabled={!newViewName.trim()}
+                className="rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1 text-[length:var(--text-sm)] text-[var(--accent-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {t("create")}
+              </button>
+            </form>
+          )}
+          {showFields && onFieldCreate && (
+            <div className="flex flex-col gap-2" data-testid="fields-panel">
+              <ul className="flex flex-wrap gap-1.5">
+                {fields.map((f) => (
+                  <li
+                    key={f.id}
+                    className="flex items-center gap-1.5 rounded-[var(--radius-pill)] border border-[var(--border)] px-2 py-0.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
+                  >
+                    <span className="truncate">{f.name}</span>
+                    <span className="uppercase tracking-wider text-[var(--meta)]">{f.type}</span>
+                  </li>
+                ))}
+              </ul>
+              <form
+                onSubmit={handleFieldCreateSubmit}
+                className="flex flex-wrap items-center gap-2"
+              >
+                <input
+                  value={newFieldName}
+                  onChange={(e) => setNewFieldName(e.target.value)}
+                  placeholder={t("newFieldNamePlaceholder")}
+                  aria-label={t("newFieldNameAria")}
+                  maxLength={100}
+                  className="min-w-[160px] rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                />
+                <select
+                  value={newFieldType}
+                  onChange={(e) => setNewFieldType(e.target.value as typeof newFieldType)}
+                  aria-label={t("newFieldTypeAria")}
+                  className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2 py-1 text-[length:var(--text-sm)] text-[var(--fg)]"
+                >
+                  {CREATABLE_FIELD_TYPES.map((ft) => (
+                    <option key={ft} value={ft}>
+                      {t(FIELD_TYPE_LABEL_KEYS[ft])}
+                    </option>
+                  ))}
+                </select>
+                <button
+                  type="submit"
+                  disabled={!newFieldName.trim()}
+                  className="rounded-[var(--radius-sm)] bg-[var(--accent)] px-3 py-1 text-[length:var(--text-sm)] text-[var(--accent-fg)] disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {t("create")}
+                </button>
+              </form>
+            </div>
+          )}
         </div>
       )}
 
@@ -369,6 +557,7 @@ export function DatabaseEditor({
             view={currentView}
             onRecordUpdate={onRecordUpdate}
             onRecordCreate={onRecordCreate}
+            onRecordDelete={onRecordDelete}
           />
         )}
         {currentView.type === "board" && (

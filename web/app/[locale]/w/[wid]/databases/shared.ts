@@ -171,3 +171,13 @@ export async function fetchMyWorkspaceRole(wid: string): Promise<Role | null> {
 export function canManageDatabases(role: Role | null): boolean {
   return role === "owner" || role === "admin";
 }
+
+/**
+ * 能否删除记录。口径来自服务端 `requirePermission(ctx, "databaseRecords", "delete")`
+ * （`lib/permissions.ts`：owner/admin/member 为 crud，viewer 只有 "r"），
+ * 比 canManageDatabases 宽——member 也能删自己表里的行，别把入口收得过窄。
+ * 上面那条「POST/PATCH 无角色校验」只说创建与修改，DELETE 有校验。
+ */
+export function canDeleteDatabaseRecords(role: Role | null): boolean {
+  return role === "owner" || role === "admin" || role === "member";
+}

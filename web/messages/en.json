@@ -2036,6 +2036,26 @@
       "noView": "No views yet. Please create one first.",
       "recordCount": "{count} items",
       "viewSwitchAria": "Switch view",
+      "addView": "New view",
+      "addViewAria": "Create a new view",
+      "newViewNamePlaceholder": "View name",
+      "newViewNameAria": "New view name",
+      "newViewTypeAria": "New view type",
+      "fields": "Fields",
+      "fieldsAria": "Manage fields",
+      "newFieldNamePlaceholder": "Field name",
+      "newFieldNameAria": "New field name",
+      "newFieldTypeAria": "New field type",
+      "create": "Create",
+      "fieldTypeText": "Text",
+      "fieldTypeNumber": "Number",
+      "fieldTypeSelect": "Select",
+      "fieldTypeMultiselect": "Multi-select",
+      "fieldTypeDate": "Date",
+      "fieldTypeCheckbox": "Checkbox",
+      "fieldTypeUser": "Member",
+      "fieldTypeUrl": "URL",
+      "fieldTypeEmail": "Email",
       "filterAria": "Filter",
       "sortAria": "Sort",
       "groupAria": "Group",
@@ -2091,6 +2111,8 @@
     "tableView": {
       "summary": "{rows} rows · {cols} cols",
       "noRecords": "No records",
+      "deleteRecord": "Delete record",
+      "deleteRecordAria": "Delete this record",
       "addRow": "Add row"
     },
     "filterPanel": {
@@ -2193,7 +2215,8 @@
       "back": "Back to databases",
       "loadFailed": "Failed to load",
       "saveFailed": "Failed to save",
-      "viewNotPersisted": "Your role cannot save view settings — this change applies to the current page only"
+      "viewNotPersisted": "Your role cannot save view settings — this change applies to the current page only",
+      "confirmDeleteRecord": "Delete this record? This cannot be undone."
     }
   },
   "files": {

@@ -11,7 +11,7 @@ import {
   type ReactElement,
 } from "react";
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { GripVertical, Plus } from "lucide-react";
+import { GripVertical, Plus, Trash2 } from "lucide-react";
 import { FieldControl } from "./FieldControls";
 import { useTranslations } from "next-intl";
 
@@ -37,6 +37,11 @@ interface TableViewProps {
   view: DatabaseView;
   onRecordUpdate?: (id: string, data: Record<string, unknown>) => void;
   onRecordCreate?: () => void;
+  /**
+   * 行删除。缺省时行首手柄列维持 40px；给了回调就加宽 28px 放删除按钮，
+   * 宽度必须与表头/totalWidth 同步，否则虚拟滚动的行宽会错位。
+   */
+  onRecordDelete?: (id: string) => void;
 }
 
 // ─── 辅助函数 ───────────────────────────────────────────────────────────────
@@ -153,8 +158,11 @@ export function TableView({
   view: _view,
   onRecordUpdate,
   onRecordCreate,
+  onRecordDelete,
 }: TableViewProps): ReactElement {
   const t = useTranslations("database.tableView");
+  // 有删除入口时行首列加宽，容纳第二个图标（三处宽度都走这个变量，保证对齐）
+  const handleWidth = onRecordDelete ? HANDLE_WIDTH + 28 : HANDLE_WIDTH;
 
   // 按 sortOrder 排序字段
   const sortedFields = useMemo(
@@ -205,8 +213,8 @@ export function TableView({
 
   // 计算总宽度（用于水平滚动）
   const totalWidth = useMemo(
-    () => HANDLE_WIDTH + sortedFields.reduce((sum, f) => sum + getWidth(f.id), 0),
-    [sortedFields, getWidth],
+    () => handleWidth + sortedFields.reduce((sum, f) => sum + getWidth(f.id), 0),
+    [handleWidth, sortedFields, getWidth],
   );
 
   // 开始编辑单元格
@@ -256,10 +264,21 @@ export function TableView({
       >
         {/* 拖拽手柄列 */}
         <div
-          className="flex items-center justify-center shrink-0 border-r border-[var(--border)] text-[var(--meta)] hover:text-[var(--fg-2)] cursor-grab active:cursor-grabbing"
-          style={{ width: HANDLE_WIDTH }}
+          className="flex items-center justify-center gap-1 shrink-0 border-r border-[var(--border)] text-[var(--meta)] hover:text-[var(--fg-2)]"
+          style={{ width: handleWidth }}
         >
-          <GripVertical size={14} />
+          <GripVertical size={14} className="cursor-grab active:cursor-grabbing" />
+          {onRecordDelete && (
+            <button
+              type="button"
+              onClick={() => onRecordDelete(record.id)}
+              aria-label={t("deleteRecordAria")}
+              title={t("deleteRecord")}
+              className="flex items-center justify-center rounded-[var(--radius-sm)] p-1 text-[var(--meta)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--danger-soft)] hover:text-[var(--danger-fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <Trash2 size={12} />
+            </button>
+          )}
         </div>
         {/* 数据列 */}
         {sortedFields.map((field) => {
@@ -315,7 +334,7 @@ export function TableView({
           {/* 手柄列表头 */}
           <div
             className="flex items-center justify-center shrink-0 border-r border-[var(--border)]"
-            style={{ width: HANDLE_WIDTH }}
+            style={{ width: handleWidth }}
           >
             <span className="text-[length:var(--text-xs)] text-[var(--meta)]">#</span>
           </div>

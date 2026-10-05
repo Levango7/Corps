@@ -2036,6 +2036,26 @@
       "noView": "暂无视图，请先创建一个视图。",
       "recordCount": "{count} 条",
       "viewSwitchAria": "视图切换",
+      "addView": "新建视图",
+      "addViewAria": "新建视图",
+      "newViewNamePlaceholder": "视图名称",
+      "newViewNameAria": "新视图名称",
+      "newViewTypeAria": "新视图类型",
+      "fields": "字段",
+      "fieldsAria": "字段管理",
+      "newFieldNamePlaceholder": "字段名称",
+      "newFieldNameAria": "新字段名称",
+      "newFieldTypeAria": "新字段类型",
+      "create": "创建",
+      "fieldTypeText": "文本",
+      "fieldTypeNumber": "数字",
+      "fieldTypeSelect": "单选",
+      "fieldTypeMultiselect": "多选",
+      "fieldTypeDate": "日期",
+      "fieldTypeCheckbox": "勾选",
+      "fieldTypeUser": "成员",
+      "fieldTypeUrl": "链接",
+      "fieldTypeEmail": "邮箱",
       "filterAria": "筛选",
       "sortAria": "排序",
       "groupAria": "分组",
@@ -2091,6 +2111,8 @@
     "tableView": {
       "summary": "{rows} 行 · {cols} 列",
       "noRecords": "暂无记录",
+      "deleteRecord": "删除记录",
+      "deleteRecordAria": "删除该行记录",
       "addRow": "新增行"
     },
     "filterPanel": {
@@ -2193,7 +2215,8 @@
       "back": "返回多维表格列表",
       "loadFailed": "加载失败",
       "saveFailed": "保存失败",
-      "viewNotPersisted": "你的角色无法保存视图配置，本次调整仅在当前页面生效"
+      "viewNotPersisted": "你的角色无法保存视图配置，本次调整仅在当前页面生效",
+      "confirmDeleteRecord": "确定删除这条记录？该操作不可撤销。"
     }
   },
   "files": {

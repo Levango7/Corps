@@ -33,6 +33,7 @@ import { Skeleton } from "@/components/Skeleton";
 import { SafeComponent } from "@/components/SafeComponent";
 import type { Role } from "@/lib/types";
 import {
+  canDeleteDatabaseRecords,
   canManageDatabases,
   fetchMyWorkspaceRole,
   recordDataAsObject,
@@ -78,6 +79,8 @@ function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
   const [loadError, setLoadError] = useState("");
 
   const canManage = canManageDatabases(role);
+  // 删记录的门槛比建字段/建视图低：member 即可（viewer 只读）
+  const canDeleteRecords = canDeleteDatabaseRecords(role);
 
   // ─── 装载 ────────────────────────────────────────────────────
   useEffect(() => {
@@ -161,6 +164,57 @@ function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
     [wid, dbid, canManage, t],
   );
 
+  /** 建字段：POST /fields，成功后把新字段并进来（列头与筛选/排序立即可用） */
+  const handleFieldCreate = useCallback(
+    async (input: { name: string; type: string }) => {
+      try {
+        const created = await api<DatabaseFieldDto>(
+          `/api/v1/workspaces/${wid}/databases/${dbid}/fields`,
+          { method: "POST", body: JSON.stringify(input) },
+        );
+        setFields((prev) => [...prev, created]);
+        setLoadError("");
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : t("saveFailed"));
+      }
+    },
+    [wid, dbid, t],
+  );
+
+  /** 建视图：POST /views，成功即切过去（board/gantt/calendar 由此才可达） */
+  const handleViewCreate = useCallback(
+    async (input: { name: string; type: string }) => {
+      try {
+        const created = await api<DatabaseViewDto>(
+          `/api/v1/workspaces/${wid}/databases/${dbid}/views`,
+          { method: "POST", body: JSON.stringify(input) },
+        );
+        setViews((prev) => [...prev, created]);
+        setCurrentViewId(created.id);
+        setLoadError("");
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : t("saveFailed"));
+      }
+    },
+    [wid, dbid, t],
+  );
+
+  /** 删记录：破坏性动作，先 confirm；服务端 requirePermission 拒的就是这里没拦住的 viewer */
+  const handleRecordDelete = useCallback(
+    async (rid: string) => {
+      if (!window.confirm(t("confirmDeleteRecord"))) return;
+      setRecords((prev) => prev.filter((r) => r.id !== rid));
+      try {
+        await api(`/api/v1/workspaces/${wid}/databases/${dbid}/records/${rid}`, {
+          method: "DELETE",
+        });
+      } catch (e) {
+        setLoadError(e instanceof Error ? e.message : t("saveFailed"));
+      }
+    },
+    [wid, dbid, t],
+  );
+
   // ─── DTO → DatabaseEditor 的 Prisma 模型形状 ──────────────────
   const editorProps = useMemo(
     () =>
@@ -217,8 +271,11 @@ function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
             {...editorProps}
             onRecordUpdate={handleRecordUpdate}
             onRecordCreate={handleRecordCreate}
+            onRecordDelete={canDeleteRecords ? handleRecordDelete : undefined}
             onViewChange={handleViewChange}
             onViewUpdate={handleViewUpdate}
+            onFieldCreate={canManage ? handleFieldCreate : undefined}
+            onViewCreate={canManage ? handleViewCreate : undefined}
           />
         </SafeComponent>
       </div>
