@@ -19,8 +19,10 @@ overrides:
   # 注意：pnpm 在 web/ 下安装时只读本文件（CI 的 working-directory: web、
   # Dockerfile 的构建上下文 ./web 都属这种情况）。仓库根 pnpm-workspace.yaml 里的
   # overrides 不会进锁文件——此前那条 sharp 覆盖就是死配置，故在此重述一遍。
-  # sharp >=0.35.4 修 GHSA-rgj7-g3m4-5g8c（libheif）
-  sharp: ">=0.35.4"
+  # sharp >=0.35.5 修 GHSA-rgj7-g3m4-5g8c（libheif）+ CVE-2026-96889（librsvg，high，2026-10-06 出新公告）
+  # 这条是**手写 override 下界**：dependabot 只 bump package.json 的直接依赖、不会来抬它，
+  # 所以每次上游出新公告都要人工抬一次下界（同一天被 tinypool、sharp 连着咬两次）。
+  sharp: ">=0.35.5"
   # undici 三条 high（DoS via unrequested WebSocket subprotocol / TLS 证书校验绕过 /
   # cross-origin cache poisoning）分属两个大版本，各自按声明范围覆盖并**加上界**：
   # 若写成 ">=7.29.1" 无上界，pnpm 会把 7.x 的请求解析到 8.10.0 —— 既跨了大版本、
