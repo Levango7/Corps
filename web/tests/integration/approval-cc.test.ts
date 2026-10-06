@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { BASE, registerUser, authHeader, inviteMember, TEST_PASSWORD } from "../helpers";
+import { BASE, registerUser, authHeader, cookieHeader, inviteMember } from "../helpers";
 
 /**
  * 审批实例抄送列表读取端集成测试（GET /workspaces/{wid}/approvals/instances/{aid}/cc）
@@ -10,11 +10,15 @@ import { BASE, registerUser, authHeader, inviteMember, TEST_PASSWORD } from "../
  *
  * 覆盖：
  * 1. 未登录 → 401
- * 2. 非本工作区成员读 → 401/403（不能跨租户读到别人的抄送名单）
- * 3. 抄送 2 人后 GET → 200，数组含 2 条，字段齐（id/userId/user.name/read/nodeIndex）
- * 4. 无抄送记录时 → 200 + 空数组（与"真的没有抄送"同形，但**不是** 405/404）
- * 5. 实例不存在 → 404
- * 6. viewer（只读成员）也能读 —— 读路径不应被角色门禁拦下
+ * 2. 令牌绑定到别的工作区（wid 守卫层）→ 401
+ * 3. 令牌已换绑到**目标**工作区、但调用者不是该工作区成员（成员校验层）→ 401
+ *    —— 这条才是真跨租户判据：实测 `/auth/refresh` 会为任意 workspaceId 发票据
+ *    （200 + access_token），所以去掉 getWorkspaceContext 里的成员查询时，
+ *    第 2 条仍然 401、只有第 3 条会退化。两条都留着。
+ * 4. 抄送 2 人后 GET → 200，数组含 2 条，字段齐（id/userId/user.name/read/nodeIndex）
+ * 5. 无抄送记录时 → 200 + 空数组（与"真的没有抄送"同形，但**不是** 405/404）
+ * 6. 实例不存在 → 404
+ * 7. viewer（只读成员）也能读 —— 读路径不应被角色门禁拦下
  */
 
 interface CcRow {
@@ -33,6 +37,8 @@ let instanceId: string;
 let emptyInstanceId: string;
 let outsiderToken: string;
 let outsiderInstanceId: string;
+let outsiderCookies: string[];
+let forgedToken: string | undefined;
 let viewerToken: string;
 
 async function createInstance(token: string, workspaceId: string, title: string) {
@@ -71,6 +77,27 @@ async function readCc(token: string | null, workspaceId: string, aid: string) {
   };
 }
 
+/**
+ * 用 session cookie 换一张**绑定到指定工作区**的 access token。
+ *
+ * 为什么必需：register 返回的 access_token 绑的是调用者自己的默认工作区，而
+ * `getWorkspaceContext` 的 wid 守卫（`payload.wid !== wid` 直接判 null）会在查成员
+ * **之前**短路成 401。所以要测"某工作区里的 viewer 角色"或"非成员越权"，
+ * 必须先换一张目标工作区的令牌——与 rbac.test.ts 同款做法。
+ */
+async function wsBoundToken(cookies: string[], workspaceId: string): Promise<string | undefined> {
+  const res = await fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    headers: { ...cookieHeader(cookies), "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId }),
+  });
+  const setCookie = res.headers.getSetCookie?.() ?? [];
+  return setCookie
+    .find((c) => c.startsWith("access_token="))
+    ?.split("=")[1]
+    ?.split(";")[0];
+}
+
 beforeAll(async () => {
   const owner = await registerUser({ prefix: "approval-cc-owner", workspaceName: "抄送读取测试" });
   ownerToken = owner.accessToken;
@@ -98,6 +125,7 @@ beforeAll(async () => {
     workspaceName: "抄送读取测试-外租户",
   });
   outsiderToken = outsider.accessToken;
+  outsiderCookies = outsider.cookies;
   const outsiderCreated = await createInstance(
     outsider.accessToken,
     outsider.workspace.id,
@@ -105,6 +133,11 @@ beforeAll(async () => {
   );
   expect(outsiderCreated.status).toBe(201);
   outsiderInstanceId = outsiderCreated.body!.data!.id;
+
+  // 越权令牌：outsider 并非 wid 的成员，但 /auth/refresh 实测照样为 wid 发票据。
+  // 拿这张"wid 合法、身份不合法"的令牌读取，判定必须落在成员校验上（见用例 3）。
+  forgedToken = await wsBoundToken(outsiderCookies, wid);
+  expect(forgedToken).toBeTruthy();
 
   // viewer 只读成员
   const viewer = await registerUser({ prefix: "approval-cc-viewer" });
@@ -115,36 +148,8 @@ beforeAll(async () => {
     body: JSON.stringify({ role: "viewer" }),
   });
   expect(demote.status).toBe(200);
-
-  // 关键：不能直接用 viewer.accessToken。
-  // registerUser 走 POST /auth/register 签发的令牌，其 JWT 的 wid 声明绑定的是
-  // **viewer 自己那个工作区**（registerUser 会顺手给他建一个）。而 getWorkspaceContext
-  // 在 lib/auth.ts:94 有 wid 守卫 `if (payload.wid && payload.wid !== wid) return null`，
-  // 于是拿这个令牌读 owner 的 wid 会在打开任何事务之前短路 → 401，
-  // 且**不是**权限判定失败、也不是路由缺陷。
-  // 正确做法与 rbac.test.ts:132-147 保持一致：重新登录后用 /auth/refresh 带上
-  // workspaceId=wid，换回一个绑定到目标工作区的 access_token。
-  const viewerLogin = await fetch(`${BASE}/auth/login`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email: viewer.user.email, password: TEST_PASSWORD }),
-  });
-  expect(viewerLogin.status).toBe(200);
-  const viewerCookies = viewerLogin.headers.getSetCookie?.() ?? [];
-  const viewerRefresh = await fetch(`${BASE}/auth/refresh`, {
-    method: "POST",
-    headers: { Cookie: viewerCookies.join("; "), "Content-Type": "application/json" },
-    body: JSON.stringify({ workspaceId: wid }),
-  });
-  expect(viewerRefresh.status).toBe(200);
-  viewerToken =
-    viewerRefresh.headers
-      .getSetCookie?.()
-      .find((c) => c.startsWith("access_token="))
-      ?.split("=")[1]
-      ?.split(";")[0] ?? "";
-  // 令牌为空会让后续断言以"401 vs 200"的形式伪装成路由问题，这里显式钉住。
-  expect(viewerToken).not.toBe("");
+  viewerToken = (await wsBoundToken(viewer.cookies, wid)) ?? "";
+  expect(viewerToken).toBeTruthy();
 });
 
 describe("审批实例抄送列表读取（GET .../cc）", () => {
@@ -153,9 +158,17 @@ describe("审批实例抄送列表读取（GET .../cc）", () => {
     expect(status).toBe(401);
   });
 
-  it("非本工作区成员用合法令牌也读不到（跨租户隔离）", async () => {
-    // 用 outsider 的令牌去读 owner 工作区的实例：成员校验先失败
+  it("令牌绑在别的工作区时读不到（wid 守卫层）", async () => {
+    // outsider 的 register 令牌绑它自己的工作区 ⇒ URL wid 与 payload.wid 不符
     const { status } = await readCc(outsiderToken, wid, instanceId);
+    expect(status).toBe(401);
+  });
+
+  it("令牌已换绑到本工作区但调用者不是成员时读不到（成员校验层 = 真跨租户判据）", async () => {
+    // forgedToken 的 payload.wid === wid，wid 守卫放行；唯一还挡着它的是成员查询。
+    // 若哪天 getWorkspaceContext 少了那次 findFirst，只有本用例会展红。
+    expect(forgedToken).toBeTruthy();
+    const { status } = await readCc(forgedToken!, wid, instanceId);
     expect([401, 403]).toContain(status);
   });
 
