@@ -46,14 +46,14 @@ client 直接跑，逐条只改一个变量。脚本：`/tmp/repro_cc_mech.cjs`�
 
 HTTP 面复核（同一 hardened 容器，集成测试）：
 
-| 端点 | hardened（修复前）| owner 角色（RLS 被绕过）|
-|---|---|---|
-| `POST .../cc` | 500 | 200 |
-| `POST .../approve` | 500 | 200 |
-| `POST .../reject` | 500 | 200 |
-| `POST .../transfer` | 500 | 200 |
-| `POST .../delegate` | 500 | 200 |
-| `POST .../add-sign` | 500 | 200 |
+| 端点 | hardened（修复前）| hardened（修复后）| owner 角色（RLS 被绕过）|
+|---|---|---|---|
+| `POST .../cc` | 500 | 200 | 200 |
+| `POST .../approve` | 500 | 200 | 200 |
+| `POST .../reject` | 500 | 200 | 200 |
+| `POST .../transfer` | 500 | 200 | 200 |
+| `POST .../delegate` | 500 | 200 | 200 |
+| `POST .../add-sign` | 500 | 200 | 200 |
 
 服务端日志逐条对应：`[POST approve] error` / `[POST reject] error` /
 `[POST transfer] error` / `[POST delegate] error` / `[POST add-sign] error` /
@@ -100,13 +100,38 @@ helper 一处。
 
 ```bash
 # hardened 容器（corps_app 连库，指向本轮审计库 127.0.0.1:55441）
-cd web && TEST_BASE_URL=http://127.0.0.1:34572/api/v1 \
+cd web && TEST_BASE_URL=http://127.0.0.1:34574/api/v1 \
   npx vitest run tests/integration/approval-cross-user.test.ts \
                  tests/integration/task-cross-user-notify.test.ts \
                  tests/integration/approval-cc.test.ts
 # 对照腿（owner 角色，RLS 被绕过）
-TEST_BASE_URL=http://127.0.0.1:34571/api/v1 同上
+TEST_BASE_URL=http://127.0.0.1:34573/api/v1 同上
 ```
+
+### 6.1 本轮验证记录（数字都要带条件，否则下一次复算对不上）
+
+被测态：`main` = `c38c9ae0`（含 `ff4be690` 通知修复、`ff52cb4e` 抄送用例修正、`509ab641` 排版）。
+构件：`corps-audit-img:509ab641`（本机 `docker build` rc=0，Windows Docker Desktop / Linux 容器内构建）。
+两个容器同一镜像、同一库（`corps-audit-pg-c6e90dfb`，100 表 / 272 策略 / conversations 为 ENABLE+FORCE RLS），
+差别只在连接角色：34573=postgres（BYPASSRLS）、34574=corps_app（NOBYPASSRLS）。
+
+| 腿 | 命令范围 | 结果 | 条件 |
+|---|---|---|---|
+| hardened | `vitest run tests/integration`（24 个文件）| **200 passed / 4 skipped，rc=0** | 热态（容器已 ready、路由已在内存）；`rls-engine` 因未注入 `RLS_SMOKE_*_URL` 退成 skip |
+| hardened 补测 | 同上 + `RLS_SMOKE_OWNER_URL/APP_URL` | **4 passed** | 单独跑 `rls-engine.test.ts`，把上面那条 skip 补成实测 |
+| owner | `vitest run`（全量：单测 + 集成）| **952 passed / 4 skipped，rc=0**（92 文件）| 与 CI 的 `Test` 腿同口径（不带 coverage 阈值）|
+| 类型/lint | `tsc --noEmit`、`eslint` | rc=0 | 在**私有工作树** `F:/Nexus/corps-audit-wt`（detached 到被测 sha）上跑，避开共享树里他人未提交文件 |
+| 排版 | `prettier --check` | clean | **必须**用 `git archive` 出 LF 净副本再跑：本机 `core.autocrlf=true` 会把工作树所有 `.ts` 落成 CRLF，直接在 Windows 工作树上 check 会把全仓都报成"不合规"（本轮据此误判过一次，净副本复测后确认只有我 3 个新文件真有超长行未折，已在 `509ab641` 修掉）|
+
+CI 终判（比本机数字权威，条件不同：ubuntu + `next dev` + postgres:18 服务）：
+`509ab641` 上 11/12 绿，唯一红的是 `Unit Coverage Ratchet`，报点 `[NEW_ZERO] lib/notification/record.ts`
+——门禁自己给了处置口径"新代码要么带测试，要么显式进基线并说明理由"，选择带测试那条
+（`e1c976cb`：3 条用例，其中一条把 `create` mock 成抛 42501，所以改回 create 必红）。
+把新代码倒进零覆盖基线等于绕过它，没走那条。
+
+一处必须自我更正的**先前验证无效**：#32/#33 我当时报"本机全绿"，用的是 **owner 角色**的容器，
+即 RLS 被绕过条件下的全绿，对 hardened 腿没有证明力；真正暴露问题的是推上去之后的 CI
+（`Test (hardened RLS mode)` 红）。教训：容器形态验证必须把角色也当成一个被测维度。
 
 ## 7. 防回归建议（待拍板，未落地）
 
