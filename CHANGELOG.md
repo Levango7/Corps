@@ -66,6 +66,17 @@
   另核一条版本分歧：锁文件由本机 pnpm 12.9.1 写，而 CI 与 Dockerfile 读 `packageManager` 用 **pnpm 11.22.0**；
   以 `corepack pnpm@11.22.0 install --frozen-lockfile --ignore-scripts` 实测**退出 0**（57s），
   且该树里同样只有 `tinypool@2.2.0` / `source-map-js@1.2.2`——override 被 pnpm 11 同口径解析，不存在"本地绿 CI 红"的版本缝隙。
+  同一 CI 形状在**干净 worktree（`git worktree` 于仓库外）+ `pnpm@11.22.0` 冷装**复测一遍，判定不变：
+  单测 **67 文件 / 735 例全绿**、覆盖率 functions **56.40%** / branches **72.07%**（阈值 55/70 过）、
+  `tsc --noEmit` 退出 0、零覆盖棘轮 PASS(628) 且 `--self-test` 退出 0。
+  与上面主工作树的 56.70%/72.09% 差在小数第二位，来自两棵树的统计状态不同，不改变任何判定。
+  **Build 腿本机验不了**：`next build` 在 `next.config.ts` 加载期就红
+  （`next-intl` 的 SWC extractor 要求 `@swc/core` 原生绑定，而绑定要落进受校验的缓存目录，
+  `ERR_SWC_NATIVE_CACHE`：`%LOCALAPPDATA%\swc` 与自指目录 `SWC_NATIVE_BINDING_CACHE` 的 DACL 都因给非属主 SID
+  授予 replacement rights 被拒）。在用户主工作树复现**同一条错误**，且 `@swc/core@1.16.13` 的锁文件坐标本笔未动
+  ⇒ 属本机 Windows ACL 与 SWC 的冲突，不是本笔改动引入，也不是仓库缺陷；绕过它需要改机器 ACL，未做。
+  该腿只能由 CI 的 ubuntu runner 判定——而它自 `2026-10-06T03:00` 起因 audit 红被 `needs` 恒 skipped，
+  这次推送会是它这几天第一次真跑。
 
 ### Fixed
 
