@@ -29,3 +29,13 @@ overrides:
   #   jsdom（经 vitest 带入，且被 --prod 审计计入）声明 ^8.9.0 → 修复版 >=8.10.2
   "undici@^7.29.0": ">=7.29.1 <8"
   "undici@^8.9.0": ">=8.10.2 <9"
+  # tinypool 两条 critical（GHSA-5gmw-xhrv-c9v3 等：worker options 的原型污染 gadget → RCE）
+  # 只有 2.1.2+ 修了，而 vitest 3.2.7 声明的是 ^1.1.1；升 vitest 到 4 能自然摆脱 tinypool，
+  # 但 v4 把覆盖率统计口径改成"include 命中的全部 712 个文件"（实测 total functions
+  # 59.33% → 5.78%），等于逼两道门重新定标，所以这里先只顶依赖、把 vitest 留在 3.2.7。
+  # 加 <3 上界是照 undici 那两行的教训：无上界会把请求解析到未修复或跨大版本的版本。
+  # 这个组合越过了 vitest 自己声明的范围，必须由测试跑通来背书——见本轮单测计数。
+  tinypool: ">=2.1.2 <3"
+  # source-map-js 1.2.1 = GHSA-68fv-2mgg-jv7q（high：source-map section 偏移可造成事件循环 DoS），
+  # 1.2.2 是同大版本补丁；引入方是 prisma CLI（magicast）与 tailwind（postcss），都被 --prod 计入。
+  source-map-js: ">=1.2.2"
