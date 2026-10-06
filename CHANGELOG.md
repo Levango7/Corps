@@ -39,6 +39,33 @@
   同时关掉 ②③ → 清理侧用例红（种入的那条 8s 内没被删）。两处还原后按 md5 确认逐字节一致并复绿。
   **已知未收口**：切换工作区（URL 仍在 `/w/` 下、不经过 `/auth`）不触发第③层——但第①层已保证租户内容从来不会被写入，
   所以这一条只是少了一道兜底扫描，不再是残留面。
+- **发布链被两条 critical 依赖公告打断（`pnpm audit --prod`）**：CI 的 Security Audit job 跑
+  `pnpm audit --prod --audit-level=high`，2026-10-06T03:00 那轮报 **2 critical + 1 high**：
+  tinypool 的 worker-options 原型污染→RCE（GHSA-5gmw-xhrv-c9v3 等，只有 `>=2.1.2` 修）与
+  source-map-js 的事件循环 DoS（`1.2.1`→`1.2.2`）。它 `needs` 下游 `Build` 与
+  `Publish image (GHCR)`，所以**镜像发布从那一刻起是断的**。
+  成因不是本仓回归：同一颗锁文件下，10-05T20:15 那轮只有 `5 found — 1 low | 4 moderate`、
+  日志里 grep `tinypool` = 0 次，10-06T03:00 变 10 条，而 `git diff 3836352b..50506a36 -- web/pnpm-lock.yaml` 为空
+  ⇒ 是公告库更新。另外 `tinypool` 是经 `.>better-auth>vitest>tinypool` 进入 `--prod` 视图的
+  （better-auth 把 vitest 声明成 peerDependency，而 lock 的 `settings.autoInstallPeers: true`）。
+  修法取 **pnpm override**（`web/pnpm-workspace.yaml`，与既有 sharp/undici 同一条路子，都带上界防止跨大版本）：
+  `tinypool: ">=2.1.2 <3"`、`source-map-js: ">=1.2.2"`；锁文件解析结果实测为
+  `tinypool@2.2.0` / `source-map-js@1.2.2`，且 diff 只有这两条及它们的依赖指向，无夹带。
+  **为什么不是升 vitest**：先试了 vitest 4.1.11（它根本不用 tinypool，装上后锁里 tinypool 归零）。
+  但 v4 把覆盖率统计口径从"被测试加载的文件"换成"`include` 命中的全部 712 个文件"，实测
+  `total.functions` 从 59.33% 掉到 5.78%、`branches` 4.62%，而 CI 的阈值（55/70）是照旧口径校的——
+  换上去就得给两道门重新定标，等于用"调低阈值"换绿灯。该实验已完整回退（vitest 回到 3.2.7）。
+  现在的组合是 vitest 3.2.7 + tinypool 2.2.0，**越过了 vitest 自己声明的 `^1.1.1`**，
+  所以由测试背书：单测 **67 文件 / 735 例全绿**、覆盖率阈值判定 exit 0（functions 56.70%、branches 72.09%）、
+  零覆盖棘轮 PASS（628 行，`--self-test` 亦 0）。
+  审计口径本机**可以**复现，只要显式指官方源（默认源 `registry.npmmirror.com` 没有 audit 端点）：
+  `pnpm audit --prod --audit-level=high --registry=https://registry.npmjs.org` 在改前锁文件（HEAD 态，独立临时工程里跑）
+  报 `10 found — 3 low | 4 moderate | 1 high | 2 critical`、**退出 1**，路径与 CI 一致
+  （`.>better-auth>vitest>tinypool`、`.>@tailwindcss/postcss>postcss>source-map-js` 等 17 条）；
+  改后同一命令报 `7 found — 3 low | 4 moderate`（**0 critical / 0 high**）、**退出 0**，即门禁要的形状。
+  另核一条版本分歧：锁文件由本机 pnpm 12.9.1 写，而 CI 与 Dockerfile 读 `packageManager` 用 **pnpm 11.22.0**；
+  以 `corepack pnpm@11.22.0 install --frozen-lockfile --ignore-scripts` 实测**退出 0**（57s），
+  且该树里同样只有 `tinypool@2.2.0` / `source-map-js@1.2.2`——override 被 pnpm 11 同口径解析，不存在"本地绿 CI 红"的版本缝隙。
 
 ### Fixed
 
