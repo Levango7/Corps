@@ -17,7 +17,7 @@
  * - DELETE /api/v1/workspaces/${workspaceId}/spaces/${spaceId}/permissions/${permissionId}
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Loader2, Trash2, Plus, Shield, X, ChevronDown } from "lucide-react";
 import { api, ApiError } from "@/lib/api";
@@ -121,7 +121,9 @@ export function FolderPermissionPanel({
 
   const basePath = buildBasePath(workspaceId, targetType, targetId);
 
-  async function loadPermissions() {
+  // useCallback 稳定引用：basePath 由 workspaceId/targetType/targetId 派生，
+  // 仅在目标或语言变化时才产生新引用，从而让下方 useEffect 的触发条件保持不变。
+  const loadPermissions = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -133,11 +135,11 @@ export function FolderPermissionPanel({
     } finally {
       setLoading(false);
     }
-  }
+  }, [basePath, t]);
 
   useEffect(() => {
     loadPermissions();
-  }, [basePath, t]);
+  }, [loadPermissions]);
 
   async function removePermission(permission: PermissionItem) {
     if (!window.confirm(t("confirmRemove"))) return;

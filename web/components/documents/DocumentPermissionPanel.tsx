@@ -16,7 +16,7 @@
  * 来源标记：explicit（显式授权）/ inherited（继承）/ author（作者）/ module（模块）
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
   Loader2,
@@ -142,7 +142,9 @@ export function DocumentPermissionPanel({ workspaceId, documentId }: DocumentPer
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
 
-  async function loadPermissions() {
+  // useCallback 稳定引用：既让下方 useEffect 能把它列进依赖数组，
+  // 又保证只有 workspaceId / documentId / 语言变化时才真正重新拉取。
+  const loadPermissions = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -155,7 +157,7 @@ export function DocumentPermissionPanel({ workspaceId, documentId }: DocumentPer
     } finally {
       setLoading(false);
     }
-  }
+  }, [workspaceId, documentId, t]);
 
   useEffect(() => {
     loadPermissions();
@@ -177,7 +179,7 @@ export function DocumentPermissionPanel({ workspaceId, documentId }: DocumentPer
       .catch(() => {
         // 角色列表加载失败不阻塞权限管理
       });
-  }, [workspaceId, documentId, t]);
+  }, [workspaceId, loadPermissions]);
 
   async function removePermission(permission: DocumentPermission) {
     if (!window.confirm(t("confirmRemove"))) return;

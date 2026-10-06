@@ -17,7 +17,7 @@
  * 分享 URL 格式：${window.location.origin}/share/${shareToken}
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import {
   Loader2,
@@ -163,7 +163,9 @@ export function ShareDialogEnhanced({
   // 成功提示状态
   const [successMsg, setSuccessMsg] = useState("");
 
-  async function loadShareLinks() {
+  // useCallback 稳定引用：仅在 workspaceId / documentId / 语言变化时产生新引用，
+  // 因此下面 useEffect 的触发时机与原先 [workspaceId, documentId] 等价（另补上语言切换）。
+  const loadShareLinks = useCallback(async () => {
     setLoading(true);
     setError("");
     try {
@@ -176,11 +178,11 @@ export function ShareDialogEnhanced({
     } finally {
       setLoading(false);
     }
-  }
+  }, [workspaceId, documentId, t]);
 
   useEffect(() => {
     loadShareLinks();
-  }, [workspaceId, documentId]);
+  }, [loadShareLinks]);
 
   /** 自动清除成功提示 */
   useEffect(() => {

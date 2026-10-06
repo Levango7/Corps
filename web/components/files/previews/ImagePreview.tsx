@@ -50,6 +50,7 @@ export function ImagePreview({ src, fileName }: ImagePreviewProps) {
           {t("loading")}
         </span>
       )}
+      {/* eslint-disable-next-line @next/next/no-img-element -- src 是运行时动态的私有文件端点（靠会话 Cookie 鉴权），next/image 优化器服务端取源不带 Cookie 会 401；且需 transform: scale() 缩放 + max-w/max-h 自然尺寸语义（fill 会把小图放大）、含 svg（需 dangerouslyAllowSVG）、可能为 blob:/跨域预签名 URL（需 remotePatterns）——均无法预声明，故保留原生 img */}
       <img
         src={src}
         alt={fileName}

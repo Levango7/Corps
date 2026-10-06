@@ -92,6 +92,7 @@ function ImagePreview({ url, fileName }: { url: string; fileName: string }) {
       className="flex items-center justify-center w-full h-full overflow-auto bg-[var(--surface-2)]"
       data-testid="image-preview"
     >
+      {/* eslint-disable-next-line @next/next/no-img-element -- src 是运行时动态的私有文件端点（/api/v1/workspaces/{wid}/files/{fid}/download，靠会话 Cookie 鉴权），next/image 的服务端优化器取源时不带用户 Cookie 会 401；且文件尺寸未知（需 fill/固定宽高，会破坏 max-w/max-h 的自然尺寸语义）、含 svg（需 dangerouslyAllowSVG）、可能为 blob: 或跨域预签名 URL（需 remotePatterns）——均无法在此处声明，故保留原生 img */}
       <img
         src={url}
         alt={fileName}
