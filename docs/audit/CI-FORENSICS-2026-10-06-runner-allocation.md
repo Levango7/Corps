@@ -24,6 +24,10 @@
 > 失败步骤恒为 `Audit production deps (high/critical block CI)`，其余 11 个 job 全 success。
 > 红因仍是**公告库更新**而非本仓回归（本文的 runner 分配结论不受影响）。
 > 已由 `526e1111` 的两条 pnpm override 解掉，改前/改后同命令实测 `退出 1 → 退出 0`，口径见 CHANGELOG。
+> **终判（2026-10-06）**：推送 `9f80938d` 的 CI run `37415473720` = **12/12 success**，
+> `Security Audit` 首次转绿并把 `Build` 与 `Publish image (GHCR)` 一起放回来，
+> 发布日志实到 `ghcr.io/levango7/corps:{main,latest,sha-9f80938d…}`；`Test`/`Test (hardened RLS)`/
+> `E2E (production build)` 三条腿在 `tinypool@2.2.0` 下全绿（本机因 Docker 未起而没跑的那两条，由此补上）。
 >
 > 由此固化一条判据：**"这颗 sha 全绿"不等于"这颗 sha 现在仍全绿"**——审计类门禁的结论绑定
 > 公告库时间点，引用它必须带时间戳；同理重跑历史 red 时，先问"门禁的输入变了没有"再归因代码。

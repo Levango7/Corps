@@ -76,7 +76,8 @@
   授予 replacement rights 被拒）。在用户主工作树复现**同一条错误**，且 `@swc/core@1.16.13` 的锁文件坐标本笔未动
   ⇒ 属本机 Windows ACL 与 SWC 的冲突，不是本笔改动引入，也不是仓库缺陷；绕过它需要改机器 ACL，未做。
   该腿只能由 CI 的 ubuntu runner 判定——而它自 `2026-10-06T03:00` 起因 audit 红被 `needs` 恒 skipped，
-  这次推送会是它这几天第一次真跑。
+  这次推送会是它这几天第一次真跑。构建路径的**既有性**另有旁证：E2E (production build) job 里自带
+  `npx next build`，它不依赖 audit，改前锁文件下一直是绿的 ⇒ 本笔在构建面未测的增量只有 source-map-js 的补丁版。
 
 ### Fixed
 
