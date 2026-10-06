@@ -96,8 +96,8 @@ describe("任务族跨用户通知（FORCE RLS 生产形态）", () => {
     });
     expect(r.status, `决议不应 5xx：${r.text.slice(0, 300)}`).toBeLessThan(500);
     expect([200, 201]).toContain(r.status);
-    expect((await notificationsOfType(assigneeToken, wid, "decision_updated")).length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      (await notificationsOfType(assigneeToken, wid, "decision_updated")).length,
+    ).toBeGreaterThan(0);
   });
 });

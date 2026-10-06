@@ -101,27 +101,35 @@ describe("审批族跨用户通知（FORCE RLS 生产形态）", () => {
     const aid = await newInstanceId("跨用户-驳回", actorId);
     const r = await act(actorToken, aid, "reject", { comment: "不同意" });
     expectNoServerFailure("reject", r.status, r.text);
-    expect((await notificationsOfType(ownerToken, wid, "approval_result")).length).toBeGreaterThan(0);
+    expect((await notificationsOfType(ownerToken, wid, "approval_result")).length).toBeGreaterThan(
+      0,
+    );
   });
 
   it("审批人转交 → 接收人收到 approval_transfer", async () => {
     const aid = await newInstanceId("跨用户-转交", actorId);
     const r = await act(actorToken, aid, "transfer", { transferToId: targetId });
     expectNoServerFailure("transfer", r.status, r.text);
-    expect((await notificationsOfType(targetToken, wid, "approval_transfer")).length).toBeGreaterThan(0);
+    expect(
+      (await notificationsOfType(targetToken, wid, "approval_transfer")).length,
+    ).toBeGreaterThan(0);
   });
 
   it("审批人委托 → 接收人收到 approval_delegate", async () => {
     const aid = await newInstanceId("跨用户-委托", actorId);
     const r = await act(actorToken, aid, "delegate", { delegateToId: targetId });
     expectNoServerFailure("delegate", r.status, r.text);
-    expect((await notificationsOfType(targetToken, wid, "approval_delegate")).length).toBeGreaterThan(0);
+    expect(
+      (await notificationsOfType(targetToken, wid, "approval_delegate")).length,
+    ).toBeGreaterThan(0);
   });
 
   it("审批人加签 → 接收人收到 approval_add_sign", async () => {
     const aid = await newInstanceId("跨用户-加签", actorId);
     const r = await act(actorToken, aid, "add-sign", { addSignToId: targetId });
     expectNoServerFailure("add-sign", r.status, r.text);
-    expect((await notificationsOfType(targetToken, wid, "approval_add_sign")).length).toBeGreaterThan(0);
+    expect(
+      (await notificationsOfType(targetToken, wid, "approval_add_sign")).length,
+    ).toBeGreaterThan(0);
   });
 });

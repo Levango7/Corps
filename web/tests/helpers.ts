@@ -194,7 +194,9 @@ export async function notificationsOfType(
   if (res.status !== 200) {
     throw new Error(`读取通知列表失败: ${res.status} ${(await res.text()).slice(0, 200)}`);
   }
-  const body = (await res.json()) as { data?: { items?: Array<{ type: string; entityId?: string }> } };
+  const body = (await res.json()) as {
+    data?: { items?: Array<{ type: string; entityId?: string }> };
+  };
   return (body?.data?.items ?? []).filter((n) => n.type === type);
 }
 
