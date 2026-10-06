@@ -85,9 +85,13 @@ self-check wrong: 0
 - 修法二选一（都要连带测试，未在本机验证，因为 Docker/PG 没起、`next build` 又被 Windows SWC
   DACL 卡住，见 [[corps-verify-hazards]] §12）：
   ① 给 `cc/route.ts` 补 `GET`：`requirePermission(ctx, "approvals", "r")` + 按 `workspaceId`/RLS 过滤，
-     返回 `data: CcUser[]`，并同步 `api/openapi.yaml`（注意 `check_api_contract.py` 是只允许收缩的
-     205 端点基线，新增路径要按该脚本口径处理，且该脚本归属并行会话）；
-  ② 或让详情端点把 `cc` 一起返回，删掉这两次独立请求。
+     返回 `data: CcUser[]`；
+  ② 或让详情端点把 `cc` 一起返回，删掉这两次独立请求（少一个端点，但要改详情响应契约，成本更高）。
+- **补一条实测，因为这条改动的成本比看上去低**：`check_api_contract.py` 的 `collect_routes()`
+  返回的是**路径集合、不含 HTTP method**，而 `scripts/api-contract-baseline.txt:124` 已收了
+  `/api/v1/workspaces/{wid}/approvals/instances/{aid}/cc` ⇒ **给已有路径补 GET 不会触碰只允许收缩的
+  端点基线**、也不需要新增路径条目（openapi 补 operation 即可，该门禁只比 path 键）。
+  所以选 ① 不必先谈并行会话的脚本归属；真要谈的是"要不要把方法维度纳入契约"——那是另一条更大的口径。
 - 已在 `ApprovalDetail.tsx:245-247` 留 `TODO(P2)` 注释指向本文，未擅自改服务端行为。
 
 ---
