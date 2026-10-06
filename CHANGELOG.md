@@ -128,6 +128,12 @@
   `PATCH /workspaces/{wid}/notifications`（标记自己的已读，按 `ctx.payload.sub` 过滤）
   与 `POST /workspaces/{wid}/presence`（上报自己的 onlineAt 心跳）——均为"写的是用户
   自己的数据"，viewer 亦应放行。
+- `web/eslint.config.mjs` 的 ignores 补 `".next.stale.*/**"`：验证流程常把旧构建目录改名保留
+  （`.gitignore` 里的 `web/.next.stale.*` 就是为它写的），而 eslint 原先只忽略 `.next/**`。
+  本机一次 `eslint .` 因此吞进 **4,990** 个 minified chunk、报出 **436,701** 条与代码无关的红；
+  补这一行后同一命令是 **0 error / 5 warning**——即仓库本身一直是干净的。变异对照：
+  同一个 chunk 去掉忽略行 → 542 problems（537 errors），加回 → 仅剩"按忽略规则跳过"的提示。
+  CI 从没暴露过这个坑，因为它跑在干净 checkout 上、那个目录不存在。
 
 ### Changed
 
