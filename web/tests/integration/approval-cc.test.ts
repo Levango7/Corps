@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { BASE, registerUser, authHeader, inviteMember } from "../helpers";
+import { BASE, registerUser, authHeader, inviteMember, TEST_PASSWORD } from "../helpers";
 
 /**
  * 审批实例抄送列表读取端集成测试（GET /workspaces/{wid}/approvals/instances/{aid}/cc）
@@ -115,7 +115,36 @@ beforeAll(async () => {
     body: JSON.stringify({ role: "viewer" }),
   });
   expect(demote.status).toBe(200);
-  viewerToken = viewer.accessToken;
+
+  // 关键：不能直接用 viewer.accessToken。
+  // registerUser 走 POST /auth/register 签发的令牌，其 JWT 的 wid 声明绑定的是
+  // **viewer 自己那个工作区**（registerUser 会顺手给他建一个）。而 getWorkspaceContext
+  // 在 lib/auth.ts:94 有 wid 守卫 `if (payload.wid && payload.wid !== wid) return null`，
+  // 于是拿这个令牌读 owner 的 wid 会在打开任何事务之前短路 → 401，
+  // 且**不是**权限判定失败、也不是路由缺陷。
+  // 正确做法与 rbac.test.ts:132-147 保持一致：重新登录后用 /auth/refresh 带上
+  // workspaceId=wid，换回一个绑定到目标工作区的 access_token。
+  const viewerLogin = await fetch(`${BASE}/auth/login`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email: viewer.user.email, password: TEST_PASSWORD }),
+  });
+  expect(viewerLogin.status).toBe(200);
+  const viewerCookies = viewerLogin.headers.getSetCookie?.() ?? [];
+  const viewerRefresh = await fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    headers: { Cookie: viewerCookies.join("; "), "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId: wid }),
+  });
+  expect(viewerRefresh.status).toBe(200);
+  viewerToken =
+    viewerRefresh.headers
+      .getSetCookie?.()
+      .find((c) => c.startsWith("access_token="))
+      ?.split("=")[1]
+      ?.split(";")[0] ?? "";
+  // 令牌为空会让后续断言以"401 vs 200"的形式伪装成路由问题，这里显式钉住。
+  expect(viewerToken).not.toBe("");
 });
 
 describe("审批实例抄送列表读取（GET .../cc）", () => {
