@@ -71,7 +71,7 @@ export async function GET(
           }),
           tx.documentVersion.count({ where: { documentId: id, workspaceId: wid } }),
         ]);
-        return { versions, total };
+        return { versions, total, currentVersion: doc.currentVersion };
       },
       ctx.payload.sub,
     );
@@ -87,6 +87,7 @@ export async function GET(
       code: 200,
       data: {
         items: result.versions,
+        currentVersion: result.currentVersion,
         page,
         limit,
         total: result.total,

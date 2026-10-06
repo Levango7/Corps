@@ -19,7 +19,7 @@
 
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
-import { api, apiList, ApiError } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
 import { Check, Clock, Eye, GitCompare, History, Loader2, Plus, RotateCcw, X } from "lucide-react";
 
 // ── 类型定义（对应设计文档 §2.3.2 Prisma schema）──
@@ -38,6 +38,29 @@ interface DocumentVersion {
   source: string; // publish | manual | auto | collaborative
   author: VersionAuthor | null;
   createdAt: string;
+}
+
+interface DocumentVersionList {
+  items: DocumentVersion[];
+  currentVersion: number;
+  page: number;
+  limit: number;
+  total: number;
+  hasMore: boolean;
+}
+
+interface RestoredDocument {
+  title: string;
+  markdown: string;
+  publishedMarkdown: string | null;
+  publishedAt: string | null;
+  shareToken: string | null;
+}
+
+interface RestoreVersionResponse {
+  document: RestoredDocument;
+  snapshotVersion: number;
+  restoredFromVersionId: string;
 }
 
 /** 版本对比 diff 结果（对应设计文档 §2.3.3 响应） */
@@ -92,15 +115,23 @@ interface DocumentVersionHistoryProps {
   wid: string;
   docId: string;
   onClose: () => void;
+  onRestored?: (document: RestoredDocument) => void;
 }
 
-export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionHistoryProps) {
+export function DocumentVersionHistory({
+  wid,
+  docId,
+  onClose,
+  onRestored,
+}: DocumentVersionHistoryProps) {
   const t = useTranslations("document");
   const locale = typeof window !== "undefined" ? document.documentElement.lang : "en";
 
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
+  const [currentVersion, setCurrentVersion] = useState<number | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
 
   // 查看版本内容
   const [viewing, setViewing] = useState<DocumentVersion | null>(null);
@@ -124,14 +155,16 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
     setLoading(true);
     setError("");
     try {
-      // GET /documents/{id}/versions 返回分页信封 data:{ items, page, limit, total, hasMore }
-      // ——route.ts 里 items 的取值是 result.versions，**响应键仍是 items**。
-      // 曾按 data.versions 取（错键），Array.isArray 兜底成 [] 后版本历史恒为空且不报错；
-      // 用 apiList 归一化（它同时吃 { items } 与裸数组），改口径不会再静默失效。
-      const data = await apiList<DocumentVersion>(
+      // GET /documents/{id}/versions 返回分页信封，currentVersion 是服务端文档真值。
+      // 不能按当前页数组位置推断“当前版本”，否则分页后会把旧版本误标为最新版。
+      const data = await api<DocumentVersionList>(
         `/api/v1/workspaces/${wid}/documents/${docId}/versions`,
       );
-      setVersions(data);
+      if (!Array.isArray(data.items) || !Number.isInteger(data.currentVersion)) {
+        throw new Error(t("versionLoadFailed"));
+      }
+      setVersions(data.items);
+      setCurrentVersion(data.currentVersion);
     } catch (e) {
       setError(e instanceof Error ? e.message : t("versionLoadFailed"));
     } finally {
@@ -167,10 +200,16 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
   // ── 回滚 ──
   async function confirmRollback() {
     if (!rollbackTarget || busy) return;
+    if (rollbackTarget.version === currentVersion) {
+      setRollbackTarget(null);
+      setNotice(t("versionRollbackNoop"));
+      return;
+    }
     setBusy(true);
     setError("");
+    setNotice("");
     try {
-      await api(
+      const restored = await api<RestoreVersionResponse>(
         `/api/v1/workspaces/${wid}/documents/${docId}/versions/${rollbackTarget.id}/restore`,
         {
           method: "POST",
@@ -178,6 +217,7 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
       );
       setRollbackTarget(null);
       await loadVersions();
+      onRestored?.(restored.document);
     } catch (e) {
       setError(e instanceof ApiError ? e.message : t("versionRollbackFailed"));
     } finally {
@@ -191,6 +231,7 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
     if (busy) return;
     setBusy(true);
     setError("");
+    setNotice("");
     try {
       await api(`/api/v1/workspaces/${wid}/documents/${docId}/versions`, {
         method: "POST",
@@ -225,14 +266,24 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
   // ── 渲染 ──
 
   return (
-    <div className="fixed inset-y-0 right-0 w-[400px] max-w-[90vw] border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)] z-[var(--z-modal)] flex flex-col">
+    <div
+      id="document-version-history"
+      role="dialog"
+      aria-label={t("versionHistory")}
+      className="fixed inset-y-0 right-0 w-[400px] max-w-[90vw] border-l border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)] z-[var(--z-modal)] flex flex-col"
+    >
       {/* 头部 */}
-      <div className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">
-        <div className="flex items-center gap-2">
-          <History size={16} className="text-[var(--muted)]" />
-          <h3 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-            {t("versionHistory")}
-          </h3>
+      <div className="flex items-start justify-between gap-[var(--space-3)] border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">
+        <div className="min-w-0">
+          <div className="flex items-center gap-[var(--space-2)]">
+            <History size={16} className="shrink-0 text-[var(--muted)]" />
+            <h3 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+              {t("versionHistory")}
+            </h3>
+          </div>
+          <p className="mt-[var(--space-1)] text-[length:var(--text-xs)] leading-relaxed text-[var(--meta)]">
+            {t("versionHistoryScope")}
+          </p>
         </div>
         <button
           type="button"
@@ -307,6 +358,14 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
           {error}
         </div>
       )}
+      {notice && (
+        <div
+          role="status"
+          className="mx-[var(--space-4)] mt-[var(--space-2)] rounded-[var(--radius-sm)] bg-[var(--surface-2)] px-[var(--space-3)] py-[var(--space-2)] text-[length:var(--text-xs)] text-[var(--fg-2)]"
+        >
+          {notice}
+        </div>
+      )}
 
       {/* 版本列表 */}
       <div className="flex-1 overflow-y-auto">
@@ -327,11 +386,11 @@ export function DocumentVersionHistory({ wid, docId, onClose }: DocumentVersionH
           </div>
         ) : (
           <ul className="py-[var(--space-2)]">
-            {versions.map((v, idx) => (
+            {versions.map((v) => (
               <VersionItem
                 key={v.id}
                 version={v}
-                isLatest={idx === 0}
+                isLatest={v.version === currentVersion}
                 locale={locale}
                 compareMode={compareMode}
                 selectedForCompare={selectedForCompare}

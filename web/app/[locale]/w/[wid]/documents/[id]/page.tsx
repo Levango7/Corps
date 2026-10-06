@@ -1,11 +1,17 @@
 "use client";
 
+import { History } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 import dynamic from "next/dynamic";
 
 // P0-2: code splitting — DocumentEditor 改为 dynamic import 懒加载
+const DocumentVersionHistory = dynamic(
+  () => import("@/components/DocumentVersionHistory").then((m) => m.DocumentVersionHistory),
+  { ssr: false },
+);
+
 const DocumentEditor = dynamic(
   () => import("@/components/DocumentEditor").then((m) => m.DocumentEditor),
   {
@@ -76,6 +82,8 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
   const [id, setId] = useState<string | null>(null);
   const [data, setData] = useState<DocumentEditorProps["initial"] | null>(null);
   const [error, setError] = useState("");
+  const [versionHistoryOpen, setVersionHistoryOpen] = useState(false);
+  const [editorKey, setEditorKey] = useState(0);
   // 权限管理：仅对有 manage 权限的用户显示 PermissionManager
   const [canManage, setCanManage] = useState(false);
 
@@ -131,6 +139,17 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
     };
   }, [params, t]);
 
+  function handleVersionRestored(document: DocumentEditorProps["initial"]) {
+    setData({
+      title: document.title,
+      markdown: document.markdown,
+      publishedMarkdown: document.publishedMarkdown,
+      publishedAt: document.publishedAt,
+      shareToken: document.shareToken,
+    });
+    setEditorKey((key) => key + 1);
+  }
+
   if (error) {
     return <p className="p-[var(--space-8)] text-center text-[var(--danger)]">{error}</p>;
   }
@@ -139,10 +158,30 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
   }
   return (
     <div className="flex flex-col gap-[var(--space-4)]">
+      <div className="mx-auto flex w-full max-w-3xl justify-end px-[var(--space-4)] pt-[var(--space-4)]">
+        <button
+          type="button"
+          onClick={() => setVersionHistoryOpen((open) => !open)}
+          aria-expanded={versionHistoryOpen}
+          aria-controls="document-version-history"
+          className="inline-flex min-h-[var(--space-12)] items-center gap-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] px-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--fg-2)] transition-colors duration-[var(--motion-fast)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] active:bg-[var(--surface-3)]"
+        >
+          <History size={16} aria-hidden="true" />
+          {t("versionHistory")}
+        </button>
+      </div>
       <SafeComponent name="文档编辑器">
-        <DocumentEditor wid={wid} id={id} initial={data} />
+        <DocumentEditor key={editorKey} wid={wid} id={id} initial={data} />
       </SafeComponent>
       {canManage && <PermissionManager docId={id} workspaceId={wid} />}
+      {versionHistoryOpen && (
+        <DocumentVersionHistory
+          wid={wid}
+          docId={id}
+          onClose={() => setVersionHistoryOpen(false)}
+          onRestored={handleVersionRestored}
+        />
+      )}
     </div>
   );
 }
