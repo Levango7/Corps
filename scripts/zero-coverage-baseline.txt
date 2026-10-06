@@ -621,6 +621,7 @@ lib/livekit-utils.ts
 lib/mail/transporter.ts
 lib/payments/alipay-provider.ts
 lib/payments/index.ts
+lib/payments/stripe-provider.ts
 lib/payments/types.ts
 lib/payments/wechat-provider.ts
 lib/prisma-error.ts
