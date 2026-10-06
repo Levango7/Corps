@@ -53,5 +53,18 @@ else
   echo "[entrypoint] 提示：RLS_ACTIVATE 未开启，引擎层租户隔离未激活（见 runbook-deploy 加固章节）"
 fi
 
+# 上传目录可写性前置检查：IM 附件走本地 uploads/ 回退，写不进去时每个上传请求
+# 都会 500（而健康检查仍是 healthy、其它功能正常 ⇒ 症状会被当成"上传偶发失败"）。
+# 这里在启动时把它说清楚；不 exit：附件只是一条功能面，不值得让整个应用崩溃循环。
+if ! (touch /app/uploads/.write-probe >/dev/null 2>&1); then
+  echo "[entrypoint] 错误：/app/uploads 对当前用户（uid $(id -u)）不可写 ⇒ IM 附件上传会全部 500。" >&2
+  echo "           若这是挂载了旧命名卷的存量部署，一次性修复（之后重启即恢复）：" >&2
+  echo "             docker run --rm -v <uploads 卷名>:/v alpine chown -R 1001:1001 /v" >&2
+  echo "           全新部署无需处理：镜像内已 mkdir + chown（见 Dockerfile）。" >&2
+else
+  rm -f /app/uploads/.write-probe
+  echo "[entrypoint] /app/uploads 可写（IM 附件本地回退可用）"
+fi
+
 echo "[entrypoint] 启动 Next.js standalone server..."
 exec node server.js

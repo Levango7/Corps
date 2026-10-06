@@ -96,6 +96,13 @@ COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh
 COPY --chown=nextjs:nodejs docker/entrypoint-cron.sh ./entrypoint-cron.sh
 RUN chmod +x ./entrypoint.sh ./entrypoint-cron.sh
 
+# IM 附件的本地存储目录必须在 USER 切换前建好并交给 nextjs 拥有。
+# 缺这一步时 /app 是 root:root 0755，以 uid 1001 运行的应用调
+# fs.mkdir('/app/uploads', {recursive:true}) 直接 EACCES ⇒ 上传恒 500；
+# compose 就算挂了 uploads_data 卷，空卷挂到"镜像里不存在的目录"上也会得到
+# root:root 的挂载点，同样写不进去（2026-10-06 两种形态都实测复现）。
+RUN mkdir -p /app/uploads && chown -R nextjs:nodejs /app/uploads
+
 # 声明运行时需要的环境变量（仅文档作用，仍需在 docker run/compose 中提供）
 ENV DATABASE_URL=""
 ENV BETTER_AUTH_SECRET=""
