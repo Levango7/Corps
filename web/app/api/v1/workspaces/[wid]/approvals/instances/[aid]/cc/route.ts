@@ -99,3 +99,62 @@ export async function POST(
     );
   }
 }
+
+/**
+ * 抄送列表读取端。此前本路由只有 POST，而 ApprovalDetail.tsx 用无 method 的
+ * `api<CcUser[]>()` 去读 ⇒ 恒 405，并被调用点的 catch 吞成"没有抄送人"。
+ */
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string; aid: string }> },
+) {
+  const { wid, aid } = await params;
+  const ctx = await getWorkspaceContext(req, wid);
+  if (!ctx)
+    return NextResponse.json(
+      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
+      { status: 401 },
+    );
+
+  try {
+    const result = await runWithWorkspace(
+      wid,
+      async (tx) => {
+        const instance = await tx.approvalInstance.findUnique({ where: { id: aid } });
+        if (!instance || instance.workspaceId !== wid) return { kind: "notFound" as const };
+
+        const records = await tx.approvalCcRecord.findMany({
+          where: { instanceId: aid, workspaceId: wid },
+          include: { user: { select: { id: true, name: true, email: true } } },
+          orderBy: { createdAt: "asc" },
+        });
+
+        return {
+          kind: "ok" as const,
+          data: records.map((r) => ({
+            id: r.id,
+            userId: r.userId,
+            user: r.user,
+            nodeIndex: r.nodeIndex,
+            read: r.readAt !== null,
+          })),
+        };
+      },
+      ctx.payload.sub,
+    );
+
+    if (result.kind === "notFound")
+      return NextResponse.json(
+        { code: 404, message: apiMsg(req, "approvalNotFound"), data: null },
+        { status: 404 },
+      );
+
+    return NextResponse.json({ code: 200, data: result.data });
+  } catch (error) {
+    console.error("[GET approval-cc] error:", error);
+    return NextResponse.json(
+      { code: 500, data: null, message: apiMsg(req, "internalError") },
+      { status: 500 },
+    );
+  }
+}
