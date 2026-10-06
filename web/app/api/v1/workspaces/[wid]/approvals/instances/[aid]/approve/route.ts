@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { notifyUsers } from "@/lib/notification/record";
 import { applyPermissionOnApproval } from "@/lib/approval/permission-linkage";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
@@ -150,15 +151,15 @@ export async function POST(
         if (shouldAdvance && isLastNode) {
           // 通知申请人审批结果（仅在审批最终通过时通知）
           if (instance.applicantId !== ctx.payload.sub) {
-            await tx.notification.create({
-              data: {
+            await notifyUsers(tx, [
+              {
                 userId: instance.applicantId,
                 workspaceId: wid,
                 type: "approval_result",
                 entityId: aid,
                 entityTitle: instance.title,
               },
-            });
+            ]);
           }
 
           // 审批通过后自动授权文档权限（联动）

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { notifyUsers } from "@/lib/notification/record";
 
 const ccSchema = z.object({
   ccUserIds: z.array(z.string().uuid()).min(1).max(50),
@@ -52,15 +53,18 @@ export async function POST(
               data: { instanceId: aid, workspaceId: wid, userId: ccUserId, nodeIndex },
             });
             ccRecords.push(record);
-            await tx.notification.create({
-              data: {
+            // 走 notifyUsers 而不是 notification.create()：接收者是别人，而 create 的
+            // `INSERT … RETURNING` 过不了 notifications 的 SELECT 策略（FORCE RLS 下 42501）。
+            // 机理与实测判据见 lib/notification/record.ts。
+            await notifyUsers(tx, [
+              {
                 userId: ccUserId,
                 workspaceId: wid,
                 type: "approval_cc",
                 entityId: aid,
                 entityTitle: instance.title,
               },
-            });
+            ]);
           }
         }
 

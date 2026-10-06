@@ -85,6 +85,30 @@
 
 ### Fixed
 
+- **审批族"给他人发通知"在生产 RLS 形态下 500（P1，本轮由新测试暴露）**：`cc / approve /
+  reject / transfer / delegate / add-sign` 六个端点都以 `tx.notification.create()` 写他人
+  的通知。Prisma 的 create 发 `INSERT … RETURNING`，而 PG 要求 RETURNING 的行再过一遍
+  `notifications` 的 SELECT 策略（`user_id = app.user_id`，DL-17 刻意不放行他人行）；
+  这些调用点又都传了 `runWithWorkspace(wid, fn, ctx.payload.sub)` ⇒ `app.user_id` 是操作者，
+  接收者是别人 ⇒ `42501 new row violates row-level security policy` ⇒ 事务整体回滚、端点 500。
+  复现矩阵（同库同角色同事务同 GUC，只换写法）：裸 `INSERT … RETURNING` 同样红、去掉
+  RETURNING（裸 INSERT / `createMany`）即绿、接收者=操作者时 create 也绿 ⇒ 变量只有
+  RETURNING 与 `app.user_id`，与 Prisma 无关。
+  改法：新增 `lib/notification/record.ts` 的 `notifyUsers()`（内部 createMany），6 站点改走它。
+  **没削策略**：INSERT 仍只按 workspace 判定（本就是 DL-17 允许的系统代写）。
+  为什么历史没发现：非硬化 `Test` 腿用 postgres（BYPASSRLS）绕过策略；hardened 腿虽有 enforcement，
+  但旧审批用例把申请人与审批人设成同一人，`applicantId !== payload.sub` 那条分支从未执行。
+  新增 `approval-cross-user.test.ts`（6 条走跨用户分支）与 `task-cross-user-notify.test.ts`
+  （3 条钉住任务族"不传 userId 才安全"这个隐含前提——任务族实测是绿的，补上 user 作用域就会变红）。
+  证据链与未改站点清单见 `docs/audit/RLS-CROSS-USER-NOTIFY-2026-10-07.md`。
+- **审批抄送列表恒空（#32，P2 静默失效）**：`approvals/instances/[aid]/cc` 只有 POST，而
+  `components/approval/ApprovalDetail.tsx` 用无 method 的 `api<CcUser[]>()` 去读 ⇒ 恒 405，
+  再被调用点 `catch {}` / `.catch(() => [])` 双双吞掉，UI 表现成"这单没有抄送人"的**错数据**
+  而不是报错。补 GET（照同目录 `instances/[aid]/route.ts` 的 401/404 约定），并加
+  `approval-cc.test.ts` 7 条：未登录 401、票据绑错工作区 401、**票据已换绑到本工作区但人不是成员**
+  仍 401（这条才是真跨租户判据——实测 `/auth/refresh` 会为任意 workspaceId 发票，去掉成员查询
+  只有这条会展红）、抄送 2 人后 200 且 `user.email` 非空、无抄送时 200+空数组（与"真没抄送"同形
+  而不是 405）、实例不存在 404、viewer 可读。反向钉住 405 不再回来。
 - **IM 附件上传在生产镜像里恒 500（P1，只在容器形态复现，CI 抓不到）**：本机用 Docker 起
   生产镜像 + 活 PG 实测，`POST /workspaces/{wid}/tasks/{id}/messages/attachments` 返回 500，
   服务端 `Upload attachment error: Error: EACCES: permission denied, mkdir '/app/uploads'`，

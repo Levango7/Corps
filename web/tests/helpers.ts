@@ -153,6 +153,52 @@ export async function inviteMember(
 }
 
 /**
+ * 换一张**绑定到指定工作区**的 access token（用 session cookie 走 /auth/refresh）。
+ *
+ * 为什么必需：register/login 发的 access_token 绑的是调用者自己的默认工作区，而
+ * `getWorkspaceContext` 的 wid 守卫（payload.wid ≠ URL wid 直接判 null）会在查成员
+ * **之前**短路成 401。所以要测"某工作区里的角色"或"以接收方视角读取"，
+ * 必须先换一张目标工作区的票据。
+ *
+ * 注意（实测 2026-10-06）：/auth/refresh **不校验成员资格**，任意 workspaceId 都发票
+ * （200 + access_token）。所以"拿到票"不等于"有权限"——挡住越权的是票进入端点后的
+ * 成员查询，这也正是可以用它构造越权用例的原因。
+ */
+export async function wsBoundToken(
+  cookies: string[],
+  workspaceId: string,
+): Promise<string | undefined> {
+  const res = await fetch(`${BASE}/auth/refresh`, {
+    method: "POST",
+    headers: { ...cookieHeader(cookies), "Content-Type": "application/json" },
+    body: JSON.stringify({ workspaceId }),
+  });
+  return (res.headers.getSetCookie?.() ?? [])
+    .find((c) => c.startsWith("access_token="))
+    ?.split("=")[1]
+    ?.split(";")[0];
+}
+
+/**
+ * 以指定身份读取其在 wid 内某类型的站内通知条数（列表响应为 { data: { items } } 分页形态）。
+ * 给"通知要发到对的人身上"这类断言用：只看写入方 2xx 不足以证明接收方收到了。
+ */
+export async function notificationsOfType(
+  token: string,
+  wid: string,
+  type: string,
+): Promise<Array<{ type: string; entityId?: string }>> {
+  const res = await fetch(`${BASE}/workspaces/${wid}/notifications?limit=100`, {
+    headers: authHeader(token),
+  });
+  if (res.status !== 200) {
+    throw new Error(`读取通知列表失败: ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+  const body = (await res.json()) as { data?: { items?: Array<{ type: string; entityId?: string }> } };
+  return (body?.data?.items ?? []).filter((n) => n.type === type);
+}
+
+/**
  * 在指定工作区创建任务
  */
 export async function createTask(

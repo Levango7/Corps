@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { notifyUsers } from "@/lib/notification/record";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
 interface ApprovalNode {
@@ -89,15 +90,15 @@ export async function POST(
 
         // 通知申请人审批被拒绝（不通知自己）
         if (instance.applicantId !== ctx.payload.sub) {
-          await tx.notification.create({
-            data: {
+          await notifyUsers(tx, [
+            {
               userId: instance.applicantId,
               workspaceId: wid,
               type: "approval_result",
               entityId: aid,
               entityTitle: instance.title,
             },
-          });
+          ]);
         }
 
         return { kind: "ok" as const, data: updated };

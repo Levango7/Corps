@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { notifyUsers } from "@/lib/notification/record";
 import type { Prisma } from "@prisma/client";
 
 interface ApprovalNode {
@@ -86,15 +87,15 @@ export async function POST(
           },
         });
 
-        await tx.notification.create({
-          data: {
+        await notifyUsers(tx, [
+          {
             userId: validated.transferToId,
             workspaceId: wid,
             type: "approval_transfer",
             entityId: aid,
             entityTitle: instance.title,
           },
-        });
+        ]);
 
         return { kind: "ok" as const, data: { instance: updatedInstance, operation } };
       },
