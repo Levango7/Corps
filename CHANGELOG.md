@@ -78,8 +78,30 @@
   该腿只能由 CI 的 ubuntu runner 判定——而它自 `2026-10-06T03:00` 起因 audit 红被 `needs` 恒 skipped，
   这次推送会是它这几天第一次真跑。构建路径的**既有性**另有旁证：E2E (production build) job 里自带
   `npx next build`，它不依赖 audit，改前锁文件下一直是绿的 ⇒ 本笔在构建面未测的增量只有 source-map-js 的补丁版。
+  **更正上一句的适用范围（同日补测）**："本机验不了"只对 **Windows 原生路径**成立。Docker 起来之后
+  改在 Linux 容器里 `docker build` 复跑了整条构建：**退出 0**，产出可运行镜像并跑起了服务
+  （`/api/health` 200），所以 `next build` 与 `source-map-js@1.2.2` 的组合已有本机一手证据，不再只靠 CI。
+  顺带这条容器路径还揪出一个 CI 永远看不见的 P1（见下方 Fixed 第一条）。
 
 ### Fixed
+
+- **IM 附件上传在生产镜像里恒 500（P1，只在容器形态复现，CI 抓不到）**：本机用 Docker 起
+  生产镜像 + 活 PG 实测，`POST /workspaces/{wid}/tasks/{id}/messages/attachments` 返回 500，
+  服务端 `Upload attachment error: Error: EACCES: permission denied, mkdir '/app/uploads'`，
+  `tests/integration/im-upload.test.ts` 4 例全红（首条即 `expected 500 to be 201`）。
+  根因两层，各自单独复现：① runner 阶段 `/app` 是 `root:root 0755`，应用以 uid 1001(nextjs) 运行，
+  `attachments/route.ts:142` 的 `fs.mkdir(UPLOAD_DIR,{recursive:true})` 没权限建目录；
+  ② 光挂 compose 的 `uploads_data` 卷也救不了——镜像里该目录原本不存在，空命名卷挂上去得到的仍是
+  root 属主挂载点（复现时错误变为 `permission denied, open '/app/uploads/<uuid>.png'`）。
+  并核实**线上现存卷** `corps-uploads-data` 属主就是 `drwxr-xr-x root root`（2026-08-31 建）⇒ 部署态同样是坏的。
+  CI 之所以一直绿：Build/E2E 腿用 `next start` 跑在 runner 的可写检出目录里，从不进这个镜像——
+  与 `b9dd5a36` 立过案的"CI 全绿但按文档部署必失败"同一类。
+  改法：`Dockerfile` 在 `USER nextjs` 前 `mkdir -p /app/uploads && chown -R nextjs:nodejs`；
+  `docker/entrypoint.sh` 加启动可写性前置检查，不可写时打精确错误与一次性修复命令。
+  **故意不 exit**：附件只是一条功能面，让整个应用崩溃循环比报错更糟。
+  验证（同一镜像三形态重建后实测）：无卷 `IT_A_rc=0`、新命名卷 `IT_B_rc=0`（Docker 会把镜像里的属主
+  带进空卷）、存量 root 属主卷 `IT_C_rc=1` 且启动即打出错误——即新部署自愈、存量需宿主侧一次
+  `docker run --rm -v corps-uploads-data:/v alpine chown -R 1001:1001 /v`（已写进 runbook §7.7）。
 
 - **任务聊天面板"发出去的消息自己看不到"（get-or-create 竞态，P1）**：
   `POST /api/v1/workspaces/{wid}/tasks/{id}/conversation` 注释写的是"获取或创建"，实现是

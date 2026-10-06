@@ -311,6 +311,16 @@ proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
 - **不要移除该挂载**：重建容器若不挂卷，`uploads/` 落到容器可写层，重启即清空，而 DB 中的 `message_attachments` 记录仍指向这些文件 → 下载 404。
 - 备份：`docker run --rm -v corps-uploads-data:/data -v /opt/corps/backups:/backup alpine tar czf /backup/uploads-$(date +%Y%m%d).tgz -C /data .`
 - 升级路径：对象存储（S3/OSS）签名 URL 重定向，见 `app/api/uploads/[...path]/route.ts` 头注释。
+- **卷属主必须是 uid 1001（nextjs）**：应用以非 root 运行，写不进 `/app/uploads` 时 IM 附件上传
+  **每个请求都 500**，而健康检查照样 healthy、其它功能照常（症状容易被误判成"上传偶发失败"）。
+  - 新部署无需处理：镜像已在 `USER nextjs` 之前 `mkdir -p /app/uploads && chown -R nextjs:nodejs`
+    （`0f780699`）；挂空命名卷时 Docker 会把这份属主带进卷，本机实测可写。
+  - **存量部署要一次性修**：早先建的卷（如 2026-08-31 那个 `corps-uploads-data`，实测
+    `drwxr-xr-x root root`）换镜像也不会自动纠正，需宿主侧执行一次
+    `docker run --rm -v corps-uploads-data:/v alpine chown -R 1001:1001 /v`
+  - 自查：`docker exec corps-app sh -c 'ls -ld /app/uploads; touch /app/uploads/.p && echo WRITABLE'`；
+    启动时 `entrypoint.sh` 也会探测，不可写就打
+    `[entrypoint] 错误：/app/uploads 对当前用户（uid 1001）不可写`（不阻断启动，避免整机崩溃循环）。
 
 ### 7.8 附件孤儿文件清理
 
