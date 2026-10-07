@@ -1,15 +1,25 @@
-import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaClient, type Prisma } from "@prisma/client";
+import { resolveDatabaseUrl } from "./db-pool";
+import { runWithDbRetry } from "./db-retry";
 
 /**
  * Prisma Client 单例。
  *
- * 连接池配置（DL-3）：
- *  Prisma 的连接池通过 DATABASE_URL 的 query 参数配置，例如：
- *  postgresql://user:pass@host:5432/db?connection_limit=10&pool_timeout=30
- *  - connection_limit：连接池大小（默认 = CPU 核数 × 2 + 1）
- *  - pool_timeout：获取连接超时秒数（默认 10）
- *  - schema：数据库 schema 名（默认 public）
- *  生产环境建议 connection_limit=10-20，pool_timeout=30。
+ * 连接池配置（DL-3，2026-10-07 修正）：
+ *  连接串在**构造时**经 resolveDatabaseUrl()（lib/db-pool.ts）补齐
+ *  connection_limit 与 pool_timeout 后显式传入，不再依赖 Prisma 默认值。
+ *   - connection_limit：连接池大小。默认 10（代码常量，不随宿主机 CPU 核数漂移）。
+ *   - pool_timeout：获取连接的最长等待秒数。默认 5（池不饱和时等待接近 0，
+ *     调小只影响池饱和场景：快速失败而不是排队）。
+ *   - schema：数据库 schema 名（默认 public）
+ *  覆盖方式（优先级从高到低）：
+ *   1. DATABASE_URL 的 query 里显式写死——运维显式配置优先，代码不覆盖
+ *   2. 环境变量 CORPS_DB_CONNECTION_LIMIT / CORPS_DB_POOL_TIMEOUT_S
+ *   3. lib/db-pool.ts 的 DB_POOL_DEFAULTS
+ *  修正前本段注释描述的是**一个并不存在的配置**：全仓库 DATABASE_URL 的两处
+ *  定义都只有 ?schema=public，于是实际生效的一直是 Prisma 默认值
+ *  （connection_limit = 容器可见 CPU 核数 × 2 + 1，随宿主机漂移；多副本时容易
+ *  顶爆 Postgres 的 max_connections）。因果链见 lib/db-pool.ts 文件头。
  *
  * ─── 缓存层规划（DL-5，P3 降级：文档说明）────────────────────────────
  * 当前状态：**无业务数据缓存层**——所有读请求直达 PostgreSQL，热点查询
@@ -38,18 +48,55 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined;
 };
 
-export const prisma =
-  globalForPrisma.prisma ??
-  new PrismaClient({
-    log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
-  });
+/**
+ * 构造时解析最终连接串（补上 connection_limit / pool_timeout，见文件头注释）。
+ *
+ * try/catch **不是可选的**：CI 的 Unit Coverage Ratchet job 是全仓库唯一不设
+ * DATABASE_URL 的 job，next build / 静态分析同样可能在没有 DATABASE_URL 的
+ * 上下文里加载本模块。缺了它就会在"本不该炸的地方"炸——模块加载期抛错，
+ * 而不是等到真正访问数据库时才报错。因此解析失败时回退到 Prisma 默认行为
+ * （由 Prisma 自行读 schema.prisma 的 env 配置），只打一条结构化提示。
+ * 运行时真正要访问数据库的路径上 DATABASE_URL 一定是配好的。
+ */
+const resolvedUrl = (() => {
+  try {
+    return resolveDatabaseUrl();
+  } catch (error) {
+    console.error(
+      "[db-pool] DATABASE_URL 未配置或为空，回退到 Prisma 默认连接配置（不注入连接池参数）：",
+      error instanceof Error ? error.message : String(error),
+    );
+    return null;
+  }
+})();
+
+/** 日志级别：dev 下开 query 便于本地排查慢查询，生产只留 error/warn 之外的错误 */
+const clientLog: Array<"query" | "error" | "warn"> =
+  process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"];
+
+/**
+ * 构造参数。
+ *
+ * 显式类型标注**不是可选的**：生成的 PrismaClient 构造函数是
+ * `constructor(optionsArg?: Prisma.Subset<ClientOptions, Prisma.PrismaClientOptions>)`，
+ * ClientOptions 由实参反推。把三元表达式直接放在实参位置时，TS 只从两个分支的
+ * 公共属性推出 `{ log }`，随后把 datasources 判成"多余属性"——实测报错：
+ *   lib/prisma.ts(81,11): error TS2345 ... 'datasources' does not exist in type
+ *   'Subset<{ log: ("query"|"warn"|"error")[] }, PrismaClientOptions>'
+ * 标注后 ClientOptions 固定为完整的 PrismaClientOptions，两个分支都能通过。
+ */
+const clientOptions: Prisma.PrismaClientOptions = resolvedUrl
+  ? { datasources: { db: { url: resolvedUrl } }, log: clientLog }
+  : { log: clientLog };
+
+export const prisma = globalForPrisma.prisma ?? new PrismaClient(clientOptions);
 
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
 
 /**
- * DB 连接失败重试包装器（DL-4）。
+ * DB 连接失败重试包装器（DL-4，2026-10-07 加固：新增总预算兜底）。
  *
  * 在 Prisma P1001（Can't reach database server）等连接错误时自动重试，
  * 适用于 Serverless / 云函数环境中 DB 冷启动导致的瞬断。
@@ -58,32 +105,18 @@ if (process.env.NODE_ENV !== "production") {
  * 或在事务中：withDbRetry(() => prisma.$transaction(async (tx) => { ... }))
  *
  * 注意：仅在连接级错误重试，业务错误（如 P2002 唯一约束冲突）不重试。
+ *
+ * ─── 加固点（逻辑已下沉到 lib/db-retry.ts，本函数只保留导出签名）──────
+ *  1. **总预算兜底**：一次调用的全部尝试 + 退避共享一个 deadline
+ *     （默认 15s，可用 CORPS_DB_OP_BUDGET_MS 覆盖），最坏延迟因此有上界。
+ *     原实现最坏是 4 次尝试 × pool_timeout + 退避，没有上界。
+ *  2. **超时是终态**：预算耗尽抛 DbOperationTimeoutError 且**不再重试**——
+ *     预算已花光，再排队只会把刚缓解的连接池重新打满。
+ *  3. 存在理由：原实现的重试判据依赖 Prisma 肯抛 P1008；ADR-014 的 Prisma 7
+ *     升级会改变连接池语义，P1008 可能不再出现。届时旧实现不会报错、不会告警，
+ *     请求只是无限排队（日志全绿、监控无感）。总预算兜底不依赖任何 Prisma
+ *     错误码，把这个"判据失效 → 静默挂起"的失效模式堵住。
  */
-const DB_RETRY_MAX = 3;
-const DB_RETRY_DELAY_MS = 500;
-
 export async function withDbRetry<T>(fn: () => Promise<T>): Promise<T> {
-  let lastError: unknown;
-  for (let attempt = 0; attempt <= DB_RETRY_MAX; attempt++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      // 仅在连接级错误重试（P1001: Can't reach database server, P1002: Database kind wrong,
-      // P1008: Timed out fetching connection from pool——R9D-04 补充，
-      // 连接池耗尽/瞬断同样属于可重试的连接级错误）
-      const isConnectionError =
-        error instanceof Prisma.PrismaClientKnownRequestError &&
-        (error.code === "P1001" || error.code === "P1002" || error.code === "P1008");
-      if (!isConnectionError || attempt === DB_RETRY_MAX) {
-        throw error;
-      }
-      // 指数退避 + 随机抖动（R8D-08：避免多实例同步重试造成 DB 连接风暴）
-      // 基础退避：500ms, 1000ms, 2000ms；叠加 0-30% 随机抖动分散重试时间
-      const baseDelay = DB_RETRY_DELAY_MS * 2 ** attempt;
-      const jitter = Math.random() * baseDelay * 0.3; // 0-30% 抖动
-      await new Promise((resolve) => setTimeout(resolve, baseDelay + jitter));
-    }
-  }
-  throw lastError;
+  return runWithDbRetry(fn);
 }
