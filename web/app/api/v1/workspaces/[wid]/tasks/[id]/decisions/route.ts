@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/permissions";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { syncActionItems } from "@/lib/decision-action-parser";
 import { z } from "zod";
@@ -12,12 +13,15 @@ export async function GET(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // API-015：补 try-catch，避免 runWithWorkspace 抛错变成未处理异常
   try {
@@ -51,12 +55,15 @@ export async function POST(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 角色门禁：lib/permissions.ts 声明 decisions 对 viewer 仅 "r"，此前只认证不判角色。
   const deniedRole = await requirePermission(ctx, "decisions", "create", req);

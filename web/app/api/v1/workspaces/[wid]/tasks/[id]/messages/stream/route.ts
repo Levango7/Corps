@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace, withGuc } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace, withGuc } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
@@ -54,13 +55,16 @@ export async function GET(
   if (limited) return limited;
 
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx) {
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
   }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 校验任务确实属于本工作区（防跨租户订阅）
   const taskExists = await runWithWorkspace(
