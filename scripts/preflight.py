@@ -14,6 +14,17 @@
     python scripts/preflight.py            # 检查项目根目录的 .env
     python scripts/preflight.py path/.env  # 指定文件
 
+与生产版的分工（2026-10-07 澄清）：
+    本脚本面向**本机/开发**，检查项目根的 `.env`。
+    生产部署请用 `deploy/scripts/preflight.sh`（12 项，检查 `deploy/.env.prod`，
+    额外覆盖 prod overlay 渲染、db/app 无宿主机端口（AC-01）、app 无 build 段、
+    容器日志上界（AC-05）、密钥长度达标、密钥不得为历史泄漏值等）。
+
+    两者**不是重复实现**：输入文件不同、场景不同，故都保留。
+    但"必填变量非空"与"弱密钥"这两类检查在两边都存在——
+    若将来要调整这两类的判定标准（例如新增必填变量、更换弱值黑名单），
+    **记得两边都改**，否则会出现"本机通过、生产拒绝"或反之的漂移。
+
 退出码：0 全部通过；1 存在阻断项。
 """
 from __future__ import annotations
