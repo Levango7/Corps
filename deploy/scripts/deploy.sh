@@ -132,11 +132,16 @@ if [[ -z "${_bdir}" || ! -d "${_bdir}" ]]; then
   trigger_rollback "上线前备份失败（目录不可用）——继续部署等于放弃唯一的 schema 还原点"
   exit 1
 fi
+# 先捕获实际文件名再写：清理时必须删掉「真正写出的那个文件」。
+# 旧写法写入 *.sql.gz 却 rm *.sql.gz.tmp，通配符不匹配，清理从未生效——
+# 失败时会留下 0 字节或截断的 .sql.gz（restore.sh 的 gzip -t 能兜住误恢复，
+# 但垃圾文件会堆积，且与注释声明的意图不符）。
+_bak="${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).sql.gz"
 if ! corpse_compose exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' 2>/dev/null \
-     | gzip > "${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).sql.gz"; then
+     | gzip > "${_bak}"; then
   # pg_dumpall 失败时清掉半截文件：留下一个 0 字节或截断的 .sql.gz，
   # 将来 restore.sh 拿它恢复会得到一个"看起来有文件、实则残缺"的假安全感
-  rm -f "${_bdir}"/corps_predeploy_*.sql.gz.tmp 2>/dev/null || true
+  rm -f "${_bak}" 2>/dev/null || true
   log_error "pg_dumpall 失败"
   trigger_rollback "上线前备份失败——继续部署等于放弃唯一的 schema 还原点"
   exit 1
