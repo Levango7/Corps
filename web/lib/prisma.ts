@@ -9,8 +9,12 @@ import { runWithDbRetry } from "./db-retry";
  *  连接串在**构造时**经 resolveDatabaseUrl()（lib/db-pool.ts）补齐
  *  connection_limit 与 pool_timeout 后显式传入，不再依赖 Prisma 默认值。
  *   - connection_limit：连接池大小。默认 10（代码常量，不随宿主机 CPU 核数漂移）。
- *   - pool_timeout：获取连接的最长等待秒数。默认 5（池不饱和时等待接近 0，
- *     调小只影响池饱和场景：快速失败而不是排队）。
+ *   - pool_timeout：获取连接的最长等待秒数。默认 10（池不饱和时等待接近 0，
+ *     所以它只影响池饱和场景：继续排队还是快速失败）。
+ *     **与 lib/auth.ts:252 的 maxWait=10_000 强耦合**：事务内取连接的有效
+ *     等待 = min(pool_timeout, maxWait)，取小者生效。初版写 5，等于把那段按
+ *     __prisma_pool_conc.cjs 实测（并发 8 事务需 2.4s 拿全连接）才从 2s 放宽
+ *     到 10s 的余量悄悄砍回一半，故修正为 10。
  *   - schema：数据库 schema 名（默认 public）
  *  覆盖方式（优先级从高到低）：
  *   1. DATABASE_URL 的 query 里显式写死——运维显式配置优先，代码不覆盖
@@ -108,14 +112,21 @@ if (process.env.NODE_ENV !== "production") {
  *
  * ─── 加固点（逻辑已下沉到 lib/db-retry.ts，本函数只保留导出签名）──────
  *  1. **总预算兜底**：一次调用的全部尝试 + 退避共享一个 deadline
- *     （默认 15s，可用 CORPS_DB_OP_BUDGET_MS 覆盖），最坏延迟因此有上界。
- *     原实现最坏是 4 次尝试 × pool_timeout + 退避，没有上界。
+ *     （默认 30s = lib/auth.ts:252 的 maxWait 10s + 事务 timeout 20s，
+ *     即恰好覆盖一次最坏情况的尝试；可用 CORPS_DB_OP_BUDGET_MS 覆盖），
+ *     最坏延迟因此有上界。原实现最坏是 4 次尝试 × pool_timeout + 退避，
+ *     没有上界。
  *  2. **超时是终态**：预算耗尽抛 DbOperationTimeoutError 且**不再重试**——
  *     预算已花光，再排队只会把刚缓解的连接池重新打满。
- *  3. 存在理由：原实现的重试判据依赖 Prisma 肯抛 P1008；ADR-014 的 Prisma 7
- *     升级会改变连接池语义，P1008 可能不再出现。届时旧实现不会报错、不会告警，
- *     请求只是无限排队（日志全绿、监控无感）。总预算兜底不依赖任何 Prisma
- *     错误码，把这个"判据失效 → 静默挂起"的失效模式堵住。
+ *  3. 存在理由：原实现的重试判据依赖 Prisma 肯抛 P1008（Operations timed out，
+ *     **不是**"取连接超时"——取连接超时是 P2024，佐证见 lib/prisma-error.ts:
+ *     72-75）。ADR-014 的 Prisma 7 升级会改变连接池语义，P1008 可能不再出现。
+ *     届时旧实现不会报错、不会告警，请求只是无限排队（日志全绿、监控无感）。
+ *     总预算兜底不依赖任何 Prisma 错误码，把这个"判据失效 → 静默挂起"的
+ *     失效模式堵住。
+ *  4. 池饱和（P2024）**deliberate 不重试**：那时重试会把拥塞放大成惊群，
+ *     正确行为是快速失败返回 503 交给上层/用户。详见 lib/db-retry.ts 中
+ *     RETRYABLE_DB_CODES 旁的决策注释。
  */
 export async function withDbRetry<T>(fn: () => Promise<T>): Promise<T> {
   return runWithDbRetry(fn);

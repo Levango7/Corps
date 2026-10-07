@@ -17,9 +17,13 @@
  *  1. connectionLimit = 10：替代「CPU 核数 × 2 + 1」这个随宿主机漂移的值，
  *     固定为**可推理的常数**。容量规划要能算得清：副本数 × 10 就是上限，
  *     不需要先去查一遍宿主机有几个核。
- *  2. poolTimeoutSeconds = 5：等连接的最大秒数。池不饱和时等待时间接近 0，
- *     所以调小**不影响正常路径**；调小的唯一作用是池饱和时快速失败，
- *     让上层（withDbRetry / 503）立刻感知，而不是静默排队。
+ *  2. poolTimeoutSeconds = 10：等连接的最大秒数。池不饱和时等待时间接近 0，
+ *     所以它**不影响正常路径**，只决定池饱和时是快速失败还是继续排队。
+ *     **与 web/lib/auth.ts:252 的 maxWait=10_000 强耦合**：事务内取连接的
+ *     有效等待 = min(pool_timeout, maxWait)，取小者生效。初版这里写 5，
+ *     等于把别人按 __prisma_pool_conc.cjs 实测（并发 8 事务需 2.4s 才拿全连接）
+ *     才从 2s 放宽到 10s 的余量悄悄砍回一半，让 maxWait 变成死配置。
+ *     完整因果链见下方 DB_POOL_DEFAULTS 的注释。
  *
  * ─── 覆盖优先级（显式优先）────────────────────────────────────
  *   URL query 里显式写的值 > CORPS_DB_CONNECTION_LIMIT / CORPS_DB_POOL_TIMEOUT_S
@@ -35,8 +39,28 @@
  * 不触发 zero-coverage 基线的 STALE_COVERED 判红）。
  */
 
-/** 连接池参数默认值（CPU 核数无关的固定常数，理由见文件头） */
-export const DB_POOL_DEFAULTS = { connectionLimit: 10, poolTimeoutSeconds: 5 } as const;
+/**
+ * 连接池参数默认值（CPU 核数无关的固定常数，理由见文件头）。
+ *
+ * ─── poolTimeoutSeconds = 10 的耦合关系（改这个值之前必读）─────────────
+ * 事务内获取连接的有效等待 = **min(pool_timeout, web/lib/auth.ts 的 maxWait)**，
+ * 两者取小者生效。web/lib/auth.ts:252 显式传了 `{ maxWait: 10_000, timeout: 20_000 }`，
+ * 而 238-241 行的注释写清了 10s 的来历：Prisma 默认 maxWait=2000ms 在并发请求
+ * 集中、连接池需渐进建连时会过早超时（P2028）——__prisma_pool_conc.cjs 实测
+ * 并发 8 个事务约需 2.4s 才能全部拿到连接，所以才从 2s 放宽到 10s。
+ *
+ * 因此这里**必须是 10 而不是 5**：设成 5 会让 maxWait=10_000 变成死配置，
+ * 把"并发突发时排队等连接"的预算从 10s 悄悄砍到 5s——砍掉的正是别人有实测
+ * 依据才放宽出来的余量（本文件初版就犯过这个错，2026-10-07 修正）。
+ * 改之前先读 web/lib/auth.ts:252 的 maxWait 及其由来注释；这条耦合由
+ * tests/unit/db-pool.test.ts 的"pool_timeout ≥ maxWait"断言守着
+ * （该用例会直接读 auth.ts 源码抽 maxWait，不靠人记住）。
+ *
+ * 另一个方向：pool_timeout 调小**不影响正常路径**（池不饱和时等待接近 0），
+ * 它只决定池饱和时是快速失败还是继续排队——而排队的预算已经被 maxWait 定死了，
+ * 所以调大也不会把请求拖得更久，只是不再单方面收紧别人的余量。
+ */
+export const DB_POOL_DEFAULTS = { connectionLimit: 10, poolTimeoutSeconds: 10 } as const;
 
 /** connection_limit 上界：再大就该改架构（加副本/加 PgBouncer），而不是加连接 */
 const CONNECTION_LIMIT_MAX = 100;

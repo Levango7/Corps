@@ -1,5 +1,8 @@
 // @vitest-environment node
 import { describe, it, expect } from "vitest";
+import { readFileSync } from "fs";
+import { join, dirname } from "path";
+import { fileURLToPath } from "url";
 
 /**
  * db-retry 单元测试 —— 锁定「总预算兜底」与「超时是终态」两条新契约。
@@ -25,6 +28,9 @@ import {
   isRetryableDbError,
   runWithDbRetry,
 } from "@/lib/db-retry";
+
+/** 定位 web/ 根目录（tests/unit → 上两级），与同目录 db-pool.test.ts 同手法 */
+const WEB_ROOT = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
 /** 造一个"像 Prisma 错误"的对象：Error 实例 + string 型 code 字段 */
 function dbError(code: string): Error {
@@ -180,6 +186,26 @@ describe("runWithDbRetry —— 总预算兜底", () => {
     expect(counter.calls).toBe(1);
   });
 
+  /**
+   * 断言 16：把"超时是终态"这条契约钉在**判据层**，而不只靠端到端计数。
+   *
+   * 为什么需要它（2026-10-07 实测的变异体设计教训）：
+   * 本改动验证门禁时，第一个变异体是在 isRetryableDbError 的
+   * `if (typeof code !== "string") return false;` **之后**追加
+   * `|| error instanceof DbOperationTimeoutError`——结果 15/15 全绿。
+   * 原因不是门禁没牙，而是那个变异体**不可达**：DbOperationTimeoutError 没有
+   * code 字段，前面那条类型守卫先返回了。不可达的变异体是等价变异体，
+   * 任何测试都杀不掉，把它当成"门禁失灵"会误导下一轮维护。
+   *
+   * 真正**可达**的变异体是"按错误类名/实例判定超时可重试"
+   * （实测：把类型守卫改成 `return error.name === "DbOperationTimeoutError"`），
+   * 它会让本断言与断言 10 同时变红（expected 4 to be 1）。
+   * 也就是说：选变异体时要先证明它可达，否则自证的是空气。
+   */
+  it("断言 16：超时错误本身不是可重试错误（判据层契约）", () => {
+    expect(isRetryableDbError(new DbOperationTimeoutError(100, 1))).toBe(false);
+  });
+
   it("退避上界：剩余预算小于 backoff 时 sleep 被截短，不会睡过头（断言 11）", async () => {
     const clock = fakeClock();
     let calls = 0;
@@ -276,5 +302,65 @@ describe("判定与计算的纯函数", () => {
     expect(dbOpBudgetMs(envOf({ CORPS_DB_OP_BUDGET_MS: "0" }))).toBe(DB_OP_BUDGET_MS_DEFAULT);
     expect(dbOpBudgetMs(envOf({ CORPS_DB_OP_BUDGET_MS: "-5" }))).toBe(DB_OP_BUDGET_MS_DEFAULT);
     expect(dbOpBudgetMs(envOf({ CORPS_DB_OP_BUDGET_MS: "8000" }))).toBe(8000);
+  });
+});
+
+describe("总预算的取值不是自由的 —— 必须覆盖一次最坏情况的尝试（断言 14、15）", () => {
+  /**
+   * 为什么这两条断言存在（2026-10-07 实测踩过）：
+   *
+   * 本改动初版把 DB_OP_BUDGET_MS_DEFAULT 定成 15_000，而 lib/auth.ts:252 的
+   * $transaction 传的是 `{ maxWait: 10_000, timeout: 20_000 }`。于是外层预算
+   * 比事务自己的超时还小：事务还没跑到 timeout，预算就先把它掐成
+   * DbOperationTimeoutError；更糟的是 DB 侧那条事务会继续跑到 20s、继续占着
+   * 池连接（connection_limit 现在只有 10），连接占用被泄漏。
+   *
+   * 所以预算的下界是 maxWait + timeout：**恰好覆盖一次最坏情况的尝试**。
+   * 而重试只对 P1001/P1002 这类"快速失败"的连接错误有意义（三次退避
+   * 500/1000/2000ms ≈ 3.5s，远在预算内），所以这个下界不会挡掉任何一次
+   * 正当重试。上限方向不设：预算是"本该无限排队"的兜底，不是性能指标。
+   *
+   * 断言 14 是字面量：常量被改（无论改大改小）都必须是一次有意识的行为，
+   * 而不是改完测试仍然全绿。只断言"等于常量自己"是假护栏。
+   * 断言 15 去读 auth.ts 源码抽 maxWait 与 timeout，把推导式本身钉住——
+   * 那边改数字的人看不见这里，靠"记住"守不住。
+   */
+  it("断言 14：字面量锁定 30_000（= maxWait 10s + 事务 timeout 20s）", () => {
+    expect(DB_OP_BUDGET_MS_DEFAULT).toBe(30_000);
+  });
+
+  it("断言 15：DB_OP_BUDGET_MS_DEFAULT ≥ auth.ts 的 maxWait + timeout", () => {
+    const authSrc = readFileSync(join(WEB_ROOT, "lib/auth.ts"), "utf8");
+
+    // 两个数只出现在 $transaction 的第二个参数对象里
+    const maxWaitMatch = authSrc.match(/maxWait:\s*([\d_]+)/);
+    const timeoutMatch = authSrc.match(/timeout:\s*([\d_]+)/);
+    expect(
+      maxWaitMatch,
+      "在 lib/auth.ts 里找不到 maxWait：$transaction 的选项可能被改名或挪走了，本断言需要同步更新",
+    ).not.toBeNull();
+    expect(
+      timeoutMatch,
+      "在 lib/auth.ts 里找不到 timeout：$transaction 的选项可能被改名或挪走了，本断言需要同步更新",
+    ).not.toBeNull();
+
+    const maxWaitMs = Number((maxWaitMatch?.[1] ?? "").replace(/_/g, ""));
+    const txTimeoutMs = Number((timeoutMatch?.[1] ?? "").replace(/_/g, ""));
+    expect(
+      Number.isFinite(maxWaitMs) && maxWaitMs > 0,
+      `maxWait 解析失败：${String(maxWaitMatch?.[1])}`,
+    ).toBe(true);
+    expect(
+      Number.isFinite(txTimeoutMs) && txTimeoutMs > 0,
+      `timeout 解析失败：${String(timeoutMatch?.[1])}`,
+    ).toBe(true);
+
+    expect(
+      DB_OP_BUDGET_MS_DEFAULT,
+      `总预算 ${DB_OP_BUDGET_MS_DEFAULT}ms 小于 lib/auth.ts 的一次最坏尝试 ` +
+        `(maxWait ${maxWaitMs}ms + timeout ${txTimeoutMs}ms = ${maxWaitMs + txTimeoutMs}ms)：` +
+        "此时事务还没跑到自己的超时就被外层预算掐断，而 DB 侧那条事务会继续跑完、" +
+        "继续占着池连接，等于泄漏连接占用。",
+    ).toBeGreaterThanOrEqual(maxWaitMs + txTimeoutMs);
   });
 });
