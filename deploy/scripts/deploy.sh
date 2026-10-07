@@ -137,15 +137,21 @@ fi
 # 失败时会留下 0 字节或截断的 .sql.gz（restore.sh 的 gzip -t 能兜住误恢复，
 # 但垃圾文件会堆积，且与注释声明的意图不符）。
 _bak="${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).sql.gz"
-if ! corpse_compose exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' 2>/dev/null \
+# stderr 落到临时文件而不是 /dev/null：备份失败时"pg_dumpall 失败"这句话
+# 本身不提供任何可行动信息（是权限？连接？卷满？），排查得手工重跑一遍。
+_err_log="$(mktemp 2>/dev/null || echo "${_bak}.err")"
+if ! corpse_compose exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' 2>"${_err_log}" \
      | gzip > "${_bak}"; then
   # pg_dumpall 失败时清掉半截文件：留下一个 0 字节或截断的 .sql.gz，
   # 将来 restore.sh 拿它恢复会得到一个"看起来有文件、实则残缺"的假安全感
   rm -f "${_bak}" 2>/dev/null || true
-  log_error "pg_dumpall 失败"
+  log_error "pg_dumpall 失败，stderr 末尾 5 行："
+  tail -n 5 "${_err_log}" 2>/dev/null | while IFS= read -r _l; do log_error "  ${_l}"; done
+  rm -f "${_err_log}" 2>/dev/null || true
   trigger_rollback "上线前备份失败——继续部署等于放弃唯一的 schema 还原点"
   exit 1
 fi
+rm -f "${_err_log}" 2>/dev/null || true
 _bf="$(ls -t "${_bdir}"/corps_predeploy_*.sql.gz 2>/dev/null | head -1)"
 _bf_size="$(du -h "${_bf}" 2>/dev/null | cut -f1 || echo '?')"
 log_ok "备份完成：${_bf}（${_bf_size}）"
