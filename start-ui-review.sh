@@ -1,7 +1,7 @@
 #!/bin/bash
 # UI 审查辅助脚本 —— 仅支持 WSL/Linux 环境（依赖 /mnt/* 路径、python3）。
 # Windows 原生环境请手动执行：cd web && pnpm dev，然后访问 /auth/register 注册。
-cd ~/corps-web
+cd ~/corps-web || exit 1
 export DATABASE_URL="postgresql://corps:corps_dev_2026@localhost:5432/corps_dev?schema=public"
 
 # 同步最新文件
@@ -18,7 +18,7 @@ npx prisma db push --force-reset --accept-data-loss 2>&1 | tail -1
 # 注册测试用户
 npx next dev > /tmp/next-ui-review.log 2>&1 &
 DEV_PID=$!
-for i in $(seq 1 30); do
+for _ in $(seq 1 30); do
   if grep -q "Ready" /tmp/next-ui-review.log 2>/dev/null; then break; fi
   sleep 2
 done

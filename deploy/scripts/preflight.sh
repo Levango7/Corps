@@ -99,7 +99,7 @@ fi
 log_step "3/12 渲染 prod overlay"
 DB_PORTS=""; APP_PORTS=""; APP_HAS_BUILD=""; APP_IMAGE=""; CRON_IMAGE=""
 LOG_DB=""; LOG_APP=""; LOG_REDIS=""; LOG_CRON=""; LOG_LIVEKIT=""; LOG_CADDY=""
-REDIS_COMMAND=""; LIVEKIT_PORTS=""; CADDY_PORTS=""; APP_URL=""
+REDIS_COMMAND=""; LIVEKIT_PORTS=""; CADDY_PORTS=""
 
 if ! _rendered="$(corpse_compose config 2>&1)"; then
   fail "prod overlay 渲染失败（compose -f docker-compose.yml -f deploy/docker-compose.prod.yml config）：

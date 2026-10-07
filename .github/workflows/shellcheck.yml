@@ -1,0 +1,55 @@
+# =============================================================================
+# Shell 脚本静态检查（shellcheck）
+#
+# 为什么单独一个 workflow：
+#   仓库里有 18 个 shell 脚本（deploy/ 部署链、db/ 备份恢复、scripts/ 运维工具、
+#   web/docker/ 容器入口），但**没有任何 CI 门禁覆盖它们**——
+#   ci.yml 的 Lint job 只对 web/ 跑 prettier/eslint，看不懂 shell。
+#   实测教训（2026-10-07）：deploy/scripts/deploy.sh 里有一处
+#   「写入 *.sql.gz 却 rm *.sql.gz.tmp」的通配符错误，清理从未生效，
+#   长期无人发现——因为这类问题没有任何自动化检查会碰到。
+#
+# 阈值：--severity=warning（不是默认的 style）。
+#   当前全仓 0 error / 0 warning（2026-10-07 实测），所以可以直接卡 warning。
+#   若将来确实需要豁免，正确做法是行内 `# shellcheck disable=SCxxxx` 并写明理由，
+#   而不是放宽全局阈值。
+#
+# 不并入 ci.yml 的原因：ci.yml 已有在途改动，且 shell 检查与前端检查
+# 关注点不同，分开后触发条件也能按 *.sh 路径过滤，避免每次前端改动都跑。
+# =============================================================================
+name: Shellcheck
+
+on:
+  push:
+    paths:
+      - "**.sh"
+      - ".github/workflows/shellcheck.yml"
+  pull_request:
+    paths:
+      - "**.sh"
+  workflow_dispatch:
+
+jobs:
+  shellcheck:
+    name: Shell script lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: 打印待检查脚本清单
+        shell: bash
+        run: |
+          mapfile -t files < <(find . -name '*.sh' \
+            -not -path '*/node_modules/*' -not -path './.git/*' | sort)
+          printf '%s\n' "${files[@]}"
+          echo "共 ${#files[@]} 个脚本"
+
+      - name: shellcheck（warning 级，0 容忍）
+        shell: bash
+        run: |
+          mapfile -t files < <(find . -name '*.sh' \
+            -not -path '*/node_modules/*' -not -path './.git/*' | sort)
+          shellcheck --version
+          # --format=gcc 让输出在 GitHub 日志里可读且可点
+          shellcheck --severity=warning --format=gcc "${files[@]}"
+          echo "shellcheck 通过：${#files[@]} 个脚本，0 error / 0 warning"
