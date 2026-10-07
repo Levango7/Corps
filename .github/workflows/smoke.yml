@@ -1,44 +1,70 @@
 # =============================================================================
-# 定时 smoke 监控：每 15 分钟探测生产/staging 的 /api/health
+# 定时 smoke 监控：探测生产/staging 的 /api/health
 #
 # 启用方式：仓库 Settings → Secrets and variables → Actions → Variables
 # 新增变量 SMOKE_TARGET_URL（如 https://corps.example.com），或执行：
 #   gh variable set SMOKE_TARGET_URL --body https://你的域名
-# 未配置时 job 仍会运行并输出一条 warning（不再静默跳过）——静默跳过会让
-# 「以为有监控、实际没有」成为常态，与"健康"在视觉上难以区分。
-# 探测失败时 job 失败，GitHub 会向 watch 该仓库的用户 / 工作流触发者
-# 发送默认邮件告警（Actions failure notification）。
+#
+# 设计（2026-10-07 改，修"假绿"）：
+#   job 1 `config-check`：每日一次，未配置 SMOKE_TARGET_URL 则**失败**。
+#     为什么单独拆出来：探测 job 是 */15 高频跑的，若让它在未配置时失败，
+#     会每 15 分钟发一封告警邮件，把真正的故障告警淹没；而"未配置"是
+#     一次性配置缺陷，每日提醒一次足够。
+#   job 2 `smoke-test`：每 15 分钟探测。未配置时**跳过探测**（输出 warning，
+#     job 成功）——它不承担"提醒配置缺失"的职责，那个由 job 1 负责。
+#
+# 历史教训（2026-10-04 与 10-07 两次迭代）：
+#   - 最初：未配置时 job 级 if 跳过 → 显示 skipped，与"健康"难以区分。
+#   - 10-04：改为 warning + 跳过探测 → job 仍是 success，**列表页依然绿**，
+#     "以为有监控、实际没有"的问题并未真正解决。
+#   - 10-07：拆出 config-check 做硬失败，让"未配置"在 CI 列表页真实可见。
 # =============================================================================
 name: Smoke
 
 on:
   schedule:
-    # 每 15 分钟一次
+    # 每 15 分钟探测一次
     - cron: "*/15 * * * *"
+    # 每日 01:00 UTC（= 09:00 北京时间）检查监控配置
+    - cron: "0 1 * * *"
   workflow_dispatch:
 
 jobs:
-  smoke-test:
-    name: Smoke test (/api/health)
+  # 每日一次的配置检查：未配置监控目标 → 失败，让缺失在列表页可见
+  config-check:
+    name: 监控配置检查
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
     runs-on: ubuntu-latest
     steps:
-      # 未配置 SMOKE_TARGET_URL 时不再静默跳过整个 job（2026-10-04 改）：
-      # 静默跳过会让「以为有监控、实际没有」成为常态——job 显示为 skipped，
-      # 与"健康"在视觉上几乎无法区分。改为显式输出 warning，让未配置这件事可见。
-      - name: 检查监控目标是否已配置
+      - name: 检查 SMOKE_TARGET_URL 是否已配置
         shell: bash
         run: |
           if [ -z "${{ vars.SMOKE_TARGET_URL }}" ]; then
-            echo "::warning::SMOKE_TARGET_URL 未配置——健康检查未生效，当前等于没有监控。"
+            echo "::error::SMOKE_TARGET_URL 未配置——当前没有任何健康监控，等于生产裸奔。"
             echo "启用方式：gh variable set SMOKE_TARGET_URL --body https://你的域名"
-            echo "SKIP_SMOKE=1" >> "$GITHUB_ENV"
+            exit 1
+          fi
+          echo "SMOKE_TARGET_URL 已配置：${{ vars.SMOKE_TARGET_URL }}"
+
+  # 高频探测：未配置时跳过（配置缺失由上面的 config-check 负责提醒）
+  smoke-test:
+    name: Smoke test (/api/health)
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *'
+    runs-on: ubuntu-latest
+    steps:
+      - name: GET /api/health and validate payload
+        shell: bash
+        env:
+          TARGET: ${{ vars.SMOKE_TARGET_URL }}
+        run: |
+          # 未配置时跳过探测（配置缺失由每日的 config-check job 负责硬失败提醒）。
+          # 这里用 step 内判断而非 `if:` 条件，避免依赖 `if` 对 vars 上下文的支持。
+          if [ -z "$TARGET" ]; then
+            echo "::warning::SMOKE_TARGET_URL 未配置，本次不探测。"
+            echo "注意：本 job 不承担配置提醒职责——每日「监控配置检查」job 会因此失败。"
+            exit 0
           fi
 
-      - name: GET /api/health and validate payload
-        if: env.SKIP_SMOKE != '1'
-        shell: bash
-        run: |
-          TARGET="${{ vars.SMOKE_TARGET_URL }}"
           HTTP_CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 10 "$TARGET/api/health")
           echo "HTTP $HTTP_CODE from $TARGET/api/health"
           cat /tmp/health.json || true
