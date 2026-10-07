@@ -336,3 +336,174 @@ export function runWithShareToken<T>(
 ): Promise<T> {
   return withGuc({ public_token: token }, fn);
 }
+
+// ─── 401/403 统一出口（W2 · 只新增，不动既有 getWorkspaceContext）──
+
+/**
+ * 拒绝原因。既有 `getWorkspaceContext` 对全部四种情形一律 `return null`，
+ * handler 只能统一回 401，于是「身份有效但无权」也被说成「未授权」——
+ * 前端 api.ts 会在 401 上做一次无意义的 token refresh 往返，用户最后看到
+ * 「未授权」而不是「无权限」。本枚举把两者分开。
+ */
+export type DenialReason =
+  | "unauthenticated" // 无有效凭据 —— 真 401
+  | "workspace_mismatch" // token 绑定的 wid 与 URL wid 不符
+  | "not_a_member" // 身份有效，但不是该工作区成员
+  | "write_policy"; // 成员，但写策略拒绝（如 viewer 写工作区数据）
+
+/** 拒绝结果：带语义化的 HTTP 状态与原因，供 authFailure 直接构造响应。 */
+export interface AuthDenial {
+  ok: false;
+  /** 401 仅代表「没有身份」；403 代表「有身份但无权」 */
+  status: 401 | 403;
+  reason: DenialReason;
+}
+
+/** 通过结果：与既有 getWorkspaceContext 的成功形态逐字段一致。 */
+export interface AuthGranted {
+  ok: true;
+  payload: JWTPayload;
+  member: { role: string; workspaceId: string };
+  permissions?: Map<string, string>;
+  temporaryGrant?: {
+    tempRole: string;
+    originalRole: string;
+    expiresAt: Date;
+  } | null;
+}
+
+/**
+ * getWorkspaceContextV2 的返回值。
+ *
+ * `null` 只是为了与 v1 的调用形态保持一致，便于后续机械化迁移
+ * （既有 handler 写的 `if (!ctx)` 能同时接住 null 与 denial）；
+ * V2 本身**从不返回 null**——四个拒绝分支全部有明确语义，
+ * 返回 null 会把 403 伪装成 401，那正是本函数要修的问题。
+ * 调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）。
+ */
+export type WorkspaceContextV2 = AuthGranted | AuthDenial | null;
+
+/**
+ * getWorkspaceContext 的判别联合版本（W2 新增）。
+ *
+ * 刻意**复制**既有函数的逻辑体而非重构它：`web/lib/auth.ts` 属并行会话占区，
+ * 本批不允许修改既有函数的任何一行（Spec §0.3）。两个函数因此暂时并存，
+ * 语义必须一致——既有 25 处 `expect([401,403])` 断言依赖 v1 行为不变。
+ *
+ * 与 v1 的唯一差异是四个拒绝分支改为返回 `AuthDenial`：
+ *  - :88  `if (!payload) return null`                 → unauthenticated / 401
+ *  - :94  `payload.wid !== wid`                       → workspace_mismatch / 403
+ *  - :107 `if (!member) return null`                  → not_a_member / 403
+ *  - :198 `!decision.allowed`（写策略拒绝）           → write_policy / 403
+ */
+export async function getWorkspaceContextV2(
+  req: NextRequest,
+  wid: string,
+): Promise<WorkspaceContextV2> {
+  const payload = await authenticate(req);
+  if (!payload) return { ok: false, status: 401, reason: "unauthenticated" };
+
+  // wid 守卫（口径同 v1）：旧 token / Bearer 场景可能不带 wid，跳过守卫走成员资格校验。
+  if (payload.wid && payload.wid !== wid) {
+    return { ok: false, status: 403, reason: "workspace_mismatch" };
+  }
+
+  const member = await runWithWorkspace(
+    wid,
+    (tx) =>
+      tx.member.findFirst({
+        where: { userId: payload.sub, workspaceId: wid },
+        select: { role: true, workspaceId: true },
+      }),
+    payload.sub,
+  );
+  if (!member) return { ok: false, status: 403, reason: "not_a_member" };
+
+  // F2（任务 156）：为 member/viewer 角色一次性加载该工作区的权限覆盖。
+  let permissions: Map<string, string> | undefined;
+  if (member.role === "member" || member.role === "viewer") {
+    const actionToCode: Record<string, string> = {
+      create: "c",
+      read: "r",
+      update: "u",
+      delete: "d",
+    };
+    const perms = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.memberPermission.findMany({
+          where: { workspaceId: wid, role: member.role },
+          select: { role: true, module: true, actions: true },
+        }),
+      payload.sub,
+    );
+    permissions = new Map<string, string>();
+    for (const p of perms) {
+      permissions.set(
+        `${p.role}:${p.module}`,
+        p.actions
+          .map((a) => actionToCode[a] ?? "")
+          .filter(Boolean)
+          .join(""),
+      );
+    }
+  }
+
+  // F2（任务 186）：加载临时授权（若存在）。
+  let temporaryGrant: {
+    tempRole: string;
+    originalRole: string;
+    expiresAt: Date;
+  } | null = null;
+  if (member.role !== "owner") {
+    const grant = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.temporaryGrant.findUnique({
+          where: { userId_workspaceId: { userId: payload.sub, workspaceId: wid } },
+          select: { tempRole: true, originalRole: true, expiresAt: true },
+        }),
+      payload.sub,
+    );
+    if (grant) {
+      temporaryGrant = {
+        tempRole: grant.tempRole,
+        originalRole: grant.originalRole,
+        expiresAt: grant.expiresAt,
+      };
+    }
+  }
+
+  const writeMode = parseWritePolicyMode(process.env.WRITE_POLICY_MODE);
+  if (writeMode !== "off") {
+    const tempRole =
+      temporaryGrant && temporaryGrant.expiresAt.getTime() > Date.now()
+        ? temporaryGrant.tempRole
+        : null;
+    const decision = decideWorkspaceWrite(
+      {
+        method: req.method,
+        pathname: new URL(req.url).pathname,
+        role: tempRole ?? member.role,
+        overrides: permissions ?? null,
+      },
+      writeMode,
+    );
+    if (!decision.allowed) {
+      console.error(
+        `[write-policy] denied method=${req.method} role=${member.role}` +
+          `${tempRole ? ` tempRole=${tempRole}` : ""} path=${new URL(req.url).pathname}` +
+          ` reason=${decision.reason}`,
+      );
+      return { ok: false, status: 403, reason: "write_policy" };
+    }
+    if (decision.shadowDenied) {
+      console.error(
+        `[write-policy] shadow-deny method=${req.method} role=${member.role}` +
+          ` path=${new URL(req.url).pathname} reason=${decision.reason}`,
+      );
+    }
+  }
+
+  return { ok: true, payload, member, permissions, temporaryGrant };
+}

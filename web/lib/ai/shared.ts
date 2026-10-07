@@ -36,11 +36,11 @@ export function unauthorizedResponse(req: NextRequest): NextResponse {
 /** AI 服务未配置响应（503）
  *
  * code 对齐统一数字模式（原 "AI_NOT_CONFIGURED" 字符串违反 { code, data, message } 信封约定）。
- * 接受 req 参数以备国际化；apiMsg 暂无 aiNotConfigured key，先用硬编码英文。
+ * message 走 api-messages.ts 的 aiNotConfigured 键（此前硬编码英文，中文用户拿到英文）。
  */
-export function aiNotConfiguredResponse(_req: NextRequest): NextResponse {
+export function aiNotConfiguredResponse(req: NextRequest): NextResponse {
   return NextResponse.json(
-    { code: 503, message: "AI service is not configured", data: null },
+    { code: 503, message: apiMsg(req, "aiNotConfigured"), data: null },
     { status: 503 },
   );
 }

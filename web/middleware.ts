@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import createMiddleware from "next-intl/middleware";
 import { buildCsp } from "./lib/csp";
 import { routing } from "./lib/i18n-routing";
+import { apiMsg } from "./lib/api-messages";
 
 /**
  * next-intl 中间件：locale 检测与重定向（ADR-008 方案 A）。
@@ -112,8 +113,11 @@ export function middleware(req: NextRequest) {
   }
 
   if (!isAllowed(req)) {
+    // 文案走 api-messages.ts 收口（原文硬编码英文且含 CSRF/跨域术语，
+    // 用户看不懂也无从自救）。语言协商与其余端点同口径：NEXT_LOCALE cookie
+    // 优先，回退 Accept-Language。
     return NextResponse.json(
-      { code: 403, message: "Cross-origin request blocked (CSRF protection)" },
+      { code: 403, message: apiMsg(req, "blockedBySecurityPolicy") },
       { status: 403 },
     );
   }

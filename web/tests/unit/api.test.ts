@@ -15,7 +15,8 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
  * 不依赖真实网络与 dev server。
  */
 
-import { api } from "@/lib/api";
+import { api, ApiError } from "@/lib/api";
+import { API_MESSAGES } from "@/lib/api-messages";
 
 /** 构造一个最小 Response-like 对象（避免完整 Response 构造的兼容问题） */
 function mockResponse(
@@ -275,7 +276,7 @@ describe("api 客户端 - 401 自动 refresh 与重试", () => {
     expect(refreshInit.credentials).toBe("include");
   });
 
-  it("401 时 refresh 失败（非 ok）抛出 unauthorized 错误", async () => {
+  it("401 时 refresh 失败（非 ok）抛出未授权错误", async () => {
     // Arrange
     const unauthorizedResponse = mockResponse(
       { code: 401, message: "token expired", data: null },
@@ -289,8 +290,34 @@ describe("api 客户端 - 401 自动 refresh 与重试", () => {
     fetchSpy.mockResolvedValueOnce(unauthorizedResponse).mockResolvedValueOnce(refreshFailResponse);
 
     // Act & Assert
-    await expect(api("/api/v1/tasks/1")).rejects.toThrow("unauthorized");
+    // AC-21：抛出的 message 必须是**展示文案**，不能是裸 key 字面量 "unauthorized"
+    // （该字面量会直接进 Toast，英文用户看到的就是 "unauthorized" 这个词）。
+    // 本用例此前断言的正是那个裸 key，等于把缺陷钉成了契约，故在此改写。
+    await expect(api("/api/v1/tasks/1")).rejects.toThrow(API_MESSAGES.unauthorized.zh);
     expect(fetchSpy).toHaveBeenCalledTimes(2);
+  });
+
+  it("401 refresh 失败抛出的错误带可映射的 messageKey，且 message 不是裸 key", async () => {
+    fetchSpy
+      .mockResolvedValueOnce(mockResponse({ code: 401, message: "x", data: null }, { status: 401 }))
+      .mockResolvedValueOnce(
+        mockResponse({ code: 401, message: "x", data: null }, { status: 401 }),
+      );
+
+    let caught: unknown;
+    try {
+      await api("/api/v1/tasks/1");
+    } catch (e) {
+      caught = e;
+    }
+    expect(caught).toBeInstanceOf(ApiError);
+    const err = caught as InstanceType<typeof ApiError>;
+    // 可映射的错误码：调用方可凭此键查表，无需对展示文案做字符串比较
+    expect(err.messageKey).toBe("unauthorized");
+    expect(err.status).toBe(401);
+    // message 是真实文案，绝不能等于键名本身
+    expect(err.message).not.toBe("unauthorized");
+    expect(err.message).toBe(API_MESSAGES.unauthorized.zh);
   });
 
   it("401 时 refresh 端点网络错误则抛出 fetch 原始错误", async () => {

@@ -26,6 +26,16 @@ export const API_MESSAGES = {
   invalidParams: { zh: "请求参数无效", en: "Invalid request parameters" },
   unauthorized: { zh: "未授权", en: "Unauthorized" },
   forbidden: { zh: "禁止访问", en: "Forbidden" },
+  /**
+   * CSRF / Origin 校验失败（middleware）。
+   * 文案刻意不提 CSRF、跨域、Origin —— 用户不认识这些词，只会觉得被误伤；
+   * 也不引导重新登录（登录解决不了 Origin 不匹配）。只说清"被拦了 + 怎么恢复
+   * + 已填内容没丢"这三件用户真正需要知道的事。
+   */
+  blockedBySecurityPolicy: {
+    zh: "这次操作被安全策略拦下了，刷新页面后重试，你填写的内容会保留。",
+    en: "This action was blocked by our security check. Refresh and try again — what you entered is kept.",
+  },
   validationFailed: { zh: "参数校验失败", en: "Validation failed" },
   validationError: { zh: "参数校验错误", en: "Validation error" },
   rateLimited: { zh: "请求过于频繁，请稍后再试", en: "Too many requests; please try again later" },
@@ -56,6 +66,14 @@ export const API_MESSAGES = {
 
   /* ── AI 推送（M2 闭环完善）── */
   pushScheduleNotFound: { zh: "推送计划不存在", en: "Push schedule not found" },
+  /**
+   * AI 服务未配置（DEEPSEEK_API_KEY / OPENAI_API_KEY 皆为空）。
+   * lib/ai/shared.ts:41 此前硬编码英文，英文用户能看懂、中文用户拿到英文。
+   */
+  aiNotConfigured: {
+    zh: "AI 功能尚未配置，请联系管理员开启后再使用",
+    en: "AI features are not configured yet. Contact your admin to enable them first",
+  },
 
   /* ── 任务 ── */
   assigneeNotMember: {
