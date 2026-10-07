@@ -227,6 +227,23 @@ fi
 log_step "真实恢复模式（--force）"
 log_error "本操作将用 ${BACKUP_FILE} 覆盖生产库 ${PROD_DB} 的全部数据。"
 
+# 闸门：必须先用 --dry-run 验证过**同一份**备份文件。
+# 此前 DRY_RUN_DONE_MARK 只被写入（第 207 行）却从未被读取——文档声明的
+# "必须先 --dry-run 验证"实际是空承诺，--force 可以跳过验证直接打生产。
+# 这正是"声称有约束、实为死代码"的典型：约束写在注释里，没有任何执行点。
+if [[ ! -f "${DRY_RUN_DONE_MARK}" ]]; then
+  die 1 "该备份文件未通过 --dry-run 验证，拒绝直接覆盖生产库。
+       请先执行：bash deploy/scripts/restore.sh --dry-run ${BACKUP_FILE}
+       （dry-run 会恢复到临时库 ${CHECK_DB} 并输出核心表行数，不碰生产）"
+fi
+if [[ "$(tr -d '[:space:]' < "${DRY_RUN_DONE_MARK}")" != "${BACKUP_FILE}" ]]; then
+  die 1 "上次 --dry-run 验证的是另一份文件，拒绝用未验证的备份覆盖生产库。
+       已验证：$(tr -d '[:space:]' < "${DRY_RUN_DONE_MARK}")
+       本次要恢复：${BACKUP_FILE}
+       请先对本次的文件执行 --dry-run。"
+fi
+log_ok "已确认该备份文件通过 --dry-run 验证"
+
 # 二次确认：破坏性操作不能靠"用户传了个 flag"就往下走
 log_warn "请输入 RESTORE 四个字母以确认（其他任何输入都会中止）"
 printf '确认请输入 > ' >&2
@@ -244,11 +261,19 @@ if [[ ! -d "${_bdir}" ]]; then
 fi
 _safety="${_bdir}/corps_prerestore_$(date +%Y%m%d_%H%M%S).sql.gz"
 log_info "当前生产库将备份到：${_safety}"
-if ! corpse_compose exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' 2>/dev/null \
+# stderr 落临时文件而非 /dev/null：与 deploy.sh 同一处理。备份失败时
+# "恢复前备份失败"本身不提供任何可行动信息（权限？连接？卷满？），
+# 而此刻正是最不能靠猜的时刻——用户已经被迫中断恢复流程了。
+_err_log="$(mktemp 2>/dev/null || echo "${_safety}.err")"
+if ! corpse_compose exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' 2>"${_err_log}" \
      | gzip > "${_safety}"; then
-  rm -f "${_safety}"
+  rm -f "${_safety}" 2>/dev/null || true
+  log_error "pg_dumpall 失败，stderr 末尾 5 行："
+  tail -n 5 "${_err_log}" 2>/dev/null | while IFS= read -r _l; do log_error "  ${_l}"; done
+  rm -f "${_err_log}" 2>/dev/null || true
   die 1 "恢复前备份失败——拒绝在无还原点的情况下覆盖生产库"
 fi
+rm -f "${_err_log}" 2>/dev/null || true
 log_ok "恢复前备份完成（${_safety}）"
 
 # 停 app：恢复期间应用仍连库会读到半恢复状态的数据
