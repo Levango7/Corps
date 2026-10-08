@@ -26,7 +26,7 @@ import {
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg, apiLocale } from "@/lib/api-messages";
 import {
@@ -35,6 +35,7 @@ import {
   type VoiceIntent,
   type VoiceIntentResult,
 } from "@/lib/ai/prompts/voice-intent-parse";
+import { authFailure } from "@/lib/auth-response";
 
 /** POST schema */
 const schema = z.object({
@@ -154,13 +155,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区成员资格认证
-  const ctx = await getWorkspaceContext(req, body.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 6) AI 意图解析 + 持久化
   try {

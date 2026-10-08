@@ -1,14 +1,15 @@
 // GET    /api/v1/ai/conversations/[id] — 获取对话详情 + 消息列表
 // DELETE /api/v1/ai/conversations/[id] — 删除对话（级联删除消息）
 //
-// 认证模式：getUserId → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：通过 workspaceId + userId 双重过滤确保用户只能访问自己的对话
 
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 从 URL 路径提取对话 ID，并校验是否为合法 UUID */
 function extractId(req: NextRequest): string | null {
@@ -47,13 +48,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 查询
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 双重过滤：workspaceId + userId 确保只能访问自己的对话
     const conversation = await runWithWorkspace(
@@ -128,13 +131,15 @@ export async function DELETE(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 删除
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // P2-4: 原子化删除——单步 deleteMany 带 userId + workspaceId 条件，
     // 避免先查询再删除的并发竞态（中间可能有并发删除）

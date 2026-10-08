@@ -11,8 +11,9 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { submitFeedback, getFeedbackStats } from "@/lib/ai/feedback";
 import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContextV2 } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── POST 校验 schema ──────────────────────────────────────────────────────
 const postSchema = z.object({
@@ -67,13 +68,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 4) 工作区归属校验（P0-1：防止越权访问其他工作区）
-  const ctx = await getWorkspaceContext(req, body.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission"), data: null },
-      { status: 403 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 5) 持久化反馈
   try {
@@ -141,13 +144,15 @@ export async function GET(req: NextRequest) {
   }
 
   // 4) 工作区归属校验（P0-1：防止越权访问其他工作区）
-  const ctx = await getWorkspaceContext(req, params.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, params.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission"), data: null },
-      { status: 403 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 5) 查询反馈列表 + 统计
   try {

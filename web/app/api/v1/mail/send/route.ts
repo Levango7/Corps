@@ -17,7 +17,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { sendMail } from "@/lib/mail/transporter";
@@ -77,15 +78,17 @@ export async function POST(req: NextRequest) {
   }
 
   // 3) 工作区成员资格认证
-  let ctx: Awaited<ReturnType<typeof getWorkspaceContext>>;
+  let ctx: Awaited<ReturnType<typeof getWorkspaceContextV2>>;
   try {
-    ctx = await getWorkspaceContext(req, body.wid);
-    if (!ctx) {
+    ctx = await getWorkspaceContextV2(req, body.wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
   } catch (error) {
     console.error("[POST mail/send] getWorkspaceContext error:", error);
     return NextResponse.json(

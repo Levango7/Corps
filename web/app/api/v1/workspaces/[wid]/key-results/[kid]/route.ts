@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * 顶级 KeyResult 端点 · /v1/workspaces/{wid}/key-results/{kid}
@@ -16,7 +17,7 @@ import { computeProgress } from "@/lib/okr";
  *  - 本端点不携带 oid，从 KR 反查 objectiveId，再校验 objective.workspaceId。
  *  两者均经 runWithWorkspace 注入 RLS，双保险防跨租户访问。
  *
- * 认证模式：getWorkspaceContext → checkRateLimit → zod parse → runWithWorkspace（RLS 事务）
+ * 认证模式：getWorkspaceContextV2 → checkRateLimit → zod parse → runWithWorkspace（RLS 事务）
  */
 
 const patchSchema = z.object({
@@ -43,12 +44,15 @@ export async function PATCH(
   { params }: { params: Promise<{ wid: string; kid: string }> },
 ) {
   const { wid, kid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 限流：每分钟 60 次更新（进度面板可能高频拖动滑块）
   const limited = await checkRateLimit(req, "okr-key-result-update", {
@@ -141,12 +145,15 @@ export async function DELETE(
   { params }: { params: Promise<{ wid: string; kid: string }> },
 ) {
   const { wid, kid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   const limited = await checkRateLimit(req, "okr-key-result-delete", {
     windowMs: 60_000,

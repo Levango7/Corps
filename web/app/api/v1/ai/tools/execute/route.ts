@@ -8,7 +8,7 @@
 // 执行流程：
 //  1) 认证 + 限流
 //  2) zod 校验请求体
-//  3) getWorkspaceContext 验证工作区成员资格（wid 守卫 + RLS）
+//  3) getWorkspaceContextV2 验证工作区成员资格（wid 守卫 + RLS）
 //  3.5) 写类工具按权限矩阵放行（create_task → tasks/create），只读成员 403
 //  4) runWithWorkspace 在 RLS 事务内执行工具，注入 tx 上下文
 //  5) 返回 ToolResult（success / data / error）
@@ -17,12 +17,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { requirePermission } from "@/lib/permissions";
 import { apiMsg } from "@/lib/api-messages";
 import { toolRegistry } from "@/lib/ai/tools/registry";
 // 触发内置工具自注册
 import "@/lib/ai/tools/builtins";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   toolName: z.string().min(1).max(100),
@@ -74,13 +75,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区成员资格认证（wid 守卫 + RLS）
-  const ctx = await getWorkspaceContext(req, body.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 6) 写类工具接权限矩阵：create_task 与手工 POST /tasks 走同一条规则（tasks/create）。
   //    此前本端点只校验成员资格，只读成员可经 AI 落位绕过 viewer 只读——

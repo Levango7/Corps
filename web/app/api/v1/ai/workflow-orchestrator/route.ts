@@ -9,10 +9,10 @@
 // 4. 返回工作流定义（trigger + nodes + edges + explanation）
 //
 // 认证链顺序（来源：2026-09-16-ai-api-route-auth-chain-order-config-check-before-rate-limit）：
-//   getUserId → isAiConfigured → checkRateLimit → zod parse → getWorkspaceContext
+//   getUserId → isAiConfigured → checkRateLimit → zod parse → getWorkspaceContextV2
 //   - isAiConfigured 在 checkRateLimit 之前：AI 未配置时所有请求注定 503，不应消耗限流配额
 //   - checkRateLimit 在 zod parse 之前：超限请求不应再消耗 CPU 解析 body
-//   - getWorkspaceContext 在最后：含 DB 查询（member.findFirst），最昂贵
+//   - getWorkspaceContextV2 在最后：含 DB 查询（member.findFirst），最昂贵
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
@@ -27,7 +27,7 @@ import {
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContextV2 } from "@/lib/auth";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import {
@@ -35,6 +35,7 @@ import {
   buildWorkflowOrchestratorUserPrompt,
   type ExistingWorkflowSummary,
 } from "@/lib/ai/prompts/workflow-orchestrator";
+import { authFailure } from "@/lib/auth-response";
 
 // ── 请求体 schema ──
 
@@ -249,14 +250,16 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区上下文（含 DB 查询，最昂贵，放最后）
-  //    getWorkspaceContext 同时完成 workspace 归属校验 + 角色加载
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  //    getWorkspaceContextV2 同时完成 workspace 归属校验 + 角色加载
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 6) LLM 生成工作流定义（非流式，defaultModel）
   let workflow: WorkflowDefinition;

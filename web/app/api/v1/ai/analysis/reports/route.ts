@@ -7,8 +7,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 const querySchema = z.object({
   wid: z.string().uuid(),
@@ -55,13 +56,15 @@ export async function GET(req: NextRequest) {
   }
 
   // 3) 工作区成员资格认证
-  const ctx = await getWorkspaceContext(req, query.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, query.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 4) 查询报告列表 + 总数（RLS 事务内）
   try {

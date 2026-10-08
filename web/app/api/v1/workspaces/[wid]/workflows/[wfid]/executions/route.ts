@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { executeWorkflow } from "@/lib/workflow/executor";
 import { logger } from "@/lib/logger";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * GET /v1/workspaces/{wid}/workflows/{wfid}/executions — 执行历史
@@ -15,12 +16,15 @@ export async function GET(
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
   const { wid, wfid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const url = new URL(req.url);
@@ -95,12 +99,15 @@ export async function POST(
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
   const { wid, wfid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const body = await req.json().catch(() => ({}));

@@ -13,7 +13,7 @@
  *  5. 编辑更新 body + editedAt = now()，允许多次编辑（5 分钟内）
  *
  * ─── 安全 ─────────────────────────────────────────────────────
- *  - getWorkspaceContext 校验工作区成员资格 + RLS 上下文
+ *  - getWorkspaceContextV2 校验工作区成员资格 + RLS 上下文
  *  - checkRateLimit 防滥用（60s 内 30 次）
  *  - zod 校验请求体
  *  - 所有 DB 操作经 runWithWorkspace 注入 RLS
@@ -25,11 +25,12 @@
  */
 
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
+import { authFailure } from "@/lib/auth-response";
 
 /** 编辑/撤回时间窗口（毫秒）：5 分钟 */
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
@@ -92,13 +93,15 @@ export async function PATCH(
   const { workspaceId, body } = parsed;
 
   // 2) 认证 + 工作区上下文
-  const ctx = await getWorkspaceContext(req, workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 3) 限流（认证后立即调用，防滥用）
   const limited = await checkRateLimit(req, "im-message-edit", {
@@ -238,13 +241,15 @@ export async function DELETE(
   const { workspaceId } = parsed;
 
   // 2) 认证 + 工作区上下文
-  const ctx = await getWorkspaceContext(req, workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 3) 限流
   const limited = await checkRateLimit(req, "im-message-revoke", {

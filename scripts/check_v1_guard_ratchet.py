@@ -158,6 +158,10 @@ def self_test():
         ("三种问题并存", base, {"a.ts": 9, "d.ts": 1},
          {"NEW_V1", "V1_REGRESSION", "STALE_V1"}),
         ("全部收编", {"a.ts": 2, "b.ts": 1}, {}, {"STALE_V1"}),
+        # 终点态：基线零条目 + 实测零残留 => 必须通过（这是闸门存在的目的）
+        ("终点态（基线空 + 实测零残留）", {}, {}, set()),
+        # 反向：基线零条目 + 仍残留 => 全都是 NEW_V1，必须红
+        ("终点态被破坏（基线空 + 仍有残留）", {}, {"a.ts": 1}, {"NEW_V1"}),
     ]
 
     bad = 0
@@ -199,10 +203,16 @@ def main():
               % (len(body), total, len(header)))
         return 0
 
-    baseline = load_baseline(baseline_p)
-    if not baseline:
-        print("基线为空或不存在：%s（先跑 --emit 生成）" % BASELINE_REL)
+    # 区分两种「空」：
+    #  - 基线**文件**不存在        -> 配置缺失，必须报错（先跑 --emit）
+    #  - 基线存在但**零条目**      -> 合法的终点态：要求残留为 0
+    # 曾经把两者混为一谈，于是闸门把"自己驱动到的终点"判成了错误——
+    # 残留真收敛到 0 的那天，这道闸门反而变成红的。
+    if not baseline_p.exists():
+        print("基线文件不存在：%s（先跑 --emit 生成）" % BASELINE_REL)
         return 1
+
+    baseline = load_baseline(baseline_p)
 
     print("实测：%d 个文件仍有 v1 残留，合计 %d 处" % (len(current), sum(current.values())))
     print("基线：%d 个文件，合计 %d 处" % (len(baseline), sum(baseline.values())))

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContextV2 } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
@@ -9,6 +9,7 @@ import {
   subscribeWorkspaceEvents,
   type WorkspaceEvent,
 } from "@/lib/workspace-events";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * GET /v1/workspaces/{wid}/events/stream — 工作区级 SSE 实时推送
@@ -20,7 +21,7 @@ import {
  *  - presence.online / presence.offline：成员上下线
  *  - ping：30 秒心跳保活（SSE 注释行 `: heartbeat\n\n`）
  *
- * 认证：getWorkspaceContext 校验工作区成员身份 + RLS 上下文。
+ * 认证：getWorkspaceContextV2 校验工作区成员身份 + RLS 上下文。
  * 限流：复用 chat-events 的 SSE 连接建立限流（每分钟 20 次）+ 单用户并发上限 5。
  *
  * 实现说明：
@@ -54,13 +55,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (limited) return limited;
 
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   const userId = ctx.payload.sub;
 

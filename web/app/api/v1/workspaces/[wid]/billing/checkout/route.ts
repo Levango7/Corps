@@ -1,10 +1,11 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { getPaymentProvider, PaymentProviderError, ProviderId } from "@/lib/payments";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
+import { authFailure } from "@/lib/auth-response";
 
 // P3-2 / 裁决三：checkout/route.ts 归支付线独占。period 字段并入本线交付。
 // Phase 2：新增 provider 参数支持通道选择（stripe/wechatpay-native/alipay-page）。
@@ -54,12 +55,15 @@ function safeRedirectUrl(
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   const denied = await requirePermission(ctx, "billing", "update", req);
   if (denied) return denied;
 

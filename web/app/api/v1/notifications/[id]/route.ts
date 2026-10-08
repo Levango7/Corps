@@ -2,7 +2,7 @@
 //        Body: { read: boolean }
 // DELETE /api/v1/notifications/[id]?workspaceId=xxx — 删除通知
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：先查通知确认属于当前用户 + 工作区，再更新/删除（防越权操作他人通知）
 // 约定：{ code, data, message }
 //
@@ -14,9 +14,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 查询参数 schema（workspaceId 用于 RLS 上下文） */
 const querySchema = z.object({
@@ -86,13 +87,15 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 
   // 4) 工作区成员资格认证 + 更新
   try {
-    const ctx = await getWorkspaceContext(req, workspaceId);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, workspaceId);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 先验证通知属于当前用户 + 工作区（防越权）
     const notification = await runWithWorkspace(
@@ -185,13 +188,15 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
 
   // 3) 工作区成员资格认证 + 删除
   try {
-    const ctx = await getWorkspaceContext(req, workspaceId);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, workspaceId);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 先验证通知属于当前用户 + 工作区（防越权）
     const notification = await runWithWorkspace(

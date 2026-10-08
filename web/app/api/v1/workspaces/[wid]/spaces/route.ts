@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * 知识库空间 API · /api/v1/workspaces/{wid}/spaces
@@ -15,12 +16,15 @@ import { handlePrismaError } from "@/lib/prisma-error";
 /** GET /v1/workspaces/{wid}/spaces — 列出工作区所有空间（含 KnowledgeBase 渲染所需的整棵树） */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     // Prisma 不支持递归 include，故三次扁平查询后在内存里装配（单工作区规模有界，各带 take 兜底）。
@@ -137,12 +141,15 @@ const createSpaceSchema = z.object({
 /** POST /v1/workspaces/{wid}/spaces — 创建空间（仅 owner/admin） */
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   // 权限：仅 owner/admin 可创建空间（复用标签创建权限语义）
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
@@ -193,12 +200,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
  */
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "noPermission"), data: null },
@@ -290,12 +300,15 @@ const deleteSpaceSchema = z.object({
  */
 export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "noPermission"), data: null },

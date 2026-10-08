@@ -6,12 +6,13 @@
 // DEEPSEEK_API_KEY 未配置时返回 503（无 fallback，行动项生成强依赖 LLM）。
 
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { generateText } from "ai";
 import { requireDefaultModel } from "@/lib/ai/deepseek";
 import { isAiConfigured, aiNotConfiguredResponse } from "@/lib/ai/shared";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   decisionMarkdown: z.string().min(10).max(20_000),
@@ -81,12 +82,15 @@ ${decisionMarkdown}`;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   // 仅 member 及以上可生成行动项
   if (!["owner", "admin", "member"].includes(ctx.member.role)) {
     return NextResponse.json(

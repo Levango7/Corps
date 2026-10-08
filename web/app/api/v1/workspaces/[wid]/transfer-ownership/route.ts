@@ -5,11 +5,12 @@
 //   与登录认证同源同算法（scrypt）。OAuth 用户（无密码）放行——其登录本身
 //   已经过外部 provider 二次认证，session 劫持风险等价于密码场景。
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace, runWithAuthOp } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { verifyPassword } from "better-auth/crypto";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   newOwnerUserId: z.string().uuid(),
@@ -19,12 +20,15 @@ const schema = z.object({
 
 export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   if (ctx.member.role !== "owner") {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerTransfer"), data: null },

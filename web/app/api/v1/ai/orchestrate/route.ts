@@ -32,7 +32,8 @@ import type { AiAction, AiActionResult } from "@/lib/ai/executor";
 import { requirePermission } from "@/lib/permissions";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContextV2 } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── POST schema：生成联动方案 ───
 const postSchema = z.object({
@@ -106,13 +107,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区上下文校验（成员资格）
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 6) 生成联动方案
   try {
@@ -198,13 +201,15 @@ export async function PATCH(req: NextRequest) {
   }
 
   // 5) 工作区上下文校验（成员资格）
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 6) 校验每个 action 的必填字段 + 枚举值（type 已由 z.enum 校验）
   for (const action of body.actions) {

@@ -2,15 +2,16 @@
 //
 // 获取 Agent 消息历史（支持按 from/to/type 过滤 + 分页）。
 //
-// 认证模式：getUserId → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：通过 workspaceId + id 双重过滤确保用户只能访问当前工作区 Agent 的消息
 // 约定：{ code, data, message }
 
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** UUID 正则校验 */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -97,13 +98,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 查询
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 构建查询条件：当前 Agent 参与的消息（作为发送方或接收方）
     // + 可选的 from/to/type 过滤

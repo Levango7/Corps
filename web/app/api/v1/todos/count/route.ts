@@ -3,15 +3,16 @@
 // 待办计数：返回当前用户在指定工作区的待办总数及按类型分布。
 // 仅统计 pending（未完成）待办，completed 不计入。
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 约定：{ code, data, message } 信封
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── 类型定义 ──────────────────────────────────────────────────────────────────
 
@@ -89,13 +90,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 计数查询
   try {
-    const ctx = await getWorkspaceContext(req, workspaceId);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, workspaceId);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     const currentUserId = ctx.payload.sub;
 

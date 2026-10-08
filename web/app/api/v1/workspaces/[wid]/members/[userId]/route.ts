@@ -5,12 +5,13 @@
 // - admin 可改/删 member；admin 不能改/删 admin、不能动 owner
 // - owner 可以改/删除自己以外的任何人；不能改/删自己
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { requirePermission } from "@/lib/permissions";
+import { authFailure } from "@/lib/auth-response";
 
 const updateSchema = z.object({
   // viewer 必须在此枚举内：lib/permissions.ts:56 的 ROLES、schema.prisma 的 role 注释
@@ -24,12 +25,15 @@ export async function PATCH(
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
   const { wid, userId } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   const denied = await requirePermission(ctx, "members", "update", req);
   if (denied) return denied;
 
@@ -114,12 +118,15 @@ export async function DELETE(
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
   const { wid, userId } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   const denied = await requirePermission(ctx, "members", "delete", req);
   if (denied) return denied;
   if (userId === ctx.payload.sub) {

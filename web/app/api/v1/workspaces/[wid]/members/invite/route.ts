@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithSeatCheck, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithSeatCheck, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
 import { sendInviteEmail } from "@/lib/email";
@@ -9,6 +9,7 @@ import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -20,12 +21,15 @@ const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   if (!["owner", "admin"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "onlyOwnerAdminInvite"), data: null },
@@ -252,7 +256,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // props 增强（FUNNEL-METRICS §4.2）：channel 恒 "email"（现有唯一发出方式即邮件携带链接）；
     // seatUsage 取自已验证的工作区上下文。
     // TC-RLS-07：workspaces / members 均在 RLS 范围（db/rls-activate.sql），全局 prisma
-    // 直查在加固模式下读不到行（seatUsage 恒缺失）。本路由持有 getWorkspaceContext
+    // 直查在加固模式下读不到行（seatUsage 恒缺失）。本路由持有 getWorkspaceContextV2
     // 验证过的 wid，属常规租户上下文，用 runWithWorkspace 注入 workspace_id + user_id
     // GUC 走正常租户谓词——而非 runWithAuthOp 逃生口（后者仅限无 wid 上下文的
     // 公开/系统路径；且 p_members_select 的 provision 分支附 user_id 相等条件，

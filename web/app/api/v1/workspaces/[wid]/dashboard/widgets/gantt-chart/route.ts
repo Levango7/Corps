@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { Prisma } from "@prisma/client";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { authFailure } from "@/lib/auth-response";
 
 type Tx = Prisma.TransactionClient;
 
@@ -16,16 +17,19 @@ type Tx = Prisma.TransactionClient;
  * dueDate 作为结束日期。仅查询有 dueDate 的顶层任务，按 createdAt 排序，
  * 限制最多 20 条记录。
  *
- * 认证：getWorkspaceContext 校验成员身份 + 注入 RLS。
+ * 认证：getWorkspaceContextV2 校验成员身份 + 注入 RLS。
  */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const data = await runWithWorkspace(wid, (tx) => loadGantt(tx, wid), ctx.payload.sub);

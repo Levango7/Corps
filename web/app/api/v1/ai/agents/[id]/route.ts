@@ -2,7 +2,7 @@
 //        Body: { name?, role?, capabilities?, systemPrompt?, model?, enabled?, metadata? }
 // DELETE /api/v1/ai/agents/[id]?wid=xxx — 删除 Agent
 //
-// 认证模式：getUserId → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：通过 workspaceId + id 双重过滤确保用户只能操作当前工作区的 Agent
 // 约定：{ code, data, message }；capabilities/metadata 用 as Prisma.InputJsonValue 转换。
 
@@ -10,9 +10,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 合法角色枚举（与 schema 注释保持一致） */
 const ROLE_VALUES = ["task_breaker", "doc_writer", "follow_upper", "analyst"] as const;
@@ -92,13 +93,15 @@ export async function PATCH(req: NextRequest) {
 
   // 4) 工作区成员资格认证 + 更新
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 构建更新数据（仅包含传入字段）
     const data: Prisma.AiAgentUpdateInput = {};
@@ -193,13 +196,15 @@ export async function DELETE(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 删除
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 原子化删除：带 workspaceId 条件，避免先查询再删除的并发竞态
     const result = await runWithWorkspace(
