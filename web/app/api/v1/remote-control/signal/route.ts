@@ -9,13 +9,13 @@
 // 信令消息类型见 lib/webrtc/signaling.ts 的 SignalingMessage 联合类型。
 // 服务端事件总线见 lib/webrtc/remote-control-events.ts。
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContext
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2
 // 约定：{ code, data, message } 信封（POST），text/event-stream（GET）
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
@@ -23,6 +23,7 @@ import {
   subscribeSignalingMessages,
   type SignalingEnvelope,
 } from "@/lib/webrtc/remote-control-events";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── 常量 ──────────────────────────────────────────────────────
 
@@ -69,13 +70,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const ctx = await getWorkspaceContext(req, workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   const userId = ctx.payload.sub;
 
@@ -227,13 +230,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 4) 工作区隔离校验（P0-fix: workspaceId 必填，强制校验当前用户是该工作区成员）
-  const ctx = await getWorkspaceContext(req, body.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "forbidden"), data: null },
-      { status: 403 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 5) P0-fix: 信令归属校验——sessionId 对应的 RemoteControlSession 必须存在，
   //    status 为 active/pending，且 fromUserId/toUserId 必须是会话的参与方

@@ -6,12 +6,13 @@
 // 接口输入输出格式不变，后端实现渐进替换，不会给用户带来 API 破坏性变更。
 
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContextV2 } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { generateText } from "ai";
 import { requireReasonerModel } from "@/lib/ai/deepseek";
 import { isAiConfigured } from "@/lib/ai/shared";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   sourceText: z.string().min(10).max(20_000),
@@ -147,12 +148,15 @@ ${sourceText}`;
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
   // 仅 member 及以上；viewer 也不可调用（前端也不应出现入口）
   if (!["owner", "admin", "member"].includes(ctx.member.role)) {
     return NextResponse.json(

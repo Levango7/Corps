@@ -18,8 +18,9 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
@@ -61,13 +62,15 @@ export async function GET(req: NextRequest) {
   }
 
   // 工作区归属校验（P0-4：防止越权访问其他工作区）
-  const ctx = await getWorkspaceContext(req, parsed.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, parsed.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission"), data: null },
-      { status: 403 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 查询其他用户限额时要求 admin/owner 角色（P0-4）
   if (
@@ -153,13 +156,15 @@ export async function PUT(req: NextRequest) {
 
   try {
     // 管理员权限检查：仅 workspace owner / admin 可设置限额
-    const ctx = await getWorkspaceContext(req, body.workspaceId);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, body.workspaceId);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
     if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {
       return NextResponse.json(
         { code: 403, message: apiMsg(req, "noPermission"), data: null },

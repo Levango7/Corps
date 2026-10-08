@@ -12,7 +12,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -53,8 +53,11 @@ async function loadAccessibleTemplate(
   }
 
   // 工作区模板：校验成员资格
-  const ctx = await getWorkspaceContext(req, template.workspaceId);
-  if (!ctx) return null;
+  const ctx = await getWorkspaceContextV2(req, template.workspaceId);
+  // 刻意把「拒绝」与「不存在」一并折叠为 null（调用方回 404）：不向非成员
+  // 泄露该模板是否存在。这是有意的遮蔽，不是 v1 那种把 403 误标成 401 的缺陷
+  // ——客户端在 404 上同样不会做无意义的 token refresh。
+  if (!ctx || !ctx.ok) return null;
   return { template, wid: template.workspaceId };
 }
 

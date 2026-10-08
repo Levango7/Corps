@@ -20,7 +20,7 @@ import {
   isAiConfigured,
 } from "@/lib/ai/shared";
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
 import {
@@ -28,6 +28,7 @@ import {
   buildKnowledgeQaUserPrompt,
 } from "@/lib/ai/prompts/knowledge-qa";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -127,13 +128,15 @@ export async function POST(req: NextRequest) {
 
   // 5) 工作区成员资格认证（wid 守卫 + RLS）+ 上下文聚合 + 流式生成
   try {
-    const ctx = await getWorkspaceContext(req, body.wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, body.wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 6) 聚合跨模块上下文（RLS 事务内，仅聚合用户有权限查看的数据）
     const scopes = resolveScopes(body.scope);

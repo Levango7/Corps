@@ -2,13 +2,14 @@
 // 查询参数：?wid=xxx&type=concept&limit=100
 // 输出：{ code: 200, data: { nodes: KnowledgeNode[], edges: KnowledgeEdge[] } }
 //
-// 安全：通过 getWorkspaceContext 校验工作区成员资格，runWithWorkspace 注入 RLS
+// 安全：通过 getWorkspaceContextV2 校验工作区成员资格，runWithWorkspace 注入 RLS
 
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 合法节点类型白名单 */
 const VALID_NODE_TYPES = new Set(["concept", "entity", "fact", "procedure"]);
@@ -46,13 +47,15 @@ export async function GET(req: NextRequest) {
   }
 
   // 3) 工作区上下文校验
-  const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 4) 查询图谱
   try {

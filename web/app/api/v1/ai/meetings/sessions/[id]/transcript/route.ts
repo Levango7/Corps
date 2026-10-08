@@ -2,16 +2,17 @@
 //      Body: { wid, speaker, text, timestamp? }
 //
 // 将转录片段追加到 session.transcript JSON 数组。
-// 认证模式：getUserId → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 约定：{ code, data, message }
 // 并发安全：用 PostgreSQL 原生 JSONB `||` 追加，避免 read-modify-write 丢失更新。
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** UUID 正则校验 */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -90,13 +91,15 @@ export async function POST(req: NextRequest) {
 
   // 4) 工作区守卫 + 追加转录片段
   try {
-    const ctx = await getWorkspaceContext(req, body.wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, body.wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 构造转录片段，用 PostgreSQL 原生 JSONB 追加避免读改写丢失更新
     const segment: TranscriptSegment = {

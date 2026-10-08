@@ -15,7 +15,7 @@ import {
   aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContextV2 } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
@@ -25,6 +25,7 @@ import {
   buildPreMeetingPrompt,
   buildPostMeetingPrompt,
 } from "@/lib/ai/prompts/meeting-flow";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   phase: z.enum(["pre", "post"]),
@@ -70,13 +71,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区认证（wid 守卫 + 成员资格）
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
   if (!["owner", "admin", "member"].includes(ctx.member.role)) {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "noPermission"), data: null },

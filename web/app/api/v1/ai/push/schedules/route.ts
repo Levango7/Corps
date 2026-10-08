@@ -1,7 +1,7 @@
 // GET  /api/v1/ai/push/schedules — 获取当前用户的推送计划列表
 // POST /api/v1/ai/push/schedules — 创建推送计划
 //
-// 查询/请求体通过 wid 绑定工作区，经 getWorkspaceContext 做 RLS 守卫。
+// 查询/请求体通过 wid 绑定工作区，经 getWorkspaceContextV2 做 RLS 守卫。
 // AiPushSchedule 为用户级配置（userId + workspaceId + capability 唯一约束由业务保证）。
 
 import { NextRequest, NextResponse } from "next/server";
@@ -13,10 +13,11 @@ import {
   isAiConfigured,
   aiNotConfiguredResponse,
 } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace, runWithAuthOp } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
+import { authFailure } from "@/lib/auth-response";
 
 /** 推送能力枚举（与 Prisma schema capability VarChar(50) 对齐） */
 const CAPABILITIES = ["daily_briefing", "risk_alert", "progress_anomaly"] as const;
@@ -68,13 +69,15 @@ export async function GET(req: NextRequest) {
     );
   }
 
-  const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const schedules = await runWithWorkspace(
@@ -127,13 +130,15 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const schedule = await runWithWorkspace(

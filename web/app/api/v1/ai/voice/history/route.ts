@@ -1,16 +1,17 @@
 // GET /api/v1/ai/voice/history?wid=xxx[&intent=...][&page=1][&pageSize=20]
 // 获取当前用户的语音命令历史（支持分页 + intent 过滤）
 //
-// 认证模式：getUserId → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：通过 workspaceId + userId 过滤确保用户只能访问自己的命令历史
 // 约定：{ code, data, message }；data = { items, total, page, pageSize }
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 合法意图类型枚举（与 voice-intent-parse.ts 对齐） */
 const INTENT_VALUES = [
@@ -89,13 +90,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 查询
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 并行查询总数 + 当前页数据
     const [items, total] = await runWithWorkspace(

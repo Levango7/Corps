@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { livekitApiHost } from "@/lib/livekit-utils";
 import { EgressClient } from "livekit-server-sdk";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/recording/stop — 停止会议录制
@@ -23,12 +24,15 @@ export async function POST(
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
   const { wid, mid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // LiveKit 服务端配置检查
   const livekitUrl = process.env.LIVEKIT_URL;

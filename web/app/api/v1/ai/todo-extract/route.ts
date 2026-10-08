@@ -23,8 +23,9 @@ import {
 } from "@/lib/ai/prompts/todo-extract";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── 请求体 schema ─────────────────────────────────────────────────────────────
 
@@ -147,13 +148,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区认证 + 准备候选人列表
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 候选人列表：优先使用 body.context.assignees；未提供时查询工作区成员姓名
   let assignees: string[] | undefined = body.context?.assignees;

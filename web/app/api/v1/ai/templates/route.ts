@@ -10,9 +10,10 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 合法分类枚举 */
 const CATEGORY_VALUES = ["project", "meeting", "review", "onboarding", "custom"] as const;
@@ -85,16 +86,16 @@ export async function GET(req: NextRequest) {
   const { category, public: publicOnly, wid, q, take, skip } = parsed.data;
 
   // wid 传入时校验工作区成员资格（防越权读取他人工作区私有模板）
-  let wsOk = true;
   if (wid) {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) wsOk = false;
-  }
-  if (wid && !wsOk) {
-    return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission"), data: null },
-      { status: 403 },
-    );
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
+      return NextResponse.json(
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
+      );
+    if (!ctx.ok) return authFailure(ctx, req);
   }
 
   try {
@@ -195,13 +196,15 @@ export async function POST(req: NextRequest) {
 
   // wid 传入时校验工作区成员资格
   if (body.wid) {
-    const ctx = await getWorkspaceContext(req, body.wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, body.wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 403, message: apiMsg(req, "noPermission"), data: null },
-        { status: 403 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
   }
 
   try {

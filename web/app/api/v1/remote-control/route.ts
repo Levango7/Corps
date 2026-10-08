@@ -5,21 +5,22 @@
 // 会话生命周期：pending（等待接受）→ active（进行中）→ ended/rejected/failed
 //
 // 安全：
-//  - 认证 + 工作区隔离（getWorkspaceContext + runWithWorkspace）
+//  - 认证 + 工作区隔离（getWorkspaceContextV2 + runWithWorkspace）
 //  - 不能向自己发起远程控制
 //  - 会话超时 30 分钟自动过期
 //  - 目标用户必须明确接受才能建立连接
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 约定：{ code, data, message } 信封
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { emitSessionEvent } from "@/lib/webrtc/remote-control-events";
+import { authFailure } from "@/lib/auth-response";
 
 // ─── 常量 ──────────────────────────────────────────────────────
 
@@ -115,13 +116,15 @@ export async function POST(req: NextRequest) {
 
   // 4) 工作区成员资格认证 + 创建会话
   try {
-    const ctx = await getWorkspaceContext(req, workspaceId);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, workspaceId);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     const currentUserId = ctx.payload.sub;
     const expiresAt = new Date(Date.now() + SESSION_TIMEOUT_MS);
@@ -240,13 +243,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 查询会话列表
   try {
-    const ctx = await getWorkspaceContext(req, workspaceId);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, workspaceId);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     const currentUserId = ctx.payload.sub;
 

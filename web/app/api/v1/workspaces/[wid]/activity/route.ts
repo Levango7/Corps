@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * M4 实时协作基础：工作区活动流 API
@@ -17,7 +18,7 @@ import { logger } from "@/lib/logger";
  *
  * 分页：take 20，?cursor=ISO 时间戳（返回早于 cursor 的活动）。
  *
- * 认证：getWorkspaceContext 校验工作区成员身份 + RLS 上下文。
+ * 认证：getWorkspaceContextV2 校验工作区成员身份 + RLS 上下文。
  * RLS：通过 runWithWorkspace 注入工作区上下文，跨工作区请求被拦截。
  *
  * 响应：{ code: 0, data: { items: Activity[], nextCursor: string | null }, message }
@@ -42,13 +43,15 @@ interface Activity {
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const userId = ctx.payload.sub;

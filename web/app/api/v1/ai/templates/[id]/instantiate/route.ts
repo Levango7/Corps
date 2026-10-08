@@ -19,9 +19,10 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 const instantiateSchema = z.object({
   wid: z.string().uuid(),
@@ -88,13 +89,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   }
 
   // 校验目标工作区成员资格
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 403, message: apiMsg(req, "noPermission"), data: null },
-      { status: 403 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     // 1) 加载模板（校验访问权限）
@@ -107,13 +110,15 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     }
     // 工作区私有模板：需校验该工作区成员资格
     if (template.workspaceId !== null && template.workspaceId !== body.wid) {
-      const tplCtx = await getWorkspaceContext(req, template.workspaceId);
-      if (!tplCtx) {
+      const tplCtx = await getWorkspaceContextV2(req, template.workspaceId);
+      if (!tplCtx)
+        // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+        // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
         return NextResponse.json(
-          { code: 403, message: apiMsg(req, "noPermission"), data: null },
-          { status: 403 },
+          { code: 500, message: apiMsg(req, "internalError"), data: null },
+          { status: 500 },
         );
-      }
+      if (!tplCtx.ok) return authFailure(tplCtx, req);
     }
 
     // 2) 校验 steps 形状

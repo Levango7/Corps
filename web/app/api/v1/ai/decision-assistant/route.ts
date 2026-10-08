@@ -4,10 +4,10 @@
 // DEEPSEEK_API_KEY 未配置时返回 503。
 //
 // 认证链顺序（依据 2026-09-16-ai-api-route-auth-chain-order 经验）：
-//   getUserId → isAiConfigured → checkRateLimit → zod parse → getWorkspaceContext
+//   getUserId → isAiConfigured → checkRateLimit → zod parse → getWorkspaceContextV2
 // - isAiConfigured 在 checkRateLimit 之前：AI 未配置时所有请求注定 503，不应消耗限流配额
 // - checkRateLimit 在 zod parse 之前：超限请求不应再消耗 CPU 解析 body
-// - getWorkspaceContext 在最后：含 DB 查询（member.findFirst），是最昂贵的检查
+// - getWorkspaceContextV2 在最后：含 DB 查询（member.findFirst），是最昂贵的检查
 
 import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
@@ -21,7 +21,7 @@ import {
   aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import {
   buildDecisionAssistantSystemPrompt,
@@ -30,6 +30,7 @@ import {
 } from "@/lib/ai/prompts/decision-assistant";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -165,14 +166,16 @@ export async function POST(req: NextRequest) {
 
   // 5) 工作区成员资格认证 + 查询上下文 + LLM 生成
   try {
-    // getWorkspaceContext 含 DB 查询（member.findFirst），是最昂贵的检查，放最后
-    const ctx = await getWorkspaceContext(req, body.wid);
-    if (!ctx) {
+    // getWorkspaceContextV2 含 DB 查询（member.findFirst），是最昂贵的检查，放最后
+    const ctx = await getWorkspaceContextV2(req, body.wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 6) 查询工作区上下文（任务、决策历史、项目进度）—— RLS 事务内
     const workspaceContext: DecisionContext = await runWithWorkspace(

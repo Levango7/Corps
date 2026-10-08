@@ -23,10 +23,11 @@ import {
   buildCalendarUserPrompt,
 } from "@/lib/ai/prompts/calendar-schedule";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** 排程上下文聚合范围：今日会议 + 逾期/阻塞任务 + 今日工时 */
 const CALENDAR_SCOPES: AiContextScope[] = [
@@ -119,13 +120,15 @@ export async function POST(req: NextRequest) {
   }
 
   // 5) 工作区认证（RLS 成员资格校验）
-  const ctx = await getWorkspaceContext(req, body.wid);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, body.wid);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     // 6) 聚合工作区上下文（今日会议 + 逾期/阻塞任务 + 今日工时）

@@ -1,6 +1,6 @@
 // GET /api/v1/mail/inbox?wid=xxx&status=sent&isRead=false&page=1&pageSize=20 — 收件箱/邮件列表
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：通过 workspaceId + accountId（归属当前用户）过滤确保用户只能访问自己的邮件
 // 约定：{ code, data, message }；按 createdAt 降序分页。
 //
@@ -8,10 +8,11 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { z } from "zod";
+import { authFailure } from "@/lib/auth-response";
 
 /** 邮件状态枚举 */
 const STATUS_VALUES = ["draft", "sent", "received"] as const;
@@ -70,13 +71,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 查询
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // 先查出当前用户的所有账户 ID，用于过滤 Mail（确保只能看到自己账户下的邮件）
     const accountIds = await runWithWorkspace(

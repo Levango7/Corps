@@ -2,7 +2,7 @@
 // POST /api/v1/mail/accounts — 添加邮箱账户
 //      Body: { wid, email, smtpHost, smtpPort, credential, displayName?, smtpSecure?, provider? }
 //
-// 认证模式：getUserId → checkRateLimit → getWorkspaceContext → runWithWorkspace（RLS 事务）
+// 认证模式：getUserId → checkRateLimit → getWorkspaceContextV2 → runWithWorkspace（RLS 事务）
 // 安全：通过 workspaceId + userId 过滤确保用户只能访问自己的账户
 // 约定：{ code, data, message }；利用 @@unique([userId, email]) 防重复账户。
 //       credential（SMTP 密码）以 Base64 编码存储。
@@ -15,10 +15,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { encodeCredential } from "@/lib/mail/transporter";
+import { authFailure } from "@/lib/auth-response";
 
 /** GET 查询参数 schema */
 const listQuerySchema = z.object({
@@ -75,13 +76,15 @@ export async function GET(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 查询
   try {
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     const accounts = await runWithWorkspace(
       wid,
@@ -163,13 +166,15 @@ export async function POST(req: NextRequest) {
 
   // 3) 工作区成员资格认证 + 创建
   try {
-    const ctx = await getWorkspaceContext(req, body.wid);
-    if (!ctx) {
+    const ctx = await getWorkspaceContextV2(req, body.wid);
+    if (!ctx)
+      // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+      // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
       return NextResponse.json(
-        { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-        { status: 401 },
+        { code: 500, message: apiMsg(req, "internalError"), data: null },
+        { status: 500 },
       );
-    }
+    if (!ctx.ok) return authFailure(ctx, req);
 
     // Base64 编码密码后存储
     const encodedCredential = encodeCredential(body.credential);

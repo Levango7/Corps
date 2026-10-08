@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { apiMsg, type ApiMsgKey } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
 
@@ -29,8 +30,9 @@ export async function PATCH(
   try {
     const { wid, id, mid } = paramsSchema.parse(await params);
     // 本项目通过工作区上下文同时验证登录身份、令牌工作区及成员资格。
-    const ctx = await getWorkspaceContext(req, wid);
-    if (!ctx) return fail(401, "unauthorized");
+    const ctx = await getWorkspaceContextV2(req, wid);
+    if (!ctx) return fail(500, "internalError");
+    if (!ctx.ok) return authFailure(ctx, req);
     const input = updateSchema.parse(await req.json());
     const userId = ctx.payload.sub;
     const result = await runWithWorkspace(

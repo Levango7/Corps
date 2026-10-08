@@ -13,7 +13,7 @@
  *  - wiki：仅 Wiki
  *
  * 安全：
- *  - getUserId 认证 → getWorkspaceContext RLS 成员资格校验 → runWithWorkspace 注入 GUC
+ *  - getUserId 认证 → getWorkspaceContextV2 RLS 成员资格校验 → runWithWorkspace 注入 GUC
  *  - checkRateLimit 限流（每分钟 30 次）
  *  - zod 校验 query 参数
  *  - $queryRawUnsafe 参数化查询，杜绝 SQL 注入
@@ -22,15 +22,16 @@
  * 返回信封：{ code, data: { messages: [], wikis: [] }, message }
  *
  * 来源：经验 2026-09-15-ai-route-unified-pattern-audit-checklist
- *       （getUserId + checkRateLimit + getWorkspaceContext + runWithWorkspace + apiMsg 统一模式）
+ *       （getUserId + checkRateLimit + getWorkspaceContextV2 + runWithWorkspace + apiMsg 统一模式）
  */
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { authFailure } from "@/lib/auth-response";
 
 /** query 参数校验 schema */
 const searchSchema = z.object({
@@ -167,13 +168,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   }
 
   // 4) 工作区认证（RLS 成员资格校验）
-  const ctx = await getWorkspaceContext(req, parsed.workspaceId);
-  if (!ctx) {
+  const ctx = await getWorkspaceContextV2(req, parsed.workspaceId);
+  if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
-  }
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     // 5) 根据 type 并行执行搜索（走 RLS 事务）

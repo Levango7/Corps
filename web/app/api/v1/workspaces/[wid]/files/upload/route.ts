@@ -1,11 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { randomUUID, createHash } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { z } from "zod";
+import { authFailure } from "@/lib/auth-response";
 
 /**
  * 云盘文件上传 API · /api/v1/workspaces/{wid}/files/upload
@@ -85,12 +86,15 @@ function computeSha256(buffer: Buffer): string {
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 声明在 try 块外，以便 catch 块能访问并清理已写入磁盘的文件（防磁盘泄漏）
   let savedPath: string | null = null;
