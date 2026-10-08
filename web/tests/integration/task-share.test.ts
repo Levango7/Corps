@@ -84,11 +84,18 @@ describe("任务公开分享", () => {
     expect(pub.status).toBe(404);
   });
 
-  it("跨工作区：他人不能通过 workspace API 读他人任务（401 非成员）", async () => {
+  it("跨工作区：他人不能通过 workspace API 读他人任务（403 有身份但无权）", async () => {
     const other = await registerUser({ prefix: "taskshare-other" });
     const res = await fetch(`${BASE}/workspaces/${wid}/tasks/${taskId}`, {
       headers: authHeader(other.accessToken),
     });
-    expect(res.status).toBe(401);
+    // 语义变更（4f877d1e）：该路径原先走 getWorkspaceContext(v1)，四种拒绝一律
+    // 收敛成 null ⇒ 只能回 401，于是「身份有效但无权」被说成「未授权」，前端
+    // lib/api.ts 还会先做一次无意义的 token refresh 再重试。
+    // 改走 getWorkspaceContextV2 后，此处的拒绝是 workspace_mismatch / not_a_member
+    // ——两者都属「有身份、无权限」，按 lib/auth.ts:348-360 的口径必须是 403。
+    // 断言跟着语义走，不是为了让它变绿：本用例的名字此前写的就是「401 非成员」，
+    // 那正是本次要修的表达。
+    expect(res.status).toBe(403);
   });
 });
