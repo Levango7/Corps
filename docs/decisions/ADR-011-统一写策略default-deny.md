@@ -56,10 +56,19 @@
 
 ## 后果与已知缺口
 
-1. **viewer 的写响应码由 403 变成 401**：裁决点在 `getWorkspaceContext`（返回 null），handler 走既有
-   未授权分支。`rbac.test.ts` 与 `e2e/viewer-readonly.spec.ts` 的断言相应改为 `[401, 403]`——
-   断言的实质是"不许 2xx"，不是钉死状态码。**精确 403 需要一个统一的错误出口**（类似 NextResponse 的
-   deny 通道），登记为下一步，不阻塞本次收口。
+1. ~~**viewer 的写响应码由 403 变成 401**~~ —— **已闭环（2026-10-09）**。
+   当时的成因：裁决点在 `getWorkspaceContext`，它对四种拒绝一律 `return null`，handler 只能回 401。
+   本条目留下的那句"**精确 403 需要一个统一的错误出口**"，现在就是
+   `getWorkspaceContextV2`（返回判别联合 `AuthGranted | AuthDenial | null`）+
+   `authFailure(denial, req)`（`lib/auth-response.ts`，把 `DenialReason` 一一映射成状态码：
+   `unauthenticated`→401，`workspace_mismatch` / `not_a_member` / `write_policy`→403）。
+   `web/app/api` 下**全部 269 处** v1 守卫已收口（266 处机械替换 + 3 处逐一判断），
+   并由 `scripts/check_v1_guard_ratchet.py` 把残留棘轮钉在 **0**（只减不增）。
+   于是 viewer 写现在返回**精确 403**，不再是 401。
+   > 遗留：`rbac.test.ts` 等处的 `[401, 403]` 容错断言**尚未逐一收紧**为 `403`。
+   > 它们当时的实质是"不许 2xx"，收紧需要逐条确认该路径的拒绝原因唯一（`not_a_member` 与
+   > `write_policy` 都是 403，但 `workspace_mismatch` 亦然，故多数可直接钉 403）。
+   > 已在 `approval-cc.test.ts` / `documents.test.ts` 上做过收紧示范，其余留作增量。
 2. **`MemberPermission` 行级覆盖已接入裁决（2026-10-03 同日收编）**：`decideWorkspaceWrite()`
    增加可选输入 `overrides`（auth.ts 按 `${role}:${module}` 加载的动作代码串）。角色本会被拒
    时，若 `pathToWriteModule()` 把路径映射到模块 M、且覆盖串含本方法的写码
