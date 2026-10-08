@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { auth, runWithAuthOp } from "@/lib/auth";
+import { auth, runWithAuthOp, requireEmailVerificationEnabled } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { generateSlug } from "@/lib/slug";
 import { prisma } from "@/lib/prisma";
@@ -69,6 +69,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 邮箱验证门控（2026-10-08）：开关开启且邮箱未验证时，注册不发放任何
+    // 会话凭据（不签发 JWT、不透传 BA 会话 cookie），响应带
+    // emailVerificationRequired 供前端引导查收验证邮件。
+    const verificationRequired = requireEmailVerificationEnabled() && !baUser.emailVerified;
+
     // 2) 创建首个工作区 + owner 成员（单事务，走 provision 逃生口）
     const slug = await generateSlug(validated.workspaceName);
     const { workspace } = await runWithAuthOp(
@@ -127,6 +132,33 @@ export async function POST(req: NextRequest) {
         ...(validated.inviteToken ? { src: "invite" } : {}),
       },
     });
+
+    // 邮箱验证门控（2026-10-08，审计 P2）：开关开启且邮箱未验证时，注册
+    // 不发放任何会话凭据——既不签发自签 JWT，也不透传 Better Auth 会话
+    // cookie（否则等于绕过验证）；主动触发验证邮件，响应带
+    // emailVerificationRequired 供前端引导查收。验证完成后经登录页正常登录。
+    if (verificationRequired) {
+      try {
+        await auth.api.sendVerificationEmail({
+          body: { email: validated.email },
+          headers: req.headers,
+        });
+      } catch (mailError) {
+        // 发信失败不阻断注册（用户可稍后经 BA /api/auth/send-verification-email 重发）
+        console.error("[register] 验证邮件发送失败:", mailError);
+      }
+      return NextResponse.json(
+        {
+          code: 201,
+          data: {
+            user: { id: baUser.id, email: baUser.email, name: baUser.name },
+            workspace: { id: workspace.id, name: workspace.name, slug: workspace.slug },
+            emailVerificationRequired: true,
+          },
+        },
+        { status: 201 },
+      );
+    }
 
     const response = NextResponse.json(
       {

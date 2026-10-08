@@ -16,6 +16,7 @@ import {
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
+  aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
@@ -23,6 +24,7 @@ import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { buildApprovalAdviceSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts/approval-advice";
 import { createAiJsonProgressStream } from "@/lib/ai/stream";
+import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -113,6 +115,8 @@ export async function POST(req: NextRequest) {
   try {
     body = schema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -143,6 +147,9 @@ export async function POST(req: NextRequest) {
     //    buildPrompt 封装审批实例查询 + 历史审批聚合 + 上下文构建，
     //    让进度阶段有真实时序：
     //    阶段 1（聚合审批数据）→ 查询+聚合 → 阶段 2（分析风险）→ 阶段 3（生成建议）→ LLM → 结果 data part
+    // 真拦截（2026-10-08）：流式路径不经 withUsageTracking，发起模型调用前
+    // 显式断言配额；超限抛 AiQuotaExceededError，由下方 catch 映射 429。
+    await assertAiUsageQuota(ctx.payload.sub, body.wid);
     return createAiJsonProgressStream<ApprovalAdvice>(
       {
         model: requireReasonerModel(),
@@ -248,6 +255,8 @@ export async function POST(req: NextRequest) {
       },
     );
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[ai/approval-advice] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

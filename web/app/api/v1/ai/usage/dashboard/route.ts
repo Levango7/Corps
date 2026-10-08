@@ -6,7 +6,7 @@
 //   topCapabilities: [{ capability, calls, tokens, cost }],
 //   recentLogs: AiUsageLog[],
 //   limit: AiUsageLimit | null,
-//   quota: { ok, reason?, usagePercent? } | null,   // 限额状态（提示用，不阻断调用）
+//   quota: { ok, reason?, usagePercent? } | null,   // 限额状态（超限时 AI 调用返回 429）
 // }
 
 import { NextRequest, NextResponse } from "next/server";
@@ -14,8 +14,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkAiUsageLimit } from "@/lib/ai/usage-limit";
 
 const querySchema = z.object({
@@ -72,40 +71,46 @@ export async function GET(req: NextRequest) {
     const todayWhere = { ...wsWhere, createdAt: { gte: todayStart } } as const;
     const monthWhere = { ...wsWhere, createdAt: { gte: monthStart } } as const;
 
-    // 并行查询：今日/本月聚合 + Top 能力 + 最近日志 + 限额配置 + 限额达成状态
-    const [todayAgg, monthAgg, topCapabilitiesRaw, recentLogs, limit, quota] = await Promise.all([
-      prisma.aiUsageLog.aggregate({
-        where: todayWhere,
-        _sum: { totalTokens: true, cost: true },
-        _count: true,
-      }),
-      prisma.aiUsageLog.aggregate({
-        where: monthWhere,
-        _sum: { totalTokens: true, cost: true },
-        _count: true,
-      }),
-      prisma.aiUsageLog.groupBy({
-        by: ["capability"],
-        where: monthWhere,
-        _sum: { totalTokens: true, cost: true },
-        _count: true,
-        orderBy: { _count: { capability: "desc" } },
-        take: 5,
-      }),
-      prisma.aiUsageLog.findMany({
-        where: wsWhere,
-        orderBy: { createdAt: "desc" },
-        take: 10,
-      }),
-      // 工作空间级默认限额（userId = null）
-      prisma.aiUsageLimit.findFirst({
-        where: { workspaceId: parsed.workspaceId, userId: null },
-      }),
-      // 限额达成状态。此前 checkAiUsageLimit 在生产链路里零调用点（只有单测引用），
-      // 所以 README 的"按工作区限额"实际从未生效。按产品决定改为**提示不阻断**：
-      // 本结果只用于用量页提示，不影响 AI 调用本身是否放行。
-      checkAiUsageLimit(userId, parsed.workspaceId),
-    ]);
+    // 并行查询：今日/本月聚合 + Top 能力 + 最近日志 + 限额配置（同一 GUC 事务）+
+    // 限额达成状态（checkAiUsageLimit 内部自建 GUC 事务）。
+    // 2026-10-08：全部改走 runWithWorkspace——ai_usage_logs / ai_usage_limits 是
+    // FORCE RLS 表，裸查询在加固模式（生产默认）下静默读空，仪表盘恒显示零。
+    const [todayAgg, monthAgg, topCapabilitiesRaw, recentLogs, limit] = await runWithWorkspace(
+      parsed.workspaceId,
+      (tx) =>
+        Promise.all([
+          tx.aiUsageLog.aggregate({
+            where: todayWhere,
+            _sum: { totalTokens: true, cost: true },
+            _count: true,
+          }),
+          tx.aiUsageLog.aggregate({
+            where: monthWhere,
+            _sum: { totalTokens: true, cost: true },
+            _count: true,
+          }),
+          tx.aiUsageLog.groupBy({
+            by: ["capability"],
+            where: monthWhere,
+            _sum: { totalTokens: true, cost: true },
+            _count: true,
+            orderBy: { _count: { capability: "desc" } },
+            take: 5,
+          }),
+          tx.aiUsageLog.findMany({
+            where: wsWhere,
+            orderBy: { createdAt: "desc" },
+            take: 10,
+          }),
+          // 工作空间级默认限额（userId = null）
+          tx.aiUsageLimit.findFirst({
+            where: { workspaceId: parsed.workspaceId, userId: null },
+          }),
+        ]),
+      userId,
+    );
+    // 限额状态（配额真拦截后本值用于用量页展示与排障：超限时 AI 调用返回 429）
+    const quota = await checkAiUsageLimit(userId, parsed.workspaceId);
 
     const result = {
       today: {

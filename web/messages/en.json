@@ -519,7 +519,11 @@
         "medium": "Fair",
         "strong": "Strong",
         "label": "Password strength: {level}"
-      }
+      },
+      "verifyEmailTitle": "Check your inbox",
+      "verifyEmailSentTo": "We sent a verification email to <strong>{email}</strong>. Click the link in it to finish signing up.",
+      "verifyEmailHint": "The link is valid for 24 hours. Didn't get it? Check your spam folder; if it still doesn't arrive, try signing up again later or contact your workspace admin.",
+      "verifyEmailBackToLogin": "Go to sign in"
     },
     "forgotPassword": {
       "title": "Reset your password",
@@ -2794,7 +2798,7 @@
       "topCapabilities": "Top Capabilities",
       "recentLogs": "Recent Logs",
       "limitSettings": "Limit Settings",
-      "quotaWarningTitle": "AI usage limit exceeded (still usable — advisory only)",
+      "quotaWarningTitle": "AI usage limit exceeded — AI calls are now blocked. Raise the limit or wait for the quota to reset.",
       "dailyTokenLimit": "Daily Token Limit",
       "monthlyTokenLimit": "Monthly Token Limit",
       "dailyCallLimit": "Daily Call Limit",

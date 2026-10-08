@@ -9,7 +9,7 @@
  * 来源：方向 G 任务 1（usage-tracker.ts）
  */
 
-import { prisma } from "@/lib/prisma";
+import { runWithWorkspace } from "@/lib/auth";
 
 /** recordAiUsage 入参 */
 export interface RecordAiUsageParams {
@@ -31,27 +31,30 @@ export interface RecordAiUsageParams {
 /**
  * 记录一次 AI 调用的使用量。
  *
- * 写入失败由调用方 catch（典型用法在 withUsageTracking 的 finally 中
- * 异步触发并 .catch），本函数自身不吞异常——保持显式语义。
+ * 2026-10-08：写入改为 runWithWorkspace 注入 GUC——ai_usage_logs 是 FORCE RLS
+ * 表，裸 insert 在加固模式（生产默认）下被策略拒绝且静默吞掉，用量从未落库
+ *（连带限额判定永远读到 0）。写入失败仍由调用方 catch，本函数不吞异常。
  */
 export async function recordAiUsage(params: RecordAiUsageParams) {
   const totalTokens = params.inputTokens + params.outputTokens;
   const cost = params.cost ?? estimateCost(params.model, params.inputTokens, params.outputTokens);
 
-  return prisma.aiUsageLog.create({
-    data: {
-      workspaceId: params.workspaceId,
-      userId: params.userId,
-      capability: params.capability,
-      model: params.model,
-      inputTokens: params.inputTokens,
-      outputTokens: params.outputTokens,
-      totalTokens,
-      cost,
-      durationMs: params.durationMs,
-      success: params.success,
-    },
-  });
+  return runWithWorkspace(params.workspaceId, (tx) =>
+    tx.aiUsageLog.create({
+      data: {
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        capability: params.capability,
+        model: params.model,
+        inputTokens: params.inputTokens,
+        outputTokens: params.outputTokens,
+        totalTokens,
+        cost,
+        durationMs: params.durationMs,
+        success: params.success,
+      },
+    }),
+  );
 }
 
 /**

@@ -3,12 +3,27 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 
 import { prisma, withDbRetry } from "./prisma";
 import { verifyAccessToken, type JWTPayload } from "./jwt";
-import { sendResetPasswordEmail } from "./email";
+import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
 import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
 import { envFlag } from "./env";
 import { decideWorkspaceWrite, parseWritePolicyMode } from "./write-policy";
+
+/**
+ * 邮箱验证开关（2026-10-08，审计 P2：关闭验证 + 按 email 直加成员构成
+ * 抢注受邀邮箱的社会工程面）。
+ *
+ * 语义：REQUIRE_EMAIL_VERIFICATION=1 时注册不发会话凭据、需点击邮件链接
+ * 完成验证后才能登录（register 路由读同一开关保持门控一致）。
+ *
+ * 代码默认关（flag 缺省），理由：多数环境未配置 Resend（lib/email.ts），
+ * 邮件发不出去会把新用户全部锁死在验证页；生产模板
+ * deploy/.env.prod.example 已置 1——部署即开启。开启前务必先配好 Resend。
+ */
+export function requireEmailVerificationEnabled(): boolean {
+  return envFlag("REQUIRE_EMAIL_VERIFICATION");
+}
 
 /**
  * Better Auth 服务端实例（Spec §4：认证 = Better Auth）。
@@ -21,7 +36,7 @@ export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
     autoSignIn: true,
-    requireEmailVerification: false,
+    requireEmailVerification: requireEmailVerificationEnabled(),
     // 忘记密码：better-auth 负责 token 生成/校验（/api/auth/request-password-reset、
     // /api/auth/reset-password），本回调只负责把一次性链接发出去。
     // 自建链接指向 /auth/reset-password（站内页），不用 better-auth 默认的 /reset-password 路径
@@ -33,6 +48,15 @@ export const auth = betterAuth({
       });
     },
     resetPasswordTokenExpiresIn: 60 * 60, // 1 小时
+  },
+  // 邮箱验证：回调只负责发信；发信时机由 register 路由显式调用
+  // auth.api.sendVerificationEmail 触发（不依赖 BA 的 sendOnSignUp 选项名，
+  // 避免版本间改名导致的静默不发）。
+  emailVerification: {
+    expiresIn: 60 * 60 * 24, // 24 小时
+    sendVerificationEmail: async ({ user, url }) => {
+      await sendVerificationEmail({ to: user.email, verifyUrl: url });
+    },
   },
   session: {
     expiresIn: 60 * 60 * 24 * 7,

@@ -1,22 +1,29 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
 /**
- * AI 使用量跟踪与成本估算是单元测试（lib/ai/usage-tracker.ts）
+ * AI 使用量跟踪与成本估算单元测试（lib/ai/usage-tracker.ts）
  *
  * 覆盖：
  *  - estimateCost：DeepSeek 定价计算（deepseek-chat / deepseek-reasoner / 未知模型回退）
  *  - recordAiUsage：写入 AiUsageLog（totalTokens 求和、cost 估算或显式透传、字段映射）
  *
- * Mock 策略：vi.mock("@/lib/prisma") 替换 prisma client，不连接真实 DB。
- * estimateCost 是纯函数，无需 mock。
+ * Mock 策略：vi.hoisted 建共享 mock tx，同时替换 @/lib/prisma 与 @/lib/auth
+ * （runWithWorkspace 透传 mock tx）——2026-10-08 起写入经 GUC 事务
+ * （ai_usage_logs 是 FORCE RLS 表，裸 insert 在加固模式下被策略拒绝），
+ * 透传后原有 prisma.* 断言全部沿用。estimateCost 是纯函数，无需 mock。
  */
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
+const { mockTx } = vi.hoisted(() => ({
+  mockTx: {
     aiUsageLog: {
       create: vi.fn(),
     },
   },
+}));
+
+vi.mock("@/lib/prisma", () => ({ prisma: mockTx }));
+vi.mock("@/lib/auth", () => ({
+  runWithWorkspace: (_wid: string, fn: (tx: unknown) => unknown) => fn(mockTx),
 }));
 
 import { prisma } from "@/lib/prisma";

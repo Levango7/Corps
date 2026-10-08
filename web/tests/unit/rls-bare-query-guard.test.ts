@@ -72,6 +72,38 @@ const GUC_HELPERS = [
   "withGuc",
 ];
 
+/**
+ * 存量裸查登记表（tests/rls-bare-query-baseline.txt，2026-10-08 建立）。
+ *
+ * 守卫的大小写口径修复后一次性暴露 38 处存量裸查；按仓库既有登记表惯例
+ * （参照 RLS 豁免表 / write-access registry）只允许收缩：
+ *  - 未登记文件出现裸查 → NEW（红）
+ *  - 已登记文件处数增加 → GROWTH（红）
+ *  - 已登记文件处数减少 → STALE（红，强制同步收缩登记表）
+ *
+ * 格式：`<相对 web/ 路径> | <处数> | reason`，`#` 开头为注释。
+ */
+function parseBareQueryBaseline(): Map<string, number> {
+  const text = readFileSync(join(HERE, "../rls-bare-query-baseline.txt"), "utf8");
+  const map = new Map<string, number>();
+  for (const raw of text.split("\n")) {
+    const line = raw.trim();
+    if (!line || line.startsWith("#")) continue;
+    const parts = line.split("|").map((p) => p.trim());
+    if (parts.length < 3) {
+      throw new Error(
+        `rls-bare-query-baseline.txt 行格式错误（需 path | count | reason）: ${line}`,
+      );
+    }
+    const count = Number(parts[1]);
+    if (!Number.isInteger(count) || count <= 0) {
+      throw new Error(`rls-bare-query-baseline.txt 处数非法: ${line}`);
+    }
+    map.set(parts[0], count);
+  }
+  return map;
+}
+
 function walk(dir: string, out: string[] = []): string[] {
   for (const e of readdirSync(dir)) {
     const p = join(dir, e);
@@ -114,12 +146,14 @@ function scanFile(file: string, rlsModels: Set<string>): string[] {
     let m;
     while ((m = re.exec(line))) {
       const model = m[1];
-      if (!rlsModels.has(model)) continue;
+      if (!rlsModels.has(model.toLowerCase())) continue;
       // 用行在全文中的偏移精确定位调用点
       const lineStart = src.split("\n").slice(0, lineNo).join("\n").length + 1;
       const callPos = lineStart + m.index;
       if (!isWrapped(callPos)) {
-        violations.push(`${file.replace(WEB_ROOT, "")}:${lineNo + 1} prisma.${model}`);
+        // 路径统一为正斜杠（与登记表口径一致，跨平台稳定）
+        const rel = file.replace(WEB_ROOT, "").replace(/\\/g, "/").replace(/^\//, "");
+        violations.push(`${rel}:${lineNo + 1} prisma.${model}`);
       }
     }
   });
@@ -127,28 +161,65 @@ function scanFile(file: string, rlsModels: Set<string>): string[] {
 }
 
 describe("RLS 裸查防复发（受 FORCE RLS 的租户表禁止裸 prisma 直调）", () => {
-  it("app/api 与 lib 下无未包裹的受 RLS 模型直调", () => {
+  it("app/api 与 lib 下无未包裹的受 RLS 模型直调（登记表只允许收缩）", () => {
     // 受保护模型 = RLS 表 ∩ schema 模型（经 @@map 对齐），两处声明任一扩容本检查即收紧
     const byTable = parseSchemaTables();
+    // 2026-10-08 口径修复：守卫此前用 schema 的 PascalCase 模型名直接比对
+    // prisma 访问器（camelCase，如 prisma.aiUsageLog），has() 恒为 false——
+    // 该守卫从未拦下过任何裸查。按不区分大小写比对修复。
     const rlsModels = new Set(
       parseRlsTables()
         .map((t) => byTable.get(t))
-        .filter((m): m is string => Boolean(m)),
+        .filter((m): m is string => Boolean(m))
+        .map((m) => m.toLowerCase()),
     );
     const files = [
       ...walk(join(WEB_ROOT, "app/api"), []),
       ...walk(join(WEB_ROOT, "lib"), []),
     ].filter((f) => /\.(ts|tsx)$/.test(f));
 
-    const violations = [];
+    const violations: string[] = [];
     for (const f of files) {
       violations.push(...scanFile(f, rlsModels));
     }
+
+    // 按文件聚合与登记表比对（2026-10-08 建立）：
+    //  - 未登记文件出现裸查 → 红（新增即拦）
+    //  - 已登记文件处数 > 基线 → 红（登记表不是扩容许可证）
+    //  - 处数 < 基线 → 红（修复后必须同步收缩登记表，防止虚胖）
+    const baseline = parseBareQueryBaseline();
+    const byFile = new Map<string, string[]>();
+    for (const v of violations) {
+      const rel = v.split(":")[0].replace(/^\//, "");
+      if (!byFile.has(rel)) byFile.set(rel, []);
+      byFile.get(rel)!.push(v);
+    }
+
+    const problems: string[] = [];
+    for (const [rel, vs] of byFile) {
+      const allowed = baseline.get(rel);
+      if (allowed === undefined) {
+        problems.push(`NEW ${rel}: ${vs.length} 处（未登记）\n    ${vs.join("\n    ")}`);
+      } else if (vs.length > allowed) {
+        problems.push(`GROWTH ${rel}: ${vs.length} > 基线 ${allowed}\n    ${vs.join("\n    ")}`);
+      }
+    }
+    for (const [rel, allowed] of baseline) {
+      const count = byFile.get(rel)?.length ?? 0;
+      if (count < allowed) {
+        problems.push(
+          `STALE ${rel}: 基线 ${allowed}，实际 ${count} —— 修复后请同步收缩 rls-bare-query-baseline.txt`,
+        );
+      }
+    }
+
     // 若你看到本测试失败：新代码对受 RLS 表的查询需要走 runWithWorkspace（带 wid 的路由）
-    // / runWithAuthOp（系统作业）/ withGuc 注入 GUC，否则加固模式下静默返回空。
-    expect(violations, `受 RLS 表的裸直调（应包进 GUC helper）:\n${violations.join("\n")}`).toEqual(
-      [],
-    );
+    // / runWithAuthOp（系统作业）/ withGuc 注入 GUC，否则加固模式下静默返回空/写被拒。
+    // 存量债登记在 tests/rls-bare-query-baseline.txt（只允许收缩）。
+    expect(
+      problems,
+      `受 RLS 表的裸直调与登记表不一致（应包进 GUC helper）:\n${problems.join("\n")}`,
+    ).toEqual([]);
   });
 
   it("RLS 表清单与 schema.prisma 一一对应（防双源漂移）", () => {

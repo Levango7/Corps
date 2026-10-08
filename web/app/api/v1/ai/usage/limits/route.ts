@@ -5,16 +5,20 @@
 // PUT /api/v1/ai/usage/limits — 设置限额配置（需管理员权限）
 //   请求体：{ workspaceId, userId?, dailyTokenLimit?, monthlyTokenLimit?,
 //             dailyCallLimit?, monthlyCallLimit? }
-//   使用 upsert（workspaceId + userId 唯一约束）
+//   使用 findFirst + update/create（workspaceId + userId 唯一约束）
 //   权限：仅 workspace owner / admin 可设置
+//
+// 2026-10-08：全部查询改走 runWithWorkspace 注入 GUC——ai_usage_limits 是
+// FORCE RLS 表，裸查询在加固模式（生产默认）下静默读空/写入被拒。
+// P2002 竞态恢复放在独立小事务中：Postgres 事务在约束冲突后即中止，
+// 同一交互式事务内无法继续查询并发记录。
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
@@ -79,15 +83,21 @@ export async function GET(req: NextRequest) {
   }
 
   try {
-    const limit =
-      (parsed.userId
-        ? await prisma.aiUsageLimit.findFirst({
+    const limit = await runWithWorkspace(
+      parsed.workspaceId,
+      async (tx) => {
+        if (parsed.userId) {
+          const userLimit = await tx.aiUsageLimit.findFirst({
             where: { workspaceId: parsed.workspaceId, userId: parsed.userId },
-          })
-        : null) ??
-      (await prisma.aiUsageLimit.findFirst({
-        where: { workspaceId: parsed.workspaceId, userId: null },
-      }));
+          });
+          if (userLimit) return userLimit;
+        }
+        return tx.aiUsageLimit.findFirst({
+          where: { workspaceId: parsed.workspaceId, userId: null },
+        });
+      },
+      userId,
+    );
 
     return NextResponse.json({ code: 0, data: limit, message: "OK" });
   } catch (error) {
@@ -157,7 +167,7 @@ export async function PUT(req: NextRequest) {
       );
     }
 
-    // upsert：workspaceId + userId 唯一约束
+    // upsert 语义：workspaceId + userId 唯一约束
     // userId 为 null 表示工作空间级默认限额
     // 注意：Prisma 对含 nullable 字段的复合唯一键 upsert where 子句支持不一致，
     // 改用 findFirst + update/create 显式实现，避免运行时错误。
@@ -165,10 +175,17 @@ export async function PUT(req: NextRequest) {
 
     // P1-4：当 body.userId 非空时，验证目标用户属于该 workspace
     if (body.userId) {
-      const targetMember = await prisma.member.findFirst({
-        where: { workspaceId: body.workspaceId, userId: body.userId },
-        select: { userId: true },
-      });
+      // 收窄后的局部量：闭包内 TS 不会保留对 body.userId 的收窄
+      const checkedUserId = body.userId;
+      const targetMember = await runWithWorkspace(
+        body.workspaceId,
+        (tx) =>
+          tx.member.findFirst({
+            where: { workspaceId: body.workspaceId, userId: checkedUserId },
+            select: { userId: true },
+          }),
+        userId,
+      );
       if (!targetMember) {
         return NextResponse.json(
           { code: 400, message: apiMsg(req, "invalidBody"), data: null },
@@ -177,9 +194,14 @@ export async function PUT(req: NextRequest) {
       }
     }
 
-    const existing = await prisma.aiUsageLimit.findFirst({
-      where: { workspaceId: body.workspaceId, userId: targetUserId },
-    });
+    const existing = await runWithWorkspace(
+      body.workspaceId,
+      (tx) =>
+        tx.aiUsageLimit.findFirst({
+          where: { workspaceId: body.workspaceId, userId: targetUserId },
+        }),
+      userId,
+    );
 
     const limitData = {
       dailyTokenLimit: body.dailyTokenLimit,
@@ -190,34 +212,47 @@ export async function PUT(req: NextRequest) {
 
     let limit;
     if (existing) {
-      limit = await prisma.aiUsageLimit.update({
-        where: { id: existing.id },
-        data: limitData,
-      });
+      limit = await runWithWorkspace(
+        body.workspaceId,
+        (tx) => tx.aiUsageLimit.update({ where: { id: existing.id }, data: limitData }),
+        userId,
+      );
     } else {
-      // P1-3：捕获唯一约束冲突后重新 findFirst + update
+      // P1-3：捕获唯一约束冲突后重新 findFirst + update（各自独立小事务：
+      // 约束冲突会中止当前 PG 事务，同一交互式事务内不能继续查询）
       try {
-        limit = await prisma.aiUsageLimit.create({
-          data: {
-            workspaceId: body.workspaceId,
-            userId: targetUserId,
-            ...limitData,
-          },
-        });
+        limit = await runWithWorkspace(
+          body.workspaceId,
+          (tx) =>
+            tx.aiUsageLimit.create({
+              data: {
+                workspaceId: body.workspaceId,
+                userId: targetUserId,
+                ...limitData,
+              },
+            }),
+          userId,
+        );
       } catch (createError) {
         if (
           createError instanceof Prisma.PrismaClientKnownRequestError &&
           createError.code === "P2002"
         ) {
           // 并发下另一请求已创建同一记录，重新查找并更新
-          const raceExisting = await prisma.aiUsageLimit.findFirst({
-            where: { workspaceId: body.workspaceId, userId: targetUserId },
-          });
+          const raceExisting = await runWithWorkspace(
+            body.workspaceId,
+            (tx) =>
+              tx.aiUsageLimit.findFirst({
+                where: { workspaceId: body.workspaceId, userId: targetUserId },
+              }),
+            userId,
+          );
           if (raceExisting) {
-            limit = await prisma.aiUsageLimit.update({
-              where: { id: raceExisting.id },
-              data: limitData,
-            });
+            limit = await runWithWorkspace(
+              body.workspaceId,
+              (tx) => tx.aiUsageLimit.update({ where: { id: raceExisting.id }, data: limitData }),
+              userId,
+            );
           } else {
             throw createError;
           }

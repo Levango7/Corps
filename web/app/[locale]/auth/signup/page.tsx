@@ -2,7 +2,7 @@
 
 import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, Link } from "@/lib/i18n-navigation";
-import { Loader2, AlertCircle, UserPlus } from "lucide-react";
+import { Loader2, AlertCircle, UserPlus, MailCheck } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { track, getSessionId } from "@/lib/analytics";
 
@@ -22,6 +22,8 @@ export default function SignupPage() {
   const [workspaceName, setWorkspaceName] = useState("");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  // 邮箱验证开启时：注册成功待验证的邮箱（非空则渲染"查收验证邮件"面板）
+  const [verifyEmailSent, setVerifyEmailSent] = useState<string | null>(null);
   const router = useRouter();
 
   // ─── 邀请链接支持（?invite=<token>）─────────────────────
@@ -106,6 +108,14 @@ export default function SignupPage() {
         return;
       }
 
+      // 邮箱验证开启且未验证：服务端未发放会话凭据（不签发 JWT），
+      // 此处不跳转应用，改为引导用户查收验证邮件（验证后回登录页登录）。
+      if (data.data.emailVerificationRequired) {
+        setVerifyEmailSent(email);
+        setBusy(false);
+        return;
+      }
+
       // 带邀请 token：先接受邀请加入对方工作区；否则进入自己刚创建的工作区
       const invitedWid = await acceptInvitation();
       router.push(`/w/${invitedWid ?? data.data.workspace.id}`);
@@ -152,155 +162,182 @@ export default function SignupPage() {
 
   return (
     <div className="w-full max-w-sm px-4 sm:px-0">
-      {/* 邀请上下文提示（仅带 ?invite= 链接时出现） */}
-
-      {(invitePreview || inviteError) && (
-        <div
-          className={`mb-[var(--space-4)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] ${
-            invitePreview
-              ? "bg-[var(--success-soft)] text-[var(--success-fg)]"
-              : "bg-[var(--warn-soft)] text-[var(--warn-fg)]"
-          }`}
-        >
-          <UserPlus size={16} className="shrink-0 mt-0.5" />
-          {invitePreview ? (
-            <span>
-              {t.rich("invitePreview", {
-                inviter: invitePreview.inviterName,
-                workspace: invitePreview.workspaceName,
-                email: invitePreview.emailMasked,
-                strong: (chunks) => <strong>{chunks}</strong>,
-              })}
-            </span>
-          ) : (
-            <span>{inviteError}</span>
-          )}
+      {/* 邮箱验证待完成：注册已成功但需先验证邮箱（服务端未发会话凭据） */}
+      {verifyEmailSent !== null ? (
+        <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)] text-center">
+          <MailCheck size={28} className="mx-auto mb-3 text-[var(--success)]" />
+          <h1 className="mb-3 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
+            {t("verifyEmailTitle")}
+          </h1>
+          <p className="mb-3 text-[length:var(--text-sm)] text-[var(--fg-2)]">
+            {t.rich("verifyEmailSentTo", {
+              email: verifyEmailSent,
+              strong: (chunks) => <strong>{chunks}</strong>,
+            })}
+          </p>
+          <p className="mb-6 text-[length:var(--text-sm)] text-[var(--meta)]">
+            {t("verifyEmailHint")}
+          </p>
+          <Link
+            href="/auth/login"
+            className="inline-flex w-full h-9 items-center justify-center bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] transition-colors duration-[var(--motion-base)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+          >
+            {t("verifyEmailBackToLogin")}
+          </Link>
         </div>
-      )}
+      ) : (
+        <>
+          {/* 邀请上下文提示（仅带 ?invite= 链接时出现） */}
 
-      <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
-        {/* 卡片内顶部居中标题 */}
-        <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
-          {t("title")}
-        </h1>
-        {error && (
-          <div className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
-            <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />
-            <span>{error}</span>
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="space-y-[var(--space-4)]">
-          <div>
-            <label htmlFor="workspaceName" className={labelClass}>
-              {t("workspaceName")}
-            </label>
-            <input
-              id="workspaceName"
-              type="text"
-              value={workspaceName}
-              onChange={(e) => setWorkspaceName(e.target.value)}
-              className={inputClass}
-              placeholder={t("workspaceNamePlaceholder")}
-              required
-              minLength={2}
-            />
-          </div>
-
-          <div className="h-px -my-2 bg-[var(--border-soft)]" />
-
-          <div>
-            <label htmlFor="name" className={labelClass}>
-              {t("yourName")}
-              <span className="ml-1.5 font-[weight:var(--weight-regular)] text-[var(--meta)]">
-                {t("yourNameOptional")}
-              </span>
-            </label>
-            <input
-              id="name"
-              type="text"
-              autoComplete="name"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              className={inputClass}
-              placeholder={t("yourNamePlaceholder")}
-            />
-          </div>
-
-          <div>
-            <label htmlFor="email" className={labelClass}>
-              {t("email")}
-            </label>
-            <input
-              id="email"
-              type="email"
-              autoComplete="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className={inputClass}
-              placeholder="you@company.com"
-              required
-            />
-          </div>
-
-          <div>
-            <label htmlFor="password" className={labelClass}>
-              {t("password")}
-            </label>
-            <input
-              id="password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className={inputClass}
-              placeholder={t("passwordPlaceholder")}
-              required
-              minLength={8}
-            />
-            {strength > 0 && (
-              <div
-                className="mt-2 flex items-center gap-1.5"
-                aria-label={t("passwordStrength.label", { level: strengthLabel })}
-              >
-                <div className="flex gap-1" aria-hidden="true">
-                  <div
-                    className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 1 ? strengthColor : "bg-[var(--border)]"}`}
-                  />
-                  <div
-                    className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 2 ? strengthColor : "bg-[var(--border)]"}`}
-                  />
-                  <div
-                    className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 3 ? strengthColor : "bg-[var(--border)]"}`}
-                  />
-                </div>
-                <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-                  {strengthLabel}
+          {(invitePreview || inviteError) && (
+            <div
+              className={`mb-[var(--space-4)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] ${
+                invitePreview
+                  ? "bg-[var(--success-soft)] text-[var(--success-fg)]"
+                  : "bg-[var(--warn-soft)] text-[var(--warn-fg)]"
+              }`}
+            >
+              <UserPlus size={16} className="shrink-0 mt-0.5" />
+              {invitePreview ? (
+                <span>
+                  {t.rich("invitePreview", {
+                    inviter: invitePreview.inviterName,
+                    workspace: invitePreview.workspaceName,
+                    email: invitePreview.emailMasked,
+                    strong: (chunks) => <strong>{chunks}</strong>,
+                  })}
                 </span>
+              ) : (
+                <span>{inviteError}</span>
+              )}
+            </div>
+          )}
+
+          <div className="bg-[var(--surface)] rounded-[var(--radius-xl)] p-5 sm:p-8 shadow-[var(--elev-lg)] border border-[var(--border)] ring-1 ring-[color-mix(in_srgb,var(--accent)_7%,transparent)]">
+            {/* 卡片内顶部居中标题 */}
+            <h1 className="mb-6 text-center text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
+              {t("title")}
+            </h1>
+            {error && (
+              <div className="mb-[var(--space-5)] flex items-start gap-[var(--space-2)] p-[var(--space-3)] bg-[var(--danger-soft)] text-[var(--danger-fg)] rounded-[var(--radius-md)] text-[length:var(--text-sm)]">
+                <AlertCircle size={16} className="shrink-0 mt-0.5 text-[var(--danger)]" />
+                <span>{error}</span>
               </div>
             )}
+
+            <form onSubmit={handleSubmit} className="space-y-[var(--space-4)]">
+              <div>
+                <label htmlFor="workspaceName" className={labelClass}>
+                  {t("workspaceName")}
+                </label>
+                <input
+                  id="workspaceName"
+                  type="text"
+                  value={workspaceName}
+                  onChange={(e) => setWorkspaceName(e.target.value)}
+                  className={inputClass}
+                  placeholder={t("workspaceNamePlaceholder")}
+                  required
+                  minLength={2}
+                />
+              </div>
+
+              <div className="h-px -my-2 bg-[var(--border-soft)]" />
+
+              <div>
+                <label htmlFor="name" className={labelClass}>
+                  {t("yourName")}
+                  <span className="ml-1.5 font-[weight:var(--weight-regular)] text-[var(--meta)]">
+                    {t("yourNameOptional")}
+                  </span>
+                </label>
+                <input
+                  id="name"
+                  type="text"
+                  autoComplete="name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className={inputClass}
+                  placeholder={t("yourNamePlaceholder")}
+                />
+              </div>
+
+              <div>
+                <label htmlFor="email" className={labelClass}>
+                  {t("email")}
+                </label>
+                <input
+                  id="email"
+                  type="email"
+                  autoComplete="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                  placeholder="you@company.com"
+                  required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="password" className={labelClass}>
+                  {t("password")}
+                </label>
+                <input
+                  id="password"
+                  type="password"
+                  autoComplete="new-password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  className={inputClass}
+                  placeholder={t("passwordPlaceholder")}
+                  required
+                  minLength={8}
+                />
+                {strength > 0 && (
+                  <div
+                    className="mt-2 flex items-center gap-1.5"
+                    aria-label={t("passwordStrength.label", { level: strengthLabel })}
+                  >
+                    <div className="flex gap-1" aria-hidden="true">
+                      <div
+                        className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 1 ? strengthColor : "bg-[var(--border)]"}`}
+                      />
+                      <div
+                        className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 2 ? strengthColor : "bg-[var(--border)]"}`}
+                      />
+                      <div
+                        className={`h-1 w-6 rounded-full transition-colors duration-[var(--motion-fast)] ${strength >= 3 ? strengthColor : "bg-[var(--border)]"}`}
+                      />
+                    </div>
+                    <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+                      {strengthLabel}
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <button
+                type="submit"
+                disabled={busy}
+                className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
+              >
+                {busy && <Loader2 size={16} className="animate-spin" />}
+                {busy ? t("submitting") : t("submit")}
+              </button>
+            </form>
           </div>
 
-          <button
-            type="submit"
-            disabled={busy}
-            className="w-full h-9 px-4 bg-[var(--accent)] text-[var(--accent-fg)] rounded-[var(--radius-md)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] active:bg-[var(--accent-active)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-base)] flex items-center justify-center gap-[var(--space-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:outline-none"
-          >
-            {busy && <Loader2 size={16} className="animate-spin" />}
-            {busy ? t("submitting") : t("submit")}
-          </button>
-        </form>
-      </div>
-
-      <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
-        {t("loginLink")}{" "}
-        <Link
-          href="/auth/login"
-          className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2"
-        >
-          {t("loginCta")}
-        </Link>
-      </p>
+          <p className="mt-5 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+            {t("loginLink")}{" "}
+            <Link
+              href="/auth/login"
+              className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2"
+            >
+              {t("loginCta")}
+            </Link>
+          </p>
+        </>
+      )}
     </div>
   );
 }

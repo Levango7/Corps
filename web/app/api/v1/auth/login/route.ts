@@ -33,10 +33,20 @@ export async function POST(req: NextRequest) {
     });
     if (!baRes.ok) {
       const err = await baRes.json().catch(() => ({}));
+      // 邮箱未验证（2026-10-08 起可开启 REQUIRE_EMAIL_VERIFICATION）：BA 返回
+      // 403 + "Email not verified" 一类文案，统一映射成双语提示，引导先验证再登录
+      const unverified =
+        baRes.status === 403 &&
+        (/verif/i.test(String(err?.message ?? "")) ||
+          String(err?.code ?? "")
+            .toUpperCase()
+            .includes("VERIF"));
       return NextResponse.json(
         {
           code: baRes.status,
-          message: err?.message || apiMsg(req, "invalidCredentials"),
+          message: unverified
+            ? apiMsg(req, "emailNotVerified")
+            : err?.message || apiMsg(req, "invalidCredentials"),
           data: null,
         },
         { status: baRes.status },

@@ -30,6 +30,13 @@ export interface ResetPasswordEmailParams {
   resetUrl: string;
 }
 
+/** 邮箱验证邮件参数 */
+export interface VerifyEmailParams {
+  to: string;
+  /** 一次性验证链接（含 token，24 小时有效） */
+  verifyUrl: string;
+}
+
 /** 任务指派通知邮件参数 */
 export interface TaskAssignedEmailParams {
   to: string;
@@ -352,6 +359,35 @@ export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): 
   if (!sent && !isEmailConfigured()) {
     // 未配置 Resend 时仅记录收件人（S12：不记录 resetUrl/token，避免日志泄露凭据）
     logPlaceholder("reset_password", `to=${maskEmail(params.to)}`);
+  }
+}
+
+function renderVerifyEmailHtml(params: VerifyEmailParams): string {
+  return renderEmailHtml({
+    title: "验证你的 corps 邮箱",
+    preheader: "完成邮箱验证即可开始使用（链接 24 小时内有效）",
+    bodyHtml:
+      `<p style="margin:0 0 12px;">感谢注册 corps。点击下方按钮验证你的邮箱，完成注册。</p>` +
+      `<p style="margin:0 0 12px;">链接 <strong>24 小时内有效</strong>，且只能使用一次。</p>` +
+      `<p style="margin:0;color:#64748b;">如果不是你本人操作，可以忽略这封邮件，不会创建任何账户活动。</p>`,
+    ctaLabel: "验证邮箱",
+    ctaHref: params.verifyUrl,
+  });
+}
+
+/**
+ * 邮箱验证邮件（由注册流程 / Better Auth sendVerificationEmail 回调触发，失败不阻塞）。
+ * 未配置 Resend 时仅记录收件人（不记录 verifyUrl/token，避免日志泄露凭据）。
+ */
+export async function sendVerificationEmail(params: VerifyEmailParams): Promise<void> {
+  const sent = await sendViaResend({
+    to: params.to,
+    subject: "验证你的 corps 邮箱",
+    html: renderVerifyEmailHtml(params),
+    logTag: "verify_email",
+  });
+  if (!sent && !isEmailConfigured()) {
+    logPlaceholder("verify_email", `to=${maskEmail(params.to)}`);
   }
 }
 

@@ -251,6 +251,18 @@ export const API_MESSAGES = {
     en: "Free plan keeps the 10 most recent decisions per workspace; older ones become read-only (exportable, editable again after upgrading)",
   },
 
+  /* ── AI 用量限额（2026-10-08 起为真拦截）── */
+  aiQuotaExceeded: {
+    zh: "已达本工作区 AI 用量限额（Token 或调用次数），请联系工作区管理员调整限额，或等待额度自然重置（每日/每月）",
+    en: "This workspace's AI usage limit has been reached (tokens or calls). Ask a workspace admin to raise the limit, or wait for the daily/monthly reset.",
+  },
+
+  /* ── 邮箱验证 ── */
+  emailNotVerified: {
+    zh: "邮箱尚未验证：请先点击注册邮件中的验证链接，再登录",
+    en: "Email not verified yet: please click the verification link in the sign-up email before signing in",
+  },
+
   /* ── SSE ── */
   tooManySseConnections: {
     zh: "并发连接过多，请关闭其他标签页后重试",
