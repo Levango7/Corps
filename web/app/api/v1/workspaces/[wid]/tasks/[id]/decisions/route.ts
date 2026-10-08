@@ -7,6 +7,9 @@ import { syncActionItems } from "@/lib/decision-action-parser";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 
+/** 免费版每工作区决策记录上限（v2 定价 r07：超出转只读保留，Pro 不受限） */
+const FREE_DECISION_LIMIT = 10;
+
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions — 决策记录（版本倒序，最新在前） */
 export async function GET(
   req: NextRequest,
@@ -79,8 +82,25 @@ export async function POST(
       });
       if (!task) return null;
 
+      // v2 定价 r07：免费版每工作区保留最近 10 条决策记录（FAQ：超出转只读）。
+      // 审计 P1-2：此限制此前只存在于定价文案，服务端零执行点。
+      // 上限按工作区计（跨任务），与 /decisions 聚合列表同一口径。
+      // 并发保护：事务级 advisory lock 按 workspace 串行化"计数+插入"
+      //（与 conversation/上传清理同款模式，随事务结束自动释放）——不用
+      // workspaces FOR UPDATE（那需要 seat 特权上下文，见 runWithSeatCheck），
+      // 跨任务并发创建也串行过闸，不会超限。
+      await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${wid}))`;
+      const workspace = await tx.workspace.findUnique({
+        where: { id: wid },
+        select: { plan: true },
+      });
+      if (workspace?.plan !== "pro") {
+        const decisionCount = await tx.decision.count({ where: { workspaceId: wid } });
+        if (decisionCount >= FREE_DECISION_LIMIT) return { limited: true as const };
+      }
+
       // 决策记录只追加不覆盖：版本号在事务内自增（AC-10 可追溯）
-      // 并发保护：先对 Task 行加 FOR UPDATE 行锁，防止两个并发请求同时读到
+      // 并发保护：再对 Task 行加 FOR UPDATE 行锁，防止两个并发请求同时读到
       // 相同的 _max.version 导致版本号重复（来源：经验库 prisma-interactive-transaction）
       await tx.$queryRaw`SELECT id FROM "tasks" WHERE id = ${id}::uuid FOR UPDATE`;
       const agg = await tx.decision.aggregate({ where: { taskId: id }, _max: { version: true } });
@@ -134,6 +154,13 @@ export async function POST(
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "taskNotFound"), data: null },
         { status: 404 },
+      );
+
+    if ("limited" in result)
+      // 402 + 定价文案：与席位门控同一出口语义（限额 → 提示升级）
+      return NextResponse.json(
+        { code: 402, message: apiMsg(req, "decisionLimitFree"), data: null },
+        { status: 402 },
       );
 
     const { decision, actionSync } = result;

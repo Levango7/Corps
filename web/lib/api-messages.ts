@@ -245,6 +245,12 @@ export const API_MESSAGES = {
     en: "Free plan attachments are limited to 10MB; upgrade to Pro for up to 50MB",
   },
 
+  /* ── 决策记录（v2 定价：免费版每工作区最近 10 条，超出转只读保留）── */
+  decisionLimitFree: {
+    zh: "免费版每工作区保留最近 10 条决策记录，超出部分转为只读保留（可导出，升级 Pro 后恢复可编辑）",
+    en: "Free plan keeps the 10 most recent decisions per workspace; older ones become read-only (exportable, editable again after upgrading)",
+  },
+
   /* ── SSE ── */
   tooManySseConnections: {
     zh: "并发连接过多，请关闭其他标签页后重试",

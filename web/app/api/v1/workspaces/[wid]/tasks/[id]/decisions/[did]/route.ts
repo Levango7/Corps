@@ -11,6 +11,9 @@ const updateDecisionSchema = z.object({
   baseVersion: z.number().int().min(1),
 });
 
+/** 免费版可编辑的决策窗口：全工作区最近 N 条（与 POST 创建上限同口径） */
+const FREE_DECISION_LIMIT = 10;
+
 /**
  * PATCH /v1/workspaces/{wid}/tasks/{id}/decisions/{did} — 编辑决策（版本 +1）
  * 乐观并发：baseVersion 不等于当前版本时返回 409，拒绝静默覆盖他人修改。
@@ -47,11 +50,26 @@ export async function PATCH(
 
       const decision = await tx.decision.findFirst({
         where: { id: did, taskId: id, workspaceId: wid },
-        select: { id: true, version: true },
+        select: { id: true, version: true, createdAt: true },
       });
       if (!decision) return { notFound: true as const };
       if (decision.version !== validated.baseVersion) {
         return { conflict: true as const, currentVersion: decision.version };
+      }
+
+      // v2 定价 r07（审计 P1-2）：免费版超出"最近 10 条"的决策转只读保留。
+      // 可编辑窗口 = 全工作区按 createdAt 倒序的前 FREE_DECISION_LIMIT 条；
+      // 超额只出现在 Pro 降级场景（免费版创建在 POST 已被拦在 10 条内）。
+      // 该判定无需加锁：排名随新建决策单调后移，属刻意的不变式而非竞态面。
+      const workspace = await tx.workspace.findUnique({
+        where: { id: wid },
+        select: { plan: true },
+      });
+      if (workspace?.plan !== "pro") {
+        const newerCount = await tx.decision.count({
+          where: { workspaceId: wid, createdAt: { gt: decision.createdAt } },
+        });
+        if (newerCount >= FREE_DECISION_LIMIT) return { readOnly: true as const };
       }
 
       const updated = await tx.decision.update({
@@ -105,6 +123,13 @@ export async function PATCH(
           data: { currentVersion: result.currentVersion },
         },
         { status: 409 },
+      );
+    }
+    if ("readOnly" in result) {
+      // 402 + 定价文案：免费版超出窗口的决策只读（与创建上限同一出口语义）
+      return NextResponse.json(
+        { code: 402, message: apiMsg(req, "decisionLimitFree"), data: null },
+        { status: 402 },
       );
     }
 

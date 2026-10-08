@@ -21,8 +21,9 @@ import { z } from "zod";
  *  6. 存储到 web/uploads/ 目录（MVP 本地存储，生产环境用 S3）
  */
 
-/** 文件大小上限：50MB */
-const MAX_FILE_SIZE = 50 * 1024 * 1024;
+/** 文件大小上限：免费版 10MB，Pro 50MB（v2 定价，与任务附件同口径） */
+const MAX_FILE_SIZE_FREE = 10 * 1024 * 1024;
+const MAX_FILE_SIZE_PRO = 50 * 1024 * 1024;
 
 /**
  * 允许的文件类型（MIME type → 允许的扩展名列表）。
@@ -104,12 +105,23 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       );
     }
 
-    // 文件大小校验
-    if (file.size > MAX_FILE_SIZE) {
-      return NextResponse.json(
-        { code: 400, message: apiMsg(req, "fileSizeExceededPro"), data: null },
-        { status: 400 },
-      );
+    // 文件大小校验：按套餐分档（审计 P1-2：此前固定 50MB，
+    // 免费版也可传 50MB，且超限文案对免费用户误报 fileSizeExceededPro）
+    const activeSub = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.subscription.findFirst({
+          where: { workspaceId: wid, status: "active" },
+          select: { id: true },
+        }),
+      ctx.payload.sub,
+    );
+    const maxSize = activeSub ? MAX_FILE_SIZE_PRO : MAX_FILE_SIZE_FREE;
+    if (file.size > maxSize) {
+      const message = activeSub
+        ? apiMsg(req, "fileSizeExceededPro")
+        : apiMsg(req, "fileSizeExceededFree");
+      return NextResponse.json({ code: 400, message, data: null }, { status: 400 });
     }
 
     // 校验文件类型（MIME type + 文件名扩展名双重校验，防绕过）
