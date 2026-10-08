@@ -169,6 +169,13 @@ function verifyCallback(data: string, signature: string): boolean {
   if (WECHAT_PLATFORM_PUBLIC_KEY_PEM) {
     return rsaSha256Verify(WECHAT_PLATFORM_PUBLIC_KEY_PEM, data, signature);
   }
+  // 审计 P1-3：生产环境未配平台公钥时直接拒绝，不再静默降级 HMAC。
+  // 降级只允许出现在沙箱/测试（NODE_ENV !== "production"）。
+  if (process.env.NODE_ENV === "production") {
+    throw new PaymentWebhookError(
+      "WECHAT_PLATFORM_PUBLIC_KEY_PEM 未配置：生产环境禁止 HMAC 验签降级，回调拒收",
+    );
+  }
   // HMAC 回退（仅沙箱/测试）
   // R9D-07：模块级布尔标志去重，仅首次回退时警告一次
   if (!hmacFallbackVerifyWarned) {

@@ -92,7 +92,13 @@ export async function POST(req: NextRequest) {
             data: { provider: "stripe", eventId: event.providerEventId },
             select: { eventId: true },
           })
-          .catch(() => null);
+          .catch((err: { code?: string }) => {
+            // 审计 P1-4：只在 P2002（唯一约束冲突）时判为"已处理"，
+            // 其他错误（连接抖动等）重新抛出让事务失败——此前 .catch(() => null)
+            // 把一切插入失败都当已处理，Stripe 收到 200 确认后事件即丢失。
+            if (err.code === "P2002") return null;
+            throw err;
+          });
         if (!inserted) {
           duplicate = true;
           return;
