@@ -56,6 +56,16 @@ jobs:
       # 实测曾漂移 521 行、且源文件被 autocrlf 转成 CRLF 导致 next build 报
       # "CssSyntaxError: Missed semicolon"。此处钉死"逐字节一致 + 均为 LF"。
       - run: python ../scripts/check_design_tokens_sync.py
+      # v1 守卫残留棘轮（2026-10-09 补）：authFailure 收口是分批推进的
+      # （tasks 域 27 处 -> +documents/approvals/databases/conversations 88 处），
+      # 全仓仍有 269 处在用 getWorkspaceContext(v1)。此前这个数字只活在一次性的
+      # Python 脚本里，**没人看得见、也没人守得住**——下一批随时可能半途而废，
+      # 新代码也可能照着旧写法继续产出 v1（2026-10-08 实测：编码规范的示范代码
+      # 当时仍在推荐 v1，等于一个持续制造残留的源头，已在同一轮修掉）。
+      # 此门禁让残留只减不增：新增 v1 调用判 NEW_V1，已收口却忘记删基线行判
+      # STALE_V1（不强制删行，数字就永远收紧不了）。
+      - run: python ../scripts/check_v1_guard_ratchet.py
+      - run: python ../scripts/check_v1_guard_ratchet.py --self-test
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
