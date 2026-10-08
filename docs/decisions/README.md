@@ -23,7 +23,8 @@
 | ADR-011 | 统一写策略 default-deny | `ADR-011-统一写策略default-deny.md` | — | 2026-10-03 新增（此前未进索引）；choke point 拒绝口径与 `WRITE_POLICY_MODE=shadow/enforce` |
 | ADR-012 | 文档实时协同降级为"本地编辑 + 版本历史" | `ADR-012-文档协同降级为本地编辑模式.md` | — | 2026-10-04 新增（此前未进索引）；`server/collab/` 保留不收编，前置条件见其末节 |
 | ADR-013 | 旧聊天实现树（`ChatPanel` + `components/chat/*`）登记为待整合 | `ADR-013-旧聊天实现树登记为待整合.md` | — | 2026-10-06 新增；零挂载判定含可复现判据，收口台账第 12 行"写了没人读" |
-| ADR-014 | 三个 major 依赖升级（TypeScript / Stripe / Prisma） | `ADR-014-三个major依赖升级.md` | — | 2026-10-07 新增（**草案 · 待用户确认后实施**）；顺序 TS→Stripe→Prisma；TS 锁 6.0.3 否决 7.0.2、Stripe 锁 22.6.2 否决 23.0.0、Prisma 7 挂前置条件本轮不启动 |
+| ADR-014 | 三个 major 依赖升级（TypeScript / Stripe / Prisma） | `ADR-014-三个major依赖升级.md` | 阶段一的 `tsc` 影响面已实测：用 TS 6.0.3 编译本项目 **0 错误**（ADR §509 留的"`types: []` 新默认是否让 `@types/node` 全局声明消失"未发生），但仍**未实施**——本机 pnpm 解析 `@pnpm/exe` 失败，无法正规更新 package.json + 锁文件 | 2026-10-07 新增（**草案 · 待用户确认后实施**）；顺序 TS→Stripe→Prisma；TS 锁 6.0.3 否决 7.0.2、Stripe 锁 22.6.2 否决 23.0.0、Prisma 7 挂前置条件本轮不启动 |
+| ADR-015 | 未接线的云盘 / 预览组件登记为"待接线" | `ADR-015-未接线的云盘与预览组件登记.md` | — | 2026-10-08 新增；20 文件 2007 行静态零引用，但后端 `app/api/v1/workspaces/[wid]/files/**` 是活的 ⇒ 判为"后端已上线、UI 未挂载"而非死代码，**禁止以清理死代码为由删除**；含可复现判据与两套并行预览实现的处置选项 |
 
 阅读顺序：按编号顺序通读；ADR-004/ADR-005 分别是 ADR-002（技术栈）/ADR-003（计费方案）
 在实现层面的落地决策。
