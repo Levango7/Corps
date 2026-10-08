@@ -222,7 +222,7 @@ describe("发布与分享", () => {
 });
 
 describe("跨工作区防护", () => {
-  it("A 的 token 不能读 B 工作区的文档（在 B 工作区下 404）", async () => {
+  it("A 的 token 不能读 B 工作区的文档（在 B 工作区下 403）", async () => {
     // 在 otherWid 下建文档
     const create = await fetch(`${BASE}/workspaces/${otherWid}/documents`, {
       method: "POST",
@@ -231,14 +231,16 @@ describe("跨工作区防护", () => {
     });
     const created = await create.json();
     const id = created.data.id;
-    // A 的 token 拿 B 的 wid 上下文 → 401（getWorkspaceContext 跨工作区 null）
+    // A 的 token 拿 B 的 wid → workspace_mismatch。老的 getWorkspaceContext(v1) 把
+    // 四种拒绝一律收敛成 null ⇒ 只能回 401，把「有身份但无权」说成了「未授权」；
+    // 改走 V2 后按 lib/auth.ts:348-360 的口径必须是 403（forbidden）。
     const res = await fetch(`${BASE}/workspaces/${otherWid}/documents/${id}`, {
       headers: authHeader(token),
     });
-    expect(res.status).toBe(401);
+    expect(res.status).toBe(403);
   });
 
-  it("A 的 token 不能改 B 工作区的文档（在 B 工作区下 401）", async () => {
+  it("A 的 token 不能改 B 工作区的文档（在 B 工作区下 403）", async () => {
     const create = await fetch(`${BASE}/workspaces/${otherWid}/documents`, {
       method: "POST",
       headers: { ...authHeader(otherToken), "Content-Type": "application/json" },
@@ -251,6 +253,7 @@ describe("跨工作区防护", () => {
       headers: { ...authHeader(token), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "越权修改" }),
     });
-    expect(res.status).toBe(401);
+    // 同上：语义变更（documents 域收口到 authFailure），断言跟着语义走。
+    expect(res.status).toBe(403);
   });
 });

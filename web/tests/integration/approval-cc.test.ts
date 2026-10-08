@@ -9,12 +9,16 @@ import { BASE, registerUser, authHeader, cookieHeader, inviteMember } from "../h
  * 表现成"这单没有抄送人"的**静默错数据**。本套件把这条读路径钉住，并特意留下 405 的反向断言。
  *
  * 覆盖：
- * 1. 未登录 → 401
- * 2. 令牌绑定到别的工作区（wid 守卫层）→ 401
- * 3. 令牌已换绑到**目标**工作区、但调用者不是该工作区成员（成员校验层）→ 401
+ * 1. 未登录 → 401（unauthenticated，真「没有身份」）
+ * 2. 令牌绑定到别的工作区（wid 守卫层）→ 403（workspace_mismatch）
+ * 3. 令牌已换绑到**目标**工作区、但调用者不是该工作区成员（成员校验层）→ 403（not_a_member）
  *    —— 这条才是真跨租户判据：实测 `/auth/refresh` 会为任意 workspaceId 发票据
- *    （200 + access_token），所以去掉 getWorkspaceContext 里的成员查询时，
- *    第 2 条仍然 401、只有第 3 条会退化。两条都留着。
+ *    （200 + access_token），所以去掉 getWorkspaceContextV2 里的成员查询时，
+ *    第 2 条仍然 403、只有第 3 条会退化。两条都留着。
+ *
+ * 第 2、3 条原断言为 401：守旧调用的是 getWorkspaceContext(v1)，它把四种拒绝一律
+ * 收敛成 null ⇒ handler 只能说「未授权」，于是「有身份但无权」被讲成「没有身份」。
+ * 本域收口到 authFailure 后按 lib/auth.ts:348-360 的口径拆开：401 只留给第 1 条。
  * 4. 抄送 2 人后 GET → 200，数组含 2 条，字段齐（id/userId/user.name/read/nodeIndex）
  * 5. 无抄送记录时 → 200 + 空数组（与"真的没有抄送"同形，但**不是** 405/404）
  * 6. 实例不存在 → 404
@@ -158,18 +162,19 @@ describe("审批实例抄送列表读取（GET .../cc）", () => {
     expect(status).toBe(401);
   });
 
-  it("令牌绑在别的工作区时读不到（wid 守卫层）", async () => {
+  it("令牌绑在别的工作区时读不到（wid 守卫层 403）", async () => {
     // outsider 的 register 令牌绑它自己的工作区 ⇒ URL wid 与 payload.wid 不符
     const { status } = await readCc(outsiderToken, wid, instanceId);
-    expect(status).toBe(401);
+    expect(status).toBe(403);
   });
 
-  it("令牌已换绑到本工作区但调用者不是成员时读不到（成员校验层 = 真跨租户判据）", async () => {
+  it("令牌已换绑到本工作区但调用者不是成员时读不到（成员校验层 = 真跨租户判据，403）", async () => {
     // forgedToken 的 payload.wid === wid，wid 守卫放行；唯一还挡着它的是成员查询。
-    // 若哪天 getWorkspaceContext 少了那次 findFirst，只有本用例会展红。
+    // 若哪天 getWorkspaceContextV2 少了那次 findFirst，本用例会放行成 200 即展红。
+    // 断言由容错 [401,403] 收紧为 403：V2 下这条路径的拒绝原因唯一（not_a_member）。
     expect(forgedToken).toBeTruthy();
     const { status } = await readCc(forgedToken!, wid, instanceId);
-    expect([401, 403]).toContain(status);
+    expect(status).toBe(403);
   });
 
   it("GET 自己的实例返回 200 且抄送记录含 user 嵌套对象（钉住 405 不再回来）", async () => {

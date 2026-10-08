@@ -4,7 +4,8 @@
 // 返回分享访问日志（分页 page + pageSize），按 accessedAt 倒序。
 // 仅 owner/admin 可调用。
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
 
 const DEFAULT_PAGE_SIZE = 20;
@@ -16,12 +17,15 @@ export async function GET(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 仅 owner/admin 可查看访问日志
   if (ctx.member.role !== "owner" && ctx.member.role !== "admin") {

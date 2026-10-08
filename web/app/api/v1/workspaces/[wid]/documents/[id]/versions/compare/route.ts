@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { requirePermission } from "@/lib/permissions";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
@@ -38,12 +39,15 @@ export async function POST(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // 角色门禁：Spec §5 要求「成员 + 文档读权限」。虽然语义是读，但本端点用 POST 传输
   // （diff 载荷放在 body 里），因此必须显式声明 documents:read 门禁，

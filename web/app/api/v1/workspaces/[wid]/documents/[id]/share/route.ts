@@ -11,7 +11,8 @@
 //  - GET 不返回密码 hash，仅返回 hasPassword 布尔值
 //  - shareToken 由服务端生成（192 位熵），客户端不可指定
 import { NextRequest, NextResponse } from "next/server";
-import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { authFailure } from "@/lib/auth-response";
 import { randomBytes } from "crypto";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
@@ -48,12 +49,15 @@ export async function PATCH(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // documents:update 权限检查
   const denied = await requirePermission(ctx, "documents", "update", req);
@@ -162,12 +166,15 @@ export async function GET(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   try {
     const doc = await runWithWorkspace(
@@ -226,12 +233,15 @@ export async function POST(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // documents:update 权限检查（创建分享链接属于修改文档属性）
   const denied = await requirePermission(ctx, "documents", "update", req);
@@ -349,12 +359,15 @@ export async function DELETE(
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
   const { wid, id } = await params;
-  const ctx = await getWorkspaceContext(req, wid);
+  const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
+    // V2 契约上从不返回 null（见 lib/auth.ts 的 WorkspaceContextV2 文档：
+    // "调用方遇到 null 应按 500 处理（fail-closed，不可当作 401 重试）"）。
     return NextResponse.json(
-      { code: 401, message: apiMsg(req, "unauthorized"), data: null },
-      { status: 401 },
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
     );
+  if (!ctx.ok) return authFailure(ctx, req);
 
   // documents:update 权限检查
   const denied = await requirePermission(ctx, "documents", "update", req);
