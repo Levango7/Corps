@@ -149,23 +149,50 @@ web/
 
 ### 4.1 Route Handler 模式
 
+> 本节的示范代码就是当前推荐形态，不是历史形态。新写的 handler 一律按下例。
+
 ```typescript
 import { NextRequest, NextResponse } from "next/server";
+import { authFailure } from "@/lib/auth-response";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { apiMsg } from "@/lib/api-messages";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
-  // 1. 认证
-  const payload = await authenticate(req);
-  if (!payload) return NextResponse.json({ code: 401, message: "Unauthorized" }, { status: 401 });
-  // 2. RBAC
-  const ctx = await getWorkspaceContext(req, wid);
-  if (!ctx) return NextResponse.json({ code: 403, message: "Forbidden" }, { status: 403 });
-  // 3. 业务逻辑 + RLS
-  const result = await runWhithWorkspace(wid, async (tx) => { ... });
+
+  // 1. 认证 + 成员资格 + 写策略 —— 三者在一个 choke point 里结算（ADR-011），不要拆成三步
+  const ctx = await getWorkspaceContextV2(req, wid);
+  if (!ctx)
+    // V2 契约上从不返回 null；真出现了说明 choke point 被绕过，按 500 处理（fail-closed）
+    return NextResponse.json(
+      { code: 500, message: apiMsg(req, "internalError"), data: null },
+      { status: 500 },
+    );
+  // 2. 拒绝出口统一交给 authFailure：401 只代表「没有身份」，403 代表「有身份但无权」
+  if (!ctx.ok) return authFailure(ctx, req);
+
+  // 3. 业务逻辑 + RLS：第三个参数传 userId，Postgres RLS 据此判定行级可见性
+  const result = await runWithWorkspace(
+    wid,
+    (tx) => tx.label.findMany({ where: { workspaceId: wid } }),
+    ctx.payload.sub,
+  );
+
   // 4. 统一响应
-  return NextResponse.json({ code: 200, data: result, message: "ok" });
+  return NextResponse.json({ code: 200, data: result });
 }
 ```
+
+**这几行为什么必须这么写（踩过的坑，别改回去）：**
+
+| 要求 | 原因 |
+|------|------|
+| 用 `getWorkspaceContextV2`，不用旧版 `getWorkspaceContext` | 旧版把四种拒绝一律收敛成 `null`，handler 只能统一回 401，导致「身份有效但无权」被说成「未授权」。详见 `lib/auth.ts` 的 `DenialReason`。 |
+| 不要先 `authenticate()` 再 `getWorkspaceContext*()` | `getWorkspaceContext*` 内部已经包含认证，重复调用是多余的一次密码学验签。旧示范里的两步走已被废弃。 |
+| 拒绝分支一律走 `authFailure(ctx, req)` | 手写 401/403 字面量会让文案、状态码口径各写各的，出问题只能逐处对。 |
+| `if (!ctx)` 里返回 **500**，不是 401 | 这条路径契约上不可达。返回 401 会让前端 `lib/api.ts` 先做一次无意义的 token refresh 再重试。 |
+| 文案一律 `apiMsg(req, key)`，不写硬编码英文 | 直接写 `"Unauthorized"` 会绕过 i18n，英文用户以外的语言拿不到翻译。可用键见 `lib/api-messages.ts`。 |
+| `runWithWorkspace` 记得传第三参数 | 漏传 userId 会让 RLS 拿不到行级身份，轻则多查、重则越权。注意拼写：`runWithWorkspace`，不是 `runWhithWorkspace`。 |
 
 ### 4.2 响应信封
 
