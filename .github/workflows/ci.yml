@@ -66,6 +66,17 @@ jobs:
       # STALE_V1（不强制删行，数字就永远收紧不了）。
       - run: python ../scripts/check_v1_guard_ratchet.py
       - run: python ../scripts/check_v1_guard_ratchet.py --self-test
+      # ADR-015 登记表门禁（2026-10-09 补）：web/components/files/** 与
+      # web/components/im/FilePreview.tsx 共 20 个文件**静态零引用**（`grep -rn "previews/"` 零命中），
+      # 是「后端 API 已上线、前端没挂载」的半成品，不是死代码——砍掉等于砍掉一个
+      # 已完成功能的前半截。ADR-015 §5 用文档写了"不得以清理死代码为由删除"，
+      # 但**文档拦不住下一个动手的人**：这个约束原本只活在人的记忆里。
+      # 此门禁把它变成机器判据：文件消失 / 范围内冒出表外新文件 / 表自身条目重复，
+      # 三种红因各自独立。解除约束的正规路径只有一条——改 ADR-015 状态 + 同提交更新此表。
+      # 放在 lint job 而非新开 job：lint 已是 required status check，
+      # 新 job 不在必需清单里，变红也拦不住合并。
+      - run: python ../scripts/check_adr015_manifest.py
+      - run: python ../scripts/check_adr015_manifest.py --self-test
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
