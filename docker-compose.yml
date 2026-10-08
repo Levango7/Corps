@@ -170,6 +170,8 @@ services:
       # 邮件（可选）
       RESEND_API_KEY: ${RESEND_API_KEY:-}
       EMAIL_FROM: ${EMAIL_FROM:-}
+      # 邮箱验证（2026-10-08）：=1 时注册需验证邮箱才能登录；开启前先配好 RESEND_API_KEY / EMAIL_FROM
+      REQUIRE_EMAIL_VERIFICATION: ${REQUIRE_EMAIL_VERIFICATION:-}
       # RLS 运行时角色密码（RLS_ACTIVATE=true 时必填，见 .env.example 生成命令）
       CORPS_APP_PASSWORD: ${CORPS_APP_PASSWORD:?请在 .env 中设置 CORPS_APP_PASSWORD}
       # 日志级别（debug/info/warn/error/fatal，默认 info）
