@@ -1,19 +1,23 @@
 /**
  * AI 使用量跟踪中间件（方向 G）
  *
- * withUsageTracking 包装 AI 调用函数，自动记录使用量（Token / 耗时 / 成败）。
+ * withUsageTracking 包装 AI 调用函数：调用前做配额断言（超限抛
+ * AiQuotaExceededError，2026-10-08 起真拦截），调用后自动记录使用量。
  *
  * 设计要点：
+ *  - 配额断言：fn() 执行前 assertAiUsageQuota——超限即中断，不发起模型调用；
+ *    错误由路由错误出口 aiQuotaExceededResponse 映射为 429
  *  - 成功路径：返回 fn() 的 result，同时记录 inputTokens/outputTokens
  *  - 失败路径：抛出原异常，但仍在 finally 中记录 success=false
  *  - 异步记录：在 finally 中触发 recordAiUsage 并 .catch()，不阻塞响应
  *  - 不依赖 shared.ts：避免循环依赖（shared.ts 是基础认证模块，
- *    被 AI 路由广泛依赖；本模块仅依赖 usage-tracker）
+ *    被 AI 路由广泛依赖；本模块仅依赖 usage-tracker / usage-limit）
  *
  * 来源：方向 G 任务 4（withUsageTracking 辅助函数）
  */
 
 import { recordAiUsage } from "@/lib/ai/usage-tracker";
+import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 
 /** withUsageTracking 入参（不含 usage，usage 由 fn 返回） */
 export interface UsageTrackingParams {
@@ -61,6 +65,10 @@ export async function withUsageTracking<T>(
   params: UsageTrackingParams,
   fn: () => Promise<UsageTrackingFnResult<T>>,
 ): Promise<T> {
+  // 真拦截（2026-10-08）：超限直接抛 AiQuotaExceededError，不发起模型调用。
+  // 该错误在路由错误出口由 aiQuotaExceededResponse 映射为 429（含超限原因）。
+  await assertAiUsageQuota(params.userId, params.workspaceId);
+
   const startTime = Date.now();
   let success = true;
   let inputTokens = 0;

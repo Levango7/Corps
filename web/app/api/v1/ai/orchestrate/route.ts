@@ -19,6 +19,7 @@ import {
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
+  aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import {
@@ -86,6 +87,8 @@ export async function POST(req: NextRequest) {
   try {
     body = postSchema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -140,6 +143,8 @@ export async function POST(req: NextRequest) {
       data: plan satisfies OrchestrationPlan,
     });
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[POST ai/orchestrate] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
@@ -174,6 +179,8 @@ export async function PATCH(req: NextRequest) {
   try {
     body = patchSchema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -263,6 +270,8 @@ export async function PATCH(req: NextRequest) {
       },
     });
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[PATCH ai/orchestrate] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

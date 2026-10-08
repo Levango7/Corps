@@ -13,6 +13,7 @@ import {
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
+  aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -23,6 +24,7 @@ import {
 } from "@/lib/ai/prompts/project-insight";
 import { apiMsg } from "@/lib/api-messages";
 import { createAiProgressStream } from "@/lib/ai/stream";
+import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -60,6 +62,8 @@ export async function POST(req: NextRequest) {
   try {
     body = schema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -88,6 +92,9 @@ export async function POST(req: NextRequest) {
 
     // 6) 流式生成洞察（deepseek-reasoner 推理模型，带阶段化进度反馈）
     //    buildPrompt 封装上下文聚合（RLS 事务内），让进度阶段有真实时序
+    // 真拦截（2026-10-08）：流式路径不经 withUsageTracking，发起模型调用前
+    // 显式断言配额；超限抛 AiQuotaExceededError，由下方 catch 映射 429。
+    await assertAiUsageQuota(ctx.payload.sub, body.wid);
     return createAiProgressStream(
       {
         model: requireReasonerModel(),
@@ -114,6 +121,8 @@ export async function POST(req: NextRequest) {
       },
     );
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[ai/project-insight] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

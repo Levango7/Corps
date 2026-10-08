@@ -16,6 +16,7 @@ import {
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
+  aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
@@ -110,6 +111,8 @@ export async function POST(req: NextRequest) {
   try {
     body = schema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -206,6 +209,8 @@ export async function POST(req: NextRequest) {
       data: { recommendations: savedRecommendations },
     });
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[ai/personalization/generate] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

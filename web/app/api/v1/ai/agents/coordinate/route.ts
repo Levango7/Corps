@@ -22,6 +22,7 @@ import {
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
+  aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
@@ -144,6 +145,8 @@ export async function POST(req: NextRequest) {
   try {
     body = schema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -384,6 +387,8 @@ export async function POST(req: NextRequest) {
 
     return NextResponse.json({ code: 0, data: result, message: "OK" });
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[POST ai/agents/coordinate] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

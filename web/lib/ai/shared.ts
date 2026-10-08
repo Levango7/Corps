@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth, authenticate } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { AiQuotaExceededError } from "@/lib/ai/usage-limit";
 
 /**
  * AI 路由共享认证与响应辅助。
@@ -48,6 +49,26 @@ export function aiNotConfiguredResponse(req: NextRequest): NextResponse {
 /** 检查 AI 服务是否已配置（DEEPSEEK_API_KEY 或 OPENAI_API_KEY 任一存在且非空） */
 export function isAiConfigured(): boolean {
   return !!process.env.DEEPSEEK_API_KEY || !!process.env.OPENAI_API_KEY;
+}
+
+/**
+ * AI 配额超限的统一错误出口（2026-10-08：限额从"提示不阻断"改为真拦截）。
+ *
+ * 路由 catch 块顶部调用：非配额错误返回 null（继续走原有 500 处理），
+ * 配额错误返回 429 + 超限原因。判定与响应映射集中在此，路由侧不复制分支。
+ */
+export function aiQuotaExceededResponse(req: NextRequest, error: unknown): NextResponse | null {
+  if (error instanceof AiQuotaExceededError) {
+    return NextResponse.json(
+      {
+        code: 429,
+        message: apiMsg(req, "aiQuotaExceeded"),
+        data: { reason: error.reason, usagePercent: error.usagePercent ?? null },
+      },
+      { status: 429 },
+    );
+  }
+  return null;
 }
 /**
  * 获取当前用户 ID + 工作区 ID（用于 AI 使用量跟踪）。

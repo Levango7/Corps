@@ -7,8 +7,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 
 const querySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -69,15 +68,20 @@ export async function GET(req: NextRequest) {
     if (!isManager) where.userId = userId;
     if (parsed.capability) where.capability = parsed.capability;
 
-    const [logs, total] = await Promise.all([
-      prisma.aiUsageLog.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: parsed.limit,
-        skip: parsed.offset,
-      }),
-      prisma.aiUsageLog.count({ where }),
-    ]);
+    const [logs, total] = await runWithWorkspace(
+      parsed.workspaceId,
+      (tx) =>
+        Promise.all([
+          tx.aiUsageLog.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            take: parsed.limit,
+            skip: parsed.offset,
+          }),
+          tx.aiUsageLog.count({ where }),
+        ]),
+      userId,
+    );
 
     return NextResponse.json({ code: 0, data: { logs, total }, message: "OK" });
   } catch (error) {

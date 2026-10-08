@@ -1,0 +1,27 @@
+# RLS 裸查登记表（2026-10-08 建立）
+#
+# 背景：rls-bare-query-guard.test.ts 此前因大小写口径缺陷长期失效——守卫的模型
+# 集合是 schema 里的 PascalCase 名（AiUsageLog），而 prisma 访问器是 camelCase
+# （prisma.aiUsageLog），成员的 has() 判定永远为 false，从未拦下任何裸查。
+# 修正口径后一次性暴露 33 处存量裸查（15 文件里 4 处为注释误报已剔除，11 文件 33 处为真）（FORCE RLS 表，加固模式下静默读空/写被拒，
+# 生产默认 RLS_ACTIVATE=true）。同批已修复 AI 用量域（usage-limit / usage-tracker /
+# usage 四个路由），其余按"只允许收缩"登记如下。
+#
+# 格式：<相对 web/ 的路径> | <违规处数> | reason
+# 规则：
+#   - 未登记文件出现任何裸查 → 红（新增即拦）；
+#   - 已登记文件处数超过基线 → 红（登记表不是扩容许可证）；
+#   - 处数少于基线（修复后未同步收缩）→ 红（强制更新登记表，防止虚胖）。
+# 收编方向：改走 runWithWorkspace（带 wid）/ runWithAuthOp（系统作业）/ withGuc 注入 GUC。
+#
+app/api/cron/ai-push-web/route.ts | 2 | 定时推送：待按 runWithAuthOp("cron") 逃生口收编
+app/api/v1/ai/assistant/conversations/route.ts | 1 | AI 助手会话域：待专项批次收编
+app/api/v1/ai/feedback/route.ts | 2 | AI 反馈域：待专项批次收编
+app/api/v1/ai/templates/route.ts | 3 | AI 模板域：待专项批次收编
+app/api/v1/ai/templates/[id]/route.ts | 3 | AI 模板域：待专项批次收编
+app/api/v1/ai/templates/[id]/instantiate/route.ts | 2 | AI 模板域：待专项批次收编
+app/api/v1/push/subscribe/route.ts | 5 | push 域：用户级 GUC（app.user_id）改造批次
+app/api/v1/push/unsubscribe/route.ts | 1 | push 域：用户级 GUC 改造批次
+lib/ai/feedback.ts | 1 | AI 反馈域：待专项批次收编
+lib/workflow/executor.ts | 10 | 工作流域：执行器整体缺 wid 上下文注入，专项重构批次
+lib/workflow/triggers.ts | 2 | 工作流域：同执行器批次

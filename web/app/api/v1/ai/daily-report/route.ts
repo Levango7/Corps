@@ -12,6 +12,7 @@ import {
   unauthorizedResponse,
   aiNotConfiguredResponse,
   isAiConfigured,
+  aiQuotaExceededResponse,
 } from "@/lib/ai/shared";
 import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
@@ -20,6 +21,7 @@ import { buildDailyReportSystemPrompt, buildUserPrompt } from "@/lib/ai/prompts/
 import { getFeedbackExamples } from "@/lib/ai/feedback";
 import { apiMsg } from "@/lib/api-messages";
 import { createAiProgressStream } from "@/lib/ai/stream";
+import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -57,6 +59,8 @@ export async function POST(req: NextRequest) {
   try {
     body = schema.parse(await req.json());
   } catch (e) {
+    const quotaGuard = aiQuotaExceededResponse(req, e);
+    if (quotaGuard) return quotaGuard;
     if (e instanceof z.ZodError) {
       return NextResponse.json(
         {
@@ -106,6 +110,9 @@ export async function POST(req: NextRequest) {
     // 8) 流式生成日报（带阶段化进度反馈）
     //    buildPrompt 封装上下文聚合，让进度阶段有真实时序：
     //    阶段 1（聚合数据）→ buildPrompt → 阶段 2（分析）→ 阶段 3（生成）→ LLM 文本流
+    // 真拦截（2026-10-08）：流式路径不经 withUsageTracking，发起模型调用前
+    // 显式断言配额；超限抛 AiQuotaExceededError，由下方 catch 映射 429。
+    await assertAiUsageQuota(ctx.payload.sub, body.wid);
     return createAiProgressStream(
       {
         model: requireDefaultModel(),
@@ -132,6 +139,8 @@ export async function POST(req: NextRequest) {
       },
     );
   } catch (error) {
+    const quotaGuard = aiQuotaExceededResponse(req, error);
+    if (quotaGuard) return quotaGuard;
     console.error("[ai/daily-report] error:", error);
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },

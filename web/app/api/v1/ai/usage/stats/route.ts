@@ -7,8 +7,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContext } from "@/lib/auth";
+import { getWorkspaceContext, runWithWorkspace } from "@/lib/auth";
 
 const querySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -73,22 +72,27 @@ export async function GET(req: NextRequest) {
       if (parsed.endDate) where.createdAt.lte = new Date(parsed.endDate);
     }
 
-    // 并行查询：聚合统计 + 按能力分组
-    const [aggregate, byCapabilityRaw] = await Promise.all([
-      prisma.aiUsageLog.aggregate({
-        where,
-        _sum: { totalTokens: true, cost: true },
-        _avg: { durationMs: true },
-        _count: true,
-      }),
-      prisma.aiUsageLog.groupBy({
-        by: ["capability"],
-        where,
-        _sum: { totalTokens: true, cost: true },
-        _count: true,
-        orderBy: { _count: { capability: "desc" } },
-      }),
-    ]);
+    // 并行查询：聚合统计 + 按能力分组（GUC 事务：ai_usage_logs 为 FORCE RLS 表）
+    const [aggregate, byCapabilityRaw] = await runWithWorkspace(
+      parsed.workspaceId,
+      (tx) =>
+        Promise.all([
+          tx.aiUsageLog.aggregate({
+            where,
+            _sum: { totalTokens: true, cost: true },
+            _avg: { durationMs: true },
+            _count: true,
+          }),
+          tx.aiUsageLog.groupBy({
+            by: ["capability"],
+            where,
+            _sum: { totalTokens: true, cost: true },
+            _count: true,
+            orderBy: { _count: { capability: "desc" } },
+          }),
+        ]),
+      userId,
+    );
 
     const byCapability = byCapabilityRaw.map((row) => ({
       capability: row.capability,

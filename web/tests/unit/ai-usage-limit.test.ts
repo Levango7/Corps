@@ -8,14 +8,18 @@ import { Prisma } from "@prisma/client";
  *  - checkAiUsageLimit：日/月 Token 限额 + 日/月调用次数限额检查，
  *    用户级限额优先 > 工作空间级默认限额回退 > 无限额放行，
  *    限额判定使用 >= 比较（刚好等于限额即拒绝）
+ *  - assertAiUsageQuota：超限抛 AiQuotaExceededError（2026-10-08 真拦截）
  *  - getOrCreateDefaultLimit：已存在直接返回 / 不存在则创建 / P2002 竞态重新查找
  *
- * Mock 策略：vi.mock("@/lib/prisma") 替换 prisma client，不连接真实 DB。
+ * Mock 策略：vi.hoisted 建共享 mock tx，同时替换 @/lib/prisma（prisma）与
+ * @/lib/auth（runWithWorkspace 透传 mock tx）——2026-10-08 起限额读取一律走
+ * runWithWorkspace 注入 GUC（ai_usage_* 是 FORCE RLS 表，裸查询在加固模式下读空），
+ * 透传后原有 prisma.* 断言全部沿用。不连接真实 DB。
  * P2002 错误用真实的 Prisma.PrismaClientKnownRequestError 构造，保证 instanceof 判定成立。
  */
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
+const { mockTx } = vi.hoisted(() => ({
+  mockTx: {
     aiUsageLimit: {
       findFirst: vi.fn(),
       create: vi.fn(),
@@ -26,8 +30,18 @@ vi.mock("@/lib/prisma", () => ({
   },
 }));
 
+vi.mock("@/lib/prisma", () => ({ prisma: mockTx }));
+vi.mock("@/lib/auth", () => ({
+  runWithWorkspace: (_wid: string, fn: (tx: unknown) => unknown) => fn(mockTx),
+}));
+
 import { prisma } from "@/lib/prisma";
-import { checkAiUsageLimit, getOrCreateDefaultLimit } from "@/lib/ai/usage-limit";
+import {
+  checkAiUsageLimit,
+  getOrCreateDefaultLimit,
+  assertAiUsageQuota,
+  AiQuotaExceededError,
+} from "@/lib/ai/usage-limit";
 
 const WORKSPACE_ID = "00000000-0000-4000-8000-000000000001";
 const USER_ID = "00000000-0000-4000-8000-000000000002";
@@ -353,6 +367,27 @@ describe("checkAiUsageLimit - aggregate _sum.totalTokens 为 null", () => {
 
     const result = await checkAiUsageLimit(USER_ID, WORKSPACE_ID);
     expect(result.ok).toBe(true);
+  });
+});
+
+describe("assertAiUsageQuota - 真拦截（2026-10-08）", () => {
+  it("超限时抛 AiQuotaExceededError（携带 reason 与 usagePercent）", async () => {
+    vi.mocked(prisma.aiUsageLimit.findFirst).mockResolvedValue(
+      limitRecord({ dailyCallLimit: 10 }) as never,
+    );
+    vi.mocked(prisma.aiUsageLog.aggregate)
+      .mockResolvedValueOnce(aggResult(1000, 10)) // today: 10 >= 10
+      .mockResolvedValueOnce(aggResult(10000, 10));
+
+    const err = await assertAiUsageQuota(USER_ID, WORKSPACE_ID).catch((e) => e);
+    expect(err).toBeInstanceOf(AiQuotaExceededError);
+    expect((err as AiQuotaExceededError).reason).toBe("Daily call limit exceeded");
+    expect((err as AiQuotaExceededError).usagePercent).toBe(1);
+  });
+
+  it("未超限时正常返回（不抛）", async () => {
+    vi.mocked(prisma.aiUsageLimit.findFirst).mockResolvedValue(null as never);
+    await expect(assertAiUsageQuota(USER_ID, WORKSPACE_ID)).resolves.toBeUndefined();
   });
 });
 
