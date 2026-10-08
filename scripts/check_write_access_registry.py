@@ -48,8 +48,11 @@ HANDLER_RE = re.compile(
     r"export\s+(?:async\s+)?function\s+(GET|POST|PUT|PATCH|DELETE)\b"
     r"|export\s+const\s+(GET|POST|PUT|PATCH|DELETE)\b"
 )
-# 进墙信号：handler 所在文件 GetWorkspaceContext 调用（choke point 入口）
-CHOKE_POINT_RE = re.compile(r"\bgetWorkspaceContext\s*\(")
+# 进墙信号：handler 所在文件 getWorkspaceContext / getWorkspaceContextV2 调用
+#（choke point 入口。V2 是 authFailure 收口引入的失败语义显式化变体，同墙同责——
+#   2026-10-08 CI 红：V2 迁移批量落地后本正则不认识 V2，78 个已进墙 handler
+#   被误报 UNGATED，判据漂移即修）
+CHOKE_POINT_RE = re.compile(r"\bgetWorkspaceContext(?:V2)?\s*\(")
 
 ENTRY_RE = re.compile(r"^(POST|PUT|PATCH|DELETE)\s+(\S+)\s+reason=(\S+)\s+review_by=(\d{4}-\d{2}-\d{2})$")
 
