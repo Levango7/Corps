@@ -21,11 +21,13 @@ issue #32 的 body **只有 5 字节**（一个 `## 现状`）。也就是说 Ty
 
 | 阶段 | 依赖 | 当前 | 目标 | 裁决 |
 |---|---|---|---|---|
-| 一 | TypeScript | `5.9.3` | **`6.0.3`** | 实施。明确否决 7.0.2（见 §4.1.4） |
-| 二 | Stripe | `18.3.0` | **`22.6.2`** | 实施。明确否决 23.0.0（见 §4.2.4） |
+| 一 | TypeScript | `6.0.3`（已声明，**未安装**，见 §10.1） | **`6.0.3`** | 实施。明确否决 7.0.2（见 §4.1.4）。**当前处于半成品状态** |
+| 二 | Stripe | `18.3.0` | **`22.6.2`** | 实施。明确否决 23.0.0（见 §4.2.4，`apiVersion` 护栏已先落地） |
 | 三 | Prisma | `6.15.0` | `7.10.0` | **本轮不启动**，挂 §7.3 的前置条件 |
 
 顺序维持 **TS → Stripe → Prisma**，理由见 §5。三处修正（目标版本而非 latest、Prisma 改挂前置条件）是本 ADR 相对初始顺序的实质改动。
+
+> §10（2026-10-09 修订记录）包含后续实测对本文件各章节的校验与勘误，编号如上表的实测数据以 §10 为准。
 
 ---
 
@@ -522,6 +524,119 @@ const adapter = new PrismaPg({
 
 ## 九、影响
 
-- 本 ADR 生效前，**不改任何依赖**。`web/package.json` 与 `desktop/.../standalone/package.json` 保持现状。
+- 本 ADR 生效前，**不改任何依赖**。
 - §6 的 P0 前置步骤（连接池显式化 + 请求级超时兜底）**可以在不升级的前提下先做**，且对 v6 同样有益，建议独立于本 ADR 排期。
 - issue #32 的 body 应由本 ADR 的 §2 决策摘要回填，让那 5 字节变成有据可查的决策。
+
+---
+
+## 十、修订记录（2026-10-09）
+
+本节记录本 ADR 落稿后两项实测（Stripe 专项探针、Prisma 官方升级指南抓取）对前文的校验结果。**被勘误的原文一律保留不动**，只在此标注取代关系，保持决策演进可追溯。
+
+### 10.1 TypeScript 阶段一：已 declare 但未 install，且漏了第二声明点（新阻塞）
+
+Dependabot PR #14（`75b80332`）已把 `web/package.json:100` 抬到 `typescript: 6.0.3`。但该 PR **只改了两个文件**（`web/package.json` + `web/pnpm-lock.yaml`），导致阶段一处于半成品状态：
+
+| 检查项 | 实测（2026-10-09） | 结论 |
+|---|---|---|
+| `web/package.json:100` 声明值 | `6.0.3` | 已改 |
+| `web/pnpm-lock.yaml` | 含 `6.0.3`（55 处） | 已改 |
+| `web/node_modules/typescript` 实际版本 | **5.9.3** | **未安装，三者分歧** |
+| `web/tsconfig.json` 的 `types` 字段 | **仍不存在** | **§4.1.1 预判的核心风险尚未处理** |
+| `desktop/.../standalone/package.json:99` | **仍是 `5.9.3`** | **第二声明点漏改** |
+
+两点后果：
+
+1. **本仓至今没有用 TS 6 编译过一次。** §3.3 那条「0 错误」基线是 TS 5.9.3 跑出来的，对 TS 6 **不作担保**。§8 第 1 条（`types: []` 是否真的生效）仍是未验证项，且已从「未来担心」变成「当前阻塞」。
+2. **桌面端会长期停在 TS 5.9.3。** 该 package.json 不在 pnpm workspace 的依赖解析路径上，但会被 Tauri standalone 打包读取——声明与实际不一致，且不会有任何工具报错。
+
+这与 §3.1 预先指出的「第二处声明点（易漏）」完全吻合，不是新问题而是被证实的风险。见 §10.4 的落地要求。
+
+### 10.2 Stripe 章节校验（数据来自 stripe-probe 专项实测，2026-10-09）
+
+**取代 §4.2.2 的表述**：`apiVersion` 护栏**已经落地**，不再是待办。
+
+```
+web/lib/payments/stripe-provider.ts:66    apiVersion: "2025-06-30.basil",
+web/tests/unit/stripe-api-version.test.ts  配套护栏单测
+```
+
+§4.2.2 里「`:50-52` 构造时没指定 `apiVersion`」的描述已过期，§6 阶段二的 2.2 步骤应视为**已完成**。
+
+**划掉 §8 第 4 条风险**（v21 webhook 解析抛错）。实测依据：`stripe@23.0.0` 的 `cjs/Webhooks.js:9-11` 只在 `jsonPayload.object === 'v2.core.event'`（V2 thin event）时抛错。本仓接的是 **V1** 事件（`stripe-provider.ts` 的 `checkout.session.completed` / `customer.subscription.*` / `invoice.*`），**不触发**。
+
+**划掉 §4.2 表格里「① 大概率不撞」的含糊措辞**（v21 `Stripe.Decimal`）。实测：PR #38 的 CI（run 37870493355）全项目 `tsc` 在 v23 下**只报 1 条错**，且就是那条 `apiVersion` 字面量不匹配：
+
+```
+lib/payments/stripe-provider.ts(66,9): error TS2322:
+  Type '"2025-06-30.basil"' is not assignable to type '"2026-09-30.endive"'
+```
+
+其余 5 处 SDK 调用 + 4 处 cast 在 v23 类型下**均编译通过**；另有隔离复刻验证（`stripe@23.0.0` + `typescript@6.0.3`）得到 0 error。**§4.2.1 那 4 处 cast 的风险因此下调**——类型形状不是 Stripe 升级的障碍。
+
+**§4.2.4 否决 23.0.0 的触发条件复测：仍未满足。** 23.x 稳定版**仍只有 1 个**（`23.0.0`，另有 3 个 alpha/beta），ADR 要求 ≥3 个补丁版本 → 维持否决结论，目标仍是 `22.6.2`。
+
+**新增两个此前遗漏的事实，须写入阶段二的前置条件：**
+
+1. **`apiVersion` 不控制 webhook 事件体形状。** Stripe 官方 API versioning 文档原文：*"Webhook events also use your account's default API version unless you set an API version during endpoint creation."* 也就是说 webhook 侧的事件结构由**账户默认版本或 endpoint 级设置**决定，与 SDK 的 `apiVersion` 无关。§4.2.2 的风险论述应收缩为：**风险面只在出向调用**（`checkout.sessions.create` / `billingPortal.sessions.create` / `subscriptions.retrieve|update`），`normalizeEvent` 的归一化逻辑不会因升 SDK 而改变。这是一条降低风险的修正。
+
+2. **clover 起默认切换到 flexible billing mode —— 这才是「要不要跟 API 版本」的真实业务成本。** 官方 `docs.stripe.com/changelog/clover`（2025-09-30 条目）原文：*"Flexible billing mode is the new default: When you create Subscriptions with this GA version, the subscriptions default to flexible billing mode, which changes how those Subscriptions behave at different points in their lifecycle."*
+
+   本仓 `stripe-provider.ts:129`（即 `checkout.sessions.create({ mode: "subscription" })`）正落在这个面上。**只要 `apiVersion` 抬到 clover 及以后（22.6.2 的 dahlia、23.0.0 的 endive 都算），新建订阅的生命周期行为就会改变。** 因此 §6 阶段二必须新增一条前置：**先在 Stripe 测试模式验证 flexible billing mode 下新建订阅的续费/变更/取消行为**，再决定是否把 `apiVersion` 从 basil 抬走。不验证就抬版本 = 拿计费语义赌运气。
+
+### 10.3 Prisma 章节补充（依据 Prisma 官方《升級至 Prisma ORM 7》原文）
+
+本节取代/补充 §4.3.2 的若干条。
+
+**① `prisma-client-js` 在 v7 仍可用，只是被宣告将来移除。** 官方原文：「舊版的 `prisma-client-js` 提供者將在未來的 Prisma ORM 版本中移除。請升級至使用新版 Rust-free 客戶端的 `prisma-client` 提供者。」
+
+→ 这给了阶段三一个**降风险的过渡选项**：可以先用 `prisma-client-js` 把 6→7 的 adapter / config / ESM 部分跑通，把 generator 切换留到第二步。§4.3.2 第 3 条不必与第 1、5、6 条同批落地，可拆成 3.a（切换 generator + 全量改 import，135 文件）与 3.b 两步。**建议拆**，让最大那份 diff 独立可回滚。
+
+**② Prisma 官方的 TypeScript 支持矩阵与阶段一存在张力（新增，需 team-lead 拍板）。** 官方标明的版本要求：
+
+| | 最低支援 | 建議 |
+|---|---|---|
+| Node | 20.19.0 | 22.x |
+| TypeScript | 5.4.0 | **5.9.x** |
+
+本仓阶段一刚把 TS 抬到 `6.0.3`（已声明），而 Prisma 7 官方建议的是 **5.9.x**。这不代表 TS 6 跑不了 Prisma 7，但意味着**阶段三将落在一个 Prisma 官方未标注支持的类型版本上**。两个选项：跟 TS 6 走并自行背书，或阶段三之前先确认 Prisma 7.10 对 TS 6 的实际兼容。**这是把 TS 放在第一阶段的一个代价，此前没写明，现在补上。**
+
+**③ ESM 要求比原先记载的更重。** 官方明确要求：
+
+```json
+// package.json
+{ "type": "module" }
+```
+```json
+// tsconfig.json
+{ "module": "ESNext", "moduleResolution": "node", "target": "ES2023" }
+```
+
+`web/package.json` 当前**没有** `"type"` 字段（CJS），且本仓 tsconfig 用的是 `moduleResolution: "bundler"`、`target: "ES2022"`。给一个 Next 16 应用的根 package.json 加 `"type": "module"`，会波及所有 `.js` 配置文件与脚本的解释方式，**不是一行改动**。§4.3.2 第 4 条的影响面据此上调；并需评估 generator 的 `moduleFormat = "cjs"` 逃生开关能否让本仓免于改 `"type"`。
+
+**④ 一批 `PRISMA_*` 环境变量在 v7 被移除 —— 实测本仓全部未使用（可划掉一条风险）。** 官方清单：`PRISMA_CLI_QUERY_ENGINE_TYPE`、`PRISMA_CLIENT_ENGINE_TYPE`、`PRISMA_QUERY_ENGINE_BINARY`、`PRISMA_QUERY_ENGINE_LIBRARY`、`PRISMA_GENERATE_SKIP_AUTOINSTALL`、`PRISMA_SKIP_POSTINSTALL_GENERATE`、`PRISMA_GENERATE_IN_POSTINSTALL`、`PRISMA_GENERATE_DATAPROXY`、`PRISMA_GENERATE_NO_ENGINE`、`PRISMA_CLIENT_NO_RETRY`、`PRISMA_MIGRATE_SKIP_GENERATE`、`PRISMA_MIGRATE_SKIP_SEED`。
+
+实测（2026-10-09）本仓用到的 `PRISMA_*` 只有 4 个，**无一在移除清单内**：
+
+```
+PRISMA_CLIENT_DIR      ← mobile-build.yml / tauri-build.yml 的拷贝 hack 用
+PRISMA_DATABASE_URL    ← entrypoint 注释说明它 "不识别的前缀"，实际未被使用
+PRISMA_ENGINES_MIRROR  ← Dockerfile:31-32
+PRISMA_GEN_DIR         ← mobile-build.yml / tauri-build.yml 的拷贝 hack 用
+```
+
+注：`PRISMA_ENGINES_MIRROR` 不在移除清单，但 v7 去掉了 client query engine，需确认它对 schema engine 的下载是否仍有效（并入 §8 待验证项）。
+
+### 10.4 由本节新增的落地要求（合并进 §6/§7）
+
+| # | 要求 | 归属 |
+|---|---|---|
+| R1 | **先补一次 `pnpm install` 并跑 `tsc --noEmit`**，确认 TS 6.0.3 下的真实错误清单；按 §4.1.1 补 `types` 字段 | 阶段一（当前阻塞） |
+| R2 | 同步 `desktop/.../standalone/package.json:99` 至 `6.0.3` | 阶段一 |
+| R3 | **把「两处声明点同步」写成每次升级的显式检查项**（`.github/workflows/**` 属他人区域，需协调） | 全部阶段 |
+| R4 | Dependabot 只监控 `/web`（`.github/dependabot.yml`），**永远不会提 desktop 那份包**——人工同步是唯一保障，建议补一个 CI 断言：两个 package.json 里这四个包的版本号必须一致 | 全部阶段（新增 CI 门禁建议） |
+| R5 | 阶段三允许拆分：3.a（generator 切换 + 124 条 import 改写）与 3.b 分开落地 | 阶段三 |
+| R6 | 阶段三前确认 Prisma 7.10 与 TS 6.0.3 的实际兼容性（官方建议是 5.9.x） | 阶段三 |
+| R7 | 阶段二前置：**在 Stripe 测试模式验证 flexible billing mode** 下新建订阅的行为，再决定 `apiVersion` 是否抬离 `2025-06-30.basil` | 阶段二（新增） |
+| R8 | 阶段二风险面收缩为出向调用；webhook 归一化逻辑不受 SDK `apiVersion` 影响 | 阶段二（风险下调） |
