@@ -43,3 +43,23 @@ cd web && node scripts/layout-audit.mjs
    （"创建并进入" 等）全落空，表象为注册环节 click 超时。Chromium/WebKit
    在本机会继承系统中文所以没暴露。脚本已在 `newContext` 显式
    `locale: "zh-CN"` 钉死三引擎行为一致。
+
+## scripts/seed-simulation-team.mjs
+
+模拟团队播种器（QA / 演示场景）：一键造出「1 名总负责人 + 3 个组（每组 1 名组负责人）+ 6 名成员」
+的 10 人小团队，含 24 个主任务 + 5 个子任务（覆盖四态/阻塞/里程碑/组标签）、4 条决策记录
+（含版本留痕与 Mermaid）、3 篇文档、3 个会话 23 条消息、通知、公告与 42 条 AI 用量日志。
+
+```bash
+cd web && node scripts/seed-simulation-team.mjs
+```
+
+- **幂等**：重跑即重置（保留账号，重建全部内容）；只认领 `@sim.example.com` 账号与
+  `sim-team-10` 工作区，其余数据不碰。
+- **前提**：本地 compose 栈在跑（`corps-app` + `db`）；脚本经 `DATABASE_OWNER_URL`
+  （postgres 超级用户，绕过 RLS）直连数据库，DB 端口以根 `.env` 为准（本机 compose 为
+  `localhost:5433`）；`SIM_OWNER_URL` / `SIM_API_BASE` 可显式覆盖。
+- **账号**：`sim01`…`sim10@sim.example.com`，统一密码 `Sim2026#Team`；注册走真实
+  HTTP 注册接口（限流 10 次/小时/IP，恰好够首轮；正常重跑不触发注册）。
+- **排障**：若报「注册成功但库里查不到用户行」= 脚本连的库与运行实例不是同一个，
+  核对 `.env` 的 DB 端口与 `docker ps` 里 db 容器映射的端口。
