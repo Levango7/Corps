@@ -16,6 +16,12 @@ import {
   Check,
   CheckSquare,
   FileText,
+  Scale,
+  Wand2,
+  Lightbulb,
+  HelpCircle,
+  Newspaper,
+  PenLine,
   BarChart3,
   Plus,
   Star,
@@ -34,7 +40,6 @@ import {
   Megaphone,
   BookOpen,
   Calendar as CalendarIcon,
-  Sparkles,
   Table2,
 } from "lucide-react";
 import { api } from "@/lib/api";
@@ -340,7 +345,7 @@ export default function WorkspaceLayout({
         {
           href: `/w/${wid}/decisions`,
           label: t("menu.decisions"),
-          icon: FileText,
+          icon: Scale,
           exact: false,
         },
       ],
@@ -432,24 +437,24 @@ export default function WorkspaceLayout({
     {
       label: t("menu.groupAI"),
       items: [
-        { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Sparkles, exact: false },
-        { href: `/w/${wid}/insight`, label: t("menu.insight"), icon: Sparkles, exact: false },
+        { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Wand2, exact: false },
+        { href: `/w/${wid}/insight`, label: t("menu.insight"), icon: Lightbulb, exact: false },
         {
           href: `/w/${wid}/knowledge-qa`,
           label: t("menu.knowledgeQa"),
-          icon: Sparkles,
+          icon: HelpCircle,
           exact: false,
         },
         {
           href: `/w/${wid}/daily-report`,
           label: t("menu.dailyReport"),
-          icon: Sparkles,
+          icon: Newspaper,
           exact: false,
         },
         {
           href: `/w/${wid}/announcement-draft`,
           label: t("menu.announcementDraft"),
-          icon: Sparkles,
+          icon: PenLine,
           exact: false,
         },
       ],
