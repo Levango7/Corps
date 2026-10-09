@@ -330,9 +330,11 @@ describe("会议加入/离开 POST join/leave", () => {
       body: JSON.stringify({}),
     });
 
-    // otherToken 用户不是工作区成员，可能返回 401/403
-    // 如果是成员且会议有密码，不传密码应返回 403
-    expect([401, 403]).toContain(joinRes.status);
+    // 断言由容错 [401,403] 收紧为 403：otherToken 是合法令牌，但绑的是它自己的
+    // 工作区，与 URL wid 不符 ⇒ join/route.ts 的 getWorkspaceContextV2 在成员查询前
+    // 短路为 workspace_mismatch（403）。这里测到的是跨工作区拒绝，不是密码分支
+    // （密码校验在成员资格之后，非成员永远走不到）。
+    expect(joinRes.status).toBe(403);
   });
 
   it("leave 幂等：未加入直接离开返回 200", async () => {

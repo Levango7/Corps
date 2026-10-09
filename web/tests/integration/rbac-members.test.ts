@@ -80,8 +80,11 @@ describe("RBAC：PATCH /transfer-ownership", () => {
       headers: { ...authHeader(fx.ownerToken), "Content-Type": "application/json" },
       body: JSON.stringify({ newOwnerUserId: fx.ownerId }),
     });
-    // 上一步已经把所有权转给了 memberId，现在原 owner 已经降为 admin
-    // 用 owner token 调 transfer → 403；如果意外通过了 200 也算错
+    // 刻意保持容错（B 类，非遮蔽类）：本断言依赖同 describe 内前一条用例的执行顺序——
+    // 前序用例已把所有权转给 memberId，原 owner 降为 admin ⇒ "非 owner" 门禁 403；
+    // 若单独跑本用例（-t 隔离），原 owner 仍是 owner ⇒ 命中"不能转给自己" → 400。
+    // 两个值都是"正确拒绝"，钉死任一个都会在另一种执行方式下假红，故不收紧。
+    // （这是测试隔离耦合，非设计意图；要彻底消除需把该用例改成自带前置数据）
     expect([400, 403]).toContain(res.status);
   });
 });

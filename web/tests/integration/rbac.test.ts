@@ -8,13 +8,18 @@ import { BASE, registerUser, inviteMember, authHeader, createTask } from "../hel
  * ┌─────────┬──────────┬──────────┬──────────┬─────────┐
  * │ 操作    │ owner    │ admin    │ member   │ outsider│
  * ├─────────┼──────────┼──────────┼──────────┼─────────┤
- * │ 邀请成员 │ ✓        │ ✓        │ ✗ 403    │ 401     │
- * │ 改角色  │ ✓        │ ✓        │ ✗ 403    │ 401     │
- * │ 移除成员 │ ✓        │ ✓        │ ✗ 403    │ 401     │
- * │ 计费    │ ✓        │ ✗ 403    │ ✗ 403    │ 401     │
- * │ 读任务  │ ✓        │ ✓        │ ✓        │ 401     │
- * │ 建任务  │ ✓        │ ✓        │ ✓        │ 401     │
+ * │ 邀请成员 │ ✓        │ ✓        │ ✗ 403    │ 403     │
+ * │ 改角色  │ ✓        │ ✓        │ ✗ 403    │ 403     │
+ * │ 移除成员 │ ✓        │ ✓        │ ✗ 403    │ 403     │
+ * │ 计费    │ ✓        │ ✗ 403    │ ✗ 403    │ 403     │
+ * │ 读任务  │ ✓        │ ✓        │ ✓        │ 403     │
+ * │ 建任务  │ ✓        │ ✓        │ ✓        │ 403     │
  * └─────────┴──────────┴──────────┴──────────┴─────────┘
+ *
+ * outsider 列恒 403：outsider 用的是 register 令牌，其 wid 绑的是 outsider 自己的
+ * 工作区；访问本工作区 URL 时 getWorkspaceContextV2 的 wid 守卫在成员查询前短路为
+ * workspace_mismatch（403）。即便令牌不带 wid 落到成员校验层，也是 not_a_member
+ * （403）。两分支同一状态码，故 outsider 列不存在 401。
  *
  * 另有独立的 "RBAC: viewer 只读角色" 用例组。viewer 列是后补的：
  * lib/permissions.ts 的矩阵一直声明 viewer 全只读，但本文件原先只有
@@ -192,10 +197,13 @@ describe("RBAC: 邀请成员权限", () => {
     expect(res.status).toBe(403);
   });
 
-  it("外部用户（非成员）邀请返回 401", async () => {
+  it("外部用户（非成员）邀请返回 403", async () => {
     const newUser = await registerUser({ prefix: "rbac-invite-by-outsider" });
     const res = await inviteMember(fixture.outsider.accessToken, fixture.wid, newUser.user.email);
-    expect([401, 403]).toContain(res.status);
+    // 断言由容错 [401,403] 收紧为 403：outsider 令牌绑其自有工作区，URL wid 与之不符 ⇒
+    // getWorkspaceContextV2 短路为 workspace_mismatch（403）；令牌不带 wid 时走成员校验层
+    // 得 not_a_member（403）。与 members/invite/route.ts 的 owner/admin 角色门禁同为 403。
+    expect(res.status).toBe(403);
   });
 });
 
@@ -335,6 +343,10 @@ describe("RBAC: 任务读权限（所有成员可读）", () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks`, {
       headers: authHeader(fixture.outsider.accessToken),
     });
+    // 刻意保持容错（B 类）：当前本端点在 wid 守卫处短路，实际返回 403（workspace_mismatch）。
+    // 不收紧为单一状态码的理由是**策略未决**——跨租户究竟应返回 403，还是折叠为 404 以遮蔽
+    // 资源存在性，是一个尚未拍板的安全策略问题（遮蔽先例仅见于 ai/templates/[id]/route.ts，
+    // 不适用于此处）。收紧等于替该决策拍板，故保留可接受值集合。
     expect([401, 403, 404]).toContain(res.status);
   });
 });
@@ -357,34 +369,37 @@ describe("RBAC: viewer 只读角色（矩阵 tasks=r，此前零覆盖）", () =
     expect(res.status).toBe(200);
   });
 
-  it("viewer 创建任务返回 401/403", async () => {
+  it("viewer 创建任务返回 403", async () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks`, {
       method: "POST",
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "viewer 不该建成的任务" }),
     });
-    // 2026-10-03 起 viewer 的写请求被统一 choke point 拦在 lib/auth.ts 的
-    // getWorkspaceContext 里（返回 null），handler 走既有的 401 分支；此前由
-    // requirePermission 在同一 handler 内部返回 403。两者都是"拒"，接受任一，
-    // 但**不允许 2xx**：断言收窄到"必须被拒"而非钉死某个状态码。
-    expect([401, 403]).toContain(res.status);
+    // 断言由容错 [401,403] 收紧为 403：viewer 是本工作区成员且已认证，两种拒绝路径
+    // 都唯一指向 403 —— 写策略 choke point 判 write_policy，或 tasks/route.ts POST 内
+    // requirePermission("tasks","create") 返回 403。WRITE_POLICY_MODE 取何值都不改变结果。
+    expect(res.status).toBe(403);
   });
 
-  it("viewer 修改任务字段返回 401/403（PATCH 本体，非改指派人）", async () => {
+  it("viewer 修改任务字段返回 403（PATCH 本体，非改指派人）", async () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks/${taskId}`, {
       method: "PATCH",
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "viewer 不该改动的标题" }),
     });
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：tasks/[id]/route.ts PATCH 内 requirePermission("tasks","update")（viewer 矩阵仅 "r"）
+    // 与写策略 choke point 均为 403，拒绝原因唯一。
+    expect(res.status).toBe(403);
   });
 
-  it("viewer 删除任务返回 401/403", async () => {
+  it("viewer 删除任务返回 403", async () => {
     const res = await fetch(`${BASE}/workspaces/${fixture.wid}/tasks/${taskId}`, {
       method: "DELETE",
       headers: authHeader(fixture.viewer.accessToken),
     });
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：任务是 owner 建的（非 viewer 创建），tasks/[id]/route.ts DELETE 的
+    // "非创建者需 tasks:delete" 分支对 viewer 返回 403；写策略 choke point 亦 403。
+    expect(res.status).toBe(403);
   });
 
   it("member 仍可创建任务（回归锚点：别把 member 一起锁死）", async () => {
@@ -438,8 +453,9 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ data: { 标题: "viewer 不该建成的记录" } }),
     });
-    // ADR-011：choke point fail-closed 走 401；钉的实质是"不许 2xx"
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：records/route.ts POST 内 requirePermission("databaseRecords","create")
+    // （viewer 矩阵仅 "r"）与写策略 choke point 均为 403。
+    expect(res.status).toBe(403);
   });
 
   it("viewer 改记录返回 403", async () => {
@@ -451,7 +467,8 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
         body: JSON.stringify({ data: { 标题: "viewer 不该改动的记录" } }),
       },
     );
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：records/[rid]/route.ts PATCH 内 requirePermission("databaseRecords","update")。
+    expect(res.status).toBe(403);
   });
 
   it("viewer 删记录返回 403", async () => {
@@ -459,7 +476,8 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
       `${BASE}/workspaces/${fixture.wid}/databases/${dbId}/records/${recordId}`,
       { method: "DELETE", headers: authHeader(fixture.viewer.accessToken) },
     );
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：records/[rid]/route.ts DELETE 内 requirePermission("databaseRecords","delete")。
+    expect(res.status).toBe(403);
   });
 
   it("member 仍可创建记录（回归锚点：矩阵给 member 的是 crud，别一并锁死）", async () => {
@@ -477,7 +495,9 @@ describe("RBAC: viewer 对多维表格数据面只读（databaseRecords 矩阵�
       headers: { ...authHeader(fixture.viewer.accessToken), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "viewer 不该建成的库" }),
     });
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：databases/route.ts POST 内显式 `!["owner","admin"].includes(role)` 门禁
+    // 与写策略 choke point 均为 403。
+    expect(res.status).toBe(403);
   });
 });
 
@@ -498,7 +518,9 @@ describe("RBAC: viewer 不能经 AI 落位绕过只读", () => {
         workspaceId: fixture.wid,
       }),
     });
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：ai/tools/execute/route.ts 对 create_task 判 requirePermission("tasks","create")，
+    // viewer 仅 "r" → 403；写策略 choke point（POST 非自助路径）同为 403。
+    expect(res.status).toBe(403);
   });
 
   it("member 经 ai/tools/execute 可建任务（回归锚点：别把 member 一起锁死）", async () => {
@@ -530,7 +552,9 @@ describe("RBAC: viewer 不能经 AI 落位绕过只读", () => {
         ],
       }),
     });
-    expect([401, 403]).toContain(res.status);
+    // 收紧为 403：ai/orchestrate/route.ts PATCH 对 createTask 判 requirePermission("tasks","create")，
+    // viewer 仅 "r" → 403（AI 配置检查刻意放在鉴权之后，无 key 环境也走这条）。
+    expect(res.status).toBe(403);
   });
 
   it("member 经 ai/orchestrate 不被鉴权拦截（无 AI key 时到 503，说明已过权限门禁）", async () => {

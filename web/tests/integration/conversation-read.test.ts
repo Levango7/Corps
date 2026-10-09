@@ -109,6 +109,9 @@ describe("标记已读端点的 body 处理", () => {
 
   it("未认证访问返回 401", async () => {
     const res = await fetch(readUrl(), { method: "POST" });
-    expect([401, 403]).toContain(res.status);
+    // 断言由容错 [401,403] 收紧为 401：请求不带 cookie 也不带 Authorization，
+    // getWorkspaceContextV2 的 authenticate() 返回 null ⇒ unauthenticated（401），
+    // 不会走到成员校验/write_policy 的 403 分支。
+    expect(res.status).toBe(401);
   });
 });
