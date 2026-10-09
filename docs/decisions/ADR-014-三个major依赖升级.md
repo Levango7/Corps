@@ -632,16 +632,17 @@ PRISMA_GEN_DIR         ← mobile-build.yml / tauri-build.yml 的拷贝 hack 用
 
 | # | 要求 | 归属 |
 |---|---|---|
-| R1 | **先补一次 `pnpm install` 并跑 `tsc --noEmit`**，确认 TS 6.0.3 下的真实错误清单；按 §4.1.1 补 `types` 字段 | 阶段一（当前阻塞） |
-| R2 | 同步 `desktop/.../standalone/package.json:99` 至 `6.0.3` | 阶段一 |
-| R3 | **把「两处声明点同步」写成每次升级的显式检查项**（`.github/workflows/**` 属他人区域，需协调） | 全部阶段 |
-| R4 | Dependabot 只监控 `/web`（`.github/dependabot.yml`），**永远不会提 desktop 那份包**——人工同步是唯一保障，建议补一个 CI 断言：两个 package.json 里这四个包的版本号必须一致 | 全部阶段（新增 CI 门禁建议） |
+| R1 | ~~先补一次 `pnpm install` 并跑 `tsc --noEmit`，确认 TS 6.0.3 下的真实错误清单~~ **已由 CI 长期覆盖，见 §10.8**。剩余动作仅是把**本地** `node_modules` 对齐（环境问题，非仓库问题） | 阶段一（**非阻塞**，已降级） |
+| R2 | ~~同步 `desktop/.../standalone/package.json:99` 至 `6.0.3`~~ **撤销** | — |
+| R3 | ~~把「两处声明点同步」写成每次升级的显式检查项~~ **撤销** | — |
+| R4 | ~~建议补 CI 断言：两个 package.json 里这四个包的版本号必须一致~~ **撤销** | — |
 | R5 | 阶段三允许拆分：3.a（generator 切换 + 124 条 import 改写）与 3.b 分开落地 | 阶段三 |
 | R6 | 阶段三前确认 Prisma 7.10 与 TS 6.0.3 的实际兼容性（官方建议是 5.9.x） | 阶段三 |
 | R7 | 阶段二前置：**在 Stripe 测试模式验证 flexible billing mode** 下新建订阅的行为，再决定 `apiVersion` 是否抬离 `2025-06-30.basil` | 阶段二（新增） |
 | R8 | 阶段二风险面收缩为出向调用；webhook 归一化逻辑不受 SDK `apiVersion` 影响 | 阶段二（风险下调） |
 | R9 | 若阶段二选择「跟随 SDK 而非钉住 basil」，`stripe-provider.ts:66` 的字面量必须写 **`"2026-08-26.dahlia"`**（22.6.2 的实际值）；写 `2026-03-25.dahlia` 会直接 TS2322 失败 | 阶段二（新增，见 §10.5） |
 | R10 | 若用 `as Stripe.LatestApiVersion` 断言绕过单字面量约束，**必须同时补一条非断言型运行时护栏**（如断言 `getApiField('version') === '2025-06-30.basil'`），否则等于把护栏从类型层降级成人工自觉 | 阶段二（新增，见 §10.5） |
+| R11 | 评估把 `desktop/src-tauri/resources/standalone/` 移出版本控制（加入 `.gitignore`）。它是 `copy-standalone.mjs` 的生成物（见 §10.8），追踪它只会制造「声明点不一致」的假象 | 全部阶段（新增，替代 R2–R4） |
 
 ### 10.5 勘误：22.6.2 的 pinned API 版本不是 `2026-03-25.dahlia`
 
@@ -698,3 +699,63 @@ lib/payments/stripe-provider.ts(66,9): error TS2322:
 | `constructEvent` 签名 | `cjs/Webhooks.d.ts:46` | 与 v23 一致，同步版验签实测通过 |
 | `WebhookEndpoint.ApiVersion` 枚举 | 仍含 `'2025-06-30.basil'` | **basil 未退役**，钉版可持续 |
 | 5 处 SDK 调用 + 4 处 cast | 隔离复刻 0 error | 类型形状不是升级障碍 |
+
+### 10.8 勘误二：§10.1 的「阶段一阻塞」与「第二声明点」两处 判断均不成立
+
+§10.1 提出的两条结论都被后续取证推翻。**原文保留不动**，此处标注取代关系——其中第 2 条曾同时被两个独立 worker 建议升级为 CI 门禁，若不纠正会导向一条永久报红的错误门禁。
+
+#### 10.8.1 「本仓至今没有用 TS 6 编译过一次」——**错**
+
+`tsc --noEmit` 一直在 CI 里跑，且跑的就是 TS 6.0.3。四条证据：
+
+1. `.github/workflows/ci.yml:34`：`lint` job 在 `pnpm install --frozen-lockfile --ignore-scripts` 之后执行
+   `node node_modules/typescript/bin/tsc --noEmit`。**类型检查是 lint job 的固定步骤，不是 Dependabot PR 的偶发行为。**
+2. PR #14（`75b80332`，即把 TS 抬到 6.0.3 的那个提交）的 `Lint` = **pass**（run `37869605830`）。该 PR 改的正是 `web/package.json` + `web/pnpm-lock.yaml`，CI 按新锁安装后再跑 tsc → **TS 6.0.3 下编译通过**。
+3. `origin/main` 的 `web/pnpm-lock.yaml:4139` = `typescript@6.0.3`。CI 用 `--frozen-lockfile`，锁与声明不一致会直接报错而不是静默降级 —— 所以不存在「声明 6.0.3 而实际跑 5.9.3」的中间状态。
+4. main 上最近一次成功 CI（run `37968878926`，PR #46）的 lint 安装日志含
+   `+ typescript 6.0.3` / `+ typescript-eslint 8.71.0`。
+
+**推论：§4.1.1 预判的核心风险（TS 6 把 `types` 默认改为 `[]`，导致 `@types/node` 全局声明消失）实际未发生。**`web/tsconfig.json` 至今**没有** `types` 字段，而 tsc 在 TS 6.0.3 下全绿 —— 这条预判被证伪，§8 第 1 条可以关闭。
+
+**真正陈旧的只剩两处，且都不在仓库的语义范围内：**
+
+| 现象 | 性质 | 处置 |
+|---|---|---|
+| 本地 `web/node_modules/typescript` = `5.9.3` | **本地环境**未重装，不进入版本控制、不影响 CI | 需要时补一次 `pnpm install`，非阻塞项 |
+| `desktop/.../standalone/package.json:99` = `5.9.3` | 见 10.8.2，是**生成物快照** | 见 R11 |
+
+#### 10.8.2 `desktop/src-tauri/resources/standalone/package.json` 不是「第二声明点」——**错**
+
+该文件是**构建产物**，不是需要人工同步的声明点：
+
+- `desktop/copy-standalone.mjs` 的 copy 函数先 `rmSync(dest, {recursive:true, force:true})` 再 `cpSync(src, dest, {recursive:true})`，
+  源目录是 `web/.next/standalone/`（Next.js 生成的 standalone 输出，其中含由 `web/package.json` 派生的 `package.json`）。
+- `.github/workflows/tauri-build.yml:102` 的 beforeBuildCommand = `cd ../web && pnpm build && node ../desktop/copy-standalone.mjs`，
+  **每次桌面端构建都整体重建该目录**。
+
+**佐证（三处同时陈旧，说明从无人手改过）：**
+
+| 字段 | `standalone/package.json` | `web/package.json`（main） |
+|---|---|---|
+| `version` | `0.6.0` | `0.7.2` |
+| `typescript` | `5.9.3` | `6.0.3` |
+| `next` | `16.3.6` | `16.3.8` |
+
+（`next` 与 `version` 的落后无法用「Dependabot 只监控 /web」解释 —— Dependabot 同样提过 next 的升级，说明这些值从来不是被维护的声明，只是某次构建留下的快照。）
+
+**由此撤销三条结论：**
+
+- **R2（同步该文件至 6.0.3）撤销**：手改会在下次桌面构建时被 `rmSync` 抹掉，属于无效动作。
+- **R3（把「两处声明点同步」写成显式检查项）撤销**：不存在第二个声明点。
+- **R4（CI 门禁：两处 `package.json` 的 `typescript`/`stripe`/`prisma`/`@prisma/client` 版本号必须一致）撤销**：
+  这条门禁会**立即永久报红**（现状 `5.9.3` vs `6.0.3`），且方向错误 —— 它要求生成物追上源，而生成物本就不该被当作文档维护。
+  两个独立 worker 各自提出过这条建议，均基于同一错误前提。
+
+**替换为 R11**：真正的处置方向是**把生成物移出版本控制**（`.gitignore` + `git rm --cached`），
+让它只在构建时产生。这样既消除「看起来不一致」的假象，也不再需要任何同步义务。
+
+#### 10.8.3 对排期的影响
+
+阶段一的**声明层（`web/package.json`）与 CI 层（每次 CI 都在 TS 6.0.3 下编译）均已完成**，
+不存在 §10.1 所述的阻塞。剩余为两项环境/卫生动作（本地 `node_modules` 重装、生成物取消追踪），
+**均不阻塞阶段二（Stripe 22.6.2）的启动**。
