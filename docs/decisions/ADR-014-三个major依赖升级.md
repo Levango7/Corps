@@ -209,8 +209,8 @@ typescript-eslint@8.71.1（latest）    peerDependencies.typescript = ">=4.8.4 <
 |---|---|---|---|
 | v19 | 2025-09-30.clover | V2 事件类型搬移；`Discount.coupon` 移除 | 不撞（本仓只用 v1 资源） |
 | v20 | 2025-11-17.clover | v2 数组参数序列化改 indexed 格式 | 不撞（不用 v2） |
-| v21 | 2026-03-25.dahlia | ① `decimal_string` 字段类型 `string` → `Stripe.Decimal`；② **用错 webhook 解析方法时抛错**；③ Node >= 18 | ① 大概率不撞（读的是 `amount_paid` / `quantity` 整数位，非 decimal 位）；② **需实测**，见下 |
-| v22 | 2026-03-25.dahlia | ① TS 类型大改：类型改为与实现同文件内联，移除顶层 `stripe` ambient module；② **移除 callback 支持**；③ **params 与 options 不再混用，params 必须在前、options 必须在后**；④ CJS 入口不再导出 `.default` / `.Stripe`；⑤ `Stripe.StripeContext` → `StripeContextType` | ②③ 不撞（6 处调用都是单 params 对象）；① **4 处 cast 需复核**；⑤ 不撞 |
+| v21 | `2026-03-25.dahlia`（21.0.0 起） | ① `decimal_string` 字段类型 `string` → `Stripe.Decimal`；② **用错 webhook 解析方法时抛错**；③ Node >= 18 | ① **已实测不撞**（见 §10.2）；② **已实测排除**——只在 V2 thin event 触发，本仓接 V1（见 §10.2）；③ CI Node 22 满足 |
+| v22 | `2026-03-25.dahlia`（22.0.0）→ **`2026-08-26.dahlia`（22.6.2，本 ADR 目标）** | ① TS 类型大改：类型改为与实现同文件内联，移除顶层 `stripe` ambient module；② **移除 callback 支持**；③ **params 与 options 不再混用，params 必须在前、options 必须在后**；④ CJS 入口不再导出 `.default` / `.Stripe`；⑤ `Stripe.StripeContext` → `StripeContextType` | ②③ 不撞（6 处调用都是单 params 对象）；① **已实测通过**（PR #38 CI + §10.2 隔离复刻，0 error）；⑤ 不撞 |
 
 **最大风险不在代码，而在 API 版本的隐式跳跃。** `stripe-provider.ts:50-52` 构造时**没有指定 `apiVersion`**：
 
@@ -240,7 +240,7 @@ exports.ApiVersion = '2025-06-30.basil';
 #### 4.2.4 为什么否决 Stripe 23.0.0
 
 - **6 天龄**（2026-10-01 发布，本 ADR 撰写时 `23.x` 只有 1 个版本）。22.x 有 17 个版本、6 个月的实际使用。
-- v23 绑定的是**新的 Stripe API 大版本（endive）**。v21/v22 同为 `2026-03-25.dahlia`——也就是说 18→22 与 18→23 在 API 版本跨度上只差一个 API 大版本，但 22 有半年的补丁沉淀，23 没有。
+- v23 绑定的是**新的 Stripe API 大版本（endive，`2026-09-30.endive`）**。API 版本跨度上三者是：`2025-06-30.basil`（v18，现用）→ **`2026-08-26.dahlia`（v22.6.2）** → `2026-09-30.endive`（v23.0.0）。也就是说 18→22.6.2 与 18→23.0.0 在 API 版本跨度上只差最后一个月度版本，但 22 有半年的补丁沉淀，23 没有。（**勘误**：本条曾误写为「v21/v22 同为 `2026-03-25.dahlia`」，那是 22.0.0 的初始值而非 22.6.2 的实际值，见 §10.5。）
 - 支付路径不需要抢这 6 天。等 23.x 攒到 23.2+ 且 dahlia→endive 的差异有沙箱验证记录后再评。
 
 **触发条件**：`23.x` 累计 ≥ 3 个补丁版本，且已在 Stripe 测试模式跑通 checkout → webhook → portal 全链路。
@@ -583,7 +583,7 @@ lib/payments/stripe-provider.ts(66,9): error TS2322:
 
 2. **clover 起默认切换到 flexible billing mode —— 这才是「要不要跟 API 版本」的真实业务成本。** 官方 `docs.stripe.com/changelog/clover`（2025-09-30 条目）原文：*"Flexible billing mode is the new default: When you create Subscriptions with this GA version, the subscriptions default to flexible billing mode, which changes how those Subscriptions behave at different points in their lifecycle."*
 
-   本仓 `stripe-provider.ts:129`（即 `checkout.sessions.create({ mode: "subscription" })`）正落在这个面上。**只要 `apiVersion` 抬到 clover 及以后（22.6.2 的 dahlia、23.0.0 的 endive 都算），新建订阅的生命周期行为就会改变。** 因此 §6 阶段二必须新增一条前置：**先在 Stripe 测试模式验证 flexible billing mode 下新建订阅的续费/变更/取消行为**，再决定是否把 `apiVersion` 从 basil 抬走。不验证就抬版本 = 拿计费语义赌运气。
+   本仓 `stripe-provider.ts:129`（即 `checkout.sessions.create({ mode: "subscription" })`）正落在这个面上。**只要 `apiVersion` 抬到 clover 及以后（22.6.2 的 `2026-08-26.dahlia`、23.0.0 的 `2026-09-30.endive` 都算），新建订阅的生命周期行为就会改变。** 而 22.6.2 **默认就是** dahlia（省略 `apiVersion` 实测发出 `2026-08-26.dahlia`，见 §10.5）——比 basil 跨了 clover + dahlia 两个 API 大版本。因此 §6 阶段二必须新增一条前置：**先在 Stripe 测试模式验证 flexible billing mode 下新建订阅的续费/变更/取消行为**，再决定是否把 `apiVersion` 从 basil 抬走。不验证就抬版本 = 拿计费语义赌运气。
 
 ### 10.3 Prisma 章节补充（依据 Prisma 官方《升級至 Prisma ORM 7》原文）
 
@@ -640,3 +640,61 @@ PRISMA_GEN_DIR         ← mobile-build.yml / tauri-build.yml 的拷贝 hack 用
 | R6 | 阶段三前确认 Prisma 7.10 与 TS 6.0.3 的实际兼容性（官方建议是 5.9.x） | 阶段三 |
 | R7 | 阶段二前置：**在 Stripe 测试模式验证 flexible billing mode** 下新建订阅的行为，再决定 `apiVersion` 是否抬离 `2025-06-30.basil` | 阶段二（新增） |
 | R8 | 阶段二风险面收缩为出向调用；webhook 归一化逻辑不受 SDK `apiVersion` 影响 | 阶段二（风险下调） |
+| R9 | 若阶段二选择「跟随 SDK 而非钉住 basil」，`stripe-provider.ts:66` 的字面量必须写 **`"2026-08-26.dahlia"`**（22.6.2 的实际值）；写 `2026-03-25.dahlia` 会直接 TS2322 失败 | 阶段二（新增，见 §10.5） |
+| R10 | 若用 `as Stripe.LatestApiVersion` 断言绕过单字面量约束，**必须同时补一条非断言型运行时护栏**（如断言 `getApiField('version') === '2025-06-30.basil'`），否则等于把护栏从类型层降级成人工自觉 | 阶段二（新增，见 §10.5） |
+
+### 10.5 勘误：22.6.2 的 pinned API 版本不是 `2026-03-25.dahlia`
+
+**原文错误**：§4.2 表格与 §4.2.4 曾写「v21/v22 同为 `2026-03-25.dahlia`」。这句话对 **22.0.0** 成立，对作为本 ADR 目标的 **22.6.2 不成立**。已就地更正，此处保留记录以免读过旧稿的人被误导。
+
+**实测依据**（stripe-probe，2026-10-09，隔离目录装真实包）：
+
+```
+stripe@22.6.2  cjs/apiVersion.d.ts
+  export declare const ApiVersion = "2026-08-26.dahlia";
+  export declare const ApiMajorVersion = "dahlia";
+```
+
+**为什么会有这个偏差**：Stripe 的版本模型是大版本（`basil` / `clover` / `dahlia` / `endive`）+ 月度向后兼容版本，月度版本沿用大版本名。22.0.0 钉 `2026-03-25.dahlia`，之后 dahlia 又发了 5 个月度版本（04-22 / 05-27 / 06-24 / 07-29 / 08-26），`ApiVersion` 跟着走到 **`2026-08-26.dahlia`**。
+
+**这条错误有多容易被踩**：不是笔误级别，是会直接让实施者编译失败。实测：
+
+```
+probe.ts(11,3): error TS2322:
+  Type '"2026-03-25.dahlia"' is not assignable to type '"2026-08-26.dahlia"'.
+```
+
+**副作用的两条结论**：
+
+1. **「走 22.6.2」和「留在 basil」必须是同时成立的两件事，缺一就退化成静默换 API 版本。** 实测省略 `apiVersion` 时 22.6.2 会发出 `2026-08-26.dahlia` —— 相对 basil 跨过了 **clover + dahlia 两个 API 大版本**，其中就包含 R7 那条 flexible billing mode 的默认切换。这给 §10.2 那句「22.6.2 只在同时钉住 basil 时才安全」补了硬证据。
+2. **阶段二的目标字面量取决于走哪条路径**：钉住不动就写 `2025-06-30.basil`（现方案）；跟随 SDK 就必须写 `2026-08-26.dahlia`。前者无额外代价，后者要同时满足 R7 的前置验证。**
+
+### 10.6 TS 6 复测结论：单字面量护栏在 TS 6.0.3 下有效（另一个悬置项的关闭）
+
+我在 §10.4 之外曾担心 TS 6 落地后 `stripe-api-version.test.ts` 的护栏机制失效。**已实测关闭，两条独立证据**：
+
+1. **PR #38 的 CI 日志本身就是 TS 6 下的真实记录**：`pnpm install` 输出含 `+ typescript 6.0.3`，随后的 `tsc --noEmit` 报出
+
+```
+lib/payments/stripe-provider.ts(66,9): error TS2322:
+  Type '"2025-06-30.basil"' is not assignable to type '"2026-09-30.endive"'
+```
+
+   即该护栏**已经在 TS 6.0.3 下真实触发过**，无需等待复测。
+2. **隔离复刻**（`typescript@6.0.3` + `stripe@22.6.2`，用本仓 tsconfig 的 flags：`strict` / `esModuleInterop` / `moduleResolution: bundler` / `skipLibCheck`）：写错字面量同样报 TS2322。
+
+**机制分层说明**（这点容易混淆，写清楚）：`stripe-api-version.test.ts` 锁的是**运行时字面量**（值层），「写错版本会 tsc 失败」来自 `StripeConfig.apiVersion` 的**单字面量类型**（类型层）。两者相互独立，TS 6 下都仍然有效。
+
+**由此产生的一条禁令（R10 的来由）**：stripe-probe 验证的「方案 B」写法是 `apiVersion: "2025-06-30.basil" as Stripe.LatestApiVersion`，实测 0 error、运行时确为 basil、webhook 验签通过、现有单测无需改动。但 `as` 断言会把类型层那条护栏**一起消掉**——下次 SDK 升级改了 `LatestApiVersion`，将不再有 TS2322 逼出决策。本次 basil vs dahlia 这个决策正是被 TS2322 逼出来的。
+
+所以：**加 `as` 必须与「补一条非断言型运行时护栏」成对出现**，否则等于把护栏从类型层降级成人工自觉。
+
+### 10.7 22.6.2 其余实测约束
+
+| 项 | 实测 | 结论 |
+|---|---|---|
+| `engines` | `{"node":">=18"}` | CI Node 22 满足（v23 要求是 `>=20`） |
+| 单字面量约束位置 | `cjs/lib.d.ts:11/27` | 与 v23 完全一致，机制同上 |
+| `constructEvent` 签名 | `cjs/Webhooks.d.ts:46` | 与 v23 一致，同步版验签实测通过 |
+| `WebhookEndpoint.ApiVersion` 枚举 | 仍含 `'2025-06-30.basil'` | **basil 未退役**，钉版可持续 |
+| 5 处 SDK 调用 + 4 处 cast | 隔离复刻 0 error | 类型形状不是升级障碍 |
