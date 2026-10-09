@@ -204,6 +204,10 @@ describe("搜索认证", () => {
     const url = new URL(`${BASE}/workspaces/${wid}/search`);
     url.searchParams.set("q", "test");
     const res = await fetch(url.toString(), { headers: authHeader(otherToken) });
+    // 刻意保持容错（B 类）：当前本端点在 wid 守卫处短路，实际返回 403（workspace_mismatch）。
+    // 不收紧为单一状态码的理由是**策略未决**——跨租户究竟应返回 403，还是折叠为 404 以遮蔽
+    // 资源存在性，是一个尚未拍板的安全策略问题（遮蔽先例仅见于 ai/templates/[id]/route.ts，
+    // 不适用于此处）。收紧等于替该决策拍板，故保留可接受值集合。
     expect([401, 403, 404]).toContain(res.status);
   });
 });

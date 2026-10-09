@@ -13,7 +13,7 @@ import { BASE, registerUser, authHeader, inviteMember, TEST_PASSWORD } from "../
  *
  * ## 本文件证明什么
  *  - AC：回滚前当前内容**仍能通过版本列表 API 取回**（快照真的建了，且存的是回滚前内容）；
- *  - AC：无写权限用户（viewer）调 restore → 401/403，**且文档内容未变**；
+ *  - AC：无写权限用户（viewer）调 restore → 403，**且文档内容未变**；
  *  - AC：版本不存在 → 404；
  *  - AC：连续两次回滚 → 产生**两条**独立快照（不覆盖上一条快照）。
  *
@@ -197,13 +197,16 @@ describe("POST /documents/{id}/versions/{versionId}/restore — 强制快照防�
     expect(doc.markdown, "文档 markdown 应已被回滚为 v1 内容").toBe(fx.v1Markdown);
   });
 
-  it("无写权限用户（viewer）调 restore 返回 401/403 且文档内容未变", async () => {
+  it("无写权限用户（viewer）调 restore 返回 403 且文档内容未变", async () => {
     const before = await readDoc(fx.ownerToken);
     const versionsBefore = await listVersions(fx.ownerToken);
 
     const res = await restore(fx.viewerToken, fx.v2Id);
-    expect([401, 403], `viewer 必须被拒，实际 ${res.status}`).toContain(res.status);
-    // 绝不能 2xx —— 显式再断言一次，避免 [401,403] 断言被误放宽
+    // 断言由容错 [401,403] 收紧为 403：viewer 是本工作区成员，restore/route.ts 内
+    // requirePermission("documents","update")（viewer 矩阵仅 "r"）与写策略 choke point
+    // 均为 403，拒绝原因唯一。
+    expect(res.status, `viewer 必须被拒，实际 ${res.status}`).toBe(403);
+    // 绝不能 2xx —— 显式再断言一次
     expect(res.status).toBeLessThan(500);
     expect(res.ok, "无写权限时绝不能返回 2xx").toBe(false);
 

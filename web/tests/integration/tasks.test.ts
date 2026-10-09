@@ -289,6 +289,10 @@ describe("跨工作区防护", () => {
     const res = await fetch(`${BASE}/workspaces/${otherWid}/tasks`, {
       headers: authHeader(token),
     });
+    // 刻意保持容错（B 类）：当前本端点在 wid 守卫处短路，实际返回 403（workspace_mismatch）。
+    // 不收紧为单一状态码的理由是**策略未决**——跨租户究竟应返回 403，还是折叠为 404 以遮蔽
+    // 资源存在性，是一个尚未拍板的安全策略问题（遮蔽先例仅见于 ai/templates/[id]/route.ts，
+    // 不适用于此处）。收紧等于替该决策拍板，故保留可接受值集合。
     expect([401, 403, 404]).toContain(res.status);
   });
 
@@ -301,6 +305,8 @@ describe("跨工作区防护", () => {
     const res = await fetch(`${BASE}/workspaces/${otherWid}/tasks/${taskId}`, {
       headers: authHeader(token),
     });
+    // 保持容错（B 类）：同跨租户读——当前返回 403（workspace_mismatch），是否改为 404
+    // 遮蔽该任务是否存在属**策略未决**，故不收紧。
     expect([401, 403, 404]).toContain(res.status);
   });
 
@@ -313,6 +319,7 @@ describe("跨工作区防护", () => {
       headers: { ...authHeader(token), "Content-Type": "application/json" },
       body: JSON.stringify({ title: "被 A 篡改" }),
     });
+    // 保持容错（B 类）：跨租户写——当前返回 403（workspace_mismatch），404 遮蔽属**策略未决**。
     expect([401, 403, 404]).toContain(res.status);
 
     // 验证 B 的任务未被改动
@@ -331,6 +338,7 @@ describe("跨工作区防护", () => {
       method: "DELETE",
       headers: authHeader(token),
     });
+    // 保持容错（B 类）：跨租户删——当前返回 403（workspace_mismatch），404 遮蔽属**策略未决**。
     expect([401, 403, 404]).toContain(res.status);
 
     // 验证 B 的任务仍存在

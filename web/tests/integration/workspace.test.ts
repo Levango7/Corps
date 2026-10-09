@@ -65,7 +65,10 @@ describe("AC-03: 跨租户请求隔离", () => {
     const res = await fetch(`${BASE}/workspaces/${widB}/tasks`, {
       headers: { Authorization: `Bearer ${tokenA}` },
     });
-    // 401（认证与成员资格合并判定）同样不泄漏资源存在性，视为可接受
+    // 刻意保持容错（B 类）：当前本端点在 wid 守卫处短路，实际返回 403（workspace_mismatch）。
+    // 不收紧为单一状态码的理由是**策略未决**——跨租户究竟应返回 403，还是折叠为 404 以遮蔽
+    // 资源存在性，是一个尚未拍板的安全策略问题（遮蔽先例仅见于 ai/templates/[id]/route.ts，
+    // 不适用于此处）。收紧等于替该决策拍板，故保留可接受值集合。
     expect([401, 404, 403]).toContain(res.status);
   });
 
@@ -73,6 +76,7 @@ describe("AC-03: 跨租户请求隔离", () => {
     const res = await fetch(`${BASE}/workspaces/${widB}/tasks/fake-uuid`, {
       headers: { Authorization: `Bearer ${tokenA}` },
     });
+    // 保持容错（B 类）：同跨租户读——当前 403（workspace_mismatch），404 遮蔽属**策略未决**。
     expect([401, 404, 403]).toContain(res.status);
   });
 });
@@ -122,12 +126,14 @@ describe("AC-04: RLS引擎层拦截漏写WHERE", () => {
       },
       body: JSON.stringify({ title: "被篡改" }),
     });
+    // 保持容错（B 类）：跨租户写——当前 403（workspace_mismatch），404 遮蔽属**策略未决**。
     expect([401, 403, 404]).toContain(patchRes.status);
 
     const deleteRes = await fetch(`${BASE}/workspaces/${widB}/tasks/${taskId}`, {
       method: "DELETE",
       headers: { Authorization: `Bearer ${tokenA}` },
     });
+    // 保持容错（B 类）：跨租户删——当前 403（workspace_mismatch），404 遮蔽属**策略未决**。
     expect([401, 403, 404]).toContain(deleteRes.status);
 
     // B 的任务未被改动
