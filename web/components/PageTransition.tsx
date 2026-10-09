@@ -55,8 +55,11 @@ export function PageTransition({
         exit="exit"
         variants={variants}
         transition={transition}
-        // 仅动画 transform / opacity，不触发 layout / paint（设计原则 §1.1 第 4 条）
-        style={{ willChange: "transform, opacity" }}
+        // 注意：不要在此设置 `willChange: "transform"`——will-change 会立即让该层
+        // 成为 `position: fixed` 元素的包含块，页面内所有全屏弹窗/遮罩会被劫持
+        // 定位并被容器裁剪（2026-10-10 实测缺陷）。transform 的残留由 variants 的
+        // transitionEnd 在动画结束后清除；动画期间的 will-change 由 framer-motion
+        // 自行管理并在结束后移除。
       >
         {children}
       </motion.div>
