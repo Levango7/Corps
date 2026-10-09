@@ -17,9 +17,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithUserContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
@@ -100,8 +99,11 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
   if (!ctx.ok) return authFailure(ctx, req);
 
   try {
-    // 1) 加载模板（校验访问权限）
-    const template = await prisma.aiWorkflowTemplate.findUnique({ where: { id } });
+    // 1) 加载模板（校验访问权限；2026-10-09 收编：by-id 探测走用户 GUC，
+    //    成员校验在下方的 template.workspaceId 分支完成）
+    const template = await runWithUserContext(ctx.payload.sub, (tx) =>
+      tx.aiWorkflowTemplate.findUnique({ where: { id } }),
+    );
     if (!template) {
       return NextResponse.json(
         { code: 404, message: apiMsg(req, "templateNotFound"), data: null },
@@ -165,31 +167,51 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       },
     };
 
-    // 4) 在目标工作区创建 Workflow + 模板 usageCount 自增
-    //    ai_workflow_templates 无 RLS，usageCount 更新用 prisma 直连。
-    const [workflow] = await Promise.all([
-      runWithWorkspace(
-        body.wid,
-        (tx) =>
-          tx.workflow.create({
-            data: {
-              workspaceId: body.wid,
-              name: wfName,
-              description: template.description,
-              trigger: trigger as Prisma.InputJsonValue,
-              actions: actions as Prisma.InputJsonValue,
-              active: true,
-              createdBy: ctx.payload.sub,
-            },
+    // 4) 在目标工作区创建 Workflow（GUC 事务）
+    const workflow = await runWithWorkspace(
+      body.wid,
+      (tx) =>
+        tx.workflow.create({
+          data: {
+            workspaceId: body.wid,
+            name: wfName,
+            description: template.description,
+            trigger: trigger as Prisma.InputJsonValue,
+            actions: actions as Prisma.InputJsonValue,
+            active: true,
+            createdBy: ctx.payload.sub,
+          },
+        }),
+      ctx.payload.sub,
+    );
+
+    // 5) 模板 usageCount 自增：尽力而为（仅统计计数，失败不影响主流程）。
+    //    工作区模板走其工作区 GUC；公开模板走用户 GUC——加固模式下公开行受
+    //    UPDATE 策略限制自增不生效（P2025 被吞），属已接受的取舍。
+    try {
+      if (template.workspaceId) {
+        await runWithWorkspace(
+          template.workspaceId,
+          (tx) =>
+            tx.aiWorkflowTemplate.update({
+              where: { id },
+              data: { usageCount: { increment: 1 } },
+              select: { id: true, usageCount: true },
+            }),
+          ctx.payload.sub,
+        );
+      } else {
+        await runWithUserContext(ctx.payload.sub, (tx) =>
+          tx.aiWorkflowTemplate.update({
+            where: { id },
+            data: { usageCount: { increment: 1 } },
+            select: { id: true, usageCount: true },
           }),
-        ctx.payload.sub,
-      ),
-      prisma.aiWorkflowTemplate.update({
-        where: { id },
-        data: { usageCount: { increment: 1 } },
-        select: { id: true, usageCount: true },
-      }),
-    ]);
+        );
+      }
+    } catch (e) {
+      console.warn("[ai/templates/instantiate] usageCount 自增失败（不影响主流程）", e);
+    }
 
     return NextResponse.json({ code: 0, data: workflow, message: "OK" }, { status: 201 });
   } catch (error) {

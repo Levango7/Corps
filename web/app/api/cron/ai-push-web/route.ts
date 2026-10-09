@@ -78,15 +78,17 @@ export async function GET(req: NextRequest) {
     const userIds = Array.from(new Set(records.map((r) => r.userId)));
     const allSubscriptions =
       userIds.length > 0
-        ? await prisma.pushSubscription.findMany({
-            where: { userId: { in: userIds } },
-            select: {
-              userId: true,
-              endpoint: true,
-              p256dhKey: true,
-              authKey: true,
-            },
-          })
+        ? await runWithAuthOp("cron", (tx) =>
+            tx.pushSubscription.findMany({
+              where: { userId: { in: userIds } },
+              select: {
+                userId: true,
+                endpoint: true,
+                p256dhKey: true,
+                authKey: true,
+              },
+            }),
+          )
         : [];
     const subsByUser = new Map<string, typeof allSubscriptions>();
     for (const sub of allSubscriptions) {
@@ -232,9 +234,11 @@ export async function GET(req: NextRequest) {
     if (expiredEndpoints.size > 0) {
       const endpointsToDelete = Array.from(expiredEndpoints);
       try {
-        const deleteResult = await prisma.pushSubscription.deleteMany({
-          where: { endpoint: { in: endpointsToDelete } },
-        });
+        const deleteResult = await runWithAuthOp("cron", (tx) =>
+          tx.pushSubscription.deleteMany({
+            where: { endpoint: { in: endpointsToDelete } },
+          }),
+        );
         expiredSubsCleaned = deleteResult.count;
         logger.info("[cron ai-push-web] 清理过期 Web Push 订阅", {
           count: expiredSubsCleaned,

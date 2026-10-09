@@ -8,7 +8,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
+import { runWithUserContext } from "@/lib/auth";
 
 // P1-fix: SSRF 防护——endpoint 域名白名单，只允许已知 Web Push 服务域名
 const ALLOWED_PUSH_HOSTS = [
@@ -71,38 +71,48 @@ export async function POST(req: NextRequest) {
     // schema 尚未添加 @@unique([userId, endpoint])，故无法用 upsert 的复合 where。
     // 这里先查再更新/创建，并对 create 加 try-catch 处理唯一约束冲突
     // （若并发下另一事务先创建了同 (userId, endpoint) 行，P2002 时改为 update）。
-    const existing = await prisma.pushSubscription.findFirst({
-      where: { userId, endpoint: body.endpoint },
-      select: { id: true },
-    });
+    const existing = await runWithUserContext(userId, (tx) =>
+      tx.pushSubscription.findFirst({
+        where: { userId, endpoint: body.endpoint },
+        select: { id: true },
+      }),
+    );
     if (existing) {
-      await prisma.pushSubscription.update({
-        where: { id: existing.id },
-        data: { p256dhKey: body.keys.p256dh, authKey: body.keys.auth },
-      });
+      await runWithUserContext(userId, (tx) =>
+        tx.pushSubscription.update({
+          where: { id: existing.id },
+          data: { p256dhKey: body.keys.p256dh, authKey: body.keys.auth },
+        }),
+      );
     } else {
       try {
-        await prisma.pushSubscription.create({
-          data: {
-            userId,
-            endpoint: body.endpoint,
-            p256dhKey: body.keys.p256dh,
-            authKey: body.keys.auth,
-          },
-        });
+        await runWithUserContext(userId, (tx) =>
+          tx.pushSubscription.create({
+            data: {
+              userId,
+              endpoint: body.endpoint,
+              p256dhKey: body.keys.p256dh,
+              authKey: body.keys.auth,
+            },
+          }),
+        );
       } catch (e: unknown) {
         // P2002 = 唯一约束冲突（并发下另一事务先创建了同 endpoint 行）
         // 降级为按 (userId, endpoint) 再查一次并 update keys
         if (e instanceof Error && "code" in e && (e as { code: string }).code === "P2002") {
-          const again = await prisma.pushSubscription.findFirst({
-            where: { userId, endpoint: body.endpoint },
-            select: { id: true },
-          });
+          const again = await runWithUserContext(userId, (tx) =>
+            tx.pushSubscription.findFirst({
+              where: { userId, endpoint: body.endpoint },
+              select: { id: true },
+            }),
+          );
           if (again) {
-            await prisma.pushSubscription.update({
-              where: { id: again.id },
-              data: { p256dhKey: body.keys.p256dh, authKey: body.keys.auth },
-            });
+            await runWithUserContext(userId, (tx) =>
+              tx.pushSubscription.update({
+                where: { id: again.id },
+                data: { p256dhKey: body.keys.p256dh, authKey: body.keys.auth },
+              }),
+            );
           } else {
             throw e;
           }

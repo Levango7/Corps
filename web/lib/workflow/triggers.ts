@@ -20,7 +20,7 @@
  *  - 其他业务事件按需扩展
  */
 
-import { prisma } from "@/lib/prisma";
+import { runWithWorkspace } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
 import { executeWorkflow } from "./executor";
@@ -48,13 +48,17 @@ export async function emitWorkflowEvent(
     //    trigger 是 JSON 字段，Prisma 对 JsonB 的等值过滤语法在各版本支持不一，
     //    这里先查所有活跃工作流，在代码层过滤 trigger.event === eventName，
     //    工作流数量通常很少（每个工作区几十条），内存过滤可接受。
-    const workflows = await prisma.workflow.findMany({
-      where: {
-        workspaceId,
-        active: true,
-      },
-      select: { id: true, name: true, trigger: true },
-    });
+    //    2026-10-09 收编：workflows 是 FORCE RLS 表，走 GUC 事务（裸查询在
+    //    加固模式下静默读空 → 触发器永远查不到工作流，事件链路整条失效）。
+    const workflows = await runWithWorkspace(workspaceId, (tx) =>
+      tx.workflow.findMany({
+        where: {
+          workspaceId,
+          active: true,
+        },
+        select: { id: true, name: true, trigger: true },
+      }),
+    );
 
     // 2. 过滤 trigger.event === eventName 的工作流
     const matched = workflows.filter((wf) => {
@@ -78,15 +82,18 @@ export async function emitWorkflowEvent(
     //    串行执行避免并发对同一工作区造成 DB 连接压力
     for (const wf of matched) {
       try {
-        const execution = await prisma.workflowExecution.create({
-          data: {
-            workflowId: wf.id,
-            workspaceId,
-            triggerData: payload as Prisma.InputJsonValue,
-            status: "pending",
-          },
-          select: { id: true },
-        });
+        // 2026-10-09 收编：workflow_execution 是 FORCE RLS 表，走 GUC 事务
+        const execution = await runWithWorkspace(workspaceId, (tx) =>
+          tx.workflowExecution.create({
+            data: {
+              workflowId: wf.id,
+              workspaceId,
+              triggerData: payload as Prisma.InputJsonValue,
+              status: "pending",
+            },
+            select: { id: true },
+          }),
+        );
 
         // 同步执行工作流（executeWorkflow 内部已 try-catch，不会抛异常）
         await executeWorkflow(workspaceId, wf.id, execution.id, payload);

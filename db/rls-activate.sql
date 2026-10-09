@@ -477,8 +477,12 @@ CREATE POLICY p_push_subscriptions_update ON push_subscriptions FOR UPDATE
   WITH CHECK (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
 
 DROP POLICY IF EXISTS p_push_subscriptions_delete ON push_subscriptions;
+-- 2026-10-09：补 cron 逃生口（与 SELECT 的 cron 逃生口对称）——cron/ai-push-web
+-- 的过期订阅清理（410 Gone 后 deleteMany）是跨用户操作，无此口在加固模式下
+-- 静默删 0 行，死订阅会让后续 cron 永远重试失败。
 CREATE POLICY p_push_subscriptions_delete ON push_subscriptions FOR DELETE
-  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid);
+  USING (user_id = NULLIF(current_setting('app.user_id', true), '')::uuid
+         OR current_setting('app.auth_op', true) = 'cron');
 
 -- ── push_tokens（用户级，按 user_id 隔离；ADR-010 G3 收编试点）────────────
 -- 无 cron 逃生口：唯一跨用户读路径 sendPushToUser 以【目标用户】身份注入
@@ -744,12 +748,25 @@ CREATE POLICY p_ai_user_behaviors_delete ON ai_user_behaviors FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 
 -- ── ai_workflow_templates ──
+-- 2026-10-09：模板库两类逃生口（此前加固模式下整个模板库是死的）：
+--  1) 公开模板（workspace_id IS NULL 且 is_public）：裸行在 workspace_id=GUC 下
+--     永不匹配 → 列表为空/详情 404/无法创建公开模板。SELECT+INSERT 补
+--     "NULL 且公开"放行；UPDATE/DELETE 刻意不补——公开模板在加固模式下
+--     变为只读不可删（比非加固的"任何登录用户可改"更安全；公开模板的
+--     归属/权限语义待产品立项后再放开）。
+--  2) 按成员资格子查询放行（与 workspaces SELECT 同款模式）：模板详情的
+--     by-id 探测无法预知 workspace_id 注入哪个 GUC，按"用户是其成员的
+--     工作区"放行后由路由层继续做成员校验。
 DROP POLICY IF EXISTS p_ai_workflow_templates_select ON ai_workflow_templates;
 CREATE POLICY p_ai_workflow_templates_select ON ai_workflow_templates FOR SELECT
-  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+         OR (workspace_id IS NULL AND is_public = true)
+         OR workspace_id IN (SELECT m.workspace_id FROM members m
+                             WHERE m.user_id = NULLIF(current_setting('app.user_id', true), '')::uuid));
 DROP POLICY IF EXISTS p_ai_workflow_templates_insert ON ai_workflow_templates;
 CREATE POLICY p_ai_workflow_templates_insert ON ai_workflow_templates FOR INSERT
-  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid
+              OR (workspace_id IS NULL AND is_public = true));
 DROP POLICY IF EXISTS p_ai_workflow_templates_update ON ai_workflow_templates;
 CREATE POLICY p_ai_workflow_templates_update ON ai_workflow_templates FOR UPDATE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
