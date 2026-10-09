@@ -172,7 +172,7 @@ describe("认证全流程：注册 → 登录 → 刷新 → 登出", () => {
     expect(parsed.value).toBe(""); // 值清空
   });
 
-  it("登出后用旧 access_token 访问受保护资源应 401", async () => {
+  it("登出后旧 access_token 在剩余 TTL 内仍有效（无状态 JWT 的已知取舍，TC-AUTH-06）", async () => {
     // Arrange
     const reg = await registerUser({ prefix: "flow-after-logout" });
     const wid = reg.workspace.id;
@@ -189,14 +189,54 @@ describe("认证全流程：注册 → 登录 → 刷新 → 登出", () => {
       headers: cookieHeader(reg.cookies),
     });
 
-    // Assert - 登出后旧 token 仍可访问（JWT 无状态，登出不失效 token）
-    // 这是 JWT 的已知特性：登出仅清 cookie，token 本身到过期前仍有效
-    // 验证点在于 cookie 已被清除，浏览器不会再发送 token
+    // Assert - 这是**有意的设计取舍**，不是缺陷：
+    //   1) access_token 是无状态 JWT，TTL = "15m"（web/lib/jwt.ts:6，硬编码、无 env 可覆盖），
+    //      验签只查签名/过期/issuer（web/lib/jwt.ts:62-67）不查库，故登出不会让已签发的
+    //      access_token 即刻失效。
+    //   2) 但登出**确实在服务端删除了会话**：logout route 调 auth.api.signOut
+    //      （web/app/api/v1/auth/logout/route.ts:12）→ Better Auth internalAdapter.deleteSession，
+    //      故攻击者拿不到续期能力，实际可利用窗口被钳死在旧 token 剩余 TTL（≤15 分钟）。
+    //   3) 该取舍已被审查并明确接受：见 docs/security/PENTEST-REPORT-Phase1.md:359（TC-AUTH-06，
+    //      列为观察项非缺陷）与 docs/security/PENTEST-PLAN.md:131。
+    // 本用例断言 200 是**确定性**结果：登出只删会话 + 清 cookie，不改成员资格；beforeRes 与
+    // afterRes 相隔毫秒级，远小于 15 分钟。
+    // 若将来要收紧到"登出即刻失效"：需引入 jti denylist 或 User.tokenVersion。当前不做——
+    // tokenVersion 的语义是"全端失效"（登出一个设备会踢掉该用户所有设备），相对 ≤15min 的
+    // 窗口收益有限，不值得引入该语义副作用。
     const afterRes = await fetch(`${BASE}/workspaces/${wid}/tasks`, {
       headers: authHeader(reg.accessToken),
     });
-    // JWT 无状态：token 仍有效（200），但浏览器 cookie 已清，前端不会再带
-    expect([200, 401]).toContain(afterRes.status);
+    expect(afterRes.status).toBe(200);
+  });
+
+  it("登出后原会话已服务端吊销：refresh 必须 401（TC-AUTH-06 的可续期窗口 = 0）", async () => {
+    // Arrange
+    const reg = await registerUser({ prefix: "flow-logout-refresh" });
+    const wid = reg.workspace.id;
+
+    // Act - 登出（走注册时捕获的会话 cookie）
+    await fetch(`${BASE}/auth/logout`, {
+      method: "POST",
+      headers: cookieHeader(reg.cookies),
+    });
+
+    // Assert - 用**原会话 cookie** 调 refresh 必须 401：
+    // refresh 走查库的 auth.api.getSession({ headers })（web/app/api/v1/auth/refresh/route.ts:77-81），
+    // 会话行已被登出 DELETE ⇒ !session?.user?.id ⇒ 401 noActiveSession。
+    // body 传合法 workspaceId——该 401 发生在 req.json() 之前，即使 body 有偏差也仍 401，
+    // 但传合法值可避免未来 handler 调序后出现假红。
+    //
+    // 防空转（这条断言必须归因于"登出"，而不是"cookie 本来就无效"）：
+    //   - 本用例在登出前**没有**调用过 refresh，故 401 不可能来自 session token 轮换；
+    //   - 兄弟用例 TC-AUTH-05 的 Act 1（下方 describe）证明 reg.cookies 在登出前对 refresh
+    //     是 200 —— 即该 cookie 确实是 refresh 认得的有效会话。
+    //   两相印证：此处的 401 只能由登出删除会话行造成。
+    const res = await fetch(`${BASE}/auth/refresh`, {
+      method: "POST",
+      headers: { ...cookieHeader(reg.cookies), "Content-Type": "application/json" },
+      body: JSON.stringify({ workspaceId: wid }),
+    });
+    expect(res.status).toBe(401);
   });
 });
 
