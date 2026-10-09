@@ -1,0 +1,42 @@
+# ADR-015 登记表 —— 未接线的云盘 / 预览组件"待接线"，非死代码
+#
+# 由 `scripts/check_adr015_manifest.py` 校验。每行：<相对**仓库根**的路径>
+# （与脚本里 SCAN_DIRS / SCAN_FILES 的写法一致；表里的路径必须能直接 root/path 命中）
+#
+# 为什么需要这张表：这 20 个文件在当前代码里静态零引用（`grep -rn "previews/"` 零命中），
+# 看起来就是"可以清掉的死代码"。但它们是 `app/api/v1/workspaces/[wid]/files/**` 这套
+# **已在运行**的后端 API 的前端部分——缺的只是"一个页面把它们挂上去"。
+# 删掉 = 砍掉一个后端已完成功能的前半截。
+#
+# 判据：
+#   ADR015_FILE_MISSING   表里的文件不见了   -> 有人删了却没按 ADR-015 §5 更新 ADR
+#   ADR015_UNREGISTERED   扫描范围内有表外文件 -> 新增/移动了却没登记
+#   ADR015_MANIFEST_DIRTY 表自身条目重复      -> 表已经不是可信清单
+#
+# 解除约束的唯一方式（照 ADR-015 §5）：把 ADR-015 状态改成"已接线"或"已删除"，
+# 并在同一提交里更新本表。**不许只改表不改 ADR。**
+#
+# ── 统一入口 + 兄弟预览器（被 FilePreviewDialog import，而后者零引用）
+web/components/files/FilePreview.tsx
+web/components/files/FilePreviewDialog.tsx
+web/components/files/PdfPreview.tsx
+web/components/files/VideoPreview.tsx
+web/components/files/TextPreview.tsx
+# ── 列表 / 上传 / 版本管理
+web/components/files/FileBrowser.tsx
+web/components/files/FileGridItem.tsx
+web/components/files/FileListItem.tsx
+web/components/files/FileUploader.tsx
+web/components/files/FileVersionList.tsx
+web/components/files/FileVersionRestore.tsx
+web/components/files/file-utils.ts
+# ── 另一条路线的独立预览器（零引用；Code/Markdown/Office 是别处没有的能力）
+web/components/files/previews/AudioPreview.tsx
+web/components/files/previews/CodePreview.tsx
+web/components/files/previews/ImagePreview.tsx
+web/components/files/previews/MarkdownPreview.tsx
+web/components/files/previews/OfficePreview.tsx
+web/components/files/previews/PdfPreview.tsx
+web/components/files/previews/VideoPreview.tsx
+# ── IM 内联预览
+web/components/im/FilePreview.tsx
