@@ -740,7 +740,8 @@ async function migrateTaskChats() {
 
 现有 API 路由的安全模式（保持不变）：
 
-1. **认证**：`getWorkspaceContext(req, wid)` 验证 JWT + 工作区成员资格
+1. **认证**：`getWorkspaceContextV2(req, wid)` 验证 JWT + 工作区成员资格，拒绝经 `authFailure` 出口
+   （`unauthenticated`→401；`workspace_mismatch` / `not_a_member` / `write_policy`→403）
 2. **授权**：`runWithWorkspace(wid, fn, userId)` 注入 GUC（`app.workspace_id` + `app.user_id`）
 3. **成员校验**：每个会话操作前验证 `ConversationMember` 存在性
 4. **角色校验**：owner/admin 操作（更新会话、移除成员）前验证角色
