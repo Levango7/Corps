@@ -8,9 +8,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithUserContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
@@ -125,28 +124,34 @@ export async function GET(req: NextRequest) {
       where.workspaceId = null;
     }
 
-    const [items, total] = await Promise.all([
-      prisma.aiWorkflowTemplate.findMany({
-        where,
-        select: {
-          id: true,
-          name: true,
-          description: true,
-          category: true,
-          steps: true,
-          isPublic: true,
-          workspaceId: true,
-          usageCount: true,
-          metadata: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-        orderBy: [{ usageCount: "desc" }, { updatedAt: "desc" }],
-        skip,
-        take,
-      }),
-      prisma.aiWorkflowTemplate.count({ where }),
-    ]);
+    // 2026-10-09 收编：ai_workflow_templates 是 FORCE RLS 表。有 wid 走工作区
+    // GUC；无 wid 走用户 GUC（公开行 workspace_id IS NULL 由策略逃生口放行）
+    const listQuery = (tx: Prisma.TransactionClient) =>
+      Promise.all([
+        tx.aiWorkflowTemplate.findMany({
+          where,
+          select: {
+            id: true,
+            name: true,
+            description: true,
+            category: true,
+            steps: true,
+            isPublic: true,
+            workspaceId: true,
+            usageCount: true,
+            metadata: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+          orderBy: [{ usageCount: "desc" }, { updatedAt: "desc" }],
+          skip,
+          take,
+        }),
+        tx.aiWorkflowTemplate.count({ where }),
+      ]);
+    const [items, total] = await (wid
+      ? runWithWorkspace(wid, listQuery, userId)
+      : runWithUserContext(userId, listQuery));
 
     return NextResponse.json({ code: 0, data: { items, total, skip, take }, message: "OK" });
   } catch (error) {
@@ -225,17 +230,19 @@ export async function POST(req: NextRequest) {
             }),
           userId,
         )
-      : await prisma.aiWorkflowTemplate.create({
-          data: {
-            name: body.name,
-            description: body.description,
-            category: body.category,
-            steps: body.steps as Prisma.InputJsonValue,
-            isPublic: true,
-            workspaceId: null,
-            metadata: body.metadata as Prisma.InputJsonValue | undefined,
-          },
-        });
+      : await runWithUserContext(userId, (tx) =>
+          tx.aiWorkflowTemplate.create({
+            data: {
+              name: body.name,
+              description: body.description,
+              category: body.category,
+              steps: body.steps as Prisma.InputJsonValue,
+              isPublic: true,
+              workspaceId: null,
+              metadata: body.metadata as Prisma.InputJsonValue | undefined,
+            },
+          }),
+        );
 
     return NextResponse.json({ code: 0, data: template, message: "OK" }, { status: 201 });
   } catch (error) {

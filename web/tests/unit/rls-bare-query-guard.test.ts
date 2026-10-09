@@ -75,17 +75,27 @@ const GUC_HELPERS = [
 /**
  * 存量裸查登记表（tests/rls-bare-query-baseline.txt，2026-10-08 建立）。
  *
- * 守卫的大小写口径修复后一次性暴露 38 处存量裸查；按仓库既有登记表惯例
+ * 守卫的大小写口径修复后一次性暴露 33 处存量裸查；按仓库既有登记表惯例
  * （参照 RLS 豁免表 / write-access registry）只允许收缩：
  *  - 未登记文件出现裸查 → NEW（红）
  *  - 已登记文件处数增加 → GROWTH（红）
  *  - 已登记文件处数减少 → STALE（红，强制同步收缩登记表）
  *
- * 格式：`<相对 web/ 路径> | <处数> | reason`，`#` 开头为注释。
+ * **2026-10-09 全量收编后登记表已清空并删除**（workflow 域 12 处、push 6 处、
+ * 模板 8 处、反馈 3 处、助手 1 处、cron 2 处——每处独立短 GUC 事务，模板/公开行
+ * 另加了策略逃生口）。此后**任何**未包裹的裸查都直接判 NEW。若未来确有需要
+ * 登记的存量（放弃某处收编），重建同名文件即可，格式：
+ * `<相对 web/ 路径> | <处数> | reason`，`#` 开头为注释。
  */
 function parseBareQueryBaseline(): Map<string, number> {
-  const text = readFileSync(join(HERE, "../rls-bare-query-baseline.txt"), "utf8");
   const map = new Map<string, number>();
+  let text: string;
+  try {
+    text = readFileSync(join(HERE, "../rls-bare-query-baseline.txt"), "utf8");
+  } catch {
+    // 登记表不存在 = 无存量（全量收编后的常态）
+    return map;
+  }
   for (const raw of text.split("\n")) {
     const line = raw.trim();
     if (!line || line.startsWith("#")) continue;

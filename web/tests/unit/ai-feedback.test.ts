@@ -11,17 +11,24 @@ import { Prisma } from "@prisma/client";
  *  - getFeedbackStats：反馈统计（positive/negative/total/satisfactionRate，
  *    capability 过滤、空数据兜底、tx 优先）
  *
- * Mock 策略：vi.mock("@/lib/prisma") 替换 prisma client，不连接真实 DB。
+ * Mock 策略：vi.hoisted 建共享 mock tx，同时替换 @/lib/prisma 与 @/lib/auth
+ * （runWithWorkspace 透传 mock tx）——2026-10-09 起 submitFeedback 写入经 GUC 事务
+ *（ai_feedback 是 FORCE RLS 表，裸 insert 在加固模式下被策略拒绝）。
  */
 
-vi.mock("@/lib/prisma", () => ({
-  prisma: {
+const { mockTx } = vi.hoisted(() => ({
+  mockTx: {
     aiFeedback: {
       create: vi.fn(),
       findMany: vi.fn(),
       count: vi.fn(),
     },
   },
+}));
+
+vi.mock("@/lib/prisma", () => ({ prisma: mockTx }));
+vi.mock("@/lib/auth", () => ({
+  runWithWorkspace: (_wid: string, fn: (tx: unknown) => unknown) => fn(mockTx),
 }));
 
 import { prisma } from "@/lib/prisma";

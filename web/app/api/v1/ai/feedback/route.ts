@@ -10,8 +10,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { submitFeedback, getFeedbackStats } from "@/lib/ai/feedback";
-import { prisma } from "@/lib/prisma";
-import { getWorkspaceContextV2 } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
 
@@ -166,27 +165,34 @@ export async function GET(req: NextRequest) {
       ...(params.rating ? { rating: params.rating } : {}),
     };
 
-    const [items, total, stats] = await Promise.all([
-      prisma.aiFeedback.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        take: params.limit,
-        skip: params.offset,
-        select: {
-          id: true,
-          capability: true,
-          rating: true,
-          comment: true,
-          originalOutput: true,
-          correctedOutput: true,
-          metadata: true,
-          createdAt: true,
-        },
-      }),
-      prisma.aiFeedback.count({ where }),
-      // 统计始终按工作区(+capability)维度，不受 rating 筛选影响
-      getFeedbackStats(params.workspaceId, params.capability),
-    ]);
+    // 2026-10-09 收编：ai_feedback 是 FORCE RLS 表，走 GUC 事务；
+    // stats 同事务内传 tx（其 prisma 回退在加固模式下读空）
+    const [items, total, stats] = await runWithWorkspace(
+      params.workspaceId,
+      (tx) =>
+        Promise.all([
+          tx.aiFeedback.findMany({
+            where,
+            orderBy: { createdAt: "desc" },
+            take: params.limit,
+            skip: params.offset,
+            select: {
+              id: true,
+              capability: true,
+              rating: true,
+              comment: true,
+              originalOutput: true,
+              correctedOutput: true,
+              metadata: true,
+              createdAt: true,
+            },
+          }),
+          tx.aiFeedback.count({ where }),
+          // 统计始终按工作区(+capability)维度，不受 rating 筛选影响
+          getFeedbackStats(params.workspaceId, params.capability, tx),
+        ]),
+      userId,
+    );
 
     return NextResponse.json({
       code: 0,

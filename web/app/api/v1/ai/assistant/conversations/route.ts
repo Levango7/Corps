@@ -15,6 +15,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { runWithWorkspace } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
 
@@ -73,17 +74,23 @@ export async function GET(req: NextRequest) {
     }
 
     // 模式二：对话列表（id 缺失时，返回最近 20 条对话）
-    const conversations = await prisma.assistantConversation.findMany({
-      where: { userId, workspaceId: wid },
-      orderBy: { updatedAt: "desc" },
-      take: 20,
-      select: {
-        id: true,
-        createdAt: true,
-        updatedAt: true,
-        _count: { select: { messages: true } },
-      },
-    });
+    // 2026-10-09 收编：assistant_conversations 是 FORCE RLS 表，走 GUC 事务
+    const conversations = await runWithWorkspace(
+      wid,
+      (tx) =>
+        tx.assistantConversation.findMany({
+          where: { userId, workspaceId: wid },
+          orderBy: { updatedAt: "desc" },
+          take: 20,
+          select: {
+            id: true,
+            createdAt: true,
+            updatedAt: true,
+            _count: { select: { messages: true } },
+          },
+        }),
+      userId,
+    );
 
     return NextResponse.json({ code: 0, data: { conversations } });
   } catch (error) {

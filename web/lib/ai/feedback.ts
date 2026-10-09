@@ -13,6 +13,7 @@
  *    仅保留有实际修正内容的正面反馈。
  */
 
+import { runWithWorkspace } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { Prisma } from "@prisma/client";
 
@@ -57,18 +58,21 @@ export async function submitFeedback(params: {
   correctedOutput?: Prisma.InputJsonValue;
   metadata?: Prisma.InputJsonValue;
 }) {
-  return prisma.aiFeedback.create({
-    data: {
-      workspaceId: params.workspaceId,
-      userId: params.userId,
-      capability: params.capability,
-      rating: params.rating,
-      comment: params.comment,
-      originalOutput: params.originalOutput,
-      correctedOutput: params.correctedOutput,
-      metadata: params.metadata,
-    },
-  });
+  // 2026-10-09 收编：ai_feedback 是 FORCE RLS 表，写入走 GUC 事务
+  return runWithWorkspace(params.workspaceId, (tx) =>
+    tx.aiFeedback.create({
+      data: {
+        workspaceId: params.workspaceId,
+        userId: params.userId,
+        capability: params.capability,
+        rating: params.rating,
+        comment: params.comment,
+        originalOutput: params.originalOutput,
+        correctedOutput: params.correctedOutput,
+        metadata: params.metadata,
+      },
+    }),
+  );
 }
 
 /**

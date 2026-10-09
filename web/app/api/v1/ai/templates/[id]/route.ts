@@ -10,9 +10,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
-import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
+import { getWorkspaceContextV2, runWithUserContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 
@@ -44,7 +43,14 @@ async function loadAccessibleTemplate(
   req: NextRequest,
   id: string,
 ): Promise<{ template: Prisma.AiWorkflowTemplateGetPayload<true>; wid: string | null } | null> {
-  const template = await prisma.aiWorkflowTemplate.findUnique({ where: { id } });
+  // 2026-10-09 收编：by-id 探测无法预知 workspace_id GUC，走用户 GUC——
+  // ai_workflow_templates SELECT 策略按"成员资格子查询 + 公开行（is_public）"
+  // 放行；成员校验仍由下方 getWorkspaceContextV2 完成
+  const userId = await getUserId(req);
+  if (!userId) return null;
+  const template = await runWithUserContext(userId, (tx) =>
+    tx.aiWorkflowTemplate.findUnique({ where: { id } }),
+  );
   if (!template) return null;
 
   // 公开模板且无工作区绑定：放行
@@ -150,7 +156,11 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
           (tx) => tx.aiWorkflowTemplate.update({ where: { id }, data }),
           userId,
         )
-      : await prisma.aiWorkflowTemplate.update({ where: { id }, data });
+      : await runWithUserContext(userId, (tx) =>
+          // 公开模板在加固模式下受 UPDATE 策略限制不可编辑（P2025 → 404 遮蔽，
+          // 比非加固的"任何登录用户可改"更安全；编辑语义待产品立项）
+          tx.aiWorkflowTemplate.update({ where: { id }, data }),
+        );
 
     return NextResponse.json({ code: 0, data: updated, message: "OK" });
   } catch (error) {
@@ -190,7 +200,10 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
         userId,
       );
     } else {
-      await prisma.aiWorkflowTemplate.delete({ where: { id } });
+      await runWithUserContext(userId, (tx) =>
+        // 同上：公开模板在加固模式下不可删
+        tx.aiWorkflowTemplate.delete({ where: { id } }),
+      );
     }
 
     return NextResponse.json({ code: 0, data: null, message: "OK" });

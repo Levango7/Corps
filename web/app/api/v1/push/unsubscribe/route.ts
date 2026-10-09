@@ -7,7 +7,7 @@ import { z } from "zod";
 import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
-import { prisma } from "@/lib/prisma";
+import { runWithUserContext } from "@/lib/auth";
 
 const unsubscribeSchema = z.object({
   endpoint: z.string().url(),
@@ -45,9 +45,11 @@ export async function POST(req: NextRequest) {
   }
 
   try {
-    await prisma.pushSubscription.deleteMany({
-      where: { userId, endpoint: body.endpoint },
-    });
+    await runWithUserContext(userId, (tx) =>
+      tx.pushSubscription.deleteMany({
+        where: { userId, endpoint: body.endpoint },
+      }),
+    );
     return NextResponse.json({ code: 200, data: { unsubscribed: true } });
   } catch (error) {
     console.error("[POST push/unsubscribe] error:", error);

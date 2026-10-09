@@ -4,8 +4,10 @@
  * 设计要点：
  *  - 不依赖外部 worker/queue，在 API 请求上下文内同步推进状态机
  *    pending → running → completed/failed
- *  - Prisma 操作直接用 prisma client（不在 runWithWorkspace 事务上下文中，
- *    因为执行引擎可能被触发器/手动触发等多种入口调用，统一用裸 prisma 更简单）
+ *  - Prisma 操作一律经 runWithWorkspace 注入 GUC（2026-10-09 收编：workflow/
+ *    workflow_execution/task/member/notification 都是 FORCE RLS 表，裸查询在
+ *    加固模式（生产默认）下静默读空/写被拒）。每个操作独立短事务——执行引擎
+ *    可能长跑（逐动作推进），不把整个执行包进一个大事务，避免长占池连接。
  *  - 整个执行过程用 try-catch 包裹，确保不会抛出未捕获异常影响调用方
  *  - 每个动作独立 try-catch，单动作失败可配置是否终止后续动作（默认终止）
  *
@@ -20,7 +22,7 @@
  *  { type: "update_task", config: { taskId, title?, status?, priority?, assigneeId?, dueDate? }, order }
  */
 
-import { prisma } from "@/lib/prisma";
+import { runWithWorkspace } from "@/lib/auth";
 import { logger } from "@/lib/logger";
 import type { Prisma } from "@prisma/client";
 
@@ -69,14 +71,16 @@ export async function executeWorkflow(
 ): Promise<void> {
   try {
     // 1. 读取 Workflow（含 actions JSON 字段）
-    const workflow = await prisma.workflow.findUnique({
-      where: { id: workflowId },
-      select: { actions: true, name: true, workspaceId: true },
-    });
+    const workflow = await runWithWorkspace(workspaceId, (tx) =>
+      tx.workflow.findUnique({
+        where: { id: workflowId },
+        select: { actions: true, name: true, workspaceId: true },
+      }),
+    );
 
     if (!workflow) {
       logger.error("[workflow:executor] workflow not found", { workflowId, executionId });
-      await markFailed(executionId, `workflow ${workflowId} not found`);
+      await markFailed(workspaceId, executionId, `workflow ${workflowId} not found`);
       return;
     }
 
@@ -87,18 +91,20 @@ export async function executeWorkflow(
         expected: workspaceId,
         actual: workflow.workspaceId,
       });
-      await markFailed(executionId, "workspace mismatch");
+      await markFailed(workspaceId, executionId, "workspace mismatch");
       return;
     }
 
     // 2. 更新状态：pending → running
-    await prisma.workflowExecution.update({
-      where: { id: executionId },
-      data: {
-        status: "running",
-        startedAt: new Date(),
-      },
-    });
+    await runWithWorkspace(workspaceId, (tx) =>
+      tx.workflowExecution.update({
+        where: { id: executionId },
+        data: {
+          status: "running",
+          startedAt: new Date(),
+        },
+      }),
+    );
 
     logger.info("[workflow:executor] execution started", {
       workflowId,
@@ -113,10 +119,12 @@ export async function executeWorkflow(
     const results: ActionResult[] = [];
     for (let i = 0; i < actions.length; i++) {
       // 每次执行动作前检查是否已被取消（cancel API 可在执行期间将 status 改为 "cancelled"）
-      const current = await prisma.workflowExecution.findUnique({
-        where: { id: executionId },
-        select: { status: true },
-      });
+      const current = await runWithWorkspace(workspaceId, (tx) =>
+        tx.workflowExecution.findUnique({
+          where: { id: executionId },
+          select: { status: true },
+        }),
+      );
       if (current?.status === "cancelled") {
         logger.info("[workflow:executor] execution cancelled, aborting remaining actions", {
           workflowId,
@@ -145,24 +153,28 @@ export async function executeWorkflow(
     // 5. 判定整体状态：有动作失败 → failed，否则 → completed
     const hasFailure = results.some((r) => r.status === "failed");
     if (hasFailure) {
-      await prisma.workflowExecution.update({
-        where: { id: executionId },
-        data: {
-          status: "failed",
-          completedAt: new Date(),
-          result: { actions: results, triggerData } as unknown as Prisma.InputJsonValue,
-        },
-      });
+      await runWithWorkspace(workspaceId, (tx) =>
+        tx.workflowExecution.update({
+          where: { id: executionId },
+          data: {
+            status: "failed",
+            completedAt: new Date(),
+            result: { actions: results, triggerData } as unknown as Prisma.InputJsonValue,
+          },
+        }),
+      );
       logger.warn("[workflow:executor] execution failed", { workflowId, executionId, results });
     } else {
-      await prisma.workflowExecution.update({
-        where: { id: executionId },
-        data: {
-          status: "completed",
-          completedAt: new Date(),
-          result: { actions: results, triggerData } as unknown as Prisma.InputJsonValue,
-        },
-      });
+      await runWithWorkspace(workspaceId, (tx) =>
+        tx.workflowExecution.update({
+          where: { id: executionId },
+          data: {
+            status: "completed",
+            completedAt: new Date(),
+            result: { actions: results, triggerData } as unknown as Prisma.InputJsonValue,
+          },
+        }),
+      );
       logger.info("[workflow:executor] execution completed", {
         workflowId,
         executionId,
@@ -177,7 +189,7 @@ export async function executeWorkflow(
       executionId,
       error: message,
     });
-    await markFailed(executionId, message).catch(() => {
+    await markFailed(workspaceId, executionId, message).catch(() => {
       // 标记失败本身也失败时，仅记录日志，不再向上传播
       logger.error("[workflow:executor] markFailed also failed", { executionId });
     });
@@ -244,7 +256,7 @@ async function executeAction(
  * config 字段：title（必填）、description?、status?、priority?、assigneeId?、dueDate?
  * triggerData 中的字段可用 {{trigger.field}} 占位符引用（此处仅做简单字符串替换）。
  *
- * 递归防护：此函数直接用 prisma.task.create 创建任务，不经过 API 路由，
+ * 递归防护：此函数直接经 runWithWorkspace 事务创建任务（不走 API 路由），
  * 因此不会触发 emitWorkflowEvent（task.created 事件），避免无限递归。
  * 切勿在此处添加 emitWorkflowEvent 调用，否则会导致 task.created → create_task → task.created 循环。
  */
@@ -260,18 +272,20 @@ async function executeCreateTask(
     return { index, type: "create_task", status: "failed", error: "config.title is required" };
   }
 
-  const created = await prisma.task.create({
-    data: {
-      workspaceId,
-      title,
-      description: resolveStringOptional(cfg.description, triggerData),
-      status: resolveStringOptional(cfg.status, triggerData) ?? "todo",
-      priority: resolveStringOptional(cfg.priority, triggerData) ?? "medium",
-      assigneeId: resolveStringOptional(cfg.assigneeId, triggerData),
-      dueDate: resolveDateOptional(cfg.dueDate, triggerData),
-    },
-    select: { id: true },
-  });
+  const created = await runWithWorkspace(workspaceId, (tx) =>
+    tx.task.create({
+      data: {
+        workspaceId,
+        title,
+        description: resolveStringOptional(cfg.description, triggerData),
+        status: resolveStringOptional(cfg.status, triggerData) ?? "todo",
+        priority: resolveStringOptional(cfg.priority, triggerData) ?? "medium",
+        assigneeId: resolveStringOptional(cfg.assigneeId, triggerData),
+        dueDate: resolveDateOptional(cfg.dueDate, triggerData),
+      },
+      select: { id: true },
+    }),
+  );
 
   return { index, type: "create_task", status: "success", entityId: created.id };
 }
@@ -301,12 +315,26 @@ async function executeSendNotification(
     };
   }
 
-  // 校验目标用户是否为该工作区成员（防止越权/钓鱼）
-  const membership = await prisma.member.findFirst({
-    where: { userId, workspaceId },
-    select: { userId: true },
+  // 校验目标用户是否为该工作区成员（防止越权/钓鱼）+ 创建通知（同一 GUC 事务）
+  const outcome = await runWithWorkspace(workspaceId, async (tx) => {
+    const membership = await tx.member.findFirst({
+      where: { userId, workspaceId },
+      select: { userId: true },
+    });
+    if (!membership) return { notMember: true as const };
+    const created = await tx.notification.create({
+      data: {
+        userId,
+        workspaceId,
+        type,
+        entityId,
+        entityTitle,
+      },
+      select: { id: true },
+    });
+    return { created };
   });
-  if (!membership) {
+  if ("notMember" in outcome) {
     return {
       index,
       type: "send_notification",
@@ -315,18 +343,12 @@ async function executeSendNotification(
     };
   }
 
-  const created = await prisma.notification.create({
-    data: {
-      userId,
-      workspaceId,
-      type,
-      entityId,
-      entityTitle,
-    },
-    select: { id: true },
-  });
-
-  return { index, type: "send_notification", status: "success", entityId: created.id };
+  return {
+    index,
+    type: "send_notification",
+    status: "success",
+    entityId: outcome.created.id,
+  };
 }
 
 /**
@@ -370,10 +392,12 @@ async function executeUpdateTask(
   }
 
   // 限定工作区，防跨租户更新
-  const updated = await prisma.task.updateMany({
-    where: { id: taskId, workspaceId },
-    data,
-  });
+  const updated = await runWithWorkspace(workspaceId, (tx) =>
+    tx.task.updateMany({
+      where: { id: taskId, workspaceId },
+      data,
+    }),
+  );
 
   if (updated.count === 0) {
     return {
@@ -387,16 +411,22 @@ async function executeUpdateTask(
   return { index, type: "update_task", status: "success", entityId: taskId };
 }
 
-/** 标记执行为 failed（独立函数，便于在 catch 中复用） */
-async function markFailed(executionId: string, errorMessage: string): Promise<void> {
-  await prisma.workflowExecution.update({
-    where: { id: executionId },
-    data: {
-      status: "failed",
-      completedAt: new Date(),
-      result: { error: errorMessage } as Prisma.InputJsonValue,
-    },
-  });
+/** 标记执行为 failed（独立函数，便于在 catch 中复用；workspaceId 驱动 GUC） */
+async function markFailed(
+  workspaceId: string,
+  executionId: string,
+  errorMessage: string,
+): Promise<void> {
+  await runWithWorkspace(workspaceId, (tx) =>
+    tx.workflowExecution.update({
+      where: { id: executionId },
+      data: {
+        status: "failed",
+        completedAt: new Date(),
+        result: { error: errorMessage } as Prisma.InputJsonValue,
+      },
+    }),
+  );
 }
 
 // ─── 占位符解析工具 ──────────────────────────────────────────────

@@ -361,6 +361,20 @@ export function runWithShareToken<T>(
   return withGuc({ public_token: token }, fn);
 }
 
+/**
+ * 用户级上下文（2026-10-09，存量裸查收编）：仅注入 app.user_id GUC。
+ *
+ * 用于无 workspaceId、按用户隔离的表（push_subscriptions / push_tokens），
+ * 以及"公开行（workspace_id IS NULL）+ 成员工作区行"混合读取的表
+ *（ai_workflow_templates：策略按成员资格子查询放行）。其余表保持常规隔离。
+ */
+export function runWithUserContext<T>(
+  userId: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<T>,
+): Promise<T> {
+  return withGuc({ user_id: userId }, fn);
+}
+
 // ─── 401/403 统一出口（W2 · 只新增，不动既有 getWorkspaceContext）──
 
 /**
