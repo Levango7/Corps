@@ -160,7 +160,9 @@ describe("IM 附件上传 / 下载（租户隔离 + 鉴权）", () => {
       headers: authHeader(otherToken),
     });
 
-    // 403 = 归属定位成功但成员校验失败；404 = 加固模式下归属查询不可见（fail-closed）
+    // 刻意保持容错（B 类）：403 = 归属定位成功但成员校验失败；404 = 加固模式下归属查询
+    // 不可见（fail-closed）。两者取决于附件行经 runWithAuthOp("cron") 逃生口是否可见，
+    // 由部署的 RLS 加固模式决定，测试无法控制，故不收紧为单一码。
     expect([403, 404]).toContain(res.status);
   });
 
