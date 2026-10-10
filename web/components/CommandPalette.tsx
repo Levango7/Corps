@@ -30,7 +30,12 @@ import {
   GitBranch,
   LayoutTemplate,
   Clock,
-  Sparkles,
+  BarChart3,
+  Wand2,
+  Lightbulb,
+  HelpCircle,
+  Newspaper,
+  PenLine,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
@@ -189,7 +194,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         titleKey: "nav.menu.decisions",
         kind: "nav",
         href: `/w/${wid}/decisions`,
-        icon: FileText,
+        icon: Scale,
       },
       {
         id: "nav-meetings",
@@ -308,35 +313,35 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         titleKey: "nav.menu.aiTools",
         kind: "nav",
         href: `/w/${wid}/ai-tools`,
-        icon: Sparkles,
+        icon: Wand2,
       },
       {
         id: "nav-insight",
         titleKey: "nav.menu.insight",
         kind: "nav",
         href: `/w/${wid}/insight`,
-        icon: Sparkles,
+        icon: Lightbulb,
       },
       {
         id: "nav-knowledge-qa",
         titleKey: "nav.menu.knowledgeQa",
         kind: "nav",
         href: `/w/${wid}/knowledge-qa`,
-        icon: Sparkles,
+        icon: HelpCircle,
       },
       {
         id: "nav-daily-report",
         titleKey: "nav.menu.dailyReport",
         kind: "nav",
         href: `/w/${wid}/daily-report`,
-        icon: Sparkles,
+        icon: Newspaper,
       },
       {
         id: "nav-announcement-draft",
         titleKey: "nav.menu.announcementDraft",
         kind: "nav",
         href: `/w/${wid}/announcement-draft`,
-        icon: Sparkles,
+        icon: PenLine,
       },
       {
         id: "nav-members",
@@ -357,7 +362,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         titleKey: "nav.menu.analytics",
         kind: "nav",
         href: `/w/${wid}/analytics`,
-        icon: FileText,
+        icon: BarChart3,
       },
       {
         id: "nav-settings",

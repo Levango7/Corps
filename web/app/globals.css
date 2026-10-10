@@ -288,7 +288,10 @@ svg {
 
 /* 淡入动画 */
 .fade-in {
-  animation: fadeIn var(--motion-enter) ease-out both;
+  /* 2026-10-10：fill 用 backwards 而非 both——both/forwards 会把终帧的
+     transform 残留为单位矩阵，使该层成为 position:fixed 弹窗的包含块（实测缺陷）。
+     backwards 在动画结束后回到底层样式（视觉终态与之相同，无变化）。 */
+  animation: fadeIn var(--motion-enter) ease-out backwards;
 }
 @keyframes fadeIn {
   from {
@@ -297,7 +300,6 @@ svg {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -363,7 +365,10 @@ svg {
  * -------------------------------------------------------------------------- */
 
 .page-enter {
-  animation: pageEnter var(--motion-enter) ease-out both;
+  /* 2026-10-10：fill 用 backwards 而非 both——both/forwards 会把终帧的
+     transform 残留为单位矩阵，使该层成为 position:fixed 弹窗的包含块（实测缺陷）。
+     backwards 在动画结束后回到底层样式（视觉终态与之相同，无变化）。 */
+  animation: pageEnter var(--motion-enter) ease-out backwards;
 }
 @keyframes pageEnter {
   from {
@@ -372,7 +377,6 @@ svg {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -381,7 +385,10 @@ svg {
  * -------------------------------------------------------------------------- */
 
 .modal-enter {
-  animation: modalEnter var(--motion-slow) ease-out both;
+  /* 2026-10-10：fill 用 backwards 而非 both——both/forwards 会把终帧的
+     transform 残留为单位矩阵，使该层成为 position:fixed 弹窗的包含块（实测缺陷）。
+     backwards 在动画结束后回到底层样式（视觉终态与之相同，无变化）。 */
+  animation: modalEnter var(--motion-slow) ease-out backwards;
 }
 @keyframes modalEnter {
   from {
@@ -390,7 +397,6 @@ svg {
   }
   to {
     opacity: 1;
-    transform: scale(1) translateY(0);
   }
 }
 
@@ -695,12 +701,14 @@ svg {
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
 .page-fade-slide {
-  animation: page-fade-slide var(--motion-enter) var(--ease-out) both;
+  /* 2026-10-10：fill 用 backwards 而非 both——both/forwards 会把终帧的
+     transform 残留为单位矩阵，使该层成为 position:fixed 弹窗的包含块（实测缺陷）。
+     backwards 在动画结束后回到底层样式（视觉终态与之相同，无变化）。 */
+  animation: page-fade-slide var(--motion-enter) var(--ease-out) backwards;
 }
 
 /* 反向退出（slide-down + fade-out，用于退出动画） */
@@ -725,14 +733,15 @@ svg {
  * 用法：父容器加 .stagger-list，子项加 .stagger-item，
  * 通过 --stagger-index 自定义属性控制延迟（JS 设置或 CSS nth-child）。
  * -------------------------------------------------------------------------- */
+/* 纯透明度 stagger（刻意无 transform）：stagger-item 必须 forwards 填充
+   （底层 opacity:0），而 forwards 会在动画结束后把 transform 残留为单位矩阵，
+   成为 position:fixed 弹窗的包含块（2026-10-10 实测缺陷）。 */
 @keyframes stagger-enter {
   from {
     opacity: 0;
-    transform: translateY(8px);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
   }
 }
 
@@ -827,13 +836,17 @@ svg {
     transform: translateY(-2px) scale(1.01);
   }
   100% {
+    /* 终帧显式 transform: none（勿删，同 pageEnter 注释）。 */
     opacity: 1;
-    transform: translateY(0) scale(1);
+    transform: none;
   }
 }
 
 .card-enter-bounce {
-  animation: card-enter-bounce var(--motion-enter) var(--ease-out) both;
+  /* 2026-10-10：fill 用 backwards 而非 both——both/forwards 会把终帧的
+     transform 残留为单位矩阵，使该层成为 position:fixed 弹窗的包含块（实测缺陷）。
+     backwards 在动画结束后回到底层样式（视觉终态与之相同，无变化）。 */
+  animation: card-enter-bounce var(--motion-enter) var(--ease-out) backwards;
 }
 
 /* ----------------------------------------------------------------------------

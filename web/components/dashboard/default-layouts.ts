@@ -27,24 +27,27 @@ export const WIDGET_REGISTRY: Record<
   string,
   { titleKey: string; defaultW: number; defaultH: number; minW?: number; minH?: number }
 > = {
-  // F7: 4列→12列细粒度网格，宽度×3、高度×0.75 取整（rowHeight 80→60）
-  "task-stats": { titleKey: "taskStats", defaultW: 3, defaultH: 1, minW: 2, minH: 1 },
-  "my-tasks": { titleKey: "myTasks", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
-  "decision-actions": { titleKey: "decisionActions", defaultW: 6, defaultH: 2, minW: 4, minH: 1 },
-  "due-this-week": { titleKey: "dueThisWeek", defaultW: 6, defaultH: 2, minW: 4, minH: 1 },
-  "team-load": { titleKey: "teamLoad", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
-  burndown: { titleKey: "burndown", defaultW: 9, defaultH: 3, minW: 6, minH: 2 },
-  "priority-dist": { titleKey: "priorityDist", defaultW: 3, defaultH: 1, minW: 2, minH: 1 },
-  "recent-activity": { titleKey: "recentActivity", defaultW: 6, defaultH: 2, minW: 3, minH: 1 },
-  "gantt-chart": { titleKey: "ganttChart", defaultW: 12, defaultH: 4, minW: 6, minH: 3 },
+  // F7: 4列→12列网格（w/x ×3）。
+  // 2026-10-10 高度修正：rowHeight 80→60 时 h 应 ×1.33，原 ×0.75 是反向缩放——
+  // 全部 Widget 高度只有应有值的 ~56%，内容被裁切/出内滚动条。按内容实际需要
+  // （统计卡 ~200px / 图表 ~240px / 列表 ~240px）重定 defaultH 与 minH。
+  "task-stats": { titleKey: "taskStats", defaultW: 3, defaultH: 4, minW: 2, minH: 2 },
+  "my-tasks": { titleKey: "myTasks", defaultW: 6, defaultH: 4, minW: 4, minH: 3 },
+  "decision-actions": { titleKey: "decisionActions", defaultW: 6, defaultH: 4, minW: 4, minH: 2 },
+  "due-this-week": { titleKey: "dueThisWeek", defaultW: 6, defaultH: 4, minW: 4, minH: 2 },
+  "team-load": { titleKey: "teamLoad", defaultW: 6, defaultH: 4, minW: 4, minH: 2 },
+  burndown: { titleKey: "burndown", defaultW: 9, defaultH: 4, minW: 6, minH: 3 },
+  "priority-dist": { titleKey: "priorityDist", defaultW: 3, defaultH: 4, minW: 2, minH: 2 },
+  "recent-activity": { titleKey: "recentActivity", defaultW: 6, defaultH: 4, minW: 3, minH: 2 },
+  "gantt-chart": { titleKey: "ganttChart", defaultW: 12, defaultH: 6, minW: 6, minH: 4 },
   "milestone-timeline": {
     titleKey: "milestoneTimeline",
     defaultW: 6,
-    defaultH: 4,
+    defaultH: 5,
     minW: 4,
     minH: 3,
   },
-  "custom-chart": { titleKey: "customChart", defaultW: 6, defaultH: 3, minW: 4, minH: 2 },
+  "custom-chart": { titleKey: "customChart", defaultW: 6, defaultH: 5, minW: 4, minH: 3 },
 };
 
 /** 已注册的 Widget id 列表（用于「添加 Widget」对话框展示可选项） */
