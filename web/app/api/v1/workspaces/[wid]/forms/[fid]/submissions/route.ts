@@ -36,7 +36,7 @@ export async function GET(
         {
           code: 400,
           message: apiMsg(req, "validationFailed"),
-          errors: parsed.error.errors,
+          errors: parsed.error.issues,
           data: null,
         },
         { status: 400 },
@@ -158,7 +158,7 @@ export async function POST(
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

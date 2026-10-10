@@ -94,8 +94,9 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
       }
       return zh ? `${label}格式不正确` : `${label} has an invalid format`;
     }
-    case "invalid_string": {
-      const validation = (issue as { validation?: unknown }).validation;
+    case "invalid_format": {
+      // zod 4：格式类 issue 的 code 为 invalid_format，格式名在 format 属性
+      const validation = (issue as { format?: unknown }).format;
       const kind = typeof validation === "string" ? validation : "";
       if (kind === "email") {
         return zh
@@ -112,7 +113,7 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
     }
     case "too_small": {
       const minimum = (issue as { minimum?: number }).minimum;
-      const origin = (issue as { type?: string }).type;
+      const origin = (issue as { origin?: string }).origin;
       if (origin === "string" && typeof minimum === "number") {
         return zh
           ? `${label}至少需要 ${minimum} 个字符`
@@ -122,7 +123,7 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
     }
     case "too_big": {
       const maximum = (issue as { maximum?: number }).maximum;
-      const origin = (issue as { type?: string }).type;
+      const origin = (issue as { origin?: string }).origin;
       if (origin === "string" && typeof maximum === "number") {
         return zh
           ? `${label}不能超过 ${maximum} 个字符`
@@ -130,15 +131,14 @@ function describe(issue: z.ZodIssue, locale: "zh" | "en"): string {
       }
       return zh ? `${label}取值过大` : `${label} is too large`;
     }
-    case "invalid_enum_value": {
-      const options = (issue as { options?: unknown[] }).options;
+    case "invalid_value": {
+      // zod 4：invalid_enum_value 与 invalid_literal 合并为 invalid_value
+      const options = (issue as { values?: unknown[] }).values;
       const list = Array.isArray(options) ? options.join(" / ") : "";
       return zh
         ? `${label}取值不在允许范围内${list ? `（${list}）` : ""}`
         : `${label} is not an allowed value`;
     }
-    case "invalid_literal":
-      return zh ? `${label}取值不正确` : `${label} has an invalid value`;
     default:
       // 兜底：优先用 zod 自带 message，但它是英文，仅在没有更好选择时使用
       return zh ? `${label}填写有误` : issue.message;

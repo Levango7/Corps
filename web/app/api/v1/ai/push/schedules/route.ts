@@ -27,7 +27,7 @@ const createSchema = z.object({
   capability: z.enum(CAPABILITIES),
   cron: z.string().min(1).max(50),
   enabled: z.boolean().default(true),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 
 /** 推送频率枚举（M2 闭环完善） */

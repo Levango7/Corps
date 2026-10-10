@@ -16,7 +16,7 @@ const patchSchema = z.object({
   wid: z.string().uuid(),
   cron: z.string().min(1).max(50).optional(),
   enabled: z.boolean().optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
 });
 
 /** PATCH /api/v1/ai/push/schedules/{id} — 更新推送计划 */

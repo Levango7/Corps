@@ -31,7 +31,7 @@ const listQuerySchema = z.object({
 const stepSchema = z.object({
   name: z.string().min(1).max(100),
   capability: z.string().min(1).max(50),
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 /** POST 创建 schema */
@@ -42,7 +42,7 @@ const createSchema = z.object({
   category: z.enum(CATEGORY_VALUES),
   steps: z.array(stepSchema).min(1).max(50),
   isPublic: z.boolean().default(false),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

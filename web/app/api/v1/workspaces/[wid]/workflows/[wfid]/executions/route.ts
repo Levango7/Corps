@@ -37,7 +37,7 @@ export async function GET(
         {
           code: 400,
           message: apiMsg(req, "validationFailed"),
-          errors: parsed.error.errors,
+          errors: parsed.error.issues,
           data: null,
         },
         { status: 400 },
@@ -87,7 +87,7 @@ const listSchema = z.object({
 });
 
 const triggerSchema = z.object({
-  triggerData: z.record(z.unknown()).optional(),
+  triggerData: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**
@@ -170,7 +170,7 @@ export async function POST(
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );
