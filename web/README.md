@@ -22,7 +22,7 @@ cd web
 pnpm install --frozen-lockfile
 ```
 
-关键依赖（package.json 已锁定版本）：`better-auth@1.3.28`、`stripe@18.3.0`、`jsonwebtoken@9.0.2`、`@prisma/client@6.15.0`。
+关键依赖（package.json 已锁定版本）：`better-auth@1.3.28`、`stripe@22.6.2`、`jsonwebtoken@9.0.2`、`@prisma/client@6.15.0`。
 
 ### 2. 启动数据库（Docker）
 

@@ -51,19 +51,19 @@ export class StripeProvider implements PaymentProvider {
         // API 版本必须显式钉住，不能吃 SDK 默认值。
         //
         // 原因：stripe-node 的 `StripeConfig.apiVersion` 类型是**单字面量**
-        // （本版 `LatestApiVersion = '2025-06-30.basil'`，见 node_modules/stripe/types/lib.d.ts:30），
-        // 而该字段是可选的——不写就等于"永久跟随 SDK 默认值"。可 SDK 升级会自动换掉
-        // 生产请求头里的 Stripe-Version：那是一次**静默的、只在上线后暴露的**支付路径变更，
-        // 且账单/订阅这类接口的字段语义可能整体漂移，回滚要动业务代码而不是动依赖版本。
+        // （本版 `LatestApiVersion = '2026-08-26.dahlia'`），而该字段是可选的——
+        // 不写就等于"永久跟随 SDK 默认值"。可 SDK 升级会自动换掉生产请求头里的
+        // Stripe-Version：那是一次**静默的、只在上线后暴露的**支付路径变更，且账单/
+        // 订阅这类接口的字段语义可能整体漂移，回滚要动业务代码而不是动依赖版本。
         //
-        // 显式写死之后，这个"静默变更"变成"编译期错误"：升级 SDK 到 v22 时
-        // LatestApiVersion 变成另一个字面量，这一行会直接 tsc 失败，
-        // 强迫升级时显式决策"要不要跟着换 API 大版本"——也就是 ADR-014 §4.2 说的
-        // 把「SDK 升级」与「API 版本升级」拆成两件事。
+        // 显式写死之后，这个"静默变更"变成"编译期错误"：本仓 2026-10-10 升 SDK
+        // 18.3.0→22.6.2 时这一行立刻 tsc 失败（旧值 basil 不在新 LatestApiVersion
+        // 单字面量里），强迫显式决策 API 大版本——按 ADR-014 §4.2 裁决：目标
+        // 22.6.2 绑定 dahlia（ basil→dahlia 跨 1 个 API 大版本），执行记录见 §12。
         //
         // 改动本文件不影响任何调用方：全仓仅此一处 `new Stripe(`。
         // 升级 SDK 时同步改这一行，并按 https://stripe.com/docs/upgrades 核对破坏性变更。
-        apiVersion: "2025-06-30.basil",
+        apiVersion: "2026-08-26.dahlia",
         appInfo: { name: "corps", version: "0.1.0" },
       });
     }

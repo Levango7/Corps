@@ -826,3 +826,42 @@ v7.10 仍完整支持 `prisma-client-js` 生成器，产物仍在 `node_modules/
 - Dependabot #15/#16 按第 §7 建议关闭；`.github/dependabot.yml` 已为
   prisma / @prisma/client 加 major ignore（防周期性重建红 PR）。
 - Stripe 18→22.6.2 与其余 minor 升级不在本批次范围（§4.2 结论不变）。
+
+---
+
+## 十二、执行记录（2026-10-10，Stripe 18.3.0 → 22.6.2 完成）
+
+### 12.1 实际改动面（一行代码 + 一行测试）
+
+- `web/package.json`：`stripe` 18.3.0 → **22.6.2**（ADR §4.2 裁决目标；23.0.0 继续否决，§4.2.4 触发条件未满足）。
+- `web/lib/payments/stripe-provider.ts`：`apiVersion` 字面量 `2025-06-30.basil` → **`2026-08-26.dahlia`**
+  （22.6.2 绑定的 API 大版本）。**该护栏按设计生效**：升级瞬间 tsc 即失败
+  （`"2025-06-30.basil" is not assignable to "2026-08-26.dahlia"`），把"静默跟随
+  SDK 默认值"变成编译期显式决策——本批次唯一代码改动。
+- `web/tests/unit/stripe-api-version.test.ts`：断言值同步更新（该用例守的是
+  "键必须存在"的钉死行为，值断言仅作版本锚点）。
+- `docs`：`web/README.md` 的 `stripe@18.3.0` 版本号同步为 22.6.2；`spec/SPEC.md`
+  无 Stripe 版本声明（仅"三通道支付"表述，不变）。
+
+### 12.2 §3 预判的破坏性变更实测结果（逐条确认）
+
+| 变更（§4.2.3 清单） | 实测 |
+| --- | --- |
+| apiVersion 字面量 | **命中且已处置**（见 §12.1）——升级直接暴露，无静默漂移 |
+| v19–v23 其余破坏性变更（webhook 解析方法、CJS 导出形状、`Stripe.Decimal`、params/options 分离、callback 移除等） | **0 命中**——`tsc --noEmit` 0 错即证（5 处调用全部为单 params 对象，`constructEvent` 同步版仍在） |
+| Node 版本要求（v23 需 ≥20） | 不涉及（CI Node 22，且目标 22.6.2 无此要求） |
+
+### 12.3 验证
+
+- 本地：tsc 0 错 / eslint 0 warning / 单元 859 passed（含 stripe-api-version 钉死用例）/
+  五道 python 门禁 PASS / Docker 真构建 + 容器 healthy + **集成 201 passed 0 failed**
+  （billing/webhook 路径全绿）。
+- CI：12 项检查应全绿（含 hardened RLS 腿的 rls-engine）。
+- **沙箱真跑未覆盖**：本机无 Stripe 沙箱流量，`constructEvent` 的运行时行为与
+  dahlia 字段语义仍需上线后首笔真实交易验证（§8 第 4/5 条的遗留约束不变）。
+
+### 12.4 后续防护
+
+`.github/dependabot.yml` 为 `stripe` 加 **major ignore**——23.x 每攒一个新补丁版本
+就会重建 PR（§4.2.4 的触发条件是 23.x 累计 ≥3 补丁版本 + 沙箱验证记录，Dependabot
+不会等这个条件），按 prisma 的同款先例处理。

@@ -15,6 +15,11 @@ updates:
           - "minor"
           - "patch"
     ignore:
+      # Stripe major：ADR-014 §4.2.4 明确否决 23.0.0（触发条件：23.x 累计 ≥3 补丁
+      # 且沙箱跑通全链路）。2026-10-10 已完成 18.3.0→22.6.2（见 §12）；Dependabot
+      # 不等触发条件，按 prisma 同款先例加 major ignore。
+      - dependency-name: "stripe"
+        update-types: ["version-update:semver-major"]
       # Prisma major 是独立工程项目而非一次版本 bump（v6→v7 需 prisma.config.ts +
       # driver adapter + Dockerfile/部署脚本适配，见 issue #32 与 ADR-014 §4.3）；
       # 2026-10-10 的 chore/prisma-7-upgrade 批次已完成 6→7。后续 major 一律人工
