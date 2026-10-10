@@ -3,7 +3,11 @@ import react from "@vitejs/plugin-react";
 import path from "path";
 
 export default defineConfig({
-  plugins: [react()],
+  // `as` 断言（2026-10-10，随 @vitejs/plugin-react 4→6）：plugin-react 6 的
+  // peer 解析把 vite 8.x 类型拉进来，与 vitest 内嵌的 vite 6.4.3 Plugin 类型
+  // 不兼容（HotUpdatePluginContext vs MinimalPluginContext）。运行时完全兼容，
+  // 仅类型面冲突。可移除本断言的时机 = 仓内 vite 统一到单一版本。
+  plugins: [react() as never],
   test: {
     // 集成测试是纯 API 测试（fetch localhost），无需 DOM；
     // 组件单元测试通过文件顶部 `// @vitest-environment jsdom` 注释按需切换到 jsdom。
