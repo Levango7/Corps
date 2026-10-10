@@ -3,7 +3,7 @@
 #   1) 以 DATABASE_OWNER_URL 执行 Prisma migrate deploy（DDL 需要属主权限）
 #   2) RLS_ACTIVATE=true 时，执行 db/rls-activate.sql（创建 corps_app 角色 + FORCE RLS）
 #   3) 应用以 DATABASE_URL（corps_app 最小权限角色）运行
-# prisma CLI 已在 Dockerfile 中全局安装（npm install -g prisma@6.15.0）
+# prisma CLI 已在 Dockerfile 中全局安装（npm install -g prisma@7.10.0）
 set -e
 
 echo "----------------------------------------------------------"
@@ -15,9 +15,9 @@ echo "----------------------------------------------------------"
 
 if [ -n "${DATABASE_OWNER_URL}" ]; then
   echo "[entrypoint] 以 owner 连接执行 Prisma migrate deploy..."
-  # prisma 6 的 schema 固定从 env("DATABASE_URL") 读取 datasource url，
-  # 临时覆盖 DATABASE_URL 让 migrate deploy 走属主连接；RNS 子命令忽略
-  # 我们额外设的 PRISMA_DATABASE_URL（不识别的前缀），所以必须用 DATABASE_URL
+  # prisma 7 的 datasource url 统一由 /app/prisma.config.ts 从 env("DATABASE_URL")
+  # 读取（与 v6 的 schema env() 同一语义）；临时覆盖 DATABASE_URL 让 migrate
+  # deploy 走属主连接。
   DATABASE_URL="${DATABASE_OWNER_URL}" \
     prisma migrate deploy --schema=/app/prisma/schema.prisma
   echo "[entrypoint] Prisma migrate deploy 完成"

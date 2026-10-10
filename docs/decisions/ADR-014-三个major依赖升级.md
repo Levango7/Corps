@@ -19,11 +19,11 @@ issue #32 的 body **只有 5 字节**（一个 `## 现状`）。也就是说 Ty
 
 ## 二、决策（摘要）
 
-| 阶段 | 依赖 | 当前 | 目标 | 裁决 |
-|---|---|---|---|---|
-| 一 | TypeScript | `5.9.3` | **`6.0.3`** | 实施。明确否决 7.0.2（见 §4.1.4） |
-| 二 | Stripe | `18.3.0` | **`22.6.2`** | 实施。明确否决 23.0.0（见 §4.2.4） |
-| 三 | Prisma | `6.15.0` | `7.10.0` | **本轮不启动**，挂 §7.3 的前置条件 |
+| 阶段 | 依赖       | 当前     | 目标         | 裁决                               |
+| ---- | ---------- | -------- | ------------ | ---------------------------------- |
+| 一   | TypeScript | `5.9.3`  | **`6.0.3`**  | 实施。明确否决 7.0.2（见 §4.1.4）  |
+| 二   | Stripe     | `18.3.0` | **`22.6.2`** | 实施。明确否决 23.0.0（见 §4.2.4） |
+| 三   | Prisma     | `6.15.0` | `7.10.0`     | **本轮不启动**，挂 §7.3 的前置条件 |
 
 顺序维持 **TS → Stripe → Prisma**，理由见 §5。三处修正（目标版本而非 latest、Prisma 改挂前置条件）是本 ADR 相对初始顺序的实质改动。
 
@@ -37,12 +37,12 @@ issue #32 的 body **只有 5 字节**（一个 `## 现状`）。也就是说 Ty
 
 `web/package.json` 三个包均为**精确 pin、无 semver 范围**：
 
-| 包 | 位置 | 声明值 | `node_modules` 实测值 | 一致 |
-|---|---|---|---|---|
-| `typescript` | `web/package.json:100`（devDeps） | `5.9.3` | 5.9.3 | 是 |
-| `stripe` | `web/package.json:68` | `18.3.0` | 18.3.0 | 是 |
-| `@prisma/client` | `web/package.json:33` | `6.15.0` | 6.15.0 | 是 |
-| `prisma`（CLI） | `web/package.json:98`（devDeps） | `6.15.0` | 6.15.0 | 是 |
+| 包               | 位置                              | 声明值   | `node_modules` 实测值 | 一致 |
+| ---------------- | --------------------------------- | -------- | --------------------- | ---- |
+| `typescript`     | `web/package.json:100`（devDeps） | `5.9.3`  | 5.9.3                 | 是   |
+| `stripe`         | `web/package.json:68`             | `18.3.0` | 18.3.0                | 是   |
+| `@prisma/client` | `web/package.json:33`             | `6.15.0` | 6.15.0                | 是   |
+| `prisma`（CLI）  | `web/package.json:98`（devDeps）  | `6.15.0` | 6.15.0                | 是   |
 
 **第二处声明点（易漏）**：`desktop/src-tauri/resources/standalone/package.json` 同样精确 pin 了这四个包（`:33` `@prisma/client 6.15.0`、`:68` `stripe 18.3.0`、`:97` `prisma 6.15.0`、`:99` `typescript 5.9.3`）。任何一项升级都要同步改这两处，否则 Tauri 桌面端打包拿到的仍是旧版本。
 
@@ -64,11 +64,11 @@ $ npm view prisma dist-tags
 
 跨 major 数与发布节奏：
 
-| 包 | 当前 | 当前发布日期 | latest | latest 发布日期 | 跨越 major | 当前所在线是否还在出补丁 |
-|---|---|---|---|---|---|---|
-| typescript | 5.9.3 | 2025-09-30 | **7.0.2** | 2026-07-08 | 2（6、7） | 5.x 已停更 |
-| stripe | 18.3.0 | 2025-07-01 | **23.0.0** | **2026-10-01** | 5（19–23） | 18.x 最后一版 18.5.0（2025-08-27），已停更 13 个月 |
-| @prisma/client | 6.15.0 | ~2025-08 | **7.10.0** | 2026-08-25 | 1（7） | 6.x 最后一版 6.19.3（2026-04-01），已停更 6 个月 |
+| 包             | 当前   | 当前发布日期 | latest     | latest 发布日期 | 跨越 major | 当前所在线是否还在出补丁                           |
+| -------------- | ------ | ------------ | ---------- | --------------- | ---------- | -------------------------------------------------- |
+| typescript     | 5.9.3  | 2025-09-30   | **7.0.2**  | 2026-07-08      | 2（6、7）  | 5.x 已停更                                         |
+| stripe         | 18.3.0 | 2025-07-01   | **23.0.0** | **2026-10-01**  | 5（19–23） | 18.x 最后一版 18.5.0（2025-08-27），已停更 13 个月 |
+| @prisma/client | 6.15.0 | ~2025-08     | **7.10.0** | 2026-08-25      | 1（7）     | 6.x 最后一版 6.19.3（2026-04-01），已停更 6 个月   |
 
 TypeScript 稳定版实际只有三个跨过 5.9 的版本，且 **6.x 线已终止**：
 
@@ -105,14 +105,14 @@ EXIT=0        耗时 2m14s
 
 TS 6.0 是自 TS 2.0 以来破坏性变更最多的一次发布（多个二手来源一致，官方文档待实施时核对）。与本仓相关的：
 
-| 变更 | 本仓现状 | 是否撞上 |
-|---|---|---|
-| `types` 默认变为 `[]`，不再自动包含全部 `@types/*` | `web/tsconfig.json` **没有 `types` 字段** | **会。** `@types/node` 的全局声明（`process` / `Buffer` / `__dirname`）会整体消失，API 路由与脚本大面积报错 |
-| `strict` 默认 true | 已显式 `strict: true` | 否 |
-| `module` 默认 `esnext`、`target` 默认 `es2025` | 已显式 `target: ES2022`、`module: esnext` | 否（但 `target` 需评估是否顺势上调） |
-| 移除 `module: amd/umd/systemjs/none`、`moduleResolution: classic`、`outFile` | 用的是 `bundler` | 否 |
-| `esModuleInterop` / `allowSyntheticDefaultImports` 不可再为 false | 已为 `true` | 否 |
-| 为 tsc 传文件参数且存在 tsconfig 时报错 | CI 用 `-p .`，不传文件参数 | 否 |
+| 变更                                                                         | 本仓现状                                  | 是否撞上                                                                                                    |
+| ---------------------------------------------------------------------------- | ----------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| `types` 默认变为 `[]`，不再自动包含全部 `@types/*`                           | `web/tsconfig.json` **没有 `types` 字段** | **会。** `@types/node` 的全局声明（`process` / `Buffer` / `__dirname`）会整体消失，API 路由与脚本大面积报错 |
+| `strict` 默认 true                                                           | 已显式 `strict: true`                     | 否                                                                                                          |
+| `module` 默认 `esnext`、`target` 默认 `es2025`                               | 已显式 `target: ES2022`、`module: esnext` | 否（但 `target` 需评估是否顺势上调）                                                                        |
+| 移除 `module: amd/umd/systemjs/none`、`moduleResolution: classic`、`outFile` | 用的是 `bundler`                          | 否                                                                                                          |
+| `esModuleInterop` / `allowSyntheticDefaultImports` 不可再为 false            | 已为 `true`                               | 否                                                                                                          |
+| 为 tsc 传文件参数且存在 tsconfig 时报错                                      | CI 用 `-p .`，不传文件参数                | 否                                                                                                          |
 
 唯一实质改动面是 **`web/tsconfig.json` 一个文件**。
 
@@ -185,14 +185,14 @@ typescript-eslint@8.71.1（latest）    peerDependencies.typescript = ">=4.8.4 <
 - 全仓**只有 1 个文件** import Stripe SDK：`web/lib/payments/stripe-provider.ts`。`web/lib/payments/index.ts` 只 import `StripeProvider` 这个适配器类，不碰 SDK。
 - SDK 调用点共 **6 处**，全部是单参数对象形式：
 
-| 行 | 调用 |
-|---|---|
-| `stripe-provider.ts:113` | `stripe.checkout.sessions.create({...})` |
-| `stripe-provider.ts:159` | `stripe.billingPortal.sessions.create({...})` |
-| `stripe-provider.ts:176` | `stripe.subscriptions.retrieve(id)` |
-| `stripe-provider.ts:179` | `stripe.subscriptions.update(id, {...})` |
+| 行                       | 调用                                                   |
+| ------------------------ | ------------------------------------------------------ |
+| `stripe-provider.ts:113` | `stripe.checkout.sessions.create({...})`               |
+| `stripe-provider.ts:159` | `stripe.billingPortal.sessions.create({...})`          |
+| `stripe-provider.ts:176` | `stripe.subscriptions.retrieve(id)`                    |
+| `stripe-provider.ts:179` | `stripe.subscriptions.update(id, {...})`               |
 | `stripe-provider.ts:209` | `stripe.webhooks.constructEvent(rawBody, sig, secret)` |
-| `stripe-provider.ts:248` | `stripe.subscriptions.retrieve(subId)` |
+| `stripe-provider.ts:248` | `stripe.subscriptions.retrieve(subId)`                 |
 
 - 文件里还有 **4 处为绕开 v18 类型缺口而写的交叉类型 cast**，它们是最可能与新版类型冲突的地方：
 
@@ -203,12 +203,12 @@ typescript-eslint@8.71.1（latest）    peerDependencies.typescript = ">=4.8.4 <
 
 #### 4.2.2 会撞上的破坏性变更（跨 4 个 major）
 
-| 版本 | API 版本 | 与本仓相关的破坏性变更 | 是否撞上 |
-|---|---|---|---|
-| v19 | 2025-09-30.clover | V2 事件类型搬移；`Discount.coupon` 移除 | 不撞（本仓只用 v1 资源） |
-| v20 | 2025-11-17.clover | v2 数组参数序列化改 indexed 格式 | 不撞（不用 v2） |
-| v21 | 2026-03-25.dahlia | ① `decimal_string` 字段类型 `string` → `Stripe.Decimal`；② **用错 webhook 解析方法时抛错**；③ Node >= 18 | ① 大概率不撞（读的是 `amount_paid` / `quantity` 整数位，非 decimal 位）；② **需实测**，见下 |
-| v22 | 2026-03-25.dahlia | ① TS 类型大改：类型改为与实现同文件内联，移除顶层 `stripe` ambient module；② **移除 callback 支持**；③ **params 与 options 不再混用，params 必须在前、options 必须在后**；④ CJS 入口不再导出 `.default` / `.Stripe`；⑤ `Stripe.StripeContext` → `StripeContextType` | ②③ 不撞（6 处调用都是单 params 对象）；① **4 处 cast 需复核**；⑤ 不撞 |
+| 版本 | API 版本          | 与本仓相关的破坏性变更                                                                                                                                                                                                                                              | 是否撞上                                                                                    |
+| ---- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------- |
+| v19  | 2025-09-30.clover | V2 事件类型搬移；`Discount.coupon` 移除                                                                                                                                                                                                                             | 不撞（本仓只用 v1 资源）                                                                    |
+| v20  | 2025-11-17.clover | v2 数组参数序列化改 indexed 格式                                                                                                                                                                                                                                    | 不撞（不用 v2）                                                                             |
+| v21  | 2026-03-25.dahlia | ① `decimal_string` 字段类型 `string` → `Stripe.Decimal`；② **用错 webhook 解析方法时抛错**；③ Node >= 18                                                                                                                                                            | ① 大概率不撞（读的是 `amount_paid` / `quantity` 整数位，非 decimal 位）；② **需实测**，见下 |
+| v22  | 2026-03-25.dahlia | ① TS 类型大改：类型改为与实现同文件内联，移除顶层 `stripe` ambient module；② **移除 callback 支持**；③ **params 与 options 不再混用，params 必须在前、options 必须在后**；④ CJS 入口不再导出 `.default` / `.Stripe`；⑤ `Stripe.StripeContext` → `StripeContextType` | ②③ 不撞（6 处调用都是单 params 对象）；① **4 处 cast 需复核**；⑤ 不撞                       |
 
 **最大风险不在代码，而在 API 版本的隐式跳跃。** `stripe-provider.ts:50-52` 构造时**没有指定 `apiVersion`**：
 
@@ -273,18 +273,18 @@ import 形态拆解（决定 v7 改动的机械程度与风险）：
 
 #### 4.3.2 会撞上的破坏性变更（逐条落到文件）
 
-| # | 破坏性变更 | 本仓证据 | 影响 |
-|---|---|---|---|
-| 1 | **driver adapter 强制**（`new PrismaClient({ adapter })`，空构造抛错） | `web/lib/prisma.ts:43`、`web/prisma/seed.ts:6`、`server/collab/persistence.ts:62`、`server/collab/y-websocket-server.ts:335` | 4 处装配点改写；新增依赖 `@prisma/adapter-pg` + `pg`（`^8.16.3`） |
-| 2 | **`datasourceUrl` 构造参数移除** | `web/tests/integration/rls-engine.test.ts:35-36`（`new PrismaClient({ datasourceUrl: OWNER_URL! })` 两处） | RLS 引擎集成测试必须重写连接注入方式——这是**唯一守护 RLS 的集成测试** |
-| 3 | **generator 要求显式 `output`，产物不再进 `node_modules`** | `web/prisma/schema.prisma:51-53` 只有 `provider = "prisma-client-js"`，无 `output` | 124 条 import 全量改路径；产物目录要进 `.gitignore` 与 Docker 复制清单 |
-| 4 | **client 转为 ESM** | `web/package.json` 无 `"type": "module"`（CJS） | Next 与 `tsx` 可消化，但 `desktop/src-tauri` 的 standalone 打包链路需单独验证 |
-| 5 | **`prisma.config.ts` 成为 CLI 配置主入口**；`datasource.url` 从 schema 迁走 | `web/prisma/schema.prisma:55-58`（`url = env("DATABASE_URL")`）；仓库内**无 `prisma.config.ts`** | 新增文件；`schema.prisma` 改结构 |
-| 6 | **CLI 不再自动加载 `.env`** | `web/.env`、`web/.env.local` 存在；本地 `prisma migrate dev` / `db:seed` 依赖它 | 需 dotenv 显式加载；容器入口靠环境变量传值（`web/docker/entrypoint.sh:24-26` 用 `DATABASE_URL=... prisma migrate deploy`）不受影响 |
-| 7 | **`Prisma.validator()` 废弃/移除，改用 `satisfies`** | `web/app/api/v1/workspaces/[wid]/tasks/route.ts:70,91` | 1 个文件 2 处改写 |
-| 8 | **`$use()` 中间件移除** | 全仓零使用（已 grep 确认） | 不撞 |
-| 9 | **client 引擎全部移除**（LibraryEngine / BinaryEngine / DataProxy / ReactNative） | `web/Dockerfile:47-56` 手工 `cp` `@prisma/engines` 与 `.prisma/client` 到 standalone；`pnpm-workspace.yaml:8` 允许 `@prisma/client` / `@prisma/engines` 构建脚本 | 镜像构建的两条复制逻辑失效或复制了不再存在的东西，需重写 |
-| 10 | `prisma.config.ts` 缺失时 introspection 不可用 | 影响 drift 检查（`ci.yml:153` 的 `corps_drift` 库） | CI 需配套改 |
+| #   | 破坏性变更                                                                        | 本仓证据                                                                                                                                                         | 影响                                                                                                                               |
+| --- | --------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **driver adapter 强制**（`new PrismaClient({ adapter })`，空构造抛错）            | `web/lib/prisma.ts:43`、`web/prisma/seed.ts:6`、`server/collab/persistence.ts:62`、`server/collab/y-websocket-server.ts:335`                                     | 4 处装配点改写；新增依赖 `@prisma/adapter-pg` + `pg`（`^8.16.3`）                                                                  |
+| 2   | **`datasourceUrl` 构造参数移除**                                                  | `web/tests/integration/rls-engine.test.ts:35-36`（`new PrismaClient({ datasourceUrl: OWNER_URL! })` 两处）                                                       | RLS 引擎集成测试必须重写连接注入方式——这是**唯一守护 RLS 的集成测试**                                                              |
+| 3   | **generator 要求显式 `output`，产物不再进 `node_modules`**                        | `web/prisma/schema.prisma:51-53` 只有 `provider = "prisma-client-js"`，无 `output`                                                                               | 124 条 import 全量改路径；产物目录要进 `.gitignore` 与 Docker 复制清单                                                             |
+| 4   | **client 转为 ESM**                                                               | `web/package.json` 无 `"type": "module"`（CJS）                                                                                                                  | Next 与 `tsx` 可消化，但 `desktop/src-tauri` 的 standalone 打包链路需单独验证                                                      |
+| 5   | **`prisma.config.ts` 成为 CLI 配置主入口**；`datasource.url` 从 schema 迁走       | `web/prisma/schema.prisma:55-58`（`url = env("DATABASE_URL")`）；仓库内**无 `prisma.config.ts`**                                                                 | 新增文件；`schema.prisma` 改结构                                                                                                   |
+| 6   | **CLI 不再自动加载 `.env`**                                                       | `web/.env`、`web/.env.local` 存在；本地 `prisma migrate dev` / `db:seed` 依赖它                                                                                  | 需 dotenv 显式加载；容器入口靠环境变量传值（`web/docker/entrypoint.sh:24-26` 用 `DATABASE_URL=... prisma migrate deploy`）不受影响 |
+| 7   | **`Prisma.validator()` 废弃/移除，改用 `satisfies`**                              | `web/app/api/v1/workspaces/[wid]/tasks/route.ts:70,91`                                                                                                           | 1 个文件 2 处改写                                                                                                                  |
+| 8   | **`$use()` 中间件移除**                                                           | 全仓零使用（已 grep 确认）                                                                                                                                       | 不撞                                                                                                                               |
+| 9   | **client 引擎全部移除**（LibraryEngine / BinaryEngine / DataProxy / ReactNative） | `web/Dockerfile:47-56` 手工 `cp` `@prisma/engines` 与 `.prisma/client` 到 standalone；`pnpm-workspace.yaml:8` 允许 `@prisma/client` / `@prisma/engines` 构建脚本 | 镜像构建的两条复制逻辑失效或复制了不再存在的东西，需重写                                                                           |
+| 10  | `prisma.config.ts` 缺失时 introspection 不可用                                    | 影响 drift 检查（`ci.yml:153` 的 `corps_drift` 库）                                                                                                              | CI 需配套改                                                                                                                        |
 
 **额外：部署链路上的硬编码版本。**
 
@@ -309,12 +309,12 @@ web/Dockerfile:76    RUN npm install -g prisma@6.15.0
 
 这是本次调研里最值得单列的一条。Prisma 官方给出的 v6 URL 参数 → v7 pg 配置对照表：
 
-| 行为 | v6 URL 参数 | v6 默认 | v7 pg 配置字段 | v7 默认 |
-|---|---|---|---|---|
-| 池大小 | `connection_limit` | `num_cpus*2+1` | `max` | **10** |
-| 取连接超时 | `pool_timeout` | **10s** | `connectionTimeoutMillis` | **0（无超时）** |
-| 建连超时 | `connect_timeout` | **5s** | `connectionTimeoutMillis` | **0（无超时）** |
-| 空闲超时 | `max_idle_connection_lifetime` | 300s | `idleTimeoutMillis` | 10s |
+| 行为       | v6 URL 参数                    | v6 默认        | v7 pg 配置字段            | v7 默认         |
+| ---------- | ------------------------------ | -------------- | ------------------------- | --------------- |
+| 池大小     | `connection_limit`             | `num_cpus*2+1` | `max`                     | **10**          |
+| 取连接超时 | `pool_timeout`                 | **10s**        | `connectionTimeoutMillis` | **0（无超时）** |
+| 建连超时   | `connect_timeout`              | **5s**         | `connectionTimeoutMillis` | **0（无超时）** |
+| 空闲超时   | `max_idle_connection_lifetime` | 300s           | `idleTimeoutMillis`       | 10s             |
 
 （来源：Prisma 官方文档 Connection pool 页）
 
@@ -330,20 +330,23 @@ const isConnectionError =
   (error.code === "P1001" || error.code === "P1002" || error.code === "P1008");
 ```
 
-   换成 pg adapter 后取连接默认**不再超时**（`connectionTimeoutMillis: 0`），也就**不再产生 P1008**。结果是：池耗尽时不再快速失败并被重试，而是**无限排队**。表现不是报错率上升，而是延迟无声拉长直到上游超时——**没有错误码、没有告警、日志全绿**。这正是"上线后才炸"的典型形态。
+换成 pg adapter 后取连接默认**不再超时**（`connectionTimeoutMillis: 0`），也就**不再产生 P1008**。结果是：池耗尽时不再快速失败并被重试，而是**无限排队**。表现不是报错率上升，而是延迟无声拉长直到上游超时——**没有错误码、没有告警、日志全绿**。这正是"上线后才炸"的典型形态。
 
 3. **`withGuc` 的并发上限会静默下降。** `web/lib/auth.ts:247-253` 是 `runWithWorkspace` / `runWithAuthOp` / `runWithSeatCheck` / `runWithShareToken` 的共同底层——**每一个带租户上下文的数据库操作都走它**：
 
 ```ts
 return withDbRetry(() =>
   prisma.$transaction(
-    async (tx) => { await setGucs(tx, gucs); return fn(tx); },
+    async (tx) => {
+      await setGucs(tx, gucs);
+      return fn(tx);
+    },
     { maxWait: 10_000, timeout: 20_000 },
   ),
 );
 ```
 
-   交互式事务在 pg adapter 下要从池里独占一条连接。池上限从 `num_cpus*2+1` 变成 **10**，`maxWait: 10_000` 这条保护能否在 adapter 路径下继续生效**无法静态确认**（Prisma 文档里 `$transaction` 的 `maxWait`/`timeout` 在 v7 仍列出，但底层取连接者已换成 pg Pool）。
+交互式事务在 pg adapter 下要从池里独占一条连接。池上限从 `num_cpus*2+1` 变成 **10**，`maxWait: 10_000` 这条保护能否在 adapter 路径下继续生效**无法静态确认**（Prisma 文档里 `$transaction` 的 `maxWait`/`timeout` 在 v7 仍列出，但底层取连接者已换成 pg Pool）。
 
 **结论：升级 Prisma 7 必须把连接池配置当成一等公民显式写死，而不是依赖默认值。** 官方给出的对齐 v6 行为的写法：
 
@@ -382,11 +385,11 @@ const adapter = new PrismaPg({
 
 ### 5.3 相对初始顺序的三处修正
 
-| # | 初始 | 本 ADR | 理由 |
-|---|---|---|---|
-| 1 | TS → 6 | **→ 6.0.3，明确否决 7.0.2** | 7.0.2 是原生二进制发行版，无 JS Compiler API；Next 16.3.8 require `typescript/lib/typescript.js` 且装 `typescript@^6.0.0`；typescript-eslint 最新版 peer 仍是 `<6.1.0` |
-| 2 | Stripe → 22 | **→ 22.6.2，明确否决 23.0.0；且必须显式钉 `apiVersion`** | 23.0.0 仅 6 天龄、23.x 只 1 个版本、绑定新 API 大版本 endive；22.x 17 个版本、6 个月沉淀。不钉 `apiVersion` 会让 SDK 升级顺带换掉生产 API 版本 |
-| 3 | Prisma → 7（本轮实施） | **本轮不启动，挂 §7.3 前置条件** | 见下 |
+| #   | 初始                   | 本 ADR                                                   | 理由                                                                                                                                                                   |
+| --- | ---------------------- | -------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | TS → 6                 | **→ 6.0.3，明确否决 7.0.2**                              | 7.0.2 是原生二进制发行版，无 JS Compiler API；Next 16.3.8 require `typescript/lib/typescript.js` 且装 `typescript@^6.0.0`；typescript-eslint 最新版 peer 仍是 `<6.1.0` |
+| 2   | Stripe → 22            | **→ 22.6.2，明确否决 23.0.0；且必须显式钉 `apiVersion`** | 23.0.0 仅 6 天龄、23.x 只 1 个版本、绑定新 API 大版本 endive；22.x 17 个版本、6 个月沉淀。不钉 `apiVersion` 会让 SDK 升级顺带换掉生产 API 版本                         |
+| 3   | Prisma → 7（本轮实施） | **本轮不启动，挂 §7.3 前置条件**                         | 见下                                                                                                                                                                   |
 
 **为什么 Prisma 阶段三本轮不启动（不是"不该升"，而是"现在不该动"）：**
 
@@ -413,15 +416,16 @@ const adapter = new PrismaPg({
 
 ### 阶段一：TypeScript 5.9.3 → 6.0.3
 
-| 步骤 | 动作 |
-|---|---|
-| 1.1 | `web/package.json:100` 改 `typescript` 为 `6.0.3`；同步 `desktop/src-tauri/resources/standalone/package.json:99` |
-| 1.2 | `pnpm install`（**仅** lock 更新，不触碰其它包） |
-| 1.3 | 跑 `tsc --noEmit`，记录新增错误 |
-| 1.4 | 若 `@types/*` 全局声明消失 → 在 `web/tsconfig.json` 补显式 `types` 数组（预期至少 `["node"]`，按需补齐） |
-| 1.5 | 收敛剩余错误 |
+| 步骤 | 动作                                                                                                             |
+| ---- | ---------------------------------------------------------------------------------------------------------------- |
+| 1.1  | `web/package.json:100` 改 `typescript` 为 `6.0.3`；同步 `desktop/src-tauri/resources/standalone/package.json:99` |
+| 1.2  | `pnpm install`（**仅** lock 更新，不触碰其它包）                                                                 |
+| 1.3  | 跑 `tsc --noEmit`，记录新增错误                                                                                  |
+| 1.4  | 若 `@types/*` 全局声明消失 → 在 `web/tsconfig.json` 补显式 `types` 数组（预期至少 `["node"]`，按需补齐）         |
+| 1.5  | 收敛剩余错误                                                                                                     |
 
 **验收**：
+
 - `cd web && ./node_modules/.bin/tsc --noEmit --incremental false` → **退出码 0**（基线同为 0，不允许新增）
 - `pnpm lint` 输出与升级前一致（无新增 error）
 - `pnpm build` 成功，且 `typescript-eslint` 未打印 "unsupported TypeScript version" 警告
@@ -431,15 +435,16 @@ const adapter = new PrismaPg({
 
 ### 阶段二：Stripe 18.3.0 → 22.6.2
 
-| 步骤 | 动作 |
-|---|---|
-| 2.1 | `web/package.json:68` 改 `stripe` 为 `22.6.2`；同步 `desktop/.../standalone/package.json:68` |
-| 2.2 | **先**在 `web/lib/payments/stripe-provider.ts:50-52` 的构造函数加 `apiVersion: "2025-06-30.basil"`（与当前 SDK 默认一致，锁定不动） |
-| 2.3 | `pnpm install` |
-| 2.4 | 跑 `tsc --noEmit`，逐条复核 `:270-271` / `:282-284` / `:298-303` / `:318-322` 四处 cast 是否仍必要、是否与新类型冲突 |
-| 2.5 | 跑 `web/e2e/billing.spec.ts` 与 payments 相关单测 |
+| 步骤 | 动作                                                                                                                                |
+| ---- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| 2.1  | `web/package.json:68` 改 `stripe` 为 `22.6.2`；同步 `desktop/.../standalone/package.json:68`                                        |
+| 2.2  | **先**在 `web/lib/payments/stripe-provider.ts:50-52` 的构造函数加 `apiVersion: "2025-06-30.basil"`（与当前 SDK 默认一致，锁定不动） |
+| 2.3  | `pnpm install`                                                                                                                      |
+| 2.4  | 跑 `tsc --noEmit`，逐条复核 `:270-271` / `:282-284` / `:298-303` / `:318-322` 四处 cast 是否仍必要、是否与新类型冲突                |
+| 2.5  | 跑 `web/e2e/billing.spec.ts` 与 payments 相关单测                                                                                   |
 
 **验收**：
+
 - `tsc --noEmit` 退出码 0
 - `web/lib/payments/*` 全量单测通过
 - **Stripe 测试模式真实链路跑通一次**：checkout session 创建 → 回调 webhook 验签（`constructEvent`）→ billing portal 会话创建。其中 webhook 一步必须真发一次事件，不能只靠 mock——v21 的"用错解析方法抛错"只有真实调用才暴露
@@ -451,25 +456,26 @@ const adapter = new PrismaPg({
 
 前置步骤（**在 v6 上先做，与本 ADR 的升级解耦**）：
 
-| 步骤 | 动作 |
-|---|---|
-| P0 | `web/lib/prisma.ts` 把连接池配置从注释落成显式代码常量；给 `withDbRetry` 加请求级超时兜底 |
-| P1 | 等 `web/lib/auth.ts` 在途改动合入 |
-| P2 | 等 `.github/workflows/**`、`web/Dockerfile` 可同步修改 |
+| 步骤 | 动作                                                                                      |
+| ---- | ----------------------------------------------------------------------------------------- |
+| P0   | `web/lib/prisma.ts` 把连接池配置从注释落成显式代码常量；给 `withDbRetry` 加请求级超时兜底 |
+| P1   | 等 `web/lib/auth.ts` 在途改动合入                                                         |
+| P2   | 等 `.github/workflows/**`、`web/Dockerfile` 可同步修改                                    |
 
 实施步骤（条件满足后）：
 
-| 步骤 | 动作 |
-|---|---|
-| 3.1 | `schema.prisma:51-53` generator 改 `provider = "prisma-client"` + `output`；新增 `web/prisma.config.ts`（含 dotenv 加载、`datasource.url`、`migrations.seed`） |
-| 3.2 | 加 `@prisma/adapter-pg` + `pg`；改写 4 处 client 装配点（`web/lib/prisma.ts:43`、`web/prisma/seed.ts:6`、`server/collab/persistence.ts:62`、`server/collab/y-websocket-server.ts:335`），**按 §4.3.3 显式配池** |
-| 3.3 | 批量改写 124 条 import（按 `client` / `models` / `enums` 入口分流），`Prisma` 值导入改 `import type` |
-| 3.4 | `web/app/api/v1/workspaces/[wid]/tasks/route.ts:70,91` 的 `Prisma.validator` 改 `satisfies` |
-| 3.5 | `web/tests/integration/rls-engine.test.ts:35-36` 去掉 `datasourceUrl`，改为 adapter 注入 |
-| 3.6 | `web/Dockerfile`：`:76` 全局 CLI 改 7.x；`:47-56` 的产物复制逻辑按新 output 路径重写 |
-| 3.7 | 4 个 CI workflow：`prisma generate` 前后顺序、`mobile-build.yml` / `tauri-build.yml` 的 `.prisma/client` 拷贝 hack 重写 |
+| 步骤 | 动作                                                                                                                                                                                                            |
+| ---- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3.1  | `schema.prisma:51-53` generator 改 `provider = "prisma-client"` + `output`；新增 `web/prisma.config.ts`（含 dotenv 加载、`datasource.url`、`migrations.seed`）                                                  |
+| 3.2  | 加 `@prisma/adapter-pg` + `pg`；改写 4 处 client 装配点（`web/lib/prisma.ts:43`、`web/prisma/seed.ts:6`、`server/collab/persistence.ts:62`、`server/collab/y-websocket-server.ts:335`），**按 §4.3.3 显式配池** |
+| 3.3  | 批量改写 124 条 import（按 `client` / `models` / `enums` 入口分流），`Prisma` 值导入改 `import type`                                                                                                            |
+| 3.4  | `web/app/api/v1/workspaces/[wid]/tasks/route.ts:70,91` 的 `Prisma.validator` 改 `satisfies`                                                                                                                     |
+| 3.5  | `web/tests/integration/rls-engine.test.ts:35-36` 去掉 `datasourceUrl`，改为 adapter 注入                                                                                                                        |
+| 3.6  | `web/Dockerfile`：`:76` 全局 CLI 改 7.x；`:47-56` 的产物复制逻辑按新 output 路径重写                                                                                                                            |
+| 3.7  | 4 个 CI workflow：`prisma generate` 前后顺序、`mobile-build.yml` / `tauri-build.yml` 的 `.prisma/client` 拷贝 hack 重写                                                                                         |
 
 **验收**：
+
 - `tsc --noEmit` 退出码 0
 - 全量单测 + 集成测试通过，**特别是 `rls-engine.test.ts`**（RLS 是 ADR-006 的引擎级租户隔离，不容退化）
 - `db/rls-smoke.sh` 与 `scripts/rls-smoke.sh` 通过
@@ -483,22 +489,22 @@ const adapter = new PrismaPg({
 
 ## 七、冲击面清单（实施时逐项对照）
 
-| 类别 | 位置 | 涉及阶段 |
-|---|---|---|
-| version pin | `web/package.json:33/68/98/100` | 一、二、三 |
-| version pin（易漏） | `desktop/src-tauri/resources/standalone/package.json:33/68/97/99` | 一、二、三 |
-| tsconfig | `web/tsconfig.json`（缺 `types`） | 一 |
-| 业务代码 | `web/lib/payments/stripe-provider.ts`（1 文件 / 6 调用 / 4 cast） | 二 |
-| 业务代码 | 135 个 `@prisma/client` 引用文件（124 条 import） | 三 |
-| 核心敏感点 | `web/lib/auth.ts:247-253`（`withGuc` 事务 + GUC 注入） | 三 |
-| 核心敏感点 | `web/lib/prisma.ts:43`（装配）、`:73-77`（P1008 重试） | 三（P0 前置即可动） |
-| 测试 | `web/tests/integration/rls-engine.test.ts:35-36`（`datasourceUrl`） | 三 |
-| 代码 | `web/app/api/v1/workspaces/[wid]/tasks/route.ts:70,91`（`Prisma.validator`） | 三 |
-| schema | `web/prisma/schema.prisma:51-58`；新增 `web/prisma.config.ts` | 三 |
-| 镜像 | `web/Dockerfile:47-56`（产物复制）、`:76`（`npm install -g prisma@6.15.0`） | 三 |
-| CI | `.github/workflows/ci.yml`（6× generate / 4× migrate deploy） | 三 |
-| CI | `.github/workflows/mobile-build.yml:81-95,164-178`；`tauri-build.yml:81-84`（`.prisma/client` 拷贝 hack） | 三 |
-| 文档 | `spec/SPEC.md:77`（`@prisma/client@6`）、`web/README.md:25`（`stripe@18.3.0`）、`server/collab/ARCHIVE-NOTE.md:35`（`@prisma/client 6.15.0`） | 二、三 |
+| 类别                | 位置                                                                                                                                          | 涉及阶段            |
+| ------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- | ------------------- |
+| version pin         | `web/package.json:33/68/98/100`                                                                                                               | 一、二、三          |
+| version pin（易漏） | `desktop/src-tauri/resources/standalone/package.json:33/68/97/99`                                                                             | 一、二、三          |
+| tsconfig            | `web/tsconfig.json`（缺 `types`）                                                                                                             | 一                  |
+| 业务代码            | `web/lib/payments/stripe-provider.ts`（1 文件 / 6 调用 / 4 cast）                                                                             | 二                  |
+| 业务代码            | 135 个 `@prisma/client` 引用文件（124 条 import）                                                                                             | 三                  |
+| 核心敏感点          | `web/lib/auth.ts:247-253`（`withGuc` 事务 + GUC 注入）                                                                                        | 三                  |
+| 核心敏感点          | `web/lib/prisma.ts:43`（装配）、`:73-77`（P1008 重试）                                                                                        | 三（P0 前置即可动） |
+| 测试                | `web/tests/integration/rls-engine.test.ts:35-36`（`datasourceUrl`）                                                                           | 三                  |
+| 代码                | `web/app/api/v1/workspaces/[wid]/tasks/route.ts:70,91`（`Prisma.validator`）                                                                  | 三                  |
+| schema              | `web/prisma/schema.prisma:51-58`；新增 `web/prisma.config.ts`                                                                                 | 三                  |
+| 镜像                | `web/Dockerfile:47-56`（产物复制）、`:76`（`npm install -g prisma@6.15.0`）                                                                   | 三                  |
+| CI                  | `.github/workflows/ci.yml`（6× generate / 4× migrate deploy）                                                                                 | 三                  |
+| CI                  | `.github/workflows/mobile-build.yml:81-95,164-178`；`tauri-build.yml:81-84`（`.prisma/client` 拷贝 hack）                                     | 三                  |
+| 文档                | `spec/SPEC.md:77`（`@prisma/client@6`）、`web/README.md:25`（`stripe@18.3.0`）、`server/collab/ARCHIVE-NOTE.md:35`（`@prisma/client 6.15.0`） | 二、三              |
 
 ---
 
@@ -525,3 +531,64 @@ const adapter = new PrismaPg({
 - 本 ADR 生效前，**不改任何依赖**。`web/package.json` 与 `desktop/.../standalone/package.json` 保持现状。
 - §6 的 P0 前置步骤（连接池显式化 + 请求级超时兜底）**可以在不升级的前提下先做**，且对 v6 同样有益，建议独立于本 ADR 排期。
 - issue #32 的 body 应由本 ADR 的 §2 决策摘要回填，让那 5 字节变成有据可查的决策。
+
+---
+
+## 十、执行记录（2026-10-10，Prisma 6→7 完成）
+
+### 10.1 结论修订：预估的最大工作量没有发生
+
+第 §7 节预估「v7 要求显式 output → 124 条 import 全量改路径（135 文件）」——**未发生**。
+v7.10 仍完整支持 `prisma-client-js` 生成器，产物仍在 `node_modules/@prisma/client` 内
+（布局从"外置 .prisma/client 兄弟目录"改为"内联包内"，`default.js` 自解析，不再需要
+兄弟目录 hack）。改 import 路径的 135 文件 churn 不必要。
+
+**但有一条 v7 新语义必须写进操作规范**：生成物内联在包目录内，于是 `pnpm install`
+覆盖包目录时会**连带抹掉生成物**——每一次 install 后必须重跑 `prisma generate`
+（本仓 CI 与 Dockerfile 均显式调用；本地开发用 `pnpm db:generate`）。
+
+### 10.2 实际改动面
+
+- 依赖：prisma / @prisma/client 6.15.0 → 7.10.0；新增 @prisma/adapter-pg@7.10.0 + pg
+  （+ @types/pg）；mysql2 override ≥3.22.0（better-auth 可选 peer 连带暴露
+  GHSA-3f6p-5ww8-9rcr，prisma7 批次连带修复）。
+- 新建 `web/prisma.config.ts`（v7 CLI 配置主入口；schema 内 `url` 已移除）。
+- 装配点 4 处改 driver adapter：`web/lib/prisma.ts`（含连接池参数映射：URL 的
+  connection_limit/pool_timeout → pg Pool 的 max/connectionTimeoutMillis）、
+  `web/prisma/seed.ts`、`server/collab/{persistence,y-websocket-server}.ts`（归档未接线，
+  同步适配保持清单诚实）。
+- `web/tests/integration/rls-engine.test.ts` 两处 `datasourceUrl` 构造改 adapter。
+- `web/Dockerfile`：全局 CLI 6.15.0 → 7.10.0；`prisma.config.ts` 加入运行镜像
+  （migrate deploy 必需）；`.prisma/client` 拷贝步骤按 v7 语义改为**容错跳过**
+  （防御性保留）。
+- `mobile-build.yml`（2 处）/ `tauri-build.yml`（1 处）：`.prisma/client` 缺目录
+  从 `exit 1` 改为 v7 容错跳过。
+- `docker-compose.yml`：补 `RATE_LIMIT_DISABLED` 透传（本机复现集成测试与 CI 同口径）。
+- 文档同步：`spec/SPEC.md`、`web/README.md`、`server/collab/ARCHIVE-NOTE.md` 的版本号。
+
+### 10.3 容器实测抓到的坑（§八 第 7 条的真答案）
+
+全局安装的 prisma CLI 加载 `/app/prisma.config.ts` 时**无法解析**
+`import { defineConfig } from "prisma/config"`（全局包不在 /app 的 node_modules
+解析路径上）→ entrypoint 是 `set -e`，migrate deploy 失败直接把容器拖进**重启循环**。
+修法：config 改为 `import type { PrismaConfig }` + 普通对象默认导出（类型导入在
+转译期擦除、零运行时解析）。**任何"容器里用全局 CLI 加载 TS 配置"的场景都适用此坑。**
+
+### 10.4 §八 其余悬案的实测答案
+
+- **#6（P1008 / maxWait 在 adapter 下是否还生效）**：取连接超时归 pg 的
+  `connectionTimeoutMillis`（已由 lib/prisma.ts 显式映射，默认值语义与 v6 一致）；
+  withDbRetry 的总预算兜底不依赖任何 Prisma 错误码，设计在 v7 下继续成立。
+- **#7（standalone 在 alpine + pnpm 虚拟存储下的追踪）**：真构建 + 真运行验证通过
+  ——镜像内 v7 全局 CLI `migrate deploy`（51 迁移，0 pending）+ /api/health db:up +
+  登录/任务链路 + 集成 201 用例全绿。
+- **#8（`SET LOCAL` GUC 在 pg adapter 事务内语义）**：正确与 v6 等价——本地集成
+  201 passed（含 RLS/租户隔离断言）；RLS 引擎级 4 用例在 CI 加固腿运行。
+
+### 10.5 验证与遗留
+
+- 本地：tsc 0 错 / eslint 0 warning / 单元 859 passed / 五道门禁 PASS / Docker 真构建
+  - 容器健康 + 集成 201 passed（0 失败）。
+- Dependabot #15/#16 按第 §7 建议关闭；`.github/dependabot.yml` 已为
+  prisma / @prisma/client 加 major ignore（防周期性重建红 PR）。
+- Stripe 18→22.6.2 与其余 minor 升级不在本批次范围（§4.2 结论不变）。

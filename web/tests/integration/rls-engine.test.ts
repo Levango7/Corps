@@ -1,5 +1,6 @@
 import { describe, it, expect, afterAll } from "vitest";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 /**
  * RLS 引擎级冒烟（AC-04 的数据库层断言）
  *
@@ -32,8 +33,9 @@ const WA = "33333333-3333-4333-8333-ccccccccccc3";
 const WB = "44444444-4444-4444-8444-dddddddddddd";
 
 suite("RLS 引擎级冒烟（corps_app 直连，AC-04 引擎断言）", () => {
-  const owner = new PrismaClient({ datasourceUrl: OWNER_URL! });
-  const app = new PrismaClient({ datasourceUrl: APP_URL! });
+  // Prisma 7：driver adapter 装配（datasourceUrl 构造参数已移除）
+  const owner = new PrismaClient({ adapter: new PrismaPg({ connectionString: OWNER_URL! }) });
+  const app = new PrismaClient({ adapter: new PrismaPg({ connectionString: APP_URL! }) });
 
   afterAll(async () => {
     await owner.$disconnect();

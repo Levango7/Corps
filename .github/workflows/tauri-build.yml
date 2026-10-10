@@ -92,9 +92,10 @@ jobs:
             echo "Copied .prisma/client into @prisma/client/node_modules/.prisma/client/"
             ls "$REAL_DIR/node_modules/.prisma/client/" | head -5
           else
-            echo "ERROR: .prisma/client not found at $PRISMA_GEN_DIR"
-            find . -name ".prisma" -type d 2>/dev/null | head -10
-            exit 1
+            # Prisma 7：不再生成外置 .prisma/client（生成物内联进 @prisma/client
+            # 包内，default.js 的 require 不再依赖兄弟目录）。本步骤是 v6 布局的
+            # 兼容 hack，v7 下无目录可拷属预期——不视为失败（2026-10-10 升 v7）。
+            echo "note: no external .prisma/client (Prisma 7 layout) — copy step skipped"
           fi
         working-directory: web
 

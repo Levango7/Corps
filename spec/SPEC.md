@@ -74,7 +74,7 @@
 | 图标 | Lucide (lucide-react) | 钉确切版本（非 ^/latest） | P0 锁定一套 SVG，禁 emoji/禁混用 |
 | 后端 | Next.js Route Handlers（全栈起步） | 同前端 | 最小部署目标、最快跑通 |
 | 后端生长 | NestJS (Fastify) | @nestjs/core@11 | 多端/AI 出现时抽独立 API，复用 TS DTO+Prisma |
-| ORM | Prisma | @prisma/client@6 (≥6.15.0) | 迁移可逆（契合可回滚）+ 类型共享 |
+| ORM | Prisma | @prisma/client@7 (≥7.10.0) | 迁移可逆（契合可回滚）+ 类型共享；v7 起接 driver adapter（@prisma/adapter-pg） |
 | 数据库 | PostgreSQL | 18.4 | RLS 行级安全成熟，多租户隔离引擎层强制 |
 | 认证 | Better Auth | better-auth 最新稳定 | TS 原生、sessions/MFA/多租户(orgs)插件、Prisma 适配器 |
 | 密码 | scrypt（Better Auth 默认） | — | Better Auth 1.3 稳定版未暴露 argon2 钩子；scrypt 强度仍够，argon2id 作为后续升级项见 OPEN-DECISIONS |
