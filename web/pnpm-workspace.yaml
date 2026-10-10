@@ -14,6 +14,10 @@ minimumReleaseAgeExclude:
   - "@ai-sdk/react@4.0.102"
   - ai@7.0.99
 overrides:
+  # MySQL2 auth plugin 降级泄露明文凭据（GHSA-3f6p-5ww8-9rcr，high，<3.22.0）。
+  # better-auth 的可选 peer 会把 mysql2 解析进锁文件（本项目用 pg，mysql2 实际不加载）。
+  # Prisma 7 升级批次连带暴露，收敛到修复版下界。
+  mysql2: ">=3.22.0"
   effect: ^3.20.0
   deepmerge-ts: ^8.0.0
   # 注意：pnpm 在 web/ 下安装时只读本文件（CI 的 working-directory: web、

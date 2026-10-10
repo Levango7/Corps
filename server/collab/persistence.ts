@@ -21,6 +21,7 @@
  */
 
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import * as Y from "yjs";
 
 /**
@@ -59,7 +60,14 @@ export class PrismaYjsPersistence implements YjsPersistence {
 
   constructor(prisma?: PrismaClient) {
     // 复用传入的 PrismaClient 实例（避免多实例连接池耗尽），或创建新实例
-    this.prisma = prisma ?? new PrismaClient();
+    // Prisma 7：driver adapter 装配（归档代码未参与 CI 编译，保持与 web 侧一致）
+    this.prisma =
+      prisma ??
+      new PrismaClient({
+        adapter: new PrismaPg({
+          connectionString: process.env.DATABASE_URL ?? "postgresql://placeholder@127.0.0.1:5432/placeholder",
+        }),
+      });
   }
 
   /**

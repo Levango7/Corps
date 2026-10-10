@@ -6,7 +6,7 @@
 
 - **前端**: Next.js 16 (App Router) + React 19 + Tailwind CSS 4
 - **后端**: Next.js Route Handlers (TypeScript)
-- **数据库**: PostgreSQL 18.4 + Prisma 6 (RLS 行级安全)
+- **数据库**: PostgreSQL 18.4 + Prisma 7（driver adapter: @prisma/adapter-pg）+ RLS 行级安全
 - **认证**: Better Auth 1.3（身份/会话托管，scrypt 哈希）+ wid 作用域 JWT（15min access / 7d refresh，驱动 RLS）
 - **计费**: Stripe 18（Checkout 订阅 + Customer Portal + Webhook 席位同步）
 - **部署**: 腾讯云 CloudBase (后续)

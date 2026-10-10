@@ -1,9 +1,15 @@
 import { PrismaClient, Prisma } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { resolveDatabaseUrl } from "../lib/db-pool";
 // better-auth/crypto 导出公开的 hashPassword，使用与 Better Auth 一致的哈希算法
 // （默认 scrypt）。seed 必须用此函数哈希密码，否则登录时 signInEmail 验证失败。
 import { hashPassword } from "better-auth/crypto";
 
-const prisma = new PrismaClient();
+// Prisma 7：连接走 driver adapter（v6 的 datasources/隐式 env 读取均已移除）。
+// DATABASE_URL 缺失时 resolveDatabaseUrl 抛 DatabaseUrlMissingError，报错可读。
+const prisma = new PrismaClient({
+  adapter: new PrismaPg({ connectionString: resolveDatabaseUrl() }),
+});
 
 /**
  * 幂等地创建演示用户：

@@ -49,11 +49,15 @@ RUN ENGINES_DIR=$(find node_modules -path "*/@prisma/engines" -type d 2>/dev/nul
       mkdir -p .next/standalone/node_modules/@prisma/engines \
       && cp -rL "$ENGINES_DIR"/* .next/standalone/node_modules/@prisma/engines/; \
     fi
-# 同样复制 prisma client 的生成产物（.prisma/client 包含引擎 .node）
+# Prisma 7 布局变更：不再生成外置的 .prisma/client 目录（client 产物内联在
+# @prisma/client 包内，由 Next standalone tracing 自动追踪）。本步骤保留为
+# 防御性兜底——若未来版本重新引入外置产物目录，仍会被拷贝进 standalone。
 RUN CLIENT_DIR=$(find node_modules -path "*/.prisma/client" -type d 2>/dev/null | head -1) \
     && if [ -n "$CLIENT_DIR" ]; then \
       mkdir -p .next/standalone/node_modules/.prisma/client \
       && cp -rL "$CLIENT_DIR"/* .next/standalone/node_modules/.prisma/client/; \
+    else \
+      echo "[build] v7 布局：无外置 .prisma/client 目录，跳过（产物随 @prisma/client 包追踪）"; \
     fi
 
 # ===== 阶段3: 运行 =====
@@ -73,7 +77,8 @@ RUN apk add --no-cache postgresql-client
 
 # 全局安装 prisma CLI（用于启动时 prisma migrate deploy）
 # pnpm 的符号链接结构使得局部 prisma CLI 难以稳定复制，全局安装最简单可靠
-RUN npm install -g prisma@6.15.0
+# v7：CLI 必须与 @prisma/client 同版本（v6 CLI 搭配 v7 client 会拒绝运行）
+RUN npm install -g prisma@7.10.0
 
 # 创建非 root 用户运行应用（安全基线）
 # 注意：alpine 的 adduser/addgroup 是 busybox 实现，只支持短选项（-S/-u/-G/-g），
@@ -89,6 +94,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/public ./public
 
 # 迁移文件 + schema（用于启动时 prisma migrate deploy）
 COPY --from=builder --chown=nextjs:nodejs /app/prisma ./prisma
+# Prisma 7：CLI 配置主入口（datasource.url 的唯一来源），migrate deploy 必需
+COPY --from=builder --chown=nextjs:nodejs /app/prisma.config.ts ./prisma.config.ts
 
 # 入口脚本：先执行 prisma migrate deploy，再启动 Next.js
 COPY --chown=nextjs:nodejs docker/entrypoint.sh ./entrypoint.sh

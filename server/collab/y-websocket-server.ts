@@ -34,6 +34,7 @@ import { WebSocketServer, WebSocket } from "ws";
 import { URL } from "node:url";
 import jwt, { type JwtPayload } from "jsonwebtoken";
 import { PrismaClient } from "@prisma/client";
+import { PrismaPg } from "@prisma/adapter-pg";
 import * as Y from "yjs";
 import * as encoding from "lib0/encoding";
 import * as decoding from "lib0/decoding";
@@ -332,7 +333,14 @@ export async function startCollabServer(options?: {
   prisma?: PrismaClient;
 }): Promise<{ wss: WebSocketServer; close: () => Promise<void> }> {
   const port = options?.port ?? Number(process.env.COLLAB_WS_PORT) ?? 1234;
-  const prisma = options?.prisma ?? new PrismaClient();
+  // Prisma 7：driver adapter 装配（归档代码未参与 CI 编译，保持与 web 侧一致）
+  const prisma =
+    options?.prisma ??
+    new PrismaClient({
+      adapter: new PrismaPg({
+        connectionString: process.env.DATABASE_URL ?? "postgresql://placeholder@127.0.0.1:5432/placeholder",
+      }),
+    });
   const persistence = new PrismaYjsPersistence(prisma);
 
   const wss = new WebSocketServer({ port });
