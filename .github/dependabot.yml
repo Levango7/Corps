@@ -14,6 +14,15 @@ updates:
         update-types:
           - "minor"
           - "patch"
+    ignore:
+      # Prisma major 是独立工程项目而非一次版本 bump（v6→v7 需 prisma.config.ts +
+      # driver adapter + Dockerfile/部署脚本适配，见 issue #32 与 ADR-014 §4.3）；
+      # 2026-10-10 的 chore/prisma-7-upgrade 批次已完成 6→7。后续 major 一律人工
+      # 立项，禁止 Dependabot 周期性重建合不进去的红 PR（#15/#16 的先例）。
+      - dependency-name: "prisma"
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@prisma/client"
+        update-types: ["version-update:semver-major"]
 
   # GitHub Actions 自身版本更新
   - package-ecosystem: "github-actions"

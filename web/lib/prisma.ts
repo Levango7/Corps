@@ -1,5 +1,6 @@
 import { PrismaClient, type Prisma } from "@prisma/client";
-import { resolveDatabaseUrl } from "./db-pool";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { resolveDatabaseUrl, DB_POOL_DEFAULTS } from "./db-pool";
 import { runWithDbRetry } from "./db-retry";
 
 /**
@@ -79,19 +80,47 @@ const clientLog: Array<"query" | "error" | "warn"> =
   process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"];
 
 /**
- * 构造参数。
+ * 构造 pg 驱动适配器（Prisma 7 装配，2026-10-10 升级）。
  *
- * 显式类型标注**不是可选的**：生成的 PrismaClient 构造函数是
- * `constructor(optionsArg?: Prisma.Subset<ClientOptions, Prisma.PrismaClientOptions>)`，
- * ClientOptions 由实参反推。把三元表达式直接放在实参位置时，TS 只从两个分支的
- * 公共属性推出 `{ log }`，随后把 datasources 判成"多余属性"——实测报错：
- *   lib/prisma.ts(81,11): error TS2345 ... 'datasources' does not exist in type
- *   'Subset<{ log: ("query"|"warn"|"error")[] }, PrismaClientOptions>'
- * 标注后 ClientOptions 固定为完整的 PrismaClientOptions，两个分支都能通过。
+ * v7 起 Rust 查询引擎退役、改用 driver adapter，且 v6 的 `datasources`
+ * 构造参数已被移除（实测报 `Unknown property datasources provided to
+ * PrismaClient constructor`）——连接串从此经适配器传入。
+ *
+ * 连接池参数映射：v6 时代 URL 的 connection_limit / pool_timeout 驱动 Prisma
+ * 内部池；v7 起池归 node-postgres，故把 resolveDatabaseUrl() 归一化后的两个
+ * 值映射为 pg Pool 的 `max` 与 `connectionTimeoutMillis`。语义对应关系保持
+ * 文件头 DL-3 注释的结论：池饱和时的取连接等待 = min(连接超时, auth.maxWait)，
+ * 默认 10s 的取值与 lib/auth.ts 的 maxWait=10_000 强耦合——改之前先读那两处。
  */
-const clientOptions: Prisma.PrismaClientOptions = resolvedUrl
-  ? { datasources: { db: { url: resolvedUrl } }, log: clientLog }
-  : { log: clientLog };
+function createPostgresAdapter(url: string) {
+  const parsed = new URL(url);
+  const maxRaw = Number(
+    parsed.searchParams.get("connection_limit") ?? DB_POOL_DEFAULTS.connectionLimit,
+  );
+  const timeoutRaw = Number(
+    parsed.searchParams.get("pool_timeout") ?? DB_POOL_DEFAULTS.poolTimeoutSeconds,
+  );
+  const max = Number.isFinite(maxRaw) && maxRaw > 0 ? maxRaw : DB_POOL_DEFAULTS.connectionLimit;
+  const timeoutS =
+    Number.isFinite(timeoutRaw) && timeoutRaw > 0
+      ? timeoutRaw
+      : DB_POOL_DEFAULTS.poolTimeoutSeconds;
+  return new PrismaPg({ connectionString: url, max, connectionTimeoutMillis: timeoutS * 1000 });
+}
+
+/**
+ * 无 DATABASE_URL 上下文的占位串：CI 的 Unit Coverage Ratchet job 是唯一不设
+ * DATABASE_URL 的 job，next build / 静态分析也可能在无环境变量时加载本模块。
+ * pg Pool 惰性建连——占位串只保证"模块可加载、构造不抛"，真正发查询的路径
+ * 一定是配好环境的运行时（与 v6 时代"回退 Prisma 默认配置"同一失效模式：
+ * 加载永不炸，查询时才报）。
+ */
+const PLACEHOLDER_DB_URL = "postgresql://placeholder:placeholder@127.0.0.1:5432/placeholder";
+
+const clientOptions: Prisma.PrismaClientOptions = {
+  adapter: createPostgresAdapter(resolvedUrl ?? PLACEHOLDER_DB_URL),
+  log: clientLog,
+};
 
 export const prisma = globalForPrisma.prisma ?? new PrismaClient(clientOptions);
 

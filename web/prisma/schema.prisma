@@ -54,7 +54,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  // Prisma 7：连接 URL 已移至 web/prisma.config.ts（datasource.url）；
+  // schema 内不再支持 url 属性。
 }
 
 // ─── 核心实体 ───────────────────────────────────────────────
