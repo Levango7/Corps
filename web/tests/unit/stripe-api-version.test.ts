@@ -5,7 +5,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  *
  * 为什么要这条测试（而不是靠代码评审记住）：
  *
- * `stripe-provider.ts` 的构造函数里写了 `apiVersion: "2025-06-30.basil"`。
+ * `stripe-provider.ts` 的构造函数里写了 `apiVersion: "2026-08-26.dahlia"`。
  * TS 类型 `StripeConfig.apiVersion` 是**单字面量**（本版 LatestApiVersion 就是这个值），
  * 所以升级 SDK 时改错版本会 tsc 失败——这一层已经拦住"改错"。
  *
@@ -15,7 +15,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * 断言该键存在——删掉即红。
  *
  * 换句话说，这是一条**能被变异证明的断言**：
- *   把 `apiVersion: "2025-06-30.basil",` 整行删掉 → 本用例失败。
+ *   把 `apiVersion: "2026-08-26.dahlia",` 整行删掉 → 本用例失败。
  *   把它改成任意其它字符串            → tsc 失败（类型层）+ 本用例失败（值层）。
  *
  * ── 一条刻意不写的断言 ──────────────────────────────────────────
@@ -68,7 +68,7 @@ describe("StripeProvider · API 版本钉死", () => {
     // 关键断言：键必须"存在"。只断言值是不够的——
     // 删掉 apiVersion 后 SDK 默认值恰好也是这个值，值断言会误判为通过。
     expect(captured[0]).toHaveProperty("apiVersion");
-    expect(captured[0].apiVersion).toBe("2025-06-30.basil");
+    expect(captured[0].apiVersion).toBe("2026-08-26.dahlia");
   });
 
   it("没有 secret 时不构造客户端（分支未回归）", async () => {
