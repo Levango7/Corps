@@ -35,7 +35,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         {
           code: 400,
           message: apiMsg(req, "validationFailed"),
-          errors: parsed.error.errors,
+          errors: parsed.error.issues,
           data: null,
         },
         { status: 400 },
@@ -89,8 +89,8 @@ const listQuerySchema = z.object({
 const createSchema = z.object({
   name: z.string().min(1).max(200),
   description: z.string().max(500).optional(),
-  trigger: z.record(z.unknown()),
-  actions: z.array(z.record(z.unknown())).min(1),
+  trigger: z.record(z.string(), z.unknown()),
+  actions: z.array(z.record(z.string(), z.unknown())).min(1),
   active: z.boolean().optional(),
 });
 
@@ -136,7 +136,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

@@ -36,7 +36,7 @@ const createSchema = z.object({
   systemPrompt: z.string().min(1).max(8000),
   model: z.enum(MODEL_VALUES).default("deepseek-chat"),
   enabled: z.boolean().default(true),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

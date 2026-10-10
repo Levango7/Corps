@@ -29,7 +29,7 @@ const updateSchema = z.object({
   systemPrompt: z.string().min(1).max(8000).optional(),
   model: z.enum(MODEL_VALUES).optional(),
   enabled: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /** UUID 正则校验 */

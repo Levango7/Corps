@@ -20,7 +20,7 @@ const CATEGORY_VALUES = ["project", "meeting", "review", "onboarding", "custom"]
 const stepSchema = z.object({
   name: z.string().min(1).max(100),
   capability: z.string().min(1).max(50),
-  config: z.record(z.unknown()).default({}),
+  config: z.record(z.string(), z.unknown()).default({}),
 });
 
 /** PATCH 部分更新 schema（所有字段可选） */
@@ -30,7 +30,7 @@ const updateSchema = z.object({
   category: z.enum(CATEGORY_VALUES).optional(),
   steps: z.array(stepSchema).min(1).max(50).optional(),
   isPublic: z.boolean().optional(),
-  metadata: z.record(z.unknown()).optional(),
+  metadata: z.record(z.string(), z.unknown()).optional(),
 });
 
 /**

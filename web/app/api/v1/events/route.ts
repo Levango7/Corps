@@ -24,7 +24,7 @@ import { apiMsg } from "@/lib/api-messages";
 
 const eventSchema = z.object({
   name: z.string().max(64),
-  props: z.record(z.unknown()).default({}),
+  props: z.record(z.string(), z.unknown()).default({}),
   sessionId: z.string().max(64).optional(),
   workspaceId: z.string().uuid().optional(),
 });
@@ -98,7 +98,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.issues, data: null },
         { status: 400 },
       );
     }

@@ -27,7 +27,7 @@ import { authFailure } from "@/lib/auth-response";
 
 const schema = z.object({
   toolName: z.string().min(1).max(100),
-  args: z.record(z.unknown()).default({}),
+  args: z.record(z.string(), z.unknown()).default({}),
   workspaceId: z.string().uuid(),
 });
 

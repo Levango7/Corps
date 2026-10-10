@@ -56,7 +56,7 @@ const createInstanceSchema = z.object({
   templateId: z.string().uuid().optional(),
   title: z.string().min(1).max(200),
   description: z.string().optional(),
-  content: z.record(z.any()),
+  content: z.record(z.string(), z.any()),
   nodes: z.array(approvalNodeSchema).min(1).optional(),
   // M5: 工作流 approval 节点 — 从工作流节点配置自动生成审批流
   workflowNodeId: z.string().uuid().optional(),
@@ -94,7 +94,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         {
           code: 400,
           message: apiMsg(req, "validationFailed"),
-          errors: parsed.error.errors,
+          errors: parsed.error.issues,
           data: null,
         },
         { status: 400 },
@@ -287,7 +287,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

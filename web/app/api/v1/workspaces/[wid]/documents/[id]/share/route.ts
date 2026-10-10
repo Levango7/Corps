@@ -255,7 +255,7 @@ export async function POST(
         {
           code: 400,
           message: apiMsg(req, "validationFailed"),
-          errors: parsed.error.errors,
+          errors: parsed.error.issues,
           data: null,
         },
         { status: 400 },

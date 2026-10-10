@@ -151,7 +151,7 @@ export async function PATCH(
         {
           code: 400,
           message: apiMsg(req, "validationFailed"),
-          errors: error.errors,
+          errors: error.issues,
           data: null,
         },
         { status: 400 },

@@ -64,7 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           code: 400,
           message: parsed.error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: parsed.error.errors,
+          errors: parsed.error.issues,
         },
         { status: 400 },
       );

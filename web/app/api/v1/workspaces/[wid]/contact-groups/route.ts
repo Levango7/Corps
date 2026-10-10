@@ -110,7 +110,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );
@@ -196,7 +196,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

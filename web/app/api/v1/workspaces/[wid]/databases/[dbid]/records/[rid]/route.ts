@@ -14,7 +14,7 @@ import { apiMsg } from "@/lib/api-messages";
  */
 
 const updateRecordSchema = z.object({
-  data: z.record(z.unknown()).optional(),
+  data: z.record(z.string(), z.unknown()).optional(),
   sortOrder: z.number().optional(),
 });
 
@@ -78,7 +78,7 @@ export async function PATCH(
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

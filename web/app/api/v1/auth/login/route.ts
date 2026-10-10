@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
           code: 400,
           // 字段级中文提示：让用户知道"是哪个字段、错在哪"，而非笼统的"参数校验错误"
           message: zodMessage(error, apiLocale(req)),
-          errors: error.errors,
+          errors: error.issues,
           fieldErrors: zodFieldErrors(error, apiLocale(req)),
           data: null,
         },

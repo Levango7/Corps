@@ -86,7 +86,7 @@ export async function GET(
 const createFieldSchema = z.object({
   name: z.string().min(1).max(100),
   type: z.string().min(1).max(20),
-  options: z.record(z.unknown()).optional(),
+  options: z.record(z.string(), z.unknown()).optional(),
   sortOrder: z.number().optional(),
 });
 
@@ -153,7 +153,7 @@ export async function POST(
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

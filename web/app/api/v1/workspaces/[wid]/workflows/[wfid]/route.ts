@@ -71,8 +71,8 @@ export async function GET(
 const patchSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   description: z.string().max(500).nullable().optional(),
-  trigger: z.record(z.unknown()).optional(),
-  actions: z.array(z.record(z.unknown())).min(1).optional(),
+  trigger: z.record(z.string(), z.unknown()).optional(),
+  actions: z.array(z.record(z.string(), z.unknown())).min(1).optional(),
   active: z.boolean().optional(),
 });
 
@@ -137,7 +137,7 @@ export async function PATCH(
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

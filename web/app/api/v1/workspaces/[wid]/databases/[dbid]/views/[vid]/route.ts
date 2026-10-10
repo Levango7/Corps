@@ -15,7 +15,7 @@ import { apiMsg } from "@/lib/api-messages";
 const updateViewSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   type: z.string().min(1).max(20).optional(),
-  config: z.record(z.unknown()).optional(),
+  config: z.record(z.string(), z.unknown()).optional(),
   sortOrder: z.number().optional(),
 });
 
@@ -84,7 +84,7 @@ export async function PATCH(
           code: 400,
           message: error.issues[0]?.message ?? apiMsg(req, "validationFailed"),
           data: null,
-          errors: error.errors,
+          errors: error.issues,
         },
         { status: 400 },
       );

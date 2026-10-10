@@ -95,7 +95,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.issues, data: null },
         { status: 400 },
       );
     }
@@ -167,7 +167,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.issues, data: null },
         { status: 400 },
       );
     }
@@ -255,7 +255,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
-        { code: 400, message: apiMsg(req, "validationError"), errors: error.errors, data: null },
+        { code: 400, message: apiMsg(req, "validationError"), errors: error.issues, data: null },
         { status: 400 },
       );
     }

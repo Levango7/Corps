@@ -139,7 +139,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid:
         {
           code: 400,
           message: apiMsg(req, "validationError"),
-          errors: error.errors,
+          errors: error.issues,
           data: null,
         },
         { status: 400 },
