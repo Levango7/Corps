@@ -51,7 +51,7 @@
     "bcryptjs": "^3.0.3",
     "better-auth": "1.7.7",
     "framer-motion": "^13.5.0",
-    "ioredis": "5.4.1",
+    "ioredis": "6.0.0",
     "json-logic-js": "^2.0.5",
     "jsonwebtoken": "9.0.3",
     "lib0": "^0.2.119",
