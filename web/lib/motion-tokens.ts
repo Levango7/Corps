@@ -63,16 +63,19 @@ export const fadeVariants: Variants = {
 };
 
 /** 淡入 + 微 slide-up（y: 8 → 0），页面切换默认 */
+// 注：visible 的 transitionEnd 清 transform（勿删）——残留 transform 会让页面过渡层
+// 成为 position:fixed 弹窗的包含块，把全站页面级弹窗劫持进容器内并裁剪
+//（2026-10-10 实测缺陷：遮罩只盖一条带、弹窗右缘被切）。
 export const slideVariants: Variants = {
   hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0 },
+  visible: { opacity: 1, y: 0, transitionEnd: { transform: "none" } },
   exit: { opacity: 0, y: -8 },
 };
 
 /** 淡入 + 微缩放（scale: 0.96 → 1），模态 / 浮层 */
 export const scaleVariants: Variants = {
   hidden: { opacity: 0, scale: 0.96 },
-  visible: { opacity: 1, scale: 1 },
+  visible: { opacity: 1, scale: 1, transitionEnd: { transform: "none" } },
   exit: { opacity: 0, scale: 0.96 },
 };
 

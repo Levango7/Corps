@@ -28,30 +28,35 @@ export interface RGLItem {
  * 按角色的默认仪表盘布局。
  * owner/admin 偏分析视图（燃尽图 + 团队负载），member 偏执行视图（我的任务 + 本周截止），
  * viewer 最精简（统计 + 最近活动）。
+ *
+ * 2026-10-10 修复（用户反馈"默认布局不正常"）：F7 把 4 列网格改为 12 列时，w/x 乘了 3
+ * 但 y 未做同步变换、h 又乘了 0.75（rowHeight 80→60 时应 ×80/60≈1.33）——三套布局
+ * 坐标互相重叠（RGL 自动下推后呈散乱排布），且高度只有应有值的 ~56%（Widget 内部
+ * 出滚动条、图表只剩轴标签）。本次按"上下两行、每行铺满 12 列"重排：
+ * 上排 3+9（统计 + 燃尽图），下排 6+6，h=4（≈240px，容得下图表与列表），全量无重叠。
  */
 export const DEFAULT_LAYOUTS: Record<Role, RGLItem[]> = {
-  // F7: 4列→12列细粒度网格，w×3、x×3、h 按 rowHeight 80→60 调整（×0.75 取整）
   owner: [
-    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
-    { i: "burndown", x: 3, y: 0, w: 9, h: 3 },
-    { i: "team-load", x: 0, y: 1, w: 6, h: 3 },
-    { i: "recent-activity", x: 6, y: 2, w: 6, h: 2 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 4 },
+    { i: "burndown", x: 3, y: 0, w: 9, h: 4 },
+    { i: "team-load", x: 0, y: 4, w: 6, h: 4 },
+    { i: "recent-activity", x: 6, y: 4, w: 6, h: 4 },
   ],
   admin: [
-    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
-    { i: "burndown", x: 3, y: 0, w: 9, h: 3 },
-    { i: "decision-actions", x: 0, y: 1, w: 6, h: 2 },
-    { i: "recent-activity", x: 6, y: 2, w: 6, h: 2 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 4 },
+    { i: "burndown", x: 3, y: 0, w: 9, h: 4 },
+    { i: "decision-actions", x: 0, y: 4, w: 6, h: 4 },
+    { i: "recent-activity", x: 6, y: 4, w: 6, h: 4 },
   ],
   member: [
-    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
-    { i: "my-tasks", x: 3, y: 0, w: 6, h: 3 },
-    { i: "due-this-week", x: 0, y: 1, w: 6, h: 2 },
-    { i: "priority-dist", x: 9, y: 0, w: 3, h: 1 },
+    { i: "task-stats", x: 0, y: 0, w: 3, h: 4 },
+    { i: "my-tasks", x: 3, y: 0, w: 9, h: 4 },
+    { i: "due-this-week", x: 0, y: 4, w: 7, h: 4 },
+    { i: "priority-dist", x: 7, y: 4, w: 5, h: 4 },
   ],
   viewer: [
-    { i: "task-stats", x: 0, y: 0, w: 3, h: 1 },
-    { i: "recent-activity", x: 3, y: 0, w: 6, h: 2 },
+    { i: "task-stats", x: 0, y: 0, w: 4, h: 4 },
+    { i: "recent-activity", x: 4, y: 0, w: 8, h: 4 },
   ],
 };
 
