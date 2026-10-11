@@ -16,7 +16,13 @@ import { registerAndLogin } from "./helpers";
 /** 采集可见文本节点里的 emoji（含 placeholder/title 属性），返回命中列表。 */
 async function scanEmoji(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
-    const re = /\p{Extended_Pictographic}/u;
+    // 字符集与 scripts/check_p0_content.py 的 EMOJI_CLUSTER_RE **同口径**（改一处要改两处）：
+    //   - 含 \u2600-\u27BF，所以 ✓(U+2713) / ✕(U+2715) 这类 dingbat 图标同样会被抓住
+    //     ——\p{Extended_Pictographic} 抓不到它们（它们不是 emoji），那是旧口径的盲区；
+    //   - 不含 \u00A9（©），所以页脚 "© 2026 corps" 这类正文排版符号不误报
+    //     ——规则原意是「禁把符号当图标用」，不是禁版权号。
+    const re =
+      /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\u203C\u2049\u2139\u2194-\u2199\u21A9\u21AA]/u;
     const hits: { where: string; text: string }[] = [];
     const visible = (el: Element) => {
       const r = el.getBoundingClientRect();
