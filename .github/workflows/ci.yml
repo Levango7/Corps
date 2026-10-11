@@ -320,18 +320,18 @@ jobs:
           curl -sf http://localhost:3000/api/health > /dev/null || { cat next-dev.log; exit 1; }
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
-          JWT_ACCESS_SECRET: ci-test-access-secret
-          JWT_REFRESH_SECRET: ci-test-refresh-secret
-          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          JWT_ACCESS_SECRET: ci-test-access-secret-32chars-min
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-32chars-min
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret-32chars
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           # 集成测试同源高频请求会被限流拦截，测试环境关闭限流
           RATE_LIMIT_DISABLED: "1"
       - run: npx vitest run --coverage
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
-          JWT_ACCESS_SECRET: ci-test-access-secret
-          JWT_REFRESH_SECRET: ci-test-refresh-secret
-          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          JWT_ACCESS_SECRET: ci-test-access-secret-32chars-min
+          JWT_REFRESH_SECRET: ci-test-refresh-secret-32chars-min
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret-32chars
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           # 单元/集成测试中触发限流会造成假失败，测试环境关闭限流
           RATE_LIMIT_DISABLED: "1"
@@ -408,8 +408,8 @@ jobs:
         env:
           # 应用以最小权限角色连接（生产同构），RLS 策略真实生效
           DATABASE_URL: postgresql://corps_app:hardened-ci-app-password@localhost:5432/corps_test
-          JWT_ACCESS_SECRET: ci-test-access-secret
-          BETTER_AUTH_SECRET: ci-test-better-auth-secret
+          JWT_ACCESS_SECRET: ci-test-access-secret-32chars-min
+          BETTER_AUTH_SECRET: ci-test-better-auth-secret-32chars
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
       # 引擎级 RLS 断言（rls-engine.test.ts，corps_app 直连）此前恒被 describe.skip——

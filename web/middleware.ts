@@ -181,6 +181,9 @@ export const config = {
    *  - /(.* ) — 所有页面路由（CSP nonce 注入 + locale 协商）
    *
    * next-intl 会自动忽略 /api 路径，无需在此排除。
+   * /offline 必须排除：它是 Service Worker 的导航兜底页（sw.js CORE_ASSETS
+   * 预缓存项），落在 [locale] 段之外；若进 locale 协商会被重写到
+   * /zh/offline（不存在的路由）→ 404，SW 永远预缓存不到它。
    */
-  matcher: ["/api/v1/:path*", "/api/auth/:path*", "/((?!api|_next|_vercel|.*\\..*).*)"],
+  matcher: ["/api/v1/:path*", "/api/auth/:path*", "/((?!api|_next|_vercel|offline|.*\\..*).*)"],
 };

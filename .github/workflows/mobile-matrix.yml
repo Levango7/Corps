@@ -73,9 +73,9 @@ jobs:
           curl -sf http://localhost:3000/api/health > /dev/null || { cat next-dev.log; exit 1; }
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
-          JWT_ACCESS_SECRET: ci-mac-access-secret
-          JWT_REFRESH_SECRET: ci-mac-refresh-secret
-          BETTER_AUTH_SECRET: ci-mac-better-auth-secret
+          JWT_ACCESS_SECRET: ci-mac-access-secret-32chars-min
+          JWT_REFRESH_SECRET: ci-mac-refresh-secret-32chars-min
+          BETTER_AUTH_SECRET: ci-mac-better-auth-secret-32chars-min
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
       # macos runner 预装 Playwright 依赖基本齐，--with-deps 兜底系统库
@@ -143,9 +143,9 @@ jobs:
             -o /dev/null -w "register warmup: %{http_code} in %{time_total}s\n" --max-time 180
         env:
           DATABASE_URL: postgresql://postgres:test@localhost:5432/corps_test
-          JWT_ACCESS_SECRET: ci-and-access-secret
-          JWT_REFRESH_SECRET: ci-and-refresh-secret
-          BETTER_AUTH_SECRET: ci-and-better-auth-secret
+          JWT_ACCESS_SECRET: ci-and-access-secret-32chars-min
+          JWT_REFRESH_SECRET: ci-and-refresh-secret-32chars-min
+          BETTER_AUTH_SECRET: ci-and-better-auth-secret-32chars-min
           # 关键：模拟器从 10.0.2.2:3000 访问宿主——APP_URL 必须与实际访问源
           # 一致，否则注册/登录后 cookie 域不匹配、会话种不上（五轮实测：
           # 提交注册后跳回 signup 页的根因）
