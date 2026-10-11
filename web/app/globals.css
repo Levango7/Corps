@@ -682,11 +682,10 @@ svg {
  * UI 精致化打磨 · 动效增强（2026-09-17）
  * - 页面切换过渡：fade-in + slide-up 组合
  * - 列表项 stagger 进入动画
- * - 微交互增强：button press scale（spring）、card hover lift（bounce）
+ * - 微交互增强：button press scale、card hover lift
  * - WidgetGrid 可拖拽卡片网格样式
  * 所有时长 / 缓动走 design token（var(--motion-*) / var(--ease-*)），
- * 高级动效 token（--motion-spring / --ease-bounce / --motion-stagger-delay）
- * 定义在 design-tokens.css。
+ * stagger 延迟 token（--motion-stagger-delay）定义在 design-tokens.css。
  * prefers-reduced-motion 全局降级块已统一处理，此处不重复声明。
  * ========================================================================= */
 
@@ -794,38 +793,8 @@ svg {
 }
 
 /* ----------------------------------------------------------------------------
- * 微交互增强 · spring / bounce 变体
- * 在已有 .btn-press / .card-lift 基础上，提供弹性缓动变体，
- * 用于强调型按钮 / 卡片落地动画。
+ * 卡片入场弹跳（从下方弹入，带过冲）
  * -------------------------------------------------------------------------- */
-
-/* 按钮按压弹性反馈（spring 缓动，过冲后回弹） */
-.btn-press-spring {
-  transition:
-    transform var(--motion-base) var(--motion-spring, cubic-bezier(0.34, 1.56, 0.64, 1)),
-    box-shadow var(--motion-base) var(--ease-out);
-}
-.btn-press-spring:active {
-  transform: scale(0.94);
-}
-
-/* 卡片悬停弹跳抬升（bounce 缓动，落地有轻微回弹） */
-.card-lift-bounce {
-  transition:
-    transform var(--motion-slow) var(--ease-bounce, cubic-bezier(0.68, -0.55, 0.265, 1.55)),
-    box-shadow var(--motion-slow) var(--ease-out);
-  will-change: transform;
-}
-.card-lift-bounce:hover {
-  transform: translateY(-4px);
-  box-shadow: var(--elev-hover);
-}
-.card-lift-bounce:active {
-  transform: translateY(-1px);
-  box-shadow: var(--elev-sm);
-}
-
-/* 卡片入场弹跳（从下方弹入，带过冲） */
 @keyframes card-enter-bounce {
   0% {
     opacity: 0;

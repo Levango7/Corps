@@ -43,8 +43,6 @@ export const MOTION = {
 export const springSnappy: Transition = { type: "spring", stiffness: 500, damping: 32, mass: 1 };
 /** 平滑磁吸：Widget 拖拽释放吸附（对应 SPRING.magnetic / --spring-stiffness 300） */
 export const springSmooth: Transition = { type: "spring", stiffness: 300, damping: 30, mass: 1 };
-/** 弹性浮窗：长按浮窗菜单 / Toast 入场（对应 SPRING.menu / stiffness 400，略过冲） */
-export const springBouncy: Transition = { type: "spring", stiffness: 400, damping: 28, mass: 1 };
 
 // ─── Transition presets（tween，走 --motion-* 时长 + --ease-standard）───
 /** var(--motion-fast) + var(--ease-standard) */
