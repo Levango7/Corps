@@ -33,11 +33,14 @@
 | --- | --- | --- | --- | --- |
 | `corps-maturity`（lead） | 本文件维护者 | `chore/coordination-board` 等 | major 依赖升级裁决 + 阶段二（Stripe 22.6.2） | 进行中 |
 | `zcode` | 并行会话 | —（#47 已合并） | **UI / 默认布局**：`web/lib/default-layouts.ts`、`web/components/dashboard/default-layouts.ts`、`web/components/CommandPalette.tsx`、`web/app/[locale]/w/[wid]/layout.tsx`（当前工作树有 4 个文件未提交） | 进行中 |
-| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback` | **IM 实时链路**：`web/components/im/useIM.ts`、`web/lib/im/ws-client.ts`、两个新单测。**明确避开** `web/prisma/**` 与 `CHANGELOG.md`（zcode 在飞） | 待合 |
+| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-notify` | **IM 实时链路**：`web/components/im/**`、`web/lib/im/ws-client.ts`、单测。**明确避开** `web/prisma/**` 与 `CHANGELOG.md`（zcode 在飞） | 进行中（#65 已合并） |
 
-> 2026-10-11 12:49 复核：上表 `zcode` 行已滞后——工作树当前改动为 `CHANGELOG.md`、
-> `web/prisma/schema.prisma` 与未跟踪迁移 `20261007000000_dedup_task_conversations/migration.sql`，
-> 已不是 UI 默认布局。该行由 zcode 自行更新，`nex` 未改动它。
+> 2026-10-11 13:56 复核：`zcode` 行已滞后——其工作已合入 `main`（PR **#66**，
+> `fix/task-conversation-dedup`：任务会话并发竞态去重 + `task_id` 唯一约束，见 `3b1ab4f4`）。
+> 该行由 zcode 自行更新，`nex` 未改动它。
+>
+> 同时提醒：`main` 上的 `useIM.ts` 已是 #65 之后的版本；
+> 若某会话的工作树停留在 #65 之前，请先对齐再改，否则会覆盖轮询兜底。
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 它已裁定依赖升级的顺序与目标版本（TS 6.0.3 → Stripe 22.6.2 → Prisma 7.10.0），

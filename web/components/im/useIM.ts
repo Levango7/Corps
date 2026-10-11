@@ -165,6 +165,56 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
   const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
   /**
+   * 上一次观察到的各会话未读数（轮询兜底用）。
+   * `null` 表示基线尚未建立——首次快照只记录不通知。
+   */
+  const unreadSnapshotRef = useRef<Map<string, number> | null>(null);
+
+  /**
+   * 轮询兜底下的「非活跃会话新消息」浏览器通知。
+   *
+   * 为什么需要：这个通知原本只挂在 `ws.onMessage` 的 "message" 分支（见下方 effect），
+   * 而 WS 在本部署连不上（Next standalone 不处理 upgrade，实测部署产物
+   * `.next/standalone/web/server.js` 里 `handleImUpgrade` 出现 0 次）→ 那个分支永不执行
+   * → 非活跃会话的新消息**从不弹通知**。轮询拿到会话列表后用未读数增量还原同一行为。
+   *
+   * 未读口径由后端保证「只统计他人消息」（`conversations/route.ts:118` 的
+   * `author_id IS DISTINCT FROM userId`），所以未读数增加必然意味着别人发了消息。
+   *
+   * 首次快照只建基线不通知：否则每次打开 IM 页面都会为历史未读刷一屏通知。
+   */
+  const notifyOnUnreadIncrease = useCallback((list: Conversation[]) => {
+    const prev = unreadSnapshotRef.current;
+    const next = new Map<string, number>();
+    for (const c of list) next.set(c.id, c.unreadCount ?? 0);
+    unreadSnapshotRef.current = next;
+
+    if (prev === null) return;
+    if (typeof window === "undefined" || typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+
+    for (const c of list) {
+      // 正在看的会话不弹（与 ws.onMessage 的 "message" 分支同口径）
+      if (c.id === activeCidRef.current) continue;
+      if ((c.unreadCount ?? 0) <= (prev.get(c.id) ?? 0)) continue;
+
+      const last = c.lastMessage;
+      try {
+        const notification = new Notification(last?.author?.name || c.title || "新消息", {
+          body: last?.body ?? "",
+          icon: last?.author?.image ?? undefined,
+        });
+        notification.onclick = () => {
+          window.focus();
+          notification.close();
+        };
+      } catch {
+        // 非用户手势上下文等限制下构造失败，静默忽略（与 ws 分支同口径）
+      }
+    }
+  }, []);
+
+  /**
    * 加载会话列表。
    *
    * @param opts.silent 静默刷新：不动 loading / error，供轮询兜底每 5s 调用。
@@ -184,6 +234,8 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
         // 就在渲染期抛 TypeError，任务详情页整体被打进路由级错误边界。
         const list = await apiList<Conversation>(`/api/v1/workspaces/${workspaceId}/conversations`);
         setConversations(list);
+        // 未读增量 → 非活跃会话的新消息通知（WS 不可用时的替代路径）
+        notifyOnUnreadIncrease(list);
       } catch (err) {
         // 静默刷新失败不写 error：下一个 tick 会重试，不该把轮询抖动冒泡成页面错误
         if (silent) return;
@@ -196,7 +248,7 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
         if (!silent) setLoading(false);
       }
     },
-    [workspaceId, t],
+    [workspaceId, t, notifyOnUnreadIncrease],
   );
 
   /** 选择会话：加载详情 + 消息 + 订阅 WS + 标记已读 */
