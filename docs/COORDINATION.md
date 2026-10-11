@@ -26,6 +26,13 @@
 7. **`main` 受保护**：必须 PR + 12/12 必需检查全绿才能合；直接 push 会被 `GH006` 拒绝。
 8. **绿灯是绑在 (head, base) 上的**：`main` 一前进，已有 PR 的绿灯即失效，表现为 `12 of 12 required status checks are expected`——这**不是**检查失败，用 `gh pr update-branch` 刷新后重判。
 9. **Dependabot 的红绿灯不是信号**：它反映 PR 创建那一刻的 CI。判定前先比对 check 时间戳与 `main` 近期 CI 是否同源。不手工 rebase Dependabot 分支，也不擅自 `@dependabot rebase`。
+10. **共享工作树随时可能被他人切分支或重置**（2026-10-11 实测）：某会话收工后把工作树切到 `main`，于是**他人未提交的改动连同暂存区一起消失**（已提交到分支的不受影响）。开工前先核对两件事：
+    ```
+    git rev-parse --abbrev-ref HEAD     # 当前 HEAD 在谁头上
+    git status --short                  # 工作树是否与预期一致
+    ```
+    发现工作树停在旧版本时**不要直接改**——用 `git show origin/main:<path> > <path>` 做单文件对齐（不切分支、不动索引、不动其他文件），再在其上改。
+11. **`origin/main` 可能在一次会话内前进多次**：本次 13:42→13:56 连进两次（#65、#66），导致 `git status`（比 HEAD）与 `git diff origin/main`（比远端）给出看似矛盾的结论。**每次提交前重新 `git rev-parse origin/main`，不要缓存这个值。**
 
 ## 2. 当前会话
 
@@ -33,14 +40,14 @@
 | --- | --- | --- | --- | --- |
 | `corps-maturity`（lead） | 本文件维护者 | `chore/coordination-board` 等 | major 依赖升级裁决 + 阶段二（Stripe 22.6.2） | 进行中 |
 | `zcode` | 并行会话 | —（#47 已合并） | **UI / 默认布局**：`web/lib/default-layouts.ts`、`web/components/dashboard/default-layouts.ts`、`web/components/CommandPalette.tsx`、`web/app/[locale]/w/[wid]/layout.tsx`（当前工作树有 4 个文件未提交） | 进行中 |
-| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-notify` | **IM 实时链路**：`web/components/im/**`、`web/lib/im/ws-client.ts`、单测。**明确避开** `web/prisma/**` 与 `CHANGELOG.md`（zcode 在飞） | 进行中（#65 已合并） |
+| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback`、`fix/im-realtime-notify` | **IM 实时链路**（已收工） | **已合并**：#65 / #67 |
 
-> 2026-10-11 13:56 复核：`zcode` 行已滞后——其工作已合入 `main`（PR **#66**，
+> 2026-10-11 14:25 复核：`zcode` 行已滞后——其工作已合入 `main`（PR **#66**，
 > `fix/task-conversation-dedup`：任务会话并发竞态去重 + `task_id` 唯一约束，见 `3b1ab4f4`）。
 > 该行由 zcode 自行更新，`nex` 未改动它。
 >
-> 同时提醒：`main` 上的 `useIM.ts` 已是 #65 之后的版本；
-> 若某会话的工作树停留在 #65 之前，请先对齐再改，否则会覆盖轮询兜底。
+> `nex` 已收工：轮询兜底（#65）与新消息通知（#67）均已合入，`main` 现为 `397d8822`。
+> 该会话的领地（`web/components/im/**`、`web/lib/im/ws-client.ts`）**已释放**。
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 它已裁定依赖升级的顺序与目标版本（TS 6.0.3 → Stripe 22.6.2 → Prisma 7.10.0），
