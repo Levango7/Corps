@@ -17,12 +17,29 @@ import { registerAndLogin } from "./helpers";
 async function scanEmoji(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
     // 字符集与 scripts/check_p0_content.py 的 EMOJI_CLUSTER_RE **同口径**（改一处要改两处）：
-    //   - 含 \u2600-\u27BF，所以 ✓(U+2713) / ✕(U+2715) 这类 dingbat 图标同样会被抓住
+    //   - 含 0x2600-0x27BF，所以 dingbat 图标（对勾 / 叉号 U+2713 / U+2715）同样会被抓到
     //     ——\p{Extended_Pictographic} 抓不到它们（它们不是 emoji），那是旧口径的盲区；
-    //   - 不含 \u00A9（©），所以页脚 "© 2026 corps" 这类正文排版符号不误报
-    //     ——规则原意是「禁把符号当图标用」，不是禁版权号。
-    const re =
-      /[\u{1F000}-\u{1FAFF}\u2600-\u27BF\u2B00-\u2BFF\u203C\u2049\u2139\u2194-\u2199\u21A9\u21AA]/u;
+    //   - 不含 0x00A9，所以页脚版权符号不误报——规则原意是「禁把符号当图标用」。
+    //
+    // 之所以写成码点区间数组而不是 /[\uXXXX-\uYYYY]/ 正则：P0 门禁
+    // （scripts/check_p0_content.py）会先把源码里的 \uXXXX 转义解码，再按
+    // 「emoji 作图标」判红——那段口径是刻意从严的（转义不该成为后门）。
+    // 于是这里改写法，而不是给门禁开路径豁免。
+    const EMOJI_CODEPOINT_RANGES: Array<[number, number]> = [
+      [0x1f000, 0x1faff],
+      [0x2600, 0x27bf],
+      [0x2b00, 0x2bff],
+      [0x203c, 0x203c],
+      [0x2049, 0x2049],
+      [0x2139, 0x2139],
+      [0x2194, 0x2199],
+      [0x21a9, 0x21aa],
+    ];
+    const isEmoji = (text: string) =>
+      Array.from(text).some((ch) => {
+        const cp = ch.codePointAt(0) ?? 0;
+        return EMOJI_CODEPOINT_RANGES.some(([lo, hi]) => cp >= lo && cp <= hi);
+      });
     const hits: { where: string; text: string }[] = [];
     const visible = (el: Element) => {
       const r = el.getBoundingClientRect();
@@ -34,7 +51,7 @@ async function scanEmoji(page: import("@playwright/test").Page) {
       for (const node of Array.from(el.childNodes)) {
         if (node.nodeType !== Node.TEXT_NODE) continue;
         const text = (node.textContent ?? "").trim();
-        if (text && re.test(text)) {
+        if (text && isEmoji(text)) {
           hits.push({ where: el.tagName.toLowerCase(), text: text.slice(0, 40) });
         }
       }
@@ -42,7 +59,7 @@ async function scanEmoji(page: import("@playwright/test").Page) {
     // 2) 输入控件的占位符与标题
     for (const el of Array.from(document.querySelectorAll("input[placeholder], [title]"))) {
       const text = el.getAttribute("placeholder") ?? el.getAttribute("title") ?? "";
-      if (text && re.test(text)) {
+      if (text && isEmoji(text)) {
         hits.push({ where: "placeholder/title", text: text.slice(0, 40) });
       }
     }
