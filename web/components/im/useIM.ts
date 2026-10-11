@@ -182,9 +182,7 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
         // GET /conversations 返回分页信封 { items, nextCursor, hasMore }，不是裸数组。
         // 曾把信封直接存进 conversations，下一次 setConversations(prev => prev.map(...))
         // 就在渲染期抛 TypeError，任务详情页整体被打进路由级错误边界。
-        const list = await apiList<Conversation>(
-          `/api/v1/workspaces/${workspaceId}/conversations`,
-        );
+        const list = await apiList<Conversation>(`/api/v1/workspaces/${workspaceId}/conversations`);
         setConversations(list);
       } catch (err) {
         // 静默刷新失败不写 error：下一个 tick 会重试，不该把轮询抖动冒泡成页面错误
