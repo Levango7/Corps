@@ -522,11 +522,11 @@ jobs:
       # 浏览器级真 E2E：playwright.config.ts 的 testDir:"./e2e" 未限定 testMatch，
       # 故运行 e2e/ 下全部用例（非仅 smoke）。打的是上面已就绪的生产构建 server，
       # 补齐"真实浏览器水合与交互"盲区
-      # --update-snapshots=all：视觉回归基线（ui-visual.spec.ts）首跑记录、
+      # --update-snapshots=missing：视觉回归基线（ui-visual.spec.ts）首跑记录、
       # 后续比对。基线从下方产物下载提交入库后才真正生效；CI 环境跨次运行
       # 渲染确定（同镜像同 chromium），本地因系统字体栈差异不可比（spec 已 test.skip 本地）。
       - name: Run browser E2E tests
-        run: npx playwright test --config playwright.config.ts --update-snapshots=all
+        run: npx playwright test --config playwright.config.ts --update-snapshots=missing
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
