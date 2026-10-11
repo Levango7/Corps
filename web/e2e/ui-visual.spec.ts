@@ -37,7 +37,8 @@ async function snapshotView(page: import("@playwright/test").Page, name: string)
   await page.emulateMedia({ colorScheme: "light" });
   await page.addStyleTag({ content: FREEZE_ANIMATIONS });
   await page.waitForTimeout(400); // 字体与布局绘制稳定
-  await expect(page).toMatchSnapshot(`${name}.png`, { maxDiffPixelRatio: 0.0001 });
+  // toHaveScreenshot 是 page 级截图断言（toMatchSnapshot 只对 locator/Buffer 等泛型目标可用）
+  await expect(page).toHaveScreenshot(`${name}.png`, { maxDiffPixelRatio: 0.0001 });
 }
 
 test.describe.serial("视觉回归（CI-only）", () => {
