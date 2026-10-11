@@ -45,6 +45,10 @@ async function snapshotView(page: import("@playwright/test").Page, name: string)
   await expect(page).toHaveScreenshot(`${name}.png`, { maxDiffPixelRatio: 0.0001 });
 }
 
+// 固定工作区名：registerAndLogin 默认名带时间戳，会渲染进工作区头部
+// （"corps / <名字>"），每轮截图必 diff。邮箱仍保持唯一。
+const FIXED_WS_NAME = "视觉基线工作区";
+
 test.describe.serial("视觉回归（CI-only）", () => {
   test("注册页", async ({ page }) => {
     await page.goto("/auth/signup");
@@ -61,7 +65,7 @@ test.describe.serial("视觉回归（CI-only）", () => {
   test("工作区仪表盘（空状态）", async ({ page }) => {
     const uniqueEmail = () =>
       `e2e-visual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@e2e.local`;
-    await registerAndLogin(page, uniqueEmail());
+    await registerAndLogin(page, uniqueEmail(), FIXED_WS_NAME);
     await expect(page.getByRole("button", { name: /搜索/ }).first()).toBeVisible({
       timeout: 15_000,
     });
@@ -71,7 +75,7 @@ test.describe.serial("视觉回归（CI-only）", () => {
   test("Cmd+K 命令面板", async ({ page }) => {
     const uniqueEmail = () =>
       `e2e-visual-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@e2e.local`;
-    await registerAndLogin(page, uniqueEmail());
+    await registerAndLogin(page, uniqueEmail(), FIXED_WS_NAME);
     await page.getByRole("button", { name: /搜索/ }).first().click();
     const dialog = page.locator('[role="dialog"][aria-label="命令面板"]');
     await expect(dialog).toBeVisible({ timeout: 20_000 });
