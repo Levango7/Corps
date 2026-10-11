@@ -26,6 +26,13 @@
 7. **`main` 受保护**：必须 PR + 12/12 必需检查全绿才能合；直接 push 会被 `GH006` 拒绝。
 8. **绿灯是绑在 (head, base) 上的**：`main` 一前进，已有 PR 的绿灯即失效，表现为 `12 of 12 required status checks are expected`——这**不是**检查失败，用 `gh pr update-branch` 刷新后重判。
 9. **Dependabot 的红绿灯不是信号**：它反映 PR 创建那一刻的 CI。判定前先比对 check 时间戳与 `main` 近期 CI 是否同源。不手工 rebase Dependabot 分支，也不擅自 `@dependabot rebase`。
+10. **共享工作树随时可能被他人切分支或重置**（2026-10-11 实测）：某会话收工后把工作树切到 `main`，于是**他人未提交的改动连同暂存区一起消失**（已提交到分支的不受影响）。开工前先核对两件事：
+    ```
+    git rev-parse --abbrev-ref HEAD     # 当前 HEAD 在谁头上
+    git status --short                  # 工作树是否与预期一致
+    ```
+    发现工作树停在旧版本时**不要直接改**——用 `git show origin/main:<path> > <path>` 做单文件对齐（不切分支、不动索引、不动其他文件），再在其上改。
+11. **`origin/main` 可能在一次会话内前进多次**：本次 13:42→13:56 连进两次（#65、#66），导致 `git status`（比 HEAD）与 `git diff origin/main`（比远端）给出看似矛盾的结论。**每次提交前重新 `git rev-parse origin/main`，不要缓存这个值。**
 
 ## 2. 当前会话
 
@@ -33,6 +40,22 @@
 | --- | --- | --- | --- | --- |
 | `corps-maturity`（lead） | 本文件维护者 | `chore/coordination-board` 等 | major 依赖升级裁决 + 阶段二（Stripe 22.6.2） | 进行中 |
 | `zcode` | 并行会话 | —（#47 已合并） | **UI / 默认布局**：`web/lib/default-layouts.ts`、`web/components/dashboard/default-layouts.ts`、`web/components/CommandPalette.tsx`、`web/app/[locale]/w/[wid]/layout.tsx`（当前工作树有 4 个文件未提交） | 进行中 |
+<<<<<<< Updated upstream
+| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback` | **IM 实时链路**：`web/components/im/useIM.ts`、`web/lib/im/ws-client.ts`、两个新单测。**明确避开** `web/prisma/**` 与 `CHANGELOG.md`（zcode 在飞） | 待合 |
+
+> 2026-10-11 12:49 复核：上表 `zcode` 行已滞后——工作树当前改动为 `CHANGELOG.md`、
+> `web/prisma/schema.prisma` 与未跟踪迁移 `20261007000000_dedup_task_conversations/migration.sql`，
+> 已不是 UI 默认布局。该行由 zcode 自行更新，`nex` 未改动它。
+=======
+| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback`、`fix/im-realtime-notify` | **IM 实时链路**（已收工） | **已合并**：#65 / #67 |
+
+> 2026-10-11 14:25 复核：`zcode` 行已滞后——其工作已合入 `main`（PR **#66**，
+> `fix/task-conversation-dedup`：任务会话并发竞态去重 + `task_id` 唯一约束，见 `3b1ab4f4`）。
+> 该行由 zcode 自行更新，`nex` 未改动它。
+>
+> `nex` 已收工：轮询兜底（#65）与新消息通知（#67）均已合入，`main` 现为 `397d8822`。
+> 该会话的领地（`web/components/im/**`、`web/lib/im/ws-client.ts`）**已释放**。
+>>>>>>> Stashed changes
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 它已裁定依赖升级的顺序与目标版本（TS 6.0.3 → Stripe 22.6.2 → Prisma 7.10.0），
@@ -68,7 +91,7 @@
 | --- | --- |
 | #44 与 #46 内容逐字节相同 | 保留 #46（`test/auth-logout-semantics`，已合并），#44 关闭 |
 | 跨租户越权的响应码 | viewer 写操作返回 **403**（不是 401）；401 仅指「未认证」。见 ADR-011 |
-| 登出后旧 access token | 在剩余 TTL（15m，硬编码）内仍有效，属已知取舍；可续期窗口 = 0。**残余缺口：WebSocket 连接不随登出断开**（`web/app/api/v1/im/ws/route.ts`、`web/lib/im/ws-server.ts`），未处理 |
+| 登出后旧 access token | 在剩余 TTL（15m，硬编码）内仍有效，属已知取舍；可续期窗口 = 0。**原记的「残余缺口：WebSocket 连接不随登出断开」前提不成立**——本部署跑 Next.js standalone server（`web/docker/entrypoint.sh:70` 的 `exec node server.js`），不处理 WS upgrade（实测部署产物 `.next/standalone/web/server.js` 里 `upgrade` 出现 **0** 次、`handleImUpgrade` **0** 次，`ws` 库未安装，源码零调用点），**根本没有 WS 连接**，所以不存在"登出时断不断"的问题。真实缺口是「**IM 无实时推送**」：服务端 `GET .../messages?after=` 增量游标早已就绪，客户端从未调用。已按 ADR-009 §2.1.1 补 5s 轮询兜底（`nex`，见 §2） |
 | TypeScript 6.0.3 | 已合入（`75b80332`），ADR-014 阶段 1 完成。**CI 每次都在 TS 6.0.3 下编译**（`ci.yml:34` 的 `tsc --noEmit`），不存在"从未验证" |
 | Prisma 7.10.0（#15/#16） | **不可合**。`P1012`：v7 不再支持 schema 里的 `datasource.url`，而本仓无 `prisma.config.ts` → `prisma generate` 立即失败。另带出 `mysql2` HIGH 审计失败。见 Issue #32 §2 |
 | Stripe 23.0.0（#38） | **不合**。ADR-014 §4.2.4 否决（23.x 稳定版仅 1 个，触发条件 ≥3 未满足），目标改投 **22.6.2** |

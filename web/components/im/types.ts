@@ -98,6 +98,19 @@ export interface Conversation {
   messages?: Message[];
   /** 未读消息数（由后端计算或前端根据 lastReadAt 推算） */
   unreadCount?: number;
+  /**
+   * 最后一条消息（后端会话列表已返回，见 `conversations/route.ts:138` 的 `lastMessage`）。
+   * 用于会话列表预览，以及轮询兜底下的新消息通知文案——轮询通道没有 WS 推送，
+   * 通知内容只能从这里取。
+   */
+  lastMessage?: {
+    id: string;
+    body: string;
+    type?: string;
+    createdAt: string;
+    authorId: string | null;
+    author: { id: string; name: string | null; image: string | null } | null;
+  } | null;
   /** 是否还有更早的历史消息可加载（游标分页，由 useIM 维护） */
   hasMoreMessages?: boolean;
 }
