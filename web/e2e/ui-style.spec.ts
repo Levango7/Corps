@@ -13,9 +13,6 @@ import { registerAndLogin } from "./helpers";
  * （playwright.config.ts 的 testDir 未限定 testMatch）。
  */
 
-/** Unicode Extended_Pictographic：emoji 谱系（含需 VS16 的变体）。CJK 标点不在其内，不会误伤。 */
-const EMOJI_RE = /\p{Extended_Pictographic}/u;
-
 /** 采集可见文本节点里的 emoji（含 placeholder/title 属性），返回命中列表。 */
 async function scanEmoji(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
