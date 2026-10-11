@@ -33,53 +33,46 @@
     ```
     发现工作树停在旧版本时**不要直接改**——用 `git show origin/main:<path> > <path>` 做单文件对齐（不切分支、不动索引、不动其他文件），再在其上改。
 11. **`origin/main` 可能在一次会话内前进多次**：本次 13:42→13:56 连进两次（#65、#66），导致 `git status`（比 HEAD）与 `git diff origin/main`（比远端）给出看似矛盾的结论。**每次提交前重新 `git rev-parse origin/main`，不要缓存这个值。**
+12. **提交前先扫冲突标记**（2026-10-12 实测）：一次 `git stash pop` 的冲突曾被直接提交进 `main`，`docs/COORDINATION.md` 里留下了 `<<<<<<< / ======= / >>>>>>>` 三行。提交前跑一次：
+    ```
+    git grep -nE '^(<<<<<<<|=======|>>>>>>>)' -- .    # 必须为空
+    ```
 
 ## 2. 当前会话
 
 | 会话 | 角色 | 分支 | 正在做 | 状态 |
 | --- | --- | --- | --- | --- |
-| `corps-maturity`（lead） | 本文件维护者 | `chore/coordination-board` 等 | major 依赖升级裁决 + 阶段二（Stripe 22.6.2） | 进行中 |
-| `zcode` | 并行会话 | —（#47 已合并） | **UI / 默认布局**：`web/lib/default-layouts.ts`、`web/components/dashboard/default-layouts.ts`、`web/components/CommandPalette.tsx`、`web/app/[locale]/w/[wid]/layout.tsx`（当前工作树有 4 个文件未提交） | 进行中 |
-<<<<<<< Updated upstream
-| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback` | **IM 实时链路**：`web/components/im/useIM.ts`、`web/lib/im/ws-client.ts`、两个新单测。**明确避开** `web/prisma/**` 与 `CHANGELOG.md`（zcode 在飞） | 待合 |
-
-> 2026-10-11 12:49 复核：上表 `zcode` 行已滞后——工作树当前改动为 `CHANGELOG.md`、
-> `web/prisma/schema.prisma` 与未跟踪迁移 `20261007000000_dedup_task_conversations/migration.sql`，
-> 已不是 UI 默认布局。该行由 zcode 自行更新，`nex` 未改动它。
-=======
-| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback`、`fix/im-realtime-notify` | **IM 实时链路**（已收工） | **已合并**：#65 / #67 |
-
-> 2026-10-11 14:25 复核：`zcode` 行已滞后——其工作已合入 `main`（PR **#66**，
-> `fix/task-conversation-dedup`：任务会话并发竞态去重 + `task_id` 唯一约束，见 `3b1ab4f4`）。
-> 该行由 zcode 自行更新，`nex` 未改动它。
->
-> `nex` 已收工：轮询兜底（#65）与新消息通知（#67）均已合入，`main` 现为 `397d8822`。
-> 该会话的领地（`web/components/im/**`、`web/lib/im/ws-client.ts`）**已释放**。
->>>>>>> Stashed changes
+| `corps-maturity`（lead） | 本文件维护者 | — | 成熟度收尾：依赖升级、ADR 勘误、协作机制 | **三个依赖升级阶段全部完成**（见 §5） |
+| `zcode` | 并行会话 | `fix/task-conversation-dedup`（#66）等 | UI 修复批次（#50）+ 任务会话并发竞态去重（#66） | 均已合入 `main` |
+| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback`、`fix/im-realtime-notify` | IM 实时链路：5s 轮询兜底 + 新消息通知 | **已收工**：#65 / #67 已合入，领地已释放 |
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
-它已裁定依赖升级的顺序与目标版本（TS 6.0.3 → Stripe 22.6.2 → Prisma 7.10.0），
 任何与该 ADR 冲突的升级动作都应先改 ADR，而不是先改代码。
 
-## 3. 在飞的 PR
+## 3. 当前状态（2026-10-12）
 
-| PR | 分支 | 内容 | 归属 | 状态 |
-| --- | --- | --- | --- | --- |
-| #15 | `dependabot/.../prisma-7.10.0` | `prisma` CLI 6.15.0 → 7.10.0 | Dependabot | ❌ **待关闭**——真红灯且结构性（见 Issue #32 §2） |
-| #16 | `dependabot/.../prisma/client-7.10.0` | `@prisma/client` 6.15.0 → 7.10.0 | Dependabot | ❌ 同上 |
-| #38 | `dependabot/.../stripe-23.0.0` | `stripe` 18.3.0 → 23.0.0 | Dependabot | ❌ **待关闭**——ADR-014 §4.2.4 已否决 23.0.0 |
-| #48 | `chore/coordination-board` | 本文件 | lead | 待合 |
-| #49 | `chore/adr014-rev-log` | ADR-014 §10 修订记录 + 勘误二 | lead | 待合 |
+**`main` tip = `bb8c2dc1`（#71 合并）。三个依赖升级阶段全部落地：**
 
-评估结论统一登记在 **Issue #32**；**该 issue 现在是这条线的唯一事实来源**。
+| 阶段 | 目标 | 落地 PR | 结果 |
+| --- | --- | --- | --- |
+| 一 | TypeScript 5.9.3 → 6.0.3 | #14 | ✅ `75b80332` |
+| 二 | Stripe 18.3.0 → 22.6.2 | #58 | ✅ `5fdea854`，**保留 `basil` 钉版**（apiVersion 护栏按设计触发显式决策） |
+| 三 | Prisma 6.15.0 → 7.10.0 | #51 | ✅ `e22b9a51`，driver adapter + `web/prisma.config.ts` + 全链路验证 |
+
+**当前唯一开放 PR：**
+
+| PR | 分支 | 内容 | 状态 |
+| --- | --- | --- | --- |
+| #72 | `test/ui-visual-regression` | E2E 视觉回归基线（CI-only，截图 + 像素 diff） | 11 项检查 10 绿，仅 `E2E (production build)` pending |
+
+**Dependabot 侧的处置**：#15 / #16 / #38 均已关闭（依据分别是 ADR-014 §4.3 的 P1012 结构性失败、§4.2.4 对 23.0.0 的否决），关闭评论均指向 Issue #32。**不要重开。**
 
 ## 4. 领地（避免同时改同一处）
 
 | 文件 / 目录 | 占用或约束 | 说明 |
 | --- | --- | --- |
-| `web/lib/default-layouts.ts` 等 4 个 UI 文件 | **zcode** | 见 §2，未提交 |
-| `web/lib/payments/**`、`web/tests/unit/stripe-api-version.test.ts` | lead（阶段二） | Stripe 升级只动这几个 |
-| `web/package.json`、`web/pnpm-lock.yaml` | **改动前必须登记** | 两边都可能碰；锁文件冲突最难解 |
+| `web/e2e/ui-visual*.spec.ts` + `ui-visual.spec.ts-snapshots/**` | #72 | 视觉回归基线，含 4 张 PNG |
+| `web/package.json`、`web/pnpm-lock.yaml` | **改动前必须登记** | 依赖升级已全部完成，如无必要不要动 |
 | `scripts/adr015-manifest.txt` | **不得删条目** | ADR-015 §5 已由 CI 门禁 `check_adr015_manifest.py` 强制 |
 | `docs/ROADMAP-2026Q4.md` | 冻结 | 由 `scripts/check_burndown.py` / burndown workflow 消费 |
 | `scripts/zero-coverage-baseline.txt` | 冻结 | 覆盖率棘轮基线 |
@@ -91,9 +84,8 @@
 | --- | --- |
 | #44 与 #46 内容逐字节相同 | 保留 #46（`test/auth-logout-semantics`，已合并），#44 关闭 |
 | 跨租户越权的响应码 | viewer 写操作返回 **403**（不是 401）；401 仅指「未认证」。见 ADR-011 |
-| 登出后旧 access token | 在剩余 TTL（15m，硬编码）内仍有效，属已知取舍；可续期窗口 = 0。**原记的「残余缺口：WebSocket 连接不随登出断开」前提不成立**——本部署跑 Next.js standalone server（`web/docker/entrypoint.sh:70` 的 `exec node server.js`），不处理 WS upgrade（实测部署产物 `.next/standalone/web/server.js` 里 `upgrade` 出现 **0** 次、`handleImUpgrade` **0** 次，`ws` 库未安装，源码零调用点），**根本没有 WS 连接**，所以不存在"登出时断不断"的问题。真实缺口是「**IM 无实时推送**」：服务端 `GET .../messages?after=` 增量游标早已就绪，客户端从未调用。已按 ADR-009 §2.1.1 补 5s 轮询兜底（`nex`，见 §2） |
-| TypeScript 6.0.3 | 已合入（`75b80332`），ADR-014 阶段 1 完成。**CI 每次都在 TS 6.0.3 下编译**（`ci.yml:34` 的 `tsc --noEmit`），不存在"从未验证" |
-| Prisma 7.10.0（#15/#16） | **不可合**。`P1012`：v7 不再支持 schema 里的 `datasource.url`，而本仓无 `prisma.config.ts` → `prisma generate` 立即失败。另带出 `mysql2` HIGH 审计失败。见 Issue #32 §2 |
-| Stripe 23.0.0（#38） | **不合**。ADR-014 §4.2.4 否决（23.x 稳定版仅 1 个，触发条件 ≥3 未满足），目标改投 **22.6.2** |
-| `desktop/src-tauri/resources/standalone/package.json` | **不是声明点**，是 `copy-standalone.mjs` 的生成物。不要手改，也不要为它加 CI 门禁 |
-
+| 登出后旧 access token | 在剩余 TTL（15m，硬编码）内仍有效，属已知取舍；可续期窗口 = 0。**原记的「残余缺口：WebSocket 连接不随登出断开」前提不成立**——本部署跑 Next.js standalone server（`web/docker/entrypoint.sh:70` 的 `exec node server.js`），不处理 WS upgrade（实测部署产物 `.next/standalone/web/server.js` 里 `upgrade` 出现 **0** 次、`handleImUpgrade` **0** 次，`ws` 库未安装，源码零调用点），**根本没有 WS 连接**。真实缺口是「IM 无实时推送」，已按 ADR-009 §2.1.1 补 5s 轮询兜底（#65 / #67） |
+| TypeScript 6.0.3 | 已合入（#14）。**CI 每次都在 TS 6.0.3 下编译**（`ci.yml:34` 的 `tsc --noEmit` + `--frozen-lockfile`），不存在"从未验证"；ADR §4.1.1 预判的 `types` 默认变 `[]` 风险未发生 |
+| Prisma 7.10.0（#15/#16） | 当初判定「不可合」正确——Dependabot 版本只改两个文件必然撞 P1012。**最终由 #51 作为独立工程完成**：`web/prisma.config.ts` + driver adapter + 4 处装配点 + 124 条 import 路径 |
+| Stripe 23.0.0（#38） | **不合**。ADR-014 §4.2.4 否决（23.x 稳定版仅 1 个，触发条件 ≥3 未满足）。**阶段二改投 22.6.2（#58）**，且**保留 `apiVersion: "2025-06-30.basil"` 钉版**——22.6.2 默认值是 `2026-08-26.dahlia`，省略即静默跨过 clover + dahlia 两个 API 大版本 |
+| `desktop/src-tauri/resources/standalone/package.json` | **不是声明点**，是 `copy-standalone.mjs` 的生成物（每次桌面构建 `rmSync` + `cpSync` 整体重建）。#57 曾手改其 TS 版本到 6.0.3 —— **无害但无效**，下次桌面构建即被覆盖。不要为它加 CI 门禁 |
