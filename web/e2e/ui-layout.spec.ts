@@ -21,10 +21,14 @@ async function scanContainingBlockTraps(dialog: import("@playwright/test").Locat
       const transform = cs.transform;
       // "none" 或空 = 未建立包含块；其余（含 matrix(1,0,0,1,0,0) 单位矩阵）都算
       if (transform && transform !== "none") {
-        traps.push(`${cur.tagName.toLowerCase()}.${cur.className.toString().slice(0, 60)} transform=${transform}`);
+        traps.push(
+          `${cur.tagName.toLowerCase()}.${cur.className.toString().slice(0, 60)} transform=${transform}`,
+        );
       }
       if (cs.willChange.includes("transform")) {
-        traps.push(`${cur.tagName.toLowerCase()}.${cur.className.toString().slice(0, 60)} will-change=transform`);
+        traps.push(
+          `${cur.tagName.toLowerCase()}.${cur.className.toString().slice(0, 60)} will-change=transform`,
+        );
       }
       cur = cur.parentElement;
     }
@@ -51,8 +55,14 @@ test.describe.serial("UI 布局硬断言", () => {
     const box = await dialog.boundingBox();
     const vp = page.viewportSize();
     expect(box, "弹窗无 boundingBox").not.toBeNull();
-    expect(Math.abs(box!.width - vp!.width), `遮罩宽 ${box!.width} ≠ 视口 ${vp!.width}`).toBeLessThanOrEqual(1);
-    expect(Math.abs(box!.height - vp!.height), `遮罩高 ${box!.height} ≠ 视口 ${vp!.height}`).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(box!.width - vp!.width),
+      `遮罩宽 ${box!.width} ≠ 视口 ${vp!.width}`,
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.abs(box!.height - vp!.height),
+      `遮罩高 ${box!.height} ≠ 视口 ${vp!.height}`,
+    ).toBeLessThanOrEqual(1);
     expect(Math.abs(box!.x), `遮罩 x 偏移 ${box!.x}`).toBeLessThanOrEqual(1);
     expect(Math.abs(box!.y), `遮罩 y 偏移 ${box!.y}`).toBeLessThanOrEqual(1);
 

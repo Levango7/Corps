@@ -34,9 +34,7 @@ async function scanEmoji(page: import("@playwright/test").Page) {
       }
     }
     // 2) 输入控件的占位符与标题
-    for (const el of Array.from(
-      document.querySelectorAll("input[placeholder], [title]"),
-    )) {
+    for (const el of Array.from(document.querySelectorAll("input[placeholder], [title]"))) {
       const text = el.getAttribute("placeholder") ?? el.getAttribute("title") ?? "";
       if (text && re.test(text)) {
         hits.push({ where: "placeholder/title", text: text.slice(0, 40) });
