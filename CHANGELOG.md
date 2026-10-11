@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **任务会话并发竞态产生的重复会话善后 + 数据库级唯一约束**：任务聊天 get-or-create 的竞态窗口
+  （API 层已用 `pg_advisory_xact_lock` 收口）此前已落库的重复会话仍然存在，而读取侧
+  `conversation.findFirst({ where: { taskId } })` 没有 `orderBy`，命中的会话与消息实际写入的
+  会话可能不是同一条 ⇒ 用户"发出去的消息自己看不到"。迁移 `20261007000000_dedup_task_conversations`
+  做确定性去重（同 task 组内 `created_at` 最早、并列取 `id` 字典序最小者为 survivor；messages
+  改址、members/presences 用 `INSERT..ON CONFLICT` 并入——保住 `last_read_at` 的 NULL 语义，
+  避免未读数凭空归零）后落 `uq_conversations_task_id` 唯一索引，并把这条不变量从"代码自觉"
+  交给数据库；同列冗余普通索引一并移除。schema 同步声明 `@@unique`。**执行角色注意**：
+  该迁移必须由表属主/BYPASSRLS 连接执行（生产即 compose 的 postgres 超级用户）；以
+  `corps_app`（NOBYPASSRLS）跑会因 FORCE RLS 全部 0 行命中，属预期防护而非故障。
+
 ### Security
 
 - **写权限从"只有声明"变成"有执行点"——viewer 只读承诺落地（default-deny）**：`lib/permissions.ts`
@@ -86,7 +99,7 @@
 ### Fixed
 
 - **审批族"给他人发通知"在生产 RLS 形态下 500（P1，本轮由新测试暴露）**：`cc / approve /
-  reject / transfer / delegate / add-sign` 六个端点都以 `tx.notification.create()` 写他人
+reject / transfer / delegate / add-sign` 六个端点都以 `tx.notification.create()` 写他人
   的通知。Prisma 的 create 发 `INSERT … RETURNING`，而 PG 要求 RETURNING 的行再过一遍
   `notifications` 的 SELECT 策略（`user_id = app.user_id`，DL-17 刻意不放行他人行）；
   这些调用点又都传了 `runWithWorkspace(wid, fn, ctx.payload.sub)` ⇒ `app.user_id` 是操作者，
