@@ -585,7 +585,6 @@ lib/approval/condition-engine.ts
 lib/approval/permission-linkage.ts
 lib/billing/seat-policy.ts
 lib/billing/subscription-expiry.ts
-lib/billing/webhook-handler.ts
 lib/calendar/config.ts
 lib/calendar/google-client.ts
 lib/calendar/oauth.ts
@@ -605,9 +604,7 @@ lib/im/types.ts
 lib/im/ws-server.ts
 lib/livekit-utils.ts
 lib/mail/transporter.ts
-lib/payments/alipay-provider.ts
 lib/payments/index.ts
-lib/payments/wechat-provider.ts
 lib/prisma-error.ts
 lib/prisma.ts
 lib/push/unified.ts
