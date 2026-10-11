@@ -16,11 +16,7 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default async function OfflineLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default async function OfflineLayout({ children }: { children: React.ReactNode }) {
   const h = await headers();
   const nonce = h.get("x-nonce") ?? "";
 
