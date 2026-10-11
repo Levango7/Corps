@@ -22,7 +22,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { GripVertical, Settings, X, Maximize2, RefreshCw, Trash2 } from "lucide-react";
-import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
 import WidgetConfigPanel, { type WidgetConfig } from "./WidgetConfigPanel";
 import { PinchToZoom } from "@/components/PinchToZoom";
 import { QuickActionMenu, type QuickAction } from "@/components/QuickActionMenu";
@@ -81,8 +80,6 @@ export default function WidgetCard({
   /** F7: 双击切换尺寸时的短暂标签提示（如 "M"），1.5s 后自动消失 */
   const [sizeHint, setSizeHint] = useState<string | null>(null);
   const hintTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  /** prefers-reduced-motion 检测 */
-  const prefersReduced = useReducedMotion();
   const t = useTranslations("widget");
 
   /** 长按 QuickActionMenu 状态 */
@@ -146,7 +143,10 @@ export default function WidgetCard({
 
   return (
     <div
-      style={{ perspective: prefersReduced ? undefined : "var(--perspective-card)" }}
+      // 注意：这里曾写 `perspective: var(--perspective-card)` 给配置面板的 3D 翻转入场用。
+      // 已移除 —— perspective（非 none）会为 position:fixed 后代创建包含块，把长按
+      // QuickActionMenu 的视口坐标错按卡片盒子解析，整个菜单偏移。翻转入场现在由
+      // WidgetConfigPanel 自带 transformPerspective，不再需要祖先 perspective。
       className={[
         "relative flex flex-col h-full bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] overflow-hidden",
         // F7: 拖拽视觉反馈 — 轻微放大 + 更强阴影 + 半透明
@@ -217,38 +217,18 @@ export default function WidgetCard({
       >
         <PinchToZoom>{children}</PinchToZoom>
       </div>
-      {/* 配置面板 — 3D 翻转入场（§4.2），reduced 降级为条件渲染 */}
-      {prefersReduced ? (
-        configOpen &&
-        widgetId &&
-        onConfigChange && (
-          <WidgetConfigPanel
-            widgetId={widgetId}
-            config={config ?? {}}
-            onChange={(next) => onConfigChange(next)}
-            onClose={() => setConfigOpen(false)}
-          />
-        )
-      ) : (
-        <AnimatePresence>
-          {configOpen && widgetId && onConfigChange && (
-            <motion.div
-              initial={{ rotateX: -90, opacity: 0 }}
-              animate={{ rotateX: 0, opacity: 1 }}
-              exit={{ rotateX: 90, opacity: 0 }}
-              transition={{ duration: 0.3, ease: [0.2, 0, 0, 1] }}
-              style={{ transformOrigin: "top", transformStyle: "preserve-3d" }}
-              className="absolute inset-x-0 bottom-0 z-[var(--z-dropdown)]"
-            >
-              <WidgetConfigPanel
-                widgetId={widgetId}
-                config={config ?? {}}
-                onChange={(next) => onConfigChange(next)}
-                onClose={() => setConfigOpen(false)}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+      {/* 配置面板 —— 本组件自己 portal 到 document.body，并自带 3D 翻转入场
+          （§4.2，reduced 档降级为瞬时；见 WidgetConfigPanel 内的长注释）。
+          这里**不能**再套 motion.div 包裹层：它的 transform 会构成 position:fixed
+          的包含块，把 fixed inset-0 的遮罩劫持进卡片盒子内，再被卡片根的
+          overflow-hidden 裁掉，于是遮罩只盖住卡片本身。 */}
+      {configOpen && widgetId && onConfigChange && (
+        <WidgetConfigPanel
+          widgetId={widgetId}
+          config={config ?? {}}
+          onChange={(next) => onConfigChange(next)}
+          onClose={() => setConfigOpen(false)}
+        />
       )}
       {/* 长按 QuickActionMenu — 仅在有可用操作时渲染 */}
       {quickActions.length > 0 && (
