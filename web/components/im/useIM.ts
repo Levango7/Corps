@@ -8,12 +8,14 @@
  *  - 发送 / 编辑 / 撤回消息
  *  - 创建会话
  *  - 订阅 WebSocket 实时消息（新消息 / 编辑 / 撤回 / 在线状态 / 正在输入 / 已读）
+ *  - WS 不可用时按 ADR-009 §2.1.1 以 5s 轮询兜底（见下方「轮询兜底」effect）
  *  - 标记已读
  *
  * 数据流：
  *  1. 初始化时 loadConversations() 拉取会话列表
  *  2. selectConversation(cid) 加载会话详情 + 消息 + 订阅 WS + 标记已读
  *  3. ws.onMessage 统一处理服务端推送，更新 conversations / messages
+ *  4. WS 未连接时，5s 轮询用 `?after=` 游标增量补齐消息与会话列表
  *
  * 错误处理：
  *  - API 失败时 setError(message)，loading 复位
@@ -28,6 +30,13 @@ import type { Conversation, Message, SendMessageOptions, CreateConversationParam
 
 /** 消息分页每页条数（与后端 limit 上限 200 对齐，取 50 平衡首屏性能） */
 const MESSAGES_PAGE_SIZE = 50;
+
+/**
+ * 轮询兜底间隔（ms）。
+ *
+ * ADR-009 §2.1.1 裁定的 MVP 实时方案就是「5s 间隔 + 游标增量」，此处取同一口径。
+ */
+const POLL_INTERVAL_MS = 5_000;
 
 /** 消息列表 API 响应（游标分页信封） */
 interface MessagesListResponse {
@@ -81,8 +90,11 @@ export interface UseIMResult {
   error: string | null;
   /** WebSocket 连接状态 */
   wsStatus: "connecting" | "connected" | "disconnected" | "error";
-  /** 加载会话列表 */
-  loadConversations: () => Promise<void>;
+  /**
+   * 加载会话列表。
+   * @param opts.silent 静默刷新：不动 loading / error，供轮询兜底调用
+   */
+  loadConversations: (opts?: { silent?: boolean }) => Promise<void>;
   /** 选择会话（加载详情 + 消息 + 订阅 + 标记已读） */
   selectConversation: (cid: string) => Promise<void>;
   /** 从任务 ID 获取/创建关联会话（任务详情页内嵌聊天用） */
@@ -132,6 +144,12 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
   const [typingUsers, setTypingUsers] = useState<Record<string, string[]>>({});
 
   const ws = useIMWebSocket(workspaceId);
+  /**
+   * 是否已建立 WS 连接。
+   * 只取布尔值、不把整个 status 放进依赖：status 会在 connecting→error→connecting
+   * 之间随重连抖动，若直接依赖它，5s 轮询定时器会被反复重建而打断节奏。
+   */
+  const wsConnected = ws.status === "connected";
 
   // 当前活跃会话 ID 引用（供 WS 消息处理判断是否属于当前会话）
   const activeCidRef = useRef<string | null>(null);
@@ -146,26 +164,40 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
    */
   const typingTimersRef = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
 
-  /** 加载会话列表 */
-  const loadConversations = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      // GET /conversations 返回分页信封 { items, nextCursor, hasMore }，不是裸数组。
-      // 曾把信封直接存进 conversations，下一次 setConversations(prev => prev.map(...))
-      // 就在渲染期抛 TypeError，任务详情页整体被打进路由级错误边界。
-      const list = await apiList<Conversation>(`/api/v1/workspaces/${workspaceId}/conversations`);
-      setConversations(list);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : (t?.("loadConversationsFailed") ?? "Failed to load conversations"),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [workspaceId, t]);
+  /**
+   * 加载会话列表。
+   *
+   * @param opts.silent 静默刷新：不动 loading / error，供轮询兜底每 5s 调用。
+   *   若沿用非静默路径，会话列表会每 5s 闪一次全屏 spinner，
+   *   且一次轮询失败会把页面级 error 点亮。
+   */
+  const loadConversations = useCallback(
+    async (opts?: { silent?: boolean }) => {
+      const silent = opts?.silent === true;
+      if (!silent) {
+        setLoading(true);
+        setError(null);
+      }
+      try {
+        // GET /conversations 返回分页信封 { items, nextCursor, hasMore }，不是裸数组。
+        // 曾把信封直接存进 conversations，下一次 setConversations(prev => prev.map(...))
+        // 就在渲染期抛 TypeError，任务详情页整体被打进路由级错误边界。
+        const list = await apiList<Conversation>(`/api/v1/workspaces/${workspaceId}/conversations`);
+        setConversations(list);
+      } catch (err) {
+        // 静默刷新失败不写 error：下一个 tick 会重试，不该把轮询抖动冒泡成页面错误
+        if (silent) return;
+        setError(
+          err instanceof Error
+            ? err.message
+            : (t?.("loadConversationsFailed") ?? "Failed to load conversations"),
+        );
+      } finally {
+        if (!silent) setLoading(false);
+      }
+    },
+    [workspaceId, t],
+  );
 
   /** 选择会话：加载详情 + 消息 + 订阅 WS + 标记已读 */
   const selectConversation = useCallback(
@@ -542,6 +574,86 @@ export function useIM(workspaceId: string, t?: (key: string) => string): UseIMRe
     });
     return unsubscribe;
   }, [ws]);
+
+  // 轮询兜底用的 loadConversations 引用。
+  // 不把 loadConversations 直接放进 effect 依赖：它的 identity 依赖调用方传入的 t，
+  // 若 t 不稳定，5s 定时器会每次渲染都被重建。
+  const loadConversationsRef = useRef(loadConversations);
+  useEffect(() => {
+    loadConversationsRef.current = loadConversations;
+  }, [loadConversations]);
+
+  /**
+   * 轮询兜底 —— ADR-009 §2.1.1 裁定的 MVP 实时通道（5s + 游标增量）。
+   *
+   * 为什么必须有：本部署跑的是 Next.js standalone server
+   * （`web/docker/entrypoint.sh:70` 的 `exec node server.js`），它不处理 WebSocket
+   * upgrade —— 实测部署产物 `web/.next/standalone/web/server.js` 里 `upgrade` 出现 0 次、
+   * `handleImUpgrade` 出现 0 次，且 `ws` 库未安装。于是 `ws-client` 的连接永远建立不起来，
+   * 上面那个 `ws.onMessage` 分支一条也收不到，IM 会退化成"必须手动刷新才看得到新消息"。
+   *
+   * 服务端的增量游标端点是现成的（`GET .../messages?after=ISO`，见
+   * `app/api/v1/workspaces/[wid]/conversations/[cid]/messages/route.ts:74-78`），
+   * 本 effect 只补客户端这半个循环。
+   *
+   * WS 一旦真的连上（未来接入 custom server），`wsConnected` 变 true 会让本循环自动停用，
+   * 避免与推送重复更新。
+   */
+  useEffect(() => {
+    if (wsConnected) return;
+
+    let cancelled = false;
+
+    const tick = async () => {
+      // ① 活跃会话的消息增量（未选中会话时跳过；会话列表仍照刷）
+      const cid = activeCidRef.current;
+      if (cid) {
+        try {
+          // 游标回退 1ms：服务端用的是 `createdAt > after`（严格大于），
+          // 同一毫秒落库的消息会被漏掉。回退 1ms 后靠下面的 id 去重兜住重叠部分——宁重不漏。
+          const last = messagesRef.current[messagesRef.current.length - 1];
+          const after = last
+            ? `&after=${encodeURIComponent(
+                new Date(new Date(last.createdAt).getTime() - 1).toISOString(),
+              )}`
+            : "";
+
+          const result = await api<MessagesListResponse>(
+            `/api/v1/workspaces/${workspaceId}/conversations/${cid}/messages?limit=${MESSAGES_PAGE_SIZE}${after}`,
+          );
+
+          // 竞态：请求期间用户可能已切到别的会话 —— 丢弃本批，不要污染新会话的消息列表
+          const incoming =
+            cancelled || activeCidRef.current !== cid ? [] : (result?.messages ?? []);
+
+          if (incoming.length > 0) {
+            setMessages((prev) => {
+              const seen = new Set(prev.map((m) => m.id));
+              const fresh = incoming.filter((m) => !seen.has(m.id));
+              return fresh.length > 0 ? [...prev, ...fresh] : prev;
+            });
+          }
+        } catch {
+          // best-effort：单次轮询失败不打断 UI、不写 error，下一个 tick 自然重试
+        }
+      }
+
+      // ② 会话列表：未读数 / lastMessageAt 同样只靠 WS 推送，不刷就是死的。
+      //    放在 cid 判断之外 —— IM 落地页（尚未选中任何会话）也需要看到未读变化。
+      //    用静默模式，避免每 5s 闪一次 spinner。
+      try {
+        await loadConversationsRef.current({ silent: true });
+      } catch {
+        // 兜底：loadConversations 内部已吞掉失败，此处仅防未来改动引入未捕获拒绝
+      }
+    };
+
+    const timer = setInterval(tick, POLL_INTERVAL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [workspaceId, wsConnected]);
 
   // 同步消息列表引用（供 loadMoreMessages 读取游标）
   useEffect(() => {
