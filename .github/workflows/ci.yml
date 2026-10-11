@@ -522,8 +522,11 @@ jobs:
       # 浏览器级真 E2E：playwright.config.ts 的 testDir:"./e2e" 未限定 testMatch，
       # 故运行 e2e/ 下全部用例（非仅 smoke）。打的是上面已就绪的生产构建 server，
       # 补齐"真实浏览器水合与交互"盲区
+      # --update-snapshots=missing：视觉回归基线（ui-visual.spec.ts）首跑记录、
+      # 后续比对。基线从下方产物下载提交入库后才真正生效；CI 环境跨次运行
+      # 渲染确定（同镜像同 chromium），本地因系统字体栈差异不可比（spec 已 test.skip 本地）。
       - name: Run browser E2E tests
-        run: npx playwright test --config playwright.config.ts
+        run: npx playwright test --config playwright.config.ts --update-snapshots=missing
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
@@ -535,6 +538,15 @@ jobs:
             kill "$(cat next.pid)" 2>/dev/null || true
             rm -f next.pid
           fi
+      # 视觉回归基线产物：首跑以 missing 模式记录的基线在此下载，
+      # 提交入库后纳入后续所有 PR 的像素比对。
+      - name: Upload visual baselines
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: visual-snapshots
+          path: web/e2e/*-snapshots/
+          if-no-files-found: ignore
       # E2E 失败时上传 Playwright 产物（trace/screenshot/HTML 报告/JSON 报告），
       # 便于离线定位浏览器级失败。playwright.config.ts: trace=retain-on-failure，
       # outputDir 默认 test-results/，HTML 报告默认 playwright-report/，JSON 报告 pw-report.json。
