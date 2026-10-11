@@ -294,7 +294,7 @@ export function CalendarEventDialog({
               value={color}
               onChange={(e) => setColor(e.target.value)}
               maxLength={20}
-              placeholder="#3b82f6"
+              placeholder="#RRGGBB"
               className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
             />

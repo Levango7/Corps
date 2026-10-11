@@ -205,16 +205,6 @@
   --ease-standard: cubic-bezier(0.2, 0, 0, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
 
-  /* —— 高级动效 token（UI 精致化打磨，2026-09-17）——
-   * 弹性 / 弹跳缓动曲线，用于强调型微交互（按钮按压回弹、卡片落地弹跳）。
-   * --motion-spring：过冲后回弹（cubic-bezier y1>1），适合"按下回弹"手感。
-   * --ease-bounce：负向过冲 + 正向过冲（y1<0, y2>1），适合"落地弹跳"动画。
-   * 注意：含过冲的缓动在 transform 动画上效果最佳；避免用于 opacity（无视觉差异）。
-   * prefers-reduced-motion 全局降级块已将 animation/transition-duration 设为 0.01ms，
-   * 过冲自动消除，无需额外处理。 */
-  --motion-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
-
   /* —— 动效时长别名（语义化档位，供组件按语义引用）——
    * 与 --motion-fast/base/slow 并行，提供更直观的"快/中/慢"语义命名。
    * --motion-duration-fast：微交互（按钮、图标）150ms
