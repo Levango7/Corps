@@ -288,7 +288,7 @@ export default function MeetingFlowPanel({ wid, meetingId, onClose }: MeetingFlo
 
   return (
     <aside
-      className="flex h-full w-[480px] flex-col border-l border-[var(--border)] bg-[var(--surface)]"
+      className="flex h-full w-[480px] max-w-[90vw] flex-col border-l border-[var(--border)] bg-[var(--surface)]"
       aria-label={t("title")}
     >
       {/* 标题栏 */}

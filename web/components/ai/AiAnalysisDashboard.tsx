@@ -33,6 +33,7 @@ import {
   Target,
   CheckCircle2,
   Flag,
+  X,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { BurndownChart, type BurndownPoint } from "./BurndownChart";
@@ -754,10 +755,10 @@ export function AiAnalysisDashboard({ wid }: AiAnalysisDashboardProps) {
               <button
                 type="button"
                 onClick={() => setShowHistory(false)}
-                className="rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                className="inline-flex items-center justify-center rounded-[var(--radius-sm)] px-[var(--space-2)] py-[var(--space-1)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                 aria-label="close"
               >
-                ✕
+                <X size={16} aria-hidden="true" />
               </button>
             </header>
             <div className="p-[var(--space-4)]">
