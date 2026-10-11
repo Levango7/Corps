@@ -258,7 +258,7 @@ export default function MeetingSummaryPanel({
       s.actionItems.forEach((a) => {
         const parts: string[] = [`- [ ] ${a.title}`];
         if (a.assignee) parts.push(`（${t("meetingTitle")}: ${a.assignee}）`);
-        if (a.dueDate) parts.push(`📅 ${a.dueDate}`);
+        if (a.dueDate) parts.push(`（截止：${a.dueDate}）`);
         parts.push(`[${a.priority}]`);
         lines.push(parts.join(" "));
       });
