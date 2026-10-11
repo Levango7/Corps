@@ -19,6 +19,10 @@ import { registerAndLogin } from "./helpers";
  * 挂在 e2e/ 下自动进入 CI「E2E (production build)」job。
  */
 
+// bypassCSP：动画冻结依赖内联 <style> 注入，本仓 CSP style-src 只放行 'self'+nonce，
+// 不放行 inline——无此开关 addStyleTag 必被拦（CI 生产构建下实测）。
+test.use({ bypassCSP: true });
+
 test.skip(!process.env.CI, "视觉回归基线只在 CI 环境生成与比对（跨平台字体渲染不可比），本地跳过");
 
 /** 冻结全部 CSS 动画/过渡——screenshot 前注入，消除 page-enter/modal-enter 时序。 */
