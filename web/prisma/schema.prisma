@@ -524,7 +524,9 @@ model Conversation {
 
   // 会话列表按工作区 + 最近活动排序
   @@index([workspaceId, updatedAt])
-  @@index([taskId])
+  // task 会话唯一：get-or-create 并发竞态的不变量交给数据库（迁移 20261007 去重后落地；
+  // NULL 即普通 IM 会话不受约束，PG 唯一索引不约束 NULL）
+  @@unique([taskId], map: "uq_conversations_task_id")
   @@map("conversations")
 }
 
