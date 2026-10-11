@@ -657,7 +657,7 @@ function CommentItem({
 // ── 头像组件（首字母占位）──
 
 function Avatar({ name, size = "md" }: { name: string; size?: "sm" | "md" }) {
-  const dim = size === "sm" ? "w-5 h-5 text-[10px]" : "w-6 h-6 text-[length:var(--text-xs)]";
+  const dim = size === "sm" ? "w-5 h-5 text-[11px]" : "w-6 h-6 text-[length:var(--text-xs)]";
   return (
     <span
       className={`inline-flex items-center justify-center shrink-0 rounded-full bg-[var(--surface-2)] text-[var(--fg-2)] font-[weight:var(--weight-medium)] ${dim}`}

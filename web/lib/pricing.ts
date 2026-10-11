@@ -6,7 +6,8 @@
  *  - PRICING_PLANS 来自 docs/market/pricing-page-spec.md §4.1（ACCEPTED 冻结）。
  *  - 年付派生数字由 59×12−590 计算得出而非硬编码字符串，防手滑改价。
  *  - PRICING_FAQS 六条来自 spec §5（question_id 0–5）。
- *  - PRICING_MATRIX 来自 spec §4.2（值类型 string，✅/— 用文本字符）。
+ *  - PRICING_MATRIX 来自 spec §4.2（单元格为语义标识 included/excluded 或展示短语，
+ *    图标由渲染层映射 lucide SVG，数据层不存符号字符）。
  *
  * 关联：
  *  - docs/design/pricing-page-impl-design.md §3.3（落点决策）
@@ -147,11 +148,23 @@ export const PRICING_FAQS: PricingFaq[] = [
   },
 ];
 
-/** 对比表行结构（spec §4.2，值类型 string，✅/— 用文本字符）。 */
+/**
+ * 对比表单元格取值：语义标识 + 展示短语。
+ *  - "included" → 渲染层映射 lucide Check 图标（功能包含）
+ *  - "excluded" → 渲染层映射 lucide Minus 图标（功能不含）
+ *  - 其余字符串 → 短语/数字/价格字面量（语言无关或经 matrixCells 翻译）
+ *
+ * P0-1：禁止用 emoji/符号字符作功能图标，故数据层只存纯字符串标识，
+ * 统一描边 SVG 图标由渲染层 web/app/[locale]/pricing/page.tsx 映射。
+ * 本文件零 React/DOM 依赖（可被服务端组件与单测直接导入），不在数据层 import 组件。
+ */
+export type PricingMatrixCell = "included" | "excluded" | string;
+
+/** 对比表行结构（spec §4.2）。 */
 export interface PricingMatrixRow {
   feature: string;
-  free: string;
-  pro: string;
+  free: PricingMatrixCell;
+  pro: PricingMatrixCell;
 }
 
 /** 对比表分组结构（spec §4.2 五分组）。 */
@@ -163,49 +176,50 @@ export interface PricingMatrixGroup {
 /**
  * 功能对比表数据（v2 定价方案，2026-09-02 用户拍板）。
  * 七分组；group/feature 为 pricing.matrix.* 翻译键（zh/en 双语渲染），
- * free/pro 单元格为展示字面量（✅/—/短语，单元格短语经 ComparisonGroup 上下文注入语言）。
+ * free/pro 单元格为语义标识（included/excluded，渲染层映射 Check/Minus 图标）
+ * 或展示短语（单元格短语经 ComparisonGroup 上下文注入语言）。
  */
 export const PRICING_MATRIX: PricingMatrixGroup[] = [
   {
     group: "matrix.g1",
     rows: [
-      { feature: "matrix.r01", free: "✅", pro: "✅" },
-      { feature: "matrix.r02", free: "✅", pro: "✅" },
-      { feature: "matrix.r03", free: "✅", pro: "✅" },
-      { feature: "matrix.r04", free: "✅", pro: "✅" },
-      { feature: "matrix.r05", free: "✅", pro: "✅" },
-      { feature: "matrix.r06", free: "—", pro: "✅" },
+      { feature: "matrix.r01", free: "included", pro: "included" },
+      { feature: "matrix.r02", free: "included", pro: "included" },
+      { feature: "matrix.r03", free: "included", pro: "included" },
+      { feature: "matrix.r04", free: "included", pro: "included" },
+      { feature: "matrix.r05", free: "included", pro: "included" },
+      { feature: "matrix.r06", free: "excluded", pro: "included" },
     ],
   },
   {
     group: "matrix.g2",
     rows: [
       { feature: "matrix.r07", free: "最近 10 条/工作区", pro: "无限" },
-      { feature: "matrix.r08", free: "—", pro: "✅" },
+      { feature: "matrix.r08", free: "excluded", pro: "included" },
     ],
   },
   {
     group: "matrix.g3",
     rows: [
-      { feature: "matrix.r09", free: "✅", pro: "✅" },
-      { feature: "matrix.r10", free: "✅", pro: "✅" },
-      { feature: "matrix.r11", free: "✅", pro: "✅" },
-      { feature: "matrix.r12", free: "—", pro: "✅" },
+      { feature: "matrix.r09", free: "included", pro: "included" },
+      { feature: "matrix.r10", free: "included", pro: "included" },
+      { feature: "matrix.r11", free: "included", pro: "included" },
+      { feature: "matrix.r12", free: "excluded", pro: "included" },
     ],
   },
   {
     group: "matrix.g4",
     rows: [
-      { feature: "matrix.r13", free: "✅", pro: "✅" },
-      { feature: "matrix.r14", free: "—", pro: "✅" },
+      { feature: "matrix.r13", free: "included", pro: "included" },
+      { feature: "matrix.r14", free: "excluded", pro: "included" },
     ],
   },
   {
     group: "matrix.g5",
     rows: [
-      { feature: "matrix.r15", free: "✅", pro: "✅" },
-      { feature: "matrix.r16", free: "✅", pro: "✅" },
-      { feature: "matrix.r17", free: "✅", pro: "✅" },
+      { feature: "matrix.r15", free: "included", pro: "included" },
+      { feature: "matrix.r16", free: "included", pro: "included" },
+      { feature: "matrix.r17", free: "included", pro: "included" },
     ],
   },
   {
@@ -216,15 +230,15 @@ export const PRICING_MATRIX: PricingMatrixGroup[] = [
         free: "≤10 人",
         pro: "不限（产品定位服务 5–30 人）",
       },
-      { feature: "matrix.r19", free: "✅", pro: "✅" },
-      { feature: "matrix.r20", free: "✅", pro: "✅" },
+      { feature: "matrix.r19", free: "included", pro: "included" },
+      { feature: "matrix.r20", free: "included", pro: "included" },
     ],
   },
   {
     group: "matrix.g7",
     rows: [
       { feature: "matrix.r21", free: "10MB", pro: "50MB" },
-      { feature: "matrix.r22", free: "—", pro: "✅" },
+      { feature: "matrix.r22", free: "excluded", pro: "included" },
       { feature: "matrix.r23", free: "¥0", pro: "¥29.9/人/月 或 ¥299/人/年" },
     ],
   },

@@ -101,6 +101,15 @@ test.describe.serial("UI 风格硬断言", () => {
     }
   });
 
+  test("定价页（公开）：无 emoji、最小字号 ≥ 11px", async ({ page }) => {
+    await page.goto("/pricing");
+    // 等服务端渲染的 Hero H1 就位（公开页无水合依赖，SSR 直出）
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    expect(await scanEmoji(page), "定价页存在 emoji").toEqual([]);
+    const { min, where } = await minFontSize(page);
+    expect(min, `定价页最小字号 ${min}px（${where}）低于 11px 红线`).toBeGreaterThanOrEqual(11);
+  });
+
   test("工作区首页：无 emoji、最小字号 ≥ 11px", async ({ page }) => {
     await registerAndLogin(page, uniqueEmail());
     // 等顶栏搜索按钮 = 工作区壳水合完成（SSR 首屏不含客户端交互态）

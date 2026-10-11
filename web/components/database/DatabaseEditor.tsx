@@ -190,7 +190,7 @@ const VIEW_TAB_BASE =
 const COUNT_BADGE =
   "ml-0.5 inline-flex items-center justify-center min-w-[16px] h-4 px-1 " +
   "rounded-[var(--radius-pill)] bg-[var(--accent)] text-[var(--accent-fg)] " +
-  "text-[10px] font-[weight:var(--weight-semibold)] leading-none";
+  "text-[11px] font-[weight:var(--weight-semibold)] leading-none";
 
 // ─── 主组件 ──────────────────────────────────────────────────────
 
