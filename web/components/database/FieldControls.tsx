@@ -125,8 +125,13 @@ export function parseFieldOptions(options: unknown): FieldOptions {
   return parsed;
 }
 
-/** 将单元格值格式化为显示字符串（供只读预览） */
-export function formatCellValue(field: DatabaseField, value: unknown): string {
+/**
+ * 将单元格值格式化为只读预览显示值（供只读预览）。
+ * 返回 string 或 ReactElement：checkbox 勾选态返回 lucide Check 图标而非勾选符号字符
+ * （P0-1：禁 dingbat 字符作图标，图标须为统一描边 SVG；本函数当前无外部调用方，
+ * 返回类型放宽不影响既有消费方，后续渲染 `{formatCellValue(...)}` 两种形态均可直出）。
+ */
+export function formatCellValue(field: DatabaseField, value: unknown): string | ReactElement {
   if (value === null || value === undefined) return "";
   const opts = parseFieldOptions(field.options);
   switch (field.type as FieldType) {
@@ -138,7 +143,12 @@ export function formatCellValue(field: DatabaseField, value: unknown): string {
     case "number":
       return typeof value === "number" ? String(value) : "";
     case "checkbox":
-      return value === true ? "✓" : "";
+      // P0-1：勾选字符（U+2713 dingbat）禁作图标，改用 lucide Check（与下拉选中态同款描边 SVG）。
+      return value === true ? (
+        <Check size={14} className="text-[var(--accent)]" aria-hidden="true" />
+      ) : (
+        ""
+      );
     case "select": {
       if (typeof value !== "string") return "";
       const choice = opts.choices?.find((c) => c.id === value);

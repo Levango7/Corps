@@ -26,6 +26,7 @@
  */
 
 import type { Metadata } from "next";
+import type { ReactNode } from "react";
 import { Link } from "@/lib/i18n-navigation";
 import { notFound } from "next/navigation";
 import { hasLocale } from "next-intl";
@@ -34,6 +35,8 @@ import {
   GitBranch,
   SquareKanban as KanbanSquare,
   ShieldCheck,
+  Check,
+  Minus,
   ChevronDown,
   ArrowRight,
 } from "lucide-react";
@@ -402,16 +405,28 @@ function ComparisonTable({ t }: { t: TranslateFn }) {
 }
 
 /** 对比表分组行（含分组标题行 + 数据行；group/feature 为 pricing.matrix.* 翻译键，
- *  单元格短语经 matrixCells 取当前语言（最近 10 条/无限 等））。
- *  单元格中的 ✅/—/数字/价格字面量语言无关直出。 */
+ *  单元格短语经 cellText 取当前语言（最近 10 条/无限 等）；
+ *  included/excluded 语义标识映射为 lucide Check/Minus 图标（P0-1：禁符号字符作图标），
+ *  颜色走 design token（包含=success，不含=meta）。 */
 function ComparisonGroup({ group, t }: { group: (typeof PRICING_MATRIX)[number]; t: TranslateFn }) {
-  /** 单元格短语按语言解析：命中已知短语 key 时走翻译，否则原样输出（✅/—/数字等） */
+  /** 单元格短语按语言解析：命中已知短语 key 时走翻译，否则原样输出（数字/价格等） */
   function cellText(value: string): string {
     if (value === "最近 10 条/工作区") return t("matrixCells.decisionLimitFree");
     if (value === "无限") return t("matrixCells.unlimited");
     if (value === "≤10 人") return t("matrixCells.seatLimitFree");
     if (value === "不限（产品定位服务 5–30 人）") return t("matrixCells.seatUnlimited");
     return value;
+  }
+  /** 语义标识 → lucide 图标（included=Check / excluded=Minus）；其余短语走 cellText 翻译。
+   *  图标为装饰性（aria-hidden），包含/不含语义由列表头列名与图标图形承载。 */
+  function renderCell(value: string): ReactNode {
+    if (value === "included") {
+      return <Check size={16} className="text-[var(--success)]" aria-hidden="true" />;
+    }
+    if (value === "excluded") {
+      return <Minus size={16} className="text-[var(--meta)]" aria-hidden="true" />;
+    }
+    return cellText(value);
   }
   return (
     <>
@@ -429,8 +444,8 @@ function ComparisonGroup({ group, t }: { group: (typeof PRICING_MATRIX)[number];
       {group.rows.map((row) => (
         <tr key={row.feature} className="border-b border-[var(--border-soft)]">
           <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{t(row.feature)}</td>
-          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{cellText(row.free)}</td>
-          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{cellText(row.pro)}</td>
+          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{renderCell(row.free)}</td>
+          <td className="py-3 px-[var(--space-4)] text-[var(--fg-2)]">{renderCell(row.pro)}</td>
         </tr>
       ))}
     </>
