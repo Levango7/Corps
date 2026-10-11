@@ -77,6 +77,20 @@ jobs:
       # 新 job 不在必需清单里，变红也拦不住合并。
       - run: python ../scripts/check_adr015_manifest.py
       - run: python ../scripts/check_adr015_manifest.py --self-test
+      # P0 内容规约门禁（2026-10-12 补）：5 条 P0 绝对规则（禁 emoji/dingbat 作功能图标、
+      # 禁紫→粉渐变、禁 AI 模板文案、禁硬编码色、禁弹跳缓动）此前全靠人眼评审，已漏过多次。
+      # 最近一次全量审计清出 6 条 blocking 违反，其中两条藏在 design/design-tokens.css 里、
+      # 消费方是死类 —— 人眼评审看不见，因为「名义 clean 的 token 源文件里藏着被禁内容」
+      # 正是本项目踩过的坑（cubic-bezier(0.68,-0.55,0.265,1.55) 就写在 token 源里，
+      # 随 next build 进产物 CSS）。e2e/ui-style.spec.ts 也只扫四个页面，定价页曾用
+      # 9 个 ✅ 当功能图标而 CI 全程绿灯。
+      # 棘轮语义：基线外首见的 (文件,规则) 判 NEW_*，已登记文件的处数变多判 REGRESSION_*，
+      # 只减不增。放在 lint job 而非新开 job：lint 已是 required status check，
+      # 新 job 不在必需清单里，变红也拦不住合并。
+      - run: python ../scripts/check_p0_content.py
+      # 自测断言是「红因集合相等」（注入已知违反，扫出的原因集合必须精确等于预期，
+      # 多一条少一条都算失败），防止检测器本身退化成「永远 PASS」的假门禁。
+      - run: python ../scripts/check_p0_content.py --self-test
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
