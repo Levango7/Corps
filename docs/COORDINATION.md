@@ -33,6 +33,11 @@
 | --- | --- | --- | --- | --- |
 | `corps-maturity`（lead） | 本文件维护者 | `chore/coordination-board` 等 | major 依赖升级裁决 + 阶段二（Stripe 22.6.2） | 进行中 |
 | `zcode` | 并行会话 | —（#47 已合并） | **UI / 默认布局**：`web/lib/default-layouts.ts`、`web/components/dashboard/default-layouts.ts`、`web/components/CommandPalette.tsx`、`web/app/[locale]/w/[wid]/layout.tsx`（当前工作树有 4 个文件未提交） | 进行中 |
+| `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback` | **IM 实时链路**：`web/components/im/useIM.ts`、`web/lib/im/ws-client.ts`、两个新单测。**明确避开** `web/prisma/**` 与 `CHANGELOG.md`（zcode 在飞） | 待合 |
+
+> 2026-10-11 12:49 复核：上表 `zcode` 行已滞后——工作树当前改动为 `CHANGELOG.md`、
+> `web/prisma/schema.prisma` 与未跟踪迁移 `20261007000000_dedup_task_conversations/migration.sql`，
+> 已不是 UI 默认布局。该行由 zcode 自行更新，`nex` 未改动它。
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 它已裁定依赖升级的顺序与目标版本（TS 6.0.3 → Stripe 22.6.2 → Prisma 7.10.0），
@@ -68,7 +73,7 @@
 | --- | --- |
 | #44 与 #46 内容逐字节相同 | 保留 #46（`test/auth-logout-semantics`，已合并），#44 关闭 |
 | 跨租户越权的响应码 | viewer 写操作返回 **403**（不是 401）；401 仅指「未认证」。见 ADR-011 |
-| 登出后旧 access token | 在剩余 TTL（15m，硬编码）内仍有效，属已知取舍；可续期窗口 = 0。**残余缺口：WebSocket 连接不随登出断开**（`web/app/api/v1/im/ws/route.ts`、`web/lib/im/ws-server.ts`），未处理 |
+| 登出后旧 access token | 在剩余 TTL（15m，硬编码）内仍有效，属已知取舍；可续期窗口 = 0。**原记的「残余缺口：WebSocket 连接不随登出断开」前提不成立**——本部署跑 Next.js standalone server（`web/docker/entrypoint.sh:70` 的 `exec node server.js`），不处理 WS upgrade（实测部署产物 `.next/standalone/web/server.js` 里 `upgrade` 出现 **0** 次、`handleImUpgrade` **0** 次，`ws` 库未安装，源码零调用点），**根本没有 WS 连接**，所以不存在"登出时断不断"的问题。真实缺口是「**IM 无实时推送**」：服务端 `GET .../messages?after=` 增量游标早已就绪，客户端从未调用。已按 ADR-009 §2.1.1 补 5s 轮询兜底（`nex`，见 §2） |
 | TypeScript 6.0.3 | 已合入（`75b80332`），ADR-014 阶段 1 完成。**CI 每次都在 TS 6.0.3 下编译**（`ci.yml:34` 的 `tsc --noEmit`），不存在"从未验证" |
 | Prisma 7.10.0（#15/#16） | **不可合**。`P1012`：v7 不再支持 schema 里的 `datasource.url`，而本仓无 `prisma.config.ts` → `prisma generate` 立即失败。另带出 `mysql2` HIGH 审计失败。见 Issue #32 §2 |
 | Stripe 23.0.0（#38） | **不合**。ADR-014 §4.2.4 否决（23.x 稳定版仅 1 个，触发条件 ≥3 未满足），目标改投 **22.6.2** |
