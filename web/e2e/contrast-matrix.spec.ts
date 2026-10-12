@@ -22,7 +22,15 @@
 
 import { expect, test } from "@playwright/test";
 import { registerAndLogin, uniqueEmail } from "./helpers";
-import { CONTRAST_INJECT, ABS_FLOOR, TOLERANCE, applyTheme, readPairs, checkOverflow, dumpReport } from "./visual-kit/index.js";
+import {
+  CONTRAST_INJECT,
+  ABS_FLOOR,
+  TOLERANCE,
+  applyTheme,
+  readPairs,
+  checkOverflow,
+  dumpReport,
+} from "./visual-kit/index.js";
 
 /* 两套主题：light 是默认态（无 data-theme 属性），dark 用 data-theme="dark" */
 const THEMES = ["light", "dark"];
@@ -31,18 +39,37 @@ const THEMES = ["light", "dark"];
 const CONTRAST_PAIRS: Record<string, [string, string]> = {
   "fg/surface": ["--fg", "--surface"],
   "fg/bg": ["--fg", "--bg"],
+  // fg-2/surface 曾被漏在此清单外（基线表与 visual-kit/contrast-probe.cjs 都有它），
+  // key 集不一致 → 断言「缺少配对」当场红。两处清单必须保持同集（2026-10-13 首跑实测）。
+  "fg-2/surface": ["--fg-2", "--surface"],
   "muted/surface": ["--muted", "--surface"],
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
-  "accent/surface": ["--accent", "--surface"]
+  "accent/surface": ["--accent", "--surface"],
 };
 
 /* 基线表（待实测填入 —— 首跑后从 _probe/contrast-actual.txt 复制真实值）
    初始全 0 → 首跑会全红，这是**预期的**（基线必须先实测）。
    填入后删除此注释。 */
 const BASELINE: Record<string, Record<string, number>> = {
-  light: { "fg/surface": 17.26, "fg/bg": 16.39, "fg-2/surface": 10.79, "muted/surface": 5.29, "on-accent/accent": 4.98, "danger/surface": 4.32, "accent/surface": 4.93 },
-  dark:  { "fg/surface": 15.75, "fg/bg": 17.14, "fg-2/surface": 10.32, "muted/surface": 5.39, "on-accent/accent": 4.51, "danger/surface": 5.34, "accent/surface": 3.85 }
+  light: {
+    "fg/surface": 17.26,
+    "fg/bg": 16.39,
+    "fg-2/surface": 10.79,
+    "muted/surface": 5.29,
+    "on-accent/accent": 4.98,
+    "danger/surface": 4.32,
+    "accent/surface": 4.93,
+  },
+  dark: {
+    "fg/surface": 15.75,
+    "fg/bg": 17.14,
+    "fg-2/surface": 10.32,
+    "muted/surface": 5.39,
+    "on-accent/accent": 4.51,
+    "danger/surface": 5.34,
+    "accent/surface": 3.85,
+  },
 };
 
 test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
@@ -64,11 +91,23 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
         expect(v, "主题 " + th + " 缺少配对 " + k).toBeTruthy();
         if (v.c === null) continue;
         const floor = Math.max(ABS_FLOOR, base[k] * TOLERANCE);
-        const line = th + " · " + k + " = " + v.c.toFixed(2) +
-          "（基线 " + base[k] + "，下限 " + floor.toFixed(2) + "）";
+        const line =
+          th +
+          " · " +
+          k +
+          " = " +
+          v.c.toFixed(2) +
+          "（基线 " +
+          base[k] +
+          "，下限 " +
+          floor.toFixed(2) +
+          "）";
         report.push(line);
-        
-        expect(v.c, "对比度退步：" + line + "  [" + v.fg + " / " + v.bg + "]").toBeGreaterThanOrEqual(floor);
+
+        expect(
+          v.c,
+          "对比度退步：" + line + "  [" + v.fg + " / " + v.bg + "]",
+        ).toBeGreaterThanOrEqual(floor);
       }
     }
     /* 落盘实测值，便于填入基线 */
@@ -81,7 +120,10 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
       const overflow = await checkOverflow(page);
       expect(overflow, "主题 " + th + " 出现横向溢出 " + overflow + "px").toBeLessThanOrEqual(0);
       /* 主内容区域存在且可见 */
-      await expect(page.locator("main, [role=main]").first(), "主题 " + th + "：主内容不可见").toBeVisible();
+      await expect(
+        page.locator("main, [role=main]").first(),
+        "主题 " + th + "：主内容不可见",
+      ).toBeVisible();
     }
   });
 
@@ -90,8 +132,14 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
       await applyTheme(page, th);
       const pairs = await readPairs(page, CONTRAST_PAIRS);
       for (const k in pairs) {
-        expect(pairs[k].fg, "主题 " + th + " 的前景令牌 " + CONTRAST_PAIRS[k][0] + " 为空").not.toBe("");
-        expect(pairs[k].bg, "主题 " + th + " 的背景令牌 " + CONTRAST_PAIRS[k][1] + " 为空").not.toBe("");
+        expect(
+          pairs[k].fg,
+          "主题 " + th + " 的前景令牌 " + CONTRAST_PAIRS[k][0] + " 为空",
+        ).not.toBe("");
+        expect(
+          pairs[k].bg,
+          "主题 " + th + " 的背景令牌 " + CONTRAST_PAIRS[k][1] + " 为空",
+        ).not.toBe("");
       }
     }
   });

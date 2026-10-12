@@ -18,11 +18,14 @@
 async function applyTheme(page, name, opts) {
   const o = opts || {};
   const attr = o.attr || "data-theme";
-  await page.evaluate(({ name, attr, lightValue }) => {
-    const el = document.documentElement;
-    if (name === (lightValue || "light")) el.removeAttribute(attr);
-    else el.setAttribute(attr, name);
-  }, { name, attr, lightValue: o.lightValue });
+  await page.evaluate(
+    ({ name, attr, lightValue }) => {
+      const el = document.documentElement;
+      if (name === (lightValue || "light")) el.removeAttribute(attr);
+      else el.setAttribute(attr, name);
+    },
+    { name, attr, lightValue: o.lightValue },
+  );
 }
 
 /** 读取若干 CSS 变量的声明原文。返回 { tokenName: value }。 */
@@ -44,8 +47,13 @@ async function readPairs(page, pairs) {
     const g = (k) => cs.getPropertyValue(k).trim();
     const out = {};
     for (const k in pairs) {
-      const fg = g(pairs[k][0]), bg = g(pairs[k][1]);
-      out[k] = { fg, bg, c: (window.__vk && window.__vk.contrast) ? window.__vk.contrast(fg, bg) : null };
+      const fg = g(pairs[k][0]),
+        bg = g(pairs[k][1]);
+      out[k] = {
+        fg,
+        bg,
+        c: window.__vk && window.__vk.contrast ? window.__vk.contrast(fg, bg) : null,
+      };
     }
     return out;
   }, pairs);
@@ -53,8 +61,9 @@ async function readPairs(page, pairs) {
 
 /** 检测横向溢出。返回溢出像素数（≤0 表示无溢出）。 */
 async function checkOverflow(page) {
-  return page.evaluate(() =>
-    document.documentElement.scrollWidth - document.documentElement.clientWidth);
+  return page.evaluate(
+    () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+  );
 }
 
 /** 检测核心控件是否可见。selectors 为字符串数组，返回 { selector: boolean }。 */
@@ -63,7 +72,7 @@ async function checkVisible(page, selectors) {
   for (const sel of selectors) {
     try {
       results[sel] = await page.locator(sel).first().isVisible();
-    } catch (e) {
+    } catch {
       results[sel] = false;
     }
   }

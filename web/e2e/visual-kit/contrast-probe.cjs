@@ -26,7 +26,7 @@ const PAIRS = {
   "muted/surface": ["--muted", "--surface"],
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
-  "accent/surface": ["--accent", "--surface"]
+  "accent/surface": ["--accent", "--surface"],
 };
 
 (async () => {
@@ -48,15 +48,25 @@ const PAIRS = {
       const g = (k) => cs.getPropertyValue(k).trim();
       const out = [];
       for (const k in pairs) {
-        const fg = g(pairs[k][0]), bg = g(pairs[k][1]);
+        const fg = g(pairs[k][0]),
+          bg = g(pairs[k][1]);
         out.push({ name: k, fg, bg, c: window.__vk.contrast(fg, bg) });
       }
       return out;
     }, PAIRS);
     console.log("\n[" + theme + "]");
     for (const r of rows) {
-      const line = theme + " · " + r.name + " = " + (r.c === null ? "N/A" : r.c.toFixed(2)) +
-        "  [" + r.fg + " / " + r.bg + "]";
+      const line =
+        theme +
+        " · " +
+        r.name +
+        " = " +
+        (r.c === null ? "N/A" : r.c.toFixed(2)) +
+        "  [" +
+        r.fg +
+        " / " +
+        r.bg +
+        "]";
       console.log("  " + line);
       report.push(line);
     }
@@ -65,4 +75,7 @@ const PAIRS = {
   fs.writeFileSync(OUT_FILE, report.join("\n") + "\n", "utf8");
   console.log("\n写入 " + OUT_FILE);
   await browser.close();
-})().catch((e) => { console.error("探针异常:", e.message); process.exit(1); });
+})().catch((e) => {
+  console.error("探针异常:", e.message);
+  process.exit(1);
+});

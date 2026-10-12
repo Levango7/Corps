@@ -19,7 +19,7 @@ function dumpReport(lines, name, dir) {
     fs.mkdirSync(d, { recursive: true });
     fs.writeFileSync(file, lines.join("\n") + "\n", "utf8");
     return file;
-  } catch (e) {
+  } catch {
     /* 落盘失败不影响断言 */
     return null;
   }

@@ -11,30 +11,24 @@ export declare const TOLERANCE: number;
 export declare function applyTheme(
   page: import("@playwright/test").Page,
   name: string,
-  opts?: { attr?: string; lightValue?: string }
+  opts?: { attr?: string; lightValue?: string },
 ): Promise<void>;
 
 export declare function readTokens(
   page: import("@playwright/test").Page,
-  tokenNames: string[]
+  tokenNames: string[],
 ): Promise<Record<string, string>>;
 
 export declare function readPairs(
   page: import("@playwright/test").Page,
-  pairs: Record<string, [string, string]>
+  pairs: Record<string, [string, string]>,
 ): Promise<Record<string, { fg: string; bg: string; c: number | null }>>;
 
-export declare function checkOverflow(
-  page: import("@playwright/test").Page
-): Promise<number>;
+export declare function checkOverflow(page: import("@playwright/test").Page): Promise<number>;
 
 export declare function checkVisible(
   page: import("@playwright/test").Page,
-  selectors: string[]
+  selectors: string[],
 ): Promise<Record<string, boolean>>;
 
-export declare function dumpReport(
-  lines: string[],
-  name: string,
-  dir?: string
-): string | null;
+export declare function dumpReport(lines: string[], name: string, dir?: string): string | null;
