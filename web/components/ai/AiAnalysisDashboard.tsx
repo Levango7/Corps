@@ -3,21 +3,6 @@
 /**
  * AI 数据分析仪表板。
  *
- * 【勿删】本文件静态零引用，但它不是死代码 —— 不要以"清理死代码"为由删除。
- *
- * 2026-10-12 实测：全仓搜不到任何 import（web/app、web/components、web/tests 三处零命中），
- * 看起来就是可以清掉的老代码。但它调的 5 个后端路由**全部存在且已上线**：
- *   web/app/api/v1/ai/analysis/{burndown,team-performance,bottleneck,weekly-report,reports}/route.ts
- * 也就是说这是「后端已完成、前端差一个页面挂上去」的半成品 —— 与 ADR-015 §5 保护的
- * web/components/files/** 是同一形态。删掉 = 砍掉一个后端已完成功能的前半截。
- *
- * 另：docs/market/pricing-redesign-v2.md:143 把「分析看板」列为**现有 Free 功能**
- * （"不把现有 Free 功能挪进 Pro（分析看板、通知中心、IM 等已免费项保持免费）"）。
- * 若它确实没被挂载，那是一个「定价页承诺了产品没有的门」的问题，需要决定是接线
- * 还是显式下线——但无论哪种，都不是静默删除。
- *
- * 正确处置：接线上线，或按 ADR-015 §5 的方式（改 ADR 状态 + 同提交更新登记表）显式退役。
- *
  * 4 个分析类型 tab：
  *  - 燃尽图：调用 /api/v1/ai/analysis/burndown，渲染 BurndownChart
  *  - 团队效能：调用 /api/v1/ai/analysis/team-performance，渲染成员效能表
