@@ -70,6 +70,11 @@ export function ConversationSettings({
   onLeave,
 }: ConversationSettingsProps) {
   const t = useTranslations("chat");
+  // 群管理类确认文案（confirm / confirmDeleteGroup / confirmLeaveGroup / confirmRemoveMember）
+  // 一直只存在于 im 命名空间下（与 im.confirmRevoke 同族，17 个键的 IM 基础用语）。
+  // 此前误绑 chat.* —— 那 4 个键在 chat 下不存在，next-intl 找不到键时会**把键路径
+  // 本身当兜底渲染**（界面直接显示 "chat.confirmDeleteGroup"）。复用已有译文，不复制一份。
+  const tIm = useTranslations("im");
   const wid = conversation.workspaceId;
   const cid = conversation.id;
 
@@ -685,7 +690,7 @@ export function ConversationSettings({
           className="fixed inset-0 z-[calc(var(--z-modal)+1)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
           role="dialog"
           aria-modal="true"
-          aria-label={t("confirm")}
+          aria-label={tIm("confirm")}
           onClick={handleCancelConfirm}
         >
           <div
@@ -695,9 +700,9 @@ export function ConversationSettings({
             <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
               {confirmAction === "leave"
                 ? isOwner
-                  ? t("confirmDeleteGroup")
-                  : t("confirmLeaveGroup")
-                : t("confirmRemoveMember")}
+                  ? tIm("confirmDeleteGroup")
+                  : tIm("confirmLeaveGroup")
+                : tIm("confirmRemoveMember")}
             </h3>
             <div className="flex items-center justify-end gap-[var(--space-2)] mt-[var(--space-4)]">
               <button
@@ -712,7 +717,7 @@ export function ConversationSettings({
                 onClick={handleConfirmAction}
                 className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 transition-opacity duration-[var(--motion-fast)]"
               >
-                {t("confirm")}
+                {tIm("confirm")}
               </button>
             </div>
           </div>

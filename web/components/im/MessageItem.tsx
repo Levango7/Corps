@@ -584,7 +584,7 @@ function MessageItemImpl({
               <span>{timeStr}</span>
               {isEdited && <span className="italic">· {t("edited")}</span>}
               {isOwn && (
-                <span title={isRead ? t("read") : t("sent")}>
+                <span title={isRead ? t("read") : tIm("sent")}>
                   {isRead ? <CheckCheck size={14} /> : <Check size={14} />}
                 </span>
               )}
@@ -637,7 +637,7 @@ function MessageItemImpl({
           className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
           role="dialog"
           aria-modal="true"
-          aria-label={t("confirmRevoke")}
+          aria-label={tIm("confirmRevoke")}
           onClick={() => setShowRevokeConfirm(false)}
         >
           <div
@@ -645,7 +645,7 @@ function MessageItemImpl({
             onClick={(e) => e.stopPropagation()}
           >
             <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
-              {t("confirmRevoke")}
+              {tIm("confirmRevoke")}
             </h3>
             <div className="flex items-center justify-end gap-[var(--space-2)] mt-[var(--space-4)]">
               <button
@@ -660,7 +660,7 @@ function MessageItemImpl({
                 onClick={handleConfirmRevoke}
                 className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:opacity-90 transition-opacity duration-[var(--motion-fast)]"
               >
-                {t("confirm")}
+                {tIm("confirm")}
               </button>
             </div>
           </div>
