@@ -11,7 +11,8 @@
 
 import { AnimatePresence, motion } from "framer-motion";
 import { type LucideIcon } from "lucide-react";
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 export interface QuickAction {
   icon: LucideIcon;
@@ -39,6 +40,20 @@ export interface QuickActionMenuProps {
 
 export function QuickActionMenu({ open, onClose, actions, x, y, _children }: QuickActionMenuProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+
+  /** createPortal 需要 document；SSR / 首帧不渲染，避免 Next.js hydration mismatch */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
+
+  /**
+   * 已知遗留（不在本次修复范围，勿顺手改）：
+   * 坐标直接用长按点，屏幕右缘 / 下缘打开时菜单会有一截超出视口——
+   * 长按点在 1150px、视口 1280px 时，min-w-[160px] 的菜单右缘会到 1310px。
+   * 修法是把长按点按菜单实测尺寸夹回视口内，且必须用 offsetWidth/offsetHeight
+   * 而非 getBoundingClientRect（后者受入场 scale(0.8) 影响会量偏小）。
+   * 没有一起改的原因：它会改变「菜单贴合触发点」这一可观测行为，
+   * 需要配套改 web/e2e/fixed-overlay-portal.spec.ts 的 ±4px 断言，单独一个 PR 做。
+   */
 
   // Esc 关闭
   useEffect(() => {
@@ -129,7 +144,23 @@ export function QuickActionMenu({ open, onClose, actions, x, y, _children }: Qui
     };
   }, [open]);
 
-  return (
+  if (!mounted) return null;
+
+  /**
+   * portal 到 document.body，**不能**就地渲染在触发元素旁边。
+   *
+   * 原因（2026-10-12 实测）：调用方传进来的 x/y 是 `useLongPress` 的
+   * `e.clientX / e.clientY`（web/lib/use-long-press.ts:48），即**视口坐标**；
+   * 本菜单用 `position: fixed` 按视口定位，语义是匹配的。但只要任一祖先带
+   * `transform` / `perspective` / `filter` / `will-change: transform` / `contain`，
+   * `fixed` 的包含块就被改到那个祖先上，视口坐标被当成祖先盒内坐标解析，菜单整体偏移。
+   *
+   * 实测触发点：WidgetCard 根元素挂着 `perspective: var(--perspective-card)`
+   * （非 reduced 档常驻）；拖拽时还有 `scale-[1.02]`。调用方 board-parts.tsx /
+   * DocumentListView.tsx 同样在滚动容器内，未来插一层 transform 就会复发。
+   * portal 到 body 让定位不再依赖祖先，属结构性修法。
+   */
+  return createPortal(
     <AnimatePresence>
       {open && (
         <motion.div
@@ -166,6 +197,7 @@ export function QuickActionMenu({ open, onClose, actions, x, y, _children }: Qui
           })}
         </motion.div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body,
   );
 }

@@ -16,7 +16,30 @@ import { registerAndLogin } from "./helpers";
 /** 采集可见文本节点里的 emoji（含 placeholder/title 属性），返回命中列表。 */
 async function scanEmoji(page: import("@playwright/test").Page) {
   return page.evaluate(() => {
-    const re = /\p{Extended_Pictographic}/u;
+    // 字符集与 scripts/check_p0_content.py 的 EMOJI_CLUSTER_RE **同口径**（改一处要改两处）：
+    //   - 含 0x2600-0x27BF，所以 dingbat 图标（对勾 / 叉号 U+2713 / U+2715）同样会被抓到
+    //     ——\p{Extended_Pictographic} 抓不到它们（它们不是 emoji），那是旧口径的盲区；
+    //   - 不含 0x00A9，所以页脚版权符号不误报——规则原意是「禁把符号当图标用」。
+    //
+    // 之所以写成码点区间数组而不是 /[\uXXXX-\uYYYY]/ 正则：P0 门禁
+    // （scripts/check_p0_content.py）会先把源码里的 \uXXXX 转义解码，再按
+    // 「emoji 作图标」判红——那段口径是刻意从严的（转义不该成为后门）。
+    // 于是这里改写法，而不是给门禁开路径豁免。
+    const EMOJI_CODEPOINT_RANGES: Array<[number, number]> = [
+      [0x1f000, 0x1faff],
+      [0x2600, 0x27bf],
+      [0x2b00, 0x2bff],
+      [0x203c, 0x203c],
+      [0x2049, 0x2049],
+      [0x2139, 0x2139],
+      [0x2194, 0x2199],
+      [0x21a9, 0x21aa],
+    ];
+    const isEmoji = (text: string) =>
+      Array.from(text).some((ch) => {
+        const cp = ch.codePointAt(0) ?? 0;
+        return EMOJI_CODEPOINT_RANGES.some(([lo, hi]) => cp >= lo && cp <= hi);
+      });
     const hits: { where: string; text: string }[] = [];
     const visible = (el: Element) => {
       const r = el.getBoundingClientRect();
@@ -28,7 +51,7 @@ async function scanEmoji(page: import("@playwright/test").Page) {
       for (const node of Array.from(el.childNodes)) {
         if (node.nodeType !== Node.TEXT_NODE) continue;
         const text = (node.textContent ?? "").trim();
-        if (text && re.test(text)) {
+        if (text && isEmoji(text)) {
           hits.push({ where: el.tagName.toLowerCase(), text: text.slice(0, 40) });
         }
       }
@@ -36,7 +59,7 @@ async function scanEmoji(page: import("@playwright/test").Page) {
     // 2) 输入控件的占位符与标题
     for (const el of Array.from(document.querySelectorAll("input[placeholder], [title]"))) {
       const text = el.getAttribute("placeholder") ?? el.getAttribute("title") ?? "";
-      if (text && re.test(text)) {
+      if (text && isEmoji(text)) {
         hits.push({ where: "placeholder/title", text: text.slice(0, 40) });
       }
     }
@@ -99,6 +122,15 @@ test.describe.serial("UI 风格硬断言", () => {
       const { min, where } = await minFontSize(page);
       expect(min, `${path} 最小字号 ${min}px（${where}）低于 11px 红线`).toBeGreaterThanOrEqual(11);
     }
+  });
+
+  test("定价页（公开）：无 emoji、最小字号 ≥ 11px", async ({ page }) => {
+    await page.goto("/pricing");
+    // 等服务端渲染的 Hero H1 就位（公开页无水合依赖，SSR 直出）
+    await expect(page.getByRole("heading", { level: 1 }).first()).toBeVisible();
+    expect(await scanEmoji(page), "定价页存在 emoji").toEqual([]);
+    const { min, where } = await minFontSize(page);
+    expect(min, `定价页最小字号 ${min}px（${where}）低于 11px 红线`).toBeGreaterThanOrEqual(11);
   });
 
   test("工作区首页：无 emoji、最小字号 ≥ 11px", async ({ page }) => {

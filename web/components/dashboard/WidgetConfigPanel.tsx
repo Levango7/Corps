@@ -26,7 +26,9 @@
  *   — 图标尺寸走档位值（16/14），不使用任意数值。
  */
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import { motion, useReducedMotion } from "framer-motion";
 import { X } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -215,6 +217,16 @@ export default function WidgetConfigPanel({
   const t = useTranslations("dashboard");
   const panelRef = useRef<HTMLDivElement>(null);
   const fields = getFields(widgetId, t);
+  const prefersReduced = useReducedMotion();
+
+  /**
+   * createPortal 需要 document，SSR / 首帧不能渲染（否则 Next.js hydration mismatch）。
+   * 首帧返回 null，挂载后第二帧才 portal —— 故下面「打开时聚焦面板」的 effect
+   * 必须把 mounted 放进依赖，否则首次 effect 跑在 panelRef 还是 null 的那一帧上，
+   * 焦点永远不会落到面板上。
+   */
+  const [mounted, setMounted] = useState(false);
+  useEffect(() => setMounted(true), []);
 
   // Escape 关闭
   useEffect(() => {
@@ -225,32 +237,63 @@ export default function WidgetConfigPanel({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  // 打开时聚焦面板
+  // 打开时聚焦面板（mounted 变化后重跑：portal 挂载前 panelRef 为 null）
   useEffect(() => {
     if (panelRef.current) {
       const id = requestAnimationFrame(() => panelRef.current?.focus());
       return () => cancelAnimationFrame(id);
     }
-  }, []);
+  }, [mounted]);
 
   /** 更新单个配置字段 */
   function updateField(key: string, value: unknown) {
     onChange({ ...config, [key]: value });
   }
 
-  return (
+  if (!mounted) return null;
+
+  /**
+   * 遮罩必须 portal 到 document.body —— **不能**就地渲染在 WidgetCard 里。
+   *
+   * 原因（2026-10-12 实测）：`position: fixed` 的包含块会被祖先的 `transform` /
+   * `perspective` / `filter` / `will-change: transform` / `contain` 劫持，祖先的
+   * `overflow: hidden` 随之把遮罩裁掉。WidgetCard 根元素三样全中：
+   *   - `style={{ perspective: "var(--perspective-card)" }}`（非 reduced 档）
+   *   - 拖拽时 `scale-[1.02]`（transform）
+   *   - `overflow-hidden`
+   * 于是 `fixed inset-0` 的遮罩不再铺满视口，只覆盖卡片。
+   *
+   * 更早还有一层：WidgetCard 原先用 `motion.div`（rotateX 翻转入场）包住本组件，
+   * 那个 transform 同样构成包含块。现在翻转入场移到了下面 dialog 自身，
+   * 包裹层已删除，但 portal 仍然必要——卡片根的 perspective / scale 还在。
+   *
+   * @see web/lib/motion-tokens.ts 顶部注释（2026-10-10 同源缺陷：页面过渡层残留
+   *      transform 劫持全站弹窗，当时用 transitionEnd 清 transform 打的补丁）
+   */
+  return createPortal(
     <div
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center p-4 bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div
+      <motion.div
         ref={panelRef}
         role="dialog"
         aria-modal="true"
         aria-label={t("widgetConfig")}
         tabIndex={-1}
+        initial={prefersReduced ? false : { rotateX: -90, opacity: 0 }}
+        animate={{ rotateX: 0, opacity: 1 }}
+        transition={
+          prefersReduced
+            ? { duration: 0 }
+            : // 与 FEATURE-DESIGN-v0.7.md §4.2 一致：0.3s / ease [0.2, 0, 0, 1]
+              // transitionEnd 清 transform（勿删，同 motion-tokens.ts 的既定做法）：
+              // 残留 transform 会让本 dialog 成为其后代 fixed 元素的包含块。
+              { duration: 0.3, ease: [0.2, 0, 0, 1] as [number, number, number, number] }
+        }
+        style={{ transformOrigin: "top", transformPerspective: 1200 }}
         className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] focus-visible:outline-none"
       >
         {/* 标题栏 */}
@@ -298,8 +341,9 @@ export default function WidgetConfigPanel({
             {t("widgetConfigDone")}
           </button>
         </footer>
-      </div>
-    </div>
+      </motion.div>
+    </div>,
+    document.body,
   );
 }
 

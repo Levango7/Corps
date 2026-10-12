@@ -77,6 +77,20 @@ jobs:
       # 新 job 不在必需清单里，变红也拦不住合并。
       - run: python ../scripts/check_adr015_manifest.py
       - run: python ../scripts/check_adr015_manifest.py --self-test
+      # P0 内容规约门禁（2026-10-12 补）：5 条 P0 绝对规则（禁 emoji/dingbat 作功能图标、
+      # 禁紫→粉渐变、禁 AI 模板文案、禁硬编码色、禁弹跳缓动）此前全靠人眼评审，已漏过多次。
+      # 最近一次全量审计清出 6 条 blocking 违反，其中两条藏在 design/design-tokens.css 里、
+      # 消费方是死类 —— 人眼评审看不见，因为「名义 clean 的 token 源文件里藏着被禁内容」
+      # 正是本项目踩过的坑（cubic-bezier(0.68,-0.55,0.265,1.55) 就写在 token 源里，
+      # 随 next build 进产物 CSS）。e2e/ui-style.spec.ts 也只扫四个页面，定价页曾用
+      # 9 个 ✅ 当功能图标而 CI 全程绿灯。
+      # 棘轮语义：基线外首见的 (文件,规则) 判 NEW_*，已登记文件的处数变多判 REGRESSION_*，
+      # 只减不增。放在 lint job 而非新开 job：lint 已是 required status check，
+      # 新 job 不在必需清单里，变红也拦不住合并。
+      - run: python ../scripts/check_p0_content.py
+      # 自测断言是「红因集合相等」（注入已知违反，扫出的原因集合必须精确等于预期，
+      # 多一条少一条都算失败），防止检测器本身退化成「永远 PASS」的假门禁。
+      - run: python ../scripts/check_p0_content.py --self-test
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
@@ -522,8 +536,11 @@ jobs:
       # 浏览器级真 E2E：playwright.config.ts 的 testDir:"./e2e" 未限定 testMatch，
       # 故运行 e2e/ 下全部用例（非仅 smoke）。打的是上面已就绪的生产构建 server，
       # 补齐"真实浏览器水合与交互"盲区
+      # --update-snapshots=missing：视觉回归基线（ui-visual.spec.ts）首跑记录、
+      # 后续比对。基线从下方产物下载提交入库后才真正生效；CI 环境跨次运行
+      # 渲染确定（同镜像同 chromium），本地因系统字体栈差异不可比（spec 已 test.skip 本地）。
       - name: Run browser E2E tests
-        run: npx playwright test --config playwright.config.ts
+        run: npx playwright test --config playwright.config.ts --update-snapshots=missing
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
@@ -535,6 +552,15 @@ jobs:
             kill "$(cat next.pid)" 2>/dev/null || true
             rm -f next.pid
           fi
+      # 视觉回归基线产物：首跑以 missing 模式记录的基线在此下载，
+      # 提交入库后纳入后续所有 PR 的像素比对。
+      - name: Upload visual baselines
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: visual-snapshots
+          path: web/e2e/*-snapshots/
+          if-no-files-found: ignore
       # E2E 失败时上传 Playwright 产物（trace/screenshot/HTML 报告/JSON 报告），
       # 便于离线定位浏览器级失败。playwright.config.ts: trace=retain-on-failure，
       # outputDir 默认 test-results/，HTML 报告默认 playwright-report/，JSON 报告 pw-report.json。

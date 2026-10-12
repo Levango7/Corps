@@ -58,8 +58,19 @@ export class StripeProvider implements PaymentProvider {
         //
         // 显式写死之后，这个"静默变更"变成"编译期错误"：本仓 2026-10-10 升 SDK
         // 18.3.0→22.6.2 时这一行立刻 tsc 失败（旧值 basil 不在新 LatestApiVersion
-        // 单字面量里），强迫显式决策 API 大版本——按 ADR-014 §4.2 裁决：目标
-        // 22.6.2 绑定 dahlia（ basil→dahlia 跨 1 个 API 大版本），执行记录见 §12。
+        // 单字面量里），强迫显式决策 API 大版本。最终决策见 ADR-014 §12：跟到 dahlia。
+        //
+        // ⚠️ 代价必须写清楚，否则后来人会低估：**basil → dahlia 跨的是 2 个 API
+        // 大版本（clover + dahlia），不是 1 个。** 其中 clover（2025-09-30）起
+        // "Flexible billing mode is the new default"（Stripe 官方 changelog 原文），
+        // 而本仓 `checkout.sessions.create({ mode: "subscription" })` 正是在建订阅——
+        // 新建订阅的生命周期行为因此改变。见 ADR-014 §11.2 / §11.5。
+        //
+        // ⚠️ **R7 前置尚未满足**：ADR-014 要求「先在 Stripe 测试模式验证 flexible
+        // billing mode 下新建订阅的续费 / 变更 / 取消行为，再决定是否把 apiVersion
+        // 抬离 basil」，而 §12.3 已记录本机无沙箱流量、该验证未做。
+        // 也就是说当前值处于「**已决策但未验证**」状态——上线后第一笔真实交易
+        // 必须核对订阅生命周期行为（续费日推算、变更生效时点、取消后的降级时点）。
         //
         // 改动本文件不影响任何调用方：全仓仅此一处 `new Stripe(`。
         // 升级 SDK 时同步改这一行，并按 https://stripe.com/docs/upgrades 核对破坏性变更。

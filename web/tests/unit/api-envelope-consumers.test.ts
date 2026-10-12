@@ -197,12 +197,11 @@ function collectArrayCallSites(): { literal: CallSite[]; unresolved: number } {
 /** 客户端待扫文件（服务端路由自身不在被约束范围） */
 function clientFiles(): string[] {
   const out: string[] = [];
-  const dirs = [
-    APP_DIR,
-    join(WEB_ROOT, "components"),
-    join(WEB_ROOT, "hooks"),
-    join(WEB_ROOT, "lib"),
-  ];
+  const dirs = [APP_DIR, join(WEB_ROOT, "components"), join(WEB_ROOT, "lib")];
+  // 注：这里曾经还有 join(WEB_ROOT, "hooks")。2026-10-12 该目录整体删除
+  //（三个 hook 全仓零引用，被 web/lib/use-long-press.ts 与 components/PinchToZoom.tsx
+  // 取代，见 chore/remove-dead-hooks）。walk() 不容忍目录缺失，留着会 ENOENT。
+  // 若日后重建 hooks/，把这行加回来即可。
   for (const dir of dirs) {
     for (const f of walk(dir)) {
       if (!f.endsWith(".ts") && !f.endsWith(".tsx")) continue;
