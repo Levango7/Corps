@@ -52,6 +52,31 @@ export default [
     },
   },
 
+  // visual-kit：E2E 工具集，单个文件在「Node CJS / 浏览器页内求值」两种环境间混用
+  // （probe 经 addScriptTag 注入页面、measure 在 evaluate 内跑、report 在 Node 侧）。
+  // 按普通应用代码检查会把两端 globals 各判一遍"未定义"——这里显式声明双端环境，
+  // CJS require/console 是这套工具的形态而非疏漏（2026-10-13 CI Lint 实测）。
+  {
+    files: ["e2e/visual-kit/**/*.{js,cjs}"],
+    languageOptions: {
+      sourceType: "commonjs",
+      globals: {
+        require: "readonly",
+        console: "readonly",
+        module: "readonly",
+        __dirname: "readonly",
+        process: "readonly",
+        document: "readonly",
+        window: "readonly",
+        getComputedStyle: "readonly",
+      },
+    },
+    rules: {
+      "no-console": "off",
+      "@typescript-eslint/no-require-imports": "off",
+    },
+  },
+
   // 忽略
   {
     ignores: [
