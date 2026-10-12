@@ -57,7 +57,7 @@
     "lib0": "^0.2.119",
     "livekit-client": "^2.22.4",
     "livekit-server-sdk": "^2.19.1",
-    "lucide-react": "0.513.0",
+    "lucide-react": "1.54.0",
     "mermaid": "^12.1.0",
     "next": "16.4.0",
     "next-intl": "^4.14.9",
