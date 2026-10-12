@@ -10,31 +10,22 @@
 # 背景：i18n-keys.test.ts 只比对 zh/en 两份的键集合相等，所以"两边都缺同一个键"
 # 依然全绿，而运行期会抛 MISSING_MESSAGE。已确证的实例：task.complete / task.copy /
 # task.share 三个键曾两边皆无，看板长按菜单三条菜单项各抛 164 次（已修复，故不在此列）。
-
-chat.confirm
-chat.confirmDeleteGroup
-chat.confirmLeaveGroup
-chat.confirmRemoveMember
-chat.confirmRevoke
-chat.sent
-dashboard.layoutOptions
-document.delete
-document.move
-document.rename
-im.acceptCall
-im.incomingVideoCall
-im.incomingVoiceCall
-im.rejectCall
-im.voiceCallInvite
-permissions.adminCanOverride
-permissions.copyFailed
-permissions.loadFailed
-permissions.ownerLocked
-permissions.reset
-permissions.resetSuccess
-permissions.saveFailed
-permissions.saveSuccess
-permissions.saving
-permissions.shareFailed
-permissions.subtitle
-permissions.viewerHint
+#
+# ── 2026-10-12 清零 ──
+# 下面 27 条一次性还清（PR 见 fix/i18n-missing-keys）：
+#   chat.confirm{,DeleteGroup,LeaveGroup,RemoveMember,Revoke} / chat.sent
+#       -> 绑错命名空间：文案一直在 im.* 下，ConversationSettings / MessageItem
+#          却绑了 useTranslations("chat")。改用 im 命名空间复用已有译文，没有复制。
+#   permissions.viewerHint
+#       -> 同上，译文在 members.viewerHint。
+#   dashboard.layoutOptions / document.{rename,move,delete}
+#       -> 确实缺失，两侧同时补（zh.json + en.json 各 +20 键）。
+#   im.{acceptCall,rejectCall,incomingVoiceCall,incomingVideoCall,voiceCallInvite}
+#       -> 同上，IM 来电通知的按钮与提示。
+#   permissions.{subtitle,saving,reset,resetSuccess,saveSuccess,saveFailed,
+#                loadFailed,ownerLocked,adminCanOverride,copyFailed,shareFailed}
+#       -> 同上，权限设置页整页文案 + 分享对话框的错误提示。
+#
+# 基线现为空。注意：tests/unit/i18n-usage.test.ts 的「扫描覆盖面没塌」断言
+# 改成了直接数扫到的源文件数，不再依赖"基线非空"——因为债务还清后，
+# 靠"还有债"来证明扫描器活着，会让空基线永远无法成立。

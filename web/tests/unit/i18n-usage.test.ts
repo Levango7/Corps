@@ -57,14 +57,16 @@ function resolveLeaf(obj: unknown, segs: string[]): string | undefined {
   return typeof cur === "string" ? cur : undefined;
 }
 
-/** 收集"代码引用了但词条缺失"的键 */
-function findMissingKeys(): string[] {
+/** 收集"代码引用了但词条缺失"的键，并带回扫描覆盖面（供活性断言用） */
+function findMissingKeys(): { missing: string[]; scannedFiles: number } {
   const zh = loadMessages("zh");
   const en = loadMessages("en");
   const missing = new Set<string>();
+  let scannedFiles = 0;
 
   for (const dir of SCAN_DIRS) {
     for (const file of listTsFiles(join(WEB, dir))) {
+      scannedFiles += 1;
       const src = readFileSync(file, "utf8");
       const bindings = [
         ...src.matchAll(/(?:const|let|var)\s+(\w+)\s*=\s*useTranslations\(\s*"([^"]*)"\s*\)/g),
@@ -87,7 +89,7 @@ function findMissingKeys(): string[] {
       }
     }
   }
-  return [...missing].sort();
+  return { missing: [...missing].sort(), scannedFiles };
 }
 
 function loadBaseline(): string[] {
@@ -100,13 +102,20 @@ function loadBaseline(): string[] {
 }
 
 describe("i18n 代码引用键必须存在于词条", () => {
-  const missing = findMissingKeys();
+  const { missing, scannedFiles } = findMissingKeys();
   const baseline = loadBaseline();
 
-  it("能扫到足够多的引用以证明扫描本身在工作", () => {
-    // 阈值取自当前仓库规模；若大幅下降到个位数，多半是解析式失效而非真的修完了
+  it("扫描覆盖面没有塌掉（防解析式失效）", () => {
+    // 活性检查直接数扫到的源文件数。此前写成 `expect(baseline.length).toBeGreaterThan(0)`，
+    // 是借「还有债」来间接证明扫描器活着 —— 2026-10-12 基线清零后，那个断言
+    // 会让「债务还清」这个正确状态永远无法成立（见 i18n-usage-baseline.txt 尾注）。
+    // 阈值取自当前仓库规模（app + components + lib + hooks 约 700+ 个 ts/tsx）。
+    expect(scannedFiles).toBeGreaterThan(300);
+  });
+
+  it("缺口规模没有失控（超过基线 +5 视为新缺口成批出现）", () => {
+    // 若大幅下降到个位数，多半是解析式失效而非真的修完了
     expect(missing.length).toBeLessThanOrEqual(baseline.length + 5);
-    expect(baseline.length).toBeGreaterThan(0);
   });
 
   it("不引入基线之外的新缺口", () => {

@@ -99,7 +99,8 @@ function MemberRow({
   const meta = ROLE_META[m.role];
   const t = useTranslations("members");
   const tRole = useTranslations("role");
-  const tPermissions = useTranslations("permissions");
+  // 注：viewerHint 的译文在 members 命名空间下（不在 permissions —— permissions 里没有这个键，
+  // 此前绑错导致界面直接渲染出 "permissions.viewerHint"）。故不再需要 permissions 命名空间。
 
   const Icon = meta.icon;
   const editable = canManage && m.role !== "owner" && !m.isSelf;
@@ -226,7 +227,7 @@ function MemberRow({
         </div>
         {showViewerHint && (
           <div className="ml-auto text-[length:var(--text-xs)] text-[var(--meta)] italic">
-            {tPermissions("viewerHint")}
+            {t("viewerHint")}
           </div>
         )}
       </div>
@@ -294,7 +295,7 @@ function MemberRow({
           </select>
           {showViewerHint ? (
             <span className="text-[length:var(--text-xs)] text-[var(--meta)] italic">
-              {tPermissions("viewerHint")}
+              {t("viewerHint")}
             </span>
           ) : (
             <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
