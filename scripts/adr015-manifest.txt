@@ -16,6 +16,14 @@
 # 解除约束的唯一方式（照 ADR-015 §5）：把 ADR-015 状态改成"已接线"或"已删除"，
 # 并在同一提交里更新本表。**不许只改表不改 ADR。**
 #
+# 2026-10-13：FileBrowser 家族与「统一入口」预览链已由页面
+# `app/[locale]/w/[wid]/files/page.tsx` 接线（见 ADR-015 状态段）；同日新增的客户端
+# 容器 FileManagerPage.tsx 按闭合判据一并入表。本表仍逐一登记
+# 扫描范围内的**全部**文件——判据是"扫描范围 ↔ 登记表"双向闭合，与是否已接线无关。
+# 剩余 10 个未接线文件（版本管理 2 + previews/ 7 + im/FilePreview）继续受 §5 保护。
+#
+# ── 页面容器（2026-10-13 接线新增的客户端容器；按闭合判据同样入表）
+web/components/files/FileManagerPage.tsx
 # ── 统一入口 + 兄弟预览器（被 FilePreviewDialog import，而后者零引用）
 web/components/files/FilePreview.tsx
 web/components/files/FilePreviewDialog.tsx

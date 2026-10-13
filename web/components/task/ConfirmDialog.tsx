@@ -2,17 +2,33 @@
 
 // 自定义确认弹窗（替代 window.confirm）。
 // 拆分自 task/[id]/page.tsx 第 1167-1210 行，纯展示 + 回调。
+//
+// 2026-10-13：文案可覆盖化——files 等模块复用本弹窗时通过 labels 传入自己的
+// i18n 文案；不传则沿用 task 命名空间的默认删除文案，旧调用点行为不变。
 
 import { useEffect, useRef } from "react";
 import { Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
+
+/** 可覆盖文案（均为已解析好的展示串，含 ICU 参数渲染后的结果） */
+export interface ConfirmDialogLabels {
+  /** role=dialog 的 aria-label */
+  aria: string;
+  title: string;
+  description: string;
+  confirm: string;
+  cancel: string;
+}
 
 interface ConfirmDialogProps {
   open: boolean;
   onClose: () => void;
   onConfirm: () => void;
   deleting: boolean;
-  taskTitle: string;
+  /** 主体名（task 场景用；其它模块传了 labels 时可省略） */
+  taskTitle?: string;
+  /** 文案覆盖（不传 = task 默认删除文案） */
+  labels?: ConfirmDialogLabels;
 }
 
 export function ConfirmDialog({
@@ -21,10 +37,19 @@ export function ConfirmDialog({
   onConfirm,
   deleting,
   taskTitle,
+  labels,
 }: ConfirmDialogProps) {
   const t = useTranslations("task");
   const tButton = useTranslations("button");
   const dialogRef = useRef<HTMLDivElement>(null);
+
+  const copy = labels ?? {
+    aria: t("confirmAria"),
+    title: t("confirmDeleteTitle"),
+    description: t("confirmDeleteTask", { title: taskTitle ?? "" }),
+    confirm: t("confirmDelete"),
+    cancel: tButton("cancel"),
+  };
 
   // 焦点管理：打开时记录之前焦点并移入模态框，关闭时恢复
   useEffect(() => {
@@ -85,7 +110,7 @@ export function ConfirmDialog({
       ref={dialogRef}
       role="dialog"
       aria-modal="true"
-      aria-label={t("confirmAria")}
+      aria-label={copy.aria}
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
       onClick={onClose}
     >
@@ -94,10 +119,10 @@ export function ConfirmDialog({
         onClick={(e) => e.stopPropagation()}
       >
         <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
-          {t("confirmDeleteTitle")}
+          {copy.title}
         </h3>
         <p className="text-[length:var(--text-sm)] text-[var(--fg-2)] leading-[var(--leading-relaxed)] mb-[var(--space-5)]">
-          {t("confirmDeleteTask", { title: taskTitle })}
+          {copy.description}
         </p>
         <div className="flex items-center justify-end gap-[var(--space-2)]">
           <button
@@ -105,7 +130,7 @@ export function ConfirmDialog({
             onClick={onClose}
             className="h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] active:bg-[var(--surface-3)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
-            {tButton("cancel")}
+            {copy.cancel}
           </button>
           <button
             type="button"
@@ -117,7 +142,7 @@ export function ConfirmDialog({
             className="inline-flex items-center gap-1.5 h-8 px-[var(--space-3)] rounded-[var(--radius-md)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] bg-[var(--danger)] text-[var(--accent-fg)] hover:opacity-90 active:opacity-80 disabled:opacity-50 transition-opacity duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
           >
             {deleting ? <Loader2 size={14} className="animate-spin" /> : null}
-            {t("confirmDelete")}
+            {copy.confirm}
           </button>
         </div>
       </div>

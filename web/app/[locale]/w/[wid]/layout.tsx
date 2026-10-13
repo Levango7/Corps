@@ -41,6 +41,7 @@ import {
   BookOpen,
   Calendar as CalendarIcon,
   Table2,
+  FolderOpen,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
@@ -388,6 +389,7 @@ export default function WorkspaceLayout({
       label: t("menu.groupKnowledge"),
       items: [
         { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
+        { href: `/w/${wid}/files`, label: t("menu.files"), icon: FolderOpen, exact: false },
         { href: `/w/${wid}/wiki`, label: t("menu.wiki"), icon: BookOpen, exact: false },
         {
           href: `/w/${wid}/whiteboards`,

@@ -24,6 +24,7 @@ import {
   BookOpen,
   PenTool,
   Table2,
+  FolderOpen,
   ClipboardList,
   Trash2,
   Target,
@@ -244,6 +245,13 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         kind: "nav",
         href: `/w/${wid}/documents`,
         icon: FileText,
+      },
+      {
+        id: "nav-files",
+        titleKey: "nav.menu.files",
+        kind: "nav",
+        href: `/w/${wid}/files`,
+        icon: FolderOpen,
       },
       {
         id: "nav-wiki",
