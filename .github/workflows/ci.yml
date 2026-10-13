@@ -540,7 +540,7 @@ jobs:
       # 后续比对。基线从下方产物下载提交入库后才真正生效；CI 环境跨次运行
       # 渲染确定（同镜像同 chromium），本地因系统字体栈差异不可比（spec 已 test.skip 本地）。
       - name: Run browser E2E tests
-        run: npx playwright test --config playwright.config.ts --update-snapshots=missing
+        run: npx playwright test --config playwright.config.ts --update-snapshots=all
         env:
           PLAYWRIGHT_BASE_URL: http://localhost:3000
           RATE_LIMIT_DISABLED: "1"
