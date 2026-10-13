@@ -32,6 +32,8 @@ export interface FileBrowserProps {
   viewMode?: "list" | "grid";
   onFileClick?: (file: FileAsset) => void;
   onFileDelete?: (fileId: string) => void;
+  /** 版本历史入口（提供时列表/网格行会渲染「版本历史」按钮） */
+  onFileVersions?: (file: FileAsset) => void;
   onFileMove?: (fileId: string, targetFolderId: string) => void;
   onUploadComplete?: () => void;
 }
@@ -59,6 +61,7 @@ export function FileBrowser({
   viewMode = "list",
   onFileClick,
   onFileDelete,
+  onFileVersions,
   onUploadComplete,
 }: FileBrowserProps) {
   const t = useTranslations("files.fileBrowser");
@@ -191,6 +194,7 @@ export function FileBrowser({
                 onClick={() => onFileClick?.(file)}
                 onSelect={() => toggleSelect(file.id)}
                 onDelete={onFileDelete ? () => handleDelete(file.id) : undefined}
+                onVersions={onFileVersions ? () => onFileVersions(file) : undefined}
               />
             ))}
           </div>
@@ -208,6 +212,7 @@ export function FileBrowser({
                 onClick={() => onFileClick?.(file)}
                 onSelect={() => toggleSelect(file.id)}
                 onDelete={onFileDelete ? () => handleDelete(file.id) : undefined}
+                onVersions={onFileVersions ? () => onFileVersions(file) : undefined}
               />
             ))}
           </div>

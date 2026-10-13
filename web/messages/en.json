@@ -2293,12 +2293,14 @@
     "fileGridItem": {
       "unselectAria": "Unselect",
       "selectAria": "Select file",
-      "deleteAria": "Delete file"
+      "deleteAria": "Delete file",
+      "versionsAria": "Version history"
     },
     "fileListItem": {
       "unselectAria": "Unselect",
       "selectAria": "Select file",
-      "deleteAria": "Delete file"
+      "deleteAria": "Delete file",
+      "versionsAria": "Version history"
     },
     "preview": {
       "title": "File Preview",
@@ -2369,7 +2371,11 @@
       "empty": "No version history",
       "currentVersion": "Current version",
       "restoreAria": "Restore to v{version}",
-      "restoreToVersion": "Restore to this version"
+      "restoreToVersion": "Restore to this version",
+      "closeAria": "Close version history",
+      "loadFailed": "Failed to load version history",
+      "restoreDone": "Reverted to v{version}",
+      "restoreFailed": "Failed to revert. Please try again."
     }
   },
   "collaboration": {

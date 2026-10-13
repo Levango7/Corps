@@ -11,10 +11,14 @@ import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/re
  *  2. 点击文件 → 预览弹窗拿到的 url 是下载端点、fileType 是**扩名**（FilePreview 按它分发）；
  *  3. 删除必须先过确认弹窗（文案来自 files.page.*，不是 task 默认文案）、
  *     成功后本地剔除该行并 toast，失败则保留该行并 toast error；
- *  4. 上传完成回调触发列表刷新。
+ *  4. 上传完成回调触发列表刷新；
+ *  5. 版本历史（2026-10-14 续接）：打开时请求 versions 端点、渲染列表与权威当前版本号；
+ *     回滚走确认弹窗 → POST restore → **两个列表都刷新**（版本 + 文件本体）；
+ *     版本列表拉取失败时 toast 并收起弹层。
  *
- * 三个子组件（FileBrowser / FilePreviewDialog / ConfirmDialog）均以桩替换：
- * 视图渲染另有真机走查覆盖（上传→预览→删除全链路，见 PR 记录），这里只测接线逻辑。
+ * 五个子组件（FileBrowser / FilePreviewDialog / ConfirmDialog / FileVersionList /
+ * FileVersionRestore）均以桩替换：视图渲染另有真机走查覆盖
+ * （上传→预览→删除→同内容重传造 v2→回滚 v1 全链路），这里只测接线逻辑。
  */
 
 const mocks = vi.hoisted(() => ({
@@ -24,19 +28,20 @@ const mocks = vi.hoisted(() => ({
 }));
 
 vi.mock("next-intl", () => ({
-  // 带上 ICU 参数（JSON 化）——让"文案里嵌了文件名"这类断言可判
+  // 带上 ICU 参数（JSON 化）——让"文案里嵌了文件名/版本号"这类断言可判
   useTranslations: (ns: string) => (key: string, params?: Record<string, unknown>) =>
     params ? `${ns}:${key}:${JSON.stringify(params)}` : `${ns}:${key}`,
 }));
 vi.mock("@/lib/api", () => ({ api: mocks.api, apiList: mocks.apiList }));
 vi.mock("@/components/Toast", () => ({ useToast: () => ({ toast: mocks.toast }) }));
 
-// 桩 1：FileBrowser —— 暴露三个回调入口 + 当前文件数
+// 桩 1：FileBrowser —— 暴露五个回调入口 + 当前文件数
 vi.mock("@/components/files/FileBrowser", () => ({
   FileBrowser: (props: {
     files: Array<{ id: string; fileName: string }>;
     onFileClick?: (f: unknown) => void;
     onFileDelete?: (id: string) => void;
+    onFileVersions?: (f: unknown) => void;
     onUploadComplete?: () => void;
   }) => (
     <div data-testid="stub-browser">
@@ -46,6 +51,12 @@ vi.mock("@/components/files/FileBrowser", () => ({
       </button>
       <button data-testid="stub-delete" onClick={() => props.onFileDelete?.(props.files[0].id)}>
         delete
+      </button>
+      <button
+        data-testid="stub-versions-open"
+        onClick={() => props.onFileVersions?.(props.files[0])}
+      >
+        versions
       </button>
       <button data-testid="stub-upload-done" onClick={() => props.onUploadComplete?.()}>
         uploaded
@@ -101,11 +112,55 @@ vi.mock("@/components/task/ConfirmDialog", () => ({
     ) : null,
 }));
 
+// 桩 4：版本列表 —— 透出当前版本号，非当前版本各给一个回滚按钮
+vi.mock("@/components/files/FileVersionList", () => ({
+  FileVersionList: (props: {
+    versions: Array<{ id: string; version: number; createdAt?: unknown }>;
+    currentVersion: number;
+    loading?: boolean;
+    onRestore?: (versionId: string) => void;
+  }) => (
+    <div
+      data-testid="stub-versions"
+      data-count={props.versions.length}
+      data-current={props.currentVersion}
+      data-loading={String(Boolean(props.loading))}
+      data-createdIsDate={String(props.versions[0]?.createdAt instanceof Date)}
+    >
+      {props.versions
+        .filter((v) => v.version !== props.currentVersion)
+        .map((v) => (
+          <button
+            key={v.id}
+            data-testid={`versions-restore-${v.version}`}
+            onClick={() => props.onRestore?.(v.id)}
+          >
+            restore-v{v.version}
+          </button>
+        ))}
+    </div>
+  ),
+}));
+
+// 桩 5：回滚确认 —— 透出版本号与文件名
+vi.mock("@/components/files/FileVersionRestore", () => ({
+  FileVersionRestore: (props: { version: number; fileName: string; onConfirm: () => void }) => (
+    <div data-testid="stub-restore-confirm" data-version={props.version} data-name={props.fileName}>
+      <button data-testid="stub-restore-go" onClick={props.onConfirm}>
+        go
+      </button>
+    </div>
+  ),
+}));
+
 import { FileManagerPage } from "@/components/files/FileManagerPage";
 
 const WID = "w-1";
 const F1 = { id: "f1", fileName: "需求文档.txt" };
 const F2 = { id: "f2", fileName: "架构图.png" };
+// createdAt 用 ISO 字符串——模拟 API 的 wire 形状（容器负责转回 Date，见 loadVersions）
+const V1 = { id: "v-1", version: 1, createdAt: "2026-10-14T02:00:00.000Z" };
+const V2 = { id: "v-2", version: 2, createdAt: "2026-10-14T02:05:00.000Z" };
 
 beforeEach(() => {
   mocks.api.mockReset();
@@ -198,5 +253,72 @@ describe("FileManagerPage（云盘容器）", () => {
     fireEvent.click(screen.getByTestId("stub-upload-done"));
     await waitFor(() => expect(screen.getByTestId("stub-count")).toHaveTextContent("2"));
     expect(mocks.apiList).toHaveBeenCalledTimes(2);
+  });
+
+  it("打开版本历史 → 请求 versions 端点、渲染列表与权威当前版本，仅非当前版本可回滚", async () => {
+    mocks.apiList.mockResolvedValueOnce([F1]);
+    mocks.api.mockResolvedValueOnce({ items: [V2, V1], currentVersion: 2 });
+    render(<FileManagerPage wid={WID} />);
+    await screen.findByTestId("stub-browser");
+
+    fireEvent.click(screen.getByTestId("stub-versions-open"));
+    const list = await screen.findByTestId("stub-versions");
+    expect(mocks.api).toHaveBeenCalledWith(`/api/v1/workspaces/${WID}/files/f1/versions?limit=100`);
+    expect(list).toHaveAttribute("data-count", "2");
+    expect(list).toHaveAttribute("data-current", "2");
+    // createdAt 必须是 Date 实例（wire 字符串转换的回归守卫——
+    // 不转换会在真机渲染期抛 v.createdAt.toISOString is not a function）
+    expect(list).toHaveAttribute("data-createdIsDate", "true");
+    // 回滚按钮只出现在非当前版本上（v1 有、v2 没有）
+    expect(screen.getByTestId("versions-restore-1")).toBeInTheDocument();
+    expect(screen.queryByTestId("versions-restore-2")).not.toBeInTheDocument();
+  });
+
+  it("回滚：确认弹窗带版本号/文件名 → POST restore → 版本与文件两个列表都刷新 + toast", async () => {
+    mocks.apiList.mockResolvedValueOnce([F1]);
+    mocks.api.mockResolvedValueOnce({ items: [V2, V1], currentVersion: 2 });
+    render(<FileManagerPage wid={WID} />);
+    await screen.findByTestId("stub-browser");
+    fireEvent.click(screen.getByTestId("stub-versions-open"));
+    await screen.findByTestId("versions-restore-1");
+
+    fireEvent.click(screen.getByTestId("versions-restore-1"));
+    const confirm = screen.getByTestId("stub-restore-confirm");
+    expect(confirm).toHaveAttribute("data-version", "1");
+    expect(confirm).toHaveAttribute("data-name", "需求文档.txt");
+
+    mocks.api.mockResolvedValueOnce(null); // POST restore
+    mocks.api.mockResolvedValueOnce({ items: [V2, V1], currentVersion: 1 }); // 版本列表刷新
+    mocks.apiList.mockResolvedValueOnce([F1]); // 文件列表刷新
+    fireEvent.click(screen.getByTestId("stub-restore-go"));
+
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith(
+        "success",
+        'files:versionList.restoreDone:{"version":1}',
+      ),
+    );
+    expect(mocks.api).toHaveBeenCalledWith(
+      `/api/v1/workspaces/${WID}/files/f1/versions/v-1/restore`,
+      { method: "POST" },
+    );
+    // 权威当前版本号已随刷新更新为 1
+    await waitFor(() =>
+      expect(screen.getByTestId("stub-versions")).toHaveAttribute("data-current", "1"),
+    );
+    expect(mocks.apiList).toHaveBeenCalledTimes(2);
+  });
+
+  it("版本历史加载失败 → toast error 且弹层收起（不给空壳）", async () => {
+    mocks.apiList.mockResolvedValueOnce([F1]);
+    mocks.api.mockRejectedValueOnce(new Error("500"));
+    render(<FileManagerPage wid={WID} />);
+    await screen.findByTestId("stub-browser");
+
+    fireEvent.click(screen.getByTestId("stub-versions-open"));
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith("error", "files:versionList.loadFailed"),
+    );
+    expect(screen.queryByTestId("stub-versions")).not.toBeInTheDocument();
   });
 });
