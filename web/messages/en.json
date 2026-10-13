@@ -115,6 +115,7 @@
       "groupPlanning": "Planning",
       "groupAI": "AI Tools",
       "documents": "Documents",
+      "files": "Files",
       "favorites": "My starred",
       "messages": "Messages",
       "meetings": "Meetings",
@@ -2253,6 +2254,20 @@
     }
   },
   "files": {
+    "page": {
+      "title": "Files",
+      "count": "{count, plural, =1 {# file} other {# files}}",
+      "loading": "Loading…",
+      "loadFailed": "Failed to load the file list",
+      "retry": "Retry",
+      "deleteConfirmAria": "Confirm file deletion",
+      "deleteConfirmTitle": "Delete file",
+      "deleteConfirmBody": "Delete \"{name}\"? This action cannot be undone.",
+      "deleteConfirm": "Delete",
+      "deleteCancel": "Cancel",
+      "deleteDone": "File deleted",
+      "deleteFailed": "Failed to delete. Please try again."
+    },
     "fileBrowser": {
       "searchPlaceholder": "Search files…",
       "searchAria": "Search files",
