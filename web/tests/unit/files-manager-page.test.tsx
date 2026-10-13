@@ -184,7 +184,9 @@ describe("FileManagerPage（云盘容器）", () => {
 
     fireEvent.click(screen.getByTestId("stub-delete"));
     fireEvent.click(screen.getByTestId("stub-confirm-go"));
-    await waitFor(() => expect(mocks.toast).toHaveBeenCalledWith("error", "files:page.deleteFailed"));
+    await waitFor(() =>
+      expect(mocks.toast).toHaveBeenCalledWith("error", "files:page.deleteFailed"),
+    );
     expect(screen.getByTestId("stub-count")).toHaveTextContent("1");
   });
 
