@@ -5,11 +5,11 @@
 
 ## 三层与各自的运行面
 
-| 层 | 位置 | 本地跑 | CI job |
-| --- | --- | --- | --- |
-| 单元 | `web/tests/unit/` | `npx vitest run tests/unit` | Test / Unit Coverage Ratchet |
-| 集成（真 HTTP） | `web/tests/integration/` | dev/生产 server + `TEST_BASE_URL`（见下） | Test（生产构建腿） |
-| E2E（本目录） | `web/e2e/*.spec.ts` | `npx playwright test`（需目标 server） | E2E (production build) |
+| 层              | 位置                     | 本地跑                                    | CI job                       |
+| --------------- | ------------------------ | ----------------------------------------- | ---------------------------- |
+| 单元            | `web/tests/unit/`        | `npx vitest run tests/unit`               | Test / Unit Coverage Ratchet |
+| 集成（真 HTTP） | `web/tests/integration/` | dev/生产 server + `TEST_BASE_URL`（见下） | Test（生产构建腿）           |
+| E2E（本目录）   | `web/e2e/*.spec.ts`      | `npx playwright test`（需目标 server）    | E2E (production build)       |
 
 ## 本地跑 E2E 的正确姿势
 
