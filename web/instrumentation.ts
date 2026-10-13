@@ -2,6 +2,8 @@
  * Next.js instrumentation hook — 在服务器启动时执行
  * 用于环境变量校验和优雅关闭注册
  */
+import type { Instrumentation } from "next";
+
 export async function register() {
   // 仅在服务端执行（非 Edge Runtime）
   if (process.env.NEXT_RUNTIME === "nodejs") {
@@ -28,3 +30,34 @@ export async function register() {
     setupGracefulShutdown();
   }
 }
+
+/**
+ * 请求级服务端错误上报（Next 内置钩子）。
+ *
+ * 为什么必须有：App Router 会**在框架内部捕获** route handler / SSR 渲染抛出的
+ * 异常并返回 500——进程不会崩，`unhandledRejection`/`uncaughtException` 永不触发，
+ * 因此这类**最高频的服务端错误**对现有一切上报（lib/observability.ts 的进程级
+ * handler、global-error 前端边界）全部不可见，只能靠人翻 docker 日志。本钩子是
+ * 它们进入 captureError 的唯一入口。
+ *
+ * 语义：
+ * - 复用 captureError 全链（脱敏 / 限流 / Sentry Envelope / webhook 告警）；
+ * - 传输层噪声（客户端断连）与进程级 handler 同判据过滤，不上报；
+ * - 整个钩子包 try/catch——上报绝不影响错误响应本身。
+ */
+export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  try {
+    const { captureError, isBenignTransportError } = await import("./lib/observability");
+    if (isBenignTransportError(error)) return;
+    captureError(error, {
+      source: "request",
+      route: context.routePath,
+      requestPath: request.path,
+      method: request.method,
+      routerKind: context.routerKind,
+      routeType: context.routeType,
+    });
+  } catch {
+    // 上报失败不影响错误响应（与 captureError 的 fire-and-forget 语义一致）
+  }
+};

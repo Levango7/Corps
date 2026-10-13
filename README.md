@@ -86,6 +86,19 @@ npx prisma generate && npx prisma migrate dev
 pnpm dev                           # http://localhost:3000
 ```
 
+### 开发环境体检（"怎么又不通了"的第一步）
+
+本机环境有一类间歇性故障反复出现且症状相似——Docker Desktop 自行退出、重启后
+个别端口转发丢失（容器 healthy 但连不上）、Windows Hyper-V 保留段吞端口。
+排查不必再逐项人工做：
+
+```bash
+bash scripts/dev-doctor.sh
+```
+
+一条命令查六项（引擎 / 容器与 healthy / 宿主端口监听器 / Windows 保留段 /
+应用真探活 / 备份新鲜度），每条失败都附可执行的修复命令。
+
 ## 技术栈
 
 Next.js 16（App Router / Turbopack）· React 19 · Tailwind CSS 4 · Prisma 6 · PostgreSQL 18（RLS）· Better Auth · next-intl · mermaid · Stripe / 微信 / 支付宝三通道

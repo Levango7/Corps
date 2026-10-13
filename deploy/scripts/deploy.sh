@@ -133,26 +133,32 @@ if [[ -z "${_bdir}" || ! -d "${_bdir}" ]]; then
   exit 1
 fi
 # 先捕获实际文件名再写：清理时必须删掉「真正写出的那个文件」。
-# 旧写法写入 *.sql.gz 却 rm *.sql.gz.tmp，通配符不匹配，清理从未生效——
-# 失败时会留下 0 字节或截断的 .sql.gz（restore.sh 的 gzip -t 能兜住误恢复，
-# 但垃圾文件会堆积，且与注释声明的意图不符）。
-_bak="${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).sql.gz"
-# stderr 落到临时文件而不是 /dev/null：备份失败时"pg_dumpall 失败"这句话
+# 旧写法写入 *.sql.gz 却 rm *.sql.gz.tmp，通配符不匹配，清理从未生效。
+# 2026-10-13 恢复演练重构：改用 pg_dump --format=custom（与每日备份同格式）。
+# 原 pg_dumpall | gzip 有两个致命问题（演练实测）：① restore.sh 的灌库命令
+# `psql --force` 是非法选项——这条恢复链从未工作过，只是失败得足够响亮
+# （一个核心表都灌不进 → 判据红）；② pg_dumpall 产物含 `\connect <生产库>`,
+# 一旦灌库参数修好，--dry-run 会切到生产库写数据，与"生产库零接触"承诺相悖。
+# custom 格式单库 dump：恢复走 pg_restore、无 \connect 隐患、可选择性恢复，
+# 且与 backup 容器的每日产物按同一套 restore 路径验证过（演练 dry-run 通过）。
+_bak="${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).dump"
+# stderr 落到临时文件而不是 /dev/null：备份失败时"pg_dump 失败"这句话
 # 本身不提供任何可行动信息（是权限？连接？卷满？），排查得手工重跑一遍。
 _err_log="$(mktemp 2>/dev/null || echo "${_bak}.err")"
-if ! corpse_compose exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' 2>"${_err_log}" \
-     | gzip > "${_bak}"; then
-  # pg_dumpall 失败时清掉半截文件：留下一个 0 字节或截断的 .sql.gz，
+if ! corpse_compose exec -T db sh -c \
+     'pg_dump --format=custom --no-owner -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-corps}"' \
+     > "${_bak}" 2>"${_err_log}"; then
+  # pg_dump 失败时清掉半截文件：留下一个 0 字节或截断的 .dump，
   # 将来 restore.sh 拿它恢复会得到一个"看起来有文件、实则残缺"的假安全感
   rm -f "${_bak}" 2>/dev/null || true
-  log_error "pg_dumpall 失败，stderr 末尾 5 行："
+  log_error "pg_dump 失败，stderr 末尾 5 行："
   tail -n 5 "${_err_log}" 2>/dev/null | while IFS= read -r _l; do log_error "  ${_l}"; done
   rm -f "${_err_log}" 2>/dev/null || true
   trigger_rollback "上线前备份失败——继续部署等于放弃唯一的 schema 还原点"
   exit 1
 fi
 rm -f "${_err_log}" 2>/dev/null || true
-_bf="$(ls -t "${_bdir}"/corps_predeploy_*.sql.gz 2>/dev/null | head -1)"
+_bf="$(ls -t "${_bdir}"/corps_predeploy_*.dump 2>/dev/null | head -1)"
 _bf_size="$(du -h "${_bf}" 2>/dev/null | cut -f1 || echo '?')"
 log_ok "备份完成：${_bf}（${_bf_size}）"
 
@@ -186,6 +192,23 @@ fi
 log_step "7/7 更新版本记录"
 write_current_version "${TARGET_TAG}"
 log_ok "deploy/VERSION 已更新为 ${TARGET_TAG}"
+
+# 备份链路自检（2026-10-13 恢复演练教训）：此前"每天有没有备份在跑"
+# 没有任何一步在查——备份容器在开发机上被 SIGKILL 后无人拉起、每日备份
+# 静默停摆了一整段。deploy/README 的"§7 确认定时备份已落地"是人工项，
+# 这里把它变成部署输出里的机器判据（容器在跑 + 备份目录可读）。
+# 注：backup.sh 是"先备后睡"（while true: dump; sleep 86400），所以
+# 部署后一分钟内应出现首份 .dump；首次部署当场没有属正常，以容器状态为准。
+log_step "7/7·附 备份链路自检"
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -q '^corps-backup$'; then
+  log_ok "备份容器在跑（corps-backup）"
+  _n="$(find "${BACKUP_DIR:-/opt/corps/backups}" -maxdepth 1 -name 'corps-*.dump' 2>/dev/null | wc -l | tr -d ' ')"
+  log_info "每日备份（corps-*.dump）现有 ${_n} 份；备份目录：${BACKUP_DIR:-/opt/corps/backups}"
+  log_info "建议 24h 内复核一次：bash deploy/scripts/restore.sh --list"
+else
+  log_warn "⛔ 备份容器未运行——每日备份不会发生。排查：docker logs corps-backup --tail 20"
+  log_warn "   恢复：docker compose --env-file deploy/.env.prod up -d backup"
+fi
 
 trap - ERR
 
