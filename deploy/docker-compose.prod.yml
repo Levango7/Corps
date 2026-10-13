@@ -48,6 +48,17 @@ services:
     ports: !reset []
     logging: *logging
 
+  # ─── 每日备份落点对齐（2026-10-13 恢复演练教训）──────────────────────────
+  # 基线把备份写进 named volume（开发态合理：不污染宿主目录）；但生产侧
+  # restore.sh 的 --list/--dry-run 与 deploy.sh §3 的还原点都在宿主
+  # ${BACKUP_DIR} 下读——两处不一致时"有备份却找不到"，恢复链是断的。
+  # 这里把 /backups 这个挂载点换成宿主目录（compose 对同名 target 的
+  # volumes 条目按后者覆盖），每日 .dump 与上线前 .sql.gz 落在同一处。
+  backup:
+    volumes:
+      - ${BACKUP_DIR:-/opt/corps/backups}:/backups
+    logging: *logging
+
   # ─── Redis（限流共享计数）──────────────────────────────────────────────────
   redis:
     # 基线无上限：Redis 默认吃满可用内存。在 2C4G 机器上这意味着把
