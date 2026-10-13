@@ -2293,12 +2293,14 @@
     "fileGridItem": {
       "unselectAria": "取消选择",
       "selectAria": "选择文件",
-      "deleteAria": "删除文件"
+      "deleteAria": "删除文件",
+      "versionsAria": "版本历史"
     },
     "fileListItem": {
       "unselectAria": "取消选择",
       "selectAria": "选择文件",
-      "deleteAria": "删除文件"
+      "deleteAria": "删除文件",
+      "versionsAria": "版本历史"
     },
     "preview": {
       "title": "文件预览",
@@ -2369,7 +2371,11 @@
       "empty": "暂无版本历史",
       "currentVersion": "当前版本",
       "restoreAria": "回滚到 v{version}",
-      "restoreToVersion": "回滚到此版本"
+      "restoreToVersion": "回滚到此版本",
+      "closeAria": "关闭版本历史",
+      "loadFailed": "版本历史加载失败",
+      "restoreDone": "已回滚到 v{version}",
+      "restoreFailed": "回滚失败，请重试"
     }
   },
   "collaboration": {

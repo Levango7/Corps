@@ -13,7 +13,7 @@
 
 import { useState } from "react";
 import type { FileAsset } from "@prisma/client";
-import { Check, Trash2 } from "lucide-react";
+import { Check, Trash2, History } from "lucide-react";
 import { formatFileSize, getFileIcon } from "./file-utils";
 import { useTranslations } from "next-intl";
 
@@ -25,6 +25,8 @@ export interface FileGridItemProps {
   onClick?: () => void;
   onSelect?: () => void;
   onDelete?: () => void;
+  /** 版本历史入口（提供时渲染「版本历史」按钮） */
+  onVersions?: () => void;
 }
 
 // ─── 组件 ────────────────────────────────────────────────────────
@@ -35,6 +37,7 @@ export function FileGridItem({
   onClick,
   onSelect,
   onDelete,
+  onVersions,
 }: FileGridItemProps) {
   const t = useTranslations("files.fileGridItem");
   const Icon = getFileIcon(file.fileType);
@@ -78,6 +81,21 @@ export function FileGridItem({
           }
         >
           {selected && <Check size={12} className="text-[var(--accent-fg)]" strokeWidth={3} />}
+        </button>
+      )}
+
+      {/* 版本历史按钮（右上角左一，hover/focus 显示） */}
+      {onVersions && (
+        <button
+          type="button"
+          aria-label={t("versionsAria")}
+          onClick={(e) => {
+            e.stopPropagation();
+            onVersions();
+          }}
+          className="absolute top-2 right-9 w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] bg-[var(--surface)] border border-[var(--border)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--accent)] opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-[var(--motion-fast)] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+        >
+          <History size={14} />
         </button>
       )}
 

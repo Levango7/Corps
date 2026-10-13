@@ -6,7 +6,7 @@
 // 辅助函数已提取到 file-utils.ts（纯函数，可在 server/client 通用）。
 
 import type { FileAsset } from "@prisma/client";
-import { Trash2, Check } from "lucide-react";
+import { Trash2, Check, History } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { formatFileSize, getFileIcon, formatDate } from "./file-utils";
 
@@ -18,6 +18,8 @@ export interface FileListItemProps {
   onClick?: () => void;
   onSelect?: () => void;
   onDelete?: () => void;
+  /** 版本历史入口（提供时渲染「版本历史」按钮） */
+  onVersions?: () => void;
 }
 
 // ─── 组件 ────────────────────────────────────────────────────────
@@ -28,6 +30,7 @@ export function FileListItem({
   onClick,
   onSelect,
   onDelete,
+  onVersions,
 }: FileListItemProps) {
   const t = useTranslations("files.fileListItem");
   const Icon = getFileIcon(file.fileType);
@@ -83,8 +86,21 @@ export function FileListItem({
         {formatDate(file.createdAt)}
       </span>
 
-      {/* 操作按钮：删除（hover/focus 显示） */}
-      <div className="shrink-0 w-8 flex items-center justify-end opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-[var(--motion-fast)] motion-reduce:transition-none">
+      {/* 操作按钮：版本历史 + 删除（hover/focus 显示） */}
+      <div className="shrink-0 w-14 flex items-center justify-end gap-1 opacity-0 group-hover:opacity-100 group-focus-within:opacity-100 transition-opacity duration-[var(--motion-fast)] motion-reduce:transition-none">
+        {onVersions && (
+          <button
+            type="button"
+            aria-label={t("versionsAria")}
+            onClick={(e) => {
+              e.stopPropagation();
+              onVersions();
+            }}
+            className="w-6 h-6 inline-flex items-center justify-center rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] hover:text-[var(--accent)] transition-colors duration-[var(--motion-fast)] motion-reduce:transition-none focus-visible:outline-none focus-visible:ring-[var(--focus-ring)]"
+          >
+            <History size={14} />
+          </button>
+        )}
         {onDelete && (
           <button
             type="button"
