@@ -31,8 +31,8 @@ bash deploy/scripts/deploy.sh
 | §3 | 配 `.env.prod`（密钥 + 域名 + tag） | 10 min |
 | §4 | 放通安全组 80/443 | 2 min |
 | §5 | `preflight.sh` 跑到绿 | 3 min |
-| §6 | `deploy.sh` 起服务 | 5 min |
-| §7 | 确认定时备份已落地 | 5 min |
+| §6 | `deploy.sh` 起服务（含备份链路自检输出） | 5 min |
+| §7 | 复核备份自检 + 首跑一次 `restore.sh --dry-run` | 5 min |
 
 超出预算的常见原因：域名 ICP 备案没完成（见 §5.1）。
 
@@ -210,35 +210,47 @@ docker compose ... exec caddy caddy validate --config /etc/caddy/Caddyfile
 
 ## 7. 备份与恢复
 
-### 现状：本部署包落地前，备份从未真正执行过
+### 每日备份：由 backup 容器承担（2026-10-13 起，取代手抄 crontab）
 
-`scripts/backup-db.sh` 早就在仓库里，但**没有任何编排引用它**——根 compose 无
-backup 服务，宿主机无 crontab。等于"有脚本但从来没备份过"。本部署包通过
-`deploy.sh` 的第 3 步（每次上线前强制备份）让链路先跑起来，再按下面配 cron。
+**两套机制曾漂移共存**（本次恢复演练实测的根因）：README 一直写"手配 crontab
+产出 `corps_*.sql.gz`"，而 base compose 的 `backup` 服务（`db/backup.sh`，先备后
+睡、`--format=custom` 产出 `corps-*.dump`）后来也接上了——前者靠人抄、易漏，后者
+自动化但**写进了 named volume，restore.sh 在宿主 `${BACKUP_DIR}` 下永远找不到它**。
+现状统一为后者，并把落点对齐到宿主目录（prod overlay 的 `backup.volumes` 绑定
+`${BACKUP_DIR}:/backups`）：
 
-### 每日备份
+- **机制**：`backup` 容器（`restart: unless-stopped`，先备后睡，间隔
+  `BACKUP_INTERVAL_SECONDS` 默认 86400s，保留 `BACKUP_RETENTION_DAYS` 默认 7 天）；
+- **落点**：`${BACKUP_DIR}`（默认 `/opt/corps/backups`），文件形如
+  `corps-YYYYMMDD-HHMMSS.dump`（**custom 格式**，`pg_restore` 可直接选表恢复）；
+- **上线前还原点**：`deploy.sh` §3 用同一格式产出 `corps_predeploy_*.dump`——
+  **整包只有一种格式、一条恢复路径**（演练前是两套互不相认的格式）；
+- **自检**：`deploy.sh` 收尾会自动检查"容器在跑 + 备份目录可读"；人工复核用
+  `bash deploy/scripts/restore.sh --list`（逐个验归档完整性）。
 
-```bash
-crontab -e
-# 每天 03:17（避开整点：整点是各系统备份任务的高峰，磁盘 IO 竞争）
-17 3 * * * cd /opt/corps && docker compose -f docker-compose.yml \
-  -f deploy/docker-compose.prod.yml --env-file deploy/.env.prod \
-  exec -T db sh -c 'pg_dumpall -U "${POSTGRES_USER:-postgres}"' \
-  | gzip > /opt/corps/backups/corps_$(date +\%Y\%m\%d_\%H\%M\%S).sql.gz \
-  && find /opt/corps/backups -name 'corps_*.sql.gz' -mtime +7 -delete
-```
+> **legacy 说明**：旧 crontab 方案（`pg_dumpall | gzip > corps_*.sql.gz`）已废弃。
+> 那些旧文件**不再支持恢复**（演练实测：灌库端 `psql --force` 是非法选项，这条
+> 链从未工作过；且 pg_dumpall 产物含 `\connect <生产库>`，修好参数会写进生产库）。
+> `--list` 会把它们标为 `[legacy·不支持恢复]` 供识别清理。
 
 **RPO 声明**：逻辑备份（pg_dump），非 WAL 连续归档。RPO ≈ 备份间隔（默认 24h），
 不保证零数据丢失。要更小的 RPO 需要 WAL 归档，那是另一套设施，不在本包范围。
 
-### 每月验证一次备份
+### 恢复演练（上线后 24h 内首跑，之后每季一次）
 
 **没验证过的备份等于没有备份。** 备份文件存在不等于可恢复——它可能截断、可能
-缺表、可能躺在磁盘上却恢复不进去。`restore.sh --dry-run` 就是为此存在：
+缺表、可能躺在磁盘上却恢复不进去、甚至根本不在你找的目录里（2026-10-13 演练
+实测：格式与落点双漂移，恢复链实际是断的，演练前无人知晓）。完整姿势：
 
 ```bash
-bash deploy/scripts/restore.sh --list                 # 列出并逐个验 gzip 完整性
-bash deploy/scripts/restore.sh --dry-run <文件>       # 恢复到临时库 + 输出核心表行数
+# ① 列备份 + 逐个验完整性（.dump 走 pg_restore --list，.sql.gz 走 gzip -t）
+bash deploy/scripts/restore.sh --list
+
+# ② 挑最新一份做 dry-run：恢复到临时库 + 输出核心表行数（生产库零接触）
+bash deploy/scripts/restore.sh --dry-run /opt/corps/backups/corps-<ts>.dump
+
+# ③ 判据：核心表行数与线上同量级（对照：进容器 SELECT count(*)）
+#    全为 0 或"表不存在"= 这份备份不可用，换一份重验
 ```
 
 `--dry-run` **只碰临时库**（`corps_restore_check`），生产库一个字节都不动。

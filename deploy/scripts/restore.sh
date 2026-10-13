@@ -23,8 +23,8 @@
 #
 # 用法：
 #   bash deploy/scripts/restore.sh --list
-#   bash deploy/scripts/restore.sh --dry-run /opt/corps/backups/corps_20261004_030000.sql.gz
-#   bash deploy/scripts/restore.sh --force    /opt/corps/backups/corps_20261004_030000.sql.gz
+#   bash deploy/scripts/restore.sh --dry-run /opt/corps/backups/corps-20261013-040623.dump
+#   bash deploy/scripts/restore.sh --force    /opt/corps/backups/corps-20261013-040623.dump
 # =============================================================================
 
 # shellcheck source=lib/common.sh
@@ -62,7 +62,13 @@ if [[ "${MODE}" == "list" ]]; then
     die 1 "备份目录不存在：${_bdir}
        BACKUP_DIR 是宿主机路径。确认 deploy/.env.prod 中的设置与实际目录一致"
   fi
-  _files="$(find "${_bdir}" -maxdepth 1 -name 'corps_*.sql.gz' -printf '%T@ %p\n' 2>/dev/null | sort -rn || true)"
+  # 格式现状（2026-10-13 恢复演练重构）：本包统一 pg_dump --format=custom：
+  #   - corps-*.dump             每日备份（backup 容器）
+  #   - corps_predeploy_*.dump   上线前还原点（deploy.sh §3）
+  # 旧的 corps_*.sql.gz（pg_dumpall 时代）仅列出、标注 legacy：
+  # 那条恢复链从未工作过（灌库端的 `psql --force` 是非法选项），且 pg_dumpall
+  # 产物含 `\connect <生产库>`——盲目灌会把数据写进生产库。不再支持。
+  _files="$(find "${_bdir}" -maxdepth 1 \( -name 'corps*.dump' -o -name 'corps*.sql.gz' \) -printf '%T@ %p\n' 2>/dev/null | sort -rn || true)"
   if [[ -z "${_files}" ]]; then
     log_warn "没有任何备份。这说明备份从未成功执行过——先跑一次手动备份确认链路通"
     die 1 "无可用备份"
@@ -72,18 +78,30 @@ if [[ "${MODE}" == "list" ]]; then
   while read -r _ts _f; do
     _sz="$(du -h "${_f}" 2>/dev/null | cut -f1 || echo '?')"
     _human="$(date -d "@${_ts%.*}" '+%Y-%m-%d %H:%M' 2>/dev/null || echo '?')"
-    printf '  %-46s %10s  %s\n' "$(basename "${_f}")" "${_sz}" "${_human}" >&2
+    _tag=""
+    case "${_f}" in
+      *.sql.gz) _tag="  [legacy·不支持恢复]" ;;
+    esac
+    printf '  %-46s %10s  %s%s\n' "$(basename "${_f}")" "${_sz}" "${_human}" "${_tag}" >&2
   done <<< "${_files}"
-  # gzip 完整性：文件存在不等于可解压。截断的 .sql.gz 恢复时会在中途失败，
+  # 完整性：文件存在不等于可用。截断的备份恢复时会在中途失败，
   # 那时生产库已经被改了一半——所以在这里就验，不要留到恢复时。
+  #   .dump → pg_restore --list（进 db 容器验归档目录）
   printf '\n' >&2
-  log_info "逐个校验 gzip 完整性（gzip -t）："
+  log_info "逐个校验完整性（.dump → pg_restore --list；.sql.gz 为 legacy，仅列出）："
   while read -r _ts _f; do
-    if gzip -t "${_f}" 2>/dev/null; then
-      log_ok "$(basename "${_f}") 完整"
-    else
-      log_error "$(basename "${_f}") 已截断或损坏——不可用于恢复"
-    fi
+    case "${_f}" in
+      *.dump)
+        if corpse_compose exec -T db pg_restore --list < "${_f}" >/dev/null 2>&1; then
+          log_ok "$(basename "${_f}") 完整"
+        else
+          log_error "$(basename "${_f}") 归档损坏或非 custom 格式——不可用于恢复"
+        fi
+        ;;
+      *.sql.gz)
+        log_warn "$(basename "${_f}") 为旧 pg_dumpall 格式（legacy）——本包不再支持恢复"
+        ;;
+    esac
   done <<< "${_files}"
   printf '\n  下一步：bash deploy/scripts/restore.sh --dry-run <文件>\n\n' >&2
   exit 0
@@ -112,13 +130,29 @@ fi
 # 在任何写操作之前验。这是本脚本最重要的一道闸：损坏的备份一旦开始恢复，
 # 生产库会停在半恢复状态，而此时已经无法判断"恢复到哪一步了"。
 log_step "校验备份文件完整性"
-if ! gzip -t "${BACKUP_FILE}" 2>/dev/null; then
-  die 1 "备份文件已截断或损坏，拒绝使用：${BACKUP_FILE}
+case "${BACKUP_FILE}" in
+  *.dump)
+    if ! corpse_compose exec -T db pg_restore --list < "${BACKUP_FILE}" >/dev/null 2>&1; then
+      die 1 "归档损坏或非 custom 格式，拒绝使用：${BACKUP_FILE}
        损坏的备份恢复到中途失败，会让生产库停在半恢复状态——比不恢复更糟。
        请改用 --list 中另一个完整的备份"
-fi
+    fi
+    _fmt="dump(custom)"
+    ;;
+  *.sql.gz)
+    die 1 "旧 pg_dumpall 格式（.sql.gz）不再支持恢复：${BACKUP_FILE}
+       原因（2026-10-13 演练实测）：这条恢复链从未工作过——灌库端的
+       \`psql --force\` 是非法选项；且 pg_dumpall 产物含 \`\\connect <生产库>\`，
+       修好参数后会切到生产库写数据，与「生产库零接触」承诺相悖。
+       本包已统一 pg_dump --format=custom（见 README §7）。"
+    ;;
+  *)
+    die 1 "无法识别的备份格式：${BACKUP_FILE}
+       本包备份一律为 corps_predeploy_*.dump / corps-*.dump（custom 格式）"
+    ;;
+esac
 _bsize="$(du -h "${BACKUP_FILE}" 2>/dev/null | cut -f1 || echo '?')"
-log_ok "gzip 完整，大小 ${_bsize}"
+log_ok "完整性通过（${_fmt}），大小 ${_bsize}"
 
 # ── 数据库连接方式 ───────────────────────────────────────────────────────────
 # 一律走 compose exec db 而不是宿主机的 psql：
@@ -146,17 +180,15 @@ if (( FORCE == 0 )); then
     "CREATE DATABASE ${CHECK_DB};" >/dev/null
   log_ok "临时库就绪"
 
-  # 2. 灌数据。--force 让 psql 忽略错误继续——为什么这里要忽略？
-  #    pg_dump 输出里常有 "CREATE EXTENSION IF NOT EXISTS" 之类在目标库已存在时
-  #    报错的语句（TEMPORARY 类对象、owner 不一致等）。这些在临时库里是噪音。
-  #    关键判定放在第 3 步：核心表有没有行数。表有数据 = 备份可用。
+  # 2. 灌数据（custom 归档 → pg_restore；默认遇错继续，判定放第 3 步行数）。
+  #    2026-10-13 演练教训：原 .sql.gz 分支的 `psql --force` 是非法选项——
+  #    整条恢复链从未工作过；且 pg_dumpall 的 \connect 会指向生产库。已废弃。
   log_info "导入数据（这一步可能需要数十秒到数分钟，取决于备份大小）"
-  if ! gunzip -c "${BACKUP_FILE}" | corpse_compose exec -T db psql \
+  if ! corpse_compose exec -T db pg_restore \
+        --no-owner --no-privileges \
         -U "${POSTGRES_USER:-postgres}" -d "${CHECK_DB}" \
-        --force --no-password -q >/dev/null 2>"${TMPDIR:-/tmp}/corps_restore_err.log"; then
-    # psql 返回非 0 也不一定是失败（--force 下部分语句报错仍继续）。
-    # 真正的判据是核心表行数，所以这里只提示，不中止。
-    log_warn "psql 报告部分错误（--force 模式下属常见，见下表行数判定）："
+        < "${BACKUP_FILE}" >/dev/null 2>"${TMPDIR:-/tmp}/corps_restore_err.log"; then
+    log_warn "pg_restore 报告部分错误（属常见，见下表行数判定）："
     head -5 "${TMPDIR:-/tmp}/corps_restore_err.log" 2>/dev/null | sed 's/^/    /' >&2 || true
   fi
   log_ok "数据导入完成"
