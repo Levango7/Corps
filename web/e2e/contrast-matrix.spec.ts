@@ -3,11 +3,28 @@
  * ----------------------------------------------------------------------------
  * 从 Interaction 的 visual-kit 复制（v3.7.122）。守护的是**渲染层不变量**
  * （不依赖像素基线，本机与 CI 结果一致）：
- *   ① light / dark 两套主题的关键令牌配对对比度 ≥ 实测基线 × 0.9
+ *   ① light / dark 两套主题的关键令牌配对对比度 ≥ WCAG AA（4.5:1），
+ *      或 ≥ 实测基线 × 0.9（取两者较大）；已在豁免清单登记的已知不达标项除外
  *   ② 核心 UI 元素在两套主题下都真实可见且无横向溢出
  *   ③ 令牌本身有值（缺失会让主题静默退化）
  *
  * 基线 = 2026-10-12 本机实测值（需 Corps 生产构建 + dev server 跑出后填入）。
+ *
+ * ⚠️ 2026-10-14 口径修正（重要）：此前本文件用共享模板的 ABS_FLOOR = 1.5 作绝对底线，
+ * 实际底线是 max(1.5, 基线 × 0.9)。问题在于**它锁死的是"当前实测值"，而不是 WCAG 标准**，
+ * 实测（contrast-probe.mjs，纯令牌计算不需 server）发现 5 处放纵：
+ *   A 类 · 锁死不达标（实测已低于 AA，旧底线却放行）：
+ *     - light danger/surface = 4.32，旧底线 3.89
+ *     - dark  accent/surface = 3.85，旧底线 3.46
+ *   B 类 · 允许退化到不达标（实测达标，但旧底线低于 AA，可一路退化而门禁不响；
+ *     且跌破 AA 后旧底线会跟着实测值一起降，所以永远不会报警）：
+ *     - light on-accent/accent = 4.98，旧底线 4.48
+ *     - light accent/surface    = 4.93，旧底线 4.44
+ *     - dark  on-accent/accent  = 4.51，旧底线 4.06
+ * 一道"允许不达标、且允许继续变坏"的门禁比没有门禁更危险——它给人虚假的安全感。
+ * 现改为：底线 = max(WCAG AA 4.5, 基线 × 0.9)；确实不达标且短期改不动的，
+ * 必须进 AA_EXEMPT 显式登记（带理由与修复路径），并受「豁免腐烂」断言约束。
+ *
  * 口径：实测值 ≥ 基线 × 0.9（允许 10% 抖动，退步超过一成就红）。
  * ⚠️ 调基线必须在提交信息里说明原因，不要为了变绿而下调。
  *
@@ -24,13 +41,46 @@ import { expect, test } from "@playwright/test";
 import { registerAndLogin, uniqueEmail } from "./helpers";
 import {
   CONTRAST_INJECT,
-  ABS_FLOOR,
   TOLERANCE,
   applyTheme,
   readPairs,
   checkOverflow,
   dumpReport,
 } from "./visual-kit/index.js";
+
+/** WCAG 2.x AA 对**普通正文**的硬性要求：4.5:1（大号文字 3:1，本项目不区分，从严取 4.5）。 */
+const AA_MIN = 4.5;
+
+/**
+ * 已知不达标配对的显式豁免清单。键为 `<主题>|<配对名>`，值为**必须写**的理由。
+ *
+ * 为什么用清单而不是继续藏在"基线 × 0.9"里：藏在基线里的问题是**不可见**的——
+ * 看门禁全绿，没人知道有两处文字其实读不清。登记出来，问题才有人认领。
+ *
+ * 当前两项，均有实测数据支撑（contrast-probe.mjs，2026-10-14 复验一致）：
+ *
+ * 1. light danger/surface = 4.32（差 AA 0.18）
+ *    `--p-danger: #dc3d4a` 作文字色（--prio-high-fg / --danger）出现在任务优先级、
+ *    危险操作提示上。修法很轻：把 --p-danger 调深到 #d33240 即 4.84 达标，色相观感几乎不变。
+ *    未顺手改的原因：改的是全站语义色，属设计决策，需确认后再动。
+ *
+ * 2. dark accent/surface = 3.85（差 AA 0.65）
+ *    这一项**不是调个数值就能解决的**，是设计约束冲突：dark 主题的 --accent
+ *    同时充当「强调色文字（--eyebrow-fg / --status-doing-fg，此时它是前景，要更亮）」
+ *    和「强调按钮底色（--on-accent 白字压在它上面，此时它是背景，要更暗）」。
+ *    实测扫描显示两者无法靠单一色值同时满足 4.5：
+ *      #4973d1（现值）→ 文字 3.85 ✗ / 白字 4.51 ✓
+ *      #517cd6        → 文字 4.30 ✗ / 白字 4.04 ✗（两头不讨好）
+ *      #5b83db        → 文字 4.72 ✓ / 白字 3.68 ✗
+ *    正解是**分离令牌**：引入 --accent-on-surface（作文字，取亮）与保留 --accent（作背景，取暗），
+ *    并同步改使用处。这是设计系统级变更，影响租户换肤的 color-mix 派生链，故单独排期。
+ */
+const AA_EXEMPT: Record<string, string> = {
+  "light|danger/surface":
+    "4.32 < AA 4.5（差 0.18）。--p-danger #dc3d4a 调深至 #d33240 即 4.84，属设计决策待确认",
+  "dark|accent/surface":
+    "3.85 < AA 4.5（差 0.65）。单一色值无法同时满足「accent 作文字」与「白字在 accent 上」，需分离 --accent-on-surface 令牌，设计系统级变更",
+};
 
 /* 两套主题：light 是默认态（无 data-theme 属性），dark 用 data-theme="dark" */
 const THEMES = ["light", "dark"];
@@ -79,8 +129,9 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
     await page.evaluate(CONTRAST_INJECT);
   });
 
-  test("每套主题的关键配对对比度不低于实测基线", async ({ page }) => {
+  test("每套主题的关键配对对比度不低于 AA 或实测基线", async ({ page }) => {
     const report: string[] = [];
+    const exempted: string[] = [];
     for (const th of THEMES) {
       await applyTheme(page, th);
       const pairs = await readPairs(page, CONTRAST_PAIRS);
@@ -90,7 +141,14 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
         const v = pairs[k];
         expect(v, "主题 " + th + " 缺少配对 " + k).toBeTruthy();
         if (v.c === null) continue;
-        const floor = Math.max(ABS_FLOOR, base[k] * TOLERANCE);
+        const exempt = AA_EXEMPT[th + "|" + k];
+        /* 豁免项只受棘轮约束（不许比基线更差）；非豁免项必须同时满足 AA 与棘轮。
+           取 max 而非只取 AA：已达标的配对若被改坏 10%，AA 未必能立刻抓到
+           （例如 4.93 → 4.44 仍 > 4.5 的话 AA 放行），棘轮负责这种"缓慢下滑"。 */
+        const floor = exempt ? base[k] * TOLERANCE : Math.max(AA_MIN, base[k] * TOLERANCE);
+        if (exempt) {
+          exempted.push(th + " · " + k + " = " + v.c.toFixed(2) + "（AA " + AA_MIN + "）");
+        }
         const line =
           th +
           " · " +
@@ -101,6 +159,7 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
           base[k] +
           "，下限 " +
           floor.toFixed(2) +
+          (exempt ? "，已登记豁免" : "") +
           "）";
         report.push(line);
 
@@ -112,6 +171,48 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
     }
     /* 落盘实测值，便于填入基线 */
     dumpReport(report, "contrast-actual");
+    /* 把当前仍不达标的项一并落盘——豁免清单是给人看的，不能只活在代码里 */
+    if (exempted.length) {
+      dumpReport(
+        [
+          "以下配对仍低于 WCAG AA " + AA_MIN + "（见 contrast-matrix.spec.ts 的 AA_EXEMPT）：",
+          ...exempted,
+        ],
+        "contrast-below-aa",
+      );
+    }
+  });
+
+  test("豁免清单不放行已修好的条目（防豁免腐烂）", async ({ page }) => {
+    // 与 a11y 门禁（tests/unit/a11y-baseline.test.ts）同款的"防豁免腐烂"：
+    // 修好了但豁免没删，门禁会继续放行更差的实现，清单也越来越像一份过期档案。
+    // 这里反向断言——豁免项必须**仍然**不达标。
+    const stillBad: string[] = [];
+    for (const th of THEMES) {
+      await applyTheme(page, th);
+      const pairs = await readPairs(page, CONTRAST_PAIRS);
+      for (const key of Object.keys(AA_EXEMPT)) {
+        const [theme, pair] = key.split("|");
+        if (theme !== th) continue;
+        const v = pairs[pair];
+        if (!v || v.c === null) {
+          stillBad.push(key + " 已无法测到（配对消失了？）");
+          continue;
+        }
+        if (v.c >= AA_MIN) {
+          stillBad.push(
+            key +
+              " 现为 " +
+              v.c.toFixed(2) +
+              "，已达标 —— 请从 AA_EXEMPT 删除该条，让它回归 AA 硬底线",
+          );
+        }
+      }
+    }
+    expect(
+      stillBad,
+      "以下豁免项已修好或已失效，请同步清理 AA_EXEMPT：\n  " + stillBad.join("\n  "),
+    ).toEqual([]);
   });
 
   test("每套主题下核心 UI 可见且无横向溢出", async ({ page }) => {
