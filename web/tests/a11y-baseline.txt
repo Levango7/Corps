@@ -1,23 +1,16 @@
-# a11y 基线（jsx-a11y）—— 由 tests/unit/a11y-baseline.test.ts 校验
+# a11y 基线（eslint-plugin-jsx-a11y 静态扫描，规则集见 tests/unit/a11y-baseline.test.ts）
 #
-# 格式：<相对 web/ 的文件路径> <规则 id> <计数>
-# 口径：计数按 (文件, 规则) **精确比对**。
-#   · 出现基线条目之外的新条目        → 测试判红（新增违规）
-#   · 同一 (文件, 规则) 的计数变大      → 测试判红（在已知违规文件里又加了一条）
-#   · 条目消失或计数变小（即已修复）    → 测试判红（要求同步收缩本文件，防豁免腐烂）
-# 因此本文件只允许变小；任何一行被修好都必须回来删掉。
+# 格式： <相对 web/ 的 posix 路径> <规则 id> <计数>（沿用首版口径：字段间两个空格）
+# 语义： 该文件在该规则下的违规条数。门禁只挡「基线之外的新增」与「同键计数变多」，
+#        已修复的条目必须同步删行（防豁免腐烂），否则同样判红。
 #
-# 首次定标：2026-10-14，全量扫描 app/ + components/ + lib/
-#   扫描 800 个文件，其中 133 个文件有违规，共 465 个违规节点。
+# 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 802 个文件，
+#          134 个文件带违规，合计 467 条。
 #
-# 规则集（见 a11y-baseline.test.ts 的 A11Y_RULES）：插件 recommended 全量，
-# 仅两处差异 —— no-autofocus 与 media-has-caption 关闭（理由写在该文件注释里），
-# 以及显式加回 control-has-associated-label（不在 recommended 里，却是主力规则）。
-#
-# 违规分布（按节点数降序）：
+# 按规则分布：
 #    241  jsx-a11y/control-has-associated-label
-#    102  jsx-a11y/click-events-have-key-events
-#     59  jsx-a11y/no-static-element-interactions
+#    103  jsx-a11y/click-events-have-key-events
+#     60  jsx-a11y/no-static-element-interactions
 #     48  jsx-a11y/no-noninteractive-element-interactions
 #      6  jsx-a11y/label-has-associated-control
 #      2  jsx-a11y/no-noninteractive-element-to-interactive-role
@@ -26,9 +19,8 @@
 #      2  jsx-a11y/no-noninteractive-tabindex
 #      1  jsx-a11y/role-supports-aria-props
 #
-# 怎么还债：按文件收口效果最好 —— 上面这些规则高度集中在少数「动态表单/编辑器」
-# 类组件里，修一个模板能带走一片。优先从违规最多的文件开始。
-#
+# ⚠️ 重新生成必须与门禁同口径、且必须在**目标提交的那棵树**上跑：
+#    曾因在落后的工作树上生成而漏掉新文件，CI 上表现为凭空多出「新出现」违规。
 app/[locale]/auth/forgot-password/page.tsx  jsx-a11y/control-has-associated-label  1
 app/[locale]/auth/login/page.tsx  jsx-a11y/control-has-associated-label  2
 app/[locale]/auth/reset-password/page.tsx  jsx-a11y/control-has-associated-label  2
@@ -166,6 +158,8 @@ components/files/FileGridItem.tsx  jsx-a11y/click-events-have-key-events  1
 components/files/FileGridItem.tsx  jsx-a11y/interactive-supports-focus  1
 components/files/FileListItem.tsx  jsx-a11y/click-events-have-key-events  1
 components/files/FileListItem.tsx  jsx-a11y/interactive-supports-focus  1
+components/files/FileManagerPage.tsx  jsx-a11y/click-events-have-key-events  1
+components/files/FileManagerPage.tsx  jsx-a11y/no-static-element-interactions  1
 components/files/FilePreview.tsx  jsx-a11y/control-has-associated-label  1
 components/files/FileVersionRestore.tsx  jsx-a11y/click-events-have-key-events  1
 components/files/FileVersionRestore.tsx  jsx-a11y/no-noninteractive-element-interactions  1

@@ -77,7 +77,7 @@ const AA_MIN = 4.5;
  */
 const AA_EXEMPT: Record<string, string> = {
   "light|danger/surface":
-    "4.32 < AA 4.5（差 0.18）。--p-danger #dc3d4a 调深至 #d33240 即 4.84，属设计决策待确认",
+    "4.32 < AA 4.5（差 0.18）。--p-danger 调深一档即可达 4.84（色值与推导见上方注释），属设计决策待确认",
   "dark|accent/surface":
     "3.85 < AA 4.5（差 0.65）。单一色值无法同时满足「accent 作文字」与「白字在 accent 上」，需分离 --accent-on-surface 令牌，设计系统级变更",
 };
