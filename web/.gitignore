@@ -14,3 +14,7 @@ playwright-report/
 
 # CI 加固腿的 vitest JSON 报告（守卫输入，产物不入库）
 vitest-integration.json
+
+# e2e/contrast-matrix.spec.ts 的实测值落盘（每次跑都重写，供人工复核/填基线用，
+# 不是源文件）。不忽略会一直挂在 git status 上，容易被误当成待提交改动。
+_probe/
