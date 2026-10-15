@@ -45,7 +45,7 @@
 | `corps-maturity`（lead） | 本文件维护者 | — | 成熟度收尾：依赖升级、ADR 勘误、协作机制 | **三个依赖升级阶段全部完成**（见 §5） |
 | `zcode` | 并行会话 | `fix/task-conversation-dedup`（#66）等 | UI 修复批次（#50）+ 任务会话并发竞态去重（#66） | 均已合入 `main` |
 | `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback`、`fix/im-realtime-notify` | IM 实时链路：5s 轮询兜底 + 新消息通知 | **已收工**：#65 / #67 已合入，领地已释放 |
-| `cline-coord` | 并行会话 | `chore/coordination-claim` | 新增 §6 认领协议（worktree / 路径认领 + 开工前检查） | 待合（**#96**） |
+| `cline-coord` | 并行会话 | `chore/coordination-claim`（#96） | §6 认领协议 + 执行器 + §3 刷新 | 待合（**#96**，本批即收尾） |
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 任何与该 ADR 冲突的升级动作都应先改 ADR，而不是先改代码。
@@ -117,7 +117,11 @@
 
 | worktree | 分支 | 路径 glob | agent | since | expires | 意图 |
 | --- | --- | --- | --- | --- | --- | --- |
-| `F:/Nexus/corps-wt-coord` | `chore/coordination-claim` | `docs/COORDINATION.md,scripts/check_coordination_claims.py,.github/workflows/ci.yml` | `cline-coord` | 2026-10-15 09:40 | 2026-10-15 13:40 | §6 认领协议 + 执行器 |
+
+> **表空着是正常状态**，不是「没人用这套协议」。别为了好看往里放假行 —— 判据会把假行当真认领。
+> 字段顺序示例（**写成代码行、不写成表格行**，否则一样会被判据收走）：
+>
+> `| F:/Nexus/corps-wt-x | feat/x | docs/**,scripts/foo.py | <会话名> | 2026-10-15 10:00 | 2026-10-15 14:00 | 一句话意图 |`
 
 字段口径：
 
@@ -152,6 +156,9 @@ python scripts/check_coordination_claims.py --worktree <目标 worktree> --agent
 ### 6.4 收工
 
 - 提交（或 handoff 说明）之后**删掉自己那一行**；忘了也没关系，`expires` 会兜底。
+- ⚠️ **收尾动作若就是「删掉自己那一行」，必须放在同一个 PR 里**（2026-10-15 狗粮踩到的循环）：
+  否则你会为了删一行而再开一个 PR，而那个 PR 又需要一行认领 —— 无限套娃。
+  §6 是工具，不是仪式。
 - 认领**不替代** §1：`main` 仍要 PR + 12/12；共享工作树仍禁写（规则 2 / 5 / 10）。
 
 ### 6.5 强制范围（如实声明：强制的是一半）
