@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-claims | chore/coordination-claims-store | docs/COORDINATION.md,scripts/check_coordination_claims.py,.github/workflows/ci.yml | cline-coord | 2026-10-15 15:27 | 2026-10-15 19:27 | §6 认领存储搬到分支（合并前可见）+ 认可执行器
