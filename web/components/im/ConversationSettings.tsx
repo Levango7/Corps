@@ -375,6 +375,7 @@ export function ConversationSettings({
                     onChange={(e) => setTitle(e.target.value)}
                     disabled={!canManage}
                     maxLength={100}
+                    aria-label={t("groupName")}
                     className="w-full h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] disabled:opacity-60 transition-colors duration-[var(--motion-fast)]"
                   />
                 </div>
@@ -388,6 +389,7 @@ export function ConversationSettings({
                     disabled={!canManage}
                     rows={3}
                     maxLength={500}
+                    aria-label={t("groupDescription")}
                     className="w-full px-[var(--space-3)] py-[var(--space-2)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] resize-none disabled:opacity-60 transition-colors duration-[var(--motion-fast)]"
                   />
                 </div>
@@ -606,6 +608,7 @@ export function ConversationSettings({
                   value={addQuery}
                   onChange={(e) => setAddQuery(e.target.value)}
                   placeholder={t("selectMembers")}
+                  aria-label={t("selectMembers")}
                   className="w-full h-9 pl-9 pr-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
                 />
               </div>
@@ -688,16 +691,23 @@ export function ConversationSettings({
       {confirmAction && (
         <div
           className="fixed inset-0 z-[calc(var(--z-modal)+1)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
-          role="dialog"
-          aria-modal="true"
-          aria-label={tIm("confirm")}
-          onClick={handleCancelConfirm}
+          role="presentation"
+          onClick={(e) => {
+            // 只在点击遮罩本身时关闭：冒泡上来的内容区点击不算（stopPropagation 会连内部
+            // 交互一起吞掉，改成判 target 更稳）
+            if (e.target === e.currentTarget) handleCancelConfirm();
+          }}
         >
           <div
             className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] p-[var(--space-5)]"
-            onClick={(e) => e.stopPropagation()}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="conversation-confirm-title"
           >
-            <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
+            <h3
+              id="conversation-confirm-title"
+              className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]"
+            >
               {confirmAction === "leave"
                 ? isOwner
                   ? tIm("confirmDeleteGroup")

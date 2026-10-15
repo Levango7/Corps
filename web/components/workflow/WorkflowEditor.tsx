@@ -129,19 +129,28 @@ export function WorkflowEditor({ wid, workflow, onClose, onSaved }: WorkflowEdit
   }
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational（它只是"点外面关掉"的点击靶），
+    // 对话框语义下移到内层内容区。这样静态规则不再把遮罩当成"可点的非交互元素"。
     <div
       ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="workflow-editor-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+          <h2
+            id="workflow-editor-title"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+          >
             {isEdit ? t("edit") : t("create")}
           </h2>
           <button
@@ -165,6 +174,9 @@ export function WorkflowEditor({ wid, workflow, onClose, onSaved }: WorkflowEdit
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={200}
+              // control-has-associated-label 看不见 <label htmlFor>（只看控件自身子树与 aria-*），
+              // 故显式补 aria-label；与上方 label 同源同 key，不会漂移
+              aria-label={t("name")}
               className={`${fieldControl} h-10`}
               aria-required="true"
             />
@@ -179,6 +191,7 @@ export function WorkflowEditor({ wid, workflow, onClose, onSaved }: WorkflowEdit
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               maxLength={500}
+              aria-label={t("description")}
               className={fieldControl}
             />
           </div>
@@ -192,6 +205,7 @@ export function WorkflowEditor({ wid, workflow, onClose, onSaved }: WorkflowEdit
               value={triggerText}
               onChange={(e) => setTriggerText(e.target.value)}
               rows={4}
+              aria-label={t("trigger")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] font-mono"
             />
           </div>
@@ -205,6 +219,7 @@ export function WorkflowEditor({ wid, workflow, onClose, onSaved }: WorkflowEdit
               value={actionsText}
               onChange={(e) => setActionsText(e.target.value)}
               rows={6}
+              aria-label={t("actions")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] font-mono"
             />
           </div>
@@ -214,6 +229,7 @@ export function WorkflowEditor({ wid, workflow, onClose, onSaved }: WorkflowEdit
               type="checkbox"
               checked={active}
               onChange={(e) => setActive(e.target.checked)}
+              aria-label={t("active")}
               className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)]"
             />
             <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">{t("active")}</span>

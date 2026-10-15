@@ -390,6 +390,7 @@ export function DocumentListView({ wid }: { wid: string }) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={t("searchPlaceholder")}
+          aria-label={t("searchPlaceholder")}
           className="w-full h-9 pl-9 pr-9 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
         />
         {q && (
@@ -477,18 +478,19 @@ export function DocumentListView({ wid }: { wid: string }) {
                       longPressHandlers.onContextMenu(e);
                     }}
                   >
-                    {/* 复选框（绝对定位在左侧） */}
-                    <label
-                      className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 z-10 cursor-pointer inline-flex items-center justify-center w-4 h-4"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    {/* 勾选框（绝对定位在左侧）：外层不再是 <label>（无文本的 label 会触发
+                        label-has-associated-control），可访问名直接落在控件上；
+                        阻止冒泡改挂到 input 自身，外层 div 因此无需任何事件处理器 */}
+                    <div className="absolute left-[var(--space-3)] top-1/2 -translate-y-1/2 z-10 inline-flex items-center justify-center w-4 h-4">
                       <input
                         type="checkbox"
                         checked={isSelected}
                         onChange={() => toggleSelect(d.id)}
+                        onClick={(e) => e.stopPropagation()}
+                        aria-label={d.title}
                         className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)] cursor-pointer"
                       />
-                    </label>
+                    </div>
                     <Link
                       href={`/w/${wid}/documents/${d.id}`}
                       className="block px-[var(--space-4)] py-[var(--space-3)] pl-[var(--space-8)] pr-[6rem] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)]"
@@ -586,9 +588,14 @@ export function DocumentListView({ wid }: { wid: string }) {
         </LayoutGroup>
       )}
 
+      {/* 原生 <dialog>：点击 ::backdrop 时浏览器把事件派发到 dialog 元素本身，
+          所以「点遮罩关闭」只能挂在 dialog 上 —— 但静态规则不认 dialog 是交互元素。
+          这里沿用本仓库既定的「遮罩层 / 内容层」拆法：外层转 presentational，
+          对话框语义下移到内层内容区，语义不丢、规则也不再误报。
+          键盘可关闭性由原生 showModal 的 Esc + 显式关闭按钮共同保证。 */}
       <dialog
         ref={previewDialog}
-        aria-label={t("previewMode")}
+        role="presentation"
         onClose={() => setPreviewDocument(null)}
         onClick={(event) => {
           if (event.target === event.currentTarget) {
@@ -604,18 +611,20 @@ export function DocumentListView({ wid }: { wid: string }) {
         }}
         className="m-auto w-[calc(100%-var(--space-8))] max-w-4xl max-h-[90dvh] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] p-[var(--space-4)] text-[var(--fg)] shadow-[var(--elev-sm)] backdrop:bg-[var(--overlay)]"
       >
-        <div className="flex justify-end mb-[var(--space-2)]">
-          <button
-            type="button"
-            autoFocus
-            onClick={() => previewDialog.current?.close()}
-            aria-label={t("close")}
-            className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
-          >
-            <X size={16} />
-          </button>
+        <div role="dialog" aria-modal="true" aria-label={t("previewMode")}>
+          <div className="flex justify-end mb-[var(--space-2)]">
+            <button
+              type="button"
+              autoFocus
+              onClick={() => previewDialog.current?.close()}
+              aria-label={t("close")}
+              className="p-2 rounded-[var(--radius-sm)] text-[var(--muted)] hover:bg-[var(--surface-2)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <X size={16} />
+            </button>
+          </div>
+          {previewDocument && <DocumentPreview document={previewDocument} />}
         </div>
-        {previewDocument && <DocumentPreview document={previewDocument} />}
       </dialog>
 
       {/* ── 批量导出预览模态框（F4）── */}

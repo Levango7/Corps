@@ -5,9 +5,14 @@
 #        已修复的条目必须同步删行（防豁免腐烂），否则同样判红。
 #
 # 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 802 个文件，
-#          124 个文件带违规，合计 363 条（与下方数据行精确一致）。
+#          118 个文件带违规，合计 323 条（与下方数据行精确一致）。
 #
 # 偿还历史：
+#    2026-10-16 第 4 批（分支 fix/a11y-burndown-4）：ConversationSettings /
+#      DocumentListView / ai·TemplateEditor / template·TemplateEditor /
+#      WorkflowEditor / database·TableView 共 40 条清零。其中 TableView 的列宽
+#      手柄与单元格属于真实缺陷（此前键盘完全够不着），已补方向键调宽与
+#      回车进入编辑，不是单纯为过门禁而改。
 #    2026-10-15 第 3 批（分支 fix/a11y-burndown-3）：MessageItem / MeetingCreate /
 #      KeyResultEditor / contacts/page / CalendarMonth 共 42 条清零。
 #
@@ -74,9 +79,6 @@ components/ai/SemanticSearchPanel.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/TaskBreakdownDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/ai/TaskBreakdownDialog.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/TaskBreakdownDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/ai/TemplateEditor.tsx  jsx-a11y/click-events-have-key-events  1
-components/ai/TemplateEditor.tsx  jsx-a11y/control-has-associated-label  3
-components/ai/TemplateEditor.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/ai/TodoExtractDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/ai/TodoExtractDialog.tsx  jsx-a11y/control-has-associated-label  3
 components/ai/TodoExtractDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
@@ -126,16 +128,9 @@ components/dashboard/WidgetConfigPanel.tsx  jsx-a11y/control-has-associated-labe
 components/dashboard/WidgetConfigPanel.tsx  jsx-a11y/no-static-element-interactions  1
 components/database/DatabaseEditor.tsx  jsx-a11y/no-noninteractive-element-to-interactive-role  1
 components/database/RelationField.tsx  jsx-a11y/control-has-associated-label  1
-components/database/TableView.tsx  jsx-a11y/click-events-have-key-events  2
-components/database/TableView.tsx  jsx-a11y/mouse-events-have-key-events  2
-components/database/TableView.tsx  jsx-a11y/no-static-element-interactions  3
 components/doc/ShareDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/doc/ShareDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/DocumentComments.tsx  jsx-a11y/control-has-associated-label  6
-components/DocumentListView.tsx  jsx-a11y/click-events-have-key-events  2
-components/DocumentListView.tsx  jsx-a11y/control-has-associated-label  2
-components/DocumentListView.tsx  jsx-a11y/label-has-associated-control  1
-components/DocumentListView.tsx  jsx-a11y/no-noninteractive-element-interactions  2
 components/documents/FolderPermissionPanel.tsx  jsx-a11y/control-has-associated-label  2
 components/documents/ShareDialogEnhanced.tsx  jsx-a11y/control-has-associated-label  6
 components/editor/SlashMenu.tsx  jsx-a11y/click-events-have-key-events  1
@@ -161,10 +156,6 @@ components/form/FormPreview.tsx  jsx-a11y/control-has-associated-label  2
 components/form/FormSubmissionList.tsx  jsx-a11y/click-events-have-key-events  1
 components/form/FormSubmissionList.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/im/ConversationCreate.tsx  jsx-a11y/control-has-associated-label  2
-components/im/ConversationSettings.tsx  jsx-a11y/click-events-have-key-events  2
-components/im/ConversationSettings.tsx  jsx-a11y/control-has-associated-label  3
-components/im/ConversationSettings.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/im/ConversationSettings.tsx  jsx-a11y/no-static-element-interactions  1
 components/im/FilePreview.tsx  jsx-a11y/click-events-have-key-events  1
 components/im/FilePreview.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/im/MessageInput.tsx  jsx-a11y/click-events-have-key-events  2
@@ -232,9 +223,6 @@ components/task/TaskPropertyAside.tsx  jsx-a11y/control-has-associated-label  3
 components/TaskFilterBar.tsx  jsx-a11y/control-has-associated-label  1
 components/template/TemplateApplyDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/template/TemplateApplyDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/template/TemplateEditor.tsx  jsx-a11y/click-events-have-key-events  1
-components/template/TemplateEditor.tsx  jsx-a11y/control-has-associated-label  5
-components/template/TemplateEditor.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/timetrack/TimeEntryList.tsx  jsx-a11y/control-has-associated-label  3
 components/timetrack/TimeReport.tsx  jsx-a11y/control-has-associated-label  2
 components/timetrack/TimeTracker.tsx  jsx-a11y/control-has-associated-label  2
@@ -248,9 +236,6 @@ components/wiki/WikiHome.tsx  jsx-a11y/no-static-element-interactions  1
 components/wiki/WikiSidebar.tsx  jsx-a11y/click-events-have-key-events  1
 components/wiki/WikiSidebar.tsx  jsx-a11y/control-has-associated-label  1
 components/wiki/WikiSidebar.tsx  jsx-a11y/no-static-element-interactions  1
-components/workflow/WorkflowEditor.tsx  jsx-a11y/click-events-have-key-events  1
-components/workflow/WorkflowEditor.tsx  jsx-a11y/control-has-associated-label  5
-components/workflow/WorkflowEditor.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/workflow/WorkflowExecutionList.tsx  jsx-a11y/click-events-have-key-events  1
 components/workflow/WorkflowExecutionList.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/workflow/WorkflowList.tsx  jsx-a11y/click-events-have-key-events  1

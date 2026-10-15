@@ -57,6 +57,18 @@ const SCAN_DIRS = ["app", "components", "lib"];
  *     不启用等于放掉了本门禁最核心的那一半。加回后实测新增若干真实缺陷。
  *
  * 棘轮纪律：规则集只增不减。任何一条被 off 的规则，都必须在上面写清理由与实测计数。
+ *
+ * 判定笔记（都是实测出来的，别靠直觉改）：
+ *   1. control-has-associated-label **看不见 <label htmlFor>**：它的实现
+ *      （util/mayHaveAccessibleLabel）只看控件自身子树与 aria-* 属性，从不回溯祖先。
+ *      所以 `<label htmlFor="x">名称</label><input id="x" />` 这种**完全合格**的写法
+ *      照样判红；而 `<select>` / `<button>` 因为有子节点文本反而不红。
+ *      结论：修它就得在控件上补 aria-label。与上方 label 用同一个 t() key，不会漂移。
+ *   2. <dialog> 不被视为交互元素：点 ::backdrop 时浏览器把事件派发到 dialog 元素
+ *      本身，"点遮罩关闭"只能挂在它身上，于是必被 click-events-have-key-events +
+ *      no-noninteractive-element-interactions 判红。加 onKeyDown 只能消掉前者。
+ *      本仓库统一改用「遮罩层 role=presentation + 内容层 role=dialog aria-modal」，
+ *      语义不丢（Esc 与关闭按钮照旧），规则也不再误报。
  */
 const A11Y_RULES: Linter.RulesRecord = {
   ...jsxA11y.flatConfigs.recommended.rules,

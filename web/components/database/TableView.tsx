@@ -96,7 +96,17 @@ function useColumnResize() {
 
   const getWidth = (fieldId: string): number => widths[fieldId] ?? DEFAULT_COL_WIDTH;
 
-  return { getWidth, startResize };
+  /**
+   * 键盘调整列宽（方向键）。
+   * 拖拽手柄此前只能鼠标操作 —— 对键盘/读屏用户等于「这个控件不存在」。
+   * 补上步进式调整后，手柄在 ARIA 上就是一个真正的 slider：有值域、有当前值。
+   */
+  const nudgeWidth = (fieldId: string, delta: number) => {
+    const base = widths[fieldId] ?? DEFAULT_COL_WIDTH;
+    setWidths((prev) => ({ ...prev, [fieldId]: Math.max(MIN_COL_WIDTH, base + delta) }));
+  };
+
+  return { getWidth, startResize, nudgeWidth };
 }
 
 // ─── 单元格 ─────────────────────────────────────────────────────────────────
@@ -122,13 +132,25 @@ function TableCell({
   const value = isEditing ? editValue : getCellValue(record, field.id);
 
   return (
+    // 单元格此前只能鼠标点开编辑：div 挂 onClick 但键盘既不可聚焦也不可触发。
+    // 补 role=gridcell + tabIndex + 回车/空格，键盘用户才真正进得去编辑态；
+    // 进入编辑态后焦点应落在里面的控件上，故此时把单元格移出 Tab 序列。
     <div
+      role="gridcell"
+      tabIndex={isEditing ? -1 : 0}
       className="w-full h-full overflow-hidden"
       onClick={(e) => {
         if (!isEditing) {
           e.stopPropagation();
           onStartEdit();
         }
+      }}
+      onKeyDown={(e) => {
+        if (isEditing) return;
+        if (e.key !== "Enter" && e.key !== " ") return;
+        e.preventDefault();
+        e.stopPropagation();
+        onStartEdit();
       }}
       onBlur={(e) => {
         // 仅当焦点移出当前单元格时提交
@@ -200,7 +222,7 @@ export function TableView({
   } | null>(null);
 
   // 列宽管理
-  const { getWidth, startResize } = useColumnResize();
+  const { getWidth, startResize, nudgeWidth } = useColumnResize();
 
   // 虚拟滚动
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -255,6 +277,7 @@ export function TableView({
   const renderRow = (record: DatabaseRecord, isHovered: boolean): ReactElement => {
     return (
       <div
+        role="row"
         className="flex items-stretch border-b border-[var(--border)]"
         style={{
           width: totalWidth,
@@ -351,9 +374,15 @@ export function TableView({
               <span className="ml-1.5 text-[length:var(--text-xs)] text-[var(--meta)] uppercase tracking-wider shrink-0">
                 {field.type}
               </span>
-              {/* 列宽拖拽手柄 */}
+              {/* 列宽拖拽手柄：既能拖，也能用方向键调（键盘用户此前完全够不着） */}
               <div
-                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize opacity-0 group-hover:opacity-100 transition-opacity"
+                role="slider"
+                aria-label={t("resizeColumn", { field: field.name })}
+                aria-orientation="horizontal"
+                aria-valuemin={MIN_COL_WIDTH}
+                aria-valuenow={getWidth(field.id)}
+                tabIndex={0}
+                className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition-opacity"
                 style={{ background: "transparent" }}
                 onMouseDown={(e) => startResize(field.id, e)}
                 onMouseOver={(e) => {
@@ -361,6 +390,20 @@ export function TableView({
                 }}
                 onMouseOut={(e) => {
                   (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                }}
+                // mouse-events-have-key-events 要求 hover 有对应的 focus 表现 ——
+                // 顺带是对的：键盘用户也该看得见自己落在哪个手柄上
+                onFocus={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = "var(--accent)";
+                }}
+                onBlur={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = "transparent";
+                }}
+                onKeyDown={(e) => {
+                  if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+                  e.preventDefault();
+                  e.stopPropagation();
+                  nudgeWidth(field.id, e.key === "ArrowRight" ? 16 : -16);
                 }}
               />
             </div>
@@ -411,14 +454,17 @@ export function TableView({
 
       {/* 底部新增行按钮 */}
       {onRecordCreate && (
-        <div
-          className="flex items-center gap-2 px-4 border-t border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
+        // 这就是个按钮：用原生 <button> 而不是 div + onClick，
+        // 键盘可达与可访问名都由浏览器/内容天然提供
+        <button
+          type="button"
+          className="flex w-full items-center gap-2 px-4 text-left border-t border-[var(--border)] bg-[var(--surface)] hover:bg-[var(--surface-2)] transition-colors cursor-pointer"
           style={{ height: ROW_HEIGHT }}
           onClick={onRecordCreate}
         >
           <Plus size={14} className="text-[var(--meta)]" />
           <span className="text-[length:var(--text-sm)] text-[var(--meta)]">{t("addRow")}</span>
-        </div>
+        </button>
       )}
     </div>
   );

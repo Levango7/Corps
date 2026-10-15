@@ -2145,7 +2145,8 @@
       "noRecords": "No records",
       "deleteRecord": "Delete record",
       "deleteRecordAria": "Delete this record",
-      "addRow": "Add row"
+      "addRow": "Add row",
+      "resizeColumn": "{field} · Column width"
     },
     "filterPanel": {
       "title": "Filter",
