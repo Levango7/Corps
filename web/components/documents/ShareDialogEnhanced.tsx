@@ -362,6 +362,7 @@ export function ShareDialogEnhanced({
               <input
                 type="checkbox"
                 checked={allowDownload}
+                aria-label={t("allowDownload")}
                 onChange={(e) => setAllowDownload(e.target.checked)}
                 className="h-4 w-4 rounded-[var(--radius-sm)] border-[var(--border)] accent-[var(--accent)]"
               />
@@ -375,6 +376,7 @@ export function ShareDialogEnhanced({
               <input
                 type="checkbox"
                 checked={allowPrint}
+                aria-label={t("allowPrint")}
                 onChange={(e) => setAllowPrint(e.target.checked)}
                 className="h-4 w-4 rounded-[var(--radius-sm)] border-[var(--border)] accent-[var(--accent)]"
               />
@@ -388,6 +390,7 @@ export function ShareDialogEnhanced({
               <input
                 type="checkbox"
                 checked={allowCopy}
+                aria-label={t("allowCopy")}
                 onChange={(e) => setAllowCopy(e.target.checked)}
                 className="h-4 w-4 rounded-[var(--radius-sm)] border-[var(--border)] accent-[var(--accent)]"
               />
@@ -406,6 +409,7 @@ export function ShareDialogEnhanced({
             </label>
             <input
               id="share-password"
+              aria-label={t("passwordProtect")}
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -423,6 +427,7 @@ export function ShareDialogEnhanced({
             </label>
             <input
               id="share-expires"
+              aria-label={t("linkExpires")}
               type="datetime-local"
               value={expiresAt}
               onChange={(e) => setExpiresAt(e.target.value)}
@@ -437,6 +442,7 @@ export function ShareDialogEnhanced({
             </label>
             <input
               id="share-max-views"
+              aria-label={t("maxViews")}
               type="number"
               min="1"
               value={maxViews}

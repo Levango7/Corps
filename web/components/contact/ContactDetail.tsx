@@ -239,6 +239,7 @@ export function ContactDetail({
             </label>
             <input
               id="cd-name"
+              aria-label={t("name")}
               value={form.name}
               onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
               maxLength={100}
@@ -255,6 +256,7 @@ export function ContactDetail({
               </label>
               <input
                 id="cd-email"
+                aria-label={t("email")}
                 type="email"
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
@@ -269,6 +271,7 @@ export function ContactDetail({
               </label>
               <input
                 id="cd-phone"
+                aria-label={t("phone")}
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 maxLength={50}
@@ -285,6 +288,7 @@ export function ContactDetail({
               </label>
               <input
                 id="cd-dept"
+                aria-label={t("department")}
                 value={form.department}
                 onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
                 maxLength={100}
@@ -298,6 +302,7 @@ export function ContactDetail({
               </label>
               <input
                 id="cd-pos"
+                aria-label={t("position")}
                 value={form.position}
                 onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))}
                 maxLength={100}
@@ -332,6 +337,7 @@ export function ContactDetail({
             </label>
             <textarea
               id="cd-notes"
+              aria-label={t("notes")}
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={4}

@@ -5,9 +5,12 @@
 #        已修复的条目必须同步删行（防豁免腐烂），否则同样判红。
 #
 # 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 802 个文件，
-#          118 个文件带违规，合计 323 条（与下方数据行精确一致）。
+#          111 个文件带违规，合计 281 条（与下方数据行精确一致）。
 #
 # 偿还历史：
+#    2026-10-16 第 5 批（分支 fix/a11y-burndown-5）：settings/calendar/page /
+#      AnnouncementEditor / ApprovalSubmit / ApprovalTemplateManage /
+#      ContactDetail / DocumentComments / ShareDialogEnhanced 共 42 条清零。
 #    2026-10-16 第 4 批（分支 fix/a11y-burndown-4）：ConversationSettings /
 #      DocumentListView / ai·TemplateEditor / template·TemplateEditor /
 #      WorkflowEditor / database·TableView 共 40 条清零。其中 TableView 的列宽
@@ -56,8 +59,6 @@ app/[locale]/w/[wid]/okr/page.tsx  jsx-a11y/click-events-have-key-events  1
 app/[locale]/w/[wid]/okr/page.tsx  jsx-a11y/control-has-associated-label  3
 app/[locale]/w/[wid]/okr/page.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 app/[locale]/w/[wid]/page.tsx  jsx-a11y/control-has-associated-label  1
-app/[locale]/w/[wid]/settings/calendar/page.tsx  jsx-a11y/control-has-associated-label  3
-app/[locale]/w/[wid]/settings/calendar/page.tsx  jsx-a11y/label-has-associated-control  3
 app/[locale]/w/[wid]/settings/page.tsx  jsx-a11y/control-has-associated-label  2
 app/[locale]/w/[wid]/settings/permissions/page.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/AiAnalysisDashboard.tsx  jsx-a11y/click-events-have-key-events  1
@@ -87,20 +88,11 @@ components/ai/UsageLimitSettings.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/WorkflowBuildDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/ai/WorkflowBuildDialog.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/WorkflowBuildDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/announcement/AnnouncementEditor.tsx  jsx-a11y/click-events-have-key-events  1
-components/announcement/AnnouncementEditor.tsx  jsx-a11y/control-has-associated-label  4
-components/announcement/AnnouncementEditor.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/approval/ApprovalDelegateSettings.tsx  jsx-a11y/control-has-associated-label  3
 components/approval/ApprovalDetail.tsx  jsx-a11y/click-events-have-key-events  1
 components/approval/ApprovalDetail.tsx  jsx-a11y/control-has-associated-label  2
 components/approval/ApprovalDetail.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/approval/ApprovalList.tsx  jsx-a11y/control-has-associated-label  1
-components/approval/ApprovalSubmit.tsx  jsx-a11y/click-events-have-key-events  1
-components/approval/ApprovalSubmit.tsx  jsx-a11y/control-has-associated-label  4
-components/approval/ApprovalSubmit.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/approval/ApprovalTemplateManage.tsx  jsx-a11y/click-events-have-key-events  1
-components/approval/ApprovalTemplateManage.tsx  jsx-a11y/control-has-associated-label  4
-components/approval/ApprovalTemplateManage.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/AttachmentPreviewModal.tsx  jsx-a11y/click-events-have-key-events  2
 components/AttachmentPreviewModal.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/AttachmentPreviewModal.tsx  jsx-a11y/no-static-element-interactions  1
@@ -118,7 +110,6 @@ components/CommandPalette.tsx  jsx-a11y/control-has-associated-label  1
 components/CommandPalette.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/CommandPalette.tsx  jsx-a11y/no-static-element-interactions  1
 components/common/FavoriteButton.tsx  jsx-a11y/control-has-associated-label  1
-components/contact/ContactDetail.tsx  jsx-a11y/control-has-associated-label  6
 components/contact/ContactGroupSidebar.tsx  jsx-a11y/control-has-associated-label  1
 components/contact/ContactList.tsx  jsx-a11y/control-has-associated-label  2
 components/dashboard/AddWidgetDialog.tsx  jsx-a11y/click-events-have-key-events  1
@@ -130,9 +121,7 @@ components/database/DatabaseEditor.tsx  jsx-a11y/no-noninteractive-element-to-in
 components/database/RelationField.tsx  jsx-a11y/control-has-associated-label  1
 components/doc/ShareDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/doc/ShareDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/DocumentComments.tsx  jsx-a11y/control-has-associated-label  6
 components/documents/FolderPermissionPanel.tsx  jsx-a11y/control-has-associated-label  2
-components/documents/ShareDialogEnhanced.tsx  jsx-a11y/control-has-associated-label  6
 components/editor/SlashMenu.tsx  jsx-a11y/click-events-have-key-events  1
 components/ExportPreview.tsx  jsx-a11y/click-events-have-key-events  2
 components/ExportPreview.tsx  jsx-a11y/no-noninteractive-element-interactions  1

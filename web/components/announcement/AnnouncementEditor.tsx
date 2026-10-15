@@ -203,18 +203,23 @@ export default function AnnouncementEditor({
   }
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational（它只是"点外面关掉"的点击靶），
+    // 对话框语义下移到内层内容区（详见 a11y-baseline.test.ts 的判定笔记 2）。
     <div
       ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="announcement-editor-title"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="announcement-editor-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
             id="announcement-editor-title"
@@ -245,6 +250,8 @@ export default function AnnouncementEditor({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
+              // control-has-associated-label 看不见 <label htmlFor>，故显式补 aria-label
+              aria-label={t("title")}
               className={`${fieldControl} h-10`}
               aria-required="true"
             />
@@ -260,6 +267,7 @@ export default function AnnouncementEditor({
               value={content}
               onChange={(e) => setContent(e.target.value)}
               rows={6}
+              aria-label={t("content")}
               placeholder="Markdown…"
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
@@ -308,6 +316,7 @@ export default function AnnouncementEditor({
                 value={audienceValue}
                 onChange={(e) => setAudienceValue(e.target.value)}
                 placeholder={audienceType === "role" ? "owner, admin, member" : "dept-a, dept-b"}
+                aria-label={t(audienceType === "role" ? "audienceRole" : "audienceDepartment")}
                 className={fieldControl}
               />
             </div>
@@ -341,6 +350,7 @@ export default function AnnouncementEditor({
                 type="date"
                 value={expiresAt}
                 onChange={(e) => setExpiresAt(e.target.value)}
+                aria-label={t("expiresAt")}
                 className={fieldControl}
               />
             </div>

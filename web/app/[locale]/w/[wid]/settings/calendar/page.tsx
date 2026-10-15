@@ -399,7 +399,13 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
               {t("syncSettingsHint")}
             </p>
             <div className="space-y-3">
-              <label className="flex items-center justify-between gap-3 cursor-pointer">
+              {/* 这三个开关此前是「label 包着控件」——包裹式关联对读屏有效，
+                  但 label-has-associated-control 只认显式 htmlFor/id；顺手补上，
+                  控件再各自带 aria-label（control-has-associated-label 不看 label）。 */}
+              <label
+                className="flex items-center justify-between gap-3 cursor-pointer"
+                htmlFor="cal-sync-due-date-only"
+              >
                 <div>
                   <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                     {t("syncDueDateOnly")}
@@ -409,13 +415,18 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   </div>
                 </div>
                 <input
+                  id="cal-sync-due-date-only"
                   type="checkbox"
                   checked={syncSettings.syncDueDateOnly}
                   onChange={(e) => updateSyncSettings({ syncDueDateOnly: e.target.checked })}
+                  aria-label={t("syncDueDateOnly")}
                   className="w-4 h-4 accent-[var(--accent)]"
                 />
               </label>
-              <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <label
+                className="flex items-center justify-between gap-3 cursor-pointer"
+                htmlFor="cal-remind-one-day"
+              >
                 <div>
                   <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                     {t("remindOneDay")}
@@ -425,13 +436,18 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   </div>
                 </div>
                 <input
+                  id="cal-remind-one-day"
                   type="checkbox"
                   checked={syncSettings.remindOneDay}
                   onChange={(e) => updateSyncSettings({ remindOneDay: e.target.checked })}
+                  aria-label={t("remindOneDay")}
                   className="w-4 h-4 accent-[var(--accent)]"
                 />
               </label>
-              <label className="flex items-center justify-between gap-3 cursor-pointer">
+              <label
+                className="flex items-center justify-between gap-3 cursor-pointer"
+                htmlFor="cal-remind-one-hour"
+              >
                 <div>
                   <div className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
                     {t("remindOneHour")}
@@ -441,9 +457,11 @@ export default function CalendarSettingsPage({ params }: { params: Promise<{ wid
                   </div>
                 </div>
                 <input
+                  id="cal-remind-one-hour"
                   type="checkbox"
                   checked={syncSettings.remindOneHour}
                   onChange={(e) => updateSyncSettings({ remindOneHour: e.target.checked })}
+                  aria-label={t("remindOneHour")}
                   className="w-4 h-4 accent-[var(--accent)]"
                 />
               </label>

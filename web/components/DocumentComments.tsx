@@ -328,6 +328,7 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
             value={newAnchorPath}
             onChange={(e) => setNewAnchorPath(e.target.value)}
             placeholder={t("commentAnchorPlaceholder")}
+            aria-label={t("commentAnchorPlaceholder")}
             disabled={submitting}
             className="w-20 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-[var(--focus-ring)] placeholder:text-[var(--meta)] font-mono"
           />
@@ -335,6 +336,7 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
             value={newAnchorText}
             onChange={(e) => setNewAnchorText(e.target.value)}
             placeholder={t("commentAnchorTextPlaceholder")}
+            aria-label={t("commentAnchorTextPlaceholder")}
             disabled={submitting}
             className="flex-1 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg-2)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-[var(--focus-ring)] placeholder:text-[var(--meta)]"
           />
@@ -344,6 +346,7 @@ export function DocumentComments({ wid, docId, onClose }: DocumentCommentsProps)
             value={newBody}
             onChange={(e) => setNewBody(e.target.value)}
             placeholder={t("commentBodyPlaceholder")}
+            aria-label={t("commentBodyPlaceholder")}
             disabled={submitting}
             className="flex-1 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-[var(--focus-ring)] placeholder:text-[var(--meta)]"
           />
@@ -496,6 +499,7 @@ function CommentItem({
         >
           <input
             value={editBody}
+            aria-label={t("commentEditBody")}
             onChange={(e) => onSetEditBody(e.target.value)}
             disabled={submitting}
             className="flex-1 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-[var(--focus-ring)]"
@@ -545,6 +549,7 @@ function CommentItem({
                   <form onSubmit={(e) => onSaveEdit(reply.id, e)} className="mt-1 flex gap-2">
                     <input
                       value={editBody}
+                      aria-label={t("commentEditBody")}
                       onChange={(e) => onSetEditBody(e.target.value)}
                       disabled={submitting}
                       className="flex-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--surface)] text-[length:var(--text-xs)] text-[var(--fg)] outline-none focus-visible:ring-[var(--focus-ring)]"
@@ -590,6 +595,7 @@ function CommentItem({
             value={replyBody}
             onChange={(e) => onSetReplyBody(e.target.value)}
             placeholder={t("commentReplyPlaceholder")}
+            aria-label={t("commentReplyPlaceholder")}
             disabled={submitting}
             autoFocus
             className="flex-1 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-[var(--focus-ring)] placeholder:text-[var(--meta)]"

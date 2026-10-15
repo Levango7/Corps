@@ -1628,6 +1628,7 @@
     "commentAnchorPlaceholder": "1.2.0",
     "commentAnchorTextPlaceholder": "选中的文本",
     "commentBodyPlaceholder": "写评论…",
+    "commentEditBody": "编辑评论内容",
     "commentReplyPlaceholder": "写回复…",
     "commentReply": "回复",
     "commentResolve": "解决",
