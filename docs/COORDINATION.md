@@ -45,15 +45,20 @@
 | `corps-maturity`（lead） | 本文件维护者 | — | 成熟度收尾：依赖升级、ADR 勘误、协作机制 | **三个依赖升级阶段全部完成**（见 §5） |
 | `zcode` | 并行会话 | `fix/task-conversation-dedup`（#66）等 | UI 修复批次（#50）+ 任务会话并发竞态去重（#66） | 均已合入 `main` |
 | `nex` | 并行会话（审查 / 修复） | `fix/im-realtime-polling-fallback`、`fix/im-realtime-notify` | IM 实时链路：5s 轮询兜底 + 新消息通知 | **已收工**：#65 / #67 已合入，领地已释放 |
-| `cline-coord` | 并行会话 | `chore/coordination-claim`（#96） | §6 认领协议 + 执行器 + §3 刷新 | 待合（**#96**，本批即收尾） |
+| `cline-coord` | 并行会话 | `chore/coordination-claim`（#96）、`chore/coordination-state` | 协作机制：§6 认领协议 + 执行器；§3 / §4 防腐重写 | **#96 已合**；防腐重写见本 PR |
 
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 任何与该 ADR 冲突的升级动作都应先改 ADR，而不是先改代码。
 
-## 3. 当前状态（快照 · 2026-10-15 实测）
+## 3. 当前状态（里程碑；**刻意不写易变值**）
 
-> ⚠️ **本节是最容易腐烂的一节**：上一版写着「`main` tip = `bb8c2dc1`、当前唯一开放 PR #72」，
-> 一天后全错（`main` 已前进 6 次、PR 号到了 #97）。**不要把快照当事实，权威值直接问源头：**
+> **本节只放慢变量**：线级进展与已定案的处置。
+> `main` tip / 开放 PR / 最近 CI / burn-down 这类值**刻意不写进表**——
+> 依据（2026-10-15 实测）：上一版把它们写成表行，刷新后**同一天内**就全错
+> （#96 上午还开着、中午就合并、`main` 又前进一次）。
+> **一个只在「开会话 / 收工」时才被刷新的文件，装不住小时级变化的数字。**
+>
+> 要当前值，直接问源头：
 >
 > ```bash
 > git fetch origin main && git log -1 --oneline origin/main   # main 的 tip
@@ -61,25 +66,24 @@
 > gh run list --workflow=ci.yml --limit 3                     # 最近 CI
 > gh run list --workflow=burndown.yml --limit 3               # burn-down 门禁
 > ```
->
-> 收工登记（§1 规则 1）时**顺手把下表刷成当天实测值**，别让它再烂一版。
 
-| 项 | 2026-10-15 实测 |
+| 线 | 状态（里程碑，只增不改） |
 | --- | --- |
-| `main` tip | `74eb6a68`（#97 合并） |
-| 开放 PR | 仅 **#96**（本文件 §6 认领协议 + 执行器）；#95 / #97 已合并 |
-| CI | 12/12 必需检查全绿（最近跑完的一条为 success） |
-| burn-down | 绿（`38673903042` success） |
-| a11y 线 | #94 立静态门禁（jsx-a11y + 基线棘轮 + 防豁免腐烂）；#95 / #97 分两批还存量 **62 条**（28 + 34） |
 | 依赖升级（ADR-014） | 三阶段全部落地（结论逐条见 §5） |
+| a11y | #94 立静态门禁（jsx-a11y + 基线棘轮 + 防豁免腐烂）；其后 #95 / #97 分两批还存量共 **62 条**（28 + 34），基线同步收缩 |
+| 协作机制 | §6 认领协议 + 执行器 `scripts/check_coordination_claims.py`（已接进 Lint job） |
 
 **Dependabot 侧的处置**：#15 / #16 / #38 均已关闭（依据分别是 ADR-014 §4.3 的 P1012 结构性失败、§4.2.4 对 23.0.0 的否决），关闭评论均指向 Issue #32。**不要重开。**
 
 ## 4. 领地（避免同时改同一处）
 
+> **本节只放长期约束**；**有时效的占用请写 §6.2**（那是认领表的职责）。
+> 2026-10-15 修：原「#72 占用视觉基线」一行早已过期（#72 早就合并），
+> 与 §3 是同一类病——**把有时效的占用写进了慢表**。
+
 | 文件 / 目录 | 占用或约束 | 说明 |
 | --- | --- | --- |
-| `web/e2e/ui-visual*.spec.ts` + `ui-visual.spec.ts-snapshots/**` | #72 | 视觉回归基线，含 4 张 PNG |
+| `web/e2e/ui-visual*.spec.ts` + `ui-visual.spec.ts-snapshots/**` | **改动前必须登记** | 视觉回归基线（含 4 张 PNG）——动它等于动像素基线，按 §6.1 先认领 |
 | `web/package.json`、`web/pnpm-lock.yaml` | **改动前必须登记** | 依赖升级已全部完成，如无必要不要动 |
 | `scripts/adr015-manifest.txt` | **不得删条目** | ADR-015 §5 已由 CI 门禁 `check_adr015_manifest.py` 强制 |
 | `docs/ROADMAP-2026Q4.md` | 冻结 | 由 `scripts/check_burndown.py` / burndown workflow 消费 |
