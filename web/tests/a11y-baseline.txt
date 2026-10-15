@@ -147,9 +147,6 @@ components/DocumentListView.tsx  jsx-a11y/label-has-associated-control  1
 components/DocumentListView.tsx  jsx-a11y/no-noninteractive-element-interactions  2
 components/documents/FolderPermissionPanel.tsx  jsx-a11y/control-has-associated-label  2
 components/documents/ShareDialogEnhanced.tsx  jsx-a11y/control-has-associated-label  6
-components/DocumentVersionHistory.tsx  jsx-a11y/click-events-have-key-events  7
-components/DocumentVersionHistory.tsx  jsx-a11y/control-has-associated-label  1
-components/DocumentVersionHistory.tsx  jsx-a11y/no-static-element-interactions  6
 components/editor/SlashMenu.tsx  jsx-a11y/click-events-have-key-events  1
 components/ExportPreview.tsx  jsx-a11y/click-events-have-key-events  2
 components/ExportPreview.tsx  jsx-a11y/no-noninteractive-element-interactions  1
