@@ -2145,7 +2145,8 @@
       "noRecords": "暂无记录",
       "deleteRecord": "删除记录",
       "deleteRecordAria": "删除该行记录",
-      "addRow": "新增行"
+      "addRow": "新增行",
+      "resizeColumn": "{field} · 列宽"
     },
     "filterPanel": {
       "title": "筛选",

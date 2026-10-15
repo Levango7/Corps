@@ -228,17 +228,22 @@ export default function TemplateEditor({
   }
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational（它只是"点外面关掉"的点击靶），
+    // 对话框语义下移到内层内容区。这样静态规则不再把遮罩当成"可点的非交互元素"。
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ai-template-editor-title"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         if (!submitting) onClose();
       }}
     >
-      <div className="w-full max-w-2xl my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-template-editor-title"
+        className="w-full max-w-2xl my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         {/* ── 头部 ── */}
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
@@ -280,6 +285,9 @@ export default function TemplateEditor({
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
               disabled={submitting}
+              // control-has-associated-label 看不见 <label htmlFor>（它只看控件自身子树
+              // 与 aria-* 属性），所以这里显式补 aria-label；与上方 label 同源同 key，不会漂移
+              aria-label={t("name")}
               className={fieldControl}
             />
           </div>
@@ -299,6 +307,7 @@ export default function TemplateEditor({
               rows={3}
               maxLength={2000}
               disabled={submitting}
+              aria-label={t("description")}
               className={`${fieldControl} resize-y`}
             />
           </div>
@@ -339,6 +348,7 @@ export default function TemplateEditor({
                   type="button"
                   role="switch"
                   aria-checked={isPublic}
+                  aria-label={t("public")}
                   onClick={() => setIsPublic((v) => !v)}
                   disabled={submitting}
                   className={`relative inline-flex h-6 w-11 items-center rounded-[var(--radius-pill)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] ${
