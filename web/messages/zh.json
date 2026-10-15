@@ -2200,7 +2200,9 @@
       "emailPlaceholder": "example@domain.com",
       "emptyDash": "—",
       "relationCount": "{count} 条关联",
-      "relationIdPlaceholder": "记录 ID（逗号分隔）"
+      "relationIdPlaceholder": "记录 ID（逗号分隔）",
+      "rangeStart": "{field} · 开始",
+      "rangeEnd": "{field} · 结束"
     },
     "groupControl": {
       "label": "分组",

@@ -177,14 +177,19 @@ export function CalendarEventDialog({
 
   return (
     <div
+      role="presentation"
       className="fixed inset-0 z-50 flex items-center justify-center"
       style={{ background: "color-mix(in srgb, var(--fg) 40%, transparent)" }}
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={isEdit ? t("editEvent") : t("newEvent")}
         className="w-[480px] max-w-[90vw] max-h-[90vh] overflow-y-auto rounded-[var(--radius-lg)] p-[var(--space-6)]"
         style={{ background: "var(--surface)", border: "1px solid var(--border)" }}
-        onClick={(e) => e.stopPropagation()}
       >
         {/* 头部 */}
         <div className="flex items-center justify-between mb-[var(--space-4)]">
@@ -212,6 +217,7 @@ export function CalendarEventDialog({
               type="text"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
+              aria-label={t("eventTitle")}
               maxLength={200}
               className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
@@ -226,6 +232,7 @@ export function CalendarEventDialog({
             <textarea
               value={description}
               onChange={(e) => setDescription(e.target.value)}
+              aria-label={t("eventDescription")}
               rows={3}
               className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none resize-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
@@ -238,6 +245,7 @@ export function CalendarEventDialog({
               type="checkbox"
               checked={allDay}
               onChange={(e) => setAllDay(e.target.checked)}
+              aria-label={t("allDay")}
               className="cursor-pointer"
             />
             {t("allDay")}
@@ -253,6 +261,7 @@ export function CalendarEventDialog({
                 type="datetime-local"
                 value={startAt}
                 onChange={(e) => setStartAt(e.target.value)}
+                aria-label={t("startDate")}
                 className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none"
                 style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
               />
@@ -265,6 +274,7 @@ export function CalendarEventDialog({
                 type="datetime-local"
                 value={endAt}
                 onChange={(e) => setEndAt(e.target.value)}
+                aria-label={t("endDate")}
                 className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none"
                 style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
               />
@@ -280,6 +290,7 @@ export function CalendarEventDialog({
               type="text"
               value={location}
               onChange={(e) => setLocation(e.target.value)}
+              aria-label={t("location")}
               maxLength={500}
               className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none"
               style={{ background: "var(--surface-2)", border: "1px solid var(--border)" }}
@@ -293,6 +304,7 @@ export function CalendarEventDialog({
               type="text"
               value={color}
               onChange={(e) => setColor(e.target.value)}
+              aria-label={t("color")}
               maxLength={20}
               placeholder="#RRGGBB"
               className="px-[var(--space-3)] py-2 rounded-[var(--radius-md)] text-[var(--fg)] outline-none"

@@ -463,6 +463,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           onBlur={() => save()}
           maxLength={255}
           placeholder={t("titlePlaceholder")}
+          aria-label={t("titlePlaceholder")}
           className="w-full px-0 py-[var(--space-2)] bg-transparent text-[length:var(--text-3xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)] outline-none border-b border-transparent focus:border-[var(--border)] placeholder:text-[var(--meta)]"
         />
 
@@ -546,7 +547,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     aria-label={t("moreActions")}
                     className="absolute right-0 top-9 z-20 min-w-[180px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
                   >
-                    <li role="menuitem">
+                    <li role="menuitem" aria-label={tDiagram("title")}>
                       <button
                         onClick={() => {
                           setQuickDiagramOpen(true);
@@ -560,7 +561,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                         </div>
                       </button>
                     </li>
-                    <li role="menuitem">
+                    <li role="menuitem" aria-label={tDecision("insertTemplate")}>
                       <button
                         onClick={() => {
                           setTemplateMenuOpen(true);
@@ -615,7 +616,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     className="absolute right-0 top-9 z-20 min-w-[220px] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface)] shadow-[var(--elev-md)] py-1"
                   >
                     {ACTION_TEMPLATES.map((tpl) => (
-                      <li key={tpl.id} role="menuitem">
+                      <li key={tpl.id} role="menuitem" aria-label={tpl.name}>
                         <button
                           onClick={() => handleInsertTemplate(tpl.markdown)}
                           className="w-full text-left px-[var(--space-3)] py-1.5 hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -691,6 +692,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
           <input
             value={shareUrl}
             readOnly
+            aria-label={t("shareUrl")}
             className="flex-1 min-w-0 bg-transparent text-[var(--fg-2)] font-[family-name:var(--font-mono)] outline-none truncate"
           />
           <button
@@ -748,19 +750,21 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
       {/* ── F5：分享设置对话框 ── */}
       {shareDialogOpen && (
         <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("shareDialogTitle")}
+          role="presentation"
           className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-4"
-          onClick={() => {
-            setShareDialogOpen(false);
-            setRevokeConfirm(false);
-            shareTriggerRef.current?.focus();
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              setShareDialogOpen(false);
+              setRevokeConfirm(false);
+              shareTriggerRef.current?.focus();
+            }
           }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("shareDialogTitle")}
             className="flex flex-col w-full max-w-lg max-h-[85dvh] rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] overflow-hidden"
-            onClick={(e) => e.stopPropagation()}
           >
             {/* 头部 */}
             <header className="flex items-center gap-[var(--space-2)] px-[var(--space-4)] py-2.5 border-b border-[var(--border-soft)] shrink-0">
@@ -795,6 +799,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     <input
                       value={shareUrl}
                       readOnly
+                      aria-label={t("shareUrl")}
                       className="flex-1 min-w-0 bg-transparent text-[var(--fg-2)] font-[family-name:var(--font-mono)] text-[length:var(--text-xs)] outline-none truncate"
                     />
                     <button
@@ -823,6 +828,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     value={shareSlug}
                     onChange={(e) => setShareSlug(e.target.value)}
                     placeholder={t("customSlugPlaceholder")}
+                    aria-label={t("customSlugPlaceholder")}
                     maxLength={50}
                     pattern="[a-z0-9-]*"
                     className="flex-1 min-w-0 h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] font-[family-name:var(--font-mono)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)] placeholder:text-[var(--meta)]"
@@ -860,6 +866,7 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                     type="date"
                     value={customExpiryDate}
                     onChange={(e) => setCustomExpiryDate(e.target.value)}
+                    aria-label={t("shareExpiry")}
                     min={todayStr}
                     className="mt-[var(--space-2)] w-full h-9 px-[var(--space-3)] border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
                   />
@@ -899,6 +906,11 @@ export function DocumentEditor({ wid, id, initial }: DocumentEditorProps) {
                   value={sharePasswordInput}
                   onChange={(e) => setSharePasswordInput(e.target.value)}
                   autoComplete="new-password"
+                  aria-label={
+                    hasPassword
+                      ? t("sharePasswordChangePlaceholder")
+                      : t("sharePasswordPlaceholder")
+                  }
                   placeholder={
                     hasPassword
                       ? t("sharePasswordChangePlaceholder")

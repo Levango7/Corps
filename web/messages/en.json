@@ -2200,7 +2200,9 @@
       "emailPlaceholder": "example@domain.com",
       "emptyDash": "—",
       "relationCount": "{count} relations",
-      "relationIdPlaceholder": "Record IDs (comma-separated)"
+      "relationIdPlaceholder": "Record IDs (comma-separated)",
+      "rangeStart": "{field} · Start",
+      "rangeEnd": "{field} · End"
     },
     "groupControl": {
       "label": "Group",
