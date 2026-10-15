@@ -50,21 +50,28 @@
 **两边方向的共同锚点是 `docs/decisions/ADR-014-三个major依赖升级.md`。**
 任何与该 ADR 冲突的升级动作都应先改 ADR，而不是先改代码。
 
-## 3. 当前状态（2026-10-12）
+## 3. 当前状态（快照 · 2026-10-15 实测）
 
-**`main` tip = `bb8c2dc1`（#71 合并）。三个依赖升级阶段全部落地：**
+> ⚠️ **本节是最容易腐烂的一节**：上一版写着「`main` tip = `bb8c2dc1`、当前唯一开放 PR #72」，
+> 一天后全错（`main` 已前进 6 次、PR 号到了 #97）。**不要把快照当事实，权威值直接问源头：**
+>
+> ```bash
+> git fetch origin main && git log -1 --oneline origin/main   # main 的 tip
+> gh pr list --state open                                     # 在飞 PR
+> gh run list --workflow=ci.yml --limit 3                     # 最近 CI
+> gh run list --workflow=burndown.yml --limit 3               # burn-down 门禁
+> ```
+>
+> 收工登记（§1 规则 1）时**顺手把下表刷成当天实测值**，别让它再烂一版。
 
-| 阶段 | 目标 | 落地 PR | 结果 |
-| --- | --- | --- | --- |
-| 一 | TypeScript 5.9.3 → 6.0.3 | #14 | ✅ `75b80332` |
-| 二 | Stripe 18.3.0 → 22.6.2 | #58 | ✅ `5fdea854`，**保留 `basil` 钉版**（apiVersion 护栏按设计触发显式决策） |
-| 三 | Prisma 6.15.0 → 7.10.0 | #51 | ✅ `e22b9a51`，driver adapter + `web/prisma.config.ts` + 全链路验证 |
-
-**当前唯一开放 PR：**
-
-| PR | 分支 | 内容 | 状态 |
-| --- | --- | --- | --- |
-| #72 | `test/ui-visual-regression` | E2E 视觉回归基线（CI-only，截图 + 像素 diff） | 11 项检查 10 绿，仅 `E2E (production build)` pending |
+| 项 | 2026-10-15 实测 |
+| --- | --- |
+| `main` tip | `74eb6a68`（#97 合并） |
+| 开放 PR | 仅 **#96**（本文件 §6 认领协议 + 执行器）；#95 / #97 已合并 |
+| CI | 12/12 必需检查全绿（最近跑完的一条为 success） |
+| burn-down | 绿（`38673903042` success） |
+| a11y 线 | #94 立静态门禁（jsx-a11y + 基线棘轮 + 防豁免腐烂）；#95 / #97 分两批还存量 **62 条**（28 + 34） |
+| 依赖升级（ADR-014） | 三阶段全部落地（结论逐条见 §5） |
 
 **Dependabot 侧的处置**：#15 / #16 / #38 均已关闭（依据分别是 ADR-014 §4.3 的 P1012 结构性失败、§4.2.4 对 23.0.0 的否决），关闭评论均指向 Issue #32。**不要重开。**
 
