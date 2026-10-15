@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-polish | chore/coordination-polish | docs/COORDINATION.md,scripts/check_coordination_claims.py,.github/workflows/ci.yml | cline-coord | 2026-10-15 16:47 | 2026-10-15 20:47 | §6 执行器收尾：prune / 读的远端回退 / preflight 给可粘贴命令
