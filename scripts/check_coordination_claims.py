@@ -39,9 +39,12 @@ preflight 把 §6.3 压成一条命令，正是为了降低那道门槛。
   preflight --worktree <路径> [--agent <名>]
   claim     --worktree <路径> --paths <glob[,glob]> [--agent <名>] [--hours 4] [--intent "..."]
   release   --agent <名> [--worktree <路径>]
+  prune                                 清掉**已过期**的认领行（表里那根「可清理」的尾巴）
   --self-test                           变异自检
 环境变量：COORD_NOW / COORD_STORE_BRANCH / COORD_STORE_FILE / COORD_REMOTE
-退出码：check 0/1/2；list 0；preflight 0 可进入 / 1 **停手**；claim、release 0 成功 / 1 失败
+  COORD_REMOTE 同时决定**写**的目标远端；**读**会在 origin → upstream → 其余远端间回退
+  （fork PR 里 origin 指向 fork、真表在 upstream，靠这条回退才不会误报 STORE_MISSING）
+退出码：check 0/1/2；list 0；preflight 0 可进入 / 1 **停手**；claim、release、prune 0 成功 / 1 失败
 """
 
 from __future__ import annotations
@@ -276,18 +279,41 @@ def local_ref() -> str:
     return f"refs/remotes/{remote()}/{store_branch()}"
 
 
-def fetch_store() -> tuple[bool, str | None]:
-    """取回活态表正文。返回 (取到没有, 正文)。分支不存在 / 文件不存在 / 网络失败都算「取不到」。"""
-    spec = f"+{store_ref()}:{local_ref()}"
-    rc, _, _ = git(["fetch", "--quiet", remote(), spec])
-    if rc != 0:
-        return False, None
-    rc, out, _ = git(["show", f"{local_ref()}:{store_file()}"])
-    return (rc == 0), (out if rc == 0 else None)
+def candidate_remotes() -> list[str]:
+    """**读**的候选远端：COORD_REMOTE 显式指定优先；否则 origin → upstream → 其余远端。
+
+    **为什么要有回退**：fork 提的 PR 里 `origin` 指向 **fork**，真表在 `upstream`；
+    只认 origin 会让判据在 fork PR 上误报 `CLAIM_STORE_MISSING`。
+    写入仍只走 `remote()` —— 无写权限的 fork 贡献者本来就推不动主仓，
+    那属于权限边界、不是代码能修的（见 §6.5）。
+    """
+    explicit = os.environ.get("COORD_REMOTE")
+    if explicit:
+        return [explicit]
+    rc, out, _ = git(["remote"])
+    have = [r.strip() for r in out.splitlines() if r.strip()]
+    preferred = [r for r in ("origin", "upstream") if r in have]
+    return preferred + [r for r in have if r not in preferred]
+
+
+def fetch_store() -> tuple[bool, str | None, str]:
+    """取回活态表正文。返回 (取到没有, 正文, 命中的远端)。
+
+    分支不存在 / 文件不存在 / 网络失败都算「取不到」；逐个候选远端试。
+    """
+    for rem in candidate_remotes():
+        ref = f"refs/remotes/{rem}/{store_branch()}"
+        rc, _, _ = git(["fetch", "--quiet", rem, f"+{store_ref()}:{ref}"])
+        if rc != 0:
+            continue
+        rc, out, _ = git(["show", f"{ref}:{store_file()}"])
+        if rc == 0:
+            return True, out, rem
+    return False, None, ""
 
 
 def read_store_text() -> str:
-    _, text = fetch_store()
+    _, text, _ = fetch_store()
     return with_header(text or "")
 
 
@@ -339,18 +365,19 @@ def write_with_retry(mutate, message: str, tries: int = 4) -> int:
 
 
 def cmd_check(now: datetime) -> int:
-    _, text = fetch_store()
+    found, text, rem = fetch_store()
     claims, errors = parse_claims(text)
     conflict_list = conflicts(claims, now)
     expired = [c for c in claims if c.expires <= now]
     live = [c for c in claims if c.expires > now]
 
-    print(f"活态表：{remote()}/{store_branch()}:{store_file()}")
+    where = rem or "/".join(candidate_remotes()) or remote()
+    print(f"活态表：{where}/{store_branch()}:{store_file()}{'' if found else '（没找到）'}")
     print(f"认领：{len(claims)} 条（未过期 {len(live)} / 已过期 {len(expired)}）")
 
     if expired:
         # 只提示不判红：过期即已释放；判红会让一个忘记 release 的人卡死全仓 PR
-        print("提示（不判红）：以下认领已过期，视为已释放，可顺手 `release` 清理 ——")
+        print("提示（不判红）：以下认领已过期，视为已释放 —— 跑 `prune` 可一次清掉：")
         for c in expired:
             print(f"    {c.worktree}  `{c.path_glob}`  {c.agent}  到期 {c.expires:%Y-%m-%d %H:%M}")
 
@@ -366,7 +393,7 @@ def cmd_check(now: datetime) -> int:
 
 
 def cmd_list(now: datetime) -> int:
-    _, text = fetch_store()
+    _, text, _ = fetch_store()
     claims, errors = parse_claims(text)
     if text is None:
         for e in errors:
@@ -386,9 +413,42 @@ def cmd_list(now: datetime) -> int:
             print(f"  {c.worktree}  `{c.path_glob}`  {c.agent}  到期 {c.expires:%m-%d %H:%M}")
     return 0
 
+def split_expired(text: str, now: datetime) -> tuple[list[str], list[str]]:
+    """把正文分成 (保留行, 已过期行)。
+
+    **只把「确定过期」的算进第二类**：解析不了的行、注释、空行一律保留。
+    prune 是扫帚不是垃圾桶 —— 删错一行等于**悄悄放掉别人的认领**，
+    比多留一行危险得多，所以这里宁可少删。
+    """
+    kept: list[str] = []
+    expired_lines: list[str] = []
+    for raw in text.splitlines():
+        s = raw.strip()
+        if s and not s.startswith("#"):
+            cells = [x.strip() for x in s.split("|")]
+            if len(cells) == len(COLUMNS) and DT_RE.match(cells[5]) and parse_dt(cells[5]) <= now:
+                expired_lines.append(raw)
+                continue
+        kept.append(raw)
+    return kept, expired_lines
+
+
+def cmd_prune(now: datetime) -> int:
+    """清掉**已过期**的认领行（表里那根「可清理」的尾巴）。判定见 split_expired。"""
+
+    def mutate(text: str) -> tuple[str | None, str]:
+        kept, expired_lines = split_expired(text, now)
+        if not expired_lines:
+            return None, "无需清理：没有已过期的认领行"
+        body = "\n".join(kept).rstrip("\n")
+        return (body + "\n" if body else HEADER), f"已清理 {len(expired_lines)} 条过期认领"
+
+    return write_with_retry(mutate, "prune: expired claims")
+
+
 def cmd_preflight(worktree: Path, agent: str | None, now: datetime) -> int:
     """§6.3 开工前检查。退出码 0 可进入 / 1 停手。"""
-    _, text = fetch_store()
+    _, text, _ = fetch_store()
     claims, errors = parse_claims(text)
     for e in errors:
         print(f"  {e}")
@@ -434,7 +494,12 @@ def cmd_preflight(worktree: Path, agent: str | None, now: datetime) -> int:
         return 1
     print()
     print("可进入：该 worktree 干净且无人认领。")
-    print("        进去后第一件事 —— 跑 claim 补一条认领（§6.3 步骤 3）。")
+    print("        进去后第一件事 —— 补一条认领（§6.3 步骤 3），可直接粘这条：")
+    print(
+        "          python scripts/check_coordination_claims.py claim"
+        f' --worktree "{str(wt).replace(chr(92), "/")}" --paths "<glob[,glob]>"'
+        f' --agent {agent or "<你的会话名>"} --intent "<一句话意图>"'
+    )
     return 0
 
 
@@ -555,6 +620,11 @@ def self_test() -> int:
             mk_tree_input(base_entries, "ccc", "coordination-claims.txt"),
             "100644 blob bbb\tnotes.md\n100644 blob ccc\tcoordination-claims.txt\n",
         ),
+        (
+            "prune 只清确定过期的行（活跃行 / 坏行 / 注释都留下）",
+            split_expired(f"# 注释\n{good}\n{expired}\n{six}\n", now),
+            (["# 注释", good, six], [expired]),
+        ),
     ]
     for name, got, want in pure_cases:
         if got != want:
@@ -614,7 +684,9 @@ if __name__ == "__main__":
             print("用法：release --agent <名> [--worktree <路径>]")
             raise SystemExit(2)
         raise SystemExit(cmd_release(agent, Path(wt_flag) if wt_flag else None))
+    if cmd == "prune":
+        raise SystemExit(cmd_prune(now))
 
     print(f"未知子命令：{cmd}")
-    print("可用：check / list / preflight / claim / release / --self-test")
+    print("可用：check / list / preflight / claim / release / prune / --self-test")
     raise SystemExit(2)
