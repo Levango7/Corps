@@ -5,9 +5,11 @@
 #        已修复的条目必须同步删行（防豁免腐烂），否则同样判红。
 #
 # 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 802 个文件，
-#          111 个文件带违规，合计 281 条（与下方数据行精确一致）。
+#          108 个文件带违规，合计 263 条（与下方数据行精确一致）。
 #
 # 偿还历史：
+#    2026-10-16 第 6 批（分支 fix/a11y-burndown-6）：FormBuilder / MailSettings /
+#      MinutesEditor 共 18 条清零。
 #    2026-10-16 第 5 批（分支 fix/a11y-burndown-5）：settings/calendar/page /
 #      AnnouncementEditor / ApprovalSubmit / ApprovalTemplateManage /
 #      ContactDetail / DocumentComments / ShareDialogEnhanced 共 42 条清零。
@@ -138,7 +140,6 @@ components/files/FileVersionRestore.tsx  jsx-a11y/no-noninteractive-element-inte
 components/files/previews/AudioPreview.tsx  jsx-a11y/control-has-associated-label  1
 components/files/previews/VideoPreview.tsx  jsx-a11y/control-has-associated-label  1
 components/files/VideoPreview.tsx  jsx-a11y/control-has-associated-label  1
-components/form/FormBuilder.tsx  jsx-a11y/control-has-associated-label  6
 components/form/FormList.tsx  jsx-a11y/click-events-have-key-events  1
 components/form/FormList.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/form/FormPreview.tsx  jsx-a11y/control-has-associated-label  2
@@ -155,7 +156,6 @@ components/im/MessageSearch.tsx  jsx-a11y/control-has-associated-label  1
 components/mail/MailComposer.tsx  jsx-a11y/control-has-associated-label  5
 components/mail/MailList.tsx  jsx-a11y/click-events-have-key-events  2
 components/mail/MailList.tsx  jsx-a11y/no-static-element-interactions  2
-components/mail/MailSettings.tsx  jsx-a11y/control-has-associated-label  6
 components/MarkdownToolbar.tsx  jsx-a11y/click-events-have-key-events  1
 components/MarkdownToolbar.tsx  jsx-a11y/no-static-element-interactions  1
 components/meeting/MeetingList.tsx  jsx-a11y/click-events-have-key-events  1
@@ -166,7 +166,6 @@ components/members/TemporaryGrantModal.tsx  jsx-a11y/no-noninteractive-element-i
 components/members/TemporaryGrantModal.tsx  jsx-a11y/no-static-element-interactions  1
 components/MilestoneFilter.tsx  jsx-a11y/click-events-have-key-events  1
 components/MilestoneFilter.tsx  jsx-a11y/no-static-element-interactions  2
-components/minutes/MinutesEditor.tsx  jsx-a11y/control-has-associated-label  6
 components/NewTaskDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/NewTaskDialog.tsx  jsx-a11y/control-has-associated-label  3
 components/NewTaskDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1

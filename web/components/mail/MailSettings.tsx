@@ -196,6 +196,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
               </label>
               <input
                 type="email"
+                aria-label={t("email")}
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="you@example.com"
@@ -211,6 +212,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
               <input
                 type="text"
                 value={displayName}
+                aria-label={t("displayName")}
                 onChange={(e) => setDisplayName(e.target.value)}
                 placeholder="Your Name"
                 className="w-full px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -225,6 +227,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
               <input
                 type="text"
                 value={smtpHost}
+                aria-label={t("smtpHost")}
                 onChange={(e) => setSmtpHost(e.target.value)}
                 placeholder="smtp.example.com"
                 className="w-full px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -238,6 +241,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
               </label>
               <input
                 type="number"
+                aria-label={t("smtpPort")}
                 value={smtpPort}
                 onChange={(e) => setSmtpPort(e.target.value)}
                 min={1}
@@ -253,6 +257,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
               </label>
               <input
                 type="password"
+                aria-label={t("password")}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="••••••••"
@@ -266,6 +271,7 @@ export default function MailSettings({ workspaceId }: MailSettingsProps) {
             <input
               type="checkbox"
               checked={smtpSecure}
+              aria-label="SSL/TLS"
               onChange={(e) => setSmtpSecure(e.target.checked)}
               className="rounded-[var(--radius-sm)] border-[var(--border)] text-[var(--accent)] focus-visible:ring-[var(--accent-ring)]"
             />

@@ -415,6 +415,7 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
             value={content}
             onChange={(e) => setContent(e.target.value)}
             rows={16}
+            aria-label={t("content")}
             placeholder={t("contentPlaceholder")}
             className="w-full px-3 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)] font-mono"
           />
@@ -446,12 +447,14 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
                   value={a.name}
                   onChange={(e) => updateAttendee(idx, "name", e.target.value)}
                   placeholder={t("attendeeName")}
+                  aria-label={`${t("attendeeName")} ${idx + 1}`}
                   className={`${fieldControl} flex-1`}
                 />
                 <input
                   value={a.role ?? ""}
                   onChange={(e) => updateAttendee(idx, "role", e.target.value)}
                   placeholder={t("attendeeRole")}
+                  aria-label={`${t("attendeeRole")} ${idx + 1}`}
                   className={`${fieldControl} w-32`}
                 />
                 <button
@@ -504,12 +507,14 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
                   value={a.title}
                   onChange={(e) => updateActionItem(idx, "title", e.target.value)}
                   placeholder={t("actionTitle")}
+                  aria-label={`${t("actionTitle")} ${idx + 1}`}
                   className={`${fieldControl} flex-1`}
                 />
                 <input
                   value={a.assigneeId ?? ""}
                   onChange={(e) => updateActionItem(idx, "assigneeId", e.target.value)}
                   placeholder={t("actionAssignee")}
+                  aria-label={`${t("actionAssignee")} ${idx + 1}`}
                   className={`${fieldControl} w-32`}
                 />
                 <input
@@ -523,6 +528,7 @@ export function MinutesEditor({ wid, mid, initial }: MinutesEditorProps) {
                     )
                   }
                   placeholder={t("actionDueDate")}
+                  aria-label={`${t("actionDueDate")} ${idx + 1}`}
                   className={`${fieldControl} w-36`}
                 />
                 <button
