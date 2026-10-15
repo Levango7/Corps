@@ -86,19 +86,27 @@ export function TemporaryGrantModal({
   const existingActive = existingGrant && new Date(existingGrant.expiresAt).getTime() > Date.now();
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational（它只是"点外面关掉"的点击靶），
+    // 关闭判定改成比 target —— 比 stopPropagation 更稳，也不会吞掉内容区的键盘事件
     <div
-      role="dialog"
-      aria-modal="true"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-4"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="temp-grant-title"
         className="w-full max-w-md bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] p-5"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between mb-4">
-          <h3 className="flex items-center gap-2 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+          <h3
+            id="temp-grant-title"
+            className="flex items-center gap-2 text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+          >
             <Clock size={18} className="text-[var(--warn-fg)]" />
             {t("tempGrant")}
           </h3>
@@ -190,6 +198,7 @@ export function TemporaryGrantModal({
               onChange={(e) => setReason(e.target.value)}
               maxLength={500}
               placeholder={t("grantReasonPlaceholder")}
+              aria-label={t("grantReason")}
               className="w-full h-9 px-3 border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 placeholder:text-[var(--meta)]"
             />
           </div>

@@ -5,9 +5,13 @@
 #        已修复的条目必须同步删行（防豁免腐烂），否则同样判红。
 #
 # 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 802 个文件，
-#          108 个文件带违规，合计 263 条（与下方数据行精确一致）。
+#          102 个文件带违规，合计 233 条（与下方数据行精确一致）。
 #
 # 偿还历史：
+#    2026-10-16 第 7 批（分支 fix/a11y-burndown-7）：MeetingSummaryPanel /
+#      TodoExtractDialog / CommandPalette / MessageInput / MailComposer /
+#      TemporaryGrantModal 共 30 条清零。新增判定 15：aria-hidden 元素会被
+#      交互规则整体跳过，所以「aria-hidden 遮罩自己挂 onClick」是正确改法。
 #    2026-10-16 第 6 批（分支 fix/a11y-burndown-6）：FormBuilder / MailSettings /
 #      MinutesEditor 共 18 条清零。
 #    2026-10-16 第 5 批（分支 fix/a11y-burndown-5）：settings/calendar/page /
@@ -75,16 +79,12 @@ components/ai/DocQaPanel.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/KnowledgeExtractPanel.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/KnowledgeGraphView.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/MailAssistantPanel.tsx  jsx-a11y/control-has-associated-label  3
-components/ai/MeetingSummaryPanel.tsx  jsx-a11y/control-has-associated-label  5
 components/ai/MultiAgentPanel.tsx  jsx-a11y/control-has-associated-label  4
 components/ai/OrchestrationPanel.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/SemanticSearchPanel.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/TaskBreakdownDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/ai/TaskBreakdownDialog.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/TaskBreakdownDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/ai/TodoExtractDialog.tsx  jsx-a11y/click-events-have-key-events  1
-components/ai/TodoExtractDialog.tsx  jsx-a11y/control-has-associated-label  3
-components/ai/TodoExtractDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/ai/ToolPanel.tsx  jsx-a11y/control-has-associated-label  2
 components/ai/UsageLimitSettings.tsx  jsx-a11y/control-has-associated-label  1
 components/ai/WorkflowBuildDialog.tsx  jsx-a11y/click-events-have-key-events  1
@@ -107,10 +107,6 @@ components/chat/ChatHeaderClient.tsx  jsx-a11y/control-has-associated-label  1
 components/chat/MessageBubble.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/chat/MessageInput.tsx  jsx-a11y/control-has-associated-label  2
 components/chat/MessageList.tsx  jsx-a11y/control-has-associated-label  1
-components/CommandPalette.tsx  jsx-a11y/click-events-have-key-events  2
-components/CommandPalette.tsx  jsx-a11y/control-has-associated-label  1
-components/CommandPalette.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/CommandPalette.tsx  jsx-a11y/no-static-element-interactions  1
 components/common/FavoriteButton.tsx  jsx-a11y/control-has-associated-label  1
 components/contact/ContactGroupSidebar.tsx  jsx-a11y/control-has-associated-label  1
 components/contact/ContactList.tsx  jsx-a11y/control-has-associated-label  2
@@ -148,22 +144,13 @@ components/form/FormSubmissionList.tsx  jsx-a11y/no-noninteractive-element-inter
 components/im/ConversationCreate.tsx  jsx-a11y/control-has-associated-label  2
 components/im/FilePreview.tsx  jsx-a11y/click-events-have-key-events  1
 components/im/FilePreview.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/im/MessageInput.tsx  jsx-a11y/click-events-have-key-events  2
-components/im/MessageInput.tsx  jsx-a11y/control-has-associated-label  1
-components/im/MessageInput.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/im/MessageInput.tsx  jsx-a11y/no-static-element-interactions  1
 components/im/MessageSearch.tsx  jsx-a11y/control-has-associated-label  1
-components/mail/MailComposer.tsx  jsx-a11y/control-has-associated-label  5
 components/mail/MailList.tsx  jsx-a11y/click-events-have-key-events  2
 components/mail/MailList.tsx  jsx-a11y/no-static-element-interactions  2
 components/MarkdownToolbar.tsx  jsx-a11y/click-events-have-key-events  1
 components/MarkdownToolbar.tsx  jsx-a11y/no-static-element-interactions  1
 components/meeting/MeetingList.tsx  jsx-a11y/click-events-have-key-events  1
 components/meeting/MeetingList.tsx  jsx-a11y/no-static-element-interactions  1
-components/members/TemporaryGrantModal.tsx  jsx-a11y/click-events-have-key-events  2
-components/members/TemporaryGrantModal.tsx  jsx-a11y/control-has-associated-label  1
-components/members/TemporaryGrantModal.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/members/TemporaryGrantModal.tsx  jsx-a11y/no-static-element-interactions  1
 components/MilestoneFilter.tsx  jsx-a11y/click-events-have-key-events  1
 components/MilestoneFilter.tsx  jsx-a11y/no-static-element-interactions  2
 components/NewTaskDialog.tsx  jsx-a11y/click-events-have-key-events  1

@@ -69,6 +69,31 @@ const SCAN_DIRS = ["app", "components", "lib"];
  *      no-noninteractive-element-interactions 判红。加 onKeyDown 只能消掉前者。
  *      本仓库统一改用「遮罩层 role=presentation + 内容层 role=dialog aria-modal」，
  *      语义不丢（Esc 与关闭按钮照旧），规则也不再误报。
+ *   3. label-has-associated-control **只认显式 htmlFor/id**，「label 包着控件」不算。
+ *      所以补 htmlFor/id 是修语义，不是为过门禁；而控件侧无论哪种形态都仍需
+ *      aria-label（因为第 1 条）。
+ *   4. 两种 label 形态的**性质不同**，别一律当成"规则误报"：
+ *        <label> 包裹控件        → 对读屏有效，报红属规则看不见祖先 → aria-label 冗余但无害
+ *        <label> 兄弟且无 htmlFor → 对读屏无效，根本没建立关联     → aria-label 是修真实缺陷
+ *   5. **aria-hidden 元素会被交互规则整体跳过**（no-static-element-interactions /
+ *      click-events-have-key-events / control-has-associated-label 都会先判
+ *      isHiddenFromScreenReader）。所以「纯装饰的遮罩自己挂 onClick」是正确改法：
+ *      既保住了点击外面关闭，也不会被判红。
+ *
+ * ⛔ 改弹窗结构前**必须先看 e2e 里固化的是哪一套**——本仓库存在两套并存的约定，
+ *    而且各自被硬断言钉死，套错会直接把 E2E 测红（2026-10-16 实测踩过）：
+ *
+ *      A. role=dialog 在**内层内容卡**、外层是遮罩
+ *         （fixed-overlay-portal.spec.ts 断言「role=dialog 的**父节点**才是遮罩」，
+ *           即 overlay = dialog.parentElement，须 position:fixed 且 portal 到 body）
+ *      B. role=dialog 就在**满视口遮罩本身**、内容是普通子节点
+ *         （ui-layout.spec.ts / ui-visual.spec.ts 断言
+ *           `[role="dialog"][aria-label="命令面板"]` 的矩形 == 视口、背景非透明
+ *           —— CommandPalette 属这一套，它同时还要满足前者，因为 A 的断言取
+ *           `.first()`）
+ *
+ *    所以把 B 改成 A 会立刻红：断言量到的是内容卡（实测 549×730 ≠ 1280）。
+ *    对 B 类弹窗清违规要用「aria-hidden 装饰层挂处理器」，**不要**下移 role。
  */
 const A11Y_RULES: Linter.RulesRecord = {
   ...jsxA11y.flatConfigs.recommended.rules,

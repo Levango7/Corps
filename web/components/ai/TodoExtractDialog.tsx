@@ -250,17 +250,21 @@ export default function TodoExtractDialog({
   const allSelected = todos.length > 0 && selectedCount === todos.length;
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational，对话框语义下移到内层内容区
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="ai-todo-extract-title"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         if (!submitting && !loading) onClose();
       }}
     >
-      <div className="w-full max-w-2xl my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ai-todo-extract-title"
+        className="w-full max-w-2xl my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         {/* ── 头部 ── */}
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
@@ -400,6 +404,7 @@ export default function TodoExtractDialog({
                         checked={allSelected}
                         onChange={(e) => toggleSelectAll(e.target.checked)}
                         disabled={submitting}
+                        aria-label={allSelected ? t("deselectAll") : t("selectAll")}
                         className="w-4 h-4 rounded-[var(--radius-sm)] border-[var(--border)] text-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                       />
                       {allSelected ? t("deselectAll") : t("selectAll")}
@@ -462,6 +467,7 @@ export default function TodoExtractDialog({
                                   }
                                   maxLength={100}
                                   disabled={submitting}
+                                  aria-label={t("todoAssignee")}
                                   className={`${fieldControl} disabled:opacity-60`}
                                 />
                               </div>
@@ -482,6 +488,7 @@ export default function TodoExtractDialog({
                                     })
                                   }
                                   disabled={submitting}
+                                  aria-label={t("todoDueDate")}
                                   className={`${fieldControl} disabled:opacity-60`}
                                 />
                               </div>

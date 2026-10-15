@@ -474,6 +474,7 @@ export default function MeetingSummaryPanel({
                         <input
                           type="text"
                           value={point}
+                          aria-label={`${t("keyPoints")} ${i + 1}`}
                           onChange={(e) =>
                             setEditBuffer((prev) => {
                               if (!prev) return prev;
@@ -514,6 +515,7 @@ export default function MeetingSummaryPanel({
                           <input
                             type="text"
                             value={d.title}
+                            aria-label={`${t("decisionTitle")} ${i + 1}`}
                             onChange={(e) =>
                               setEditBuffer((prev) => {
                                 if (!prev) return prev;
@@ -526,6 +528,7 @@ export default function MeetingSummaryPanel({
                           />
                           <textarea
                             value={d.description}
+                            aria-label={`${t("decisionDesc")} ${i + 1}`}
                             onChange={(e) =>
                               setEditBuffer((prev) => {
                                 if (!prev) return prev;
@@ -580,6 +583,7 @@ export default function MeetingSummaryPanel({
                             <input
                               type="text"
                               value={item.title}
+                              aria-label={`${t("actionTitle")} ${i + 1}`}
                               onChange={(e) =>
                                 setEditBuffer((prev) => {
                                   if (!prev) return prev;
@@ -594,6 +598,7 @@ export default function MeetingSummaryPanel({
                               <input
                                 type="text"
                                 value={item.assignee ?? ""}
+                                aria-label={`${t("assigneePlaceholder")} ${i + 1}`}
                                 onChange={(e) =>
                                   setEditBuffer((prev) => {
                                     if (!prev) return prev;

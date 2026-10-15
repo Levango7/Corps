@@ -460,17 +460,24 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   };
 
   return (
+    // ⚠️ 这里刻意**不**套用「遮罩转 presentational、语义下移」的写法。
+    // 本仓库 PR #50 定下的约定是「遮罩元素自己带 role=dialog aria-modal」，
+    // 且被两条硬断言固化：ui-layout.spec.ts 的「遮罩矩形 == 视口」与
+    // fixed-overlay-portal.spec.ts 的「role=dialog 的**父节点**才是遮罩」。
+    // 把 role 下移会让断言测到内容卡（实测 549×730 ≠ 1280），属于改坏约定。
+    //
+    // 那两条 jsx-a11y 违规改用另一条路清：把关闭处理器挂到一层
+    // aria-hidden 的装饰层上 —— 交互规则会整体跳过 aria-hidden 元素
+    // （见 tests/unit/a11y-baseline.test.ts 判定笔记 5），于是 role=dialog
+    // 的遮罩自身不携带任何事件处理器，规则不再误报，行为完全不变。
     <div
       role="dialog"
       aria-modal="true"
       aria-label={t("ariaLabel")}
       className="modal-overlay fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4 bg-[var(--overlay)]"
-      onClick={onClose}
     >
-      <div
-        className="modal-enter w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
-      >
+      <div className="absolute inset-0" aria-hidden="true" onClick={onClose} />
+      <div className="modal-enter relative z-10 w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden">
         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[var(--border-soft)]">
           <Search size={17} className="text-[var(--muted)] shrink-0" />
           <input
@@ -479,6 +486,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
+            aria-label={t("searchPlaceholder")}
             className="flex-1 bg-transparent outline-none text-[length:var(--text-md)] text-[var(--fg)] placeholder:text-[var(--meta)]"
           />
           {query && (
