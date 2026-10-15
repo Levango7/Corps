@@ -3073,6 +3073,9 @@
       "generateFailed": "生成失败，请重试",
       "addFailed": "入库失败，请重试",
       "emptySummary": "点击「生成纪要」开始",
+      "decisionTitle": "决策标题",
+      "decisionDesc": "决策说明",
+      "actionTitle": "待办标题",
       "assigneePlaceholder": "负责人",
       "assigneePrefix": "负责人：{name}"
     },

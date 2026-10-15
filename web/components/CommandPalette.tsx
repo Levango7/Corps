@@ -460,16 +460,19 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   };
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational，对话框语义下移到内层内容区
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-label={t("ariaLabel")}
+      role="presentation"
       className="modal-overlay fixed inset-0 z-[var(--z-modal)] flex items-start justify-center pt-[var(--cmd-palette-top)] px-4 bg-[var(--overlay)]"
-      onClick={onClose}
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
+        role="dialog"
+        aria-modal="true"
+        aria-label={t("ariaLabel")}
         className="modal-enter w-full max-w-[560px] bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)] overflow-hidden"
-        onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center gap-2.5 px-4 h-12 border-b border-[var(--border-soft)]">
           <Search size={17} className="text-[var(--muted)] shrink-0" />
@@ -479,6 +482,7 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder={t("searchPlaceholder")}
+            aria-label={t("searchPlaceholder")}
             className="flex-1 bg-transparent outline-none text-[length:var(--text-md)] text-[var(--fg)] placeholder:text-[var(--meta)]"
           />
           {query && (

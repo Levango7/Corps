@@ -686,6 +686,7 @@ export function MessageInput({
           disabled={disabled}
           rows={1}
           placeholder={placeholder ?? t("placeholder")}
+          aria-label={placeholder ?? t("placeholder")}
           className="flex-1 px-[var(--space-3)] py-[var(--space-2)] overflow-hidden resize-none border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:border-[var(--accent)] placeholder:text-[var(--meta)] disabled:opacity-50 disabled:cursor-not-allowed transition-colors duration-[var(--motion-fast)]"
           style={{ minHeight: `${MIN_HEIGHT}px`, maxHeight: `${MAX_HEIGHT}px` }}
         />
@@ -739,18 +740,19 @@ export function MessageInput({
 
       {/* 分享任务弹窗 */}
       {taskPickerOpen && (
-        <div
-          className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center"
-          onClick={handleCloseTaskPicker}
-        >
-          {/* 遮罩 */}
-          <div className="absolute inset-0 bg-[var(--overlay)]" aria-hidden="true" />
+        <div className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center">
+          {/* 遮罩：关闭处理器直接挂在遮罩本身（它已经有 aria-hidden，
+              交互规则会跳过它；反过来挂在无 role 的外层 div 上才会被判红） */}
+          <div
+            className="absolute inset-0 bg-[var(--overlay)]"
+            aria-hidden="true"
+            onClick={handleCloseTaskPicker}
+          />
           {/* 弹窗主体 */}
           <div
             role="dialog"
             aria-modal="true"
             aria-label={t("shareTask")}
-            onClick={(e) => e.stopPropagation()}
             className="relative w-[90vw] max-w-[420px] max-h-[60vh] flex flex-col rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-md)]"
           >
             {/* 弹窗头部 */}

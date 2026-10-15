@@ -3073,6 +3073,9 @@
       "generateFailed": "Generation failed, please retry",
       "addFailed": "Failed to add, please retry",
       "emptySummary": "Click \"Generate Summary\" to start",
+      "decisionTitle": "Decision title",
+      "decisionDesc": "Decision detail",
+      "actionTitle": "Action title",
       "assigneePlaceholder": "Assignee",
       "assigneePrefix": "Assignee: {name}"
     },

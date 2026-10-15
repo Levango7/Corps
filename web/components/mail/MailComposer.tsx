@@ -216,6 +216,7 @@ export default function MailComposer({ workspaceId, onSent, onCancel }: MailComp
           <input
             type="text"
             value={to}
+            aria-label={t("to")}
             onChange={(e) => setTo(e.target.value)}
             placeholder="recipient@example.com"
             className="flex-1 px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -230,6 +231,7 @@ export default function MailComposer({ workspaceId, onSent, onCancel }: MailComp
           <input
             type="text"
             value={cc}
+            aria-label={t("cc")}
             onChange={(e) => setCc(e.target.value)}
             placeholder="cc@example.com"
             className="flex-1 px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -244,6 +246,7 @@ export default function MailComposer({ workspaceId, onSent, onCancel }: MailComp
           <input
             type="text"
             value={bcc}
+            aria-label={t("bcc")}
             onChange={(e) => setBcc(e.target.value)}
             placeholder="bcc@example.com"
             className="flex-1 px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] placeholder:text-[var(--meta)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -258,6 +261,7 @@ export default function MailComposer({ workspaceId, onSent, onCancel }: MailComp
           <input
             type="text"
             value={subject}
+            aria-label={t("subject")}
             onChange={(e) => setSubject(e.target.value)}
             className="flex-1 px-2.5 py-1.5 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] text-[length:var(--text-sm)] text-[var(--fg)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
           />
@@ -266,6 +270,7 @@ export default function MailComposer({ workspaceId, onSent, onCancel }: MailComp
         {/* 正文 */}
         <textarea
           value={bodyText}
+          aria-label={t("body")}
           onChange={(e) => setBodyText(e.target.value)}
           rows={10}
           placeholder={t("body")}
