@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y | fix/a11y-burndown-4 | components/im/ConversationSettings.tsx,components/DocumentListView.tsx,components/workflow/WorkflowEditor.tsx,components/template/TemplateEditor.tsx,components/database/TableView.tsx,web/tests/a11y-baseline.txt | a11y-burndown | 2026-10-15 19:24 | 2026-10-15 23:24 | a11y 存量偿还第 4 批（5 文件 35 条）
+F:/Nexus/corps-wt-a11y | fix/a11y-burndown-6 | web/components/form/FormBuilder.tsx,web/components/mail/MailSettings.tsx,web/components/minutes/MinutesEditor.tsx,web/tests/a11y-baseline.txt | a11y-burndown-6 | 2026-10-16 01:58 | 2026-10-16 05:58 | a11y 基线偿还第 6 批：3 个文件 18 条清零（堆叠在 #104 之上）
