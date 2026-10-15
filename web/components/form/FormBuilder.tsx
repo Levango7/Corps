@@ -155,6 +155,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
         </label>
         <input
           id="fb-title"
+          aria-label={t("name")}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           maxLength={200}
@@ -169,6 +170,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
         </label>
         <textarea
           id="fb-desc"
+          aria-label={t("description")}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           rows={2}
@@ -183,6 +185,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
           <input
             type="checkbox"
             checked={active}
+            aria-label={t("active")}
             onChange={(e) => setActive(e.target.checked)}
             className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)]"
           />
@@ -220,6 +223,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                       <input
                         value={field.label}
+                        aria-label={`${t("fieldLabel")} ${index + 1}`}
                         onChange={(e) => updateField(field.id, { label: e.target.value })}
                         placeholder={t("fieldLabel")}
                         maxLength={200}
@@ -244,6 +248,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
                     {OPTION_FIELD_TYPES.includes(field.type) && (
                       <textarea
                         value={(field.options ?? []).join("\n")}
+                        aria-label={`${t("fieldOptions")} ${index + 1}`}
                         onChange={(e) => updateFieldOptions(field.id, e.target.value)}
                         rows={2}
                         placeholder={t("fieldOptions")}
@@ -256,6 +261,7 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
                       <input
                         type="checkbox"
                         checked={field.required}
+                        aria-label={`${t("fieldRequired")} ${index + 1}`}
                         onChange={(e) => updateField(field.id, { required: e.target.checked })}
                         className="w-3.5 h-3.5 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)]"
                       />
