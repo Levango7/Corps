@@ -105,7 +105,7 @@ jobs:
       - run: python ../scripts/check_coordination_claims.py
       # 门禁自己也要被门禁：五类注入变异各自因正确的红因变红（取不到表 / 三类格式非法 / 冲突），
       # 外加一条**必须不判红**的负例（「已过期 + 活跃同资源」不许判成冲突），
-      # 以及九条纯函数断言 —— 其中「自己认领 + 工作树是脏的 ⇒ 放行」是实测踩出来的自锁，
+      # 以及十五条纯函数断言 —— 其中「自己认领 + 工作树是脏的 ⇒ 放行」是实测踩出来的自锁，
       # 不钉住就会随下次重构原样复发。
       - run: python ../scripts/check_coordination_claims.py --self-test
 

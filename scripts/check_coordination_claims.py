@@ -36,7 +36,8 @@ preflight 把 §6.3 压成一条命令，正是为了降低那道门槛。
 用法：
   check                                 校验活态表（CI 用，默认子命令）
   list                                  列出认领（未过期 / 已过期分开）
-  preflight --worktree <路径> [--agent <名>]
+  preflight --worktree <路径> [--agent <名>] [--paths <glob[,glob]>] [--stale-hours 4]
+            除认领表外，还会扫**同机所有 worktree 的在制品**并与 --paths 交叉比对（§6.3 第 4 步）
   claim     --worktree <路径> --paths <glob[,glob]> [--agent <名>] [--hours 4] [--intent "..."]
   release   --agent <名> [--worktree <路径>]
   prune                                 清掉**已过期**的认领行（表里那根「可清理」的尾巴）
@@ -49,6 +50,7 @@ preflight 把 §6.3 压成一条命令，正是为了降低那道门槛。
 
 from __future__ import annotations
 
+import fnmatch
 import os
 import re
 import subprocess
@@ -221,6 +223,101 @@ def decide(live_here: list[Claim], dirty: bool, agent: str | None) -> str:
     if dirty:
         return "blocked_dirty"
     return "ok_free"
+
+
+def path_matches(path: str, globs: str) -> bool:
+    """路径是否落在逗号分隔的 glob 里。
+
+    用 `fnmatch` —— 它的 `*` **也会跨 `/`**（`docs/**` 匹配 `docs/a/b.md`，`docs/*` 也匹配）。
+    这是**故意的**：宁可多报一点重叠（多看一眼），也别因为通配写法差异漏掉真在动的文件。
+    """
+    return any(fnmatch.fnmatch(path, g.strip()) for g in globs.split(",") if g.strip())
+
+
+def classify_overlap(age_h: float, fresh_hours: float) -> str:
+    """在制品文件的 mtime 距今 age_h 小时 → "stop"（新鲜，像有人正在写）/ "warn"（陈旧，像遗留脏树）。
+
+    为什么用 mtime 分档：`git status` 只能告诉你「脏」，不能告诉你「是不是**此刻**有人在动」——
+    共享树上可能躺着几十天前的遗留改动。mtime 是把这两者分开的最便宜信号
+    （#94 那次事故我就是靠 mtime 认出对方会话还活着的）。
+    读不到 mtime（age_h < 0，例如文件刚被删）→ 当作新鲜，**宁可停手**。
+    """
+    return "stop" if age_h < 0 or age_h <= fresh_hours else "warn"
+
+
+def local_worktrees() -> list[tuple[str, str]]:
+    """所有本地 worktree：[(posix 路径, 分支名)]。读 `git worktree list --porcelain`。"""
+    rc, out, _ = git(["worktree", "list", "--porcelain"])
+    if rc != 0:
+        return []
+    items: list[tuple[str, str]] = []
+    path, branch = "", ""
+    for line in out.splitlines() + [""]:
+        if line.startswith("worktree "):
+            path, branch = line[len("worktree ") :].strip().replace("\\", "/"), ""
+        elif line.startswith("branch "):
+            branch = line[len("branch ") :].strip().removeprefix("refs/heads/")
+        elif not line.strip() and path:
+            items.append((path, branch or "（detached）"))
+            path = ""
+    return items
+
+
+def dirty_files(wt: str) -> list[str]:
+    """该 worktree 的**在制品**（未提交改动 + 未跟踪文件），返回相对仓库根的 posix 路径。
+
+    只读 `git status`、不写任何东西；**别人的 worktree 也照读** —— 同机事实正是从这里来的。
+    """
+    rc, out, _ = git(["-C", wt, "status", "--porcelain", "--untracked-files=all"])
+    if rc != 0:
+        return []
+    files: list[str] = []
+    for line in out.splitlines():
+        if len(line) < 4:
+            continue
+        rest = line[3:].strip()
+        if " -> " in rest:  # 重命名：取新路径
+            rest = rest.split(" -> ")[-1]
+        files.append(rest.strip('"').replace("\\", "/"))
+    return files
+
+
+def scan_live_edits(
+    target: Path, globs: str | None, fresh_hours: float, mine: set[str]
+) -> tuple[list[str], list[str]]:
+    """同机在制品交叉扫描 → (停手项, 警告项)。
+
+    为什么需要它（2026-10-15 复盘）：认领表是**自愿、事前、靠身份**的信号；而事故的真实形态是
+    「同一台机器上两个会话同时改同一批文件」—— 那件事本来就有**硬信号**：
+    `git worktree list` + 每个 worktree 的 `git status` + 文件 mtime。
+    #94 那次信号一直都在（我确实跑了 `worktree list`、也看到它脏），只是**没人把这一步写进检查表**。
+    所以这里不再依赖「别人愿不愿意登记」，而是直接读客观事实。
+
+    `mine` = 已由本 agent 认领的 worktree 路径集合：那是自己的在制品，降到警告，别自己拦自己。
+    """
+    stop: list[str] = []
+    warn: list[str] = []
+    if not globs:
+        return stop, warn
+    tgt = str(target).replace("\\", "/").rstrip("/").lower()
+    now_ts = datetime.now().timestamp()  # mtime 是真实文件系统事实，不用 COORD_NOW 覆盖
+    for wt, branch in local_worktrees():
+        if wt.rstrip("/").lower() == tgt:
+            continue
+        for rel in dirty_files(wt):
+            if not path_matches(rel, globs):
+                continue
+            try:
+                age_h = (now_ts - (Path(wt) / rel).stat().st_mtime) / 3600.0
+            except OSError:
+                age_h = -1.0
+            label = "未知" if age_h < 0 else f"{age_h:.1f}h 前改动"
+            item = f"{wt}  [{branch}]  {rel}  （{label}）"
+            if wt.rstrip("/").lower() in mine:
+                warn.append(f"{item}  ← 是你自己的 worktree")
+            else:
+                (stop if classify_overlap(age_h, fresh_hours) == "stop" else warn).append(item)
+    return stop, warn
 
 
 def mk_tree_input(base_ls_tree: str, new_blob: str, filename: str) -> str:
@@ -446,15 +543,26 @@ def cmd_prune(now: datetime) -> int:
     return write_with_retry(mutate, "prune: expired claims")
 
 
-def cmd_preflight(worktree: Path, agent: str | None, now: datetime) -> int:
+def cmd_preflight(
+    worktree: Path,
+    agent: str | None,
+    now: datetime,
+    paths: str | None = None,
+    fresh_hours: float = 4.0,
+) -> int:
     """§6.3 开工前检查。退出码 0 可进入 / 1 停手。"""
-    _, text, _ = fetch_store()
+    _, text, rem = fetch_store()
     claims, errors = parse_claims(text)
     for e in errors:
         print(f"  {e}")
 
     wt = worktree.resolve()
     live_here = [c for c in claims if c.expires > now and same_worktree(c.worktree, wt)]
+    mine_wts = {
+        c.worktree.rstrip("/\\").replace("\\", "/").lower()
+        for c in claims
+        if c.expires > now and agent and c.agent.lower() == agent.lower()
+    }
 
     rc, status, err = git(["status", "--short"], cwd=wt)
     if rc != 0:
@@ -463,7 +571,7 @@ def cmd_preflight(worktree: Path, agent: str | None, now: datetime) -> int:
     rc, branch_out, _ = git(["rev-parse", "--abbrev-ref", "HEAD"], cwd=wt)
     dirty = bool(status.strip())
 
-    print(f"活态表：{remote()}/{store_branch()}:{store_file()}")
+    print(f"活态表：{rem or '/'.join(candidate_remotes()) or remote()}/{store_branch()}:{store_file()}")
     print(f"目标 worktree：{wt}")
     print(f"  当前分支：{branch_out.strip() or '（读不到）'}")
     print(f"  未提交改动：{'有（脏）' if dirty else '无（干净）'}")
@@ -476,6 +584,37 @@ def cmd_preflight(worktree: Path, agent: str | None, now: datetime) -> int:
             )
     else:
         print("  未过期认领：无")
+
+    # ── 同机在制品交叉检查（§6.3 第 4 步）：读客观事实，不依赖别人登记 ──
+    stop, warn = scan_live_edits(wt, paths, fresh_hours, mine_wts)
+    if not paths:
+        rows = [(w, br, len(dirty_files(w))) for w, br in local_worktrees()]
+        rows = [(w, br, n) for w, br, n in rows if n]
+        print("  同机在制品交叉检查：未给 --paths，跳过（给了才判得了重叠）。当前同机在制品：")
+        for w, br, n in rows:
+            print(f"    {w}  [{br}]  {n} 个")
+        if not rows:
+            print("    （无）")
+    elif stop or warn:
+        print(
+            f"  同机在制品交叉检查：{len(stop)} 处新鲜重叠 / {len(warn)} 处陈旧重叠"
+            f"（新鲜阈值 {fresh_hours:g}h）"
+        )
+        for x in stop:
+            print(f"    [重叠·新鲜] {x}")
+        for x in warn:
+            print(f"    [重叠·陈旧·不拦] {x}")
+    else:
+        print("  同机在制品交叉检查：无重叠")
+
+    if stop:
+        print()
+        print("停手：同机**别的 worktree 的在制品**与你打算写的路径重叠，且改动很新 ——")
+        for x in stop:
+            print(f"    {x}")
+        print("      这不是推测：那些文件在另一个工作区里**此刻就是脏的**（§6.3 第 4 步）。")
+        print("      先与对方确认或要 handoff；不要硬上。")
+        return 1
 
     code = decide(live_here, dirty, agent)
     if code == "blocked_other":
@@ -495,9 +634,10 @@ def cmd_preflight(worktree: Path, agent: str | None, now: datetime) -> int:
     print()
     print("可进入：该 worktree 干净且无人认领。")
     print("        进去后第一件事 —— 补一条认领（§6.3 步骤 3），可直接粘这条：")
+    globs_hint = paths or "<glob[,glob]>"
     print(
         "          python scripts/check_coordination_claims.py claim"
-        f' --worktree "{str(wt).replace(chr(92), "/")}" --paths "<glob[,glob]>"'
+        f' --worktree "{str(wt).replace(chr(92), "/")}" --paths "{globs_hint}"'
         f' --agent {agent or "<你的会话名>"} --intent "<一句话意图>"'
     )
     return 0
@@ -625,6 +765,12 @@ def self_test() -> int:
             split_expired(f"# 注释\n{good}\n{expired}\n{six}\n", now),
             (["# 注释", good, six], [expired]),
         ),
+        ("path_matches 命中 docs/**", path_matches("docs/a/b.md", "docs/**"), True),
+        ("path_matches 不误命中", path_matches("web/x.ts", "docs/**"), False),
+        ("path_matches 逗号分隔多个 glob", path_matches("scripts/x.py", "docs/**,scripts/*.py"), True),
+        ("classify_overlap 新鲜 -> stop", classify_overlap(0.5, 4), "stop"),
+        ("classify_overlap 读不到 mtime -> stop（宁可停手）", classify_overlap(-1.0, 4), "stop"),
+        ("classify_overlap 陈旧 -> warn（遗留脏树不拦人）", classify_overlap(50.0, 4), "warn"),
     ]
     for name, got, want in pure_cases:
         if got != want:
@@ -662,9 +808,18 @@ if __name__ == "__main__":
         raise SystemExit(cmd_list(now))
     if cmd == "preflight":
         if not wt_flag:
-            print("用法：preflight --worktree <路径> [--agent <名>]")
+            print(
+                "用法：preflight --worktree <路径> [--agent <名>] "
+                "[--paths <glob[,glob]>] [--stale-hours 4]"
+            )
             raise SystemExit(2)
-        raise SystemExit(cmd_preflight(Path(wt_flag), agent, now))
+        raw_hours = _flag(argv, "--stale-hours")
+        try:
+            fresh = float(raw_hours) if raw_hours else 4.0
+        except ValueError:
+            print(f"用法：--stale-hours 必须是数字，实得 {raw_hours}")
+            raise SystemExit(2)
+        raise SystemExit(cmd_preflight(Path(wt_flag), agent, now, _flag(argv, "--paths"), fresh))
     if cmd == "claim":
         paths = _flag(argv, "--paths")
         if not wt_flag or not paths:
