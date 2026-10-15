@@ -104,9 +104,6 @@ components/AttachmentPreviewModal.tsx  jsx-a11y/no-static-element-interactions  
 components/board-parts.tsx  jsx-a11y/control-has-associated-label  1
 components/calendar/CalendarDay.tsx  jsx-a11y/click-events-have-key-events  1
 components/calendar/CalendarDay.tsx  jsx-a11y/no-static-element-interactions  1
-components/calendar/CalendarEventDialog.tsx  jsx-a11y/click-events-have-key-events  2
-components/calendar/CalendarEventDialog.tsx  jsx-a11y/control-has-associated-label  7
-components/calendar/CalendarEventDialog.tsx  jsx-a11y/no-static-element-interactions  2
 components/calendar/CalendarMonth.tsx  jsx-a11y/click-events-have-key-events  4
 components/calendar/CalendarMonth.tsx  jsx-a11y/no-static-element-interactions  4
 components/calendar/CalendarWeek.tsx  jsx-a11y/click-events-have-key-events  2
@@ -129,7 +126,6 @@ components/dashboard/WidgetConfigPanel.tsx  jsx-a11y/click-events-have-key-event
 components/dashboard/WidgetConfigPanel.tsx  jsx-a11y/control-has-associated-label  1
 components/dashboard/WidgetConfigPanel.tsx  jsx-a11y/no-static-element-interactions  1
 components/database/DatabaseEditor.tsx  jsx-a11y/no-noninteractive-element-to-interactive-role  1
-components/database/FieldControls.tsx  jsx-a11y/control-has-associated-label  10
 components/database/RelationField.tsx  jsx-a11y/control-has-associated-label  1
 components/database/TableView.tsx  jsx-a11y/click-events-have-key-events  2
 components/database/TableView.tsx  jsx-a11y/mouse-events-have-key-events  2
@@ -137,10 +133,6 @@ components/database/TableView.tsx  jsx-a11y/no-static-element-interactions  3
 components/doc/ShareDialog.tsx  jsx-a11y/click-events-have-key-events  1
 components/doc/ShareDialog.tsx  jsx-a11y/no-noninteractive-element-interactions  1
 components/DocumentComments.tsx  jsx-a11y/control-has-associated-label  6
-components/DocumentEditor.tsx  jsx-a11y/click-events-have-key-events  2
-components/DocumentEditor.tsx  jsx-a11y/control-has-associated-label  9
-components/DocumentEditor.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/DocumentEditor.tsx  jsx-a11y/no-static-element-interactions  1
 components/DocumentListView.tsx  jsx-a11y/click-events-have-key-events  2
 components/DocumentListView.tsx  jsx-a11y/control-has-associated-label  2
 components/DocumentListView.tsx  jsx-a11y/label-has-associated-control  1

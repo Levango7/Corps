@@ -211,7 +211,7 @@ function useClickOutside<T extends HTMLElement>(onClose: () => void) {
 }
 
 // ─── 1. text ────────────────────────────────────────────────────────────────
-function TextControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function TextControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const str = typeof value === "string" ? value : "";
   if (readOnly) {
@@ -222,13 +222,14 @@ function TextControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
       type="text"
       className={inputClass}
       value={str}
+      aria-label={field.name}
       onChange={(e) => onChange(e.target.value)}
     />
   );
 }
 
 // ─── 2. number ──────────────────────────────────────────────────────────────
-function NumberControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function NumberControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const num = typeof value === "number" ? value : null;
   if (readOnly) {
@@ -243,6 +244,7 @@ function NumberControl({ value, onChange, readOnly }: FieldControlProps): ReactE
       type="number"
       className={inputClass}
       value={num ?? ""}
+      aria-label={field.name}
       onChange={(e) => {
         const v = e.target.value;
         onChange(v === "" ? null : Number(v));
@@ -472,6 +474,7 @@ function DateControl({ field, value, onChange, readOnly }: FieldControlProps): R
           type="date"
           className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[length:var(--text-sm)] text-[var(--fg)]"
           value={start}
+          aria-label={t("rangeStart", { field: field.name })}
           onChange={(e) => onChange({ start: e.target.value, end: end || undefined })}
         />
         <span className="text-[var(--meta)] text-[length:var(--text-sm)]">~</span>
@@ -479,6 +482,7 @@ function DateControl({ field, value, onChange, readOnly }: FieldControlProps): R
           type="date"
           className="flex-1 min-w-0 bg-transparent border-0 outline-none text-[length:var(--text-sm)] text-[var(--fg)]"
           value={end}
+          aria-label={t("rangeEnd", { field: field.name })}
           onChange={(e) =>
             onChange({
               start,
@@ -495,13 +499,14 @@ function DateControl({ field, value, onChange, readOnly }: FieldControlProps): R
       type="date"
       className={inputClass}
       value={start}
+      aria-label={field.name}
       onChange={(e) => onChange(e.target.value)}
     />
   );
 }
 
 // ─── 6. checkbox ────────────────────────────────────────────────────────────
-function CheckboxControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function CheckboxControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const checked = value === true;
   return (
     <div className="w-full h-full flex items-center justify-center">
@@ -510,6 +515,7 @@ function CheckboxControl({ value, onChange, readOnly }: FieldControlProps): Reac
         className="w-4 h-4 accent-[var(--accent)] cursor-pointer"
         checked={checked}
         disabled={readOnly}
+        aria-label={field.name}
         onChange={(e) => onChange(e.target.checked)}
       />
     </div>
@@ -517,7 +523,7 @@ function CheckboxControl({ value, onChange, readOnly }: FieldControlProps): Reac
 }
 
 // ─── 7. user ────────────────────────────────────────────────────────────────
-function UserControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function UserControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const userId = typeof value === "string" ? value : "";
   if (readOnly) {
@@ -529,13 +535,14 @@ function UserControl({ value, onChange, readOnly }: FieldControlProps): ReactEle
       className={inputClass}
       value={userId}
       placeholder={t("userIdPlaceholder")}
+      aria-label={field.name}
       onChange={(e) => onChange(e.target.value)}
     />
   );
 }
 
 // ─── 8. url ─────────────────────────────────────────────────────────────────
-function UrlControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function UrlControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const url = typeof value === "string" ? value : "";
   if (readOnly) {
@@ -558,13 +565,14 @@ function UrlControl({ value, onChange, readOnly }: FieldControlProps): ReactElem
       className={inputClass}
       value={url}
       placeholder={t("urlPlaceholder")}
+      aria-label={field.name}
       onChange={(e) => onChange(e.target.value)}
     />
   );
 }
 
 // ─── 9. email ───────────────────────────────────────────────────────────────
-function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function EmailControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const email = typeof value === "string" ? value : "";
   if (readOnly) {
@@ -576,6 +584,7 @@ function EmailControl({ value, onChange, readOnly }: FieldControlProps): ReactEl
       className={inputClass}
       value={email}
       placeholder={t("emailPlaceholder")}
+      aria-label={field.name}
       onChange={(e) => onChange(e.target.value)}
     />
   );
@@ -590,7 +599,7 @@ function FormulaControl({ value }: FieldControlProps): ReactElement {
 }
 
 // ─── 11. relation ───────────────────────────────────────────────────────────
-function RelationControl({ value, onChange, readOnly }: FieldControlProps): ReactElement {
+function RelationControl({ field, value, onChange, readOnly }: FieldControlProps): ReactElement {
   const t = useTranslations("database.fieldControls");
   const ids: string[] = Array.isArray(value)
     ? value.filter((v): v is string => typeof v === "string")
@@ -618,6 +627,7 @@ function RelationControl({ value, onChange, readOnly }: FieldControlProps): Reac
       className={inputClass}
       value={text}
       placeholder={t("relationIdPlaceholder")}
+      aria-label={field.name}
       onChange={(e) => {
         setText(e.target.value);
         const newIds = e.target.value
