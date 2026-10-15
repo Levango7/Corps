@@ -338,6 +338,7 @@ export function DocumentVersionHistory({
             value={createMessage}
             onChange={(e) => setCreateMessage(e.target.value)}
             placeholder={t("versionMessagePlaceholder")}
+            aria-label={t("versionMessagePlaceholder")}
             disabled={busy}
             className="flex-1 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-[var(--focus-ring)] placeholder:text-[var(--meta)]"
           />
@@ -484,7 +485,18 @@ function VersionItem({
           isSelected ? "bg-[var(--accent-soft)]" : ""
         }`}
         onClick={compareMode ? onCompareSelect : undefined}
+        onKeyDown={
+          compareMode
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onCompareSelect();
+                }
+              }
+            : undefined
+        }
         role={compareMode ? "button" : undefined}
+        tabIndex={compareMode ? 0 : undefined}
       >
         {/* 版本号 + 时间 */}
         <div className="flex items-center justify-between">
@@ -561,16 +573,24 @@ function VersionContentModal({
   return (
     <div
       className="fixed inset-0 z-[calc(var(--z-modal)+1)] flex items-center justify-center bg-[var(--bg)]/80 p-[var(--space-4)]"
-      onClick={onClose}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="w-full max-w-2xl max-h-[80vh] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="document-version-content-title"
       >
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">
           <div>
-            <h4 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+            <h4
+              id="document-version-content-title"
+              className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+            >
               {t("versionViewTitle", { version: version.version })}
             </h4>
             <p className="mt-0.5 text-[length:var(--text-xs)] text-[var(--meta)]">
@@ -614,16 +634,24 @@ function VersionDiffModal({
   return (
     <div
       className="fixed inset-0 z-[calc(var(--z-modal)+1)] flex items-center justify-center bg-[var(--bg)]/80 p-[var(--space-4)]"
-      onClick={onClose}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onClose();
+      }}
     >
       <div
         className="w-full max-w-3xl max-h-[80vh] rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)] flex flex-col"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="document-version-diff-title"
       >
         {/* 头部 */}
         <div className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-4)] py-[var(--space-3)]">
           <div>
-            <h4 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+            <h4
+              id="document-version-diff-title"
+              className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+            >
               {t("versionCompareTitle", { from: diff.from.version, to: diff.to.version })}
             </h4>
             {/* 统计 */}
@@ -735,14 +763,22 @@ function RollbackConfirmDialog({
   return (
     <div
       className="fixed inset-0 z-[calc(var(--z-modal)+1)] flex items-center justify-center bg-[var(--bg)]/80 p-[var(--space-4)]"
-      onClick={onCancel}
+      role="presentation"
+      onClick={(e) => {
+        if (e.target === e.currentTarget) onCancel();
+      }}
     >
       <div
         className="w-full max-w-md rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)]"
-        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="document-version-rollback-title"
       >
         <div className="px-[var(--space-4)] py-[var(--space-3)] border-b border-[var(--border)]">
-          <h4 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+          <h4
+            id="document-version-rollback-title"
+            className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+          >
             {t("versionRollbackTitle")}
           </h4>
         </div>
