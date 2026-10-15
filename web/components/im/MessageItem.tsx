@@ -492,6 +492,7 @@ function MessageItemImpl({
                 onKeyDown={handleEditKeyDown}
                 rows={Math.min(5, editBody.split("\n").length)}
                 autoFocus
+                aria-label={t("editMessage")}
                 className="w-full px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-md)] border border-[var(--accent)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none resize-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               />
               <div
@@ -635,16 +636,23 @@ function MessageItemImpl({
       {showRevokeConfirm && (
         <div
           className="fixed inset-0 z-[var(--z-modal)] flex items-center justify-center bg-[var(--overlay)] p-[var(--space-4)]"
-          role="dialog"
-          aria-modal="true"
-          aria-label={tIm("confirmRevoke")}
-          onClick={() => setShowRevokeConfirm(false)}
+          role="presentation"
+          onClick={(e) => {
+            // 仅遮罩区域点击关闭（鼠标便捷操作；键盘用户用取消/确认按钮）
+            if (e.target !== e.currentTarget) return;
+            setShowRevokeConfirm(false);
+          }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="msg-revoke-confirm-title"
             className="w-full max-w-sm rounded-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] p-[var(--space-5)]"
-            onClick={(e) => e.stopPropagation()}
           >
-            <h3 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]">
+            <h3
+              id="msg-revoke-confirm-title"
+              className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] mb-[var(--space-2)]"
+            >
               {tIm("confirmRevoke")}
             </h3>
             <div className="flex items-center justify-end gap-[var(--space-2)] mt-[var(--space-4)]">
@@ -671,14 +679,18 @@ function MessageItemImpl({
       {showMobileMenu && (
         <div
           className="fixed inset-0 z-[var(--z-modal)] flex items-end justify-center bg-[var(--overlay)]"
-          role="dialog"
-          aria-modal="true"
-          aria-label={t("moreActions")}
-          onClick={() => setShowMobileMenu(false)}
+          role="presentation"
+          onClick={(e) => {
+            // 仅遮罩区域点击关闭（鼠标便捷操作；键盘用户用取消按钮）
+            if (e.target !== e.currentTarget) return;
+            setShowMobileMenu(false);
+          }}
         >
           <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={t("moreActions")}
             className="w-full max-w-sm rounded-t-[var(--radius-lg)] bg-[var(--surface)] border border-[var(--border)] shadow-[var(--elev-lg)] p-[var(--space-3)] pb-safe"
-            onClick={(e) => e.stopPropagation()}
           >
             {/* 操作选项 */}
             <div className="flex flex-col gap-[var(--space-1)]">

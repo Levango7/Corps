@@ -182,17 +182,25 @@ function CreateContactDialog({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
+      role="presentation"
       onClick={(e) => {
+        // 仅遮罩区域点击关闭（鼠标便捷操作；键盘用户用 Esc / 关闭按钮）
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="cc-dialog-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+          <h2
+            id="cc-dialog-title"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+          >
             {t("create")}
           </h2>
           <button
@@ -218,6 +226,7 @@ function CreateContactDialog({
               maxLength={100}
               required
               placeholder={t("name")}
+              aria-label={t("name")}
               className={`${fieldControl} h-10`}
             />
           </div>
@@ -233,6 +242,7 @@ function CreateContactDialog({
                 value={form.email}
                 onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))}
                 maxLength={255}
+                aria-label={t("email")}
                 className={fieldControl}
               />
             </div>
@@ -245,6 +255,7 @@ function CreateContactDialog({
                 value={form.phone}
                 onChange={(e) => setForm((f) => ({ ...f, phone: e.target.value }))}
                 maxLength={50}
+                aria-label={t("phone")}
                 className={fieldControl}
               />
             </div>
@@ -260,6 +271,7 @@ function CreateContactDialog({
                 value={form.department}
                 onChange={(e) => setForm((f) => ({ ...f, department: e.target.value }))}
                 maxLength={100}
+                aria-label={t("department")}
                 className={fieldControl}
               />
             </div>
@@ -272,6 +284,7 @@ function CreateContactDialog({
                 value={form.position}
                 onChange={(e) => setForm((f) => ({ ...f, position: e.target.value }))}
                 maxLength={100}
+                aria-label={t("position")}
                 className={fieldControl}
               />
             </div>
@@ -305,6 +318,7 @@ function CreateContactDialog({
               value={form.notes}
               onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))}
               rows={3}
+              aria-label={t("notes")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
           </div>

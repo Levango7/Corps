@@ -129,17 +129,25 @@ export default function KeyResultEditor({
 
   return (
     <div
-      role="dialog"
-      aria-modal="true"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
+      role="presentation"
       onClick={(e) => {
+        // 仅遮罩区域点击关闭（鼠标便捷操作；键盘用户用 Esc / 关闭按钮）
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="kr-editor-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
-          <h2 className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
+          <h2
+            id="kr-editor-title"
+            className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)]"
+          >
             {kr ? t("edit") : t("addKeyResult")}
           </h2>
           <button
@@ -163,6 +171,7 @@ export default function KeyResultEditor({
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
+              aria-label={t("title_")}
               className={`${fieldControl} h-10`}
             />
           </div>
@@ -178,6 +187,7 @@ export default function KeyResultEditor({
                 step="any"
                 value={targetValue}
                 onChange={(e) => setTargetValue(e.target.value)}
+                aria-label={t("targetValue")}
                 className={fieldControl}
               />
             </div>
@@ -191,6 +201,7 @@ export default function KeyResultEditor({
                 step="any"
                 value={currentValue}
                 onChange={(e) => setCurrentValue(e.target.value)}
+                aria-label={t("currentValue")}
                 className={fieldControl}
               />
             </div>
@@ -206,6 +217,7 @@ export default function KeyResultEditor({
                 value={unit}
                 onChange={(e) => setUnit(e.target.value)}
                 maxLength={20}
+                aria-label={t("unit")}
                 className={fieldControl}
               />
             </div>
@@ -220,6 +232,7 @@ export default function KeyResultEditor({
                 min="0"
                 value={weight}
                 onChange={(e) => setWeight(e.target.value)}
+                aria-label={t("weight")}
                 className={fieldControl}
               />
             </div>
@@ -254,6 +267,7 @@ export default function KeyResultEditor({
                 type="date"
                 value={dueDate}
                 onChange={(e) => setDueDate(e.target.value)}
+                aria-label={t("dueDate")}
                 className={fieldControl}
               />
             </div>
