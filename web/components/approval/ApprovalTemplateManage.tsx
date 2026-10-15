@@ -387,17 +387,21 @@ function TemplateEditDialog({
   const isEdit = template !== null;
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational，对话框语义下移到内层内容区
     <div
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="template-edit-title"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="template-edit-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
             id="template-edit-title"
@@ -427,6 +431,8 @@ function TemplateEditDialog({
               value={name}
               onChange={(e) => setName(e.target.value)}
               maxLength={100}
+              // control-has-associated-label 看不见 <label htmlFor>，故显式补 aria-label
+              aria-label={t("templateName")}
               className={`${fieldControl} h-10`}
               aria-required="true"
             />
@@ -443,6 +449,7 @@ function TemplateEditDialog({
               onChange={(e) => setDescription(e.target.value)}
               rows={2}
               maxLength={500}
+              aria-label={t("templateDesc")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
           </div>
@@ -497,6 +504,7 @@ function TemplateEditDialog({
                       onChange={(e) => updateNode(node.tempId, "name", e.target.value)}
                       maxLength={50}
                       placeholder={t("nodeName")}
+                      aria-label={`${t("nodeName")} ${idx + 1}`}
                       className={fieldControl}
                     />
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -509,6 +517,7 @@ function TemplateEditDialog({
                           onChange={(e) => updateNode(node.tempId, "approverRole", e.target.value)}
                           maxLength={50}
                           placeholder={t("approverRole")}
+                          aria-label={`${t("approverRole")} ${idx + 1}`}
                           className={fieldControl}
                         />
                       </div>

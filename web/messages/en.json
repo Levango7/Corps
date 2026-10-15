@@ -1628,6 +1628,7 @@
     "commentAnchorPlaceholder": "1.2.0",
     "commentAnchorTextPlaceholder": "Selected text",
     "commentBodyPlaceholder": "Write a comment…",
+    "commentEditBody": "Edit comment",
     "commentReplyPlaceholder": "Write a reply…",
     "commentReply": "Reply",
     "commentResolve": "Resolve",

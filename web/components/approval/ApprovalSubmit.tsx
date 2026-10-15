@@ -206,18 +206,22 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
   }
 
   return (
+    // 遮罩层 / 内容层拆开：遮罩转 presentational，对话框语义下移到内层内容区
     <div
       ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="approval-submit-title"
+      role="presentation"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
       onClick={(e) => {
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="approval-submit-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
             id="approval-submit-title"
@@ -315,6 +319,8 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
               placeholder={t("title")}
+              // control-has-associated-label 看不见 <label htmlFor>，故显式补 aria-label
+              aria-label={t("title")}
               className={`${fieldControl} h-10`}
               aria-required="true"
             />
@@ -332,6 +338,7 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
               rows={3}
               maxLength={2000}
               placeholder={t("description")}
+              aria-label={t("description")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
           </div>
@@ -347,6 +354,7 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
                     onChange={(e) => updateContentField(idx, "key", e.target.value)}
                     maxLength={100}
                     placeholder={t("contentKeyPlaceholder")}
+                    aria-label={`${t("contentKeyPlaceholder")} ${idx + 1}`}
                     className={`${fieldControl} flex-1`}
                   />
                   <input
@@ -354,6 +362,7 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
                     onChange={(e) => updateContentField(idx, "value", e.target.value)}
                     maxLength={500}
                     placeholder={t("contentValuePlaceholder")}
+                    aria-label={`${t("contentValuePlaceholder")} ${idx + 1}`}
                     className={`${fieldControl} flex-1`}
                   />
                   <button
