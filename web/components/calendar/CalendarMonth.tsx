@@ -124,7 +124,15 @@ export function CalendarMonth({
                 background: "var(--surface)",
                 border: "1px solid var(--border)",
               }}
+              role="button"
+              tabIndex={0}
               onClick={() => onDayClick(date)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onDayClick(date);
+                }
+              }}
             >
               {/* 日期标签 */}
               <div className="flex flex-col items-center shrink-0 w-12">
@@ -157,9 +165,18 @@ export function CalendarMonth({
                         background: `color-mix(in srgb, ${getEventColor(event)} 20%, var(--surface))`,
                         color: getEventColor(event),
                       }}
+                      role="button"
+                      tabIndex={0}
                       onClick={(e) => {
                         e.stopPropagation();
                         onEventClick(event);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" || e.key === " ") {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          onEventClick(event);
+                        }
                       }}
                     >
                       {isTaskDeadline(event) && <CheckCircle2 size={12} className="shrink-0" />}
@@ -196,7 +213,15 @@ export function CalendarMonth({
               key={i}
               className="p-1 min-h-[80px] flex flex-col gap-1 cursor-pointer overflow-hidden"
               style={{ background: "var(--surface)" }}
+              role="button"
+              tabIndex={0}
               onClick={() => onDayClick(date)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onDayClick(date);
+                }
+              }}
             >
               <span
                 className="text-[length:var(--text-sm)] w-6 h-6 flex items-center justify-center rounded-full"
@@ -216,9 +241,18 @@ export function CalendarMonth({
                     background: `color-mix(in srgb, ${getEventColor(event)} 20%, var(--surface))`,
                     color: getEventColor(event),
                   }}
+                  role="button"
+                  tabIndex={0}
                   onClick={(e) => {
                     e.stopPropagation();
                     onEventClick(event);
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      onEventClick(event);
+                    }
                   }}
                 >
                   {isTaskDeadline(event) && <CheckCircle2 size={10} className="shrink-0" />}

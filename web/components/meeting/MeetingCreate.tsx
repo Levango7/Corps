@@ -184,16 +184,20 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
   return (
     <div
       ref={dialogRef}
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="meeting-create-title"
       className="fixed inset-0 z-[var(--z-modal)] flex items-start justify-center p-4 sm:p-8 overflow-y-auto bg-[var(--overlay)]"
+      role="presentation"
       onClick={(e) => {
+        // 仅遮罩区域点击关闭（鼠标便捷操作；键盘用户用 Esc / 关闭按钮）
         if (e.target !== e.currentTarget) return;
         onClose();
       }}
     >
-      <div className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="meeting-create-title"
+        className="w-full max-w-lg my-auto bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] shadow-[var(--elev-lg)]"
+      >
         {/* 头部 */}
         <header className="flex items-center justify-between px-5 py-3.5 border-b border-[var(--border-soft)]">
           <h2
@@ -227,6 +231,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
               onChange={(e) => setTitle(e.target.value)}
               maxLength={200}
               placeholder={t("meetingTitlePlaceholder")}
+              aria-label={t("meetingTitle")}
               className={`${fieldControl} h-10`}
               aria-required="true"
             />
@@ -244,6 +249,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
               rows={3}
               maxLength={500}
               placeholder={t("descriptionPlaceholder")}
+              aria-label={t("description")}
               className="w-full px-2.5 py-2 resize-y border border-[var(--border)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] placeholder:text-[var(--meta)]"
             />
           </div>
@@ -308,6 +314,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
                 min={minDateTime}
                 value={scheduledAt}
                 onChange={(e) => setScheduledAt(e.target.value)}
+                aria-label={t("scheduledAt")}
                 className={fieldControl}
                 aria-required="true"
               />
@@ -347,6 +354,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
                 value={maxParticipants}
                 onChange={(e) => setMaxParticipants(e.target.value)}
                 placeholder={t("maxParticipantsPlaceholder")}
+                aria-label={t("maxParticipants")}
                 className={fieldControl}
               />
             </div>
@@ -357,6 +365,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
                   type="checkbox"
                   checked={recordingEnabled}
                   onChange={(e) => setRecordingEnabled(e.target.checked)}
+                  aria-label={t("recordingEnabled")}
                   className="w-4 h-4 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)]"
                 />
                 <span className="text-[length:var(--text-sm)] text-[var(--fg-2)]">
@@ -378,6 +387,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
               onChange={(e) => setPassword(e.target.value)}
               maxLength={100}
               placeholder={t("passwordPlaceholder")}
+              aria-label={t("password")}
               className={fieldControl}
               autoComplete="new-password"
             />
@@ -395,6 +405,7 @@ export function MeetingCreate({ workspaceId, onClose, onCreated, meeting }: Meet
               onChange={(e) => setPasswordConfirm(e.target.value)}
               maxLength={100}
               placeholder={t("passwordConfirmPlaceholder")}
+              aria-label={t("passwordConfirm")}
               className={fieldControl}
               autoComplete="new-password"
             />
