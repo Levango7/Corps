@@ -575,17 +575,15 @@ export function KnowledgeBase({ wid, className }: KnowledgeBaseProps) {
 
       {/* 移动端：抽屉 */}
       {mobileOpen && (
-        <div
-          className="md:hidden fixed inset-0 z-[var(--z-modal)] flex"
-          onClick={() => setMobileOpen(false)}
-        >
-          {/* 遮罩 */}
-          <div className="absolute inset-0 bg-[var(--bg)]/80" />
-          {/* 抽屉面板 */}
+        <div className="md:hidden fixed inset-0 z-[var(--z-modal)] flex">
+          {/* 遮罩：点击空白处关闭（点击面板不会命中遮罩，无需 stopPropagation） */}
           <div
-            className="relative flex flex-col w-[var(--sidebar-w-mobile)] max-w-[85vw] h-full bg-[var(--surface)] shadow-[var(--elev-lg)]"
-            onClick={(e) => e.stopPropagation()}
-          >
+            role="presentation"
+            className="absolute inset-0 bg-[var(--bg)]/80"
+            onClick={() => setMobileOpen(false)}
+          />
+          {/* 抽屉面板 */}
+          <div className="relative flex flex-col w-[var(--sidebar-w-mobile)] max-w-[85vw] h-full bg-[var(--surface)] shadow-[var(--elev-lg)]">
             {/* 抽屉头部 */}
             <div className="flex items-center justify-between border-b border-[var(--border)] px-[var(--space-3)] py-[var(--space-2)]">
               <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
@@ -699,6 +697,14 @@ function SpaceNode({
           isDragOver ? "bg-[var(--surface-2)] ring-1 ring-[var(--accent)]" : ""
         }`}
         onClick={() => onToggle(space.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle(space.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
         onContextMenu={(e) => onContextMenu(e, "space", space.id, space.name, space.id, null)}
         onDragOver={(e) => onDragOver(e, space.id)}
         onDragLeave={onDragLeave}
@@ -726,6 +732,7 @@ function SpaceNode({
           <RenameInput
             defaultValue={space.name}
             busy={busy}
+            ariaLabel={t("rename")}
             onSubmit={(name) => onRename("space", space.id, name)}
             onCancel={() => onRename("space", space.id, space.name)}
           />
@@ -847,6 +854,14 @@ function FolderNode({
         onDragLeave={onDragLeave}
         onDrop={(e) => onDropOnFolder(e, spaceId, folder.id)}
         onClick={() => onToggle(folder.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onToggle(folder.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
         onContextMenu={(e) =>
           onContextMenu(e, "folder", folder.id, folder.name, spaceId, folder.parentId)
         }
@@ -870,6 +885,7 @@ function FolderNode({
           <RenameInput
             defaultValue={folder.name}
             busy={busy}
+            ariaLabel={t("rename")}
             onSubmit={(name) => onRename("folder", folder.id, name)}
             onCancel={() => onRename("folder", folder.id, folder.name)}
           />
@@ -945,6 +961,14 @@ function DocumentNode({ doc, spaceId, folderId, onNavigate, onDragStart }: Docum
           })
         }
         onClick={() => onNavigate(doc.id)}
+        onKeyDown={(e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            onNavigate(doc.id);
+          }
+        }}
+        role="button"
+        tabIndex={0}
       >
         {/* 占位对齐（无折叠箭头） */}
         <span className="shrink-0 w-[14px]" />
@@ -966,11 +990,14 @@ function DocumentNode({ doc, spaceId, folderId, onNavigate, onDragStart }: Docum
 function RenameInput({
   defaultValue,
   busy,
+  ariaLabel,
   onSubmit,
   onCancel,
 }: {
   defaultValue: string;
   busy: boolean;
+  /** 输入框的可访问名称（由调用方传 i18n 文案，避免硬编码） */
+  ariaLabel: string;
   onSubmit: (value: string) => void;
   onCancel: () => void;
 }) {
@@ -995,6 +1022,7 @@ function RenameInput({
         onChange={(e) => setValue(e.target.value)}
         onBlur={onCancel}
         disabled={busy}
+        aria-label={ariaLabel}
         className="flex-1 min-w-0 h-6 px-1 rounded-[var(--radius-sm)] border border-[var(--accent)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-[var(--focus-ring)]"
       />
       {busy && <Loader2 size={14} className="animate-spin text-[var(--muted)]" />}
@@ -1041,6 +1069,7 @@ function CreateInput({
         onBlur={onCancel}
         disabled={busy}
         placeholder={placeholder}
+        aria-label={placeholder}
         className="flex-1 h-7 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:border-[var(--accent)] focus-visible:ring-[var(--focus-ring)] placeholder:text-[var(--meta)]"
       />
       {busy ? (
@@ -1080,7 +1109,11 @@ function ContextMenu({
     <div
       className="fixed z-[var(--z-modal)] min-w-[160px] py-1 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] shadow-[var(--elev-lg)]"
       style={{ left: state.x, top: state.y }}
+      role="menu"
+      tabIndex={-1}
+      // 键盘事件同样不上抛：菜单内方向键/回车交给菜单项，不应触发底下树行的开关
       onClick={(e) => e.stopPropagation()}
+      onKeyDown={(e) => e.stopPropagation()}
       onContextMenu={(e) => e.preventDefault()}
     >
       {/* 新建子文件夹 */}
