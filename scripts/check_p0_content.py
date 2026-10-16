@@ -489,7 +489,12 @@ def emit_baseline(root, path):
         total += subtotal
         for rel, n in entries:
             body.append("%s %s %d" % (rel, rule, n))
-    path.write_text("\n".join(header + body) + "\n", encoding="utf-8")
+    # newline="\n" 是必须的，不是洁癖：Windows 上默认文本模式会把 \n 转成 \r\n，
+    # 于是同事在 Windows 跑一次 --emit 就把整个基线改成 CRLF（79 行全变），
+    # 真实改动被埋在全文件 diff 里看不见——正是本仓 design-tokens.css 被 autocrlf
+    # 转成 CRLF、next build 报 CssSyntaxError 的同一类事故。仓库存的是 LF。
+    with path.open("w", encoding="utf-8", newline="\n") as fh:
+        fh.write("\n".join(header + body) + "\n")
     print("已重写基线：%d 个 (文件,规则) 组合 / %d 处违反（表头 %d 行，保留手写说明 %d 组）"
           % (len(counts), total, len(header), len(notes)))
     print("请人工核对上面的 diff 后再提交——基线即额度，登记=承认这笔技术债。")
@@ -752,6 +757,10 @@ def self_test():
              "2026-10-12 清零（PR #75）" in text),
             ("非规则的时间戳分隔行不被吞掉",
              "2026-10-13 某次收紧（非规则分组，是时间戳分隔行）" in text),
+            # Windows 默认文本模式会把 \n 写成 \r\n，导致整个基线被改成 CRLF、
+            # 真实改动埋在全文件 diff 里（design-tokens.css 曾被 autocrlf 这样坑过一次）。
+            ("写出的基线必须是 LF（Windows 上不许转 CRLF）",
+             b"\r\n" not in bp.read_bytes()),
             ("表头未被重复",
              text.count("# 表头一") == 1 and text.count("# 表头二") == 1),
             ("分组标题不重复",
