@@ -16,12 +16,35 @@
 # 任何往上/往下插一行都会让一批登记项错位成「新增」——那正是天天误叫的死法。
 #
 # 登记 ≠ 认可：每一条都是待还的技术债。修掉后跑 --emit 收紧，不要留着过年。
+#
+# 文件结构说明：本文件按 --emit 的规范形态组织（分组标题 -> 手写说明 -> 条目），
+# 这样 `git diff` 在每次 --emit 后只反映真实变化。手写说明会被 --emit 原样保留，
+# 改动说明请写在自己那一组里，不要插到组外。
+#
+# 2026-10-13 首次接入 CI（lint job）时锁定。本文件在 origin/main = a31b07db
+# （a11y 偿还第 4~7 批，#103~#106）上重新 --emit 定稿。与上一版（旧 main = 53395fc0，
+# 18 组合 / 114 处）相比，#103~#106 已消掉 7 个组合 / 39 处：
+#   pricing.ts P0-1 33（定价页 9 个 ✅，已改 lucide）、AiAnalysisDashboard P0-1 1、
+#   MeetingSummaryPanel P0-1 1、FieldControls P0-1 1、CalendarEventDialog P0-4 1、
+#   design-tokens.css P0-5 1、web/app/globals.css P0-5 1。
+# 换句话说：这 39 处当初是靠人眼一轮轮清出来的，现在由门禁接手——同类再出现即红。
 # ── P0-1 emoji 作功能图标（5 个文件 / 24 处）──
 # 2026-10-12 收紧：定价页 9 个 ✅（33 处转义字面量）、AiAnalysisDashboard ✕、
 # MeetingSummaryPanel 📅、FieldControls ✓ 已改为 lucide 描边图标（PR #75 / #76），
 # 对应条目全部归零删除 —— 这几条正是本门禁要防的同类，留着等于给自己留后门。
-# 余下 5 个文件是服务端 console 日志前缀与 seed 脚本日志，不产生 DOM 文本节点，
-# 属「合理硬约束」一类，待后续按需清理。
+#
+# 余下条目分两类，**不是同一类债，别混着看**：
+#   合理硬约束（4 个文件 / 23 处）：web/lib/chat-events.ts、web/lib/crypto.ts、
+#   web/lib/workspace-events.ts 的服务端 console 日志前缀（🔴 ⚠️ ℹ️）与
+#   web/prisma/seed.ts 的 seed 脚本日志。这些字符串不渲染成 DOM 文本节点，
+#   只出现在服务器日志里，换成 lucide 反而没法表达"严重/警告/信息"的分级。
+#   待清理，按需处理即可。
+#   真实违反（1 个文件 / 1 处）：web/components/workflow/WorkflowExecutionList.tsx:130
+#   的关闭按钮图标写成 `{"\u2715"}`（✕）——**会渲染进 DOM**，且同一文件里相邻的
+#   Play / Loader2 / AlertCircle 都规规矩矩用了 lucide，就它一个是字符。
+#   修法一行：删掉 `{"\u2715"}`，换成 `<X size={14} />`（lucide-react）。
+#   这条当初连人眼都漏了：写成转义序列，肉眼扫不出是 ✕；静态扫描器第一版也只匹配
+#   字面字符，所以也是漏的。正是为了抓住它，检测器才补上了 \uXXXX / \u{XXXXXX} 解码。
 web/components/workflow/WorkflowExecutionList.tsx P0-1 1
 web/lib/chat-events.ts P0-1 3
 web/lib/crypto.ts P0-1 1
@@ -31,6 +54,21 @@ web/prisma/seed.ts P0-1 16
 # 2026-10-12 收紧：CalendarEventDialog 的 placeholder="#3b82f6" 已改 "#RRGGBB"（PR #76）
 # ——实测该处是 <input type="text">，placeholder 是纯文本 HTML 属性、var() 不生效，
 # 而 #3b82f6 也不是品牌色（--accent 是 #4263eb），无等价 token 可换。
+#
+# 余下 51 处按"能不能用 var()"分四类，全部实测确认过（不是推测）：
+#   邮件 HTML 模板（3 个文件 / 32 处）：web/lib/email.ts 22、web/lib/ai/push-email.ts 9、
+#     web/lib/notification/offline-push.ts 1。邮件客户端（Outlook/Gmail 系）会剥掉或
+#     无视 CSS 自定义属性，var() 在这里不生效——属合理硬约束，真要清理只能整模板重写。
+#   批量导出 HTML/PDF（1 个文件 / 13 处）：
+#     web/app/api/v1/workspaces/[wid]/documents/batch-export/route.ts。导出物是脱离
+#     本站 CSS 的独立文档，引不到 design token，同理属合理硬约束。
+#   PWA theme-color（1 个文件 / 2 处）：web/app/[locale]/layout.tsx 的
+#     <meta name="theme-color">，color 是纯 HTML 属性，var() 不生效；两个值分别对应
+#     浅色/深色的 --p-accent（#4263EB / #4973D1），已按注释标注来源。
+#   协作光标调色板（1 个文件 / 4 处）：web/components/CollaborationProvider.tsx 的
+#     --cursor-purple / --cursor-pink / --cursor-teal / --cursor-orange。这是运行时
+#     按用户索引分配的光标色定义层（值即数据），不是产品用色；要收口得先有
+#     "协作者调色板"这个 token，属待设计项，不是待改项。
 web/app/[locale]/layout.tsx P0-4 2
 web/app/api/v1/workspaces/[wid]/documents/batch-export/route.ts P0-4 13
 web/components/CollaborationProvider.tsx P0-4 4
