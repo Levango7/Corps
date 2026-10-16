@@ -7,8 +7,9 @@ import { render, screen, cleanup } from "@testing-library/react";
  * 在线成员条的挂载契约。
  *
  * 背景（2026-10-06 实测）：`/api/v1/workspaces/{wid}/presence` 的 GET 与 POST 心跳
- * 早已实现，`components/OnlinePresence.tsx` 也写好了轮询与清理，但**全仓没有一处挂载**
- * ——它只被同样零挂载的 CollaborationProvider 引用。属于"能力存在但没通电"。
+ * 早已实现，`components/OnlinePresence.tsx` 也写好了轮询与清理，但彼时**全仓没有一处
+ * 挂载**——能力存在但没通电。现已通电：`components/im/IMClient.tsx` 在多会话模式下
+ * 挂载它并传入当前工作区 id（单会话模式仍刻意不挂，见下方断言 2）。
  * 这里钉两件事：
  *  1. IM 页（多会话模式）确实挂上，且拿到的是当前工作区 id；
  *  2. 单会话模式（任务详情内嵌聊天）不挂 —— 那种场景不该替用户起 2 分钟心跳。

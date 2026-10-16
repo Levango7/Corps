@@ -302,8 +302,6 @@ components/BatchToolbar.tsx
 components/CalendarSyncBadge.tsx
 components/ChatPanel.tsx
 components/ClientLayout.tsx
-components/CollaborationCursor.tsx
-components/CollaborationProvider.tsx
 components/CommandPalette.tsx
 components/DocumentComments.tsx
 components/DocumentListView.tsx
@@ -320,7 +318,6 @@ components/Onboarding.tsx
 components/OnlinePresence.tsx
 components/PageTransition.tsx
 components/PinchToZoom.tsx
-components/PresenceIndicator.tsx
 components/PublicDocumentView.tsx
 components/QuickActionMenu.tsx
 components/RecycleBin.tsx
