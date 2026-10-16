@@ -50,12 +50,12 @@ web/lib/chat-events.ts P0-1 3
 web/lib/crypto.ts P0-1 1
 web/lib/workspace-events.ts P0-1 3
 web/prisma/seed.ts P0-1 16
-# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（6 个文件 / 51 处）──
+# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（5 个文件 / 47 处）──
 # 2026-10-12 收紧：CalendarEventDialog 的 placeholder="#3b82f6" 已改 "#RRGGBB"（PR #76）
 # ——实测该处是 <input type="text">，placeholder 是纯文本 HTML 属性、var() 不生效，
 # 而 #3b82f6 也不是品牌色（--accent 是 #4263eb），无等价 token 可换。
 #
-# 余下 51 处按"能不能用 var()"分四类，全部实测确认过（不是推测）：
+# 余下 47 处按"能不能用 var()"分三类，全部实测确认过（不是推测）：
 #   邮件 HTML 模板（3 个文件 / 32 处）：web/lib/email.ts 22、web/lib/ai/push-email.ts 9、
 #     web/lib/notification/offline-push.ts 1。邮件客户端（Outlook/Gmail 系）会剥掉或
 #     无视 CSS 自定义属性，var() 在这里不生效——属合理硬约束，真要清理只能整模板重写。
@@ -65,13 +65,10 @@ web/prisma/seed.ts P0-1 16
 #   PWA theme-color（1 个文件 / 2 处）：web/app/[locale]/layout.tsx 的
 #     <meta name="theme-color">，color 是纯 HTML 属性，var() 不生效；两个值分别对应
 #     浅色/深色的 --p-accent（#4263EB / #4973D1），已按注释标注来源。
-#   协作光标调色板（1 个文件 / 4 处）：web/components/CollaborationProvider.tsx 的
-#     --cursor-purple / --cursor-pink / --cursor-teal / --cursor-orange。这是运行时
-#     按用户索引分配的光标色定义层（值即数据），不是产品用色；要收口得先有
-#     "协作者调色板"这个 token，属待设计项，不是待改项。
+# 2026-10-16 摘除协同孤儿（PR 待定）：第四类"协作光标调色板"随
+#   web/components/CollaborationProvider.tsx 一并删除（-1 文件 / -4 处），该类现为零。
 web/app/[locale]/layout.tsx P0-4 2
 web/app/api/v1/workspaces/[wid]/documents/batch-export/route.ts P0-4 13
-web/components/CollaborationProvider.tsx P0-4 4
 web/lib/ai/push-email.ts P0-4 9
 web/lib/email.ts P0-4 22
 web/lib/notification/offline-push.ts P0-4 1
