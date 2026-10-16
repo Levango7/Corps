@@ -1,7 +1,7 @@
 # ARCHIVE-NOTE · 实时协同（CRDT）能力现状与复活前置条件
 
 > 状态：**保留但断开**（用户 2026-10-03 拍板走「保留离线编辑 + 版本历史」那一档）
-> 决策依据：ADR-013（协同降级）、ADR-019（版本回滚实现契约）
+> 决策依据：ADR-012（协同降级）、ADR-016（文档版本 compare/restore 实现契约）
 > 维护：本文件是「复活协同」的唯一前置检查项。改动本目录或挂载协同组件前，先读本文件。
 
 ---
@@ -32,7 +32,12 @@
 | `yjs` | ✅ `^13.6.33` |
 | `lib0` | ✅ `^0.2.118` |
 | `jsonwebtoken` | ✅ `9.0.3` |
-| `@prisma/client` | ✅ `7.10.0`（2026-10-10 随 PR 批次升 v7；本目录仍未接线，装饰配点同步适配） |
+| `@prisma/client` | ✅ `7.10.0`（2026-10-10 随 PR 批次升 v7；本目录仍未接线） |
+
+> **口径提示**：本仓 Prisma 已升 7.10.0（`web/package.json` + `web/Dockerfile:81`），但
+> `web/prisma/schema.prisma:51-53` 的 generator 仍是 v6 的 `prisma-client-js` 且无 `output` 字段
+> ——这是 Prisma 7 要求迁移的破坏性变更。另 `docs/decisions/README.md` 索引的 ADR-014 写
+> 「Prisma 7 本轮不启动」，与包实际版本不一致。**三处口径不一致，勿据本表推断 Prisma 迁移已完成。**
 | **`ws`** | ❌ **缺失** |
 | **`@types/ws`** | ❌ **缺失** |
 
@@ -51,11 +56,18 @@
 |---|---|---|
 | 文档编辑 | `RichTextEditor.tsx`（TipTap StarterKit） | ❌ |
 | 自动保存 | `DocumentEditor.tsx:463` `onBlur={() => save()}` | ❌ |
-| **离线编辑** | `CollaborationProvider` 内的 `y-indexeddb`（IndexedDB 本地持久化） | ❌ **纯浏览器侧** |
+| ~~离线编辑~~ | `CollaborationProvider` 内的 `y-indexeddb` | ❌ **未激活** |
 | 版本历史 | `DocumentVersionHistory.tsx` + `versions/*` 路由 | ❌ |
+| 离线页面可达 | `web/public/sw.js`（仅 `/dashboard` `/board` `/my-tasks` 三条核心路由） | ❌ |
 
-**关键点**：`y-indexeddb` 走 IndexedDB，是**纯浏览器侧**能力，**不需要 WebSocket 服务端**。
-所以「保留离线编辑」与「断开协同服务」不冲突 —— 这是本决策能成立的技术前提。
+**事实陈述**：`y-indexeddb` 确实是纯浏览器侧能力、不需要 WebSocket 服务端，但它的唯一消费者
+`CollaborationProvider` 全仓零挂载，因此该能力**从未激活**。当前实际保留的是
+「在线编辑 + 失焦保存 + 版本历史」，**不是**「离线编辑」。
+
+离线可达范围由 `web/public/sw.js` 决定：仅预缓存 `/dashboard` `/board` `/my-tasks` 三条核心路由，
+且明确**不缓存** `/api/` 与 `/w/{wid}/…`（该文件注释记录了两条实测事故：写完读不到、跨账号复用）。
+`DocumentEditor.tsx` 无离线兜底（`:463` 为 `onBlur={() => save()}`，失败即 catch）
+⇒ **断网时文档编辑无法保存**。此前对外表述的「保留离线编辑」与实际能力存在偏差，已报用户知悉。
 
 **断开 WS 连接后，能力边界（务必如实告知用户，不要含糊）：**
 
@@ -223,7 +235,7 @@ S2「正在重连」需要一个既非成功也非警告的色。
 | 静默兜底 localhost | `CollaborationProvider.tsx:206` |
 | offline 用 warn 呈现 | `PresenceIndicator.tsx:162-167` |
 | S1 三秒闪现现状 | `PresenceIndicator.tsx:122` `SYNCED_FLASH_MS = 3000`；`:184-196` |
-| 长离线阈值 7 天 | `CollaborationProvider.tsx:48` `OFFLINE_TOO_LONG_MS` |
-| 离线编辑不依赖服务端 | `CollaborationProvider` 内 `y-indexeddb`（IndexedDB 纯浏览器侧） |
+| 长离线阈值 7 天 | `CollaborationProvider.tsx:51` `OFFLINE_TOO_LONG_MS` |
+| 离线编辑**未激活** | `CollaborationProvider` 内 `y-indexeddb`（IndexedDB 纯浏览器侧，但 Provider 零挂载 ⇒ 从未运行）；实际离线范围见 `web/public/sw.js` 仅 3 条核心路由 |
 | `--info` 缺失 | `design/design-tokens.css:101-107` |
 | accent 为纯色（非渐变） | `design/design-tokens.css:21` `--p-accent: #4263EB` |
