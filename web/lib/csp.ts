@@ -6,10 +6,9 @@
  * `'unsafe-inline'`，该冗余会掩盖未来 nonce 注入失效的回归——生产环境移除。
  *
  * 生产收紧的安全前提（已全量核实）：
- *  - 无裸 <script>；全库仅 3 处 dangerouslySetInnerHTML，内容均为**模块级硬编码
- *    常量（零用户输入）**：app/global-error.tsx（主题初始化脚本）、
- *    components/CollaborationCursor.tsx 与 CollaborationProvider.tsx（光标样式）。
- *    三者的 nonce 依赖 Next.js 输出的 csp-nonce meta 经 React 传播至内联
+ *  - 无裸 <script>；全库仅 1 处 dangerouslySetInnerHTML，内容为**模块级硬编码
+ *    常量（零用户输入）**：app/global-error.tsx（主题初始化脚本）。
+ *    其 nonce 依赖 Next.js 输出的 csp-nonce meta 经 React 传播至内联
  *    style/script；若生产环境出现 CSP 拦截报错，应改为外部资源或显式传 nonce
  *    （见 docs/audit 审核报告的"待实测验证项"）；
  *  - Next.js 读取 middleware 设置的 x-nonce 头后，为其自身生成的内联

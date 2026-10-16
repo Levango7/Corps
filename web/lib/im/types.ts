@@ -114,7 +114,8 @@ export type ConnectionStatus = "connecting" | "connected" | "disconnected" | "er
  * 服务端 WebSocket 连接的最小抽象接口。
  *
  * 为什么不直接 import { WebSocket } from "ws"：
- *  本项目未将 `ws` 列为直接依赖（y-websocket 是前端库，使用浏览器原生 WebSocket）。
+ *  本项目未将 `ws` 列为直接依赖（IM 的双端都只用浏览器原生 WebSocket：
+ *  浏览器侧是原生全局对象，服务端侧由 custom server 注入 `ws` 实例而不在本仓声明）。
  *  定义此接口解耦服务端逻辑与具体 WebSocket 实现：
  *  - `ws` 库的 WebSocket 实例可通过适配器满足此接口（custom server 场景）。
  *  - 未来切换到其他 WebSocket 库（如 uWebSockets.js）只需提供适配器。
