@@ -74,6 +74,13 @@ CI 红灯，只会训练大家 --no-verify。收紧靠人周期性跑 --emit 复
     python scripts/check_p0_content.py --emit          # 人工核对后刷新基线
     python scripts/check_p0_content.py --self-test     # 注入式自检
     python scripts/check_p0_content.py --root <path>   # 指定仓库根（红线注入证明用）
+
+--emit 的基线保留规则（改这里前先读）：
+    基线文件按「分组标题 -> 手写说明 -> 条目」组织，--emit **只重写条目与统计行**，
+    每组下面的手写说明原样保留（见 _split_baseline_notes）。那些说明是这份文件
+    唯一可审计的部分——"哪一条为什么算合理硬约束、哪一次收紧消掉了什么"，
+    抹掉它们等于把基线变成一份没人敢问来源的额度表。清零的规则只要还留着说明，
+    该组就连同"0 个文件 / 0 处"一起保留，作为给后来人的历史记录。
 """
 import os
 import re
@@ -430,40 +437,61 @@ def load_baseline(path):
     return out
 
 
+def _split_baseline_notes(path):
+    """把既有基线拆成 (表头, {规则: [该规则分组下的手写说明行]})。
+
+    存在的理由：`--emit` 每跑一次就会重写整个文件，而分组标题与条目之间的
+    手写说明（谁在什么时候、因为哪条 PR 收紧了什么、为什么某处是合理硬约束）
+    是这份文件唯一可审计的部分——test-integrity 规范里"改基线必须解释得清"
+    指的就是它们。不保留的话，下一次 --emit 会把全部审计痕迹静默抹掉，
+    于是"基线为什么长这样"重新变成没人知道的事。
+    """
+    header, notes, rule = [], {}, None
+    for l in path.read_text(encoding="utf-8").splitlines():
+        if l.startswith("# ── "):
+            m = re.match(r"# ── ([A-Z0-9-]+) ", l)
+            if m and m.group(1) in RULES:
+                rule = m.group(1)
+                continue
+            # 看着像分组标题、其实不是（如 "# ── 2026-10-13 某次收紧 ──"）。
+            # 落到下面当普通注释处理，位置原样保留；否则一跑 --emit 就被静默吞掉，
+            # 而它是这份文件里少数几条"什么时候发生过什么"的时间戳。
+        if l.startswith("#"):
+            if rule is None:
+                header.append(l.rstrip())
+            else:
+                notes.setdefault(rule, []).append(l.rstrip())
+    return header, notes
+
+
 def emit_baseline(root, path):
     if not (root / "web").is_dir():
         print("--root 下没有 web/ 目录：%s（拒绝把基线写成空——那会悄悄拆掉门禁）" % root)
         return 1
     counts = scan(root)
-    header = []
+    header, notes = ([], {})
     if path.exists():
-        for l in path.read_text(encoding="utf-8").splitlines():
-            # 分组标题（"# ── P0-1 ... ──"）也是注释，但它属于**正文**：
-            # 不在这里收手，重复 --emit 时它会被当成表头吃进去再输出一遍，
-            # 于是每次刷新基线都多一行重复标题（当前基线文件里就有这个产物）。
-            if l.startswith("# ── "):
-                break
-            if l.startswith("#"):
-                header.append(l.rstrip())
-            else:
-                break
+        header, notes = _split_baseline_notes(path)
     if not header:
         header = DEFAULT_HEADER.splitlines()
     body = []
     total = 0
     for rule in RULES:
         entries = sorted((rel, n) for (rel, r), n in counts.items() if r == rule)
-        if not entries:
+        # 该规则既有条目、又有历史说明，就继续出这一组：清零的规则靠说明行留痕
+        # （"本类现在全仓为零"这句话本身就是要给后来人看的），条目全没了也不消失。
+        if not entries and rule not in notes:
             continue
         subtotal = sum(n for _, n in entries)
         body.append("# ── %s %s（%d 个文件 / %d 处）──"
                     % (rule, RULE_DESC[rule], len(entries), subtotal))
+        body.extend(notes.get(rule, []))
         total += subtotal
         for rel, n in entries:
             body.append("%s %s %d" % (rel, rule, n))
     path.write_text("\n".join(header + body) + "\n", encoding="utf-8")
-    print("已重写基线：%d 个 (文件,规则) 组合 / %d 处违反（表头 %d 行）"
-          % (len(counts), total, len(header)))
+    print("已重写基线：%d 个 (文件,规则) 组合 / %d 处违反（表头 %d 行，保留手写说明 %d 组）"
+          % (len(counts), total, len(header), len(notes)))
     print("请人工核对上面的 diff 后再提交——基线即额度，登记=承认这笔技术债。")
     return 0
 
@@ -685,6 +713,55 @@ def self_test():
             ok = True
         bad += 0 if ok else 1
         print("  [" + ("OK " if ok else "BAD") + "] 基线非法规则名必须报错退出")
+    finally:
+        shutil.rmtree(tmp, ignore_errors=True)
+
+    # --emit 必须保留分组下的手写说明（审计痕迹），且不得把分组标题吃进表头后重复输出。
+    # 不测这条，下一个人一跑 --emit 就把"为什么基线长这样"全抹掉，而基线本身看着
+    # 毫无变化——正是 test-integrity 规范里最危险的那类静默改动。
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        (tmp / "web" / "app").mkdir(parents=True)
+        (tmp / BASELINE_REL.rsplit("/", 1)[0]).mkdir(parents=True, exist_ok=True)
+        (tmp / "web" / "app" / "a.tsx").write_text(
+            'export const C = ["#abc123", "#def456"];\n', encoding="utf-8")
+        bp = tmp / BASELINE_REL
+        bp.write_text(
+            "# 表头一\n# 表头二\n"
+            "# ── 2026-10-13 某次收紧（非规则分组，是时间戳分隔行）──\n"
+            "# ── P0-4 硬编码色值（#rgb）（1 个文件 / 1 处）──\n"
+            "# 手写说明：这个 hex 是邮件客户端不认 var() 的硬约束。\n"
+            "# 2026-10-12 由 PR #76 收紧，别删。\n"
+            "web/app/a.tsx P0-4 1\n"
+            "# ── P0-5 禁用缓动（0 个文件 / 0 处）──\n"
+            "# 2026-10-12 清零（PR #75）：token 已删，任何新增直接判 NEW_P0_5。\n",
+            encoding="utf-8")
+        import contextlib
+        import io as _io
+        buf = _io.StringIO()
+        with contextlib.redirect_stdout(buf):  # 自检输出别被 emit 的提示打散
+            rc = emit_baseline(tmp, bp)
+        text = bp.read_text(encoding="utf-8")
+        ok = rc == 0
+        bad += 0 if ok else 1
+        print("  [" + ("OK " if ok else "BAD") + "] emit 成功退出")
+        checks = [
+            ("手写说明保留",
+             "手写说明：这个 hex 是邮件客户端不认 var() 的硬约束。" in text),
+            ("清零规则的历史说明也保留",
+             "2026-10-12 清零（PR #75）" in text),
+            ("非规则的时间戳分隔行不被吞掉",
+             "2026-10-13 某次收紧（非规则分组，是时间戳分隔行）" in text),
+            ("表头未被重复",
+             text.count("# 表头一") == 1 and text.count("# 表头二") == 1),
+            ("分组标题不重复",
+             text.count("# ── P0-4 ") == 1),
+            ("条数按实测刷新",
+             "web/app/a.tsx P0-4 2" in text),
+        ]
+        for label, cond in checks:
+            bad += 0 if cond else 1
+            print("  [" + ("OK " if cond else "BAD") + "] emit 保留审计痕迹: " + label)
     finally:
         shutil.rmtree(tmp, ignore_errors=True)
 
