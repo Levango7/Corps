@@ -65,7 +65,7 @@ web/prisma/seed.ts P0-1 16
 #   PWA theme-color（1 个文件 / 2 处）：web/app/[locale]/layout.tsx 的
 #     <meta name="theme-color">，color 是纯 HTML 属性，var() 不生效；两个值分别对应
 #     浅色/深色的 --p-accent（#4263EB / #4973D1），已按注释标注来源。
-# 2026-10-16 摘除协同孤儿（PR 待定）：第四类"协作光标调色板"随
+# 2026-10-16 摘除协同孤儿（ADR-017 / PR #109）：第四类"协作光标调色板"随
 #   web/components/CollaborationProvider.tsx 一并删除（-1 文件 / -4 处），该类现为零。
 web/app/[locale]/layout.tsx P0-4 2
 web/app/api/v1/workspaces/[wid]/documents/batch-export/route.ts P0-4 13
