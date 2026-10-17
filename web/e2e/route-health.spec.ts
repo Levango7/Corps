@@ -39,6 +39,10 @@ import { registerAndLogin } from "./helpers";
  * 路由清单由 web/app/[locale]/w/[wid]/ 下的 page.tsx 生成（剔除含 [ 的动态段）：
  *   find "web/app/[locale]/w/[wid]" -name page.tsx | grep -v "\[" | sort
  *
+ * 共两轮：默认视口（1280x720，三类断言全量）+ 375px 视口（横向溢出 + 错误边界）。
+ * 之所以要 375 那一轮：P1-3 顶栏溢出在 1280 下溢出 0px、375 下溢出 18px，
+ * 只跑默认视口的门禁对它完全失明。详情见第二个 test 的注释。
+ *
  * 挂在 e2e/ 下即自动进入 CI 的「E2E (production build)」job。
  */
 
@@ -143,5 +147,66 @@ test.describe.serial("路由健康门禁", () => {
         [...new Set(missingMessages)].slice(0, 10).join("\n")
       : "";
     expect([...new Set(missingMessages)], missMsg).toEqual([]);
+  });
+
+  /**
+   * 375px 视口：无横向溢出 + 无错误边界。
+   *
+   * ## 为什么单独一轮（2026-10-17 P1-3 的教训）
+   *
+   * 上面那轮跑在 Playwright 默认视口（playwright.config.ts 用
+   * `devices["Desktop Chrome"]` = 1280x720），**纯响应式缺陷在该宽度下完全不暴露**：
+   * 工作区顶栏右簇在 375px 下越界 17.5px（documentElement.scrollWidth=393 vs
+   * clientWidth=375，整页可被横向拖走 18px、左 hamburger 被推出屏），而 1280 下
+   * 溢出 0px —— 路由健康门禁跑完整整 36 条路由都没发现它。
+   *
+   * 判据用 `documentElement.scrollWidth === clientWidth`：
+   *   - DOM 级、无需等动画、不依赖具体元素 rect；
+   *   - 溢出即红，不受「元素有没有被挤扁」影响（挤扁不溢出但同样坏，那类问题
+   *     归布局专项，不在此门禁）。
+   *
+   * 刻意只跑静态路由（与上一轮同清单），且只断言溢出与错误边界两项 ——
+   * MISSING_MESSAGE / pageerror 与视口无关，已被上一轮覆盖。
+   */
+  test("375px 视口：无横向溢出 / 无错误边界（36 条静态路由）", async ({ page }) => {
+    const wid = await registerAndLogin(page, uniqueEmail());
+
+    await page.setViewportSize({ width: 375, height: 812 });
+
+    /** 横向溢出的路由 → 溢出像素数。 */
+    const overflows: { route: string; px: number }[] = [];
+    const crashed: string[] = [];
+    const routeErrorLogs: string[] = [];
+    page.on("console", (msg) => {
+      const t = msg.text();
+      if (t.includes("[route-error]")) routeErrorLogs.push(t.slice(0, 300));
+    });
+
+    for (const route of WORKSPACE_ROUTES) {
+      await page.goto("/w/" + wid + route, { waitUntil: "load" });
+      // 同上一轮：不能用 networkidle（心跳/轮询型页面永不可静默，会把 test timeout 吃光）
+      await page.waitForTimeout(1000);
+
+      const m = await page.evaluate(() => ({
+        scrollWidth: document.documentElement.scrollWidth,
+        clientWidth: document.documentElement.clientWidth,
+      }));
+      const px = m.scrollWidth - m.clientWidth;
+      if (px > 0) overflows.push({ route, px });
+
+      const hit = await page
+        .getByText(BOUNDARY_TEXT, { exact: true })
+        .first()
+        .isVisible()
+        .catch(() => false);
+      if (hit) crashed.push(route + "  <-  " + (routeErrorLogs.at(-1) ?? "(无 route-error 日志)"));
+    }
+
+    const of = overflows.map((o) => `${o.route}  (溢出 ${o.px}px)`);
+    expect(
+      of,
+      `以下路由在 375px 下横向溢出（scrollWidth > clientWidth）：` + of.join("\n"),
+    ).toEqual([]);
+    expect(crashed, `以下路由在 375px 下崩到错误边界：` + crashed.join("\n")).toEqual([]);
   });
 });

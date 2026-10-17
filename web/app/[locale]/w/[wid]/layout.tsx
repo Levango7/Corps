@@ -523,7 +523,7 @@ export default function WorkspaceLayout({
         </button>
 
         {/* 工作区切换器 */}
-        <div className="flex items-center gap-[var(--space-2)] relative" ref={switcherRef}>
+        <div className="flex items-center gap-[var(--space-2)] relative min-w-0" ref={switcherRef}>
           <Link
             href={`/w/${wid}`}
             className="text-[length:var(--text-md)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]"
@@ -664,7 +664,7 @@ export default function WorkspaceLayout({
         </div>
 
         {/* 搜索 */}
-        <div className="flex-1 flex items-center justify-center px-2">
+        <div className="flex-1 flex items-center justify-center px-2 min-w-0">
           <button
             onClick={() => setCmdOpen(true)}
             className="hidden md:flex items-center gap-[var(--space-2)] px-[var(--space-3)] h-9 border border-[var(--accent-ring)] rounded-[var(--radius-md)] bg-[var(--surface)] text-[var(--muted)] text-[length:var(--text-sm)] shadow-[var(--elev-sm)] hover:border-[var(--accent)] hover:text-[var(--fg)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] transition-colors duration-[var(--motion-fast)] w-[var(--search-w-sm)] lg:w-[var(--search-w-lg)]"
@@ -687,7 +687,7 @@ export default function WorkspaceLayout({
         </div>
 
         {/* 右侧：IM 未读徽标 → 通知 → 用户下拉（内含设置/语言/主题/退出） */}
-        <div className="flex items-center gap-[var(--space-1)] ml-auto">
+        <div className="flex items-center gap-[var(--space-1)] ml-auto shrink-0">
           <IMBadge workspaceId={wid} />
           {user ? (
             <UserMenu
