@@ -21,6 +21,26 @@
   **仍需 owner 处置**：变量本身要指向固定域名，或删除以诚实表达"当前无线上监控"——
   属部署拓扑，未替你改。取证与配方见 `docs/audit/SMOKE-MONITOR-TARGET-2026-10-17.md`。
 
+- **认领协议的两处"判据只活在一侧"**（`scripts/check_coordination_claims.py`，同一条 PR 顺带收）：
+  ① **写侧放过、读侧才炸**：`claim` 用 `_flag(argv, "--intent") or ""` 取意图，空串照样落盘并回显"已认领"，
+  而 `parse_claims` 把空意图判 `CLAIM_MALFORMED` ⇒ CI 的 Lint job 红（Lint 门住 Build/E2E/发布）。
+  **这条坏认领是我自己漏传 `--intent` 写进去的**（PR #113 首轮 Lint 红的真实红因，见
+  `docs/audit/SMOKE-MONITOR-TARGET-2026-10-17.md` §7.1）。修法：`claim` 要求非空 `--intent`，
+  缺失即 usage + `exit 2`（与既有 `--hours` 校验同形）。
+  ② **取不到表被当成"没人占用"（fail-open）**：`fetch_store` 取不到时 `text=None`，
+  `parse_claims` 只产出 errors、`claims` 是空数组，于是 `decide([]，干净)` 走到 `ok_free` —— 屏幕第一行是
+  `CLAIM_STORE_MISSING … 取不到就红，不静默放过`，最后一行却是`可进入：该 worktree 干净且无人认领`且 **退出码 0**，
+  而 `docs/COORDINATION.md` §6.3 要人拿这个退出码决定开不开工。本机一次 `git fetch` 抖动
+  （2026-10-17 12:36 实测连续 3 次）就足以让"读不到别人的认领"变成"没人占用"。
+  修法：`cmd_preflight` 在 `text is None` 时直接停手回 1；`cmd_list` 同样改为非 0（§6.3 也让人动手前先看它），
+  并打印"这不是「没人认领」，是**读不到表**"。
+  验证：`--self-test` 由 22 条增至 **28 条**，新增 6 条**接线**断言（桩换 `fetch_store` 跑真的
+  `cmd_list`/`cmd_preflight`，不联网、不写盘，每条配一格"表取得到 → 哨兵串必须不出现"的防恒真对照）。
+  两刀变异各自只打红对应那条：删 `cmd_preflight` 守卫 → 1 条 FAIL；`cmd_list` 改回 `return 0` → 1 条 FAIL。
+  一处诚实披露：preflight 的"退出码非 0"这一格**单独不承重**——worktree 脏时 `decide()` 也会回 1，
+  本机跑变异时正是被这格掩盖、只有哨兵格抓到 MUT；CI 的检出树是干净的才两格都咬得住，
+  因此把它们合成一条断言而不是留一条会假绿的。
+
 - **任务会话并发竞态产生的重复会话善后 + 数据库级唯一约束**：任务聊天 get-or-create 的竞态窗口
   （API 层已用 `pg_advisory_xact_lock` 收口）此前已落库的重复会话仍然存在，而读取侧
   `conversation.findFirst({ where: { taskId } })` 没有 `orderBy`，命中的会话与消息实际写入的

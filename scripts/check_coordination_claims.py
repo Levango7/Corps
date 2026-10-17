@@ -835,8 +835,9 @@ def self_test() -> int:
         ("cmd_list 表取不到 -> 打印「读不到表」", miss_list in out_list_broken, True),
         ("cmd_list 表取得到 -> 退出码 0", rc_list_ok == 0, True),
         ("cmd_list 表取得到 -> 不出现红因行（防恒真）", miss_list in out_list_ok, False),
-        ("cmd_preflight 表取不到 -> 退出码非 0（不再放行）", rc_pf_broken != 0, True),
-        ("cmd_preflight 表取不到 -> 打印停手行", miss_pf in out_pf_broken, True),
+        # 合成一条：退出码单独**不承重**——worktree 脏时 decide() 也会回 1（本机跑变异时被这格掩盖过，
+        # 只有哨兵格抓到 MUT），CI 的检出树是干净的才两格都咬得住。所以这里判"两条同时成立"。
+        ("cmd_preflight 表取不到 -> 停手且退出码非 0", rc_pf_broken != 0 and miss_pf in out_pf_broken, True),
         ("cmd_preflight 表取得到 -> 不出现停手行（防恒真）", miss_pf in out_pf_ok, False),
     ]
     for name, got, want in wire_cases:
