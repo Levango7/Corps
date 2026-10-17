@@ -6,8 +6,14 @@ import { buildCsp } from "@/lib/csp";
  *
  * 覆盖 lib/csp.ts 的 buildCsp(nonce, isProd)：
  *  - 生产：script-src/style-src 均为纯 nonce（无 unsafe-inline），含 style-src-attr
- *  - 开发：保留 unsafe-inline（HMR/dev 内联脚本兼容）
+ *  - 开发：script-src/style-src 保留 unsafe-inline（HMR/dev 内联脚本兼容），
+ *          **并同样含 style-src-attr**（放行 React 内联 style 属性的唯一有效手段）
  *  - 其余指令两环境一致且不被破坏
+ *
+ * 关于"字符串断言 vs 行为断言"：script-src/style-src 主指令里的 'unsafe-inline'
+ * 在 nonce 存在时会被 CSP3 忽略（lib/csp.ts 第 5-6 行），因此对它的存在断言只记录
+ * 「主指令保留了该 token」这一决定，并不能证明浏览器会采纳。真正表达"dev 内联样式
+ * 属性被放行"这一行为的契约，落在 style-src-attr 的断言上。
  */
 
 const NONCE = "dGVzdC1ub25jZQ==";
@@ -37,6 +43,7 @@ describe("buildCsp 生产环境（isProd=true）", () => {
   });
 
   it("新增 style-src-attr 'unsafe-inline' 单独放行内联样式属性", () => {
+    // 生产防回归：本条不得被改坏（dev 侧新增同名断言见下一个 describe）
     const d = directiveOf(csp, "style-src-attr");
     expect(d).toBe("style-src-attr 'unsafe-inline'");
   });
@@ -65,6 +72,9 @@ describe("buildCsp 开发环境（isProd=false）", () => {
   it("script-src 保留 unsafe-inline + unsafe-eval（HMR 兼容 + React dev eval 调用）", () => {
     const d = directiveOf(csp, "script-src");
     expect(d).toBe(`script-src 'self' 'unsafe-inline' 'unsafe-eval' 'nonce-${NONCE}'`);
+    // 局限：此断言只证明 token 在串里，不证明浏览器会采纳——同指令内存在 nonce 时
+    // CSP3 忽略 'unsafe-inline'。保留它是为记录「dev 主指令保留 unsafe-inline」的决定，
+    // 而非行为契约；dev 内联脚本的实际放行依赖 Next.js 为自身内联脚本注入的 nonce。
     expect(d).toContain("'unsafe-inline'");
     // React 16+ dev mode 启动时调用 eval() 做堆栈重组，dev 环境必须放行
     expect(d).toContain("'unsafe-eval'");
@@ -73,10 +83,15 @@ describe("buildCsp 开发环境（isProd=false）", () => {
   it("style-src 保留 unsafe-inline", () => {
     const d = directiveOf(csp, "style-src");
     expect(d).toBe(`style-src 'self' 'unsafe-inline' 'nonce-${NONCE}'`);
+    // 同上局限：仅为记录 dev 主指令保留了 unsafe-inline（nonce 存在时被 CSP3 忽略），
+    // 它**不是**内联样式属性被放行的依据。
     expect(d).toContain("'unsafe-inline'");
   });
 
-  it("开发环境不需要 style-src-attr（style-src 已含 unsafe-inline）", () => {
-    expect(csp).not.toContain("style-src-attr");
+  // 本次修复的行为契约：dev 下真正放行 style={{}} 内联样式属性的手段。
+  // 修复前该子指令只在 `if (isProd)` 内注册，dev 两头落空 → 内联 style 属性全被拦。
+  it("style-src-attr 'unsafe-inline' 在开发环境同样生效（放行内联样式属性）", () => {
+    const d = directiveOf(csp, "style-src-attr");
+    expect(d).toBe("style-src-attr 'unsafe-inline'");
   });
 });
