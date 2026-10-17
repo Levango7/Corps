@@ -495,7 +495,10 @@ def cmd_list(now: datetime) -> int:
     if text is None:
         for e in errors:
             print(e)
-        return 0
+        # 取不到表 ≠ 没人占用。docs/COORDINATION.md §6.3 让人"动手前先看这个"，
+        # 所以这里必须给出非零退出码，否则 `list && 开工` 会把网络抖动读成"空表"。
+        print("提示：这不是「没人认领」，是**读不到表**。重跑一次；持续取不到就先去确认网络与远端。")
+        return 1
     live = [c for c in claims if c.expires > now]
     expired = [c for c in claims if c.expires <= now]
     print(f"未过期（{len(live)}）—— 这些资源现在别碰：")
@@ -555,6 +558,14 @@ def cmd_preflight(
     claims, errors = parse_claims(text)
     for e in errors:
         print(f"  {e}")
+    if text is None:
+        # 空表与"读不到表"在两处判据里必须不同：claims 为空会让下面的 decide() 报
+        # 「可进入：该 worktree 干净且无人认领」——实测把 fetch 抖动放行成"没人占用"（fail-open）。
+        print()
+        print("停手：活态表**取不到**（远端分支不存在 / fetch 失败），这不等于「没人认领」。")
+        print("      判据出处：本文件 docstring「取不到就红，不静默放过」。")
+        print("      先重跑一次排除网络抖动；确认 refs/heads/" + store_branch() + " 取得到再进入工作区。")
+        return 1
 
     wt = worktree.resolve()
     live_here = [c for c in claims if c.expires > now and same_worktree(c.worktree, wt)]
@@ -780,6 +791,60 @@ def self_test() -> int:
             ok = False
         else:
             print(f"  OK   {name} -> {got!r}")
+
+    # ── 接线断言：打到命令层，不是纯函数 ──────────────────────────────────
+    # 只测 parse_claims 抓不住这一类失效：实测过 **fail-open** —— parse_claims 已经
+    # 打印 CLAIM_STORE_MISSING，但 cmd_preflight 仍回「可进入：该 worktree 干净且无人认领」
+    # 并 exit 0（空 claims 让 decide() 走到 ok_free）。红因写在屏幕上、放行也写在屏幕上，
+    # 而 docs/COORDINATION.md §6.3 要人拿这个退出码决定要不要开工。
+    # 因此这里只桩换 fetch_store（不联网、不写任何东西），跑**真的** cmd_list / cmd_preflight。
+    # 每条都配一格"表取得到"的对照：哨兵串在正常态必须不出现，否则断言恒真。
+    import contextlib
+    import io
+
+    def stub_broken():
+        return False, None, "self-test 桩"
+
+    def stub_readable():
+        return True, HEADER, "self-test 桩"
+
+    def run_with_store(stub, call):
+        orig = globals()["fetch_store"]
+        try:
+            globals()["fetch_store"] = stub
+            buf = io.StringIO()
+            with contextlib.redirect_stdout(buf):
+                rc = call()
+            return rc, buf.getvalue()
+        finally:
+            globals()["fetch_store"] = orig
+
+    miss_list = "是**读不到表**"
+    miss_pf = "活态表**取不到**"
+    rc_list_broken, out_list_broken = run_with_store(stub_broken, lambda: cmd_list(now))
+    rc_list_ok, out_list_ok = run_with_store(stub_readable, lambda: cmd_list(now))
+    rc_pf_broken, out_pf_broken = run_with_store(
+        stub_broken, lambda: cmd_preflight(REPO, "selftest-agent", now)
+    )
+    rc_pf_ok, out_pf_ok = run_with_store(
+        stub_readable, lambda: cmd_preflight(REPO, "selftest-agent", now)
+    )
+
+    wire_cases: list[tuple[str, bool, bool]] = [
+        ("cmd_list 表取不到 -> 退出码非 0", rc_list_broken != 0, True),
+        ("cmd_list 表取不到 -> 打印「读不到表」", miss_list in out_list_broken, True),
+        ("cmd_list 表取得到 -> 退出码 0", rc_list_ok == 0, True),
+        ("cmd_list 表取得到 -> 不出现红因行（防恒真）", miss_list in out_list_ok, False),
+        ("cmd_preflight 表取不到 -> 退出码非 0（不再放行）", rc_pf_broken != 0, True),
+        ("cmd_preflight 表取不到 -> 打印停手行", miss_pf in out_pf_broken, True),
+        ("cmd_preflight 表取得到 -> 不出现停手行（防恒真）", miss_pf in out_pf_ok, False),
+    ]
+    for name, got, want in wire_cases:
+        if bool(got) != want:
+            print(f"  FAIL {name}：实得 {got!r}，期望 {want!r}")
+            ok = False
+        else:
+            print(f"  OK   {name}")
 
     print("self-test PASS" if ok else "self-test FAILED: 判据失效")
     return 0 if ok else 2
