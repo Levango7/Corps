@@ -249,10 +249,7 @@ function serverRolesAfterPatches(
   overrides = new Map<string, string>(),
 ): Record<string, Record<string, Action[]>> {
   for (const p of patches) {
-    overrides.set(
-      `${p.role}:${p.module}`,
-      p.actions.map((a) => ACTION_CODE[a]).join(""),
-    );
+    overrides.set(`${p.role}:${p.module}`, p.actions.map((a) => ACTION_CODE[a]).join(""));
   }
   const roles: Record<string, Record<string, Action[]>> = {};
   for (const role of ROLES) roles[role] = getMergedPermissions(role, overrides);
