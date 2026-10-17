@@ -42,7 +42,7 @@ import { registerAndLogin } from "./helpers";
  * 挂在 e2e/ 下即自动进入 CI 的「E2E (production build)」job。
  */
 
-test.setTimeout(300_000);
+test.setTimeout(480_000);
 
 /** 静态路由清单（36 条，生成方式见文件头注释）。 */
 const WORKSPACE_ROUTES: readonly string[] = [
@@ -111,9 +111,11 @@ test.describe.serial("路由健康门禁", () => {
     for (const route of WORKSPACE_ROUTES) {
       await page.goto("/w/" + wid + route, { waitUntil: "load" });
       // 等水合与（若有的话）错误边界落地。错误边界在 render 抛错时同步渲染，
-      // 但 hydration 错误可能在网络静默后才浮现，给一个短稳态窗口。
-      await page.waitForLoadState("networkidle").catch(() => {});
-      await page.waitForTimeout(600);
+      // 但 hydration 错误可能在网络静默后才浮现，给一个固定稳态窗口。
+      // ⛔ 不能用 waitForLoadState("networkidle")：/im 与仪表盘挂了在线成员条
+      //    （POST /presence 心跳每 2 分钟一次），网络永远静默不下来，首跑实测
+      //    在这里把 5 分钟的 test timeout 整个吃光。轮询型页面必须用固定延时。
+      await page.waitForTimeout(1000);
 
       const hit = await page
         .getByText(BOUNDARY_TEXT, { exact: true })
