@@ -122,6 +122,14 @@ services:
       # enforce（默认）viewer 写工作区数据即被拒；shadow 只记日志不拦（上线灰度观察误杀面用）；
       # off 完全关闭。非法取值一律按 enforce 处理（fail-closed），拼错环境变量不会悄悄降级安全性
       WRITE_POLICY_MODE: ${WRITE_POLICY_MODE:-enforce}
+      # ── DB 操作总预算（lib/db-retry.ts 的 withDbRetry 兜底）──
+      # 一次调用的全部尝试 + 退避共享一个 deadline，耗尽即抛 DbOperationTimeoutError 且不重试。
+      # 这里刻意用空默认值而不是 `:-30000`：默认值的权威来源是代码里的
+      # DB_OP_BUDGET_MS_DEFAULT（= lib/auth.ts 交互式事务的 maxWait 10s + timeout 20s，
+      # 由 tests/unit/db-retry.test.ts 断言 14/15 钉住）。compose 再抄一份数字就是
+      # 同一个指标声明两遍——两边改不动的时候，被掐断的事务会继续占着池连接。
+      # 留空 = 走代码默认；填非法值（NaN/≤0）也回退默认，不会让进程起不来。
+      CORPS_DB_OP_BUDGET_MS: ${CORPS_DB_OP_BUDGET_MS:-}
       # 认证密钥（必须为强随机值；未设置或为空时 compose 直接报错退出，
       # 杜绝带着空签名密钥启动导致 JWT 可被伪造——见 docs/runbook-deploy.md §5）
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET:?请在 .env 中设置 BETTER_AUTH_SECRET（openssl rand -hex 32）}
