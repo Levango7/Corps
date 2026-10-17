@@ -120,6 +120,9 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
   const { wid } = use(params);
   const t = useTranslations("permissions");
   const tRole = useTranslations("role");
+  // 权限矩阵的表头/动作标签独立命名空间：permissions.action 已是字符串「操作」
+  // （文档审计页在用），不能再挂子树，否则破坏既有消费方。
+  const tM = useTranslations("permissionsMatrix");
   const { toast } = useToast();
 
   const [matrix, setMatrix] = useState<PermissionMatrix>(() => defaultMatrix());
@@ -279,7 +282,7 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
                     scope="col"
                     className="p-2 border-b border-[var(--border)] text-center text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] whitespace-nowrap min-w-[120px]"
                   >
-                    {t(`module.${mod}`)}
+                    {tM(`module.${mod}`)}
                   </th>
                 ))}
               </tr>
@@ -319,7 +322,7 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
                                 className={`inline-flex items-center gap-0.5 ${
                                   disabled ? "cursor-not-allowed opacity-60" : "cursor-pointer"
                                 }`}
-                                title={t(`action.${act}Label`)}
+                                title={tM(`actionLabel.${act}`)}
                               >
                                 <input
                                   type="checkbox"
@@ -329,7 +332,7 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
                                   className="h-3.5 w-3.5 rounded-[var(--radius-sm)] border border-[var(--border)] accent-[var(--accent)] focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-1"
                                 />
                                 <span className="text-[length:var(--text-xs)] text-[var(--meta)] font-[family-name:var(--font-mono)]">
-                                  {t(`action.${act}`)}
+                                  {tM(`action.${act}`)}
                                 </span>
                               </label>
                             );

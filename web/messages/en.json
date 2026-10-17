@@ -1489,6 +1489,30 @@
     "confirmRemove": "Confirm remove this permission?",
     "confirmRevoke": "Confirm revoke this share link?"
   },
+  "permissionsMatrix": {
+    "module": {
+      "tasks": "Tasks",
+      "decisions": "Decisions",
+      "documents": "Documents",
+      "messages": "Messages",
+      "members": "Members",
+      "billing": "Billing",
+      "analytics": "Analytics",
+      "settings": "Settings"
+    },
+    "action": {
+      "read": "R",
+      "create": "C",
+      "update": "U",
+      "delete": "D"
+    },
+    "actionLabel": {
+      "read": "Read",
+      "create": "Create",
+      "update": "Update",
+      "delete": "Delete"
+    }
+  },
   "theme": {
     "light": "Light",
     "dark": "Dark",
