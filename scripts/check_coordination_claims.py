@@ -706,6 +706,7 @@ def self_test() -> int:
         Claim(wt, "test/x", "docs/**", "cline-selftest", datetime(2026, 1, 1), datetime(2030, 1, 1), "注入行（活跃）")
     )
     six = f"{wt} | test/x | docs/** | cline-selftest | 2026-01-01 00:00 | 2030-01-01 00:00"
+    empty_intent = f"{wt} | test/x | docs/** | cline-selftest | 2026-01-01 00:00 | 2030-01-01 00:00 | "
     reversed_ = f"{wt} | test/x | docs/** | cline-selftest | 2030-01-01 00:00 | 2026-01-01 00:00 | 日期反了"
     relwt = f"corps-wt-selftest | test/x | docs/** | cline-selftest | 2026-01-01 00:00 | 2030-01-01 00:00 | 相对路径"
     steal = f"{wt} | test/other | docs/** | cline-other | 2026-01-01 00:00 | 2030-01-01 00:00 | 抢同一资源"
@@ -719,6 +720,7 @@ def self_test() -> int:
     cases: list[tuple[str, str | None, set[str]]] = [
         ("存储取不到 -> CLAIM_STORE_MISSING", None, {"CLAIM_STORE_MISSING"}),
         ("认领行少一段 -> CLAIM_MALFORMED", six, {"CLAIM_MALFORMED"}),
+        ("段数够但意图为空 -> CLAIM_MALFORMED", empty_intent, {"CLAIM_MALFORMED"}),
         ("expires 早于 since -> CLAIM_MALFORMED", reversed_, {"CLAIM_MALFORMED"}),
         ("worktree 写成相对路径 -> CLAIM_MALFORMED", relwt, {"CLAIM_MALFORMED"}),
         ("两条未过期认领同一资源 -> CLAIM_CONFLICT", f"{good}\n{steal}\n", {"CLAIM_CONFLICT"}),
@@ -831,9 +833,14 @@ if __name__ == "__main__":
         except ValueError:
             print(f"用法：--hours 必须是数字，实得 {hours_raw}")
             raise SystemExit(2)
-        raise SystemExit(
-            cmd_claim(Path(wt_flag), paths, agent, hours, _flag(argv, "--intent") or "", now)
-        )
+        intent = (_flag(argv, "--intent") or "").strip()
+        # 写侧必须自己校验读侧会判的东西：`parse_claims` 把空意图判 CLAIM_MALFORMED，
+        # 而这里原先 `or ""` 直接落盘并回显「已认领」——坏行要等到 CI 的 Lint job 才暴露，
+        # 而 Lint 门住 Build/E2E/发布。实测 2026-10-17：漏传 --intent 的认领让 PR #113 变红。
+        if not intent:
+            print("用法：claim 必须带 --intent \"<一句话意图>\"（该字段是活态表的必填列）")
+            raise SystemExit(2)
+        raise SystemExit(cmd_claim(Path(wt_flag), paths, agent, hours, intent, now))
     if cmd == "release":
         if not agent:
             print("用法：release --agent <名> [--worktree <路径>]")
