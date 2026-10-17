@@ -40,10 +40,18 @@
   就要记得补一次），改为把写权限收敛到**单一 choke point**：`lib/auth.ts` 的 `getWorkspaceContext()`
   内部调用新增的 `lib/write-policy.ts` 裁决，写方法（POST/PUT/PATCH/DELETE）默认拒绝，
   只有 owner/admin/member 与"自助类"端点（自己的收藏/通知/设备/资料/纯文本 AI）放行。
-  实测覆盖：278 个写 handler 中 250 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
+  实测覆盖：280 个写 handler 中 252 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
   用户级自服务 / 创建工作区等本就没有成员上下文的端点）在 `scripts/write-access-registry.txt`
   逐条登记 reason 与复核截止日，并由新脚本 `check_write_access_registry.py` 断言
   "每个写 handler 要么进墙要么登记"（含三类注入变异自检），已接进 CI 的 permission-gate job。
+  数字口径（2026-10-17 复算，原写 278/250 已随端点增加过期；现测命令
+  `python scripts/check_write_access_registry.py`）：全仓写方法 export 共 **285** 处，
+  门禁分母 **280** = 减去 5 处按设计不进气泡的：`/api/[...path]` 的 POST/PATCH/PUT/DELETE
+  四个 handler（该路由只回 JSON 404，不碰库，见 `INTERNAL_EXACT`）与
+  `POST /api/cron/recycle-cleanup`（`/api/cron/` 前缀整族按 `INTERNAL_PREFIXES` 跳过，
+  该族 9 个端点各自带 `CRON_SECRET` Bearer 鉴权，且未配置密钥时返回 500 而非放行——fail-closed）。
+  即这条门的分母不是"漏看"，但**前缀式跳过意味着以后新加的 `/api/cron/*` 会自动隐身**，
+  这层依赖的是 cron 族的书写惯例而非机械检查。
 
   灰度开关 `WRITE_POLICY_MODE`：enforce（默认，fail-closed，拼错也按 enforce 处理）/ shadow
   （只打日志，用于上线前观察误杀面）/ off。

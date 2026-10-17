@@ -121,3 +121,42 @@ shellcheck 在 `/e/dev-data/go/bin/shellcheck`。**本机没有真 jq**，载荷
 
 最后一条口径：本文所有 GitHub 侧数字取自 2026-10-17 上午的 API 实测。
 期间 `gh api` 出现过一次连接超时（同一命令重跑即成功），所以引用"某 sha 全绿"必须带时点。
+
+## 6. 同一条 PR 上顺手收的两处（含我自己造成的一次红）
+
+### 6.1 我让 PR #113 的 Lint 变红，根因是认领工具的写侧不校验读侧会判的东西
+
+现象：PR #113 首跑 `Lint=fail`，红因不是我改的 workflow，而是
+`check_coordination_claims.py CLAIM_MALFORMED 字段为空 ['意图']`——**那条坏认领是我写的**。
+我执行 `claim --paths … --hours 3` 时漏了 `--intent`，工具里是
+`_flag(argv, "--intent") or ""`，空串照样落盘并回显"已认领"；而 `parse_claims`
+把空意图判 `CLAIM_MALFORMED`，CI 的 Lint job 因此红（Lint 门住 Build/E2E/发布）。
+写侧放过、读侧才炸，坏状态在本地完全不可见——这是本仓反复出现的那一类：判据只活在一侧。
+
+修法（`scripts/check_coordination_claims.py`）：claim 要求非空 `--intent`，缺失即 usage +
+`exit 2`（与既有 `--hours` 的校验同形）；并给 `--self-test` 补一条
+"段数够但意图为空 → CLAIM_MALFORMED"（原有 `six` 只覆盖少一段的形状，覆盖不到这种）。
+
+验证（本机，不经管道取退出码——第一版我把 `| tail` 的退出码当成了工具的退出码）：
+漏 `--intent` → 真实退出码 2 且**认领表里没有多出该行**（`list | grep -c guard-probe` = 0）；
+`--self-test` 22 条（`--self-test 2>&1 | grep -c OK` = 22、`grep -c FAIL` = 0）含新用例全 OK；不带参数的校验（CI 用的就是它）→ PASS。
+
+### 6.2 写权限 default-deny 的数字复算（#37）
+
+门禁自报：`280 scanned / 252 covered / 28 registered`，PASS。
+CHANGELOG 里那条 Security 记录写的是 `278 / 250 / 28` —— 数字过期（+2 个新端点进墙后没回写），
+已改为现值并附现测命令。
+独立复算分母：全仓写方法 export **285** 处（POST 156 / PATCH 68 / DELETE 58 / PUT 3），
+门禁的 280 = 285 − 5 处按设计跳过的：
+
+| 跳过项 | 数量 | 机制 | 复核结论 |
+| --- | --- | --- | --- |
+| `/api/[...path]` 的 POST/PATCH/PUT/DELETE | 4 | `INTERNAL_EXACT` | 该路由只返回 JSON 404，完全不碰库 ⇒ 跳过是对的 |
+| `POST /api/cron/recycle-cleanup` | 1 | `INTERNAL_PREFIXES` 的 `/api/cron/` | 9 个 cron 端点各自有 `CRON_SECRET` Bearer；`secret` 未配置时返回 **500 而非放行**（fail-closed，逐个读到源码确认） |
+
+另外查了两条会让人误信的形态：`多文件归一化到同一 (method, route)` 的塌键数 = **0**
+（若存在，后写的会覆盖前者的 covered 值，把未覆盖的说成覆盖）；`check_p0_content.py` 的扫描范围
+是 `web/**/*.{ts,tsx}` + 两个 css，**不含 docs**，所以本文件不受内容棘轮约束。
+
+要说清的残余风险：前缀式跳过意味着**今后新加的 `/api/cron/*` 会自动隐身**，
+这一层靠的是"cron 族每个端点自己写鉴权"的惯例，没有机械检查守着。
