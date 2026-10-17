@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y | fix/a11y-burndown-4 | components/im/ConversationSettings.tsx,components/DocumentListView.tsx,components/workflow/WorkflowEditor.tsx,components/template/TemplateEditor.tsx,components/database/TableView.tsx,web/tests/a11y-baseline.txt | a11y-burndown | 2026-10-15 19:24 | 2026-10-15 23:24 | a11y 存量偿还第 4 批（5 文件 35 条）
+F:/Nexus/corps-reverify-1017 | HEAD | .github/workflows/smoke.yml,CHANGELOG.md,docs/audit/SMOKE-MONITOR-TARGET-2026-10-17.md | qoder-reverify-1017 | 2026-10-17 11:48 | 2026-10-17 14:48 | 
