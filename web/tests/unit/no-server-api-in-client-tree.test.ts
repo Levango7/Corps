@@ -258,7 +258,13 @@ function findServerApiImports(src: string): Array<{ line: number; api: string; t
     if (named) {
       const names = named[1]
         .split(",")
-        .map((s) => s.trim().split(/\s+as\s+/)[0].replace(/^type\s+/, "").trim())
+        .map((s) =>
+          s
+            .trim()
+            .split(/\s+as\s+/)[0]
+            .replace(/^type\s+/, "")
+            .trim(),
+        )
         .filter(Boolean);
       for (const api of SERVER_ONLY_APIS) {
         if (names.includes(api)) {

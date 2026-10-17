@@ -34,11 +34,7 @@ interface ApprovalFlowDiagramProps {
   status: string;
 }
 
-export function ApprovalFlowDiagram({
-  nodes,
-  currentNode,
-  status,
-}: ApprovalFlowDiagramProps) {
+export function ApprovalFlowDiagram({ nodes, currentNode, status }: ApprovalFlowDiagramProps) {
   const t = useTranslations("approval");
 
   if (!nodes || nodes.length === 0) {
