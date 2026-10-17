@@ -1489,6 +1489,30 @@
     "confirmRemove": "确认移除此权限？",
     "confirmRevoke": "确认撤销此分享链接？"
   },
+  "permissionsMatrix": {
+    "module": {
+      "tasks": "任务",
+      "decisions": "决策",
+      "documents": "文档",
+      "messages": "消息",
+      "members": "成员",
+      "billing": "计费",
+      "analytics": "分析",
+      "settings": "设置"
+    },
+    "action": {
+      "read": "R",
+      "create": "C",
+      "update": "U",
+      "delete": "D"
+    },
+    "actionLabel": {
+      "read": "查看",
+      "create": "创建",
+      "update": "更新",
+      "delete": "删除"
+    }
+  },
   "theme": {
     "light": "浅色",
     "dark": "深色",
