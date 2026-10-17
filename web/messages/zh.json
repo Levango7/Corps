@@ -1426,7 +1426,7 @@
     "saveFailed": "保存失败，请重试",
     "loadFailed": "加载权限失败",
     "ownerLocked": "Owner 权限不可修改",
-    "adminCanOverride": "Admin 可覆盖此列设置",
+    "adminCanOverride": "仅 Member / Viewer 行可覆盖，Owner 与 Admin 行固定",
     "copyFailed": "复制失败",
     "shareFailed": "分享失败，请重试",
     "addPermission": "添加权限",
