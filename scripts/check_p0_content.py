@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-r"""P0 内容规约门禁（棘轮）：emoji 图标 / 紫粉渐变 / 硬编码色 / 禁用缓动 / AI 模板文案。
+r"""P0 内容规约门禁（棘轮）：emoji 图标 / 紫粉渐变 / 硬编码色 / 禁用缓动 / AI 模板文案
+/ 硬编码用户可见文案。
 
-背景（2026-10 全量审计实测）：团队 5 条 P0 内容规则此前只活在文档与人的记忆里，
+背景（2026-10 全量审计实测）：团队 P0 内容规则此前只活在文档与人的记忆里，
 机械覆盖有四层洞：
   P0-1 emoji 作图标：e2e/ui-style.spec.ts 只渲染扫 signup / login / dashboard 三个页面，
     定价页（公开营销页）曾用 9 个 ✅ 作功能图标，CI 全程绿灯（现已修，本门禁防复发）；
@@ -10,14 +11,19 @@ r"""P0 内容规约门禁（棘轮）：emoji 图标 / 紫粉渐变 / 硬编码�
   P0-4 硬编码色：200+ 个文件带硬编码色值，CI 一道不管；
   P0-5 禁用缓动：design/design-tokens.css 逐字写着被禁的
     cubic-bezier(0.68, -0.55, 0.265, 1.55)，并随 next build 进入产物 CSS；
-  AI 模板文案（Lorem ipsum / Welcome to Our App / Sign up today）：零覆盖。
+  AI 模板文案（Lorem ipsum / Welcome to Our App / Sign up today）：零覆盖；
+  P0-6 硬编码用户可见文案（2026-10-17 补，最后一块零覆盖）：这是一个 zh/en 双语应用
+    （词条在 web/messages/{zh,en}.json），写死在组件里的中文在英文 locale 下照样显示
+    中文。实测 web/ 生产代码 10 个文件 99 处，其中 web/app/[locale]/w/[wid]/ai-tools/
+    page.tsx 的 7 个 Tab 标签写死在 `fallbackZh` 里、而同一文件其它文案走的是
+    useTranslations("ai.aiTools")——典型"一半翻了一半没翻"。这类缺陷此前**零**机械覆盖。
 本脚本把其中**可机械判定**的部分变成 CI 门禁；判不了的（如"渐变好不好看"）
 刻意不做——天天误叫的门禁只会被 --no-verify 掉，等于没建。
 
 判据（红因集合；全部是"新增/变多"语义——棘轮，不是一刀切禁止）：
-    NEW_P0_1 / NEW_P0_2 / NEW_P0_4 / NEW_P0_5 / NEW_AI_COPY
+    NEW_P0_1 / NEW_P0_2 / NEW_P0_4 / NEW_P0_5 / NEW_AI_COPY / NEW_P0_6
         基线外首见的 (文件, 规则) -> 新违反
-    REGRESSION_P0_1 / REGRESSION_P0_2 / REGRESSION_P0_4 / REGRESSION_P0_5 / REGRESSION_AI_COPY
+    REGRESSION_P0_1 / ... / REGRESSION_AI_COPY / REGRESSION_P0_6
         已登记文件的违反处数变多 -> 只许减少
 非红提示（只打印，不判失败）：基线里已归零或减少的条目，建议删行收紧。
 刻意不把"归零未删行"做成硬失败：web/ 有并行会话在改，把别人修好的违规变成
@@ -40,7 +46,11 @@ CI 红灯，只会训练大家 --no-verify。收紧靠人周期性跑 --emit 复
   * **注释先剥后扫**：// 与 /* */（含跨行块注释）整体剔除后再匹配，字符串字面量保留。
     否则文档注释里的规则示例（"P0-1：禁 ✅ 作图标"）、issue 引用（#135）、
     token 说明（浅 #4263EB / 深 #4973D1）会天天误叫。
-    已知边界：正则字面量里的 // 可能被当作行注释（最多漏报一行，不会误报）。
+    2026-10-17 起顺带认识**正则字面量**（前一个有效字符是标识符/数字/右括号时那道 `/`
+    只能是除法，否则一路扫到配对的 `/`，中间的字符串引号不算字符串）。不加这条，
+    `.replace(/`([^`]+)`/g, "$1")` 会把状态机带跑偏，后面整段 // 注释一行都剥不掉
+    （实测 web/lib/format.ts 8 行、decisions/page.tsx 15 行），对 P0-6 直接变成假阳性。
+    已知边界：极个别写法（如正则里含 `//`）仍可能漏报一行，宁偏漏报一侧。
   * P0-1 同时吃 **转义写法**（"\u2715" / "\u{1F600}"）。理由：不解码就等于给违反留一道
     「写字面字符违规、写转义合法」的后门——实测 web/components/workflow/
     WorkflowExecutionList.tsx:130 的 `{"\u2715"}`（✕ 关闭图标）正是这么藏过去的。
@@ -52,18 +62,22 @@ CI 红灯，只会训练大家 --no-verify。收紧靠人周期性跑 --emit 复
     测试用例名里的 `TC-RLS-#119`、密码样本 `"Share#2026"` 都被旧口径判成硬编码色，
     靠"`#` 后跟 3-8 位十六进制"这一条根本区分不出来。加了左界后这两类自然消失，
     不需要为它们开路径豁免。
-  * **本脚本没有路径豁免，只有目录剪枝（node_modules/.next 等）**。这是有意的结果：
-    先按"零证据不上豁免"的口径把上一版的 4 条路径豁免逐个压测（见 --self-test 与
-    commit message），三条已经被上面两条口径修正消解为假阳性（假阳性要修检测器，
-    不是给检测器戴眼罩）；余下一条（emoji 路径豁免）在当前仓库的生产代码、
-    web/tests/、web/e2e/ 里均**零命中**——即没有任何现有样本需要它掩护。
+  * **没有路径豁免，只有目录剪枝（node_modules/.next 等）**——P0-6 的 tests/e2e 是
+    唯一例外，且带实测数字与负向断言，详见 P0_6_SKIP_PREFIX 处注释。除此之外是
+    有意的结果：先按"零证据不上豁免"的口径把上一版的 4 条路径豁免逐个压测（见
+    --self-test 与 commit message），三条已经被上面两条口径修正消解为假阳性
+    （假阳性要修检测器，不是给检测器戴眼罩）；余下一条（emoji 路径豁免）在当前仓库的
+    生产代码、web/tests/、web/e2e/ 里均**零命中**——即没有任何现有样本需要它掩护。
     将来真出现需要承载 emoji 的场景（UGC 夹具、负向断言），在这里加并写明理由即可，
     但请连同一条 self-test 用例一起加：没有用例的豁免会在下一次口径修正里被悄悄删掉。
   * P0-5 同时接住 framer-motion 的 BezierDefinition 数组（ease: [x1,y1,x2,y2]）——
     JS 侧不接住，P0-5 在 TS 里就仍然是零覆盖，而那正是本次要补的洞
     （motion-tokens.ts / WidgetCard / Toast 用的都是数组形式）。
-  * 计数口径：每个匹配记一处（一行 3 个 hex = 3 处）。修掉一处 = 计数减一，放行；
-    新增一处 = 计数加一，红。
+  * 计数口径：每个匹配记一处（一行 3 个 hex = 3 处；P0-6 是每段连续中文一处）。
+    修掉一处 = 计数减一，放行；新增一处 = 计数加一，红。
+  * P0-6 是唯一**整文件级**匹配的规则（其余逐行）：`<h2>\n  页面未找到\n</h2>` 这种
+    独占一行的 JSX 文本节点是 app/not-found.tsx 的实际写法，`>` 与 `<` 凑不到一行里。
+    它还有自己的第二个视图（把引号串正文抹平），理由见 strip_comments 的 mask_strings。
   * 基线粒度是「文件 + 规则 + 处数」而不是「文件:行号」：web/ 有并行会话在改，
     行号会漂，任何往上插一行都会让一批登记项错位成"新增"——那正是天天误叫的死法。
     处数口径让行号漂移无害：只有真的增删了违规内容才会改变计数。
@@ -92,13 +106,14 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 BASELINE_REL = "scripts/p0-content-baseline.txt"
 
-RULES = ("P0-1", "P0-2", "P0-4", "P0-5", "AI-COPY")
+RULES = ("P0-1", "P0-2", "P0-4", "P0-5", "AI-COPY", "P0-6")
 RULE_DESC = {
     "P0-1": "emoji 作功能图标",
     "P0-2": "紫粉渐变（indigo 系与 pink 系同现于同一个渐变）",
     "P0-4": "硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）",
     "P0-5": "禁用缓动（cubic-bezier(0.68,-0.55,0.265,1.55) 或第二控制点 y>1 过冲）",
     "AI-COPY": "AI 模板文案（Lorem ipsum / Welcome to Our App / Sign up today）",
+    "P0-6": "硬编码用户可见文案（未走 i18n 的中文字符串）",
 }
 
 # 扫描时剪掉的目录：依赖、构建产物、覆盖率报告、用户上传（UGC）、测试残留
@@ -172,6 +187,59 @@ BANNED_CURVE = (0.68, -0.55, 0.265, 1.55)
 COPY_RE = re.compile(
     r"lorem\s+ipsum|welcome\s+to\s+our\s+app|sign\s+up\s+today", re.I)
 
+# ─── P0-6：硬编码用户可见文案 ───
+# 这是一个 zh/en 双语应用（词条在 web/messages/{zh,en}.json）。写死在组件里的中文，
+# 切到 en 照样显示中文——是**用户可见**的 i18n 缺陷，2026-10 实测 web/ 生产代码里
+# 有 10 个文件 99 处（其中 web/lib/email.ts 一个文件 49 处）。
+# 难点不在"找中文"（全仓含中文的行 2 万+，绝大多数是中文注释），而在**只认渲染给用户的位置**：
+#   1. JSX/HTML 文本节点：`>中文<`（跨行感知——not-found.tsx 里 "页面未找到" 独占一行，
+#      行内正则找不到它，这也是首版原型把整个 404 页面漏掉的原因）
+#   2. 邮件/推送 HTML 模板正文：`>中文</`（同一条正则的子集，单独列出只为口径可读）
+#   3. 用户可见属性的字符串字面量值：placeholder / aria-label / title / alt / label / description
+#   4. 键名以 `Zh` 结尾的中文兜底值：`fallbackZh: "语义搜索"`
+#      ——ai-tools/page.tsx 的 7 个 Tab 标签全写在这个键里，同文件其它文案走的是
+#        useTranslations("ai.aiTools")，典型"一半翻了一半没翻"。实测全仓 `Zh` 结尾的键
+#        共 8 个、全部集中在这一个文件，零假阳性，所以这条口径收录；反之 `name: "中文"`
+#        这类泛化键**有** 49 处且混着 AI 工具定义的参数描述，不收录——理由见 4 倍误报代价。
+# 四条口径之间**同一处要去重**：`<span>暂无 AI 洞察</span>` 同时满足 1 与 2，只记一处。
+# 否则同一份债在基线里被记两遍，修一处计数只掉一半，棘轮就转不动了。
+CJK = "一-鿿"          # CJK 统一表意文字基本区；刻意不含全角标点（标点不构成"文案"）
+CJK_RUN_RE = re.compile("[%s]+" % CJK)
+# JSX 表达式容器 `{...}`：`<span>{t('total')} 数据截止昨天</span>` 是最常见的"一半表达式
+# 一半写死文案"形态，而下面的文本节点口径必须排除 `{`/`}`——两种情况撞在一起就漏报。
+# 解法是匹配前先把**不含中文的** {...} 组打平成等长点号（中文组原样保留，否则
+# `fallbackZh: '语义搜索'` 这种会被连带抹掉）。实测代价：全仓 99 处 -> 126 处，
+# 多出来的 27 处全是真阳（email.ts 的 `${name} 邀请你加入`、CalendarWeek 的
+# `{y} 年 {m} 月`、ai-tools 的错态文案），只新增 1 个文件（CalendarWeek.tsx）。
+# 反过来，若整体放宽到「正文里随便出现花括号」（最先试过的写法）会变成 591 处 / 39 文件，
+# 其中 AI prompt 正文、zod 校验消息、服务端 console 报错全部被捞进来——那才是假阳性洪水。
+_EXPR_GROUP_RE = re.compile(r"\{[^{}\n]{0,300}\}")
+# re.S：允许跨行——`<h2>\n  页面未找到\n</h2>` 这种独占一行的文本节点才是 404 页面的形态，
+# 逐行扫描会把它整片漏掉。这就是 P0-6 不能用"逐行"口径的原因，其余规则仍然逐行。
+JSX_TEXT_RE = re.compile(">([^<>{}]*[%s][^<>{}]*)<" % CJK, re.S)
+HTML_TEXT_RE = re.compile(">([^<>{}]*[%s][^<>{}]*)</" % CJK, re.S)
+VISIBLE_ATTRS = ("placeholder", "aria-label", "title", "alt", "label", "description")
+VISIBLE_ATTR_RE = re.compile(
+    r"\b(?:%s)\s*=\s*([\"'`])([^\"'`]*[%s][^\"'`]*)\1" % ("|".join(VISIBLE_ATTRS), CJK))
+ZH_KEY_RE = re.compile(r"\b[\w$]*Zh\s*:\s*([\"'`])([^\"'`]*[%s][^\"'`]*)\1" % CJK)
+
+# P0-6 不扫描的范围。本脚本向来对路径豁免零容忍（见下面「没有路径豁免」段），
+# 这里只开一条，且带实测证据 + self-test 负向断言：
+P0_6_SKIP_PREFIX = ("web/tests/", "web/e2e/")
+#   为什么 web/tests/ 与 web/e2e/ 必须跳：那里面的中文是**夹具与断言**
+#   （`render(<div>第一项</div>)`、`aria-label="命令面板"` 当选择器），不进产物 DOM。
+#   计入的话，"给某个组件把中文改成 t()" 会让组件文件 -1、测试文件 +1，门禁照样红，
+#   逼人把两处一起改——而这不是缺陷，是修复的正常表现。实测纳入会多出 5 个文件 23 处，
+#   其中 markdown.test.tsx 的 2 处是纯假阳性（测试描述 `"渲染为 <ul> 含多个 <li>"`
+#   里的 `<ul>` 与 `<` 被当成了一对标签）。
+#   为什么 web/messages/*.json **不需要**豁免：collect() 只走 .ts/.tsx 后缀，json 天然
+#   不在扫描范围。写在这里是因为它最容易被误当成"该加豁免"的地方。
+#   为什么 web/lib/ai/**/prompts/** **也没有**豁免（核实结论）：那里的中文确实是
+#   prompt——web/lib/ai/prompts/mail-assistant.ts 逐字写着"你是专业商务邮件起草助手…
+#   输出 Markdown 格式邮件"，喂给模型而不是渲染给用户。实测这四条口径在 prompts/
+#   下**零命中**，所以按"零证据不上豁免"的既定口径不加。哪天某个 prompt 文件开始产出
+#   用户可见文案，它自己就会红，不需要预留后门。
+
 # ─── 没有路径豁免 ───
 # 上一版曾有 EXEMPT_P0_1（im/ chat/ tests/ e2e/）与 EXEMPT_P0_4、EXEMPT_AI_COPY
 # （tests/ e2e/）。逐个压测后全部删掉，过程与理由：
@@ -183,6 +251,10 @@ COPY_RE = re.compile(
 #     （rbac.test.ts 的权限表、im-upgrade.spec.ts 说明），注释本来就被剥掉。
 # 零证据的豁免是负债：它让门禁在那一目录中立 readings 失效，而收益是零。要恢复请补
 # 证据（哪一行、为什么必须）+ 一条 self-test 用例，别只把前缀加回来。
+#
+# P0-6 是唯一的例外（见上面 P0_6_SKIP_PREFIX），原因很简单也很实际：tests/e2e 里的中文
+# 是夹具与断言，把"修好了组件"判成"测试文件新增违反"会让棘轮反向卡住修的人。它带
+# 实测数字和负向断言，符合"补证据才上豁免"的同一条规矩。
 
 RULE_FIX = {
     "P0-1": "换成 lucide-react 描边图标（如 <X className=\"size-4\" />，见 "
@@ -198,6 +270,16 @@ RULE_FIX = {
             "framer-motion 侧写成 ease: [0.2, 0, 0, 1]",
     "AI-COPY": "换成真实业务文案，并走 i18n（web/messages/<locale>.json）；"
                "Lorem ipsum / Welcome to Our App / Sign up today 是占位稿，不许进产物",
+    "P0-6": (
+        "这是 zh/en 双语应用，写死的中文在英文 locale 下照样显示中文。"
+        "客户端组件改用 useTranslations('<ns>')，服务端改用 await "
+        "getTranslations('<ns>')，把字符串换成 t('<key>')，并把 key 同时加进 "
+        "web/messages/zh.json 与 web/messages/en.json（两份都要加，只加中文那份，"
+        "英文站会直接翻车露出原始 key）。两类已论证的硬约束属于待登记的工作量、"
+        "不在本条修法范围内：邮件/推送 HTML 模板要整套改成按收件人 locale 渲染"
+        "（web/lib/email.ts、push-email.ts、offline-push.ts）；"
+        "app/not-found.tsx 位于 [locale] 段之外、NextIntlClientProvider 不可用。"
+    ),
 }
 
 DEFAULT_HEADER = """\
@@ -222,17 +304,46 @@ DEFAULT_HEADER = """\
 """
 
 
-def strip_comments(lines):
+# 「/ 后面还可能引出一整段正则字面量」的判别依据：前一个有效字符是标识符/数字/
+# 右括号就只能是除法（`(a+b)/2`、`path/nav`），其余位置才允许开正则。
+_REGEX_PREV_DENY_RE = re.compile(r"[0-9A-Za-z_$)\]]$")
+
+
+def strip_comments(lines, mask_strings=False):
     """剥掉 // 与 /* */ 注释（含跨行块注释），保留字符串字面量。
 
     返回与输入**等行等长**的代码文本（注释字符替换为空格）——报错和基线都要行号，
     行数对不上比注释没剥干净更糟。跨行块注释与跨行模板字符串用状态机跟踪。
+
+    mask_strings=True 时，额外把**引号串**（"..." 与 '...'）的正文替换成空格。
+    只有 P0-6 的「文本节点」口径需要它：真正的 JSX 文本节点不可能位于引号串内部，
+    而 `it("渲染为 <ul> 含多个 <li>")` 这种测试描述里的 `>` 与 `<` 会被当成一对标签，
+    造出凭空的命中。模板字符串（反引号）**一律不抹**——邮件与推送的 HTML 正文就写在
+    反引号里，抹掉等于把 P0-6 最大的一块命中（email.ts 49 处）整片豁免。
+
+    2026-10 修的一个真实缺陷：旧实现只看引号、不认正则字面量。遇到
+    `.replace(/(x)/g, "$1")` 这种正则里带引号（或反引号）的写法，状态机把那个引号当成
+    字符串开头并从此错位，结果**后续整段的 // 注释一行都剥不掉**——实测 web/lib/format.ts
+    有 8 行、decisions/page.tsx 有 15 行中文注释被当成代码保留。对 P0-1~P0-5 无感，
+    是因为那些注释里恰好没写过 emoji/hex；对 P0-6 就是硬伤：残留注释里的中文配上前一行
+    遗留的 `>` 直接成为假阳性（实测 +16 处）。修法是补上正则字面量识别；该修正在全仓
+    对既有 5 条规则**零计数变化**（71 处前后一致），不会带动任何人的基线。
     """
     out = []
     in_block = False
     in_str = None
+    last_sig = ""      # 最近一个"有意义"的代码字符，用于区分除法与正则开头
     for line in lines:
-        chars = []
+        chars = []      # 代码视图：注释抹成空格，字符串正文保留
+        masked = []     # mask 视图：注释与引号串正文都抹成空格（仅 P0-6 文本节点用）
+
+        def put(s, hide=False):
+            nonlocal last_sig
+            chars.append(s)
+            masked.append(" " * len(s) if (hide and mask_strings) else s)
+            if not hide and s.strip():
+                last_sig = s.strip()[-1]
+
         i, n = 0, len(line)
         while i < n:
             ch = line[i]
@@ -240,40 +351,78 @@ def strip_comments(lines):
             if in_block:
                 if ch == "*" and nxt == "/":
                     in_block = False
-                    chars.append("  ")
+                    put("  ")
                     i += 2
                 else:
-                    chars.append(" ")
+                    put(" ")
                     i += 1
                 continue
-            if in_str is not None:
-                chars.append(ch)
+            if in_str == "`":                      # 模板字符串：正文必须原样保留
+                put(ch)
                 if ch == "\\" and nxt:
-                    chars.append(nxt)
+                    put(nxt)
+                    i += 2
+                    continue
+                if ch == "`":
+                    in_str = None
+                i += 1
+                continue
+            if in_str is not None:                 # 引号串：正文可按需抹平
+                put(ch, hide=True)
+                if ch == "\\" and nxt:
+                    put(nxt, hide=True)
                     i += 2
                     continue
                 if ch == in_str:
                     in_str = None
                 i += 1
                 continue
-            if ch in "\"'`":
+            if ch == "`":
+                in_str = "`"
+                put(ch)
+                i += 1
+                continue
+            if ch in "\"'":
                 in_str = ch
-                chars.append(ch)
+                put(ch)
                 i += 1
                 continue
             if ch == "/" and nxt == "/":
-                chars.append(" " * (n - i))  # 行注释：剩余整行抹掉
+                put(" " * (n - i))                 # 行注释：剩余整行抹掉
                 break
             if ch == "/" and nxt == "*":
                 in_block = True
-                chars.append("  ")
+                put("  ")
                 i += 2
                 continue
-            chars.append(ch)
+            if ch == "/":
+                # 可能是正则字面量：前一个有效字符若是标识符/数字/右括号就只能是除法
+                # （(a+b)/2、path/nav）。不认正则的代价见上面 docstring。
+                if not last_sig or _REGEX_PREV_DENY_RE.search(last_sig) is None:
+                    j, in_class, closed = i + 1, False, False
+                    while j < n:
+                        c = line[j]
+                        if c == "\\":
+                            j += 2
+                            continue
+                        if in_class:
+                            if c == "]":
+                                in_class = False
+                        elif c == "[":
+                            in_class = True
+                        elif c == "/":
+                            closed = True
+                            j += 1
+                            break
+                        j += 1
+                    if closed:
+                        put(line[i:j])
+                        i = j
+                        continue
+            put(ch)
             i += 1
-        out.append("".join(chars))
+        out.append("".join(masked if mask_strings else chars))
     return out
-
 
 def _p0_1_hits(line):
     """一行里 P0-1 的原文列表：字面 emoji + 转义写法的 emoji。"""
@@ -313,6 +462,68 @@ def _p0_2_hits(line):
     return [m.group(0) for m in GRADIENT_RE.finditer(line)]
 
 
+def _collapse_expr(text):
+    """把不含中文的 {...} 组替换成等长点号（保留行结构，偏移量不变）。
+
+    只打平**不含中文**的组，是为了让 `fallbackZh: '语义搜索'` 这类带中文的对象字面量
+    保持原样——它们在对象视图里由 ZH_KEY_RE 接着认领。
+    由内向外反复替换以处理嵌套：`{a ? {b: 1} : null}` 先塌内层。
+    """
+    prev = None
+    while prev != text:
+        prev = text
+        text = _EXPR_GROUP_RE.sub(
+            lambda mm: mm.group(0) if CJK_RUN_RE.search(mm.group(0))
+            else "." * len(mm.group(0)), text)
+    return text
+
+
+def _p0_6_hits(lines):
+    """整文件级 [(行号, 原文)]——P0-6 唯一不是逐行的规则。
+
+    为什么整文件：`<h2>\\n  页面未找到\\n</h2>` 这种独占一行的文本节点是 app/not-found.tsx
+    的实际写法，逐行扫描看不到 `>中文<` 这对符号凑不到一行里。
+    为什么两种视图：文本节点在 mask 视图里找（引号串里的 `<ul> 含多个 <li>` 不是文本节点），
+    可见属性与 Zh 键在代码视图里找（属性值本身就在引号串里，抹了就永远找不到）。
+    同一处去重：一个 `<span>暂无活动</span>` 同时满足文本节点与 HTML 正文两条口径，
+    按**正文里每一段连续中文**的绝对偏移去重，同一段只记一处（否则同一份债记两遍，
+    修一处计数只掉一半，棘轮就转不动了）。计数粒度沿用「一处 = 一段连续中文」，
+    与 P0-4「一行 3 个 hex = 3 处」同口径。
+    """
+    code = _collapse_expr("\n".join(strip_comments(lines)))
+    # 快筛：绝大多数 TS/TSX 文件剥完注释后一个中文都没有，不必再造第二份视图。
+    # 没有这行的代价是全仓跑一遍多花约 7 秒（P0-6 是唯一要 strip 两遍的规则）。
+    if not CJK_RUN_RE.search(code):
+        return []
+    masked = _collapse_expr("\n".join(strip_comments(lines, mask_strings=True)))
+    hits = []
+    seen = set()
+    for text, rules_res in ((masked, (JSX_TEXT_RE, HTML_TEXT_RE)),
+                            (code, (VISIBLE_ATTR_RE, ZH_KEY_RE))):
+        for res in rules_res:
+            for m in res.finditer(text):
+                base = m.start(m.lastindex)
+                body = m.group(m.lastindex)
+                for run in CJK_RUN_RE.finditer(body):
+                    s, e = base + run.start(), base + run.end()
+                    if (s, e) in seen:
+                        continue
+                    seen.add((s, e))
+                    # 报错要能照着改，光给"暂无"两个字不够：带前后各 24 字的上下文，
+                    # 足够让人认出 `<p>本期共有 3 项任务到期…</p>` 是哪一个。
+                    ctx = body[max(0, run.start() - 24):run.end() + 24]
+                    hits.append((text.count("\n", 0, s) + 1, ctx.strip()))
+    hits.sort()
+    return hits
+    hits.sort()
+    return hits
+
+
+def _p0_6_skipped(rel):
+    """路径是否落在 P0-6 的豁免范围（只有 tests/e2e，理由见 P0_6_SKIP_PREFIX 注释）。"""
+    return rel.startswith(P0_6_SKIP_PREFIX)
+
+
 def _scan_file(rel, path, rules=RULES):
     """单文件的 [(rel, 行号, 规则, 原文)]；同一行多条违反记多项。"""
     try:
@@ -325,7 +536,13 @@ def _scan_file(rel, path, rules=RULES):
         s = s.strip()
         return s if len(s) <= 80 else s[:77] + "..."
 
-    for lineno, line in enumerate(strip_comments(text.splitlines()), 1):
+    lines = text.splitlines()
+    # P0-6 单独在文件级跑：它要跨行匹配文本节点，且有自己的独立视图。
+    # P0-6 不扫 CSS 分支传入的规则集（CSS_RULES），写法上天然满足。
+    if "P0-6" in rules and not _p0_6_skipped(rel):
+        for lineno, body in _p0_6_hits(lines):
+            out.append((rel, lineno, "P0-6", snip(body)))
+    for lineno, line in enumerate(strip_comments(lines), 1):
         if "P0-1" in rules:
             for s in _p0_1_hits(line):
                 out.append((rel, lineno, "P0-1", snip(s)))
@@ -519,6 +736,28 @@ def self_test():
     检测器改回去（把左界丢掉）时这些用例必须变红——这正是它们存在的意义。
     """
     clean_tsx = "export default function Page() { return <main>ok</main>; }\n"
+    # 真样本：web/lib/format.ts 的 Markdown 纯文本清洗链（原文机抄，含中文 // 注释）。
+    # 用 r-string 保留原文的反斜杠，不手抄转义版——手抄错一个就复现不出那个错位。
+    _fmt_chain = (
+        "export function f(text: string) {\n"
+        "  return text\n"
+        r"""    .replace(/(\*{1,3}|_{1,3})(.+?)\1/g, "$2")""" + "\n"
+        "    // 去除行内代码反引号\n"
+        r"""    .replace(/`([^`]+)`/g, "$1")""" + "\n"
+        "    // 去除图片\n"
+        r"""    .replace(/!\[([^\]]*)\]\([^)]+\)/g, "$1")""" + "\n"
+        "    // 去除引用块 >\n"
+        r"""    .replace(/^\s*>\s?/gm, "")""" + "\n"
+        "    // 去除水平分隔线\n"
+        r"""    .replace(/^---+\s*$/gm, "")""" + "\n"
+        "    // 去除 HTML 标签\n"
+        r"""    .replace(/<[^>]+>/g, "")""" + "\n"
+        "    // 折叠多余空白\n"
+        r"""    .replace(/\n{2,}/g, "\n")""" + "\n"
+        "    .trim();\n"
+        "}\n"
+    )
+
     clean_css = ":root { --x: 1px; }\n"
 
     cases = [
@@ -671,6 +910,99 @@ def self_test():
         ("tests/e2e 不豁免模板文案（零证据不上豁免；真要写负向断言请正面登记）",
          {"web/tests/unit/t2.test.ts": 'export const F = "Lorem ipsum";\n'},
          {}, {"NEW_AI_COPY"}),
+        ("i18n 正常写法不红（文案全在 {} 表达式里）",
+         {"web/app/ok.tsx": clean_tsx
+          + "export function A() { const t = useTranslations('x');\n"
+          + "  return <h1>{t('title')}</h1>; }\n"},
+         {}, set()),
+        # ── P0-6 硬编码用户可见文案 ──
+        # 这一组最贵的不是正向用例：是"中文注释绝不许红"。本仓含中文的行 2 万+、
+        # 绝大多数是中文注释；只要注释剥离有一处失守，这道门禁立刻变成全仓假阳性，
+        # 然后被人 --no-verify 掉——等于没建。
+        ("JSX 文本节点里的中文 -> NEW_P0_6",
+         {"web/app/x.tsx": clean_tsx
+          + "export function A() { return <span>暂无活动</span>; }\n"},
+         {}, {"NEW_P0_6"}),
+        ("JSX 文本节点独占一行（not-found.tsx 的真实形态）-> NEW_P0_6",
+         {"web/app/nf.tsx": clean_tsx
+          + "export function N() {\n  return (\n    <h2>\n      页面未找到\n    </h2>\n  );\n}\n"},
+         {}, {"NEW_P0_6"}),
+        ("可见属性 aria-label=\"中文\" -> NEW_P0_6",
+         {"web/app/x2.tsx": clean_tsx
+          + "export function A() { return <input aria-label=\"搜索任务\" />; }\n"},
+         {}, {"NEW_P0_6"}),
+        ("placeholder / title / alt / label / description 同样算可见属性",
+         {"web/app/x3.tsx": clean_tsx
+          + "export function A() {\n"
+          + "  return <input placeholder=\"输入任务标题\"\n"
+          + "    title=\"任务列表\" alt=\"封面图\" label=\"负责人\" description=\"按成员过滤\" />;\n}"},
+         {}, {"NEW_P0_6"}),
+        ("邮件/推送 HTML 模板正文 >中文</ -> NEW_P0_6",
+         {"web/lib/mail.ts":
+          "export const T = `<tr><td>corps · 面向中小团队的轻量协作工具</td></tr>`;\n"},
+         {}, {"NEW_P0_6"}),
+        ("键名以 Zh 结尾的中文兜底值（ai-tools Tab 标签的实际写法）-> NEW_P0_6",
+         {"web/app/tools.tsx": clean_tsx
+          + "const TABS = [{ id: 'a', fallbackZh: '语义搜索', fallbackEn: 'Search' }];\n"},
+         {}, {"NEW_P0_6"}),
+        ("键名不带 Zh 的泛化 key 不收（口径边界：author name / 工具描述之类 4 倍误报）",
+         {"web/app/tools2.tsx": clean_tsx
+          + "const T = { name: '张三', display: '待办列表' };\n"},
+         {}, set()),
+        # 去重必须用**计数字段**断言，不能用红因码：`<li>活动加载失败</li>` 同时满足
+        # 文本节点与 HTML 正文两条口径，记成 2 处时仍然是同一个 NEW_P0_6，
+        # 只看红因码会误认为通过——真重复会让"修一处计数只掉一半"，棘轮当场卡死。
+        ("同一节 JSX 同时满足文本节点与 HTML 正文口径只算一处（去重）",
+         {"web/app/dup.tsx": clean_tsx
+          + "export function A() { return <li>活动加载失败</li>; }\n"},
+         {("web/app/dup.tsx", "P0-6"): 1}, set()),
+        ("**中文注释不红**（第 0 号负向断言：证明注释真的剥掉了）",
+         {"web/app/c.tsx": clean_tsx
+          + "// 这里是加载中>态：中文注释不该被当成文本节点\n"
+          + "const x = 1; // 行尾注释：<div>缓存未命中</div> 时走 fallback\n"
+          + "const y = 2; /** 文档注释：<GrantRow>成员权限</GrantRow> 漏打字 */\n"},
+         {}, set()),
+        ("中文块注释（整段含 `>` 与 `<` 的例子）不红",
+         {"web/app/c2.tsx": clean_tsx
+          + "/* 用法：\n"
+          + " * <GrantRow>成员权限</GrantRow> 负责成员、工作组已有的叠加权限\n"
+          + " * 只处理 1 个角色包：>权限就是 memb…</GrantRow>\n */\n"},
+         {}, set()),
+        # 下面这条是 2026-10-17 实测踩到的真缺陷：旧版 strip_comments 不认正则字面量，
+        # 遇到 `.replace(/`([^`]+)`/g, "$1")` 就把正则里的反引号当成模板字符串开头，
+        # 从此错位，**后续整段 // 注释一行都剥不掉**（实测 web/lib/format.ts 8 行、
+        # decisions/page.tsx 15 行中文注释被当成代码），注释里的中文再配上前一行遗留的
+        # `>` 直接成了 P0-6 假阳性（+16 处）。样本是 web/lib/format.ts 原文机抄
+        # （_fmt_chain），不手抄转义版——手抄错一个反斜杠就复现不出这个链式错位。
+        ("正则字面量里的反引号不许把注释剥离带跑偏（2026-10 实测样本）",
+         {"web/lib/fmt.ts": _fmt_chain},
+         {}, set()),
+        ("引号串里的 `<ul> 含多个 <li>` 不是文本节点（mask 视图生效）",
+         {"web/app/m.tsx": clean_tsx
+          + "it(\"无序列表（- 前缀）渲染为 <ul> 含多个 <li>\", () => {});\n"},
+         {}, set()),
+        ("模板字符串里的 `<div>中文</div>` 照红（邮件模板不能被误当成引号串豁免）",
+         {"web/lib/mail2.ts": "export const T = `<div>`;\n"
+          + "export const U = `<p>你好</p>`;\n"},
+         {}, {"NEW_P0_6"}),
+        ("同一文件既有基线内又有新增 -> 只红新增",
+         {"web/app/x.tsx": clean_tsx
+          + "export const A = <span>暂无活动</span>;\n"
+          + "export const B = <span>加载失败</span>;\n"},
+         {("web/app/x.tsx", "P0-6"): 1}, {"REGRESSION_P0_6"}),
+        ("P0-6 处数变少不红（收紧由提示承担）",
+         {"web/app/x.tsx": clean_tsx + "export const A = <span>暂无活动</span>;\n"},
+         {("web/app/x.tsx", "P0-6"): 3}, set()),
+        ("web/tests/ 与 web/e2e/ 豁免（夹具与断言不进产物 DOM，见 P0_6_SKIP_PREFIX）",
+         {"web/tests/unit/a.test.tsx": "render(<div>第一项</div>);\n",
+          "web/e2e/a.spec.ts": "await page.getByLabel('命令面板');\n"},
+         {}, set()),
+        ("web/messages/zh.json 天然不扫（collect 只走 .ts/.tsx，不需要额外豁免）",
+         {"web/messages/zh.json": "{\"title\": \"任务标题\"}\n"},
+         {}, set()),
+        ("同一节既有 P0-6 又有别的规则 -> 两个红因都在",
+         {"web/app/mix.tsx": 'export const X = ["#abc123", <span>暂无活动</span>];\n'},
+         {}, {"NEW_P0_4", "NEW_P0_6"}),
         # ── 组合 ──
         ("多规则并发（emoji + hex + 文案）",
          {"web/app/multi.tsx": 'export const X = ["#abc123", "✅ Welcome to Our App"];\n'},
