@@ -92,6 +92,14 @@ web/.next.stale.*
 # 模板见 deploy/.env.prod.example —— 只有 .example 才入库
 deploy/.env.prod
 deploy/.env.prod.local
+# 备份后缀：实测出现过 deploy/.env.prod.20261004-drill.bak（8609 字节、59 个生产密钥：
+# JWT_ACCESS_SECRET / BETTER_AUTH_SECRET / STRIPE_SECRET_KEY / STRIPE_WEBHOOK_SECRET /
+# RESEND_API_KEY / POSTGRES_PASSWORD / LIVEKIT_API_SECRET 及支付宝、微信、
+# Google、Outlook OAuth 全套）。它不含 .env 前缀、也不以 .prod 结尾，
+# 上面两条逐字规则一条都拦不住 —— git add -A 会把它提进历史（泄露需轮换全部密钥）。
+# 故在此加后缀通配。它只作用于 deploy/；全仓唯一 tracked 的 .bak 是根目录
+# .dockerignore.bak（已在 L66 被忽略，但因已入库不受影响），与本规则无交集。
+deploy/*.bak
 
 # Tauri 打包资源里的运行时上传目录（内容为本地测试上传残留，不应入库）
 desktop/src-tauri/resources/standalone/uploads/
