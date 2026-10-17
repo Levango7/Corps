@@ -15,6 +15,7 @@
 //   - 不做 HTML 转义（调用方负责传入已转义的 html）
 
 import { logger } from "@/lib/logger";
+import { EMAIL_COLORS } from "@/lib/html-palette";
 
 /** sendPushEmail 选项 */
 export interface SendPushEmailOpts {
@@ -137,16 +138,16 @@ export function renderPushEmailHtml(opts: {
     `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>${safeTitle}</title></head>` +
-    `<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#0f172a;">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;">` +
+    `<body style="margin:0;padding:0;background:${EMAIL_COLORS.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:${EMAIL_COLORS.titleFg};">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${EMAIL_COLORS.pageBg};">` +
     `<tr><td align="center" style="padding:32px 16px;">` +
-    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">` +
-    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:#0f172a;">${safeTitle}</h1></td></tr>` +
-    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:#334155;">${summaryHtml}</td></tr>` +
+    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid ${EMAIL_COLORS.border};overflow:hidden;">` +
+    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:${EMAIL_COLORS.titleFg};">${safeTitle}</h1></td></tr>` +
+    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:${EMAIL_COLORS.bodyFg};">${summaryHtml}</td></tr>` +
     `<tr><td style="padding:0 32px 32px;">` +
-    `<a href="${safeUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">查看详情</a>` +
+    `<a href="${safeUrl}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.ctaBg};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">查看详情</a>` +
     `</td></tr>` +
-    `<tr><td style="padding:16px 32px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#94a3b8;">corps · AI 推送通知</td></tr>` +
+    `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">corps · AI 推送通知</td></tr>` +
     `</table></td></tr></table></body></html>`
   );
 }

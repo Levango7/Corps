@@ -50,28 +50,37 @@ web/lib/chat-events.ts P0-1 3
 web/lib/crypto.ts P0-1 1
 web/lib/workspace-events.ts P0-1 3
 web/prisma/seed.ts P0-1 16
-# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（5 个文件 / 47 处）──
+# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（2 个文件 / 25 处）──
 # 2026-10-12 收紧：CalendarEventDialog 的 placeholder="#3b82f6" 已改 "#RRGGBB"（PR #76）
 # ——实测该处是 <input type="text">，placeholder 是纯文本 HTML 属性、var() 不生效，
 # 而 #3b82f6 也不是品牌色（--accent 是 #4263eb），无等价 token 可换。
 #
-# 余下 47 处按"能不能用 var()"分三类，全部实测确认过（不是推测）：
-#   邮件 HTML 模板（3 个文件 / 32 处）：web/lib/email.ts 22、web/lib/ai/push-email.ts 9、
-#     web/lib/notification/offline-push.ts 1。邮件客户端（Outlook/Gmail 系）会剥掉或
-#     无视 CSS 自定义属性，var() 在这里不生效——属合理硬约束，真要清理只能整模板重写。
-#   批量导出 HTML/PDF（1 个文件 / 13 处）：
-#     web/app/api/v1/workspaces/[wid]/documents/batch-export/route.ts。导出物是脱离
-#     本站 CSS 的独立文档，引不到 design token，同理属合理硬约束。
+# 2026-10-18 去重（47 处 → 25 处）：注意这是**去重**，不是消除——字面量本身一个没少，
+# 只是从散落在 5 个文件收敛到 1 个集中定义处。原因是这三类产物都拿不到
+# CSS 自定义属性，var() 在这里不生效（逐类实测确认过，不是推测）：
+#   邮件 HTML 模板：Gmail / Outlook 系客户端会剥掉或无视 var()。原本同一套调色板被
+#     复制粘贴了三份——web/lib/email.ts 22、web/lib/ai/push-email.ts 9（模板明显抄自
+#     email.ts）、web/lib/notification/offline-push.ts 1，三份副本之间没有单一真源，
+#     改品牌色只改一处就会让两类邮件配色漂移，且没有任何测试能发现。
+#   批量导出 HTML/PDF：web/app/.../batch-export/route.ts 13 处（去重后 9 个唯一值），
+#     导出物是脱离本站 CSS 的独立文档，引不到 design token，同理属硬约束。
+#   → 以上 4 个文件的 45 处全部替换为 web/lib/html-palette.ts 的
+#     EMAIL_COLORS（14 键）/ EXPORT_COLORS（9 键）插值，处数归零。
+#     web/lib/html-palette.ts 因此新增 23 处（14+9）——这是本 PR 的代价与目的：
+#     宁可让 23 处集中在一处被单测钉死，也不要让 45 处散在四处各自漂移。
+#     web/tests/unit/html-palette.test.ts 断言三个邮件模板引用同一 EMAIL_COLORS，
+#     并快照式锁住全部 23 个值，误改即红。
+#
+# 余下 25 处：
+#   调色板集中定义（1 个文件 / 23 处）：web/lib/html-palette.ts，注释里写明了为什么
+#     必须是字面量以及为什么集中到一处。
 #   PWA theme-color（1 个文件 / 2 处）：web/app/[locale]/layout.tsx 的
 #     <meta name="theme-color">，color 是纯 HTML 属性，var() 不生效；两个值分别对应
-#     浅色/深色的 --p-accent（#4263EB / #4973D1），已按注释标注来源。
+#     浅色/深色的 --p-accent（#4263EB / #4973D1），已按注释标注来源。保持不动。
 # 2026-10-16 摘除协同孤儿（ADR-017 / PR #109）：第四类"协作光标调色板"随
 #   web/components/CollaborationProvider.tsx 一并删除（-1 文件 / -4 处），该类现为零。
 web/app/[locale]/layout.tsx P0-4 2
-web/app/api/v1/workspaces/[wid]/documents/batch-export/route.ts P0-4 13
-web/lib/ai/push-email.ts P0-4 9
-web/lib/email.ts P0-4 22
-web/lib/notification/offline-push.ts P0-4 1
+web/lib/html-palette.ts P0-4 23
 # ── P0-5 禁用缓动（cubic-bezier(0.68,-0.55,0.265,1.55) 或第二控制点 y>1 过冲）（0 个文件 / 0 处）──
 # 2026-10-12 清零（PR #75）：design-tokens.css 的 --ease-bounce / --motion-spring
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源

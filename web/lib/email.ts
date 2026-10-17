@@ -9,6 +9,8 @@
  * 优雅降级：未配置 RESEND_API_KEY 时仅记 DB 通知，不发邮件（调用方负责 DB 通知写入）。
  */
 
+import { EMAIL_COLORS } from "@/lib/html-palette";
+
 export interface InviteEmailParams {
   to: string;
   workspaceName: string;
@@ -104,17 +106,17 @@ function renderEmailHtml(opts: {
     `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>${escapeHtml(opts.title)}</title></head>` +
-    `<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#0f172a;">` +
+    `<body style="margin:0;padding:0;background:${EMAIL_COLORS.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:${EMAIL_COLORS.titleFg};">` +
     preheader +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${EMAIL_COLORS.pageBg};">` +
     `<tr><td align="center" style="padding:32px 16px;">` +
-    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">` +
-    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:#0f172a;">${escapeHtml(opts.title)}</h1></td></tr>` +
-    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:#334155;">${opts.bodyHtml}</td></tr>` +
+    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid ${EMAIL_COLORS.border};overflow:hidden;">` +
+    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:${EMAIL_COLORS.titleFg};">${escapeHtml(opts.title)}</h1></td></tr>` +
+    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:${EMAIL_COLORS.bodyFg};">${opts.bodyHtml}</td></tr>` +
     `<tr><td style="padding:0 32px 32px;">` +
-    `<a href="${escapeHtml(opts.ctaHref)}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(opts.ctaLabel)}</a>` +
+    `<a href="${escapeHtml(opts.ctaHref)}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.ctaBg};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(opts.ctaLabel)}</a>` +
     `</td></tr>` +
-    `<tr><td style="padding:16px 32px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#94a3b8;">corps · 面向中小团队的轻量协作工具</td></tr>` +
+    `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">corps · 面向中小团队的轻量协作工具</td></tr>` +
     `</table></td></tr></table></body></html>`
   );
 }
@@ -144,7 +146,7 @@ function renderTaskAssignedHtml(params: TaskAssignedEmailParams): string {
     preheader: `新任务指派：${params.taskTitle}`,
     bodyHtml:
       `<p style="margin:0 0 12px;">${escapeHtml(params.assignerName)} 在 <strong>${escapeHtml(params.workspaceName)}</strong> 中给你指派了一个任务：</p>` +
-      `<p style="margin:0 0 12px;padding:12px 16px;background:#f1f5f9;border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.quoteBg};border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
       `<p style="margin:0;">点击下方按钮查看任务详情。</p>`,
     ctaLabel: "查看任务",
     ctaHref: params.taskUrl,
@@ -162,7 +164,7 @@ function renderTaskDueReminderHtml(params: TaskDueReminderEmailParams): string {
     preheader: `截止日提醒：${params.taskTitle} 明天到期`,
     bodyHtml:
       `<p style="margin:0 0 12px;">你在 <strong>${escapeHtml(params.workspaceName)}</strong> 中负责的任务即将到期：</p>` +
-      `<p style="margin:0 0 12px;padding:12px 16px;background:#fef3c7;border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.warnBg};border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
       `<p style="margin:0 0 12px;">截止日期：<strong>${escapeHtml(dueText)}</strong></p>` +
       `<p style="margin:0;">请尽快处理，避免逾期。</p>`,
     ctaLabel: "查看任务",
@@ -176,7 +178,7 @@ function renderMentionHtml(params: MentionEmailParams): string {
     preheader: `@提及：${params.mentionerName} 在 ${params.taskTitle} 中提到了你`,
     bodyHtml:
       `<p style="margin:0 0 12px;">${escapeHtml(params.mentionerName)} 在 <strong>${escapeHtml(params.workspaceName)}</strong> 的任务评论中提到了你：</p>` +
-      `<p style="margin:0 0 12px;padding:12px 16px;background:#f1f5f9;border-radius:8px;font-size:14px;color:#475569;">${escapeHtml(params.commentSnippet)}</p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.quoteBg};border-radius:8px;font-size:14px;color:${EMAIL_COLORS.quoteFg};">${escapeHtml(params.commentSnippet)}</p>` +
       `<p style="margin:0 0 12px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
       `<p style="margin:0;">点击下方按钮查看并回复。</p>`,
     ctaLabel: "查看评论",
@@ -190,7 +192,7 @@ function renderResetPasswordHtml(params: ResetPasswordEmailParams): string {
     preheader: "密码重置请求：链接 1 小时内有效",
     bodyHtml:
       `<p style="margin:0 0 12px;">我们收到了你的密码重置请求。点击下方按钮设置新密码，链接 <strong>1 小时内有效</strong>。</p>` +
-      `<p style="margin:0;color:#64748b;">如果不是你本人操作，可以忽略这封邮件，你的密码不会被更改。</p>`,
+      `<p style="margin:0;color:${EMAIL_COLORS.noteFg};">如果不是你本人操作，可以忽略这封邮件，你的密码不会被更改。</p>`,
     ctaLabel: "重置密码",
     ctaHref: params.resetUrl,
   });
@@ -369,7 +371,7 @@ function renderVerifyEmailHtml(params: VerifyEmailParams): string {
     bodyHtml:
       `<p style="margin:0 0 12px;">感谢注册 corps。点击下方按钮验证你的邮箱，完成注册。</p>` +
       `<p style="margin:0 0 12px;">链接 <strong>24 小时内有效</strong>，且只能使用一次。</p>` +
-      `<p style="margin:0;color:#64748b;">如果不是你本人操作，可以忽略这封邮件，不会创建任何账户活动。</p>`,
+      `<p style="margin:0;color:${EMAIL_COLORS.noteFg};">如果不是你本人操作，可以忽略这封邮件，不会创建任何账户活动。</p>`,
     ctaLabel: "验证邮箱",
     ctaHref: params.verifyUrl,
   });
@@ -415,7 +417,7 @@ function renderAccountDeletedHtml(params: AccountDeletedEmailParams): string {
 /** 每周摘要的任务列表行（标题 + 截止日 + 链接） */
 function digestTaskRows(tasks: WeeklyDigestEmailParams["overdueTasks"], warn: boolean): string {
   if (tasks.length === 0) return "";
-  const color = warn ? "#fef3c7" : "#eef2ff";
+  const color = warn ? EMAIL_COLORS.warnBg : EMAIL_COLORS.infoBg;
   return tasks
     .slice(0, 10)
     .map(
@@ -436,20 +438,20 @@ function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
     bodyHtml:
       `<p style="margin:0 0 12px;">${name}，这是你在 <strong>${escapeHtml(params.workspaceName)}</strong> 的每周任务摘要：</p>` +
       (params.overdueTasks.length > 0
-        ? `<p style="margin:16px 0 8px;font-weight:600;color:#b45309;">已逾期（${params.overdueTasks.length}）</p>` +
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.overdueFg};">已逾期（${params.overdueTasks.length}）</p>` +
           digestTaskRows(params.overdueTasks, true)
         : "") +
       (params.upcomingTasks.length > 0
-        ? `<p style="margin:16px 0 8px;font-weight:600;color:#4263eb;">未来 7 天到期（${params.upcomingTasks.length}）</p>` +
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.accentFg};">未来 7 天到期（${params.upcomingTasks.length}）</p>` +
           digestTaskRows(params.upcomingTasks, false)
         : "") +
       (!hasAny
         ? `<p style="margin:0 0 12px;">你负责的任务没有逾期项，未来 7 天也没有到期任务——干得漂亮。</p>`
         : "") +
-      `<p style="margin:16px 0 0;color:#6b7280;font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>` +
+      `<p style="margin:16px 0 0;color:${EMAIL_COLORS.footnoteFg};font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>` +
       (params.weeklyStats
-        ? `<p style="margin:20px 0 6px;font-weight:600;color:#4263eb;">本周大盘</p>` +
-          `<p style="margin:0 0 12px;padding:10px 14px;background:#eef2ff;border-radius:8px;font-size:13px;">` +
+        ? `<p style="margin:20px 0 6px;font-weight:600;color:${EMAIL_COLORS.accentFg};">本周大盘</p>` +
+          `<p style="margin:0 0 12px;padding:10px 14px;background:${EMAIL_COLORS.infoBg};border-radius:8px;font-size:13px;">` +
           `注册 ${params.weeklyStats.registers} · 激活 ${params.weeklyStats.activations} · 建任务 ${params.weeklyStats.taskCreates} · 浏览 ${params.weeklyStats.pageViews}</p>`
         : ""),
     ctaLabel: "打开工作区",
