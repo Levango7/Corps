@@ -445,9 +445,10 @@ describe("总预算的取值不是自由的 —— 必须覆盖一次最坏情�
    * 删掉 .env.example 那一行则立刻变红（已用变异自证）。
    * `names.length > 0` 那条是探针自证——正则失效时不许把"一个都没抽到"判成绿。
    */
-  it("断言 19：db-retry 读的 env 旋钮必须在 .env.example 里有声明", () => {
+  it("断言 19：db-retry 读的 env 旋钮必须在 .env.example 与 docker-compose 里都有", () => {
     const src = readFileSync(join(WEB_ROOT, "lib/db-retry.ts"), "utf8");
     const example = readFileSync(join(WEB_ROOT, "../.env.example"), "utf8");
+    const compose = readFileSync(join(WEB_ROOT, "../docker-compose.yml"), "utf8");
 
     const names = [...src.matchAll(/env\.([A-Z][A-Z0-9_]{2,})/g)].map((m) => m[1]);
     expect(
@@ -456,9 +457,17 @@ describe("总预算的取值不是自由的 —— 必须覆盖一次最坏情�
     ).toBeGreaterThan(0);
 
     for (const name of names) {
+      const declared = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=`, "m");
       expect(
-        new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=`, "m").test(example),
+        declared.test(example),
         `env 旋钮 ${name} 只在代码里存在，.env.example 没有声明条目`,
+      ).toBe(true);
+      // 第二个文件判的是"够得着"：compose 不转发的话，运维在 .env 里填了也到不了容器，
+      // 那条声明就变成一句假话（2026-10-03 的 JWT_REFRESH_SECRET 就是同一形态）。
+      // 这里只查"出现"，不查默认值写法——默认值的权威在代码常量，见 compose 内注释。
+      expect(
+        compose.includes(name),
+        `env 旋钮 ${name} 在 .env.example 里有声明，但 docker-compose 没转发 => compose 部署填了也不生效`,
       ).toBe(true);
     }
   });
