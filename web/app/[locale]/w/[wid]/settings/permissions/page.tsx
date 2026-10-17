@@ -8,9 +8,10 @@
  *
  * 规则：
  *  - Owner 行灰色锁定不可改（拥有全部权限）
- *  - Admin 行可改 Member 和 Viewer 列的权限覆盖
- *  - 保存调用 PATCH /api/v1/workspaces/{wid}/permissions
- *  - 加载调用 GET /api/v1/workspaces/{wid}/permissions
+ *  - 仅 member/viewer 行可写（服务端 PATCH 只接受这两个角色的覆盖，owner/admin
+ *    会被 zod 400 拒绝），owner 与 admin 行均为只读展示
+ *  - 保存调用 PATCH /api/v1/workspaces/{wid}/permissions（逐格、单格请求体）
+ *  - 加载调用 GET /api/v1/workspaces/{wid}/permissions（响应经 toPermissionMatrix 适配）
  *
  * UI 走 design token + Tailwind，与 settings/page.tsx 风格一致。
  */
@@ -22,45 +23,20 @@ import { api } from "@/lib/api";
 import { useToast } from "@/components/Toast";
 import { Skeleton } from "@/components/Skeleton";
 import type { Role } from "@/lib/types";
-
-// ─── 类型定义 ───────────────────────────────────────────────
-
-/** 模块 key：与后端权限矩阵列一致 */
-type ModuleKey =
-  | "tasks"
-  | "decisions"
-  | "documents"
-  | "messages"
-  | "members"
-  | "billing"
-  | "analytics"
-  | "settings";
-
-/** 操作 key：R/C/U/D */
-type ActionKey = "read" | "create" | "update" | "delete";
-
-/** 单格权限：4 个布尔值 */
-type PermissionCell = Record<ActionKey, boolean>;
-
-/** 权限矩阵：matrix[role][module] = PermissionCell */
-type PermissionMatrix = Record<Role, Record<ModuleKey, PermissionCell>>;
-
-// ─── 常量 ───────────────────────────────────────────────────
-
-const MODULES: ModuleKey[] = [
-  "tasks",
-  "decisions",
-  "documents",
-  "messages",
-  "members",
-  "billing",
-  "analytics",
-  "settings",
-];
-
-const ACTIONS: ActionKey[] = ["read", "create", "update", "delete"];
-
-const ROLES: Role[] = ["owner", "admin", "member", "viewer"];
+import {
+  ACTIONS,
+  MODULES,
+  ROLES,
+  cloneMatrix,
+  defaultMatrix,
+  isOverridable,
+  matrixEqual,
+  toPermissionMatrix,
+  toPermissionPatches,
+  type ActionKey,
+  type ModuleKey,
+  type PermissionMatrix,
+} from "@/lib/permissions-matrix";
 
 /**
  * 权限页 Skeleton · 与正式页面布局尺寸对齐
@@ -135,61 +111,8 @@ function PermissionsPageSkeleton() {
   );
 }
 
-/** Owner 默认拥有全部权限 */
-const FULL_CELL: PermissionCell = { read: true, create: true, update: true, delete: true };
-
-/** Viewer 默认仅读 */
-const READ_ONLY_CELL: PermissionCell = { read: true, create: false, update: false, delete: false };
-
-/** 生成默认权限矩阵（首次加载/重置时使用） */
-function defaultMatrix(): PermissionMatrix {
-  const makeRoleRow = (cell: PermissionCell): Record<ModuleKey, PermissionCell> =>
-    MODULES.reduce(
-      (acc, m) => {
-        acc[m] = { ...cell };
-        return acc;
-      },
-      {} as Record<ModuleKey, PermissionCell>,
-    );
-
-  return {
-    owner: makeRoleRow(FULL_CELL),
-    admin: makeRoleRow(FULL_CELL),
-    member: {
-      ...makeRoleRow({ read: true, create: true, update: true, delete: false }),
-      // member 对 members/billing/analytics/settings 仅读
-      members: { ...READ_ONLY_CELL },
-      billing: { ...READ_ONLY_CELL },
-      analytics: { ...READ_ONLY_CELL },
-      settings: { ...READ_ONLY_CELL },
-    },
-    viewer: makeRoleRow(READ_ONLY_CELL),
-  };
-}
-
-/** 深拷贝矩阵（避免引用共享导致状态错乱） */
-function cloneMatrix(m: PermissionMatrix): PermissionMatrix {
-  const out = {} as PermissionMatrix;
-  for (const r of ROLES) {
-    out[r] = {} as Record<ModuleKey, PermissionCell>;
-    for (const mod of MODULES) {
-      out[r][mod] = { ...m[r][mod] };
-    }
-  }
-  return out;
-}
-
-/** 矩阵相等比较（用于判断 dirty） */
-function matrixEqual(a: PermissionMatrix, b: PermissionMatrix): boolean {
-  for (const r of ROLES) {
-    for (const mod of MODULES) {
-      for (const act of ACTIONS) {
-        if (a[r][mod][act] !== b[r][mod][act]) return false;
-      }
-    }
-  }
-  return true;
-}
+// 矩阵类型、默认值、比较与两侧契约适配均位于 @/lib/permissions-matrix，
+// 便于单测直接覆盖（页面内私有函数无法测试，见 tests/unit/permissions-matrix-adapter.test.ts）。
 
 // ─── 页面组件 ───────────────────────────────────────────────
 
@@ -212,11 +135,13 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
   const load = useCallback(async () => {
     try {
       const [perm, ws] = await Promise.all([
-        api<PermissionMatrix | null>(`/api/v1/workspaces/${wid}/permissions`).catch(() => null),
+        // 响应体形状是 { roles: { [role]: { [module]: Action[] } }, ... }，
+        // 必须经 toPermissionMatrix 解包 + 转布尔，不能当矩阵直接用。
+        api<unknown>(`/api/v1/workspaces/${wid}/permissions`).catch(() => null),
         api<{ role: Role }>(`/api/v1/workspaces/${wid}`),
       ]);
-      // 后端可能返回 null（未配置过），用默认矩阵兜底
-      const next = perm ?? defaultMatrix();
+      // 未配置过 / 响应缺项时由适配函数逐项回落默认矩阵，始终返回完整矩阵
+      const next = toPermissionMatrix(perm);
       setMatrix(next);
       setOriginalMatrix(cloneMatrix(next));
       setCurrentRole(ws.role);
@@ -239,10 +164,8 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
   /** 切换单个权限格 */
   function toggle(role: Role, mod: ModuleKey, act: ActionKey) {
     if (!canEdit) return;
-    // Owner 行锁定
-    if (role === "owner") return;
-    // Admin 仅可改 member 和 viewer 列（不能改自己 admin 列，也不能改 owner 列）
-    if (currentRole === "admin" && role !== "member" && role !== "viewer") return;
+    // 服务端只允许 member/viewer 的覆盖；owner/admin 行只读
+    if (!isOverridable(role)) return;
 
     setMatrix((prev) => {
       const next = cloneMatrix(prev);
@@ -254,14 +177,22 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
   /** 保存权限矩阵 */
   async function save() {
     if (saving || !dirty) return;
+    // 服务端 PATCH 的形状是单格 { role, module, actions }，不是整张矩阵；
+    // 因此把矩阵差异拆成逐格补丁（仅 member/viewer）。
+    const patches = toPermissionPatches(matrix, originalMatrix);
+    if (patches.length === 0) return; // owner/admin 行的差异服务端不可持久化
     setSaving(true);
     setError("");
     setSaved(false);
     try {
-      await api(`/api/v1/workspaces/${wid}/permissions`, {
-        method: "PATCH",
-        body: JSON.stringify(matrix),
-      });
+      await Promise.all(
+        patches.map((patch) =>
+          api(`/api/v1/workspaces/${wid}/permissions`, {
+            method: "PATCH",
+            body: JSON.stringify(patch),
+          }),
+        ),
+      );
       setOriginalMatrix(cloneMatrix(matrix));
       setSaved(true);
       toast("success", t("saveSuccess"));
@@ -356,13 +287,10 @@ export default function PermissionsPage({ params }: { params: Promise<{ wid: str
             <tbody>
               {ROLES.map((role) => {
                 const isOwner = role === "owner";
-                // Admin 仅可改 member/viewer 行
-                const rowEditable =
-                  canEdit &&
-                  !isOwner &&
-                  (currentRole === "owner" ||
-                    (currentRole === "admin" && (role === "member" || role === "viewer")));
-                const rowLocked = isOwner || !rowEditable;
+                // 仅 member/viewer 行可写：服务端 PATCH 只接受这两个角色的覆盖，
+                // owner/admin 行仅展示（服务端会 400，本地不允许改，避免"看着能改却存不上"）
+                const rowEditable = canEdit && isOverridable(role);
+                const rowLocked = !rowEditable;
 
                 return (
                   <tr key={role} className="border-b border-[var(--border-soft)] last:border-b-0">

@@ -1426,7 +1426,7 @@
     "saveFailed": "Failed to save, please try again",
     "loadFailed": "Failed to load permissions",
     "ownerLocked": "Owner permissions cannot be changed",
-    "adminCanOverride": "Admin can override this column",
+    "adminCanOverride": "Only Member and Viewer rows can be overridden; Owner and Admin rows are fixed",
     "copyFailed": "Failed to copy",
     "shareFailed": "Failed to share, please try again",
     "addPermission": "Add Permission",
