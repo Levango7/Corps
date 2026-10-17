@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y | fix/a11y-burndown-4 | components/im/ConversationSettings.tsx,components/DocumentListView.tsx,components/workflow/WorkflowEditor.tsx,components/template/TemplateEditor.tsx,components/database/TableView.tsx,web/tests/a11y-baseline.txt | a11y-burndown | 2026-10-15 19:24 | 2026-10-15 23:24 | a11y 存量偿还第 4 批（5 文件 35 条）
-F:/Nexus/corps-reverify-1017 | fix/smoke-ephemeral-target-diagnosis | web/tests/unit/db-retry.test.ts,.env.example | qoder-reverify-1017 | 2026-10-17 13:15 | 2026-10-17 16:15 | 补齐 withDbRetry 未覆盖的三条分支（预算耗尽抛原错误、defaultSleep 真定时器、env 旋钮必须有声明）
