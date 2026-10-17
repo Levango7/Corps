@@ -87,6 +87,8 @@ __pycache__/
 .tmp-*
 # Next.js 构建的过期产物目录（本机 build 被中断时留下，形如 .next.stale.<数字>）
 web/.next.stale.*
+# visual-kit 探针运行时输出（对比度实测值等临时文本，不入库）
+web/_probe/
 
 # 部署配置里的真实环境文件（含 POSTGRES_PASSWORD / JWT_*_SECRET 等赋值）
 # 模板见 deploy/.env.prod.example —— 只有 .example 才入库
