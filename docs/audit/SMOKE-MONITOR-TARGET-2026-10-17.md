@@ -122,9 +122,42 @@ shellcheck 在 `/e/dev-data/go/bin/shellcheck`。**本机没有真 jq**，载荷
 最后一条口径：本文所有 GitHub 侧数字取自 2026-10-17 上午的 API 实测。
 期间 `gh api` 出现过一次连接超时（同一命令重跑即成功），所以引用"某 sha 全绿"必须带时点。
 
-## 6. 同一条 PR 上顺手收的两处（含我自己造成的一次红）
+## 6. 顺带核过的两条既有门禁（不是本 PR 的改动，只是独立复核）
 
-### 6.1 我让 PR #113 的 Lint 变红，根因是认领工具的写侧不校验读侧会判的东西
+### 6.1 `pool_timeout ≥ auth.maxWait` 这条耦合断言真有射程
+
+`lib/db-pool.ts` 声称这条跨文件耦合"由 `tests/unit/db-pool.test.ts` 的断言守着（用例直接读
+auth.ts 源码抽 maxWait）"。静态读到确实是 `readFileSync(lib/auth.ts)` +
+`/maxWait:\s*([\d_]+)/`，并且注释解释了为什么不会命中注释里的 `maxWait=2000ms` 写法。
+运行时验证（本 worktree 独立 `pnpm install --frozen-lockfile --ignore-scripts` 后跑，
+vitest 3.2.7，单跑该文件）：
+
+| 跑法 | 结果 |
+| --- | --- |
+| 基线 | `Test Files 1 passed / Tests 15 passed`，rc=0 |
+| MUT-A `DB_POOL_DEFAULTS.poolTimeoutSeconds` 10→5 | **7 failed**，红因正是"断言 6"那条 describe |
+| MUT-B `auth.ts` 的 `{maxWait: 10_000}`→`{maxWait: 20_000}` | **1 failed**，红因同样是"断言 6" |
+| 两处分别还原 | 回到 15 passed，rc=0 |
+
+⇒ 这条断言不是"把两个常数各写一遍"的假绿门禁：改任一侧都会红，且红在正确的用例上。
+
+方法论补一条我自己的坑：**"还原后 md5 一致"这种核对在 autocrlf 机器上会骗人**——
+`sed -i` 往返后文件内容与 HEAD 归一化后一致（`git diff --stat` 为空、CR 计数与 HEAD 都是 0），
+但 md5 与检出时的副本不同、`git status` 仍标 ` M`（stat 缓存 + CRLF 归一化的产物）。
+判"是否恢复原状"要用 `git checkout -- <paths>` + `git status --porcelain` 为空，
+不要拿 md5 当准，否则会得出"我改坏了"或"没改回来"的错误结论。
+
+### 6.2 顺带确认的 e2e 接线
+
+`ci.yml` 的 e2e job 跑 `npx playwright test --config playwright.config.ts`，**不带 spec 过滤**
+⇒ `web/e2e/viewer-readonly.spec.ts` 确实在 CI 里被执行（不是我 10-07 那次"写完了但没人跑"）。
+另：e2e 的真实目录是 `web/e2e/`（`testDir: "./e2e"` 相对 `web/`）——我先前拿仓库根 `e2e/`
+去 grep 得到空结果，误判成"spec 已删 / `describe.serial` 已消"，实际 `describe.serial` 仍有 17 处。
+教训：**判"某个东西已消失"之前，先证明搜索路径存在**。
+
+## 7. 同一条 PR 上顺手收的两处（含我自己造成的一次红）
+
+### 7.1 我让 PR #113 的 Lint 变红，根因是认领工具的写侧不校验读侧会判的东西
 
 现象：PR #113 首跑 `Lint=fail`，红因不是我改的 workflow，而是
 `check_coordination_claims.py CLAIM_MALFORMED 字段为空 ['意图']`——**那条坏认领是我写的**。
@@ -141,7 +174,7 @@ shellcheck 在 `/e/dev-data/go/bin/shellcheck`。**本机没有真 jq**，载荷
 漏 `--intent` → 真实退出码 2 且**认领表里没有多出该行**（`list | grep -c guard-probe` = 0）；
 `--self-test` 22 条（`--self-test 2>&1 | grep -c OK` = 22、`grep -c FAIL` = 0）含新用例全 OK；不带参数的校验（CI 用的就是它）→ PASS。
 
-### 6.2 写权限 default-deny 的数字复算（#37）
+### 7.2 写权限 default-deny 的数字复算（#37）
 
 门禁自报：`280 scanned / 252 covered / 28 registered`，PASS。
 CHANGELOG 里那条 Security 记录写的是 `278 / 250 / 28` —— 数字过期（+2 个新端点进墙后没回写），
