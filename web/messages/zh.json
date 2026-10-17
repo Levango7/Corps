@@ -2986,7 +2986,11 @@
       "resultMessages": "消息",
       "resultWikis": "文档",
       "resultTodos": "待办",
-      "resultDecisions": "决策"
+      "resultDecisions": "决策",
+      "scopeMessages": "消息",
+      "scopeWikis": "文档",
+      "scopeTodos": "待办",
+      "scopeDecisions": "决策"
     },
     "mailAssistant": {
       "title": "邮件助手",
