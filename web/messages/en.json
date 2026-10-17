@@ -2986,7 +2986,11 @@
       "resultMessages": "Messages",
       "resultWikis": "Documents",
       "resultTodos": "Todos",
-      "resultDecisions": "Decisions"
+      "resultDecisions": "Decisions",
+      "scopeMessages": "Messages",
+      "scopeWikis": "Documents",
+      "scopeTodos": "Todos",
+      "scopeDecisions": "Decisions"
     },
     "mailAssistant": {
       "title": "Mail Assistant",

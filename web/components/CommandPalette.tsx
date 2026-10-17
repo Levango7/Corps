@@ -48,7 +48,7 @@ interface CmdItem {
   id: string;
   /** 渲染文案：搜索结果为原文；导航项走 titleKey（此时 title 可缺省） */
   title?: string;
-  /** 导航项的翻译 key（阶段 2-6 i18n）：title 为原始 key、显示经 tNav(title) */
+  /** 导航项的翻译 key（阶段 2-6 i18n）：完整路径如 "nav.menu.overview"，显示经 tNav(titleKey) */
   titleKey?: string;
   kind: SearchType | "nav";
   href: string;
@@ -101,7 +101,9 @@ const SEARCH_ICONS: Record<SearchType, typeof FileText> = {
 
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
   const t = useTranslations("command");
-  const tNav = useTranslations("nav");
+  // 根命名空间：titleKey / hintKey 存的都是完整路径（nav.menu.*），
+  // 若这里用 useTranslations("nav") 会二次叠加成 nav.nav.menu.*，全部 MISSING_MESSAGE。
+  const tNav = useTranslations();
   const tSearch = useTranslations("search");
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<CmdItem[]>([]);
