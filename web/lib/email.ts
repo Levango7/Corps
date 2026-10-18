@@ -114,7 +114,7 @@ function renderEmailHtml(opts: {
     `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:${EMAIL_COLORS.titleFg};">${escapeHtml(opts.title)}</h1></td></tr>` +
     `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:${EMAIL_COLORS.bodyFg};">${opts.bodyHtml}</td></tr>` +
     `<tr><td style="padding:0 32px 32px;">` +
-    `<a href="${escapeHtml(opts.ctaHref)}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.ctaBg};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(opts.ctaLabel)}</a>` +
+    `<a href="${escapeHtml(opts.ctaHref)}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.accent};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(opts.ctaLabel)}</a>` +
     `</td></tr>` +
     `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">corps · 面向中小团队的轻量协作工具</td></tr>` +
     `</table></td></tr></table></body></html>`
@@ -442,7 +442,7 @@ function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
           digestTaskRows(params.overdueTasks, true)
         : "") +
       (params.upcomingTasks.length > 0
-        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.accentFg};">未来 7 天到期（${params.upcomingTasks.length}）</p>` +
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.accent};">未来 7 天到期（${params.upcomingTasks.length}）</p>` +
           digestTaskRows(params.upcomingTasks, false)
         : "") +
       (!hasAny
@@ -450,7 +450,7 @@ function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
         : "") +
       `<p style="margin:16px 0 0;color:${EMAIL_COLORS.footnoteFg};font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>` +
       (params.weeklyStats
-        ? `<p style="margin:20px 0 6px;font-weight:600;color:${EMAIL_COLORS.accentFg};">本周大盘</p>` +
+        ? `<p style="margin:20px 0 6px;font-weight:600;color:${EMAIL_COLORS.accent};">本周大盘</p>` +
           `<p style="margin:0 0 12px;padding:10px 14px;background:${EMAIL_COLORS.infoBg};border-radius:8px;font-size:13px;">` +
           `注册 ${params.weeklyStats.registers} · 激活 ${params.weeklyStats.activations} · 建任务 ${params.weeklyStats.taskCreates} · 浏览 ${params.weeklyStats.pageViews}</p>`
         : ""),
