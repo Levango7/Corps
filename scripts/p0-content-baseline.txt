@@ -86,3 +86,52 @@ web/lib/html-palette.ts P0-4 23
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源
 # 文件的原因），globals.css 的死类 .btn-press-spring / .card-lift-bounce 同步删除。
 # 本类现在全仓为零：任何一处新增都会直接判 NEW_P0-5，没有基线可躲。
+# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（11 个文件 / 126 处）──
+# 2026-10-17 首次登记：本规则此前是全仓唯一「有真实缺陷、但零机械覆盖」的一类——
+# 双语应用里写死的中文在英文 locale 下照样显示中文，用户可见，却没有任何门禁管。
+# 登记的目的与其余几条完全一致：先立门禁把「新增」卡住，存量分批烧，不是认可。
+#
+# 这 126 处按清偿难度分三类，**别混着看**：
+#
+# A 类 · UI 组件 —— 该修，且改法常规（7 个文件 / 50 处）：
+#   ai-tools/page.tsx 19：7 个 Tab 标签写死在 `fallbackZh`（语义搜索 / 邮件助手 /
+#     待办提取 / 会议纪要 / 文档问答 / 决策辅助 / 工作流编排）+ AI 推送，另有 Tab
+#     描述文案与 aria-label="关闭"。**同一个文件其它文案走的是
+#     useTranslations("ai.aiTools")**，典型的部分 i18n——一半翻了一半没翻。
+#   AiInsightWidget 11、TaskSummaryWidget 7、CalendarWeek 5、ActivityWidget 4、
+#     WidgetGrid 3（可拖拽卡片网格 / 拖拽移动 / 调整大小）、SafeComponent 1（刷新重试）。
+#     CalendarWeek 那 5 处是**日期格式**写死成「2026年 10月18日」，英文 locale 下照样
+#     这么显示；正解是 Intl.DateTimeFormat 按 locale 格式化，不是往词条里加键。
+#     其余全是客户端组件，换 useTranslations + 往 messages/{zh,en}.json 加键即可，
+#     服务端 bundle 不受影响。本 PR 不改这些组件，另行开一轮烧。
+#
+# B 类 · 邮件/推送 HTML 模板 —— 本轮不修（3 个文件 / 73 处）：
+#   web/lib/email.ts 68、web/lib/ai/push-email.ts 2、web/lib/notification/offline-push.ts 3。
+#   这些正文写在 TS 模板字符串里、由服务端直接拼进 HTML 发出去。要修不是加几个 t()
+#   就完事：得先给发信路径带上收件人 locale、把模板拆成按 locale 取词条的一整套，
+#   是独立工作项（约 73 处 + invoke 点签名改动），不在本 PR 范围。**登记 ≠ 认可**。
+#
+# C 类 · 已论证的硬约束（1 个文件 / 3 处）：
+#   web/app/not-found.tsx：文件头注释写明「本组件位于 [locale] 段之外，
+#   NextIntlClientProvider 不可用，故使用中文硬编码文本（全局 fallback）」。
+#   这里拿不到 provider，属硬限制；要改得先把根布局挪出 [locale] 段或改用 locale 探测，
+#   收益远小于成本。留着，理由已写在源文件的注释里。
+#
+# 检测口径（详见 check_p0_content.py 的 P0-6 段落）：剥离 // 与 /* */ 注释后，只认三类
+# **渲染给用户**的位置——JSX/HTML 文本节点、可见属性（placeholder/aria-label/title/alt/
+# label/description）的字符串值、邮件模板正文 `>中文</`，外加 `fallbackZh` 这类以 Zh
+# 结尾的中文兜底键。**不认**中文注释（含中文的行全仓 2 万+、绝大多数是注释，不剥干净
+# 这道门禁全是假阳性），**不认** web/lib/ai/**/prompts/** 下的 prompt 正文（实测那四条
+# 口径在 prompts/ 下零命中，所以按"零证据不上豁免"的既定口径连豁免都不加），
+# 也**不扫** web/tests/ 与 web/e2e/（夹具与断言不进产物 DOM）。
+web/app/[locale]/w/[wid]/ai-tools/page.tsx P0-6 19
+web/app/not-found.tsx P0-6 3
+web/components/SafeComponent.tsx P0-6 1
+web/components/WidgetGrid.tsx P0-6 3
+web/components/calendar/CalendarWeek.tsx P0-6 5
+web/components/widgets/ActivityWidget.tsx P0-6 4
+web/components/widgets/AiInsightWidget.tsx P0-6 11
+web/components/widgets/TaskSummaryWidget.tsx P0-6 7
+web/lib/ai/push-email.ts P0-6 2
+web/lib/email.ts P0-6 68
+web/lib/notification/offline-push.ts P0-6 3
