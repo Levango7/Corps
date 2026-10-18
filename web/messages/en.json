@@ -474,7 +474,10 @@
     "deleteFailed": "Delete failed",
     "fatalError": "A critical error occurred",
     "fatalErrorDesc": "An unexpected error occurred while rendering the page. Try again or refresh.",
-    "copyFailed": "Copy failed"
+    "copyFailed": "Copy failed",
+    "componentLoadFailed": "{name} failed to load",
+    "componentLoadFailedGeneric": "Component failed to load",
+    "reloadRetry": "Reload & retry"
   },
   "auth": {
     "tagline": "Lightweight collaboration for small teams",
@@ -2055,7 +2058,26 @@
     "resetLayoutConfirm": "Reset layout to default? This will discard your current layout.",
     "dashboard": "Dashboard",
     "exportLayoutFailed": "Layout export failed",
-    "importLayoutFailed": "Layout import failed"
+    "importLayoutFailed": "Layout import failed",
+    "taskStatsLoading": "Loading task summary",
+    "completionRateAria": "Completion rate {percent}%",
+    "statDone": "Completed",
+    "statInProgress": "In progress",
+    "statPending": "Pending",
+    "statOverdue": "Overdue",
+    "aiInsightLoading": "Loading AI insights",
+    "aiInsightDisabled": "AI insights not enabled",
+    "aiInsightDisabledHint": "Workspace insights will be generated automatically once the AI assistant is enabled",
+    "aiInsightLoadFailed": "Failed to load insights",
+    "aiInsightEmpty": "No AI insights yet",
+    "aiInsightEmptyHint": "The AI assistant will generate insights once more data accumulates",
+    "insightTypeOpportunity": "Opportunity",
+    "insightTypeRisk": "Risk",
+    "insightTypeTrend": "Trend",
+    "insightTypeSuggestion": "Suggestion",
+    "confidenceHigh": "High confidence",
+    "confidenceMedium": "Medium confidence",
+    "confidenceLow": "Low confidence"
   },
   "knowledgeBase": {
     "loading": "Loading…",
@@ -3183,7 +3205,12 @@
       "docQa": "Document Q&A",
       "decisionAssistant": "Decision Assistant",
       "workflowOrchestrator": "Workflow Orchestrator",
-      "aiPush": "AI Push"
+      "aiPush": "AI Push",
+      "todoExtractDesc": "Extract implicit to-dos from messages, documents, and emails. AI identifies titles, owners, due dates, and priorities automatically, with bulk import support.",
+      "openTab": "Open {name}",
+      "close": "Close",
+      "serviceUnavailable": "{name} is temporarily unavailable. Please try again.",
+      "retry": "Reload & retry"
     }
   },
   "doc": {
@@ -3954,6 +3981,9 @@
     "config": "Configure",
     "fullscreen": "Fullscreen",
     "refresh": "Refresh",
-    "remove": "Remove"
+    "remove": "Remove",
+    "gridAriaLabel": "Draggable widget grid",
+    "dragMove": "Drag to move",
+    "resize": "Resize"
   }
 }

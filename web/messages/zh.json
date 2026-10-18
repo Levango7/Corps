@@ -474,7 +474,10 @@
     "deleteFailed": "删除失败",
     "fatalError": "应用发生严重错误",
     "fatalErrorDesc": "页面渲染时发生未预期的异常，请尝试重试或刷新。",
-    "copyFailed": "复制失败"
+    "copyFailed": "复制失败",
+    "componentLoadFailed": "{name} 加载失败",
+    "componentLoadFailedGeneric": "组件加载失败",
+    "reloadRetry": "刷新重试"
   },
   "auth": {
     "tagline": "面向中小团队的轻量协作平台",
@@ -2055,7 +2058,26 @@
     "resetLayoutConfirm": "恢复默认布局？这将丢弃当前布局。",
     "dashboard": "仪表盘",
     "exportLayoutFailed": "布局导出失败",
-    "importLayoutFailed": "布局导入失败"
+    "importLayoutFailed": "布局导入失败",
+    "taskStatsLoading": "加载任务摘要",
+    "completionRateAria": "完成率 {percent}%",
+    "statDone": "已完成",
+    "statInProgress": "进行中",
+    "statPending": "待处理",
+    "statOverdue": "逾期",
+    "aiInsightLoading": "加载 AI 洞察",
+    "aiInsightDisabled": "AI 洞察暂未启用",
+    "aiInsightDisabledHint": "启用 AI 助理后将自动生成工作区洞察",
+    "aiInsightLoadFailed": "洞察加载失败",
+    "aiInsightEmpty": "暂无 AI 洞察",
+    "aiInsightEmptyHint": "AI 助理将在积累更多数据后生成洞察",
+    "insightTypeOpportunity": "机会",
+    "insightTypeRisk": "风险",
+    "insightTypeTrend": "趋势",
+    "insightTypeSuggestion": "建议",
+    "confidenceHigh": "高置信",
+    "confidenceMedium": "中置信",
+    "confidenceLow": "低置信"
   },
   "knowledgeBase": {
     "loading": "加载中…",
@@ -3183,7 +3205,12 @@
       "docQa": "文档问答",
       "decisionAssistant": "决策辅助",
       "workflowOrchestrator": "工作流编排",
-      "aiPush": "AI 推送"
+      "aiPush": "AI 推送",
+      "todoExtractDesc": "从消息、文档或邮件内容中提取隐含的待办事项，AI 自动识别标题、负责人、截止日期与优先级，支持批量入库。",
+      "openTab": "打开 {name}",
+      "close": "关闭",
+      "serviceUnavailable": "{name} 服务暂时不可用，请重试",
+      "retry": "刷新重试"
     }
   },
   "doc": {
@@ -3954,6 +3981,9 @@
     "config": "配置",
     "fullscreen": "全屏",
     "refresh": "刷新",
-    "remove": "删除"
+    "remove": "删除",
+    "gridAriaLabel": "可拖拽卡片网格",
+    "dragMove": "拖拽移动",
+    "resize": "调整大小"
   }
 }
