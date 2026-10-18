@@ -566,7 +566,6 @@ lib/ai/prompts/weekly-report.ts
 lib/ai/prompts/wiki-search.ts
 lib/ai/prompts/workflow-build.ts
 lib/ai/prompts/workflow-orchestrator.ts
-lib/ai/push-email.ts
 lib/ai/push-runner.ts
 lib/ai/shared.ts
 lib/ai/stream.ts
