@@ -17,6 +17,8 @@ r"""P0 内容规约门禁（棘轮）：emoji 图标 / 紫粉渐变 / 硬编码�
     中文。实测 web/ 生产代码 10 个文件 99 处，其中 web/app/[locale]/w/[wid]/ai-tools/
     page.tsx 的 7 个 Tab 标签写死在 `fallbackZh` 里、而同一文件其它文案走的是
     useTranslations("ai.aiTools")——典型"一半翻了一半没翻"。这类缺陷此前**零**机械覆盖。
+    2026-10-19 扩到第二组口径（表达式容器/对象字面量/name prop 共五类盲区，逐条理由、
+    正则与不判红边界见下面 P0-6 段落与 self_test 的配套用例）。
 本脚本把其中**可机械判定**的部分变成 CI 门禁；判不了的（如"渐变好不好看"）
 刻意不做——天天误叫的门禁只会被 --no-verify 掉，等于没建。
 
@@ -222,6 +224,82 @@ VISIBLE_ATTRS = ("placeholder", "aria-label", "title", "alt", "label", "descript
 VISIBLE_ATTR_RE = re.compile(
     r"\b(?:%s)\s*=\s*([\"'`])([^\"'`]*[%s][^\"'`]*)\1" % ("|".join(VISIBLE_ATTRS), CJK))
 ZH_KEY_RE = re.compile(r"\b[\w$]*Zh\s*:\s*([\"'`])([^\"'`]*[%s][^\"'`]*)\1" % CJK)
+
+# ─── P0-6 第二组口径（2026-10-19 补）：表达式容器 / 对象字面量 / name prop ───
+# 第一组四条口径有五类实测抓不到的盲区（独立复验往文件里注入这些形态、门禁判 PASS
+# 验证过，不是推测）：
+#   5. JSX 属性表达式容器：title={`完成率 ${n}%`} —— VISIBLE_ATTR_RE 在 `=` 与引号之间
+#      只允许空白（=\s*(["'`])），属性值写成 `={` 时正则直接失配；
+#   6. JSX 子节点表达式容器里的模板串：<span>{`完成率 ${n}%`}</span>；
+#   7. JSX 子节点里的三元：{cond ? "全部已完成" : "尚有未完"}；
+#      （6/7 根因相同：第一组的文本节点口径必须排除 `{`/`}`，否则
+#      `<span>{t('total')} 数据截止昨天</span>` 这种"一半表达式一半写死文案"没法
+#      只算写死的那半——见 _EXPR_GROUP_RE 处注释的实测数字：整体放宽会变 591 处）
+#   8. 对象字面量的界面标签键：label: "洞察类型"；
+#   9. JSX 普通字符串 prop：<SafeComponent name="多维表格编辑器"> —— name 不在第一组
+#      的可见属性白名单里，而它会流进 SafeComponent 的默认兜底
+#      t("componentLoadFailed", { name })，英文 locale 下照样显示中文。
+# 第二组与第一组共用同一份去重集合（按连续中文段的绝对偏移），同一处不记两遍。
+#
+# 不判红的边界（逐条写进 self_test 负向用例——改坏检测器时它们必须变红）：
+#   a. 中文在注释里（strip_comments 先剥，两类视图都吃不到）；
+#   b. 中文在**非渲染位置**的普通字符串常量里：const MSG = "操作成功" 之后 toast(MSG)。
+#      判据不是"有没有中文"而是"在不在渲染位置"：它没写死在 JSX/属性里，且有变量名
+#      可读；但同样内容直接写进 JSX 属性或子节点就红（见上面的正向用例）；
+#   c. 中文在 console.error/console.warn 的参数里——服务端日志不是界面文案；
+#   d. web/messages/**（collect 只走 .ts/.tsx，天然不扫）、web/tests/**、web/e2e/**；
+#   e. 中文在类型/接口/枚举的字符串字面量成员里（type Kind = "高优先级" | "中优先级"、
+#      interface Props { label: "高优先级" }）——定义处不背：真被渲染了是调用方的责任。
+#      对象字面量口径因此带 interface/type 前缀守卫（见 OBJECT_VISIBLE_RE 使用处）；
+#   f. 表达式容器里**只有字符串字面量**中的中文算文案：{i.名称}（属性访问）、
+#      aria-label={某变量}（标识符）不算——与边界 b 同一条判据，实现见
+#      _string_literal_spans；
+#   g. name 只有在 JSX 开标签里才算 prop：let name = "张三" 这类普通赋值不判红；
+#   h. 箭头函数体不是子节点容器：JSX_CHILD_EXPR_RE 的 (?<!=) 挡掉 `(x) => { ... }`——
+#      不挡会把全仓箭头函数里的中文一网打尽（`=>` 后的 `{` 与 `>中文<` 前的子节点
+#      容器在形状上一模一样，是这组口径里最大的假阳性洪水风险）；
+#   i. 表达式容器里含语句/箭头函数时**整容器跳过**：{items.map((x) => { const tip =
+#      "操作成功"; … })} 这种容器里的中文常量按边界 b 归调用方管（有可读变量名、不在
+#      渲染位置），整容器抓它就是把边界 b 从后门推翻。关键词只取
+#      const/let/var/return/function/await 与 =>——if/for 之类不进集合，因为它们可能
+#      出现在中文文案里（"if 语句"），误跳过的代价只是漏报，而漏报比误报便宜。
+_CONTAINER_STMT_RE = re.compile(r"\b(?:const|let|var|return|function|await)\b|=>")
+# 表达式容器 {...} 的内容模式：允许一层嵌套花括号（模板串插值 ${n}、三元里的对象），
+# 不允许裸换行外的多层嵌套——宁漏不误报，嵌套再深就该上 AST 而不是正则。
+_EXPR_CONTENT = r"[^{}]*(?:\{[^{}]*\}[^{}]*)*"
+# 形态 5：可见属性的表达式容器值（title={`中文`} / aria-label={`中文`} / …）。
+# 属性名沿用第一组的 VISIBLE_ATTRS——HTML 标准可见属性，零争议。
+VISIBLE_ATTR_EXPR_RE = re.compile(
+    r"\b(?:%s)\s*=\s*\{(%s)\}" % ("|".join(VISIBLE_ATTRS), _EXPR_CONTENT))
+# 形态 9：JSX 开标签内的 name 字符串 prop。为什么必须带 `<标签 ...>` 上下文：name 是
+# 高频普通标识符，`let name = "张三"` 这类非渲染位置赋值按边界 g 不判红，只有出现在
+# 开标签里才算 prop。结尾 [\s/>] 站位挡掉 `a<b && name = "中文"` 这种比较/赋值混在
+# 一个表达式里的形状（值后紧跟 ) ; , 的一律不是 JSX prop）；`<[A-Za-z][^<>]{0,400}?`
+# 要求标签名以字母开头且属性区内不含尖括号（多行属性允许，[^<>] 吃换行）。
+JSX_NAME_ATTR_RE = re.compile(
+    r"<[A-Za-z][^<>]{0,400}?\bname\s*=\s*([\"'`])([^\"'`]*[%s][^\"'`]*)\1[\s/>]" % CJK)
+# 形态 9 的表达式形态：name={`中文`}
+JSX_NAME_EXPR_RE = re.compile(
+    r"<[A-Za-z][^<>]{0,400}?\bname\s*=\s*\{(%s)\}" % _EXPR_CONTENT)
+# 形态 6/7：JSX 子节点表达式容器（> 与 < 之间的唯一子节点）。只认唯一子节点是刻意的：
+# `>{a} {`中文`}<` 这类混合子节点连同第一组的文本节点口径一起漏（既有边界，本次不扩），
+# 而唯一子节点形态零误报风险。(?<!=) 见边界 h；console. 见边界 c。
+JSX_CHILD_EXPR_RE = re.compile(
+    r"(?<!=)>\s*\{(%s)\}\s*<" % _EXPR_CONTENT, re.S)
+# 形态 8：对象字面量的界面标签键。键白名单的来历（门禁实测，不是拍脑袋）：
+#   label 27 处全真（analytics 漏斗标签 7 + 审批内置模板表单标签 20）；
+#   反过来 title 23 处里 20 处是用户数据（任务/会议标题）、种子数据、B 类邮件主题或
+#   中英对照翻译表（lib/zod-i18n.ts 的 FIELD_LABELS_ZH 正是翻译表，键名就是
+#   title/description——收 title 会把翻译表本身判红），只有 3 处是 lib/pricing.ts 的
+#   营销文案；description 28 处几乎全是喂给模型的 AI 工具 schema
+#   （lib/ai/tools/builtins.ts 17）与休眠的工作流/审批模板描述（11）；name 49 处混着
+#   AI 工具参数描述（上一轮实测结论，见第一组注释）。收泛化键 = 用 7-28 倍数据噪声换
+#   0-3 处真阳，按宁漏不误报不收。已知漏报：lib/pricing.ts 的营销文案写在 title/body
+#   键里（数据模块的既有 i18n 缺口），欠单独工作项。
+OBJECT_LABEL_KEYS = ("label", "aria-label", "ariaLabel", "alt", "placeholder")
+OBJECT_VISIBLE_RE = re.compile(
+    r"\b(?:%s)\s*:\s*([\"'`])([^\"'`]*[%s][^\"'`]*)\1"
+    % ("|".join(OBJECT_LABEL_KEYS), CJK))
 
 # P0-6 不扫描的范围。本脚本向来对路径豁免零容忍（见下面「没有路径豁免」段），
 # 这里只开一条，且带实测证据 + self-test 负向断言：
@@ -485,11 +563,40 @@ def _p0_6_hits(lines):
     的实际写法，逐行扫描看不到 `>中文<` 这对符号凑不到一行里。
     为什么两种视图：文本节点在 mask 视图里找（引号串里的 `<ul> 含多个 <li>` 不是文本节点），
     可见属性与 Zh 键在代码视图里找（属性值本身就在引号串里，抹了就永远找不到）。
+    第二组口径（2026-10-19 补的表达式容器/对象字面量/name prop）也全在代码视图里找——
+    容器里的字符串字面量要留着才能判中文，mask 视图会把它们抹平。
     同一处去重：一个 `<span>暂无活动</span>` 同时满足文本节点与 HTML 正文两条口径，
     按**正文里每一段连续中文**的绝对偏移去重，同一段只记一处（否则同一份债记两遍，
     修一处计数只掉一半，棘轮就转不动了）。计数粒度沿用「一处 = 一段连续中文」，
     与 P0-4「一行 3 个 hex = 3 处」同口径。
     """
+    def _string_literal_spans(text):
+        """text 里引号串（"..." '...' `...`）的 [(起, 止)] 列表（含首尾引号，止为开区间）。
+
+        只认字符串字面量里的中文是第二组口径的判据（边界 f）：属性访问（{i.名称}）、
+        标识符（aria-label={某变量}）里的中文不算文案——它们与渲染结果无关，与边界 b
+        "非渲染位置的普通字符串常量不判红"是同一条判据。
+        反斜杠按转义处理（跳两格），避免 "a\\"b" 把引号状态带偏。
+        """
+        spans = []
+        i, n = 0, len(text)
+        while i < n:
+            ch = text[i]
+            if ch in "\"'`":
+                j = i + 1
+                while j < n:
+                    if text[j] == "\\":
+                        j += 2
+                        continue
+                    if text[j] == ch:
+                        break
+                    j += 1
+                spans.append((i, min(j + 1, n)))
+                i = j + 1
+            else:
+                i += 1
+        return spans
+
     code = _collapse_expr("\n".join(strip_comments(lines)))
     # 快筛：绝大多数 TS/TSX 文件剥完注释后一个中文都没有，不必再造第二份视图。
     # 没有这行的代价是全仓跑一遍多花约 7 秒（P0-6 是唯一要 strip 两遍的规则）。
@@ -498,6 +605,28 @@ def _p0_6_hits(lines):
     masked = _collapse_expr("\n".join(strip_comments(lines, mask_strings=True)))
     hits = []
     seen = set()
+
+    def emit(text, base, body, run):
+        s, e = base + run.start(), base + run.end()
+        if (s, e) in seen:
+            return
+        seen.add((s, e))
+        # 报错要能照着改，光给"暂无"两个字不够：带前后各 24 字的上下文，
+        # 足够让人认出 `<p>本期共有 3 项任务到期…</p>` 是哪一个。
+        ctx = body[max(0, run.start() - 24):run.end() + 24]
+        hits.append((text.count("\n", 0, s) + 1, ctx.strip()))
+
+    def emit_container(text, m):
+        """表达式容器口径：只认容器内字符串字面量中的中文段（边界 f/i）。"""
+        body = m.group(m.lastindex)
+        # 边界 i：容器内含语句/箭头函数时整容器跳过（里面的中文常量归调用方管）
+        if _CONTAINER_STMT_RE.search(body):
+            return
+        base = m.start(m.lastindex)
+        for s0, s1 in _string_literal_spans(body):
+            for run in CJK_RUN_RE.finditer(body, s0, s1):
+                emit(text, base, body, run)
+
     for text, rules_res in ((masked, (JSX_TEXT_RE, HTML_TEXT_RE)),
                             (code, (VISIBLE_ATTR_RE, ZH_KEY_RE))):
         for res in rules_res:
@@ -505,16 +634,35 @@ def _p0_6_hits(lines):
                 base = m.start(m.lastindex)
                 body = m.group(m.lastindex)
                 for run in CJK_RUN_RE.finditer(body):
-                    s, e = base + run.start(), base + run.end()
-                    if (s, e) in seen:
-                        continue
-                    seen.add((s, e))
-                    # 报错要能照着改，光给"暂无"两个字不够：带前后各 24 字的上下文，
-                    # 足够让人认出 `<p>本期共有 3 项任务到期…</p>` 是哪一个。
-                    ctx = body[max(0, run.start() - 24):run.end() + 24]
-                    hits.append((text.count("\n", 0, s) + 1, ctx.strip()))
-    hits.sort()
-    return hits
+                    emit(text, base, body, run)
+    # ─── 第二组口径（2026-10-19 补，逐条理由见上面正则处的注释）──
+    # 形态 5/9：可见属性与 name 的表达式容器值
+    for res in (VISIBLE_ATTR_EXPR_RE, JSX_NAME_EXPR_RE):
+        for m in res.finditer(code):
+            emit_container(code, m)
+    # 形态 6/7：JSX 子节点表达式容器。边界 c：console 日志参数不算界面文案；
+    # 边界 h：正则自带的 (?<!=) 已挡掉箭头函数体。
+    for m in JSX_CHILD_EXPR_RE.finditer(code):
+        if "console." in m.group(1):
+            continue
+        emit_container(code, m)
+    # 形态 8：对象字面量界面标签键。边界 e：interface/type 前缀（字面量类型成员）
+    # 不判红——定义处不背，真被渲染了是调用方的责任。
+    for m in OBJECT_VISIBLE_RE.finditer(code):
+        line_start = code.rfind("\n", 0, m.start()) + 1
+        if re.search(r"\b(?:interface|type)\s+\w", code[line_start:m.start()]):
+            continue
+        base = m.start(m.lastindex)
+        body = m.group(m.lastindex)
+        for run in CJK_RUN_RE.finditer(body):
+            emit(code, base, body, run)
+    # 形态 9：JSX 开标签内的 name 字符串 prop（边界 g：非 JSX 的 name 赋值不判红，
+    # 由正则的 `<标签 ...>` 上下文与结尾 [\s/>] 站位保证）。
+    for m in JSX_NAME_ATTR_RE.finditer(code):
+        base = m.start(m.lastindex)
+        body = m.group(m.lastindex)
+        for run in CJK_RUN_RE.finditer(body):
+            emit(code, base, body, run)
     hits.sort()
     return hits
 
@@ -949,6 +1097,46 @@ def self_test():
          {"web/app/tools2.tsx": clean_tsx
           + "const T = { name: '张三', display: '待办列表' };\n"},
          {}, set()),
+        # ── P0-6 第二组口径（2026-10-19 补）──
+        # 第一组五类盲区的正向用例（独立复验注入验证过门禁判 PASS）。逐条理由见模块里
+        # VISIBLE_ATTR_EXPR_RE / JSX_CHILD_EXPR_RE / OBJECT_VISIBLE_RE /
+        # JSX_NAME_ATTR_RE / _CONTAINER_STMT_RE 处的注释；配套负向用例在下面
+        # "第二组口径的不判红边界"一节。
+        ("形态5：JSX 属性表达式容器 title={`完成率 ${n}%`} -> NEW_P0_6",
+         {"web/app/e1.tsx": clean_tsx
+          + "export function A({ n }: { n: number }) {\n"
+          + "  return <span title={`完成率 ${n}%`}>{n}%</span>;\n}\n"},
+         {}, {"NEW_P0_6"}),
+        ("形态5 变体：title={\"中文\"}（容器里直接放引号串）也红",
+         {"web/app/e2.tsx": clean_tsx
+          + "export function A() { return <input title={\"搜索任务\"} />; }\n"},
+         {}, {"NEW_P0_6"}),
+        ("形态6：JSX 子节点容器里的模板串 <span>{`完成率 ${n}%`}</span> -> NEW_P0_6",
+         {"web/app/e3.tsx": clean_tsx
+          + "export function A({ n }: { n: number }) {\n"
+          + "  return <span>{`完成率 ${n}%`}</span>;\n}\n"},
+         {}, {"NEW_P0_6"}),
+        # 三元两段中文各记一处——用**计数字段**断言（同上面的去重用例：只看红因码会漏掉
+        # "两段记成一处"的重复计数缺陷，而重复计数会让修一处只掉一半，棘轮当场卡死）。
+        ("形态7：JSX 子节点三元 {cond ? \"全部已完成\" : \"尚有未完\"} 两段各记一处",
+         {"web/app/e4.tsx": clean_tsx
+          + "export function A({ done }: { done: boolean }) {\n"
+          + "  return <p>{done ? \"全部已完成\" : \"尚有未完\"}</p>;\n}\n"},
+         {("web/app/e4.tsx", "P0-6"): 2}, set()),
+        ("形态8：对象字面量界面标签键 label: \"洞察类型\" -> NEW_P0_6",
+         {"web/app/e5.tsx": clean_tsx
+          + "const SERIES = [{ key: 'kind', label: '洞察类型' }];\n"},
+         {}, {"NEW_P0_6"}),
+        ("形态9：JSX 普通字符串 prop name=\"多维表格编辑器\" -> NEW_P0_6（SafeComponent 实际写法）",
+         {"web/app/e6.tsx": clean_tsx
+          + "export function A() {\n"
+          + "  return <SafeComponent name=\"多维表格编辑器\">x</SafeComponent>;\n}\n"},
+         {}, {"NEW_P0_6"}),
+        ("形态9 变体：多行开标签 + name={`中文`} 也红",
+         {"web/app/e7.tsx": clean_tsx
+          + "export function A() {\n  return (\n    <SafeComponent\n"
+          + "      name={`Mermaid 图表`}\n    >\n      x\n    </SafeComponent>\n  );\n}\n"},
+         {}, {"NEW_P0_6"}),
         # 去重必须用**计数字段**断言，不能用红因码：`<li>活动加载失败</li>` 同时满足
         # 文本节点与 HTML 正文两条口径，记成 2 处时仍然是同一个 NEW_P0_6，
         # 只看红因码会误认为通过——真重复会让"修一处计数只掉一半"，棘轮当场卡死。
@@ -967,6 +1155,64 @@ def self_test():
           + "/* 用法：\n"
           + " * <GrantRow>成员权限</GrantRow> 负责成员、工作组已有的叠加权限\n"
           + " * 只处理 1 个角色包：>权限就是 memb…</GrantRow>\n */\n"},
+         {}, set()),
+        # ── 第二组口径的不判红边界（负向用例改坏检测器时必须变红）──
+        # 边界 b：非渲染位置的普通字符串常量不判红（有变量名可读、没写死在 JSX/属性里）
+        ("边界b：const MSG = \"操作成功\" 之后 toast(MSG) 不判红",
+         {"web/app/n1.tsx": clean_tsx
+          + "export function A() {\n"
+          + "  const MSG = \"操作成功\";\n"
+          + "  toast(MSG);\n"
+          + "  return <button onClick={() => toast(MSG)}>ok</button>;\n}\n"},
+         {}, set()),
+        # 边界 c：服务端日志不是界面文案
+        ("边界c：console.error/warn 参数里的中文不判红",
+         {"web/lib/n2.ts": "export function f(err: unknown) {\n"
+          + "  console.error(\"操作失败：\", err);\n"
+          + "  console.warn(`同步警告：${err}`);\n"
+          + "}\n"},
+         {}, set()),
+        ("边界c 变体：子节点容器里的 console 调用也不判红",
+         {"web/app/n3.tsx": clean_tsx
+          + "export function A({ err }: { err: unknown }) {\n"
+          + "  return <div>{console.error(\"渲染失败：\", err)}</div>;\n}\n"},
+         {}, set()),
+        # 边界 e：定义处不背（类型/接口/枚举的字符串字面量成员）
+        ("边界e：type/enum/interface 的字符串字面量成员不判红",
+         {"web/lib/n4.ts": "export type Kind = \"高优先级\" | \"中优先级\";\n"
+          + "export enum Level { High = \"高\", Mid = \"中\" }\n"
+          + "export interface Props { kind: Kind; label: string }\n"},
+         {}, set()),
+        ("边界e 变体：接口成员 label: \"中文\"（字面量类型）也不判红（interface 前缀守卫）",
+         {"web/lib/n5.ts": "export interface Props { label: \"高优先级\" }\n"},
+         {}, set()),
+        # 边界 f：表达式容器里只有字符串字面量算文案（属性访问/标识符不算）
+        ("边界f：子节点容器里的属性访问 {i.名称} 不判红",
+         {"web/app/n6.tsx": clean_tsx
+          + "export function A({ items }: { items: { 名称: string }[] }) {\n"
+          + "  return <ul>{items.map((i) => <li key={i.名称}>{i.名称}</li>)}</ul>;\n}\n"},
+         {}, set()),
+        ("边界f 变体：aria-label={某变量}（中文在变量定义处）不判红",
+         {"web/app/n7.tsx": clean_tsx
+          + "export function A() {\n"
+          + "  const DISPLAY = \"搜索任务\";\n"
+          + "  return <input aria-label={DISPLAY} />;\n}\n"},
+         {}, set()),
+        # 边界 g：name 只在 JSX 开标签里算 prop
+        ("边界g：let name = \"张三\" 这类普通赋值不判红",
+         {"web/lib/n8.ts": "export function f() {\n"
+          + "  let name = \"张三\";\n"
+          + "  name = \"李四\";\n"
+          + "  return name;\n}\n"},
+         {}, set()),
+        # 边界 i：容器内含语句/箭头函数时整容器跳过（里面的 const 归调用方管）
+        ("边界i：map 回调体里的 const tip = \"操作成功\" 不判红（整容器跳过）",
+         {"web/app/n9.tsx": clean_tsx
+          + "export function A({ items }: { items: string[] }) {\n"
+          + "  return <ul>{items.map((x) => {\n"
+          + "    const tip = \"操作成功\";\n"
+          + "    return <li key={x}>{x}</li>;\n"
+          + "  })}</ul>;\n}\n"},
          {}, set()),
         # 下面这条是 2026-10-17 实测踩到的真缺陷：旧版 strip_comments 不认正则字面量，
         # 遇到 `.replace(/`([^`]+)`/g, "$1")` 就把正则里的反引号当成模板字符串开头，

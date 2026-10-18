@@ -477,7 +477,13 @@
     "copyFailed": "Copy failed",
     "componentLoadFailed": "{name} failed to load",
     "componentLoadFailedGeneric": "Component failed to load",
-    "reloadRetry": "Reload & retry"
+    "reloadRetry": "Reload & retry",
+    "componentNames": {
+      "databaseEditor": "Database editor",
+      "whiteboardEditor": "Whiteboard editor",
+      "documentEditor": "Document editor",
+      "mermaid": "Mermaid diagram"
+    }
   },
   "auth": {
     "tagline": "Lightweight collaboration for small teams",
@@ -1049,6 +1055,10 @@
     "week": "Week",
     "day": "Day",
     "today": "Today",
+    "prevWeek": "Previous week",
+    "nextWeek": "Next week",
+    "prevDayInWeek": "Previous day",
+    "nextDayInWeek": "Next day",
     "newEvent": "New Event",
     "editEvent": "Edit Event",
     "deleteEvent": "Delete",

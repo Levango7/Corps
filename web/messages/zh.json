@@ -477,7 +477,13 @@
     "copyFailed": "复制失败",
     "componentLoadFailed": "{name} 加载失败",
     "componentLoadFailedGeneric": "组件加载失败",
-    "reloadRetry": "刷新重试"
+    "reloadRetry": "刷新重试",
+    "componentNames": {
+      "databaseEditor": "多维表格编辑器",
+      "whiteboardEditor": "白板编辑器",
+      "documentEditor": "文档编辑器",
+      "mermaid": "Mermaid 图表"
+    }
   },
   "auth": {
     "tagline": "面向中小团队的轻量协作平台",
@@ -1049,6 +1055,10 @@
     "week": "周",
     "day": "日",
     "today": "今天",
+    "prevWeek": "上一周",
+    "nextWeek": "下一周",
+    "prevDayInWeek": "前一天",
+    "nextDayInWeek": "后一天",
     "newEvent": "新建事件",
     "editEvent": "编辑事件",
     "deleteEvent": "删除事件",

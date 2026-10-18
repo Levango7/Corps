@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render } from "@testing-library/react";
 
 /**
@@ -19,6 +19,33 @@ import { render } from "@testing-library/react";
  */
 
 import Markdown from "@/components/Markdown";
+
+// i18n mock（范式同 newtaskdialog.test.tsx）：Markdown 的 mermaid 代码块经
+// SafeComponent 渲染，其 name 走 useTranslations("error").componentNames.mermaid
+// （2026-10-19 P0-6 清偿：不再写死中文）。useTranslations 按 zh.json 展平查表返回
+// 真实中文，NextIntlClientProvider 退化为透传——本文件 51 个渲染调用点无需逐个包
+// provider。测的是 Markdown 解析行为，不是 i18n 集成。
+const { zhFlat } = vi.hoisted(() => {
+  const req = process
+    .getBuiltinModule("module")
+    .createRequire(process.cwd() + "/tests/unit/markdown.test.tsx");
+  const zh = req("../../messages/zh.json");
+  const flat: Record<string, string> = {};
+  const walk = (o: unknown, p = "") => {
+    if (typeof o !== "object" || o === null) return;
+    for (const [k, v] of Object.entries(o)) {
+      const np = p ? `${p}.${k}` : k;
+      if (typeof v === "object" && v !== null) walk(v, np);
+      else flat[np] = String(v);
+    }
+  };
+  walk(zh, "");
+  return { zhFlat: flat };
+});
+vi.mock("next-intl", () => ({
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTranslations: (ns: string) => (key: string) => zhFlat[`${ns}.${key}`] ?? key,
+}));
 
 describe("Markdown 组件 - 标题渲染（h1-h4）", () => {
   it("单个 # 渲染为 h1", () => {

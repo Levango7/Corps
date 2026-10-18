@@ -86,7 +86,7 @@ web/lib/html-palette.ts P0-4 23
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源
 # 文件的原因），globals.css 的死类 .btn-press-spring / .card-lift-bounce 同步删除。
 # 本类现在全仓为零：任何一处新增都会直接判 NEW_P0-5，没有基线可躲。
-# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（4 个文件 / 76 处）──
+# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（5 个文件 / 96 处）──
 # 2026-10-17 首次登记：本规则此前是全仓唯一「有真实缺陷、但零机械覆盖」的一类——
 # 双语应用里写死的中文在英文 locale 下照样显示中文，用户可见，却没有任何门禁管。
 # 登记的目的与其余几条完全一致：先立门禁把「新增」卡住，存量分批烧，不是认可。
@@ -129,14 +129,58 @@ web/lib/html-palette.ts P0-4 23
 #   这里拿不到 provider，属硬限制；要改得先把根布局挪出 [locale] 段或改用 locale 探测，
 #   收益远小于成本。留着，理由已写在源文件的注释里。
 #
-# 检测口径（详见 check_p0_content.py 的 P0-6 段落）：剥离 // 与 /* */ 注释后，只认三类
-# **渲染给用户**的位置——JSX/HTML 文本节点、可见属性（placeholder/aria-label/title/alt/
-# label/description）的字符串值、邮件模板正文 `>中文</`，外加 `fallbackZh` 这类以 Zh
-# 结尾的中文兜底键。**不认**中文注释（含中文的行全仓 2 万+、绝大多数是注释，不剥干净
-# 这道门禁全是假阳性），**不认** web/lib/ai/**/prompts/** 下的 prompt 正文（实测那四条
-# 口径在 prompts/ 下零命中，所以按"零证据不上豁免"的既定口径连豁免都不加），
-# 也**不扫** web/tests/ 与 web/e2e/（夹具与断言不进产物 DOM）。
+# D 类 · 定义即入库、渲染器未接线的休眠 schema（1 个文件 / 20 处）：
+#   web/lib/approval/builtin-templates.ts 的 formSchema.fields[].label（请假类型 /
+#   开始时间 / 报销金额 / 采购物品 / 合同名称 / 入职人姓名……20 个表单字段标签）。
+#   它们是 5 个内置审批模板的定义数据，经 POST /approvals/templates?action=init-builtin
+#   写进 approval_templates.form_schema（JSONB）——**全仓没有任何组件读取
+#   formSchema.fields 渲染表单**（ApprovalSubmit 渲染的是通用标题/内容键值对），
+#   所以今天不直接暴露给用户。按"定义处不背"的边界（类型/接口/枚举字面量成员不判红，
+#   真被渲染了是调用方的责任），这 20 处本可不收；但对象字面量口径按 label 键收录时
+#   区分不了"将渲染的定义"与"死 schema"，故登记在此。**登记 ≠ 认可**：待审批表单
+#   渲染器接线时必须走 labelKey 模式（范式见 ApprovalDetail.tsx 的 status labelKey
+#   与 AssistantPanel 的 labelKey ? t(labelKey) : label 兜底），别直接渲染 label；
+#   已入库的历史 JSON 行靠渲染器的 label 兜底兼容。
+#
+# 2026-10-19 门禁补第二组检测口径（P0-6 从 4 条扩到 9 条，逐条理由与正则见
+# check_p0_content.py 的 P0-6 段落）。此前独立复验实测确认第一组有五类抓不到的盲区：
+#   5. JSX 属性表达式容器 title={`完成率 ${n}%`}（= 与引号之间只允许空白，`={` 直接失配）
+#   6. JSX 子节点容器里的模板串 <span>{`完成率 ${n}%`}</span>
+#   7. JSX 子节点三元 {cond ? "全部已完成" : "尚有未完"}
+#   8. 对象字面量界面标签键 label: "洞察类型"
+#   9. JSX 普通字符串 prop <SafeComponent name="多维表格编辑器">
+# 新口径首跑新增 31 处（4 调用方 + analytics 路由 7 + 本 D 类 20），同批修掉 12 处：
+#   - 4 个 SafeComponent 调用方（databases/whiteboards/documents 三个 page.tsx +
+#     Markdown.tsx）的 name 改走 error.componentNames.* 词条（zh/en 双侧同加）；
+#   - analytics/overview 路由的 7 个漏斗 label 改走 API_MESSAGES + apiMsg(req, key)
+#     按请求 locale 现取（沿用 lib/api-messages.ts 的既有范式，响应结构不变）；
+#   - 另修掉门禁能力范围外的反向缺陷：CalendarWeek.tsx 4 个写死英文 aria-label
+#     （previous week 等）改走 calendar.prevWeek/nextWeek/prevDayInWeek/nextDayInWeek
+#     ——P0-6 只抓中文，英文写死在中文 locale 下同样是 i18n 缺陷，一并清偿。
+# 检测口径（详见 check_p0_content.py 的 P0-6 段落）：剥离 // 与 /* */ 注释后，只认**渲染
+# 给用户**的位置——JSX/HTML 文本节点、可见属性（placeholder/aria-label/title/alt/
+# label/description）的字符串值、邮件模板正文 `>中文</`、`fallbackZh` 这类以 Zh 结尾的
+# 中文兜底键，外加 2026-10-19 补的五类：可见属性的表达式容器值、JSX 子节点容器里的
+# 模板串/三元（只认容器内**字符串字面量**中的中文，且容器内含语句/箭头函数时整容器
+# 跳过）、对象字面量的界面标签键（label/aria-label/ariaLabel/alt/placeholder）、
+# JSX 开标签内的 name prop。
+# **不判红**的边界（写进了 self_test 负向用例，改坏检测器时它们必须变红）：
+#   中文注释（含中文的行全仓 2 万+，不剥干净这道门禁全是假阳性）；非渲染位置的普通
+#   字符串常量（const MSG = "操作成功" 后 toast(MSG)——判据是"在不在渲染位置"而非
+#   "有没有中文"）；console.error/warn 参数（服务端日志不是界面文案）；
+#   web/lib/ai/**/prompts/** 下的 prompt 正文（实测四条口径在 prompts/ 下零命中，
+#   按"零证据不上豁免"的既定口径连豁免都不加）；类型/接口/枚举的字符串字面量成员
+#   （定义处不背）；表达式容器里的属性访问/标识符（{i.名称}、aria-label={某变量}）；
+#   普通赋值里的 name（let name = "张三"——name 只在 JSX 开标签里算 prop）；
+#   map 回调体里的常量（容器含语句/箭头函数时整容器跳过）；web/tests/ 与 web/e2e/
+#   （夹具与断言不进产物 DOM）。
+# 已知漏报（宁漏不误报的取舍，欠单独工作项）：lib/pricing.ts 的营销文案写在
+# title/body 数据键里——title 键实测 23 处中 19 处是用户数据/种子数据/B 类邮件主题/
+# 中英对照翻译表（lib/zod-i18n.ts 的 FIELD_LABELS_ZH），description 33 处几乎全是
+# 喂模型的 AI 工具 schema，name 49 处混着 AI 工具参数描述；收泛化键 = 3-6 倍数据
+# 噪声换 0-3 处真阳，故对象字面量口径只收 label 系键。
 web/app/not-found.tsx P0-6 3
 web/lib/ai/push-email.ts P0-6 2
+web/lib/approval/builtin-templates.ts P0-6 20
 web/lib/email.ts P0-6 68
 web/lib/notification/offline-push.ts P0-6 3

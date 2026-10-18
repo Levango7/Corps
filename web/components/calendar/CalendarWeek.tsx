@@ -89,7 +89,7 @@ export function CalendarWeek({
             onClick={onPrev}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="previous week"
+            aria-label={t("prevWeek")}
           >
             <ChevronLeft size={14} />
           </button>
@@ -97,7 +97,7 @@ export function CalendarWeek({
             onClick={onNext}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="next week"
+            aria-label={t("nextWeek")}
           >
             <ChevronRight size={14} />
           </button>
@@ -123,7 +123,7 @@ export function CalendarWeek({
             disabled={mobileDayIndex === 0}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="previous day in week"
+            aria-label={t("prevDayInWeek")}
           >
             <ChevronLeft size={14} />
           </button>
@@ -136,7 +136,7 @@ export function CalendarWeek({
             disabled={mobileDayIndex === 6}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="next day in week"
+            aria-label={t("nextDayInWeek")}
           >
             <ChevronRight size={14} />
           </button>
