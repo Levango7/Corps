@@ -74,6 +74,12 @@ model User {
   // M4 实时协作：在线状态心跳时间戳。presence API POST 定期更新，
   // GET 查询时以 now - 5min 为阈值判定在线。NULL 表示从未心跳（离线）。
   onlineAt      DateTime? @map("online_at") @db.Timestamptz
+  // 界面/邮件语言（"zh" | "en"），注册时按请求协商结果写入，此后随用户设置变更。
+  // 为什么必须落库：事务邮件存在 cron 定时发送路径（due-reminders / weekly-digest /
+  // ai-push-web），那里**没有 request 对象**，拿不到 NEXT_LOCALE cookie 与
+  // Accept-Language，决定收件人语言的唯一可用信号只能是库里这一列。
+  // 与 AiVoicePreference.language 无关——后者是 AI 语音合成音色，不是界面语言。
+  locale        String    @default("zh") @db.VarChar(5)
 
   members             Member[]
   tasks               Task[]               @relation("TaskAssignee")

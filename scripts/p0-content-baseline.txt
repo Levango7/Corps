@@ -91,7 +91,7 @@ web/lib/html-palette.ts P0-4 22
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源
 # 文件的原因），globals.css 的死类 .btn-press-spring / .card-lift-bounce 同步删除。
 # 本类现在全仓为零：任何一处新增都会直接判 NEW_P0-5，没有基线可躲。
-# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（5 个文件 / 96 处）──
+# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（2 个文件 / 23 处）──
 # 2026-10-17 首次登记：本规则此前是全仓唯一「有真实缺陷、但零机械覆盖」的一类——
 # 双语应用里写死的中文在英文 locale 下照样显示中文，用户可见，却没有任何门禁管。
 # 登记的目的与其余几条完全一致：先立门禁把「新增」卡住，存量分批烧，不是认可。
@@ -122,11 +122,24 @@ web/lib/html-palette.ts P0-4 22
 #     仍是写死中文（databases/whiteboards/documents 页 + Markdown.tsx 的 Mermaid），
 #     那 4 个文件不在本轮范围，欠它们的 default fallback 在英文 locale 下仍是中英混排。
 #
-# B 类 · 邮件/推送 HTML 模板 —— 本轮不修（3 个文件 / 73 处）：
+# B 类 · 邮件/推送 HTML 模板（原 3 个文件 / 73 处）—— 2026-10-19 清偿完毕，条目已删：
 #   web/lib/email.ts 68、web/lib/ai/push-email.ts 2、web/lib/notification/offline-push.ts 3。
-#   这些正文写在 TS 模板字符串里、由服务端直接拼进 HTML 发出去。要修不是加几个 t()
-#   就完事：得先给发信路径带上收件人 locale、把模板拆成按 locale 取词条的一整套，
-#   是独立工作项（约 73 处 + invoke 点签名改动），不在本 PR 范围。**登记 ≠ 认可**。
+#   这些正文写在 TS 模板字符串里、由服务端直接拼进 HTML 发出去，**走不了 next-intl**
+#   （没有 React 渲染树可挂载，cron 发送路径连 request 都没有）。真正的难点不是取词，
+#   而是"按谁的语言取"：邮件的语言必须按**收件人**定，不是按发请求的人——中文界面的
+#   管理员邀请英文同事，那封邀请邮件就该是英文。而此前全仓没有持久化的 UI locale
+#   （唯一出处是 NEXT_LOCALE cookie + Accept-Language，只随单次请求存在）。
+#   清偿做法：
+#     - 文案抽到 web/lib/email-messages.ts 的 EMAIL_MESSAGES（38 键 × zh/en），
+#       emailMsg(key, locale, vars) 取词并填 {占位符}；
+#     - User 新增 locale 列（additive migration 20261019000000_add_user_locale），
+#       注册时用 apiLocale(req) 采集——那是"请求方即收件人"的唯一时刻；
+#     - 判定级联：收件人有 User 行 → 该行 locale；无（invite 未注册）→ 操作者 locale
+#       → 兜底 zh。cron 三处（due-reminders / weekly-digest / ai-push-web 的邮件回退）
+#       改在查询里 select locale，按收件人渲染。
+#   回归测试 web/tests/unit/email-locale.test.ts（22 例）钉死三条**静默失效**模式：
+#   en 列抄了 zh、两侧 {占位符} 不对齐、locale 参数被忽略。三处变异均实测变红
+#   （忽略 locale → 2 红；en 抄 zh → 2 红；邀请邮件写死 zh → 1 红）。
 #
 # C 类 · 已论证的硬约束（1 个文件 / 3 处）：
 #   web/app/not-found.tsx：文件头注释写明「本组件位于 [locale] 段之外，
@@ -185,7 +198,4 @@ web/lib/html-palette.ts P0-4 22
 # 喂模型的 AI 工具 schema，name 49 处混着 AI 工具参数描述；收泛化键 = 3-6 倍数据
 # 噪声换 0-3 处真阳，故对象字面量口径只收 label 系键。
 web/app/not-found.tsx P0-6 3
-web/lib/ai/push-email.ts P0-6 2
 web/lib/approval/builtin-templates.ts P0-6 20
-web/lib/email.ts P0-6 68
-web/lib/notification/offline-push.ts P0-6 3

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { auth, authenticate } from "@/lib/auth";
 import { z } from "zod";
 import { previewAccountDeletion, deleteAccount } from "@/lib/account-deletion";
-import { apiMsg } from "@/lib/api-messages";
+import { apiLocale, apiMsg } from "@/lib/api-messages";
 
 /**
  * 账户删除端点组（阶段 2-3：隐私政策"删除账户"承诺兑现）。
@@ -83,9 +83,11 @@ export async function DELETE(req: NextRequest) {
     const { deletedWorkspaces } = await deleteAccount(userId);
 
     // 通知邮件（尽力而为：账户已删，Resend 发件不依赖账户存在）
+    // 语言只能取请求协商结果：此刻 User 行已随账户删除，User.locale 读不到了，
+    // 而删账户是本人操作，收件人即操作者，用 apiLocale(req) 与"按收件人语言"同义。
     try {
       const { sendAccountDeletedEmail } = await import("@/lib/email");
-      await sendAccountDeletedEmail({ to: email, deletedWorkspaces });
+      await sendAccountDeletedEmail({ to: email, deletedWorkspaces, locale: apiLocale(req) });
     } catch (err) {
       console.error("[delete-account] notify email failed (non-blocking):", err);
     }
