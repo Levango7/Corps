@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { registerAndLogin, createTask } from "./helpers";
+import { registerAndLogin } from "./helpers";
 
 /**
  * 路由健康门禁（Route Health Gate）：
@@ -39,7 +39,8 @@ import { registerAndLogin, createTask } from "./helpers";
  *
  *  - 768/1920 之外的中间宽度：断点由 Tailwind 的 sm/md/lg/xl 决定，这四个视口
  *    分别对应移动端 / md 边界 / 桌面默认 / 宽屏，已覆盖全部断点切换。
- *  - 动态详情路由只给了 /task/[id] 一条作范式（helpers 里已有 createTask）。
+ *  - 动态详情路由只给了 /task/[id] 一条作范式，且实体用 `page.request.post` 直接
+ *    建（`helpers.createTask` 返回的是标题不是 id，拿它拼 URL 会退化成 404 空转）。
  *    其余 [aid]/[dbid]/[id]/[cid]/[mid] 需要先造实体，扩的时候照这条抄：
  *    先在 helpers.ts 加 createXxx，再把路径加进 DYNAMIC_ROUTES。
  *
@@ -236,13 +237,26 @@ test.describe.serial("路由健康门禁", () => {
    * 动态详情路由：/task/[id]。
    *
    * 静态路由清单刻意剔除了含 [ 的动态段，因为要先造实体。本测试补上这一层，
-   * 并作为后续扩展其余 [aid]/[dbid]/[id]/[cid]/[mid] 的范式：
-   * helpers.ts 已有 createTask 返回真实 id，直接拿来导航。
+   * 并作为后续扩展其余 [aid]/[dbid]/[id]/[cid]/[mid] 的范式。
    *
-   * 断言错误边界 + 未捕获异常 + MISSING_MESSAGE；不测内容正确性（那是各功能
-   * spec 的职责），只测「这条路能通、不崩」。
+   * ## 为什么用 API 造实体而不是 `createTask(page, ...)`
+   *
+   * `helpers.ts` 的 `createTask` 返回的是**任务标题**（见它的 JSDoc：
+   * "@returns 任务标题"），不是 id。第一版本测试直接拿它的返回值拼
+   * `/task/<标题>`，于是 URL 指向一个不存在的 uuid 段、渲染的是 404 页——
+   * 而 404 页既不显示「页面出错了」也不抛 pageerror，三条断言全部照过。
+   * 也就是说那一版**恒绿且什么都没测**。
+   *
+   * 现在改成用 `page.request.post` 建任务并从响应里取真实 uuid，同时把
+   * 「页面确实渲染了这个任务」变成显式断言——这条阳性断言才是防止上述
+   * 空转的关键：404 页上找不到任务标题，一旦拼错 id 立刻红。
+   *
+   * 断言：错误边界 / 未捕获异常 / MISSING_MESSAGE / **详情页真的渲染出该任务**。
+   * 不测内容正确性（那是各功能 spec 的职责），只测「这条路能通、不崩、到对了地方」。
    */
-  test("动态详情路由 /task/[id]：不崩、无异常、无原始 key", async ({ page }) => {
+  test("动态详情路由 /task/[id]：不崩、无异常、无原始 key、且真的渲染出该任务", async ({
+    page,
+  }) => {
     const wid = await registerAndLogin(page, uniqueEmail());
 
     const pageErrors: string[] = [];
@@ -254,8 +268,14 @@ test.describe.serial("路由健康门禁", () => {
       }
     });
 
-    const taskId = await createTask(page, `e2e-route-health-detail-${Date.now()}`);
-    expect(taskId, "createTask 未返回任务 id").toBeTruthy();
+    const title = `e2e-route-health-detail-${Date.now()}`;
+    const created = await page.request.post(`/api/v1/workspaces/${wid}/tasks`, {
+      data: { title },
+    });
+    expect(created.status(), "建任务应返回 201").toBe(201);
+    const taskId = ((await created.json()) as { data?: { id?: string } })?.data?.id ?? "";
+    // 必须是真 uuid：拿不到 id 时会拼出 /task/undefined，那又退化成 404 空转
+    expect(taskId, "响应里没有合法任务 uuid").toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
 
     await page.goto(`/w/${wid}/task/${taskId}`, { waitUntil: "load" });
     await page.waitForTimeout(1000);
@@ -266,6 +286,16 @@ test.describe.serial("路由健康门禁", () => {
       .isVisible()
       .catch(() => false);
     expect(hit, `/task/${taskId} 崩到路由级错误边界`).toBe(false);
+
+    // 阳性断言：详情页真的把这个任务渲染出来了。
+    // 没有这一条，整个测试对「id 拼错 → 404 页」毫无感知（第一版就是这么漏的）。
+    // 注意标题渲染在 <textarea value={titleDraft}>（components/task/TaskDetailHeader.tsx:55），
+    // 不是文本节点，所以 getByText 抓不到；Playwright 也没有 Testing Library 的
+    // getByDisplayValue，只能用 locator + toHaveValue 断言其当前值。
+    await expect(
+      page.locator("textarea").first(),
+      "详情页没渲染出该任务，可能落的不是详情页",
+    ).toHaveValue(title, { timeout: 15_000 });
 
     const errMsg = pageErrors.length
       ? "存在未捕获异常（pageerror）：" + [...new Set(pageErrors)].slice(0, 10).join("\n")
