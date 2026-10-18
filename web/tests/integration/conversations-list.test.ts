@@ -61,6 +61,40 @@ describe("GET /workspaces/{wid}/conversations", () => {
     expect(json?.data?.items?.length ?? 0).toBeGreaterThanOrEqual(2);
     expect(typeof json?.data?.hasMore).toBe("boolean");
   });
+
+  /**
+   * 分页上限的边界（两侧都钉住）。
+   *
+   * 为什么单拎出来测：这是「500 resources」那轮排查里唯一**没有任何用例覆盖**的
+   * 参数形态。同批三个端点中 `notifications?count=true` 有集成用例，而 `limit`
+   * 的 schema 上限虽然写在 route.ts:25 的 `.max(100)`，但从来没有人真的用 100
+   * 请求过。上限值恰好是合法/非法行为翻转的那一个点，也正是最容易被
+   * 「把 max 改大一点试试」改坏、却不会被任何测试发现的那一个点。
+   *
+   * 两条断言的侧重点不同：合法侧要证明**上限值本身能用**且分页不外溢；
+   * 越界侧要证明**回的是 400 不是 500**——越界参数是客户端错误，回 5xx 会让
+   * 前端把参数问题误报成服务不可用，那正是当初排查 500 时最误导人的形态。
+   */
+  it("limit=100（schema 上限）返回 200，且单页不超过 100 条", async () => {
+    const res = await fetch(`${BASE}/workspaces/${ctx.wid}/conversations?limit=100`, {
+      headers: authHeader(ctx.accessToken),
+    });
+    expect(res.status, "上限值本身必须是合法输入").toBe(200);
+    const json = (await res.json()) as { data?: { items?: unknown[] } };
+    expect(Array.isArray(json?.data?.items)).toBe(true);
+    expect(json?.data?.items?.length ?? 0).toBeLessThanOrEqual(100);
+  });
+
+  it("limit 越界（101 / 0）返回 400 而不是 500", async () => {
+    for (const bad of ["101", "0"]) {
+      const res = await fetch(`${BASE}/workspaces/${ctx.wid}/conversations?limit=${bad}`, {
+        headers: authHeader(ctx.accessToken),
+      });
+      expect(res.status, `limit=${bad} 应被判为客户端错误 400`).toBe(400);
+      const json = (await res.json()) as { code?: number };
+      expect(json?.code).toBe(400);
+    }
+  });
 });
 
 describe("GET /workspaces/{wid}/conversations/unread-count", () => {
