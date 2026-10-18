@@ -86,24 +86,36 @@ web/lib/html-palette.ts P0-4 23
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源
 # 文件的原因），globals.css 的死类 .btn-press-spring / .card-lift-bounce 同步删除。
 # 本类现在全仓为零：任何一处新增都会直接判 NEW_P0-5，没有基线可躲。
-# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（11 个文件 / 126 处）──
+# ── P0-6 硬编码用户可见文案（未走 i18n 的中文字符串）（4 个文件 / 76 处）──
 # 2026-10-17 首次登记：本规则此前是全仓唯一「有真实缺陷、但零机械覆盖」的一类——
 # 双语应用里写死的中文在英文 locale 下照样显示中文，用户可见，却没有任何门禁管。
 # 登记的目的与其余几条完全一致：先立门禁把「新增」卡住，存量分批烧，不是认可。
 #
-# 这 126 处按清偿难度分三类，**别混着看**：
+# 本类原登记 126 处 / 11 个文件。2026-10-18 A 类（UI 组件 7 个文件 / 50 处）已全部
+# 清偿、条目删除，余下按性质分两类，**别混着看**：
 #
-# A 类 · UI 组件 —— 该修，且改法常规（7 个文件 / 50 处）：
-#   ai-tools/page.tsx 19：7 个 Tab 标签写死在 `fallbackZh`（语义搜索 / 邮件助手 /
-#     待办提取 / 会议纪要 / 文档问答 / 决策辅助 / 工作流编排）+ AI 推送，另有 Tab
-#     描述文案与 aria-label="关闭"。**同一个文件其它文案走的是
-#     useTranslations("ai.aiTools")**，典型的部分 i18n——一半翻了一半没翻。
-#   AiInsightWidget 11、TaskSummaryWidget 7、CalendarWeek 5、ActivityWidget 4、
-#     WidgetGrid 3（可拖拽卡片网格 / 拖拽移动 / 调整大小）、SafeComponent 1（刷新重试）。
-#     CalendarWeek 那 5 处是**日期格式**写死成「2026年 10月18日」，英文 locale 下照样
-#     这么显示；正解是 Intl.DateTimeFormat 按 locale 格式化，不是往词条里加键。
-#     其余全是客户端组件，换 useTranslations + 往 messages/{zh,en}.json 加键即可，
-#     服务端 bundle 不受影响。本 PR 不改这些组件，另行开一轮烧。
+# A 类 · UI 组件（原 7 个文件 / 50 处）—— 2026-10-18 清偿完毕，条目已删：
+#   ai-tools/page.tsx 19：7 个 Tab 标签原写死在 `fallbackZh`（语义搜索 / 邮件助手 /
+#     待办提取 / 会议纪要 / 文档问答 / 决策辅助 / 工作流编排）+ AI 推送，同文件其它
+#     文案走 useTranslations("ai.aiTools")——典型的部分 i18n。实测这 8 个 labelKey
+#     在 ai.aiTools 命名空间的**两侧词条里早已存在**，fallbackZh/En 是死重量：做法是
+#     整字段删除、tabLabel 直连 t(labelKey)，同时退役同文件的 t.has() 兜底函数（tf）。
+#     中文兜底正是英文 locale 露中文的根源，不是资产；缺键由
+#     tests/unit/i18n-usage.test.ts（代码引用的键必须存在于词条）兜底。
+#   CalendarWeek 5：是**日期格式**写死成「2026年 10月18日」。按同目录 CalendarDay 的
+#     既有范式改用 Intl.DateTimeFormat + useLocale()（zh-CN / en-US）现算，不往词条里
+#     加日期键——词条是静态文案，塞日期会让全 locale 拿到同一个格式。
+#   AiInsightWidget 11 / TaskSummaryWidget 7 / ActivityWidget 4 / WidgetGrid 3 /
+#     SafeComponent 1：换 useTranslations 后键挂到**既有**命名空间（dashboard /
+#     activity / widget / error），中英文案两侧同步补，没有新造平行命名空间。
+#     清偿时同时修掉了门禁四条口径抓不到的用户可见中文：JSX 表达式包裹的模板串
+#     （TaskSummaryWidget 的 `完成率 N%`）、花括号组内的三元表达式（SafeComponent 的
+#     `组件加载失败`）、对象字面量 label 键（洞察类型 / 活动动作文案）、以及
+#     ActivityWidget 本地重复的相对时间函数（改用 lib/format 的共享 relativeTime）。
+#     门禁计数只认它那四条口径，这些"漏网"处不占计数，但同属用户可见，一并无残留。
+#     另记录一处**未**修的相关缺口：SafeComponent 的 name prop 在 4 个调用方文件里
+#     仍是写死中文（databases/whiteboards/documents 页 + Markdown.tsx 的 Mermaid），
+#     那 4 个文件不在本轮范围，欠它们的 default fallback 在英文 locale 下仍是中英混排。
 #
 # B 类 · 邮件/推送 HTML 模板 —— 本轮不修（3 个文件 / 73 处）：
 #   web/lib/email.ts 68、web/lib/ai/push-email.ts 2、web/lib/notification/offline-push.ts 3。
@@ -124,14 +136,7 @@ web/lib/html-palette.ts P0-4 23
 # 这道门禁全是假阳性），**不认** web/lib/ai/**/prompts/** 下的 prompt 正文（实测那四条
 # 口径在 prompts/ 下零命中，所以按"零证据不上豁免"的既定口径连豁免都不加），
 # 也**不扫** web/tests/ 与 web/e2e/（夹具与断言不进产物 DOM）。
-web/app/[locale]/w/[wid]/ai-tools/page.tsx P0-6 19
 web/app/not-found.tsx P0-6 3
-web/components/SafeComponent.tsx P0-6 1
-web/components/WidgetGrid.tsx P0-6 3
-web/components/calendar/CalendarWeek.tsx P0-6 5
-web/components/widgets/ActivityWidget.tsx P0-6 4
-web/components/widgets/AiInsightWidget.tsx P0-6 11
-web/components/widgets/TaskSummaryWidget.tsx P0-6 7
 web/lib/ai/push-email.ts P0-6 2
 web/lib/email.ts P0-6 68
 web/lib/notification/offline-push.ts P0-6 3

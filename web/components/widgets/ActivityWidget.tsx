@@ -13,6 +13,9 @@
  * 与 ActivityFeed 的区别：ActivityFeed 是独立全功能组件（自动刷新 / 分页 / i18n），
  * ActivityWidget 是轻量卡片版，专注 WidgetGrid 嵌入场景。
  *
+ * i18n：文案走 activity 命名空间（与 ActivityFeed 同一份词条，不再本地重复），
+ * 相对时间走 lib/format 的共享 relativeTime + time 命名空间。
+ *
  * 用法：
  *   <ActivityWidget wid={wid} />
  */
@@ -25,7 +28,9 @@ import {
   GitBranch,
   Activity as ActivityIcon,
 } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
+import { relativeTime } from "@/lib/format";
 
 /** 活动项（与 activity GET 响应 data.items 对齐） */
 interface Activity {
@@ -53,30 +58,14 @@ interface ActivityWidgetProps {
   limit?: number;
 }
 
-/** 活动类型 → 图标 + 动作文案映射 */
-const ACTIVITY_META: Record<Activity["type"], { icon: typeof Plus; label: string }> = {
-  "task.created": { icon: Plus, label: "创建了任务" },
-  "task.updated": { icon: CheckCircle2, label: "更新了任务" },
-  "comment.created": { icon: MessageSquare, label: "评论了" },
-  "decision.created": { icon: GitBranch, label: "创建了决策" },
-  "decision.updated": { icon: GitBranch, label: "更新了决策" },
+/** 活动类型 → 图标 + 动作文案 key 映射（key 在 activity 命名空间下） */
+const ACTIVITY_META: Record<Activity["type"], { icon: typeof Plus; labelKey: string }> = {
+  "task.created": { icon: Plus, labelKey: "taskCreated" },
+  "task.updated": { icon: CheckCircle2, labelKey: "taskUpdated" },
+  "comment.created": { icon: MessageSquare, labelKey: "commentCreated" },
+  "decision.created": { icon: GitBranch, labelKey: "decisionCreated" },
+  "decision.updated": { icon: GitBranch, labelKey: "decisionUpdated" },
 };
-
-/** 相对时间格式化（刚刚 / N 分钟前 / N 小时前 / N 天前） */
-function formatRelativeTime(iso: string): string {
-  const now = Date.now();
-  const then = new Date(iso).getTime();
-  const diffMs = now - then;
-  const diffMin = Math.floor(diffMs / 60_000);
-  const diffHour = Math.floor(diffMs / 3_600_000);
-  const diffDay = Math.floor(diffMs / 86_400_000);
-
-  if (diffMin < 1) return "刚刚";
-  if (diffMin < 60) return `${diffMin} 分钟前`;
-  if (diffHour < 24) return `${diffHour} 小时前`;
-  if (diffDay < 7) return `${diffDay} 天前`;
-  return new Date(iso).toLocaleDateString("zh-CN");
-}
 
 /** 头像占位：取用户名首字母（无用户名则用问号） */
 function getInitial(name: string | null): string {
@@ -93,6 +82,8 @@ function getAvatarColor(name: string | null): string {
 }
 
 export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) {
+  const t = useTranslations("activity");
+  const tTime = useTranslations("time");
   const [data, setData] = useState<ActivityData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -119,7 +110,7 @@ export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) 
       <div
         className="flex flex-col gap-[var(--space-2)] p-[var(--space-3)]"
         aria-busy="true"
-        aria-label="加载活动流"
+        aria-label={t("loading")}
       >
         {Array.from({ length: 4 }).map((_, i) => (
           <div key={i} className="flex items-center gap-[var(--space-2)]">
@@ -140,7 +131,7 @@ export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) 
         aria-live="polite"
       >
         <ActivityIcon size={14} aria-hidden />
-        <span>活动加载失败</span>
+        <span>{t("loadFailed")}</span>
       </div>
     );
   }
@@ -152,7 +143,7 @@ export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) 
     return (
       <div className="flex items-center gap-[var(--space-2)] p-[var(--space-3)] text-[length:var(--text-sm)] text-[var(--muted)]">
         <ActivityIcon size={14} aria-hidden />
-        <span>暂无活动</span>
+        <span>{t("empty")}</span>
       </div>
     );
   }
@@ -161,12 +152,12 @@ export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) 
     <ul
       className="flex flex-col gap-[var(--space-1)] p-[var(--space-3)]"
       role="feed"
-      aria-label="最近活动"
+      aria-label={t("title")}
     >
       {items.map((activity) => {
         const meta = ACTIVITY_META[activity.type];
         const Icon = meta.icon;
-        const actorName = activity.actorName ?? "未知用户";
+        const actorName = activity.actorName ?? t("unknownUser");
         return (
           <li
             key={activity.id}
@@ -187,7 +178,7 @@ export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) 
               <span className="font-[weight:var(--weight-medium)] text-[var(--fg)]">
                 {actorName}
               </span>
-              <span className="text-[var(--muted)]"> {meta.label} </span>
+              <span className="text-[var(--muted)]"> {t(meta.labelKey)} </span>
               <span className="text-[var(--fg-2)]">{activity.entityTitle}</span>
             </span>
             {/* 时间 */}
@@ -195,7 +186,7 @@ export default function ActivityWidget({ wid, limit = 5 }: ActivityWidgetProps) 
               className="shrink-0 text-[length:var(--text-xs)] text-[var(--meta)]"
               dateTime={activity.createdAt}
             >
-              {formatRelativeTime(activity.createdAt)}
+              {relativeTime(activity.createdAt, tTime)}
             </time>
           </li>
         );
