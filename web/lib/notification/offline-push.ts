@@ -14,6 +14,7 @@
 import { runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { getNotificationPreferences, isDndActive } from "@/lib/notification/preferences";
 import { decrypt } from "@/lib/crypto";
+import { EMAIL_COLORS } from "@/lib/html-palette";
 import nodemailer, { type Transporter } from "nodemailer";
 
 /** 在线判定阈值：lastSeen 在此毫秒数内视为在线（容忍一次心跳丢失） */
@@ -142,7 +143,9 @@ function buildEmailContent(opts: DispatchOfflineNotificationOpts): {
   const text = `${actor} 在 ${opts.entityTitle} 中有新动态。${snippet}\n\n请登录查看详情。`;
   const html =
     `<p style="margin:0 0 12px;"><strong>${escapeHtml(actor)}</strong> 在 <strong>${escapeHtml(opts.entityTitle)}</strong> 中有新动态。</p>` +
-    (snippet ? `<p style="margin:0 0 12px;color:#475569;">${escapeHtml(snippet)}</p>` : "") +
+    (snippet
+      ? `<p style="margin:0 0 12px;color:${EMAIL_COLORS.quoteFg};">${escapeHtml(snippet)}</p>`
+      : "") +
     `<p style="margin:0;">请登录查看详情。</p>`;
   return { subject, text, html };
 }
