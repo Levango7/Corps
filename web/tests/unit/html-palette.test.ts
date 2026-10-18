@@ -11,7 +11,7 @@
  *      回归闸门——当初没人能发现漂移，就是因为没有任何一处断言它们必须同源。
  *   2. 格式：全部是 3 位或 6 位小写 hex——邮件与导出 HTML 里只认这种字面量，
  *      混进 `rgb()` / 8 位 hex 会在 Outlook 系客户端上静默失效。
- *   3. 键集合：14 / 9 个键名逐个列出，多一个少一个都要有意识地改这份清单。
+ *   3. 键集合：13 / 9 个键名逐个列出，多一个少一个都要有意识地改这份清单。
  *
  * ⚠️ 刻意**没有**写"23 个色值逐条快照"那层断言。原因：那份快照的信息与
  * `lib/html-palette.ts` 自身完全重复（一个 23 行的文件，改任何一个值都会暴露在
@@ -55,13 +55,12 @@ const IMPORT_EMAIL_RE = /import\s*\{[^}]*\bEMAIL_COLORS\b[^}]*\}\s*from\s*"@\/li
 const IMPORT_EXPORT_RE = /import\s*\{[^}]*\bEXPORT_COLORS\b[^}]*\}\s*from\s*"@\/lib\/html-palette"/;
 
 describe("EMAIL_COLORS —— 邮件调色板键集合", () => {
-  it("键集合恰好 14 个（多一个少一个都要有意识地改这份清单）", () => {
+  it("键集合恰好 13 个（多一个少一个都要有意识地改这份清单）", () => {
     expect(Object.keys(EMAIL_COLORS).sort()).toEqual(
       [
-        "accentFg",
+        "accent",
         "bodyFg",
         "border",
-        "ctaBg",
         "footerFg",
         "footnoteFg",
         "infoBg",
@@ -165,7 +164,7 @@ describe("渲染产物（端到端接线）", () => {
     expect(html).toContain(`color:${EMAIL_COLORS.titleFg}`);
     expect(html).toContain(`border:1px solid ${EMAIL_COLORS.border}`);
     expect(html).toContain(`color:${EMAIL_COLORS.bodyFg}`);
-    expect(html).toContain(`background:${EMAIL_COLORS.ctaBg}`);
+    expect(html).toContain(`background:${EMAIL_COLORS.accent}`);
     expect(html).toContain(`color:${EMAIL_COLORS.footerFg}`);
   });
 

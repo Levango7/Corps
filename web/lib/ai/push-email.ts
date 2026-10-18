@@ -145,7 +145,7 @@ export function renderPushEmailHtml(opts: {
     `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:${EMAIL_COLORS.titleFg};">${safeTitle}</h1></td></tr>` +
     `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:${EMAIL_COLORS.bodyFg};">${summaryHtml}</td></tr>` +
     `<tr><td style="padding:0 32px 32px;">` +
-    `<a href="${safeUrl}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.ctaBg};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">查看详情</a>` +
+    `<a href="${safeUrl}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.accent};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">查看详情</a>` +
     `</td></tr>` +
     `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">corps · AI 推送通知</td></tr>` +
     `</table></td></tr></table></body></html>`
