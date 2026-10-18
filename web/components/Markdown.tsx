@@ -1,5 +1,6 @@
 import { Fragment, type ReactNode } from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { Mermaid } from "@/components/Mermaid";
 import { SafeComponent } from "@/components/SafeComponent";
 
@@ -100,6 +101,9 @@ function renderInline(text: string, keyPrefix: string): ReactNode[] {
 }
 
 export default function Markdown({ source }: { source: string }) {
+  // SafeComponent 的 name 会流进 error 命名空间的 componentLoadFailed 兜底文案，
+  // 故取 error 命名空间的组件名词条（中英双语），不写死中文
+  const t = useTranslations("error");
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const blocks: ReactNode[] = [];
   let i = 0;
@@ -121,7 +125,7 @@ export default function Markdown({ source }: { source: string }) {
       // mermaid 代码块 → 图表渲染（v0.4.0 队列第 3 项；决策/文档/评论三处通用）
       if (lang === "mermaid" && buf.length > 0) {
         blocks.push(
-          <SafeComponent key={key++} name="Mermaid 图表">
+          <SafeComponent key={key++} name={t("componentNames.mermaid")}>
             <Mermaid code={buf.join("\n")} />
           </SafeComponent>,
         );
