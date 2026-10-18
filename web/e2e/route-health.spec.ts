@@ -4,9 +4,11 @@ import { registerAndLogin } from "./helpers";
 /**
  * 路由健康门禁（Route Health Gate）：
  *
- *  1. 任何工作区路由都不得整页崩到路由级错误边界（app/[locale]/error.tsx）
+ *  1. 任何工作区静态路由都不得整页崩到路由级错误边界（app/[locale]/error.tsx）
  *  2. 不得出现未捕获异常（pageerror）
  *  3. 不得出现 next-intl 的 MISSING_MESSAGE（它意味着界面上渲染的是原始翻译 key）
+ *  4. 四个视口（375 / 768 / 1280 / 1920）下都不得横向溢出
+ *  5. 动态详情路由（示例：/task/[id]）同样不得崩
  *
  * ## 为什么需要它（三个真实缺陷的教训，均已在 main 上存在过）
  *
@@ -20,33 +22,35 @@ import { registerAndLogin } from "./helpers";
  *  - CommandPalette 用 useTranslations("nav") 却传完整路径 key，首屏 8 个导航项
  *    全部显示 nav.nav.menu.*，且 ⌘K 搜索因此失效。MISSING_MESSAGE 是这类缺陷的
  *    确定性信号。
+ *  - 375px 顶栏右簇越界 17.5px（P1-3）：纯响应式缺陷，在 1280 下溢出 0px，
+ *    1280 那一轮整跑一遍都看不见它。故有第 4 项视口矩阵。
  *
  * ## 断言点的选择
  *
  *  - 错误边界判定用可见文案「页面出错了」（error.pageError，全仓唯一，仅
  *    app/[locale]/error.tsx 渲染）。不用 role=alert 或 aria-live——not-found.tsx、
- *    公告、看板、MeetingRoom 里都有 aria-live="assertive"，会误报。
+ *    公告、看板、MeetingRoom 里都有 aria-live=assertive，会误报。
  *  - MISSING_MESSAGE 是 next-intl 对「键解析失败」的 console.error，比扫 DOM 里的
  *    key 形状字符串精确（后者会被邮箱、ID、时间戳误伤）。
+ *  - 溢出判定用 documentElement.scrollWidth === clientWidth：DOM 级、不依赖具体
+ *    元素 rect。溢出即红；「挤扁但不溢出」同样坏，那类问题归布局专项。
  *
  * ## 刻意不覆盖的维度
  *
- *  - 横向溢出（如 375px 顶栏 +18px）不在此门禁内：当前是已知未修项，纳入即红。
- *    归布局专项，修完后再加。
- *  - 动态路由（[aid]/[dbid]/[id]/[cid]/[mid]）需要先造实体，本 spec 只覆盖静态
- *    路由；列表页已渲染，详情页的崩溃由对应功能 E2E 覆盖。
+ *  - 768/1920 之外的中间宽度：断点由 Tailwind 的 sm/md/lg/xl 决定，这四个视口
+ *    分别对应移动端 / md 边界 / 桌面默认 / 宽屏，已覆盖全部断点切换。
+ *  - 动态详情路由只给了 /task/[id] 一条作范式，且实体用 `page.request.post` 直接
+ *    建（`helpers.createTask` 返回的是标题不是 id，拿它拼 URL 会退化成 404 空转）。
+ *    其余 [aid]/[dbid]/[id]/[cid]/[mid] 需要先造实体，扩的时候照这条抄：
+ *    先在 helpers.ts 加 createXxx，再把路径加进 DYNAMIC_ROUTES。
  *
  * 路由清单由 web/app/[locale]/w/[wid]/ 下的 page.tsx 生成（剔除含 [ 的动态段）：
  *   find "web/app/[locale]/w/[wid]" -name page.tsx | grep -v "\[" | sort
  *
- * 共两轮：默认视口（1280x720，三类断言全量）+ 375px 视口（横向溢出 + 错误边界）。
- * 之所以要 375 那一轮：P1-3 顶栏溢出在 1280 下溢出 0px、375 下溢出 18px，
- * 只跑默认视口的门禁对它完全失明。详情见第二个 test 的注释。
- *
  * 挂在 e2e/ 下即自动进入 CI 的「E2E (production build)」job。
  */
 
-test.setTimeout(480_000);
+test.setTimeout(600_000);
 
 /** 静态路由清单（36 条，生成方式见文件头注释）。 */
 const WORKSPACE_ROUTES: readonly string[] = [
@@ -88,6 +92,21 @@ const WORKSPACE_ROUTES: readonly string[] = [
   "/workflows",
 ];
 
+/**
+ * 响应式视口矩阵。四个宽度各有用意：
+ *   375  手机（sm 以下）
+ *   768  md 断点边界——layout.tsx 的桌面搜索按钮在 768 这一行从 hidden 变 md:flex，
+ *        是布局切换点，最容易出错却又最不会被默认视口发现
+ *   1280 桌面默认（playwright.config.ts 的 devices["Desktop Chrome"]）
+ *   1920 宽屏
+ */
+const VIEWPORTS: readonly { width: number; height: number; label: string }[] = [
+  { width: 375, height: 812, label: "375px 手机" },
+  { width: 768, height: 1024, label: "768px md 边界" },
+  { width: 1280, height: 800, label: "1280px 桌面" },
+  { width: 1920, height: 1080, label: "1920px 宽屏" },
+];
+
 /** 路由级错误边界的唯一可见文案（error.pageError）。 */
 const BOUNDARY_TEXT = "页面出错了";
 
@@ -96,7 +115,9 @@ test.describe.serial("路由健康门禁", () => {
   const uniqueEmail = () =>
     "e2e-route-health-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "@e2e.local";
 
-  test("全部工作区静态路由：无错误边界 / 无未捕获异常 / 无 MISSING_MESSAGE", async ({ page }) => {
+  test("默认视口：36 条静态路由无错误边界 / 无未捕获异常 / 无 MISSING_MESSAGE", async ({
+    page,
+  }) => {
     const wid = await registerAndLogin(page, uniqueEmail());
 
     const pageErrors: string[] = [];
@@ -150,63 +171,140 @@ test.describe.serial("路由健康门禁", () => {
   });
 
   /**
-   * 375px 视口：无横向溢出 + 无错误边界。
+   * 四视口矩阵：无横向溢出 + 无错误边界。
    *
-   * ## 为什么单独一轮（2026-10-17 P1-3 的教训）
+   * ## 为什么必须多视口（2026-10-17 P1-3 的教训）
    *
    * 上面那轮跑在 Playwright 默认视口（playwright.config.ts 用
-   * `devices["Desktop Chrome"]` = 1280x720），**纯响应式缺陷在该宽度下完全不暴露**：
-   * 工作区顶栏右簇在 375px 下越界 17.5px（documentElement.scrollWidth=393 vs
-   * clientWidth=375，整页可被横向拖走 18px、左 hamburger 被推出屏），而 1280 下
-   * 溢出 0px —— 路由健康门禁跑完整整 36 条路由都没发现它。
+   * devices["Desktop Chrome"] = 1280x720），**纯响应式缺陷在该宽度下完全不暴露**：
+   * 工作区顶栏右簇在 375px 下越界 17.5px（scrollWidth=393 vs clientWidth=375），
+   * 而 1280 下溢出 0px——1280 那一轮跑完整整 36 条路由都没发现它。
    *
-   * 判据用 `documentElement.scrollWidth === clientWidth`：
-   *   - DOM 级、无需等动画、不依赖具体元素 rect；
-   *   - 溢出即红，不受「元素有没有被挤扁」影响（挤扁不溢出但同样坏，那类问题
-   *     归布局专项，不在此门禁）。
+   * 768 格外重要：它是 md 断点本身（layout.tsx 的桌面搜索按钮在 768 这一行
+   * 从 hidden 切到 md:flex），是布局行为发生切换的那一行，最可能出问题，
+   * 又最不会被桌面默认视口发现。
    *
-   * 刻意只跑静态路由（与上一轮同清单），且只断言溢出与错误边界两项 ——
-   * MISSING_MESSAGE / pageerror 与视口无关，已被上一轮覆盖。
+   * 只断言溢出与错误边界两项：MISSING_MESSAGE / pageerror 与视口无关，
+   * 已被上一轮覆盖。
    */
-  test("375px 视口：无横向溢出 / 无错误边界（36 条静态路由）", async ({ page }) => {
+  test("四视口矩阵：无横向溢出 / 无错误边界（36 条静态路由 × 375/768/1280/1920）", async ({
+    page,
+  }) => {
     const wid = await registerAndLogin(page, uniqueEmail());
 
-    await page.setViewportSize({ width: 375, height: 812 });
-
-    /** 横向溢出的路由 → 溢出像素数。 */
-    const overflows: { route: string; px: number }[] = [];
-    const crashed: string[] = [];
     const routeErrorLogs: string[] = [];
     page.on("console", (msg) => {
       const t = msg.text();
       if (t.includes("[route-error]")) routeErrorLogs.push(t.slice(0, 300));
     });
 
-    for (const route of WORKSPACE_ROUTES) {
-      await page.goto("/w/" + wid + route, { waitUntil: "load" });
-      // 同上一轮：不能用 networkidle（心跳/轮询型页面永不可静默，会把 test timeout 吃光）
-      await page.waitForTimeout(1000);
+    /** 每条违规都是「视口 × 路由 × 溢出像素数」。 */
+    const violations: string[] = [];
 
-      const m = await page.evaluate(() => ({
-        scrollWidth: document.documentElement.scrollWidth,
-        clientWidth: document.documentElement.clientWidth,
-      }));
-      const px = m.scrollWidth - m.clientWidth;
-      if (px > 0) overflows.push({ route, px });
+    for (const vp of VIEWPORTS) {
+      await page.setViewportSize({ width: vp.width, height: vp.height });
+      for (const route of WORKSPACE_ROUTES) {
+        await page.goto("/w/" + wid + route, { waitUntil: "load" });
+        // 同上一轮：不能用 networkidle（心跳/轮询型页面永不可静默，会把 timeout 吃光）
+        await page.waitForTimeout(1000);
 
-      const hit = await page
-        .getByText(BOUNDARY_TEXT, { exact: true })
-        .first()
-        .isVisible()
-        .catch(() => false);
-      if (hit) crashed.push(route + "  <-  " + (routeErrorLogs.at(-1) ?? "(无 route-error 日志)"));
+        const m = await page.evaluate(() => ({
+          scrollWidth: document.documentElement.scrollWidth,
+          clientWidth: document.documentElement.clientWidth,
+        }));
+        const px = m.scrollWidth - m.clientWidth;
+        if (px > 0) violations.push(`${vp.label}  ${route}  (溢出 ${px}px)`);
+
+        const hit = await page
+          .getByText(BOUNDARY_TEXT, { exact: true })
+          .first()
+          .isVisible()
+          .catch(() => false);
+        if (hit) {
+          violations.push(
+            `${vp.label}  ${route}  (崩到错误边界 <- ${routeErrorLogs.at(-1) ?? "(无 route-error 日志)"})`,
+          );
+        }
+      }
     }
 
-    const of = overflows.map((o) => `${o.route}  (溢出 ${o.px}px)`);
-    expect(
-      of,
-      `以下路由在 375px 下横向溢出（scrollWidth > clientWidth）：` + of.join("\n"),
-    ).toEqual([]);
-    expect(crashed, `以下路由在 375px 下崩到错误边界：` + crashed.join("\n")).toEqual([]);
+    expect(violations, `以下「视口 × 路由」存在横向溢出或崩溃：\n${violations.join("\n")}`).toEqual(
+      [],
+    );
+  });
+
+  /**
+   * 动态详情路由：/task/[id]。
+   *
+   * 静态路由清单刻意剔除了含 [ 的动态段，因为要先造实体。本测试补上这一层，
+   * 并作为后续扩展其余 [aid]/[dbid]/[id]/[cid]/[mid] 的范式。
+   *
+   * ## 为什么用 API 造实体而不是 `createTask(page, ...)`
+   *
+   * `helpers.ts` 的 `createTask` 返回的是**任务标题**（见它的 JSDoc：
+   * "@returns 任务标题"），不是 id。第一版本测试直接拿它的返回值拼
+   * `/task/<标题>`，于是 URL 指向一个不存在的 uuid 段、渲染的是 404 页——
+   * 而 404 页既不显示「页面出错了」也不抛 pageerror，三条断言全部照过。
+   * 也就是说那一版**恒绿且什么都没测**。
+   *
+   * 现在改成用 `page.request.post` 建任务并从响应里取真实 uuid，同时把
+   * 「页面确实渲染了这个任务」变成显式断言——这条阳性断言才是防止上述
+   * 空转的关键：404 页上找不到任务标题，一旦拼错 id 立刻红。
+   *
+   * 断言：错误边界 / 未捕获异常 / MISSING_MESSAGE / **详情页真的渲染出该任务**。
+   * 不测内容正确性（那是各功能 spec 的职责），只测「这条路能通、不崩、到对了地方」。
+   */
+  test("动态详情路由 /task/[id]：不崩、无异常、无原始 key、且真的渲染出该任务", async ({
+    page,
+  }) => {
+    const wid = await registerAndLogin(page, uniqueEmail());
+
+    const pageErrors: string[] = [];
+    const missingMessages: string[] = [];
+    page.on("pageerror", (err) => pageErrors.push(err.name + ": " + err.message));
+    page.on("console", (msg) => {
+      if (msg.type() === "error" && msg.text().includes("MISSING_MESSAGE")) {
+        missingMessages.push(msg.text());
+      }
+    });
+
+    const title = `e2e-route-health-detail-${Date.now()}`;
+    const created = await page.request.post(`/api/v1/workspaces/${wid}/tasks`, {
+      data: { title },
+    });
+    expect(created.status(), "建任务应返回 201").toBe(201);
+    const taskId = ((await created.json()) as { data?: { id?: string } })?.data?.id ?? "";
+    // 必须是真 uuid：拿不到 id 时会拼出 /task/undefined，那又退化成 404 空转
+    expect(taskId, "响应里没有合法任务 uuid").toMatch(/^[0-9a-f]{8}-[0-9a-f]{4}-/i);
+
+    await page.goto(`/w/${wid}/task/${taskId}`, { waitUntil: "load" });
+    await page.waitForTimeout(1000);
+
+    const hit = await page
+      .getByText(BOUNDARY_TEXT, { exact: true })
+      .first()
+      .isVisible()
+      .catch(() => false);
+    expect(hit, `/task/${taskId} 崩到路由级错误边界`).toBe(false);
+
+    // 阳性断言：详情页真的把这个任务渲染出来了。
+    // 没有这一条，整个测试对「id 拼错 → 404 页」毫无感知（第一版就是这么漏的）。
+    // 注意标题渲染在 <textarea value={titleDraft}>（components/task/TaskDetailHeader.tsx:55），
+    // 不是文本节点，所以 getByText 抓不到；Playwright 也没有 Testing Library 的
+    // getByDisplayValue，只能用 locator + toHaveValue 断言其当前值。
+    await expect(
+      page.locator("textarea").first(),
+      "详情页没渲染出该任务，可能落的不是详情页",
+    ).toHaveValue(title, { timeout: 15_000 });
+
+    const errMsg = pageErrors.length
+      ? "存在未捕获异常（pageerror）：" + [...new Set(pageErrors)].slice(0, 10).join("\n")
+      : "";
+    expect(pageErrors, errMsg).toEqual([]);
+
+    const missMsg = missingMessages.length
+      ? "存在 MISSING_MESSAGE：" + [...new Set(missingMessages)].slice(0, 10).join("\n")
+      : "";
+    expect([...new Set(missingMessages)], missMsg).toEqual([]);
   });
 });
