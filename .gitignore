@@ -90,8 +90,11 @@ web/.next.stale.*
 
 # 部署配置里的真实环境文件（含 POSTGRES_PASSWORD / JWT_*_SECRET 等赋值）
 # 模板见 deploy/.env.prod.example —— 只有 .example 才入库
-deploy/.env.prod
-deploy/.env.prod.local
+# 用 `deploy/.env.prod*` 通配 + `!` 例外：连演练/回滚留下的带时间戳备份
+# （.env.prod.20261004-drill.bak 之类）一起挡掉 —— 它们同样带真实密钥赋值，
+# 漏一条规则就等于把密钥摆在 `git add .` 的枪口下（2026-10-19 实测踩到）。
+deploy/.env.prod*
+!deploy/.env.prod.example
 
 # Tauri 打包资源里的运行时上传目录（内容为本地测试上传残留，不应入库）
 desktop/src-tauri/resources/standalone/uploads/
