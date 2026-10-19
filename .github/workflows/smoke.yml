@@ -18,6 +18,17 @@
 #   - 10-04：改为 warning + 跳过探测 → job 仍是 success，**列表页依然绿**，
 #     "以为有监控、实际没有"的问题并未真正解决。
 #   - 10-07：拆出 config-check 做硬失败，让"未配置"在 CI 列表页真实可见。
+#
+# 2026-10-17 补第三种失效模式：目标**配了但已失效**。实测 main 上定时 Smoke
+#   从 10-13 起持续红（10-13 5/6、10-14 5/6、10-15 7/8、10-16 6/7；08-24→09-29
+#   一段 0 红），日志显示 `TARGET: https://….trycloudflare.com`、curl 退出码 6
+#   （域名不可解析）。trycloudflare/loca.lt/ngrok 免费会话的域名随发起进程退出
+#   就消失，所以这种目标**注定长期红**，而红的原因根本不是生产故障——
+#   却按"app/db 挂了"的口径告警，把人往"重启应用/回滚 DB"上带。
+#   处置：config-check 直接把临时隧道域名判为配置缺陷（每日提醒一次，不刷屏）；
+#   smoke-test **仍然判红**——目标不可达也可能是域名整体失效（=真故障），
+#   绝不为省邮件而把探测改成跳过（那正是 10-04 被否掉的假绿形态），
+#   只把"两种可能都要查"写进报错，让红自己可解释。
 # =============================================================================
 name: Smoke
 
@@ -38,13 +49,32 @@ jobs:
     steps:
       - name: 检查 SMOKE_TARGET_URL 是否已配置
         shell: bash
+        # 目标地址经 env 传入，不在 run 脚本里做 ${{ }} 直接插值：
+        # 变量值里带引号/分号就能改写这段脚本（smoke-test 早就是 env 形态，
+        # 这里补齐，两个 job 用同一个口径）
+        env:
+          TARGET_URL: ${{ vars.SMOKE_TARGET_URL }}
         run: |
-          if [ -z "${{ vars.SMOKE_TARGET_URL }}" ]; then
+          if [ -z "$TARGET_URL" ]; then
             echo "::error::SMOKE_TARGET_URL 未配置——当前没有任何健康监控，等于生产裸奔。"
             echo "启用方式：gh variable set SMOKE_TARGET_URL --body https://你的域名"
             exit 1
           fi
-          echo "SMOKE_TARGET_URL 已配置：${{ vars.SMOKE_TARGET_URL }}"
+          # 抽出 host（去协议、去端口、去路径），用于识别"注定失效"的目标
+          HOST=$(printf '%s' "$TARGET_URL" | sed -E 's#^[a-zA-Z][a-zA-Z0-9+.-]*://##; s#[:/].*##')
+          case "$HOST" in
+            trycloudflare.com|*.trycloudflare.com|loca.lt|*.loca.lt|ngrok-free.app|*.ngrok-free.app|ngrok.io|*.ngrok.io)
+              echo "::error::SMOKE_TARGET_URL 指向临时隧道域名（host=$HOST）——这类域名随发起隧道"
+              echo "  的进程退出就消失，监控注定长期红，而红的原因不是生产故障。"
+              echo "  实测教训：2026-10-13 起 main 的定时 Smoke 持续失败（curl 退出码 6=域名不可解析），"
+              echo "  而 08-24→09-29 同一条门 0 红——差别只在当时那个隧道进程还活着。"
+              echo "  改法：用固定域名，gh variable set SMOKE_TARGET_URL --body https://你的固定域名"
+              echo "  暂时还没有固定域名时，请把该变量清空（gh variable delete SMOKE_TARGET_URL）："
+              echo "  探测会以 warning 跳过、本 job 每日仍硬失败一次——比每 15 分钟假报一次生产故障更可读。"
+              exit 1
+              ;;
+          esac
+          echo "SMOKE_TARGET_URL 已配置：$TARGET_URL（host=$HOST）"
 
   # 高频探测：未配置时跳过（配置缺失由上面的 config-check 负责提醒）
   smoke-test:
@@ -65,7 +95,28 @@ jobs:
             exit 0
           fi
 
-          HTTP_CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 10 "$TARGET/api/health")
+          # 这一步原本用 `HTTP_CODE=$(curl …)` 直接取值：step 以 bash -e 运行，
+          # curl 一失败（如退出码 6=域名不可解析）整步立刻终止，日志只剩
+          # `Process completed with exit code 6`，看不出"目标失效"与"应用挂了"的区别。
+          # 这里显式接住退出码再分类——判定结果仍然是红，只是让红可解释。
+          CURL_RC=0
+          HTTP_CODE=$(curl -s -o /tmp/health.json -w '%{http_code}' --max-time 10 "$TARGET/api/health") || CURL_RC=$?
+          if [ "$CURL_RC" -ne 0 ]; then
+            case "$CURL_RC" in
+              6) REASON="域名无法解析（DNS 层就没通）" ;;
+              7) REASON="连不上目标（连接被拒 / 端口没在监听）" ;;
+              28) REASON="超过 10s 未响应（--max-time 截断）" ;;
+              *) REASON="curl 退出码 $CURL_RC" ;;
+            esac
+            echo "::error::smoke 失败：$TARGET/api/health $REASON"
+            echo "  这一类红有两种可能，按顺序排除："
+            echo "  ① 监控目标本身已失效——若它是 trycloudflare/loca.lt/ngrok 之类的临时隧道域名，"
+            echo "     进程一退出域名就永久消失（每日「监控配置检查」job 已把这种配置判为硬失败）；"
+            echo "  ② 生产/预发布确实整体不可达，包括域名过期或 DNS 变更——这时它是真故障。"
+            echo "  先用 gh variable get SMOKE_TARGET_URL 确认目标是固定域名，再按 ② 处置。"
+            exit 1
+          fi
+
           echo "HTTP $HTTP_CODE from $TARGET/api/health"
           cat /tmp/health.json || true
 

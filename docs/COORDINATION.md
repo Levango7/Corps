@@ -129,10 +129,12 @@
 
 ```bash
 python scripts/check_coordination_claims.py list      # 看谁在占什么（动手前先看这个）
+# 注：表取不到时 list 也回**非 0**（2026-10-17 起）——别把"读不到"当成"没人占用"。
 
 # 其余子命令：
 #   preflight --worktree <路径> [--agent <名>]                        开工前检查（§6.3）
-#   claim  --worktree <路径> --paths <glob[,glob]> [--agent <名>]      认领
+#   claim  --worktree <路径> --paths <glob[,glob]> --intent "<一句话>" [--agent <名>]
+#                                                      认领；--intent 是**必填**（缺即 exit 2）
 #   release --agent <名> [--worktree <路径>]                          释放
 #   prune                                                            清掉已过期的行
 #   check                                                            CI 用（默认子命令）
@@ -174,6 +176,10 @@ python scripts/check_coordination_claims.py preflight \
    - 目标 worktree / 路径**已被认领且未过期** → **停手**。等它过期，或找对方要 handoff；
      **不要自己 `release` 别人的认领**（那与「替别人合并 PR」是同类越界）。
    - 干净且**无人认领** → 可以进，但**进去第一件事就是 `claim` 一条**。
+   - 活态表**取不到**（分支不存在 / `git fetch` 抖动）→ **也停手**（2026-10-17 修）。
+     "读不到别人占什么"不等于"没人占"；先重跑一次排除网络抖动，别直接开工。
+     此前这里是 **fail-open**：屏幕第一行打 `CLAIM_STORE_MISSING`、最后一行却说
+     「可进入：该 worktree 干净且无人认领」并且退出码 0 —— 而本步的判据就是那个退出码。
 4. **同机在制品交叉检查**（2026-10-15 补）—— 扫**本机所有 worktree** 的 `git status`，
    与你 `--paths` 给的路径比对：
    - 重叠且文件 **mtime 新鲜**（≤ 4h，`--stale-hours` 可调）→ **停手**。这不是推测：
