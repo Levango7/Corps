@@ -8,8 +8,15 @@ node_modules/
 out/
 build/
 
-# 生成产物（从 design/design-tokens.css 复制，不应入库）
-web/app/design-tokens.css
+# design-tokens 的副本（web/app/design-tokens.css）**必须入库**——它不是可再生的
+# 一次性产物，而是三处构建都要用的输入：
+#   1) web/Dockerfile 的构建上下文是 ./web，拿不到仓库根的 design/，只能复用
+#      已入库的副本（Dockerfile 里直接 `npx next build` 跳过 prebuild 钩子）；
+#   2) Vercel 的 Root Directory=web 时 ../design/ 不可见，prebuild 复制不到源；
+#   3) scripts/check_design_tokens_sync.py 门禁按「两份逐字节一致 + 均 LF」判定，
+#      它要求副本在库（见该脚本 docstring）。
+# 唯一真源仍是 design/design-tokens.css：predev/prebuild 在源可见时覆盖副本，
+# 源不可见时（Vercel/Docker）保留入库副本不报错。
 
 # Production
 dist/
