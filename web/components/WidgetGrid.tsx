@@ -35,6 +35,7 @@ import {
   type ReactNode,
 } from "react";
 import { GripVertical, Maximize2 } from "lucide-react";
+import { useTranslations } from "next-intl";
 
 /** 单个 Widget 定义 */
 export interface Widget {
@@ -102,6 +103,7 @@ export default function WidgetGrid({
   initialLayout,
   readOnly = false,
 }: WidgetGridProps) {
+  const t = useTranslations("widget");
   /** 当前布局：优先 initialLayout，否则从 widgets.defaultPosition 派生 */
   const [layout, setLayout] = useState<WidgetLayout>(() => {
     if (initialLayout) return { ...initialLayout };
@@ -284,7 +286,7 @@ export default function WidgetGrid({
   );
 
   return (
-    <div className="widget-grid" style={gridStyle} role="region" aria-label="可拖拽卡片网格">
+    <div className="widget-grid" style={gridStyle} role="region" aria-label={t("gridAriaLabel")}>
       {widgets.map((widget) => {
         const pos = layout[widget.id] ?? widget.defaultPosition;
         const isDragging = draggingId === widget.id;
@@ -322,7 +324,7 @@ export default function WidgetGrid({
             {/* 卡片头部：拖拽手柄 + 标题 */}
             <div className="widget-grid__header">
               {!readOnly && (
-                <span className="widget-grid__grip" aria-hidden title="拖拽移动">
+                <span className="widget-grid__grip" aria-hidden title={t("dragMove")}>
                   <GripVertical size={14} />
                 </span>
               )}
@@ -339,7 +341,7 @@ export default function WidgetGrid({
                 onMouseDown={(e) => handleResizeStart(e, widget.id)}
                 role="separator"
                 aria-orientation="vertical"
-                aria-label="调整大小"
+                aria-label={t("resize")}
                 tabIndex={0}
               >
                 <Maximize2 size={14} aria-hidden />

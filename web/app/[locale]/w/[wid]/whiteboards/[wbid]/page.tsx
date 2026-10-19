@@ -33,6 +33,9 @@ export default function WhiteboardEditPage({
 
 function WhiteboardEditPageClient({ params }: { params: Promise<{ wid: string; wbid: string }> }) {
   const t = useTranslations("whiteboard");
+  // SafeComponent 的 name 会流进 error 命名空间的 componentLoadFailed 兜底文案，
+  // 故取 error 命名空间的组件名词条（中英双语），不写死中文
+  const tError = useTranslations("error");
   const [wid, setWid] = useState<string | null>(null);
   const [wbid, setWbid] = useState<string | null>(null);
   const [data, setData] = useState<{
@@ -73,7 +76,7 @@ function WhiteboardEditPageClient({ params }: { params: Promise<{ wid: string; w
     return <p className="p-[var(--space-8)] text-center text-[var(--muted)]">{t("loading")}</p>;
   }
   return (
-    <SafeComponent name="白板编辑器">
+    <SafeComponent name={tError("componentNames.whiteboardEditor")}>
       <WhiteboardCanvas wid={wid} wbid={wbid} initialTitle={data.title} initialData={data.data} />
     </SafeComponent>
   );

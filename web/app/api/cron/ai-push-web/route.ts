@@ -5,6 +5,7 @@ import { logger } from "@/lib/logger";
 import { prisma } from "@/lib/prisma";
 import { sendPush } from "@/lib/web-push";
 import { sendPushEmail, renderPushEmailHtml } from "@/lib/ai/push-email";
+import { normalizeEmailLocale } from "@/lib/email-messages";
 
 /**
  * GET /api/cron/ai-push-web — AI 推送 Web Push 发送器（每 15 分钟定时调用）
@@ -107,12 +108,16 @@ export async function GET(req: NextRequest) {
       userIds.length > 0
         ? await prisma.user.findMany({
             where: { id: { in: userIds } },
-            select: { id: true, email: true },
+            // locale：回退发邮件时按收件人语言渲染。Web Push 本身不分语言，
+            // 只有落到邮件这条回退路径时才需要它。
+            select: { id: true, email: true, locale: true },
           })
         : [];
     const userEmails = new Map<string, string>();
+    const userLocales = new Map<string, string>();
     for (const u of allUsers) {
       userEmails.set(u.id, u.email);
+      userLocales.set(u.id, u.locale);
     }
 
     let sent = 0;
@@ -141,6 +146,7 @@ export async function GET(req: NextRequest) {
               title: record.title,
               summary: record.summary,
               workspaceUrl,
+              locale: normalizeEmailLocale(userLocales.get(record.userId)),
             }),
             workspaceId: record.workspaceId,
           });
@@ -199,6 +205,7 @@ export async function GET(req: NextRequest) {
               title: record.title,
               summary: record.summary,
               workspaceUrl,
+              locale: normalizeEmailLocale(userLocales.get(record.userId)),
             }),
             workspaceId: record.workspaceId,
           });

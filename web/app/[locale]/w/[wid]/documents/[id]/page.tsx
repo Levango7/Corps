@@ -78,6 +78,9 @@ export default function DocumentEditPage({
 
 function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id: string }> }) {
   const t = useTranslations("document");
+  // SafeComponent 的 name 会流进 error 命名空间的 componentLoadFailed 兜底文案，
+  // 故取 error 命名空间的组件名词条（中英双语），不写死中文
+  const tError = useTranslations("error");
   const [wid, setWid] = useState<string | null>(null);
   const [id, setId] = useState<string | null>(null);
   const [data, setData] = useState<DocumentEditorProps["initial"] | null>(null);
@@ -170,7 +173,7 @@ function DocumentEditPageClient({ params }: { params: Promise<{ wid: string; id:
           {t("versionHistory")}
         </button>
       </div>
-      <SafeComponent name="文档编辑器">
+      <SafeComponent name={tError("componentNames.documentEditor")}>
         <DocumentEditor key={editorKey} wid={wid} id={id} initial={data} />
       </SafeComponent>
       {canManage && <PermissionManager docId={id} workspaceId={wid} />}

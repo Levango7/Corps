@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { sendWeeklyDigestEmail, isEmailConfigured } from "@/lib/email";
+import { normalizeEmailLocale } from "@/lib/email-messages";
 import { apiMsg } from "@/lib/api-messages";
 
 /**
@@ -105,7 +106,7 @@ export async function GET(req: NextRequest) {
       // 3) 一次性查询所有 Pro 工作区的成员（带用户邮箱与显示名），按 workspaceId 分组
       const allMembers = await tx.member.findMany({
         where: { workspaceId: { in: workspaceIds } },
-        include: { user: { select: { id: true, email: true, name: true } } },
+        include: { user: { select: { id: true, email: true, name: true, locale: true } } },
       });
       const membersByWs = new Map<string, typeof allMembers>();
       for (const m of allMembers) {
@@ -204,6 +205,9 @@ export async function GET(req: NextRequest) {
             })),
             workspaceUrl: `${appUrl}/w/${wid}`,
             weeklyStats: wsStats,
+            // 语言按**收件人**定：cron 没有 request，读不到 cookie 与 Accept-Language，
+            // 只能靠 User.locale（注册时按请求协商写入）。
+            locale: normalizeEmailLocale(m.user.locale),
           });
           if (ok) sent++;
           else skipped++;

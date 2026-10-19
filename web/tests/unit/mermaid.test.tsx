@@ -26,6 +26,32 @@ vi.mock("mermaid", () => ({
 
 import Markdown from "@/components/Markdown";
 
+// i18n mock（范式同 newtaskdialog.test.tsx）：Markdown 的 mermaid 代码块经
+// SafeComponent 渲染，其 name 走 useTranslations("error").componentNames.mermaid
+// （2026-10-19 P0-6 清偿：不再写死中文）。NextIntlClientProvider 退化为透传，
+// useTranslations 按 zh.json 展平查表返回真实中文，render 无需包 provider。
+const { zhFlat } = vi.hoisted(() => {
+  const req = process
+    .getBuiltinModule("module")
+    .createRequire(process.cwd() + "/tests/unit/mermaid.test.tsx");
+  const zh = req("../../messages/zh.json");
+  const flat: Record<string, string> = {};
+  const walk = (o: unknown, p = "") => {
+    if (typeof o !== "object" || o === null) return;
+    for (const [k, v] of Object.entries(o)) {
+      const np = p ? `${p}.${k}` : k;
+      if (typeof v === "object" && v !== null) walk(v, np);
+      else flat[np] = String(v);
+    }
+  };
+  walk(zh, "");
+  return { zhFlat: flat };
+});
+vi.mock("next-intl", () => ({
+  NextIntlClientProvider: ({ children }: { children: React.ReactNode }) => children,
+  useTranslations: (ns: string) => (key: string) => zhFlat[`${ns}.${key}`] ?? key,
+}));
+
 const FLOW = `graph TD
   A[讨论] --> B{有结论?}
   B -->|是| C[决策记录]`;

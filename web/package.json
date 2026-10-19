@@ -4,9 +4,9 @@
   "private": true,
   "packageManager": "pnpm@11.22.0",
   "scripts": {
-    "predev": "node -e \"require('fs').copyFileSync('../design/design-tokens.css','app/design-tokens.css')\"",
+    "predev": "node -e \"const fs=require('fs');if(fs.existsSync('../design/design-tokens.css'))fs.copyFileSync('../design/design-tokens.css','app/design-tokens.css')\"",
     "dev": "next dev --turbopack",
-    "prebuild": "node -e \"require('fs').copyFileSync('../design/design-tokens.css','app/design-tokens.css')\"",
+    "prebuild": "node -e \"const fs=require('fs');if(fs.existsSync('../design/design-tokens.css'))fs.copyFileSync('../design/design-tokens.css','app/design-tokens.css')\"",
     "build": "next build",
     "start": "next start",
     "lint": "npx eslint .",

@@ -1,7 +1,9 @@
+"use client";
+
 // 设置 - 工作区概况区：成员数 / 任务数 / 套餐 / 创建时间 / 工作区 ID。
 // 拆分自 settings/page.tsx 第 851-879 行。纯展示组件。
 
-import { getLocale, getTranslations } from "next-intl/server";
+import { useLocale, useTranslations } from "next-intl";
 import type { Workspace } from "./types";
 
 const sectionClass =
@@ -11,9 +13,9 @@ interface SettingsOverviewProps {
   ws: Workspace;
 }
 
-export async function SettingsOverview({ ws }: SettingsOverviewProps) {
-  const t = await getTranslations("settings");
-  const locale = await getLocale();
+export function SettingsOverview({ ws }: SettingsOverviewProps) {
+  const t = useTranslations("settings");
+  const locale = useLocale();
 
   return (
     <section className={`${sectionClass} mt-5`}>

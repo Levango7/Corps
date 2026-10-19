@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * PDF 预览组件
  *
@@ -7,15 +9,15 @@
  * 所有样式走 design token（var(--*)），无裸 hex。
  */
 
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 
 export interface PdfPreviewProps {
   /** PDF 文件的 URL */
   url: string;
 }
 
-export async function PdfPreview({ url }: PdfPreviewProps) {
-  const t = await getTranslations("files.preview");
+export function PdfPreview({ url }: PdfPreviewProps) {
+  const t = useTranslations("files.preview");
 
   return (
     <iframe
