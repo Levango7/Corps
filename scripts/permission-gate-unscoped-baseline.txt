@@ -19,7 +19,6 @@ DELETE /api/v1/users/me/account
 DELETE /api/v1/workspaces/{wid}/approvals/delegates/{did}
 DELETE /api/v1/workspaces/{wid}/approvals/instances/{aid}
 DELETE /api/v1/workspaces/{wid}/calendar/events/{eventId}
-DELETE /api/v1/workspaces/{wid}/contact-groups
 DELETE /api/v1/workspaces/{wid}/forms/{fid}
 DELETE /api/v1/workspaces/{wid}/key-results/{kid}
 DELETE /api/v1/workspaces/{wid}/objectives/{oid}
@@ -50,7 +49,6 @@ PATCH /api/v1/remote-control/{sessionId}
 PATCH /api/v1/users/me
 PATCH /api/v1/workspaces/{wid}/approvals/delegates/{did}
 PATCH /api/v1/workspaces/{wid}/calendar/events/{eventId}
-PATCH /api/v1/workspaces/{wid}/contact-groups
 PATCH /api/v1/workspaces/{wid}/files/{fid}/move
 PATCH /api/v1/workspaces/{wid}/forms/{fid}
 PATCH /api/v1/workspaces/{wid}/key-results/{kid}
@@ -135,7 +133,6 @@ POST /api/v1/workspaces/{wid}/approvals/instances/{aid}/withdraw
 POST /api/v1/workspaces/{wid}/approvals/templates
 POST /api/v1/workspaces/{wid}/calendar/events
 POST /api/v1/workspaces/{wid}/calendar/sync
-POST /api/v1/workspaces/{wid}/contact-groups
 POST /api/v1/workspaces/{wid}/dashboard/layout/import
 POST /api/v1/workspaces/{wid}/files/upload
 POST /api/v1/workspaces/{wid}/files/{fid}/versions/{vid}/restore

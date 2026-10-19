@@ -21,6 +21,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { CheckCircle2, Clock, AlertCircle, ListTodo } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
 
 /** analytics/overview 响应中可能携带的任务统计字段（宽容类型） */
@@ -61,6 +62,7 @@ function normalizeStats(payload: TaskStatsPayload | null | undefined): TaskStats
 
 /** 圆环进度图（纯 SVG）—— 完成率 = done / total */
 function ProgressRing({ percent, size = 72 }: { percent: number; size?: number }) {
+  const t = useTranslations("dashboard");
   const stroke = 6;
   const radius = (size - stroke) / 2;
   const circumference = 2 * Math.PI * radius;
@@ -74,7 +76,7 @@ function ProgressRing({ percent, size = 72 }: { percent: number; size?: number }
       height={size}
       viewBox={`0 0 ${size} ${size}`}
       role="img"
-      aria-label={`完成率 ${Math.round(clamped)}%`}
+      aria-label={t("completionRateAria", { percent: Math.round(clamped) })}
     >
       {/* 背景轨道 */}
       <circle
@@ -143,6 +145,7 @@ function StatItem({
 }
 
 export default function TaskSummaryWidget({ wid }: TaskSummaryWidgetProps) {
+  const t = useTranslations("dashboard");
   const [stats, setStats] = useState<TaskStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
@@ -169,7 +172,7 @@ export default function TaskSummaryWidget({ wid }: TaskSummaryWidgetProps) {
       <div
         className="flex items-center gap-[var(--space-3)] p-[var(--space-3)]"
         aria-busy="true"
-        aria-label="加载任务摘要"
+        aria-label={t("taskStatsLoading")}
       >
         <span className="h-[72px] w-[72px] rounded-full bg-[var(--surface-3)] animate-pulse" />
         <div className="flex-1 grid grid-cols-2 gap-[var(--space-2)]">
@@ -203,27 +206,41 @@ export default function TaskSummaryWidget({ wid }: TaskSummaryWidgetProps) {
       <div className="flex items-center gap-[var(--space-4)]">
         <ProgressRing percent={percent} />
         <div className="flex flex-col">
-          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">任务总数</span>
+          <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
+            {t("totalTasks")}
+          </span>
           <span className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
             {total}
           </span>
           {error && (
-            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">数据加载失败</span>
+            <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+              {t("loadFailed")}
+            </span>
           )}
         </div>
       </div>
 
       {/* 统计网格 */}
       <div className="grid grid-cols-2 gap-[var(--space-3)]">
-        <StatItem icon={CheckCircle2} label="已完成" value={done} color="var(--success)" />
-        <StatItem icon={Clock} label="进行中" value={inProgress} color="var(--accent)" />
+        <StatItem icon={CheckCircle2} label={t("statDone")} value={done} color="var(--success)" />
+        <StatItem
+          icon={Clock}
+          label={t("statInProgress")}
+          value={inProgress}
+          color="var(--accent)"
+        />
         <StatItem
           icon={ListTodo}
-          label="待处理"
+          label={t("statPending")}
           value={Math.max(0, total - done - inProgress)}
           color="var(--muted)"
         />
-        <StatItem icon={AlertCircle} label="逾期" value={overdue} color="var(--danger)" />
+        <StatItem
+          icon={AlertCircle}
+          label={t("statOverdue")}
+          value={overdue}
+          color="var(--danger)"
+        />
       </div>
     </div>
   );

@@ -349,7 +349,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
               : {}),
           },
           include: {
-            assignee: { select: { id: true, name: true, email: true } },
+            // locale 一并提出来：指派邮件按**收件人（负责人）**的语言渲染，不按创建者
+            assignee: { select: { id: true, name: true, email: true, locale: true } },
             labels: { include: { label: { select: { id: true, name: true, color: true } } } },
           },
         });

@@ -474,7 +474,16 @@
     "deleteFailed": "删除失败",
     "fatalError": "应用发生严重错误",
     "fatalErrorDesc": "页面渲染时发生未预期的异常，请尝试重试或刷新。",
-    "copyFailed": "复制失败"
+    "copyFailed": "复制失败",
+    "componentLoadFailed": "{name} 加载失败",
+    "componentLoadFailedGeneric": "组件加载失败",
+    "reloadRetry": "刷新重试",
+    "componentNames": {
+      "databaseEditor": "多维表格编辑器",
+      "whiteboardEditor": "白板编辑器",
+      "documentEditor": "文档编辑器",
+      "mermaid": "Mermaid 图表"
+    }
   },
   "auth": {
     "tagline": "面向中小团队的轻量协作平台",
@@ -1046,6 +1055,10 @@
     "week": "周",
     "day": "日",
     "today": "今天",
+    "prevWeek": "上一周",
+    "nextWeek": "下一周",
+    "prevDayInWeek": "前一天",
+    "nextDayInWeek": "后一天",
     "newEvent": "新建事件",
     "editEvent": "编辑事件",
     "deleteEvent": "删除事件",
@@ -1426,7 +1439,7 @@
     "saveFailed": "保存失败，请重试",
     "loadFailed": "加载权限失败",
     "ownerLocked": "Owner 权限不可修改",
-    "adminCanOverride": "Admin 可覆盖此列设置",
+    "adminCanOverride": "仅 Member / Viewer 行可覆盖，Owner 与 Admin 行固定",
     "copyFailed": "复制失败",
     "shareFailed": "分享失败，请重试",
     "addPermission": "添加权限",
@@ -1488,6 +1501,30 @@
     "cancel": "取消",
     "confirmRemove": "确认移除此权限？",
     "confirmRevoke": "确认撤销此分享链接？"
+  },
+  "permissionsMatrix": {
+    "module": {
+      "tasks": "任务",
+      "decisions": "决策",
+      "documents": "文档",
+      "messages": "消息",
+      "members": "成员",
+      "billing": "计费",
+      "analytics": "分析",
+      "settings": "设置"
+    },
+    "action": {
+      "read": "R",
+      "create": "C",
+      "update": "U",
+      "delete": "D"
+    },
+    "actionLabel": {
+      "read": "查看",
+      "create": "创建",
+      "update": "更新",
+      "delete": "删除"
+    }
   },
   "theme": {
     "light": "浅色",
@@ -2031,7 +2068,26 @@
     "resetLayoutConfirm": "恢复默认布局？这将丢弃当前布局。",
     "dashboard": "仪表盘",
     "exportLayoutFailed": "布局导出失败",
-    "importLayoutFailed": "布局导入失败"
+    "importLayoutFailed": "布局导入失败",
+    "taskStatsLoading": "加载任务摘要",
+    "completionRateAria": "完成率 {percent}%",
+    "statDone": "已完成",
+    "statInProgress": "进行中",
+    "statPending": "待处理",
+    "statOverdue": "逾期",
+    "aiInsightLoading": "加载 AI 洞察",
+    "aiInsightDisabled": "AI 洞察暂未启用",
+    "aiInsightDisabledHint": "启用 AI 助理后将自动生成工作区洞察",
+    "aiInsightLoadFailed": "洞察加载失败",
+    "aiInsightEmpty": "暂无 AI 洞察",
+    "aiInsightEmptyHint": "AI 助理将在积累更多数据后生成洞察",
+    "insightTypeOpportunity": "机会",
+    "insightTypeRisk": "风险",
+    "insightTypeTrend": "趋势",
+    "insightTypeSuggestion": "建议",
+    "confidenceHigh": "高置信",
+    "confidenceMedium": "中置信",
+    "confidenceLow": "低置信"
   },
   "knowledgeBase": {
     "loading": "加载中…",
@@ -2986,7 +3042,11 @@
       "resultMessages": "消息",
       "resultWikis": "文档",
       "resultTodos": "待办",
-      "resultDecisions": "决策"
+      "resultDecisions": "决策",
+      "scopeMessages": "消息",
+      "scopeWikis": "文档",
+      "scopeTodos": "待办",
+      "scopeDecisions": "决策"
     },
     "mailAssistant": {
       "title": "邮件助手",
@@ -3155,7 +3215,12 @@
       "docQa": "文档问答",
       "decisionAssistant": "决策辅助",
       "workflowOrchestrator": "工作流编排",
-      "aiPush": "AI 推送"
+      "aiPush": "AI 推送",
+      "todoExtractDesc": "从消息、文档或邮件内容中提取隐含的待办事项，AI 自动识别标题、负责人、截止日期与优先级，支持批量入库。",
+      "openTab": "打开 {name}",
+      "close": "关闭",
+      "serviceUnavailable": "{name} 服务暂时不可用，请重试",
+      "retry": "刷新重试"
     }
   },
   "doc": {
@@ -3926,6 +3991,9 @@
     "config": "配置",
     "fullscreen": "全屏",
     "refresh": "刷新",
-    "remove": "删除"
+    "remove": "删除",
+    "gridAriaLabel": "可拖拽卡片网格",
+    "dragMove": "拖拽移动",
+    "resize": "调整大小"
   }
 }

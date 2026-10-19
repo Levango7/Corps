@@ -22,6 +22,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { Sparkles, Lightbulb, TrendingUp, AlertTriangle } from "lucide-react";
+import { useTranslations } from "next-intl";
 import { api, ApiError } from "@/lib/api";
 
 /** 单条 AI 洞察 */
@@ -48,26 +49,27 @@ interface AiInsightWidgetProps {
   limit?: number;
 }
 
-/** 洞察类型 → 图标 + 颜色映射 */
+/** 洞察类型 → 图标 + 颜色映射（labelKey 在 dashboard 命名空间下） */
 const INSIGHT_META: Record<
   AiInsight["type"],
-  { icon: typeof Lightbulb; color: string; label: string }
+  { icon: typeof Lightbulb; color: string; labelKey: string }
 > = {
-  opportunity: { icon: TrendingUp, color: "var(--success)", label: "机会" },
-  risk: { icon: AlertTriangle, color: "var(--danger)", label: "风险" },
-  trend: { icon: TrendingUp, color: "var(--accent)", label: "趋势" },
-  suggestion: { icon: Lightbulb, color: "var(--warn)", label: "建议" },
+  opportunity: { icon: TrendingUp, color: "var(--success)", labelKey: "insightTypeOpportunity" },
+  risk: { icon: AlertTriangle, color: "var(--danger)", labelKey: "insightTypeRisk" },
+  trend: { icon: TrendingUp, color: "var(--accent)", labelKey: "insightTypeTrend" },
+  suggestion: { icon: Lightbulb, color: "var(--warn)", labelKey: "insightTypeSuggestion" },
 };
 
-/** 置信度 → 文字标签 */
-function confidenceLabel(confidence?: number): string {
-  if (confidence === undefined) return "";
-  if (confidence >= 0.8) return "高置信";
-  if (confidence >= 0.5) return "中置信";
-  return "低置信";
+/** 置信度 → 文案 key（null 表示无置信度数据，不渲染） */
+function confidenceLabelKey(confidence?: number): string | null {
+  if (confidence === undefined) return null;
+  if (confidence >= 0.8) return "confidenceHigh";
+  if (confidence >= 0.5) return "confidenceMedium";
+  return "confidenceLow";
 }
 
 export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps) {
+  const t = useTranslations("dashboard");
   const [data, setData] = useState<AiInsightData | null>(null);
   const [loading, setLoading] = useState(true);
   const [notAvailable, setNotAvailable] = useState(false);
@@ -101,7 +103,7 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
       <div
         className="flex flex-col gap-[var(--space-2)] p-[var(--space-3)]"
         aria-busy="true"
-        aria-label="加载 AI 洞察"
+        aria-label={t("aiInsightLoading")}
       >
         {Array.from({ length: 3 }).map((_, i) => (
           <div key={i} className="flex flex-col gap-[var(--space-1)]">
@@ -122,10 +124,10 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
       >
         <Sparkles size={16} className="text-[var(--muted)]" aria-hidden />
         <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
-          AI 洞察暂未启用
+          {t("aiInsightDisabled")}
         </span>
         <span className="text-[length:var(--text-xs)] text-[var(--muted)]">
-          启用 AI 助理后将自动生成工作区洞察
+          {t("aiInsightDisabledHint")}
         </span>
       </div>
     );
@@ -140,7 +142,7 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
         aria-live="polite"
       >
         <Sparkles size={14} aria-hidden />
-        <span>洞察加载失败</span>
+        <span>{t("aiInsightLoadFailed")}</span>
       </div>
     );
   }
@@ -152,9 +154,11 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
     return (
       <div className="flex flex-col items-center gap-[var(--space-2)] p-[var(--space-4)] text-center">
         <Sparkles size={16} className="text-[var(--muted)]" aria-hidden />
-        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">暂无 AI 洞察</span>
+        <span className="text-[length:var(--text-sm)] text-[var(--muted)]">
+          {t("aiInsightEmpty")}
+        </span>
         <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
-          AI 助理将在积累更多数据后生成洞察
+          {t("aiInsightEmptyHint")}
         </span>
       </div>
     );
@@ -164,13 +168,13 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
     <div
       className="flex flex-col gap-[var(--space-2)] p-[var(--space-3)]"
       role="region"
-      aria-label="AI 洞察"
+      aria-label={t("aiInsight")}
     >
       {/* 头部：AI 图标 + 标题 */}
       <div className="flex items-center gap-[var(--space-2)]">
         <Sparkles size={14} className="text-[var(--accent)]" aria-hidden />
         <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
-          AI 洞察
+          {t("aiInsight")}
         </span>
       </div>
 
@@ -179,7 +183,7 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
         {items.map((insight) => {
           const meta = INSIGHT_META[insight.type] ?? INSIGHT_META.suggestion;
           const Icon = meta.icon;
-          const confLabel = confidenceLabel(insight.confidence);
+          const confLabelKey = confidenceLabelKey(insight.confidence);
           return (
             <li
               key={insight.id}
@@ -198,7 +202,7 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
                     background: `color-mix(in srgb, ${meta.color} 12%, transparent)`,
                   }}
                 >
-                  {meta.label}
+                  {t(meta.labelKey)}
                 </span>
               </div>
               {/* 摘要 */}
@@ -206,8 +210,10 @@ export default function AiInsightWidget({ wid, limit = 3 }: AiInsightWidgetProps
                 {insight.summary}
               </p>
               {/* 置信度（如有） */}
-              {confLabel && (
-                <span className="text-[length:var(--text-xs)] text-[var(--meta)]">{confLabel}</span>
+              {confLabelKey && (
+                <span className="text-[length:var(--text-xs)] text-[var(--meta)]">
+                  {t(confLabelKey)}
+                </span>
               )}
             </li>
           );

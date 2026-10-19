@@ -68,6 +68,9 @@ export default function DatabaseDetailPage({
 function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
   const t = useTranslations("database.detail");
   const tc = useTranslations("common");
+  // SafeComponent 的 name 会流进 error 命名空间的 componentLoadFailed 兜底文案，
+  // 故取 error 命名空间的组件名词条（中英双语），不写死中文
+  const tError = useTranslations("error");
 
   const [database, setDatabase] = useState<DatabaseDto | null>(null);
   const [fields, setFields] = useState<DatabaseFieldDto[]>([]);
@@ -317,7 +320,7 @@ function DatabaseDetail({ wid, dbid }: { wid: string; dbid: string }) {
         <p className="text-[length:var(--text-sm)] text-[var(--danger-fg)]">{loadError}</p>
       )}
       <div className="h-[calc(100dvh-var(--topbar-h)-var(--space-8))] lg:h-[calc(100dvh-var(--topbar-h)-var(--space-12))] min-h-[420px] rounded-[var(--radius-lg)] border border-[var(--border)] bg-[var(--surface)] overflow-hidden">
-        <SafeComponent name="多维表格编辑器">
+        <SafeComponent name={tError("componentNames.databaseEditor")}>
           <DatabaseEditor
             {...editorProps}
             onRecordUpdate={handleRecordUpdate}

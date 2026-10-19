@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * 联系人分组 API · /api/v1/workspaces/{wid}/contact-groups
@@ -87,6 +88,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  const denied = await requirePermission(ctx, "contacts", "create", req);
+  if (denied) return denied;
+
   try {
     const validated = createGroupSchema.parse(await req.json());
 
@@ -150,6 +154,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+
+  const denied = await requirePermission(ctx, "contacts", "update", req);
+  if (denied) return denied;
 
   try {
     const url = new URL(req.url);
@@ -230,6 +237,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+
+  const denied = await requirePermission(ctx, "contacts", "delete", req);
+  if (denied) return denied;
 
   try {
     const url = new URL(req.url);

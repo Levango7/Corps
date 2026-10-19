@@ -1,3 +1,5 @@
+"use client";
+
 /**
  * 文档查看页：只读渲染 publishedMarkdown（已发布快照）。
  * 公开分享页（/documents/share/[token]）也用这个组件。
@@ -6,7 +8,7 @@
  * 文档用纯展示组件，标题列外带工作区 + 作者 + 发布时间脚注。
  */
 
-import { getTranslations } from "next-intl/server";
+import { useTranslations } from "next-intl";
 import Markdown from "@/components/Markdown";
 
 interface PublicDocumentViewProps {
@@ -19,7 +21,7 @@ interface PublicDocumentViewProps {
   redacted?: boolean;
 }
 
-export async function PublicDocumentView({
+export function PublicDocumentView({
   title,
   markdown,
   workspace,
@@ -27,7 +29,7 @@ export async function PublicDocumentView({
   publishedAt,
   redacted = false,
 }: PublicDocumentViewProps) {
-  const t = await getTranslations("document");
+  const t = useTranslations("document");
   const authorName = author?.name || (redacted ? t("anonymous") : t("unknownAuthor"));
 
   return (

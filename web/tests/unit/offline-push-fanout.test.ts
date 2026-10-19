@@ -18,6 +18,10 @@ const h = vi.hoisted(() => {
     chatPresence: { findFirst: vi.fn() },
     notification: { create: vi.fn() },
     emailAccount: { findFirst: vi.fn() },
+    // 2026-10-19：fanOutOfflineEmail 现在与邮箱账户同一次事务里读收件人的
+    // User.locale（cron 调用点没有 request 可协商邮件语言）。mock 事务必须提供
+    // 这个模型，否则 `tx.user.findUnique` 抛 TypeError → 整段 catch 掉 → 一封都不发。
+    user: { findUnique: vi.fn() },
   };
   return {
     calls,
@@ -85,6 +89,7 @@ beforeEach(() => {
   h.tx.chatPresence.findFirst.mockResolvedValue(null); // 默认离线
   h.tx.notification.create.mockResolvedValue({ id: "n-1" });
   h.tx.emailAccount.findFirst.mockResolvedValue(ACCOUNT);
+  h.tx.user.findUnique.mockResolvedValue({ locale: "zh" });
   h.getNotificationPreferences.mockResolvedValue(PREF_ON);
   h.isDndActive.mockReturnValue(false);
   h.decrypt.mockReturnValue("pw");
@@ -103,6 +108,29 @@ describe("fanOutOfflineEmail —— 只扇出，不落记录", () => {
     expect(h.tx.notification.create).not.toHaveBeenCalled();
     // 发信凭证走 decrypt，明文不外泄
     expect(h.decrypt).toHaveBeenCalledWith("cipher");
+  });
+
+  it("邮件语言跟随收件人 User.locale（cron 调用点没有 request 可协商）", async () => {
+    const { emailMsg } = await import("@/lib/email-messages");
+
+    h.tx.user.findUnique.mockResolvedValue({ locale: "en" });
+    await fanOutOfflineEmail(OPTS);
+
+    const mail = h.sendMail.mock.calls[0][0] as { subject: string; text: string };
+    const enHint = emailMsg("offlineSignInHint", "en");
+    const zhHint = emailMsg("offlineSignInHint", "zh");
+
+    expect(mail.text).toContain(enHint);
+    // 关键：不是"两种语言都在"，而是中文那句**不能**出现——否则把 locale 忽略掉也照样绿
+    expect(mail.text, "locale=en 却渲染了中文文案").not.toContain(zhHint);
+  });
+
+  it("读不到 User 行时按 zh 兜底，不阻断发信", async () => {
+    h.tx.user.findUnique.mockResolvedValue(null);
+
+    await fanOutOfflineEmail(OPTS);
+
+    expect(h.sendMail).toHaveBeenCalledTimes(1);
   });
 
   it("在线用户不补邮件（实时通道已送达）", async () => {

@@ -8,7 +8,8 @@ import { expireSubscriptionIfDue } from "@/lib/billing/subscription-expiry";
 import { z } from "zod";
 import { createHash, randomBytes } from "crypto";
 import { Prisma } from "@prisma/client";
-import { apiMsg } from "@/lib/api-messages";
+import { apiLocale, apiMsg } from "@/lib/api-messages";
+import { normalizeEmailLocale } from "@/lib/email-messages";
 import { authFailure } from "@/lib/auth-response";
 
 const inviteSchema = z.object({
@@ -43,7 +44,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
   try {
     const { email, role } = inviteSchema.parse(await req.json());
 
-    const invitedUser = await prisma.user.findUnique({ where: { email } });
+    // 顺带取 locale：已注册受邀者有 User 行，邮件语言按**收件人**定（级联第 1 步），
+    // 而不是按发邀请的操作者——中文界面的管理员加英文同事，通知邮件就该是英文。
+    const invitedUser = await prisma.user.findUnique({
+      where: { email },
+      select: { id: true, locale: true },
+    });
     if (!invitedUser) {
       // 未注册用户：创建 pending invitation 并返回一次性邀请链接（不再 422）。
       // token 明文只在本次响应中出现一次；库中仅存 sha256 哈希，泄露库也无法伪造链接。
@@ -134,6 +140,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           workspaceName: result.workspaceName,
           inviterName: result.inviterName,
           inviteUrl,
+          // 收件人尚未注册 → 没有 User 行可读，退到级联第 2 步：用操作者（邀请人）的语言。
+          // 这是"被邀请人还没账号"这一支唯一可依据的信号，不是漏接线。
+          locale: apiLocale(req),
         });
       } catch (emailError) {
         console.error("[invite] sendInviteEmail failed:", emailError);
@@ -247,6 +256,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         workspaceName: result.workspaceName,
         inviterName: result.inviterName,
         loginUrl: `${appUrl}/auth/login`,
+        locale: normalizeEmailLocale(invitedUser?.locale),
       });
     } catch (emailError) {
       console.error("[invite] sendInviteEmail failed:", emailError);
