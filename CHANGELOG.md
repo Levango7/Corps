@@ -6,6 +6,41 @@
 
 ### Fixed
 
+- **定时 Smoke 的失败原因不再冒充"生产故障"**：`SMOKE_TARGET_URL` 被设成了
+  `*.trycloudflare.com` 这类进程级临时隧道域名，隧道进程一退出域名就永久消失——实测 main 的
+  schedule run 从 2026-10-13 起几乎每次红（10-13 5/6、10-14 5/6、10-15 7/8、10-16 6/7），
+  而 08-24→09-28 同一条门 0 红；`curl` 退出码 6（域名不可解析）在 `bash -e` 下让整步当场终止，
+  日志只剩一个裸退出码，失败指引却写着"回滚 DB 或重启应用"，处置方向是错的。
+  改动只做两件事（**不把探测改成跳过**，那正是 10-04 被否掉的假绿形态）：
+  `config-check` 除"空"之外把临时隧道域名（trycloudflare/loca.lt/ngrok-free/ngrok.io）判为
+  每日一次硬失败的配置缺陷；`smoke-test` 接住 curl 退出码并分类为 DNS/连接/超时，
+  仍判红但报出"① 目标失效 ② 真不可达"的排除顺序。顺带把 `config-check` 里两处
+  `${{ vars.* }}` 直接插值改为 `env:` 传入（值里带引号即可改写脚本，`smoke-test` 早已是 env 形态）。
+  验证：抽真实 `run:` 块按 `bash -e -o pipefail` 跑 34 条断言全过，含 2 条变异对照
+  （删掉隧道判据则隧道目标退回绿；关掉分类分支则红仍在但说不出 DNS 原因）。
+  **仍需 owner 处置**：变量本身要指向固定域名，或删除以诚实表达"当前无线上监控"——
+  属部署拓扑，未替你改。取证与配方见 `docs/audit/SMOKE-MONITOR-TARGET-2026-10-17.md`。
+
+- **认领协议的两处"判据只活在一侧"**（`scripts/check_coordination_claims.py`，同一条 PR 顺带收）：
+  ① **写侧放过、读侧才炸**：`claim` 用 `_flag(argv, "--intent") or ""` 取意图，空串照样落盘并回显"已认领"，
+  而 `parse_claims` 把空意图判 `CLAIM_MALFORMED` ⇒ CI 的 Lint job 红（Lint 门住 Build/E2E/发布）。
+  **这条坏认领是我自己漏传 `--intent` 写进去的**（PR #113 首轮 Lint 红的真实红因，见
+  `docs/audit/SMOKE-MONITOR-TARGET-2026-10-17.md` §7.1）。修法：`claim` 要求非空 `--intent`，
+  缺失即 usage + `exit 2`（与既有 `--hours` 校验同形）。
+  ② **取不到表被当成"没人占用"（fail-open）**：`fetch_store` 取不到时 `text=None`，
+  `parse_claims` 只产出 errors、`claims` 是空数组，于是 `decide([]，干净)` 走到 `ok_free` —— 屏幕第一行是
+  `CLAIM_STORE_MISSING … 取不到就红，不静默放过`，最后一行却是`可进入：该 worktree 干净且无人认领`且 **退出码 0**，
+  而 `docs/COORDINATION.md` §6.3 要人拿这个退出码决定开不开工。本机一次 `git fetch` 抖动
+  （2026-10-17 12:36 实测连续 3 次）就足以让"读不到别人的认领"变成"没人占用"。
+  修法：`cmd_preflight` 在 `text is None` 时直接停手回 1；`cmd_list` 同样改为非 0（§6.3 也让人动手前先看它），
+  并打印"这不是「没人认领」，是**读不到表**"。
+  验证：`--self-test` 由 22 条增至 **28 条**，新增 6 条**接线**断言（桩换 `fetch_store` 跑真的
+  `cmd_list`/`cmd_preflight`，不联网、不写盘，每条配一格"表取得到 → 哨兵串必须不出现"的防恒真对照）。
+  两刀变异各自只打红对应那条：删 `cmd_preflight` 守卫 → 1 条 FAIL；`cmd_list` 改回 `return 0` → 1 条 FAIL。
+  一处诚实披露：preflight 的"退出码非 0"这一格**单独不承重**——worktree 脏时 `decide()` 也会回 1，
+  本机跑变异时正是被这格掩盖、只有哨兵格抓到 MUT；CI 的检出树是干净的才两格都咬得住，
+  因此把它们合成一条断言而不是留一条会假绿的。
+
 - **任务会话并发竞态产生的重复会话善后 + 数据库级唯一约束**：任务聊天 get-or-create 的竞态窗口
   （API 层已用 `pg_advisory_xact_lock` 收口）此前已落库的重复会话仍然存在，而读取侧
   `conversation.findFirst({ where: { taskId } })` 没有 `orderBy`，命中的会话与消息实际写入的
@@ -25,10 +60,18 @@
   就要记得补一次），改为把写权限收敛到**单一 choke point**：`lib/auth.ts` 的 `getWorkspaceContext()`
   内部调用新增的 `lib/write-policy.ts` 裁决，写方法（POST/PUT/PATCH/DELETE）默认拒绝，
   只有 owner/admin/member 与"自助类"端点（自己的收藏/通知/设备/资料/纯文本 AI）放行。
-  实测覆盖：278 个写 handler 中 250 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
+  实测覆盖：280 个写 handler 中 252 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
   用户级自服务 / 创建工作区等本就没有成员上下文的端点）在 `scripts/write-access-registry.txt`
   逐条登记 reason 与复核截止日，并由新脚本 `check_write_access_registry.py` 断言
   "每个写 handler 要么进墙要么登记"（含三类注入变异自检），已接进 CI 的 permission-gate job。
+  数字口径（2026-10-17 复算，原写 278/250 已随端点增加过期；现测命令
+  `python scripts/check_write_access_registry.py`）：全仓写方法 export 共 **285** 处，
+  门禁分母 **280** = 减去 5 处按设计不进气泡的：`/api/[...path]` 的 POST/PATCH/PUT/DELETE
+  四个 handler（该路由只回 JSON 404，不碰库，见 `INTERNAL_EXACT`）与
+  `POST /api/cron/recycle-cleanup`（`/api/cron/` 前缀整族按 `INTERNAL_PREFIXES` 跳过，
+  该族 9 个端点各自带 `CRON_SECRET` Bearer 鉴权，且未配置密钥时返回 500 而非放行——fail-closed）。
+  即这条门的分母不是"漏看"，但**前缀式跳过意味着以后新加的 `/api/cron/*` 会自动隐身**，
+  这层依赖的是 cron 族的书写惯例而非机械检查。
 
   灰度开关 `WRITE_POLICY_MODE`：enforce（默认，fail-closed，拼错也按 enforce 处理）/ shadow
   （只打日志，用于上线前观察误杀面）/ off。
