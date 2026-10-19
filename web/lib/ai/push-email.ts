@@ -15,6 +15,13 @@
 //   - 不做 HTML 转义（调用方负责传入已转义的 html）
 
 import { logger } from "@/lib/logger";
+import { EMAIL_COLORS } from "@/lib/html-palette";
+import {
+  emailMsg,
+  emailHtmlLang,
+  normalizeEmailLocale,
+  type EmailLocale,
+} from "@/lib/email-messages";
 
 /** sendPushEmail 选项 */
 export interface SendPushEmailOpts {
@@ -121,12 +128,17 @@ export async function sendPushEmail(opts: SendPushEmailOpts): Promise<SendPushEm
  * 与 web/lib/email.ts 的 renderEmailHtml 风格一致（简洁、无外部 CSS 依赖），
  * 但独立实现以避免引入对私有函数的依赖。调用方负责对 title/summary 做转义，
  * 本函数对传入的 title/summary/workspaceUrl 做 HTML 转义防护。
+ *
+ * locale 由调用方按**收件人**给出（AI 推送走 cron，没有 request 可协商，
+ * 只能读 User.locale）。缺省 zh 只为未接线调用点兜底，不是让它悄悄发中文。
  */
 export function renderPushEmailHtml(opts: {
   title: string;
   summary: string;
   workspaceUrl: string;
+  locale?: EmailLocale;
 }): string {
+  const locale = normalizeEmailLocale(opts.locale);
   const safeTitle = escapeHtml(opts.title);
   const safeSummary = escapeHtml(opts.summary);
   const safeUrl = escapeHtml(opts.workspaceUrl);
@@ -134,19 +146,19 @@ export function renderPushEmailHtml(opts: {
   const summaryHtml = safeSummary.replace(/\n/g, "<br>");
 
   return (
-    `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">` +
+    `<!DOCTYPE html><html lang="${emailHtmlLang(locale)}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>${safeTitle}</title></head>` +
-    `<body style="margin:0;padding:0;background:#f6f7f9;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:#0f172a;">` +
-    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7f9;">` +
+    `<body style="margin:0;padding:0;background:${EMAIL_COLORS.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:${EMAIL_COLORS.titleFg};">` +
+    `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:${EMAIL_COLORS.pageBg};">` +
     `<tr><td align="center" style="padding:32px 16px;">` +
-    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid #e5e7eb;overflow:hidden;">` +
-    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:#0f172a;">${safeTitle}</h1></td></tr>` +
-    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:#334155;">${summaryHtml}</td></tr>` +
+    `<table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:12px;border:1px solid ${EMAIL_COLORS.border};overflow:hidden;">` +
+    `<tr><td style="padding:24px 32px 8px;"><h1 style="margin:0;font-size:18px;font-weight:600;line-height:1.4;color:${EMAIL_COLORS.titleFg};">${safeTitle}</h1></td></tr>` +
+    `<tr><td style="padding:8px 32px 24px;font-size:14px;line-height:1.6;color:${EMAIL_COLORS.bodyFg};">${summaryHtml}</td></tr>` +
     `<tr><td style="padding:0 32px 32px;">` +
-    `<a href="${safeUrl}" style="display:inline-block;padding:10px 20px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">查看详情</a>` +
+    `<a href="${safeUrl}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.accent};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(emailMsg("pushCtaViewDetails", locale))}</a>` +
     `</td></tr>` +
-    `<tr><td style="padding:16px 32px 24px;border-top:1px solid #e5e7eb;font-size:12px;color:#94a3b8;">corps · AI 推送通知</td></tr>` +
+    `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">${escapeHtml(emailMsg("pushFooter", locale))}</td></tr>` +
     `</table></td></tr></table></body></html>`
   );
 }

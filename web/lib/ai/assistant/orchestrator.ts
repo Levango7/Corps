@@ -318,71 +318,71 @@ export function getSuggestionsForPhase(
     created: [
       {
         id: "task_breakdown",
-        labelKey: "assistant.suggest.taskBreakdown.label",
-        descKey: "assistant.suggest.taskBreakdown.desc",
+        labelKey: "suggest.taskBreakdown.label",
+        descKey: "suggest.taskBreakdown.desc",
       },
       {
         id: "todo_extract",
-        labelKey: "assistant.suggest.todoExtract.label",
-        descKey: "assistant.suggest.todoExtract.desc",
+        labelKey: "suggest.todoExtract.label",
+        descKey: "suggest.todoExtract.desc",
       },
     ],
     in_progress: [
       {
         id: "progress_anomaly",
-        labelKey: "assistant.suggest.progressAnomaly.label",
-        descKey: "assistant.suggest.progressAnomaly.desc",
+        labelKey: "suggest.progressAnomaly.label",
+        descKey: "suggest.progressAnomaly.desc",
       },
       {
         id: "bottleneck_analysis",
-        labelKey: "assistant.suggest.bottleneckAnalysis.label",
-        descKey: "assistant.suggest.bottleneckAnalysis.desc",
+        labelKey: "suggest.bottleneckAnalysis.label",
+        descKey: "suggest.bottleneckAnalysis.desc",
       },
       {
         id: "follow_up",
-        labelKey: "assistant.suggest.followUp.label",
-        descKey: "assistant.suggest.followUp.desc",
+        labelKey: "suggest.followUp.label",
+        descKey: "suggest.followUp.desc",
       },
     ],
     review: [
       {
         id: "decision_assistant",
-        labelKey: "assistant.suggest.decisionAssistant.label",
-        descKey: "assistant.suggest.decisionAssistant.desc",
+        labelKey: "suggest.decisionAssistant.label",
+        descKey: "suggest.decisionAssistant.desc",
       },
       {
         id: "approval_advice",
-        labelKey: "assistant.suggest.approvalAdvice.label",
-        descKey: "assistant.suggest.approvalAdvice.desc",
+        labelKey: "suggest.approvalAdvice.label",
+        descKey: "suggest.approvalAdvice.desc",
       },
     ],
     completed: [
       {
         id: "meeting_summary",
-        labelKey: "assistant.suggest.meetingSummary.label",
-        descKey: "assistant.suggest.meetingSummary.desc",
+        labelKey: "suggest.meetingSummary.label",
+        descKey: "suggest.meetingSummary.desc",
       },
       {
         id: "daily_report",
-        labelKey: "assistant.suggest.dailyReport.label",
-        descKey: "assistant.suggest.dailyReport.desc",
+        labelKey: "suggest.dailyReport.label",
+        descKey: "suggest.dailyReport.desc",
       },
       {
         id: "knowledge_extract",
-        labelKey: "assistant.suggest.knowledgeExtract.label",
-        descKey: "assistant.suggest.knowledgeExtract.desc",
+        labelKey: "suggest.knowledgeExtract.label",
+        descKey: "suggest.knowledgeExtract.desc",
       },
     ],
     blocked: [
       {
         id: "risk_alert",
-        labelKey: "assistant.suggest.riskAlert.label",
-        descKey: "assistant.suggest.riskAlert.desc",
+        labelKey: "suggest.riskAlert.label",
+        descKey: "suggest.riskAlert.desc",
       },
       {
         id: "bottleneck_analysis",
-        labelKey: "assistant.suggest.bottleneckAnalysis.label",
-        descKey: "assistant.suggest.bottleneckAnalysis.desc",
+        labelKey: "suggest.bottleneckAnalysis.label",
+        descKey: "suggest.bottleneckAnalysis.desc",
       },
     ],
   };

@@ -4,6 +4,7 @@ import { prismaAdapter } from "better-auth/adapters/prisma";
 import { prisma, withDbRetry } from "./prisma";
 import { verifyAccessToken, type JWTPayload } from "./jwt";
 import { sendResetPasswordEmail, sendVerificationEmail } from "./email";
+import { resolveUserEmailLocale } from "./user-locale";
 import { NextRequest } from "next/server";
 import type { Prisma } from "@prisma/client";
 import { randomUUID } from "crypto";
@@ -40,11 +41,18 @@ export const auth = betterAuth({
     // 忘记密码：better-auth 负责 token 生成/校验（/api/auth/request-password-reset、
     // /api/auth/reset-password），本回调只负责把一次性链接发出去。
     // 自建链接指向 /auth/reset-password（站内页），不用 better-auth 默认的 /reset-password 路径
+    // 语言按**收件人**定，不按发请求的人：这两个回调由 Better Auth 内部触发，
+    // 拿不到 request，唯一能读到的信号就是收件人自己 User 行上的 locale
+    // （注册时由请求协商结果写入，见 app/api/v1/auth/register/route.ts）。
+    // 典型分叉场景：中文界面的管理员邀请英文同事后，同事点"忘记密码"收到的
+    // 重置邮件应是英文——按操作者语言发就错了。
     sendResetPassword: async ({ user, token }) => {
       const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
+      const locale = await resolveUserEmailLocale(user.id);
       await sendResetPasswordEmail({
         to: user.email,
         resetUrl: `${appUrl}/auth/reset-password?token=${token}`,
+        locale,
       });
     },
     resetPasswordTokenExpiresIn: 60 * 60, // 1 小时
@@ -54,8 +62,11 @@ export const auth = betterAuth({
   // 避免版本间改名导致的静默不发）。
   emailVerification: {
     expiresIn: 60 * 60 * 24, // 24 小时
+    // 语言同上，按收件人 User.locale 取。注册流程里 User.locale 已由 register 路由
+    // 在调用本回调之前写入，所以这里读到的是注册者当时的语言。
     sendVerificationEmail: async ({ user, url }) => {
-      await sendVerificationEmail({ to: user.email, verifyUrl: url });
+      const locale = await resolveUserEmailLocale(user.id);
+      await sendVerificationEmail({ to: user.email, verifyUrl: url, locale });
     },
   },
   session: {

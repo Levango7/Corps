@@ -8,8 +8,15 @@ node_modules/
 out/
 build/
 
-# 生成产物（从 design/design-tokens.css 复制，不应入库）
-web/app/design-tokens.css
+# design-tokens 的副本（web/app/design-tokens.css）**必须入库**——它不是可再生的
+# 一次性产物，而是三处构建都要用的输入：
+#   1) web/Dockerfile 的构建上下文是 ./web，拿不到仓库根的 design/，只能复用
+#      已入库的副本（Dockerfile 里直接 `npx next build` 跳过 prebuild 钩子）；
+#   2) Vercel 的 Root Directory=web 时 ../design/ 不可见，prebuild 复制不到源；
+#   3) scripts/check_design_tokens_sync.py 门禁按「两份逐字节一致 + 均 LF」判定，
+#      它要求副本在库（见该脚本 docstring）。
+# 唯一真源仍是 design/design-tokens.css：predev/prebuild 在源可见时覆盖副本，
+# 源不可见时（Vercel/Docker）保留入库副本不报错。
 
 # Production
 dist/
@@ -90,8 +97,11 @@ web/.next.stale.*
 
 # 部署配置里的真实环境文件（含 POSTGRES_PASSWORD / JWT_*_SECRET 等赋值）
 # 模板见 deploy/.env.prod.example —— 只有 .example 才入库
-deploy/.env.prod
-deploy/.env.prod.local
+# 用 `deploy/.env.prod*` 通配 + `!` 例外：连演练/回滚留下的带时间戳备份
+# （.env.prod.20261004-drill.bak 之类）一起挡掉 —— 它们同样带真实密钥赋值，
+# 漏一条规则就等于把密钥摆在 `git add .` 的枪口下（2026-10-19 实测踩到）。
+deploy/.env.prod*
+!deploy/.env.prod.example
 
 # Tauri 打包资源里的运行时上传目录（内容为本地测试上传残留，不应入库）
 desktop/src-tauri/resources/standalone/uploads/

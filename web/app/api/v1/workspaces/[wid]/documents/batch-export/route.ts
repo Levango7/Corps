@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { EXPORT_COLORS } from "@/lib/html-palette";
 
 /**
  * POST /v1/workspaces/{wid}/documents/batch-export — 批量导出多文档
@@ -169,13 +170,13 @@ function buildBatchHtml(docs: DocForExport[], includeToc: boolean, locale: "zh" 
       body {
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
         line-height: 1.6;
-        color: #1a1a1a;
+        color: ${EXPORT_COLORS.text};
         max-width: 800px;
         margin: 0 auto;
         padding: 32px;
       }
       h1, h2, h3, h4 { font-weight: 600; margin-top: 1.5em; margin-bottom: 0.5em; }
-      h1 { font-size: 1.5em; border-bottom: 1px solid #e5e5e5; padding-bottom: 0.3em; }
+      h1 { font-size: 1.5em; border-bottom: 1px solid ${EXPORT_COLORS.border}; padding-bottom: 0.3em; }
       h2 { font-size: 1.3em; }
       h3 { font-size: 1.15em; }
       h4 { font-size: 1em; }
@@ -183,44 +184,44 @@ function buildBatchHtml(docs: DocForExport[], includeToc: boolean, locale: "zh" 
       ul, ol { padding-left: 1.5em; }
       li { margin: 0.3em 0; }
       blockquote {
-        border-left: 3px solid #d0d0d0;
+        border-left: 3px solid ${EXPORT_COLORS.quoteBar};
         padding-left: 1em;
-        color: #555;
+        color: ${EXPORT_COLORS.quoteFg};
         margin: 0.8em 0;
       }
       code {
-        background: #f5f5f5;
+        background: ${EXPORT_COLORS.surface};
         padding: 0.15em 0.35em;
         border-radius: 3px;
         font-family: "SFMono-Regular", Consolas, monospace;
         font-size: 0.9em;
       }
       pre {
-        background: #f5f5f5;
+        background: ${EXPORT_COLORS.surface};
         padding: 0.8em;
         border-radius: 6px;
         overflow-x: auto;
         margin: 0.8em 0;
       }
       pre code { background: none; padding: 0; }
-      hr { border: none; border-top: 1px solid #e5e5e5; margin: 1.5em 0; }
-      a { color: #2563eb; text-decoration: none; }
+      hr { border: none; border-top: 1px solid ${EXPORT_COLORS.border}; margin: 1.5em 0; }
+      a { color: ${EXPORT_COLORS.link}; text-decoration: none; }
       a:hover { text-decoration: underline; }
       table { border-collapse: collapse; width: 100%; margin: 1em 0; }
-      th, td { border: 1px solid #ddd; padding: 0.5em 0.8em; text-align: left; }
-      th { background: #f5f5f5; font-weight: 600; }
+      th, td { border: 1px solid ${EXPORT_COLORS.thBorder}; padding: 0.5em 0.8em; text-align: left; }
+      th { background: ${EXPORT_COLORS.surface}; font-weight: 600; }
       .toc { margin-bottom: 2em; }
-      .toc h1 { border-bottom: 2px solid #2563eb; padding-bottom: 0.4em; }
+      .toc h1 { border-bottom: 2px solid ${EXPORT_COLORS.link}; padding-bottom: 0.4em; }
       .toc ol { list-style: decimal; padding-left: 1.8em; }
       .toc li { margin: 0.5em 0; }
       .toc a { font-weight: 500; }
       .doc-section { page-break-after: always; }
       .doc-section:last-child { page-break-after: auto; }
       .doc-meta {
-        color: #888;
+        color: ${EXPORT_COLORS.metaFg};
         font-size: 0.85em;
         margin-bottom: 1em;
-        border-bottom: 1px solid #f0f0f0;
+        border-bottom: 1px solid ${EXPORT_COLORS.rowBorder};
         padding-bottom: 0.5em;
       }
       @media print {

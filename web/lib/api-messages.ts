@@ -227,6 +227,14 @@ export const API_MESSAGES = {
     en: "The q parameter cannot be empty or whitespace",
   },
 
+  /* ── 分析漏斗（analytics/overview 漏斗步骤标签）── */
+  funnelLandingView: { zh: "落地曝光", en: "Landing view" },
+  funnelClickSignup: { zh: "点击注册", en: "Sign-up click" },
+  funnelRegisterSubmit: { zh: "提交注册", en: "Sign-up submit" },
+  funnelRegisterSuccess: { zh: "注册成功", en: "Sign-up success" },
+  funnelCreateTask: { zh: "创建任务", en: "Task created" },
+  funnelActivationCompleted: { zh: "激活完成", en: "Activation completed" },
+
   /* ── 标签 ── */
   labelNameExists: { zh: "标签名已存在", en: "A label with this name already exists" },
 

@@ -81,6 +81,9 @@ MODULE_BY_SEGMENT = {
     "time-entries": "timetrack",
     "announcements": "announcements",
     "contacts": "contacts",
+    # 联系人分组是 contacts 数据域的子资源：分组 CRUD 归 contacts 模块管
+    # （矩阵内已有 owner/admin=crud、member=cr、viewer=r 的既有语义，无需新模块）
+    "contact-groups": "contacts",
     "labels": "tasks",
     "milestones": "tasks",
     # 多维表格在矩阵里是**两个**模块（容器 vs 记录数据面），按路径段区分：

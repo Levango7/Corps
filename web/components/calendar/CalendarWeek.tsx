@@ -5,7 +5,7 @@
 // CalendarView 管理所有日历状态（currentDate/events/dialogOpen），本组件仅做展示 + 回调转发。
 
 import { useState } from "react";
-import { useTranslations } from "next-intl";
+import { useTranslations, useLocale } from "next-intl";
 import { ChevronLeft, ChevronRight, CheckCircle2 } from "lucide-react";
 import type { CalendarEvent } from "./CalendarEventDialog";
 import {
@@ -41,8 +41,21 @@ export function CalendarWeek({
   onEventClick,
 }: CalendarWeekProps) {
   const t = useTranslations("calendar");
+  const locale = useLocale();
   const today = new Date();
   const weekDays = getWeekDays(currentDate);
+  // i18n 日期格式化：按 locale 选 BCP 47 标签（与 CalendarDay 同口径），
+  // 不往词条里塞日期——词条是静态文案，日期必须由 Intl 按 locale 现算
+  const dateLocale = locale === "zh" ? "zh-CN" : "en-US";
+  const weekRangeStart = new Intl.DateTimeFormat(dateLocale, {
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  }).format(weekDays[0]);
+  const weekRangeEnd = new Intl.DateTimeFormat(dateLocale, {
+    month: "long",
+    day: "numeric",
+  }).format(weekDays[6]);
   // 手机端：当前显示的天索引（0-6），默认定位到今天或第一天
   const [mobileDayIndex, setMobileDayIndex] = useState(() => {
     const todayIdx = weekDays.findIndex((d) => isSameDay(d, today));
@@ -76,7 +89,7 @@ export function CalendarWeek({
             onClick={onPrev}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="previous week"
+            aria-label={t("prevWeek")}
           >
             <ChevronLeft size={14} />
           </button>
@@ -84,7 +97,7 @@ export function CalendarWeek({
             onClick={onNext}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="next week"
+            aria-label={t("nextWeek")}
           >
             <ChevronRight size={14} />
           </button>
@@ -97,8 +110,7 @@ export function CalendarWeek({
           </button>
         </div>
         <h2 className="text-[length:var(--text-lg)] font-[weight:var(--weight-semibold)] text-[var(--fg)]">
-          {weekDays[0].getFullYear()}年 {weekDays[0].getMonth() + 1}月{weekDays[0].getDate()}日 -{" "}
-          {weekDays[6].getMonth() + 1}月{weekDays[6].getDate()}日
+          {weekRangeStart} - {weekRangeEnd}
         </h2>
       </div>
 
@@ -111,7 +123,7 @@ export function CalendarWeek({
             disabled={mobileDayIndex === 0}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="previous day in week"
+            aria-label={t("prevDayInWeek")}
           >
             <ChevronLeft size={14} />
           </button>
@@ -124,7 +136,7 @@ export function CalendarWeek({
             disabled={mobileDayIndex === 6}
             className="p-1 rounded-[var(--radius-sm)] cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
             style={{ color: "var(--muted)", border: "1px solid var(--border)" }}
-            aria-label="next day in week"
+            aria-label={t("nextDayInWeek")}
           >
             <ChevronRight size={14} />
           </button>

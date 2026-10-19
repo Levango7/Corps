@@ -24,19 +24,24 @@ import { authFailure } from "@/lib/auth-response";
  * RLS：走 runWithWorkspace，工作区隔离。
  */
 
-/** 获客段漏斗步骤（按 sessionId 分组串联，匿名可算）。 */
+/**
+ * 获客段漏斗步骤（按 sessionId 分组串联，匿名可算）。
+ * label 不写死：labelKey 走 API_MESSAGES，由 apiMsg(req, …) 按请求 locale 现取
+ * （与 next-intl 同源的 cookie/Accept-Language 协商，见 lib/api-messages.ts）——
+ * 英文用户看分析页不该看到中文漏斗标签（P0-6）。
+ */
 const ACQUISITION_STEPS = [
-  { name: "landing_view", label: "落地曝光" },
-  { name: "click_signup", label: "点击注册" },
-  { name: "register_submit", label: "提交注册" },
-  { name: "register_success", label: "注册成功" },
+  { name: "landing_view", labelKey: "funnelLandingView" },
+  { name: "click_signup", labelKey: "funnelClickSignup" },
+  { name: "register_submit", labelKey: "funnelRegisterSubmit" },
+  { name: "register_success", labelKey: "funnelRegisterSuccess" },
 ] as const;
 
 /** 激活段漏斗步骤（按 workspaceId+userId 分组串联，全服务端事件）。 */
 const ACTIVATION_STEPS = [
-  { name: "register_success", label: "注册成功" },
-  { name: "create_task", label: "创建任务" },
-  { name: "activation_completed", label: "激活完成" },
+  { name: "register_success", labelKey: "funnelRegisterSuccess" },
+  { name: "create_task", labelKey: "funnelCreateTask" },
+  { name: "activation_completed", labelKey: "funnelActivationCompleted" },
 ] as const;
 
 const RANGE_DAYS = 14;
@@ -110,7 +115,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           }));
         const acquisition = matchFunnel(
           acquisitionEvents,
-          ACQUISITION_STEPS as readonly { name: string; label: string }[],
+          ACQUISITION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
         );
 
         // 激活段按 (workspaceId, userId) 分组——此处 wid 固定，按 userId 分组即可
@@ -126,7 +131,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           }));
         const activation = matchFunnel(
           activationEvents,
-          ACTIVATION_STEPS as readonly { name: string; label: string }[],
+          ACTIVATION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
         );
 
         // ─── D1 修复：daily 按 Asia/Shanghai 日界分桶 ───

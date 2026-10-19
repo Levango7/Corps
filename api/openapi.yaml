@@ -1824,6 +1824,29 @@ paths:
                       status: { type: string, example: "degraded" }
                       db: { type: string, example: "down" }
                   message: { type: string, example: "Database unreachable" }
+  # Prometheus 指标端点：输出 Prometheus 0.0.4 文本格式（非 JSON 信封）。
+  # 默认开放（Prometheus scraper 无 cookie）；设置 METRICS_TOKEN 后要求 Bearer 令牌。
+  /api/metrics:
+    get:
+      tags: [system]
+      summary: Prometheus metrics exposition (text/plain)
+      description: >-
+        Returns process metrics in Prometheus exposition format
+        (corps_uptime_seconds, corps_memory_*_bytes, corps_node_version,
+        corps_process_pid). When METRICS_TOKEN is set, a request without
+        `Authorization: Bearer <token>` is rejected with 401.
+      security:
+        - {}
+        - metricsToken: []
+      responses:
+        '200':
+          description: Prometheus exposition text
+          content:
+            text/plain:
+              schema:
+                type: string
+        '401':
+          description: METRICS_TOKEN is set and the Bearer token is missing/invalid
   /api/cron/due-reminders:
     get:
       tags: [system]
@@ -3602,6 +3625,33 @@ paths:
         '500':
           description: Internal server error
 
+  # AI 可用性探测：供客户端按钮在挂载时判断 AI 是否已配置，
+  # 未配置时按钮置灰而不是点击后才收到 503。仅返回布尔值，不泄露密钥。
+  # 需要登录（匿名探测 → 401）。
+  /api/v1/ai/configured:
+    get:
+      tags: [ai]
+      summary: Check whether the AI provider is configured (boolean only)
+      operationId: getAiConfigured
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: AI configuration status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data:
+                    type: object
+                    properties:
+                      configured: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+
   # ===========================================================================
   # DECISION EXTRACT (AI draft)
   # ===========================================================================
@@ -4335,6 +4385,14 @@ components:
     cronSecret:
       type: http
       scheme: bearer
+      description: Shared secret (CRON_SECRET env) for scheduled job endpoints.
+    metricsToken:
+      type: http
+      scheme: bearer
+      description: >-
+        Optional shared secret (METRICS_TOKEN env). Only enforced when the
+        variable is set; otherwise /api/metrics is open and must be restricted
+        at the network layer.
     bearerAuth:
       type: http
       scheme: bearer

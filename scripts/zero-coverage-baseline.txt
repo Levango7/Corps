@@ -302,7 +302,6 @@ components/BatchToolbar.tsx
 components/CalendarSyncBadge.tsx
 components/ChatPanel.tsx
 components/ClientLayout.tsx
-components/CommandPalette.tsx
 components/DocumentComments.tsx
 components/DocumentListView.tsx
 components/DocumentPreview.tsx
@@ -362,7 +361,6 @@ components/ai/OrchestrationPanel.tsx
 components/ai/PersonalizationPanel.tsx
 components/ai/ProgressSteps.tsx
 components/ai/ProjectInsightView.tsx
-components/ai/SemanticSearchPanel.tsx
 components/ai/TaskBreakdownDialog.tsx
 components/ai/TemplateEditor.tsx
 components/ai/TemplateMarket.tsx
@@ -568,7 +566,6 @@ lib/ai/prompts/weekly-report.ts
 lib/ai/prompts/wiki-search.ts
 lib/ai/prompts/workflow-build.ts
 lib/ai/prompts/workflow-orchestrator.ts
-lib/ai/push-email.ts
 lib/ai/push-runner.ts
 lib/ai/shared.ts
 lib/ai/stream.ts

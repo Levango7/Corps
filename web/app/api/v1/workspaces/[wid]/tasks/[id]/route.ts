@@ -7,6 +7,7 @@ import { syncTaskToAllCalendars } from "@/lib/calendar/sync";
 import { deleteTaskFiles } from "@/lib/uploads-cleanup";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { normalizeEmailLocale } from "@/lib/email-messages";
 import { requirePermission } from "@/lib/permissions";
 // M4 实时协作：任务变更/删除后通过 workspace-events 总线广播事件，
 // SSE 端点 /events/stream 订阅者（看板/详情页）实时刷新。
@@ -157,7 +158,8 @@ export async function PATCH(
           shareToken: shareTokenValue,
           ...(dueDate !== undefined ? { dueDate: dueDate ? new Date(dueDate) : null } : {}),
         },
-        include: { assignee: { select: { id: true, name: true, email: true } } },
+        // locale 一并提出来：指派邮件的语言按**收件人（新负责人）**定，不按操作者
+        include: { assignee: { select: { id: true, name: true, email: true, locale: true } } },
       });
 
       // A-3: assignee 变更且新 assignee 不是操作者时，创建 task_assigned 通知
@@ -239,6 +241,8 @@ export async function PATCH(
             workspaceName: workspace.name,
             assignerName: assigner.name ?? assigner.email,
             taskUrl: `${appUrl}/w/${wid}/task/${id}`,
+            // 级联第 1 步：收件人有 User 行，用它自己的 locale
+            locale: normalizeEmailLocale(result.task.assignee.locale),
           });
         }
       } catch (err) {

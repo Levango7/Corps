@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { sendTaskDueReminderEmail, isEmailConfigured } from "@/lib/email";
+import { normalizeEmailLocale } from "@/lib/email-messages";
 import { apiMsg } from "@/lib/api-messages";
 
 /**
@@ -55,7 +56,9 @@ export async function GET(req: NextRequest) {
           assigneeId: { not: null },
         },
         include: {
-          assignee: { select: { id: true, name: true, email: true } },
+          // locale：邮件语言按**收件人**（任务负责人）决定。cron 没有 request 可协商，
+          // User.locale 是这个上下文里唯一还读得到的语言信号。
+          assignee: { select: { id: true, name: true, email: true, locale: true } },
           workspace: { select: { id: true, name: true } },
         },
       }),
@@ -78,6 +81,7 @@ export async function GET(req: NextRequest) {
           workspaceName: task.workspace.name,
           dueDate: task.dueDate!.toISOString(),
           taskUrl: `${appUrl}/w/${task.workspace.id}/task/${task.id}`,
+          locale: normalizeEmailLocale(task.assignee.locale),
         });
         sent++;
       } catch (err) {
