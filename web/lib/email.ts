@@ -7,9 +7,23 @@
  *
  * 设计原则：邮件为"尽力而为"——任何发送失败只记 console.error，绝不阻断业务流程。
  * 优雅降级：未配置 RESEND_API_KEY 时仅记 DB 通知，不发邮件（调用方负责 DB 通知写入）。
+ *
+ * 语言（2026-10-19）：每个 send* 函数都带 `locale`，文案一律经 EMAIL_MESSAGES 取，
+ * 本文件不再出现任何写死的用户可见中文。locale 必须由**调用方按收件人**给出：
+ *   1. 收件人有 User 行 → 用该收件人的 User.locale（唯一正确信号，cron 场景尤其如此）
+ *   2. 收件人没有 User 行（典型是 invite：被邀请人还没注册）→ 用操作者的语言
+ *   3. 都拿不到 → 兜底 "zh"
+ * 缺省值只是为了让"暂时没接线"的调用点不崩，不是让它悄悄发中文——接线时请显式传。
  */
 
 import { EMAIL_COLORS } from "@/lib/html-palette";
+import {
+  emailMsg,
+  emailHtmlLang,
+  emailDateLocale,
+  normalizeEmailLocale,
+  type EmailLocale,
+} from "@/lib/email-messages";
 
 export interface InviteEmailParams {
   to: string;
@@ -23,6 +37,8 @@ export interface InviteEmailParams {
   inviteUrl?: string;
   /** 已注册直加场景的登录入口（可选；缺省回退 /auth/login） */
   loginUrl?: string;
+  /** 收件人语言。未注册受邀者没有 User 行，此时传邀请人的语言。 */
+  locale?: EmailLocale;
 }
 
 /** 密码重置邮件参数 */
@@ -30,6 +46,7 @@ export interface ResetPasswordEmailParams {
   to: string;
   /** 一次性重置链接（含 token，短期有效） */
   resetUrl: string;
+  locale?: EmailLocale;
 }
 
 /** 邮箱验证邮件参数 */
@@ -37,6 +54,7 @@ export interface VerifyEmailParams {
   to: string;
   /** 一次性验证链接（含 token，24 小时有效） */
   verifyUrl: string;
+  locale?: EmailLocale;
 }
 
 /** 任务指派通知邮件参数 */
@@ -47,6 +65,7 @@ export interface TaskAssignedEmailParams {
   workspaceName: string;
   assignerName: string;
   taskUrl: string;
+  locale?: EmailLocale;
 }
 
 /** 截止日提醒邮件参数 */
@@ -57,6 +76,7 @@ export interface TaskDueReminderEmailParams {
   workspaceName: string;
   dueDate: string; // ISO 字符串
   taskUrl: string;
+  locale?: EmailLocale;
 }
 
 /** @提及通知邮件参数 */
@@ -68,6 +88,31 @@ export interface MentionEmailParams {
   mentionerName: string;
   commentSnippet: string; // 评论内容摘要（已截断）
   taskUrl: string;
+  locale?: EmailLocale;
+}
+
+/** 账户删除通知邮件参数 */
+export interface AccountDeletedEmailParams {
+  to: string;
+  /** 随账户一并删除的自有工作区数 */
+  deletedWorkspaces: number;
+  locale?: EmailLocale;
+}
+
+/** 每周任务摘要邮件参数 */
+export interface WeeklyDigestEmailParams {
+  to: string;
+  memberName: string;
+  workspaceName: string;
+  /** 已逾期任务（未完成且截止日已过） */
+  overdueTasks: { title: string; dueDate: string; taskUrl: string }[];
+  /** 未来 7 天到期任务 */
+  upcomingTasks: { title: string; dueDate: string; taskUrl: string }[];
+  /** 本周运营漏斗（可选：不传则邮件中不渲染该段） */
+  weeklyStats?: { registers: number; activations: number; taskCreates: number; pageViews: number };
+  /** 工作区首页链接 */
+  workspaceUrl: string;
+  locale?: EmailLocale;
 }
 
 /** HTML 转义（用户可控输入，防邮件内容注入） */
@@ -77,6 +122,11 @@ function escapeHtml(s: string): string {
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
+}
+
+/** 强调片段：文案表里只有纯文本，加粗由渲染侧在填充占位符时包（见 email-messages.ts 约定 2）。 */
+function strong(s: string): string {
+  return `<strong>${s}</strong>`;
 }
 
 /**
@@ -93,6 +143,7 @@ function maskEmail(email: string): string {
 
 /** 邮件基础模板：标题 + 正文 + CTA 链接，简洁风格，无外部 CSS 依赖。 */
 function renderEmailHtml(opts: {
+  locale: EmailLocale;
   title: string;
   preheader?: string;
   bodyHtml: string;
@@ -103,7 +154,7 @@ function renderEmailHtml(opts: {
     ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;">${escapeHtml(opts.preheader)}</div>`
     : "";
   return (
-    `<!DOCTYPE html><html lang="zh-CN"><head><meta charset="utf-8">` +
+    `<!DOCTYPE html><html lang="${emailHtmlLang(opts.locale)}"><head><meta charset="utf-8">` +
     `<meta name="viewport" content="width=device-width,initial-scale=1">` +
     `<title>${escapeHtml(opts.title)}</title></head>` +
     `<body style="margin:0;padding:0;background:${EMAIL_COLORS.pageBg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;color:${EMAIL_COLORS.titleFg};">` +
@@ -116,84 +167,106 @@ function renderEmailHtml(opts: {
     `<tr><td style="padding:0 32px 32px;">` +
     `<a href="${escapeHtml(opts.ctaHref)}" style="display:inline-block;padding:10px 20px;background:${EMAIL_COLORS.accent};color:#ffffff;text-decoration:none;border-radius:8px;font-size:14px;font-weight:500;">${escapeHtml(opts.ctaLabel)}</a>` +
     `</td></tr>` +
-    `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">corps · 面向中小团队的轻量协作工具</td></tr>` +
+    `<tr><td style="padding:16px 32px 24px;border-top:1px solid ${EMAIL_COLORS.border};font-size:12px;color:${EMAIL_COLORS.footerFg};">${escapeHtml(emailMsg("shellFooter", opts.locale))}</td></tr>` +
     `</table></td></tr></table></body></html>`
   );
 }
 
 function renderInviteHtml(params: InviteEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
   // 未注册受邀者：CTA 即接受邀请（token 一次性、7 天有效）；
   // 已注册直加：无邀请 token，邮件改为"已加入"通知，CTA 指向登录
   const pending = Boolean(params.inviteUrl);
-  const title = `${params.inviterName} 邀请你加入 ${params.workspaceName}`;
+  const title = emailMsg("inviteSubject", locale, {
+    inviter: params.inviterName,
+    workspace: params.workspaceName,
+  });
   return renderEmailHtml({
+    locale,
     title,
     preheader: title,
     bodyHtml: pending
-      ? `<p style="margin:0 0 12px;">${escapeHtml(params.inviterName)} 邀请你加入 <strong>${escapeHtml(params.workspaceName)}</strong>。</p>` +
-        `<p style="margin:0;">点击下方按钮设置密码并加入，链接 7 天内有效。</p>`
-      : `<p style="margin:0 0 12px;">${escapeHtml(params.inviterName)} 将你加入了 <strong>${escapeHtml(params.workspaceName)}</strong>。</p>` +
-        `<p style="margin:0;">登录后即可在任务看板中查看并开始协作。</p>`,
-    ctaLabel: pending ? "接受邀请" : "登录 corps",
+      ? `<p style="margin:0 0 12px;">${emailMsg("invitePendingBody1", locale, { inviter: escapeHtml(params.inviterName), workspace: strong(escapeHtml(params.workspaceName)) })}</p>` +
+        `<p style="margin:0;">${escapeHtml(emailMsg("invitePendingBody2", locale))}</p>`
+      : `<p style="margin:0 0 12px;">${emailMsg("inviteJoinedBody1", locale, { inviter: escapeHtml(params.inviterName), workspace: strong(escapeHtml(params.workspaceName)) })}</p>` +
+        `<p style="margin:0;">${escapeHtml(emailMsg("inviteJoinedBody2", locale))}</p>`,
+    ctaLabel: pending ? emailMsg("ctaAcceptInvite", locale) : emailMsg("ctaSignInCorps", locale),
     ctaHref: params.inviteUrl ?? params.loginUrl ?? `${appUrl}/auth/login`,
   });
 }
 
 function renderTaskAssignedHtml(params: TaskAssignedEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
   return renderEmailHtml({
-    title: `${params.assignerName} 给你指派了任务「${params.taskTitle}」`,
-    preheader: `新任务指派：${params.taskTitle}`,
+    locale,
+    title: emailMsg("taskAssignedSubject", locale, {
+      assigner: params.assignerName,
+      task: params.taskTitle,
+    }),
+    preheader: emailMsg("taskAssignedPreheader", locale, { task: params.taskTitle }),
     bodyHtml:
-      `<p style="margin:0 0 12px;">${escapeHtml(params.assignerName)} 在 <strong>${escapeHtml(params.workspaceName)}</strong> 中给你指派了一个任务：</p>` +
-      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.quoteBg};border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
-      `<p style="margin:0;">点击下方按钮查看任务详情。</p>`,
-    ctaLabel: "查看任务",
+      `<p style="margin:0 0 12px;">${emailMsg("taskAssignedBody1", locale, { assigner: escapeHtml(params.assignerName), workspace: strong(escapeHtml(params.workspaceName)) })}</p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.quoteBg};border-radius:8px;font-size:14px;">${strong(escapeHtml(params.taskTitle))}</p>` +
+      `<p style="margin:0;">${escapeHtml(emailMsg("taskAssignedBody2", locale))}</p>`,
+    ctaLabel: emailMsg("ctaViewTask", locale),
     ctaHref: params.taskUrl,
   });
 }
 
 function renderTaskDueReminderHtml(params: TaskDueReminderEmailParams): string {
-  const dueText = new Date(params.dueDate).toLocaleDateString("zh-CN", {
+  const locale = normalizeEmailLocale(params.locale);
+  const dueText = new Date(params.dueDate).toLocaleDateString(emailDateLocale(locale), {
     year: "numeric",
     month: "long",
     day: "numeric",
   });
   return renderEmailHtml({
-    title: `任务「${params.taskTitle}」明天到期`,
-    preheader: `截止日提醒：${params.taskTitle} 明天到期`,
+    locale,
+    title: emailMsg("dueReminderSubject", locale, { task: params.taskTitle }),
+    preheader: emailMsg("dueReminderPreheader", locale, { task: params.taskTitle }),
     bodyHtml:
-      `<p style="margin:0 0 12px;">你在 <strong>${escapeHtml(params.workspaceName)}</strong> 中负责的任务即将到期：</p>` +
-      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.warnBg};border-radius:8px;font-size:14px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
-      `<p style="margin:0 0 12px;">截止日期：<strong>${escapeHtml(dueText)}</strong></p>` +
-      `<p style="margin:0;">请尽快处理，避免逾期。</p>`,
-    ctaLabel: "查看任务",
+      `<p style="margin:0 0 12px;">${emailMsg("dueReminderBody1", locale, { workspace: strong(escapeHtml(params.workspaceName)) })}</p>` +
+      `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.warnBg};border-radius:8px;font-size:14px;">${strong(escapeHtml(params.taskTitle))}</p>` +
+      `<p style="margin:0 0 12px;">${emailMsg("dueReminderDueDate", locale, { due: strong(escapeHtml(dueText)) })}</p>` +
+      `<p style="margin:0;">${escapeHtml(emailMsg("dueReminderBody2", locale))}</p>`,
+    ctaLabel: emailMsg("ctaViewTask", locale),
     ctaHref: params.taskUrl,
   });
 }
 
 function renderMentionHtml(params: MentionEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
   return renderEmailHtml({
-    title: `${params.mentionerName} 在「${params.taskTitle}」中提到了你`,
-    preheader: `@提及：${params.mentionerName} 在 ${params.taskTitle} 中提到了你`,
+    locale,
+    title: emailMsg("mentionSubject", locale, {
+      mentioner: params.mentionerName,
+      task: params.taskTitle,
+    }),
+    preheader: emailMsg("mentionPreheader", locale, {
+      mentioner: params.mentionerName,
+      task: params.taskTitle,
+    }),
     bodyHtml:
-      `<p style="margin:0 0 12px;">${escapeHtml(params.mentionerName)} 在 <strong>${escapeHtml(params.workspaceName)}</strong> 的任务评论中提到了你：</p>` +
+      `<p style="margin:0 0 12px;">${emailMsg("mentionBody1", locale, { mentioner: escapeHtml(params.mentionerName), workspace: strong(escapeHtml(params.workspaceName)) })}</p>` +
       `<p style="margin:0 0 12px;padding:12px 16px;background:${EMAIL_COLORS.quoteBg};border-radius:8px;font-size:14px;color:${EMAIL_COLORS.quoteFg};">${escapeHtml(params.commentSnippet)}</p>` +
-      `<p style="margin:0 0 12px;"><strong>${escapeHtml(params.taskTitle)}</strong></p>` +
-      `<p style="margin:0;">点击下方按钮查看并回复。</p>`,
-    ctaLabel: "查看评论",
+      `<p style="margin:0 0 12px;">${strong(escapeHtml(params.taskTitle))}</p>` +
+      `<p style="margin:0;">${escapeHtml(emailMsg("mentionBody2", locale))}</p>`,
+    ctaLabel: emailMsg("ctaViewComment", locale),
     ctaHref: params.taskUrl,
   });
 }
 
 function renderResetPasswordHtml(params: ResetPasswordEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
   return renderEmailHtml({
-    title: "重置你的 corps 密码",
-    preheader: "密码重置请求：链接 1 小时内有效",
+    locale,
+    title: emailMsg("resetSubject", locale),
+    preheader: emailMsg("resetPreheader", locale),
     bodyHtml:
-      `<p style="margin:0 0 12px;">我们收到了你的密码重置请求。点击下方按钮设置新密码，链接 <strong>1 小时内有效</strong>。</p>` +
-      `<p style="margin:0;color:${EMAIL_COLORS.noteFg};">如果不是你本人操作，可以忽略这封邮件，你的密码不会被更改。</p>`,
-    ctaLabel: "重置密码",
+      `<p style="margin:0 0 12px;">${emailMsg("resetBody1", locale, { expiry: strong(escapeHtml(emailMsg("resetExpiry", locale))) })}</p>` +
+      `<p style="margin:0;color:${EMAIL_COLORS.noteFg};">${escapeHtml(emailMsg("resetBody2", locale))}</p>`,
+    ctaLabel: emailMsg("ctaResetPassword", locale),
     ctaHref: params.resetUrl,
   });
 }
@@ -281,9 +354,13 @@ function logPlaceholder(tag: string, detail: string): void {
 }
 
 export async function sendInviteEmail(params: InviteEmailParams): Promise<void> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: `${params.inviterName} 邀请你加入 ${params.workspaceName}`,
+    subject: emailMsg("inviteSubject", locale, {
+      inviter: params.inviterName,
+      workspace: params.workspaceName,
+    }),
     html: renderInviteHtml(params),
     logTag: "invite",
   });
@@ -299,9 +376,13 @@ export async function sendInviteEmail(params: InviteEmailParams): Promise<void> 
 
 /** 任务指派通知邮件（失败不阻塞，返回是否真实发送） */
 export async function sendTaskAssignedEmail(params: TaskAssignedEmailParams): Promise<boolean> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: `${params.assignerName} 给你指派了任务「${params.taskTitle}」`,
+    subject: emailMsg("taskAssignedSubject", locale, {
+      assigner: params.assignerName,
+      task: params.taskTitle,
+    }),
     html: renderTaskAssignedHtml(params),
     logTag: "task_assigned",
   });
@@ -318,9 +399,10 @@ export async function sendTaskAssignedEmail(params: TaskAssignedEmailParams): Pr
 export async function sendTaskDueReminderEmail(
   params: TaskDueReminderEmailParams,
 ): Promise<boolean> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: `任务「${params.taskTitle}」明天到期`,
+    subject: emailMsg("dueReminderSubject", locale, { task: params.taskTitle }),
     html: renderTaskDueReminderHtml(params),
     logTag: "task_due_reminder",
   });
@@ -335,9 +417,13 @@ export async function sendTaskDueReminderEmail(
 
 /** @提及通知邮件（失败不阻塞，返回是否真实发送） */
 export async function sendMentionEmail(params: MentionEmailParams): Promise<boolean> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: `${params.mentionerName} 在「${params.taskTitle}」中提到了你`,
+    subject: emailMsg("mentionSubject", locale, {
+      mentioner: params.mentionerName,
+      task: params.taskTitle,
+    }),
     html: renderMentionHtml(params),
     logTag: "mention",
   });
@@ -352,9 +438,10 @@ export async function sendMentionEmail(params: MentionEmailParams): Promise<bool
 
 /** 密码重置邮件（由 Better Auth 的 sendResetPassword 回调触发，失败不阻塞） */
 export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): Promise<void> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: "重置你的 corps 密码",
+    subject: emailMsg("resetSubject", locale),
     html: renderResetPasswordHtml(params),
     logTag: "reset_password",
   });
@@ -365,14 +452,16 @@ export async function sendResetPasswordEmail(params: ResetPasswordEmailParams): 
 }
 
 function renderVerifyEmailHtml(params: VerifyEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
   return renderEmailHtml({
-    title: "验证你的 corps 邮箱",
-    preheader: "完成邮箱验证即可开始使用（链接 24 小时内有效）",
+    locale,
+    title: emailMsg("verifySubject", locale),
+    preheader: emailMsg("verifyPreheader", locale),
     bodyHtml:
-      `<p style="margin:0 0 12px;">感谢注册 corps。点击下方按钮验证你的邮箱，完成注册。</p>` +
-      `<p style="margin:0 0 12px;">链接 <strong>24 小时内有效</strong>，且只能使用一次。</p>` +
-      `<p style="margin:0;color:${EMAIL_COLORS.noteFg};">如果不是你本人操作，可以忽略这封邮件，不会创建任何账户活动。</p>`,
-    ctaLabel: "验证邮箱",
+      `<p style="margin:0 0 12px;">${escapeHtml(emailMsg("verifyBody1", locale))}</p>` +
+      `<p style="margin:0 0 12px;">${emailMsg("verifyBody2", locale, { expiry: strong(escapeHtml(emailMsg("verifyExpiry", locale))) })}</p>` +
+      `<p style="margin:0;color:${EMAIL_COLORS.noteFg};">${escapeHtml(emailMsg("verifyBody3", locale))}</p>`,
+    ctaLabel: emailMsg("ctaVerifyEmail", locale),
     ctaHref: params.verifyUrl,
   });
 }
@@ -382,9 +471,10 @@ function renderVerifyEmailHtml(params: VerifyEmailParams): string {
  * 未配置 Resend 时仅记录收件人（不记录 verifyUrl/token，避免日志泄露凭据）。
  */
 export async function sendVerificationEmail(params: VerifyEmailParams): Promise<void> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: "验证你的 corps 邮箱",
+    subject: emailMsg("verifySubject", locale),
     html: renderVerifyEmailHtml(params),
     logTag: "verify_email",
   });
@@ -393,77 +483,28 @@ export async function sendVerificationEmail(params: VerifyEmailParams): Promise<
   }
 }
 
-/** 账户删除通知邮件参数 */
-export interface AccountDeletedEmailParams {
-  to: string;
-  /** 随账户一并删除的自有工作区数 */
-  deletedWorkspaces: number;
-}
-
 function renderAccountDeletedHtml(params: AccountDeletedEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
   return renderEmailHtml({
-    title: "你的 corps 账户已删除",
-    preheader: "账户删除确认通知",
+    locale,
+    title: emailMsg("deletedSubject", locale),
+    preheader: emailMsg("deletedPreheader", locale),
     bodyHtml:
-      `<p style="margin:0 0 12px;">我们确认你的 corps 账户及关联数据已删除完毕。</p>` +
-      `<p style="margin:0 0 12px;">随账户一并删除的<b>自有工作区</b>共 ${params.deletedWorkspaces} 个（含其任务、决策、聊天与附件记录）；你曾作为成员加入的其他工作区不受影响，仅移除了你的成员身份。</p>` +
-      `<p style="margin:0;">如果这是误操作或你有任何疑问，请在 7 天内联系支持邮箱——部分数据可能仍有备份可恢复（见隐私政策）。</p>`,
+      `<p style="margin:0 0 12px;">${escapeHtml(emailMsg("deletedBody1", locale))}</p>` +
+      `<p style="margin:0 0 12px;">${emailMsg("deletedBody2", locale, { count: params.deletedWorkspaces, workspaces: strong(escapeHtml(emailMsg("deletedOwnWorkspaces", locale))) })}</p>` +
+      `<p style="margin:0;">${escapeHtml(emailMsg("deletedBody3", locale))}</p>`,
     // 账户已删，没有站内页面可跳——CTA 去登录页（重新注册入口）
-    ctaLabel: "重新访问 corps",
+    ctaLabel: emailMsg("ctaRevisitCorps", locale),
     ctaHref: `${process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000"}/auth/login`,
-  });
-}
-
-/** 每周摘要的任务列表行（标题 + 截止日 + 链接） */
-function digestTaskRows(tasks: WeeklyDigestEmailParams["overdueTasks"], warn: boolean): string {
-  if (tasks.length === 0) return "";
-  const color = warn ? EMAIL_COLORS.warnBg : EMAIL_COLORS.infoBg;
-  return tasks
-    .slice(0, 10)
-    .map(
-      (t) =>
-        `<p style="margin:0 0 8px;padding:10px 14px;background:${color};border-radius:8px;font-size:14px;">` +
-        `<strong>${escapeHtml(t.title)}</strong> · ${new Date(t.dueDate).toLocaleDateString("zh-CN", { month: "long", day: "numeric" })}</p>`,
-    )
-    .join("");
-}
-
-/** 每周任务摘要邮件 HTML */
-function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
-  const name = escapeHtml(params.memberName || "同事");
-  const hasAny = params.overdueTasks.length > 0 || params.upcomingTasks.length > 0;
-  return renderEmailHtml({
-    title: `本周任务摘要 · ${escapeHtml(params.workspaceName)}`,
-    preheader: `逾期 ${params.overdueTasks.length} 项，本周到期 ${params.upcomingTasks.length} 项`,
-    bodyHtml:
-      `<p style="margin:0 0 12px;">${name}，这是你在 <strong>${escapeHtml(params.workspaceName)}</strong> 的每周任务摘要：</p>` +
-      (params.overdueTasks.length > 0
-        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.overdueFg};">已逾期（${params.overdueTasks.length}）</p>` +
-          digestTaskRows(params.overdueTasks, true)
-        : "") +
-      (params.upcomingTasks.length > 0
-        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.accent};">未来 7 天到期（${params.upcomingTasks.length}）</p>` +
-          digestTaskRows(params.upcomingTasks, false)
-        : "") +
-      (!hasAny
-        ? `<p style="margin:0 0 12px;">你负责的任务没有逾期项，未来 7 天也没有到期任务——干得漂亮。</p>`
-        : "") +
-      `<p style="margin:16px 0 0;color:${EMAIL_COLORS.footnoteFg};font-size:13px;">列表最多显示 10 条，完整清单请打开工作区查看。</p>` +
-      (params.weeklyStats
-        ? `<p style="margin:20px 0 6px;font-weight:600;color:${EMAIL_COLORS.accent};">本周大盘</p>` +
-          `<p style="margin:0 0 12px;padding:10px 14px;background:${EMAIL_COLORS.infoBg};border-radius:8px;font-size:13px;">` +
-          `注册 ${params.weeklyStats.registers} · 激活 ${params.weeklyStats.activations} · 建任务 ${params.weeklyStats.taskCreates} · 浏览 ${params.weeklyStats.pageViews}</p>`
-        : ""),
-    ctaLabel: "打开工作区",
-    ctaHref: params.workspaceUrl,
   });
 }
 
 /** 账户删除通知邮件（阶段 2-3；尽力而为，失败不阻塞删除主流程） */
 export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams): Promise<void> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: "你的 corps 账户已删除",
+    subject: emailMsg("deletedSubject", locale),
     html: renderAccountDeletedHtml(params),
     logTag: "account_deleted",
   });
@@ -474,26 +515,78 @@ export async function sendAccountDeletedEmail(params: AccountDeletedEmailParams)
 
 // ─── 每周任务摘要（Pro 功能，v2 定价 2026-09-02）───────────────────────────
 
-/** 每周任务摘要邮件参数 */
-export interface WeeklyDigestEmailParams {
-  to: string;
-  memberName: string;
-  workspaceName: string;
-  /** 已逾期任务（未完成且截止日已过） */
-  overdueTasks: { title: string; dueDate: string; taskUrl: string }[];
-  /** 未来 7 天到期任务 */
-  upcomingTasks: { title: string; dueDate: string; taskUrl: string }[];
-  /** 本周运营漏斗（可选：不传则邮件中不渲染该段） */
-  weeklyStats?: { registers: number; activations: number; taskCreates: number; pageViews: number };
-  /** 工作区首页链接 */
-  workspaceUrl: string;
+/** 每周摘要的任务列表行（标题 + 截止日 + 链接） */
+function digestTaskRows(
+  tasks: WeeklyDigestEmailParams["overdueTasks"],
+  warn: boolean,
+  locale: EmailLocale,
+): string {
+  if (tasks.length === 0) return "";
+  const color = warn ? EMAIL_COLORS.warnBg : EMAIL_COLORS.infoBg;
+  const dateLocale = emailDateLocale(locale);
+  return tasks
+    .slice(0, 10)
+    .map(
+      (t) =>
+        `<p style="margin:0 0 8px;padding:10px 14px;background:${color};border-radius:8px;font-size:14px;">` +
+        `${strong(escapeHtml(t.title))} · ${escapeHtml(new Date(t.dueDate).toLocaleDateString(dateLocale, { month: "long", day: "numeric" }))}</p>`,
+    )
+    .join("");
+}
+
+/** 每周任务摘要邮件 HTML */
+function renderWeeklyDigestHtml(params: WeeklyDigestEmailParams): string {
+  const locale = normalizeEmailLocale(params.locale);
+  const name = escapeHtml(params.memberName || emailMsg("digestFallbackName", locale));
+  const hasAny = params.overdueTasks.length > 0 || params.upcomingTasks.length > 0;
+  return renderEmailHtml({
+    locale,
+    title: emailMsg("digestTitle", locale, { workspace: params.workspaceName }),
+    preheader: emailMsg("digestPreheader", locale, {
+      overdue: params.overdueTasks.length,
+      upcoming: params.upcomingTasks.length,
+    }),
+    bodyHtml:
+      `<p style="margin:0 0 12px;">${emailMsg("digestGreeting", locale, { name, workspace: strong(escapeHtml(params.workspaceName)) })}</p>` +
+      (params.overdueTasks.length > 0
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.overdueFg};">${escapeHtml(emailMsg("digestOverdueHeading", locale, { count: params.overdueTasks.length }))}</p>` +
+          digestTaskRows(params.overdueTasks, true, locale)
+        : "") +
+      (params.upcomingTasks.length > 0
+        ? `<p style="margin:16px 0 8px;font-weight:600;color:${EMAIL_COLORS.accent};">${escapeHtml(emailMsg("digestUpcomingHeading", locale, { count: params.upcomingTasks.length }))}</p>` +
+          digestTaskRows(params.upcomingTasks, false, locale)
+        : "") +
+      (!hasAny
+        ? `<p style="margin:0 0 12px;">${escapeHtml(emailMsg("digestAllClear", locale))}</p>`
+        : "") +
+      `<p style="margin:16px 0 0;color:${EMAIL_COLORS.footnoteFg};font-size:13px;">${escapeHtml(emailMsg("digestTruncationNote", locale))}</p>` +
+      (params.weeklyStats
+        ? `<p style="margin:20px 0 6px;font-weight:600;color:${EMAIL_COLORS.accent};">${escapeHtml(emailMsg("digestStatsHeading", locale))}</p>` +
+          `<p style="margin:0 0 12px;padding:10px 14px;background:${EMAIL_COLORS.infoBg};border-radius:8px;font-size:13px;">` +
+          `${escapeHtml(
+            emailMsg("digestStatsLine", locale, {
+              registers: params.weeklyStats.registers,
+              activations: params.weeklyStats.activations,
+              taskCreates: params.weeklyStats.taskCreates,
+              pageViews: params.weeklyStats.pageViews,
+            }),
+          )}</p>`
+        : ""),
+    ctaLabel: emailMsg("ctaOpenWorkspace", locale),
+    ctaHref: params.workspaceUrl,
+  });
 }
 
 /** 每周任务摘要邮件（失败不阻塞，返回是否真实发送） */
 export async function sendWeeklyDigestEmail(params: WeeklyDigestEmailParams): Promise<boolean> {
+  const locale = normalizeEmailLocale(params.locale);
   const sent = await sendViaResend({
     to: params.to,
-    subject: `本周任务摘要：${params.workspaceName}（逾期 ${params.overdueTasks.length} · 本周到期 ${params.upcomingTasks.length}）`,
+    subject: emailMsg("digestSubject", locale, {
+      workspace: params.workspaceName,
+      overdue: params.overdueTasks.length,
+      upcoming: params.upcomingTasks.length,
+    }),
     html: renderWeeklyDigestHtml(params),
     logTag: "weekly_digest",
   });

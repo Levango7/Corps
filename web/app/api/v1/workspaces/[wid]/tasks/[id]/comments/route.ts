@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/permissions";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { sendMentionEmail, isEmailConfigured } from "@/lib/email";
+import { normalizeEmailLocale } from "@/lib/email-messages";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
@@ -154,7 +155,8 @@ export async function POST(
               tx.workspace.findUnique({ where: { id: wid }, select: { name: true } }),
               tx.user.findMany({
                 where: { id: { in: comment.validMentions } },
-                select: { id: true, name: true, email: true },
+                // locale：@提及邮件按**被提及人**的语言渲染，不按评论者。
+                select: { id: true, name: true, email: true, locale: true },
               }),
             ]),
           ctx.payload.sub,
@@ -175,6 +177,7 @@ export async function POST(
                 mentionerName: mentioner.name ?? mentioner.email,
                 commentSnippet: snippet,
                 taskUrl,
+                locale: normalizeEmailLocale(u.locale),
               }).catch((err) =>
                 console.error("[comment] sendMentionEmail failed (non-blocking):", err),
               ),

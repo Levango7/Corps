@@ -69,6 +69,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 把注册请求协商出的语言落进 User.locale。
+    // 这是"界面/邮件语言"唯一的一次采集点：此后 cron 定时邮件（截止日提醒、每周摘要、
+    // AI 推送）没有 request 可协商，只能靠这一列决定收件人看到哪种语言。
+    // 必须写在触发验证邮件（下文的 sendVerificationEmail）之前——那个回调里拿不到
+    // request，它读的就是这一列。写入失败不阻断注册：语言只是退回默认 zh。
+    const registerLocale = apiLocale(req);
+    try {
+      await prisma.user.update({ where: { id: baUser.id }, data: { locale: registerLocale } });
+    } catch (localeError) {
+      console.error("[register] 写入 User.locale 失败（退回默认语言）:", localeError);
+    }
+
     // 邮箱验证门控（2026-10-08）：开关开启且邮箱未验证时，注册不发放任何
     // 会话凭据（不签发 JWT、不透传 BA 会话 cookie），响应带
     // emailVerificationRequired 供前端引导查收验证邮件。

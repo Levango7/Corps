@@ -15,6 +15,7 @@ import { runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { getNotificationPreferences, isDndActive } from "@/lib/notification/preferences";
 import { decrypt } from "@/lib/crypto";
 import { EMAIL_COLORS } from "@/lib/html-palette";
+import { emailMsg, normalizeEmailLocale, type EmailLocale } from "@/lib/email-messages";
 import nodemailer, { type Transporter } from "nodemailer";
 
 /** 在线判定阈值：lastSeen 在此毫秒数内视为在线（容忍一次心跳丢失） */
@@ -131,23 +132,43 @@ async function sendOfflineEmail(
   }
 }
 
-/** 构建离线通知邮件的主题与正文 */
-function buildEmailContent(opts: DispatchOfflineNotificationOpts): {
+/**
+ * 构建离线通知邮件的主题与正文。
+ *
+ * locale 由 fanOutOfflineEmail 按收件人的 User.locale 取（本模块的调用点之一是
+ * cron check-overdue-actions，那里没有 request 可协商语言）。
+ * 注意 entityTitle / bodySnippet 是调用方给的内容——调用方若在 cron 里写死中文，
+ * 它仍会原样出现在邮件里；判定级联只管模板自身的固定文案。
+ */
+function buildEmailContent(
+  opts: DispatchOfflineNotificationOpts,
+  locale: EmailLocale,
+): {
   subject: string;
   text: string;
   html: string;
 } {
-  const actor = opts.actorName ?? "系统";
+  const actor = opts.actorName ?? emailMsg("offlineActorSystem", locale);
   const snippet = opts.bodySnippet ?? "";
-  const subject = `${actor}：${opts.entityTitle}`;
-  const text = `${actor} 在 ${opts.entityTitle} 中有新动态。${snippet}\n\n请登录查看详情。`;
+  const subject = emailMsg("offlineSubject", locale, {
+    actor,
+    title: opts.entityTitle,
+  });
+  const text =
+    emailMsg("offlineUpdateLine", locale, { actor, title: opts.entityTitle }) +
+    `${snippet}\n\n${emailMsg("offlineSignInHint", locale)}`;
   const html =
-    `<p style="margin:0 0 12px;"><strong>${escapeHtml(actor)}</strong> 在 <strong>${escapeHtml(opts.entityTitle)}</strong> 中有新动态。</p>` +
+    `<p style="margin:0 0 12px;">${emailMsg("offlineUpdateLine", locale, { actor: strongHtml(actor), title: strongHtml(opts.entityTitle) })}</p>` +
     (snippet
       ? `<p style="margin:0 0 12px;color:${EMAIL_COLORS.quoteFg};">${escapeHtml(snippet)}</p>`
       : "") +
-    `<p style="margin:0;">请登录查看详情。</p>`;
+    `<p style="margin:0;">${escapeHtml(emailMsg("offlineSignInHint", locale))}</p>`;
   return { subject, text, html };
+}
+
+/** <strong> 包装：文案表里只有纯文本，加粗由渲染侧在填充占位符时包。 */
+function strongHtml(s: string): string {
+  return `<strong>${escapeHtml(s)}</strong>`;
 }
 
 /** HTML 转义（防邮件内容注入） */
@@ -184,11 +205,13 @@ export async function fanOutOfflineEmail(opts: DispatchOfflineNotificationOpts):
 
   // 4) 发送（失败不抛出，保持"尽力而为"）
   try {
-    // 查询用户在工作区的默认邮箱账户
-    const emailAccount = await runWithWorkspace(
+    // 查询用户在工作区的默认邮箱账户，并顺带取收件人的语言。
+    // 语言必须与邮箱账户同一次事务查出：本函数的主要调用点是 cron（无 request 对象），
+    // User.locale 是那里唯一能决定邮件语言的信号，没有第二条路可读。
+    const { emailAccount, locale } = await runWithWorkspace(
       opts.workspaceId,
-      (tx) =>
-        tx.emailAccount.findFirst({
+      async (tx) => {
+        const account = await tx.emailAccount.findFirst({
           where: {
             workspaceId: opts.workspaceId,
             userId: opts.userId,
@@ -202,12 +225,18 @@ export async function fanOutOfflineEmail(opts: DispatchOfflineNotificationOpts):
             smtpSecure: true,
             credential: true,
           },
-        }),
+        });
+        // users 表不在 RLS 范围内（同事务查询无碍），读不到时按 zh 兜底
+        const user = await tx.user
+          .findUnique({ where: { id: opts.userId }, select: { locale: true } })
+          .catch(() => null);
+        return { emailAccount: account, locale: normalizeEmailLocale(user?.locale) };
+      },
       opts.userId,
     );
 
     if (emailAccount) {
-      const content = buildEmailContent(opts);
+      const content = buildEmailContent(opts, locale);
       await sendOfflineEmail(emailAccount, content.subject, content.text, content.html);
     }
   } catch (error) {
