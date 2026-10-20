@@ -173,6 +173,23 @@ export async function POST(
       props: { taskId: id, version: decision.version },
     });
 
+    // P1-C 闭环事件：决策里的行动项同步出了至少一个任务 —— 这是"讨论→决策→任务"
+    // 唯一可测的闭环信号（actionSync.tasks 来自 decision-action-parser，含新建与复用的任务）。
+    // 不阻塞主流程；没有行动项的决策只算 create_decision，不虚报闭环。
+    if (actionSync.tasks.length > 0) {
+      await trackServerEvent({
+        userId: ctx.payload.sub,
+        workspaceId: wid,
+        name: "decision_landed",
+        props: {
+          taskId: id,
+          decisionId: decision.id,
+          createdTasks: actionSync.created,
+          linkedTasks: actionSync.tasks.length,
+        },
+      });
+    }
+
     return NextResponse.json(
       { code: 201, data: { ...decision, actionItems: actionSync } },
       { status: 201 },
