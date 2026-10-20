@@ -68,7 +68,7 @@ function missing(names: Map<string, string>): string[] {
     .map(([n, f]) => `${n} (${f.replace(WEB_ROOT, "web")})`);
 }
 
-describe("埋点契约：事件名 ↔ 白名单", () => {
+describe("埋点契约：事件名与白名单一致", () => {
   it("客户端 track() 的事件名全部在白名单里（否则服务端静默丢弃）", () => {
     expect(SCANNED.client.size, "扫描不到任何客户端事件：探针坏了，空集不许判绿").toBeGreaterThan(
       0,
