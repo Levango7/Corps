@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { readFileSync } from "fs";
 import { join, dirname } from "path";
 import { fileURLToPath } from "url";
@@ -227,6 +227,74 @@ describe("runWithDbRetry —— 总预算兜底", () => {
     expect(calls).toBe(1);
   });
 
+  /**
+   * 断言 17：lib/db-retry.ts:251-254 那条 `left <= 0` 分支此前**没有任何用例走到**
+   * （coverage 实测未覆盖行 253-254）。
+   *
+   * 为什么现有用例都到不了：fakeClock 只在 sleep 里推进时间，于是"睡满剩余预算"
+   * 之后先命中的一定是**下一轮循环顶部**的 `remaining <= 0`（断言 11 走的就是那条），
+   * 而"错误回来时预算已被这一次尝试本身花光"这条分支一直没人管。
+   * 这里用显式时间序列把时钟推过去，now() 依次返回：
+   *   0        → 算 deadline（= 0 + budget）
+   *   1        → 循环顶部 remaining = budget-1 > 0，允许发起尝试
+   *   budget   → 错误回来后 left = 0 ⇒ 直接抛**原错误**
+   *
+   * 契约的意义：真的 DB 错误不许被兜底逻辑改写成 DbOperationTimeoutError ——
+   * 那会把"库返回了 P1001"这个事实从日志与告警里抹掉，值班的人去查一个不存在的挂起。
+   */
+  it("错误回来时预算已耗尽：抛原错误而非超时错误，且不进入退避（断言 17）", async () => {
+    const boom = dbError("P1001");
+    const budget = 5_000;
+    const ticks = [0, 1, budget];
+    let i = 0;
+    const now = () => (i < ticks.length ? ticks[i++] : ticks[ticks.length - 1]);
+    const sleeps: number[] = [];
+    await expect(
+      runWithDbRetry(
+        async () => {
+          throw boom;
+        },
+        {
+          budgetMs: budget,
+          sleep: async (ms: number) => {
+            sleeps.push(ms);
+          },
+          now,
+          rand: () => 0,
+        },
+      ),
+    ).rejects.toBe(boom);
+    // 预算已耗尽 ⇒ 一次退避都不许发起（睡下去等于把"快速失败"变成"排队"）
+    expect(sleeps).toHaveLength(0);
+  });
+
+  /**
+   * 断言 20：不传 budgetMs 时，预算必须来自 env 旋钮 —— **生产走的就是这条路**。
+   *
+   * coverage 实测：lib/db-retry.ts:212 的 `opts.budgetMs ?? dbOpBudgetMs()`
+   * 右半边此前从没执行过（所有用例都显式传 budgetMs），而 `withDbRetry`
+   * （lib/prisma.ts:160 → lib/auth.ts 的 withGuc）调用时**恰恰不传 opts**。
+   * 也就是说"唯一在被生产使用的那条分支"上是零证据的：把 `?? dbOpBudgetMs()`
+   * 误写成 `?? DB_OP_BUDGET_MS_DEFAULT`（丢掉 env），或把 env 名拼错，
+   * 19 条用例一条都不会红，而运维在部署侧调的那个旋钮会静默失效。
+   * 这与同文件里"delayMs 选项被接受却不生效"是同一类缺陷，这里补上另一半。
+   */
+  it("不传 budgetMs：预算取 env 旋钮，而不是硬编码默认值（断言 20）", async () => {
+    vi.stubEnv("CORPS_DB_OP_BUDGET_MS", "40");
+    try {
+      const counter = { calls: 0 };
+      const error = await runWithDbRetry(neverSettles(counter)).then(
+        () => null,
+        (e: unknown) => e,
+      );
+      expect(error).toBeInstanceOf(DbOperationTimeoutError);
+      // timeoutMs 必须等于 env 给的值：证明生效的是 env，而不是 30_000 那个常量
+      expect((error as DbOperationTimeoutError).timeoutMs).toBe(40);
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
   it("退避被 delayMs 选项替换时确实生效（防止选项被接受却不生效）", async () => {
     const clock = fakeClock();
     await expect(
@@ -362,5 +430,79 @@ describe("总预算的取值不是自由的 —— 必须覆盖一次最坏情�
         "此时事务还没跑到自己的超时就被外层预算掐断，而 DB 侧那条事务会继续跑完、" +
         "继续占着池连接，等于泄漏连接占用。",
     ).toBeGreaterThanOrEqual(maxWaitMs + txTimeoutMs);
+  });
+
+  /**
+   * 断言 19：本模块读的 env 旋钮必须在 `.env.example` 里有声明。
+   *
+   * 为什么要有这条：`CORPS_DB_OP_BUDGET_MS` 此前**只存在于代码里**，
+   * 而它管的是"一次 DB 操作最多排队多久被兜底掐断"这种出问题时唯一要调的量。
+   * 部署侧看不见 ⇒ 出了挂起没人知道能调、也没人知道默认值从哪来；
+   * 而 `compose ↔ .env.example` 那道门只查"compose 用了 `:?` 但 example 没写"
+   * （单向），可选旋钮落在它的盲区里。
+   *
+   * 判据从**源码抽名字**而不是把变量名写死在测试里：改名会跟着走，
+   * 删掉 .env.example 那一行则立刻变红（已用变异自证）。
+   * `names.length > 0` 那条是探针自证——正则失效时不许把"一个都没抽到"判成绿。
+   */
+  it("断言 19：db-retry 读的 env 旋钮必须在 .env.example 与 docker-compose 里都有", () => {
+    const src = readFileSync(join(WEB_ROOT, "lib/db-retry.ts"), "utf8");
+    const example = readFileSync(join(WEB_ROOT, "../.env.example"), "utf8");
+    const compose = readFileSync(join(WEB_ROOT, "../docker-compose.yml"), "utf8");
+
+    const names = [...src.matchAll(/env\.([A-Z][A-Z0-9_]{2,})/g)].map((m) => m[1]);
+    expect(
+      names.length,
+      "在 lib/db-retry.ts 里没抽到任何 env.* 旋钮：读取方式可能变了，本断言需同步更新（空集不许判绿）",
+    ).toBeGreaterThan(0);
+
+    for (const name of names) {
+      const declared = new RegExp(`^\\s*(?:export\\s+)?${name}\\s*=`, "m");
+      expect(
+        declared.test(example),
+        `env 旋钮 ${name} 只在代码里存在，.env.example 没有声明条目`,
+      ).toBe(true);
+      // 第二个文件判的是"够得着"：compose 不转发的话，运维在 .env 里填了也到不了容器，
+      // 那条声明就变成一句假话（2026-10-03 的 JWT_REFRESH_SECRET 就是同一形态）。
+      // 这里只查"出现"，不查默认值写法——默认值的权威在代码常量，见 compose 内注释。
+      expect(
+        compose.includes(name),
+        `env 旋钮 ${name} 在 .env.example 里有声明，但 docker-compose 没转发 => compose 部署填了也不生效`,
+      ).toBe(true);
+    }
+  });
+});
+
+describe("runWithDbRetry —— 生产默认 sleep 必须真的在等（断言 18）", () => {
+  /**
+   * 本文件其余用例**全部注入 sleep**，于是生产用的 defaultSleep
+   * （lib/db-retry.ts:167-171）从未被执行过（coverage 实测未覆盖行 167-171，
+   * 也是该文件 funcs 只有 6/7 的唯一原因）。
+   *
+   * 它坏掉的方式恰好是"测试抓不到"的那种：把它写成 `Promise.resolve()`，
+   * 注入型用例一条都不会红，但生产的指数退避会退化成 0ms 空转——
+   * DB 拥塞时 4 次尝试挤在同一瞬间发出，把刚缓解过的池重新打满（重试风暴）。
+   * 所以这条**不注入 sleep**，用真实定时器 + delayMs=20 让墙上时间必须往前走。
+   *
+   * 阈值取 15 而不是 20：定时器只会晚不会早，5ms 留给 Windows 的计时粒度与调度抖动；
+   * 不设上界（真实 CI 机器上晚几百 ms 不算缺陷，写成上界就会变成新的 flaky 源）。
+   */
+  it("不注入 sleep：退避真的等到位，defaultSleep 不是空函数", async () => {
+    const boom = dbError("P1001");
+    let calls = 0;
+    const start = Date.now();
+    const out = await runWithDbRetry(
+      async () => {
+        calls += 1;
+        if (calls === 1) throw boom;
+        return "ok";
+      },
+      { budgetMs: 5_000, delayMs: 20, rand: () => 0 },
+    );
+    const elapsed = Date.now() - start;
+
+    expect(out).toBe("ok");
+    expect(calls).toBe(2);
+    expect(elapsed).toBeGreaterThanOrEqual(15);
   });
 });
