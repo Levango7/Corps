@@ -50,7 +50,7 @@
 #   （域名不可解析）。trycloudflare/loca.lt/ngrok 免费会话的域名随发起进程退出
 #   就消失，所以这种目标**注定长期红**，而红的原因根本不是生产故障——
 #   却按"app/db 挂了"的口径告警，把人往"重启应用/回滚 DB"上带。
-#   处置：config-check 直接把临时隧道域名判为配置缺陷（每日提醒一次，不刷屏）；
+#   处置：config-check 直接把临时隧道域名判为配置缺陷（在本 job 的所有触发上提醒）；
 #   smoke-test **仍然判红**——目标不可达也可能是域名整体失效（=真故障），
 #   绝不为省邮件而把探测改成跳过（那正是 10-04 被否掉的假绿形态），
 #   只把"两种可能都要查"写进报错，让红自己可解释。
@@ -97,7 +97,9 @@ jobs:
               echo "  而 08-24→09-29 同一条门 0 红——差别只在当时那个隧道进程还活着。"
               echo "  改法：用固定域名，gh variable set SMOKE_TARGET_URL --body https://你的固定域名"
               echo "  暂时还没有固定域名时，请把该变量清空（gh variable delete SMOKE_TARGET_URL）："
-              echo "  探测会以 warning 跳过、本 job 每日仍硬失败一次——比每 15 分钟假报一次生产故障更可读。"
+              echo "  本 job 在所有触发上都会硬失败（每 15 分钟一次），smoke-test 由 needs 连带不跑。"
+              echo "  嫌吵就同时关掉 schedule（gh workflow disable smoke.yml）——"
+              echo "  但请记住：红是诚实信号，它在说'当前没有线上监控'。"
               exit 1
               ;;
           esac

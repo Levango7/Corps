@@ -60,7 +60,11 @@
 一次性动作：买服务器 → 提备案 → 备案期间继续打磨 → 批下来部署 compose →
 `gh variable set SMOKE_TARGET_URL` 指向正式域名 → README 回填 URL。
 **注意**：在正式实例上线前，本机临时隧道 + cloudflared 进程需保持存活，否则
-每 15 分钟 Smoke 报红；撑不到那天就先 `gh variable delete SMOKE_TARGET_URL`。
+每 15 分钟 Smoke 报红；且临时隧道域名（`trycloudflare.com` 等）会被 `config-check`
+直接判红为配置缺陷——监控目标必须是固定域名。撑不到那天就先
+`gh variable delete SMOKE_TARGET_URL`，此时工作流在所有触发上统一判红
+（这是"当前没有线上监控"的诚实信号），嫌每 15 分钟一封邮件吵就
+`gh workflow disable smoke.yml` 关掉 schedule。
 
 ### 1.4 shadow 灰度（部署后立即）
 

@@ -6,6 +6,9 @@
 > `web/lib/observability.ts`（§4 错误上报）、`docs/runbook-deploy.md` §4（回滚）。
 > 更新日期：2026-09-27（本轮：§2/§3 移除已下线的 CloudBase 依赖并改为平台无关表述、
 > §4 由"暂不引入"更新为已实现的零依赖上报、修正集成用例数口径）。
+> 2026-10-20 更新：§1 定时 smoke 行与新增 §5.1——`SMOKE_TARGET_URL` 未配置时，
+> 工作流在**所有**触发方式上统一判红（早先 `*/15` 那档走"跳过"路径、是假绿），
+> 故 §5 的失败分型从两种增加到三种。
 
 ---
 
@@ -15,7 +18,7 @@
 |---|---|---|---|---|
 | 容器 HEALTHCHECK | `docker-compose.yml` app 服务：`wget --spider http://127.0.0.1:3000/api/health`，interval 15s / timeout 5s / retries 5 / start_period 40s | `/api/health` HTTP 状态（内部真实执行 `SELECT 1`，2s 超时） | 每 15 秒连续 5 次失败判 unhealthy | 容器状态标记 unhealthy（编排平台可据此重启；compose 本身不自动重启） |
 | CI e2e | `.github/workflows/ci.yml` 的 `e2e` job：`next build` → `next start -p 3000` → 轮询 `/api/health`（最多 ~60s）→ vitest 集成测试打生产构建产物 | 生产构建可启动、健康检查可达、`tests/integration` 全过（14 文件 / 140 用例） | 每次 push/PR 到 main | PR 不能合入、main 变红 |
-| 定时 smoke | `.github/workflows/smoke.yml`：GET `$SMOKE_TARGET_URL/api/health`，校验 HTTP 200 且 `data.status=="ok"` && `data.db=="up"` | 线上应用存活 + 数据库可达 | 每 15 分钟（cron `*/15 * * * *`）；未配置 `vars.SMOKE_TARGET_URL` 时整 job 跳过 | job 失败 → GitHub 默认邮件告警 |
+| 定时 smoke | `.github/workflows/smoke.yml`：GET `$SMOKE_TARGET_URL/api/health`，校验 HTTP 200 且 `data.status=="ok"` && `data.db=="up"` | 线上应用存活 + 数据库可达 | 每 15 分钟（cron `*/15 * * * *`）；另有每日 01:00 UTC 的配置检查。**未配置 `vars.SMOKE_TARGET_URL` 时整条工作流判红**（`config-check` 失败），不是跳过 | job 失败 → GitHub 默认邮件告警 |
 | GitHub 告警邮件 | Actions 默认通知机制（Settings → Notifications） | smoke / CI 任一 workflow 失败即触发 | 失败即时 | 邮件通知 watch 用户与触发者 |
 
 健康检查端点说明（`web/app/api/health/route.ts`）：成功返回
@@ -90,7 +93,9 @@ source map 上传（补堆栈精度）→ 实例数 ≥ 3 或有 SLA 时才上 P
 
 ## 5. Smoke 告警处置流程
 
-1. **确认告警**：GitHub 邮件/Actions 页查看失败 step 输出，区分两种失败：
+1. **确认告警**：GitHub 邮件/Actions 页查看失败 step 输出，区分三种失败：
+   - `监控配置检查` job 失败（`SMOKE_TARGET_URL` 未配置 / 指向临时隧道域名）：
+     这是**配置缺陷**，不是线上故障——没有目标就等于没有监控。处置见 §5.1。
    - `HTTP 非 200`：应用层问题（app down / 5xx）；
    - `data.db=down`（HTTP 可能仍为 503）：数据库不可达。
 2. **本机复核**：
@@ -103,3 +108,21 @@ source map 上传（补堆栈精度）→ 实例数 ≥ 3 或有 SLA 时才上 P
    - 连接超时/非 200 → app down：按 `docs/runbook-deploy.md` §4.1 将镜像 tag 回退到上一个已验证版本并重启实例。
 3. **恢复验证**：处置完成后再次 `curl /api/health`，并等待下一个 smoke 周期
    （≤15 分钟）转绿；也可在 Actions 页对 smoke 工作流手动 Run workflow（workflow_dispatch）即时复核。
+
+### 5.1 `监控配置检查` 失败（配置缺陷，不是生产故障）
+
+`config-check` job 在**所有**触发方式（两个 cron + 手动触发）上都跑，未配置
+`SMOKE_TARGET_URL` 即判红。2026-10-20 起这是刻意的：早先只有每日 01:00 那一档硬失败，
+`*/15` 那一档走 `smoke-test` 的跳过路径，于是同一个配置缺陷在列表页上"15 分钟一跑是绿的、
+每天一次是红的"，看起来像有监控、实际没有。统一成"每次都红"之后，代价是缺配置时
+每 15 分钟一封告警邮件。
+
+处置（二选一）：
+
+- **给一个固定域名**：`gh variable set SMOKE_TARGET_URL --body https://你的域名`。
+  必须是稳定域名——`trycloudflare.com` / `loca.lt` / `ngrok-free.app` / `ngrok.io`
+  这类临时隧道域名会被 `config-check` 直接判红（进程一退出域名就永久消失）。
+- **暂时不做线上监控**：`gh variable delete SMOKE_TARGET_URL`。
+  这会让工作流持续判红（这是诚实表达"当前没有线上监控"，不是可以忽略的噪声）；
+  同时应当关掉 schedule 以免刷屏：`gh workflow disable smoke.yml`。
+
