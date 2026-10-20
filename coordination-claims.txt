@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y | fix/a11y-burndown-4 | components/im/ConversationSettings.tsx,components/DocumentListView.tsx,components/workflow/WorkflowEditor.tsx,components/template/TemplateEditor.tsx,components/database/TableView.tsx,web/tests/a11y-baseline.txt | a11y-burndown | 2026-10-15 19:24 | 2026-10-15 23:24 | a11y 存量偿还第 4 批（5 文件 35 条）
+F:/Nexus/corps-reverify-1017 | test/db-retry-budget-gaps | docs/design/PRODUCT-DESIGN-2026Q4.md | qoder-reverify-1017 | 2026-10-20 13:25 | 2026-10-20 17:25 | 产品定位/功能/UI 评估与 2026Q4 设计方案（定位、IA v2、决策闭环、设计系统、定价、度量、架构、落地路线）
