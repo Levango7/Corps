@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y | fix/a11y-burndown-4 | components/im/ConversationSettings.tsx,components/DocumentListView.tsx,components/workflow/WorkflowEditor.tsx,components/template/TemplateEditor.tsx,components/database/TableView.tsx,web/tests/a11y-baseline.txt | a11y-burndown | 2026-10-15 19:24 | 2026-10-15 23:24 | a11y 存量偿还第 4 批（5 文件 35 条）
+F:/Nexus/corps-reverify-1017 | docs/product-design-2026q4 | README.md,CHANGELOG.md,docs/market/competitive-analysis.md,web/tests/a11y-baseline.txt,web/package.json,desktop/package.json,desktop/src-tauri/tauri.conf.json,docs/design/PRODUCT-DESIGN-2026Q4.md,docs/design/DEAD-MODULES.md | qoder-reverify-1017 | 2026-10-20 15:10 | 2026-10-20 19:10 | P0 收尾：定位纠偏+文档漂移+0.8.0 切版材料+死模块登记
