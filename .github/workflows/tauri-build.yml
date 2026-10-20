@@ -114,6 +114,13 @@ jobs:
           # Updater signing — only applied when secrets are configured
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
+          # Updater endpoint + pubkey — repository **variables**, not secrets:
+          # neither is confidential, and variables are readable in the Actions UI
+          # so a wrong endpoint is visible at a glance. Both are read by
+          # desktop/scripts/prepare-release.mjs; leaving both unset disables
+          # auto-update (it writes `{}`) while leaving only one set fails the build.
+          CORPS_UPDATER_ENDPOINT: ${{ vars.CORPS_UPDATER_ENDPOINT }}
+          CORPS_UPDATER_PUBKEY: ${{ vars.CORPS_UPDATER_PUBKEY }}
 
       # Upload native installers per platform.
       # Paths vary by OS — if-no-files-found: warn avoids failures on non-applicable formats.
