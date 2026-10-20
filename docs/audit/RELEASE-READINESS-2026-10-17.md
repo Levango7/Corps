@@ -12,6 +12,10 @@
 （定时监控没有可用目标、Vercel 每个提交都红、桌面/移动端把别人的域名当生产站点）。
 ⇒ 我这条代码线上没有待修项；剩下的是四个 owner 决策，每个都给了可执行的下一步。
 
+> **2026-10-21 更新**：上面第三、四条已变化。Vercel 恒红的根因已用构建日志定位并在 main 修好
+> （`overrides.next` 与 `dependencies.next` 冲突，见 §5.1），它**不再是 owner 决策项**；
+> "对外可达"三条里现在只剩定时监控与真实域名两条。⇒ owner 决策从四个减到三个。
+
 ## 2. 版本状态：主干超前发布版 329 个提交
 
 ```bash
@@ -85,6 +89,11 @@ gh api "repos/Levango7/Corps/actions/workflows/smoke.yml/runs?per_page=3" \
 
 ## 5. Vercel：每个提交都红，而且这条红在常规视图里看不见
 
+> **本节的两条结论已于 2026-10-21 被 §5.1 推翻**（根因是 `overrides.next` 与 `dependencies.next`
+> 冲突，main `dba802cb` 已修，main 起 Vercel 转绿）。下面的取证过程保留，因为它记录了两条
+> 仍然成立的判据：Vercel 走 **legacy commit status** 而非 check-run（只看 check-runs 会漏），
+> 以及它是**非 required**、不锁合并。
+
 **先记方法**：`GET /commits/{sha}/check-runs` 里只有 `Vercel Preview Comments`（success），
 它**不在这条 API 上**——Vercel 走的是 legacy commit status：
 
@@ -100,7 +109,8 @@ gh api repos/Levango7/Corps/commits/fdc35b32/status \
 
 时间线（沿 `main` 往回逐条查 status，命令见附录）：
 第一个红是 `1c6f878c`（2026-10-14），其后 **47 个 main 提交 100% failure**；
-再往前 `01006723` **完全没有 Vercel status** ⇒ 这个集成是 10-14 才开始上报的，**至今没有成功过一次**。
+再往前 `01006723` **完全没有 Vercel status** ⇒ 这个集成是 10-14 才开始上报的，~~至今没有成功过一次~~
+（**2026-10-21 作废**：`6755db21` 已 success，根因见 §5.1）。
 
 我在本机否证掉的两条猜测（都留了实验输出，避免下一个人重复试）：
 
@@ -116,12 +126,59 @@ gh api repos/Levango7/Corps/commits/fdc35b32/status \
 而 `docs/DEPLOY-VERCEL.md:55` 记 2026-10-03 用 **CLI 路径**部署成功过（首页 `302 → /en/auth/login`、
 `<title>corps · Team`）⇒ "Git 集成触发的构建"与"CLI 部署"是两条路，别互相推断。
 
-剩下的候选原因都在 Vercel 项目侧（Root Directory 是否为 `web`、Production/Preview 的变量值、区域 `sin1`、套餐），
-本机 `~/.vercel` 不存在 ⇒ **我没有 Vercel 凭据，拿不到构建日志**。owner 侧一条命令就能定位：
+~~剩下的候选原因都在 Vercel 项目侧（Root Directory 是否为 `web`、Production/Preview 的变量值、区域 `sin1`、套餐），
+本机 `~/.vercel` 不存在 ⇒ **我没有 Vercel 凭据，拿不到构建日志**。owner 侧一条命令就能定位：~~
+
+（**2026-10-21 作废**：凭据可用，日志已取到，根因在 `web/package.json` 的 override 冲突，不在 Vercel 项目侧。
+取日志的命令与结论见 §5.1。当时查 `~/.vercel` 查不到就断定"没有凭据"，是**探针没自证目标**——
+CLI 是仓里的 devDependency，凭据路径也由它自己管。）
 
 ```bash
 npx vercel inspect dpl_8e5cFBZKX9BA14L4nCzUo2NSr1TG --logs   # 取自 status 描述里的原文
 ```
+
+### 5.1 更正（2026-10-21 实测）：根因已定位，本节两条结论都被推翻
+
+**推翻「至今没有成功过一次」**：main 的 `6755db21`（即 PR #136 的合并提交）Vercel status =
+**success**（2026-10-20T11:18:45Z，"Deployment has completed"）——集成 10-14 上线以来的第一次绿。
+PR #138 的 head `fd780f3c` 同样是 success。判据：
+```bash
+gh api repos/Levango7/Corps/commits/$(git rev-parse origin/main)/status \
+  --jq '.statuses[] | .context + " " + .state + " | " + .description + " | " + .updated_at'
+```
+
+**推翻「我没有 Vercel 凭据，拿不到构建日志」**：这是**探针探错位置**的假阴性。我只查了 `~/.vercel`，
+而 `vercel` CLI 本来就是 `web` 的 devDependency、凭据由 CLI 自管，实测可用（身份 `levango7`，rc=0）：
+```bash
+cd web && npx --no-install vercel whoami --non-interactive
+cd web && npx --no-install vercel inspect dpl_<status 描述里的 id> --logs --non-interactive
+```
+
+**根因**（一条 install 错误，与 Vercel 项目配置无关）：
+```
+2026-10-20T16:11:55.708Z  npm error Override for next@16.4.2 conflicts with direct dependency
+2026-10-20T16:11:55.743Z  Error: [BUILD_UTILS_SPAWN_1] Command "npx --yes pnpm@11.22.0 install
+                          --frozen-lockfile --ignore-scripts" exited with 1
+```
+即 `web/package.json` 里 `overrides.next = 16.3.8` 与 `dependencies.next = 16.4.2` 打架——
+正是 main 上 `dba802cb`（PR #136）删掉的那条 override。逐分支核对即可复现整个现象分布：
+```bash
+for b in main feat/closure-events docs/product-design-2026q4 refactor/module-registry \
+         chore/p0-closeout-2026-10-20; do
+  printf '%s ' "$b"; git show "origin/$b:web/package.json" |
+    python -c "import json,sys; d=json.load(sys.stdin); print(d.get('overrides',{}).get('next'), d['dependencies']['next'])"
+done
+# main / feat-closure-events → None 16.4.2 → Vercel 绿
+# 其余三条                    → 16.3.8 16.4.2 → Vercel 红
+```
+
+所以"每个提交都红"的正确表述是：**带旧 `overrides.next` 的分支都红，带上 #136 的分支就绿**。
+§9 待办表里原来那条「先跑 `vercel inspect --logs` 定位，再决定修还是断开集成」**可以撤掉**：
+既不需要改 Vercel 项目配置，也不需要断开集成，更不该把这条红当本仓的缺陷记账。
+
+剩下的只是合并顺序问题：分支保护 `strict: true`，每个 PR 合并前本来就要 Update branch，
+把 `dba802cb` 带进去 Vercel 自然转绿。另注：`docs/DEPLOY-VERCEL.md:55` 记的 2026-10-03 CLI 部署成功
+与本条不矛盾——那是**同一条 override 冲突尚未出现**的时期，而且走的是 CLI 路径不是 Git 集成路径。
 
 ## 6. 桌面/移动端把 `corps.com` 写成生产站点，而它属于别人
 
@@ -172,13 +229,13 @@ wc -l components/ChatPanel.tsx components/chat/*                                
 台账 #28（把任务侧消息能力并到 `TaskChatPanel` → `ChatWindow`、并裁决
 `GET /v1/workspaces/{wid}/tasks/{id}/messages/search` 的归属）至今未动。
 
-## 9. 待 owner 拍板的四件事（按性价比排序）
+## 9. 待 owner 拍板的事（按性价比排序；原四件，第 3 件已自行闭合）
 
 | # | 事项 | 我能做的 | 需要的输入 |
 | --- | --- | --- | --- |
 | 1 | `SMOKE_TARGET_URL`：填稳定 URL 还是关 schedule | 已把误读成本做好（PR #113） | 一个可达的部署地址，或一句"关掉" |
 | 2 | 切不切版本；若切，去重迁移（删数据）在生产何时、由哪个角色执行 | 已把 4 条迁移与角色坑数清楚 | 拍板 + 属主连接串的执行授权 |
-| 3 | Vercel 恒红：先跑 `vercel inspect --logs` 定位，再决定修还是断开集成 | 已排除两条猜测、给出判据 | Vercel 凭据（本机无 `~/.vercel`） |
+| 3 | ~~Vercel 恒红待定位~~ **已闭合（2026-10-21，见 §5.1）**：根因是 `overrides.next` 与 `dependencies.next` 冲突，main `dba802cb` 已修，main 与带该修复的 PR 都 success | 日志、逐分支对照、main 首次 success 均实测 | **不欠输入**：不动 Vercel 配置、不需断开集成，只需各 PR 合并前 Update branch |
 | 4 | 真实生产域名（桌面/移动壳与 updater 现在指向别人的 `corps.com` 与不存在的 `releases.corps.com`） | 已列全 8 处引用点 | 域名本身 + 归属确认 |
 
 另有两条不欠 owner 输入、纯粹欠工时的：#28（ADR-013 的整合本体）、
@@ -193,6 +250,8 @@ Schema Drift Check / API Contract Check / Permission Gate Coverage / Security Au
 Unit Coverage Ratchet / Quality Baseline Burndown`），
 `Publish image (GHCR)` 与 `Macroscope - Correctness Check` 按设计 skipped；
 `Vercel Preview Comments` success，`Vercel` status failure（§5）。
+（**2026-10-21 补**：那条 failure 属于 `748d20db` 这个**仍带旧 `overrides.next`** 的历史 head；
+main `6755db21` 起已 success，见 §5.1。本节其余数字都是当时的快照，不随主干更新。）
 该 run 排队约 14 分钟才开始（12:14 push → 约 12:30 起跑），是 runner 积压，不是本仓配置问题。
 
 ## 附：沿 main 回溯 Vercel status 的命令
