@@ -13,7 +13,7 @@
 | 维度 | 结论 | 一句话依据 |
 | --- | --- | --- |
 | 产品定位 | **不合理** | 同一份 README 同时主张「5–30 人轻量协作」和「AI 原生办公平台 17 能力 5 域」；产品面是 56 页 / 31 个导航入口 / 30+ 域（实测） |
-| 产品设计（对象与流程） | **核心合理，闭环缺证据** | 决策记录有版本留痕 + 双向回链，是全仓唯一真空位；但事件里没有 `decision_created/landed`，无法证明闭环发生 |
+| 产品设计（对象与流程） | **核心合理，闭环缺证据** | 决策记录有版本留痕 + 双向回链，是全仓唯一真空位；但事件只记到「决策被创建」（服务端 `create_decision`），没有「决策真的落位成任务」的信号，无法证明闭环发生（更正见 §9.2） |
 | 功能设计 | **广度与深度不匹配** | 任务/决策/文档/IM/审批有页面+测试；mail/todo/remote-control/sync/旧聊天树是「组件+API+i18n 齐全但零挂载」；E2E 完全不覆盖文档/多维表/审批/工作流/AI |
 | UI | **令牌合格，交互不一致** | 156 个设计令牌 + 双主题/密度/租户色；但通用组件层只有 1 个 `FocusTrap`，903 个原生 `<button>`、64 处自建 `role="dialog"`、253 处主按钮类复制、233 条 a11y 基线违规 |
 | 信息架构 | **修了一半** | 28 项平铺 → 5 组已落地；但**默认可见性没有分层**——高频与一年点一次的功能在首屏同等权重 |
@@ -24,7 +24,7 @@
 
 1. **没有前门。** 应用根路径直接 `redirect(/auth/login)`（`web/app/[locale]/page.tsx:12`）；定价页只能从工作区计费页进（`web/app/[locale]/w/[wid]/billing/page.tsx:280`）；README 自述「在线体验：暂无固定域名实例」。一个 0 用户的 0.7.x 产品，前门是登录页。
 2. **楔子被广度淹没。** 侧栏 31 个静态入口里，「决策记录」只是其中一项；AI 五页并列（`layout.tsx:442-457`）。新用户 15 分钟内看不到"讨论→决策→任务"这条唯一差异化链路。
-3. **闭环不可度量。** 全仓 `track()` 只有 14 个事件，其中与核心闭环相关的只有 `create_task` / `task_status_change` / `workspace_create`；没有 `decision_created`、`decision_landed`、`invite_sent`、`ai_extract_*`。也就是说：即使有人用，也证明不了"他们完成了闭环并留下来"。
+3. **闭环不可度量。** 两侧事件名实测（截至 main `6755db21`）：客户端 `track()` 14 个、服务端 `trackServerEvent` 13 个、并集去重 25 个。缺的不是「决策事件」——`create_decision`、`invite_member`、`invite_accepted`、`activation_completed` 早就在服务端发；缺的是**落位与留存的信号**：决策的行动项同步出任务（`decision_landed`）、导出分享（`export_pdf`）、7 日回访（`week_return`）、AI 提取（`ai_extract_*`）。另有一处实测到的静默失效：`workspace_create` 客户端一直在发，但从未进白名单，服务端对白名单外事件**静默丢弃** ⇒ 这一步在漏斗里等于不存在。也就是说：即使有人用，也证明不了"他们完成了闭环并留下来"。
 
 **可翻转的支点（判断）：** 「讨论结论自动落位成任务与决策记录」在竞品矩阵里确实是空位（`docs/market/competitive-analysis.md:23` 自述，Trello/Linear/Notion/飞书都没有原生覆盖）。它现在的问题不是"idea 不行"，而是**没有把这一件事做成 10 倍好、并放在用户看得见的地方**。
 
@@ -34,7 +34,7 @@
 1. 一个能被访问的正式实例 + 一个 60 秒可体验的示例工作区（当前 0 实例）。
 2. 决策闭环的「提取 → 确认 → 落位 → 复盘」四步产品化（现在只有对象，没有流水线）。
 3. 通用组件原语（11 个）+ 对话框统一（现在 903 个原生按钮、64 个自建弹窗）。
-4. 闭环事件与漏斗（决策闭环率、7 日回访）。
+4. 闭环事件与漏斗（决策闭环率、7 日回访）。进度（截至 2026-10-20）：`decision_landed` / `export_pdf` / 补开 `workspace_create` 闸门 + 埋点契约门禁已提 PR #138；`week_return`、`ai_extract_*`、`first_value_reached` 仍缺。
 5. 移动端「3 分钟捕捉决议」入口（决议多数发生在会议/聊天里，不在电脑前）。
 
 **需要纠偏（4）**
@@ -70,7 +70,7 @@
 | 未发版 | v0.7.2（2026-09-30）后 **389 个提交**；`web/package.json` 仍 0.7.2 | `git rev-list --count v0.7.2..origin/main` |
 | 定价 | Free ≤10 人 / 决策最近 10 条 / 附件 10MB；Pro ¥29.9/人/月、年付 ¥299 | `web/lib/pricing.ts` |
 | 付费执行点 | 席位：`lib/billing/seat-policy.ts`；决策条数：`tasks/[id]/decisions/route.ts:162`（402） | 附录 A |
-| 事件 | 14 个 `track()` 事件；服务端只有支付 webhook 的 3 个 `trackServerEvent` | 附录 A |
+| 事件 | 客户端 `track()` 14 名 + 服务端 `trackServerEvent` 13 名（并集去重 25）；白名单 34 名，其中 `workspace_create` 发了但没开闸 ⇒ 静默丢弃 | 附录 A |
 
 ---
 
@@ -265,12 +265,43 @@ README 说「15 分钟上手」「在线试用」；实际：根路径直接跳�
 ### 9.1 北极星（提案）
 **每周完成闭环的决策数** = 决策落位 → 至少 1 个关联任务 → 14 天内至少 1 个任务完成。
 
-### 9.2 漏斗（用现有 14 事件 + 需要补的 12 个）
+### 9.2 事件基线与缺口（**2026-10-20 更正**）
 
-现有：`landing_view / register_view / register_submit / click_signup / workspace_create / page_view / create_task / task_status_change / view_pricing / select_billing_period / click_upgrade / workspace_switch / filter_applied / view_saved`。
+> 初稿这里写「现有 14 事件 + 需补 12 个」「服务端只有支付 webhook 的 3 个」，
+> 并把 `decision_created` / `invite_sent` 列为缺失。复核后三处都不准：
+> 单行 `grep -rhoE 'track\("[a-z0-9_]+"'` 只扫得到**客户端**，天然数不到服务端调用点。
+> 下面按两侧分别实测，并给出可复跑判据。
 
-**缺口（实测）**：没有决策、邀请、AI 提取与留存事件。建议补：
-`decision_created / decision_landed / decision_reviewed / task_from_decision / invite_sent / invite_accepted / ai_extract_started / ai_extract_confirmed / ai_extract_failed / first_value_reached / week_return / export_pdf`。
+**实测（截至 main `6755db21`）**
+
+| 侧 | 去重事件名数 | 与闭环/留存相关的已有项 |
+| --- | --- | --- |
+| 客户端 `track("x")` | 14 | `landing_view`、`click_signup`、`workspace_create`（**未开闸**）、`create_task`、`task_status_change`、`view_pricing`、`select_billing_period`、`click_upgrade`、`filter_applied`、`view_saved`、`page_view`、`workspace_switch`、`register_view`、`register_submit` |
+| 服务端 `trackServerEvent({name})` | 13 | `register_success`、`login_success`、`activation_completed`、**`create_decision`**、`create_task`、`task_status_change`、`invite_member`、**`invite_accepted`**、`billing_checkout`、`payment_failed`、`subscription_activated` / `_renewed` / `_churned` |
+
+并集去重 25（`create_task` 与 `task_status_change` 两侧都发）。白名单 34 名。
+
+**两个真实缺陷**（不是"事件太少"这么简单）：
+1. `workspace_create` 客户端在发、白名单没有 ⇒ 服务端静默丢弃。这类「事件已打、闸门未开」
+   在两侧都不报错，靠人审表看不出来，所以必须有一道**从源码扫调用点**的门禁（PR #138 已加）。
+2. 决策链只记到「被创建」，没记「落位成任务」。`create_decision` 证明有人写了决议，
+   不证明决议变成了动作——楔子的差异化恰恰在后者。
+
+**缺口（更正后的清单）**：`week_return`（7 日回访）、`first_value_reached`、
+`decision_reviewed`（复盘）、`ai_extract_started` / `_confirmed` / `_failed`。
+初稿列的 `decision_created` 应读作已有的 `create_decision`（命名统一到既有项，不新造同义词）；
+`invite_sent` 应读作已有的 `invite_member`；`task_from_decision` 不必单列——
+`decision_landed` 的 `createdTasks` / `linkedTasks` 已经带这个维度。
+
+**北极星的可测性**（§9.1 三步，逐步标出现在能不能算）：
+
+| 步骤 | 靠什么算 | 状态 |
+| --- | --- | --- |
+| 决策落位 | `decision_landed`（`actionSync.tasks` 非空才发） | PR #138 |
+| 至少 1 个关联任务 | 同事件的 `linkedTasks` / `createdTasks` props + `DecisionActionItem.taskId` 回链 | PR #138 |
+| 14 天内至少 1 个任务完成 | `task_status_change` join 上述回链（事件已有，缺一个查询） | 待做：分析页/查询 |
+
+判据：闭环率要能在 `/analytics` 或一条 SQL 里读出来，不接受"临时手写脚本"。
 
 ### 9.3 判据（试点阶段）
 - 激活：注册后 24h 内完成一次 A 流程；
@@ -326,7 +357,7 @@ README 说「15 分钟上手」「在线试用」；实际：根路径直接跳�
 | 阶段 | 内容 | 验收判据 | 估算 |
 | --- | --- | --- | --- |
 | **P0 收尾**（1 周） | 切版（含 4 条迁移，其中 1 条删数据）；正式实例 + `SMOKE_TARGET_URL`；桌面域名占位纠正；文档漂移四处；死模块登记/隐藏 | 版本可部署；smoke 有真目标；README/定价/基线数字一致 | 1 周 |
-| **P1 楔子**（2–3 周） | 默认 6 模块 + 模块注册表；AI 五页并一；决策闭环三场景；3 条 E2E；12 个事件；定价页可发现 | 新用户 15 分钟完成 A；闭环事件可查；首屏 31→10 | 2–3 周 |
+| **P1 楔子**（2–3 周） | 默认 6 模块 + 模块注册表；AI 五页并一；决策闭环三场景；3 条 E2E；事件缺口补 6 名（§9.2 更正后口径，其中 3 名已随 PR #138 交付）；定价页可发现 | 新用户 15 分钟完成 A；闭环事件可查；首屏 31→10 | 2–3 周 |
 | **P2 设计系统**（2 周） | 11 个原语；核心 6 页迁移；Dialog 统一；axe 接入 | 原生 button 0 新增；dialog 100% 原语；a11y 233→≤150 | 2 周 |
 | **P3 试点**（2 周） | 2–3 个团队邀请式试用；跑漏斗；每周复盘 | 7 日回访 ≥40%；每周闭环 ≥3/团队；决定扩张/收缩 | 2 周 |
 
@@ -379,8 +410,10 @@ grep -rn "@/components/todo" web/app web/components --include="*.tsx"
 grep -rn "@/components/remote-control" web/app web/components --include="*.tsx"
 grep -rn "ChatPanel" web/app --include="*.tsx" | grep -v "TaskChatPanel\|AiChatPanel"
 
-# 事件
-grep -rhoE 'track\("[a-z0-9_]+"' web/app web/components web/lib | sort -u
+# 事件（**两侧都要扫**；单行 grep 只数得到客户端，初稿就栽在这里）
+grep -rhoE '\btrack\(\s*"[a-z0-9_]+"' web/app web/components web/lib | sed -E 's/.*"([a-z0-9_]+)"/\1/' | sort -u
+grep -rlU 'trackServerEvent(' web/app web/lib          # 先定位调用点，再逐个读 name 字段
+npx vitest run web/tests/unit/analytics-event-contract.test.ts   # 两侧事件名 ⊆ 白名单 + 计数==集合大小
 
 # 发布/漂移
 git rev-list --count v0.7.2..origin/main                     # 389
@@ -388,4 +421,7 @@ grep -m1 '"@prisma/client"' web/package.json                 # 7.10.1（README �
 grep -n "¥59" docs/market/competitive-analysis.md            # 与 pricing.ts 的 29.9 不一致
 ```
 
-**证据说明**：本文中"死模块零挂载""无 E2E 覆盖""事件缺口""文档漂移"四类结论都来自上表可复跑命令；"会不会受欢迎"与各阶段估算属判断，已明确标注。
+**证据说明**：本文中"死模块零挂载""无 E2E 覆盖""文档漂移"三类结论都来自上表可复跑命令；"会不会受欢迎"与各阶段估算属判断，已明确标注。
+**一处自我更正**：初稿的"事件缺口"结论虽也来自上表命令，但那条命令只扫客户端，导致服务端 13 个事件被数成 3 个、
+`create_decision` / `invite_accepted` 被误判为缺失（§9.2 已按两侧实测重写）。教训：**探针自证目标**——
+扫描命令覆盖的调用面必须先确认与声称的范围一致，否则错的是量具不是被测量。
