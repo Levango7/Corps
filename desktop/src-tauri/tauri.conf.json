@@ -44,11 +44,8 @@
   },
   "plugins": {
     "updater": {
-      "active": false,
-      "endpoints": [
-        "https://releases.corps.com/desktop/updater/{{target}}/{{arch}}/{{current_version}}"
-      ],
-      "pubkey": "REPLACE_WITH_YOUR_UPDATER_PUBKEY",
+      "endpoints": [],
+      "pubkey": "",
       "windows": {
         "installMode": "passive"
       }
