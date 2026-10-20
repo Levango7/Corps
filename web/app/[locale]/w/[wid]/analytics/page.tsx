@@ -14,7 +14,8 @@
  * 权限：owner/admin 可见（API 层 403 兜底，前端隐藏入口在 layout）。
  *
  * 图表优先级（FUNNEL-METRICS §5）：
- *  - P0 北极星卡：WAW 周活跃工作区 + 周起始
+ *  - P0 本工作区周活跃人数卡（**不是** FUNNEL-METRICS 的北极星 WAW：API 字段名叫 waw，
+ *    但值是本周本工作区去重 userId，见 overview/route.ts:176-189；跨工作区 WAW 端点至今不存在）
  *  - P0 AARRR 两段漏斗：获客段（landing→signup→submit→register）+ 激活段（register→task→activation）
  *  - P0 留存条：D1/D7/D30 回访率
  *  - P1 每日趋势折线（保留现有 SVG 折线，D1 时区修复后数据）
@@ -25,7 +26,7 @@
  *  - 趋势线：最近 14 天每日事件计数（简易 SVG 折线，不引第三方图表库）
  *  - Top 事件：列表 + 计数 + 占比条
  *  - 所有色值走 var(--token)，图标仅用 lucide-react
- *  - 收敛低调：北极星卡用 accent 色微强调，其余 surface 色收敛
+ *  - 收敛低调：周活跃人数卡用 accent 色微强调，其余 surface 色收敛
  */
 
 import { use, useEffect, useState } from "react";
@@ -150,12 +151,13 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
         </p>
       </div>
 
-      {/* 北极星卡 + 概览卡 — 轻微视差（应用内 ≤ 10px） */}
+      {/* 周活跃人数卡 + 概览卡 — 轻微视差（应用内 ≤ 10px） */}
       <Parallax
         offset={5}
         className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]"
       >
-        {/* WAW 北极星卡（占 2 列，突出展示） */}
+        {/* 本工作区本周活跃人数卡（占 2 列，突出展示）。API 字段名 waw 是历史误称，
+            这个数不是北极星 WAW —— 北极星要的是去重工作区数，跨工作区端点还没做 */}
         <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--accent-soft)] rounded-[var(--radius-lg)] shadow-[var(--elev-sm)] p-[var(--space-4)]">
           <div className="flex items-center gap-[var(--space-2)] mb-[var(--space-2)]">
             <Star size={16} className="text-[var(--accent)]" fill="currentColor" />
@@ -494,7 +496,7 @@ function ErrorState({
   );
 }
 
-/** 加载骨架（与新布局对齐：北极星卡 + 概览卡 + 两段漏斗 + 留存 + 趋势 + 热门事件）。 */
+/** 加载骨架（与新布局对齐：周活跃人数卡 + 概览卡 + 两段漏斗 + 留存 + 趋势 + 热门事件）。 */
 function AnalyticsSkeleton() {
   return (
     <div className="mx-auto max-w-[var(--container-max)]" aria-busy="true">
@@ -502,7 +504,7 @@ function AnalyticsSkeleton() {
         <Skeleton className="h-8 w-32 mb-[var(--space-2)]" />
         <Skeleton className="h-4 w-48" />
       </div>
-      {/* 北极星 + 概览卡骨架 */}
+      {/* 周活跃人数 + 概览卡骨架 */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[var(--space-3)] mb-[var(--space-6)]">
         <div className="col-span-1 sm:col-span-2 lg:col-span-2 bg-[var(--surface)] border border-[var(--border)] rounded-[var(--radius-lg)] p-[var(--space-4)]">
           <Skeleton className="h-4 w-32 mb-[var(--space-2)]" />
