@@ -5,19 +5,44 @@
 # 新增变量 SMOKE_TARGET_URL（如 https://corps.example.com），或执行：
 #   gh variable set SMOKE_TARGET_URL --body https://你的域名
 #
-# 设计（2026-10-07 改，修"假绿"）：
-#   job 1 `config-check`：每日一次，未配置 SMOKE_TARGET_URL 则**失败**。
-#     为什么单独拆出来：探测 job 是 */15 高频跑的，若让它在未配置时失败，
-#     会每 15 分钟发一封告警邮件，把真正的故障告警淹没；而"未配置"是
-#     一次性配置缺陷，每日提醒一次足够。
-#   job 2 `smoke-test`：每 15 分钟探测。未配置时**跳过探测**（输出 warning，
-#     job 成功）——它不承担"提醒配置缺失"的职责，那个由 job 1 负责。
+# 设计（2026-10-07 改，修"假绿"；2026-10-20 改，统一"未配置"的判定口径）：
+#   job 1 `config-check`：**所有**触发（两个 cron + workflow_dispatch）都跑，
+#     未配置 SMOKE_TARGET_URL 则**失败**。
+#   job 2 `smoke-test`：`needs: config-check`，配置通过才探测；未配置时由
+#     config-check 判红，smoke-test 不再自己吞掉空变量（它过去 `exit 0`）。
+#
+# 2026-10-20 为什么要再改一次：实测同一条工作流（sha 53808409）上，
+#   变量缺失时结论自相矛盾——
+#     run 39381218607（schedule */15）→ config-check skipped、smoke-test success → 整条**绿**
+#     run 39375698280（schedule 0 1）→ config-check failure              → 整条**红**
+#     run 39368785626（dispatch）    → config-check failure              → 整条**红**
+#   即"同一个配置缺陷，15 分钟一跑是绿的、每天一次是红的"，列表页看不出
+#   到底有没有监控。根因：缺失判定只写在 config-check 里，而它的 `if:`
+#   只匹配每日 cron 与手动触发；高频 cron 走的是 smoke-test 那条
+#   `exit 0` 的软失败路径。
+#   改法：把缺失判定收敛到 config-check 唯一一处，并让它在所有触发上都执行，
+#   缺失即明确失败（红）；smoke-test 用 `needs` 让它只在配置就绪时探测。
+#   代价与取舍见下方"取舍"注释——这里选"明确失败"而非"跳过"，
+#   与 10-04 被否掉的假绿形态是同一条分界线。
+#
+# 取舍（2026-10-20，明写以便日后复议）：
+#   之前把硬失败放在每日 01:00 UTC 一个 job，是为了让"未配置"每天只提醒一次
+#   （每 15 分钟红一次会发 96 封邮件，把真故障告警淹没）。现在统一成
+#   "每次运行都红"，邮件量随之上升。
+#   之所以仍选统一失败：当前**根本没有可用目标**（SMOKE_TARGET_URL 未设置），
+#   这时高频门禁全绿 = "以为有监控、实际没有"，属于本仓反复出现的那类
+#   "坏状态在配置面、代码面看不出来"。频率噪声是运维成本，
+#   假绿是正确性成本——后者更贵。
+#   若噪声不可接受，回退方式是把 config-check 的 `if:` 改回
+#   `github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'`
+#   （但那样就恢复成上面那种绿/红不一致）。
 #
 # 历史教训（2026-10-04 与 10-07 两次迭代）：
 #   - 最初：未配置时 job 级 if 跳过 → 显示 skipped，与"健康"难以区分。
 #   - 10-04：改为 warning + 跳过探测 → job 仍是 success，**列表页依然绿**，
 #     "以为有监控、实际没有"的问题并未真正解决。
 #   - 10-07：拆出 config-check 做硬失败，让"未配置"在 CI 列表页真实可见。
+#   - 10-20：把判定口径统一到 config-check 并覆盖所有触发，消除绿/红不一致。
 #
 # 2026-10-17 补第三种失效模式：目标**配了但已失效**。实测 main 上定时 Smoke
 #   从 10-13 起持续红（10-13 5/6、10-14 5/6、10-15 7/8、10-16 6/7；08-24→09-29
@@ -41,10 +66,12 @@ on:
   workflow_dispatch:
 
 jobs:
-  # 每日一次的配置检查：未配置监控目标 → 失败，让缺失在列表页可见
+  # 配置检查：未配置监控目标 → 失败，让缺失在列表页可见。
+  # 不加 `if:`——所有触发（*/15、0 1、workflow_dispatch）都跑，
+  # 这样"同一个配置缺陷"在列表页上的结论只有一种（红），不会因为
+  # 触发方式不同而时绿时红（见文件头 2026-10-20 记录）。
   config-check:
     name: 监控配置检查
-    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
     runs-on: ubuntu-latest
     steps:
       - name: 检查 SMOKE_TARGET_URL 是否已配置
@@ -76,9 +103,12 @@ jobs:
           esac
           echo "SMOKE_TARGET_URL 已配置：$TARGET_URL（host=$HOST）"
 
-  # 高频探测：未配置时跳过（配置缺失由上面的 config-check 负责提醒）
+  # 高频探测：只在本 job 自己的 cron（*/15）与手动触发时探测；
+  # 且必须先通过 config-check——配置缺失时由 config-check 判红，
+  # 本 job 不再自己吞掉空变量（过去 `exit 0`，那正是绿/红不一致的来源）。
   smoke-test:
     name: Smoke test (/api/health)
+    needs: config-check
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '*/15 * * * *'
     runs-on: ubuntu-latest
     steps:
@@ -87,12 +117,16 @@ jobs:
         env:
           TARGET: ${{ vars.SMOKE_TARGET_URL }}
         run: |
-          # 未配置时跳过探测（配置缺失由每日的 config-check job 负责硬失败提醒）。
+          # 未配置时明确失败（不探测）。
           # 这里用 step 内判断而非 `if:` 条件，避免依赖 `if` 对 vars 上下文的支持。
+          # 正常路径下 config-check 已经在 needs 里先行失败、本 job 不会启动；
+          # 这段判断是第二道防线：防止 config-check 被改动或被跳过时，
+          # 这里又退化回"静默 exit 0 的假绿"。
           if [ -z "$TARGET" ]; then
-            echo "::warning::SMOKE_TARGET_URL 未配置，本次不探测。"
-            echo "注意：本 job 不承担配置提醒职责——每日「监控配置检查」job 会因此失败。"
-            exit 0
+            echo "::error::SMOKE_TARGET_URL 未配置——无法探测 /api/health，本次 smoke 失败。"
+            echo "  当前没有任何健康监控，等于生产裸奔。"
+            echo "  启用方式：gh variable set SMOKE_TARGET_URL --body https://你的固定域名"
+            exit 1
           fi
 
           # 这一步原本用 `HTTP_CODE=$(curl …)` 直接取值：step 以 bash -e 运行，
