@@ -4,45 +4,7 @@ import { use, useEffect, useRef, useState } from "react";
 import { Logo } from "@/components/Logo";
 import { useRouter, usePathname, Link } from "@/lib/i18n-navigation";
 import { useTranslations } from "next-intl";
-import {
-  LayoutDashboard,
-  Kanban,
-  Users,
-  Settings,
-  CreditCard,
-  Search,
-  Menu,
-  ChevronsUpDown,
-  Check,
-  CheckSquare,
-  FileText,
-  Scale,
-  Wand2,
-  Lightbulb,
-  HelpCircle,
-  Newspaper,
-  PenLine,
-  BarChart3,
-  Plus,
-  Star,
-  MessageSquare,
-  Video,
-  CheckCircle2,
-  Trash2,
-  Contact as ContactIcon,
-  GitBranch,
-  Target,
-  LayoutTemplate,
-  PenTool,
-  ClipboardList,
-  Clock,
-  NotebookPen,
-  Megaphone,
-  BookOpen,
-  Calendar as CalendarIcon,
-  Table2,
-  FolderOpen,
-} from "lucide-react";
+import { Settings, Search, Menu, ChevronsUpDown, Check, Plus, Star } from "lucide-react";
 import { api } from "@/lib/api";
 import { setWorkspaceContext, track } from "@/lib/analytics";
 import { listFavorites, type FavoriteEntry } from "@/lib/favorites";
@@ -55,6 +17,13 @@ const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
 });
 import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
+import {
+  MODULE_GROUPS,
+  moduleHref,
+  modulesForRole,
+  type WorkspaceModule,
+} from "@/lib/modules/registry";
+import { MODULE_ICONS } from "@/lib/modules/icons";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
 import { IMBadge } from "@/components/shell/IMBadge";
@@ -328,184 +297,48 @@ export default function WorkspaceLayout({
     }
   }
 
-  // 导航分组
+  // 导航分组：模块清单来自 lib/modules/registry（单一事实源，2026-10-20 P1）。
+  // 这里只做三件事：翻译、图标映射、把运行时的 IM 未读数挂到 im 项上。
+  // viewer 的入口过滤也由注册表的 viewerHidden 字段在 modulesForRole() 里完成。
+  const roleModules = modulesForRole(workspace.role);
+  const modulesByGroup = MODULE_GROUPS.map((group) => ({
+    group,
+    modules: roleModules.filter((m) => m.group === group.id),
+  })).filter((g) => g.modules.length > 0);
+
+  const toNavGroup = (labelKey: string | null, mods: readonly WorkspaceModule[]): NavGroup => ({
+    label: labelKey ? t(labelKey) : null,
+    items: mods.map((m) => ({
+      href: moduleHref(m, wid),
+      label: t(m.labelKey),
+      icon: MODULE_ICONS[m.icon],
+      exact: m.exact ?? false,
+      ...(m.id === "im" ? { badge: imUnreadCount } : {}),
+    })),
+  });
+
+  // "我的星标"：localStorage 收藏的任务。当前工作区下最多展示 5 条；没有则整个分组隐藏。
+  const favoriteItems = favorites
+    .filter((f) => f.workspaceId === wid)
+    .slice(0, 5)
+    .map((f) => ({
+      href: `/w/${f.workspaceId}/task/${f.taskId}`,
+      label: f.title,
+      icon: Star,
+      exact: false,
+    }));
+
   const navGroups: NavGroup[] = [
-    {
-      label: null,
-      items: [
-        { href: `/w/${wid}`, label: t("menu.overview"), icon: LayoutDashboard, exact: true },
-        { href: `/w/${wid}/board`, label: t("menu.board"), icon: Kanban, exact: false },
-        { href: `/w/${wid}/my-tasks`, label: t("menu.myTasks"), icon: CheckSquare, exact: false },
-        {
-          href: `/w/${wid}/im`,
-          label: t("menu.messages"),
-          icon: MessageSquare,
-          exact: false,
-          badge: imUnreadCount,
-        },
-        {
-          href: `/w/${wid}/decisions`,
-          label: t("menu.decisions"),
-          icon: Scale,
-          exact: false,
-        },
-      ],
-    },
-    // ─── 整合而非减法（2026-10-03）：28 个平铺入口按工作流归组 ───
-    // 所有功能保留，只是从"一个 28 项的长列表"变成"核心 5 项 + 四个有名字的组"。
-    // 长尾入口同时保留在 CommandPalette（Cmd+K）里，按名字直达。
-    {
-      label: t("menu.groupCollaboration"),
-      items: [
-        { href: `/w/${wid}/meetings`, label: t("menu.meetings"), icon: Video, exact: false },
-        {
-          href: `/w/${wid}/meeting-minutes`,
-          label: t("menu.meetingMinutes"),
-          icon: NotebookPen,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/approvals`,
-          label: t("menu.approvals"),
-          icon: CheckCircle2,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/announcements`,
-          label: t("menu.announcements"),
-          icon: Megaphone,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/calendar`,
-          label: t("menu.calendar"),
-          icon: CalendarIcon,
-          exact: false,
-        },
-        { href: `/w/${wid}/contacts`, label: t("menu.contacts"), icon: ContactIcon, exact: false },
-      ],
-    },
-    {
-      label: t("menu.groupKnowledge"),
-      items: [
-        { href: `/w/${wid}/documents`, label: t("menu.documents"), icon: FileText, exact: false },
-        { href: `/w/${wid}/files`, label: t("menu.files"), icon: FolderOpen, exact: false },
-        { href: `/w/${wid}/wiki`, label: t("menu.wiki"), icon: BookOpen, exact: false },
-        {
-          href: `/w/${wid}/whiteboards`,
-          label: t("menu.whiteboards"),
-          icon: PenTool,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/databases`,
-          label: t("menu.databases"),
-          icon: Table2,
-          exact: false,
-        },
-        { href: `/w/${wid}/forms`, label: t("menu.forms"), icon: ClipboardList, exact: false },
-        {
-          href: `/w/${wid}/recycle-bin`,
-          label: t("menu.recycleBin"),
-          icon: Trash2,
-          exact: false,
-        },
-      ],
-    },
-    {
-      label: t("menu.groupPlanning"),
-      items: [
-        { href: `/w/${wid}/okr`, label: t("menu.okr"), icon: Target, exact: false },
-        {
-          href: `/w/${wid}/workflows`,
-          label: t("menu.workflows"),
-          icon: GitBranch,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/templates`,
-          label: t("menu.templates"),
-          icon: LayoutTemplate,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/time-tracking`,
-          label: t("menu.timeTracking"),
-          icon: Clock,
-          exact: false,
-        },
-      ],
-    },
-    {
-      label: t("menu.groupAI"),
-      items: [
-        { href: `/w/${wid}/ai-tools`, label: t("menu.aiTools"), icon: Wand2, exact: false },
-        { href: `/w/${wid}/insight`, label: t("menu.insight"), icon: Lightbulb, exact: false },
-        {
-          href: `/w/${wid}/knowledge-qa`,
-          label: t("menu.knowledgeQa"),
-          icon: HelpCircle,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/daily-report`,
-          label: t("menu.dailyReport"),
-          icon: Newspaper,
-          exact: false,
-        },
-        {
-          href: `/w/${wid}/announcement-draft`,
-          label: t("menu.announcementDraft"),
-          icon: PenLine,
-          exact: false,
-        },
-      ],
-    },
-    // "我的星标"：localStorage 收藏的任务。当前工作区下最多展示 5 条；
-    // 没有则整个分组隐藏，避免噪音
-    ...(favorites.filter((f) => f.workspaceId === wid).length > 0
-      ? [
-          {
-            label: t("menu.favorites"),
-            items: favorites
-              .filter((f) => f.workspaceId === wid)
-              .slice(0, 5)
-              .map((f) => ({
-                href: `/w/${f.workspaceId}/task/${f.taskId}`,
-                label: f.title,
-                icon: Star,
-                exact: false,
-              })),
-          },
-        ]
-      : []),
-    {
-      label: t("menu.admin"),
-      items: [
-        { href: `/w/${wid}/members`, label: t("menu.members"), icon: Users, exact: false },
-        { href: `/w/${wid}/billing`, label: t("menu.billing"), icon: CreditCard, exact: false },
-        { href: `/w/${wid}/analytics`, label: t("menu.analytics"), icon: BarChart3, exact: false },
-        { href: `/w/${wid}/settings`, label: t("menu.settings"), icon: Settings, exact: false },
-      ],
-    },
+    ...modulesByGroup
+      .filter((g) => g.group.id !== "admin")
+      .map((g) => toNavGroup(g.group.labelKey, g.modules)),
+    ...(favoriteItems.length > 0 ? [{ label: t("menu.favorites"), items: favoriteItems }] : []),
+    ...modulesByGroup
+      .filter((g) => g.group.id === "admin")
+      .map((g) => toNavGroup(g.group.labelKey, g.modules)),
   ];
 
-  // Viewer 角色权限过滤：隐藏「成员管理」「计费」「分析」入口。
-  // Viewer 为只读角色，仅可查看任务/决策/文档，不可管理工作区。
-  // 设置页保留（含个人偏好与权限矩阵查看）。
-  const viewerHiddenPrefixes = ["/members", "/billing", "/analytics"];
-  const filteredNavGroups: NavGroup[] =
-    workspace.role === "viewer"
-      ? navGroups
-          .map((group) => ({
-            ...group,
-            items: group.items.filter(
-              (item) => !viewerHiddenPrefixes.some((prefix) => item.href.endsWith(prefix)),
-            ),
-          }))
-          // 过滤掉空分组，避免渲染空标签
-          .filter((group) => group.items.length > 0)
-      : navGroups;
+  const filteredNavGroups: NavGroup[] = navGroups;
 
   const notifHref = `/w/${wid}/notifications`;
   const notifActive = pathname.startsWith(notifHref);
