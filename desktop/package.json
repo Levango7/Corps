@@ -5,7 +5,7 @@
   "description": "Corps 桌面端（Tauri v2，打包为 Windows / macOS / Linux 原生应用）",
   "scripts": {
     "dev": "tauri dev",
-    "build": "tauri build",
+    "build": "node scripts/prepare-release.mjs && tauri build --config src-tauri/tauri.release.conf.json",
     "build:debug": "tauri build --debug",
     "build:sidecar": "cd ../web && pnpm build && node ../desktop/copy-standalone.mjs",
     "tauri": "tauri",
