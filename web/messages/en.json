@@ -1125,7 +1125,7 @@
     "activationFunnel": "Activation funnel",
     "title": "Analytics",
     "subtitle": "User behavior funnel and trends for the last {days} days.",
-    "wawTitle": "WAW weekly active workspaces",
+    "wawTitle": "Active people this week (core events)",
     "wawWeekStart": "Week starts {date} (Mon 00:00 UTC+8)",
     "totalEvents": "Total events",
     "coreActive": "Core active",

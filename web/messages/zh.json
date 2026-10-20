@@ -1125,7 +1125,7 @@
     "activationFunnel": "激活段漏斗",
     "title": "分析",
     "subtitle": "最近 {days} 天的用户行为漏斗与趋势。",
-    "wawTitle": "WAW 周活跃工作区",
+    "wawTitle": "本工作区本周活跃人数（核心事件）",
     "wawWeekStart": "周起始 {date}（周一 00:00 UTC+8）",
     "totalEvents": "事件总数",
     "coreActive": "核心活跃",

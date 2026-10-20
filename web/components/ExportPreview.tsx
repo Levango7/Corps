@@ -25,6 +25,7 @@ import { useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
 import { X, Printer } from "lucide-react";
 import Markdown from "@/components/Markdown";
+import { track } from "@/lib/analytics";
 
 /** 批量模式下的单个文档数据 */
 export interface BatchDocument {
@@ -203,6 +204,9 @@ export function ExportPreview({
                   // 批量模式：触发回调（父组件可做埋点等），然后打印
                   onBatchExport([]);
                 }
+                // P1-C：导出是闭环的最后一个动作（决策/文档被带走分享）。PDF 走浏览器打印，
+                // 这里记的是"用户点了导出并进入打印对话框"的意图，不是 PDF 文件生成成功。
+                track("export_pdf", { mode: batchMode ? "batch" : "single" });
                 window.print();
               }}
               disabled={!hasContent}
