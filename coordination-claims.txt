@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y | fix/a11y-burndown-4 | components/im/ConversationSettings.tsx,components/DocumentListView.tsx,components/workflow/WorkflowEditor.tsx,components/template/TemplateEditor.tsx,components/database/TableView.tsx,web/tests/a11y-baseline.txt | a11y-burndown | 2026-10-15 19:24 | 2026-10-15 23:24 | a11y 存量偿还第 4 批（5 文件 35 条）
+F:/Nexus/corps | fix/smoke-unified-missing-target | '.github/workflows/smoke.yml,docs/runbook-monitoring.md,docs/ROADMAP-2026Q4.md' | cline-smoke-fix | 2026-10-20 18:07 | 2026-10-20 22:07 | 统一 Smoke workflow 缺少 SMOKE_TARGET_URL 时的行为（config-check 覆盖所有触发 + smoke-test needs 化）
