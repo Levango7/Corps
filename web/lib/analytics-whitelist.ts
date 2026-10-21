@@ -6,13 +6,9 @@
  *  - 客户端 dev 环境 warn 非法名（见 analytics.ts track()），生产环境仍由服务端静默丢弃。
  *  - 白名单追加 9 名与 SDK 改造同一 PR 合入，避免「事件已打、闸门未开」的静默丢弃窗口期。
  *
- * 计数：20 旧 + 9 新 + 3 spec §8 = 32 名（P2-4 基数更正 + 集成验证补齐 spec §8 三事件）。
- *  - 旧 20：9 注册激活 + 5 核心激活 + 2 留存 + 4 转化
- *  - 新 9：landing_view / click_signup / session_start / activation_completed /
- *          invite_accepted / subscription_activated / payment_failed /
- *          subscription_renewed / subscription_churned
- *  - spec §8 三事件（定价线消费，裁决一/三约定由埋点线一次性扩齐）：
- *          view_pricing / select_billing_period / click_upgrade
+ * 计数：37 名（实测。原注释写 32，集合实际早已是 34 —— 有两处新增没回写；
+ * 本次 P1-C 再 +3：workspace_create / decision_landed / export_pdf。
+ * 该数字由 tests/unit/analytics-event-contract.test.ts 断言，不再靠人记得改。）
  */
 export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
   // 注册激活漏斗（9）
@@ -60,4 +56,13 @@ export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
   // ─── 阶段 2-2 筛选与自定义视图（看板体验线消费）───
   "filter_applied",
   "view_saved",
+  // ─── P1-C 决策闭环与导出（2026-10-20）───
+  // workspace_create：客户端早就在发（layout.tsx 新建工作区后 track），但从未进白名单
+  //   ⇒ 服务端静默丢弃（"事件已打、闸门未开"）。补开闸，并用 analytics-event-contract 测试防再犯。
+  "workspace_create",
+  // decision_landed：决策创建时自动同步出至少一个任务（decision-action-parser 的 tasks 非空）
+  //   —— 这是产品楔子"讨论→决策→任务"闭环的唯一可测信号。
+  "decision_landed",
+  // export_pdf：导出预览里点「打印 / 保存为 PDF」（PDF 走浏览器打印，纯前端）。
+  "export_pdf",
 ]);
