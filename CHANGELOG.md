@@ -6,6 +6,38 @@
 
 （暂无；下一版本从这里开始记）
 
+## [0.8.2] - 2026-10-22
+
+### Fixed
+
+- **容器镜像终于能发出去了（本版唯一实质改动）**：`web/Dockerfile` 三个 `FROM` 此前写死第三方
+  镜像源 `docker.m.daocloud.io/library/node:22-alpine`。该源自 **2026-10-20 21:41 UTC** 最后一次
+  成功拉取后失效，此后 main 上每一次 push 的 `Publish image (GHCR)` 全部 `failure`：
+
+  ```
+  #5 ERROR: failed to do request: Head "https://docker.m.daocloud.io/v2/library/node/manifests/22-alpine"
+    dial tcp: lookup docker.m.daocloud.io on 168.63.129.16:53: no such host
+  ```
+
+  实测双侧网络对照——本机（国内网络）daocloud 可达而 Docker Hub 不可达，GitHub 托管 runner
+  恰好相反。**把只在一侧可用的第三方镜像源写死进 Dockerfile，等于把发布链路押在别人的可用性上。**
+
+  改法：镜像源收敛为单个 `ARG NODE_IMAGE=node:22-alpine`，三个 `FROM` 统一引用，默认回 Docker Hub
+  官方镜像；国内/内网换源改为构建时覆盖 `--build-arg NODE_IMAGE=...`，**不改默认值**。
+  顺带把「三阶段必须同 node 版本同镜像源」从靠人记住变成结构保证。
+
+### 说明
+
+- 本版是 **v0.8.1 的补发布**（v0.8.1 又是 v0.8.0 的补发布）。三个版本都没有容器镜像，
+  原因各不相同，别混为一谈：
+  - **v0.8.0**：Security Audit 判红（vite 三连公告）→ `Build` → `Publish image` 连锁 **skip**
+  - **v0.8.1**：安全门禁已绿、`Build` 也 success，但 **Docker 构建失败**于上述基础镜像源
+  - **v0.8.2**：修掉基础镜像源
+- v0.8.0 已发布的桌面安装包（dmg / msi / nsis / deb / AppImage）不受影响，仍挂在 v0.8.0 的 release 上
+- **已知门禁缺口**：PR 事件下 `Publish image (GHCR)` 是 `skipped`，`Build` job 只跑 `pnpm run build`
+  —— **CI 完全不验证 Dockerfile**。这正是该缺陷能潜伏到发布阶段才暴露的原因，建议单独补一条
+  Docker 构建冒烟检查
+
 ## [0.8.1] - 2026-10-21
 
 ### Fixed
