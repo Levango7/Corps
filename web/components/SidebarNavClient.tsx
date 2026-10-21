@@ -81,8 +81,10 @@ export function SidebarNavClient({
           return (
             <div key={gi} className="space-y-[var(--space-1)]">
               {/* 分组标题：桌面折叠时用分隔线，移动始终用文字 */}
-              {group.label && mode === "desktop" && !collapsed && (
-                canCollapse ? (
+              {group.label &&
+                mode === "desktop" &&
+                !collapsed &&
+                (canCollapse ? (
                   <button
                     type="button"
                     onClick={toggle}
@@ -99,15 +101,15 @@ export function SidebarNavClient({
                   <div className="text-[length:var(--text-xs)] text-[var(--meta)] px-[var(--space-3)] pt-[var(--space-4)] pb-[var(--space-1)]">
                     {group.label}
                   </div>
-                )
-              )}
+                ))}
               {group.label && mode === "desktop" && collapsed && (
                 <div className="px-[var(--space-2)] pt-[var(--space-2)]">
                   <div className="h-px bg-[var(--shell-edge)]" />
                 </div>
               )}
-              {group.label && mode === "mobile" && (
-                canCollapse ? (
+              {group.label &&
+                mode === "mobile" &&
+                (canCollapse ? (
                   <button
                     type="button"
                     onClick={toggle}
@@ -124,36 +126,38 @@ export function SidebarNavClient({
                   <div className="text-[length:var(--text-xs)] text-[var(--meta)] px-[var(--space-3)] pt-[var(--space-4)] pb-[var(--space-1)]">
                     {group.label}
                   </div>
-                )
-              )}
-            {showItems && group.items.map(({ href, label, icon: Icon, exact, badge }) => {
-              const active = exact ? pathname === href : pathname.startsWith(href);
-              return (
-                <Link
-                  key={href}
-                  href={href}
-                  aria-current={active ? "page" : undefined}
-                  onClick={onNavigate}
-                  className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
-                    active
-                      ? "bg-[var(--accent-soft)] text-[var(--accent)]"
-                      : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
-                  } ${mode === "desktop" && collapsed ? "justify-center px-0" : ""}`}
-                  title={mode === "desktop" && collapsed ? label : undefined}
-                >
-                  <Icon size={18} className="shrink-0" />
-                  {!(mode === "desktop" && collapsed) && <span className="truncate">{label}</span>}
-                  {!(mode === "desktop" && collapsed) && badge != null && badge > 0 && (
-                    <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
-                      {badge > 99 ? "99+" : badge}
-                    </span>
-                  )}
-                  {mode === "desktop" && collapsed && badge != null && badge > 0 && (
-                    <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" />
-                  )}
-                </Link>
-              );
-            })}
+                ))}
+              {showItems &&
+                group.items.map(({ href, label, icon: Icon, exact, badge }) => {
+                  const active = exact ? pathname === href : pathname.startsWith(href);
+                  return (
+                    <Link
+                      key={href}
+                      href={href}
+                      aria-current={active ? "page" : undefined}
+                      onClick={onNavigate}
+                      className={`relative flex items-center gap-[var(--space-3)] px-[var(--space-3)] h-9 rounded-[var(--radius-md)] text-[length:var(--text-base)] font-[weight:var(--weight-medium)] transition-colors duration-[var(--motion-fast)] ${
+                        active
+                          ? "bg-[var(--accent-soft)] text-[var(--accent)]"
+                          : "text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)]"
+                      } ${mode === "desktop" && collapsed ? "justify-center px-0" : ""}`}
+                      title={mode === "desktop" && collapsed ? label : undefined}
+                    >
+                      <Icon size={18} className="shrink-0" />
+                      {!(mode === "desktop" && collapsed) && (
+                        <span className="truncate">{label}</span>
+                      )}
+                      {!(mode === "desktop" && collapsed) && badge != null && badge > 0 && (
+                        <span className="ml-auto inline-flex items-center justify-center bg-[var(--danger)] text-[var(--accent-fg)] text-[length:var(--text-xs)] rounded-full px-1.5 h-5 min-w-[1.25rem]">
+                          {badge > 99 ? "99+" : badge}
+                        </span>
+                      )}
+                      {mode === "desktop" && collapsed && badge != null && badge > 0 && (
+                        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-[var(--danger)]" />
+                      )}
+                    </Link>
+                  );
+                })}
             </div>
           );
         })}

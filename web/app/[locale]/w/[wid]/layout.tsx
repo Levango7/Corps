@@ -331,9 +331,7 @@ export default function WorkspaceLayout({
 
   const navGroups: NavGroup[] = [
     toNavGroup(null, coreModules),
-    ...(optional.length > 0
-      ? [{ ...toNavGroup("menu.more", optional), collapsible: true }]
-      : []),
+    ...(optional.length > 0 ? [{ ...toNavGroup("menu.more", optional), collapsible: true }] : []),
     ...(favoriteItems.length > 0 ? [{ label: t("menu.favorites"), items: favoriteItems }] : []),
     ...(adminModules.length > 0 ? [toNavGroup("menu.admin", adminModules)] : []),
   ];
