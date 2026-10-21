@@ -14,14 +14,16 @@ on:
   workflow_dispatch:
     inputs:
       corps_web_url:
-        description: 'Corps web URL (default: https://corps.com)'
+        description: 'Corps web URL（留空则使用仓库变量 CORPS_WEB_URL）'
         required: false
-        default: 'https://corps.com'
+        default: ''
   push:
     tags: ["v*"]
 
 env:
-  CORPS_WEB_URL: ${{ github.event.inputs.corps_web_url || 'https://corps.com' }}
+  # 不设兜底域名：未配置时 prepare-mobile.mjs 会 fail loud（exit 1），
+  # 避免把不属于本项目的站点写进分发给用户的 APK/IPA。
+  CORPS_WEB_URL: ${{ github.event.inputs.corps_web_url || vars.CORPS_WEB_URL }}
 
 jobs:
   android:

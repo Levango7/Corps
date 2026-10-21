@@ -12,3 +12,6 @@ src-tauri/gen/
 # 签名密钥（切勿提交）
 *.key
 *.key.pub
+
+# 构建期生成的 updater 覆盖配置（由 scripts/prepare-release.mjs 产出）
+src-tauri/tauri.release.conf.json

@@ -2,11 +2,16 @@ import { webview } from '@kit.ArkWeb';
 
 // Corps HarmonyOS 主页面
 //
-// 架构：ArkWeb WebView → 远程 Next.js 服务器（https://corps.com）
-// 对应 Tauri 移动端：WebView → https://corps.com
+// 架构：ArkWeb WebView → 远程 Next.js 服务器（CORPS_WEB_URL 注入）
+// 对应 Tauri 移动端：WebView → 远程 URL（同样由 CORPS_WEB_URL 注入）
 // 对应 Tauri 桌面端：WebView → localhost:3000（内嵌 Node.js sidecar）
 
-const CORPS_URL = 'https://corps.com';
+// 提交值 = 发货值：HarmonyOS 无法在标准 CI 构建（需 DevEco Studio），
+// mobile-build.yml 只做结构校验，不会调用 prepare-mobile.mjs 覆盖这里。
+// 因此下面的哨兵值不是"待替换的占位符"，而是**安全默认值**：
+// .invalid 是 RFC 2606 保留 TLD，保证永不解析，绝不可能落到真实第三方站点。
+// 出包前必须由 `CORPS_WEB_URL=... node scripts/prepare-mobile.mjs` 注入真实地址。
+const CORPS_URL = 'https://REPLACE_ME.invalid';
 
 @Entry
 @Component
