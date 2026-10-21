@@ -6,6 +6,30 @@
 
 （暂无；下一版本从这里开始记）
 
+## [0.8.1] - 2026-10-21
+
+### Fixed
+
+- **Security Audit 的全仓阻塞解除**：`vite` 6.4.3 命中三连公告
+  （GHSA-587h-7wmj-h5pm **high**、GHSA-698v-4r3x-3vcv moderate、GHSA-r825-w8mm-5pxw moderate），
+  已由 `web/pnpm-workspace.yaml` 的 `vite@^6: ">=6.4.4 <7"` 覆盖顶掉。引入方是 `vitest` 3.2.7
+  （经 `@vitest/mocker` / `vite-node`），但被 `pnpm audit --prod` 计入，因此一度让所有新推送的
+  PR 判红。**只覆盖 6.x**——`@vitejs/plugin-react@6.1.2` 的 peer 要求 vite ^8，
+  全局覆盖会把 8 压回 6 而破插件
+- **指向他人域名的文档引用**：修正 8 处 `corps.vercel.app` 引用
+  （`docs/DEPLOY-VERCEL.md`、`docs/audit/RELEASE-READINESS-2026-10-17.md`、`docs/site/index.html`），
+  站点 CTA 改指本项目稳定别名 `corps-five.vercel.app`
+
+### 说明
+
+- 本版本是 **v0.8.0 的补发布**，目的是把容器镜像发出去。v0.8.0 的 tag 打在 2026-10-21 的
+  vite 安全公告发布前、上述修复合入前的那一刻，其 Security Audit 判红导致 `Build` 与
+  `Publish image (GHCR)` 连锁 skip——**v0.8.0 没有容器镜像**。v0.8.1 的内容 =
+  v0.8.0 + 上述两项修复，**零业务代码变更**
+- v0.8.0 已发布的桌面安装包（dmg / msi / nsis / deb / AppImage）不受本次影响，仍挂在
+  v0.8.0 的 release 上
+- 桌面与移动壳的版本线独立（当前 0.6.0），不随 Web/Server 的版本号变动
+
 ## [0.8.0] - 2026-10-20
 
 ### 发布要点
