@@ -25,17 +25,17 @@
 #    2026-10-15 第 3 批（分支 fix/a11y-burndown-3）：MessageItem / MeetingCreate /
 #      KeyResultEditor / contacts/page / CalendarMonth 共 42 条清零。
 #
-# 按规则分布：
-#    192  jsx-a11y/control-has-associated-label
-#     75  jsx-a11y/click-events-have-key-events
-#     42  jsx-a11y/no-noninteractive-element-interactions
-#     39  jsx-a11y/no-static-element-interactions
-#      6  jsx-a11y/label-has-associated-control
+# 按规则分布（2026-10-20 按本文件数据重算；旧头部自 2026-10-16 起未更新，曾停在 363 条）：
+#    107  jsx-a11y/control-has-associated-label
+#     56  jsx-a11y/click-events-have-key-events
+#     32  jsx-a11y/no-static-element-interactions
+#     29  jsx-a11y/no-noninteractive-element-interactions
 #      2  jsx-a11y/no-noninteractive-element-to-interactive-role
-#      2  jsx-a11y/mouse-events-have-key-events
+#      2  jsx-a11y/label-has-associated-control
 #      2  jsx-a11y/interactive-supports-focus
 #      2  jsx-a11y/no-noninteractive-tabindex
 #      1  jsx-a11y/role-supports-aria-props
+#    合计 233（176 行 / 102 文件）
 #
 # ⚠️ 重新生成必须与门禁同口径、且必须在**目标提交的那棵树**上跑：
 #    曾因在落后的工作树上生成而漏掉新文件，CI 上表现为凭空多出「新出现」违规。
