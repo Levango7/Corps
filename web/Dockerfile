@@ -3,16 +3,32 @@
 # 依赖 next.config.ts 的 output: "standalone" 产出最小运行包
 #
 # ── 镜像源说明 ────────────────────────────────────────────────────────────────
-# 基础镜像统一使用 daocloud 镜像源（docker.m.daocloud.io），因为本机/内网环境
-# Docker Hub 不可达。**三个阶段必须保持同一 node 版本与同一镜像源**：
+# 基础镜像由 ARG NODE_IMAGE 决定，**默认 Docker Hub 官方 node:22-alpine**。
+# 三个阶段共用这一个 ARG，从根本上保证「同一 node 版本 + 同一镜像源」——
 # 曾出现过 deps/builder 用 node:20 编译、runner 却用 node:22 运行的配置，
-# 会导致 prisma engines / sharp 等原生模块版本错配。
+# 会导致 prisma engines / sharp 等原生模块版本错配；把镜像源收敛成单个 ARG
+# 后，这类错配不可能再发生（改一处即全改）。
+#
+# 为什么默认必须是 Docker Hub（2026-10-21 事故复盘）：
+#   此前三阶段写死 daocloud 镜像源 docker.m.daocloud.io/library/node:22-alpine，
+#   理由是本机/内网 Docker Hub 不可达。但 GitHub 托管 runner 解析不了该域名
+#   （NXDOMAIN），且该镜像源在 2026-10-20 21:41 UTC 最后一次成功拉取后就失效了
+#   —— 此后 main 上每一次 push 的 Publish image (GHCR) 全部 failure，
+#   错误固定为 `dial tcp: lookup docker.m.daocloud.io: no such host`。
+#   后果是 v0.8.0 / v0.8.1 两个标签都没有容器镜像。
+#   写死第三方镜像源 = 把发布链路押在别人的可用性上，这是本事故的根因。
+#
+# 国内/内网环境需要换源时，构建时覆盖即可，不要改默认值：
+#   docker build --build-arg NODE_IMAGE=docker.m.daocloud.io/library/node:22-alpine .
+#   docker compose build --build-arg NODE_IMAGE=... （或 compose 里 args: 声明）
+#
 # 除镜像源外，本文件与上游正式配置保持一致（node:22 + corepack pnpm +
 # --frozen-lockfile）。请勿为了"能构建"而降级 node/pnpm 版本或放弃
 # --frozen-lockfile —— 这会让本地产物与 CI/生产不一致。
+ARG NODE_IMAGE=node:22-alpine
 
 # ===== 阶段1: 安装依赖 =====
-FROM docker.m.daocloud.io/library/node:22-alpine AS deps
+FROM ${NODE_IMAGE} AS deps
 WORKDIR /app
 RUN corepack enable pnpm
 # pnpm-workspace.yaml 必须与 lockfile 一同进入构建：其 overrides 参与了
@@ -33,7 +49,7 @@ ENV PRISMA_ENGINES_MIRROR=${PRISMA_ENGINES_MIRROR}
 RUN ./node_modules/.bin/prisma generate
 
 # ===== 阶段2: 构建 =====
-FROM docker.m.daocloud.io/library/node:22-alpine AS builder
+FROM ${NODE_IMAGE} AS builder
 WORKDIR /app
 RUN corepack enable pnpm
 COPY --from=deps /app/node_modules ./node_modules
@@ -61,7 +77,7 @@ RUN CLIENT_DIR=$(find node_modules -path "*/.prisma/client" -type d 2>/dev/null 
     fi
 
 # ===== 阶段3: 运行 =====
-FROM docker.m.daocloud.io/library/node:22-alpine AS runner
+FROM ${NODE_IMAGE} AS runner
 WORKDIR /app
 
 ENV NODE_ENV=production
