@@ -18,7 +18,6 @@ import type { TouchEvent as ReactTouchEvent } from "react";
 import { Plus, AlertCircle, CheckSquare, Loader2, ChevronDown } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { track } from "@/lib/analytics";
 import {
   TaskFilterBar,
   EMPTY_FILTER,
@@ -336,7 +335,9 @@ export default function BoardPage({ params }: { params: Promise<{ wid: string }>
         body: JSON.stringify({ ids, action: "update", ...patch }),
       },
     );
-    track("task_status_change", { batch: true, count: resp.updated, ...patch });
+    // 状态事件改由服务端逐条发（tasks/batch 路由，props 带 taskId + to + via:"batch"）。
+    // 这里**不再**补发客户端事件：同一次批量完成若有两个真源，客户端那条既没有 taskId、
+    // 又不是权威来源（页面在 flush 前关掉就丢），计数会在"批量"这一条路径上翻倍。
     await load();
     clearSelection();
     return resp;
