@@ -4,6 +4,19 @@
 
 ## [Unreleased]
 
+（暂无；下一版本从这里开始记）
+
+## [0.8.0] - 2026-10-20
+
+### 发布要点
+
+- **依赖大版本换代**：Prisma **7.10.0 + `@prisma/adapter-pg`**（Rust 引擎退役；连接池参数显式化为 `connection_limit=10 / pool_timeout=10`，`withDbRetry` 增加 30s 总预算兜底——ADR-014）；Next.js **16.4**；TypeScript **6**。
+- **租户安全**：写权限收敛到 `getWorkspaceContext()` + `lib/write-policy.ts` 的单一 choke point（default-deny；门禁现测 280 scanned / 252 covered / 28 registered）；`db/rls-activate.sql` 实测 **81 张表 ENABLE+FORCE+策略**；`db/schema.sql` 快照追平 73 张表缺口（#133）。
+- **协同层**：按 ADR-017 摘除 `server/collab/` 与 3 个零挂载组件；ADR-016 版本回滚契约落地。
+- **国际化**：新增「硬编码用户可见中文」门禁（P0-6），并清偿 UI 50 处 + 事务邮件 73 处；事务邮件按收件人语言渲染（#123/#125/#126/#128）。
+- **可访问性**：存量偿还 7 批，当前基线 **233 条（176 行 / 102 文件）**，门禁只允许收缩。
+- **说明**：本版本是 Web/Server 版本；桌面与移动壳未随本版发布，其域名/版本问题见 `docs/design/PRODUCT-DESIGN-2026Q4.md` P0。
+
 ### Fixed
 
 - **定时 Smoke 的失败原因不再冒充"生产故障"**：`SMOKE_TARGET_URL` 被设成了
@@ -51,95 +64,6 @@
   交给数据库；同列冗余普通索引一并移除。schema 同步声明 `@@unique`。**执行角色注意**：
   该迁移必须由表属主/BYPASSRLS 连接执行（生产即 compose 的 postgres 超级用户）；以
   `corps_app`（NOBYPASSRLS）跑会因 FORCE RLS 全部 0 行命中，属预期防护而非故障。
-
-### Security
-
-- **写权限从"只有声明"变成"有执行点"——viewer 只读承诺落地（default-deny）**：`lib/permissions.ts`
-  一直声明 viewer 全只读，但 `check_permission_gates.py` 实测 T3 档有 **157 个写 handler 零角色判断**，
-  viewer 在这些端点上可以直接改工作区内容。逐个补 `requirePermission` 成本高且容易漏（每加一个端点
-  就要记得补一次），改为把写权限收敛到**单一 choke point**：`lib/auth.ts` 的 `getWorkspaceContext()`
-  内部调用新增的 `lib/write-policy.ts` 裁决，写方法（POST/PUT/PATCH/DELETE）默认拒绝，
-  只有 owner/admin/member 与"自助类"端点（自己的收藏/通知/设备/资料/纯文本 AI）放行。
-  实测覆盖：280 个写 handler 中 252 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
-  用户级自服务 / 创建工作区等本就没有成员上下文的端点）在 `scripts/write-access-registry.txt`
-  逐条登记 reason 与复核截止日，并由新脚本 `check_write_access_registry.py` 断言
-  "每个写 handler 要么进墙要么登记"（含三类注入变异自检），已接进 CI 的 permission-gate job。
-  数字口径（2026-10-17 复算，原写 278/250 已随端点增加过期；现测命令
-  `python scripts/check_write_access_registry.py`）：全仓写方法 export 共 **285** 处，
-  门禁分母 **280** = 减去 5 处按设计不进气泡的：`/api/[...path]` 的 POST/PATCH/PUT/DELETE
-  四个 handler（该路由只回 JSON 404，不碰库，见 `INTERNAL_EXACT`）与
-  `POST /api/cron/recycle-cleanup`（`/api/cron/` 前缀整族按 `INTERNAL_PREFIXES` 跳过，
-  该族 9 个端点各自带 `CRON_SECRET` Bearer 鉴权，且未配置密钥时返回 500 而非放行——fail-closed）。
-  即这条门的分母不是"漏看"，但**前缀式跳过意味着以后新加的 `/api/cron/*` 会自动隐身**，
-  这层依赖的是 cron 族的书写惯例而非机械检查。
-
-  灰度开关 `WRITE_POLICY_MODE`：enforce（默认，fail-closed，拼错也按 enforce 处理）/ shadow
-  （只打日志，用于上线前观察误杀面）/ off。
-
-- **登出后 Cache Storage 里仍留着上一位登录者的工作区页面**：`76853bd0` 把 `/api/` 全部排除出缓存后，
-  同一类暴露面剩下另一半——`public/sw.js` 对所有同源 GET 做 stale-while-revalidate，缓存 key 只有 URL、
-  不含身份，所以登录期间访问过的工作区页面（SSR HTML / RSC payload）会留在缓存里。
-  本轮补"登出即清"：`components/pwa/PwaRegister.tsx` 导出 `clearAppCaches()`（只删 `corps-sw*` 前缀），
-  工作区 layout 的登出回调在 logout POST 之后调用它。
-  **第一次全量 E2E 实测证明"清一次"不够**：`e2e/logout-cache.spec.ts` 单独跑 PASS，放进全量套件则残留
-  5 条 `/w/{wid}/decisions|meetings|meeting-minutes|approvals|announcements`——这 5 个页面用例并没有访问过，
-  是侧栏链接被 Next 预取、SW 的后台 revalidate（`sw.js:83` 的 `cache.put` 脱离请求链）在删除**之后**写回来的，
-  负载越高越容易命中。
-  最终按三层收口：① **写入侧断掉**——`sw.js` 新增 `isTenantPage()`，`/w/{wid}/…` 一律不读不写缓存
-  （导航请求仍保留 `/offline` 兜底），`CACHE_VERSION` v3→v4 让已被污染的旧桶在 activate 时删除；
-  ② 登出回调调 `clearAppCaches()`；③ `/auth/*` 页面挂载时再扫一遍。
-  用例也拆成两条确定性断言（不再靠"登出前后各拍一张快照"）：写入侧——登录后逛 3 个工作区页面并等 3s，
-  缓存里该工作区的条目必须为 0（并附"SW 确实缓存了别的东西"的反证控制，否则是空断言）；
-  清理侧——人工往桶里种一条 `/w/{wid}/board` 再登出，断言它被删掉。
-  **变异验证**：关掉 ①（`if (false && isTenantPage(url))`）→ 写入侧用例红，实测缓存里躺着 **43 条**该工作区条目；
-  同时关掉 ②③ → 清理侧用例红（种入的那条 8s 内没被删）。两处还原后按 md5 确认逐字节一致并复绿。
-  **已知未收口**：切换工作区（URL 仍在 `/w/` 下、不经过 `/auth`）不触发第③层——但第①层已保证租户内容从来不会被写入，
-  所以这一条只是少了一道兜底扫描，不再是残留面。
-- **发布链被两条 critical 依赖公告打断（`pnpm audit --prod`）**：CI 的 Security Audit job 跑
-  `pnpm audit --prod --audit-level=high`，2026-10-06T03:00 那轮报 **2 critical + 1 high**：
-  tinypool 的 worker-options 原型污染→RCE（GHSA-5gmw-xhrv-c9v3 等，只有 `>=2.1.2` 修）与
-  source-map-js 的事件循环 DoS（`1.2.1`→`1.2.2`）。它 `needs` 下游 `Build` 与
-  `Publish image (GHCR)`，所以**镜像发布从那一刻起是断的**。
-  成因不是本仓回归：同一颗锁文件下，10-05T20:15 那轮只有 `5 found — 1 low | 4 moderate`、
-  日志里 grep `tinypool` = 0 次，10-06T03:00 变 10 条，而 `git diff 3836352b..50506a36 -- web/pnpm-lock.yaml` 为空
-  ⇒ 是公告库更新。另外 `tinypool` 是经 `.>better-auth>vitest>tinypool` 进入 `--prod` 视图的
-  （better-auth 把 vitest 声明成 peerDependency，而 lock 的 `settings.autoInstallPeers: true`）。
-  修法取 **pnpm override**（`web/pnpm-workspace.yaml`，与既有 sharp/undici 同一条路子，都带上界防止跨大版本）：
-  `tinypool: ">=2.1.2 <3"`、`source-map-js: ">=1.2.2"`；锁文件解析结果实测为
-  `tinypool@2.2.0` / `source-map-js@1.2.2`，且 diff 只有这两条及它们的依赖指向，无夹带。
-  **为什么不是升 vitest**：先试了 vitest 4.1.11（它根本不用 tinypool，装上后锁里 tinypool 归零）。
-  但 v4 把覆盖率统计口径从"被测试加载的文件"换成"`include` 命中的全部 712 个文件"，实测
-  `total.functions` 从 59.33% 掉到 5.78%、`branches` 4.62%，而 CI 的阈值（55/70）是照旧口径校的——
-  换上去就得给两道门重新定标，等于用"调低阈值"换绿灯。该实验已完整回退（vitest 回到 3.2.7）。
-  现在的组合是 vitest 3.2.7 + tinypool 2.2.0，**越过了 vitest 自己声明的 `^1.1.1`**，
-  所以由测试背书：单测 **67 文件 / 735 例全绿**、覆盖率阈值判定 exit 0（functions 56.70%、branches 72.09%）、
-  零覆盖棘轮 PASS（628 行，`--self-test` 亦 0）。
-  审计口径本机**可以**复现，只要显式指官方源（默认源 `registry.npmmirror.com` 没有 audit 端点）：
-  `pnpm audit --prod --audit-level=high --registry=https://registry.npmjs.org` 在改前锁文件（HEAD 态，独立临时工程里跑）
-  报 `10 found — 3 low | 4 moderate | 1 high | 2 critical`、**退出 1**，路径与 CI 一致
-  （`.>better-auth>vitest>tinypool`、`.>@tailwindcss/postcss>postcss>source-map-js` 等 17 条）；
-  改后同一命令报 `7 found — 3 low | 4 moderate`（**0 critical / 0 high**）、**退出 0**，即门禁要的形状。
-  另核一条版本分歧：锁文件由本机 pnpm 12.9.1 写，而 CI 与 Dockerfile 读 `packageManager` 用 **pnpm 11.22.0**；
-  以 `corepack pnpm@11.22.0 install --frozen-lockfile --ignore-scripts` 实测**退出 0**（57s），
-  且该树里同样只有 `tinypool@2.2.0` / `source-map-js@1.2.2`——override 被 pnpm 11 同口径解析，不存在"本地绿 CI 红"的版本缝隙。
-  同一 CI 形状在**干净 worktree（`git worktree` 于仓库外）+ `pnpm@11.22.0` 冷装**复测一遍，判定不变：
-  单测 **67 文件 / 735 例全绿**、覆盖率 functions **56.40%** / branches **72.07%**（阈值 55/70 过）、
-  `tsc --noEmit` 退出 0、零覆盖棘轮 PASS(628) 且 `--self-test` 退出 0。
-  与上面主工作树的 56.70%/72.09% 差在小数第二位，来自两棵树的统计状态不同，不改变任何判定。
-  **Build 腿本机验不了**：`next build` 在 `next.config.ts` 加载期就红
-  （`next-intl` 的 SWC extractor 要求 `@swc/core` 原生绑定，而绑定要落进受校验的缓存目录，
-  `ERR_SWC_NATIVE_CACHE`：`%LOCALAPPDATA%\swc` 与自指目录 `SWC_NATIVE_BINDING_CACHE` 的 DACL 都因给非属主 SID
-  授予 replacement rights 被拒）。在用户主工作树复现**同一条错误**，且 `@swc/core@1.16.13` 的锁文件坐标本笔未动
-  ⇒ 属本机 Windows ACL 与 SWC 的冲突，不是本笔改动引入，也不是仓库缺陷；绕过它需要改机器 ACL，未做。
-  该腿只能由 CI 的 ubuntu runner 判定——而它自 `2026-10-06T03:00` 起因 audit 红被 `needs` 恒 skipped，
-  这次推送会是它这几天第一次真跑。构建路径的**既有性**另有旁证：E2E (production build) job 里自带
-  `npx next build`，它不依赖 audit，改前锁文件下一直是绿的 ⇒ 本笔在构建面未测的增量只有 source-map-js 的补丁版。
-  **更正上一句的适用范围（同日补测）**："本机验不了"只对 **Windows 原生路径**成立。Docker 起来之后
-  改在 Linux 容器里 `docker build` 复跑了整条构建：**退出 0**，产出可运行镜像并跑起了服务
-  （`/api/health` 200），所以 `next build` 与 `source-map-js@1.2.2` 的组合已有本机一手证据，不再只靠 CI。
-  顺带这条容器路径还揪出一个 CI 永远看不见的 P1（见下方 Fixed 第一条）。
-
-### Fixed
 
 - **审批族"给他人发通知"在生产 RLS 形态下 500（P1，本轮由新测试暴露）**：`cc / approve /
 reject / transfer / delegate / add-sign` 六个端点都以 `tx.notification.create()` 写他人
@@ -238,6 +162,93 @@ reject / transfer / delegate / add-sign` 六个端点都以 `tx.notification.cre
   本机 3000 被另一个容器（opsmesh-grafana）占用，报错信息与 corps 毫无关系、极难定位。
   改为 `"127.0.0.1:${APP_PORT:-3000}:3000"`，`.env.example` 补 `APP_PORT`（默认 3000，行为不变）。
 
+### Security
+
+- **写权限从"只有声明"变成"有执行点"——viewer 只读承诺落地（default-deny）**：`lib/permissions.ts`
+  一直声明 viewer 全只读，但 `check_permission_gates.py` 实测 T3 档有 **157 个写 handler 零角色判断**，
+  viewer 在这些端点上可以直接改工作区内容。逐个补 `requirePermission` 成本高且容易漏（每加一个端点
+  就要记得补一次），改为把写权限收敛到**单一 choke point**：`lib/auth.ts` 的 `getWorkspaceContext()`
+  内部调用新增的 `lib/write-policy.ts` 裁决，写方法（POST/PUT/PATCH/DELETE）默认拒绝，
+  只有 owner/admin/member 与"自助类"端点（自己的收藏/通知/设备/资料/纯文本 AI）放行。
+  实测覆盖：280 个写 handler 中 252 个进墙，其余 28 个（认证自身 / webhook / 分享与邀请令牌 /
+  用户级自服务 / 创建工作区等本就没有成员上下文的端点）在 `scripts/write-access-registry.txt`
+  逐条登记 reason 与复核截止日，并由新脚本 `check_write_access_registry.py` 断言
+  "每个写 handler 要么进墙要么登记"（含三类注入变异自检），已接进 CI 的 permission-gate job。
+  数字口径（2026-10-17 复算，原写 278/250 已随端点增加过期；现测命令
+  `python scripts/check_write_access_registry.py`）：全仓写方法 export 共 **285** 处，
+  门禁分母 **280** = 减去 5 处按设计不进气泡的：`/api/[...path]` 的 POST/PATCH/PUT/DELETE
+  四个 handler（该路由只回 JSON 404，不碰库，见 `INTERNAL_EXACT`）与
+  `POST /api/cron/recycle-cleanup`（`/api/cron/` 前缀整族按 `INTERNAL_PREFIXES` 跳过，
+  该族 9 个端点各自带 `CRON_SECRET` Bearer 鉴权，且未配置密钥时返回 500 而非放行——fail-closed）。
+  即这条门的分母不是"漏看"，但**前缀式跳过意味着以后新加的 `/api/cron/*` 会自动隐身**，
+  这层依赖的是 cron 族的书写惯例而非机械检查。
+
+  灰度开关 `WRITE_POLICY_MODE`：enforce（默认，fail-closed，拼错也按 enforce 处理）/ shadow
+  （只打日志，用于上线前观察误杀面）/ off。
+
+- **登出后 Cache Storage 里仍留着上一位登录者的工作区页面**：`76853bd0` 把 `/api/` 全部排除出缓存后，
+  同一类暴露面剩下另一半——`public/sw.js` 对所有同源 GET 做 stale-while-revalidate，缓存 key 只有 URL、
+  不含身份，所以登录期间访问过的工作区页面（SSR HTML / RSC payload）会留在缓存里。
+  本轮补"登出即清"：`components/pwa/PwaRegister.tsx` 导出 `clearAppCaches()`（只删 `corps-sw*` 前缀），
+  工作区 layout 的登出回调在 logout POST 之后调用它。
+  **第一次全量 E2E 实测证明"清一次"不够**：`e2e/logout-cache.spec.ts` 单独跑 PASS，放进全量套件则残留
+  5 条 `/w/{wid}/decisions|meetings|meeting-minutes|approvals|announcements`——这 5 个页面用例并没有访问过，
+  是侧栏链接被 Next 预取、SW 的后台 revalidate（`sw.js:83` 的 `cache.put` 脱离请求链）在删除**之后**写回来的，
+  负载越高越容易命中。
+  最终按三层收口：① **写入侧断掉**——`sw.js` 新增 `isTenantPage()`，`/w/{wid}/…` 一律不读不写缓存
+  （导航请求仍保留 `/offline` 兜底），`CACHE_VERSION` v3→v4 让已被污染的旧桶在 activate 时删除；
+  ② 登出回调调 `clearAppCaches()`；③ `/auth/*` 页面挂载时再扫一遍。
+  用例也拆成两条确定性断言（不再靠"登出前后各拍一张快照"）：写入侧——登录后逛 3 个工作区页面并等 3s，
+  缓存里该工作区的条目必须为 0（并附"SW 确实缓存了别的东西"的反证控制，否则是空断言）；
+  清理侧——人工往桶里种一条 `/w/{wid}/board` 再登出，断言它被删掉。
+  **变异验证**：关掉 ①（`if (false && isTenantPage(url))`）→ 写入侧用例红，实测缓存里躺着 **43 条**该工作区条目；
+  同时关掉 ②③ → 清理侧用例红（种入的那条 8s 内没被删）。两处还原后按 md5 确认逐字节一致并复绿。
+  **已知未收口**：切换工作区（URL 仍在 `/w/` 下、不经过 `/auth`）不触发第③层——但第①层已保证租户内容从来不会被写入，
+  所以这一条只是少了一道兜底扫描，不再是残留面。
+- **发布链被两条 critical 依赖公告打断（`pnpm audit --prod`）**：CI 的 Security Audit job 跑
+  `pnpm audit --prod --audit-level=high`，2026-10-06T03:00 那轮报 **2 critical + 1 high**：
+  tinypool 的 worker-options 原型污染→RCE（GHSA-5gmw-xhrv-c9v3 等，只有 `>=2.1.2` 修）与
+  source-map-js 的事件循环 DoS（`1.2.1`→`1.2.2`）。它 `needs` 下游 `Build` 与
+  `Publish image (GHCR)`，所以**镜像发布从那一刻起是断的**。
+  成因不是本仓回归：同一颗锁文件下，10-05T20:15 那轮只有 `5 found — 1 low | 4 moderate`、
+  日志里 grep `tinypool` = 0 次，10-06T03:00 变 10 条，而 `git diff 3836352b..50506a36 -- web/pnpm-lock.yaml` 为空
+  ⇒ 是公告库更新。另外 `tinypool` 是经 `.>better-auth>vitest>tinypool` 进入 `--prod` 视图的
+  （better-auth 把 vitest 声明成 peerDependency，而 lock 的 `settings.autoInstallPeers: true`）。
+  修法取 **pnpm override**（`web/pnpm-workspace.yaml`，与既有 sharp/undici 同一条路子，都带上界防止跨大版本）：
+  `tinypool: ">=2.1.2 <3"`、`source-map-js: ">=1.2.2"`；锁文件解析结果实测为
+  `tinypool@2.2.0` / `source-map-js@1.2.2`，且 diff 只有这两条及它们的依赖指向，无夹带。
+  **为什么不是升 vitest**：先试了 vitest 4.1.11（它根本不用 tinypool，装上后锁里 tinypool 归零）。
+  但 v4 把覆盖率统计口径从"被测试加载的文件"换成"`include` 命中的全部 712 个文件"，实测
+  `total.functions` 从 59.33% 掉到 5.78%、`branches` 4.62%，而 CI 的阈值（55/70）是照旧口径校的——
+  换上去就得给两道门重新定标，等于用"调低阈值"换绿灯。该实验已完整回退（vitest 回到 3.2.7）。
+  现在的组合是 vitest 3.2.7 + tinypool 2.2.0，**越过了 vitest 自己声明的 `^1.1.1`**，
+  所以由测试背书：单测 **67 文件 / 735 例全绿**、覆盖率阈值判定 exit 0（functions 56.70%、branches 72.09%）、
+  零覆盖棘轮 PASS（628 行，`--self-test` 亦 0）。
+  审计口径本机**可以**复现，只要显式指官方源（默认源 `registry.npmmirror.com` 没有 audit 端点）：
+  `pnpm audit --prod --audit-level=high --registry=https://registry.npmjs.org` 在改前锁文件（HEAD 态，独立临时工程里跑）
+  报 `10 found — 3 low | 4 moderate | 1 high | 2 critical`、**退出 1**，路径与 CI 一致
+  （`.>better-auth>vitest>tinypool`、`.>@tailwindcss/postcss>postcss>source-map-js` 等 17 条）；
+  改后同一命令报 `7 found — 3 low | 4 moderate`（**0 critical / 0 high**）、**退出 0**，即门禁要的形状。
+  另核一条版本分歧：锁文件由本机 pnpm 12.9.1 写，而 CI 与 Dockerfile 读 `packageManager` 用 **pnpm 11.22.0**；
+  以 `corepack pnpm@11.22.0 install --frozen-lockfile --ignore-scripts` 实测**退出 0**（57s），
+  且该树里同样只有 `tinypool@2.2.0` / `source-map-js@1.2.2`——override 被 pnpm 11 同口径解析，不存在"本地绿 CI 红"的版本缝隙。
+  同一 CI 形状在**干净 worktree（`git worktree` 于仓库外）+ `pnpm@11.22.0` 冷装**复测一遍，判定不变：
+  单测 **67 文件 / 735 例全绿**、覆盖率 functions **56.40%** / branches **72.07%**（阈值 55/70 过）、
+  `tsc --noEmit` 退出 0、零覆盖棘轮 PASS(628) 且 `--self-test` 退出 0。
+  与上面主工作树的 56.70%/72.09% 差在小数第二位，来自两棵树的统计状态不同，不改变任何判定。
+  **Build 腿本机验不了**：`next build` 在 `next.config.ts` 加载期就红
+  （`next-intl` 的 SWC extractor 要求 `@swc/core` 原生绑定，而绑定要落进受校验的缓存目录，
+  `ERR_SWC_NATIVE_CACHE`：`%LOCALAPPDATA%\swc` 与自指目录 `SWC_NATIVE_BINDING_CACHE` 的 DACL 都因给非属主 SID
+  授予 replacement rights 被拒）。在用户主工作树复现**同一条错误**，且 `@swc/core@1.16.13` 的锁文件坐标本笔未动
+  ⇒ 属本机 Windows ACL 与 SWC 的冲突，不是本笔改动引入，也不是仓库缺陷；绕过它需要改机器 ACL，未做。
+  该腿只能由 CI 的 ubuntu runner 判定——而它自 `2026-10-06T03:00` 起因 audit 红被 `needs` 恒 skipped，
+  这次推送会是它这几天第一次真跑。构建路径的**既有性**另有旁证：E2E (production build) job 里自带
+  `npx next build`，它不依赖 audit，改前锁文件下一直是绿的 ⇒ 本笔在构建面未测的增量只有 source-map-js 的补丁版。
+  **更正上一句的适用范围（同日补测）**："本机验不了"只对 **Windows 原生路径**成立。Docker 起来之后
+  改在 Linux 容器里 `docker build` 复跑了整条构建：**退出 0**，产出可运行镜像并跑起了服务
+  （`/api/health` 200），所以 `next build` 与 `source-map-js@1.2.2` 的组合已有本机一手证据，不再只靠 CI。
+  顺带这条容器路径还揪出一个 CI 永远看不见的 P1（见下方 Fixed 第一条）。
+
 ### Added
 
 - `lib/write-policy.ts` 与两份单测：`write-policy.test.ts`（15 例，纯函数裁决）
@@ -254,8 +265,6 @@ reject / transfer / delegate / add-sign` 六个端点都以 `tx.notification.cre
   展开后在消息列表上方渲染 `<MessageSearch workspaceId conversationId>`：复用既有实现、
   带 cid 限定所以不越界到别的会话。`e2e/im-upgrade.spec.ts` 的搜索用例改成两条链一起断言
   （面板内新入口 + `/im` 页原入口），新入口从此有回归保护。
-
-### Added
 
 - **MemberPermission 行级覆盖接入写策略裁决**：owner 给 viewer 显式配了某模块的写动作
   （DB `MemberPermission.actions` 含 create/update/delete）时，该模块的写请求放行——
