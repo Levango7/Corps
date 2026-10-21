@@ -50,7 +50,7 @@
 | `BETTER_AUTH_SECRET` | 认证密钥，32 字节十六进制 | `openssl rand -hex 32` 生成 |
 | `JWT_ACCESS_SECRET` | 业务 JWT 签名密钥，≥32 字符 | `openssl rand -hex 32` 生成 |
 | `JWT_REFRESH_SECRET` | refresh token 密钥，≥32 字符（启动校验项，缺一即退出） | `openssl rand -hex 32` 生成 |
-| `NEXT_PUBLIC_APP_URL` | 应用正式域名（生产环境必填） | `https://corps.vercel.app` |
+| `NEXT_PUBLIC_APP_URL` | 应用正式域名（生产环境必填） | `https://corps-five.vercel.app` |
 
 > **Build 成功 ≠ 部署可用；但构建日志也不是判据。** 上表五项（`DATABASE_URL` / `BETTER_AUTH_SECRET` / `JWT_ACCESS_SECRET` / `JWT_REFRESH_SECRET` / `NEXT_PUBLIC_APP_URL`）**缺任何一项、或某一项的值不合 schema**，`vercel build` 都不会报错——345 条路由里除 `/_not-found` 外全是 `ƒ` 动态渲染，构建期不执行它们的代码。"值不合 schema"这条是本项目实测出来的：2026-10-03 查线上时发现三项变量早在 31 天前就已配好且 target 含 Production+Preview，但值是占位串（`Invalid url`）或短密钥（`< 32 字符`），运行时照样起不来。真正的后果在运行时：
 >
@@ -219,7 +219,14 @@ cd web && npx prisma generate && npx prisma migrate deploy && pnpm build
 
 1. 回到 Vercel 项目配置页，点击 **Deploy**。
 2. 等待首次构建完成（通常 2-4 分钟）。Vercel 会自动分配 `*.vercel.app` 域名。
-3. 将分配的域名填回环境变量 `NEXT_PUBLIC_APP_URL`（如 `https://corps.vercel.app`），触发一次 Redeploy。
+3. 将分配的域名填回环境变量 `NEXT_PUBLIC_APP_URL`（本项目为 `https://corps-five.vercel.app`），触发一次 Redeploy。
+   > ⚠️ **别用 `https://corps.vercel.app`**（2026-10-21 实测更正）：那是**别人**的 create-react-app 静态站
+   > （`<title>Corps</title>`、`description: Web site created using create-react-app`），不是本应用。
+   > 本项目在 Vercel 上的稳定别名是 `https://corps-five.vercel.app`（`vercel project ls` 的
+   > "Latest Production URL"；`vercel.app` 下的**每次部署** URL 形如
+   > `corps-<hash>-levango7s-projects.vercel.app`，每次部署都变，**不可**用作对外地址）。
+   > 同类坑：`corps.com` 属荷兰一家设计事务所、`releases.corps.com` 连 DNS 都不解析
+   > （见 `docs/audit/RELEASE-READINESS-2026-10-17.md` §6）。
 4. 验证清单：
    - [ ] 访问 `https://<your-app>.vercel.app` 能正常加载首页。
    - [ ] 访问 `/auth/signup` 能完成注册并登录。
