@@ -246,19 +246,32 @@ Tauri 通过 `tauri.conf.json` 的 `build` 字段与 `web/` 联动：
 
 ## 自动更新配置
 
-`tauri.conf.json` 已配置 `plugins.updater`：
+`tauri.conf.json` 里的 `plugins.updater` **不带任何地址**——端点与公钥在构建期注入：
 
 ```json
 {
   "plugins": {
     "updater": {
-      "active": true,
-      "endpoints": ["https://releases.corps.com/desktop/updater/{{target}}/{{arch}}/{{current_version}}"],
-      "pubkey": "REPLACE_WITH_YOUR_UPDATER_PUBKEY"
+      "endpoints": [],
+      "pubkey": ""
     }
   }
 }
 ```
+
+`npm run build` 会先执行 `scripts/prepare-release.mjs`，读两个环境变量生成
+`src-tauri/tauri.release.conf.json`，再以 `tauri build --config <该文件>` 合并进最终配置：
+
+| 环境变量 | 说明 | 来源 |
+|----------|------|------|
+| `CORPS_UPDATER_ENDPOINT` | 更新清单地址，可含 `{{target}}` / `{{arch}}` / `{{current_version}}` | 仓库 Variables |
+| `CORPS_UPDATER_PUBKEY` | `tauri signer generate` 产出的 `.key.pub` 内容 | 仓库 Variables |
+
+- 两个都配 → 写入覆盖配置，自动更新启用
+- 两个都不配 → 写入 `{}`，自动更新关闭，构建照常通过
+- **只配一个** → 脚本 `exit 1`，构建失败（配置不自洽，不静默降级）
+
+`tauri.release.conf.json` 是生成物，已被 `.gitignore` 忽略，不要提交。
 
 ### 启用步骤
 
@@ -268,11 +281,15 @@ Tauri 通过 `tauri.conf.json` 的 `build` 字段与 `web/` 联动：
    ```
    会生成私钥（`.key`）与公钥（`.key.pub`）。
 
-2. **填入公钥**：将 `.key.pub` 内容粘贴到 `tauri.conf.json` 的 `plugins.updater.pubkey` 字段。
+2. **配置仓库 Variables**（Settings → Secrets and variables → Actions → Variables）：
+   - `CORPS_UPDATER_ENDPOINT`：`https://<你的发布域名>/desktop/updater/{{target}}/{{arch}}/{{current_version}}`
+   - `CORPS_UPDATER_PUBKEY`：`.key.pub` 的文件内容
+
+   这两项都不是机密，放 Variables（UI 可直读、便于核对地址有没有写错），不要放 Secrets。
 
 3. **配置 CI Secrets**：将 `.key` 文件内容设为 GitHub Secret `TAURI_SIGNING_PRIVATE_KEY`，密码设为 `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`。
 
-4. **发布更新**：将安装包与 `.sig` 上传到 `https://releases.corps.com/desktop/`，并维护一份 `latest.json` 清单（格式见 [Tauri Updater 文档](https://v2.tauri.app/plugin/updater/)）。
+4. **发布更新**：将安装包与 `.sig` 上传到你在第 2 步配置的发布域名下，并维护一份 `latest.json` 清单（格式见 [Tauri Updater 文档](https://v2.tauri.app/plugin/updater/)）。
 
 5. **前端调用更新**（可选）：在 `web/` 中调用 `@tauri-apps/plugin-updater` 的 `check()` / `downloadAndInstall()` 实现应用内更新检查 UI。
 
@@ -294,7 +311,7 @@ Tauri 通过 `tauri.conf.json` 的 `build` 字段与 `web/` 联动：
 | **Sidecar 需要数据库连接** | 内嵌的 Next.js standalone server 启动时需连接 PostgreSQL | 用户需确保 `DATABASE_URL` 可达，否则应用启动后页面空白 |
 | **WebView2 需预装（Win10）** | Windows 10 不自带 WebView2 Runtime | 已配置 `webviewInstallMode: downloadBootstrapper`，安装包会自动引导下载 |
 | **macOS 需代码签名** | 未签名的 dmg 在 macOS 上会触发 Gatekeeper 拦截 | 需配置 Apple Developer 证书签名，或用户手动 `xattr -cr` 绕过 |
-| **自动更新需配置公钥** | `tauri.conf.json` 中 `pubkey` 仍为占位值 | 未替换前自动更新功能不可用 |
+| **自动更新需配置端点与公钥** | `tauri.conf.json` 中 `endpoints` 为空、`pubkey` 为空串，真实值由构建期 `CORPS_UPDATER_*` 注入 | 未配置这两个仓库 Variable 前，自动更新功能关闭（构建仍会通过） |
 | **前端静态导出未完全配置** | 当前 `web/next.config.ts` 为 `output: "standalone"`，桌面端通过 Sidecar 方式运行 | 如需纯静态导出（无 Sidecar），需单独维护 `next.config.desktop.ts` 设置 `output: "export"` |
 | **Linux 包体积** | AppImage 包含完整 WebView 运行时，体积约 50-80MB | Tauri 方案已优于 Electron，但仍大于原生应用 |
 | **环境变量不内嵌** | 构建时的环境变量仅用于 next build，运行时需用户提供真实值 | 用户需在应用目录配置 `.env` 或通过系统环境变量注入 |

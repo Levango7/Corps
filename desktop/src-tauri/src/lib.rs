@@ -3,7 +3,7 @@
 // 桌面端：main.rs 调用 lib::run()，附加 sidecar/托盘/全局快捷键等桌面特有功能
 // 移动端：Android/iOS 平台入口调用 lib::run()，仅基础 WebView + 远程 URL
 //
-// 移动端架构：WebView → 远程 Next.js 服务器（https://corps.com）
+// 移动端架构：WebView → 远程 Next.js 服务器（地址由构建期 CORPS_WEB_URL 注入）
 // 桌面端架构：WebView → 本地 Node.js sidecar（127.0.0.1:3000）
 
 use tauri::Manager;

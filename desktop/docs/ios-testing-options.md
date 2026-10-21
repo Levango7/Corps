@@ -107,7 +107,11 @@ GitHub Actions 已提供 macOS runner，可以直接在 CI 中构建 iOS：
          run: |
            cd desktop
            npm install
-           export CORPS_WEB_URL=${{ secrets.CORPS_WEB_URL || 'https://corps.com' }}
+           # 必须在构建前注入远程 URL：移动端壳加载的就是这个地址。
+           # 这里没有兜底值 —— 未配置时 prepare-mobile.mjs 会 exit 1，
+           # 避免把不属于本项目的站点打进分发给用户的产物。
+           export CORPS_WEB_URL=${{ vars.CORPS_WEB_URL }}
+           node scripts/prepare-mobile.mjs
            npx tauri ios build --target aarch64-apple-ios-sim
        - uses: actions/upload-artifact@v4
          with:
