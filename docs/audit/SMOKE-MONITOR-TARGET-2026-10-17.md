@@ -193,3 +193,60 @@ CHANGELOG 里那条 Security 记录写的是 `278 / 250 / 28` —— 数字过�
 
 要说清的残余风险：前缀式跳过意味着**今后新加的 `/api/cron/*` 会自动隐身**，
 这一层靠的是"cron 族每个端点自己写鉴权"的惯例，没有机械检查守着。
+
+## 7. 2026-10-21 实测：目标已就位且真绿，但"每 15 分钟"只是表达式、不是实效
+
+§5 写"我没有替你设置或删除这个变量"——**那个状态在 10-20 17:24Z 已被改变（不是我做的）**。
+本节把之后发生的事实测一遍，因为"配了"和"配对了"是两件事。
+
+### 7.1 已落地的事实（每条都带复跑命令）
+
+| 事实 | 取证 |
+| --- | --- |
+| 仓库变量已设，值是本项目 **Vercel 生产别名**（不是某次部署的随机 URL） | `gh variable list` → `SMOKE_TARGET_URL  https://corps-five.vercel.app  2026-10-20T17:24:49Z`；`vercel project ls` → `corps  https://corps-five.vercel.app` |
+| 同一条探测代码在 GitHub runner 上 **通过** | run `39465904256`（workflow_dispatch，17:25Z，5m6s，success）：`HTTP 200 from https://corps-five.vercel.app/api/health` + `{"code":200,"data":{"status":"ok","db":"up","uptimeSec":244}}` + `smoke 通过：应用存活且数据库可达` |
+| 该域名确实指本项目，且能探 | 上面那次是 GitHub 的 runner 发出的——**不是**本机；本机到 `*.vercel.app` 边缘时通时断（有一次 `Could not connect … after 21s`），所以用本机 curl 判这个目标会得出假阴性 |
+
+### 7.2 "db=up" 不等于"库里有表"——所以另外查了 schema
+
+`/api/health` 只执行 `SELECT 1`（`web/app/api/health/route.ts` 的 2s 竞速探测），
+它证明"连得上库"，**不证明迁移跑过**：一个空库也能 db=up。于是把 production 的 `DATABASE_URL`
+（Vercel 上是 **Config** 类型、不是 Secret，CLI 可读）临时拉到**仓库外**（`/tmp`，用完即删），
+执行只读的 `prisma migrate status`：
+
+```
+Datasource "db": PostgreSQL database "neondb", schema "public" at "ep-still-sun-…-pooler.ap-southeast-1.aws.neon.tech"
+53 migrations found in prisma/migrations
+Database schema is up to date!
+```
+
+并逐名 diff 了本地 `prisma/migrations` 与 `origin/main:web/prisma/migrations`：**集合完全一致（53/53）**。
+⇒ 这个生产实例（Vercel 应用 + Neon 新加坡库 + 53 条迁移）不是"SELECT 1 假绿"，是真的可用。
+（库在 Neon，本机可达——所以将来要加班查询时不必绕 Vercel。）
+
+### 7.3 但定时腿的真实节奏是**小时级**
+
+`gh run list --workflow smoke.yml --limit 20 --json event,createdAt` 里 `schedule` 事件的相邻间隔：
+
+```
+10-19 01:11 / 05:32 / 06:10 / 13:04 / 19:17 / 22:57；10-20 01:32 / 05:35 / 06:35 / 12:10
+⇒ 间隔 1 ~ 5.5 小时
+```
+
+cron 写的是 `*/15`，但 **GitHub 对 schedule 的调度会延迟甚至丢弃**（低活跃仓库更明显，
+本仓 10-18→10-20 的实测就是这个形状）。所以：
+
+- 它能当"每天几次的兜底探活"；
+- 它**不能**当 15 分钟级监控——按这个假设定 SLA 的人，会在故障里等几个小时；
+- 变量设置（17:24Z）之后的**第一次 schedule 尚未发生**（本文写于 19:10Z），
+  所以"设定时下也会绿"目前仍是推断；已确证的是**同一条探测代码在 runner 上绿**。
+
+### 7.4 要真做到分钟级，只有三条路（都要 owner 决定，我没有擅自选）
+
+1. **外部 uptime 服务**探 `https://corps-five.vercel.app/api/health`，断言响应含 `"db":"up"`
+   （各家免费档普遍是 3–5 分钟级，具体额度以当前政策为准）。这是唯一"不写代码、不受 GitHub 调度限制"的路，
+   代价是需要你注册一个账号——我不代注册第三方服务。
+2. **Vercel Cron**：Hobby 档每个 cron 每天只能跑一次，给不了 15 分钟；要分钟级得上 Pro（涉及套餐）。
+3. **保持现状**：接受小时级兜底，把"无分钟级监控"写进 runbook 的已知限制，别让人以为有。
+
+我的建议是 1；无论选哪条，**7.3 的节奏事实都应留在文档里**，否则"配了监控"会再次变成"以为有监控"。
