@@ -45,3 +45,13 @@ overrides:
   # source-map-js 1.2.1 = GHSA-68fv-2mgg-jv7q（high：source-map section 偏移可造成事件循环 DoS），
   # 1.2.2 是同大版本补丁；引入方是 prisma CLI（magicast）与 tailwind（postcss），都被 --prod 计入。
   source-map-js: ">=1.2.2"
+
+  # vite <=6.4.3 三连（launch-editor）：GHSA-587h-7wmj-h5pm（high，fs.existsSync 校验可被绕过）
+  # + GHSA-698v-4r3x-3vcv / GHSA-r825-w8mm-5pxw（moderate），修复版 >=6.4.4。
+  # 引入方是 vitest 3.2.7（经 @vitest/mocker / vite-node），且被 --prod 审计计入 —— 2026-10-21
+  # 新公告发布后 Security Audit 在**所有**新推送的 PR 上判红（main 上一次成功跑在公告之前）。
+  # 只覆盖 **6.x**：@vitejs/plugin-react@6.1.2 的 peer 要求 vite ^8，全局覆盖会把 8 压回 6 并破插件。
+  # 同批公告里 vitest/@vitest/mocker 的 moderate（GHSA-82fw-gwwq-j7x9）只有 v4.1.11+ 才修，
+  # 而 v4 会改覆盖率统计口径（见 tinypool 那条注释），故按 CI 的 --audit-level=high 只顶 high，
+  # moderate 留档不阻塞 —— 这是有意识的取舍，不是漏看。
+  "vite@^6": ">=6.4.4 <7"

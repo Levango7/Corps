@@ -83,6 +83,18 @@ gh api "repos/Levango7/Corps/actions/workflows/smoke.yml/runs?per_page=3" \
 | `https://releases.corps.com/desktop/latest.json` | curl 退出码 6（DNS 就没解析） | 主机不存在 |
 | `https://corps.vercel.app/api/health` | 15s 超时 | **本机不可达 ≠ 站点不存在**：`docs/DEPLOY-VERCEL.md:90` 已实测 `*.vercel.app` 在本机是 SNI/TCP 级阻断，绕不过；此项只能由 owner 在别的网络验 |
 
+> **勘误（2026-10-21）**：上表第 4 行当时无法判定，现已从墙外网络实测补齐——
+> `https://corps.vercel.app` **可达但不是本应用**：返回 HTTP 200 的
+> `text/html` 静态页，`<title>Corps</title>`、
+> `description: Web site created using create-react-app`（**别人的 create-react-app 站**），
+> `/api/health` 不存在本项目的 JSON 响应。结论与前三行一致：**不是本应用**。
+>
+> 本项目在 Vercel 上的**稳定别名**是 `https://corps-five.vercel.app`
+> （`vercel project ls` 的 "Latest Production URL"）；`vercel.app` 下形如
+> `corps-<hash>-levango7s-projects.vercel.app` 的是**每次部署**的临时 URL，每次部署都变。
+> 该别名已于 2026-10-21 配进 `SMOKE_TARGET_URL` 并实测通过：
+> `{"code":200,"data":{"status":"ok","db":"up"}}`。
+
 ⇒ 出路只有两条，都归 owner：①给一个稳定的已部署 URL 填进 `SMOKE_TARGET_URL`；
 ②把 schedule 关掉（`config-check` 会替我们盯着"URL 缺失或指向临时隧道"，现在会直接判红并说明原因，
 不会再让人误读成"生产挂了"）。
