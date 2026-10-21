@@ -5,6 +5,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { deleteTaskFiles } from "@/lib/uploads-cleanup";
+import { trackServerEvent } from "@/lib/analytics-server";
 
 /**
  * POST /api/v1/workspaces/:wid/tasks/batch — 任务批量操作。
@@ -17,6 +18,11 @@ import { deleteTaskFiles } from "@/lib/uploads-cleanup";
  *  - 部分成功：返回 { updated, deleted, skipped }，skipped 为不属于当前工作区的 id
  *  - assigneeId 校验同单条：必须是当前工作区成员
  *  - 删除模式：action=delete，其余字段忽略
+ *  - 批量改 status 由服务端**逐条**发 task_status_change（props {taskId, to, via:"batch"}），
+ *    与单条 PATCH 同口径。board 页原先那条客户端聚合事件（`{batch:true, count}`，无 taskId）
+ *    在同一次提交里撤掉：同一动作留两个真源，批量路径的计数会翻倍；而客户端那条既给不出
+ *    taskId（"任务何时进入 done"的闭环推导要用），也不算权威（页面在 flush 前关掉就丢）。
+ *    事件 id 取自 update 后**读回**的落库结果，不按 validIds 发（理由见下方注释）。
  *
  * 权限：所有成员可批量改状态/优先级；改 assignee 需要 admin/owner（与单条 PATCH 对齐）。
  */
@@ -64,7 +70,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
         const skipped = body.ids.filter((id) => !validIds.has(id));
 
         if (validIds.size === 0) {
-          return { updated: 0, deleted: 0, skipped };
+          return { updated: 0, deleted: 0, skipped, statusLandedIds: [] as string[] };
         }
 
         // 2) 校验 assigneeId 是当前工作区成员
@@ -87,7 +93,12 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           const deleted = await tx.task.deleteMany({
             where: { id: { in: Array.from(validIds) }, workspaceId: wid },
           });
-          return { updated: 0, deleted: deleted.count, skipped };
+          return {
+            updated: 0,
+            deleted: deleted.count,
+            skipped,
+            statusLandedIds: [] as string[],
+          };
         }
 
         // update：构造 patch data（仅含传入字段）
@@ -99,14 +110,29 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           patchData.dueDate = body.dueDate ? new Date(body.dueDate) : null;
 
         if (Object.keys(patchData).length === 0) {
-          return { updated: 0, deleted: 0, skipped };
+          return { updated: 0, deleted: 0, skipped, statusLandedIds: [] as string[] };
         }
 
         const updated = await tx.task.updateMany({
           where: { id: { in: Array.from(validIds) }, workspaceId: wid },
           data: patchData,
         });
-        return { updated: updated.count, deleted: 0, skipped };
+
+        // 埋点要用**读回**的结果，不能用 validIds 或 updated.count：
+        // 批量改状态是「一条 UPDATE 打 N 个 id」，count 只给总数、给不出"具体哪些任务真的
+        // 落到了这个状态"。若直接按 validIds 发事件，一旦 RLS 或并发把某些行挡掉，
+        // 就会给 analytics 造出**没发生过的完成记录**——而这类虚高的完成事件正好会被
+        // 闭环率/留存这类派生指标当真数用（见 docs/design/PRODUCT-DESIGN-2026Q4.md §9.2）。
+        const statusLandedIds: string[] = [];
+        if (body.status !== undefined && updated.count > 0) {
+          const landed = await tx.task.findMany({
+            where: { id: { in: Array.from(validIds) }, workspaceId: wid, status: body.status },
+            select: { id: true },
+          });
+          statusLandedIds.push(...landed.map((t) => t.id));
+        }
+
+        return { updated: updated.count, deleted: 0, skipped, statusLandedIds };
       },
       ctx.payload.sub,
     );
@@ -115,7 +141,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       return NextResponse.json({ code: 400, message: result.error, data: null }, { status: 400 });
     }
 
-    return NextResponse.json({ code: 200, data: result });
+    // 事务提交后才发事件（与单条 PATCH 同口径：task_status_change + props {taskId, to}，
+    // 额外带 via:"batch" 便于区分来源）。响应体保持原形状，不把 statusLandedIds 漏出去。
+    const { statusLandedIds, ...data } = result;
+    if (statusLandedIds.length > 0 && body.status !== undefined) {
+      const to = body.status;
+      await Promise.all(
+        statusLandedIds.map((taskId) =>
+          trackServerEvent({
+            userId: ctx.payload.sub,
+            workspaceId: wid,
+            name: "task_status_change",
+            props: { taskId, to, via: "batch" },
+          }),
+        ),
+      );
+    }
+
+    return NextResponse.json({ code: 200, data });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

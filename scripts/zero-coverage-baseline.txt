@@ -277,7 +277,6 @@ app/api/v1/workspaces/[wid]/tasks/[id]/messages/stream/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/share/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/share/verify/route.ts
-app/api/v1/workspaces/[wid]/tasks/batch/route.ts
 app/api/v1/workspaces/[wid]/tasks/route.ts
 app/api/v1/workspaces/[wid]/time-entries/[teid]/route.ts
 app/api/v1/workspaces/[wid]/time-entries/report/route.ts
