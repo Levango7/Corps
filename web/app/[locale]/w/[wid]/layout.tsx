@@ -18,9 +18,9 @@ const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
 import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
 import {
-  MODULE_GROUPS,
   moduleHref,
-  modulesForRole,
+  optionalModulesForRole,
+  primaryModulesForRole,
   type WorkspaceModule,
 } from "@/lib/modules/registry";
 import { MODULE_ICONS } from "@/lib/modules/icons";
@@ -298,13 +298,14 @@ export default function WorkspaceLayout({
   }
 
   // 导航分组：模块清单来自 lib/modules/registry（单一事实源，2026-10-20 P1）。
+  // P1-B：首屏只放核心 6 + 管理 4；其余 21 项收进可折叠的「更多」（**可选 ≠ 删除**，
+  // 路由/API 全保留，Cmd+K 仍可直达全部模块）。
   // 这里只做三件事：翻译、图标映射、把运行时的 IM 未读数挂到 im 项上。
-  // viewer 的入口过滤也由注册表的 viewerHidden 字段在 modulesForRole() 里完成。
-  const roleModules = modulesForRole(workspace.role);
-  const modulesByGroup = MODULE_GROUPS.map((group) => ({
-    group,
-    modules: roleModules.filter((m) => m.group === group.id),
-  })).filter((g) => g.modules.length > 0);
+  // viewer 的入口过滤也由注册表的 viewerHidden 字段在 primary/optionalModulesForRole() 里完成。
+  const primary = primaryModulesForRole(workspace.role);
+  const optional = optionalModulesForRole(workspace.role);
+  const coreModules = primary.filter((m) => m.group === "core");
+  const adminModules = primary.filter((m) => m.group === "admin");
 
   const toNavGroup = (labelKey: string | null, mods: readonly WorkspaceModule[]): NavGroup => ({
     label: labelKey ? t(labelKey) : null,
@@ -329,13 +330,12 @@ export default function WorkspaceLayout({
     }));
 
   const navGroups: NavGroup[] = [
-    ...modulesByGroup
-      .filter((g) => g.group.id !== "admin")
-      .map((g) => toNavGroup(g.group.labelKey, g.modules)),
+    toNavGroup(null, coreModules),
+    ...(optional.length > 0
+      ? [{ ...toNavGroup("menu.more", optional), collapsible: true }]
+      : []),
     ...(favoriteItems.length > 0 ? [{ label: t("menu.favorites"), items: favoriteItems }] : []),
-    ...modulesByGroup
-      .filter((g) => g.group.id === "admin")
-      .map((g) => toNavGroup(g.group.labelKey, g.modules)),
+    ...(adminModules.length > 0 ? [toNavGroup("menu.admin", adminModules)] : []),
   ];
 
   const filteredNavGroups: NavGroup[] = navGroups;

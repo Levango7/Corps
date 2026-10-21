@@ -245,9 +245,45 @@ export function modulesInGroup(group: ModuleGroupId): WorkspaceModule[] {
   return WORKSPACE_MODULES.filter((m) => m.group === group);
 }
 
+/**
+ * 默认占首屏的模块 id（产品方案 §5）：核心 6 + 管理 4。
+ *
+ * 为什么用**显式 id 清单**而不是给每个模块加 `defaultVisible` 字段、也不按 group 推导：
+ *  - 按 group 推导会把握手可见性与分组绑死——挪一个模块的分组就悄悄改了首屏；
+ *  - 逐对象加字段则 31 处散落，看不出"首屏到底哪 10 个"。
+ * 一张清单 + 下面两条断言（并集恰好 31、核心/管理顺序），既能被单测钉住，也一眼可读。
+ * **可选 ≠ 删除**：不在清单里的模块只是默认收进「更多」，路由与 API 全部保留。
+ */
+export const DEFAULT_VISIBLE_MODULE_IDS: readonly string[] = [
+  // 核心 6（产品楔子：讨论 → 决策 → 任务）
+  "overview",
+  "board",
+  "my-tasks",
+  "decisions",
+  "im",
+  "documents",
+  // 管理 4
+  "members",
+  "billing",
+  "analytics",
+  "settings",
+];
+
 /** 该角色可见的模块：viewer 隐藏 viewerHidden 的模块 */
 export function modulesForRole(role: string): WorkspaceModule[] {
   return role === "viewer"
     ? WORKSPACE_MODULES.filter((m) => !m.viewerHidden)
     : [...WORKSPACE_MODULES];
+}
+
+/** 默认占首屏的模块（核心 6 + 管理 4，按角色过滤） */
+export function primaryModulesForRole(role: string): WorkspaceModule[] {
+  const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  return modulesForRole(role).filter((m) => visible.has(m.id));
+}
+
+/** 收进「更多」分组的模块（默认收起，仍可从侧栏展开或用 Cmd+K 直达） */
+export function optionalModulesForRole(role: string): WorkspaceModule[] {
+  const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  return modulesForRole(role).filter((m) => !visible.has(m.id));
 }
