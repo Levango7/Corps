@@ -108,6 +108,27 @@ jobs:
       # 以及十五条纯函数断言 —— 其中「自己认领 + 工作树是脏的 ⇒ 放行」是实测踩出来的自锁，
       # 不钉住就会随下次重构原样复发。
       - run: python ../scripts/check_coordination_claims.py --self-test
+      # Dockerfile 基础镜像门禁（2026-10-22 补）：v0.8.0 与 v0.8.1 两个版本都没有容器镜像，
+      # 根因是 web/Dockerfile 三个 FROM 写死第三方镜像源 docker.m.daocloud.io（理由是本机
+      # Docker Hub 不可达）。该源在 2026-10-20 21:41 UTC 后失效，GitHub 托管 runner 上直接
+      # NXDOMAIN：
+      #     dial tcp: lookup docker.m.daocloud.io on 168.63.129.16:53: no such host
+      # 代价不是"某版本没发出来"，而是 main 上**每一次** push 的 Publish image (GHCR) 全红，
+      # :latest 断了一整天。能潜伏这么久的原因是 PR 阶段压根没有任何一步碰 Dockerfile：
+      # docker-publish 的 if 是 `push && (main || tags/v*)`，PR 下必然 skipped；Build job 跑的
+      # 是 pnpm run build（Next.js 构建），不是 docker build。于是"Dockerfile 改坏了"在 PR 上
+      # **完全不可见**，只会在合并之后炸。
+      # 判据四条：FROM 全解析（不许留未定义变量）/ tag 必须明确且非 latest /
+      # 同仓库镜像跨阶段不许 tag 漂移（deps 用 node:20 编译、runner 用 node:22 运行的
+      # 原生模块错配就栽在这里）/ 每个镜像都要能从其 registry 取到 manifest。
+      # 探测器直接打 registry v2 API（含 Bearer token 流），**不依赖 docker 守护进程**——
+      # 门禁自己不能再引入"本地没起 Docker 就跑不了"的新脆弱点。
+      # 429/5xx 只警告不判红：基础设施抖动不该卡死所有 PR；DNS 失败/404/未定义变量一律判红。
+      - run: python ../scripts/check_dockerfile_base_images.py
+      # 注入式自测：未定义变量 / 缺 tag / latest / 跨阶段漂移 / 无 FROM / 镜像不可达 /
+      # tag 不存在 / registry 临时故障，八类红因各自独立，外加"warn 与阻断级的边界"断言。
+      # 没有这一条，上面的检测器退化成一个永远 PASS 的假门禁也没人知道。
+      - run: python ../scripts/check_dockerfile_base_images.py --self-test
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
