@@ -759,6 +759,14 @@
     "en": "English"
   },
   "settings": {
+    "moduleVisibility": {
+      "title": "侧栏模块",
+      "description": "关掉的模块不会被删除——它们仍在侧栏的「更多」里，⌘K 也始终能搜到。",
+      "ownerOnly": "仅工作区所有者可以修改",
+      "save": "保存模块设置",
+      "saved": "已保存",
+      "failed": "保存失败"
+    },
     "title": "设置",
     "subtitle": "工作区基础信息与个人显示偏好。",
     "save": "保存修改",

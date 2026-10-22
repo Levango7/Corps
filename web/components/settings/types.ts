@@ -20,6 +20,8 @@ export interface Workspace {
   taskCount: number;
   createdAt: string;
   role: Role;
+  /** P1-B2：已启用的可选模块 id（服务端 readSidebarSettings 收口后下发） */
+  enabledOptionalModules?: string[];
 }
 
 export interface NotifPref {

@@ -299,7 +299,10 @@ export default function WorkspaceLayout({
   // viewer 的入口过滤也由注册表的 viewerHidden 字段在 primary/optionalModulesForRole() 里完成。
   // 分区在注册表里做（纯函数、有单测）：**不能**在这里按 group 过滤——
   // documents 属知识组但默认可见，按 group 切会让它两边都漏掉（P1-B 首版真丢过）。
-  const { primary, more, admin } = sidebarSectionsForRole(workspace.role);
+  const { primary, groups, more, admin } = sidebarSectionsForRole(
+    workspace.role,
+    workspace.enabledOptionalModules ?? [],
+  );
 
   const toNavGroup = (labelKey: string | null, mods: readonly WorkspaceModule[]): NavGroup => ({
     label: labelKey ? t(labelKey) : null,
@@ -325,6 +328,8 @@ export default function WorkspaceLayout({
 
   const navGroups: NavGroup[] = [
     toNavGroup(null, primary),
+    // 已启用的可选模块按原分组归位（P1-B2）；未启用的仍在「更多」
+    ...groups.map((g) => toNavGroup(g.group.labelKey, g.modules)),
     ...(more.length > 0 ? [{ ...toNavGroup("menu.more", more), collapsible: true }] : []),
     ...(favoriteItems.length > 0 ? [{ label: t("menu.favorites"), items: favoriteItems }] : []),
     ...(admin.length > 0 ? [toNavGroup("menu.admin", admin)] : []),

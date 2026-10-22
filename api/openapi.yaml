@@ -4509,6 +4509,55 @@ paths:
         '401':
           $ref: '#/components/responses/Unauthorized'
 
+  /api/v1/workspaces/{wid}/settings/modules:
+    patch:
+      tags: [Settings]
+      summary: Toggle which optional sidebar modules a workspace pins
+      description: >
+        Full replacement of the enabled set (not a delta). Ids must be optional
+        modules (see DEFAULT_VISIBLE_MODULE_IDS for the always-visible core);
+        unknown/duplicate ids are rejected with 400 and listed in
+        `data.invalidModules`. Empty list = every optional module stays under
+        “More”. Requires `settings:update` (owner).
+      operationId: updateWorkspaceModuleSettings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabledModules]
+              properties:
+                enabledModules:
+                  type: array
+                  maxItems: 64
+                  items: { type: string }
+      responses:
+        '200':
+          description: Saved enabled set
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      enabledModules:
+                        type: array
+                        items: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: Requires settings:update (owner)
+        '404':
+          $ref: '#/components/responses/NotFound'
+
 components:
   securitySchemes:
     cronSecret:

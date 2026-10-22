@@ -3,6 +3,7 @@ import { authenticate, runWithAuthOp } from "@/lib/auth";
 import { generateSlug } from "@/lib/slug";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { readSidebarSettings } from "@/lib/workspace-settings";
 
 export async function GET(req: NextRequest) {
   const auth = await authenticate(req);
@@ -44,6 +45,8 @@ export async function GET(req: NextRequest) {
         plan: w.plan,
         seatLimit: w.seatLimit,
         role: w.members[0]?.role || "member",
+        // P1-B2：只暴露"已启用的可选模块 id"，不把整个 settings 桶漏给前端
+        enabledOptionalModules: readSidebarSettings(w.settings).enabledModules,
       })),
     });
   } catch (error) {

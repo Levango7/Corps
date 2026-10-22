@@ -127,6 +127,8 @@ export interface WorkspaceSummary {
   name: string;
   slug: string;
   role: Role;
+  /** P1-B2：该工作区已启用的可选模块 id（空 = 全部收在「更多」里） */
+  enabledOptionalModules?: string[];
 }
 
 /** 工作区详情（设置页形态） */

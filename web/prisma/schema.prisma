@@ -191,6 +191,11 @@ model Workspace {
   ownerId   String   @map("owner_id") @db.Uuid
   plan      String   @default("free") @db.VarChar(20) // free, starter, pro, enterprise
   seatLimit Int      @default(10) @map("seat_limit")
+  /// 工作区级轻量配置（JSON）。当前只有侧栏可选模块开关：
+  ///   { "sidebar": { "enabledModules": ["wiki", "okr"] } }
+  /// 取值域与类型由 lib/workspace-settings.ts 的 zod 收口；不加 DB CHECK——
+  /// 加约束会让"新增可配置项"都变成一次迁移，而收益只是挡住一个写入侧本就收口的域。
+  settings  Json     @default("{}")
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz
 
