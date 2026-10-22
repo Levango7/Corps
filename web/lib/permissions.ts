@@ -55,6 +55,10 @@ export const MODULES = [
   // 故按既有语义分层定义，viewer 两模块均只读。
   "databases",
   "databaseRecords",
+  // AI 能力（2026-10-22 用户拍板：owner/admin/member 可用，**viewer 只读**——
+  // 只读的含义是能看 AI 页面/历史结果，不能触发生成。此前 AI 域完全在矩阵外，
+  // 154 条 permission-gate 债务里有约 35 条是它。
+  "ai",
 ] as const;
 
 /** 角色列表 */
@@ -96,6 +100,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     contacts: "crud",
     databases: "crud",
     databaseRecords: "crud",
+    ai: "crud",
   },
   admin: {
     tasks: "crud",
@@ -112,6 +117,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     contacts: "crud",
     databases: "crud",
     databaseRecords: "crud",
+    ai: "crud",
   },
   member: {
     tasks: "crud",
@@ -129,6 +135,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     // 容器仍限 owner/admin（与既有 ad-hoc 门禁等价），数据面 member 可写（等价既有行为）
     databases: "r",
     databaseRecords: "crud",
+    ai: "crud",
   },
   viewer: {
     tasks: "r",
@@ -145,6 +152,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     contacts: "r",
     databases: "r",
     databaseRecords: "r",
+    ai: "r",
   },
 };
 

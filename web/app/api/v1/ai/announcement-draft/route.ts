@@ -25,6 +25,7 @@ import {
 import { getFeedbackExamples } from "@/lib/ai/feedback";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -117,6 +118,9 @@ export async function POST(req: NextRequest) {
         { status: 500 },
       );
     if (!ctx.ok) return authFailure(ctx, req);
+    // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+    const denied = await requirePermission(ctx, "ai", "create", req);
+    if (denied) return denied;
 
     // 6) 聚合近期进展上下文（scope 解析为 AiContextScope[]）+ 查询正面反馈 few-shot 示例
     const scopes = resolveScopes(body.scope);
