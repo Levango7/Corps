@@ -490,6 +490,7 @@
     "tagline": "Lightweight collaboration for small teams",
     "login": {
       "title": "Sign in to corps",
+      "pricingLink": "View pricing",
       "subtitle": "Continue your team's work.",
       "email": "Email",
       "emailPlaceholder": "Your email",
@@ -505,6 +506,7 @@
     },
     "signup": {
       "title": "Create a workspace",
+      "pricingLink": "View pricing",
       "subtitle": "Set up in a minute, invite teammates later.",
       "workspaceName": "Workspace name",
       "workspaceNamePlaceholder": "e.g., Growth team",
