@@ -31,6 +31,7 @@ import { getFeedbackExamples } from "@/lib/ai/feedback";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -97,6 +98,9 @@ export async function POST(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   // 6) 查询任务 + 知识图谱依赖（RLS 事务内）
   const [tasks, taskNodes, edges, feedbackExamples] = await Promise.all([

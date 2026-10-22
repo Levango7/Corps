@@ -26,6 +26,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { buildDocQaSystemPrompt, buildDocQaUserPrompt } from "@/lib/ai/prompts/doc-qa";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -81,6 +82,9 @@ export async function POST(req: NextRequest) {
         { status: 500 },
       );
     if (!ctx.ok) return authFailure(ctx, req);
+    // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+    const denied = await requirePermission(ctx, "ai", "create", req);
+    if (denied) return denied;
 
     // 6) 检索相关文档（RLS 事务内，仅检索用户有权限查看的 WikiPage）
     const documents = await runWithWorkspace(
