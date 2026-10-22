@@ -172,28 +172,38 @@ docker compose up -d
 
 ## 4.5 备份与恢复
 
-### 备份脚本
+### 备份机制：backup 容器（2026-10-13 起，取代 crontab）
 
-`scripts/backup-db.sh`：pg_dump + gzip + 保留 N 天轮转。
+备份由 compose 的 `backup` 服务承担（`docker-compose.yml` 的 `backup`，入口
+`db/backup.sh`），**不需要也不应该再配 crontab**：
 
-```bash
-DATABASE_URL="postgresql://postgres:xxx@localhost:5432/corps" \
-BACKUP_DIR="/data/backups" \
-RETENTION_DAYS=7 \
-bash scripts/backup-db.sh
-```
+- **机制**：`restart: unless-stopped`，"先备后睡"——启动即备一次，然后睡
+  `BACKUP_INTERVAL_SECONDS`（默认 86400s）再备；
+- **产出**：`corps-YYYYMMDD-HHMMSS.dump`，`pg_dump --format=custom`（与
+  `deploy.sh` 上线前还原点同格式，**整包只有一种格式、一条恢复路径**）；
+- **落点**：`${BACKUP_DIR}`（prod overlay 把 `/backups` 重新绑定到宿主目录，
+  见 `deploy/docker-compose.prod.yml` 的 backup 段）；
+- **轮转**：`BACKUP_RETENTION_DAYS`（默认 7 天）之前的自动清理。
 
-### cron 示例（每天凌晨 3 点）
+变量名以 `db/backup.sh` 与 `deploy/.env.prod.example` 为准。
 
-```bash
-0 3 * * * DATABASE_URL="postgresql://..." BACKUP_DIR="/data/backups" RETENTION_DAYS=7 bash /app/scripts/backup-db.sh >> /var/log/backup.log 2>&1
-```
+> ⚠️ **已废弃**：`scripts/backup-db.sh`（crontab + `pg_dumpall | gzip`，
+> 产 `corps_*.sql.gz`，读 `RETENTION_DAYS`）已不再接线，compose 里没有任何
+> 服务引用它。它产出的 `.sql.gz` **不支持恢复**（灌库命令用的是
+> `psql --force` 这个非法选项；且 `pg_dumpall` 产物含 `\connect <生产库>`，
+> 修好参数会写进生产库）。见到这类文件只当遗留物清理，**不要拿它恢复**。
 
 ### 恢复步骤
 
 ```bash
-gunzip -c /data/backups/corps_YYYYMMDD_HHMMSS.sql.gz | psql "$DATABASE_URL"
+# ① 列备份 + 逐个验完整性
+bash deploy/scripts/restore.sh --list
+
+# ② 挑最新一份做 dry-run（只恢复临时库，生产库零接触）
+bash deploy/scripts/restore.sh --dry-run "${BACKUP_DIR}/corps-<ts>.dump"
 ```
+
+真恢复必须显式 `--force`（会要求输入 `RESTORE` 二次确认，并先自动备份当前生产库）。
 
 ### RPO 声明
 
@@ -278,12 +288,23 @@ curl -sI https://your-domain.com/ | grep -i content-security-policy
 # 应包含 nonce-xxxxx
 ```
 
-### 7.5 备份 cron 落地
+### 7.5 备份落地核验
+
+备份由 `backup` 容器承担，**无需 crontab**。核它有没有真的在产：
 
 ```bash
-# 每日 02:00 备份，保留 7 天
-0 2 * * * /opt/corps/scripts/backup-db.sh "$DATABASE_URL" /opt/corps/backups 7 >> /var/log/corps-backup.log 2>&1
+# 容器在跑且 restart 策略正确
+docker inspect --format '{{.State.Status}} {{.HostConfig.RestartPolicy.Name}}' corps-backup
+
+# 落点有现行格式的 .dump，且最新一份是新的
+ls -lht "${BACKUP_DIR}" | head -5
+
+# 逐个验归档完整性（.dump 走 pg_restore --list）
+bash deploy/scripts/restore.sh --list
 ```
+
+见 §4.5。**不要再配 crontab 跑 `scripts/backup-db.sh`**——那个脚本已废弃，
+产物 `corps_*.sql.gz` 不支持恢复。
 
 ### 7.6 反向代理与 HTTPS 前置要求（审计 2026-08-29）
 

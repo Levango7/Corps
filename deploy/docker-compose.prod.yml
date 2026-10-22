@@ -53,7 +53,7 @@ services:
   # restore.sh 的 --list/--dry-run 与 deploy.sh §3 的还原点都在宿主
   # ${BACKUP_DIR} 下读——两处不一致时"有备份却找不到"，恢复链是断的。
   # 这里把 /backups 这个挂载点换成宿主目录（compose 对同名 target 的
-  # volumes 条目按后者覆盖），每日 .dump 与上线前 .sql.gz 落在同一处。
+  # volumes 条目按后者覆盖），每日 .dump 与上线前 .dump 落在同一处。
   backup:
     volumes:
       - ${BACKUP_DIR:-/opt/corps/backups}:/backups

@@ -353,11 +353,22 @@ elif [[ ! -d "${_bdir}" ]]; then
 elif [[ ! -w "${_bdir}" ]]; then
   fail "备份目录 ${_bdir} 不可写（当前用户无写权限）"
 else
-  _n_backups="$(find "${_bdir}" -maxdepth 1 -name 'corps_*.sql.gz' 2>/dev/null | wc -l | tr -d ' ')"
+  # 数的是**现行格式** `corps*.dump`，不是 legacy 的 `corps_*.sql.gz`。
+  # 2026-10-13 备份机制从 crontab（scripts/backup-db.sh，产 corps_*.sql.gz）
+  # 迁到 backup 容器（db/backup.sh，产 corps-*.dump）+ deploy.sh 上线前还原点
+  # （corps_predeploy_*.dump）时，这一行的通配符没跟着迁 —— 于是系统明明有 7 天
+  # 现行备份，这里仍永远报"没有任何备份"；反向也成立（备份真停了，警告一字不差），
+  # 这个信号等于不存在。演练实测坐实，见 scripts/verify_deploy_package.py。
+  _n_backups="$(find "${_bdir}" -maxdepth 1 -name 'corps*.dump' 2>/dev/null | wc -l | tr -d ' ')"
+  _n_legacy="$(find "${_bdir}" -maxdepth 1 -name 'corps_*.sql.gz' 2>/dev/null | wc -l | tr -d ' ')"
   if (( _n_backups == 0 )); then
-    log_warn "备份目录 ${_bdir} 中没有任何 corps_*.sql.gz —— 首次部署属正常，但请确认备份 cron 已落地（README §7）"
+    if (( _n_legacy > 0 )); then
+      log_warn "备份目录 ${_bdir} 只有 ${_n_legacy} 份 legacy 格式 corps_*.sql.gz，没有现行格式 corps*.dump —— 这些 legacy 文件**不支持恢复**（README §7），请确认 backup 容器已真正产出过 .dump"
+    else
+      log_warn "备份目录 ${_bdir} 中没有任何 corps*.dump —— 首次部署属正常，但请确认 backup 容器已落地（README §7）"
+    fi
   fi
-  ok "备份目录 ${_bdir} 可写（现有 ${_n_backups} 份备份）"
+  ok "备份目录 ${_bdir} 可写（现行格式 ${_n_backups} 份，legacy ${_n_legacy} 份）"
 fi
 
 # ── 汇总 ─────────────────────────────────────────────────────────────────────
