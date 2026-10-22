@@ -1511,7 +1511,8 @@
       "members": "Members",
       "billing": "Billing",
       "analytics": "Analytics",
-      "settings": "Settings"
+      "settings": "Settings",
+      "ai": "AI"
     },
     "action": {
       "read": "R",

@@ -81,7 +81,6 @@
 /api/v1/ai/wiki-search
 /api/v1/ai/workflow-build
 /api/v1/ai/workflow-orchestrator
-/api/v1/favorites
 /api/v1/favorites/check
 /api/v1/favorites/{id}
 /api/v1/im/messages/{id}
@@ -93,7 +92,6 @@
 /api/v1/mail/send
 /api/v1/mail/{id}
 /api/v1/notifications/preferences
-/api/v1/notifications/unread
 /api/v1/notifications/{id}
 /api/v1/push/register
 /api/v1/push/send
