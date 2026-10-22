@@ -287,3 +287,31 @@ export function optionalModulesForRole(role: string): WorkspaceModule[] {
   const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
   return modulesForRole(role).filter((m) => !visible.has(m.id));
 }
+
+/** 侧栏三段的划分结果（顺序即渲染顺序） */
+export interface SidebarSections {
+  /** 首屏（除管理组外的全部默认可见模块：核心 5 + 文档 = 6） */
+  primary: WorkspaceModule[];
+  /** 「更多」：其余可选模块 */
+  more: WorkspaceModule[];
+  /** 管理组（压在末尾） */
+  admin: WorkspaceModule[];
+}
+
+/**
+ * 把某角色的模块切成侧栏三段。
+ *
+ * **必须在这里切、而不是在布局里按 group 过滤**：`documents` 属于知识组但默认可见，
+ * 布局里写 `group === "core"` 会让它既不在首屏、也不在「更多」——**整项凭空消失**。
+ * 这个 bug 在 P1-B 首次截图里真实出现过（侧栏核心只剩 5 项）；单测当时只查了注册表
+ * 的并集没查分区，所以没拦住。现在分区是纯函数，并有「三段并集 == 全部可见模块」的断言。
+ */
+export function sidebarSectionsForRole(role: string): SidebarSections {
+  const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  const roleModules = modulesForRole(role);
+  return {
+    primary: roleModules.filter((m) => visible.has(m.id) && m.group !== "admin"),
+    more: roleModules.filter((m) => !visible.has(m.id)),
+    admin: roleModules.filter((m) => visible.has(m.id) && m.group === "admin"),
+  };
+}

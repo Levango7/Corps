@@ -13,6 +13,7 @@ import {
   modulesInGroup,
   optionalModulesForRole,
   primaryModulesForRole,
+  sidebarSectionsForRole,
 } from "@/lib/modules/registry";
 import { MODULE_ICONS } from "@/lib/modules/icons";
 
@@ -152,6 +153,30 @@ describe("模块注册表：结构与秩序", () => {
     expect(primaryModulesForRole("viewer")).toHaveLength(7);
     expect(primaryModulesForRole("viewer").map((m) => m.id)).not.toContain("members");
     expect(optionalModulesForRole("viewer")).toHaveLength(21);
+  });
+
+  /**
+   * 侧栏分区守卫（P1-B 首版真踩过）：布局曾按 `group === "core"` 切首屏，而 `documents`
+   * 属于知识组却默认可见 ⇒ 它既不在首屏、也不在「更多」，**整项从侧栏消失**。
+   * 当时的单测只验了注册表的并集，没验**分区**，所以没拦住。
+   * 现在分区是注册表里的纯函数，这里钉「三段并集 == 该角色全部可见模块、且不重复」。
+   */
+  it("侧栏分区：primary+more+admin 的并集恰好等于该角色全部模块（不丢不重）", () => {
+    for (const role of ["member", "viewer"]) {
+      const { primary, more, admin } = sidebarSectionsForRole(role);
+      const ids = [...primary, ...more, ...admin].map((m) => m.id);
+      expect(ids).toHaveLength(modulesForRole(role).length);
+      expect(new Set(ids).size, `${role} 的分区出现重复或遗漏`).toBe(ids.length);
+      // 知识组但默认可见的 documents 必须在首屏
+      expect(primary.map((m) => m.id)).toContain("documents");
+      // 管理组只出现在 admin 段
+      expect(admin.every((m) => m.group === "admin")).toBe(true);
+      expect(primary.some((m) => m.group === "admin")).toBe(false);
+      expect(more.some((m) => m.group === "admin")).toBe(false);
+    }
+    expect(sidebarSectionsForRole("member").primary).toHaveLength(6);
+    expect(sidebarSectionsForRole("member").admin).toHaveLength(4);
+    expect(sidebarSectionsForRole("member").more).toHaveLength(21);
   });
 
   it("moduleHref 拼出工作区路径（根模块不带多余斜杠）", () => {

@@ -17,12 +17,7 @@ const CommandPalette = dynamic(() => import("@/components/CommandPalette"), {
 });
 import { PageTransition } from "@/components/PageTransition";
 import { SidebarNav, type NavGroup } from "@/components/SidebarNav";
-import {
-  moduleHref,
-  optionalModulesForRole,
-  primaryModulesForRole,
-  type WorkspaceModule,
-} from "@/lib/modules/registry";
+import { moduleHref, sidebarSectionsForRole, type WorkspaceModule } from "@/lib/modules/registry";
 import { MODULE_ICONS } from "@/lib/modules/icons";
 import { readThemePref, resolveTheme } from "@/components/ThemeToggle";
 import { UserMenu } from "@/components/UserMenu";
@@ -302,10 +297,9 @@ export default function WorkspaceLayout({
   // 路由/API 全保留，Cmd+K 仍可直达全部模块）。
   // 这里只做三件事：翻译、图标映射、把运行时的 IM 未读数挂到 im 项上。
   // viewer 的入口过滤也由注册表的 viewerHidden 字段在 primary/optionalModulesForRole() 里完成。
-  const primary = primaryModulesForRole(workspace.role);
-  const optional = optionalModulesForRole(workspace.role);
-  const coreModules = primary.filter((m) => m.group === "core");
-  const adminModules = primary.filter((m) => m.group === "admin");
+  // 分区在注册表里做（纯函数、有单测）：**不能**在这里按 group 过滤——
+  // documents 属知识组但默认可见，按 group 切会让它两边都漏掉（P1-B 首版真丢过）。
+  const { primary, more, admin } = sidebarSectionsForRole(workspace.role);
 
   const toNavGroup = (labelKey: string | null, mods: readonly WorkspaceModule[]): NavGroup => ({
     label: labelKey ? t(labelKey) : null,
@@ -330,10 +324,10 @@ export default function WorkspaceLayout({
     }));
 
   const navGroups: NavGroup[] = [
-    toNavGroup(null, coreModules),
-    ...(optional.length > 0 ? [{ ...toNavGroup("menu.more", optional), collapsible: true }] : []),
+    toNavGroup(null, primary),
+    ...(more.length > 0 ? [{ ...toNavGroup("menu.more", more), collapsible: true }] : []),
     ...(favoriteItems.length > 0 ? [{ label: t("menu.favorites"), items: favoriteItems }] : []),
-    ...(adminModules.length > 0 ? [toNavGroup("menu.admin", adminModules)] : []),
+    ...(admin.length > 0 ? [toNavGroup("menu.admin", admin)] : []),
   ];
 
   const filteredNavGroups: NavGroup[] = navGroups;
