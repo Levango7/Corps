@@ -245,9 +245,73 @@ export function modulesInGroup(group: ModuleGroupId): WorkspaceModule[] {
   return WORKSPACE_MODULES.filter((m) => m.group === group);
 }
 
+/**
+ * 默认占首屏的模块 id（产品方案 §5）：核心 6 + 管理 4。
+ *
+ * 为什么用**显式 id 清单**而不是给每个模块加 `defaultVisible` 字段、也不按 group 推导：
+ *  - 按 group 推导会把握手可见性与分组绑死——挪一个模块的分组就悄悄改了首屏；
+ *  - 逐对象加字段则 31 处散落，看不出"首屏到底哪 10 个"。
+ * 一张清单 + 下面两条断言（并集恰好 31、核心/管理顺序），既能被单测钉住，也一眼可读。
+ * **可选 ≠ 删除**：不在清单里的模块只是默认收进「更多」，路由与 API 全部保留。
+ */
+export const DEFAULT_VISIBLE_MODULE_IDS: readonly string[] = [
+  // 核心 6（产品楔子：讨论 → 决策 → 任务）
+  "overview",
+  "board",
+  "my-tasks",
+  "decisions",
+  "im",
+  "documents",
+  // 管理 4
+  "members",
+  "billing",
+  "analytics",
+  "settings",
+];
+
 /** 该角色可见的模块：viewer 隐藏 viewerHidden 的模块 */
 export function modulesForRole(role: string): WorkspaceModule[] {
   return role === "viewer"
     ? WORKSPACE_MODULES.filter((m) => !m.viewerHidden)
     : [...WORKSPACE_MODULES];
+}
+
+/** 默认占首屏的模块（核心 6 + 管理 4，按角色过滤） */
+export function primaryModulesForRole(role: string): WorkspaceModule[] {
+  const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  return modulesForRole(role).filter((m) => visible.has(m.id));
+}
+
+/** 收进「更多」分组的模块（默认收起，仍可从侧栏展开或用 Cmd+K 直达） */
+export function optionalModulesForRole(role: string): WorkspaceModule[] {
+  const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  return modulesForRole(role).filter((m) => !visible.has(m.id));
+}
+
+/** 侧栏三段的划分结果（顺序即渲染顺序） */
+export interface SidebarSections {
+  /** 首屏（除管理组外的全部默认可见模块：核心 5 + 文档 = 6） */
+  primary: WorkspaceModule[];
+  /** 「更多」：其余可选模块 */
+  more: WorkspaceModule[];
+  /** 管理组（压在末尾） */
+  admin: WorkspaceModule[];
+}
+
+/**
+ * 把某角色的模块切成侧栏三段。
+ *
+ * **必须在这里切、而不是在布局里按 group 过滤**：`documents` 属于知识组但默认可见，
+ * 布局里写 `group === "core"` 会让它既不在首屏、也不在「更多」——**整项凭空消失**。
+ * 这个 bug 在 P1-B 首次截图里真实出现过（侧栏核心只剩 5 项）；单测当时只查了注册表
+ * 的并集没查分区，所以没拦住。现在分区是纯函数，并有「三段并集 == 全部可见模块」的断言。
+ */
+export function sidebarSectionsForRole(role: string): SidebarSections {
+  const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  const roleModules = modulesForRole(role);
+  return {
+    primary: roleModules.filter((m) => visible.has(m.id) && m.group !== "admin"),
+    more: roleModules.filter((m) => !visible.has(m.id)),
+    admin: roleModules.filter((m) => visible.has(m.id) && m.group === "admin"),
+  };
 }

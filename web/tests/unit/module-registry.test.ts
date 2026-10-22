@@ -5,11 +5,15 @@ import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 import {
+  DEFAULT_VISIBLE_MODULE_IDS,
   MODULE_GROUPS,
   WORKSPACE_MODULES,
   moduleHref,
   modulesForRole,
   modulesInGroup,
+  optionalModulesForRole,
+  primaryModulesForRole,
+  sidebarSectionsForRole,
 } from "@/lib/modules/registry";
 import { MODULE_ICONS } from "@/lib/modules/icons";
 
@@ -115,6 +119,64 @@ describe("模块注册表：结构与秩序", () => {
     expect(hidden.sort()).toEqual(["analytics", "billing", "members"]);
     expect(modulesForRole("viewer")).toHaveLength(28);
     expect(modulesForRole("member")).toHaveLength(31);
+  });
+
+  /**
+   * P1-B 默认可见性：首屏 = 核心 6 + 管理 4，其余 21 项进「更多」。
+   * 这里钉三件事：数量、**不丢不重**（两边并集恰好 31）、以及「可选 ≠ 删除」——
+   * 21 项仍全部在更多里、仍各自有页（上面那条 page.tsx 断言对全表生效）。
+   */
+  it("首屏 10 项 / 「更多」21 项，两边并集恰好 31、互不重叠", () => {
+    const primary = primaryModulesForRole("member");
+    const optional = optionalModulesForRole("member");
+    expect(primary).toHaveLength(10);
+    expect(optional).toHaveLength(21);
+    // 顺序不重要（注册表顺序 ≠ 清单书写顺序），集合必须等于声明的首屏清单
+    expect(primary.map((m) => m.id).sort()).toEqual([...DEFAULT_VISIBLE_MODULE_IDS].sort());
+
+    const ids = [...primary, ...optional].map((m) => m.id);
+    expect(ids).toHaveLength(31);
+    expect(new Set(ids).size, "有模块同时出现在首屏与「更多」，或两处都缺席").toBe(31);
+
+    // 管理组固定压在首屏末尾（documents 属于知识组但默认可见，不能按 group 推导）
+    expect(primary.slice(-4).map((m) => m.id)).toEqual([
+      "members",
+      "billing",
+      "analytics",
+      "settings",
+    ]);
+    // 「可选 ≠ 删除」：文档虽在知识组，仍必须出现在首屏
+    expect(primary.map((m) => m.id)).toContain("documents");
+  });
+
+  it("viewer 的首屏少 3 项（成员/计费/分析），「更多」不变", () => {
+    expect(primaryModulesForRole("viewer")).toHaveLength(7);
+    expect(primaryModulesForRole("viewer").map((m) => m.id)).not.toContain("members");
+    expect(optionalModulesForRole("viewer")).toHaveLength(21);
+  });
+
+  /**
+   * 侧栏分区守卫（P1-B 首版真踩过）：布局曾按 `group === "core"` 切首屏，而 `documents`
+   * 属于知识组却默认可见 ⇒ 它既不在首屏、也不在「更多」，**整项从侧栏消失**。
+   * 当时的单测只验了注册表的并集，没验**分区**，所以没拦住。
+   * 现在分区是注册表里的纯函数，这里钉「三段并集 == 该角色全部可见模块、且不重复」。
+   */
+  it("侧栏分区：primary+more+admin 的并集恰好等于该角色全部模块（不丢不重）", () => {
+    for (const role of ["member", "viewer"]) {
+      const { primary, more, admin } = sidebarSectionsForRole(role);
+      const ids = [...primary, ...more, ...admin].map((m) => m.id);
+      expect(ids).toHaveLength(modulesForRole(role).length);
+      expect(new Set(ids).size, `${role} 的分区出现重复或遗漏`).toBe(ids.length);
+      // 知识组但默认可见的 documents 必须在首屏
+      expect(primary.map((m) => m.id)).toContain("documents");
+      // 管理组只出现在 admin 段
+      expect(admin.every((m) => m.group === "admin")).toBe(true);
+      expect(primary.some((m) => m.group === "admin")).toBe(false);
+      expect(more.some((m) => m.group === "admin")).toBe(false);
+    }
+    expect(sidebarSectionsForRole("member").primary).toHaveLength(6);
+    expect(sidebarSectionsForRole("member").admin).toHaveLength(4);
+    expect(sidebarSectionsForRole("member").more).toHaveLength(21);
   });
 
   it("moduleHref 拼出工作区路径（根模块不带多余斜杠）", () => {
