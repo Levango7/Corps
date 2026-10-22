@@ -105,6 +105,8 @@ export function ModuleVisibilitySettings({
                   checked={checked}
                   onChange={() => toggle(m.id)}
                   disabled={!canEdit}
+                  // jsx-a11y 不把动态文案的 <label> 当关联标签，显式给可读名
+                  aria-label={tNav(m.labelKey)}
                   className="size-4 shrink-0 accent-[var(--accent)] disabled:opacity-50"
                 />
                 <Icon size={16} className="shrink-0 text-[var(--muted)]" aria-hidden="true" />
