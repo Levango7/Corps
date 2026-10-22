@@ -336,6 +336,16 @@ export default function SignupPage() {
               {t("loginCta")}
             </Link>
           </p>
+
+          {/* P1：定价页入口（注册前先看套餐，避免"先注册再发现要付费"）。 */}
+          <p className="mt-2 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+            <Link
+              href="/pricing"
+              className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2"
+            >
+              {t("pricingLink")}
+            </Link>
+          </p>
         </>
       )}
     </div>

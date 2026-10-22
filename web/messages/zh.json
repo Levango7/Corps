@@ -490,6 +490,7 @@
     "tagline": "面向中小团队的轻量协作平台",
     "login": {
       "title": "登录 corps",
+      "pricingLink": "查看定价与套餐",
       "subtitle": "继续你团队的工作。",
       "email": "邮箱",
       "emailPlaceholder": "你的邮箱",
@@ -505,6 +506,7 @@
     },
     "signup": {
       "title": "创建工作区",
+      "pricingLink": "查看定价与套餐",
       "subtitle": "一分钟建好，之后再邀请同事。",
       "workspaceName": "工作区名称",
       "workspaceNamePlaceholder": "例如：增长组",

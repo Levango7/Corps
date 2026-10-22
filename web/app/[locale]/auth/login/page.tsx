@@ -138,6 +138,16 @@ export default function LoginPage() {
           {t("signupCta")}
         </Link>
       </div>
+
+      {/* P1：定价页此前全站无入口（只能从工作区计费页进）。放在登录页脚，让"先看看多少钱"有路可走。 */}
+      <div className="mt-3 text-center text-[length:var(--text-sm)] text-[var(--muted)]">
+        <Link
+          href="/pricing"
+          className="text-[var(--accent)] font-[weight:var(--weight-medium)] hover:underline underline-offset-2 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2"
+        >
+          {t("pricingLink")}
+        </Link>
+      </div>
     </div>
   );
 }
