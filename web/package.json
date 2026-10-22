@@ -1,6 +1,6 @@
 {
   "name": "corps-web",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "private": true,
   "packageManager": "pnpm@11.22.0",
   "scripts": {

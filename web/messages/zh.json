@@ -1512,7 +1512,8 @@
       "members": "成员",
       "billing": "计费",
       "analytics": "分析",
-      "settings": "设置"
+      "settings": "设置",
+      "ai": "AI 能力"
     },
     "action": {
       "read": "R",
