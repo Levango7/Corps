@@ -218,7 +218,9 @@ def probe_manifest(ref: str, timeout: int = 20, attempts: int = 3) -> tuple[str,
             if status == 404:
                 return MANIFEST_NOT_FOUND, "HTTP 404（tag/digest 不存在）"
             if status == 401:
-                token = _fetch_token(headers.get("WWW-Authenticate", ""), host, repo, timeout)
+                token = _fetch_token(
+                    _header(headers, "www-authenticate"), host, repo, timeout
+                )
                 if token:
                     code, _ = _head(url, timeout, token=token)
                     if code in (200, 203):
@@ -236,10 +238,10 @@ def probe_manifest(ref: str, timeout: int = 20, attempts: int = 3) -> tuple[str,
                     else:
                         last_reason = f"HTTP {code}"
                 else:
-                    return (
-                        MANIFEST_UNREACHABLE,
-                        "HTTP 401 且取不到匿名 token（该 registry 要求鉴权，构建时同样会失败）",
-                    )
+                    # 取不到 token 多半是网络抖动（实测：本机偶发一次后重试即成功）。
+                    # 这里**不能直接判 UNREACHABLE**，否则一次抖动就让所有 PR 假红。
+                    # 落到循环末尾重试；全部尝试都拿不到才报不可达。
+                    last_reason = "HTTP 401 且取不到匿名 token（该 registry 要求鉴权，或网络抖动）"
             elif status == 429 or 500 <= status < 600:
                 transient = True
                 last_reason = f"HTTP {status}（registry 暂时不可用）"
@@ -259,6 +261,24 @@ def probe_manifest(ref: str, timeout: int = 20, attempts: int = 3) -> tuple[str,
     return MANIFEST_UNREACHABLE, last_reason
 
 
+def _header(headers, name: str, default: str = "") -> str:
+    """大小写不敏感地取响应头。
+
+    必须这么取：`dict(resp.headers)` 的 key 大小写**不确定**——http.client 对一部分头
+    做规范化（如 `docker-distribution-api-version` 变小写），对另一部分保持原样
+    （`Content-Type`）。直接 `.get("WWW-Authenticate")` 会静默取不到，
+    于是"拿不到 token"被误报成"该 registry 要鉴权"，而不是"我的解析坏了"。
+    2026-10-22 在 CI 上就是这么翻车的：解析全对，却把 node:22-alpine 判成不可达。
+    """
+    if not headers:
+        return default
+    lower = name.lower()
+    for key, value in headers.items():
+        if key.lower() == lower:
+            return value
+    return default
+
+
 def _head(url: str, timeout: int, token: str | None = None):
     headers = {"Accept": MANIFEST_ACCEPT, "User-Agent": "corps-dockerfile-gate/1.0"}
     if token:
@@ -271,23 +291,45 @@ def _head(url: str, timeout: int, token: str | None = None):
         return exc.code, dict(exc.headers or {})
 
 
-def _fetch_token(www_authenticate: str, host: str, repo: str, timeout: int) -> str | None:
-    """按 WWW-Authenticate 的 Bearer 质询取匿名 token；取不到时退回约定俗成的端点。"""
+def _token_endpoint(www_authenticate: str, host: str, repo: str) -> tuple[str, str, str]:
+    """从 WWW-Authenticate 质询里解出 (realm, service, scope)；缺失时按 registry 约定兜底。
+
+    抽成纯函数是为了能被自测断言 —— 2026-10-22 的 CI 翻车正是发生在这一层：
+    token 端点解错导致 node:22-alpine 被判 UNREACHABLE，而当时的自测用桩绕过了
+    HTTP，完全覆盖不到。
+    """
     realm = service = scope = None
-    m = re.search(r'realm="([^"]+)"', www_authenticate)
+    m = re.search(r'realm="([^"]+)"', www_authenticate or "")
     if m:
         realm = m.group(1)
-    m = re.search(r'service="([^"]+)"', www_authenticate)
+    m = re.search(r'service="([^"]+)"', www_authenticate or "")
     if m:
         service = m.group(1)
-    m = re.search(r'scope="([^"]+)"', www_authenticate)
+    m = re.search(r'scope="([^"]+)"', www_authenticate or "")
     if m:
         scope = m.group(1)
 
     if not realm:
-        realm = f"https://{host}/token"
+        # Docker Hub 的 token 端点在 auth.docker.io，不在 registry-1.docker.io 上——
+        # 猜 `https://{host}/token` 对它是错的（对 ghcr.io 恰好对，所以本机测试
+        # 曾误判这条兜底可用）。
+        if host in ("registry-1.docker.io", "index.docker.io", "docker.io"):
+            realm = "https://auth.docker.io/token"
+            service = service or "registry.docker.io"
+        else:
+            realm = f"https://{host}/token"
+
+    if not service:
+        service = ""
     if not scope:
         scope = f"repository:{repo}:pull"
+
+    return realm, service, scope
+
+
+def _fetch_token(www_authenticate: str, host: str, repo: str, timeout: int) -> str | None:
+    """按 Bearer 质询取匿名 token。"""
+    realm, service, scope = _token_endpoint(www_authenticate, host, repo)
 
     params = [f"scope={urllib.request.quote(scope)}"]
     if service:
@@ -489,13 +531,87 @@ def self_test() -> int:
     else:
         print("[dockerfile-gate] self-test OK：ARG 默认值在多阶段 FROM 中正确替换")
 
+    # ── 下面三组是 2026-10-22 CI 翻车后的补钉 ──────────────────────────────
+    # 当时自测全绿、CI 却把 node:22-alpine 判成不可达：桩绕过了 HTTP 层，
+    # 而 bug 恰好全在那一层。补成纯函数断言后才可能被抓住。
+
+    # 1) 响应头必须大小写不敏感地取。实测 `dict(resp.headers)` 会把一部分头
+    #    规范化成小写、另一部分保持原样，`.get("WWW-Authenticate")` 会静默落空。
+    for probe_headers in (
+        {"Www-Authenticate": 'Bearer realm="https://auth.docker.io/token"'},
+        {"WWW-AUTHENTICATE": 'Bearer realm="https://auth.docker.io/token"'},
+        {"www-authenticate": 'Bearer realm="https://auth.docker.io/token"'},
+    ):
+        got = _header(probe_headers, "www-authenticate")
+        if "realm=" not in got:
+            failures.append(f"  [响应头大小写] {list(probe_headers)} 未取到值，实际 {got!r}")
+            break
+    else:
+        print("[dockerfile-gate] self-test OK：响应头大小写不敏感")
+
+    # 2) token 端点解析：有质询时照用，无质询时 Docker Hub 必须落到 auth.docker.io
+    cases_endpoint = [
+        (
+            "带质询",
+            'Bearer realm="https://auth.docker.io/token",service="registry.docker.io",'
+            'scope="repository:library/node:pull"',
+            "registry-1.docker.io",
+            "library/node",
+            (
+                "https://auth.docker.io/token",
+                "registry.docker.io",
+                "repository:library/node:pull",
+            ),
+        ),
+        (
+            "Docker Hub 无质询兜底",
+            "",
+            "registry-1.docker.io",
+            "library/node",
+            ("https://auth.docker.io/token", "registry.docker.io", "repository:library/node:pull"),
+        ),
+        (
+            "GHCR 无质询兜底",
+            "",
+            "ghcr.io",
+            "levango7/corps",
+            ("https://ghcr.io/token", "", "repository:levango7/corps:pull"),
+        ),
+    ]
+    for name, chal, host, repo, expected in cases_endpoint:
+        got = _token_endpoint(chal, host, repo)
+        if got != expected:
+            failures.append(f"  [token 端点/{name}] 期望 {expected}，实际 {got}")
+        else:
+            print(f"[dockerfile-gate] self-test OK：token 端点解析（{name}）")
+
+    # 3) 镜像引用拆分：隐式 Docker Hub 要补 library/ 前缀，显式 registry 不能补
+    cases_split = [
+        ("node:22-alpine", ("registry-1.docker.io", "library/node", "22-alpine", None)),
+        (
+            "docker.m.daocloud.io/library/node:22-alpine",
+            ("docker.m.daocloud.io", "library/node", "22-alpine", None),
+        ),
+        (
+            "ghcr.io/levango7/corps:0.8.2",
+            ("ghcr.io", "levango7/corps", "0.8.2", None),
+        ),
+        ("nginx", ("registry-1.docker.io", "library/nginx", None, None)),
+    ]
+    for ref, expected in cases_split:
+        got = split_image(ref)
+        if got != expected:
+            failures.append(f"  [镜像拆分] {ref} 期望 {expected}，实际 {got}")
+    if not any("镜像拆分" in x for x in failures):
+        print("[dockerfile-gate] self-test OK：镜像引用拆分（隐式 library/ 前缀）")
+
     if failures:
         print("\n[dockerfile-gate] self-test FAILED：")
         for line in failures:
             print(line)
         return 1
 
-    print(f"\n[dockerfile-gate] self-test 全部通过（{len(cases) + 3} 条）")
+    print(f"\n[dockerfile-gate] self-test 全部通过（{len(cases) + 8} 条）")
     return 0
 
 
