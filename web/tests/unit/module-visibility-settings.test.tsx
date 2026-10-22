@@ -15,7 +15,9 @@ import { ModuleVisibilitySettings } from "@/components/settings/ModuleVisibility
  *  - 非 owner 看到的是**只读**（disabled + 说明），不是"能点但存不上"。
  */
 
-const h = vi.hoisted(() => ({ calls: [] as { url: string; init?: { method?: string; body?: string } }[] }));
+const h = vi.hoisted(() => ({
+  calls: [] as { url: string; init?: { method?: string; body?: string } }[],
+}));
 
 vi.mock("@/lib/api", () => ({
   api: async (url: string, init?: { method?: string; body?: string }) => {
