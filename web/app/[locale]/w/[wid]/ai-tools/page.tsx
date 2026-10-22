@@ -3,7 +3,8 @@
 /**
  * AI 工具中心页面 · /w/[wid]/ai-tools
  *
- * 聚合 7 个 AI 能力组件，通过 Tab 导航切换：
+ * 聚合 12 个 AI 能力组件，通过 Tab 导航切换（P1「AI 五页并一」：后 4 个原本是独立页面，
+ * 现收进本中枢；旧路由保留不删，深链不碎）：
  *  - 语义搜索（SemanticSearchPanel）
  *  - 邮件助手（MailAssistantPanel）
  *  - 待办提取（TodoExtractDialog，Dialog 模式，按钮触发）
@@ -11,6 +12,11 @@
  *  - 文档问答（DocQaPanel）
  *  - 决策辅助（DecisionAssistantPanel）
  *  - 工作流编排（WorkflowOrchestratorPanel）
+ *  - 智能推送（AiPushTabContent）
+ *  - 项目洞察（ProjectInsightView，原 /insight 页）
+ *  - 知识问答（KnowledgeQaPanel，原 /knowledge-qa 页）
+ *  - 智能日报（DailyReportView，原 /daily-report 页）
+ *  - 公告起草（AnnouncementDraftPanel，原 /announcement-draft 页）
  *
  * 样式：design token（var(--*)），无裸 hex；lucide-react 图标 size 16
  * i18n：useTranslations("ai.aiTools")，全部文案（含 Tab 标签）均走词条，
@@ -33,6 +39,10 @@ import {
   Sparkles,
   Bell,
   X,
+  LineChart,
+  BookOpen,
+  Newspaper,
+  Megaphone,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import { SafeComponent } from "@/components/SafeComponent";
@@ -87,6 +97,37 @@ const AiPushFeed = dynamic(() => import("@/components/ai/AiPushFeed").then((m) =
   loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
 });
 
+// P1「AI 五页并一」：这 4 个 view 原本各自挂在一个独立路由下（/insight 等），
+// 组件本身不变、只是把入口收进中枢；旧路由继续可访问，避免深链失效。
+const ProjectInsightView = dynamic(
+  () => import("@/components/ai/ProjectInsightView").then((m) => m.ProjectInsightView),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const KnowledgeQaPanel = dynamic(
+  () => import("@/components/ai/KnowledgeQaPanel").then((m) => m.KnowledgeQaPanel),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const DailyReportView = dynamic(
+  () => import("@/components/ai/DailyReportView").then((m) => m.DailyReportView),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const AnnouncementDraftPanel = dynamic(
+  () => import("@/components/ai/AnnouncementDraftPanel").then((m) => m.AnnouncementDraftPanel),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+
 // ─── Tab 定义 ──────────────────────────────────────────────────────────────────
 
 /** Tab 标识 */
@@ -98,7 +139,12 @@ type TabId =
   | "docQa"
   | "decisionAssistant"
   | "workflowOrchestrator"
-  | "aiPush";
+  | "aiPush"
+  // P1 并一：原本四个独立路由的 AI 能力
+  | "insight"
+  | "knowledgeQa"
+  | "dailyReport"
+  | "announcementDraft";
 
 /** Tab 配置项 */
 interface TabConfig {
@@ -109,7 +155,7 @@ interface TabConfig {
   Icon: ComponentType<{ size?: number; className?: string }>;
 }
 
-/** 8 个 Tab 配置（顺序即展示顺序） */
+/** 12 个 Tab 配置（前 8 个是原有能力，后 4 个由独立页面并入；顺序即展示顺序） */
 const TABS: TabConfig[] = [
   {
     id: "semanticSearch",
@@ -150,6 +196,26 @@ const TABS: TabConfig[] = [
     id: "aiPush",
     labelKey: "aiPush",
     Icon: Bell,
+  },
+  {
+    id: "insight",
+    labelKey: "insight",
+    Icon: LineChart,
+  },
+  {
+    id: "knowledgeQa",
+    labelKey: "knowledgeQa",
+    Icon: BookOpen,
+  },
+  {
+    id: "dailyReport",
+    labelKey: "dailyReport",
+    Icon: Newspaper,
+  },
+  {
+    id: "announcementDraft",
+    labelKey: "announcementDraft",
+    Icon: Megaphone,
   },
 ];
 
@@ -286,6 +352,38 @@ export default function AiToolsPage({ params }: { params: Promise<{ wid: string 
               fallback={<AiFallback name={tabLabel(TABS[7])} />}
             >
               <AiPushTabContent wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "insight" && (
+            <SafeComponent
+              name={tabLabel(TABS[8])}
+              fallback={<AiFallback name={tabLabel(TABS[8])} />}
+            >
+              <ProjectInsightView wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "knowledgeQa" && (
+            <SafeComponent
+              name={tabLabel(TABS[9])}
+              fallback={<AiFallback name={tabLabel(TABS[9])} />}
+            >
+              <KnowledgeQaPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "dailyReport" && (
+            <SafeComponent
+              name={tabLabel(TABS[10])}
+              fallback={<AiFallback name={tabLabel(TABS[10])} />}
+            >
+              <DailyReportView wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "announcementDraft" && (
+            <SafeComponent
+              name={tabLabel(TABS[11])}
+              fallback={<AiFallback name={tabLabel(TABS[11])} />}
+            >
+              <AnnouncementDraftPanel wid={wid} />
             </SafeComponent>
           )}
         </section>
