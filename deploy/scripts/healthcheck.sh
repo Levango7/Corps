@@ -35,14 +35,13 @@ HEALTH_URL="${1:-${HEALTHCHECK_URL:-}}"
 if [[ -z "${HEALTH_URL}" ]]; then
   if [[ -f "${CORPS_ENV_PROD}" ]]; then
     load_prod_env
-    # 本地探测：优先打 Caddy 的 80 口（贴近真实入口路径，能顺带验证反代活着），
-    # 失败再打 app 直连口。app 直连口在生产已被 overlay 清掉，这里只是兜底提示。
-    _host="${CORPS_SITE_ADDRESS#http://}"; _host="${_host#https://}"; _host="${_host%%/*}"
-    if [[ -n "${_host}" && "${_host}" != *.* ]]; then
-      HEALTH_URL="http://127.0.0.1/api/health"
-    else
-      HEALTH_URL="http://127.0.0.1/api/health"
-    fi
+    # 本地探测一律打回环 http://127.0.0.1/api/health（即 Caddy 的 80 口）：
+    # 贴近真实入口路径，能顺带验证反代活着。
+    # 历史写法在这里按 CORPS_SITE_ADDRESS 的主机名有没有点分号分了两支，
+    # 但两支赋值完全相同（死分支，已删）。
+    # 也不能改用 NEXT_PUBLIC_APP_URL 的公网地址：生产上 Caddy 对公网
+    # /api/health 返回 403（不泄露 db 状态），探测必然失败。
+    HEALTH_URL="http://127.0.0.1/api/health"
   else
     die 2 "无法确定探测地址：未传参数且缺少 ${CORPS_ENV_PROD}
        用法：bash deploy/scripts/healthcheck.sh <完整 URL>
