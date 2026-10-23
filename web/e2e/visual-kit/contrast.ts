@@ -50,4 +50,4 @@ const ABS_FLOOR = 1.5;
 /** 允许的抖动比例：实测值 ≥ 基线 × 此值 即通过。抓"退步超过一成就红"。 */
 const TOLERANCE = 0.9;
 
-module.exports = { CONTRAST_INJECT, ABS_FLOOR, TOLERANCE };
+export { CONTRAST_INJECT, ABS_FLOOR, TOLERANCE };
