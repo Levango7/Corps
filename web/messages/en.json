@@ -761,6 +761,14 @@
     "en": "English"
   },
   "settings": {
+    "moduleVisibility": {
+      "title": "Sidebar modules",
+      "description": "Disabled modules are not deleted — they stay under “More” and remain searchable via ⌘K.",
+      "ownerOnly": "Only the workspace owner can change this",
+      "save": "Save modules",
+      "saved": "Saved",
+      "failed": "Failed to save"
+    },
     "title": "Settings",
     "subtitle": "Workspace basics and personal display preferences.",
     "save": "Save changes",

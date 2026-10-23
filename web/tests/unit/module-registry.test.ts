@@ -216,3 +216,42 @@ describe("模块注册表：与真实页面 / 词条 / 图标一致", () => {
     }
   });
 });
+
+describe("侧栏分区：工作区启用的可选模块（P1-B2）", () => {
+  it("启用的模块回到各自分组，「更多」与它互补：并集仍是全部、不重不丢", () => {
+    const enabled = ["wiki", "okr"];
+    const { primary, groups, more, admin } = sidebarSectionsForRole("member", enabled);
+    const pinned = groups.flatMap((g) => g.modules.map((m) => m.id));
+
+    expect(pinned.sort()).toEqual([...enabled].sort());
+    expect(more).toHaveLength(19);
+    expect(more.map((m) => m.id)).not.toContain("wiki");
+
+    const all = [...primary, ...groups.flatMap((g) => g.modules), ...more, ...admin].map(
+      (m) => m.id,
+    );
+    expect(all).toHaveLength(31);
+    expect(new Set(all).size, "启用开关让某个模块重复出现或消失").toBe(31);
+  });
+
+  it("归位到原分组：wiki 属知识组、okr 属规划组", () => {
+    const { groups } = sidebarSectionsForRole("member", ["wiki", "okr"]);
+    expect(groups.find((g) => g.group.id === "knowledge")?.modules.map((m) => m.id)).toEqual([
+      "wiki",
+    ]);
+    expect(groups.find((g) => g.group.id === "planning")?.modules.map((m) => m.id)).toEqual([
+      "okr",
+    ]);
+  });
+
+  it("不传启用列表时与 P1-B1 完全一致（默认全部在「更多」）", () => {
+    const { groups, more } = sidebarSectionsForRole("member");
+    expect(groups).toEqual([]);
+    expect(more).toHaveLength(21);
+  });
+
+  it("viewer 启用某项时也生效（角色过滤在前）", () => {
+    const { more } = sidebarSectionsForRole("viewer", ["wiki"]);
+    expect(more).toHaveLength(20);
+  });
+});

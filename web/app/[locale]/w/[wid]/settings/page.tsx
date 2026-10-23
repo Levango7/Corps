@@ -10,6 +10,7 @@ import { NotificationSettings } from "@/components/notifications/NotificationSet
 import { SettingsDataExport } from "@/components/settings/SettingsDataExport";
 import { SettingsOverview } from "@/components/settings/SettingsOverview";
 import { SettingsDangerZone } from "@/components/settings/SettingsDangerZone";
+import { ModuleVisibilitySettings } from "@/components/settings/ModuleVisibilitySettings";
 import { Skeleton } from "@/components/Skeleton";
 import { Ripple } from "@/components/Ripple";
 import type { Workspace } from "@/components/settings/types";
@@ -254,6 +255,15 @@ export default function SettingsPage({ params }: { params: Promise<{ wid: string
           </p>
         )}
       </section>
+
+      {/* 侧栏可选模块开关（P1-B2）：默认全在「更多」里，开着才回侧栏 */}
+      {ws && (
+        <ModuleVisibilitySettings
+          wid={wid}
+          role={ws.role}
+          initialEnabled={ws.enabledOptionalModules ?? []}
+        />
+      )}
 
       {/* 偏好设置（默认视图 + 通知 + 外观 + 密度 + 强调色 + 动画） */}
       <SettingsPreferences />
