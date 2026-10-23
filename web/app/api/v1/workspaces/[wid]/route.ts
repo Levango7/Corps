@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { readSidebarSettings } from "@/lib/workspace-settings";
 
 /** GET /v1/workspaces/{wid} — 工作区详情（设置页 / 顶栏读取） */
 export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
@@ -30,6 +31,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
             slug: true,
             plan: true,
             seatLimit: true,
+            settings: true,
             createdAt: true,
             _count: { select: { members: true, tasks: true } },
           },
@@ -55,6 +57,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         taskCount: ws._count.tasks,
         createdAt: ws.createdAt,
         role: ctx.member.role,
+        enabledOptionalModules: readSidebarSettings(ws.settings).enabledModules,
       },
     });
   } catch (error) {

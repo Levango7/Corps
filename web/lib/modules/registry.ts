@@ -269,6 +269,11 @@ export const DEFAULT_VISIBLE_MODULE_IDS: readonly string[] = [
   "settings",
 ];
 
+/** 可选模块 id（不在首屏清单里的全部模块；「可选 ≠ 删除」） */
+export const OPTIONAL_MODULE_IDS: readonly string[] = WORKSPACE_MODULES.filter(
+  (m) => !DEFAULT_VISIBLE_MODULE_IDS.includes(m.id),
+).map((m) => m.id);
+
 /** 该角色可见的模块：viewer 隐藏 viewerHidden 的模块 */
 export function modulesForRole(role: string): WorkspaceModule[] {
   return role === "viewer"
@@ -288,10 +293,15 @@ export function optionalModulesForRole(role: string): WorkspaceModule[] {
   return modulesForRole(role).filter((m) => !visible.has(m.id));
 }
 
-/** 侧栏三段的划分结果（顺序即渲染顺序） */
+/** 侧栏分区结果（顺序即渲染顺序） */
 export interface SidebarSections {
   /** 首屏（除管理组外的全部默认可见模块：核心 5 + 文档 = 6） */
   primary: WorkspaceModule[];
+  /**
+   * 工作区**已启用**的可选模块，按原分组归位（P1-B2）。
+   * 未启用的留在 more；两者并集 = 全部可选模块，不重复也不丢。
+   */
+  groups: { group: ModuleGroup; modules: WorkspaceModule[] }[];
   /** 「更多」：其余可选模块 */
   more: WorkspaceModule[];
   /** 管理组（压在末尾） */
@@ -306,12 +316,21 @@ export interface SidebarSections {
  * 这个 bug 在 P1-B 首次截图里真实出现过（侧栏核心只剩 5 项）；单测当时只查了注册表
  * 的并集没查分区，所以没拦住。现在分区是纯函数，并有「三段并集 == 全部可见模块」的断言。
  */
-export function sidebarSectionsForRole(role: string): SidebarSections {
+export function sidebarSectionsForRole(
+  role: string,
+  enabledOptionalIds: readonly string[] = [],
+): SidebarSections {
   const visible = new Set(DEFAULT_VISIBLE_MODULE_IDS);
+  const enabled = new Set(enabledOptionalIds);
   const roleModules = modulesForRole(role);
+  const optional = roleModules.filter((m) => !visible.has(m.id));
+  const pinned = optional.filter((m) => enabled.has(m.id));
   return {
     primary: roleModules.filter((m) => visible.has(m.id) && m.group !== "admin"),
-    more: roleModules.filter((m) => !visible.has(m.id)),
+    groups: MODULE_GROUPS.filter((g) => g.id !== "core" && g.id !== "admin")
+      .map((group) => ({ group, modules: pinned.filter((m) => m.group === group.id) }))
+      .filter((g) => g.modules.length > 0),
+    more: optional.filter((m) => !enabled.has(m.id)),
     admin: roleModules.filter((m) => visible.has(m.id) && m.group === "admin"),
   };
 }
