@@ -187,11 +187,13 @@ docker compose up -d
 
 变量名以 `db/backup.sh` 与 `deploy/.env.prod.example` 为准。
 
-> ⚠️ **已废弃**：`scripts/backup-db.sh`（crontab + `pg_dumpall | gzip`，
-> 产 `corps_*.sql.gz`，读 `RETENTION_DAYS`）已不再接线，compose 里没有任何
-> 服务引用它。它产出的 `.sql.gz` **不支持恢复**（灌库命令用的是
-> `psql --force` 这个非法选项；且 `pg_dumpall` 产物含 `\connect <生产库>`，
-> 修好参数会写进生产库）。见到这类文件只当遗留物清理，**不要拿它恢复**。
+> ⚠️ **已删除**：`scripts/backup-db.sh`（crontab + `pg_dumpall | gzip`，
+> 产 `corps_*.sql.gz`，读 `RETENTION_DAYS`）已于 2026-10-24 摘除。它当时
+> 已零接线（compose 里没有任何服务引用它，唯一引用只剩这份文档），留着只会
+> 让人以为还有两条备份路径。它产出的 `.sql.gz` **从来就不支持恢复**（灌库命令
+> 用的是 `psql --force` 这个非法选项；且 `pg_dumpall` 产物含 `\connect <生产库>`，
+> 修好参数会写进生产库）。**见到这类遗留文件只当垃圾清理，不要拿它恢复**——
+> 恢复只走 `restore.sh`。
 
 ### 恢复步骤
 
@@ -303,8 +305,8 @@ ls -lht "${BACKUP_DIR}" | head -5
 bash deploy/scripts/restore.sh --list
 ```
 
-见 §4.5。**不要再配 crontab 跑 `scripts/backup-db.sh`**——那个脚本已废弃，
-产物 `corps_*.sql.gz` 不支持恢复。
+见 §4.5。**不要配 crontab 做备份**——备份由 `backup` 容器承担；旧的
+`scripts/backup-db.sh` 已删除，其产物 `corps_*.sql.gz` 不支持恢复。
 
 ### 7.6 反向代理与 HTTPS 前置要求（审计 2026-08-29）
 
