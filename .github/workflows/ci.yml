@@ -129,6 +129,18 @@ jobs:
       # tag 不存在 / registry 临时故障，八类红因各自独立，外加"warn 与阻断级的边界"断言。
       # 没有这一条，上面的检测器退化成一个永远 PASS 的假门禁也没人知道。
       - run: python ../scripts/check_dockerfile_base_images.py --self-test
+      # 成熟度评分棘轮（2026-10-25 补）：路线图把验收判据写成「成熟度评分提升」，
+      # 但仓库里从来没有能跑的评分器 —— 09-27 那版是人工手感分，且其综合 8.4 那一行
+      # 已被自己的复核记录判为「不再作为结论使用」。这道门禁把成熟度变成计算题。
+      # 判据只比**原始指标值与方向**，不比分数：分数受 burn-down 期限影响，
+      # today 一变同一数值可能从 PASS 翻 FAIL，拿分数当棘轮会让门禁在某天自己变红，
+      # 而那天的代码什么都没改。因此分数下降只打印提示，判红只看硬事实
+      # （零覆盖文件数是否上升 / 契约未声明数是否上升 / 测试用例数是否下降 …）。
+      # 基线只存计量项（自动 --skip-gates）：门禁脚本本身已是棘轮，塞进基线
+      # 只会让基线随环境抖动（gh 有无、网络通不通都会改分数）。
+      # 前移基线必须伴随真实改进：`--emit-baseline` 不是让门禁变绿的开关。
+      - run: python ../scripts/score_maturity.py --check-baseline
+      - run: python ../scripts/score_maturity.py --self-test
 
   # 覆盖率棘轮：只跑单测、不连数据库，因此集成腿/加固腿再怎么红也一定会产出覆盖率数字。
   # 存在的理由（两条都是实测踩过的）：
@@ -237,6 +249,17 @@ jobs:
       # 靠文本解析极易误判，宁可连库看事实。
       - name: Assert schema.prisma objects all exist in deployed db
         run: python scripts/check_schema_migration_drift.py --database-url "postgresql://postgres:test@localhost:5432/corps_drift"
+      # db/schema.sql 快照新鲜度（2026-10-25 补）：上面那道 drift 门禁管的是
+      # Prisma schema ↔ migrations，**不覆盖 db/schema.sql 这份快照**。实测曾出现
+      # 快照落后最新迁移 1 个（缺 workspaces.settings 列）而 CI 全绿的情况 ——
+      # 排障的人和守卫测试拿它当权威参考，等于给一份过期的地图。
+      # 判据：快照头部声明的「对应迁移」必须等于 migrations 下最新目录。
+      # 放这里而非新开 job：本 job 已经部署了全部迁移，天然知道"最新迁移"是谁，
+      # 且 schema-drift 本身是 required status check，新 job 不在必需清单里拦不住合并。
+      - name: Assert db/schema.sql snapshot matches latest migration
+        run: python scripts/check_schema_snapshot_freshness.py
+      - name: Self-test the snapshot freshness gate
+        run: python scripts/check_schema_snapshot_freshness.py --self-test
 
   # API 契约防漂移：扫描 web/app/api/**/route.ts 得到实际路由，与
   # api/openapi.yaml 的 path 声明的差集不得超过 scripts/api-contract-baseline.txt。
