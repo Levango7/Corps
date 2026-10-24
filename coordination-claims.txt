@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-maturity2 | feat/maturity-batch2 | scripts/score_maturity.py,scripts/maturity-baseline.json,.gitignore,db/schema.sql,scripts/check_schema_snapshot_freshness.py,api/openapi.yaml,web/lib/red-metrics.ts,web/app/api/metrics/**,web/lib/observability.ts,docs/** | lead-batch2 | 2026-10-25 03:53 | 2026-10-25 11:53 | 第二批：收四处缺口（.gitignore / schema.sql 快照 / 按路由 RED 指标 / OpenAPI 契约清偿）+ 评分器棘轮化并串进 CI
