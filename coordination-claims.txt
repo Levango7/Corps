@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-maturity | feat/maturity-scorecard | scripts/score_maturity.py,docs/audit/MATURITY-2026Q4-BATCH1.md,docs/ROADMAP-2026Q4.md | lead-maturity | 2026-10-25 02:16 | 2026-10-25 08:16 | 新增可复现的成熟度评分器 + 第一批四项交付的对账报告
