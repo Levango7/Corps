@@ -1,11 +1,11 @@
 {
   "schema": 1,
   "label": null,
-  "commit": "a818303",
-  "generated_at": "2026-10-25T04:20:27",
+  "commit": "cf86574",
+  "generated_at": "2026-10-25T05:20:35",
   "today": "2026-10-25",
-  "composite": 8.47,
-  "band": "Silver",
+  "composite": 9.04,
+  "band": "Gold",
   "dimensions": [
     {
       "key": "security",
@@ -186,8 +186,8 @@
     {
       "key": "api",
       "name": "API 层",
-      "score": 3.33,
-      "band": "Red",
+      "score": 6.67,
+      "band": "Bronze",
       "checks": [
         {
           "id": "api-1",
@@ -234,10 +234,10 @@
           "title": "OpenAPI 契约覆盖率",
           "kind": "metric",
           "status": "FAIL",
-          "value": "30.4%",
+          "value": "32.2%",
           "target": "60.0%",
-          "note": "已声明 88 / 未声明 201",
-          "num": 30.4,
+          "note": "已声明 93 / 未声明 196",
+          "num": 32.2,
           "lower_is_better": false,
           "ratchet": true
         },
@@ -246,11 +246,11 @@
           "dim": "api",
           "title": "openapi.yaml 自述 path 数与实测一致",
           "kind": "metric",
-          "status": "FAIL",
-          "value": "自述 80 / 实测 88",
+          "status": "PASS",
+          "value": "自述 93 / 实测 93",
           "target": "0",
-          "note": "漂移 8",
-          "num": 8,
+          "note": "",
+          "num": 0,
           "lower_is_better": true,
           "ratchet": true
         }
@@ -358,10 +358,10 @@
           "title": "测试文件数",
           "kind": "metric",
           "status": "PASS",
-          "value": "138 个",
+          "value": "139 个",
           "target": "100 个",
           "note": "",
-          "num": 138,
+          "num": 139,
           "lower_is_better": false,
           "ratchet": true
         },
@@ -371,10 +371,10 @@
           "title": "测试用例数",
           "kind": "metric",
           "status": "PASS",
-          "value": "1302 例",
+          "value": "1317 例",
           "target": "1000 例",
           "note": "",
-          "num": 1302,
+          "num": 1317,
           "lower_is_better": false,
           "ratchet": true
         },
@@ -398,8 +398,8 @@
     {
       "key": "cicd",
       "name": "CI/CD",
-      "score": 8.57,
-      "band": "Silver",
+      "score": 10.0,
+      "band": "Gold",
       "checks": [
         {
           "id": "cicd-1",
@@ -495,15 +495,15 @@
         {
           "id": "cicd-7",
           "dim": "cicd",
-          "title": "main 分支最近一次 CI 结论",
+          "title": "main 分支最近一次 CI 工作流结论",
           "kind": "metric",
-          "status": "FAIL",
-          "value": "failure",
+          "status": "PASS",
+          "value": "success",
           "target": "success",
-          "note": "gh run list",
+          "note": "取 CI 工作流（定时 Smoke 等非必需工作流不计入）",
           "num": null,
           "lower_is_better": true,
-          "ratchet": true
+          "ratchet": false
         }
       ],
       "counted": 7,
@@ -512,7 +512,7 @@
     {
       "key": "observability",
       "name": "可观测性",
-      "score": 8.33,
+      "score": 8.12,
       "band": "Silver",
       "checks": [
         {
@@ -557,18 +557,44 @@
         {
           "id": "observability-4",
           "dim": "observability",
-          "title": "RED 指标（按路由的请求/错误/耗时）接线文件数",
-          "kind": "metric",
-          "status": "WARN",
-          "value": "0 个",
-          "target": "1 个",
-          "note": "当前仅进程级 gauge，无按路由 RED",
-          "num": 0,
+          "title": "RED-Errors：onRequestError 真的调用 recordError",
+          "kind": "file",
+          "status": "PASS",
+          "value": "已接线",
+          "target": "已接线",
+          "note": "web/instrumentation.ts",
+          "num": 1,
           "lower_is_better": false,
           "ratchet": true
         },
         {
           "id": "observability-5",
+          "dim": "observability",
+          "title": "RED-Rate：withRed 真实调用点数",
+          "kind": "metric",
+          "status": "WARN",
+          "value": "0 处",
+          "target": "1 处",
+          "note": "包装器已提供但零调用点；批量套用前不算接线",
+          "num": 0,
+          "lower_is_better": false,
+          "ratchet": true
+        },
+        {
+          "id": "observability-6",
+          "dim": "observability",
+          "title": "RED-Duration：withRed 真实调用点数",
+          "kind": "metric",
+          "status": "WARN",
+          "value": "0 处",
+          "target": "1 处",
+          "note": "与 Rate 同源（同一包装器同时记两者），仍为零",
+          "num": 0,
+          "lower_is_better": false,
+          "ratchet": true
+        },
+        {
+          "id": "observability-7",
           "dim": "observability",
           "title": "SLO/SLI 文档数",
           "kind": "metric",
@@ -581,7 +607,7 @@
           "ratchet": true
         },
         {
-          "id": "observability-6",
+          "id": "observability-8",
           "dim": "observability",
           "title": "监控运维 runbook",
           "kind": "file",
@@ -594,7 +620,7 @@
           "ratchet": true
         }
       ],
-      "counted": 6,
+      "counted": 8,
       "skipped": 0
     },
     {
@@ -734,8 +760,8 @@
     },
     "api-4": {
       "title": "OpenAPI 契约覆盖率",
-      "value": 30.4,
-      "display": "30.4%",
+      "value": 32.2,
+      "display": "32.2%",
       "target": "60.0%",
       "status": "FAIL",
       "lower_is_better": false,
@@ -743,10 +769,10 @@
     },
     "api-5": {
       "title": "openapi.yaml 自述 path 数与实测一致",
-      "value": 8,
-      "display": "自述 80 / 实测 88",
+      "value": 0,
+      "display": "自述 93 / 实测 93",
       "target": "0",
-      "status": "FAIL",
+      "status": "PASS",
       "lower_is_better": true,
       "ratchet": true
     },
@@ -779,8 +805,8 @@
     },
     "testing-3": {
       "title": "测试文件数",
-      "value": 138,
-      "display": "138 个",
+      "value": 139,
+      "display": "139 个",
       "target": "100 个",
       "status": "PASS",
       "lower_is_better": false,
@@ -788,8 +814,8 @@
     },
     "testing-4": {
       "title": "测试用例数",
-      "value": 1302,
-      "display": "1302 例",
+      "value": 1317,
+      "display": "1317 例",
       "target": "1000 例",
       "status": "PASS",
       "lower_is_better": false,
@@ -823,15 +849,33 @@
       "ratchet": true
     },
     "observability-4": {
-      "title": "RED 指标（按路由的请求/错误/耗时）接线文件数",
-      "value": 0,
-      "display": "0 个",
-      "target": "1 个",
-      "status": "WARN",
+      "title": "RED-Errors：onRequestError 真的调用 recordError",
+      "value": 1,
+      "display": "已接线",
+      "target": "已接线",
+      "status": "PASS",
       "lower_is_better": false,
       "ratchet": true
     },
     "observability-5": {
+      "title": "RED-Rate：withRed 真实调用点数",
+      "value": 0,
+      "display": "0 处",
+      "target": "1 处",
+      "status": "WARN",
+      "lower_is_better": false,
+      "ratchet": true
+    },
+    "observability-6": {
+      "title": "RED-Duration：withRed 真实调用点数",
+      "value": 0,
+      "display": "0 处",
+      "target": "1 处",
+      "status": "WARN",
+      "lower_is_better": false,
+      "ratchet": true
+    },
+    "observability-7": {
       "title": "SLO/SLI 文档数",
       "value": 0,
       "display": "0 份",

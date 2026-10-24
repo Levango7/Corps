@@ -514,15 +514,23 @@ def dim_cicd():
     exists(d + "-6", d, "回滚脚本", ROOT / "deploy" / "scripts" / "rollback.sh")
 
     # 分支保护 / 最近一次 main 运行结论：依赖 gh + 网络，取不到就 SKIP
+    # 必须按工作流过滤：main 上同时有 CI / Burndown / Smoke 等工作流，
+    # "最近一次 run" 会抓到定时 Smoke 的失败（实测 2026-10-24 抓到过一次），
+    # 而 Smoke 不是 required check —— 拿它判 CI 健康度是判错了对象。
+    # 判据取 CI 工作流（required checks 都由它产出）。
     rc, out, _ = sh(["gh", "run", "list", "--branch", "main", "--limit", "1",
-                     "--json", "conclusion", "-q", ".[] | .conclusion"])
+                     "--workflow", "CI", "--json", "conclusion",
+                     "-q", ".[] | .conclusion"])
     if rc == 0 and out.strip():
         ok = out.strip().lower() == "success"
-        add(d + "-7", d, "main 分支最近一次 CI 结论", "PASS" if ok else "FAIL",
-            out.strip(), "success", "gh run list", "metric")
+        # ratchet=False：这一项描述的是**远端状态**而不是仓库内容，
+        # 会随别人推了代码就翻转。放进基线会让门禁因外部事件变红。
+        add(d + "-7", d, "main 分支最近一次 CI 工作流结论", "PASS" if ok else "FAIL",
+            out.strip(), "success",
+            "取 CI 工作流（定时 Smoke 等非必需工作流不计入）", "metric", ratchet=False)
     else:
-        add(d + "-7", d, "main 分支最近一次 CI 结论", "SKIP", "gh 不可用", "success",
-            "本机无 gh 或网络不可达；CI 侧判定不受影响", "metric")
+        add(d + "-7", d, "main 分支最近一次 CI 工作流结论", "SKIP", "gh 不可用", "success",
+            "本机无 gh 或网络不可达；CI 侧判定不受影响", "metric", ratchet=False)
 
 
 def dim_observability():
@@ -536,24 +544,71 @@ def dim_observability():
     metrics = WEB / "app" / "api" / "metrics" / "route.ts"
     exists(d + "-3", d, "/api/metrics 指标端点", metrics)
 
-    # RED 指标：按路由维度的请求数 / 错误数 / 耗时
-    red = 0
+    # ── RED 三维分别判，不合成一项 ────────────────────────────────────────
+    # 为什么不合并：合成一项会让"通了一维"看起来像"全通了"。实测 2026-10-25
+    # 只接通了 Errors 一维（onRequestError -> recordError），Rate 与 Duration
+    # 没有诚实接入点（middleware 在 Edge runtime，状态与 /api/metrics 不共享；
+    # App Router 无全局"路由执行完毕"钩子），合并计分会把这两维的缺口藏起来。
+
+    # Errors：instrumentation.ts 的 onRequestError 必须真的调用 recordError
+    instr_txt = ""
+    if instr.is_file():
+        instr_txt = instr.read_text(encoding="utf-8", errors="replace")
+    # 判据必须比"文件里出现过 recordError 字样"更严：import 行里也有这个词。
+    # 实测反向测试（把调用删掉只留 import）第一版照样判 PASS —— 假绿灯。
+    # 因此先剥掉 import/export 行，再要求出现**真正的调用** `recordError(`。
+    body_lines = [
+        l for l in instr_txt.splitlines()
+        if not re.match(r"\s*(import|export)\s+.*from\s+['\"]", l)
+    ]
+    body = "\n".join(body_lines)
+    errors_wired = bool(
+        re.search(r"onRequestError", body) and re.search(r"\brecordError\s*\(", body)
+    )
+    # 布尔型指标：1 = 已接线，0 = 未接线。**必须 lower_is_better=False** ——
+    # 实测第一版漏了这个参数，于是"接通 Errors"被棘轮判成退步（0 -> 1 报红），
+    # 改进反被门禁挡住。凡 num 是 0/1 布尔量的检查都要显式声明方向。
+    add(d + "-4", d, "RED-Errors：onRequestError 真的调用 recordError",
+        "PASS" if errors_wired else "FAIL",
+        "已接线" if errors_wired else "未接线", "已接线",
+        "web/instrumentation.ts" if errors_wired else "接线点缺失", "file",
+        num=1 if errors_wired else 0, lower_is_better=False)
+
+    # Rate / Duration：按 withRed 的**真实调用点**计（定义文件自身不算）。
+    # 判据刻意数调用点而不是数"文件里有没有 withRed 字样" —— 后者会把一个
+    # 零调用点的包装器判成已接线，那是假绿灯。
+    red_lib = WEB / "lib" / "red-metrics.ts"
+    # 测试/e2e 里的调用点不算生产接线 —— 实测第一版把 red-metrics.test.ts 里的
+    # 5 处 withRed( 当成了已接线，得出 5 处/目标 1 处的假绿灯。判据必须是
+    # "生产代码里真的套了这个包装器"，不是"有人调过它"。
+    NON_PROD_RE = re.compile(
+        r"(^|/)(tests?|e2e|__tests__|__mocks__)(/|$)|\.[st]pec\.|\.[cm]?[jt]sx?$"
+    )
+    withred_calls = 0
     for p in walk(WEB, (".ts", ".tsx")):
         try:
+            if p.resolve() == red_lib.resolve():
+                continue
+            rel = p.relative_to(WEB).as_posix()
+            if NON_PROD_RE.search("/" + rel):
+                continue
             t = p.read_text(encoding="utf-8", errors="replace")
         except Exception:
             continue
-        if re.search(r"http_requests_total|http_request_duration|requestDurationHistogram|routeLabel", t):
-            red += 1
-    metric(d + "-4", d, "RED 指标（按路由的请求/错误/耗时）接线文件数", red, " 个", 1, 0,
-           lower_is_better=False, note="当前仅进程级 gauge，无按路由 RED")
+        withred_calls += len(re.findall(r"\bwithRed\s*\(", t))
+    metric(d + "-5", d, "RED-Rate：withRed 真实调用点数", withred_calls, " 处", 1, 0,
+           lower_is_better=False,
+           note="包装器已提供但零调用点；批量套用前不算接线")
+    metric(d + "-6", d, "RED-Duration：withRed 真实调用点数", withred_calls, " 处", 1, 0,
+           lower_is_better=False,
+           note="与 Rate 同源（同一包装器同时记两者），仍为零")
 
     slo = [p for p in walk(ROOT / "docs", (".md",))
            if re.search(r"SLO|SLI|可观测", p.name)]
-    metric(d + "-5", d, "SLO/SLI 文档数", len(slo), " 份", 1, 0, lower_is_better=False,
+    metric(d + "-7", d, "SLO/SLI 文档数", len(slo), " 份", 1, 0, lower_is_better=False,
            note="路线图 §1.5 承诺产出，尚未落地")
 
-    exists(d + "-6", d, "监控运维 runbook", ROOT / "docs" / "runbook-monitoring.md")
+    exists(d + "-8", d, "监控运维 runbook", ROOT / "docs" / "runbook-monitoring.md")
 
 
 def dim_docs():

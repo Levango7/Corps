@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 80 paths (updated 2026-09-27). The service also
+    Coverage: this contract declares 93 paths (updated 2026-10-25). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -3653,6 +3653,342 @@ paths:
           $ref: '#/components/responses/Unauthorized'
 
   # ===========================================================================
+  # AI AGENTS（2026-10-25 清偿 5 条）
+  #
+  # 依据：web/app/api/v1/ai/agents*/route.ts 的**文件头注释**（方法 / 入参 /
+  # 出参 / 限流都写在里面）。凡注释未写明的字段，这里只标 type: object，
+  # 不猜字段名 —— 契约写错比不写更危险：它会让人以为已经对齐了。
+  # 这组路由的 workspace 走 **query 参数 wid**（不是路径段），与
+  # /api/v1/workspaces/{wid}/... 那一族不同。
+  # ===========================================================================
+  /api/v1/ai/agents:
+    get:
+      tags: [ai]
+      summary: List agents of a workspace
+      description: >
+        Query: wid (required), enabled (optional boolean filter).
+        Returns agents of the workspace ordered by creation time ascending.
+      operationId: listAiAgents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+        - name: enabled
+          in: query
+          required: false
+          description: Filter by enabled flag.
+          schema: { type: boolean }
+      responses:
+        '200':
+          description: Agent list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+    post:
+      tags: [ai]
+      summary: Create an agent
+      description: >
+        Rate limit is not declared for this route. Auth chain:
+        getUserId → getWorkspaceContextV2 → runWithWorkspace (RLS transaction).
+        capabilities/metadata are converted with Prisma.InputJsonValue.
+      operationId: createAiAgent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, role, capabilities, systemPrompt, model]
+              properties:
+                name: { type: string }
+                role: { type: string }
+                capabilities:
+                  description: Free-form capability list; stored as JSON.
+                  type: array
+                  items: { type: object }
+                systemPrompt: { type: string }
+                model: { type: string }
+                enabled: { type: boolean }
+                metadata: { type: object }
+      responses:
+        '200':
+          description: Agent created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/ai/agents/coordinate:
+    post:
+      tags: [ai]
+      summary: Coordinate multiple agents to execute a task (non-streaming)
+      description: >
+        Rate limit: 3 requests per minute.
+        Returns { assignments, responses, messages }. Agents are selected by
+        agentIds when provided, otherwise all enabled agents of the workspace.
+      operationId: coordinateAiAgents
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [task]
+              properties:
+                task: { type: string }
+                agentIds:
+                  type: array
+                  items: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Coordination result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data:
+                    type: object
+                    description: '{ assignments, responses, messages }'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  /api/v1/ai/agents/{id}:
+    parameters:
+      - $ref: '#/components/parameters/AgentId'
+    patch:
+      tags: [ai]
+      summary: Update an agent (partial)
+      description: >
+        Every body field is optional; only supplied fields are updated.
+        Scoped by workspaceId + id so a caller can only touch agents of its
+        own workspace.
+      operationId: updateAiAgent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string }
+                role: { type: string }
+                capabilities:
+                  type: array
+                  items: { type: object }
+                systemPrompt: { type: string }
+                model: { type: string }
+                enabled: { type: boolean }
+                metadata: { type: object }
+      responses:
+        '200':
+          description: Agent updated
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [ai]
+      summary: Delete an agent
+      operationId: deleteAiAgent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Agent deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+
+  /api/v1/ai/agents/{id}/messages:
+    parameters:
+      - $ref: '#/components/parameters/AgentId'
+    get:
+      tags: [ai]
+      summary: List agent message history
+      description: >
+        Query: wid (required), from / to (optional agent ids), type (optional),
+        take (default 50), skip (default 0).
+      operationId: listAiAgentMessages
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          required: false
+          description: Filter by sender agent id.
+          schema: { type: string, format: uuid }
+        - name: to
+          in: query
+          required: false
+          description: Filter by recipient agent id.
+          schema: { type: string, format: uuid }
+        - name: type
+          in: query
+          required: false
+          description: Filter by message type.
+          schema: { type: string }
+        - name: take
+          in: query
+          required: false
+          description: Page size (default 50).
+          schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+        - name: skip
+          in: query
+          required: false
+          description: Offset (default 0).
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Message history
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data:
+                    type: array
+                    items: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+
+  /api/v1/ai/agents/{id}/respond:
+    parameters:
+      - $ref: '#/components/parameters/AgentId'
+    post:
+      tags: [ai]
+      summary: Get a single agent response (non-streaming)
+      description: >
+        Rate limit: 10 requests per minute.
+        Returns { response, handoff, messageId }.
+      operationId: respondAiAgent
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: wid
+          in: query
+          required: true
+          description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403.
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [message]
+              properties:
+                message: { type: string }
+      responses:
+        '200':
+          description: Agent response
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  message: { type: string, example: ok }
+                  data:
+                    type: object
+                    description: '{ response, handoff, messageId }'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+
+  # ===========================================================================
   # DECISION EXTRACT (AI draft)
   # ===========================================================================
   /api/v1/workspaces/{wid}/decisions/extract:
@@ -4629,6 +4965,12 @@ components:
         "decision-actions", "due-this-week", "team-load", "burndown",
         "priority-dist", "recent-activity".
       schema: { type: string, minLength: 1, maxLength: 64 }
+    AgentId:
+      name: id
+      in: path
+      required: true
+      description: AI agent id (UUID).
+      schema: { type: string, format: uuid }
 
   responses:
     BadRequest:
@@ -4671,6 +5013,16 @@ components:
             code: 404
             data: null
             message: "workspace not found"
+    RateLimited:
+      description: Per-route rate limit exceeded (429)
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ErrorEnvelope'
+          example:
+            code: 429
+            data: null
+            message: "rate limit exceeded, retry later"
     Conflict:
       description: Resource conflict (409)
       content:
