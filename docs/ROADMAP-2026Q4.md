@@ -18,7 +18,7 @@
 | 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0** |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭 |
-| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **147**（−10）/ 契约未声明 **201**（205 → 201）——burn-down 计划见 §2 |
+| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **147**（−10）/ 契约未声明 **196**（205 → 201 → 196，10-25 清偿 AI agents 5 条）——burn-down 计划见 §2 |
 | **已知退步** | **API 层 3.33（−1.67）**：路由新增速度≈契约补齐速度，覆盖率原地踏步；`api/openapi.yaml` 自述「80 paths」与实测 88 漂移扩大到 8。**数据层 Red**：`db/schema.sql` 快照落后最新迁移 1 个（缺 `workspaces.settings`），且无门禁看守 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
@@ -84,7 +84,7 @@
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 602 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
 | `permission-gate` T3 | 147 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
-| `api-contract` undeclared | 201 | **150** | 每周契约化 ≥5 条路由 |
+| `api-contract` undeclared | 196 | **150** | 每周契约化 ≥5 条路由 |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）

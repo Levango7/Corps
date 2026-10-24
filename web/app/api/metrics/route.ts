@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiMsg } from "@/lib/api-messages";
+import { redMetricsText } from "@/lib/red-metrics";
 
 /**
  * Prometheus 指标端点 — /api/metrics
@@ -9,6 +10,16 @@ import { apiMsg } from "@/lib/api-messages";
  * - corps_memory_rss_bytes: RSS 内存使用
  * - corps_memory_heap_used_bytes: 堆内存使用
  * - corps_node_version: Node.js 版本（info metric）
+ * - corps_http_requests_total{route}          按路由请求数（RED 的 R）
+ * - corps_http_request_errors_total{route}    按路由未处理错误数（RED 的 E）
+ * - corps_http_request_duration_ms{route}     按路由耗时直方图（RED 的 D）
+ *
+ * 关于 RED 三维的接线现状（不要只看 series 名就以为都通了）：
+ *   - Errors：已接通。数据源是 instrumentation.ts 的 onRequestError 钩子。
+ *   - Requests / Duration：注册表已实现，但**当前零调用点** ——
+ *     middleware 跑在 Edge runtime，状态与这里不共享；App Router 也没有
+ *     全局的"路由执行完毕"钩子。要接通得逐路由套 `withRed()`。
+ *     所以这两个 series 现在吐不出来，详见 web/lib/red-metrics.ts 顶部。
  *
  * 注意：默认不要求认证（Prometheus scraper 无 cookie），生产应通过网络层
  * （防火墙/ingress）限制访问；若需端点级控制，设置 METRICS_TOKEN 后即要求
@@ -63,9 +74,16 @@ export async function GET(req: NextRequest) {
     "# HELP corps_process_pid Process ID",
     "# TYPE corps_process_pid gauge",
     `corps_process_pid ${process.pid}`,
-  ].join("\n");
+  ];
 
-  return new NextResponse(metrics, {
+  // RED 指标：按路由的请求数 / 错误数 / 耗时。空注册表时 redMetricsText()
+  // 返回空串，此时不追加空块，避免 exposition 里出现孤立的 HELP/TYPE 声明。
+  const red = redMetricsText();
+  if (red) metrics.push("", red);
+
+  const body = metrics.join("\n");
+
+  return new NextResponse(body, {
     headers: {
       "Content-Type": "text/plain; version=0.0.4; charset=utf-8",
       "Cache-Control": "no-store",
