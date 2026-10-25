@@ -77,6 +77,16 @@ parse_env_file() {
   local file="$1"
   [[ -f "${file}" ]] || return 0
   local line key value
+  # 快照"调用前就已导出"的变量名：命令行 / CI 显式注入的值优先于文件内容，
+  # 与 `docker compose --env-file` 的优先级一致（shell 环境 > env 文件）。
+  # 不这么做有个反直觉的后果：`CORPS_IMAGE_TAG=0.2.1 bash deploy/scripts/deploy.sh`
+  # （deploy.sh 头部文档的"临时指定 tag"用法）会被 .env.prod 里的空值覆盖，
+  # 表现为"我明明传了 tag，它却说未设置"。
+  # 用 compgen -e 一次性取导出变量名，而不是在循环里逐个 ${!key+set} 判断：
+  # 后者会把本函数自己 export 的也算"已存在"，文件里重复出现同一 KEY 时
+  # 会破坏"最后一次出现生效"的语义。
+  local _preset
+  _preset=" $(compgen -e 2>/dev/null | tr '\n' ' ') "
   while IFS= read -r line || [[ -n "${line}" ]]; do
     line="${line%$'\r'}"                 # 剥 Windows 行尾
     # 跳过空行与注释行
@@ -98,6 +108,8 @@ parse_env_file() {
     # 非法的 key 名（以数字开头等）直接跳过：export 会报错，
     # 在 set -e 下会让整个脚本静默退出，且报错信息指向 export 而非真正原因
     [[ "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]] || continue
+    # 调用方已注入的同名变量不覆盖（见函数头的优先级说明）
+    [[ "${_preset}" == *" ${key} "* ]] && continue
     export "${key}=${value}"
   done < "${file}"
 }
@@ -207,9 +219,16 @@ write_current_version() {
 # health_poll <URL> <超时秒数> — 返回 0 健康 / 1 超时或降级
 health_poll() {
   local url="$1" timeout="${2:-${CORPS_HEALTH_TIMEOUT}}"
-  local elapsed=0 interval=2 body code last_code="000" last_body=""
+  local interval=2 body code last_code="000" last_body=""
+  # 超时按**真实墙钟**计（bash SECONDS），不按"轮数 × 间隔"推。
+  # 旧账目：每轮 elapsed += 2，但一轮实际要花 curl -m 2 + sleep 2 = 最多 4s，
+  # 于是"上限 120s"实际能跑到 ~240s —— 对外声明的预算被悄悄吃掉一半，
+  # 直接挤压 AC-02 的 5 分钟回滚窗（回滚自己还要再跑一轮健康检查）。
+  local start_ts="${SECONDS}" elapsed=0 _remain _nap
 
-  while (( elapsed < timeout )); do
+  while :; do
+    elapsed=$(( SECONDS - start_ts ))
+    (( elapsed < timeout )) || break
     # -m 2：单次请求最多 2s，避免应用挂死时单次探测卡满整个超时预算
     # -w '%{http_code}'：拿到状态码；应用 db 探测失败时返回 503
     #
@@ -235,9 +254,13 @@ health_poll() {
       return 0
     fi
     log_info "健康检查未通过（第 ${elapsed}s，HTTP ${code:-000}），${interval}s 后重试"
-    # 轮询间隔：这是"重试节奏"而非"固定等待"，总时长受 timeout 约束
-    sleep "${interval}"
-    elapsed=$(( elapsed + interval ))
+    # 轮填间隔：这是"重试节奏"而非"固定等待"；最后一轮休眠按剩余预算截断，
+    # 否则总时长会被拖到 timeout + interval（探测本身最多还要再花 2s）。
+    _remain=$(( timeout - elapsed ))
+    (( _remain > 0 )) || break
+    _nap="${interval}"
+    if (( _nap > _remain )); then _nap="${_remain}"; fi
+    sleep "${_nap}"
   done
 
   # 失败信息必须能区分三种情况，否则排障方向会错：

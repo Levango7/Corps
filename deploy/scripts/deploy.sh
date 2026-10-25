@@ -2,15 +2,21 @@
 # =============================================================================
 # deploy/scripts/deploy.sh — 一键升级（失败自动回滚）
 # =============================================================================
-# 固定序列（每步失败即中止并自动调 rollback.sh）：
+# 固定序列（每步失败即中止；**只有第 5 步起**失败才自动调 rollback.sh）：
 #   1. 跑 preflight.sh（不通过就不许动生产）
 #   2. 记录当前 tag 到 deploy/VERSION.previous（回滚依据）
-#   3. 触发一次备份（上线前留还原点）
+#   3. 触发一次备份（上线前留还原点；首装无 schema 可备，跳过）
 #   4. docker compose pull app
-#   5. docker compose up -d --no-deps app
+#   5. docker compose up -d --no-deps app（首装：完整 up -d 拉起全栈）
 #   6. 轮询健康检查，上限 120s
 #   7a. 通过 → 写 VERSION，退出 0
 #   7b. 失败 → 自动 rollback.sh，退出 1
+#
+# 为什么第 1–4 步失败**不**回滚：这四步都不改动运行中的生产——preflight 只读、
+# VERSION.previous 是本地文件、备份只往备份目录写 .dump、pull 只动本地镜像缓存。
+# 那些时刻线上还是好的，而 rollback.sh 的动作是 pull + up -d --no-deps app，
+# 只会把一个健康的 app 重启一遍，再打一行"已回滚，线上恢复到部署前状态"的误导日志。
+# 因此自动回滚的装备点放在第 5 步（第一次真正改动运行态的命令）之前。
 #
 # 关于 --no-deps：只重建 app 容器，不动 db/redis/livekit。
 # 误用（不带 --no-deps）会在 app 有新迁移时连带重建 db 容器——db 容器重建
@@ -33,11 +39,22 @@ for arg in "$@"; do
   case "${arg}" in
     --skip-preflight) SKIP_PREFLIGHT=1 ;;
     -h|--help)
-      sed -n '2,30p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+      # 打到第二个 `# ====` 分隔行为止，不写死行号——头部注释一改行号就漂
+      sed -n '2,/^# ====/p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
       exit 0 ;;
     *) die 2 "未知参数：${arg}（用 --help 查看用法）" ;;
   esac
 done
+
+# 加载 deploy/.env.prod：CORPS_IMAGE_TAG / BACKUP_DIR 等都由这里来。
+# ⛔ 历史上本脚本**从来没有**加载过 .env.prod（`git log -S load_prod_env --
+#    deploy/scripts/deploy.sh` 为空）：preflight.sh 在它自己的进程里加载了，
+#    deploy.sh 没有。于是按 README §0 的流程（preflight → deploy.sh）跑下来，
+#    deploy.sh 第 2 步就因 CORPS_IMAGE_TAG 为空而 die；就算命令行补上 tag，
+#    第 3 步又会因 BACKUP_DIR 为空而死。CI 也从不执行 deploy.sh，
+#    这个缺口因此一直没被发现——部署链是"PR 全绿、合并后才炸"的典型。
+# 放在参数解析之后：--help 不该要求 .env.prod 存在。
+load_prod_env
 
 # 记录本次部署的起始 tag，供自动回滚使用
 # 在任何可能失败的步骤之前赋值——若在赋值前就崩，自动回滚无据可依
@@ -56,7 +73,7 @@ on_error() {
   if (( AUTO_ROLLBACK_ARMED == 1 )); then
     trigger_rollback "部署中断（第 ${line_no} 行，退出码 ${exit_code}）"
   else
-    log_warn "未装备自动回滚（失败发生在记录原版本之前，线上未被改动）"
+    log_warn "未装备自动回滚（失败发生在任何生产变更之前，线上未被改动）"
   fi
   exit "${exit_code}"
 }
@@ -118,66 +135,112 @@ if [[ "${TARGET_TAG}" == "${DEPLOY_FROM_TAG}" ]]; then
 fi
 log_ok "目标版本：${TARGET_TAG}"
 
-# 从此往后任何失败都要能回滚
-AUTO_ROLLBACK_ARMED=1
-
 # ── 3. 上线前备份 ────────────────────────────────────────────────────────────
 # 为什么不直接部署：镜像 tag 回退只回退代码。schema 变了就是不可逆的，
 # 那一刻唯一的还原点就是这次部署前的备份。
 # 顺序在 pull 之前：备份要早于任何状态变更，否则"备份"里可能已含新 schema。
+#
+# ⛔ 本步骤失败**不回滚**：此刻还没碰过生产（pull / up 都在后面），
+#    而 rollback.sh 的动作是 pull + up -d --no-deps app —— 那只会把一个
+#    健康活着的 app 重启一遍，再打一行"已回滚，线上恢复到部署前状态"的误导日志。
+#    备份失败时线上本来就是好的，回滚是纯破坏。直接退出即可。
 log_step "3/7 上线前备份"
 _bdir="${BACKUP_DIR:-}"
 if [[ -z "${_bdir}" || ! -d "${_bdir}" ]]; then
-  log_error "备份目录不可用：${_bdir:-<未设置>}"
-  trigger_rollback "上线前备份失败（目录不可用）——继续部署等于放弃唯一的 schema 还原点"
-  exit 1
+  die 1 "备份目录不可用：${_bdir:-<未设置>}（未动生产，直接退出，不回滚）"
 fi
-# 先捕获实际文件名再写：清理时必须删掉「真正写出的那个文件」。
-# 旧写法写入 *.sql.gz 却 rm *.sql.gz.tmp，通配符不匹配，清理从未生效。
-# 2026-10-13 恢复演练重构：改用 pg_dump --format=custom（与每日备份同格式）。
-# 原 pg_dumpall | gzip 有两个致命问题（演练实测）：① restore.sh 的灌库命令
-# `psql --force` 是非法选项——这条恢复链从未工作过，只是失败得足够响亮
-# （一个核心表都灌不进 → 判据红）；② pg_dumpall 产物含 `\connect <生产库>`,
-# 一旦灌库参数修好，--dry-run 会切到生产库写数据，与"生产库零接触"承诺相悖。
-# custom 格式单库 dump：恢复走 pg_restore、无 \connect 隐患、可选择性恢复，
-# 且与 backup 容器的每日产物按同一套 restore 路径验证过（演练 dry-run 通过）。
-_bak="${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).dump"
-# stderr 落到临时文件而不是 /dev/null：备份失败时"pg_dump 失败"这句话
-# 本身不提供任何可行动信息（是权限？连接？卷满？），排查得手工重跑一遍。
-_err_log="$(mktemp 2>/dev/null || echo "${_bak}.err")"
-if ! corpse_compose exec -T db sh -c \
-     'pg_dump --format=custom --no-owner -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-corps}"' \
-     > "${_bak}" 2>"${_err_log}"; then
-  # pg_dump 失败时清掉半截文件：留下一个 0 字节或截断的 .dump，
-  # 将来 restore.sh 拿它恢复会得到一个"看起来有文件、实则残缺"的假安全感
-  rm -f "${_bak}" 2>/dev/null || true
-  log_error "pg_dump 失败，stderr 末尾 5 行："
-  tail -n 5 "${_err_log}" 2>/dev/null | while IFS= read -r _l; do log_error "  ${_l}"; done
+
+# db 是否在跑。判据用容器名 corps-db（根 compose 的 container_name，overlay 不改名）。
+_db_up=0
+if docker ps --format '{{.Names}}' 2>/dev/null | grep -qx 'corps-db'; then
+  _db_up=1
+fi
+
+# 首装判定：**VERSION 为空且 db 没在跑**，两个条件都要满足。
+#   VERSION 空但 db 在跑 → 版本文件被误删，按升级流程走（不重启一个活着的库）
+#   VERSION 有值但 db 没跑 → 库挂了，紧接着拦下（没有 schema 可备，不许上线）
+_first_install=0
+if [[ -z "${DEPLOY_FROM_TAG}" || "${DEPLOY_FROM_TAG}" == "none" ]]; then
+  if (( _db_up == 1 )); then
+    log_warn "deploy/VERSION 为空但 corps-db 在运行——版本记录可能被误删，按升级流程处理"
+  else
+    _first_install=1
+  fi
+fi
+
+if (( _first_install == 1 )); then
+  # 首装没有 schema 可备。历史上这里无条件 exec pg_dump，而 exec 要求 db 在跑，
+  # 于是干净机器上的首次部署 100% 死在这一步（README §0 的流程在 deploy.sh
+  # 之前没有任何 up）——表现成"备份失败 + 回滚"，把首装变成事故。
+  log_warn "首次部署（VERSION 为空且 corps-db 未运行）：跳过上线前备份——首装没有 schema 可备"
+  log_warn "  第 5 步将完整拉起全部服务（含 db）；首装失败没有旧版本可回滚，需人工介入"
+elif (( _db_up == 0 )); then
+  die 1 "corps-db 未运行，而 deploy/VERSION=${DEPLOY_FROM_TAG} 表明这不是首次部署——
+       库不在就没法备 schema，此时上线等于放弃唯一的 schema 还原点。
+       先查库：docker compose ... ps db && docker logs corps-db --tail 30"
+else
+  # 先捕获实际文件名再写：清理时必须删掉「真正写出的那个文件」。
+  # 旧写法写入 *.sql.gz 却 rm *.sql.gz.tmp，通配符不匹配，清理从未生效。
+  # 2026-10-13 恢复演练重构：改用 pg_dump --format=custom（与每日备份同格式）。
+  # 原 pg_dumpall | gzip 有两个致命问题（演练实测）：① restore.sh 的灌库命令
+  # `psql --force` 是非法选项——这条恢复链从未工作过，只是失败得足够响亮
+  # （一个核心表都灌不进 → 判据红）；② pg_dumpall 产物含 `\connect <生产库>`,
+  # 一旦灌库参数修好，--dry-run 会切到生产库写数据，与"生产库零接触"承诺相悖。
+  # custom 格式单库 dump：恢复走 pg_restore、无 \connect 隐患、可选择性恢复，
+  # 且与 backup 容器的每日产物按同一套 restore 路径验证过（演练 dry-run 通过）。
+  _bak="${_bdir}/corps_predeploy_$(date +%Y%m%d_%H%M%S).dump"
+  # stderr 落到临时文件而不是 /dev/null：备份失败时"pg_dump 失败"这句话
+  # 本身不提供任何可行动信息（是权限？连接？卷满？），排查得手工重跑一遍。
+  _err_log="$(mktemp 2>/dev/null || echo "${_bak}.err")"
+  if ! corpse_compose exec -T db sh -c \
+       'pg_dump --format=custom --no-owner -U "${POSTGRES_USER:-postgres}" -d "${POSTGRES_DB:-corps}"' \
+       > "${_bak}" 2>"${_err_log}"; then
+    # pg_dump 失败时清掉半截文件：留下一个 0 字节或截断的 .dump，
+    # 将来 restore.sh 拿它恢复会得到一个"看起来有文件、实则残缺"的假安全感
+    rm -f "${_bak}" 2>/dev/null || true
+    log_error "pg_dump 失败，stderr 末尾 5 行："
+    tail -n 5 "${_err_log}" 2>/dev/null | while IFS= read -r _l; do log_error "  ${_l}"; done
+    rm -f "${_err_log}" 2>/dev/null || true
+    die 1 "上线前备份失败——未动生产，直接退出，不回滚"
+  fi
   rm -f "${_err_log}" 2>/dev/null || true
-  trigger_rollback "上线前备份失败——继续部署等于放弃唯一的 schema 还原点"
-  exit 1
+  _bf="$(ls -t "${_bdir}"/corps_predeploy_*.dump 2>/dev/null | head -1)"
+  _bf_size="$(du -h "${_bf}" 2>/dev/null | cut -f1 || echo '?')"
+  log_ok "备份完成：${_bf}（${_bf_size}）"
 fi
-rm -f "${_err_log}" 2>/dev/null || true
-_bf="$(ls -t "${_bdir}"/corps_predeploy_*.dump 2>/dev/null | head -1)"
-_bf_size="$(du -h "${_bf}" 2>/dev/null | cut -f1 || echo '?')"
-log_ok "备份完成：${_bf}（${_bf_size}）"
 
 # ── 4. 拉取镜像 ──────────────────────────────────────────────────────────────
 log_step "4/7 拉取镜像 ghcr.io/levango7/corps:${TARGET_TAG}"
 log_warn "GHCR 在国内访问不稳定；若此处超时，先配置镜像加速再重试（README §3）"
 if ! corpse_compose pull app; then
-  die 1 "镜像拉取失败"
+  # 拉取只动本地镜像缓存，没碰运行中的容器——不需要回滚
+  die 1 "镜像拉取失败（未动生产，不回滚）"
 fi
 log_ok "镜像就绪"
 
-# ── 5. 重建 app 容器 ─────────────────────────────────────────────────────────
-log_step "5/7 重建 app 容器（--no-deps，不动 db/redis）"
-# 不加 --no-deps 会连带重建 db 容器：数据在卷里不会丢，但会中断所有连接
-# 并拉长重启窗口。app 有新迁移时 db 也不需要重建。
-if ! corpse_compose up -d --no-deps app; then
-  die 1 "app 容器启动失败"
+# ── 5. 起 app 容器 ───────────────────────────────────────────────────────────
+# 自动回滚的装备点：必须卡在"第一次真正改动运行态的命令"之前。
+# 放在更早（如备份之前）是错的：那些时刻线上还是好的，回滚只会重启一个
+# 健康的 app（见第 3 步与文件头的说明）。
+AUTO_ROLLBACK_ARMED=1
+if (( _first_install == 1 )); then
+  # 首装：栈里什么都没有，--no-deps 没有任何保护对象；且 db 不起来 app 连不上库，
+  # 健康检查必红。完整拉起全部服务（db/redis/livekit/caddy/app/cron/backup）。
+  # 镜像已在第 4 步 pull 过（app 与 cron 同镜像），这里不会现场 build。
+  log_step "5/7 首次部署：完整拉起全部服务"
+  if ! corpse_compose up -d; then
+    die 1 "首次部署起栈失败（没有旧版本可回滚）——查：docker compose ... ps && docker logs <起不来的服务> --tail 50"
+  fi
+  log_ok "全部服务已拉起"
+else
+  log_step "5/7 重建 app 容器（--no-deps，不动 db/redis）"
+  # 不加 --no-deps 会连带重建 db 容器：数据在卷里不会丢，但会中断所有连接
+  # 并拉长重启窗口。app 有新迁移时 db 也不需要重建。
+  if ! corpse_compose up -d --no-deps app; then
+    die 1 "app 容器启动失败"
+  fi
+  log_ok "app 容器已重建"
 fi
-log_ok "app 容器已重建"
 
 # ── 6. 健康检查轮询 ──────────────────────────────────────────────────────────
 log_step "6/7 健康检查（上限 ${CORPS_HEALTH_TIMEOUT}s）"

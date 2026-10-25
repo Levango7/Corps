@@ -16,10 +16,22 @@ git clone --depth 1 git@github.com:Levango7/Corps.git /opt/corps && cd /opt/corp
 cp deploy/.env.prod.example deploy/.env.prod
 $EDITOR deploy/.env.prod          # 填密钥、域名、镜像 tag —— 见 §2
 bash deploy/scripts/preflight.sh  # 不通过就别往下走
-bash deploy/scripts/deploy.sh
+bash deploy/scripts/deploy.sh     # 自己读 .env.prod；首装自动完整起栈
 ```
 
 `preflight.sh` 会拦下所有"一定会炸"的配置。**它失败是正常的**，逐条修完再跑。
+
+`deploy.sh` 自己判断这是首装还是升级（判据：`deploy/VERSION` 为空**且** `corps-db`
+没在跑），不需要传参数：
+
+| | 首装 | 升级 |
+|---|---|---|
+| 第 3 步 上线前备份 | **跳过**（没有 schema 可备） | `pg_dump` 落一个 `corps_predeploy_*.dump` |
+| 第 5 步 起容器 | 完整 `up -d` 拉起全部服务 | `up -d --no-deps app`，不碰 db/redis |
+| 失败时 | 没有旧版本可回滚，需人工介入 | 自动回滚到上一个 tag |
+
+库不在、又不算首装时（`deploy/VERSION` 有值但 `corps-db` 没跑），`deploy.sh`
+会直接拒绝上线——没有 schema 可备，上线等于放弃唯一的还原点。
 
 ---
 
