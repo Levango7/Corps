@@ -14,6 +14,7 @@ import { BASE, registerUser, authHeader } from "../helpers";
  * 6. 跨工作区隔离 — B 的 token 读 A 的记录 403
  *
  * 契约：api/openapi.yaml 已声明该簇（2026-10-26 第三批），本文件是其行为侧的钉子。
+ * 评分器口径：本文件计入 testing-5（路由级测试文件数）第 8 个。
  */
 
 let token: string;
