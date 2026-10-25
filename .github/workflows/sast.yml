@@ -4,10 +4,11 @@ name: SAST
 # RLS/权限/契约等自有门禁之外，没有任何第三方静态分析在扫真实代码 ——
 # 安全满分靠人工审计撑着（BATCH1 §6 的建议项，2026-10-26 落地）。
 #
-# 为什么只有 CodeQL 没有 gitleaks：
-#   gitleaks（密钥泄漏扫描）需要先在本地跑通零命中再上线 —— 本机到
-#   Docker Hub / 二进制下载的网络不可靠，无法预验证就直接上线，一旦历史
-#   commit 有命中就会出现一道长期红。待网络窗口预验证后另批接入。
+# gitleaks 接入记录（2026-10-26）：本地 gitleaks v8.30.1 全历史预验证
+# （865 commits）命中 4 处，逐条人工核验全部为误报（测试夹具假密钥 ×2、
+# 文档 JWT 示例、localStorage 键名），以 .gitleaksignore 带理由豁免——
+# 豁免后复扫 "no leaks found"。豁免文件里写明维护规矩：只许逐条核验后
+# 增加，修掉真实来源应删行。误报来源见 .gitleaksignore 头注释。
 #
 # 为什么不是 required check：CodeQL 的产出是 Security tab 的告警
 # （新告警不阻断 PR），分析 job 失败才红；且分支保护的必过清单是固定
@@ -43,3 +44,17 @@ jobs:
       - uses: github/codeql-action/analyze@v3
         with:
           category: "/language:javascript-typescript"
+
+  gitleaks:
+    name: Gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      # 全历史扫描：密钥泄漏的意义在于"曾经提交过什么"，浅克隆扫不到
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # 仓库根的 .gitleaksignore 生效（4 条已核验误报）；
+        # 新增泄漏 → job 红（非 required，但 Security/日志可见）

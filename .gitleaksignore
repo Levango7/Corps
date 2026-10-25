@@ -1,0 +1,22 @@
+# gitleaks 豁免登记 —— 每行一条 finding 指纹，# 开头为注释。
+#
+# 生成/复核流程（2026-10-26 首次接入时的预验证）：
+#   本地 gitleaks v8.30.1 全历史扫描（865 commits / 17.55MB）实测命中 4 处，
+#   逐条人工核验**全部为误报**、零真实泄漏，按官方 .gitleaksignore 机制豁免：
+#
+# 1. 微信支付 webhook 签名测试的 APIv3 密钥夹具——值为显式递增序列
+#    0123456789abcdef…（32 字节硬约束的测试常量），非真实密钥。
+# 2. livekit-integration 设计文档里的 JWT 响应示例——截断的 header 片段
+#    （eyJhbGciOiJIUzI1NiIs...），文档示意用。
+# 3. web/lib/favorites.ts 的 localStorage 键名常量 KEY = "corps_favorites_v1"
+#    ——generic-api-key 规则按 "KEY = \"…\"" 形态误匹配，非凭据。
+# 4. refresh-rotation 测试的 BETTER_AUTH_SECRET 夹具——注释明写"测试用"，
+#    与生产值仅格式一致（64 位 hex），值为本仓自造。
+#
+# 维护规矩：豁免只允许"逐条人工核验后增加"；修掉一个真实来源就应从本文件
+# 删行（指纹失效后 gitleaks 会重新报出，正好当作复核信号）。
+
+8f17a1b3fa53fa99ed414057b23e0675af3453ea:web/tests/unit/payments-webhook-signature.test.ts:generic-api-key:448
+48b537b27b12444899e7baddaaa5c41ca4ca8547:docs/design/livekit-integration.md:generic-api-key:383
+afeefe098339f22444fd35e192fdbef952fd82fa:web/lib/favorites.ts:generic-api-key:8
+a25c73db371c9d348b9225199fdb0ff65e729963:web/tests/unit/refresh-rotation.test.ts:generic-api-key:53
