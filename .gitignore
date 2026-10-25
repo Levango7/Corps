@@ -22,8 +22,12 @@ build/
 dist/
 
 # Environment files
-.env*.local
-.env
+# 通配 .env* + 显式例外：原先只写 `.env` 与 `.env*.local`，于是
+# `.env.prod` / `.env.prod.20261004-drill.bak` 这类**带真实密钥赋值**的变体
+# 不在忽略范围内 —— 而 PR #161 给 deploy.sh 加了根目录 `.env.prod` 加载路径，
+# 等于新开了一条"密钥摆进 `git add .` 枪口下"的路。模板一律以 .example 结尾入库。
+.env*
+!.env.example
 
 # Debug
 npm-debug.log*
