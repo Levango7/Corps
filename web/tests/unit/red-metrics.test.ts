@@ -37,9 +37,9 @@ afterEach(() => {
 
 describe("normalizeRoute — 基数控制", () => {
   it("uuid 段折叠成 [id]", () => {
-    expect(
-      normalizeRoute("/api/v1/workspaces/3f2a9c11-4b7e-4a1d-9c33-8d5e6f7a8b90/tasks"),
-    ).toBe("/api/v1/workspaces/[id]/tasks");
+    expect(normalizeRoute("/api/v1/workspaces/3f2a9c11-4b7e-4a1d-9c33-8d5e6f7a8b90/tasks")).toBe(
+      "/api/v1/workspaces/[id]/tasks",
+    );
   });
 
   it("24 位十六进制与纯数字段同样折叠", () => {
@@ -82,13 +82,17 @@ describe("withRed — Rate/Duration/按状态码的错误", () => {
     const handler = withRed(async (_req: Request) => new Response("ok", { status: 200 }));
 
     await handler(
-      new Request("http://localhost:3000/api/v1/workspaces/3f2a9c11-4b7e-4a1d-9c33-8d5e6f7a8b90/tasks"),
+      new Request(
+        "http://localhost:3000/api/v1/workspaces/3f2a9c11-4b7e-4a1d-9c33-8d5e6f7a8b90/tasks",
+      ),
     );
 
     const text = redMetricsText();
     expect(text).toContain('corps_http_requests_total{route="/api/v1/workspaces/[id]/tasks"} 1');
     expect(text).toContain("# TYPE corps_http_request_duration_ms histogram");
-    expect(text).toContain('corps_http_request_duration_ms_count{route="/api/v1/workspaces/[id]/tasks"} 1');
+    expect(text).toContain(
+      'corps_http_request_duration_ms_count{route="/api/v1/workspaces/[id]/tasks"} 1',
+    );
     expect(text).not.toContain("corps_http_request_errors_total");
   });
 

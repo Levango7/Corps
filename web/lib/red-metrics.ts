@@ -201,9 +201,7 @@ export function redMetricsText(): string {
         lines.push(`corps_http_request_duration_ms_bucket{${label},le="${bound}"} ${cumulative}`);
       });
       cumulative += s.durationBuckets[DURATION_BUCKETS_MS.length];
-      lines.push(
-        `corps_http_request_duration_ms_bucket{${label},le="+Inf"} ${cumulative}`,
-      );
+      lines.push(`corps_http_request_duration_ms_bucket{${label},le="+Inf"} ${cumulative}`);
       lines.push(`corps_http_request_duration_ms_sum{${label}} ${s.durationSumMs}`);
       lines.push(`corps_http_request_duration_ms_count{${label}} ${s.durationCount}`);
     }
