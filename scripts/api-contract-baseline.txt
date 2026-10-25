@@ -119,9 +119,6 @@
 /api/v1/workspaces/{wid}/approvals/templates
 /api/v1/workspaces/{wid}/approvals/templates/{tid}
 /api/v1/workspaces/{wid}/contact-groups
-/api/v1/workspaces/{wid}/dashboard/widgets/custom-chart
-/api/v1/workspaces/{wid}/dashboard/widgets/gantt-chart
-/api/v1/workspaces/{wid}/dashboard/widgets/milestone-timeline
 /api/v1/workspaces/{wid}/databases
 /api/v1/workspaces/{wid}/databases/{dbid}
 /api/v1/workspaces/{wid}/databases/{dbid}/fields
@@ -177,10 +174,6 @@
 /api/v1/workspaces/{wid}/tasks/{id}/conversation
 /api/v1/workspaces/{wid}/tasks/{id}/messages/search
 /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}
-/api/v1/workspaces/{wid}/whiteboards
-/api/v1/workspaces/{wid}/whiteboards/{wbid}
-/api/v1/workspaces/{wid}/wiki
-/api/v1/workspaces/{wid}/wiki/{pageId}
 /api/v1/workspaces/{wid}/workflows
 /api/v1/workspaces/{wid}/workflows/{wfid}
 /api/v1/workspaces/{wid}/workflows/{wfid}/executions

@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 110 paths (updated 2026-10-26). The service also
+    Coverage: this contract declares 117 paths (updated 2026-10-26). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -5917,6 +5917,338 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/dashboard/widgets/custom-chart:
+    get:
+      tags: [dashboard]
+      summary: Custom chart widget data (default task-status distribution)
+      description: >
+        chartType and dataSource are fixed server-side today ("bar" /
+        "taskStatus"); the client decides how to render labels/values.
+        Counts only top-level tasks (parentId=null).
+      operationId: getCustomChartWidget
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Chart payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CustomChart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/dashboard/widgets/gantt-chart:
+    get:
+      tags: [dashboard]
+      summary: Gantt widget data (top-level tasks with dueDate, max 20)
+      description: >
+        Task has no startDate field: createdAt is used as the bar start and
+        dueDate as the end. Ordering by createdAt.
+      operationId: getGanttChartWidget
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Gantt payload ({ items })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Gantt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/dashboard/widgets/milestone-timeline:
+    get:
+      tags: [dashboard]
+      summary: Milestone timeline widget data (status inferred from linked tasks)
+      description: >
+        Milestone has no status column. Status is inferred: all linked tasks
+        done → "done"; any in_progress/review → "in_progress"; otherwise →
+        "pending". Ordered by dueDate ascending.
+      operationId: getMilestoneTimelineWidget
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Timeline payload ({ items })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MilestoneTimeline'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/wiki:
+    get:
+      tags: [wiki]
+      summary: Wiki page list (tree-shaped items; q searches title/content/slug)
+      operationId: listWikiPages
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Case-insensitive match on title/content/slug.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Page list ({ items, total, hasMore }; items are page trees)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [wiki]
+      summary: Create a wiki page
+      operationId: createWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWikiPageRequest'
+      responses:
+        '201':
+          description: Page created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/wiki/{pageId}:
+    get:
+      tags: [wiki]
+      summary: Wiki page detail (with direct children)
+      operationId: getWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WikiPageId'
+      responses:
+        '200':
+          description: Page (with children)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [wiki]
+      summary: Update a wiki page
+      operationId: updateWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WikiPageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWikiPageRequest'
+      responses:
+        '200':
+          description: Updated page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [wiki]
+      summary: Delete a wiki page
+      operationId: deleteWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WikiPageId'
+      responses:
+        '200':
+          description: Deleted ({ id, deleted: true })
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/whiteboards:
+    get:
+      tags: [whiteboards]
+      summary: List whiteboards (updatedAt descending)
+      operationId: listWhiteboards
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Whiteboard list ({ items, total, hasMore })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WhiteboardList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [whiteboards]
+      summary: Create a whiteboard
+      description: Requires whiteboards:create in the permission matrix.
+      operationId: createWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhiteboardRequest'
+      responses:
+        '201':
+          description: Whiteboard created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Whiteboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/whiteboards/{wbid}:
+    get:
+      tags: [whiteboards]
+      summary: Whiteboard detail (full canvas data)
+      operationId: getWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Wbid'
+      responses:
+        '200':
+          description: Whiteboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Whiteboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [whiteboards]
+      summary: Update a whiteboard (title and/or canvas data)
+      description: Requires whiteboards:update; missing record → 404.
+      operationId: updateWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Wbid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWhiteboardRequest'
+      responses:
+        '200':
+          description: Updated whiteboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Whiteboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [whiteboards]
+      summary: Delete a whiteboard
+      description: Requires whiteboards:delete; missing record → 404.
+      operationId: deleteWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Wbid'
+      responses:
+        '200':
+          description: Deleted ({ id, deleted: true })
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -6036,6 +6368,18 @@ components:
       in: path
       required: true
       description: Time entry id (UUID).
+      schema: { type: string, format: uuid }
+    WikiPageId:
+      name: pageId
+      in: path
+      required: true
+      description: Wiki page id (UUID).
+      schema: { type: string, format: uuid }
+    Wbid:
+      name: wbid
+      in: path
+      required: true
+      description: Whiteboard id (UUID).
       schema: { type: string, format: uuid }
 
   responses:
@@ -7946,3 +8290,169 @@ components:
                 totalDuration: { type: integer }
                 billableDuration: { type: integer }
                 totalAmount: { type: number }
+    Envelope_CustomChart:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [chartType, dataSource, labels, values, total]
+          properties:
+            chartType: { type: string, enum: [bar] }
+            dataSource: { type: string, enum: [taskStatus] }
+            labels:
+              type: array
+              items: { type: string }
+              description: Fixed order — todo, in_progress, review, done.
+            values:
+              type: array
+              items: { type: integer }
+            total: { type: integer }
+    Envelope_Gantt:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              maxItems: 20
+              items:
+                type: object
+                required: [id, title, startDate, dueDate, status]
+                properties:
+                  id: { type: string, format: uuid }
+                  title: { type: string }
+                  startDate:
+                    type: string
+                    format: date-time
+                    description: Task.createdAt used as the bar start (no startDate column).
+                  dueDate: { type: string, format: date-time }
+                  status: { type: string }
+                  assignee:
+                    type: object
+                    nullable: true
+                    properties:
+                      name: { type: string, nullable: true }
+    Envelope_MilestoneTimeline:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                required: [id, name, status, taskCount]
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  dueDate: { type: string, format: date-time, nullable: true }
+                  status: { type: string, enum: [done, in_progress, pending] }
+                  taskCount: { type: integer }
+    WikiPage:
+      type: object
+      required: [id, title, slug, parentId]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string }
+        parentId: { type: string, format: uuid, nullable: true }
+        createdBy: { type: string, format: uuid }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/WikiPage'
+    Envelope_WikiPage:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/WikiPage'
+    Envelope_WikiList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              description: Top-level page trees.
+              items:
+                $ref: '#/components/schemas/WikiPage'
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateWikiPageRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, default: "" }
+        parentId: { type: string, format: uuid, nullable: true }
+        slug: { type: string, minLength: 1, maxLength: 200 }
+        sortOrder: { type: integer }
+    UpdateWikiPageRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string }
+        parentId: { type: string, format: uuid, nullable: true }
+        sortOrder: { type: integer }
+        slug: { type: string, minLength: 1, maxLength: 200 }
+    Whiteboard:
+      type: object
+      required: [id, title, data]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        data:
+          description: Canvas JSON (element array [{ id, type, x, y, width, height, content, style }]).
+        createdBy: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_Whiteboard:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Whiteboard'
+    Envelope_WhiteboardList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Whiteboard'
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateWhiteboardRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        data:
+          description: String or element array; defaults to an empty array.
+    UpdateWhiteboardRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        data:
+          description: String or element array.
