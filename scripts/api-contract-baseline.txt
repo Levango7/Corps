@@ -102,9 +102,6 @@
 /api/v1/todos/count
 /api/v1/webhooks/livekit
 /api/v1/workspaces/{wid}/action-items/generate
-/api/v1/workspaces/{wid}/activity
-/api/v1/workspaces/{wid}/announcements
-/api/v1/workspaces/{wid}/announcements/{aid}
 /api/v1/workspaces/{wid}/approvals/cc
 /api/v1/workspaces/{wid}/approvals/delegates
 /api/v1/workspaces/{wid}/approvals/delegates/{did}
@@ -124,8 +121,6 @@
 /api/v1/workspaces/{wid}/calendar/events
 /api/v1/workspaces/{wid}/calendar/events/{eventId}
 /api/v1/workspaces/{wid}/contact-groups
-/api/v1/workspaces/{wid}/contacts
-/api/v1/workspaces/{wid}/contacts/{cid}
 /api/v1/workspaces/{wid}/dashboard/widgets/custom-chart
 /api/v1/workspaces/{wid}/dashboard/widgets/gantt-chart
 /api/v1/workspaces/{wid}/dashboard/widgets/milestone-timeline

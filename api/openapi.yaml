@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 93 paths (updated 2026-10-25). The service also
+    Coverage: this contract declares 98 paths (updated 2026-10-25). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -4893,6 +4893,317 @@ paths:
           description: Requires settings:update (owner)
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v1/workspaces/{wid}/activity:
+    get:
+      tags: [activity]
+      summary: Workspace activity feed (recent task/comment/decision changes)
+      description: >
+        Aggregates the most recent task.created / task.updated / comment.created /
+        decision.created / decision.updated events into one feed, newest first.
+        A just-created item never appears again as "updated". Page size is fixed
+        at 20; pass the previous page's nextCursor to fetch older items.
+      operationId: listWorkspaceActivity
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cursor
+          in: query
+          schema: { type: string, format: date-time }
+          description: Return activities strictly older than this ISO timestamp.
+      responses:
+        '200':
+          description: One activity page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ActivityFeed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/announcements:
+    get:
+      tags: [announcements]
+      summary: List announcements (pinned first, then newest published)
+      operationId: listAnnouncements
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: type
+          in: query
+          schema: { type: string, enum: [info, warning, urgent] }
+        - name: pinned
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+          description: Literal "true"/"false" string filter.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Announcement list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AnnouncementList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [announcements]
+      summary: Create an announcement
+      description: Requires announcements:create in the permission matrix.
+      operationId: createAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnnouncementRequest'
+      responses:
+        '201':
+          description: Announcement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/announcements/{aid}:
+    get:
+      tags: [announcements]
+      summary: Announcement detail
+      operationId: getAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/AnnouncementId'
+      responses:
+        '200':
+          description: Announcement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Announcement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [announcements]
+      summary: Update an announcement
+      description: Requires announcements:update. Concurrent delete maps to 404.
+      operationId: updateAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/AnnouncementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAnnouncementRequest'
+      responses:
+        '200':
+          description: Updated announcement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [announcements]
+      summary: Delete an announcement
+      operationId: deleteAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/AnnouncementId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/contacts:
+    get:
+      tags: [contacts]
+      summary: List contacts (name ascending)
+      operationId: listContacts
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: groupId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Fuzzy match across name/email/phone/department/position.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Contact list (paginated; list rows omit notes/createdAt)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ContactList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [contacts]
+      summary: Create a contact
+      description: Requires contacts:create in the permission matrix.
+      operationId: createContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContactRequest'
+      responses:
+        '201':
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Contact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/contacts/{cid}:
+    get:
+      tags: [contacts]
+      summary: Contact detail (with group and creator)
+      operationId: getContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ContactId'
+      responses:
+        '200':
+          description: Contact detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Contact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [contacts]
+      summary: Update a contact
+      description: Requires contacts:update. Missing record maps to 404.
+      operationId: updateContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ContactId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContactRequest'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Contact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [contacts]
+      summary: Delete a contact
+      operationId: deleteContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ContactId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -4970,6 +5281,18 @@ components:
       in: path
       required: true
       description: AI agent id (UUID).
+      schema: { type: string, format: uuid }
+    AnnouncementId:
+      name: aid
+      in: path
+      required: true
+      description: Announcement id (UUID).
+      schema: { type: string, format: uuid }
+    ContactId:
+      name: cid
+      in: path
+      required: true
+      description: Contact id (UUID).
       schema: { type: string, format: uuid }
 
   responses:
@@ -6337,3 +6660,196 @@ components:
               type: integer
               description: Total count of access log entries.
             hasMore: { type: boolean }
+    ActivityItem:
+      type: object
+      required: [id, type, actorId, actorName, entityType, entityId, entityTitle, createdAt]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [task.created, task.updated, comment.created, decision.created, decision.updated]
+        actorId: { type: string }
+        actorName: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        entityTitle: { type: string }
+        createdAt: { type: string, format: date-time }
+    Envelope_ActivityFeed:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, nextCursor]
+          properties:
+            items:
+              type: array
+              maxItems: 20
+              items:
+                $ref: '#/components/schemas/ActivityItem'
+            nextCursor:
+              type: string
+              nullable: true
+              description: ISO timestamp of the last item; null when the feed is exhausted.
+    Announcement:
+      type: object
+      required: [id, title, content, type, pinned, publishedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        content: { type: string }
+        type: { type: string, enum: [info, warning, urgent] }
+        targetAudience:
+          type: object
+          description: "{ type: all|role|department, value?: string[] }"
+        pinned: { type: boolean }
+        publishedBy: { type: string }
+        publishedAt: { type: string, format: date-time }
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        publisher:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    Envelope_Announcement:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Announcement'
+    Envelope_AnnouncementList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Announcement'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateAnnouncementRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, minLength: 1 }
+        type: { type: string, enum: [info, warning, urgent] }
+        targetAudience:
+          type: object
+          required: [type]
+          properties:
+            type: { type: string, enum: [all, role, department] }
+            value:
+              type: array
+              items: { type: string }
+        pinned: { type: boolean }
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    UpdateAnnouncementRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, minLength: 1 }
+        type: { type: string, enum: [info, warning, urgent] }
+        targetAudience:
+          type: object
+          required: [type]
+          properties:
+            type: { type: string, enum: [all, role, department] }
+            value:
+              type: array
+              items: { type: string }
+        pinned: { type: boolean }
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    Contact:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email, nullable: true }
+        phone: { type: string, nullable: true }
+        department: { type: string, nullable: true }
+        position: { type: string, nullable: true }
+        avatar: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+        group:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        creator:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_Contact:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Contact'
+    Envelope_ContactList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateContactRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 255, nullable: true }
+        phone: { type: string, maxLength: 50, nullable: true }
+        department: { type: string, maxLength: 100, nullable: true }
+        position: { type: string, maxLength: 100, nullable: true }
+        avatar: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+    UpdateContactRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 255, nullable: true }
+        phone: { type: string, maxLength: 50, nullable: true }
+        department: { type: string, maxLength: 100, nullable: true }
+        position: { type: string, maxLength: 100, nullable: true }
+        avatar: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
