@@ -1,0 +1,11 @@
+# gitleaks 自定义配置 —— 在默认规则之上只做一件事：
+# 把 .gitleaksignore 排除出扫描面。原因：豁免文件的指纹行内含 40 位
+# commit hash，会被 generic-api-key 规则误判为 API key（2026-10-26 首次
+# CI 运行实测：PR 增量扫到 .gitleaksignore 自身的 diff → 红）。
+# [extend] useDefault 保留全部默认规则；本文件只加 allowlist，不加规则。
+[extend]
+useDefault = true
+
+[allowlist]
+description = "豁免登记文件自身的指纹行（40 位 commit hash 形态被 generic-api-key 误判）"
+paths = ['''\.gitleaksignore$''']
