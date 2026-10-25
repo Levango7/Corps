@@ -72,6 +72,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 
+# withRed 调用点统计的「非生产文件」排除式（模块级：self_test 要直接自测它，
+# 防止判据再次悄悄失效 —— 上一版尾巴 \.[cm]?[jt]sx?$ 曾把全部 .ts/.tsx 排除，
+# 调用点永远数 0，见 dim_observability 内注释）。
+NON_PROD_RE = re.compile(
+    r"(^|/)(tests?|e2e|__tests__|__mocks__)(/|$)|\.test\.|\.[st]pec\.|\.[cm]?jsx?$"
+)
+
 # 走路时永远跳过的目录（node_modules 会让任何全仓扫描卡死）
 SKIP_DIRS = {
     "node_modules",
@@ -581,9 +588,8 @@ def dim_observability():
     # 测试/e2e 里的调用点不算生产接线 —— 实测第一版把 red-metrics.test.ts 里的
     # 5 处 withRed( 当成了已接线，得出 5 处/目标 1 处的假绿灯。判据必须是
     # "生产代码里真的套了这个包装器"，不是"有人调过它"。
-    NON_PROD_RE = re.compile(
-        r"(^|/)(tests?|e2e|__tests__|__mocks__)(/|$)|\.[st]pec\.|\.[cm]?[jt]sx?$"
-    )
+    # 排除式 NON_PROD_RE 已提为模块级常量（self_test 自测它），修改口径时
+    # 两处必须同步。
     withred_calls = 0
     for p in walk(WEB, (".ts", ".tsx")):
         try:
@@ -598,10 +604,10 @@ def dim_observability():
         withred_calls += len(re.findall(r"\bwithRed\s*\(", t))
     metric(d + "-5", d, "RED-Rate：withRed 真实调用点数", withred_calls, " 处", 1, 0,
            lower_is_better=False,
-           note="包装器已提供但零调用点；批量套用前不算接线")
+           note="首批已接线 contacts/announcements/activity 域（2026-10-26）；按目录分批推进")
     metric(d + "-6", d, "RED-Duration：withRed 真实调用点数", withred_calls, " 处", 1, 0,
            lower_is_better=False,
-           note="与 Rate 同源（同一包装器同时记两者），仍为零")
+           note="与 Rate 同源（同一包装器同时记两者）")
 
     slo = [p for p in walk(ROOT / "docs", (".md",))
            if re.search(r"SLO|SLI|可观测", p.name)]
@@ -752,6 +758,19 @@ def self_test() -> int:
             failures.append(f"{name}：期望退步 {want} 项，实得 {len(regressions)}")
         else:
             print(f"[maturity selftest] ✓ {name}")
+
+    # NON_PROD_RE 判据自检：必须放行生产路由文件、拦下测试文件。上一版把
+    # \.[cm]?[jt]sx?$ 写进排除式等价于排除全部 .ts/.tsx，withRed 调用点永远
+    # 数出 0（判据失效型假阴性）——这种错不能等人来发现，这里钉死。
+    if NON_PROD_RE.search("/app/api/v1/workspaces/[wid]/contacts/route.ts"):
+        failures.append("NON_PROD_RE 误伤生产路由文件（route.ts 被当测试排除，调用点将恒为 0）")
+    else:
+        print("[maturity selftest] ✓ 生产 route.ts 不被排除式误伤")
+    for t in ("tests/unit/red-metrics.test.ts", "lib/x.spec.ts", "lib/x.test.ts", "scripts/probe.mjs"):
+        if not NON_PROD_RE.search("/" + t):
+            failures.append(f"NON_PROD_RE 漏排除 {t}")
+        else:
+            print(f"[maturity selftest] ✓ 排除 {t}")
 
     if failures:
         print("\n[maturity selftest] ✗ 自测失败：")

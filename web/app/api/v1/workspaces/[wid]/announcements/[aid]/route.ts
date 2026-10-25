@@ -5,11 +5,12 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/announcements/{aid} — 公告详情
  */
-export async function GET(
+async function getAnnouncement(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -66,7 +67,7 @@ const updateSchema = z.object({
   expiresAt: z.union([z.string().datetime(), z.null()]).optional(),
 });
 
-export async function PATCH(
+async function patchAnnouncement(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -156,7 +157,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/announcements/{aid} — 删除公告 */
-export async function DELETE(
+async function deleteAnnouncement(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -205,3 +206,8 @@ export async function DELETE(
     );
   }
 }
+
+// ── RED 指标接线（Rate/Duration）：包装器见 lib/red-metrics.ts。
+export const GET = withRed(getAnnouncement);
+export const PATCH = withRed(patchAnnouncement);
+export const DELETE = withRed(deleteAnnouncement);

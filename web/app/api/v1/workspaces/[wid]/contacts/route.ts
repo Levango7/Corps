@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 通讯录联系人 API · /api/v1/workspaces/{wid}/contacts
@@ -27,7 +28,7 @@ const listContactsQuerySchema = z.object({
  *        ?page=&limit=（分页）
  * 返回按 name 正序
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getContacts(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -129,7 +130,7 @@ const createContactSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/contacts — 新建联系人 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postContacts(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -187,3 +188,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// ── RED 指标接线（Rate/Duration）：包装器见 lib/red-metrics.ts。route 标签由
+// URL 自动折叠成模式（uuid/数字段 → [id]），无需手写路由名，不会撑爆标签基数。
+export const GET = withRed(getContacts);
+export const POST = withRed(postContacts);
