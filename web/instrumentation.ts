@@ -46,9 +46,16 @@ export async function register() {
  * - 整个钩子包 try/catch——上报绝不影响错误响应本身。
  */
 export const onRequestError: Instrumentation.onRequestError = async (error, request, context) => {
+  // RED 指标的 Errors 一维在这里接通（2026-10-25）。选这个钩子的理由：
+  // 它在 Node runtime 跑，能拿到逐路由标识 context.routePath，且记录与上报
+  // 解耦——上报走 Sentry/webhook，指标走 /api/metrics，两条链互不拖累。
+  // Rate 与 Duration 两维没有诚实接入点（Edge runtime 的 middleware 状态不共享、
+  // App Router 无全局完成钩子），见 web/lib/red-metrics.ts 顶部说明。
   try {
     const { captureError, isBenignTransportError } = await import("./lib/observability");
+    const { recordError, normalizeRoute } = await import("./lib/red-metrics");
     if (isBenignTransportError(error)) return;
+    recordError({ route: normalizeRoute(context.routePath), method: request.method });
     captureError(error, {
       source: "request",
       route: context.routePath,

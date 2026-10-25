@@ -1,6 +1,6 @@
 -- corps 数据库 schema（由 pg_dump --schema-only 生成 + RLS 层来自 rls-activate.sql）
--- 生成时间: 2026-10-20（pg_dump 18.6，--no-owner --no-privileges --no-policies）
--- 对应迁移: 20261019000000_add_user_locale（100 表，含 2026-09-04 后新增的 73 张表）
+-- 生成时间: 2026-10-25（pg_dump 18.6，--no-owner --no-privileges --no-policies）
+-- 对应迁移: 20261022000000_add_workspace_settings（100 表，含 2026-09-04 后新增的 73 张表）
 -- 表结构权威 = web/prisma/schema.prisma + web/prisma/migrations/；
 -- RLS 权威 = 下方 rls-activate.sql（entrypoint 实际执行的就是它，守卫测试亦以它为准）。
 --
@@ -1983,6 +1983,7 @@ CREATE TABLE public.workspaces (
     seat_limit integer DEFAULT 10 NOT NULL,
     created_at timestamp with time zone DEFAULT now() NOT NULL,
     updated_at timestamp with time zone DEFAULT now() NOT NULL,
+    settings jsonb DEFAULT '{}'::jsonb NOT NULL,
     CONSTRAINT workspaces_plan_check CHECK (((plan)::text = ANY ((ARRAY['free'::character varying, 'starter'::character varying, 'pro'::character varying, 'enterprise'::character varying])::text[]))),
     CONSTRAINT workspaces_seat_limit_check CHECK (((seat_limit >= 1) AND (seat_limit <= 1000)))
 );
