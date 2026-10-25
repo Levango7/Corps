@@ -105,6 +105,13 @@ export async function POST(
       await tx.$queryRaw`SELECT id FROM "tasks" WHERE id = ${id}::uuid FOR UPDATE`;
       const agg = await tx.decision.aggregate({ where: { taskId: id }, _max: { version: true } });
       const version = (agg._max.version ?? 0) + 1;
+      // 同一任务线程的上一版：行动项同步要靠它复用已建的任务，否则每存一版就把
+      // 同一批行动项再建成一遍新任务（看板累积重复任务）。行锁已在本事务内取过。
+      const prevDecision = await tx.decision.findFirst({
+        where: { taskId: id, version: { lt: version } },
+        orderBy: { version: "desc" },
+        select: { id: true },
+      });
 
       const created = await tx.decision.create({
         data: {
@@ -145,6 +152,7 @@ export async function POST(
         validated.markdown,
         wid,
         ctx.payload.sub,
+        prevDecision?.id,
       );
 
       return { decision: created, actionSync };
