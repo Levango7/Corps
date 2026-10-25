@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 103 paths (updated 2026-10-26). The service also
+    Coverage: this contract declares 110 paths (updated 2026-10-26). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -5547,6 +5547,376 @@ paths:
           $ref: '#/components/responses/RateLimited'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings:
+    get:
+      tags: [meetings]
+      summary: List meetings (createdAt descending)
+      description: Behavior pinned by web/tests/api/meetings.test.ts.
+      operationId: listMeetings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: status
+          in: query
+          schema: { type: string, enum: [scheduled, active, ended] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Meeting list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [meetings]
+      summary: Create a meeting
+      description: >
+        Defaults: type=instant, status=scheduled, maxParticipants=50,
+        recordingEnabled=false, recurringRule/password=null.
+      operationId: createMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingRequest'
+      responses:
+        '201':
+          description: Meeting created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Meeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings/{mid}:
+    get:
+      tags: [meetings]
+      summary: Meeting detail
+      operationId: getMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Mid'
+      responses:
+        '200':
+          description: Meeting detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Meeting'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [meetings]
+      summary: Update a meeting
+      description: >
+        status enum includes cancelled; concurrent delete (P2025) maps to 404.
+        Cross-workspace protection and password/join semantics are covered by
+        web/tests/api/meetings.test.ts.
+      operationId: updateMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Mid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingRequest'
+      responses:
+        '200':
+          description: Updated meeting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Meeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [meetings]
+      summary: End/delete a meeting (data is null)
+      operationId: deleteMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Mid'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries:
+    get:
+      tags: [timetrack]
+      summary: List time entries (startTime descending)
+      description: Rows carry user {id,name,email} and task {id,title} summaries.
+      operationId: listTimeEntries
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: userId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: taskId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Time entry list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntryList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [timetrack]
+      summary: Create a time entry (manual logging)
+      operationId: createTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeEntryRequest'
+      responses:
+        '201':
+          description: Time entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/start:
+    post:
+      tags: [timetrack]
+      summary: Start the timer (startTime=now, endTime=null)
+      description: >
+        Creates a running TimeEntry. If the current user already has an
+        unstopped timer (endTime=null), returns 409 timerAlreadyRunning.
+      operationId: startTimer
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTimerRequest'
+      responses:
+        '201':
+          description: Timer started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: A timer is already running for this user
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/stop:
+    post:
+      tags: [timetrack]
+      summary: Stop the timer (endTime=now, duration computed in seconds)
+      description: >
+        Unknown teid → 404; no running timer for that entry → 409
+        timerNotRunning.
+      operationId: stopTimer
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopTimerRequest'
+      responses:
+        '200':
+          description: Timer stopped, updated entry returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The referenced timer is not running
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/report:
+    get:
+      tags: [timetrack]
+      summary: Aggregated time report (group by user/task/day)
+      description: >
+        Returns groups with totals plus an overall summary; amounts are
+        rounded to 2 decimals.
+      operationId: timeEntryReport
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: userId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: groupBy
+          in: query
+          schema: { type: string, enum: [user, task, day], default: user }
+      responses:
+        '200':
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/{teid}:
+    get:
+      tags: [timetrack]
+      summary: Time entry detail
+      operationId: getTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Teid'
+      responses:
+        '200':
+          description: Time entry detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [timetrack]
+      summary: Update a time entry
+      description: Missing record and concurrent delete both map to 404.
+      operationId: updateTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Teid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimeEntryRequest'
+      responses:
+        '200':
+          description: Updated time entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [timetrack]
+      summary: Delete a time entry (data is null)
+      operationId: deleteTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Teid'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -5654,6 +6024,18 @@ components:
       in: path
       required: true
       description: Key result id (UUID).
+      schema: { type: string, format: uuid }
+    Mid:
+      name: mid
+      in: path
+      required: true
+      description: Meeting id (UUID).
+      schema: { type: string, format: uuid }
+    Teid:
+      name: teid
+      in: path
+      required: true
+      description: Time entry id (UUID).
       schema: { type: string, format: uuid }
 
   responses:
@@ -7378,3 +7760,189 @@ components:
         weight: { type: number, minimum: 0, maximum: 100 }
         ownerId: { type: string, format: uuid, nullable: true }
         dueDate: { type: string, format: date-time, nullable: true }
+    Meeting:
+      type: object
+      required: [id, title, roomName, status, type]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        createdBy: { type: string, format: uuid, nullable: true }
+        roomName:
+          type: string
+          description: Unique LiveKit room name.
+        status: { type: string, enum: [scheduled, active, ended, cancelled] }
+        type: { type: string, enum: [instant, scheduled, recurring] }
+        recurringRule:
+          type: string
+          nullable: true
+          description: iCal RRULE (e.g. FREQ=DAILY;INTERVAL=1); null for non-recurring.
+        password:
+          type: string
+          nullable: true
+          description: >
+            Set → joining requires the password. The API never returns the
+            bcrypt hash; presence/non-nullness is the signal.
+        scheduledAt: { type: string, format: date-time, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        endedAt: { type: string, format: date-time, nullable: true }
+        maxParticipants: { type: integer }
+        recordingEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_Meeting:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Meeting'
+    Envelope_MeetingList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Meeting'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateMeetingRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 500 }
+        type: { type: string, enum: [instant, scheduled, recurring] }
+        scheduledAt: { type: string, format: date-time }
+        maxParticipants: { type: integer, minimum: 1, maximum: 500 }
+        recordingEnabled: { type: boolean }
+        recurringRule: { type: string, maxLength: 255 }
+        password: { type: string, maxLength: 100 }
+    UpdateMeetingRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 500, nullable: true }
+        scheduledAt: { type: string, format: date-time, nullable: true }
+        maxParticipants: { type: integer, minimum: 1, maximum: 500 }
+        recordingEnabled: { type: boolean }
+        status: { type: string, enum: [scheduled, active, ended, cancelled] }
+        recurringRule: { type: string, maxLength: 255, nullable: true }
+        password: { type: string, maxLength: 100, nullable: true }
+    TimeEntry:
+      type: object
+      required: [id, userId, startTime]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        taskId: { type: string, format: uuid, nullable: true }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time, nullable: true }
+        duration:
+          type: integer
+          nullable: true
+          description: Seconds (endTime - startTime); null while running.
+        description: { type: string, nullable: true }
+        billable: { type: boolean }
+        hourlyRate: { type: number, nullable: true }
+        createdAt: { type: string, format: date-time }
+        user:
+          type: object
+          description: Included on list rows.
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        task:
+          type: object
+          nullable: true
+          description: Included on list rows.
+          properties:
+            id: { type: string, format: uuid }
+            title: { type: string }
+    Envelope_TimeEntry:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/TimeEntry'
+    Envelope_TimeEntryList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TimeEntry'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateTimeEntryRequest:
+      type: object
+      required: [startTime]
+      properties:
+        startTime: { type: string, format: date-time }
+        taskId: { type: string, format: uuid }
+        endTime: { type: string, format: date-time }
+        duration: { type: integer, minimum: 0 }
+        description: { type: string }
+        billable: { type: boolean }
+        hourlyRate: { type: number, minimum: 0 }
+    UpdateTimeEntryRequest:
+      type: object
+      minProperties: 1
+      properties:
+        endTime: { type: string, format: date-time, nullable: true }
+        duration: { type: integer, minimum: 0, nullable: true }
+        description: { type: string, nullable: true }
+        billable: { type: boolean }
+        hourlyRate: { type: number, minimum: 0, nullable: true }
+    StartTimerRequest:
+      type: object
+      properties:
+        taskId: { type: string, format: uuid }
+        description: { type: string }
+        billable: { type: boolean }
+        hourlyRate: { type: number, minimum: 0 }
+    StopTimerRequest:
+      type: object
+      required: [teid]
+      properties:
+        teid: { type: string, format: uuid }
+    Envelope_TimeReport:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [groups, summary]
+          properties:
+            groups:
+              type: array
+              items:
+                type: object
+                required: [key, totalDuration, billableDuration, totalAmount]
+                properties:
+                  key: { type: string }
+                  totalDuration: { type: integer }
+                  billableDuration: { type: integer }
+                  totalAmount: { type: number }
+            summary:
+              type: object
+              required: [totalDuration, billableDuration, totalAmount]
+              properties:
+                totalDuration: { type: integer }
+                billableDuration: { type: integer }
+                totalAmount: { type: number }

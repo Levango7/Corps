@@ -157,8 +157,6 @@
 /api/v1/workspaces/{wid}/im/search
 /api/v1/workspaces/{wid}/meeting-minutes
 /api/v1/workspaces/{wid}/meeting-minutes/{mid}
-/api/v1/workspaces/{wid}/meetings
-/api/v1/workspaces/{wid}/meetings/{mid}
 /api/v1/workspaces/{wid}/meetings/{mid}/join
 /api/v1/workspaces/{wid}/meetings/{mid}/leave
 /api/v1/workspaces/{wid}/meetings/{mid}/recording/start
@@ -179,11 +177,6 @@
 /api/v1/workspaces/{wid}/tasks/{id}/conversation
 /api/v1/workspaces/{wid}/tasks/{id}/messages/search
 /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}
-/api/v1/workspaces/{wid}/time-entries
-/api/v1/workspaces/{wid}/time-entries/report
-/api/v1/workspaces/{wid}/time-entries/start
-/api/v1/workspaces/{wid}/time-entries/stop
-/api/v1/workspaces/{wid}/time-entries/{teid}
 /api/v1/workspaces/{wid}/whiteboards
 /api/v1/workspaces/{wid}/whiteboards/{wbid}
 /api/v1/workspaces/{wid}/wiki
