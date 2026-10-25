@@ -4,5 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-ledger | chore/ledger-contract-1025 | docs/ROADMAP-2026Q4.md,api/openapi.yaml,scripts/api-contract-baseline.txt,web/tests/api/** | zcode-ledger-1025 | 2026-10-25 22:29 | 2026-10-26 04:29 | 账实对齐批次：ROADMAP §0 快照刷新 + OpenAPI 契约按周配额清偿一批 + tests/api 路由级测试
 F:/Nexus/corps-reverify-1017 | copy/positioning-tagline | web/e2e/ui-visual.spec.ts,web/e2e/calendar.spec.ts,web/e2e/im-upgrade.spec.ts,web/e2e/task-management.spec.ts,web/e2e/api-health.spec.ts,web/e2e/ui-layout.spec.ts,web/e2e/route-health.spec.ts,web/e2e/ui-style.spec.ts,web/e2e/fixed-overlay-portal.spec.ts,web/e2e/billing.spec.ts,web/e2e/i18n.spec.ts,web/e2e/v04-features.spec.ts,web/e2e/auth.spec.ts,web/e2e/invitation.spec.ts,web/e2e/smoke.spec.ts | qoder-corps-reverify | 2026-10-25 23:21 | 2026-10-26 07:21 | E2E serial 夹具独立化(task #29)：只动下列 spec，不碰 visual-kit/ 与 contrast-matrix（对方在飞）
