@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 98 paths (updated 2026-10-25). The service also
+    Coverage: this contract declares 103 paths (updated 2026-10-26). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -5204,6 +5204,349 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/calendar/events:
+    get:
+      tags: [calendar]
+      summary: List calendar events (startAt ascending)
+      description: >
+        Optional time-window filter: returns events with startAt >= start AND
+        endAt <= end. Note the envelope echoes only items/total/hasMore —
+        the requested page/pageSize are not repeated in the response.
+      operationId: listCalendarEvents
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: start
+          in: query
+          schema: { type: string, format: date-time }
+          description: Only events with startAt >= this ISO timestamp.
+        - name: end
+          in: query
+          schema: { type: string, format: date-time }
+          description: Only events with endAt <= this ISO timestamp.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Event list (filtered)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEventList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [calendar]
+      summary: Create a calendar event
+      operationId: createCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCalendarEventRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/calendar/events/{eventId}:
+    get:
+      tags: [calendar]
+      summary: Calendar event detail
+      operationId: getCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [calendar]
+      summary: Update a calendar event
+      description: Missing record and concurrent delete both map to 404.
+      operationId: updateCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCalendarEventRequest'
+      responses:
+        '200':
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [calendar]
+      summary: Delete a calendar event
+      operationId: deleteCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/objectives:
+    get:
+      tags: [okr]
+      summary: List OKR objectives (updatedAt descending)
+      description: Each row carries the owner summary and the keyResults count.
+      operationId: listObjectives
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: period
+          in: query
+          schema: { type: string }
+          description: e.g. "2026-Q1".
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, active, completed, archived] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Objective list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ObjectiveList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [okr]
+      summary: Create an objective
+      operationId: createObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjectiveRequest'
+      responses:
+        '201':
+          description: Objective created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Objective'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/objectives/{oid}:
+    get:
+      tags: [okr]
+      summary: Objective detail (with key results list)
+      operationId: getObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ObjectiveId'
+      responses:
+        '200':
+          description: Objective with keyResults (createdAt ascending, each with owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Objective'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [okr]
+      summary: Update an objective
+      description: Missing record and concurrent delete both map to 404.
+      operationId: updateObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ObjectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateObjectiveRequest'
+      responses:
+        '200':
+          description: Updated objective
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Objective'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [okr]
+      summary: Delete an objective (key results cascade)
+      operationId: deleteObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ObjectiveId'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/key-results/{kid}:
+    patch:
+      tags: [okr]
+      summary: Update a key result by id and recompute parent objective progress
+      description: >
+        Top-level endpoint for callers that only hold the kid (e.g. a batch
+        progress panel). Ownership is validated by walking KR -> Objective ->
+        workspaceId. currentValue/targetValue/weight changes recompute the
+        parent Objective.progress with the weighted formula. Missing record
+        and concurrent delete both map to 404.
+      operationId: updateKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/KeyResultId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKeyResultRequest'
+      responses:
+        '200':
+          description: Updated key result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { $ref: '#/components/schemas/KeyResult' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [okr]
+      summary: Delete a key result by id
+      operationId: deleteKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/KeyResultId'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -5293,6 +5636,24 @@ components:
       in: path
       required: true
       description: Contact id (UUID).
+      schema: { type: string, format: uuid }
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      description: Calendar event id (UUID).
+      schema: { type: string, format: uuid }
+    ObjectiveId:
+      name: oid
+      in: path
+      required: true
+      description: OKR objective id (UUID).
+      schema: { type: string, format: uuid }
+    KeyResultId:
+      name: kid
+      in: path
+      required: true
+      description: Key result id (UUID).
       schema: { type: string, format: uuid }
 
   responses:
@@ -6853,3 +7214,167 @@ components:
         avatar: { type: string, nullable: true }
         notes: { type: string, nullable: true }
         groupId: { type: string, format: uuid, nullable: true }
+    CalendarEvent:
+      type: object
+      required: [id, title, startAt, endAt, createdBy]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        allDay: { type: boolean }
+        location: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        createdBy: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_CalendarEvent:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/CalendarEvent'
+    Envelope_CalendarEventList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CalendarEvent'
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateCalendarEventRequest:
+      type: object
+      required: [title, startAt, endAt]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        allDay: { type: boolean }
+        location: { type: string, maxLength: 500 }
+        color: { type: string, maxLength: 20 }
+    UpdateCalendarEventRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        allDay: { type: boolean }
+        location: { type: string, maxLength: 500 }
+        color: { type: string, maxLength: 20 }
+    Objective:
+      type: object
+      required: [id, title, period, status, progress]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        ownerId: { type: string, format: uuid, nullable: true }
+        period:
+          type: string
+          description: '{ year, quarter }, e.g. "2026-Q1".'
+        status: { type: string, enum: [draft, active, completed, archived] }
+        progress:
+          type: number
+          description: 0-100, computed from key results.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        owner:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        _count:
+          type: object
+          description: Present on list rows.
+          properties:
+            keyResults: { type: integer }
+        keyResults:
+          type: array
+          description: Present on the detail response only.
+          items:
+            $ref: '#/components/schemas/KeyResult'
+    Envelope_Objective:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Objective'
+    Envelope_ObjectiveList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Objective'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateObjectiveRequest:
+      type: object
+      required: [title, period]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        ownerId: { type: string, format: uuid }
+        period: { type: string, minLength: 1, maxLength: 20 }
+        status: { type: string, enum: [draft, active, completed, archived] }
+    UpdateObjectiveRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true }
+        ownerId: { type: string, format: uuid, nullable: true }
+        period: { type: string, minLength: 1, maxLength: 20 }
+        status: { type: string, enum: [draft, active, completed, archived] }
+    KeyResult:
+      type: object
+      required: [id, objectiveId, title, targetValue, currentValue, weight]
+      properties:
+        id: { type: string, format: uuid }
+        objectiveId: { type: string, format: uuid }
+        title: { type: string }
+        targetValue: { type: number }
+        currentValue: { type: number }
+        unit: { type: string, maxLength: 20, nullable: true }
+        weight: { type: number, description: 0-100 }
+        ownerId: { type: string, format: uuid, nullable: true }
+        dueDate: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        owner:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    UpdateKeyResultRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        targetValue: { type: number, description: finite, rejects NaN/Infinity }
+        currentValue: { type: number, description: finite, rejects NaN/Infinity }
+        unit: { type: string, maxLength: 20, nullable: true }
+        weight: { type: number, minimum: 0, maximum: 100 }
+        ownerId: { type: string, format: uuid, nullable: true }
+        dueDate: { type: string, format: date-time, nullable: true }
