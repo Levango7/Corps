@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
+import { uniqueEmail, registerAndLogin, createTask } from "./helpers";
 
 /**
  * E2E：任务管理全流程 —— 创建 → 编辑 → 拖拽看板列 → 评论 → 创建决策。
@@ -11,22 +11,21 @@ import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
  *  - 评论发送（@提及 + ⌘/Ctrl+Enter 或发送按钮）
  *  - 决策记录创建（Markdown 编辑 + 版本号生成）
  *
- * 独立性：模块级唯一邮箱，describe.serial 保证注册先于登录。
- * 每个 test 内独立创建任务，互不依赖执行顺序。
+ * 独立性：每个 test 自带账号夹具（注册即登录）并独立创建任务，
+ * 互不依赖执行顺序——所以不用 describe.serial：serial 下首条红会把整组
+ * 后续用例标成 skipped，覆盖悄悄缩水，报告里只看得到第一条红。
  */
 
-const email = uniqueEmail("e2e-task");
-
-test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", () => {
-  // ── 注册账号（后续 test 复用登录）──
+test.describe("任务管理：创建 → 拖拽 → 评论 → 决策", () => {
+  // ── 注册链路本身 ──
   test("注册新账号并进入工作区", async ({ page }) => {
-    await registerAndLogin(page, email, "E2E任务工作区");
+    await registerAndLogin(page, uniqueEmail("e2e-task"), "E2E任务工作区");
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
   });
 
   // ── 创建任务 + 看板渲染 ──
   test("创建任务后看板页显示在待办列", async ({ page }) => {
-    const wid = await login(page, email);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-task"), "E2E任务工作区");
     const taskTitle = `E2E任务-${Date.now()}`;
 
     // 在工作区首页创建任务
@@ -46,7 +45,7 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
 
   // ── 拖拽看板列 ──
   test("拖拽任务卡从待办列到进行中列", async ({ page }) => {
-    const wid = await login(page, email);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-task"), "E2E任务工作区");
     const taskTitle = `E2E拖拽任务-${Date.now()}`;
 
     // 创建任务（默认 status=todo）
@@ -94,7 +93,7 @@ test.describe.serial("任务管理：创建 → 拖拽 → 评论 → 决策", (
   test("任务详情页：编辑标题/描述 + 发表评论 + 创建决策", async ({ page }) => {
     // 编辑+失焦保存、描述、评论（@提及候选）、决策创建四段串联——放宽总超时
     test.setTimeout(180_000);
-    const wid = await login(page, email);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-task"), "E2E任务工作区");
     const taskTitle = `E2E详情任务-${Date.now()}`;
 
     // 创建任务并进入看板
