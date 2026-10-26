@@ -56,6 +56,14 @@ jobs:
       # 实测曾漂移 521 行、且源文件被 autocrlf 转成 CRLF 导致 next build 报
       # "CssSyntaxError: Missed semicolon"。此处钉死"逐字节一致 + 均为 LF"。
       - run: python ../scripts/check_design_tokens_sync.py
+      # @theme 映射一致性（设计方案 §7.2 第 1 步配套）：globals.css 里
+      # `--color-surface: var(--surfce)` 这种拼写错误**不会让构建失败**——
+      # Tailwind 照样生成 .bg-surface，只是值解析不出来、背景静默变透明。
+      # 本门禁钉死「每个别名右侧的 token 在 design-tokens.css 里真实存在」。
+      # 诚实边界：它只证明别名指向真 token，不证明类真的生成（那层由 e2e 的
+      # computed style 断言覆盖）。--self-test 注入 5 类变异逐条自证射程。
+      - run: python ../scripts/check_theme_tokens.py
+      - run: python ../scripts/check_theme_tokens.py --self-test
       # v1 守卫残留棘轮（2026-10-09 补）：authFailure 收口是分批推进的
       # （tasks 域 27 处 -> +documents/approvals/databases/conversations 88 处），
       # 全仓仍有 269 处在用 getWorkspaceContext(v1)。此前这个数字只活在一次性的
