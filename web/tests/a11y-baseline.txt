@@ -4,8 +4,13 @@
 # 语义： 该文件在该规则下的违规条数。门禁只挡「基线之外的新增」与「同键计数变多」，
 #        已修复的条目必须同步删行（防豁免腐烂），否则同样判红。
 #
-# 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 802 个文件，
-#          102 个文件带违规，合计 233 条（与下方数据行精确一致）。
+# 生成口径：扫描 app/ components/ lib/ 下的 ts/tsx，共扫到 794 个文件
+#          （原 802 − 本轮删除的旧聊天树 8 个文件），
+#          98 个文件带违规，合计 228 条（与下方数据行精确一致）。
+#
+# 2026-10-27（整合 ADR-013）：删除 `components/ChatPanel.tsx` + `components/chat/*`，
+#          其中 4 个文件原有 5 条违规（1+1+2+1）。三处数字按现测重算：
+#          带违规文件 102→98、违规总数 233→228；行数 172（文件×规则）。
 #
 # 偿还历史：
 #    2026-10-16 第 7 批（分支 fix/a11y-burndown-7）：MeetingSummaryPanel /
@@ -103,10 +108,6 @@ components/calendar/CalendarDay.tsx  jsx-a11y/click-events-have-key-events  1
 components/calendar/CalendarDay.tsx  jsx-a11y/no-static-element-interactions  1
 components/calendar/CalendarWeek.tsx  jsx-a11y/click-events-have-key-events  2
 components/calendar/CalendarWeek.tsx  jsx-a11y/no-static-element-interactions  2
-components/chat/ChatHeaderClient.tsx  jsx-a11y/control-has-associated-label  1
-components/chat/MessageBubble.tsx  jsx-a11y/no-noninteractive-element-interactions  1
-components/chat/MessageInput.tsx  jsx-a11y/control-has-associated-label  2
-components/chat/MessageList.tsx  jsx-a11y/control-has-associated-label  1
 components/common/FavoriteButton.tsx  jsx-a11y/control-has-associated-label  1
 components/contact/ContactGroupSidebar.tsx  jsx-a11y/control-has-associated-label  1
 components/contact/ContactList.tsx  jsx-a11y/control-has-associated-label  2

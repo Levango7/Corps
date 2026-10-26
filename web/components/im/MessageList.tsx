@@ -26,9 +26,9 @@ interface MessageListProps {
   /** 当前用户 ID */
   currentUserId: string;
   /** 编辑消息 */
-  onEdit: (mid: string, body: string) => void;
+  onEdit: (mid: string, body: string) => void | Promise<void>;
   /** 撤回消息 */
-  onRevoke: (mid: string) => void;
+  onRevoke: (mid: string) => void | Promise<void>;
   /** 回复消息（可选） */
   onReply?: (mid: string) => void;
   /** 加载更多历史消息（向上滚动触发） */
