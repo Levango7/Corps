@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 117 paths (updated 2026-10-26). The service also
+    Coverage: this contract declares 124 paths (updated 2026-10-27). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -6249,6 +6249,278 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/analytics/overview:
+    get:
+      tags: [analytics]
+      summary: Workspace analytics overview
+      description: >
+        Returns comprehensive analytics including funnel (acquisition + activation),
+        daily event counts (last 14 days), top events, WAU/core active users,
+        retention (D1/D7/D30), session counts, and active users.
+        Labels are localized via apiMsg based on request locale (P0-6).
+      operationId: getAnalyticsOverview
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Analytics overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AnalyticsOverview'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/billing/checkout:
+    post:
+      tags: [billing]
+      summary: Create Stripe Checkout session
+      description: >
+        Creates a Stripe Checkout session for subscription purchase.
+        Returns the session URL for client-side redirect.
+        Protected by A-4 open redirect prevention (safeRedirectUrl).
+      operationId: createBillingCheckout
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBillingCheckoutRequest'
+      responses:
+        '201':
+          description: Checkout session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BillingCheckout'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/billing/portal:
+    post:
+      tags: [billing]
+      summary: Create Stripe Billing Portal session
+      description: >
+        Creates a Stripe Billing Portal session for customer self-service
+        (manage subscription, update payment method, view invoices).
+        Protected by A-4 open redirect prevention (safeRedirectUrl).
+      operationId: createBillingPortal
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateBillingPortalRequest'
+      responses:
+        '201':
+          description: Portal session created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BillingPortal'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/billing/status:
+    get:
+      tags: [billing]
+      summary: Get current subscription status
+      description: |
+        Returns current plan, seats used, subscription status, and Stripe readiness.
+        Calls expireSubscriptionIfDue (lazy downgrade) and getPaymentProviderSafe.
+      operationId: getBillingStatus
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Billing status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_BillingStatus'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/presence:
+    get:
+      tags: [presence]
+      summary: List workspace member online status
+      description: |
+        Returns online status for all workspace members.
+        A member is online if they have sent a heartbeat in the last 5 minutes
+        (ONLINE_WINDOW_MS = 5 minutes).
+      operationId: listPresence
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Presence list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PresenceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [presence]
+      summary: Send heartbeat (update onlineAt)
+      description: |
+        Updates the current user's onlineAt timestamp.
+        Uses runWithAuthOp("login") escape hatch because User table RLS
+        policies don't directly allow self-update by onlineAt.
+      operationId: sendHeartbeat
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Heartbeat acknowledged
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PresenceHeartbeat'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/permissions/audit-logs:
+    get:
+      tags: [permissions]
+      summary: Query permission audit logs
+      description: |
+        Returns paginated audit logs for permission changes.
+        owner/admin see all; other roles see only their own related logs
+        (granteeId = userId or operatorId = userId).
+      operationId: listPermissionAuditLogs
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: targetType
+          in: query
+          schema: { type: string, enum: [document, folder, space] }
+        - name: granteeType
+          in: query
+          schema: { type: string, enum: [user, role] }
+        - name: operatorId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: action
+          in: query
+          schema: { type: string, enum: [grant, revoke, update] }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Audit log page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PermissionAuditLogList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/permissions:
+    get:
+      tags: [permissions]
+      summary: Get workspace permission matrix (merged default + overrides)
+      description: |
+        Returns the merged permission matrix (default + overrides) for all roles.
+        Requires settings:read (owner/admin only).
+        Returns { role: { module: actions[] } } format.
+      operationId: getPermissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Permission matrix
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Permissions'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [permissions]
+      summary: Update permission overrides (owner only)
+      description: |
+        Updates permission overrides for member/viewer roles only.
+        owner/admin roles cannot be overridden (400 if attempted).
+        Requires settings:update (owner only).
+      operationId: updatePermissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdatePermissionsRequest'
+      responses:
+        '200':
+          description: Updated permissions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Permissions'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -6356,6 +6628,66 @@ components:
       in: path
       required: true
       description: Key result id (UUID).
+      schema: { type: string, format: uuid }
+    AnalyticsId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for analytics.
+      schema: { type: string, format: uuid }
+    BillingId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for billing.
+      schema: { type: string, format: uuid }
+    PresenceId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for presence.
+      schema: { type: string, format: uuid }
+    PermissionsId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for permissions.
+      schema: { type: string, format: uuid }
+    AuditLogsId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for audit logs.
+      schema: { type: string, format: uuid }
+    AnalyticsId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for analytics.
+      schema: { type: string, format: uuid }
+    BillingId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for billing.
+      schema: { type: string, format: uuid }
+    PresenceId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for presence.
+      schema: { type: string, format: uuid }
+    PermissionsId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for permissions.
+      schema: { type: string, format: uuid }
+    AuditLogsId:
+      name: wid
+      in: path
+      required: true
+      description: Workspace id (UUID) for audit logs.
       schema: { type: string, format: uuid }
     Mid:
       name: mid
@@ -8456,3 +8788,189 @@ components:
         title: { type: string, minLength: 1, maxLength: 200 }
         data:
           description: String or element array.
+    AnalyticsOverview:
+      type: object
+      required: [funnel, daily, topEvents, wau, coreActiveUsers, retention, sessions, activeUsers]
+      properties:
+        funnel:
+          type: object
+          properties:
+            acquisition:
+              type: array
+              items:
+                type: object
+                properties:
+                  step: { type: string }
+                  count: { type: integer }
+            activation:
+              type: array
+              items:
+                type: object
+                properties:
+                  step: { type: string }
+                  count: { type: integer }
+        daily:
+          type: array
+          items:
+            type: object
+            properties:
+              date: { type: string, format: date }
+              count: { type: integer }
+        topEvents:
+          type: array
+          items:
+            type: object
+            properties:
+              event: { type: string }
+              count: { type: integer }
+        wau: { type: integer }
+        coreActiveUsers: { type: integer }
+        retention:
+          type: object
+          properties:
+            d1: { type: number }
+            d7: { type: number }
+            d30: { type: number }
+        sessions: { type: integer }
+        activeUsers: { type: integer }
+    Envelope_AnalyticsOverview:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/AnalyticsOverview'
+    CreateBillingCheckoutRequest:
+      type: object
+      required: [priceId, successUrl, cancelUrl]
+      properties:
+        priceId: { type: string }
+        successUrl: { type: string, format: uri }
+        cancelUrl: { type: string, format: uri }
+    Envelope_BillingCheckout:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          properties:
+            sessionId: { type: string }
+            url: { type: string, format: uri }
+    CreateBillingPortalRequest:
+      type: object
+      required: [returnUrl]
+      properties:
+        returnUrl: { type: string, format: uri }
+    Envelope_BillingPortal:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          properties:
+            url: { type: string, format: uri }
+    BillingStatus:
+      type: object
+      required: [plan, seatsUsed, seatsLimit, subscriptionStatus, stripeReady]
+      properties:
+        plan: { type: string, enum: [free, pro] }
+        seatsUsed: { type: integer, minimum: 0 }
+        seatsLimit: { type: integer, minimum: 1 }
+        subscriptionStatus: { type: string, enum: [active, past_due, canceled, incomplete, trialing] }
+        stripeReady: { type: boolean }
+        currentPeriodEnd: { type: string, format: date-time, nullable: true }
+    Envelope_BillingStatus:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/BillingStatus'
+    CreateBillingPortalRequest:
+      type: object
+      required: [returnUrl]
+      properties:
+        returnUrl: { type: string, format: uri }
+    Envelope_BillingPortal:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          properties:
+            url: { type: string, format: uri }
+    PresenceMember:
+      type: object
+      required: [userId, name, online]
+      properties:
+        userId: { type: string, format: uuid }
+        name: { type: string }
+        online: { type: boolean }
+        lastSeen: { type: string, format: date-time, nullable: true }
+    Envelope_PresenceList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/PresenceMember'
+    Envelope_PresenceHeartbeat:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          properties:
+            onlineAt: { type: string, format: date-time }
+    AuditLogEntry:
+      type: object
+      required: [id, targetType, granteeType, action, operatorId, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        targetType: { type: string, enum: [document, folder, space] }
+        granteeType: { type: string, enum: [user, role] }
+        granteeId: { type: string, format: uuid }
+        action: { type: string, enum: [grant, revoke, update] }
+        operatorId: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+    Envelope_PermissionAuditLogList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/AuditLogEntry'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_Permissions:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: array
+              items: { type: string }
+    UpdatePermissionsRequest:
+      type: object
+      minProperties: 1
+      properties:
+        permissions:
+          type: object
+          additionalProperties:
+            type: object
+            additionalProperties:
+              type: array
+              items: { type: string }

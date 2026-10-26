@@ -160,8 +160,6 @@
 /api/v1/workspaces/{wid}/meetings/{mid}/recording/stop
 /api/v1/workspaces/{wid}/objectives/{oid}/key-results
 /api/v1/workspaces/{wid}/objectives/{oid}/key-results/{krid}
-/api/v1/workspaces/{wid}/permissions/audit-logs
-/api/v1/workspaces/{wid}/presence
 /api/v1/workspaces/{wid}/project-templates
 /api/v1/workspaces/{wid}/project-templates/{tid}
 /api/v1/workspaces/{wid}/project-templates/{tid}/apply
