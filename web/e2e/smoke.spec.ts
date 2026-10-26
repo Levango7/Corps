@@ -14,6 +14,8 @@ import { expect, test } from "@playwright/test";
 
 const uniqueEmail = `e2e-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@e2e.local`;
 
+// serial 是必需的：第三条用模块级 uniqueEmail 走登录链路，而该账号由第二条
+// 的注册落库；这条 spec 的意义就是「注册出来的账号能登录并进看板」。
 test.describe.serial("冒烟：注册 → 工作区 → 新建任务", () => {
   test("注册页正常渲染（水合完成，表单可交互）", async ({ page }) => {
     await page.goto("/auth/signup");

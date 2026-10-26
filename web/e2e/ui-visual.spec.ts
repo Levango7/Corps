@@ -49,7 +49,11 @@ async function snapshotView(page: import("@playwright/test").Page, name: string)
 // （"corps / <名字>"），每轮截图必 diff。邮箱仍保持唯一。
 const FIXED_WS_NAME = "视觉基线工作区";
 
-test.describe.serial("视觉回归（CI-only）", () => {
+// 每个视图各自自备前置（signup/login 无需账号，dashboard/palette 各自注册），
+// 故不用 describe.serial：serial 下首条红会把后续用例整组标成 skipped，
+// 实测坑过一次——tagline 改文案那轮只报出 signup 基线漂移，login 被短路隐藏，
+// 白等一轮 CI 才看见第二条。
+test.describe("视觉回归（CI-only）", () => {
   test("注册页", async ({ page }) => {
     await page.goto("/auth/signup");
     await expect(page.getByLabel("邮箱")).toBeVisible();

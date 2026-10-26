@@ -21,6 +21,7 @@ const inviteeEmail = uniqueEmail("e2e-inv-member");
 let inviteUrl: string;
 let ownerWorkspaceId: string;
 
+// serial 是必需的：第三条的输入是第二条从成员页取回的 inviteUrl，拆不开。
 test.describe.serial("邀请流程：管理员邀请 → 成员接受 → 加入工作区", () => {
   test("管理员注册并进入工作区", async ({ page }) => {
     ownerWorkspaceId = await registerAndLogin(page, ownerEmail, "E2E邀请工作区");

@@ -44,6 +44,21 @@
 
 > register_view、register_submit、login_view、login_submit、onboarding_start、onboarding_complete、onboarding_skip、create_comment、billing_view、billing_success、billing_cancel
 
+> **【2026-10-25 更新，本节以上为建规时快照】** 上面这串「已进白名单但从未打点」的缺口已收口，
+> 但**其中两个数字本身早已过期**，留在此处是为了说明缺口是怎么被漏掉两年的：
+>
+> - 上面的「9 个已埋 / 21 个白名单 / 11 个缺口」三个数字都只对建规当天成立。到 2026-10-20 白名单已长到
+>   **37 名**，`register_view` / `register_submit` 也早就接上了（signup 页），所以缺口实际是 10 名而不是 11 名。
+> - 真正的问题不是数字漂移，而是**反向没人管**：`tests/unit/analytics-event-contract.test.ts` 只断言
+>   「发出的名字必须进白名单」这一个方向。反方向（白名单里的名字必须有人发）加进去的名字永远不会被触发，
+>   分析表里那一步恒为 0 行——看板和 SQL 只会读出"转化为 0"，没人怀疑"根本没埋"。
+>   最伤的一处是 `create_comment`：它在 §2.1 的 **CORE_EVENTS** 里、被 WAW 口径当分子消费，
+>   却没有任何 emit 站点 ⇒ 只写评论不建任务的工作区在北极星里等于不存在。
+> - 现状（2026-10-25 实测）：**37 名 ↔ 37 个 emit 站点，两个方向都零缺口**，且已被钉成门禁——
+>   契约测试同时跑正向与反向，反向那条自带合成死名字的射程自检。
+>   现测命令：`cd web && npx vitest run tests/unit/analytics-event-contract.test.ts`。
+> - 从此**进度型数字不许再往本节抄**：白名单是单一事实源，任何"N 个已埋"的写法都应由上面那条命令现算。
+
 结论：现状是「白名单超前、实际覆盖不足」，且统计口径存在三处缺陷：
 
 | 缺陷编号 | 问题 | 出处 |
