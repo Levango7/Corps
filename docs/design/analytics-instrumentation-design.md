@@ -485,7 +485,11 @@ PUBLIC_LANDING_ROUTES = ["/", "/pricing", "/pricing/*", 未来营销页…] ＋ 
 
 1. **webhook 侧 4 事件的实施**（subscription_activated/payment_failed/subscription_renewed/subscription_churned）：本设计仅交付伪代码与放置约束（§2.7），编码、Stripe 事件订阅配置、联调均由支付线在其 webhook 重构中顺带完成。
 2. cohort 周粒度留存矩阵、功能渗透率等 §5 P2 图表及其查询端点。
-3. onboarding_start/complete/skip 三事件：M2 引导流程上线后补埋（白名单已预留）。
+3. ~~onboarding_start/complete/skip 三事件：M2 引导流程上线后补埋（白名单已预留）。~~
+   **本条已不成立（2026-10-25）**：M2 引导流程早已上线——`components/Onboarding.tsx` 挂在
+   `app/[locale]/w/[wid]/page.tsx:537`，且本身就有 `complete()` / `skip()` / 可见性判定三处语义；
+   但"预留"一直没人回来兑现 ⇒ AC-07「15 分钟内完成首个任务」不可度量。三事件已接线，
+   并由 `analytics-event-contract` 的反向断言钉住（白名单里有名字却没人发＝判红）。
 4. 跨设备 identity graph（批准文档 §6.2 明确过度设计，不做）。
 5. GeoIP locale：locale 取 navigator.language，GeoIP 待 CloudBase header 能力确认（Q4）。
 6. OLAP 外移：PostgreSQL 直存，每季度复核增速（§6.5）。

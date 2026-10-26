@@ -7,6 +7,7 @@ import { normalizeEmailLocale } from "@/lib/email-messages";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { trackServerEvent } from "@/lib/analytics-server";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/comments — 评论时间线（正序） */
 export async function GET(
@@ -188,6 +189,17 @@ export async function POST(
         console.error("[comment] post-create mention notify failed (non-blocking):", err);
       }
     }
+
+    // 核心激活事件 create_comment：白名单与 CORE_EVENTS 都列了它，
+    // docs/analytics/METRICS-SQL-2026Q4.md 的活跃口径查询也按它计数，但全仓此前没有
+    // 任何 emit 站点 ⇒ 这一步在分析表里恒为 0 行。放事务提交后（与提及邮件同级），
+    // trackServerEvent 内部已 catch，失败不影响本次创建的结果。
+    await trackServerEvent({
+      userId: ctx.payload.sub,
+      workspaceId: wid,
+      name: "create_comment",
+      props: { taskId: id, mentionCount: comment.validMentions.length },
+    });
 
     return NextResponse.json({ code: 201, data: comment.created }, { status: 201 });
   } catch (error) {
