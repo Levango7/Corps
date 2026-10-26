@@ -1,0 +1,60 @@
+name: SAST
+
+# 静态应用安全测试（SAST）自动化。此前安全维度的自动化缺口：
+# RLS/权限/契约等自有门禁之外，没有任何第三方静态分析在扫真实代码 ——
+# 安全满分靠人工审计撑着（BATCH1 §6 的建议项，2026-10-26 落地）。
+#
+# gitleaks 接入记录（2026-10-26）：本地 gitleaks v8.30.1 全历史预验证
+# （865 commits）命中 4 处，逐条人工核验全部为误报（测试夹具假密钥 ×2、
+# 文档 JWT 示例、localStorage 键名），以 .gitleaksignore 带理由豁免——
+# 豁免后复扫 "no leaks found"。豁免文件里写明维护规矩：只许逐条核验后
+# 增加，修掉真实来源应删行。误报来源见 .gitleaksignore 头注释。
+#
+# 为什么不是 required check：CodeQL 的产出是 Security tab 的告警
+# （新告警不阻断 PR），分析 job 失败才红；且分支保护的必过清单是固定
+# 12 项，新增 workflow 天然不在其中。这是刻意的：先把扫描跑起来看噪音，
+# 噪音可控后再议是否升级为门禁。
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # 每周二 04:31 UTC（北京 12:31），与 burndown 的错峰思路一致
+    - cron: "31 4 * * 2"
+  workflow_dispatch:
+
+jobs:
+  codeql:
+    name: CodeQL (javascript-typescript)
+    runs-on: ubuntu-latest
+    permissions:
+      # 告警写入 Security tab 需要 write
+      security-events: write
+      contents: read
+      actions: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: javascript-typescript
+          # 扫描面 = web/（唯一 TS 代码树；desktop 是 Tauri 壳，代码量小，
+          # 后续可加 languages: rust 另开 job）
+          # queries 暂用默认套件；security-extended 噪音大，跑两周看基线再议
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:javascript-typescript"
+
+  gitleaks:
+    name: Gitleaks (secret scan)
+    runs-on: ubuntu-latest
+    steps:
+      # 全历史扫描：密钥泄漏的意义在于"曾经提交过什么"，浅克隆扫不到
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        # 仓库根的 .gitleaksignore 生效（4 条已核验误报）；
+        # 新增泄漏 → job 红（非 required，但 Security/日志可见）

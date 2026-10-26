@@ -8,18 +8,19 @@
 
 ---
 
-## 0. 当前状态快照（2026-10-25 实测 · 第一批交付后）
+## 0. 当前状态快照（2026-10-25 实测 · 第二批交付后）
 
 | 项 | 状态 |
 |---|---|
-| **成熟度评分** | **综合 7.86（可比口径，批次前 6.53，+1.33）；全口径当下 8.64 —— 档位 Bronze → Silver**<br>可复现评分器：`scripts/score_maturity.py`；对账报告：`docs/audit/MATURITY-2026Q4-BATCH1.md` |
+| **成熟度评分** | **综合 9.04（Gold，第二批对账口径 8.47 → 9.04）；10-25 晚本机实跑 9.20（其中 2 项因本机环境 SKIP 不计入）—— 档位 Bronze → Silver → Gold**<br>可复现评分器：`scripts/score_maturity.py`；对账报告：`docs/audit/MATURITY-2026Q4-BATCH1.md` / `MATURITY-2026Q4-BATCH2.md` |
 | 第一批四项交付 | **全部落地**：①正式部署能力（`deploy/` 从无到有 + `deploy.sh` 五修经 PR #161 合入）②协同孤儿摘除 ③401/403 语义统一 + shellcheck 门禁 ④TS6/Prisma7/Stripe22 三个 major 升级 |
+| 第二批四处缺口 | **全部关闭**（BATCH2）：`.gitignore` 收紧为 `.env*` + `!.env.example`；`db/schema.sql` 追平最新迁移并新增快照陈旧门禁；RED-Errors 按路由接通（Rate/Duration 未接且未假装接）；OpenAPI 自述漂移修正（声明数 = 实测数） |
 | CI | 12 job 全绿；写权限 default-deny + MemberPermission 覆盖已上线并有单测/门禁钉住 |
-| 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0** |
+| 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0**；定时 Smoke 目标已从临时隧道切至 Vercel 实例（2026-10-25 连续 success，库曾一度 down 后自愈，疑免费档冷启动待定论） |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
-| 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭 |
-| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **147**（−10）/ 契约未声明 **196**（205 → 201 → 196，10-25 清偿 AI agents 5 条）——burn-down 计划见 §2 |
-| **已知退步** | **API 层 3.33（−1.67）**：路由新增速度≈契约补齐速度，覆盖率原地踏步；`api/openapi.yaml` 自述「80 paths」与实测 88 漂移扩大到 8。**数据层 Red**：`db/schema.sql` 快照落后最新迁移 1 个（缺 `workspaces.settings`），且无门禁看守 |
+| 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭；v0.8.2 修复容器镜像源单点（`ARG NODE_IMAGE` 回 Docker Hub） |
+| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **133**（10-26 approvals 批次清 14 条）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
+| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 33.9%（目标 60%），`tests/api` 路由级测试 7/20；**RED-Rate/Duration** 首批已接线（contacts/announcements/activity 域），其余路由按目录分批；**SLO/SLI 文档 0 份**（正式实例前按负面清单不做承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -83,8 +84,8 @@
 | 基线 | 当前（2026-10-12） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 602 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
-| `permission-gate` T3 | 147 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
-| `api-contract` undeclared | 196 | **150** | 每周契约化 ≥5 条路由 |
+| `permission-gate` T3 | 133 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
+| `api-contract` undeclared | 172 | **150** | 每周契约化 ≥5 条路由 |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）

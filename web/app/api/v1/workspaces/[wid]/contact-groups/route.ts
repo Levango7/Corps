@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { requirePermission } from "@/lib/permissions";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 联系人分组 API · /api/v1/workspaces/{wid}/contact-groups
@@ -18,7 +19,10 @@ import { requirePermission } from "@/lib/permissions";
  * GET /v1/workspaces/{wid}/contact-groups — 分组列表
  * 返回按 name 正序，每组带 _count.contacts
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getContactGroups(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -76,7 +80,10 @@ const createGroupSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/contact-groups — 创建分组 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postContactGroups(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -143,7 +150,10 @@ const patchGroupSchema = z.object({
  * PATCH /v1/workspaces/{wid}/contact-groups — 更新分组名称
  * 分组 id 通过 ?gid= 查询参数或 body.id 提供
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchContactGroups(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -226,7 +236,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
  * DELETE /v1/workspaces/{wid}/contact-groups — 删除分组
  * 通过 ?gid= 查询参数指定分组；联系人 groupId 由 onDelete: SetNull 自动置空
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function deleteContactGroups(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -282,3 +295,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
     );
   }
 }
+
+// ── RED 指标接线（Rate/Duration）：包装器见 lib/red-metrics.ts。
+export const GET = withRed(getContactGroups);
+export const POST = withRed(postContactGroups);
+export const PATCH = withRed(patchContactGroups);
+export const DELETE = withRed(deleteContactGroups);

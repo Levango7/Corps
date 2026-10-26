@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/announcements — 公告列表
@@ -13,7 +14,10 @@ import { authFailure } from "@/lib/auth-response";
  *        ?page=&limit=（分页，默认 page=1 limit=50）
  * 按 pinned DESC + publishedAt DESC 排序（置顶优先，再按发布时间倒序）
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getAnnouncements(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -114,7 +118,10 @@ const createSchema = z.object({
   expiresAt: z.union([z.string().datetime(), z.null()]).optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postAnnouncements(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -175,3 +182,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// ── RED 指标接线（Rate/Duration）：包装器见 lib/red-metrics.ts。
+export const GET = withRed(getAnnouncements);
+export const POST = withRed(postAnnouncements);
