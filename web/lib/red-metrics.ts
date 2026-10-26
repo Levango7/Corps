@@ -23,9 +23,10 @@
  *    拿不到状态码也拿不到耗时。要么逐路由包一层（见下方 `withRed`），
  *    要么在边缘代理（deploy/ 的 Caddy）出指标。
  *
- * 因此 `withRed()` 已经写好并可用，但**当前零调用点** —— 本文件不把它算作
- * "已接线"。哪个维度真的接了线，以 /api/metrics 实际能吐出什么为准，
- * 不以文件是否存在为准。
+ * 因此 `withRed()` 已经写好并可用。**接线状态以调用点为准**（评分器按生产代码
+ * 里的 withRed( 调用点计数）：2026-10-26 起首批已接线 contacts / announcements /
+ * activity 三个域（6 文件 15 handler），其余路由按目录分批推进。哪个维度真的
+ * 接了线，以 /api/metrics 实际能吐出什么为准，不以文件是否存在为准。
  *
  * ─── 基数控制 ────────────────────────────────────────────────────────────
  * 路由标签一律用**模式**（`/api/v1/workspaces/[id]/tasks`）而不是具体 URL。
@@ -124,27 +125,29 @@ export function recordDuration(input: {
 /**
  * 逐路由包装器：Rate + Duration + 按状态码分档的错误数。
  *
- * **当前零调用点。** 要用它接通 Rate/Duration 两维，就把它套到路由处理器上：
+ * 接法：把路由处理器改名成普通函数，文件尾统一 `export const GET = withRed(getX)`。
+ * 2026-10-26 首批已套 contacts / announcements / activity 三域；新目录按同构
+ * 方式批量跟进（套一两个路由没有意义，覆盖率 0.3% 的指标存在但基本是空的）。
  *
- *   export const GET = withRed(async (req) => { ... });
- *
- * 套一两个路由没有意义（覆盖率 0.3%，指标存在但基本是空的），
- * 要套就按目录批量套，并同步在评分器里把对应检查从 WARN 改成 PASS。
- *
- * 签名说明：入参刻意用宽类型的 `Request`（而非 NextRequest），这样既不受
- * Next 版本约束，也不会把调用点的参数类型窄化。返回类型保持 `T`，
- * 让 `export const GET = withRed(GET)` 的类型推导不丢。
+ * 签名说明：约束用 `(...args: never[])` 而不是 `(req: Request, ctx?: unknown)` ——
+ * 函数参数按逆变检查，`(req: NextRequest, …) => …` 不满足后者（Request 不是
+ * NextRequest），仓库路由清一色收 NextRequest，前者（never 是 bottom）放行任意
+ * 签名。wrapped 运行时固定按 (req, ctx) 转发，与 Next 的调用形态一致。
+ * 返回类型保持 `T`，让 `export const GET = withRed(getX)` 的类型推导不丢。
  */
-type AnyRouteHandler = (req: Request, ctx?: unknown) => Promise<Response>;
+type AnyRouteHandler = (...args: never[]) => Promise<Response>;
 
 export function withRed<T extends AnyRouteHandler>(handler: T): T {
+  // 泛型体内 T 的参数视图是 never（AnyRouteHandler 用 never[] 放行任意签名的
+  // 代价），在这里一次性收窄回运行时真实形态 (req, ctx)；对外签名仍是精确的 T。
+  const call = handler as unknown as (req: Request, ctx?: unknown) => Promise<Response>;
   const wrapped = async (req: Request, ctx?: unknown): Promise<Response> => {
     const route = normalizeRoute(new URL(req.url).pathname);
     const method = req.method;
     recordRequest({ route, method });
     const started = Date.now();
     try {
-      const res = await handler(req, ctx);
+      const res = await call(req, ctx);
       recordDuration({ route, method, durationMs: Date.now() - started });
       if (res.status >= 500) recordError({ route, method });
       return res;

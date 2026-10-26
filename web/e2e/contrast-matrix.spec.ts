@@ -8,7 +8,8 @@
  *   ② 核心 UI 元素在两套主题下都真实可见且无横向溢出
  *   ③ 令牌本身有值（缺失会让主题静默退化）
  *
- * 基线 = 2026-10-12 本机实测值（需 Corps 生产构建 + dev server 跑出后填入）。
+ * 基线 = 2026-10-12 本机实测值（contrast-probe.mjs 取数：Playwright + design-tokens.css，
+ * 纯令牌计算、不起 server；对着 committed 版 design-tokens.css 复验一致）。
  *
  * ⚠️ 2026-10-14 口径修正（重要）：此前本文件用共享模板的 ABS_FLOOR = 1.5 作绝对底线，
  * 实际底线是 max(1.5, 基线 × 0.9)。问题在于**它锁死的是"当前实测值"，而不是 WCAG 标准**，
@@ -137,7 +138,6 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
       const pairs = await readPairs(page, CONTRAST_PAIRS);
       const base = BASELINE[th];
       for (const k in base) {
-        const _k: string = k;
         const v = pairs[k];
         expect(v, "主题 " + th + " 缺少配对 " + k).toBeTruthy();
         if (v.c === null) continue;

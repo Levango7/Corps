@@ -16,10 +16,12 @@ import { redMetricsText } from "@/lib/red-metrics";
  *
  * 关于 RED 三维的接线现状（不要只看 series 名就以为都通了）：
  *   - Errors：已接通。数据源是 instrumentation.ts 的 onRequestError 钩子。
- *   - Requests / Duration：注册表已实现，但**当前零调用点** ——
- *     middleware 跑在 Edge runtime，状态与这里不共享；App Router 也没有
- *     全局的"路由执行完毕"钩子。要接通得逐路由套 `withRed()`。
- *     所以这两个 series 现在吐不出来，详见 web/lib/red-metrics.ts 顶部。
+ *   - Requests / Duration：已对首批路由接通（2026-10-26 起 contacts /
+ *     announcements / activity 三个域，逐路由 `withRed()` 包装）——
+ *     这三个域的请求会吐出 corps_http_requests_total 与
+ *     corps_http_request_duration_ms 序列；未接线路由不会出现。
+ *     middleware 跑在 Edge runtime 状态不共享、App Router 无全局钩子的约束
+ *     不变，后续按目录分批推进，详见 web/lib/red-metrics.ts 顶部。
  *
  * 注意：默认不要求认证（Prometheus scraper 无 cookie），生产应通过网络层
  * （防火墙/ingress）限制访问；若需端点级控制，设置 METRICS_TOKEN 后即要求

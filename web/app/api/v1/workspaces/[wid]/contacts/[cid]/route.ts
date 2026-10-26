@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 单个联系人 API · /api/v1/workspaces/{wid}/contacts/{cid}
@@ -14,7 +15,7 @@ import { authFailure } from "@/lib/auth-response";
  */
 
 /** GET /v1/workspaces/{wid}/contacts/{cid} — 联系人详情 */
-export async function GET(
+async function getContact(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -71,7 +72,7 @@ const updateContactSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/contacts/{cid} — 更新联系人 */
-export async function PATCH(
+async function patchContact(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -148,7 +149,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/contacts/{cid} — 删除联系人 */
-export async function DELETE(
+async function deleteContact(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -197,3 +198,8 @@ export async function DELETE(
     );
   }
 }
+
+// ── RED 指标接线（Rate/Duration）：包装器见 lib/red-metrics.ts。
+export const GET = withRed(getContact);
+export const PATCH = withRed(patchContact);
+export const DELETE = withRed(deleteContact);

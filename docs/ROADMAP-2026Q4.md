@@ -19,8 +19,8 @@
 | 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0**；定时 Smoke 目标已从临时隧道切至 Vercel 实例（2026-10-25 连续 success，库曾一度 down 后自愈，疑免费档冷启动待定论） |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭；v0.8.2 修复容器镜像源单点（`ARG NODE_IMAGE` 回 Docker Hub） |
-| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **147**（−10）/ 契约未声明 **191**（205 → 201 → 196 → 191，10-25 清偿 AI agents 5 条 + activity/announcements/contacts 5 条）——burn-down 计划见 §2 |
-| **已知短板**（非退步，存量欠账） | **API 层 8.00（Silver）**：契约覆盖率 32.2%（目标 60%），`tests/api` 路由级测试 1/20 为测试维度最大短板；**RED-Rate/Duration** 包装器就绪但零调用点（BATCH2 §4 有据可查的取舍）；**SLO/SLI 文档 0 份**（正式实例前按负面清单不做承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
+| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **133**（10-26 approvals 批次清 14 条）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
+| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 33.9%（目标 60%），`tests/api` 路由级测试 7/20；**RED-Rate/Duration** 首批已接线（contacts/announcements/activity 域），其余路由按目录分批；**SLO/SLI 文档 0 份**（正式实例前按负面清单不做承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -84,8 +84,8 @@
 | 基线 | 当前（2026-10-12） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 602 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
-| `permission-gate` T3 | 147 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
-| `api-contract` undeclared | 191 | **150** | 每周契约化 ≥5 条路由 |
+| `permission-gate` T3 | 133 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛 |
+| `api-contract` undeclared | 172 | **150** | 每周契约化 ≥5 条路由 |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）
