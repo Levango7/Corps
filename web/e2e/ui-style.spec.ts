@@ -109,7 +109,7 @@ async function minFontSize(page: import("@playwright/test").Page) {
   });
 }
 
-test.describe.serial("UI 风格硬断言", () => {
+test.describe("UI 风格硬断言", () => {
   /** 每个测试现取唯一邮箱（勿提取为共享常量——同文件内第二次注册会撞 409）。 */
   const uniqueEmail = () =>
     `e2e-style-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@e2e.local`;

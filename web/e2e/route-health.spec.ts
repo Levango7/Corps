@@ -110,7 +110,7 @@ const VIEWPORTS: readonly { width: number; height: number; label: string }[] = [
 /** 路由级错误边界的唯一可见文案（error.pageError）。 */
 const BOUNDARY_TEXT = "页面出错了";
 
-test.describe.serial("路由健康门禁", () => {
+test.describe("路由健康门禁", () => {
   /** 每个测试现取唯一邮箱（与其他 spec 的隔离口径一致）。 */
   const uniqueEmail = () =>
     "e2e-route-health-" + Date.now() + "-" + Math.random().toString(36).slice(2, 8) + "@e2e.local";

@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { uniqueEmail, registerAndLogin, login } from "./helpers";
+import { uniqueEmail, registerAndLogin } from "./helpers";
 
 /**
  * E2E：计费流程 —— 查看计费页 → 套餐展示 → 支付方式选择 → 定价页。
@@ -14,20 +14,22 @@ import { uniqueEmail, registerAndLogin, login } from "./helpers";
  * 约束：
  *  - 不实际发起支付（会跳转外部通道，E2E 环境无 Stripe）
  *  - 支付方式按钮仅在 stripeReady && isOwner 时渲染，用条件断言兼容未配置环境
+ *
+ * 独立性：每条用例自带账号夹具（注册即登录），互不依赖执行顺序——
+ * 所以不用 describe.serial：serial 下首条红会把整组后续用例标成 skipped，
+ * 覆盖悄悄缩水，报告里只看得到第一条红。
  */
 
-const email = uniqueEmail("e2e-billing");
-let workspaceId: string;
-
-test.describe.serial("计费流程：计费页 → 套餐 → 支付方式 → 定价页", () => {
+test.describe("计费流程：计费页 → 套餐 → 支付方式 → 定价页", () => {
+  // ── 注册链路本身 ──
   test("注册并进入工作区", async ({ page }) => {
-    workspaceId = await registerAndLogin(page, email, "E2E计费工作区");
+    await registerAndLogin(page, uniqueEmail("e2e-billing"), "E2E计费工作区");
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
   });
 
   test("计费页渲染：标题/当前套餐/席位/套餐卡片", async ({ page }) => {
-    await login(page, email);
-    await page.goto(`/w/${workspaceId}/billing`);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-billing"), "E2E计费工作区");
+    await page.goto(`/w/${wid}/billing`);
 
     // 标题
     await expect(page.getByRole("heading", { name: "计费" })).toBeVisible({ timeout: 10_000 });
@@ -46,8 +48,8 @@ test.describe.serial("计费流程：计费页 → 套餐 → 支付方式 → �
   });
 
   test("计费页互链到 /pricing 定价页", async ({ page }) => {
-    await login(page, email);
-    await page.goto(`/w/${workspaceId}/billing`);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-billing"), "E2E计费工作区");
+    await page.goto(`/w/${wid}/billing`);
 
     // 点击「查看完整功能对比」链接
     await page.getByRole("link", { name: "查看完整功能对比" }).click();
@@ -59,8 +61,8 @@ test.describe.serial("计费流程：计费页 → 套餐 → 支付方式 → �
   });
 
   test("支付方式选择（条件性：仅 Stripe 配置可用时）", async ({ page }) => {
-    await login(page, email);
-    await page.goto(`/w/${workspaceId}/billing`);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-billing"), "E2E计费工作区");
+    await page.goto(`/w/${wid}/billing`);
 
     // 等待计费状态加载
     await expect(page.getByText("当前套餐")).toBeVisible({ timeout: 10_000 });

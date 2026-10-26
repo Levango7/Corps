@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { uniqueEmail, registerAndLogin, login } from "./helpers";
+import { uniqueEmail, registerAndLogin } from "./helpers";
 
 /** 点击 UserMenu 头像按钮展开下拉菜单 */
 async function openUserMenu(page: Page) {
@@ -25,9 +25,10 @@ async function clickLanguageOption(page: Page, langName: string) {
  *
  * 依据：ADR-008 next-intl 方案 A，locales = ["zh", "en"]，默认 zh。
  * as-needed 前缀模式：zh 不带前缀，en 带 /en 前缀。
+ *
+ * 独立性：切换语言的两条用例各自注册账号——它们只要「有一个 zh 账号」，
+ * 不依赖前一条把偏好留在哪种语言（en→zh 那条自己 goto /en 前缀重建起点）。
  */
-
-const email = uniqueEmail("e2e-i18n");
 
 test.describe("i18n：登录页文案对比（zh vs en）", () => {
   test("默认 locale（zh）登录页显示中文", async ({ page }) => {
@@ -55,14 +56,14 @@ test.describe("i18n：登录页文案对比（zh vs en）", () => {
   });
 });
 
-test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
+test.describe("i18n：工作区内 UserMenu 切换语言", () => {
   test("注册并进入工作区（zh）", async ({ page }) => {
-    await registerAndLogin(page, email, "E2E语言工作区");
+    await registerAndLogin(page, uniqueEmail("e2e-i18n"), "E2E语言工作区");
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
   });
 
   test("切换 zh → en：导航文案变英文，URL 带 /en 前缀", async ({ page }) => {
-    await login(page, email);
+    await registerAndLogin(page, uniqueEmail("e2e-i18n"), "E2E语言工作区");
 
     // zh 下导航菜单应有中文项（桌面侧栏——移动抽屉同样渲染一份，限定桌面 aside 内）
     await expect(page.getByRole("link", { name: "看板", exact: true }).first()).toBeVisible({
@@ -86,7 +87,7 @@ test.describe.serial("i18n：工作区内 UserMenu 切换语言", () => {
 
   test("切换 en → zh：导航文案恢复中文，URL 去除 /en 前缀", async ({ page }) => {
     test.setTimeout(120_000);
-    const wid = await login(page, email);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-i18n"), "E2E语言工作区");
 
     // 直接导航到英文版工作区（避免第一次 UserMenu 切换的 click 超时风险）
     await page.goto(`/en/w/${wid}`);

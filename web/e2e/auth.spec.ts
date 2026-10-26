@@ -23,6 +23,8 @@ function uniqueEmail(prefix = "e2e-auth"): string {
 
 const PASSWORD = "e2e-auth-passw0rd";
 
+// serial 是必需的：后两条登录用例要一个「已由注册链路落库」的账号，
+// 拆成各自注册就测不到「注册出来的凭证能登录」这条契约本身。
 test.describe.serial("认证流程：注册 → 登录 → 工作区首页", () => {
   const email = uniqueEmail();
 

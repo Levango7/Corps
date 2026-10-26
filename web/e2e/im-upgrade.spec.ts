@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
+import { uniqueEmail, registerAndLogin, createTask } from "./helpers";
 
 /**
  * E2E：IM 升级 —— SSE 实时消息 / 已读状态 / 文件附件 / ChatPanel UI / 断线重连。
@@ -15,10 +15,10 @@ import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
  *  - dev server 运行且 RATE_LIMIT_DISABLED=1
  *  - 数据库可达（注册真实落库）
  *
- * 独立性：模块级唯一邮箱，describe.serial 保证注册先于登录。
+ * 独立性：每条用例自带账号夹具（注册即登录），互不依赖执行顺序——
+ * 所以不用 describe.serial：serial 下首条红会把整组后续用例标成 skipped，
+ * 覆盖悄悄缩水，报告里只看得到第一条红。
  */
-
-const EMAIL = uniqueEmail("e2e-im");
 
 /** 进入任务详情页（创建任务 → 点卡片 → 等待 URL） */
 async function gotoTaskDetail(page: Page, wid: string, taskTitle: string): Promise<void> {
@@ -35,10 +35,10 @@ async function gotoTaskDetail(page: Page, wid: string, taskTitle: string): Promi
   await page.waitForURL(/\/task\//, { timeout: 10_000 });
 }
 
-test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件 + 重连", () => {
-  // ── 注册账号 ──
+test.describe("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件 + 重连", () => {
+  // ── 注册链路本身 ──
   test("注册新账号并进入工作区", async ({ page }) => {
-    await registerAndLogin(page, EMAIL, "E2E即时消息工作区");
+    await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
   });
 
@@ -47,7 +47,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
   // ChatPanel 渲染时 actionability 超时。已通过 Ripple pointer-events-none 修复解决。
   test("任务详情页渲染 ChatPanel：标题/空状态/输入框/发送按钮", async ({ page }) => {
     test.setTimeout(120_000);
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-UI-${Date.now()}`);
 
     // 聊天标题可见（TaskChatPanel → ChatWindow 的 <h2>，标题为会话标题或 "聊天"）
@@ -80,7 +80,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── 发送消息并通过 SSE 接收 ──
   test("发送消息后实时显示在消息列表（SSE 自发自收）", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Send-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
@@ -107,7 +107,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── Ctrl+Enter 快捷发送 ──
   test("Ctrl+Enter 快捷键发送消息", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Shortcut-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
@@ -122,7 +122,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── 消息时间戳分组 ──
   test("消息列表显示时间戳分组标签", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Time-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
@@ -135,7 +135,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── 消息搜索 ──
   test("搜索框过滤消息", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Search-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
@@ -177,7 +177,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── 文件附件上传（≤10MB 限制）──
   test("上传有效文件附件后显示预览并可发送", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Attach-${Date.now()}`);
 
     // 准备一个小的 PDF 文件（< 10MB，类型在允许列表中）
@@ -212,7 +212,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── 文件大小超限校验（前端拦截）──
   test("超过 10MB 的文件被前端拦截并提示错误", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-SizeLimit-${Date.now()}`);
 
     // 构造 11MB 的 buffer（超过 10MB 限制）
@@ -235,7 +235,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 发送者上下文
     const senderCtx = await browser.newContext();
     const senderPage = await senderCtx.newPage();
-    const wid = await login(senderPage, EMAIL);
+    const wid = await registerAndLogin(senderPage, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     const taskTitle = `E2E-IM-Read-${Date.now()}`;
     await gotoTaskDetail(senderPage, wid, taskTitle);
 
@@ -260,7 +260,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── SSE 连接状态指示 ──
   test("SSE 连接正常时不显示离线指示器", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Connected-${Date.now()}`);
 
     // 发一条消息触发 SSE 连接建立
@@ -279,7 +279,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
 
   // ── SSE 断线重连：模拟网络中断后恢复 ──
   test("SSE 断线后显示离线指示，恢复后重新连接", async ({ page, context }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Reconnect-${Date.now()}`);
 
     // 先发一条消息确保 SSE 连接已建立
@@ -316,7 +316,7 @@ test.describe.serial("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件
     // 5 轮「fill→等按钮可用→按键发送→等消息可见」串联，每轮在 SSE 重渲染
     // 竞争下可达 10s+，默认 60s 不够——放宽到 150s
     test.setTimeout(150_000);
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-im"), "E2E即时消息工作区");
     await gotoTaskDetail(page, wid, `E2E-IM-Scroll-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
