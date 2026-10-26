@@ -36,7 +36,7 @@ async function scanContainingBlockTraps(dialog: import("@playwright/test").Locat
   });
 }
 
-test.describe.serial("UI 布局硬断言", () => {
+test.describe("UI 布局硬断言", () => {
   /** 每个测试现取唯一邮箱。 */
   const uniqueEmail = () =>
     `e2e-layout-${Date.now()}-${Math.random().toString(36).slice(2, 8)}@e2e.local`;

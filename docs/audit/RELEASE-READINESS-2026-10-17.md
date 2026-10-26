@@ -251,8 +251,13 @@ wc -l components/ChatPanel.tsx components/chat/*                                
 | 4 | 真实生产域名（桌面/移动壳与 updater 现在指向别人的 `corps.com` 与不存在的 `releases.corps.com`） | 已列全 8 处引用点 | 域名本身 + 归属确认 |
 
 另有两条不欠 owner 输入、纯粹欠工时的：#28（ADR-013 的整合本体）、
-#29（`web/e2e/` 仍有 **17 处 `describe.serial`、分布在 13 个 spec 文件**，单条失败会连带 "did not run"；
-现测命令 `grep -rn describe.serial web/e2e | wc -l`）。
+#29（**已收口 2026-10-25**：`describe.serial` 从 **16 组 / 15 个文件** 降到 **4 组 / 4 个文件**，
+其余 12 组改成「每条用例自带账号夹具」。动机不是洁癖而是实测坑——改 tagline 那轮的视觉基线只报出
+signup 漂移，login 被 serial 短路成 did not run，白等一整轮 CI 才看见第二条。保留的 4 组
+（auth / invitation / smoke / v04-features 子任务链）顺序确实承重，每组头部写清了承重的那一条数据流。
+现测命令：`grep -rh "^test\.describe\.serial" web/e2e/*.spec.ts | wc -l`。
+⚠️ 这条命令必须带 `^test\.` 锚点：不带锚点会把「为什么这里不用 serial」的说明注释一起数进去
+（同一棵树上前者 4、后者 9），与 `SMOKE-MONITOR-TARGET-2026-10-17.md:155` 记的是同一个坑）。
 
 ## 10. 本次快照对应的 CI 事实
 

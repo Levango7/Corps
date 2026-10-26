@@ -105,7 +105,7 @@ async function probeMenu(page: import("@playwright/test").Page, label: string) {
   }, label);
 }
 
-test.describe.serial("fixed 浮层不被祖先 transform/perspective 劫持", () => {
+test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
   test("WidgetConfigPanel 遮罩：铺满整个视口且挂在 body 下", async ({ page }) => {
     await registerAndLogin(page, uniqueEmail("e2e-fixed"));
     await page.evaluate(HIJACK_PROBE);
