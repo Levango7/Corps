@@ -35,13 +35,13 @@ jobs:
       actions: read
     steps:
       - uses: actions/checkout@v7
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: javascript-typescript
           # 扫描面 = web/（唯一 TS 代码树；desktop 是 Tauri 壳，代码量小，
           # 后续可加 languages: rust 另开 job）
           # queries 暂用默认套件；security-extended 噪音大，跑两周看基线再议
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:javascript-typescript"
 
