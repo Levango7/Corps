@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 117 paths (updated 2026-10-26). The service also
+    Coverage: this contract declares 124 paths (updated 2026-10-27). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -6095,7 +6095,7 @@ paths:
         - $ref: '#/components/parameters/WikiPageId'
       responses:
         '200':
-          description: Deleted ({ id, deleted: true })
+          description: 'Deleted — data returns { id, deleted } with deleted = true'
           content:
             application/json:
               schema:
@@ -6229,7 +6229,7 @@ paths:
         - $ref: '#/components/parameters/Wbid'
       responses:
         '200':
-          description: Deleted ({ id, deleted: true })
+          description: 'Deleted — data returns { id, deleted } with deleted = true'
           content:
             application/json:
               schema:
@@ -6241,6 +6241,420 @@ paths:
                     properties:
                       id: { type: string }
                       deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/forms:
+    get:
+      tags: [forms]
+      summary: List forms (updatedAt descending, submission counts)
+      description: >
+        LEGACY ENVELOPE: this domain returns code=0 on success (with HTTP 200),
+        unlike the rest of the API where code mirrors the HTTP status. Recorded
+        as-is; unifying it is a separate behavior change.
+      operationId: listForms
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: active
+          in: query
+          schema: { type: string, enum: ['true'] }
+          description: Literal "true" only — filters to active forms.
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Form list (code=0; data carries items/total/skip/take)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FormList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [forms]
+      summary: Create a form (fields required, min 1)
+      description: LEGACY ENVELOPE — HTTP 201 with body code=0.
+      operationId: createForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFormRequest'
+      responses:
+        '201':
+          description: Form created (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Form'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/forms/{fid}:
+    get:
+      tags: [forms]
+      summary: Form detail (with submission count)
+      description: LEGACY ENVELOPE — code=0 on success.
+      operationId: getForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Fid'
+      responses:
+        '200':
+          description: Form
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Form'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [forms]
+      summary: Update a form
+      description: LEGACY ENVELOPE — code=0 on success.
+      operationId: updateForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Fid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateFormRequest'
+      responses:
+        '200':
+          description: Updated form
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Form'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [forms]
+      summary: Delete a form (data is null)
+      description: LEGACY ENVELOPE — code=0 with data=null on success.
+      operationId: deleteForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Fid'
+      responses:
+        '200':
+          description: Deleted (code=0, data=null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 0 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/forms/{fid}/submissions:
+    get:
+      tags: [forms]
+      summary: List submissions (submittedAt descending)
+      description: LEGACY ENVELOPE — code=0 on success.
+      operationId: listFormSubmissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Fid'
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Submission list (code=0; items/total/skip/take)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FormSubmissionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [forms]
+      summary: Submit a form (data = fieldId → value record)
+      description: LEGACY ENVELOPE — HTTP 201 with body code=0.
+      operationId: createFormSubmission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Fid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateFormSubmissionRequest'
+      responses:
+        '201':
+          description: Submission created (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FormSubmission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/recycle-bin:
+    get:
+      tags: [recycle-bin]
+      summary: Soft-deleted tasks/documents (deletedAt descending, merged pagination)
+      description: >
+        Merges soft-deleted tasks and documents in memory, then paginates.
+        type filters to one entity kind; without type both are returned.
+      operationId: listRecycleBin
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: type
+          in: query
+          schema: { type: string, enum: [task, document] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Recycle bin page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RecycleBinList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/recycle-bin/{id}:
+    post:
+      tags: [recycle-bin]
+      summary: Restore a soft-deleted item (task first, then document)
+      description: >
+        Clears deletedAt/deletedBy. 400 when the row exists but is not
+        soft-deleted; 404 when neither table has the id.
+      operationId: restoreRecycleBinItem
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/RecycleBinId'
+      responses:
+        '200':
+          description: Restored (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '400':
+          description: Item is not soft-deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [recycle-bin]
+      summary: Permanently delete a soft-deleted item
+      description: 400 when the row is not soft-deleted (guards against delete-bypass); 404 when missing.
+      operationId: purgeRecycleBinItem
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/RecycleBinId'
+      responses:
+        '200':
+          description: Purged (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '400':
+          description: Item is not soft-deleted
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meeting-minutes:
+    get:
+      tags: [meeting-minutes]
+      summary: Meeting minutes list (createdAt descending)
+      operationId: listMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: meetingId
+          in: query
+          schema: { type: string, format: uuid }
+          description: Filter by linked meeting.
+      responses:
+        '200':
+          description: Minutes list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutesList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [meeting-minutes]
+      summary: Create meeting minutes
+      operationId: createMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingMinutesRequest'
+      responses:
+        '201':
+          description: Minutes created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutes'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meeting-minutes/{mid}:
+    get:
+      tags: [meeting-minutes]
+      summary: Meeting minutes detail
+      operationId: getMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/MinutesId'
+      responses:
+        '200':
+          description: Minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutes'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [meeting-minutes]
+      summary: Update meeting minutes
+      description: >
+        Requires the caller to be the creator or an admin/owner of the
+        workspace — otherwise 403 noPermission.
+      operationId: updateMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/MinutesId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingMinutesRequest'
+      responses:
+        '200':
+          description: Updated minutes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutes'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [meeting-minutes]
+      summary: Delete meeting minutes
+      description: Same creator-or-admin check as PATCH (403 otherwise).
+      operationId: deleteMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/MinutesId'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -6380,6 +6794,24 @@ components:
       in: path
       required: true
       description: Whiteboard id (UUID).
+      schema: { type: string, format: uuid }
+    Fid:
+      name: fid
+      in: path
+      required: true
+      description: Form id (UUID).
+      schema: { type: string, format: uuid }
+    RecycleBinId:
+      name: id
+      in: path
+      required: true
+      description: Task or document id (UUID) currently soft-deleted.
+      schema: { type: string, format: uuid }
+    MinutesId:
+      name: mid
+      in: path
+      required: true
+      description: Meeting minutes id (UUID).
       schema: { type: string, format: uuid }
 
   responses:
@@ -8456,3 +8888,249 @@ components:
         title: { type: string, minLength: 1, maxLength: 200 }
         data:
           description: String or element array.
+    FormField:
+      type: object
+      required: [id, type, label]
+      properties:
+        id: { type: string, minLength: 1 }
+        type:
+          type: string
+          enum: [text, textarea, number, select, radio, checkbox, date]
+        label: { type: string, minLength: 1, maxLength: 200 }
+        required: { type: boolean }
+        options:
+          type: array
+          items: { type: string, minLength: 1, maxLength: 200 }
+        validation:
+          type: object
+          properties:
+            min: { type: number }
+            max: { type: number }
+            pattern: { type: string }
+    Form:
+      type: object
+      required: [id, title, fields, active]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        fields:
+          type: array
+          items:
+            $ref: '#/components/schemas/FormField'
+        createdBy: { type: string, format: uuid, nullable: true }
+        active: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        _count:
+          type: object
+          properties:
+            submissions: { type: integer }
+    Envelope_Form:
+      type: object
+      description: 'LEGACY envelope: code=0 on success (deviates from the code=HTTP-status convention).'
+      required: [code, data]
+      properties:
+        code: { type: integer, example: 0 }
+        data:
+          $ref: '#/components/schemas/Form'
+    Envelope_FormList:
+      type: object
+      description: 'LEGACY envelope: code=0 on success; data is items/total/skip/take (no page/limit/hasMore).'
+      required: [code, data]
+      properties:
+        code: { type: integer, example: 0 }
+        data:
+          type: object
+          required: [items, total, skip, take]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Form'
+            total: { type: integer, minimum: 0 }
+            skip: { type: integer, minimum: 0 }
+            take: { type: integer, minimum: 1 }
+    CreateFormRequest:
+      type: object
+      required: [title, fields]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 2000 }
+        fields:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/FormField'
+        active: { type: boolean }
+    UpdateFormRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 2000, nullable: true }
+        fields:
+          type: array
+          minItems: 1
+          items:
+            $ref: '#/components/schemas/FormField'
+        active: { type: boolean }
+    FormSubmission:
+      type: object
+      required: [id, formId, data, submittedAt]
+      properties:
+        id: { type: string, format: uuid }
+        formId: { type: string, format: uuid }
+        data:
+          type: object
+          description: '{ fieldId: value }'
+        submittedBy: { type: string, format: uuid, nullable: true }
+        submittedAt: { type: string, format: date-time }
+    Envelope_FormSubmission:
+      type: object
+      description: 'LEGACY envelope: code=0 on success.'
+      required: [code, data]
+      properties:
+        code: { type: integer, example: 0 }
+        data:
+          $ref: '#/components/schemas/FormSubmission'
+    Envelope_FormSubmissionList:
+      type: object
+      description: 'LEGACY envelope: code=0 on success; data is items/total/skip/take.'
+      required: [code, data]
+      properties:
+        code: { type: integer, example: 0 }
+        data:
+          type: object
+          required: [items, total, skip, take]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/FormSubmission'
+            total: { type: integer, minimum: 0 }
+            skip: { type: integer, minimum: 0 }
+            take: { type: integer, minimum: 1 }
+    CreateFormSubmissionRequest:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          description: '{ fieldId: value } — values are shaped by the form fields.'
+    RecycleBinItem:
+      type: object
+      required: [id, type, name, deletedAt]
+      properties:
+        id: { type: string, format: uuid }
+        type: { type: string, enum: [task, document] }
+        name: { type: string }
+        deletedAt: { type: string, format: date-time }
+        deletedBy:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    Envelope_RecycleBinList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/RecycleBinItem'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Attendee:
+      type: object
+      required: [name]
+      properties:
+        userId: { type: string, format: uuid }
+        name: { type: string, minLength: 1, maxLength: 100 }
+        role: { type: string, maxLength: 50 }
+    MinutesActionItem:
+      type: object
+      required: [title, done]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        assigneeId: { type: string, format: uuid }
+        dueDate: { type: string, format: date-time }
+        done: { type: boolean }
+    MeetingMinutes:
+      type: object
+      required: [id, title, content, attendees, actionItems]
+      properties:
+        id: { type: string, format: uuid }
+        meetingId: { type: string, format: uuid, nullable: true }
+        title: { type: string }
+        content: { type: string }
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attendee'
+        actionItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/MinutesActionItem'
+        createdBy: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_MeetingMinutes:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/MeetingMinutes'
+    Envelope_MeetingMinutesList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/MeetingMinutes'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateMeetingMinutesRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, default: "" }
+        meetingId: { type: string, format: uuid }
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attendee'
+        actionItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/MinutesActionItem'
+    UpdateMeetingMinutesRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, minLength: 1 }
+        attendees:
+          type: array
+          items:
+            $ref: '#/components/schemas/Attendee'
+        actionItems:
+          type: array
+          items:
+            $ref: '#/components/schemas/MinutesActionItem'

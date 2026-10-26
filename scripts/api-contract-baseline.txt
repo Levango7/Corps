@@ -147,13 +147,8 @@
 /api/v1/workspaces/{wid}/files/{fid}/versions/{vid}/restore
 /api/v1/workspaces/{wid}/folders/{fid}/permissions
 /api/v1/workspaces/{wid}/folders/{fid}/permissions/{pid}
-/api/v1/workspaces/{wid}/forms
-/api/v1/workspaces/{wid}/forms/{fid}
-/api/v1/workspaces/{wid}/forms/{fid}/submissions
 /api/v1/workspaces/{wid}/im/online
 /api/v1/workspaces/{wid}/im/search
-/api/v1/workspaces/{wid}/meeting-minutes
-/api/v1/workspaces/{wid}/meeting-minutes/{mid}
 /api/v1/workspaces/{wid}/meetings/{mid}/join
 /api/v1/workspaces/{wid}/meetings/{mid}/leave
 /api/v1/workspaces/{wid}/meetings/{mid}/recording/start
@@ -165,8 +160,6 @@
 /api/v1/workspaces/{wid}/project-templates
 /api/v1/workspaces/{wid}/project-templates/{tid}
 /api/v1/workspaces/{wid}/project-templates/{tid}/apply
-/api/v1/workspaces/{wid}/recycle-bin
-/api/v1/workspaces/{wid}/recycle-bin/{id}
 /api/v1/workspaces/{wid}/spaces
 /api/v1/workspaces/{wid}/spaces/{spaceId}/folders
 /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions
