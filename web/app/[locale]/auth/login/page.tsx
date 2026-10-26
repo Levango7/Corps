@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { useRouter, Link } from "@/lib/i18n-navigation";
 import { Loader2, AlertCircle } from "lucide-react";
 import { useTranslations } from "next-intl";
@@ -15,10 +15,20 @@ export default function LoginPage() {
   const [busy, setBusy] = useState(false);
   const router = useRouter();
 
+  // 漏斗口径与 signup 页对齐：register_view / register_submit 早就在发，登录侧的
+  // login_view / login_submit 只在白名单里挂着、没有 emit 站点 ⇒ 「看到登录页 → 提交」
+  // 这一步在分析表里恒空（只有服务端 login_success），无法算登录转化与流失。
+  useEffect(() => {
+    track("login_view", { path: "/auth/login" });
+  }, []);
+
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setError("");
     setBusy(true);
+
+    // 语义与 register_submit 一致：记「尝试提交」，含后续 401 失败
+    track("login_submit");
 
     try {
       const res = await fetch("/api/v1/auth/login", {
