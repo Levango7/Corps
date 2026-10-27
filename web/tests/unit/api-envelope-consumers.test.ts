@@ -77,6 +77,13 @@ const PAGING_KEY_RE = /(?<![\w$.])(?:total|hasMore|nextCursor)\s*[:,]/;
  */
 const PAYLOAD_OBJ_RE = /(?:data\s*:\s*\{|return\s*\{)/;
 const HANDLER_RE = /export\s+async\s+function\s+(GET|POST)\b/g;
+/**
+ * withRed 接线形态（2026-10-27 起 RED 分批推进）：handler 改名为普通函数，
+ * 文件尾 `export const GET = withRed(getXxx)`。检测器两种形态都要认——
+ * 且对后者必须回溯到 handler 函数定义处取正文（export 行本身没有业务体，
+ * 只认 export 行会把该端点静默漏掉，等于守卫对该域名存实亡）。
+ */
+const WRAP_RE = /export\s+const\s+(GET|POST)\s*=\s*withRed\(\s*(\w+)\s*\)/g;
 
 /** 动态段归一化：`${wid}` 与 `[wid]` 是同一个位置参数 */
 function normalizePath(p: string): string {
@@ -103,18 +110,25 @@ interface WrappedHandler {
 
 function wrappedHandlers(file: string): WrappedHandler[] {
   const text = readFileSync(file, "utf8");
-  const marks: Array<{ method: string; start: number }> = [];
+  // method → handler 正文起点。同一 method 两种形态并存时以直导出为准。
+  const marks = new Map<string, number>();
   let m: RegExpExecArray | null;
   HANDLER_RE.lastIndex = 0;
-  while ((m = HANDLER_RE.exec(text)) !== null) marks.push({ method: m[1], start: m.index });
+  while ((m = HANDLER_RE.exec(text)) !== null) marks.set(m[1], m.index);
+  WRAP_RE.lastIndex = 0;
+  while ((m = WRAP_RE.exec(text)) !== null) {
+    if (marks.has(m[1])) continue;
+    const fn = new RegExp(`(?:async\\s+)?function\\s+${m[2]}\\s*\\(`).exec(text);
+    if (fn) marks.set(m[1], fn.index);
+  }
+  // 必须按正文起点排序：withRed 的 export 在文件尾，handler 定义在中间。
+  const sorted = [...marks.entries()].sort((a, b) => a[1] - b[1]);
   const out: WrappedHandler[] = [];
-  for (let i = 0; i < marks.length; i++) {
-    const body = text.slice(
-      marks[i].start,
-      i + 1 < marks.length ? marks[i + 1].start : text.length,
-    );
+  for (let i = 0; i < sorted.length; i++) {
+    const [method, start] = sorted[i];
+    const body = text.slice(start, i + 1 < sorted.length ? sorted[i + 1][1] : text.length);
     if (PAYLOAD_OBJ_RE.test(body) && LIST_KEY_RE.test(body) && PAGING_KEY_RE.test(body)) {
-      out.push({ method: marks[i].method, body });
+      out.push({ method, body });
     }
   }
   return out;
