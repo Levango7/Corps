@@ -303,7 +303,6 @@ components/DocumentListView.tsx
 components/DocumentPreview.tsx
 components/DocumentVersionHistory.tsx
 components/DueTag.tsx
-components/EmptyState.tsx
 components/KnowledgeBase.tsx
 components/LanguageSwitcher.tsx
 components/LanguageSwitcherClient.tsx
