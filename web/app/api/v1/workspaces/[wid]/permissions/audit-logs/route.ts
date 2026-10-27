@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
-import type { Prisma } from "@prisma/client";
+import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 权限审计日志查询 API（任务 444）
@@ -33,7 +34,10 @@ const querySchema = z.object({
 /**
  * GET /v1/workspaces/{wid}/permissions/audit-logs — 查询权限审计日志
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getPermissionAuditLogs(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -46,16 +50,15 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx.ok) return authFailure(ctx, req);
 
   try {
-    const url = new URL(req.url);
     const parsed = querySchema.safeParse({
-      targetType: url.searchParams.get("targetType") ?? undefined,
-      granteeType: url.searchParams.get("granteeType") ?? undefined,
-      operatorId: url.searchParams.get("operatorId") ?? undefined,
-      action: url.searchParams.get("action") ?? undefined,
-      startDate: url.searchParams.get("startDate") ?? undefined,
-      endDate: url.searchParams.get("endDate") ?? undefined,
-      page: url.searchParams.get("page") ?? undefined,
-      pageSize: url.searchParams.get("pageSize") ?? undefined,
+      targetType: req.nextUrl.searchParams.get("targetType") ?? undefined,
+      granteeType: req.nextUrl.searchParams.get("granteeType") ?? undefined,
+      operatorId: req.nextUrl.searchParams.get("operatorId") ?? undefined,
+      action: req.nextUrl.searchParams.get("action") ?? undefined,
+      startDate: req.nextUrl.searchParams.get("startDate") ?? undefined,
+      endDate: req.nextUrl.searchParams.get("endDate") ?? undefined,
+      page: req.nextUrl.searchParams.get("page") ?? undefined,
+      pageSize: req.nextUrl.searchParams.get("pageSize") ?? undefined,
     });
 
     if (!parsed.success) {
@@ -163,3 +166,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getPermissionAuditLogs);

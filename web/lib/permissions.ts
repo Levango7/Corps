@@ -67,6 +67,10 @@ export const MODULES = [
   // （web/tests/integration/approval-cross-user.test.ts 的 actor 就是 member），
   // 给 cr 会让这五个端点全 403。
   "approvals",
+  // 实时协作基础（心跳/在线状态）：2026-10-27 纳入矩阵
+  // POST /v1/workspaces/{wid}/presence 心跳需 update（写 onlineAt）
+  // GET  /v1/workspaces/{wid}/presence 查询在线成员需 read
+  "presence",
 ] as const;
 
 /** 角色列表 */
@@ -110,6 +114,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databaseRecords: "crud",
     ai: "crud",
     approvals: "crud",
+    presence: "crud",
   },
   admin: {
     tasks: "crud",
@@ -128,6 +133,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databaseRecords: "crud",
     ai: "crud",
     approvals: "crud",
+    presence: "crud",
   },
   member: {
     tasks: "crud",
@@ -147,6 +153,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databaseRecords: "crud",
     ai: "crud",
     approvals: "crud",
+    presence: "rud",
   },
   viewer: {
     tasks: "r",
@@ -165,6 +172,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databaseRecords: "r",
     ai: "r",
     approvals: "r",
+    presence: "r",
   },
 };
 
