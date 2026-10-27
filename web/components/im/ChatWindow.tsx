@@ -36,9 +36,9 @@ interface ChatWindowProps {
   /** 发送消息 */
   onSend: (body: string, opts?: SendMessageOptions) => void;
   /** 编辑消息 */
-  onEdit: (mid: string, body: string) => void;
+  onEdit: (mid: string, body: string) => void | Promise<void>;
   /** 撤回消息 */
-  onRevoke: (mid: string) => void;
+  onRevoke: (mid: string) => void | Promise<void>;
   /** 加载更多历史消息（向上滚动触发） */
   onLoadMore?: () => void;
   /** 是否正在加载更多历史消息 */

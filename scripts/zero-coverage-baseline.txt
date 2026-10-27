@@ -299,7 +299,6 @@ components/ActivityFeed.tsx
 components/AttachmentPreviewModal.tsx
 components/BatchToolbar.tsx
 components/CalendarSyncBadge.tsx
-components/ChatPanel.tsx
 components/ClientLayout.tsx
 components/DocumentComments.tsx
 components/DocumentListView.tsx
@@ -388,11 +387,6 @@ components/calendar/CalendarEventDialog.tsx
 components/calendar/CalendarMonth.tsx
 components/calendar/CalendarView.tsx
 components/calendar/CalendarWeek.tsx
-components/chat/ChatHeader.tsx
-components/chat/ChatHeaderClient.tsx
-components/chat/MessageBubble.tsx
-components/chat/MessageInput.tsx
-components/chat/MessageList.tsx
 components/common/FavoriteButton.tsx
 components/common/FavoriteList.tsx
 components/contact/ContactDetail.tsx
@@ -460,7 +454,6 @@ components/im/FilePreview.tsx
 components/im/IncomingCallNotification.tsx
 components/im/MentionPopover.tsx
 components/im/MessageInput.tsx
-components/im/MessageItem.tsx
 components/im/MessageList.tsx
 components/im/MessageSearch.tsx
 components/im/TaskChatPanel.tsx
