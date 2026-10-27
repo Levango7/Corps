@@ -73,6 +73,7 @@ MODULE_BY_SEGMENT = {
     "messages": "messages",
     "im": "messages",
     "members": "members",
+    "permissions": "settings",
     "billing": "billing",
     "analytics": "analytics",
     "settings": "settings",
@@ -90,6 +91,7 @@ MODULE_BY_SEGMENT = {
     # /databases、/databases/{dbid}、/databases/{dbid}/fields|views → databases
     # /databases/{dbid}/records[...]                                       → databaseRecords
     "databases": "databases",
+    "presence": "presence",
 }
 
 # 矩阵里"合法模块名"的唯一真源是 web/lib/permissions.ts 的 MODULES 常量。
@@ -168,7 +170,10 @@ LOOSE_RE = re.compile(
     r"|\b(?:canManage|canView|canEdit|checkDocumentPermission|hasPermission|assertRole|ensureRole)\w*\s*\("
 )
 
-START_RE = re.compile(r"^\s*export\s+async\s+function\s+(%s)\b" % "|".join(WRITE_METHODS))
+# 匹配两种导出模式：
+# 1. export async function POST|PATCH|PUT|DELETE ...
+# 2. export const POST|PATCH|PUT|DELETE = withRed(...) / handler
+START_RE = re.compile(r"^\s*export\s+(?:async\s+function\s+(%s)\b|const\s+(%s)\s*=)" % ("|".join(WRITE_METHODS), "|".join(WRITE_METHODS)))
 
 
 def normalize(route: Path) -> tuple[str, list[str], bool]:
@@ -197,13 +202,71 @@ def normalize(route: Path) -> tuple[str, list[str], bool]:
 
 
 def handler_blocks(src: str) -> list[tuple[str, str]]:
-    """按 `export async function <METHOD>` 切出每个写 handler 的代码块。"""
+    """按 `export async function <METHOD>` 或 `export const <METHOD> = ...` 切出每个写 handler 的代码块。
+    
+    对于 `export const POST = withRed(postPresenceHandler)` 形式，需要找到对应的
+    handler 函数 `postPresenceHandler` 并分析其函数体。
+    """
     lines = src.split("\n")
-    starts = [(m.group(1), i) for i, line in enumerate(lines) if (m := START_RE.match(line))]
+    starts = []
+    export_const_handlers = {}  # method -> handler function name
+    for i, line in enumerate(lines):
+        m = START_RE.match(line)
+        if m:
+            # group(1) = async function 形式的方法名，group(2) = const 形式的方法名
+            method = m.group(1) or m.group(2)
+            if method:
+                # Check if it's `export const METHOD = withRed(handlerName)`
+                const_match = re.match(r"^\s*export\s+const\s+(\w+)\s*=\s*withRed\s*\(\s*(\w+)\s*\)", line)
+                if const_match:
+                    export_const_handlers[const_match.group(1)] = const_match.group(2)
+                starts.append((method, i))
     blocks = []
     for idx, (method, start) in enumerate(starts):
         end = starts[idx + 1][1] if idx + 1 < len(starts) else len(lines)
-        blocks.append((method, "\n".join(lines[start:end])))
+        block_lines = lines[start:end]
+        
+        # If it's an export const = withRed(...) pattern, find the actual handler function
+        if method in export_const_handlers:
+            handler_name = export_const_handlers[method]
+            # Find the handler function definition
+            handler_start = -1
+            for i, line in enumerate(lines):
+                if re.match(rf"^\s*async\s+function\s+{re.escape(handler_name)}\s*\(", line):
+                    handler_start = i
+                    break
+            if handler_start >= 0:
+                # Find the end of the function (by brace counting with function depth tracking)
+                brace_count = 0
+                function_depth = 0  # Track nested async function definitions
+                in_function = False
+                handler_end = len(lines)
+                for i in range(handler_start, len(lines)):
+                    line = lines[i]
+                    for j, ch in enumerate(line):
+                        if ch == '{':
+                            brace_count += 1
+                            # Check if this brace opens a nested async function
+                            # Look for 'async function' before this brace on the same line
+                            if 'async function' in line[:j]:
+                                function_depth += 1
+                            # Also check for arrow functions: `=> {`
+                            elif j > 0 and line[j-1:j+1] == '=>' and '{' in line[j:]:
+                                function_depth += 1
+                        elif ch == '}':
+                            brace_count -= 1
+                            if function_depth > 0:
+                                function_depth -= 1
+                    
+                    if not in_function and brace_count > 0:
+                        in_function = True
+                    
+                    if in_function and brace_count == 0 and function_depth == 0:
+                        handler_end = i + 1
+                        break
+                block_lines = lines[handler_start:handler_end]
+        
+        blocks.append((method, "\n".join(block_lines)))
     return blocks
 
 

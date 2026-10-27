@@ -4,8 +4,12 @@ import { getPaymentProvider, PaymentProviderError } from "@/lib/payments";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postBillingPortal(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -24,7 +28,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     // DB 操作必须携带工作区 GUC 上下文。subscription 查询在此包裹 runWithWorkspace
     // （与 checkout/route.ts 先例同款），customerId 查得后传入 provider；
     // provider 内部不再直连 prisma（无上下文直连在 RLS_ACTIVATE=true 下恒空 → 恒 400）。
-    const subscription = await runWithWorkspace(
+    const subscription = (await runWithWorkspace(
       wid,
       (tx) =>
         tx.subscription.findUnique({
@@ -32,7 +36,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
           select: { stripeCustomerId: true },
         }),
       ctx.payload.sub,
-    );
+    )) as { stripeCustomerId: string | null } | null;
     const provider = getPaymentProvider();
     const result = await provider.createPortal({
       workspaceId: wid,
@@ -72,3 +76,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postBillingPortal);
