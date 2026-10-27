@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
@@ -47,6 +47,19 @@ const AUTHED_PAGES: Array<{ key: string; path: (wid: string) => string }> = [
   { key: "/w/:wid/settings", path: (wid) => `/w/${wid}/settings` },
 ];
 
+/**
+ * 让页面稳定下来再扫。
+ *
+ * `networkidle` 不能直接等：IM 页有长连接（WebSocket / SSE），等 idle 会一路拖到超时。
+ * 所以给它一个 5s 上限，超时就当作"够稳了"继续扫；两个短 settle 用来吃掉
+ * 首屏动画/懒加载组件挂载的抖动。
+ */
+async function settle(page: Page): Promise<void> {
+  await page.waitForTimeout(300);
+  await page.waitForLoadState("networkidle", { timeout: 5_000 }).catch(() => {});
+  await page.waitForTimeout(400);
+}
+
 interface BaselineFile {
   version: 1;
   /** 生成方式与时间，便于判断这份基线有多旧 */
@@ -71,10 +84,11 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
 
     const keys: string[] = [];
 
-    // 未登录页：注册/登录是外部用户第一眼看到的面，单独扫
-    await page.goto("/login", { waitUntil: "domcontentloaded" });
-    await expect(page.locator("form").first()).toBeVisible({ timeout: 30_000 });
-    await page.waitForTimeout(800);
+    // 未登录页：登录是外部用户第一眼看到的面，单独扫。
+    // 路径是 /auth/login（仓里没有 /login 路由——首跑就是在这里红的）。
+    await page.goto("/auth/login", { waitUntil: "domcontentloaded" });
+    await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 30_000 });
+    await settle(page);
     keys.push(
       ...collectKeys(
         "/login",
@@ -86,10 +100,10 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
     const wid = await registerAndLogin(page, uniqueEmail("e2e-a11y"), "E2E无障碍工作区");
     for (const target of AUTHED_PAGES) {
       await page.goto(target.path(wid), { waitUntil: "domcontentloaded" });
-      // 等主体渲染出来再扫：扫一个空骨架会把违规扫成 0（假绿）。
-      await expect(page.locator("main").first()).toBeVisible({ timeout: 30_000 });
-      // 不用 networkidle：IM 页有长连接，等 idle 会拖到超时。
-      await page.waitForTimeout(800);
+      // 就绪信号用应用壳（顶栏 header + 侧栏 nav 地标）：扫一个空骨架会把违规扫成 0（假绿）。
+      // 页面级 <main> 不能当信号——六个页里只有 documents 有 <main>。
+      await expect(page.locator("header").first()).toBeVisible({ timeout: 30_000 });
+      await settle(page);
       const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
       keys.push(...collectKeys(target.key, result.violations));
     }
@@ -107,6 +121,10 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
       body: JSON.stringify(snapshotPayload, null, 2),
       contentType: "application/json",
     });
+    // 再写一份到 test-results/：CI 失败时该目录会被 upload-artifact 带走，
+    // 不必从日志里抠那一行 JSON（长行会被日志系统截断）。
+    mkdirSync("test-results", { recursive: true });
+    writeFileSync("test-results/a11y-axe-snapshot.json", JSON.stringify(snapshotPayload, null, 2));
     console.info(SNAPSHOT_PREFIX + JSON.stringify(current));
 
     if (process.env.A11Y_AXE_WRITE_BASELINE === "1") {
