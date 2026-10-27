@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace, runWithAuthOp } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
-
-import { logger } from "@/lib/logger";
+import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
 
@@ -48,6 +47,10 @@ async function postPresenceHandler(
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+
+  // 权限检查：更新在线状态需 presence:update 权限
+  const denied = await requirePermission(ctx, "presence", "update", req);
+  if (denied) return denied;
 
   try {
     const userId = ctx.payload.sub;
