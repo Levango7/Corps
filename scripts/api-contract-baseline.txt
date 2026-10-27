@@ -151,7 +151,6 @@
 /api/v1/workspaces/{wid}/forms/{fid}
 /api/v1/workspaces/{wid}/forms/{fid}/submissions
 /api/v1/workspaces/{wid}/im/online
-/api/v1/workspaces/{wid}/im/search
 /api/v1/workspaces/{wid}/meeting-minutes
 /api/v1/workspaces/{wid}/meeting-minutes/{mid}
 /api/v1/workspaces/{wid}/meetings/{mid}/join
@@ -172,7 +171,6 @@
 /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions
 /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid}
 /api/v1/workspaces/{wid}/tasks/{id}/conversation
-/api/v1/workspaces/{wid}/tasks/{id}/messages/search
 /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}
 /api/v1/workspaces/{wid}/workflows
 /api/v1/workspaces/{wid}/workflows/{wfid}

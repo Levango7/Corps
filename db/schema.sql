@@ -1,6 +1,8 @@
 -- corps 数据库 schema（由 pg_dump --schema-only 生成 + RLS 层来自 rls-activate.sql）
--- 生成时间: 2026-10-25（pg_dump 18.6，--no-owner --no-privileges --no-policies）
--- 对应迁移: 20261022000000_add_workspace_settings（100 表，含 2026-09-04 后新增的 73 张表）
+-- 生成时间: 2026-10-27（pg_dump 18.6，--no-owner --no-privileges --no-policies；
+--   本次按 docs/audit/MATURITY-2026Q4-BATCH2.md §3 的增量拼接口径，只补
+--   idx_messages_body_trgm 一条，索引行与 pg_dump 对已迁移库的产物逐字相同）
+-- 对应迁移: 20261027000000_add_messages_body_trgm（100 表，含 2026-09-04 后新增的 73 张表）
 -- 表结构权威 = web/prisma/schema.prisma + web/prisma/migrations/；
 -- RLS 权威 = 下方 rls-activate.sql（entrypoint 实际执行的就是它，守卫测试亦以它为准）。
 --
@@ -3563,6 +3565,13 @@ CREATE INDEX idx_documents_markdown_trgm ON public.documents USING gin (markdown
 --
 
 CREATE INDEX idx_documents_published_markdown_trgm ON public.documents USING gin (published_markdown public.gin_trgm_ops);
+
+
+--
+-- Name: idx_messages_body_trgm; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_messages_body_trgm ON public.messages USING gin (body public.gin_trgm_ops);
 
 
 --
