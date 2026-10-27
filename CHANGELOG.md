@@ -4,6 +4,51 @@
 
 ## [Unreleased]
 
+（暂无；下一版本从这里开始记）
+
+## [0.9.0] - 2026-10-28
+
+自 v0.8.2 起 **98 个提交**。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
+消息搜索对中文真正可用、可观测与契约债务连续清偿，并把 a11y / 权限 / 契约做成
+**只允许收缩的机器判据**（不再靠人记得复核）。
+
+### Added
+
+- **设计系统地基层（#45 第一批，PR #186）**：`globals.css` 补 `@theme inline` 共 **35 个**
+  语义别名（`--color-bg/surface/fg/…`、`--shadow-flat/hover` 等），使 Tailwind 语义类
+  （`bg-surface`、`text-fg`）真正落到 `design-tokens.css` 的 token 上；新增 11 个 UI 原语
+  （Button / Input / Textarea / Select / Dialog / Sheet / Tabs / Toolbar / Table / Toast / EmptyState），
+  其中 Dialog 走 portal + 遮罩按钮 + Esc、Tabs 的 keydown 落在每个 `role="tab"` 上（ARIA 正确形态），
+  Button 默认 44px 命中区、`sm` 通过 `after:-inset-y-1.5` 补足而不改变视觉尺寸。
+  配套 `scripts/check_theme_tokens.py`（别名悬空/自引用/重复/低于地板都判红，自带 5 变体自测）
+  与 25 例原语 a11y 契约单测（含一条 `@ts-expect-error`：缺 `label` 的 IconButton 编译期就该拒绝）。
+- **可观测 RED 三维接线**：Errors 走 `instrumentation.ts` 的 `onRequestError`（#163）；
+  Rate / Duration 分两批接（#170 contacts/announcements/activity 域、#189
+  analytics/billing/permissions/presence 共 7 个端点）。实测 `withRed(` 现落在 **14 个 route 文件**。
+- **事件面双向契约**：把只在白名单挂着、没有任何 emit 站点的 10 个事件接通，并把埋点门禁
+  补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **37 名**。
+- **权限矩阵补口**：approvals 域纳入 `lib/permissions.ts` 矩阵，permission-gate T3 债务
+  **154 → 132**（`scripts/permission-gate-unscoped-baseline.txt`）。
+- **SAST 两条腿**：CodeQL（javascript-typescript，#174）与 Gitleaks 密钥扫描（#177）。
+  Gitleaks 首跑 4 处命中经逐条复核均为误报，按"带理由豁免"落库而不是放宽扫描。
+- **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **10 个**（calendar/goals/forms/
+  recycle-bin/wiki/whiteboards/time-entries/activity/contact-groups 等）。
+- **文档台账**：`OPEN-DECISIONS`（工程外阻碍项集中登记）、内部 SLI 口径、`ROADMAP-2026Q4`
+  的基线 burn-down 表（承诺值与实测值由 `check_burndown.py` 对账）。
+
+### Changed
+
+- **旧聊天实现树彻底收敛（#185，ADR-013）**：删除 `components/ChatPanel.tsx` 与
+  `components/chat/*`（**8 文件 / 2,145 行**）。它不是"暂时没挂载"——实测其自身链路已坏
+  （历史加载缺 reads/attachments、标记已读撞 100 上限死循环、服务端搜索分支永不可达）。
+  唯一非重复机制「操作失败就地提示」迁进 `components/im/MessageItem.tsx`，并修掉真缺陷：
+  `IMClient` 用 `.catch(() => {})` 吞、`TaskChatPanel` 用 `void` 丢弃，会话内编辑/撤回失败
+  对用户完全静默。
+- **e2e 夹具独立化（#168）**：19 处 `describe.serial` 改为每条用例自带账号，
+  去掉"第一条失败 → 后面全跳过"的级联遮蔽（serial 只保留有真实先后依赖的组）。
+- **契约清偿四批**：未声明契约路由 **203 → 170**；`api/openapi.yaml` 现有 117 条路径。
+- **零覆盖基线 602 → 592**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径。
+
 ### Fixed
 
 - **中文消息搜索此前恒零结果**：`GET /api/v1/im/search` 只有 `body_tsv @@ plainto_tsquery('simple', q)`
