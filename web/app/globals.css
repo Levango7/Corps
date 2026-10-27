@@ -5,6 +5,72 @@
 @custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *));
 
 /* ============================================================================
+ * @theme：把 design-tokens.css 的语义 token 映射成 Tailwind 的命名空间，
+ * 让 `bg-surface` / `text-fg` / `border-border` / `shadow-md` 这类语义类存在。
+ *
+ * 为什么需要（DESIGN.md:468 早有规定、此前未落地）：全仓有 19,039 处
+ * `var(--token)` 任意值写法（`bg-[var(--surface)]`），既冗长又让"换品牌色要人肉巡检"。
+ * 有了这层映射，新组件可以写 `bg-surface`；存量迁移是后续批次的事，本批不动存量。
+ *
+ * `inline` 是关键：让工具类直接内联成 `var(--surface)` 而不是指向一个中间变量，
+ * 于是 `[data-theme=dark]` 换掉 `--surface` 时，已生成的类会自动跟随（深色模式不需要
+ * 重新生成一套类）。
+ *
+ * 边界：只映射**颜色**与**阴影**两族。
+ *  - 字号/圆角/间距不需要映射：design-tokens.css 已经用 `--text-*` / `--radius-*` 命名，
+ *    正好是 Tailwind v4 的命名空间，`text-sm` / `rounded-md` 直接就能解析到本仓的值。
+ *  - 间距（`--space-*`）在 v4 里不是逐档命名空间（只有一个 `--spacing` 基数），
+ *    强行映射会把 `p-4` 的语义改掉，故保留 `p-[var(--space-4)]` 写法。
+ *
+ * 一致性由 scripts/check_theme_tokens.py 把关（每个别名右侧的 token 必须真实存在），
+ * 「类真的能生成」由 tests/unit/design-tokens-theme.test.ts 编译 Tailwind 产物断言。
+ * ========================================================================= */
+@theme inline {
+  /* —— 表面与文字 —— */
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-fg: var(--fg);
+  --color-fg-2: var(--fg-2);
+  --color-muted: var(--muted);
+  --color-meta: var(--meta);
+  --color-border: var(--border);
+  --color-border-soft: var(--border-soft);
+
+  /* —— 品牌与状态 —— */
+  --color-accent: var(--accent);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-active: var(--accent-active);
+  --color-accent-soft: var(--accent-soft);
+  --color-accent-soft-fg: var(--accent-soft-fg);
+  --color-accent-fg: var(--accent-fg);
+  --color-accent-ring: var(--accent-ring);
+  --color-on-accent: var(--on-accent);
+  --color-success: var(--success);
+  --color-success-soft: var(--success-soft);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-danger: var(--danger);
+  --color-danger-soft: var(--danger-soft);
+
+  /* —— 外壳 / 交互补充 —— */
+  --color-shell-sidebar: var(--shell-sidebar);
+  --color-shell-topbar: var(--shell-topbar);
+  --color-shell-edge: var(--shell-edge);
+  --color-focus-ring: var(--focus-ring);
+  --color-hover-soft: var(--hover-soft);
+
+  /* —— 阴影（elev-* → shadow-*：让 shadow-md 用本仓的高度语言） —— */
+  --shadow-flat: var(--elev-flat);
+  --shadow-ring: var(--elev-ring);
+  --shadow-sm: var(--elev-sm);
+  --shadow-md: var(--elev-md);
+  --shadow-lg: var(--elev-lg);
+  --shadow-hover: var(--elev-hover);
+}
+
+/* ============================================================================
  * corps · globals.css
  * Token 唯一定义层在 design/design-tokens.css，经 predev/prebuild 脚本
  * 同步至 app/design-tokens.css（Next.js Turbopack 无法解析项目根之外的路径）。
