@@ -25,16 +25,16 @@ import { withRed } from "@/lib/red-metrics";
  * 允许成员读取同工作区其他成员的 onlineAt（用于 GET 查询）。
  */
 
-/** 在线判定窗口：最近 5 分钟内有心跳记录视为在线 */
+/** 在线判定窗口：最近 5 分钟内有 heartbeat 的用户视为在线 */
 const ONLINE_WINDOW_MS = 5 * 60 * 1000;
 
 /**
- * POST /v1/workspaces/{wid}/presence — 心跳：更新当前用户 onlineAt
+ * POST /v1/workspaces/{wid}/presence — 心跳：更新当前用户 onlineAt 时间戳
  *
  * 前端登录后每 2 分钟调用一次，刷新在线状态。
  * 响应：{ code: 0, data: { onlineAt: ISO }, message: "OK" }
  */
-async function postPresence(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postPresenceHandler(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -84,7 +84,7 @@ async function postPresence(req: NextRequest, { params }: { params: Promise<{ wi
  * 查询工作区所有成员 + 其 onlineAt 时间戳，最近 5 分钟内有心跳的标记为在线。
  * 响应：{ code: 0, data: { items: [{ userId, name, image, role, online, onlineAt }], total, onlineCount }, message }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getPresenceHandler(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -97,7 +97,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   if (!ctx.ok) return authFailure(ctx, req);
 
   try {
-    const userId = ctx.payload.sub;
     const onlineThreshold = new Date(Date.now() - ONLINE_WINDOW_MS);
 
     // 查询工作区成员 + 用户基本信息 + onlineAt。
@@ -119,14 +118,14 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
                 onlineAt: true,
               },
             },
+            orderBy: { joinedAt: "asc" },
           },
-          orderBy: { joinedAt: "asc" },
         });
       },
-      userId,
+      ctx.payload.sub,
     );
 
-    const items = members.map((m) => ({
+    const items = members.map((m: { userId: string; user: { name: string | null; email: string; image: string | null; onlineAt: Date | null }; role: string }) => ({
       userId: m.userId,
       name: m.user.name ?? m.user.email,
       image: m.user.image,
@@ -135,7 +134,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
       onlineAt: m.user.onlineAt?.toISOString() ?? null,
     }));
 
-    const onlineCount = items.filter((i) => i.online).length;
+    const onlineCount = items.filter((i: { online: boolean }) => i.online).length;
 
     return NextResponse.json({
       code: 0,
@@ -150,3 +149,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getPresenceHandler);
+export const POST = withRed(postPresenceHandler);

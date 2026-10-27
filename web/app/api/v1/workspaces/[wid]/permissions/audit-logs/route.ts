@@ -47,7 +47,6 @@ async function getPermissionAuditLogs(req: NextRequest, { params }: { params: Pr
   if (!ctx.ok) return authFailure(ctx, req);
 
   try {
-    const url = new URL(req.url);
     const parsed = querySchema.safeParse({
       targetType: req.nextUrl.searchParams.get("targetType") ?? undefined,
       granteeType: req.nextUrl.searchParams.get("granteeType") ?? undefined,

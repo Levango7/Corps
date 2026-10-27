@@ -33,7 +33,7 @@ async function postBillingPortal(req: NextRequest, { params }: { params: Promise
           select: { stripeCustomerId: true },
         }),
       ctx.payload.sub,
-    );
+    ) as { stripeCustomerId: string | null } | null;
     const provider = getPaymentProvider();
     const result = await provider.createPortal({
       workspaceId: wid,

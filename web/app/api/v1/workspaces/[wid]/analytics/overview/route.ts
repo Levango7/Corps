@@ -134,10 +134,6 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
           activationEvents,
           ACTIVATION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
         );
-        const activation = matchFunnel(
-          activationEvents,
-          ACTIVATION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
-        );
 
 // ─── D1 修复：daily 按 Asia/Shanghai 日界分桶 ───
         const dailyMap = new Map<string, Record<string, number>>();
@@ -198,7 +194,7 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
         // 产生 ≥1 次 CORE_EVENTS 的用户数 ÷ 注册满 n 天的用户数
         // D0 以 register_success 事件 createdAt 为准（批准口径）
         const retention: Record<string, { active: number; eligible: number; rate: number }> = {};
-        const registerEvents = allEvents.filter((e) => e.name === "register_success" && !!e.userId);
+        const registerEvents = allEvents.filter((e: { name: string; userId: string | null }) => e.name === "register_success" && !!e.userId);
         for (const n of RETENTION_POINTS) {
           let active = 0;
           let eligible = 0;
@@ -212,7 +208,7 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
             eligible++;
             // 第 n 天内有 CORE_EVENTS
             const hasCore = allEvents.some(
-              (e) =>
+              (e: { name: string; userId: string | null; createdAt: Date }) =>
                 CORE_EVENTS.has(e.name) &&
                 e.userId === reg.userId &&
                 e.createdAt.getTime() >= targetDayStart &&
@@ -225,7 +221,7 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
         }
 
         // ─── D3 修复：sessions 窗口内去重 sessionId 计数 ───
-        const sessions = new Set(allEvents.filter((e) => !!e.sessionId).map((e) => e.sessionId!))
+        const sessions = new Set(allEvents.filter((e: { sessionId: string | null }) => !!e.sessionId).map((e: { sessionId: string | null }) => e.sessionId!))
           .size;
 
         return {
