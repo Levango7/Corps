@@ -17,8 +17,6 @@ let token: string;
 let wid: string;
 let otherToken: string;
 
-const uuid = () => crypto.randomUUID();
-
 const auth = () => ({ ...authHeader(token), "Content-Type": "application/json" });
 
 beforeAll(async () => {

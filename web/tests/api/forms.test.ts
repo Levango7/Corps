@@ -8,10 +8,10 @@ import { BASE, registerUser, authHeader } from "../helpers";
  * 1. 创建表单（POST）— fields 必填 min 1、字段类型校验、默认值
  * 2. 列表（GET）— 分页信封、active 过滤、_count submissions
  * 3. 详情（GET）— 含 fields 完整定义、_count submissions
- * 4. 更新（PATCH）— 局部更新、404
- * 5. 删除（DELETE）— code: 0 + data:null，再读 404
- * 6. 提交（POST /submissions）— data 为 fieldId→value 记录
- * 7. 跨工作区隔离 — B 的 token 读 A 的表单 403
+ * 3. 更新（PATCH）— 局部更新、404
+ * 4. 删除（DELETE）— code: 0 + data:null，再读 404
+ * 4. 提交（POST /submissions）— data 为 fieldId→value 记录
+ * 5. 跨工作区隔离 — B 的 token 读 A 的表单 403
  *
  * 契约：api/openapi.yaml 已声明该域（2026-10-27 第六批），本文件是其行为侧的钉子。
  * 注意：forms 域整域使用 LEGACY ENVELOPE (code=0)，契约中已显式标注。
@@ -20,8 +20,6 @@ import { BASE, registerUser, authHeader } from "../helpers";
 let token: string;
 let wid: string;
 let otherToken: string;
-
-const uuid = () => crypto.randomUUID();
 
 const auth = () => ({ ...authHeader(token), "Content-Type": "application/json" });
 
