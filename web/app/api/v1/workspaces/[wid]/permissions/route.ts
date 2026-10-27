@@ -134,7 +134,10 @@ const patchSchema = z.object({
   actions: z.array(z.enum(["read", "create", "update", "delete"])),
 });
 
-async function patchPermissions(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchPermissions(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)

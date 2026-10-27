@@ -7,7 +7,10 @@ import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
 
 /** GET /v1/workspaces/{wid}/billing/status — 当前套餐、席位占用与订阅状态 */
-async function getBillingStatus(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getBillingStatus(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)

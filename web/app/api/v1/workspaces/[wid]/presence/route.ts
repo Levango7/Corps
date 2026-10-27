@@ -34,7 +34,10 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
  * 前端登录后每 2 分钟调用一次，刷新在线状态。
  * 响应：{ code: 0, data: { onlineAt: ISO }, message: "OK" }
  */
-async function postPresenceHandler(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postPresenceHandler(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -84,7 +87,10 @@ async function postPresenceHandler(req: NextRequest, { params }: { params: Promi
  * 查询工作区所有成员 + 其 onlineAt 时间戳，最近 5 分钟内有心跳的标记为在线。
  * 响应：{ code: 0, data: { items: [{ userId, name, image, role, online, onlineAt }], total, onlineCount }, message }
  */
-async function getPresenceHandler(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getPresenceHandler(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -125,14 +131,20 @@ async function getPresenceHandler(req: NextRequest, { params }: { params: Promis
       ctx.payload.sub,
     );
 
-    const items = members.map((m: { userId: string; user: { name: string | null; email: string; image: string | null; onlineAt: Date | null }; role: string }) => ({
-      userId: m.userId,
-      name: m.user.name ?? m.user.email,
-      image: m.user.image,
-      role: m.role,
-      online: !!m.user.onlineAt && m.user.onlineAt > onlineThreshold,
-      onlineAt: m.user.onlineAt?.toISOString() ?? null,
-    }));
+    const items = members.map(
+      (m: {
+        userId: string;
+        user: { name: string | null; email: string; image: string | null; onlineAt: Date | null };
+        role: string;
+      }) => ({
+        userId: m.userId,
+        name: m.user.name ?? m.user.email,
+        image: m.user.image,
+        role: m.role,
+        online: !!m.user.onlineAt && m.user.onlineAt > onlineThreshold,
+        onlineAt: m.user.onlineAt?.toISOString() ?? null,
+      }),
+    );
 
     const onlineCount = items.filter((i: { online: boolean }) => i.online).length;
 

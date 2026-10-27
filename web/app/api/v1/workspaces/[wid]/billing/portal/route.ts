@@ -6,7 +6,10 @@ import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
 
-async function postBillingPortal(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postBillingPortal(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -25,7 +28,7 @@ async function postBillingPortal(req: NextRequest, { params }: { params: Promise
     // DB 操作必须携带工作区 GUC 上下文。subscription 查询在此包裹 runWithWorkspace
     // （与 checkout/route.ts 先例同款），customerId 查得后传入 provider；
     // provider 内部不再直连 prisma（无上下文直连在 RLS_ACTIVATE=true 下恒空 → 恒 400）。
-    const subscription = await runWithWorkspace(
+    const subscription = (await runWithWorkspace(
       wid,
       (tx) =>
         tx.subscription.findUnique({
@@ -33,7 +36,7 @@ async function postBillingPortal(req: NextRequest, { params }: { params: Promise
           select: { stripeCustomerId: true },
         }),
       ctx.payload.sub,
-    ) as { stripeCustomerId: string | null } | null;
+    )) as { stripeCustomerId: string | null } | null;
     const provider = getPaymentProvider();
     const result = await provider.createPortal({
       workspaceId: wid,

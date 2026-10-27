@@ -34,7 +34,10 @@ const querySchema = z.object({
 /**
  * GET /v1/workspaces/{wid}/permissions/audit-logs — 查询权限审计日志
  */
-async function getPermissionAuditLogs(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getPermissionAuditLogs(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)

@@ -54,7 +54,10 @@ function safeRedirectUrl(
   return fallback;
 }
 
-async function postBillingCheckout(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postBillingCheckout(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)

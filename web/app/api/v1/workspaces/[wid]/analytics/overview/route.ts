@@ -60,7 +60,10 @@ const RETENTION_POINTS = [1, 7, 30] as const;
 const DEFAULT_EVENT_LIMIT = 10_000;
 const MAX_EVENT_LIMIT = 50_000;
 
-async function getAnalyticsOverview(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getAnalyticsOverview(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -135,7 +138,7 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
           ACTIVATION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
         );
 
-// ─── D1 修复：daily 按 Asia/Shanghai 日界分桶 ───
+        // ─── D1 修复：daily 按 Asia/Shanghai 日界分桶 ───
         const dailyMap = new Map<string, Record<string, number>>();
         for (const e of allEvents) {
           const day = shanghaiDay(e.createdAt);
@@ -166,11 +169,19 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
 
         // ─── D3 修复：activeUsers 过渡保留 + coreActiveUsers 严格口径 ───
         // activeUsers（过渡期双发，面板切换完成后移除）：14 天任意事件去重 userId
-        const activeUsers = new Set(allEvents.filter((e: { userId: string | null }) => !!e.userId).map((e: { userId: string | null }) => e.userId!)).size;
+        const activeUsers = new Set(
+          allEvents
+            .filter((e: { userId: string | null }) => !!e.userId)
+            .map((e: { userId: string | null }) => e.userId!),
+        ).size;
 
         // coreActiveUsers：窗口内 CORE_EVENTS 去重 userId（严格口径）
         const coreActiveUsers = new Set(
-          allEvents.filter((e: { name: string; userId: string | null }) => CORE_EVENTS.has(e.name) && !!e.userId).map((e: { userId: string | null }) => e.userId!),
+          allEvents
+            .filter(
+              (e: { name: string; userId: string | null }) => CORE_EVENTS.has(e.name) && !!e.userId,
+            )
+            .map((e: { userId: string | null }) => e.userId!),
         ).size;
 
         // ─── D3 修复：WAW 周活跃 ───
@@ -194,7 +205,10 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
         // 产生 ≥1 次 CORE_EVENTS 的用户数 ÷ 注册满 n 天的用户数
         // D0 以 register_success 事件 createdAt 为准（批准口径）
         const retention: Record<string, { active: number; eligible: number; rate: number }> = {};
-        const registerEvents = allEvents.filter((e: { name: string; userId: string | null }) => e.name === "register_success" && !!e.userId);
+        const registerEvents = allEvents.filter(
+          (e: { name: string; userId: string | null }) =>
+            e.name === "register_success" && !!e.userId,
+        );
         for (const n of RETENTION_POINTS) {
           let active = 0;
           let eligible = 0;
@@ -221,8 +235,11 @@ async function getAnalyticsOverview(req: NextRequest, { params }: { params: Prom
         }
 
         // ─── D3 修复：sessions 窗口内去重 sessionId 计数 ───
-        const sessions = new Set(allEvents.filter((e: { sessionId: string | null }) => !!e.sessionId).map((e: { sessionId: string | null }) => e.sessionId!))
-          .size;
+        const sessions = new Set(
+          allEvents
+            .filter((e: { sessionId: string | null }) => !!e.sessionId)
+            .map((e: { sessionId: string | null }) => e.sessionId!),
+        ).size;
 
         return {
           funnel: { acquisition, activation },
