@@ -4,7 +4,32 @@
 
 ## [Unreleased]
 
-（暂无；下一版本从这里开始记）
+### Fixed
+
+- **中文消息搜索此前恒零结果**：`GET /api/v1/im/search` 只有 `body_tsv @@ plainto_tsquery('simple', q)`
+  一条匹配路径，而 `'simple'` 解析器不切词——实测（postgres:18.6）
+  `to_tsvector('simple','中文关键词测试')` 整段只生成 **1 个 lexeme**，于是
+  `@@ plainto_tsquery('simple','关键词')` = **f**。用户搜「连接池需要」在写着
+  「数据库连接池需要扩容」的消息里返回 0 条；真表复现（同工作区 2001 条 / 1 条目标）
+  仅全文分支 **0 行**、全文 ∪ ILIKE 分支 **1 行**。
+  改法：匹配条件改为 **全文 ∪ `ILIKE` 子串**，并新增迁移
+  `20261027000000_add_messages_body_trgm`（`gin (body gin_trgm_ops)`）兜住扫描成本——
+  实测 pg_trgm 对中文可抽 trigram，20005 行 / 5 行命中时计划为 `Bitmap Index Scan`。
+  **原先 e2e 是拿用例迁就实现能力**（把关键词用空格独立成词再搜完整 token），所以这条
+  缺陷长期 CI 全绿；现已改回按用户预期搜中文子串。详见 ADR-013 §7。
+  顺带补上 LIKE 元字符转义（`web/lib/like-escape.ts`）：该端点走 `$queryRawUnsafe`，
+  没有 Prisma `contains` 自带的转义，实测未转义时查询 `100%` 会退化成「以 100 开头」，
+  同一库误命中 296 行，转义后 1 行。
+
+### Removed
+
+- **两条零调用方的重复消息搜索端点**：`GET /v1/workspaces/{wid}/im/search` 与
+  `GET /v1/workspaces/{wid}/tasks/{id}/messages/search`。全仓（含 e2e/tests/桌面壳）除自身、
+  基线清单与本 ADR 外无任何引用；其能力由 `/v1/im/search` 完全覆盖——任务会话本身带
+  `conversation_id`，限定单会话用 `conversationId` 参数即可。
+  同步 `scripts/api-contract-baseline.txt` 172 → 170、`scripts/zero-coverage-baseline.txt` −2。
+  这两条路由此前只在「未声明契约」豁免清单里，不在 `api/openapi.yaml`，因此不构成对外契约破坏；
+  若有仓外调用方按此清单迁移到 `/v1/im/search`。
 
 ## [0.8.2] - 2026-10-22
 
