@@ -65,10 +65,14 @@ interface MessageItemProps {
   isOwn: boolean;
   /** 是否显示作者名（群聊显示，单聊可省略） */
   showAuthor: boolean;
-  /** 编辑消息 */
-  onEdit: (mid: string, body: string) => void;
-  /** 撤回消息 */
-  onRevoke: (mid: string) => void;
+  /**
+   * 编辑消息。返回值必须原样透传：useIM 失败时会 rethrow，本组件要 await 到
+   * rejection 才能把错误显示出来（旧类型 `=> void` 会让 await 立刻拿到 undefined，
+   * 错误被静默丢弃——这正是整合前 IM 的老问题）。
+   */
+  onEdit: (mid: string, body: string) => void | Promise<void>;
+  /** 撤回消息。返回值语义同 onEdit。 */
+  onRevoke: (mid: string) => void | Promise<void>;
   /** 回复消息（可选） */
   onReply?: (mid: string) => void;
   /** 该 call_invite 消息对应的通话是否已结束（仅 call_invite 类型使用） */
@@ -248,6 +252,8 @@ function MessageItemImpl({
   const wid = params?.wid;
   const [editing, setEditing] = useState(false);
   const [editBody, setEditBody] = useState(message.body);
+  /** 编辑/撤回失败的就地提示。机制来自旧聊天树 MessageBubble 的 role="alert"（本轮整合迁移）。 */
+  const [actionError, setActionError] = useState<string | null>(null);
   // 撤回确认弹窗
   const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
   // 移动端操作菜单（底部弹出）
@@ -281,20 +287,27 @@ function MessageItemImpl({
   /** 进入编辑模式 */
   const handleStartEdit = useCallback(() => {
     setEditBody(message.body);
+    setActionError(null);
     setEditing(true);
     setShowMobileMenu(false);
   }, [message.body]);
 
   /** 保存编辑 */
-  const handleSaveEdit = useCallback(() => {
+  const handleSaveEdit = useCallback(async () => {
     const trimmed = editBody.trim();
     if (!trimmed || trimmed === message.body) {
       setEditing(false);
       return;
     }
-    onEdit(message.id, trimmed);
-    setEditing(false);
-  }, [editBody, message.id, message.body, onEdit]);
+    setActionError(null);
+    try {
+      await onEdit(message.id, trimmed);
+      setEditing(false);
+    } catch (err) {
+      // 失败时保持编辑态：用户刚输入的内容还在，可直接重试；错误就地展示（role=alert）
+      setActionError(err instanceof Error && err.message ? err.message : t("editMessageFailed"));
+    }
+  }, [editBody, message.id, message.body, onEdit, t]);
 
   /** 取消编辑 */
   const handleCancelEdit = useCallback(() => {
@@ -307,7 +320,7 @@ function MessageItemImpl({
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
       if ((e.metaKey || e.ctrlKey) && e.key === "Enter") {
         e.preventDefault();
-        handleSaveEdit();
+        void handleSaveEdit();
       } else if (e.key === "Escape") {
         e.preventDefault();
         handleCancelEdit();
@@ -317,11 +330,16 @@ function MessageItemImpl({
   );
 
   /** 确认撤回消息 */
-  const handleConfirmRevoke = useCallback(() => {
+  const handleConfirmRevoke = useCallback(async () => {
     setShowRevokeConfirm(false);
     setShowMobileMenu(false);
-    onRevoke(message.id);
-  }, [message.id, onRevoke]);
+    setActionError(null);
+    try {
+      await onRevoke(message.id);
+    } catch (err) {
+      setActionError(err instanceof Error && err.message ? err.message : t("revokeMessageFailed"));
+    }
+  }, [message.id, onRevoke, t]);
 
   /** 长按开始：启动计时器 */
   const handleTouchStart = useCallback((e: TouchEvent<HTMLDivElement>) => {
@@ -590,6 +608,19 @@ function MessageItemImpl({
                 </span>
               )}
             </div>
+          )}
+
+          {/* 操作失败提示：旧聊天树 MessageBubble 是唯一会告诉用户"操作失败"的地方，
+              整合时把这条机制并进来。此前 useIM 只 setError，而 IMClient 仅在未选中会话时
+              渲染它，调用点又用 .catch(() => {}) / void 把 rejection 丢掉，
+              结果是会话内编辑/撤回失败对用户完全静默。 */}
+          {actionError && (
+            <p
+              role="alert"
+              className={`mt-1 text-[length:var(--text-xs)] text-[var(--danger-fg)] ${isOwn ? "text-right" : "text-left"}`}
+            >
+              {actionError}
+            </p>
           )}
         </div>
 

@@ -212,10 +212,8 @@ export function IMClient({
                 onSend={(body, opts) =>
                   sendMessage(activeConversation.id, body, opts).catch(() => {})
                 }
-                onEdit={(mid, body) =>
-                  editMessage(activeConversation.id, mid, body).catch(() => {})
-                }
-                onRevoke={(mid) => revokeMessage(activeConversation.id, mid).catch(() => {})}
+                onEdit={(mid, body) => editMessage(activeConversation.id, mid, body)}
+                onRevoke={(mid) => revokeMessage(activeConversation.id, mid)}
                 onLoadMore={() => loadMoreMessages(activeConversation.id).catch(() => {})}
                 loadingMore={loadingMore}
                 onSettings={

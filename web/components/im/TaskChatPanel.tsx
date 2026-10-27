@@ -116,8 +116,8 @@ export function TaskChatPanel({ workspaceId, taskId, currentUserId }: TaskChatPa
           messages={messages}
           currentUserId={currentUserId}
           onSend={(body, opts) => void sendMessage(activeConversation.id, body, opts)}
-          onEdit={(mid, body) => void editMessage(activeConversation.id, mid, body)}
-          onRevoke={(mid) => void revokeMessage(activeConversation.id, mid)}
+          onEdit={(mid, body) => editMessage(activeConversation.id, mid, body)}
+          onRevoke={(mid) => revokeMessage(activeConversation.id, mid)}
           onLoadMore={() => void loadMoreMessages(activeConversation.id)}
           loadingMore={loadingMore}
           typingUserIds={typingUsers[activeConversation.id] ?? []}
