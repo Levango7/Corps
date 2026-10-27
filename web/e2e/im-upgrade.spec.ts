@@ -139,13 +139,14 @@ test.describe("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件 + 重�
     await gotoTaskDetail(page, wid, `E2E-IM-Search-${Date.now()}`);
 
     const input = page.getByPlaceholder(/发消息/);
-    // 后端全文检索用 'simple' 解析器：整段无空格文本只生成一个 token，子串搜不到
-    // （实测 to_tsvector('simple','可搜索消息UniqueToken123')
-    //   @@ plainto_tsquery('simple','UniqueToken') = false，
-    //   而 '可搜索消息 UniqueToken123 结尾' 用完整 token 查 = true）。
-    // 所以关键词必须用空格独立成词，这里按实现能力搜完整 token。
-    const token = `UniqueToken${Date.now()}`;
-    const searchableText = `可搜索消息 ${token} 结尾`;
+    // 用中文子串搜索：这是本用例真正的判据。
+    // 后端 'simple' 解析器不切词，整段无空格中文只生成一个 lexeme，
+    // 所以「仅全文分支」下搜「连接池需要」必然零命中（实测见 ADR-013 §7.2）——
+    // 是 ILIKE 子串分支（+ idx_messages_body_trgm）让中文搜索对用户成立。
+    // 此前这里改成"把关键词用空格独立成词再搜完整 token"，等于拿用例迁就实现能力，
+    // 缺陷因此长期 CI 全绿。
+    const needle = "连接池需要";
+    const searchableText = `部署评审结论：数据库${needle}扩容${Date.now()}，请跟进`;
     await input.fill(searchableText);
     await page.getByRole("button", { name: "发送聊天消息" }).click();
     await expect(page.getByText(searchableText)).toBeVisible({ timeout: 10_000 });
@@ -155,8 +156,8 @@ test.describe("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件 + 重�
     await page.getByRole("button", { name: "搜索消息" }).click();
     const panelSearch = page.getByPlaceholder(/搜索消息/);
     await expect(panelSearch).toBeVisible({ timeout: 20_000 });
-    await panelSearch.fill(token);
-    await expect(page.getByText(token).first()).toBeVisible({ timeout: 20_000 });
+    await panelSearch.fill(needle);
+    await expect(page.getByText(needle).first()).toBeVisible({ timeout: 20_000 });
     // 收起面板搜索，免得与下面 /im 页的同名控件互相干扰
     await page.getByRole("button", { name: "搜索消息" }).click();
 
@@ -166,9 +167,10 @@ test.describe("IM 升级：ChatPanel 渲染 + 发消息 + 已读 + 附件 + 重�
     const searchInput = page.getByPlaceholder(/搜索消息/);
     await expect(searchInput).toBeVisible({ timeout: 20_000 });
 
-    // 输入命中的关键词：结果里出现那条消息（/v1/im/search 此前恒 500，见 uuid 转换修复）
-    await searchInput.fill(token);
-    await expect(page.getByText(token).first()).toBeVisible({ timeout: 20_000 });
+    // 输入命中的中文子串：结果里出现那条消息
+    //（该端点两个历史缺陷都被这条覆盖：恒 500 见 uuid 转换修复；中文恒零结果见 ADR-013 §7）
+    await searchInput.fill(needle);
+    await expect(page.getByText(needle).first()).toBeVisible({ timeout: 20_000 });
 
     // 输入不匹配的关键词：显示无结果提示（i18n: im.search.noResults）
     await searchInput.fill("不存在的关键词XYZ123");

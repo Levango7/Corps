@@ -239,7 +239,11 @@ wc -l components/ChatPanel.tsx components/chat/*                                
 现在多出的是 `components/chat/ChatHeaderClient.tsx`（72 行），由 `e988af5c`（**2026-09-20**）加入，
 而 ADR 落笔是 `5b8a73e4`（**2026-10-06**）——**这个数在写下的当天就是错的**，因为写的人没跑那条 `wc`。
 台账 #28（把任务侧消息能力并到 `TaskChatPanel` → `ChatWindow`、并裁决
-`GET /v1/workspaces/{wid}/tasks/{id}/messages/search` 的归属）至今未动。
+`GET /v1/workspaces/{wid}/tasks/{id}/messages/search` 的归属）**已收口**：
+旧树 8 文件 / 2,145 行由 PR #185 删除（ADR-013「执行记录」），三条重复消息搜索端点收敛为
+`GET /v1/im/search` 一条并补齐中文子串语义（ADR-013 §7，2026-10-27）。
+> 上述"7 文件 / 2,101 行 vs 实测 8 文件 / 2,109 行"的漂移记录保留原位：它是这条台账
+> 当时未动的证据本身，也是「写文档的人没跑自己给的命令」的标本。
 
 ## 9. 待 owner 拍板的事（按性价比排序；原四件，第 3 件已自行闭合）
 
