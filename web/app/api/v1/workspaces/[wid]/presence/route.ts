@@ -4,6 +4,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { logger } from "@/lib/logger";
 
 /**
  * M4 实时协作基础：工作区成员在线状态 API
