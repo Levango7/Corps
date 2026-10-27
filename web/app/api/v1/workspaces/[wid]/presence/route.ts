@@ -128,8 +128,8 @@ async function getPresenceHandler(
                 onlineAt: true,
               },
             },
-            orderBy: { joinedAt: "asc" },
           },
+          orderBy: { joinedAt: "asc" },
         });
       },
       ctx.payload.sub,
