@@ -63,7 +63,10 @@ async function searchBodies(q: string, conversationId?: string): Promise<string[
 }
 
 beforeAll(async () => {
-  const owner = await registerUser({ prefix: "im-search-cjk", workspaceName: "消息搜索测试工作区" });
+  const owner = await registerUser({
+    prefix: "im-search-cjk",
+    workspaceName: "消息搜索测试工作区",
+  });
   token = owner.accessToken;
   wid = owner.workspace.id;
 

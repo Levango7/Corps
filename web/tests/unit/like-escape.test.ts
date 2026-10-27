@@ -27,7 +27,9 @@ describe("escapeLikeOperand", () => {
   it("普通中英文、数字与标点原样通过（转义不该碰非元字符）", () => {
     expect(escapeLikeOperand("连接池需要扩容")).toBe("连接池需要扩容");
     expect(escapeLikeOperand("RollbackRunbook2026")).toBe("RollbackRunbook2026");
-    expect(escapeLikeOperand("预算 2026-Q3 已确认，请核对。")).toBe("预算 2026-Q3 已确认，请核对。");
+    expect(escapeLikeOperand("预算 2026-Q3 已确认，请核对。")).toBe(
+      "预算 2026-Q3 已确认，请核对。",
+    );
   });
 
   it("空串返回空串（q 的 min(1) 由 zod 拦，这里不造额外默认值）", () => {
