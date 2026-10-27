@@ -5,6 +5,7 @@ import { matchFunnel, type FunnelEvent } from "@/lib/analytics-funnel";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/v1/workspaces/:wid/analytics/overview — 工作区分析概览。
@@ -59,7 +60,7 @@ const RETENTION_POINTS = [1, 7, 30] as const;
 const DEFAULT_EVENT_LIMIT = 10_000;
 const MAX_EVENT_LIMIT = 50_000;
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getAnalyticsOverview(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -105,10 +106,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         // ─── D2 两段序列化漏斗 ───
         // 获客段按 sessionId 分组
         const acquisitionEvents: FunnelEvent[] = allEvents
-          .filter((e) =>
+          .filter((e: { name: string; sessionId: string | null }) =>
             (ACQUISITION_STEPS as readonly { name: string }[]).some((s) => s.name === e.name),
           )
-          .map((e) => ({
+          .map((e: { name: string; createdAt: Date; sessionId: string | null }) => ({
             name: e.name,
             createdAt: e.createdAt,
             groupKey: e.sessionId ?? "null",
@@ -120,11 +121,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
         // 激活段按 (workspaceId, userId) 分组——此处 wid 固定，按 userId 分组即可
         const activationEvents: FunnelEvent[] = allEvents
-          .filter((e) =>
+          .filter((e: { name: string; userId: string | null }) =>
             (ACTIVATION_STEPS as readonly { name: string }[]).some((s) => s.name === e.name),
           )
-          .filter((e) => !!e.userId)
-          .map((e) => ({
+          .filter((e: { userId: string | null }) => !!e.userId)
+          .map((e: { name: string; createdAt: Date; userId: string | null }) => ({
             name: e.name,
             createdAt: e.createdAt,
             groupKey: e.userId!,
@@ -133,8 +134,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           activationEvents,
           ACTIVATION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
         );
+        const activation = matchFunnel(
+          activationEvents,
+          ACTIVATION_STEPS.map((s) => ({ name: s.name, label: apiMsg(req, s.labelKey) })),
+        );
 
-        // ─── D1 修复：daily 按 Asia/Shanghai 日界分桶 ───
+// ─── D1 修复：daily 按 Asia/Shanghai 日界分桶 ───
         const dailyMap = new Map<string, Record<string, number>>();
         for (const e of allEvents) {
           const day = shanghaiDay(e.createdAt);
@@ -144,7 +149,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           dayCounts._total = (dayCounts._total ?? 0) + 1;
         }
         const daily = Array.from(dailyMap.entries())
-          .map(([date, counts]) => ({ date, ...counts }))
+          .map(([date, counts]: [string, Record<string, number>]) => ({ date, ...counts }))
           .sort((a, b) => a.date.localeCompare(b.date));
 
         // Top 事件名 + 计数（内存排序，避免 Prisma 6 groupBy orderBy _count 类型不兼容）
@@ -153,7 +158,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
           nameCounts.set(e.name, (nameCounts.get(e.name) ?? 0) + 1);
         }
         const topEvents = Array.from(nameCounts.entries())
-          .map(([name, count]) => ({ name, count }))
+          .map(([name, count]: [string, number]) => ({ name, count }))
           .sort((a, b) => b.count - a.count)
           .slice(0, 8);
 
@@ -165,11 +170,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
 
         // ─── D3 修复：activeUsers 过渡保留 + coreActiveUsers 严格口径 ───
         // activeUsers（过渡期双发，面板切换完成后移除）：14 天任意事件去重 userId
-        const activeUsers = new Set(allEvents.filter((e) => !!e.userId).map((e) => e.userId!)).size;
+        const activeUsers = new Set(allEvents.filter((e: { userId: string | null }) => !!e.userId).map((e: { userId: string | null }) => e.userId!)).size;
 
         // coreActiveUsers：窗口内 CORE_EVENTS 去重 userId（严格口径）
         const coreActiveUsers = new Set(
-          allEvents.filter((e) => CORE_EVENTS.has(e.name) && !!e.userId).map((e) => e.userId!),
+          allEvents.filter((e: { name: string; userId: string | null }) => CORE_EVENTS.has(e.name) && !!e.userId).map((e: { userId: string | null }) => e.userId!),
         ).size;
 
         // ─── D3 修复：WAW 周活跃 ───
@@ -180,12 +185,12 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
         const wawUsers = new Set(
           allEvents
             .filter(
-              (e) =>
+              (e: { name: string; userId: string | null; createdAt: Date }) =>
                 CORE_EVENTS.has(e.name) &&
                 !!e.userId &&
                 shanghaiWeekKey(e.createdAt) === weekStartKey,
             )
-            .map((e) => e.userId!),
+            .map((e: { userId: string | null }) => e.userId!),
         ).size;
 
         // ─── D3 修复：retention D1/D7/D30 ───
@@ -256,3 +261,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAnalyticsOverview);

@@ -6,6 +6,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // P3-2 / 裁决三：checkout/route.ts 归支付线独占。period 字段并入本线交付。
 // Phase 2：新增 provider 参数支持通道选择（stripe/wechatpay-native/alipay-page）。
@@ -53,7 +54,7 @@ function safeRedirectUrl(
   return fallback;
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postBillingCheckout(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -170,3 +171,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postBillingCheckout);

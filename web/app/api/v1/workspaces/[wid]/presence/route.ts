@@ -4,6 +4,7 @@ import { apiMsg } from "@/lib/api-messages";
 
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * M4 实时协作基础：工作区成员在线状态 API
@@ -33,7 +34,7 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
  * 前端登录后每 2 分钟调用一次，刷新在线状态。
  * 响应：{ code: 0, data: { onlineAt: ISO }, message: "OK" }
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postPresence(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
