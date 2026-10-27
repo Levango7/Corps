@@ -11,6 +11,8 @@ import { registerAndLogin, uniqueEmail, login, createTask } from "./helpers";
 
 let email = "";
 
+// serial 是必需的：第 3、4 条直接点看板上的 firstCard，那张卡由第 2 条
+// 「新建任务 → 详情页出现子任务区」创建；拆成各自注册就面对空看板。
 test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
   test.beforeAll(() => {
     email = uniqueEmail("v04-e2e");
@@ -100,7 +102,7 @@ test.describe.serial("v0.4 新功能：子任务 + 阻塞", () => {
   });
 });
 
-test.describe.serial("v0.4 新功能：文档中心", () => {
+test.describe("v0.4 新功能：文档中心", () => {
   let email2 = "";
 
   test.beforeAll(() => {
@@ -120,7 +122,8 @@ test.describe.serial("v0.4 新功能：文档中心", () => {
   });
 
   test("新建文档 → 编辑 → 发布", async ({ page }) => {
-    const wid = await login(page, email2);
+    // 自带账号夹具：不依赖上一条注册用例先跑（serial 会把首条红之后的用例整组 skip）
+    const wid = await registerAndLogin(page, uniqueEmail("v04-doc"), "文档中心 E2E");
 
     // 用 API 创建文档（避免"新建文档"按钮 click/focus 超时——按钮在 CI 中
     // 可见但不可交互，被覆盖层阻挡）

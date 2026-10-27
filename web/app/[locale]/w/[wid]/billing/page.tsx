@@ -3,6 +3,7 @@
 import { use, useCallback, useEffect, useState, useRef } from "react";
 import { useSearchParams } from "next/navigation";
 import { useRouter, Link } from "@/lib/i18n-navigation";
+import { track } from "@/lib/analytics";
 import {
   CreditCard,
   Check,
@@ -131,6 +132,22 @@ export default function BillingPage({ params }: { params: Promise<{ wid: string 
   useEffect(() => {
     load();
   }, [load]);
+
+  // 转化段三步（billing_view / billing_success / billing_cancel）此前只在白名单挂着、
+  // 全仓没有 emit 站点 ⇒ 「点了升级 → 回到计费页 → 真付了 / 弃单」这条漏斗恒空。
+  // ?success=1 与 ?canceled=1 是 checkout 回跳的落地态（billing/checkout/route.ts:88,89
+  // 生成，本页 justPaid/canceled 已在消费并渲染横幅），所以这是既有状态、不是新造的事件。
+  // 真实入账仍以服务端 webhook 的 subscription_activated 为准；这里记的是客户端漏斗步。
+  // 读 window.location.search 而非 search 变量：与 signup 页同款写法，可让本 effect 无外部依赖、
+  // 只在进页面那一次上报（轮询刷新会重渲染，挂在 search 上会重复计数、把转化率算错）。
+  useEffect(() => {
+    const q = new URLSearchParams(window.location.search);
+    const paid = q.get("success") === "1";
+    const cancel = q.get("canceled") === "1";
+    track("billing_view", { fromCheckoutSuccess: paid, fromCheckoutCancel: cancel });
+    if (paid) track("billing_success");
+    if (cancel) track("billing_cancel");
+  }, []);
 
   // 清理轮询定时器
   useEffect(() => {

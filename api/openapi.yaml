@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 93 paths (updated 2026-10-25). The service also
+    Coverage: this contract declares 117 paths (updated 2026-10-26). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -4893,6 +4893,1362 @@ paths:
           description: Requires settings:update (owner)
         '404':
           $ref: '#/components/responses/NotFound'
+  /api/v1/workspaces/{wid}/activity:
+    get:
+      tags: [activity]
+      summary: Workspace activity feed (recent task/comment/decision changes)
+      description: >
+        Aggregates the most recent task.created / task.updated / comment.created /
+        decision.created / decision.updated events into one feed, newest first.
+        A just-created item never appears again as "updated". Page size is fixed
+        at 20; pass the previous page's nextCursor to fetch older items.
+      operationId: listWorkspaceActivity
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cursor
+          in: query
+          schema: { type: string, format: date-time }
+          description: Return activities strictly older than this ISO timestamp.
+      responses:
+        '200':
+          description: One activity page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ActivityFeed'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/announcements:
+    get:
+      tags: [announcements]
+      summary: List announcements (pinned first, then newest published)
+      operationId: listAnnouncements
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: type
+          in: query
+          schema: { type: string, enum: [info, warning, urgent] }
+        - name: pinned
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+          description: Literal "true"/"false" string filter.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Announcement list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AnnouncementList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [announcements]
+      summary: Create an announcement
+      description: Requires announcements:create in the permission matrix.
+      operationId: createAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAnnouncementRequest'
+      responses:
+        '201':
+          description: Announcement created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/announcements/{aid}:
+    get:
+      tags: [announcements]
+      summary: Announcement detail
+      operationId: getAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/AnnouncementId'
+      responses:
+        '200':
+          description: Announcement detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Announcement'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [announcements]
+      summary: Update an announcement
+      description: Requires announcements:update. Concurrent delete maps to 404.
+      operationId: updateAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/AnnouncementId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAnnouncementRequest'
+      responses:
+        '200':
+          description: Updated announcement
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Announcement'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [announcements]
+      summary: Delete an announcement
+      operationId: deleteAnnouncement
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/AnnouncementId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/contacts:
+    get:
+      tags: [contacts]
+      summary: List contacts (name ascending)
+      operationId: listContacts
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: groupId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: search
+          in: query
+          schema: { type: string }
+          description: Fuzzy match across name/email/phone/department/position.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Contact list (paginated; list rows omit notes/createdAt)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ContactList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [contacts]
+      summary: Create a contact
+      description: Requires contacts:create in the permission matrix.
+      operationId: createContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateContactRequest'
+      responses:
+        '201':
+          description: Contact created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Contact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/contacts/{cid}:
+    get:
+      tags: [contacts]
+      summary: Contact detail (with group and creator)
+      operationId: getContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ContactId'
+      responses:
+        '200':
+          description: Contact detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Contact'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [contacts]
+      summary: Update a contact
+      description: Requires contacts:update. Missing record maps to 404.
+      operationId: updateContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ContactId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateContactRequest'
+      responses:
+        '200':
+          description: Update result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Contact'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [contacts]
+      summary: Delete a contact
+      operationId: deleteContact
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ContactId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/calendar/events:
+    get:
+      tags: [calendar]
+      summary: List calendar events (startAt ascending)
+      description: >
+        Optional time-window filter: returns events with startAt >= start AND
+        endAt <= end. Note the envelope echoes only items/total/hasMore —
+        the requested page/pageSize are not repeated in the response.
+      operationId: listCalendarEvents
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: start
+          in: query
+          schema: { type: string, format: date-time }
+          description: Only events with startAt >= this ISO timestamp.
+        - name: end
+          in: query
+          schema: { type: string, format: date-time }
+          description: Only events with endAt <= this ISO timestamp.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Event list (filtered)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEventList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [calendar]
+      summary: Create a calendar event
+      operationId: createCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateCalendarEventRequest'
+      responses:
+        '201':
+          description: Event created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/calendar/events/{eventId}:
+    get:
+      tags: [calendar]
+      summary: Calendar event detail
+      operationId: getCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Event detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEvent'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [calendar]
+      summary: Update a calendar event
+      description: Missing record and concurrent delete both map to 404.
+      operationId: updateCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/EventId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCalendarEventRequest'
+      responses:
+        '200':
+          description: Updated event
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CalendarEvent'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [calendar]
+      summary: Delete a calendar event
+      operationId: deleteCalendarEvent
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/EventId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string, format: uuid }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/objectives:
+    get:
+      tags: [okr]
+      summary: List OKR objectives (updatedAt descending)
+      description: Each row carries the owner summary and the keyResults count.
+      operationId: listObjectives
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: period
+          in: query
+          schema: { type: string }
+          description: e.g. "2026-Q1".
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, active, completed, archived] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Objective list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ObjectiveList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [okr]
+      summary: Create an objective
+      operationId: createObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateObjectiveRequest'
+      responses:
+        '201':
+          description: Objective created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Objective'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/objectives/{oid}:
+    get:
+      tags: [okr]
+      summary: Objective detail (with key results list)
+      operationId: getObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ObjectiveId'
+      responses:
+        '200':
+          description: Objective with keyResults (createdAt ascending, each with owner)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Objective'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [okr]
+      summary: Update an objective
+      description: Missing record and concurrent delete both map to 404.
+      operationId: updateObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ObjectiveId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateObjectiveRequest'
+      responses:
+        '200':
+          description: Updated objective
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Objective'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [okr]
+      summary: Delete an objective (key results cascade)
+      operationId: deleteObjective
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/ObjectiveId'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/key-results/{kid}:
+    patch:
+      tags: [okr]
+      summary: Update a key result by id and recompute parent objective progress
+      description: >
+        Top-level endpoint for callers that only hold the kid (e.g. a batch
+        progress panel). Ownership is validated by walking KR -> Objective ->
+        workspaceId. currentValue/targetValue/weight changes recompute the
+        parent Objective.progress with the weighted formula. Missing record
+        and concurrent delete both map to 404.
+      operationId: updateKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/KeyResultId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateKeyResultRequest'
+      responses:
+        '200':
+          description: Updated key result
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { $ref: '#/components/schemas/KeyResult' }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [okr]
+      summary: Delete a key result by id
+      operationId: deleteKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/KeyResultId'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings:
+    get:
+      tags: [meetings]
+      summary: List meetings (createdAt descending)
+      description: Behavior pinned by web/tests/api/meetings.test.ts.
+      operationId: listMeetings
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: status
+          in: query
+          schema: { type: string, enum: [scheduled, active, ended] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Meeting list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [meetings]
+      summary: Create a meeting
+      description: >
+        Defaults: type=instant, status=scheduled, maxParticipants=50,
+        recordingEnabled=false, recurringRule/password=null.
+      operationId: createMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateMeetingRequest'
+      responses:
+        '201':
+          description: Meeting created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Meeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings/{mid}:
+    get:
+      tags: [meetings]
+      summary: Meeting detail
+      operationId: getMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Mid'
+      responses:
+        '200':
+          description: Meeting detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Meeting'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [meetings]
+      summary: Update a meeting
+      description: >
+        status enum includes cancelled; concurrent delete (P2025) maps to 404.
+        Cross-workspace protection and password/join semantics are covered by
+        web/tests/api/meetings.test.ts.
+      operationId: updateMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Mid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMeetingRequest'
+      responses:
+        '200':
+          description: Updated meeting
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Meeting'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [meetings]
+      summary: End/delete a meeting (data is null)
+      operationId: deleteMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Mid'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries:
+    get:
+      tags: [timetrack]
+      summary: List time entries (startTime descending)
+      description: Rows carry user {id,name,email} and task {id,title} summaries.
+      operationId: listTimeEntries
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: userId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: taskId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Time entry list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntryList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [timetrack]
+      summary: Create a time entry (manual logging)
+      operationId: createTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateTimeEntryRequest'
+      responses:
+        '201':
+          description: Time entry created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/start:
+    post:
+      tags: [timetrack]
+      summary: Start the timer (startTime=now, endTime=null)
+      description: >
+        Creates a running TimeEntry. If the current user already has an
+        unstopped timer (endTime=null), returns 409 timerAlreadyRunning.
+      operationId: startTimer
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StartTimerRequest'
+      responses:
+        '201':
+          description: Timer started
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '409':
+          description: A timer is already running for this user
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/stop:
+    post:
+      tags: [timetrack]
+      summary: Stop the timer (endTime=now, duration computed in seconds)
+      description: >
+        Unknown teid → 404; no running timer for that entry → 409
+        timerNotRunning.
+      operationId: stopTimer
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StopTimerRequest'
+      responses:
+        '200':
+          description: Timer stopped, updated entry returned
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          description: The referenced timer is not running
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/report:
+    get:
+      tags: [timetrack]
+      summary: Aggregated time report (group by user/task/day)
+      description: >
+        Returns groups with totals plus an overall summary; amounts are
+        rounded to 2 decimals.
+      operationId: timeEntryReport
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: userId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: groupBy
+          in: query
+          schema: { type: string, enum: [user, task, day], default: user }
+      responses:
+        '200':
+          description: Report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeReport'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/time-entries/{teid}:
+    get:
+      tags: [timetrack]
+      summary: Time entry detail
+      operationId: getTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Teid'
+      responses:
+        '200':
+          description: Time entry detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [timetrack]
+      summary: Update a time entry
+      description: Missing record and concurrent delete both map to 404.
+      operationId: updateTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Teid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTimeEntryRequest'
+      responses:
+        '200':
+          description: Updated time entry
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TimeEntry'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [timetrack]
+      summary: Delete a time entry (data is null)
+      operationId: deleteTimeEntry
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Teid'
+      responses:
+        '200':
+          description: Deleted (data is null)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data: { nullable: true }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/dashboard/widgets/custom-chart:
+    get:
+      tags: [dashboard]
+      summary: Custom chart widget data (default task-status distribution)
+      description: >
+        chartType and dataSource are fixed server-side today ("bar" /
+        "taskStatus"); the client decides how to render labels/values.
+        Counts only top-level tasks (parentId=null).
+      operationId: getCustomChartWidget
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Chart payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_CustomChart'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/dashboard/widgets/gantt-chart:
+    get:
+      tags: [dashboard]
+      summary: Gantt widget data (top-level tasks with dueDate, max 20)
+      description: >
+        Task has no startDate field: createdAt is used as the bar start and
+        dueDate as the end. Ordering by createdAt.
+      operationId: getGanttChartWidget
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Gantt payload ({ items })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Gantt'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/dashboard/widgets/milestone-timeline:
+    get:
+      tags: [dashboard]
+      summary: Milestone timeline widget data (status inferred from linked tasks)
+      description: >
+        Milestone has no status column. Status is inferred: all linked tasks
+        done → "done"; any in_progress/review → "in_progress"; otherwise →
+        "pending". Ordered by dueDate ascending.
+      operationId: getMilestoneTimelineWidget
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Timeline payload ({ items })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MilestoneTimeline'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/wiki:
+    get:
+      tags: [wiki]
+      summary: Wiki page list (tree-shaped items; q searches title/content/slug)
+      operationId: listWikiPages
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: q
+          in: query
+          schema: { type: string }
+          description: Case-insensitive match on title/content/slug.
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Page list ({ items, total, hasMore }; items are page trees)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [wiki]
+      summary: Create a wiki page
+      operationId: createWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWikiPageRequest'
+      responses:
+        '201':
+          description: Page created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/wiki/{pageId}:
+    get:
+      tags: [wiki]
+      summary: Wiki page detail (with direct children)
+      operationId: getWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WikiPageId'
+      responses:
+        '200':
+          description: Page (with children)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [wiki]
+      summary: Update a wiki page
+      operationId: updateWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WikiPageId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWikiPageRequest'
+      responses:
+        '200':
+          description: Updated page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WikiPage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [wiki]
+      summary: Delete a wiki page
+      operationId: deleteWikiPage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WikiPageId'
+      responses:
+        '200':
+          description: Deleted ({ id, deleted: true })
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/whiteboards:
+    get:
+      tags: [whiteboards]
+      summary: List whiteboards (updatedAt descending)
+      operationId: listWhiteboards
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Whiteboard list ({ items, total, hasMore })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WhiteboardList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [whiteboards]
+      summary: Create a whiteboard
+      description: Requires whiteboards:create in the permission matrix.
+      operationId: createWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateWhiteboardRequest'
+      responses:
+        '201':
+          description: Whiteboard created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Whiteboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/whiteboards/{wbid}:
+    get:
+      tags: [whiteboards]
+      summary: Whiteboard detail (full canvas data)
+      operationId: getWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Wbid'
+      responses:
+        '200':
+          description: Whiteboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Whiteboard'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [whiteboards]
+      summary: Update a whiteboard (title and/or canvas data)
+      description: Requires whiteboards:update; missing record → 404.
+      operationId: updateWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Wbid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateWhiteboardRequest'
+      responses:
+        '200':
+          description: Updated whiteboard
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Whiteboard'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [whiteboards]
+      summary: Delete a whiteboard
+      description: Requires whiteboards:delete; missing record → 404.
+      operationId: deleteWhiteboard
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/Wbid'
+      responses:
+        '200':
+          description: Deleted ({ id, deleted: true })
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    properties:
+                      id: { type: string }
+                      deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -4970,6 +6326,60 @@ components:
       in: path
       required: true
       description: AI agent id (UUID).
+      schema: { type: string, format: uuid }
+    AnnouncementId:
+      name: aid
+      in: path
+      required: true
+      description: Announcement id (UUID).
+      schema: { type: string, format: uuid }
+    ContactId:
+      name: cid
+      in: path
+      required: true
+      description: Contact id (UUID).
+      schema: { type: string, format: uuid }
+    EventId:
+      name: eventId
+      in: path
+      required: true
+      description: Calendar event id (UUID).
+      schema: { type: string, format: uuid }
+    ObjectiveId:
+      name: oid
+      in: path
+      required: true
+      description: OKR objective id (UUID).
+      schema: { type: string, format: uuid }
+    KeyResultId:
+      name: kid
+      in: path
+      required: true
+      description: Key result id (UUID).
+      schema: { type: string, format: uuid }
+    Mid:
+      name: mid
+      in: path
+      required: true
+      description: Meeting id (UUID).
+      schema: { type: string, format: uuid }
+    Teid:
+      name: teid
+      in: path
+      required: true
+      description: Time entry id (UUID).
+      schema: { type: string, format: uuid }
+    WikiPageId:
+      name: pageId
+      in: path
+      required: true
+      description: Wiki page id (UUID).
+      schema: { type: string, format: uuid }
+    Wbid:
+      name: wbid
+      in: path
+      required: true
+      description: Whiteboard id (UUID).
       schema: { type: string, format: uuid }
 
   responses:
@@ -6337,3 +7747,712 @@ components:
               type: integer
               description: Total count of access log entries.
             hasMore: { type: boolean }
+    ActivityItem:
+      type: object
+      required: [id, type, actorId, actorName, entityType, entityId, entityTitle, createdAt]
+      properties:
+        id: { type: string }
+        type:
+          type: string
+          enum: [task.created, task.updated, comment.created, decision.created, decision.updated]
+        actorId: { type: string }
+        actorName: { type: string }
+        entityType: { type: string }
+        entityId: { type: string }
+        entityTitle: { type: string }
+        createdAt: { type: string, format: date-time }
+    Envelope_ActivityFeed:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, nextCursor]
+          properties:
+            items:
+              type: array
+              maxItems: 20
+              items:
+                $ref: '#/components/schemas/ActivityItem'
+            nextCursor:
+              type: string
+              nullable: true
+              description: ISO timestamp of the last item; null when the feed is exhausted.
+    Announcement:
+      type: object
+      required: [id, title, content, type, pinned, publishedAt]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        content: { type: string }
+        type: { type: string, enum: [info, warning, urgent] }
+        targetAudience:
+          type: object
+          description: "{ type: all|role|department, value?: string[] }"
+        pinned: { type: boolean }
+        publishedBy: { type: string }
+        publishedAt: { type: string, format: date-time }
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        publisher:
+          type: object
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    Envelope_Announcement:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Announcement'
+    Envelope_AnnouncementList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Announcement'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateAnnouncementRequest:
+      type: object
+      required: [title, content]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, minLength: 1 }
+        type: { type: string, enum: [info, warning, urgent] }
+        targetAudience:
+          type: object
+          required: [type]
+          properties:
+            type: { type: string, enum: [all, role, department] }
+            value:
+              type: array
+              items: { type: string }
+        pinned: { type: boolean }
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    UpdateAnnouncementRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, minLength: 1 }
+        type: { type: string, enum: [info, warning, urgent] }
+        targetAudience:
+          type: object
+          required: [type]
+          properties:
+            type: { type: string, enum: [all, role, department] }
+            value:
+              type: array
+              items: { type: string }
+        pinned: { type: boolean }
+        expiresAt:
+          type: string
+          format: date-time
+          nullable: true
+    Contact:
+      type: object
+      required: [id, name]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string }
+        email: { type: string, format: email, nullable: true }
+        phone: { type: string, nullable: true }
+        department: { type: string, nullable: true }
+        position: { type: string, nullable: true }
+        avatar: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+        group:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string }
+        creator:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_Contact:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Contact'
+    Envelope_ContactList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Contact'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateContactRequest:
+      type: object
+      required: [name]
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 255, nullable: true }
+        phone: { type: string, maxLength: 50, nullable: true }
+        department: { type: string, maxLength: 100, nullable: true }
+        position: { type: string, maxLength: 100, nullable: true }
+        avatar: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+    UpdateContactRequest:
+      type: object
+      minProperties: 1
+      properties:
+        name: { type: string, minLength: 1, maxLength: 100 }
+        email: { type: string, format: email, maxLength: 255, nullable: true }
+        phone: { type: string, maxLength: 50, nullable: true }
+        department: { type: string, maxLength: 100, nullable: true }
+        position: { type: string, maxLength: 100, nullable: true }
+        avatar: { type: string, nullable: true }
+        notes: { type: string, nullable: true }
+        groupId: { type: string, format: uuid, nullable: true }
+    CalendarEvent:
+      type: object
+      required: [id, title, startAt, endAt, createdBy]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        allDay: { type: boolean }
+        location: { type: string, nullable: true }
+        color: { type: string, nullable: true }
+        createdBy: { type: string, format: uuid }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_CalendarEvent:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/CalendarEvent'
+    Envelope_CalendarEventList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/CalendarEvent'
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateCalendarEventRequest:
+      type: object
+      required: [title, startAt, endAt]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        allDay: { type: boolean }
+        location: { type: string, maxLength: 500 }
+        color: { type: string, maxLength: 20 }
+    UpdateCalendarEventRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        startAt: { type: string, format: date-time }
+        endAt: { type: string, format: date-time }
+        allDay: { type: boolean }
+        location: { type: string, maxLength: 500 }
+        color: { type: string, maxLength: 20 }
+    Objective:
+      type: object
+      required: [id, title, period, status, progress]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        ownerId: { type: string, format: uuid, nullable: true }
+        period:
+          type: string
+          description: '{ year, quarter }, e.g. "2026-Q1".'
+        status: { type: string, enum: [draft, active, completed, archived] }
+        progress:
+          type: number
+          description: 0-100, computed from key results.
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        owner:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        _count:
+          type: object
+          description: Present on list rows.
+          properties:
+            keyResults: { type: integer }
+        keyResults:
+          type: array
+          description: Present on the detail response only.
+          items:
+            $ref: '#/components/schemas/KeyResult'
+    Envelope_Objective:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Objective'
+    Envelope_ObjectiveList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Objective'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateObjectiveRequest:
+      type: object
+      required: [title, period]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string }
+        ownerId: { type: string, format: uuid }
+        period: { type: string, minLength: 1, maxLength: 20 }
+        status: { type: string, enum: [draft, active, completed, archived] }
+    UpdateObjectiveRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, nullable: true }
+        ownerId: { type: string, format: uuid, nullable: true }
+        period: { type: string, minLength: 1, maxLength: 20 }
+        status: { type: string, enum: [draft, active, completed, archived] }
+    KeyResult:
+      type: object
+      required: [id, objectiveId, title, targetValue, currentValue, weight]
+      properties:
+        id: { type: string, format: uuid }
+        objectiveId: { type: string, format: uuid }
+        title: { type: string }
+        targetValue: { type: number }
+        currentValue: { type: number }
+        unit: { type: string, maxLength: 20, nullable: true }
+        weight: { type: number, description: 0-100 }
+        ownerId: { type: string, format: uuid, nullable: true }
+        dueDate: { type: string, format: date-time, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        owner:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    UpdateKeyResultRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        targetValue: { type: number, description: finite, rejects NaN/Infinity }
+        currentValue: { type: number, description: finite, rejects NaN/Infinity }
+        unit: { type: string, maxLength: 20, nullable: true }
+        weight: { type: number, minimum: 0, maximum: 100 }
+        ownerId: { type: string, format: uuid, nullable: true }
+        dueDate: { type: string, format: date-time, nullable: true }
+    Meeting:
+      type: object
+      required: [id, title, roomName, status, type]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        description: { type: string, nullable: true }
+        createdBy: { type: string, format: uuid, nullable: true }
+        roomName:
+          type: string
+          description: Unique LiveKit room name.
+        status: { type: string, enum: [scheduled, active, ended, cancelled] }
+        type: { type: string, enum: [instant, scheduled, recurring] }
+        recurringRule:
+          type: string
+          nullable: true
+          description: iCal RRULE (e.g. FREQ=DAILY;INTERVAL=1); null for non-recurring.
+        password:
+          type: string
+          nullable: true
+          description: >
+            Set → joining requires the password. The API never returns the
+            bcrypt hash; presence/non-nullness is the signal.
+        scheduledAt: { type: string, format: date-time, nullable: true }
+        startedAt: { type: string, format: date-time, nullable: true }
+        endedAt: { type: string, format: date-time, nullable: true }
+        maxParticipants: { type: integer }
+        recordingEnabled: { type: boolean }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_Meeting:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Meeting'
+    Envelope_MeetingList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Meeting'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateMeetingRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 500 }
+        type: { type: string, enum: [instant, scheduled, recurring] }
+        scheduledAt: { type: string, format: date-time }
+        maxParticipants: { type: integer, minimum: 1, maximum: 500 }
+        recordingEnabled: { type: boolean }
+        recurringRule: { type: string, maxLength: 255 }
+        password: { type: string, maxLength: 100 }
+    UpdateMeetingRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        description: { type: string, maxLength: 500, nullable: true }
+        scheduledAt: { type: string, format: date-time, nullable: true }
+        maxParticipants: { type: integer, minimum: 1, maximum: 500 }
+        recordingEnabled: { type: boolean }
+        status: { type: string, enum: [scheduled, active, ended, cancelled] }
+        recurringRule: { type: string, maxLength: 255, nullable: true }
+        password: { type: string, maxLength: 100, nullable: true }
+    TimeEntry:
+      type: object
+      required: [id, userId, startTime]
+      properties:
+        id: { type: string, format: uuid }
+        userId: { type: string, format: uuid }
+        taskId: { type: string, format: uuid, nullable: true }
+        startTime: { type: string, format: date-time }
+        endTime: { type: string, format: date-time, nullable: true }
+        duration:
+          type: integer
+          nullable: true
+          description: Seconds (endTime - startTime); null while running.
+        description: { type: string, nullable: true }
+        billable: { type: boolean }
+        hourlyRate: { type: number, nullable: true }
+        createdAt: { type: string, format: date-time }
+        user:
+          type: object
+          description: Included on list rows.
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        task:
+          type: object
+          nullable: true
+          description: Included on list rows.
+          properties:
+            id: { type: string, format: uuid }
+            title: { type: string }
+    Envelope_TimeEntry:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/TimeEntry'
+    Envelope_TimeEntryList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/TimeEntry'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateTimeEntryRequest:
+      type: object
+      required: [startTime]
+      properties:
+        startTime: { type: string, format: date-time }
+        taskId: { type: string, format: uuid }
+        endTime: { type: string, format: date-time }
+        duration: { type: integer, minimum: 0 }
+        description: { type: string }
+        billable: { type: boolean }
+        hourlyRate: { type: number, minimum: 0 }
+    UpdateTimeEntryRequest:
+      type: object
+      minProperties: 1
+      properties:
+        endTime: { type: string, format: date-time, nullable: true }
+        duration: { type: integer, minimum: 0, nullable: true }
+        description: { type: string, nullable: true }
+        billable: { type: boolean }
+        hourlyRate: { type: number, minimum: 0, nullable: true }
+    StartTimerRequest:
+      type: object
+      properties:
+        taskId: { type: string, format: uuid }
+        description: { type: string }
+        billable: { type: boolean }
+        hourlyRate: { type: number, minimum: 0 }
+    StopTimerRequest:
+      type: object
+      required: [teid]
+      properties:
+        teid: { type: string, format: uuid }
+    Envelope_TimeReport:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [groups, summary]
+          properties:
+            groups:
+              type: array
+              items:
+                type: object
+                required: [key, totalDuration, billableDuration, totalAmount]
+                properties:
+                  key: { type: string }
+                  totalDuration: { type: integer }
+                  billableDuration: { type: integer }
+                  totalAmount: { type: number }
+            summary:
+              type: object
+              required: [totalDuration, billableDuration, totalAmount]
+              properties:
+                totalDuration: { type: integer }
+                billableDuration: { type: integer }
+                totalAmount: { type: number }
+    Envelope_CustomChart:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [chartType, dataSource, labels, values, total]
+          properties:
+            chartType: { type: string, enum: [bar] }
+            dataSource: { type: string, enum: [taskStatus] }
+            labels:
+              type: array
+              items: { type: string }
+              description: Fixed order — todo, in_progress, review, done.
+            values:
+              type: array
+              items: { type: integer }
+            total: { type: integer }
+    Envelope_Gantt:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              maxItems: 20
+              items:
+                type: object
+                required: [id, title, startDate, dueDate, status]
+                properties:
+                  id: { type: string, format: uuid }
+                  title: { type: string }
+                  startDate:
+                    type: string
+                    format: date-time
+                    description: Task.createdAt used as the bar start (no startDate column).
+                  dueDate: { type: string, format: date-time }
+                  status: { type: string }
+                  assignee:
+                    type: object
+                    nullable: true
+                    properties:
+                      name: { type: string, nullable: true }
+    Envelope_MilestoneTimeline:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                required: [id, name, status, taskCount]
+                properties:
+                  id: { type: string, format: uuid }
+                  name: { type: string }
+                  dueDate: { type: string, format: date-time, nullable: true }
+                  status: { type: string, enum: [done, in_progress, pending] }
+                  taskCount: { type: integer }
+    WikiPage:
+      type: object
+      required: [id, title, slug, parentId]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        slug: { type: string }
+        content: { type: string }
+        parentId: { type: string, format: uuid, nullable: true }
+        createdBy: { type: string, format: uuid }
+        sortOrder: { type: integer }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        children:
+          type: array
+          items:
+            $ref: '#/components/schemas/WikiPage'
+    Envelope_WikiPage:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/WikiPage'
+    Envelope_WikiList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              description: Top-level page trees.
+              items:
+                $ref: '#/components/schemas/WikiPage'
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateWikiPageRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string, default: "" }
+        parentId: { type: string, format: uuid, nullable: true }
+        slug: { type: string, minLength: 1, maxLength: 200 }
+        sortOrder: { type: integer }
+    UpdateWikiPageRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        content: { type: string }
+        parentId: { type: string, format: uuid, nullable: true }
+        sortOrder: { type: integer }
+        slug: { type: string, minLength: 1, maxLength: 200 }
+    Whiteboard:
+      type: object
+      required: [id, title, data]
+      properties:
+        id: { type: string, format: uuid }
+        title: { type: string }
+        data:
+          description: Canvas JSON (element array [{ id, type, x, y, width, height, content, style }]).
+        createdBy: { type: string, format: uuid, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+    Envelope_Whiteboard:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/Whiteboard'
+    Envelope_WhiteboardList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/Whiteboard'
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    CreateWhiteboardRequest:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        data:
+          description: String or element array; defaults to an empty array.
+    UpdateWhiteboardRequest:
+      type: object
+      minProperties: 1
+      properties:
+        title: { type: string, minLength: 1, maxLength: 200 }
+        data:
+          description: String or element array.

@@ -487,7 +487,7 @@
     }
   },
   "auth": {
-    "tagline": "Lightweight collaboration for small teams",
+    "tagline": "Lightweight office collaboration for small teams",
     "login": {
       "title": "Sign in to corps",
       "pricingLink": "View pricing",
@@ -1523,7 +1523,8 @@
       "billing": "Billing",
       "analytics": "Analytics",
       "settings": "Settings",
-      "ai": "AI"
+      "ai": "AI",
+      "approvals": "Approvals"
     },
     "action": {
       "read": "R",

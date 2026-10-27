@@ -59,6 +59,18 @@ export const MODULES = [
   // 只读的含义是能看 AI 页面/历史结果，不能触发生成。此前 AI 域完全在矩阵外，
   // 154 条 permission-gate 债务里有约 35 条是它。
   "ai",
+  // 审批（approvals）：2026-10-26 从矩阵外纳入矩阵。此前 T3 未挂账里 14 条
+  // 写 handler 属本域（templates / instances / delegates / 各类动作端点），
+  // 完全落空等于“只声明不接线”。owner/admin/member 全程可写、viewer 只读，
+  // 与 AI 域同口径。member 必须含 u：approve / reject / transfer / delegate /
+  // add-sign 五个动作端点改的是既有实例状态，member 是它们的合法操作者
+  // （web/tests/integration/approval-cross-user.test.ts 的 actor 就是 member），
+  // 给 cr 会让这五个端点全 403。
+  "approvals",
+  // 实时协作基础（心跳/在线状态）：2026-10-27 纳入矩阵
+  // POST /v1/workspaces/{wid}/presence 心跳需 update（写 onlineAt）
+  // GET  /v1/workspaces/{wid}/presence 查询在线成员需 read
+  "presence",
 ] as const;
 
 /** 角色列表 */
@@ -101,6 +113,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databases: "crud",
     databaseRecords: "crud",
     ai: "crud",
+    approvals: "crud",
+    presence: "crud",
   },
   admin: {
     tasks: "crud",
@@ -118,6 +132,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databases: "crud",
     databaseRecords: "crud",
     ai: "crud",
+    approvals: "crud",
+    presence: "crud",
   },
   member: {
     tasks: "crud",
@@ -136,6 +152,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databases: "r",
     databaseRecords: "crud",
     ai: "crud",
+    approvals: "crud",
+    presence: "rud",
   },
   viewer: {
     tasks: "r",
@@ -153,6 +171,8 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     databases: "r",
     databaseRecords: "r",
     ai: "r",
+    approvals: "r",
+    presence: "r",
   },
 };
 

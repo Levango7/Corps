@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { useRouter } from "@/lib/i18n-navigation";
+import { track } from "@/lib/analytics";
 import { useTranslations } from "next-intl";
 import {
   CheckCircle2,
@@ -59,15 +60,25 @@ export default function Onboarding({
   const modalRef = useRef<HTMLDivElement>(null);
   const triggerRef = useRef<HTMLButtonElement>(null);
 
+  // 引导漏斗三步（onboarding_start / onboarding_complete / onboarding_skip）此前只在
+  // 白名单里挂着、全仓没有 emit 站点 ⇒ AC-07「15 分钟内完成首个任务」一直不可度量。
+  // taskCount 会被父组件多次刷新触发本 effect，用 ref 保证「开始」只记一次。
+  const startSentRef = useRef(false);
+
   useEffect(() => {
     const completed = localStorage.getItem(STORAGE_KEY) === "true";
     if (!completed && taskCount === 0) {
       setVisible(true);
+      if (!startSentRef.current) {
+        startSentRef.current = true;
+        track("onboarding_start", { totalSteps: TOTAL_STEPS });
+      }
     }
   }, [taskCount]);
 
   function complete() {
     localStorage.setItem(STORAGE_KEY, "true");
+    track("onboarding_complete", { step });
     setVisible(false);
     setExpanded(false);
     onDismiss();
@@ -75,6 +86,7 @@ export default function Onboarding({
 
   function skip() {
     localStorage.setItem(STORAGE_KEY, "true");
+    track("onboarding_skip", { step });
     setVisible(false);
     onDismiss();
   }

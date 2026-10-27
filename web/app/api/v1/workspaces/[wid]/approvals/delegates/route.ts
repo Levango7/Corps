@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requirePermission } from "@/lib/permissions";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
@@ -119,6 +120,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+
+  // 角色门禁：lib/permissions.ts 声明 approvals 对 viewer 仅 "r"，此前只认证不判角色。
+  const deniedRole = await requirePermission(ctx, "approvals", "create", req);
+  if (deniedRole) return deniedRole;
 
   try {
     const body = await req.json();

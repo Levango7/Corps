@@ -72,6 +72,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 
+# withRed 调用点统计的「非生产文件」排除式（模块级：self_test 要直接自测它，
+# 防止判据再次悄悄失效 —— 上一版尾巴 \.[cm]?[jt]sx?$ 曾把全部 .ts/.tsx 排除，
+# 调用点永远数 0，见 dim_observability 内注释）。
+NON_PROD_RE = re.compile(
+    r"(^|/)(tests?|e2e|__tests__|__mocks__)(/|$)|\.test\.|\.[st]pec\.|\.[cm]?jsx?$"
+)
+
 # 走路时永远跳过的目录（node_modules 会让任何全仓扫描卡死）
 SKIP_DIRS = {
     "node_modules",
@@ -581,9 +588,8 @@ def dim_observability():
     # 测试/e2e 里的调用点不算生产接线 —— 实测第一版把 red-metrics.test.ts 里的
     # 5 处 withRed( 当成了已接线，得出 5 处/目标 1 处的假绿灯。判据必须是
     # "生产代码里真的套了这个包装器"，不是"有人调过它"。
-    NON_PROD_RE = re.compile(
-        r"(^|/)(tests?|e2e|__tests__|__mocks__)(/|$)|\.[st]pec\.|\.[cm]?[jt]sx?$"
-    )
+    # 排除式 NON_PROD_RE 已提为模块级常量（self_test 自测它），修改口径时
+    # 两处必须同步。
     withred_calls = 0
     for p in walk(WEB, (".ts", ".tsx")):
         try:
@@ -598,15 +604,25 @@ def dim_observability():
         withred_calls += len(re.findall(r"\bwithRed\s*\(", t))
     metric(d + "-5", d, "RED-Rate：withRed 真实调用点数", withred_calls, " 处", 1, 0,
            lower_is_better=False,
-           note="包装器已提供但零调用点；批量套用前不算接线")
+           note="首批已接线 contacts/announcements/activity 域（2026-10-26）；按目录分批推进")
     metric(d + "-6", d, "RED-Duration：withRed 真实调用点数", withred_calls, " 处", 1, 0,
            lower_is_better=False,
-           note="与 Rate 同源（同一包装器同时记两者），仍为零")
+           note="与 Rate 同源（同一包装器同时记两者）")
 
+    # 判据只数「文件名含 SLO/SLI/可观测 的文档」——它读不懂内容，文档存在不等于口径正确。
+    # 这条局限写在这里，是防止有人拿本项分数当质量证明。
+    #
+    # 注释纠错（2026-10-27）：本项原先写着「路线图 §1.5 承诺产出」，那是**不实引用**——
+    # 路线图从来没有 §1.5（§1 只到 1.4），§5 负面清单反而写的是
+    # 「无正式实例时不对外承诺 SLO」（初版 e8ebf61 即如此，措辞为「不在无生产实例时
+    # 讨论 SLO 承诺」）。把"没做"说成"承诺了没兑现"是误导：后来人读到这里，
+    # 要么以为存在一条没还的债，要么为了把本项刷绿去造一份对外 SLO —— 那正是本项目
+    # 反复警惕的"为指标而指标"。因此口径改判为「内部口径文档是否落地」，不判阈值。
     slo = [p for p in walk(ROOT / "docs", (".md",))
            if re.search(r"SLO|SLI|可观测", p.name)]
     metric(d + "-7", d, "SLO/SLI 文档数", len(slo), " 份", 1, 0, lower_is_better=False,
-           note="路线图 §1.5 承诺产出，尚未落地")
+           note="内部口径文档（不对外的 SLI 定义）；路线图 §5 负面清单明确不承诺 SLO，"
+                "本项只判口径文档是否落地，不判目标值")
 
     exists(d + "-8", d, "监控运维 runbook", ROOT / "docs" / "runbook-monitoring.md")
 
@@ -752,6 +768,19 @@ def self_test() -> int:
             failures.append(f"{name}：期望退步 {want} 项，实得 {len(regressions)}")
         else:
             print(f"[maturity selftest] ✓ {name}")
+
+    # NON_PROD_RE 判据自检：必须放行生产路由文件、拦下测试文件。上一版把
+    # \.[cm]?[jt]sx?$ 写进排除式等价于排除全部 .ts/.tsx，withRed 调用点永远
+    # 数出 0（判据失效型假阴性）——这种错不能等人来发现，这里钉死。
+    if NON_PROD_RE.search("/app/api/v1/workspaces/[wid]/contacts/route.ts"):
+        failures.append("NON_PROD_RE 误伤生产路由文件（route.ts 被当测试排除，调用点将恒为 0）")
+    else:
+        print("[maturity selftest] ✓ 生产 route.ts 不被排除式误伤")
+    for t in ("tests/unit/red-metrics.test.ts", "lib/x.spec.ts", "lib/x.test.ts", "scripts/probe.mjs"):
+        if not NON_PROD_RE.search("/" + t):
+            failures.append(f"NON_PROD_RE 漏排除 {t}")
+        else:
+            print(f"[maturity selftest] ✓ 排除 {t}")
 
     if failures:
         print("\n[maturity selftest] ✗ 自测失败：")

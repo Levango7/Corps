@@ -4,9 +4,13 @@ import { getPaymentProviderSafe } from "@/lib/payments";
 import { expireSubscriptionIfDue } from "@/lib/billing/subscription-expiry";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET /v1/workspaces/{wid}/billing/status — 当前套餐、席位占用与订阅状态 */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getBillingStatus(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -76,3 +80,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getBillingStatus);

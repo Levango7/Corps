@@ -18,6 +18,7 @@ import {
   type Action,
 } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** DB actions（完整动作名）→ 单字符代码 */
 const ACTION_TO_CODE: Record<string, string> = {
@@ -49,7 +50,7 @@ function permsToMap(
 
 // ─── GET：返回所有角色的合并权限矩阵 ───
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getPermissions(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -133,7 +134,10 @@ const patchSchema = z.object({
   actions: z.array(z.enum(["read", "create", "update", "delete"])),
 });
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchPermissions(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -222,3 +226,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getPermissions);
+export const PATCH = withRed(patchPermissions);

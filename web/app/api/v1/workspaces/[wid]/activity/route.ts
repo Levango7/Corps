@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * M4 实时协作基础：工作区活动流 API
@@ -41,7 +42,7 @@ interface Activity {
   createdAt: string;
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getActivity(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -232,3 +233,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// ── RED 指标接线（Rate/Duration）：包装器见 lib/red-metrics.ts。
+export const GET = withRed(getActivity);

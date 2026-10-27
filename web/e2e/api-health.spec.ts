@@ -65,7 +65,7 @@ const API_HEAVY_ROUTES: readonly string[] = [
   "/settings",
 ];
 
-test.describe.serial("接口健康门禁", () => {
+test.describe("接口健康门禁", () => {
   test("渲染关键页面时 /api/v1 不得返回 5xx", async ({ page }) => {
     const wid = await registerAndLogin(page, uniqueEmail());
 

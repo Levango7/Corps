@@ -1,5 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
-import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
+import { uniqueEmail, registerAndLogin, createTask } from "./helpers";
 
 /**
  * E2E：日历集成 —— OAuth 连接 / 断开 / 同步状态 / 设置页面 / SyncBadge。
@@ -17,26 +17,26 @@ import { uniqueEmail, registerAndLogin, login, createTask } from "./helpers";
  *  - OAuth 测试不需要真实凭证：未配置 GOOGLE_CLIENT_ID 时连接按钮点击会返回 500，
  *    测试通过 mock 路由或验证重定向行为来覆盖 UI 流程
  *
- * 独立性：模块级唯一邮箱，describe.serial 保证注册先于登录。
+ * 独立性：每条用例自带账号夹具（注册即登录），互不依赖执行顺序——
+ * 所以不用 describe.serial：serial 下首条红会把整组后续用例标成 skipped，
+ * 覆盖悄悄缩水，报告里只看得到第一条红。
  */
-
-const EMAIL = uniqueEmail("e2e-cal");
 
 /** 进入日历设置页面 */
 async function gotoCalendarSettings(page: Page, wid: string): Promise<void> {
   await page.goto(`/w/${wid}/settings/calendar`);
 }
 
-test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", () => {
-  // ── 注册账号 ──
+test.describe("日历集成：设置页 + OAuth + 同步 + SyncBadge", () => {
+  // ── 注册链路本身 ──
   test("注册新账号并进入工作区", async ({ page }) => {
-    await registerAndLogin(page, EMAIL, "E2E日历工作区");
+    await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await expect(page.getByRole("heading", { name: "概览" })).toBeVisible({ timeout: 10_000 });
   });
 
   // ── 日历设置页面渲染 ──
   test("日历设置页渲染：标题/副标题/Google/Outlook 卡片", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     // 页面标题（i18n: calendar.title）
@@ -59,7 +59,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 未连接状态显示连接按钮 ──
   test("未连接时显示 Google/Outlook 连接按钮和提示文案", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     // 等待加载完成（骨架屏消失）
@@ -82,7 +82,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── OAuth 连接按钮点击行为 ──
   test("点击 Google 连接按钮触发 OAuth 重定向", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     // 等待页面加载完成
@@ -116,7 +116,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
   });
 
   test("点击 Outlook 连接按钮触发 OAuth 重定向", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     await expect(page.getByRole("button", { name: "连接 Outlook 日历" })).toBeVisible({
@@ -139,7 +139,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 同步设置区交互 ──
   test("同步设置区三个复选框可切换", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     // 等待加载完成
@@ -174,7 +174,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 同步设置持久化（localStorage）──
   test("同步设置切换后刷新页面保持状态", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     await expect(page.getByRole("heading", { name: "同步设置" })).toBeVisible({
@@ -205,7 +205,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── OAuth 回调成功参数渲染 ──
   test("OAuth 回调成功时显示连接成功提示", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     // 直接访问带 ?connected=google 参数的设置页
     await page.goto(`/w/${wid}/settings/calendar?connected=google`);
@@ -224,7 +224,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── OAuth 回调错误参数渲染 ──
   test("OAuth 回调失败时显示错误提示", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     const errorMsg = "授权被用户取消";
     await page.goto(`/w/${wid}/settings/calendar?error=${encodeURIComponent(errorMsg)}`);
@@ -242,7 +242,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 同步状态 API（未连接时返回 idle 状态）──
   test("未连接时同步状态 API 返回 disconnected 状态", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
     await gotoCalendarSettings(page, wid);
 
     // 等待页面加载完成（status API 已调用）
@@ -262,7 +262,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── CalendarSyncBadge 渲染（任务详情页）──
   test("CalendarSyncBadge 在任务详情页加载完成", async ({ page }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     // 创建任务并进入详情页（createTask 会自动导航到看板页）
     const taskTitle = `E2E日历徽章任务-${Date.now()}`;
@@ -289,7 +289,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 断开连接流程（mock 已连接状态）──
   test("已连接状态下显示断开按钮，点击后弹出确认对话框", async ({ page, context }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     // Mock calendar status API 返回已连接状态
     await context.route("**/api/v1/workspaces/*/calendar/status", async (route) => {
@@ -362,7 +362,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 立即同步按钮（已连接状态）──
   test("已连接状态下显示立即同步按钮并触发同步", async ({ page, context }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     // Mock status API 返回已连接
     await context.route("**/api/v1/workspaces/*/calendar/status", async (route) => {
@@ -432,7 +432,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 同步失败状态显示 ──
   test("同步失败时显示错误信息", async ({ page, context }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     // Mock status API 返回同步失败状态
     await context.route("**/api/v1/workspaces/*/calendar/status", async (route) => {
@@ -476,7 +476,7 @@ test.describe.serial("日历集成：设置页 + OAuth + 同步 + SyncBadge", ()
 
   // ── 最后同步时间显示 ──
   test("已连接状态显示最后同步时间", async ({ page, context }) => {
-    const wid = await login(page, EMAIL);
+    const wid = await registerAndLogin(page, uniqueEmail("e2e-cal"), "E2E日历工作区");
 
     const lastSync = new Date(Date.now() - 5 * 60 * 1000); // 5 分钟前
     await context.route("**/api/v1/workspaces/*/calendar/status", async (route) => {
