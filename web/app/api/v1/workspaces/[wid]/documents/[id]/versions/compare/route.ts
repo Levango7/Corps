@@ -6,6 +6,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { z } from "zod";
 import { diffMarkdown } from "@/lib/document-diff";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档版本对比 API · /api/v1/workspaces/{wid}/documents/{id}/versions/compare
@@ -34,7 +35,7 @@ const compareSchema = z
   });
 
 /** POST /v1/workspaces/{wid}/documents/{id}/versions/compare — 比对两个版本 */
-export async function POST(
+async function postDocumentsVersionsCompareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -171,7 +172,7 @@ export async function POST(
  * `GET .../versions/compare?from=N&to=M` 调用（组件属并行会话改动区，本批不改前端）。
  * 语义完全委托给上面的 POST，避免两份实现漂移。
  */
-export async function GET(
+async function getDocumentsVersionsCompareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -190,3 +191,7 @@ export async function GET(
   });
   return POST(forwarded, { params });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postDocumentsVersionsCompareById);
+export const GET = withRed(getDocumentsVersionsCompareById);

@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { requirePermission } from "@/lib/permissions";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档版本回滚 API · /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}/restore
@@ -38,7 +39,7 @@ type RestoreResult =
   | { kind: "ok"; snapshotVersion: number; document: unknown };
 
 /** POST /v1/workspaces/{wid}/documents/{id}/versions/{versionId}/restore — 回滚（先强制快照） */
-export async function POST(
+async function postDocumentsVersionsRestoreByIdByVersionId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; versionId: string }> },
 ) {
@@ -148,3 +149,6 @@ export async function POST(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postDocumentsVersionsRestoreByIdByVersionId);
