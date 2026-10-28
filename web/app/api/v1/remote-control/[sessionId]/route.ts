@@ -22,6 +22,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { emitSessionEvent } from "@/lib/webrtc/remote-control-events";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── Schema ────────────────────────────────────────────────────
 
@@ -88,7 +89,7 @@ function toDTO(s: {
  * - reject：目标方拒绝远程控制请求，会话状态 pending → rejected
  * - end：任一参与方结束会话，会话状态 active → ended
  */
-export async function PATCH(
+async function patchRemoteControlBySessionId(
   req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
@@ -315,7 +316,7 @@ export async function PATCH(
  * 结束远程控制会话。任一参与方可调用。
  * 等价于 PATCH { action: "end" }。
  */
-export async function DELETE(
+async function deleteRemoteControlBySessionId(
   req: NextRequest,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
@@ -432,3 +433,7 @@ export async function DELETE(
     );
   }
 }
+
+export const PATCH = withRed(patchRemoteControlBySessionId);
+
+export const DELETE = withRed(deleteRemoteControlBySessionId);

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 真实健康检查（而非静态 200）：
@@ -9,7 +10,7 @@ import { logger } from "@/lib/logger";
  * 是否真正可用——若只返回静态 JSON，DB 未就绪时容器也会被判定 healthy，
  * 流量会被路由到一个必然报错的实例。因此这里真实执行一条 SELECT 1 探测。
  */
-export async function GET(req: NextRequest) {
+async function getHealth(req: NextRequest) {
   // Promise.race：DB 探测与 2 秒超时赛跑，防止 DB 挂起时 healthcheck 长时间阻塞
   const TIMEOUT_MS = 2_000;
   try {
@@ -42,3 +43,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getHealth);

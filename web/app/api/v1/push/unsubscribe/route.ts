@@ -8,13 +8,14 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { runWithUserContext } from "@/lib/auth";
+import { withRed } from "@/lib/red-metrics";
 
 const unsubscribeSchema = z.object({
   endpoint: z.string().url(),
 });
 
 /** POST /api/v1/push/unsubscribe — 注销 Web Push 订阅 */
-export async function POST(req: NextRequest) {
+async function postPushUnsubscribe(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -59,3 +60,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postPushUnsubscribe);

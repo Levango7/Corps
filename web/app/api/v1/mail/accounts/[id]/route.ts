@@ -17,6 +17,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { encodeCredential } from "@/lib/mail/transporter";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** PATCH 更新账户 schema（所有字段可选，wid 必填用于鉴权） */
 const patchSchema = z.object({
@@ -39,7 +40,7 @@ const deleteQuerySchema = z.object({
  *
  * 仅允许账户所有者更新。credential 若提供则重新 Base64 编码。
  */
-export async function PATCH(
+async function patchMailAccountsById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -162,7 +163,7 @@ export async function PATCH(
  *
  * 仅允许账户所有者删除。关联的 Mail 记录因 onDelete: Cascade 自动级联删除。
  */
-export async function DELETE(
+async function deleteMailAccountsById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -249,3 +250,7 @@ export async function DELETE(
     );
   }
 }
+
+export const PATCH = withRed(patchMailAccountsById);
+
+export const DELETE = withRed(deleteMailAccountsById);

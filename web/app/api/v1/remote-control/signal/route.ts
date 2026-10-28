@@ -19,6 +19,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
+import { withRed } from "@/lib/red-metrics";
   emitSignalingMessage,
   subscribeSignalingMessages,
   type SignalingEnvelope,
@@ -52,7 +53,7 @@ function sseHeartbeat(): Uint8Array {
  * 建立 SSE 长连接，接收发给当前用户的信令消息。
  * 客户端用 EventSource 订阅，收到 message 事件后按 type 分发处理。
  */
-export async function GET(req: NextRequest) {
+async function getRemoteControlSignal(req: NextRequest) {
   // 1) 连接建立限流
   const limited = await checkRateLimit(req, "rc-sse", {
     windowMs: 60_000,
@@ -182,7 +183,7 @@ const signalMessageSchema = z.object({
  *
  * Body: SignalingMessage（见 lib/webrtc/signaling.ts）
  */
-export async function POST(req: NextRequest) {
+async function postRemoteControlSignal(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -331,3 +332,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getRemoteControlSignal);
+
+export const POST = withRed(postRemoteControlSignal);

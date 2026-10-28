@@ -13,6 +13,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── 类型定义 ──────────────────────────────────────────────────────────────────
 
@@ -59,7 +60,7 @@ function isCurrentApprover(nodes: unknown, currentNode: number, userId: string):
  *
  * 返回当前用户在指定工作区的待办计数。
  */
-export async function GET(req: NextRequest) {
+async function getTodosCount(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -175,3 +176,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getTodosCount);

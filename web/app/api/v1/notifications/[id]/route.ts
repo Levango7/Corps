@@ -18,6 +18,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 查询参数 schema（workspaceId 用于 RLS 上下文） */
 const querySchema = z.object({
@@ -34,7 +35,7 @@ const patchSchema = z.object({
  *
  * 标记通知已读/未读。先验证通知属于当前用户 + 工作区，再更新。
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function patchNotificationsById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -156,7 +157,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
  *
  * 删除通知。先验证通知属于当前用户 + 工作区，再删除。
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function deleteNotificationsById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -235,3 +236,7 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     );
   }
 }
+
+export const PATCH = withRed(patchNotificationsById);
+
+export const DELETE = withRed(deleteNotificationsById);

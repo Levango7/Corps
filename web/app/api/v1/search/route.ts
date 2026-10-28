@@ -32,6 +32,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** query 参数校验 schema */
 const searchSchema = z.object({
@@ -118,7 +119,7 @@ WHERE w.workspace_id = $2
 ORDER BY rank DESC, w.updated_at DESC
 LIMIT $3`;
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function getSearch(req: NextRequest): Promise<NextResponse> {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -248,3 +249,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+export const GET = withRed(getSearch);
