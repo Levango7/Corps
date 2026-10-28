@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 独立 IM 会话详情 API（任务 212）
@@ -28,7 +29,7 @@ const RECENT_MESSAGES_TAKE = 50;
  *
  * 验证当前用户是该会话成员，返回会话信息（含成员列表、最近 50 条消息）。
  */
-export async function GET(
+async function getConversationsByCid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -109,7 +110,7 @@ const updateConversationSchema = z.object({
  *
  * 仅 owner/admin 可操作。请求体：{ title?, avatar?, description? }
  */
-export async function PATCH(
+async function patchConversationsByCid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -204,7 +205,7 @@ export async function PATCH(
  * - 普通成员：退出会话（删除自己的 ConversationMember）
  * - 群聊最后一人退出时自动删除会话
  */
-export async function DELETE(
+async function deleteConversationsByCid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -270,3 +271,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getConversationsByCid);
+export const PATCH = withRed(patchConversationsByCid);
+export const DELETE = withRed(deleteConversationsByCid);

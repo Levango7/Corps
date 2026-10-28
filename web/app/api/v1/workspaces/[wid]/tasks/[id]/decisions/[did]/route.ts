@@ -5,6 +5,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const updateDecisionSchema = z.object({
   markdown: z.string().min(1).max(50000),
@@ -19,7 +20,7 @@ const FREE_DECISION_LIMIT = 10;
  * 乐观并发：baseVersion 不等于当前版本时返回 409，拒绝静默覆盖他人修改。
  * 每次编辑同时追加一条 decision_versions 历史行（AC-10 版本留痕）。
  */
-export async function PATCH(
+async function patchTasksDecisionsByIdByDid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; did: string }> },
 ) {
@@ -159,3 +160,6 @@ export async function PATCH(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchTasksDecisionsByIdByDid);

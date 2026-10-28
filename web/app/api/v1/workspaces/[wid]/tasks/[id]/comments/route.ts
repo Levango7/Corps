@@ -8,9 +8,10 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { trackServerEvent } from "@/lib/analytics-server";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/comments — 评论时间线（正序） */
-export async function GET(
+async function getTasksCommentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -49,7 +50,7 @@ const createCommentSchema = z.object({
   mentions: z.array(z.string().uuid()).optional(),
 });
 
-export async function POST(
+async function postTasksCommentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -227,7 +228,7 @@ const deleteCommentSchema = z.object({
  * DELETE /v1/workspaces/{wid}/tasks/{id}/comments — 删除评论
  * 权限：评论作者本人或工作区 owner/admin
  */
-export async function DELETE(
+async function deleteTasksCommentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -305,7 +306,7 @@ const patchCommentSchema = z.object({
  * PATCH /v1/workspaces/{wid}/tasks/{id}/comments — 编辑评论内容
  * 权限：评论作者本人或工作区 owner/admin
  */
-export async function PATCH(
+async function patchTasksCommentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -377,3 +378,9 @@ export async function PATCH(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksCommentsById);
+export const POST = withRed(postTasksCommentsById);
+export const DELETE = withRed(deleteTasksCommentsById);
+export const PATCH = withRed(patchTasksCommentsById);

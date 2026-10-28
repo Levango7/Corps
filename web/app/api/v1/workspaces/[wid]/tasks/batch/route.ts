@@ -6,6 +6,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { deleteTaskFiles } from "@/lib/uploads-cleanup";
 import { trackServerEvent } from "@/lib/analytics-server";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/v1/workspaces/:wid/tasks/batch — 任务批量操作。
@@ -37,7 +38,7 @@ const batchSchema = z.object({
   dueDate: z.string().datetime().nullable().optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postTasksBatch(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -173,3 +174,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postTasksBatch);
