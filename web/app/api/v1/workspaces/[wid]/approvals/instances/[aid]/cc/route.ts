@@ -5,13 +5,14 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { notifyUsers } from "@/lib/notification/record";
+import { withRed } from "@/lib/red-metrics";
 
 const ccSchema = z.object({
   ccUserIds: z.array(z.string().uuid()).min(1).max(50),
   nodeIndex: z.number().int().min(0).optional(),
 });
 
-export async function POST(
+async function postApprovalsInstancesCcByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -117,7 +118,7 @@ export async function POST(
  * 抄送列表读取端。此前本路由只有 POST，而 ApprovalDetail.tsx 用无 method 的
  * `api<CcUser[]>()` 去读 ⇒ 恒 405，并被调用点的 catch 吞成"没有抄送人"。
  */
-export async function GET(
+async function getApprovalsInstancesCcByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -174,3 +175,7 @@ export async function GET(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postApprovalsInstancesCcByAid);
+export const GET = withRed(getApprovalsInstancesCcByAid);

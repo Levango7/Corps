@@ -6,6 +6,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { notifyUsers } from "@/lib/notification/record";
 import { applyPermissionOnApproval } from "@/lib/approval/permission-linkage";
+import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
 interface ApprovalNode {
@@ -33,7 +34,7 @@ const approveSchema = z.object({
  * 检查当前用户是否是当前节点的审批人，创建 ApprovalOperation(action="approve")，
  * 推进 currentNode（最后一个节点则 status="approved", completedAt=now）
  */
-export async function POST(
+async function postApprovalsInstancesApproveByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -228,3 +229,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postApprovalsInstancesApproveByAid);

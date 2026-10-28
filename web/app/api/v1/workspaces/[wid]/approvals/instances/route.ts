@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点配置 schema */
 const approvalNodeSchema = z.object({
@@ -69,7 +70,10 @@ const createInstanceSchema = z.object({
  * mine=1 时只返回当前用户发起的，按 submittedAt 倒序
  * pendingMine=1 时只返回当前用户是当前节点审批人且状态为 pending 的实例
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getApprovalsInstances(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -186,7 +190,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
  * 有 templateId 则从模板复制 nodes 快照；否则用 body 中的 nodes
  * applicantId 设为当前用户，status="pending", currentNode=0
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postApprovalsInstances(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -304,3 +311,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getApprovalsInstances);
+export const POST = withRed(postApprovalsInstances);

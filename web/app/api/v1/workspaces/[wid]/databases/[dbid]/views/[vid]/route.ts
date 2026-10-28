@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 多维表格视图详情 API · /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}
@@ -20,7 +21,7 @@ const updateViewSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/databases/{dbid}/views/{vid} — 更新视图（仅 owner/admin） */
-export async function PATCH(
+async function patchDatabasesViewsByDbidByVid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string; vid: string }> },
 ) {
@@ -104,7 +105,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/databases/{dbid}/views/{vid} — 删除视图（仅 owner/admin） */
-export async function DELETE(
+async function deleteDatabasesViewsByDbidByVid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string; vid: string }> },
 ) {
@@ -161,3 +162,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchDatabasesViewsByDbidByVid);
+export const DELETE = withRed(deleteDatabasesViewsByDbidByVid);

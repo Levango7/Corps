@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 多维表格记录 API · /api/v1/workspaces/{wid}/databases/{dbid}/records
@@ -20,7 +21,7 @@ import { apiMsg } from "@/lib/api-messages";
  */
 
 /** GET /v1/workspaces/{wid}/databases/{dbid}/records — 列出记录（分页 + 筛选 + 排序） */
-export async function GET(
+async function getDatabasesRecordsByDbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string }> },
 ) {
@@ -207,7 +208,7 @@ const createRecordSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/databases/{dbid}/records — 创建记录（member 可写） */
-export async function POST(
+async function postDatabasesRecordsByDbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string }> },
 ) {
@@ -284,3 +285,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDatabasesRecordsByDbid);
+export const POST = withRed(postDatabasesRecordsByDbid);
