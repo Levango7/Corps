@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点配置 schema */
 const approvalNodeSchema = z.object({
@@ -23,7 +24,7 @@ const updateTemplateSchema = z.object({
 /**
  * GET /v1/workspaces/{wid}/approvals/templates/{tid} — 模板详情
  */
-export async function GET(
+async function getApprovalsTemplatesByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -64,7 +65,7 @@ export async function GET(
  * PATCH /v1/workspaces/{wid}/approvals/templates/{tid} — 更新模板
  * 仅 admin/owner 可操作。Body: { name?, description?, nodes?, active? }
  */
-export async function PATCH(
+async function patchApprovalsTemplatesByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -142,7 +143,7 @@ export async function PATCH(
  * DELETE /v1/workspaces/{wid}/approvals/templates/{tid} — 软删除模板
  * 仅 admin/owner 可操作。设 active=false（不物理删除，保留历史审批实例引用）
  */
-export async function DELETE(
+async function deleteApprovalsTemplatesByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -192,3 +193,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getApprovalsTemplatesByTid);
+export const PATCH = withRed(patchApprovalsTemplatesByTid);
+export const DELETE = withRed(deleteApprovalsTemplatesByTid);

@@ -14,6 +14,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContextV2, runWithUserContext, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const CATEGORY_VALUES = ["project", "meeting", "review", "onboarding", "custom"] as const;
 
@@ -68,7 +69,10 @@ async function loadAccessibleTemplate(
 }
 
 /** GET /api/v1/ai/templates/{id} */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function getAiTemplatesById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -98,7 +102,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ id: 
 }
 
 /** PATCH /api/v1/ai/templates/{id} */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function patchAiTemplatesById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -173,7 +180,10 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
 }
 
 /** DELETE /api/v1/ai/templates/{id} */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function deleteAiTemplatesById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -215,3 +225,8 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ i
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiTemplatesById);
+export const PATCH = withRed(patchAiTemplatesById);
+export const DELETE = withRed(deleteAiTemplatesById);

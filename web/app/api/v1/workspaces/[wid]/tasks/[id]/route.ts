@@ -12,6 +12,7 @@ import { requirePermission } from "@/lib/permissions";
 // M4 实时协作：任务变更/删除后通过 workspace-events 总线广播事件，
 // SSE 端点 /events/stream 订阅者（看板/详情页）实时刷新。
 import { emitWorkspaceEvent } from "@/lib/workspace-events";
+import { withRed } from "@/lib/red-metrics";
 
 const updateTaskSchema = z.object({
   title: z.string().min(1).max(255).optional(),
@@ -28,7 +29,7 @@ const updateTaskSchema = z.object({
 });
 
 /** GET /v1/workspaces/{wid}/tasks/{id} — 任务详情（详情页首屏） */
-export async function GET(
+async function getTasksById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -87,7 +88,7 @@ export async function GET(
   }
 }
 
-export async function PATCH(
+async function patchTasksById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -295,7 +296,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function deleteTasksById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -361,3 +362,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksById);
+export const PATCH = withRed(patchTasksById);
+export const DELETE = withRed(deleteTasksById);

@@ -5,6 +5,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
 import { getDefaultLayout, type RGLItem } from "@/lib/default-layouts";
 import { extractPref } from "@/lib/dashboard-layout-helpers";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * F3 Widget 仪表盘 — 布局导出 API。
@@ -17,7 +18,10 @@ import { authFailure } from "@/lib/auth-response";
  *
  * 认证：getWorkspaceContextV2 校验成员身份 + 注入 RLS。
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getDashboardLayoutExport(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -67,3 +71,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDashboardLayoutExport);

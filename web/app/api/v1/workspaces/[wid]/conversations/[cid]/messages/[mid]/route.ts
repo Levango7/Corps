@@ -6,6 +6,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { imManager } from "@/lib/im/ws-server";
 import type { ServerMessage } from "@/lib/im/types";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 独立 IM 单条消息 API（任务 213）
@@ -45,7 +46,7 @@ const editMessageSchema = z.object({
  * 权限：仅消息作者可编辑自己的消息，且消息未被撤回，5 分钟内可编辑。
  * 更新 body + editedAt = now()，WebSocket 广播 edit 事件。
  */
-export async function PATCH(
+async function patchConversationsMessagesByCidByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string; mid: string }> },
 ) {
@@ -181,7 +182,7 @@ export async function PATCH(
  * 更新 revokedAt + revokedBy，WebSocket 广播 revoke 事件。
  * 返回的消息 body 已清空。
  */
-export async function DELETE(
+async function deleteConversationsMessagesByCidByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string; mid: string }> },
 ) {
@@ -302,3 +303,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchConversationsMessagesByCidByMid);
+export const DELETE = withRed(deleteConversationsMessagesByCidByMid);

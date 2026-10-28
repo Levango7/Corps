@@ -5,11 +5,12 @@ import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/objectives/{oid}/key-results — 关键结果列表
  */
-export async function GET(
+async function getObjectivesKeyResultsByOid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string }> },
 ) {
@@ -93,7 +94,7 @@ const createSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/objectives/{oid}/key-results — 创建关键结果并重算父目标进度 */
-export async function POST(
+async function postObjectivesKeyResultsByOid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string }> },
 ) {
@@ -180,3 +181,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getObjectivesKeyResultsByOid);
+export const POST = withRed(postObjectivesKeyResultsByOid);

@@ -4,11 +4,12 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/calendar/events/{eventId} — 日历事件详情
  */
-export async function GET(
+async function getCalendarEventsByEventId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; eventId: string }> },
 ) {
@@ -73,7 +74,7 @@ const updateSchema = z.object({
   color: z.string().max(20).optional(),
 });
 
-export async function PATCH(
+async function patchCalendarEventsByEventId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; eventId: string }> },
 ) {
@@ -166,7 +167,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/calendar/events/{eventId} — 删除日历事件 */
-export async function DELETE(
+async function deleteCalendarEventsByEventId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; eventId: string }> },
 ) {
@@ -211,3 +212,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getCalendarEventsByEventId);
+export const PATCH = withRed(patchCalendarEventsByEventId);
+export const DELETE = withRed(deleteCalendarEventsByEventId);

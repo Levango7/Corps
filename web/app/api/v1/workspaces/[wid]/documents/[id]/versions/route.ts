@@ -5,6 +5,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档版本历史 API · /api/v1/workspaces/{wid}/documents/{id}/versions
@@ -20,7 +21,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
  */
 
 /** GET /v1/workspaces/{wid}/documents/{id}/versions — 版本历史列表（分页） */
-export async function GET(
+async function getDocumentsVersionsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -123,7 +124,7 @@ const createVersionSchema = z.object({
  *  权限：工作区成员均可创建版本（documents 模块 create 权限）
  *  语义：对文档当前 markdown 创建版本快照，版本号自增
  */
-export async function POST(
+async function postDocumentsVersionsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -220,3 +221,7 @@ export async function POST(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsVersionsById);
+export const POST = withRed(postDocumentsVersionsById);

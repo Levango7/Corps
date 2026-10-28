@@ -15,6 +15,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { prisma } from "@/lib/prisma";
+import { withRed } from "@/lib/red-metrics";
 
 /** PATCH 更新 schema（所有字段可选） */
 const updateSchema = z.object({
@@ -42,7 +43,7 @@ interface PreferenceResult {
  *
  * 获取当前用户语音偏好。如不存在则创建默认记录（upsert）。
  */
-export async function GET(req: NextRequest) {
+async function getAiVoicePreferences(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -93,7 +94,7 @@ export async function GET(req: NextRequest) {
  *
  * 更新当前用户语音偏好。仅更新提供的字段（partial update）。
  */
-export async function PATCH(req: NextRequest) {
+async function patchAiVoicePreferences(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -167,3 +168,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiVoicePreferences);
+export const PATCH = withRed(patchAiVoicePreferences);

@@ -13,6 +13,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 行动项合法状态枚举 */
 const ACTION_STATUS_VALUES = ["pending", "completed", "skipped"] as const;
@@ -48,7 +49,7 @@ const updateSchema = z.object({
  *
  * 返回指定会话的行动项列表（按创建时间升序），可选 status 过滤。
  */
-export async function GET(req: NextRequest) {
+async function getAiMeetingsSessionsActionsById(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -144,7 +145,7 @@ export async function GET(req: NextRequest) {
  *
  * 更新指定行动项的状态（completed / skipped / pending）。
  */
-export async function PATCH(req: NextRequest) {
+async function patchAiMeetingsSessionsActionsById(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -243,3 +244,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiMeetingsSessionsActionsById);
+export const PATCH = withRed(patchAiMeetingsSessionsActionsById);

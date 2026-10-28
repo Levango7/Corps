@@ -3,11 +3,12 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/meetings/{mid} — 会议详情（含 participants 关联）
  */
-export async function GET(
+async function getMeetingsByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -80,7 +81,7 @@ const updateMeetingSchema = z.object({
   password: z.string().max(100).nullable().optional(),
 });
 
-export async function PATCH(
+async function patchMeetingsByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -177,7 +178,7 @@ export async function PATCH(
  * 设置 status="ended", endedAt=now
  * 仅 host/创建者或 admin/owner 可操作
  */
-export async function DELETE(
+async function deleteMeetingsByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -249,3 +250,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getMeetingsByMid);
+export const PATCH = withRed(patchMeetingsByMid);
+export const DELETE = withRed(deleteMeetingsByMid);

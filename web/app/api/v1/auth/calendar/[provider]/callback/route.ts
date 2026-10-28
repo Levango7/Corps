@@ -10,6 +10,7 @@ import {
 import { getPrimaryCalendarId as getGooglePrimaryCalendarId } from "@/lib/calendar/google-client";
 import { getPrimaryCalendarId as getOutlookPrimaryCalendarId } from "@/lib/calendar/outlook-client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/v1/auth/calendar/[provider]/callback
@@ -23,7 +24,10 @@ import { apiMsg } from "@/lib/api-messages";
  *  5. 加密存储 token，upsert CalendarConnection（同 userId+provider 唯一）
  *  6. 重定向回 /w/{wid}/settings/calendar
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
+async function getAuthCalendarCallbackByProvider(
+  req: NextRequest,
+  { params }: { params: Promise<{ provider: string }> },
+) {
   const { provider } = await params;
   const url = new URL(req.url);
   const code = url.searchParams.get("code");
@@ -133,3 +137,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAuthCalendarCallbackByProvider);

@@ -5,6 +5,7 @@ import { authFailure } from "@/lib/auth-response";
 import { emitChatEvent } from "@/lib/chat-events";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/tasks/{id}/messages/send — 发送聊天消息（含 SSE 推送）
@@ -46,7 +47,7 @@ const sendMessageSchema = z.object({
   attachments: z.array(attachmentSchema).optional(),
 });
 
-export async function POST(
+async function postTasksMessagesSendById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -158,3 +159,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postTasksMessagesSendById);

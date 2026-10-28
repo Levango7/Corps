@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { cachedQuery } from "@/lib/cache";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 里程碑 API · /api/v1/workspaces/{wid}/milestones
@@ -11,7 +12,7 @@ import { authFailure } from "@/lib/auth-response";
  * - GET：列出当前工作区所有里程碑（按创建时间正序）
  * - POST：创建新里程碑（仅 owner/admin）
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getMilestones(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -58,7 +59,7 @@ const createMilestoneSchema = z.object({
   description: z.string().max(2000).optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postMilestones(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -117,7 +118,10 @@ const deleteMilestoneSchema = z.object({
  * DELETE /v1/workspaces/{wid}/milestones — 删除里程碑
  * 权限：仅 owner/admin
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function deleteMilestones(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -185,7 +189,7 @@ const patchMilestoneSchema = z.object({
  * PATCH /v1/workspaces/{wid}/milestones — 编辑里程碑名称/截止日期/描述
  * 权限：仅 owner/admin
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchMilestones(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -262,3 +266,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getMilestones);
+export const POST = withRed(postMilestones);
+export const DELETE = withRed(deleteMilestones);
+export const PATCH = withRed(patchMilestones);

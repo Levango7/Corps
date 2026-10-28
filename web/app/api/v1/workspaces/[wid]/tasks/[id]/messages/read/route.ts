@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { emitChatEvent } from "@/lib/chat-events";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * PATCH /v1/workspaces/{wid}/tasks/{id}/messages/read — 批量标记消息已读
@@ -27,7 +28,7 @@ const markReadSchema = z.object({
   messageIds: z.array(z.string().uuid()).min(1).max(100),
 });
 
-export async function PATCH(
+async function patchTasksMessagesReadById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -119,3 +120,6 @@ export async function PATCH(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchTasksMessagesReadById);

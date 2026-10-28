@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const startSchema = z.object({
   taskId: z.string().uuid().optional(),
@@ -18,7 +19,10 @@ const startSchema = z.object({
  * 若当前用户已有未停止的计时（endTime=null），返回 409
  * 返回创建的 TimeEntry
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postTimeEntriesStart(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -98,3 +102,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postTimeEntriesStart);

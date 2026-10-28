@@ -4,13 +4,14 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/forms/{fid}/submissions — 表单提交列表
  * Query: ?take=&skip= 分页
  * 返回按 submittedAt 降序
  */
-export async function GET(
+async function getFormsSubmissionsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -97,7 +98,7 @@ const createSubmissionSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/forms/{fid}/submissions — 提交表单 */
-export async function POST(
+async function postFormsSubmissionsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -170,3 +171,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getFormsSubmissionsByFid);
+export const POST = withRed(postFormsSubmissionsByFid);

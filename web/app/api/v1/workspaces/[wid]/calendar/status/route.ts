@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, withGuc } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 连接状态响应 */
 interface ConnectionStatus {
@@ -17,7 +18,10 @@ interface ConnectionStatus {
  * GET /api/v1/workspaces/{wid}/calendar/status
  * 获取当前用户的日历连接状态 + 同步状态（用于设置页面渲染）。
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getCalendarStatus(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -68,3 +72,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getCalendarStatus);

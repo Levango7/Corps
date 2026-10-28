@@ -5,6 +5,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/documents — 工作区文档列表
@@ -12,7 +13,7 @@ import { apiMsg } from "@/lib/api-messages";
  *        ?mine=1（仅我作为作者的）
  * 返回按 updatedAt 倒序
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getDocuments(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -144,7 +145,7 @@ const listDocsQuerySchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/documents — 新建文档 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postDocuments(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -198,3 +199,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocuments);
+export const POST = withRed(postDocuments);

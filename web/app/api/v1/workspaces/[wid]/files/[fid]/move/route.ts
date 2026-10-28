@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 云盘文件移动 API · /api/v1/workspaces/{wid}/files/{fid}/move
@@ -20,7 +21,7 @@ const moveFileSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/files/{fid}/move — 移动文件到指定文件夹 */
-export async function PATCH(
+async function patchFilesMoveByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -93,3 +94,6 @@ export async function PATCH(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchFilesMoveByFid);

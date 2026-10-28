@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** templateData 结构（与列表路由一致，用于 PATCH 校验） */
 const templateDataSchema = z.object({
@@ -23,7 +24,7 @@ const templateDataSchema = z.object({
 /**
  * GET /v1/workspaces/{wid}/project-templates/{tid} — 获取单个模板详情
  */
-export async function GET(
+async function getProjectTemplatesByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -73,7 +74,7 @@ const updateTemplateSchema = z.object({
   isPublic: z.boolean().optional(),
 });
 
-export async function PATCH(
+async function patchProjectTemplatesByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -145,7 +146,7 @@ export async function PATCH(
 /**
  * DELETE /v1/workspaces/{wid}/project-templates/{tid} — 删除模板
  */
-export async function DELETE(
+async function deleteProjectTemplatesByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -186,3 +187,8 @@ export async function DELETE(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getProjectTemplatesByTid);
+export const PATCH = withRed(patchProjectTemplatesByTid);
+export const DELETE = withRed(deleteProjectTemplatesByTid);

@@ -5,6 +5,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档评论 API · /api/v1/workspaces/{wid}/documents/{id}/comments
@@ -19,7 +20,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
  */
 
 /** GET /v1/workspaces/{wid}/documents/{id}/comments — 评论列表（含讨论线程） */
-export async function GET(
+async function getDocumentsCommentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -95,7 +96,7 @@ const createCommentSchema = z.object({
 /** POST /v1/workspaces/{wid}/documents/{id}/comments — 创建批注
  *  权限：工作区成员均可创建评论（documents 模块 create 权限）
  */
-export async function POST(
+async function postDocumentsCommentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -215,3 +216,7 @@ export async function POST(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsCommentsById);
+export const POST = withRed(postDocumentsCommentsById);

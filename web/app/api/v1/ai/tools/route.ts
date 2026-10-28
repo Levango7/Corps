@@ -11,8 +11,9 @@ import { apiMsg } from "@/lib/api-messages";
 import { toolRegistry } from "@/lib/ai/tools/registry";
 // 触发内置工具自注册（模块 import 时 registerBuiltinTools() 执行）
 import "@/lib/ai/tools/builtins";
+import { withRed } from "@/lib/red-metrics";
 
-export async function GET(req: NextRequest) {
+async function getAiTools(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -37,3 +38,6 @@ export async function GET(req: NextRequest) {
     message: apiMsg(req, "ok"),
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiTools);

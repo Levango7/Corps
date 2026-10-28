@@ -14,6 +14,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法角色枚举（与 schema 注释保持一致） */
 const ROLE_VALUES = ["task_breaker", "doc_writer", "follow_upper", "analyst"] as const;
@@ -48,7 +49,7 @@ function extractId(req: NextRequest): string | null {
  *
  * 更新指定 Agent 的部分字段（所有字段可选，仅更新传入字段）。
  */
-export async function PATCH(req: NextRequest) {
+async function patchAiAgentsById(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -172,7 +173,7 @@ export async function PATCH(req: NextRequest) {
  *
  * 删除指定 Agent（级联删除相关消息）。
  */
-export async function DELETE(req: NextRequest) {
+async function deleteAiAgentsById(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -232,3 +233,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchAiAgentsById);
+export const DELETE = withRed(deleteAiAgentsById);

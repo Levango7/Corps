@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 独立 IM 会话单个成员管理 API（任务 212）
@@ -20,7 +21,7 @@ import { apiMsg } from "@/lib/api-messages";
  *
  * 群聊最后一人退出时自动删除会话。
  */
-export async function DELETE(
+async function deleteConversationsMembersByCidByUid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string; uid: string }> },
 ) {
@@ -149,7 +150,7 @@ const updateMemberSchema = z
  *  - 若将他人设为 owner，当前 owner 自动降级为 admin（所有权转让）
  *  - 不能修改自己的角色（owner 通过转让所有权变更，而非直接改自己）
  */
-export async function PATCH(
+async function patchConversationsMembersByCidByUid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string; uid: string }> },
 ) {
@@ -281,3 +282,7 @@ export async function PATCH(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const DELETE = withRed(deleteConversationsMembersByCidByUid);
+export const PATCH = withRed(patchConversationsMembersByCidByUid);

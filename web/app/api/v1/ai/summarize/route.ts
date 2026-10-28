@@ -15,6 +15,7 @@ import {
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   text: z.string().min(1).max(20_000),
@@ -23,7 +24,7 @@ const schema = z.object({
 const SYSTEM_PROMPT =
   "你是文档摘要助手。将用户选中的文本生成简洁摘要。摘要应当：1）保留核心观点和关键信息 2）使用要点列表格式 3）每个要点不超过一行 4）总长度不超过原文的30%。输出 markdown 格式。";
 
-export async function POST(req: NextRequest) {
+async function postAiSummarize(req: NextRequest) {
   // 1) 认证 + 获取 workspaceId（用于 usage tracking）
   const authCtx = await getUserIdAndWorkspaceId(req);
   if (!authCtx) return unauthorizedResponse(req);
@@ -84,3 +85,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiSummarize);

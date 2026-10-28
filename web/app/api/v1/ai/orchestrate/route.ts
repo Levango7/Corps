@@ -34,6 +34,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { getWorkspaceContextV2 } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── POST schema：生成联动方案 ───
 const postSchema = z.object({
@@ -68,7 +69,7 @@ const patchSchema = z.object({
  *
  * 认证 → AI 配置检查 → 速率限制 → body 校验 → 工作区上下文校验 → suggestOrchestration
  */
-export async function POST(req: NextRequest) {
+async function postAiOrchestrate(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -162,7 +163,7 @@ export async function POST(req: NextRequest) {
  * 认证 → AI 配置检查 → 速率限制 → body 校验 → 工作区上下文校验 → executeOrchestration
  * 操作在 RLS 事务内原子执行（任一失败全部回滚）。
  */
-export async function PATCH(req: NextRequest) {
+async function patchAiOrchestrate(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -284,3 +285,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiOrchestrate);
+export const PATCH = withRed(patchAiOrchestrate);

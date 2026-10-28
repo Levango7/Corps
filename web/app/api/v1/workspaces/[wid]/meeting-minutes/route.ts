@@ -4,13 +4,17 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import type { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/meeting-minutes — 工作区会议纪要列表
  * Query: ?page=1&limit=20&meetingId=<uuid>（可选，按会议过滤）
  * 返回按 createdAt 倒序，统一分页格式 { items, page, limit, total, hasMore }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getMeetingMinutes(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -128,7 +132,10 @@ const createMinutesSchema = z.object({
   actionItems: z.array(actionItemSchema).default([]),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postMeetingMinutes(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -185,3 +192,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getMeetingMinutes);
+export const POST = withRed(postMeetingMinutes);

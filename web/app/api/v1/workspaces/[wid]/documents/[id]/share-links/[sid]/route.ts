@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { hash as hashPassword } from "@/lib/crypto";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 分享链接增强 API — 单条操作（任务 443）
@@ -70,7 +71,7 @@ const updateShareLinkSchema = z.object({
 /**
  * PATCH /v1/workspaces/{wid}/documents/{id}/share-links/{sid} — 更新分享链接配置
  */
-export async function PATCH(
+async function patchDocumentsShareLinksByIdBySid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; sid: string }> },
 ) {
@@ -184,7 +185,7 @@ export async function PATCH(
 /**
  * DELETE /v1/workspaces/{wid}/documents/{id}/share-links/{sid} — 撤销分享链接
  */
-export async function DELETE(
+async function deleteDocumentsShareLinksByIdBySid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; sid: string }> },
 ) {
@@ -248,3 +249,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchDocumentsShareLinksByIdBySid);
+export const DELETE = withRed(deleteDocumentsShareLinksByIdBySid);

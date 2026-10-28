@@ -5,6 +5,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { checkDocumentPermission } from "@/lib/document-permission-check";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/documents/batch-permissions — 批量授权
@@ -33,7 +34,10 @@ const batchPermissionSchema = z.object({
 /** 工作区中有效的角色名 */
 const VALID_ROLES = new Set(["owner", "admin", "member", "viewer"]);
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postDocumentsBatchPermissions(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -179,3 +183,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postDocumentsBatchPermissions);

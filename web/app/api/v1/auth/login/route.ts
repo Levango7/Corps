@@ -8,6 +8,7 @@ import { apiMsg, apiLocale } from "@/lib/api-messages";
 import { zodMessage, zodFieldErrors } from "@/lib/zod-i18n";
 
 import { checkRateLimit } from "@/lib/rate-limit";
+import { withRed } from "@/lib/red-metrics";
 
 const loginSchema = z.object({
   email: z.string().email(),
@@ -17,7 +18,7 @@ const loginSchema = z.object({
   wid: z.string().uuid().optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function postAuthLogin(req: NextRequest) {
   // 限流：单 IP 每分钟最多 10 次，防撞库 / 暴力破解
   const limited = await checkRateLimit(req, "login", { windowMs: 60_000, max: 10 });
   if (limited) return limited;
@@ -145,3 +146,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAuthLogin);
