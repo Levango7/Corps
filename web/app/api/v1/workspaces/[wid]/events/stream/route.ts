@@ -10,6 +10,7 @@ import {
   type WorkspaceEvent,
 } from "@/lib/workspace-events";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/events/stream — 工作区级 SSE 实时推送
@@ -49,7 +50,7 @@ function sseHeartbeatFrame(): Uint8Array {
   return encoder.encode(`: heartbeat\n\n`);
 }
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getEventsStream(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   // SSE 连接建立限流：每客户端每分钟最多 20 次连接建立
   const limited = await checkRateLimit(req, "sse", { windowMs: 60_000, max: 20 });
   if (limited) return limited;
@@ -150,3 +151,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     },
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getEventsStream);

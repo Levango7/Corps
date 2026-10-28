@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 决策列表 API（跨任务聚合）
@@ -29,7 +30,7 @@ function parsePagination(url: URL) {
 }
 
 /** GET /v1/workspaces/{wid}/decisions */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getDecisions(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -102,3 +103,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDecisions);

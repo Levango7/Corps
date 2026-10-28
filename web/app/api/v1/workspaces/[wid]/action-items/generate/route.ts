@@ -13,6 +13,7 @@ import { generateText } from "ai";
 import { requireDefaultModel } from "@/lib/ai/deepseek";
 import { isAiConfigured, aiNotConfiguredResponse } from "@/lib/ai/shared";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   decisionMarkdown: z.string().min(10).max(20_000),
@@ -80,7 +81,10 @@ ${decisionMarkdown}`;
   return items;
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postActionItemsGenerate(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -206,3 +210,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     data: { actionItems },
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postActionItemsGenerate);

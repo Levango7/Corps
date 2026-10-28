@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 回收站列表查询 searchParams 校验：
@@ -41,7 +42,7 @@ interface RecycleItem {
  * 每条记录包含：id, name(title), type, deletedAt, deletedBy(用户名)
  * 按 deletedAt 倒序。统一分页响应：{ items, page, limit, total, hasMore }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getRecycleBin(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -172,3 +173,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getRecycleBin);
