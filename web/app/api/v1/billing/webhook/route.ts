@@ -9,6 +9,7 @@ import {
   PaymentWebhookError,
 } from "@/lib/payments";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/v1/billing/webhook — Stripe 回调（路径不变，D2）。
@@ -30,7 +31,7 @@ import { apiMsg } from "@/lib/api-messages";
  * DL-2：subscription 落库改为 findFirst + update by id，避免 updateMany 按
  *  stripeSubId 误更新多工作区行。
  */
-export async function POST(req: NextRequest) {
+async function postBillingWebhook(req: NextRequest) {
   const provider = getPaymentProvider();
 
   let event;
@@ -318,3 +319,6 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ code: 200, data: { received: true } });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postBillingWebhook);

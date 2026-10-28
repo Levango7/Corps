@@ -7,12 +7,13 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const DEFAULT_PAGE_SIZE = 20;
 const MAX_PAGE_SIZE = 100;
 
 /** GET /v1/workspaces/{wid}/documents/{id}/share/logs — 分页访问日志 */
-export async function GET(
+async function getDocumentsShareLogsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -100,3 +101,6 @@ export async function GET(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsShareLogsById);

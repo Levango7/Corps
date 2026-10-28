@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 知识库空间 API · /api/v1/workspaces/{wid}/spaces
@@ -14,7 +15,7 @@ import { authFailure } from "@/lib/auth-response";
  */
 
 /** GET /v1/workspaces/{wid}/spaces — 列出工作区所有空间（含 KnowledgeBase 渲染所需的整棵树） */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getSpaces(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -139,7 +140,7 @@ const createSpaceSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/spaces — 创建空间（仅 owner/admin） */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postSpaces(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -198,7 +199,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
  *  Body: { id, name?, icon?, color?, sortOrder? }
  *  权限：仅 owner/admin
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchSpaces(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -298,7 +299,7 @@ const deleteSpaceSchema = z.object({
  *  权限：仅 owner/admin
  *  语义：空间删除后，其下文档的 spaceId/folderId 被 SetNull 置空，归入"未分类"
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function deleteSpaces(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -357,3 +358,9 @@ export async function DELETE(req: NextRequest, { params }: { params: Promise<{ w
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getSpaces);
+export const POST = withRed(postSpaces);
+export const PATCH = withRed(patchSpaces);
+export const DELETE = withRed(deleteSpaces);

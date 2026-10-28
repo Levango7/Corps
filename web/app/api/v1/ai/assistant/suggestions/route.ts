@@ -14,6 +14,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 
 import { getSuggestionsForPhase, type TaskPhase } from "@/lib/ai/assistant/orchestrator";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法阶段集合（与 orchestrator.ts TaskPhase 保持一致） */
 const VALID_PHASES = new Set<TaskPhase>([
@@ -25,7 +26,7 @@ const VALID_PHASES = new Set<TaskPhase>([
 ]);
 
 /** GET /api/v1/ai/assistant/suggestions — 按任务阶段返回建议能力 */
-export async function GET(req: NextRequest) {
+async function getAiAssistantSuggestions(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -48,3 +49,6 @@ export async function GET(req: NextRequest) {
 
   return NextResponse.json({ code: 0, data: { phase, suggestions } });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiAssistantSuggestions);

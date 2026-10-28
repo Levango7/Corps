@@ -5,13 +5,14 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/whiteboards — 工作区白板列表
  * Query: ?take=<数量> &skip=<偏移>（分页，按 updatedAt 倒序）
  * 返回 { code, data: { items, total, hasMore } }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getWhiteboards(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -92,7 +93,7 @@ const createWbSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/whiteboards — 新建白板 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postWhiteboards(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -153,3 +154,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getWhiteboards);
+export const POST = withRed(postWhiteboards);

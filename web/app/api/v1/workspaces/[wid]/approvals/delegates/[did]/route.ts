@@ -4,13 +4,14 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const updateDelegateSchema = z.object({
   active: z.boolean().optional(),
   endAt: z.string().datetime().optional(),
 });
 
-export async function PATCH(
+async function patchApprovalsDelegatesByDid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; did: string }> },
 ) {
@@ -84,7 +85,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function deleteApprovalsDelegatesByDid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; did: string }> },
 ) {
@@ -137,3 +138,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchApprovalsDelegatesByDid);
+export const DELETE = withRed(deleteApprovalsDelegatesByDid);

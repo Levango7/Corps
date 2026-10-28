@@ -9,6 +9,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const querySchema = z.object({
   workspaceId: z.string().uuid(),
@@ -17,7 +18,7 @@ const querySchema = z.object({
   offset: z.coerce.number().int().min(0).default(0),
 });
 
-export async function GET(req: NextRequest) {
+async function getAiUsageLogs(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -95,3 +96,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiUsageLogs);

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions/{did}/versions — 某条决策的版本历史（版本倒序） */
-export async function GET(
+async function getTasksDecisionsVersionsByIdByDid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; did: string }> },
 ) {
@@ -51,3 +52,6 @@ export async function GET(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksDecisionsVersionsByIdByDid);

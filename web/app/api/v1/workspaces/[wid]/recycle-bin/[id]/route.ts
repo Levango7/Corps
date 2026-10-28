@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/recycle-bin/{id} — 恢复软删除条目
@@ -11,7 +12,7 @@ import { authFailure } from "@/lib/auth-response";
  *
  * 响应：{ code: 200, data: null, message: "已恢复" }
  */
-export async function POST(
+async function postRecycleBinById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -121,7 +122,7 @@ export async function POST(
  *
  * 响应：{ code: 200, data: null, message: "已永久删除" }
  */
-export async function DELETE(
+async function deleteRecycleBinById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -212,3 +213,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postRecycleBinById);
+export const DELETE = withRed(deleteRecycleBinById);

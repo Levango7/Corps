@@ -25,6 +25,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 创建临时授权请求体 */
 const createSchema = z.object({
@@ -38,7 +39,7 @@ const deleteSchema = z.object({
   userId: z.string().uuid().optional(),
 });
 
-export async function POST(
+async function postMembersTemporaryGrantsByUserId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
@@ -173,7 +174,7 @@ export async function POST(
   }
 }
 
-export async function GET(
+async function getMembersTemporaryGrantsByUserId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
@@ -214,7 +215,7 @@ export async function GET(
   }
 }
 
-export async function DELETE(
+async function deleteMembersTemporaryGrantsByUserId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
@@ -277,3 +278,8 @@ export async function DELETE(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postMembersTemporaryGrantsByUserId);
+export const GET = withRed(getMembersTemporaryGrantsByUserId);
+export const DELETE = withRed(deleteMembersTemporaryGrantsByUserId);

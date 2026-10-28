@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { checkPermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const updateSchema = z.object({
   endTime: z.string().datetime().nullable().optional(),
@@ -14,7 +15,7 @@ const updateSchema = z.object({
 });
 
 /** GET /v1/workspaces/{wid}/time-entries/{teid} — 获取单条工时记录 */
-export async function GET(
+async function getTimeEntriesByTeid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; teid: string }> },
 ) {
@@ -60,7 +61,7 @@ export async function GET(
 }
 
 /** PATCH /v1/workspaces/{wid}/time-entries/{teid} — 更新工时记录 */
-export async function PATCH(
+async function patchTimeEntriesByTeid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; teid: string }> },
 ) {
@@ -153,7 +154,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/time-entries/{teid} — 删除工时记录 */
-export async function DELETE(
+async function deleteTimeEntriesByTeid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; teid: string }> },
 ) {
@@ -216,3 +217,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTimeEntriesByTeid);
+export const PATCH = withRed(patchTimeEntriesByTeid);
+export const DELETE = withRed(deleteTimeEntriesByTeid);

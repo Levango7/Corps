@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文件夹级权限 CRUD（任务 441）
@@ -76,7 +77,7 @@ async function canManageFolder(
 /**
  * GET /v1/workspaces/{wid}/folders/{fid}/permissions — 权限列表
  */
-export async function GET(
+async function getFoldersPermissionsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -164,7 +165,7 @@ const createPermissionSchema = z.object({
 /**
  * POST /v1/workspaces/{wid}/folders/{fid}/permissions — 添加权限
  */
-export async function POST(
+async function postFoldersPermissionsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -285,3 +286,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getFoldersPermissionsByFid);
+export const POST = withRed(postFoldersPermissionsByFid);

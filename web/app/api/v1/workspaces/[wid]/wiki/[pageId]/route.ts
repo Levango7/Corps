@@ -4,11 +4,12 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/wiki/{pageId} — 获取单个 Wiki 页面详情（含直接子页面）
  */
-export async function GET(
+async function getWikiByPageId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; pageId: string }> },
 ) {
@@ -77,7 +78,7 @@ const updateSchema = z.object({
   slug: z.string().min(1).max(200).optional(),
 });
 
-export async function PATCH(
+async function patchWikiByPageId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; pageId: string }> },
 ) {
@@ -219,7 +220,7 @@ export async function PATCH(
  * DELETE /v1/workspaces/{wid}/wiki/{pageId} — 删除 Wiki 页面
  * 子页面的 parentId 由 Prisma onDelete: SetNull 自动置为 null（变为根页面）
  */
-export async function DELETE(
+async function deleteWikiByPageId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; pageId: string }> },
 ) {
@@ -271,3 +272,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getWikiByPageId);
+export const PATCH = withRed(patchWikiByPageId);
+export const DELETE = withRed(deleteWikiByPageId);

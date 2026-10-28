@@ -11,6 +11,7 @@ import { Prisma } from "@prisma/client";
 import { verifyPassword } from "better-auth/crypto";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   newOwnerUserId: z.string().uuid(),
@@ -18,7 +19,10 @@ const schema = z.object({
   password: z.string().optional(),
 });
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchTransferOwnership(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -143,3 +147,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchTransferOwnership);

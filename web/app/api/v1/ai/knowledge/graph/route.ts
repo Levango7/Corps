@@ -10,6 +10,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法节点类型白名单 */
 const VALID_NODE_TYPES = new Set(["concept", "entity", "fact", "procedure"]);
@@ -21,7 +22,7 @@ function parseLimit(raw: string | null): number {
   return Math.max(1, Math.min(500, Math.floor(n)));
 }
 
-export async function GET(req: NextRequest) {
+async function getAiKnowledgeGraph(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -127,3 +128,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiKnowledgeGraph);

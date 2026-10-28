@@ -12,6 +12,7 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { hash as hashSharePassword } from "@/lib/crypto";
+import { withRed } from "@/lib/red-metrics";
 
 const updateShareSchema = z.object({
   /** 分享过期时间（ISO 字符串；null=永不过期；不传=保持原状） */
@@ -23,7 +24,7 @@ const updateShareSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/tasks/{id}/share — 更新分享有效期/密码 */
-export async function PATCH(
+async function patchTasksShareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -140,7 +141,7 @@ export async function PATCH(
 }
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/share — 查询当前分享设置 */
-export async function GET(
+async function getTasksShareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -201,3 +202,7 @@ export async function GET(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchTasksShareById);
+export const GET = withRed(getTasksShareById);

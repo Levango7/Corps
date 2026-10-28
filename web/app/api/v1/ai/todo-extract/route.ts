@@ -26,6 +26,7 @@ import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── 请求体 schema ─────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ function normalizeTodos(raw: unknown): TodoItem[] {
 
 // ─── 路由处理 ──────────────────────────────────────────────────────────────────
 
-export async function POST(req: NextRequest) {
+async function postAiTodoExtract(req: NextRequest) {
   // 1) 认证 + 获取 workspaceId（用于 usage tracking）
   const authCtx = await getUserIdAndWorkspaceId(req);
   if (!authCtx) return unauthorizedResponse(req);
@@ -242,3 +243,6 @@ export async function POST(req: NextRequest) {
     data: result,
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiTodoExtract);

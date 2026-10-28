@@ -12,6 +12,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const updateSchema = z.object({
   // viewer 必须在此枚举内：lib/permissions.ts:56 的 ROLES、schema.prisma 的 role 注释
@@ -20,7 +21,7 @@ const updateSchema = z.object({
   role: z.enum(["admin", "member", "viewer"]),
 });
 
-export async function PATCH(
+async function patchMembersByUserId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
@@ -113,7 +114,7 @@ export async function PATCH(
   }
 }
 
-export async function DELETE(
+async function deleteMembersByUserId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; userId: string }> },
 ) {
@@ -214,3 +215,7 @@ export async function DELETE(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchMembersByUserId);
+export const DELETE = withRed(deleteMembersByUserId);

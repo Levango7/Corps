@@ -64,6 +64,10 @@ POST /api/v1/ai/calendar-schedule
 POST /api/v1/ai/chat
 POST /api/v1/ai/completion
 POST /api/v1/ai/conversations
+# 2026-10-28 自 T4 基线迁移（非新增缺口）：检测器对 withRed 接线形态按 handler 精确切分后，
+# POST /ai/feedback 的真实状态暴露——其函数体从未有过角色判断（原 T4 判定误把同文件
+# GET handler 里的 isManager 比较并入了 POST 块）。总盲区面不变（T4 -1 / T3 +1）。
+POST /api/v1/ai/feedback
 POST /api/v1/ai/follow-up-suggestions
 POST /api/v1/ai/format
 POST /api/v1/ai/im-reply

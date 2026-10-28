@@ -37,6 +37,7 @@ import {
   buildMeetingAnalysisPrompt,
 } from "@/lib/ai/prompts/meeting-transcript-analysis";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** UUID 正则校验 */
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -163,7 +164,7 @@ function normalizeAnalysisResult(raw: unknown): AnalysisResult | null {
  *
  * 读取会话转录 → 调用 AI 分析 → 提取行动项+决策+摘要 → 写入 DB → 返回结果。
  */
-export async function POST(req: NextRequest) {
+async function postAiMeetingsSessionsAnalyzeById(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -379,3 +380,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiMeetingsSessionsAnalyzeById);

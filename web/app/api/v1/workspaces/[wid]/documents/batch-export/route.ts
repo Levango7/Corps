@@ -5,6 +5,7 @@ import { requirePermission } from "@/lib/permissions";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { EXPORT_COLORS } from "@/lib/html-palette";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/documents/batch-export — 批量导出多文档
@@ -28,7 +29,10 @@ const batchExportSchema = z.object({
   includeTableOfContents: z.boolean().default(true),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postDocumentsBatchExport(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -406,3 +410,6 @@ function markdownToHtml(markdown: string): string {
 
   return blocks.join("\n");
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postDocumentsBatchExport);

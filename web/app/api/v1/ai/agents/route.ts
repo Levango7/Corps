@@ -14,6 +14,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法角色枚举（与 schema 注释保持一致） */
 const ROLE_VALUES = ["task_breaker", "doc_writer", "follow_upper", "analyst"] as const;
@@ -45,7 +46,7 @@ const createSchema = z.object({
  * 返回当前工作区的 Agent 列表（按创建时间升序）。
  * enabled 参数可选过滤启用/禁用状态。
  */
-export async function GET(req: NextRequest) {
+async function getAiAgents(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -131,7 +132,7 @@ export async function GET(req: NextRequest) {
  *
  * 在指定工作区创建一个新 Agent。
  */
-export async function POST(req: NextRequest) {
+async function postAiAgents(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -203,3 +204,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiAgents);
+export const POST = withRed(postAiAgents);

@@ -9,6 +9,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 从 URL 路径提取节点 ID，并校验是否为合法 UUID */
 function extractId(req: NextRequest): string | null {
@@ -20,7 +21,7 @@ function extractId(req: NextRequest): string | null {
   return id;
 }
 
-export async function DELETE(req: NextRequest) {
+async function deleteAiKnowledgeNodesById(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -81,3 +82,6 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const DELETE = withRed(deleteAiKnowledgeNodesById);

@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 多维表格 API · /api/v1/workspaces/{wid}/databases
@@ -13,7 +14,7 @@ import { apiMsg } from "@/lib/api-messages";
  */
 
 /** GET /v1/workspaces/{wid}/databases — 列出工作区多维表格 */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getDatabases(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -103,7 +104,7 @@ const createDatabaseSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/databases — 创建多维表格（仅 owner/admin） */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postDatabases(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -170,3 +171,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDatabases);
+export const POST = withRed(postDatabases);

@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档评论详情 API · /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}
@@ -26,7 +27,7 @@ const patchCommentSchema = z.object({
  *  - 编辑 body：评论作者本人或 owner/admin
  *  - 解决/重开：工作区成员均可（documents 模块 update 权限）
  */
-export async function PATCH(
+async function patchDocumentsCommentsByIdByCommentId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; commentId: string }> },
 ) {
@@ -149,7 +150,7 @@ export async function PATCH(
  * 权限：评论作者本人或工作区 owner/admin
  * 语义：删除批注时，其回复（子评论）级联删除
  */
-export async function DELETE(
+async function deleteDocumentsCommentsByIdByCommentId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; commentId: string }> },
 ) {
@@ -205,3 +206,7 @@ export async function DELETE(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchDocumentsCommentsByIdByCommentId);
+export const DELETE = withRed(deleteDocumentsCommentsByIdByCommentId);

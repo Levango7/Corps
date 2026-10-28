@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 通知 API（Spec：协作平台通知中心）
@@ -20,7 +21,10 @@ const listNotificationsQuerySchema = z.object({
 });
 
 /** GET /v1/workspaces/{wid}/notifications */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getNotifications(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -108,7 +112,10 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/notifications — 标记已读 */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchNotifications(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -171,3 +178,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getNotifications);
+export const PATCH = withRed(patchNotifications);

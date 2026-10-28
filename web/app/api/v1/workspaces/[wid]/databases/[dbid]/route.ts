@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 多维表格详情 API · /api/v1/workspaces/{wid}/databases/{dbid}
@@ -14,7 +15,7 @@ import { apiMsg } from "@/lib/api-messages";
  */
 
 /** GET /v1/workspaces/{wid}/databases/{dbid} — 获取多维表格详情 */
-export async function GET(
+async function getDatabasesByDbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string }> },
 ) {
@@ -70,7 +71,7 @@ const updateDatabaseSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/databases/{dbid} — 更新多维表格元数据（仅 owner/admin） */
-export async function PATCH(
+async function patchDatabasesByDbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string }> },
 ) {
@@ -172,7 +173,7 @@ export async function PATCH(
 /** DELETE /v1/workspaces/{wid}/databases/{dbid} — 删除多维表格（仅 owner/admin）
  *  级联删除：字段、记录、视图（schema onDelete: Cascade）
  */
-export async function DELETE(
+async function deleteDatabasesByDbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; dbid: string }> },
 ) {
@@ -231,3 +232,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDatabasesByDbid);
+export const PATCH = withRed(patchDatabasesByDbid);
+export const DELETE = withRed(deleteDatabasesByDbid);

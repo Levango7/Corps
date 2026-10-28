@@ -6,12 +6,13 @@ import { trackServerEvent } from "@/lib/analytics-server";
 import { syncActionItems } from "@/lib/decision-action-parser";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** 免费版每工作区决策记录上限（v2 定价 r07：超出转只读保留，Pro 不受限） */
 const FREE_DECISION_LIMIT = 10;
 
 /** GET /v1/workspaces/{wid}/tasks/{id}/decisions — 决策记录（版本倒序，最新在前） */
-export async function GET(
+async function getTasksDecisionsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -53,7 +54,7 @@ const createDecisionSchema = z.object({
   markdown: z.string().min(1).max(50000),
 });
 
-export async function POST(
+async function postTasksDecisionsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -213,3 +214,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksDecisionsById);
+export const POST = withRed(postTasksDecisionsById);

@@ -21,6 +21,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── GET ──────────────────────────────────────────────────────────────────────
 
@@ -29,7 +30,7 @@ const querySchema = z.object({
   userId: z.string().uuid().optional(),
 });
 
-export async function GET(req: NextRequest) {
+async function getAiUsageLimits(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -123,7 +124,7 @@ const bodySchema = z.object({
   monthlyCallLimit: z.number().int().min(0).nullable().optional(),
 });
 
-export async function PUT(req: NextRequest) {
+async function putAiUsageLimits(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -276,3 +277,7 @@ export async function PUT(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiUsageLimits);
+export const PUT = withRed(putAiUsageLimits);

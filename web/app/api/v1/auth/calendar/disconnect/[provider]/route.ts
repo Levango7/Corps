@@ -3,12 +3,13 @@ import { authenticate } from "@/lib/auth";
 import { disconnectCalendar } from "@/lib/calendar/sync";
 import type { CalendarProvider } from "@/lib/calendar/config";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * DELETE /api/v1/auth/calendar/disconnect/[provider]
  * 断开日历连接：撤销 OAuth token + 删除 CalendarConnection 记录（级联删除事件映射）。
  */
-export async function DELETE(
+async function deleteAuthCalendarDisconnectByProvider(
   req: NextRequest,
   { params }: { params: Promise<{ provider: string }> },
 ) {
@@ -43,3 +44,6 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const DELETE = withRed(deleteAuthCalendarDisconnectByProvider);

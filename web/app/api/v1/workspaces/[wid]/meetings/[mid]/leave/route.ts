@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/leave — 离开会议
@@ -10,7 +11,7 @@ import { authFailure } from "@/lib/auth-response";
  * 若离开后无在线参与者（leftAt=null 的数量为 0），自动将会议状态置为 ended。
  * 幂等：未加入或已离开均返回 200（无副作用）。
  */
-export async function POST(
+async function postMeetingsLeaveByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -66,3 +67,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postMeetingsLeaveByMid);
