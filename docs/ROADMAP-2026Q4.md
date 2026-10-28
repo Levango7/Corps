@@ -84,7 +84,7 @@
 | 基线 | 当前（2026-10-12） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 592 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
-| `permission-gate` T3 | 133 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒） |
+| `permission-gate` T3 | 134 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒；2026-10-29 RED 第十一批接线后检测器再次按 handler 精确切分，POST /api/v1/remote-control 同类自 T4 迁移至此，T3 +1 / T4 −1，总盲区 164 不变） |
 | `api-contract` undeclared | 154 | **150** | 每周契约化 ≥5 条路由（2026-10-28 approvals 域 16 条契约化，openapi 117→133 paths） |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
