@@ -4,11 +4,12 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/objectives/{oid} — 目标详情（含关键结果列表）
  */
-export async function GET(
+async function getObjectivesByOid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string }> },
 ) {
@@ -69,7 +70,7 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/objectives/{oid} — 更新目标 */
-export async function PATCH(
+async function patchObjectivesByOid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string }> },
 ) {
@@ -136,7 +137,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/objectives/{oid} — 删除目标（级联删除 KeyResult） */
-export async function DELETE(
+async function deleteObjectivesByOid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string }> },
 ) {
@@ -184,3 +185,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getObjectivesByOid);
+export const PATCH = withRed(patchObjectivesByOid);
+export const DELETE = withRed(deleteObjectivesByOid);

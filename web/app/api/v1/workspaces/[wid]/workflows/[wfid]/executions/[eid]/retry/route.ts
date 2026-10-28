@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { executeWorkflow } from "@/lib/workflow/executor";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/workflows/{wfid}/executions/{eid}/retry — 重试执行
@@ -21,7 +22,7 @@ import { authFailure } from "@/lib/auth-response";
  *  - 执行引擎用裸 prisma client（不在 runWithWorkspace 事务上下文中），
  *    与 executions/route.ts POST 触发逻辑保持一致
  */
-export async function POST(
+async function postWorkflowsExecutionsRetryByWfidByEid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string; eid: string }> },
 ) {
@@ -117,3 +118,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postWorkflowsExecutionsRetryByWfidByEid);

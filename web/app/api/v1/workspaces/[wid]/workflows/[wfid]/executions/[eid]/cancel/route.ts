@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/workflows/{wfid}/executions/{eid}/cancel — 取消执行
@@ -16,7 +17,7 @@ import { authFailure } from "@/lib/auth-response";
  *  - 不调用执行引擎：本端点仅做状态机转移，运行中的同步执行引擎
  *    会在后续动作执行前读取 status 判断是否已取消（防御性检查由调用方保证）
  */
-export async function POST(
+async function postWorkflowsExecutionsCancelByWfidByEid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string; eid: string }> },
 ) {
@@ -92,3 +93,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postWorkflowsExecutionsCancelByWfidByEid);

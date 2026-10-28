@@ -4,13 +4,14 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/objectives — OKR 目标列表
  * Query: ?period=2026-Q1 &status=active &page=1 &limit=50
  * 返回按 updatedAt 倒序，含 keyResults 数量
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getObjectives(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -111,7 +112,7 @@ const createSchema = z.object({
 });
 
 /** POST /v1/workspaces/{wid}/objectives — 创建目标 */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postObjectives(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -167,3 +168,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getObjectives);
+export const POST = withRed(postObjectives);

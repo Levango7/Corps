@@ -6,12 +6,13 @@ import { apiMsg } from "@/lib/api-messages";
 import { executeWorkflow } from "@/lib/workflow/executor";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/workflows/{wfid}/executions — 执行历史
  * Query: ?take=&skip= 分页
  */
-export async function GET(
+async function getWorkflowsExecutionsByWfid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
@@ -94,7 +95,7 @@ const triggerSchema = z.object({
  * POST /v1/workspaces/{wid}/workflows/{wfid}/executions — 手动触发执行
  * 创建 WorkflowExecution 记录，status 设为 "pending"
  */
-export async function POST(
+async function postWorkflowsExecutionsByWfid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
@@ -182,3 +183,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getWorkflowsExecutionsByWfid);
+export const POST = withRed(postWorkflowsExecutionsByWfid);
