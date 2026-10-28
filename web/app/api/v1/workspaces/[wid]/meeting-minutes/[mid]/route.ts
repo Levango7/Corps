@@ -4,11 +4,12 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import type { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/meeting-minutes/{mid} — 会议纪要详情
  */
-export async function GET(
+async function getMeetingMinutesByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -80,7 +81,7 @@ const updateMinutesSchema = z.object({
   actionItems: z.array(actionItemSchema).optional(),
 });
 
-export async function PATCH(
+async function patchMeetingMinutesByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -178,7 +179,7 @@ export async function PATCH(
  * DELETE /v1/workspaces/{wid}/meeting-minutes/{mid} — 删除会议纪要
  * 仅创建者或 admin/owner 可删除
  */
-export async function DELETE(
+async function deleteMeetingMinutesByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -239,3 +240,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getMeetingMinutesByMid);
+export const PATCH = withRed(patchMeetingMinutesByMid);
+export const DELETE = withRed(deleteMeetingMinutesByMid);

@@ -4,12 +4,13 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/forms/{fid} — 表单详情
  * include _count submissions
  */
-export async function GET(
+async function getFormsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -77,7 +78,7 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/forms/{fid} — 更新表单 */
-export async function PATCH(
+async function patchFormsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -148,7 +149,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/forms/{fid} — 删除表单 */
-export async function DELETE(
+async function deleteFormsByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -187,3 +188,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getFormsByFid);
+export const PATCH = withRed(patchFormsByFid);
+export const DELETE = withRed(deleteFormsByFid);
