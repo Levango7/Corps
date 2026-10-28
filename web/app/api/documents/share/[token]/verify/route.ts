@@ -35,7 +35,10 @@ function getClientIp(req: NextRequest): string {
   return "unknown";
 }
 
-async function postDocumentsShareByTokenVerify(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function postDocumentsShareByTokenVerify(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const { token } = await params;
   const ip = getClientIp(req);
   const userAgent = req.headers.get("user-agent") ?? null;

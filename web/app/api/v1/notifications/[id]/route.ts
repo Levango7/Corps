@@ -35,7 +35,10 @@ const patchSchema = z.object({
  *
  * 标记通知已读/未读。先验证通知属于当前用户 + 工作区，再更新。
  */
-async function patchNotificationsById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function patchNotificationsById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -157,7 +160,10 @@ async function patchNotificationsById(req: NextRequest, { params }: { params: Pr
  *
  * 删除通知。先验证通知属于当前用户 + 工作区，再删除。
  */
-async function deleteNotificationsById(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function deleteNotificationsById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);

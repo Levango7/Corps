@@ -21,7 +21,10 @@ import { withRed } from "@/lib/red-metrics";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 
-async function getUploadFile(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+async function getUploadFile(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
   const { path: segments } = await params;
   const relativePath = segments.join("/");
 

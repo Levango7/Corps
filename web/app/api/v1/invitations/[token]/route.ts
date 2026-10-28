@@ -16,7 +16,10 @@ import { withRed } from "@/lib/red-metrics";
  *    本路由无工作区上下文，经 invite 受控逃生口（runWithAuthOp("invite")）按 token 读取，
  *    与 accept 路由的取件方式一致。
  */
-async function getInvitationsByToken(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function getInvitationsByToken(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   // TC-RATE-07：限流前置，超限直接 429（含 Retry-After）
   const limited = await checkRateLimit(req, "invitations:preview", { max: 10, windowMs: 60_000 });
   if (limited) return limited;

@@ -40,7 +40,10 @@ async function getUserId(req: NextRequest): Promise<{ id: string; email: string 
  * 注：invitations 表已启用 FORCE RLS（db/rls-activate.sql），token 校验经 invite
  * 受控逃生口（runWithAuthOp("invite")）按 token 读取；成员写入走 seat 上下文 RLS 事务。
  */
-async function postInvitationsByTokenAccept(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function postInvitationsByTokenAccept(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const user = await getUserId(req);
   if (!user)
     return NextResponse.json(

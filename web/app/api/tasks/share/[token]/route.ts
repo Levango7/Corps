@@ -16,7 +16,10 @@ import { withRed } from "@/lib/red-metrics";
  * RLS 下抛 Inconsistent query result）。
  * 脱敏：不返回 assignee.email、creator、评论、聊天与附件。
  */
-async function getTasksShareByToken(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function getTasksShareByToken(
+  _req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const { token } = await params;
 
   try {
