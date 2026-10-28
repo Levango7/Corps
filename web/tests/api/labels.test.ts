@@ -57,12 +57,12 @@ describe("GET /labels", () => {
 
 describe("POST /labels", () => {
   it("创建成功返回 201，带 id/name/color", async () => {
-    const { status, json } = await createLabel({ name: NAME, color: "#2563eb" });
+    const { status, json } = await createLabel({ name: NAME, color: "blue" });
     expect(status).toBe(201);
     expect(json.code).toBe(201);
     expect(json.data.id).toBeTruthy();
     expect(json.data.name).toBe(NAME);
-    expect(json.data.color).toBe("#2563eb");
+    expect(json.data.color).toBe("blue");
   });
 
   it("name 为空字符串 → 400", async () => {
