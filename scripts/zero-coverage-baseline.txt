@@ -225,7 +225,6 @@ app/api/v1/workspaces/[wid]/forms/[fid]/route.ts
 app/api/v1/workspaces/[wid]/forms/[fid]/submissions/route.ts
 app/api/v1/workspaces/[wid]/forms/route.ts
 app/api/v1/workspaces/[wid]/im/online/route.ts
-app/api/v1/workspaces/[wid]/im/search/route.ts
 app/api/v1/workspaces/[wid]/key-results/[kid]/route.ts
 app/api/v1/workspaces/[wid]/labels/route.ts
 app/api/v1/workspaces/[wid]/meeting-minutes/[mid]/route.ts
@@ -271,7 +270,6 @@ app/api/v1/workspaces/[wid]/tasks/[id]/messages/[mid]/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/messages/attachments/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/messages/read/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/messages/route.ts
-app/api/v1/workspaces/[wid]/tasks/[id]/messages/search/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/messages/send/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/messages/stream/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/route.ts

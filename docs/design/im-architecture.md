@@ -33,7 +33,7 @@
 | **前端组件** | 任务详情页内嵌聊天面板 | `/w/[wid]/im` 独立页面 + `components/im/*` |
 | **已读回执** | `MessageRead` + SSE read 事件 | `ConversationMember.lastReadAt` + WS read 事件 |
 | **在线状态** | `ChatPresence.taskId` + SSE presence | `ChatPresence.conversationId` + WS presence |
-| **消息搜索** | `/v1/workspaces/{wid}/tasks/{id}/messages/search` | `/v1/im/search`（跨会话全文搜索） |
+| **消息搜索** | 已合并到 `/v1/im/search`（2026-10-27 删除 `tasks/{id}/messages/search`；任务会话消息同样带 `conversation_id`，可用 `conversationId` 参数限定范围） | `/v1/im/search`（全文 + 子串并集，跨会话与会话内两种范围） |
 | **附件支持** | `MessageAttachment`（任务消息） | `MessageAttachment`（会话消息） |
 | **编辑/撤回** | ❌ 不支持 | ✅ PATCH/DELETE + WS 广播 |
 | **回复/提及** | ❌ 不支持 | ✅ `replyToId` + `mentions` |
@@ -341,7 +341,7 @@ CREATE POLICY p_chat_presences_rls ON chat_presences FOR ALL
 | GET/POST | `/v1/workspaces/{wid}/conversations/{cid}/members` | 成员列表/添加 | ✅ |
 | DELETE/PATCH | `/v1/workspaces/{wid}/conversations/{cid}/members/{uid}` | 移除/角色变更 | ✅ |
 | POST | `/v1/workspaces/{wid}/conversations/{cid}/read` | 标记已读 | ✅ |
-| GET | `/v1/im/search` | 全文搜索 | ✅ |
+| GET | `/v1/im/search` | 消息搜索（`body_tsv` 全文 ∪ `ILIKE` 子串；中文子串靠后者，见 ADR-013 §7） | ✅ |
 | GET | `/v1/im/ws` | WebSocket upgrade | ✅ |
 
 ### 4.2 需要新增的 API 端点
