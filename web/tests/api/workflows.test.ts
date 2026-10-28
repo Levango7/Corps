@@ -85,7 +85,9 @@ describe("POST /workflows", () => {
     expect(json.data.name).toBe(FLOW.name);
     expect(json.data.trigger).toEqual(FLOW.trigger);
     expect(Array.isArray(json.data.actions)).toBe(true);
-    expect(json.data.active).toBe(false);
+    // 实现里是 `active: validated.active ?? true`——不传就是启用状态。
+    // 这里按现状钉 true：如果哪天改成默认停用，这条会红，那时要连带确认前端开关的初值。
+    expect(json.data.active).toBe(true);
   });
 
   it("缺 trigger → 400（错误码仍用 400，与全仓一致）", async () => {

@@ -18,8 +18,6 @@ let wid: string;
 let ownerEmail: string;
 let otherToken: string;
 
-const auth = () => ({ ...authHeader(token), "Content-Type": "application/json" });
-
 beforeAll(async () => {
   const owner = await registerUser({ prefix: "member-owner", workspaceName: "成员测试工作区" });
   token = owner.accessToken;
@@ -44,7 +42,7 @@ describe("GET /members", () => {
     expect(typeof json.data.hasMore).toBe("boolean");
   });
 
-  it("新工作区只有注册者一个成员，且带 role 与 user 关联", async () => {
+  it("新工作区只有注册者一个成员；items 是**扁平**结构（不是嵌套 user）", async () => {
     const res = await fetch(`${BASE}/workspaces/${wid}/members`, {
       headers: authHeader(token),
     });
@@ -56,10 +54,13 @@ describe("GET /members", () => {
     const me = json.data.items[0];
     expect(typeof me.role).toBe("string");
     expect(me.role.length).toBeGreaterThan(0);
-    expect(me.user).toBeTruthy();
-    expect(me.user.email).toBe(ownerEmail);
-    // 只暴露必要字段，不能把 passwordHash 之类带出去
-    expect(me.user.passwordHash).toBeUndefined();
+    // 实现把 member.user 摊平了（见 route.ts 的 map）：email/name/image 直接在顶层，
+    // 没有 user 子对象。这条钉住形状，免得前端按嵌套写、后端悄悄改。
+    expect(me.email).toBe(ownerEmail);
+    expect(me.user).toBeUndefined();
+    expect(me.isSelf).toBe(true);
+    // 只暴露白名单字段，不能把 passwordHash 之类带出去
+    expect(me.passwordHash).toBeUndefined();
   });
 
   it("limit=101 超过上限 → 400", async () => {
