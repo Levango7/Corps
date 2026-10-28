@@ -12,7 +12,7 @@
 |---|---|
 | **是** | 内部可观测口径定义：信号清单、SLI 计算式、数据源、当前可得性、已知盲区 |
 | **不是** | 对外 SLO。全文**不设任何目标值**（无 99.9%、无 p95 < X ms），阈值列一律「未设定」 |
-| **为什么现在写** | RED 三维已部分落地：Errors 全路由接通（`instrumentation.ts` 的 `onRequestError`），Rate/Duration 首批接线 6 文件 15 个 handler（2026-10-26）。`/api/metrics` 已经能吐出逐路由序列，此时不定口径，等数据来了就会变成"看着数字调阈值" |
+| **为什么现在写** | RED 三维已部分落地：Errors 全路由接通（`instrumentation.ts` 的 `onRequestError`），Rate/Duration 按目录分批接线、当前覆盖 376 个 handler（快照 2026-10-29，第十二批后）。`/api/metrics` 已经能吐出逐路由序列，此时不定口径，等数据来了就会变成"看着数字调阈值" |
 | **将来怎么升级成 SLO** | 见 §4 的前置条件；满足后回路线图 §5 复议那条负面清单，**不是本文自己能解除的** |
 
 判据来源（都可复跑，不靠记忆）：
@@ -32,7 +32,7 @@
 | 进程存活时长 | `corps_uptime_seconds` | gauge，进程运行秒数 | 可用（进程重启即归零） |
 | 内存 | `corps_memory_rss_bytes`、`corps_memory_heap_used_bytes` | gauge | 可用 |
 | 运行时版本 | `corps_node_version` | info | 可用 |
-| 逐路由请求数（RED-R） | `corps_http_requests_total{route}` | counter，**仅 `withRed()` 包装过的 handler 会计数** | 部分可用：15 / 292 个路由文件 |
+| 逐路由请求数（RED-R） | `corps_http_requests_total{route}` | counter，**仅 `withRed()` 包装过的 handler 会计数** | 部分可用：376 / 448 个 handler ≈84%（快照 2026-10-29） |
 | 逐路由错误数（RED-E） | `corps_http_request_errors_total{route}` | counter，来自 `onRequestError` | 全路由可用（与上面**不同源**，见 §3） |
 | 逐路由耗时（RED-D） | `corps_http_request_duration_ms{route}` | histogram，桶边界 1/5/25/100/500/2500/10000 ms + `+Inf` | 部分可用，与 RED-R 同源同范围 |
 | 实例健康（含 DB） | `/api/health` → `{status, db, uptimeSec}` | 真实执行 `SELECT 1`，与 2s 超时赛跑；超时/失败判 `degraded` | 可用 |
@@ -64,8 +64,10 @@
 
 这几条是当前口径的真正边界，写下来是为了不让半年后的自己误读仪表盘：
 
-1. **RED-R / RED-D 只覆盖 15 / 292 个路由文件**（contacts、contact-groups、announcements、
-   activity 四域）。未接线路由**不出现在指标里**——不是"零错误"，是"没测到"。
+1. **RED-R / RED-D 只覆盖 376 / 448 个 handler ≈84%**（快照 2026-10-29，第十二批 #203 后）。
+   接线按目录分批推进（#189 起到 #203 共十二批），290 个路由文件里绝大多数已接线；
+   剩余未接线的主要是流式/特殊端点。**未接线路由不出现在指标里**——不是"零错误"，是"没测到"。
+   这个数字随时在变，最新值用文末的复核命令数一遍，别照抄本节快照。
 2. **RED-E 与 RED-R/D 分母不同源**：错误数来自 `onRequestError`（全路由），请求数与耗时来自
    `withRed()`（部分路由）。因此**错误率只能在已接线路由上算**；拿全路由错误数去除以
    已接线路由的请求数，会把错误率系统性放大，得出一个看起来很糟但不存在的故障。
@@ -101,8 +103,12 @@
 
 - 口径变了（桶边界、标签规范化规则、新增/改名序列、`MAX_ROUTES`）必须**同提交改本文**，
   否则 §1 与 §2 会变成一份骗人的说明书。
-- `withRed()` 按目录分批推进时**不需要**改本文（进度看代码即可）；但**阈值一旦写进 §2**，
-  就必须同时处理路线图 §5 那条负面清单——两者不一致比两者都缺更糟。
+- `withRed()` 按目录分批推进时：**§2 的阈值不用动**（那里没有目标值），但 §1/§3 里带
+  日期的覆盖率快照要顺手更新——过期的快照比没有更糟，它看上去像个当前结论。
+  评分器 `observability-5/6` 的达标线是**实测 handler 总数**（即"全量接线才算达标"，
+  见 `scripts/score_maturity.py`），所以它不需要谁回来改数字；真正挡退步的是
+  `--check-baseline` 的基线棘轮。§1/§3 的数字与评分器 note 里的分子应当是同一个值。
+- 阈值一旦真的要写进 §2，就必须同时处理路线图 §5 那条负面清单——两者不一致比两者都缺更糟。
 - 评分器 `observability-7` 只判「是否存在文件名含 SLO/SLI/可观测 的文档」，
   **它读不懂本文内容**。本文存在 ≠ 口径正确，这条局限留在这里以免有人拿评分当质量证明。
 
@@ -111,8 +117,9 @@
 ## 附：本文数字的复核命令
 
 ```bash
-# 路由文件总数 / 已接线 handler 数（应为 292 / 15）
+# 路由文件总数 / 导出 handler 总数 / 已接线 handler 数（快照 2026-10-29：290 / 448 / 376）
 find web/app/api -name "route.ts" | wc -l
+grep -rEc "^export (async )?(function|const) (GET|POST|PATCH|DELETE|PUT)" web/app/api --include=route.ts | awk -F: '{s+=$2} END{print s}'
 grep -rn "withRed(" web/app --include=*.ts | grep -v "\*" | wc -l
 
 # smoke 实际节奏（别信 cron 字面值）
