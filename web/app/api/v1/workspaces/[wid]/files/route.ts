@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 云盘文件管理 API · /api/v1/workspaces/{wid}/files
@@ -19,7 +20,7 @@ const listFilesQuerySchema = z.object({
 });
 
 /** GET /v1/workspaces/{wid}/files — 列出工作区文件（分页，支持 folderId 筛选） */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getFiles(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -92,3 +93,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getFiles);

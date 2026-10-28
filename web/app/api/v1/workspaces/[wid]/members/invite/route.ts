@@ -11,6 +11,7 @@ import { Prisma } from "@prisma/client";
 import { apiLocale, apiMsg } from "@/lib/api-messages";
 import { normalizeEmailLocale } from "@/lib/email-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const inviteSchema = z.object({
   email: z.string().email(),
@@ -20,7 +21,10 @@ const inviteSchema = z.object({
 /** 邀请有效期：7 天 */
 const INVITE_TTL_MS = 7 * 24 * 60 * 60 * 1000;
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postMembersInvite(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -323,3 +327,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postMembersInvite);
