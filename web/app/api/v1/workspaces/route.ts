@@ -4,8 +4,9 @@ import { generateSlug } from "@/lib/slug";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { readSidebarSettings } from "@/lib/workspace-settings";
+import { withRed } from "@/lib/red-metrics";
 
-export async function GET(req: NextRequest) {
+async function getWorkspaces(req: NextRequest) {
   const auth = await authenticate(req);
   if (!auth) {
     return NextResponse.json(
@@ -62,7 +63,7 @@ const createWorkspaceSchema = z.object({
   name: z.string().min(2).max(100),
 });
 
-export async function POST(req: NextRequest) {
+async function postWorkspace(req: NextRequest) {
   const auth = await authenticate(req);
   if (!auth) {
     return NextResponse.json(
@@ -128,3 +129,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getWorkspaces);
+
+export const POST = withRed(postWorkspace);

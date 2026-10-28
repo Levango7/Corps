@@ -19,6 +19,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { prisma } from "@/lib/prisma";
+import { withRed } from "@/lib/red-metrics";
 
 /** HH:mm 时间格式校验 */
 const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "时间格式必须为 HH:mm");
@@ -79,7 +80,7 @@ const selectFields = {
  *
  * 获取当前用户通知偏好。如不存在则创建默认记录（upsert）。
  */
-export async function GET(req: NextRequest) {
+async function getNotificationsPreferences(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -115,7 +116,7 @@ export async function GET(req: NextRequest) {
  *
  * 更新当前用户通知偏好。仅更新提供的字段（partial update）。
  */
-export async function PATCH(req: NextRequest) {
+async function patchNotificationsPreferences(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -174,3 +175,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getNotificationsPreferences);
+
+export const PATCH = withRed(patchNotificationsPreferences);

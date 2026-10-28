@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { fanOutOfflineEmail } from "@/lib/notification/offline-push";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/check-overdue-actions — 逾期行动项通知（每天定时调用）
@@ -24,7 +25,7 @@ import { fanOutOfflineEmail } from "@/lib/notification/offline-push";
  * 鉴权：CRON_SECRET Bearer（与 /api/cron/due-reminders 同模式）。
  * 调度建议：每天 09:00 调用一次。
  */
-export async function GET(req: NextRequest) {
+async function getCronCheckOverdueActions(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -138,3 +139,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronCheckOverdueActions);

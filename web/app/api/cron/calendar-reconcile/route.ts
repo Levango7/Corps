@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { reconcileCalendarSync } from "@/lib/calendar/reconcile";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/calendar-reconcile — 日历同步对账 cron job
@@ -14,7 +15,7 @@ import { apiMsg } from "@/lib/api-messages";
  *
  * 响应：{ code: 200, data: { resetErrorConnections, staleConnections, orphanMappingsRemoved, scannedConnections } }
  */
-export async function GET(req: NextRequest) {
+async function getCronCalendarReconcile(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -41,3 +42,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronCalendarReconcile);

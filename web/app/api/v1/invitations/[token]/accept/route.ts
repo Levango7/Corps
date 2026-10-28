@@ -6,6 +6,7 @@ import { evaluateSeatGate, expandProSeatsAfterJoin } from "@/lib/billing/seat-po
 import { createHash } from "crypto";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 获取当前用户 ID：优先 Better Auth session，回退到 JWT access_token。
@@ -39,7 +40,10 @@ async function getUserId(req: NextRequest): Promise<{ id: string; email: string 
  * 注：invitations 表已启用 FORCE RLS（db/rls-activate.sql），token 校验经 invite
  * 受控逃生口（runWithAuthOp("invite")）按 token 读取；成员写入走 seat 上下文 RLS 事务。
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function postInvitationsByTokenAccept(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const user = await getUserId(req);
   if (!user)
     return NextResponse.json(
@@ -188,3 +192,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     );
   }
 }
+
+export const POST = withRed(postInvitationsByTokenAccept);
