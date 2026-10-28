@@ -7,6 +7,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { z } from "zod";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 云盘文件上传 API · /api/v1/workspaces/{wid}/files/upload
@@ -84,7 +85,7 @@ function computeSha256(buffer: Buffer): string {
   return createHash("sha256").update(buffer).digest("hex");
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postFilesUpload(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -311,3 +312,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postFilesUpload);

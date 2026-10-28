@@ -3,6 +3,7 @@ import { requirePermission } from "@/lib/permissions";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 任务关联会话 API（任务 430）
@@ -25,7 +26,7 @@ const USER_SELECT = {
   image: true,
 } as const;
 
-export async function POST(
+async function postTasksConversationById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -141,3 +142,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postTasksConversationById);

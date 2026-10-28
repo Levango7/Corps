@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET 列表 query 校验 */
 const listDelegatesQuerySchema = z.object({
@@ -27,7 +28,10 @@ const createDelegateSchema = z.object({
  * active=1 时只返回 active=true 且 endAt > now() 的记录
  * 按 createdAt 倒序，include delegateTo 用户信息
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getApprovalsDelegates(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -109,7 +113,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
  * 验证 startAt < endAt 且 startAt 不在过去
  * 检查时间重叠：[startAt, endAt] 与已有委托交集则返回 409
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postApprovalsDelegates(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -232,3 +239,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getApprovalsDelegates);
+export const POST = withRed(postApprovalsDelegates);

@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** POST 添加审批评论 body 校验（上限 1000：与 approval_operations.comment 的 Text 语义匹配，
  *  同时与 approve/reject 等操作的备注长度量级保持一致） */
@@ -27,7 +28,7 @@ const commentSchema = z.object({
  *
  * @param nodeIndex 取 instance.currentNode：便于在时间线上把评论归到当时所处的节点
  */
-export async function POST(
+async function postApprovalsInstancesCommentByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -114,3 +115,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postApprovalsInstancesCommentByAid);

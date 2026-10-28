@@ -9,6 +9,7 @@ import {
   subscribeChatEvents,
   type ChatEvent,
 } from "@/lib/chat-events";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/tasks/{id}/messages/stream — SSE 实时推送
@@ -44,7 +45,7 @@ function sseFrame(event: ChatEvent): Uint8Array {
   return encoder.encode(`data: ${JSON.stringify(event)}\n\n`);
 }
 
-export async function GET(
+async function getTasksMessagesStreamById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -229,3 +230,6 @@ export async function GET(
     },
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksMessagesStreamById);

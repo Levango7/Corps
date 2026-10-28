@@ -4,6 +4,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { AccessToken } from "livekit-server-sdk";
 import bcrypt from "bcryptjs";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/join — 加入会议（获取 LiveKit token）
@@ -20,7 +21,7 @@ import { authFailure } from "@/lib/auth-response";
  *  - host（会议创建者）：canPublish + canSubscribe + roomRecord（可发起录制）
  *  - guest：canPublish + canSubscribe（无录制权限）
  */
-export async function POST(
+async function postMeetingsJoinByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -212,3 +213,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postMeetingsJoinByMid);

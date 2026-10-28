@@ -4,6 +4,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 云盘文件下载 API · /api/v1/workspaces/{wid}/files/{fid}/download
@@ -44,7 +45,7 @@ const EXT_TO_MIME: Record<string, string> = {
 };
 
 /** GET /v1/workspaces/{wid}/files/{fid}/download — 下载文件 */
-export async function GET(
+async function getFilesDownloadByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -116,3 +117,6 @@ export async function GET(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getFilesDownloadByFid);

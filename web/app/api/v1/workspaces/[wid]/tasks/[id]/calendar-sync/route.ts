@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** 任务同步状态响应 */
 interface TaskSyncStatus {
@@ -19,7 +20,7 @@ interface TaskSyncStatus {
  * GET /api/v1/workspaces/{wid}/tasks/{id}/calendar-sync
  * 获取任务的日历同步状态（用于任务详情页 CalendarSyncBadge）。
  */
-export async function GET(
+async function getTasksCalendarSyncById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -80,3 +81,6 @@ export async function GET(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksCalendarSyncById);

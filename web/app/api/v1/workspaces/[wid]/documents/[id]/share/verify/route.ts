@@ -17,6 +17,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { verify as verifySharePassword } from "@/lib/crypto";
 import { isLocked, recordFailure, clearFailures, rateLimitKey } from "@/lib/share-rate-limit";
+import { withRed } from "@/lib/red-metrics";
 
 const verifySchema = z.object({
   password: z.string().min(1).max(128),
@@ -29,7 +30,7 @@ function getClientIp(req: NextRequest): string {
   return req.headers.get("x-real-ip") ?? "unknown";
 }
 
-export async function POST(
+async function postDocumentsShareVerifyById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -163,3 +164,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postDocumentsShareVerifyById);

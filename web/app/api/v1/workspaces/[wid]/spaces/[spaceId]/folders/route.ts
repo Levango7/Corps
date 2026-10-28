@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文件夹 API · /api/v1/workspaces/{wid}/spaces/{spaceId}/folders
@@ -18,7 +19,7 @@ import { authFailure } from "@/lib/auth-response";
 const MAX_FOLDER_DEPTH = 5;
 
 /** GET /v1/workspaces/{wid}/spaces/{spaceId}/folders — 列出空间所有文件夹 */
-export async function GET(
+async function getSpacesFoldersBySpaceId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; spaceId: string }> },
 ) {
@@ -81,7 +82,7 @@ const createFolderSchema = z.object({
 /** POST /v1/workspaces/{wid}/spaces/{spaceId}/folders — 创建文件夹（仅 owner/admin）
  *  限深：最多 5 层嵌套（parentId=null 为根层级 depth=1）
  */
-export async function POST(
+async function postSpacesFoldersBySpaceId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; spaceId: string }> },
 ) {
@@ -221,7 +222,7 @@ const updateFolderSchema = z.object({
  *  Body: { id, name?, icon?, sortOrder?, expanded? }
  *  权限：仅 owner/admin
  */
-export async function PATCH(
+async function patchSpacesFoldersBySpaceId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; spaceId: string }> },
 ) {
@@ -315,7 +316,7 @@ const deleteFolderSchema = z.object({
  *  权限：仅 owner/admin
  *  语义：子文件夹级联删除，其下文档的 folderId 被 SetNull 置空（归入空间根目录）
  */
-export async function DELETE(
+async function deleteSpacesFoldersBySpaceId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; spaceId: string }> },
 ) {
@@ -377,3 +378,9 @@ export async function DELETE(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getSpacesFoldersBySpaceId);
+export const POST = withRed(postSpacesFoldersBySpaceId);
+export const PATCH = withRed(patchSpacesFoldersBySpaceId);
+export const DELETE = withRed(deleteSpacesFoldersBySpaceId);

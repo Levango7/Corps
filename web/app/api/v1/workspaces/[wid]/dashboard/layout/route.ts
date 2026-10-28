@@ -7,6 +7,7 @@ import { getDefaultLayout, type RGLItem } from "@/lib/default-layouts";
 import { putLayoutSchema, extractPref, buildPrefData } from "@/lib/dashboard-layout-helpers";
 import { z } from "zod";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * F3 Widget 仪表盘 — 布局偏好 API。
@@ -30,7 +31,10 @@ import { authFailure } from "@/lib/auth-response";
  * GET /api/v1/workspaces/:wid/dashboard/layout
  * 响应：{ code: 200, data: { layout: RGLItem[], widgetConfigs: Record<...>, breakpoint: "lg" } }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getDashboardLayout(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -83,7 +87,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
  *
  * 持久化采用复合格式 { items, widgetConfigs }，向后兼容旧读取逻辑。
  */
-export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function putDashboardLayout(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -149,3 +156,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ wid:
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDashboardLayout);
+export const PUT = withRed(putDashboardLayout);

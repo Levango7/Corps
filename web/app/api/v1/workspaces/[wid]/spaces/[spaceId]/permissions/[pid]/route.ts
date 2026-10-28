@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 空间级权限单条操作（任务 442）
@@ -56,7 +57,7 @@ const updatePermissionSchema = z
 /**
  * PATCH /v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid} — 更新权限级别或 inheritable 标记
  */
-export async function PATCH(
+async function patchSpacesPermissionsBySpaceIdByPid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; spaceId: string; pid: string }> },
 ) {
@@ -156,7 +157,7 @@ export async function PATCH(
 /**
  * DELETE /v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid} — 移除权限记录
  */
-export async function DELETE(
+async function deleteSpacesPermissionsBySpaceIdByPid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; spaceId: string; pid: string }> },
 ) {
@@ -222,3 +223,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchSpacesPermissionsBySpaceIdByPid);
+export const DELETE = withRed(deleteSpacesPermissionsBySpaceIdByPid);

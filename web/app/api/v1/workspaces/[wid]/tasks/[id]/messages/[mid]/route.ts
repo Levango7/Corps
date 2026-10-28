@@ -5,6 +5,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg, type ApiMsgKey } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
+import { withRed } from "@/lib/red-metrics";
 
 const paramsSchema = z.object({
   wid: z.string().uuid(),
@@ -18,7 +19,7 @@ const updateSchema = z.discriminatedUnion("action", [
 const recallWindowMs = 30 * 60 * 1000;
 
 /** 任务消息仅允许作者编辑/撤回；撤回窗口为发送后 30 分钟。 */
-export async function PATCH(
+async function patchTasksMessagesByIdByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; mid: string }> },
 ) {
@@ -105,3 +106,6 @@ export async function PATCH(
     return fail(500, "internalError");
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchTasksMessagesByIdByMid);
