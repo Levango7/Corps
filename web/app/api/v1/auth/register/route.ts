@@ -10,6 +10,7 @@ import { apiMsg, apiLocale } from "@/lib/api-messages";
 import { zodMessage, zodFieldErrors } from "@/lib/zod-i18n";
 
 import { checkRateLimit } from "@/lib/rate-limit";
+import { withRed } from "@/lib/red-metrics";
 
 const registerSchema = z.object({
   email: z.string().email(),
@@ -24,7 +25,7 @@ const registerSchema = z.object({
   inviteToken: z.string().max(256).optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function postAuthRegister(req: NextRequest) {
   // 限流：单 IP 每小时最多 10 次，防批量注册 / 垃圾账号
   const limited = await checkRateLimit(req, "register", { windowMs: 3_600_000, max: 10 });
   if (limited) return limited;
@@ -213,3 +214,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAuthRegister);

@@ -11,6 +11,7 @@ import {
   signState,
   type CalendarProvider,
 } from "@/lib/calendar/config";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/v1/auth/calendar/connect/[provider]
@@ -19,7 +20,10 @@ import {
  * 查询参数：
  *  - wid：回跳工作区 ID（授权完成后回到 /w/{wid}/settings/calendar）
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ provider: string }> }) {
+async function getAuthCalendarConnectByProvider(
+  req: NextRequest,
+  { params }: { params: Promise<{ provider: string }> },
+) {
   const { provider } = await params;
 
   // 校验 provider
@@ -73,3 +77,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ prov
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAuthCalendarConnectByProvider);

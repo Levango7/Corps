@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getPaymentProvider, PaymentProviderError, PaymentWebhookError } from "@/lib/payments";
 import { handleBillingEvent } from "@/lib/billing/webhook-handler";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/v1/billing/webhook/alipay — 支付宝异步回调（ADR-003 §5 落地要点 3）。
@@ -17,7 +18,7 @@ import { handleBillingEvent } from "@/lib/billing/webhook-handler";
  *
  * 幂等：processed_payment_events (provider='alipay-page', event_id=notify_id)
  */
-export async function POST(req: NextRequest) {
+async function postBillingWebhookAlipay(req: NextRequest) {
   const provider = getPaymentProvider("alipay-page");
 
   let event;
@@ -53,3 +54,6 @@ export async function POST(req: NextRequest) {
   }
   return result;
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postBillingWebhookAlipay);
