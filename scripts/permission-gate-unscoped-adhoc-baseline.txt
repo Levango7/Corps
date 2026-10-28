@@ -22,7 +22,6 @@ PATCH /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid}
 PATCH /api/v1/workspaces/{wid}/transfer-ownership
 POST /api/v1/ai/assistant/chat
 POST /api/v1/ai/daily-report
-POST /api/v1/ai/feedback
 POST /api/v1/ai/knowledge-qa
 POST /api/v1/ai/meeting-flow
 POST /api/v1/remote-control

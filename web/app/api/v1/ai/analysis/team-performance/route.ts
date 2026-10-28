@@ -32,6 +32,7 @@ import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { requirePermission } from "@/lib/permissions";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -69,7 +70,7 @@ function defaultPeriod(): AnalysisPeriod {
   return { start: monday, end: sunday };
 }
 
-export async function POST(req: NextRequest) {
+async function postAiAnalysisTeamPerformance(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -255,3 +256,6 @@ export async function POST(req: NextRequest) {
     data: { reportId, ...result },
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiAnalysisTeamPerformance);

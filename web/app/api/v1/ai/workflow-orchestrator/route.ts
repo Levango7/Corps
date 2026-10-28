@@ -36,6 +36,7 @@ import {
   type ExistingWorkflowSummary,
 } from "@/lib/ai/prompts/workflow-orchestrator";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ── 请求体 schema ──
 
@@ -211,7 +212,7 @@ function normalizeWorkflowDefinition(raw: unknown): WorkflowDefinition | null {
 
 // ── 路由处理 ──
 
-export async function POST(req: NextRequest) {
+async function postAiWorkflowOrchestrator(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -341,3 +342,6 @@ export async function POST(req: NextRequest) {
     message: apiMsg(req, "ok"),
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiWorkflowOrchestrator);

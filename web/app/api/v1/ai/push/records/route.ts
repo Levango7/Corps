@@ -13,6 +13,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 默认每页条数 */
 const DEFAULT_LIMIT = 20;
@@ -20,7 +21,7 @@ const DEFAULT_LIMIT = 20;
 const MAX_LIMIT = 50;
 
 /** GET /api/v1/ai/push/records — 推送记录列表（支持未读过滤 + 游标分页） */
-export async function GET(req: NextRequest) {
+async function getAiPushRecords(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -96,3 +97,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiPushRecords);

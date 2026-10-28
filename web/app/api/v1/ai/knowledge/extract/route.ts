@@ -29,6 +29,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { buildKnowledgeExtractPrompt } from "@/lib/ai/prompts/knowledge-extract";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -181,7 +182,7 @@ function normalizeExtractResult(raw: unknown): ExtractedResult {
   return { nodes, edges };
 }
 
-export async function POST(req: NextRequest) {
+async function postAiKnowledgeExtract(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -426,3 +427,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiKnowledgeExtract);

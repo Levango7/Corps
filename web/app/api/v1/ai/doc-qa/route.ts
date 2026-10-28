@@ -27,6 +27,7 @@ import { buildDocQaSystemPrompt, buildDocQaUserPrompt } from "@/lib/ai/prompts/d
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { requirePermission } from "@/lib/permissions";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -35,7 +36,7 @@ const schema = z.object({
   docIds: z.array(z.string().uuid()).optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function postAiDocQa(req: NextRequest) {
   // 1) 基础认证（确认登录身份）
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -154,3 +155,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiDocQa);

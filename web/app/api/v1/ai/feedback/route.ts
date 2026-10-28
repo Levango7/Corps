@@ -13,6 +13,7 @@ import { submitFeedback, getFeedbackStats } from "@/lib/ai/feedback";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── POST 校验 schema ──────────────────────────────────────────────────────
 const postSchema = z.object({
@@ -40,7 +41,7 @@ const getSchema = z.object({
  * 请求体：{ workspaceId, capability, rating, comment?, originalOutput?, correctedOutput?, metadata? }
  * 限流：60 秒内 30 次
  */
-export async function POST(req: NextRequest) {
+async function postAiFeedback(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -109,7 +110,7 @@ export async function POST(req: NextRequest) {
  * 返回：{ items, total, stats } — items 为反馈列表，total 为筛选条件下的总数，
  *       stats 为该工作区(+capability)的满意度统计
  */
-export async function GET(req: NextRequest) {
+async function getAiFeedback(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -207,3 +208,7 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiFeedback);
+export const GET = withRed(getAiFeedback);

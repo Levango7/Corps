@@ -27,6 +27,7 @@ import { runAssistant, type TaskPhase } from "@/lib/ai/assistant/orchestrator";
 import { buildTaskContext } from "@/lib/ai/assistant/context-builder";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const chatSchema = z.object({
   wid: z.string().uuid(),
@@ -40,7 +41,7 @@ const chatSchema = z.object({
 });
 
 /** POST /api/v1/ai/assistant/chat — AI 助理对话 */
-export async function POST(req: NextRequest) {
+async function postAiAssistantChat(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -210,3 +211,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiAssistantChat);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 跨内容全文搜索 API
@@ -73,7 +74,7 @@ function buildSnippet(text: string | null | undefined, query: string): string {
 }
 
 /** GET /v1/workspaces/{wid}/search — 跨内容全文搜索 */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getSearch(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -221,3 +222,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getSearch);

@@ -79,6 +79,44 @@ NON_PROD_RE = re.compile(
     r"(^|/)(tests?|e2e|__tests__|__mocks__)(/|$)|\.test\.|\.[st]pec\.|\.[cm]?jsx?$"
 )
 
+# 注释行不算调用点（2026-10-28 实测踩到，2026-10-29 复查仍成立）：
+# `web/app/api/metrics/route.ts:20` 的文档注释里写着「逐路由 `withRed()` 包装」，
+# 整段 `re.findall` 于是把真实调用数虚增 1（首批时 24 → 25；追到第七批后 210 → 211）。
+# 差 1 处看似无害，但它让「阈值钉在真实值」这件事失去意义——
+# 一个靠注释就能涨数的指标，迟早会被调成绿灯。
+# 判据只看行首形态：块注释续行（`*`）、行注释（`//`）、块注释开头（`/*`）。
+# 不解析字符串里的 `//`（那需要真词法分析，收益不成比例）。
+_COMMENT_ONLY_RE = re.compile(r"^\s*(?:\*|//|/\*)")
+
+
+def _is_comment_only(line: str) -> bool:
+    """该行是否整行都是注释（因此其中的 withRed( 不是调用点）。"""
+    return bool(_COMMENT_ONLY_RE.match(line))
+
+
+# web/app/api 下的**导出 handler 总数**（GET/POST/PATCH/DELETE/PUT）。
+# RED-Rate/Duration 的达标线（good）直接取它：目标不是"接了几个"，而是"全部接完"。
+# 为什么不用常数：见 dim_observability 里那段「口径改过两次」的留痕——手钉的常数
+# 依赖"每批接线的人都回来改这个数"，而这条约定在它进 main 之前无人可能遵守。
+_HANDLER_DEF_RE = re.compile(
+    r"(?m)^\s*export\s+(?:async\s+)?(?:function|const)\s+(?:GET|POST|PATCH|DELETE|PUT)\b"
+)
+
+
+def _count_api_handlers() -> int:
+    """web/app/api 下 route.ts 的导出 handler 总数（0 表示目录不存在或读不出）。"""
+    api_dir = WEB / "app" / "api"
+    if not api_dir.is_dir():
+        return 0
+    n = 0
+    for p in api_dir.rglob("route.ts"):
+        try:
+            t = p.read_text(encoding="utf-8", errors="replace")
+        except Exception:
+            continue
+        n += len(_HANDLER_DEF_RE.findall(t))
+    return n
+
 # 走路时永远跳过的目录（node_modules 会让任何全仓扫描卡死）
 SKIP_DIRS = {
     "node_modules",
@@ -601,13 +639,35 @@ def dim_observability():
             t = p.read_text(encoding="utf-8", errors="replace")
         except Exception:
             continue
-        withred_calls += len(re.findall(r"\bwithRed\s*\(", t))
-    metric(d + "-5", d, "RED-Rate：withRed 真实调用点数", withred_calls, " 处", 1, 0,
+        withred_calls += sum(
+            1 for line in t.splitlines()
+            if re.search(r"\bwithRed\s*\(", line) and not _is_comment_only(line)
+        )
+    # 达标线口径改过两次，第二次是错的，留痕以免第三个照抄：
+    #   第一版 good=1 处：零接线时定的下限，只判「接通了没有」。
+    #   第二版把 good 依次手钉成 24 → 210，理由是「不抬严就放过退步」。
+    #   这个理由站不住：**真正挡退步的是基线棘轮**（--check-baseline 比对实测值，
+    #   谁删掉接线当场判红），手钉的 good 只影响档位显示，挡不住任何东西。
+    #   而它根本维护不了：钉 210 的同一天，#190/#196–#203 十几批接线把真实值
+    #   一路推到 245、376 —— 同一个数字在几个小时内失准三次。凡是要求"每次接线的
+    #   人回来改这个数"的约定，在它进 main 之前就不可能被遵守。
+    # 因此第三版：good 取**实测 handler 总数** = 全量接线才算达标，bad=0：
+    #   - 推进中的部分覆盖判 WARN（不判 FAIL——按目录分批是计划内的事）
+    #   - 接线被删：值往下掉，先掉档位，越过基线就由棘轮判红（详见下句）
+    #   - 不需要任何人手动维护这个数字，批次推进自动收敛到 PASS
+    api_handlers = _count_api_handlers()
+    wired_pct = (withred_calls / api_handlers * 100) if api_handlers else 0.0
+    red_note = (f"{withred_calls}/{api_handlers} handler ≈{wired_pct:.1f}%"
+                "（达标线=全量接线；Errors 由 onRequestError 全路由覆盖，"
+                "分母不同源，别混算错误率）")
+    metric(d + "-5", d, "RED-Rate：withRed 真实调用点数", withred_calls, " 处",
+           api_handlers, 0,
            lower_is_better=False,
-           note="首批已接线 contacts/announcements/activity 域（2026-10-26）；按目录分批推进")
-    metric(d + "-6", d, "RED-Duration：withRed 真实调用点数", withred_calls, " 处", 1, 0,
+           note=red_note)
+    metric(d + "-6", d, "RED-Duration：withRed 真实调用点数", withred_calls, " 处",
+           api_handlers, 0,
            lower_is_better=False,
-           note="与 Rate 同源（同一包装器同时记两者）")
+           note="与 Rate 同源（同一包装器同时记两者），达标线同 -5")
 
     # 判据只数「文件名含 SLO/SLI/可观测 的文档」——它读不懂内容，文档存在不等于口径正确。
     # 这条局限写在这里，是防止有人拿本项分数当质量证明。
@@ -781,6 +841,22 @@ def self_test() -> int:
             failures.append(f"NON_PROD_RE 漏排除 {t}")
         else:
             print(f"[maturity selftest] ✓ 排除 {t}")
+
+    # 注释行排除式自检：这三类必须被判成「注释」（不计调用点），真实调用必须不被误判。
+    # 加这条的理由跟 NON_PROD_RE 一样——判据失效是静默的，只有钉死才能防复发。
+    comment_cases = [
+        (" * 逐路由 `withRed()` 包装", True, "块注释续行"),
+        ("// export const GET = withRed(getX)", True, "行注释"),
+        ("/* withRed(x) */", True, "块注释开头"),
+        ("export const GET = withRed(getX);", False, "真实调用"),
+        ("  params: withRedCfg,", False, "同名前缀但不是调用"),
+    ]
+    for line, want, label in comment_cases:
+        got = _is_comment_only(line)
+        if got != want:
+            failures.append(f"注释判据误判（{label}）：期望 {want}，实得 {got}")
+        else:
+            print(f"[maturity selftest] ✓ 注释判据：{label}")
 
     if failures:
         print("\n[maturity selftest] ✗ 自测失败：")
