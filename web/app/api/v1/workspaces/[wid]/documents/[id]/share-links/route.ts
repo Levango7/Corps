@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { hash as hashPassword } from "@/lib/crypto";
 import { randomBytes } from "crypto";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 分享链接增强 API（任务 443）
@@ -62,7 +63,7 @@ function stripSensitive<T extends { passwordHash?: string | null }>(
 /**
  * GET /v1/workspaces/{wid}/documents/{id}/share-links — 分享链接列表
  */
-export async function GET(
+async function getDocumentsShareLinksById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -153,7 +154,7 @@ const createShareLinkSchema = z.object({
 /**
  * POST /v1/workspaces/{wid}/documents/{id}/share-links — 创建分享链接
  */
-export async function POST(
+async function postDocumentsShareLinksById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -263,3 +264,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsShareLinksById);
+export const POST = withRed(postDocumentsShareLinksById);

@@ -20,6 +20,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { requirePermission } from "@/lib/permissions";
 import { hash as hashSharePassword } from "@/lib/crypto";
 import { logger } from "@/lib/logger";
+import { withRed } from "@/lib/red-metrics";
 
 const updateShareSchema = z.object({
   /** 分享过期时间（ISO 字符串；null=永不过期；不传=保持原状） */
@@ -44,7 +45,7 @@ const createShareSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/documents/{id}/share — 更新分享有效期/密码 */
-export async function PATCH(
+async function patchDocumentsShareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -161,7 +162,7 @@ export async function PATCH(
 }
 
 /** GET /v1/workspaces/{wid}/documents/{id}/share — 查询当前分享设置 */
-export async function GET(
+async function getDocumentsShareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -228,7 +229,7 @@ export async function GET(
  *  - expiresIn（小时）换算为 shareExpiresAt；不传或 0 = 永不过期
  *  - 返回 shareUrl / shareToken / expiresAt
  */
-export async function POST(
+async function postDocumentsShareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -354,7 +355,7 @@ export async function POST(
  *  - 文档 visibility 回退为 private（仅工作区可见）
  *  - 旧分享链接立即失效
  */
-export async function DELETE(
+async function deleteDocumentsShareById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -431,3 +432,9 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchDocumentsShareById);
+export const GET = withRed(getDocumentsShareById);
+export const POST = withRed(postDocumentsShareById);
+export const DELETE = withRed(deleteDocumentsShareById);
