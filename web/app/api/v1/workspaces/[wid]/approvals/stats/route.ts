@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点类型（nodes JSON 快照中的单节点，与 instances route 一致） */
 interface ApprovalNode {
@@ -42,7 +43,10 @@ const statsQuerySchema = z.object({
  * 默认时间范围：最近30天
  * 返回：总数、按状态/优先级/模板分组统计、平均处理时长、当前用户待审批数
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getApprovalsStats(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx) {
@@ -212,3 +216,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getApprovalsStats);

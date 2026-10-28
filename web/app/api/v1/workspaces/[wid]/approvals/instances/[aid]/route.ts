@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
 import { isAiConfigured } from "@/lib/ai/shared";
+import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点类型（nodes JSON 快照中的单节点） */
 interface ApprovalNode {
@@ -28,7 +29,7 @@ interface ApprovalNode {
  *  - aiSuggestion: AI 审批建议（M4，未配置 AI 时为 null）
  *  - entityType / entityId: 审批关联的实体类型和 ID（M6，从 content JSON 提取）
  */
-export async function GET(
+async function getApprovalsInstancesByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -146,7 +147,7 @@ export async function GET(
  * 创建 ApprovalOperation(action="withdraw")，设 status="withdrawn", completedAt=now
  * 保留审计记录，不实际删除行
  */
-export async function DELETE(
+async function deleteApprovalsInstancesByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -234,3 +235,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getApprovalsInstancesByAid);
+export const DELETE = withRed(deleteApprovalsInstancesByAid);
