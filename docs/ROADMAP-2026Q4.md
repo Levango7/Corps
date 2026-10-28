@@ -20,7 +20,7 @@
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭；v0.8.2 修复容器镜像源单点（`ARG NODE_IMAGE` 回 Docker Hub） |
 | 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **133**（10-26 approvals 批次清 14 条）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
-| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 33.9%（目标 60%），`tests/api` 路由级测试 7/20；**RED-Rate/Duration** 首批已接线（contacts/announcements/activity 域），其余路由按目录分批；**SLO/SLI 文档 0 份**（正式实例前按负面清单不做承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
+| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 40.8%（目标 60%），`tests/api` 路由级测试 10/20；**RED-Rate/Duration** 已推进到第十二批（#189、#190、#196–#203），`withRed` 覆盖 376 / 448 个 handler（≈84%，快照 2026-10-29，仍在推进）；**SLO/SLI 内部口径文档 1 份**（`docs/SLI-internal-definition.md`，只定义 SLI 与盲区，正式实例前按负面清单不做对外 SLO 承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -85,7 +85,7 @@
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 592 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
 | `permission-gate` T3 | 133 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒） |
-| `api-contract` undeclared | 170 | **150** | 每周契约化 ≥5 条路由 |
+| `api-contract` undeclared | 154 | **150** | 每周契约化 ≥5 条路由（2026-10-28 approvals 域 16 条契约化，openapi 117→133 paths） |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）
