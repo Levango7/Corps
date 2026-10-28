@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 独立 IM 会话成员管理 API（任务 212）
@@ -24,7 +25,7 @@ const USER_SELECT = {
  *
  * 验证当前用户是该会话成员，返回所有成员（含 user 基本信息、role、joinedAt、lastReadAt）。
  */
-export async function GET(
+async function getConversationsMembersByCid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -124,7 +125,7 @@ const addMembersSchema = z.object({
  * 仅 owner/admin 可操作。请求体：{ userIds: string[] }
  * 已存在的成员跳过（createMany skipDuplicates）。
  */
-export async function POST(
+async function postConversationsMembersByCid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; cid: string }> },
 ) {
@@ -245,3 +246,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getConversationsMembersByCid);
+export const POST = withRed(postConversationsMembersByCid);

@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/tasks/{id}/messages — 任务聊天消息历史
@@ -15,7 +16,7 @@ import { apiMsg } from "@/lib/api-messages";
  * MVP 采用轮询方案：前端 5s 间隔用 ?since= 增量拉取新消息。
  * API 设计兼容未来 SSE 升级（响应格式不变）。
  */
-export async function GET(
+async function getTasksMessagesById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -86,7 +87,7 @@ const createMessageSchema = z.object({
  *
  * 消息创建后，同时写入 Notification（通知任务指派人有新消息，排除发送者自己）。
  */
-export async function POST(
+async function postTasksMessagesById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -167,3 +168,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasksMessagesById);
+export const POST = withRed(postTasksMessagesById);

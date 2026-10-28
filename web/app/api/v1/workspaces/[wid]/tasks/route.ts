@@ -17,6 +17,7 @@ import { emitWorkspaceEvent } from "@/lib/workspace-events";
 // 与 workspace-events 的 emitWorkspaceEvent 同名但职责不同（SSE 推送 vs 工作流执行），
 // 此处用别名导入避免命名冲突。
 import { emitWorkflowEvent as triggerWorkflowEvent } from "@/lib/workflow/triggers";
+import { withRed } from "@/lib/red-metrics";
 
 const createTaskSchema = z.object({
   title: z.string().min(1).max(255),
@@ -95,7 +96,7 @@ const taskListOrderBy = Prisma.validator<Prisma.TaskOrderByWithRelationInput[]>(
   { id: "asc" },
 ]);
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getTasks(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -261,7 +262,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
   }
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postTasks(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -569,3 +570,7 @@ async function notifyTaskAssigned(opts: {
     console.error("[tasks] notifyTaskAssigned failed (non-blocking):", err);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTasks);
+export const POST = withRed(postTasks);

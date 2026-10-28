@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 独立 IM 会话 API（任务 212）
@@ -34,7 +35,10 @@ const listQuerySchema = z.object({
  *
  * 分页：cursor-based，cursor 为上一页末尾会话 id。
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getConversations(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -184,7 +188,10 @@ const createConversationSchema = z.object({
  *
  * 响应：{ code: 201, data: Conversation }
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postConversations(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -319,3 +326,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getConversations);
+export const POST = withRed(postConversations);
