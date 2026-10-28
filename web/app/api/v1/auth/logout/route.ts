@@ -1,12 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/v1/auth/logout
  * 清除 Better Auth 会话 + httpOnly access_token cookie。
  * signOut 容错：即使 Better Auth session 已过期或不存在，也清除 cookie 并返回 200。
  */
-export async function POST(req: NextRequest) {
+async function postAuthLogout(req: NextRequest) {
   // 1) 尝试清除 Better Auth 服务端会话（失败不阻断 logout 流程）
   try {
     await auth.api.signOut({ headers: req.headers });
@@ -25,3 +26,6 @@ export async function POST(req: NextRequest) {
   });
   return response;
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAuthLogout);

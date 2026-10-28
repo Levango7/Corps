@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { WebhookReceiver, type WebhookEvent } from "livekit-server-sdk";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/webhooks/livekit — LiveKit Server webhook 端点
@@ -17,7 +18,7 @@ import { WebhookReceiver, type WebhookEvent } from "livekit-server-sdk";
  *
  * 数据库操作通过 runWithAuthOp("webhook") 绕过 RLS（webhook 无用户上下文）。
  */
-export async function POST(req: NextRequest) {
+async function postWebhooksLivekit(req: NextRequest) {
   const apiKey = process.env.LIVEKIT_API_KEY;
   const apiSecret = process.env.LIVEKIT_API_SECRET;
   if (!apiKey || !apiSecret) {
@@ -196,3 +197,6 @@ async function handleEgressEnded(event: WebhookEvent): Promise<void> {
     }
   });
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postWebhooksLivekit);

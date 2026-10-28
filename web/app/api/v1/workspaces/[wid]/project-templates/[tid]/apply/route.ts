@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/project-templates/{tid}/apply — 从模板创建任务集
@@ -26,7 +27,7 @@ const applyTemplateSchema = z.object({
   assigneeId: z.string().uuid().optional(),
 });
 
-export async function POST(
+async function postProjectTemplatesApplyByTid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; tid: string }> },
 ) {
@@ -178,3 +179,6 @@ export async function POST(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postProjectTemplatesApplyByTid);

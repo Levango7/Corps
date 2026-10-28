@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { requirePermission } from "@/lib/permissions";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 type Tx = Prisma.TransactionClient;
 
@@ -53,7 +54,7 @@ const MS_PER_DAY = 86_400_000;
  * 与 api/openapi.yaml 的 Envelope_WidgetData 均按"直接载荷"约定消费，
  * 多包一层会让所有 widget 读到 undefined 并触发路由级错误边界。
  */
-export async function GET(
+async function getDashboardWidgetsByWidgetId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; widgetId: string }> },
 ) {
@@ -341,3 +342,6 @@ function thisWeekRange(): { start: Date; end: Date } {
   end.setHours(23, 59, 59, 999);
   return { start, end };
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDashboardWidgetsByWidgetId);

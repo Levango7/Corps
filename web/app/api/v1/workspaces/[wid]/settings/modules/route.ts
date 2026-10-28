@@ -11,6 +11,7 @@ import {
   readSidebarSettings,
   withSidebarSettings,
 } from "@/lib/workspace-settings";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * PATCH /api/v1/workspaces/:wid/settings/modules — 侧栏可选模块开关（P1-B2）。
@@ -29,7 +30,10 @@ const bodySchema = z.object({
   enabledModules: z.array(z.string()).max(64),
 });
 
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchSettingsModules(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -104,3 +108,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchSettingsModules);

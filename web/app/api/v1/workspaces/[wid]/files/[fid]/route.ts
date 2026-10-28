@@ -5,6 +5,7 @@ import path from "path";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 云盘文件操作 API · /api/v1/workspaces/{wid}/files/{fid}
@@ -18,7 +19,7 @@ import { authFailure } from "@/lib/auth-response";
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 
 /** GET /v1/workspaces/{wid}/files/{fid} — 获取文件元信息 */
-export async function GET(
+async function getFilesByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -65,7 +66,7 @@ export async function GET(
 }
 
 /** DELETE /v1/workspaces/{wid}/files/{fid} — 删除文件（级联删除版本 + 物理删除存储文件） */
-export async function DELETE(
+async function deleteFilesByFid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; fid: string }> },
 ) {
@@ -138,3 +139,7 @@ export async function DELETE(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getFilesByFid);
+export const DELETE = withRed(deleteFilesByFid);

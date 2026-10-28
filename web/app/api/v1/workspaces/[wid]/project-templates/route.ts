@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 模板内单个任务项的结构（templateData.tasks[] 的元素）。
@@ -43,7 +44,10 @@ const listTemplatesQuerySchema = z.object({
  * Query: ?category=<分类>（精确过滤） ?page=?limit=（分页）
  * 返回按 updatedAt 倒序，附带分页元信息。
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getProjectTemplates(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -134,7 +138,10 @@ const createTemplateSchema = z.object({
   isPublic: z.boolean().default(false),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postProjectTemplates(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -187,3 +194,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getProjectTemplates);
+export const POST = withRed(postProjectTemplates);

@@ -37,6 +37,7 @@ import {
   buildMeetingSummaryUserPrompt,
 } from "@/lib/ai/prompts/meeting-summary";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 请求 body schema */
 const schema = z.object({
@@ -164,7 +165,7 @@ function normalizeMeetingSummary(raw: unknown): MeetingSummary | null {
  *
  * 接收会议转写文本 → 调用 reasonerModel 生成完整结构化纪要 → 返回。
  */
-export async function POST(req: NextRequest) {
+async function postAiMeetingSummary(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -275,3 +276,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiMeetingSummary);

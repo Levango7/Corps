@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 顶级 KeyResult 端点 · /v1/workspaces/{wid}/key-results/{kid}
@@ -39,7 +40,7 @@ const patchSchema = z.object({
  * 进度重算：currentValue/targetValue/weight 变更后，父 Objective.progress
  * 按 computeProgress 加权公式重算（与嵌套端点逻辑一致）。
  */
-export async function PATCH(
+async function patchKeyResultsByKid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; kid: string }> },
 ) {
@@ -140,7 +141,7 @@ export async function PATCH(
 /**
  * DELETE /v1/workspaces/{wid}/key-results/{kid} — 删除关键结果并重算父目标进度
  */
-export async function DELETE(
+async function deleteKeyResultsByKid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; kid: string }> },
 ) {
@@ -209,3 +210,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchKeyResultsByKid);
+export const DELETE = withRed(deleteKeyResultsByKid);

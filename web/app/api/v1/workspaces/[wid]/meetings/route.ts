@@ -4,13 +4,14 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import bcrypt from "bcryptjs";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/meetings — 工作区会议列表
  * Query: ?status=scheduled|active|ended&page=1&limit=20
  * 返回按 createdAt 倒序，统一分页格式 { items, page, limit, total, hasMore }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getMeetings(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -123,7 +124,7 @@ const createMeetingSchema = z.object({
   password: z.string().max(100).optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postMeetings(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -188,3 +189,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getMeetings);
+export const POST = withRed(postMeetings);

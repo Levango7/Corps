@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const reportQuerySchema = z.object({
   userId: z.string().uuid().optional(),
@@ -24,7 +25,10 @@ interface GroupRow {
  * 聚合：按用户/任务/日期分组，返回总时长、计费时长、金额
  * 返回 { groups: [{ key, totalDuration, billableDuration, totalAmount }], summary }
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getTimeEntriesReport(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -153,3 +157,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getTimeEntriesReport);

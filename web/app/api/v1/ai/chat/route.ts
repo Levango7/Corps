@@ -15,6 +15,7 @@ import {
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   question: z.string().min(1).max(20_000),
@@ -30,7 +31,7 @@ const schema = z.object({
     .optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function postAiChat(req: NextRequest) {
   // 1) 认证 + 获取 workspaceId（用于 usage tracking）
   const authCtx = await getUserIdAndWorkspaceId(req);
   if (!authCtx) return unauthorizedResponse(req);
@@ -94,3 +95,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiChat);

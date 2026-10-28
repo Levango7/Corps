@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const stopSchema = z.object({
   teid: z.string().uuid(),
@@ -14,7 +15,10 @@ const stopSchema = z.object({
  * 更新 TimeEntry：endTime=now, duration=Math.floor((endTime-startTime)/1000)
  * 返回更新后的 TimeEntry
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postTimeEntriesStop(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -93,3 +97,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postTimeEntriesStop);

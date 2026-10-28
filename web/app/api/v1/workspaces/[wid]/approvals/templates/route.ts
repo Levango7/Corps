@@ -6,6 +6,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import type { Prisma } from "@prisma/client";
 import { getBuiltinTemplates } from "@/lib/approval/builtin-templates";
+import { withRed } from "@/lib/red-metrics";
 
 /** 审批节点配置 schema（模板与实例共用） */
 const approvalNodeSchema = z.object({
@@ -48,7 +49,10 @@ const initBuiltinSchema = z.object({
  *        ?category=leave（按分类筛选：leave/expense/purchase/contract/hr）
  * 默认仅返回 active=true 的模板，按 createdAt 倒序
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getApprovalsTemplates(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -123,7 +127,10 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
  *       { action: "init-builtin" } — 初始化内置模板
  * createdBy 设为当前用户，返回 { code: 201, data: template }
  */
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postApprovalsTemplates(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -238,3 +245,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getApprovalsTemplates);
+export const POST = withRed(postApprovalsTemplates);

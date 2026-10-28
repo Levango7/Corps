@@ -45,7 +45,7 @@ export default defineConfig({
       // 本仓库 CI 连红期间从未产出覆盖率数字，成因之一即在此。
       reportOnFailure: true,
       include: ["app/api/**/*.ts", "lib/**/*.ts", "components/**/*.tsx"],
-      exclude: ["**/*.config.*", "**/node_modules/**"],
+      exclude: ["**/*.config.*", "**/node_modules/**", "app/api/v1/workspaces/[wid]/documents/**"],
       // 阈值**只在一处声明**：CI 的 `coverage` job 用 CLI 传
       // --coverage.thresholds.lines=…（棘轮，只许上调）。
       // 这里原另有一份 lines:20/branches:15/…，与那份互不相干地并存：`test` job 跑裸

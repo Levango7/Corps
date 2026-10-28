@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { cachedQuery } from "@/lib/cache";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 分页查询参数校验：page 默认 1，limit 默认 50，最大 100 */
 const listMembersQuerySchema = z.object({
@@ -11,7 +12,7 @@ const listMembersQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getMembers(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -96,3 +97,6 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ wid:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getMembers);

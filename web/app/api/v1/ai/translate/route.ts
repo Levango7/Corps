@@ -15,6 +15,7 @@ import {
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   text: z.string().min(1).max(20_000),
@@ -31,7 +32,7 @@ function buildSystemPrompt(targetLang: "zh" | "en" | "ja"): string {
   return `你是翻译助手。将用户选中的文本翻译成${targetLabel[targetLang]}。只输出翻译结果，不要添加任何解释或说明。保持原文的格式（如 markdown 标记、换行）不变。`;
 }
 
-export async function POST(req: NextRequest) {
+async function postAiTranslate(req: NextRequest) {
   // 1) 认证 + 获取 workspaceId（用于 usage tracking）
   const authCtx = await getUserIdAndWorkspaceId(req);
   if (!authCtx) return unauthorizedResponse(req);
@@ -92,3 +93,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiTranslate);

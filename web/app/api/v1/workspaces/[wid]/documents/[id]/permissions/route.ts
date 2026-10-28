@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档级权限 CRUD（阶段 6 · 任务 222）
@@ -56,7 +57,7 @@ async function canManageDoc(
  * GET /v1/workspaces/{wid}/documents/{did}/permissions — 权限列表
  * L3: GET 请求也验证工作区成员身份 + 文档存在性
  */
-export async function GET(
+async function getDocumentsPermissionsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -146,7 +147,7 @@ const VALID_ROLES = new Set(["owner", "admin", "member", "viewer"]);
 /**
  * POST /v1/workspaces/{wid}/documents/{did}/permissions — 添加权限
  */
-export async function POST(
+async function postDocumentsPermissionsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -266,3 +267,7 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsPermissionsById);
+export const POST = withRed(postDocumentsPermissionsById);

@@ -10,6 +10,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 列表查询参数 */
 const listSchema = z.object({
@@ -28,7 +29,7 @@ const createSchema = z.object({
  *
  * 列出当前用户在指定工作区的 AI 对话（按更新时间倒序，最多 50 条）。
  */
-export async function GET(req: NextRequest) {
+async function getAiConversations(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -97,7 +98,7 @@ export async function GET(req: NextRequest) {
  *
  * 创建新 AI 对话。title 默认可由前端取用户首问前 50 字符。
  */
-export async function POST(req: NextRequest) {
+async function postAiConversations(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -173,3 +174,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiConversations);
+export const POST = withRed(postAiConversations);

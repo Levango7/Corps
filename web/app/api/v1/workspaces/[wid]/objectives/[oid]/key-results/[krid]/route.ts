@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const patchSchema = z.object({
   title: z.string().min(1).max(200).optional(),
@@ -17,7 +18,7 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/objectives/{oid}/key-results/{krid} — 更新关键结果并重算父目标进度 */
-export async function PATCH(
+async function patchObjectivesKeyResultsByOidByKrid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string; krid: string }> },
 ) {
@@ -105,7 +106,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/objectives/{oid}/key-results/{krid} — 删除关键结果并重算父目标进度 */
-export async function DELETE(
+async function deleteObjectivesKeyResultsByOidByKrid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; oid: string; krid: string }> },
 ) {
@@ -164,3 +165,7 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchObjectivesKeyResultsByOidByKrid);
+export const DELETE = withRed(deleteObjectivesKeyResultsByOidByKrid);

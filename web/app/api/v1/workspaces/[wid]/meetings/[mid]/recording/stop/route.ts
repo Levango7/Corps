@@ -4,6 +4,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { livekitApiHost } from "@/lib/livekit-utils";
 import { EgressClient } from "livekit-server-sdk";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/recording/stop — 停止会议录制
@@ -19,7 +20,7 @@ import { authFailure } from "@/lib/auth-response";
  *
  * 信封格式与现有会议端点一致：{ code, data, message }
  */
-export async function POST(
+async function postMeetingsRecordingStopByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -132,3 +133,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postMeetingsRecordingStopByMid);

@@ -4,6 +4,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { cachedQuery } from "@/lib/cache";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 标签 API · /api/v1/workspaces/{wid}/labels
@@ -11,7 +12,7 @@ import { authFailure } from "@/lib/auth-response";
  * - GET：列出当前工作区所有标签
  * - POST：创建新标签（仅 owner/admin）
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getLabels(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -57,7 +58,7 @@ const createLabelSchema = z.object({
   color: z.string().max(50).optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postLabels(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -122,7 +123,7 @@ const deleteLabelSchema = z.object({
  * DELETE /v1/workspaces/{wid}/labels — 删除标签
  * 权限：仅 owner/admin
  */
-export async function DELETE(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function deleteLabels(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -196,7 +197,7 @@ const patchLabelSchema = z.object({
  * PATCH /v1/workspaces/{wid}/labels — 编辑标签名称/颜色
  * 权限：仅 owner/admin
  */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchLabels(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -273,3 +274,9 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getLabels);
+export const POST = withRed(postLabels);
+export const DELETE = withRed(deleteLabels);
+export const PATCH = withRed(patchLabels);

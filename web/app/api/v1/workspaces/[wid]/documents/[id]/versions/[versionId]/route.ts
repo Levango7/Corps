@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 文档版本详情 API · /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}
@@ -14,7 +15,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
  */
 
 /** GET /v1/workspaces/{wid}/documents/{id}/versions/{versionId} — 版本详情 */
-export async function GET(
+async function getDocumentsVersionsByIdByVersionId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; versionId: string }> },
 ) {
@@ -82,7 +83,7 @@ export async function GET(
  *  3. 创建一个新的版本快照记录此次回滚操作（版本号继续递增，source=manual）
  *  4. 返回新版本快照
  */
-export async function POST(
+async function postDocumentsVersionsByIdByVersionId(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string; versionId: string }> },
 ) {
@@ -183,3 +184,7 @@ export async function POST(
     return handlePrismaError(error, req);
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsVersionsByIdByVersionId);
+export const POST = withRed(postDocumentsVersionsByIdByVersionId);

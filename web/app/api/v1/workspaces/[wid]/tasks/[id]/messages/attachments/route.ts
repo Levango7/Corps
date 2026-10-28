@@ -6,6 +6,7 @@ import { randomUUID } from "crypto";
 import { promises as fs } from "fs";
 import path from "path";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /v1/workspaces/{wid}/tasks/{id}/messages/attachments — 上传文件附件
@@ -75,7 +76,7 @@ interface AttachmentMeta {
   thumbnailUrl: string | null;
 }
 
-export async function POST(
+async function postTasksMessagesAttachmentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -192,3 +193,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postTasksMessagesAttachmentsById);

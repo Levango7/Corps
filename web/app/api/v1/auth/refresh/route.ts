@@ -7,6 +7,7 @@ import { z } from "zod";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg, apiLocale } from "@/lib/api-messages";
 import { zodMessage, zodFieldErrors } from "@/lib/zod-i18n";
+import { withRed } from "@/lib/red-metrics";
 
 const refreshSchema = z.object({ workspaceId: z.string().uuid().optional() });
 
@@ -68,7 +69,7 @@ function signSessionCookieValue(token: string): string {
   return `${token}.${signature}`;
 }
 
-export async function POST(req: NextRequest) {
+async function postAuthRefresh(req: NextRequest) {
   // 限流：单 IP 每分钟最多 60 次（正常前端轮换频率远低于此，仅拦异常刷接口）
   const limited = await checkRateLimit(req, "refresh", { windowMs: 60_000, max: 60 });
   if (limited) return limited;
@@ -180,3 +181,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAuthRefresh);

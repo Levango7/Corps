@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /** POST 撤回审批 body 校验 */
 const withdrawSchema = z.object({
@@ -16,7 +17,7 @@ const withdrawSchema = z.object({
  * 只有申请人可操作，status 必须为 pending，
  * 创建 ApprovalOperation(action="withdraw")，设 status="withdrawn", completedAt=now
  */
-export async function POST(
+async function postApprovalsInstancesWithdrawByAid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; aid: string }> },
 ) {
@@ -124,3 +125,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postApprovalsInstancesWithdrawByAid);

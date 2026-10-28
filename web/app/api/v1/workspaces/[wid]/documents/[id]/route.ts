@@ -7,12 +7,13 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { hash as hashSharePassword } from "@/lib/crypto";
 import { checkDocumentPermission } from "@/lib/document-permission-check";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/documents/{id} — 文档详情（编辑视图）
  * 返回 markdown 草稿 + publishedMarkdown（如有）；含 shareToken 状态供 UI 决定展示
  */
-export async function GET(
+async function getDocumentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -91,7 +92,7 @@ const updateDocSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/documents/{id} — 更新标题/正文/发布状态/分享 token */
-export async function PATCH(
+async function patchDocumentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -229,7 +230,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/documents/{id} */
-export async function DELETE(
+async function deleteDocumentsById(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; id: string }> },
 ) {
@@ -302,3 +303,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDocumentsById);
+export const PATCH = withRed(patchDocumentsById);
+export const DELETE = withRed(deleteDocumentsById);

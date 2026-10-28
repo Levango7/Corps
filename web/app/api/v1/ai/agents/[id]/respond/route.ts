@@ -32,6 +32,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { Prisma } from "@prisma/client";
 import { buildAgentResponsePrompt } from "@/lib/ai/prompts/agent-collaboration";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** POST schema */
 const schema = z.object({
@@ -89,7 +90,7 @@ function normalizeAgentResponse(raw: unknown): {
   };
 }
 
-export async function POST(req: NextRequest) {
+async function postAiAgentsRespondById(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -296,3 +297,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiAgentsRespondById);
