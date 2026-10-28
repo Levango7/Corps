@@ -4,6 +4,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { livekitApiHost } from "@/lib/livekit-utils";
 import { EgressClient, EncodedFileOutput, S3Upload, EncodedFileType } from "livekit-server-sdk";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 检查 S3 录制存储配置是否齐全。 */
 function getS3Config(): {
@@ -38,7 +39,7 @@ function getS3Config(): {
  *
  * 信封格式与现有会议端点一致：{ code, data, message }
  */
-export async function POST(
+async function postMeetingsRecordingStartByMid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; mid: string }> },
 ) {
@@ -223,3 +224,6 @@ export async function POST(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postMeetingsRecordingStartByMid);

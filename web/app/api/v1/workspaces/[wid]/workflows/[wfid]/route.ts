@@ -4,12 +4,13 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/workflows/{wfid} — 工作流详情
  * include executions（最近 10 条）
  */
-export async function GET(
+async function getWorkflowsByWfid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
@@ -77,7 +78,7 @@ const patchSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/workflows/{wfid} — 更新工作流 */
-export async function PATCH(
+async function patchWorkflowsByWfid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
@@ -151,7 +152,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/workflows/{wfid} — 删除工作流 */
-export async function DELETE(
+async function deleteWorkflowsByWfid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wfid: string }> },
 ) {
@@ -194,3 +195,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getWorkflowsByWfid);
+export const PATCH = withRed(patchWorkflowsByWfid);
+export const DELETE = withRed(deleteWorkflowsByWfid);
