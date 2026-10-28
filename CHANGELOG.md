@@ -8,7 +8,7 @@
 
 ## [0.9.0] - 2026-10-28
 
-自 v0.8.2 起 **98 个提交**。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
+自 v0.8.2 起 **118 个提交**（截至 `37a9e42`，实测 `git rev-list --count v0.8.2..main`）。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
 消息搜索对中文真正可用、可观测与契约债务连续清偿，并把 a11y / 权限 / 契约做成
 **只允许收缩的机器判据**（不再靠人记得复核）。
 
@@ -24,11 +24,14 @@
   与 25 例原语 a11y 契约单测（含一条 `@ts-expect-error`：缺 `label` 的 IconButton 编译期就该拒绝）。
 - **可观测 RED 三维接线**：Errors 走 `instrumentation.ts` 的 `onRequestError`（#163）；
   Rate / Duration 分两批接（#170 contacts/announcements/activity 域、#189
-  analytics/billing/permissions/presence 共 7 个端点）。实测 `withRed(` 现落在 **14 个 route 文件**。
+  analytics/billing/permissions/presence 首批 7 个端点），随后逐域铺开到
+  **241 个 route 文件 / 377 处**（`git grep -l "withRed(" -- "web/app/api/**/route.ts" | wc -l`）。
+  过程中暴露并迁移了若干权限门禁误判（`remote-control` 的 T4→T3、`ai/feedback` 等）——
+  迁移不改总盲区，只是按 handler 精确切分后的真实归属。
 - **事件面双向契约**：把只在白名单挂着、没有任何 emit 站点的 10 个事件接通，并把埋点门禁
   补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **37 名**。
 - **权限矩阵补口**：approvals 域纳入 `lib/permissions.ts` 矩阵，permission-gate T3 债务
-  **154 → 132**（`scripts/permission-gate-unscoped-baseline.txt`）。
+  **154 → 133**（`scripts/permission-gate-unscoped-baseline.txt`）。
 - **SAST 两条腿**：CodeQL（javascript-typescript，#174）与 Gitleaks 密钥扫描（#177）。
   Gitleaks 首跑 4 处命中经逐条复核均为误报，按"带理由豁免"落库而不是放宽扫描。
 - **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **10 个**（calendar/goals/forms/
