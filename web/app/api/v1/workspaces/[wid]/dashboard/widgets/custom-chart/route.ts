@@ -4,6 +4,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 type Tx = Prisma.TransactionClient;
 
@@ -23,7 +24,10 @@ type Tx = Prisma.TransactionClient;
  *
  * 认证：getWorkspaceContextV2 校验成员身份 + 注入 RLS。
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getDashboardWidgetsCustomChart(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -77,3 +81,6 @@ async function loadCustomChart(tx: Tx, wid: string) {
     total,
   };
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getDashboardWidgetsCustomChart);
