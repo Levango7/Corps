@@ -4,6 +4,35 @@
 
 ## [Unreleased]
 
+### Added
+
+- **决策复盘与 AI 提炼可度量（决策漏斗最后三个口子）**：白名单新增
+  `decision_reviewed` / `ai_extract_started` / `ai_extract_failed`，口径见
+  `docs/analytics/FUNNEL-METRICS.md` §4.4。
+  - 决策页新增「标记已复盘」动作（`POST .../decisions/{did}/review`，
+    落库 `decisions.reviewed_at`）。事件**只在未复盘→已复盘的跃迁上发**，重复点不重复计数、
+    撤销复盘不发；编辑决策会清空该标记（内容变了 = 未复盘内容）。
+  - 刻意**没有** `ai_extract_confirmed`：该流程只把 AI 结果拷到剪贴板，没有"确认/采纳"动作
+    可打点，硬造会与 `create_decision` 形成两个事实源。要算采用率时在 `create_decision` 上
+    加 `source: "ai_extract"` 维度即可。
+  - `ai_extract_failed` 的 `reason` 区分 `llm_error`（LLM 失败但规则版兜住，用户仍有结果）
+    与 `rules_error`（整体失败）——混成一个数会把"降级"误读成"不可用"。
+
+### Changed
+
+- **编辑决策会清空复盘标记**：`PATCH .../decisions/{did}` 现在把 `reviewed_at` 置空。
+  不复位的话复盘率会长期停在"改过就算复盘过"的虚高值。
+
+### Removed
+
+- **两条零调用方的重复消息搜索端点**：`GET /v1/workspaces/{wid}/im/search` 与
+  `GET /v1/workspaces/{wid}/tasks/{id}/messages/search`。全仓（含 e2e/tests/桌面壳）除自身、
+  基线清单与本 ADR 外无任何引用；其能力由 `/v1/im/search` 完全覆盖——任务会话本身带
+  `conversation_id`，限定单会话用 `conversationId` 参数即可。
+  同步 `scripts/api-contract-baseline.txt` 172 → 170、`scripts/zero-coverage-baseline.txt` −2。
+  这两条路由此前只在「未声明契约」豁免清单里，不在 `api/openapi.yaml`，因此不构成对外契约破坏；
+  若有仓外调用方按此清单迁移到 `/v1/im/search`。
+
 ### Fixed
 
 - **中文消息搜索此前恒零结果**：`GET /api/v1/im/search` 只有 `body_tsv @@ plainto_tsquery('simple', q)`
@@ -21,15 +50,6 @@
   没有 Prisma `contains` 自带的转义，实测未转义时查询 `100%` 会退化成「以 100 开头」，
   同一库误命中 296 行，转义后 1 行。
 
-### Removed
-
-- **两条零调用方的重复消息搜索端点**：`GET /v1/workspaces/{wid}/im/search` 与
-  `GET /v1/workspaces/{wid}/tasks/{id}/messages/search`。全仓（含 e2e/tests/桌面壳）除自身、
-  基线清单与本 ADR 外无任何引用；其能力由 `/v1/im/search` 完全覆盖——任务会话本身带
-  `conversation_id`，限定单会话用 `conversationId` 参数即可。
-  同步 `scripts/api-contract-baseline.txt` 172 → 170、`scripts/zero-coverage-baseline.txt` −2。
-  这两条路由此前只在「未声明契约」豁免清单里，不在 `api/openapi.yaml`，因此不构成对外契约破坏；
-  若有仓外调用方按此清单迁移到 `/v1/im/search`。
 
 ## [0.8.2] - 2026-10-22
 

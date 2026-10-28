@@ -262,6 +262,7 @@ app/api/v1/workspaces/[wid]/spaces/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/calendar-sync/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/comments/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/conversation/route.ts
+app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/review/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/sync-actions/route.ts
 app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/versions/route.ts
