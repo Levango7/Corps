@@ -19,12 +19,12 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import {
-import { withRed } from "@/lib/red-metrics";
   emitSignalingMessage,
   subscribeSignalingMessages,
   type SignalingEnvelope,
 } from "@/lib/webrtc/remote-control-events";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── 常量 ──────────────────────────────────────────────────────
 
