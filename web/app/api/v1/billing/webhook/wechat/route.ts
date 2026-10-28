@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getPaymentProvider, PaymentProviderError, PaymentWebhookError } from "@/lib/payments";
 import { handleBillingEvent } from "@/lib/billing/webhook-handler";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/v1/billing/webhook/wechat — 微信支付回调（ADR-003 §5 落地要点 3）。
@@ -18,7 +19,7 @@ import { apiMsg } from "@/lib/api-messages";
  *
  * 幂等：processed_payment_events (provider='wechatpay-native', event_id=通知ID)
  */
-export async function POST(req: NextRequest) {
+async function postBillingWebhookWechat(req: NextRequest) {
   const provider = getPaymentProvider("wechatpay-native");
 
   let event;
@@ -64,3 +65,6 @@ export async function POST(req: NextRequest) {
   // 统一事件处理（幂等 + 落库 + 埋点）
   return handleBillingEvent(event, "wechatpay-native");
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postBillingWebhookWechat);
