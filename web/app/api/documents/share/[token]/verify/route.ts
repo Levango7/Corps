@@ -15,6 +15,7 @@ import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { verify as verifySharePassword } from "@/lib/crypto";
 import { isLocked, recordFailure, clearFailures, rateLimitKey } from "@/lib/share-rate-limit";
+import { withRed } from "@/lib/red-metrics";
 
 const verifySchema = z.object({
   password: z.string().min(1).max(128),
@@ -34,7 +35,10 @@ function getClientIp(req: NextRequest): string {
   return "unknown";
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function postDocumentsShareByTokenVerify(
+  req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const { token } = await params;
   const ip = getClientIp(req);
   const userAgent = req.headers.get("user-agent") ?? null;
@@ -140,3 +144,5 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ tok
     );
   }
 }
+
+export const POST = withRed(postDocumentsShareByTokenVerify);

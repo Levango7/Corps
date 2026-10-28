@@ -21,6 +21,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { emitSessionEvent } from "@/lib/webrtc/remote-control-events";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── 常量 ──────────────────────────────────────────────────────
 
@@ -69,7 +70,7 @@ interface RemoteControlSessionDTO {
  * 创建远程控制请求。目标用户会收到实时通知（通过会话事件总线），
  * 需明确接受后才能建立 WebRTC 连接。
  */
-export async function POST(req: NextRequest) {
+async function postRemoteControl(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -210,7 +211,7 @@ export async function POST(req: NextRequest) {
  *
  * 返回当前用户在指定工作区的远程控制会话列表。
  */
-export async function GET(req: NextRequest) {
+async function getRemoteControl(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -316,3 +317,7 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postRemoteControl);
+
+export const GET = withRed(getRemoteControl);

@@ -9,6 +9,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { runWithUserContext } from "@/lib/auth";
+import { withRed } from "@/lib/red-metrics";
 
 // P1-fix: SSRF 防护——endpoint 域名白名单，只允许已知 Web Push 服务域名
 const ALLOWED_PUSH_HOSTS = [
@@ -36,7 +37,7 @@ const subscribeSchema = z.object({
 });
 
 /** POST /api/v1/push/subscribe — 注册/更新 Web Push 订阅 */
-export async function POST(req: NextRequest) {
+async function postPushSubscribe(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -130,3 +131,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postPushSubscribe);

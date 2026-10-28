@@ -20,6 +20,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 支持增量同步的模块 */
 const SYNC_MODULES = ["task", "decision", "document", "notification"] as const;
@@ -109,7 +110,7 @@ interface SyncChanges {
  *
  * 返回：{ changes: { task: [...], decision: [...], ... }, serverTime }
  */
-export async function GET(req: NextRequest) {
+async function getSync(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -286,7 +287,7 @@ export async function GET(req: NextRequest) {
  *
  * 返回：{ accepted: string[], conflicts: [{ id, remote }] }
  */
-export async function POST(req: NextRequest) {
+async function postSync(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -654,3 +655,7 @@ async function processDocumentOp(
 
   return { kind: "ignored" };
 }
+
+export const GET = withRed(getSync);
+
+export const POST = withRed(postSync);

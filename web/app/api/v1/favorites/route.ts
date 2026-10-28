@@ -18,6 +18,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法收藏目标类型枚举（与 schema 注释保持一致） */
 const TARGET_TYPE_VALUES = [
@@ -51,7 +52,7 @@ const createSchema = z.object({
  * 返回当前用户在指定工作区的收藏列表（按创建时间降序）。
  * type 参数可选过滤目标类型。
  */
-export async function GET(req: NextRequest) {
+async function getFavorites(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -133,7 +134,7 @@ export async function GET(req: NextRequest) {
  * 利用 @@unique([userId, targetType, targetId]) 防止重复收藏：
  *  - 使用 upsert：已存在则更新 note，不存在则创建。
  */
-export async function POST(req: NextRequest) {
+async function postFavorites(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -224,3 +225,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getFavorites);
+
+export const POST = withRed(postFavorites);
