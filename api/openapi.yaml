@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 118 paths (updated 2026-10-28). The service also
+    Coverage: this contract declares 134 paths (updated 2026-10-28). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -6154,7 +6154,7 @@ paths:
         - $ref: '#/components/parameters/WikiPageId'
       responses:
         '200':
-          description: Deleted ({ id, deleted: true })
+          description: "Deleted ({ id, deleted: true })"
           content:
             application/json:
               schema:
@@ -6288,7 +6288,7 @@ paths:
         - $ref: '#/components/parameters/Wbid'
       responses:
         '200':
-          description: Deleted ({ id, deleted: true })
+          description: "Deleted ({ id, deleted: true })"
           content:
             application/json:
               schema:
@@ -6304,6 +6304,739 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '403':
           $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/cc:
+    get:
+      tags: [approvals]
+      summary: List approval CC records addressed to me
+      operationId: listApprovalCc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: unread
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+      responses:
+        '200':
+          description: CC record list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalCcList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/delegates:
+    get:
+      tags: [approvals]
+      summary: List my approval delegate settings
+      description: "Query: page/limit/active=1 (only active and not yet expired). Ordered by createdAt desc, includes delegateTo user info."
+      operationId: listApprovalDelegates
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: active
+          in: query
+          schema: { type: string, enum: ['1'] }
+      responses:
+        '200':
+          description: Delegate settings list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalDelegateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [approvals]
+      summary: Create an approval delegate setting
+      operationId: createApprovalDelegate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delegateToId, startAt, endAt]
+              properties:
+                delegateToId: { type: string, format: uuid }
+                startAt: { type: string, format: date-time }
+                endAt: { type: string, format: date-time }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '201':
+          description: Delegate created (includes delegateTo user info)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalDelegate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/delegates/{did}:
+    patch:
+      tags: [approvals]
+      summary: Update an approval delegate setting
+      operationId: updateApprovalDelegate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: did
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                startAt: { type: string, format: date-time }
+                endAt: { type: string, format: date-time }
+                reason: { type: string, maxLength: 500 }
+      responses:
+        '200':
+          description: Updated delegate (includes delegateTo user info)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalDelegate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [approvals]
+      summary: Delete an approval delegate setting
+      operationId: deleteApprovalDelegate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: did
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Delegate deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances:
+    get:
+      tags: [approvals]
+      summary: List approval instances
+      description: Query filters — status (pending/approved/rejected/withdrawn), mine=1, pendingMine=1 (I am the current node approver). Ordered by createdAt desc.
+      operationId: listApprovalInstances
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, approved, rejected, withdrawn] }
+        - name: mine
+          in: query
+          schema: { type: string, enum: ['1'] }
+        - name: pendingMine
+          in: query
+          schema: { type: string, enum: ['1'] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Approval instance list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstanceList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [approvals]
+      summary: Create (submit) an approval instance
+      description: Nodes snapshot uses ApprovalNode entries (approverRole or approverUserId, name, order, mode sequential/parallel/countersign, requiredCount for countersign).
+      operationId: createApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [templateId, entityType, entityId, title]
+              properties:
+                templateId: { type: string, format: uuid }
+                entityType: { type: string }
+                entityId: { type: string, format: uuid }
+                title: { type: string, maxLength: 200 }
+                content: { type: string }
+                priority: { type: string, enum: [low, normal, high, urgent] }
+                nodes:
+                  type: array
+                  description: Optional node snapshot override; defaults to the template's nodes.
+                  items:
+                    $ref: '#/components/schemas/ApprovalNode'
+      responses:
+        '201':
+          description: Approval instance created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}:
+    get:
+      tags: [approvals]
+      summary: Approval instance detail
+      description: Returns the instance plus templateName, currentApproverIds, entityType/entityId and an aiSuggestion availability flag (M4).
+      operationId: getApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Approval instance detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstanceDetail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [approvals]
+      summary: Revoke (cancel) an approval instance
+      description: L4 revocation — distinct from applicant-side withdraw on pending instances.
+      operationId: revokeApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Instance revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/approve:
+    post:
+      tags: [approvals]
+      summary: Approve the current node
+      description: Caller must be the current node approver (403 notApprover otherwise; 409 if the instance is not pending). Returns the updated instance.
+      operationId: approveApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Approved; returns the updated approval instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/cc:
+    get:
+      tags: [approvals]
+      summary: List CC records of an approval instance
+      operationId: listApprovalInstanceCc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: CC records of this instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalCcList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [approvals]
+      summary: Add CC recipients to an approval instance
+      operationId: ccApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [ccUserIds]
+              properties:
+                ccUserIds:
+                  type: array
+                  minItems: 1
+                  maxItems: 50
+                  items: { type: string, format: uuid }
+                nodeIndex: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: CC records created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalCcList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/comment:
+    post:
+      tags: [approvals]
+      summary: Add a comment to an approval instance
+      operationId: commentApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [comment]
+              properties:
+                comment: { type: string, minLength: 1, maxLength: 1000 }
+      responses:
+        '200':
+          description: Comment added; returns the updated instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/delegate:
+    post:
+      tags: [approvals]
+      summary: Delegate the current node to another user
+      operationId: delegateApprovalNode
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [delegateToId]
+              properties:
+                delegateToId: { type: string, format: uuid }
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Node delegated; returns the updated instance and the operation record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/add-sign:
+    post:
+      tags: [approvals]
+      summary: Add-sign (insert an extra approver node)
+      operationId: addSignApprovalNode
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approverUserId]
+              properties:
+                approverUserId: { type: string, format: uuid }
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Node inserted; returns the updated instance and operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/reject:
+    post:
+      tags: [approvals]
+      summary: Reject the approval instance
+      operationId: rejectApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Rejected (status=rejected, completedAt set); returns the updated instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/transfer:
+    post:
+      tags: [approvals]
+      summary: Transfer the current node to another approver
+      operationId: transferApprovalNode
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transferToId]
+              properties:
+                transferToId: { type: string, format: uuid }
+                comment: { type: string, maxLength: 1000 }
+      responses:
+        '200':
+          description: Transferred; returns the updated instance and operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/instances/{aid}/withdraw:
+    post:
+      tags: [approvals]
+      summary: Withdraw a pending approval instance (applicant side)
+      operationId: withdrawApprovalInstance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: aid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Withdrawn; returns the updated instance
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalInstance'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/stats:
+    get:
+      tags: [approvals]
+      summary: Approval statistics dashboard
+      description: Returns totals, breakdowns by status/priority/template, average processing hours and pendingMine (instances where I am the current approver).
+      operationId: getApprovalStats
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: templateId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+      responses:
+        '200':
+          description: Approval statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalStats'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/templates:
+    get:
+      tags: [approvals]
+      summary: List approval templates
+      description: Paginated; supports both limit and pageSize (M3 compatibility — response carries both keys).
+      operationId: listApprovalTemplates
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100 }
+      responses:
+        '200':
+          description: Template list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalTemplateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [approvals]
+      summary: Create an approval template
+      description: createdBy is set to the caller. Setting initBuiltin=true seeds the built-in template set instead of creating a custom one.
+      operationId: createApprovalTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name, nodes]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 200 }
+                description: { type: string }
+                nodes:
+                  type: array
+                  minItems: 1
+                  items:
+                    $ref: '#/components/schemas/ApprovalNode'
+                initBuiltin:
+                  type: boolean
+                  description: Seed built-in templates instead of creating a custom template.
+      responses:
+        '201':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/approvals/templates/{tid}:
+    get:
+      tags: [approvals]
+      summary: Approval template detail
+      operationId: getApprovalTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [approvals]
+      summary: Update an approval template
+      operationId: updateApprovalTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name: { type: string, minLength: 1, maxLength: 200 }
+                description: { type: string }
+                nodes:
+                  type: array
+                  items:
+                    $ref: '#/components/schemas/ApprovalNode'
+      responses:
+        '200':
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ApprovalTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [approvals]
+      summary: Deactivate an approval template (soft delete, active=false)
+      operationId: deleteApprovalTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template deactivated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
@@ -8515,3 +9248,143 @@ components:
         title: { type: string, minLength: 1, maxLength: 200 }
         data:
           description: String or element array.
+    ApprovalNode:
+      type: object
+      required: [name, order]
+      description: Single approval node snapshot (mirrors the ApprovalNode zod schema shared by templates and instances).
+      properties:
+        name: { type: string, minLength: 1, maxLength: 200 }
+        order: { type: integer, minimum: 0 }
+        approverRole:
+          type: string
+          description: Role-based approver; mutually exclusive with approverUserId.
+        approverUserId:
+          type: string
+          format: uuid
+          description: User-based approver; mutually exclusive with approverRole.
+        mode:
+          type: string
+          enum: [sequential, parallel, countersign]
+        requiredCount:
+          type: integer
+          minimum: 1
+          description: Minimum approvals required in countersign mode.
+    Envelope_ApprovalCcList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore, totalPages]
+          properties:
+            items:
+              type: array
+              description: Approval CC records; each includes the instance snapshot and applicant { id, name, email }.
+              items: { type: object }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+            totalPages: { type: integer, minimum: 0 }
+    Envelope_ApprovalDelegate:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Approval delegate setting row; includes delegateTo { id, name, email }.
+    Envelope_ApprovalDelegateList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore, totalPages]
+          properties:
+            items:
+              type: array
+              items:
+                type: object
+                description: Delegate setting row; includes delegateTo { id, name, email }.
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+            totalPages: { type: integer, minimum: 0 }
+    Envelope_ApprovalInstance:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Approval instance row (approvalInstance table shape; nodes is the ApprovalNode[] JSON snapshot).
+    Envelope_ApprovalInstanceList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore, totalPages]
+          properties:
+            items:
+              type: array
+              description: Approval instance rows; list queries include applicant { id, name, email }.
+              items: { type: object }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+            totalPages: { type: integer, minimum: 0 }
+    Envelope_ApprovalInstanceDetail:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: "Instance row plus templateName, currentApproverIds (uuid[]), entityType, entityId and aiSuggestion ({ available: true } when AI advice is configured, else null)."
+    Envelope_ApprovalStats:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [total, byStatus, byPriority, byTemplate, pendingMine]
+          properties:
+            total: { type: integer, minimum: 0 }
+            byStatus:
+              type: object
+              description: Instance count keyed by status (pending/approved/rejected/withdrawn).
+            byPriority:
+              type: object
+              description: Instance count keyed by priority.
+            byTemplate:
+              type: object
+              description: Instance count keyed by template name/id.
+            avgProcessingHours:
+              type: number
+              nullable: true
+              description: Average hours from createdAt to completedAt over completed instances; null when none completed.
+            pendingMine: { type: integer, minimum: 0 }
+    Envelope_ApprovalTemplate:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Approval template row (approvalTemplate table shape; nodes is the ApprovalNode[] JSON snapshot).
+    Envelope_ApprovalTemplateList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, pageSize, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            pageSize: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
