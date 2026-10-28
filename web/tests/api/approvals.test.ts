@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeAll } from "vitest";
-import { BASE, registerUser, authHeader } from "../helpers";
+import { BASE, registerUser, authHeader, inviteMember, wsBoundToken } from "../helpers";
 
 /**
  * 审批 API 集成测试（/workspaces/{wid}/approvals 全域）
@@ -59,8 +59,12 @@ beforeAll(async () => {
   wid = owner.workspace.id;
 
   const other = await registerUser({ prefix: "approvals-other" });
-  otherToken = other.accessToken;
   otherUserId = other.user.id;
+  // other 必须是 wid 的成员（approve/reject/cc/delegates 都要求目标用户在册），
+  // 且 register 发的 access_token 绑定的是其默认工作区——必须换绑到 wid（见 helpers.wsBoundToken）。
+  expect((await inviteMember(ownerToken, wid, other.user.email)).status).toBe(201);
+  otherToken = (await wsBoundToken(other.cookies, wid)) ?? "";
+  expect(otherToken).toBeTruthy();
 
   const res = await createTemplate(ownerToken, otherUserId);
   const json = await res.json();
