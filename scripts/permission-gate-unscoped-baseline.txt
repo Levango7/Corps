@@ -110,6 +110,11 @@ POST /api/v1/push/register
 POST /api/v1/push/send
 POST /api/v1/push/subscribe
 POST /api/v1/push/unsubscribe
+# 2026-10-29 自 T4 基线迁移（非新增缺口）：检测器对 withRed 接线形态按 handler 精确切分后，
+# POST /api/v1/remote-control 的真实状态暴露——其函数体只有目标用户的成员存在性校验
+#（tx.member.findFirst），从无角色判断（原 T4 判定把同文件 GET handler 里 role 查询参数的
+# === 比较并入了 POST 块，实为列表筛选而非角色门禁）。总盲区面不变（T4 -1 / T3 +1）。
+POST /api/v1/remote-control
 POST /api/v1/remote-control/signal
 POST /api/v1/sync
 POST /api/v1/webhooks/livekit
