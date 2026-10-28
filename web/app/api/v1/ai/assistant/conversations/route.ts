@@ -18,9 +18,10 @@ import { apiMsg } from "@/lib/api-messages";
 import { runWithWorkspace } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { logger } from "@/lib/logger";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET /api/v1/ai/assistant/conversations — 对话历史列表 / 单对话消息 */
-export async function GET(req: NextRequest) {
+async function getAiAssistantConversations(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -103,3 +104,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiAssistantConversations);

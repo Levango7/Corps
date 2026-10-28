@@ -22,6 +22,7 @@ import { getWorkspaceContextV2, runWithUserContext, runWithWorkspace } from "@/l
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const instantiateSchema = z.object({
   wid: z.string().uuid(),
@@ -55,7 +56,10 @@ function stepsToActions(steps: TemplateStep[]): Array<{
   }));
 }
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function postAiTemplatesInstantiateById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -222,3 +226,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiTemplatesInstantiateById);

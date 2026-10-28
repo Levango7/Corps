@@ -18,6 +18,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 推送能力枚举（与 Prisma schema capability VarChar(50) 对齐） */
 const CAPABILITIES = ["daily_briefing", "risk_alert", "progress_anomaly"] as const;
@@ -50,7 +51,7 @@ const patchSchema = z
   );
 
 /** GET /api/v1/ai/push/schedules?wid=<uuid> — 当前用户的推送计划列表 */
-export async function GET(req: NextRequest) {
+async function getAiPushSchedules(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -100,7 +101,7 @@ export async function GET(req: NextRequest) {
 }
 
 /** POST /api/v1/ai/push/schedules — 创建推送计划 */
-export async function POST(req: NextRequest) {
+async function postAiPushSchedules(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -179,7 +180,7 @@ export async function POST(req: NextRequest) {
  *
  * 返回 { code: 0, data, message } 信封格式。
  */
-export async function PATCH(req: NextRequest) {
+async function patchAiPushSchedules(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -270,3 +271,8 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiPushSchedules);
+export const POST = withRed(postAiPushSchedules);
+export const PATCH = withRed(patchAiPushSchedules);

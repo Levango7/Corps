@@ -9,8 +9,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getUserId, unauthorizedResponse, isAiConfigured } from "@/lib/ai/shared";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
-export async function GET(req: NextRequest) {
+async function getAiConfigured(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -21,3 +22,6 @@ export async function GET(req: NextRequest) {
     { status: 200 },
   );
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiConfigured);

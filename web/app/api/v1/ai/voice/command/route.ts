@@ -36,6 +36,7 @@ import {
   type VoiceIntentResult,
 } from "@/lib/ai/prompts/voice-intent-parse";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** POST schema */
 const schema = z.object({
@@ -116,7 +117,7 @@ function normalizeIntentResult(raw: unknown, locale: "zh" | "en"): VoiceIntentRe
   return { intent, parameters, confidence, response };
 }
 
-export async function POST(req: NextRequest) {
+async function postAiVoiceCommand(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -238,3 +239,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiVoiceCommand);

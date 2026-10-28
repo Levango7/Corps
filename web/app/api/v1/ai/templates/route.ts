@@ -13,6 +13,7 @@ import { getWorkspaceContextV2, runWithUserContext, runWithWorkspace } from "@/l
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法分类枚举 */
 const CATEGORY_VALUES = ["project", "meeting", "review", "onboarding", "custom"] as const;
@@ -53,7 +54,7 @@ const createSchema = z.object({
  *  - 工作区私有模板（workspaceId=wid 且 isPublic=false）：仅该工作区成员可见
  * 传 wid 时两者合并返回；不传 wid 仅返回公开模板。
  */
-export async function GET(req: NextRequest) {
+async function getAiTemplates(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -169,7 +170,7 @@ export async function GET(req: NextRequest) {
  *  - wid 传入：创建为该工作区模板（需成员资格），isPublic 决定是否公开
  *  - wid 不传：创建为全局公开模板（isPublic 强制 true）
  */
-export async function POST(req: NextRequest) {
+async function postAiTemplates(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -253,3 +254,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiTemplates);
+export const POST = withRed(postAiTemplates);

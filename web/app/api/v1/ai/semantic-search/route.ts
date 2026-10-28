@@ -29,6 +29,7 @@ import {
 } from "@/lib/ai/prompts/semantic-search";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 搜索范围枚举：消息 / 文档 / 待办 / 决策 */
 type SearchScope = "messages" | "wikis" | "todos" | "decisions";
@@ -113,7 +114,7 @@ function countKeywordMatches(text: string, keywords: string[]): number {
   return count;
 }
 
-export async function POST(req: NextRequest) {
+async function postAiSemanticSearch(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -354,3 +355,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiSemanticSearch);

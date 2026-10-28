@@ -24,6 +24,7 @@ import { toolRegistry } from "@/lib/ai/tools/registry";
 // 触发内置工具自注册
 import "@/lib/ai/tools/builtins";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   toolName: z.string().min(1).max(100),
@@ -31,7 +32,7 @@ const schema = z.object({
   workspaceId: z.string().uuid(),
 });
 
-export async function POST(req: NextRequest) {
+async function postAiToolsExecute(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -123,3 +124,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiToolsExecute);

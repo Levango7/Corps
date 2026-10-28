@@ -15,6 +15,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { recordBehavior } from "@/lib/ai/behavior-tracker";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const patchSchema = z.object({
   wid: z.string().uuid(),
@@ -22,7 +23,10 @@ const patchSchema = z.object({
 });
 
 /** PATCH /api/v1/ai/personalization/recommendations/{id} — 标记推荐已采纳/拒绝 */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function patchAiPersonalizationRecommendationsById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -117,3 +121,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchAiPersonalizationRecommendationsById);

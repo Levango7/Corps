@@ -15,6 +15,7 @@ import {
 import { fireRecordUsage } from "@/lib/ai/usage-middleware";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   text: z.string().min(1).max(20_000),
@@ -23,7 +24,7 @@ const schema = z.object({
 const SYSTEM_PROMPT =
   "你是文档格式化助手。将用户选中的杂乱文本整理为结构化的 markdown 格式。要求：1）识别标题、列表、段落等结构 2）保持原文语义不变 3）使用正确的 markdown 语法 4）适度添加层级，不要过度嵌套。只输出格式化后的 markdown，不要添加解释。";
 
-export async function POST(req: NextRequest) {
+async function postAiFormat(req: NextRequest) {
   // 1) 认证 + 获取 workspaceId（用于 usage tracking）
   const authCtx = await getUserIdAndWorkspaceId(req);
   if (!authCtx) return unauthorizedResponse(req);
@@ -84,3 +85,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiFormat);
