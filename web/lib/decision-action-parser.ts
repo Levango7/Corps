@@ -5,7 +5,11 @@
  * 并与 DB 中已有 DecisionActionItem 做 diff 同步：新增→创建 Task；变更→更新 Task（除非
  * 用户已手动修改过，userModified=true 则跳过字段同步）；删除→标记 removed=true（Task 保留）。
  *
- * syncActionItems 在调用方已开启的 RLS 事务内执行，不自建事务，保证与决策创建/编辑原子化。
+ * syncActionItems 在调用方已开启的 RLS 事务内执行，不自建事务，保证与决策创建/编辑的同步原子化。
+ *
+ * 决策是**只追加的版本表**（一次「记一条」= 新行 + version 自增），所以新建版本时
+ * `decisionId` 是个全新 id：diff 必须额外对齐 `previousDecisionId`（同一任务线程的上一版），
+ * 否则同一批行动项每存一版就会被再建成一遍新任务。见 syncActionItems 里的继承分支。
  */
 import type { Prisma, Task } from "@prisma/client";
 
@@ -78,6 +82,8 @@ function dueDateEqual(parsed: string | null, existing: Date | null): boolean {
  * @param markdown   决策 Markdown 全文
  * @param workspaceId 工作区 ID
  * @param actorId    操作者用户 ID（用于 Task.createdBy，可选）
+ * @param previousDecisionId 同一任务线程的上一版决策 id；传入时，同一行号的行动项
+ *                  **复用**上一版已建的 Task（只同步字段差异），而不是再建一个任务
  */
 export async function syncActionItems(
   tx: Prisma.TransactionClient,
@@ -85,11 +91,18 @@ export async function syncActionItems(
   markdown: string,
   workspaceId: string,
   actorId?: string,
+  previousDecisionId?: string,
 ): Promise<{ created: number; updated: number; removed: number; tasks: Task[] }> {
   const parsed = parseActionItems(markdown);
   const existing = await tx.decisionActionItem.findMany({
     where: { decisionId, removed: false },
   });
+  // 上一版的行：只用来复用 task，**不改写**它（版本是快照，改写等于篡改历史）。
+  const inherited = previousDecisionId
+    ? await tx.decisionActionItem.findMany({
+        where: { decisionId: previousDecisionId, removed: false },
+      })
+    : [];
 
   // 预加载 workspace members 用于 @用户名 模糊匹配
   const members = await tx.member.findMany({
@@ -119,6 +132,7 @@ export async function syncActionItems(
 
   const parsedByLine = new Map(parsed.map((p) => [p.lineIndex, p]));
   const existingByLine = new Map(existing.map((e) => [e.lineIndex, e]));
+  const inheritedByLine = new Map(inherited.map((r) => [r.lineIndex, r]));
 
   const tasks: Task[] = [];
   let created = 0;
@@ -132,6 +146,60 @@ export async function syncActionItems(
     const dueDate = parseDate(item.dueDate);
 
     if (!existingItem) {
+      // ── 继承分支：上一版已为这一行建过任务 → 复用同一个 task ──
+      // 没有这一支，「记一条决策 → 改一版」会把同一批行动项**再建成一遍任务**：
+      // 面板按 decisionId 取数所以看不出来，但看板会累积重复任务，
+      // decision_landed 的 createdTasks 也一起被刷虚。
+      const inheritedItem = inheritedByLine.get(item.lineIndex);
+      if (inheritedItem?.taskId) {
+        const inheritedChanged =
+          inheritedItem.checked !== item.checked ||
+          inheritedItem.title !== item.title ||
+          inheritedItem.priority !== item.priority ||
+          !dueDateEqual(item.dueDate, inheritedItem.dueDate) ||
+          inheritedItem.assigneeId !== assigneeId;
+        const reused =
+          inheritedChanged && !inheritedItem.userModified
+            ? await tx.task.update({
+                where: { id: inheritedItem.taskId },
+                data: {
+                  title: item.title,
+                  priority: item.priority,
+                  dueDate,
+                  assigneeId,
+                  status: item.checked ? "done" : "todo",
+                },
+              })
+            : await tx.task.findUnique({ where: { id: inheritedItem.taskId } });
+        // 给**本版本**补一行快照：不改上一版的行（那是历史），但新版面板必须能取到这条。
+        await tx.decisionActionItem.create({
+          data: {
+            decisionId,
+            taskId: inheritedItem.taskId,
+            lineIndex: item.lineIndex,
+            checked: item.checked,
+            assigneeId,
+            dueDate,
+            priority: item.priority,
+            title: item.title,
+            userModified: inheritedItem.userModified,
+          },
+        });
+        if (inheritedChanged) updated++;
+        if (assigneeId && assigneeId !== inheritedItem.assigneeId) {
+          await tx.notification.create({
+            data: {
+              userId: assigneeId,
+              workspaceId,
+              type: "task_assigned",
+              entityId: inheritedItem.taskId,
+              entityTitle: item.title,
+            },
+          });
+        }
+        if (reused) tasks.push(reused);
+        continue;
+      }
       // 新增：创建 Task + DecisionActionItem
       const task = await tx.task.create({
         data: {
