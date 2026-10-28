@@ -23,6 +23,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { createAiProgressStream } from "@/lib/ai/stream";
 import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -40,7 +41,7 @@ const DAILY_SCOPES: AiContextScope[] = [
   "wiki:edited:today",
 ];
 
-export async function POST(req: NextRequest) {
+async function postAiDailyReport(req: NextRequest) {
   // 1) 基础认证（确认登录身份）
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -151,3 +152,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiDailyReport);

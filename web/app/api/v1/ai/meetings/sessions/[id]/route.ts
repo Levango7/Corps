@@ -13,6 +13,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法状态枚举 */
 const STATUS_VALUES = ["active", "paused", "ended"] as const;
@@ -47,7 +48,7 @@ const updateSchema = z.object({
  *
  * 获取会话详情，含行动项和决策列表。
  */
-export async function GET(req: NextRequest) {
+async function getAiMeetingsSessionsById(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -135,7 +136,7 @@ export async function GET(req: NextRequest) {
  *
  * 更新会话状态（paused/ended）或标题。ended 状态自动设置 endTime。
  */
-export async function PATCH(req: NextRequest) {
+async function patchAiMeetingsSessionsById(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -234,7 +235,7 @@ export async function PATCH(req: NextRequest) {
  *
  * 删除会议会话及其关联的行动项和决策（级联删除由 Prisma 外键约束保证）。
  */
-export async function DELETE(req: NextRequest) {
+async function deleteAiMeetingsSessionsById(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -307,3 +308,8 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiMeetingsSessionsById);
+export const PATCH = withRed(patchAiMeetingsSessionsById);
+export const DELETE = withRed(deleteAiMeetingsSessionsById);

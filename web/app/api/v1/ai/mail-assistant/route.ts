@@ -43,6 +43,7 @@ import {
 } from "@/lib/ai/prompts/mail-assistant";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 邮件助手支持的操作类型 */
 type MailAction = "draft" | "summarize" | "classify" | "reply";
@@ -79,7 +80,7 @@ const VALID_CATEGORIES: ReadonlySet<MailCategory> = new Set([
 /** 合法语气白名单 */
 const VALID_TONES: ReadonlySet<MailReplyTone> = new Set(["formal", "casual", "concise"]);
 
-export async function POST(req: NextRequest) {
+async function postAiMailAssistant(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -325,3 +326,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiMailAssistant);

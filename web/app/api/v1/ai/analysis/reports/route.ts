@@ -10,6 +10,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const querySchema = z.object({
   wid: z.string().uuid(),
@@ -27,7 +28,7 @@ interface ReportListItem {
   createdAt: string;
 }
 
-export async function GET(req: NextRequest) {
+async function getAiAnalysisReports(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -119,3 +120,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiAnalysisReports);

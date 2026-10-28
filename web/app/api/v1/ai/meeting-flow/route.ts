@@ -26,6 +26,7 @@ import {
   buildPostMeetingPrompt,
 } from "@/lib/ai/prompts/meeting-flow";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   phase: z.enum(["pre", "post"]),
@@ -36,7 +37,7 @@ const schema = z.object({
   meetingId: z.string().uuid().optional(),
 });
 
-export async function POST(req: NextRequest) {
+async function postAiMeetingFlow(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -212,3 +213,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiMeetingFlow);

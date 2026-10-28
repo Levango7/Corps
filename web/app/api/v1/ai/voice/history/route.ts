@@ -12,6 +12,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法意图类型枚举（与 voice-intent-parse.ts 对齐） */
 const INTENT_VALUES = [
@@ -56,7 +57,7 @@ interface PaginatedHistory {
  *
  * 返回当前用户在指定工作区的语音命令历史（按创建时间降序）。
  */
-export async function GET(req: NextRequest) {
+async function getAiVoiceHistory(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -156,3 +157,6 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getAiVoiceHistory);

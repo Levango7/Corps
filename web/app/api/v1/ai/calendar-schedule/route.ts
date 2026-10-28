@@ -28,6 +28,7 @@ import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 排程上下文聚合范围：今日会议 + 逾期/阻塞任务 + 今日工时 */
 const CALENDAR_SCOPES: AiContextScope[] = [
@@ -81,7 +82,7 @@ function normalizeSuggestions(raw: unknown): ScheduleSuggestion[] {
   return result;
 }
 
-export async function POST(req: NextRequest) {
+async function postAiCalendarSchedule(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -198,3 +199,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiCalendarSchedule);

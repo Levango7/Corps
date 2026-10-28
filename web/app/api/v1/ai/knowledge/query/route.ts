@@ -24,6 +24,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -47,7 +48,7 @@ function extractKeywords(question: string): string[] {
     .slice(0, 10);
 }
 
-export async function POST(req: NextRequest) {
+async function postAiKnowledgeQuery(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -194,3 +195,6 @@ ${contextMarkdown}`,
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiKnowledgeQuery);

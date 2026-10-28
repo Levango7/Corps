@@ -24,6 +24,7 @@ import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { buildImReplySystemPrompt, buildImReplyUserPrompt } from "@/lib/ai/prompts/im-reply";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
   wid: z.string().uuid(),
@@ -38,7 +39,7 @@ interface ImReplySuggestion {
   tone: "formal" | "casual" | "concise";
 }
 
-export async function POST(req: NextRequest) {
+async function postAiImReply(req: NextRequest) {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -173,3 +174,6 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const POST = withRed(postAiImReply);

@@ -9,6 +9,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 const patchSchema = z.object({
   wid: z.string().uuid(),
@@ -16,7 +17,10 @@ const patchSchema = z.object({
 });
 
 /** PATCH /api/v1/ai/push/records/{id} — 标记已读（或未读） */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+async function patchAiPushRecordsById(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
   const { id } = await params;
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -89,3 +93,6 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const PATCH = withRed(patchAiPushRecordsById);
