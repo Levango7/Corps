@@ -5,11 +5,12 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/whiteboards/{wbid} — 白板详情（含完整 data）
  */
-export async function GET(
+async function getWhiteboardsByWbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wbid: string }> },
 ) {
@@ -65,7 +66,7 @@ const updateWbSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid}/whiteboards/{wbid} — 更新白板标题和/或画布数据 */
-export async function PATCH(
+async function patchWhiteboardsByWbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wbid: string }> },
 ) {
@@ -146,7 +147,7 @@ export async function PATCH(
 }
 
 /** DELETE /v1/workspaces/{wid}/whiteboards/{wbid} — 删除白板 */
-export async function DELETE(
+async function deleteWhiteboardsByWbid(
   req: NextRequest,
   { params }: { params: Promise<{ wid: string; wbid: string }> },
 ) {
@@ -195,3 +196,8 @@ export async function DELETE(
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getWhiteboardsByWbid);
+export const PATCH = withRed(patchWhiteboardsByWbid);
+export const DELETE = withRed(deleteWhiteboardsByWbid);

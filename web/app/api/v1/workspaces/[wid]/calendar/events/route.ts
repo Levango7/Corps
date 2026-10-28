@@ -3,13 +3,17 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /v1/workspaces/{wid}/calendar/events — 日历事件列表
  * Query: ?start=ISO&end=ISO（时间范围过滤，返回 startAt >= start AND endAt <= end 的事件）
  * 按 startAt 升序排列
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getCalendarEvents(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -95,7 +99,10 @@ const createSchema = z.object({
   color: z.string().max(20).optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postCalendarEvents(
+  req: NextRequest,
+  { params }: { params: Promise<{ wid: string }> },
+) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -163,3 +170,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getCalendarEvents);
+export const POST = withRed(postCalendarEvents);

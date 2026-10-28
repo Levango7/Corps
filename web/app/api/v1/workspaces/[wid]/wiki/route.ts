@@ -4,6 +4,7 @@ import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * Wiki 页面列表项（树形结构）
@@ -84,7 +85,7 @@ function slugifyTitle(title: string): string {
  *        ?parentId= 树形过滤（仅返回某父节点下的子页面，扁平结构）
  * 返回：默认返回完整页面树；带 parentId 时返回该父节点的直接子页面（扁平）
  */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getWiki(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -171,7 +172,7 @@ const createSchema = z.object({
   sortOrder: z.number().int().optional(),
 });
 
-export async function POST(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function postWiki(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -275,3 +276,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ wid
     );
   }
 }
+
+// RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录
+export const GET = withRed(getWiki);
+export const POST = withRed(postWiki);
