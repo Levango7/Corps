@@ -42,7 +42,8 @@ const AUTHED_PAGES: Array<{ key: string; path: (wid: string) => string }> = [
   // 用 /board 而不是裸的 /w/:wid：裸根会落到不带应用壳的入口页，
   // 拿它当"页面已就绪"的信号会把 404/重定向误判成"骨架未渲染"。
   { key: "/w/:wid/board", path: (wid) => `/w/${wid}/board` },
-  { key: "/w/:wid/tasks", path: (wid) => `/w/${wid}/tasks` },
+  // 没有 /w/:wid/tasks 这个路由（任务列表在 board / my-tasks），实测 404
+  { key: "/w/:wid/my-tasks", path: (wid) => `/w/${wid}/my-tasks` },
   { key: "/w/:wid/im", path: (wid) => `/w/${wid}/im` },
   { key: "/w/:wid/decisions", path: (wid) => `/w/${wid}/decisions` },
   { key: "/w/:wid/documents", path: (wid) => `/w/${wid}/documents` },
