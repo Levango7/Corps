@@ -39,7 +39,9 @@ const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
 /** 被扫描的页面。key 要稳定——它进基线键，改名等于全量重建基线。 */
 const AUTHED_PAGES: Array<{ key: string; path: (wid: string) => string }> = [
-  { key: "/w/:wid", path: (wid) => `/w/${wid}` },
+  // 用 /board 而不是裸的 /w/:wid：裸根会落到不带应用壳的入口页，
+  // 拿它当"页面已就绪"的信号会把 404/重定向误判成"骨架未渲染"。
+  { key: "/w/:wid/board", path: (wid) => `/w/${wid}/board` },
   { key: "/w/:wid/tasks", path: (wid) => `/w/${wid}/tasks` },
   { key: "/w/:wid/im", path: (wid) => `/w/${wid}/im` },
   { key: "/w/:wid/decisions", path: (wid) => `/w/${wid}/decisions` },
@@ -99,11 +101,19 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
     // 登录后逐页扫描。用固定测试账号注册，避免依赖别人种的数据。
     const wid = await registerAndLogin(page, uniqueEmail("e2e-a11y"), "E2E无障碍工作区");
     for (const target of AUTHED_PAGES) {
-      await page.goto(target.path(wid), { waitUntil: "domcontentloaded" });
+      const url = target.path(wid);
+      const nav = await page.goto(url, { waitUntil: "domcontentloaded" });
+      // 先看状态码再等渲染：一条 404 否则会伪装成"等不到 header 的超时"，
+      // 排查时分不清是路径错了还是壳没渲染。
+      expect(nav?.status() ?? 0, `导航到 ${url} 返回 ${nav?.status()}`).toBeLessThan(400);
       // 就绪信号用应用壳（顶栏 header + 侧栏 nav 地标）：扫一个空骨架会把违规扫成 0（假绿）。
       // 页面级 <main> 不能当信号——六个页里只有 documents 有 <main>。
       await expect(page.locator("header").first()).toBeVisible({ timeout: 30_000 });
       await settle(page);
+      // 客户端渲染的 not-found 状态码仍是 200，必须显式判一次。
+      expect(await page.getByText("页面未找到").count(), `页面 ${url} 渲染成了「页面未找到」`).toBe(
+        0,
+      );
       const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
       keys.push(...collectKeys(target.key, result.violations));
     }
