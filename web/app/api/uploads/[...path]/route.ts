@@ -3,6 +3,7 @@ import { promises as fs } from "fs";
 import path from "path";
 import { authenticate, runWithAuthOp, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/uploads/[...path] — 服务上传的文件（鉴权版）
@@ -20,7 +21,10 @@ import { apiMsg } from "@/lib/api-messages";
 
 const UPLOAD_DIR = path.join(process.cwd(), "uploads");
 
-export async function GET(req: NextRequest, { params }: { params: Promise<{ path: string[] }> }) {
+async function getUploadFile(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> },
+) {
   const { path: segments } = await params;
   const relativePath = segments.join("/");
 
@@ -119,3 +123,5 @@ const EXT_TO_MIME: Record<string, string> = {
   ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   ".zip": "application/zip",
 };
+
+export const GET = withRed(getUploadFile);

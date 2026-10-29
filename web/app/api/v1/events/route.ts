@@ -5,6 +5,7 @@ import { randomUUID } from "crypto";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { ALLOWED_EVENT_NAMES } from "@/lib/analytics-whitelist";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/v1/events — 客户端批量上报分析事件。
@@ -36,7 +37,7 @@ const batchSchema = z.object({
 // 单条事件 props 的序列化体积上限：超出视为异常/脏数据，整条丢弃
 const MAX_PROPS_BYTES = 4096;
 
-export async function POST(req: NextRequest) {
+async function postEvent(req: NextRequest) {
   // 限流：单 IP 每分钟最多 120 次（批量上报场景放宽，仍拦异常洪泛）
   const limited = await checkRateLimit(req, "events", { windowMs: 60_000, max: 120 });
   if (limited) return limited;
@@ -114,7 +115,7 @@ export async function POST(req: NextRequest) {
  * GET /api/v1/events — 调试用：列出当前用户最近事件（仅 dev 环境）。
  * 生产环境分析数据通过 /workspaces/:wid/analytics/overview 读取。
  */
-export async function GET(req: NextRequest) {
+async function getEvents(req: NextRequest) {
   if (process.env.NODE_ENV === "production") {
     return NextResponse.json(
       { code: 403, message: apiMsg(req, "forbiddenInProduction"), data: null },
@@ -145,3 +146,7 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postEvent);
+
+export const GET = withRed(getEvents);

@@ -9,6 +9,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 const patchSchema = z.object({
@@ -60,6 +61,9 @@ async function patchAiPushRecordsById(
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 域资源纳入权限矩阵（2026-10-22 用户拍板：viewer 只读）。
+  const denied = await requirePermission(ctx, "ai", "update", req);
+  if (denied) return denied;
 
   try {
     // 校验记录归属当前用户

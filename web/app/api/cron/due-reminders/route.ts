@@ -3,6 +3,7 @@ import { runWithAuthOp } from "@/lib/auth";
 import { sendTaskDueReminderEmail, isEmailConfigured } from "@/lib/email";
 import { normalizeEmailLocale } from "@/lib/email-messages";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/due-reminders — 截止日提醒邮件（每天定时调用）
@@ -15,7 +16,7 @@ import { apiMsg } from "@/lib/api-messages";
  *
  * 调度建议：Vercel Cron（vercel.json）或外部调度器每天 09:00 调用一次。
  */
-export async function GET(req: NextRequest) {
+async function getCronDueReminders(req: NextRequest) {
   // 鉴权：CRON_SECRET 必须配置且匹配
   const secret = process.env.CRON_SECRET;
   if (!secret) {
@@ -99,3 +100,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronDueReminders);

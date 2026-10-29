@@ -3,6 +3,7 @@ import { runWithAuthOp } from "@/lib/auth";
 import { sendWeeklyDigestEmail, isEmailConfigured } from "@/lib/email";
 import { normalizeEmailLocale } from "@/lib/email-messages";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/weekly-digest — 每周任务摘要邮件（Pro 功能，v2 定价 2026-09-02）
@@ -16,7 +17,7 @@ import { apiMsg } from "@/lib/api-messages";
  * 调度建议：每周一 02:00 UTC（北京时间周一 10:00，corps-cron 容器内建计划）。
  * 优雅降级：邮件服务未配置时直接返回 skip 计数，不报错。
  */
-export async function GET(req: NextRequest) {
+async function getCronWeeklyDigest(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -231,3 +232,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronWeeklyDigest);

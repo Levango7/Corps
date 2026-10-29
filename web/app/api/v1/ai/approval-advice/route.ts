@@ -26,6 +26,7 @@ import { buildApprovalAdviceSystemPrompt, buildUserPrompt } from "@/lib/ai/promp
 import { createAiJsonProgressStream } from "@/lib/ai/stream";
 import { assertAiUsageQuota } from "@/lib/ai/usage-limit";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
@@ -145,6 +146,9 @@ async function postAiApprovalAdvice(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 6) 流式生成审批建议（带阶段化进度反馈）

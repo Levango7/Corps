@@ -37,6 +37,7 @@ import {
   buildMeetingAnalysisPrompt,
 } from "@/lib/ai/prompts/meeting-transcript-analysis";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** UUID 正则校验 */
@@ -221,6 +222,9 @@ async function postAiMeetingsSessionsAnalyzeById(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 7) 在 RLS 事务内读取 session + 成员名单

@@ -31,6 +31,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 编辑/撤回时间窗口（毫秒）：5 分钟 */
 const EDIT_WINDOW_MS = 5 * 60 * 1000;
@@ -62,7 +63,7 @@ const deleteSchema = z.object({
  *
  * 返回更新后的消息（含 author 内联）。
  */
-export async function PATCH(
+async function patchImMessagesById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -210,7 +211,7 @@ export async function PATCH(
  * 软删除：设置 revokedAt + revokedBy，不删除行。
  * 前端展示"此消息已撤回"。
  */
-export async function DELETE(
+async function deleteImMessagesById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -356,3 +357,7 @@ export async function DELETE(
     );
   }
 }
+
+export const PATCH = withRed(patchImMessagesById);
+
+export const DELETE = withRed(deleteImMessagesById);

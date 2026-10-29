@@ -3,6 +3,7 @@ import { runWithAuthOp, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { generatePush, type PushCapability } from "@/lib/ai/push-runner";
 import { logger } from "@/lib/logger";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/ai-push-runner — AI 主动推送自动执行器（每 30 分钟定时调用）
@@ -63,7 +64,7 @@ function isDueNow(cron: string, lastRunAt: Date | null, now: Date): boolean {
   return true;
 }
 
-export async function GET(req: NextRequest) {
+async function getCronAiPushRunner(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -200,3 +201,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronAiPushRunner);

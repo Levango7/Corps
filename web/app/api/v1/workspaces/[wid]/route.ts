@@ -5,9 +5,10 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { readSidebarSettings } from "@/lib/workspace-settings";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET /v1/workspaces/{wid} — 工作区详情（设置页 / 顶栏读取） */
-export async function GET(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function getWorkspace(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -80,7 +81,7 @@ const updateWorkspaceSchema = z.object({
 });
 
 /** PATCH /v1/workspaces/{wid} — 改名 / 改 slug，仅 owner|admin */
-export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
+async function patchWorkspace(req: NextRequest, { params }: { params: Promise<{ wid: string }> }) {
   const { wid } = await params;
   const ctx = await getWorkspaceContextV2(req, wid);
   if (!ctx)
@@ -145,3 +146,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ wi
     );
   }
 }
+
+export const GET = withRed(getWorkspace);
+
+export const PATCH = withRed(patchWorkspace);
