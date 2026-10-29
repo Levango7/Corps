@@ -6,8 +6,9 @@
  *  - 客户端 dev 环境 warn 非法名（见 analytics.ts track()），生产环境仍由服务端静默丢弃。
  *  - 白名单追加 9 名与 SDK 改造同一 PR 合入，避免「事件已打、闸门未开」的静默丢弃窗口期。
  *
- * 计数：37 名（实测。原注释写 32，集合实际早已是 34 —— 有两处新增没回写；
- * 本次 P1-C 再 +3：workspace_create / decision_landed / export_pdf。
+ * 计数：40 名（实测。原注释写 32，集合实际早已是 34 —— 有两处新增没回写；
+ * P1-C 再 +3：workspace_create / decision_landed / export_pdf；
+ * #48 再 +3：decision_reviewed / ai_extract_started / ai_extract_failed。
  * 该数字由 tests/unit/analytics-event-contract.test.ts 断言，不再靠人记得改。）
  */
 export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
@@ -65,4 +66,16 @@ export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
   "decision_landed",
   // export_pdf：导出预览里点「打印 / 保存为 PDF」（PDF 走浏览器打印，纯前端）。
   "export_pdf",
+  // ─── #48 决策漏斗补口（2026-10-28，owner 口径）───
+  // decision_reviewed：人工点「标记已复盘」。**只在未复盘→已复盘的跃迁上发**，
+  //   撤销复盘不发——分子要的是"被宣告复盘过的决策数"，不是点击次数。
+  //   刻意不用"停留时长/打开详情"这类隐式信号：那是代理指标，污染当期定义，
+  //   且换口径后历史数据不可再解释。
+  "decision_reviewed",
+  // ai_extract_started / _failed：AI 提炼决策（POST .../decisions/extract）的开始与失败。
+  //   不设 _confirmed：该流程只把结果拷到剪贴板，没有"确认/采纳"动作可打；
+  //   硬造一个 confirmed 会与 create_decision 形成两个事实源（同类先例已撤过
+  //   decision_created / task_from_decision）。
+  "ai_extract_started",
+  "ai_extract_failed",
 ]);

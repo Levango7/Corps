@@ -1188,7 +1188,13 @@
     "aiCopySuccess": "Copied to clipboard",
     "aiCopyFailed": "Copy failed — please copy manually",
     "aiFailed": "Extraction failed. Please try again.",
-    "searchAria": "Search decisions"
+    "searchAria": "Search decisions",
+    "reviewedBadge": "Reviewed",
+    "reviewAction": "Mark reviewed",
+    "unreviewAction": "Undo review",
+    "reviewedToast": "Marked as reviewed",
+    "unreviewedToast": "Review mark removed",
+    "reviewFailedToast": "Failed to update review state, please retry"
   },
   "members": {
     "invitePlaceholder": "Enter email (unregistered users can be invited)",

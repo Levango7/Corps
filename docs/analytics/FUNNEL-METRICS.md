@@ -258,6 +258,20 @@ register_success(t0) ──→ onboarding_*（M2 引导流程上线后补埋）�
 
 ALLOWED_EVENT_NAMES 需追加 9 个：`landing_view`、`click_signup`、`session_start`、`activation_completed`、`invite_accepted`、`subscription_activated`、`payment_failed`、`subscription_renewed`、`subscription_churned`。同时建议将白名单常量拆出为 `lib/analytics-whitelist.ts` 单一事实源，客户端 SDK 与服务端共用（当前客户端 track() 无本地校验，非法名会被服务端静默丢弃，排障困难——可在 dev 环境 console.warn 白名单外事件）。
 
+### 4.4 决策复盘与 AI 提炼事件（2026-10-28 落地，owner 口径）
+
+补的是 §1.2 里点名的「闭环不可度量」最后三个口子。**这三个不是"想加就加"的事件名，各自有一条不能退的语义边界**：
+
+| 事件名 | 端 | 触发时机 | props | 语义边界 |
+|--------|----|----------|-------|----------|
+| `decision_reviewed` | S | `POST /v1/workspaces/{wid}/tasks/{id}/decisions/{did}/review` 且状态由**未复盘 → 已复盘** | `{ taskId, decisionId, version }` | 只在跃迁上发。重复点不重复计数；撤销复盘（`reviewed:false`）**不发**——那是纠错，不是一次新的复盘。分母侧的落库标记是 `decisions.reviewed_at`（编辑决策会清空它 ⇒ 内容变了等于未复盘） |
+| `ai_extract_started` | S | `POST /v1/workspaces/{wid}/decisions/extract` 参数校验通过后、调模型之前 | `{ aiConfigured: boolean }` | 一次请求一条。带 `aiConfigured` 是为了把"AI 路径失败率"与"整体失败率"分开算——两者分母不同 |
+| `ai_extract_failed` | S | 两条失败路径 | `{ reason: "llm_error" \| "rules_error", fallback? }` | `llm_error` = 走了 LLM 但失败、规则版兜住了（用户仍拿到结果）；`rules_error` = 整体失败（用户什么都没拿到）。混成一个数会把"降级"误读成"不可用" |
+
+**刻意没有 `ai_extract_confirmed`。** 该流程当前只把 AI 结果拷到剪贴板（`copyAiMarkdown`），没有"确认/采纳"这个动作可打点；硬造一个 confirmed 会与 `create_decision` 形成两个事实源——同类先例（`decision_created`、`task_from_decision`）已在本文件 §9.2 上游被撤回。要算"AI 提取被采用率"，正确做法是等真有"存为决策"的路径时，在 `create_decision` 上加 `source: "ai_extract"` 维度，而不是新开一个同义事件。
+
+**为什么复盘不做隐式信号**（打开详情 / 停留 N 秒）：那是代理指标——分子会包含"只是打开看了一眼"，既污染当期定义，也让换口径后的历史数据不可再解释。复盘是**有产出的动作**，必须由人明确宣告。
+
 ---
 
 ## 5. 看板设计（analytics 页面图表优先级)

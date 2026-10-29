@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 168 paths (updated 2026-10-29). The service also
+    Coverage: this contract declares 169 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -1296,6 +1296,65 @@ paths:
           $ref: '#/components/responses/NotFound'
         '409':
           $ref: '#/components/responses/Conflict'
+
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/review:
+    # ADDED (#48)：人工标记「已复盘」。刻意与 PATCH .../decisions/{did} 分开——
+    # 那个端点的语义是"改内容 → version+1"，带 base_version 乐观锁与免费版
+    # "最近 10 条可编辑"的 402 窗口；复盘不改内容、不该进版本链，也不该被该窗口挡住
+    # （回看旧决策恰恰是复盘的主要场景）。
+    post:
+      tags: [decisions]
+      summary: '[ADDED] Mark a decision as reviewed (or undo)'
+      description: >
+        Sets `reviewed_at` on the decision. Idempotent: calling again with
+        `reviewed: true` does not refresh the timestamp, so "first reviewed at"
+        is not polluted by click counts. Emits the `decision_reviewed` analytics
+        event only on the false → true transition; undoing (`reviewed: false`)
+        emits nothing (it is a correction, not a review). Editing the decision
+        later clears `reviewed_at` — changed content is unreviewed content.
+      operationId: reviewDecision
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/Did'
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                reviewed:
+                  type: boolean
+                  default: true
+                  description: 缺省 true（标记已复盘）；false 表示撤销复盘。
+      responses:
+        '200':
+          description: Current review state after the call
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code:
+                    type: integer
+                    example: 200
+                  data:
+                    type: object
+                    properties:
+                      reviewedAt:
+                        type: string
+                        format: date-time
+                        nullable: true
+                      changed:
+                        type: boolean
+                        description: 本次调用是否真的改变了状态（幂等重复调用为 false）
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
 
   /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/versions:
     get:

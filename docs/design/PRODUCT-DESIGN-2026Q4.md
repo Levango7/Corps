@@ -329,8 +329,16 @@ FUNNEL-METRICS §3 的护栏序列，与 H1 同层。两周试点先取数，若
 2. 决策链只记到「被创建」，没记「落位成任务」。`create_decision` 证明有人写了决议，
    不证明决议变成了动作——楔子的差异化恰恰在后者。
 
-**缺口（2026-10-21 二次更正）**：真正缺的只有 `decision_reviewed`（复盘）与
+**缺口（2026-10-21 二次更正，2026-10-28 已闭合）**：真正缺的只有 `decision_reviewed`（复盘）与
 `ai_extract_started` / `_confirmed` / `_failed`。
+
+> **2026-10-28 落地（owner 口径）**：`decision_reviewed` 走**显式动作**（决策页「标记已复盘」，
+> 落库 `decisions.reviewed_at`，只在未复盘→已复盘跃迁上发事件，编辑决策会清空标记）；
+> `ai_extract_started` / `ai_extract_failed` 接在 `POST .../decisions/extract`
+> （failed 带 `reason: llm_error | rules_error` 区分"降级"与"整体失败"）。
+> **`ai_extract_confirmed` 不新增**：该流程只把结果拷到剪贴板，没有"确认/采纳"动作可打点；
+> 硬造会与 `create_decision` 形成两个事实源。要算采用率时在 `create_decision` 上加
+> `source: "ai_extract"` 维度即可。口径全文见 `docs/analytics/FUNNEL-METRICS.md` §4.4。
 
 初稿这里列的 12 个"缺口事件"，复核 FUNNEL-METRICS（ACCEPTED）与 overview API 的实际实现后，
 有 5 个是我重复造轮子，撤回：
