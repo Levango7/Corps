@@ -20,9 +20,13 @@ import { BASE, registerUser, authHeader, inviteMember, wsBoundToken } from "../h
 
 let ownerToken: string;
 let otherToken: string;
+let strangerToken: string;
 let otherUserId: string;
 let wid: string;
 let templateId: string;
+
+/** 秒级 ISO（去掉毫秒）：zod .datetime() 默认精度 0，带 .000 会被 400 拒绝 */
+const isoSec = (ms: number) => new Date(ms).toISOString().replace(/\.\d+Z$/, "Z");
 
 const auth = (t: string) => ({ ...authHeader(t), "Content-Type": "application/json" });
 
@@ -65,6 +69,10 @@ beforeAll(async () => {
   expect((await inviteMember(ownerToken, wid, other.user.email)).status).toBe(201);
   otherToken = (await wsBoundToken(other.cookies, wid)) ?? "";
   expect(otherToken).toBeTruthy();
+
+  // 隔离用例需要**非成员**：单独注册且不入会、不换绑（默认票 → wid 不匹配 → 403）
+  const stranger = await registerUser({ prefix: "approvals-stranger" });
+  strangerToken = stranger.accessToken;
 
   const res = await createTemplate(ownerToken, otherUserId);
   const json = await res.json();
@@ -172,12 +180,12 @@ describe("实例提交与详情", () => {
     expect(json.data.currentApproverIds).toContain(otherUserId);
   });
 
-  it("跨工作区隔离：B 的 token 读 A 的实例 403", async () => {
+  it("跨工作区隔离：非成员 stranger 的 token 读 A 的实例 403", async () => {
     const created = await createInstance(ownerToken, templateId, "隔离实例", otherUserId);
     const aid = (await created.json()).data.id;
 
     const res = await fetch(`${BASE}/workspaces/${wid}/approvals/instances/${aid}`, {
-      headers: auth(otherToken),
+      headers: auth(strangerToken),
     });
     expect(res.status).toBe(403);
   });
@@ -272,8 +280,9 @@ describe("委托 CRUD", () => {
       headers: auth(ownerToken),
       body: JSON.stringify({
         delegateToId: otherUserId,
-        startAt: new Date().toISOString(),
-        endAt: new Date(Date.now() + 86400_000).toISOString(),
+        // startAt 必须严格在未来（服务端校验 startAt < new Date() → 400），留 60s 余量
+        startAt: isoSec(Date.now() + 60_000),
+        endAt: isoSec(Date.now() + 86400_000),
         reason: "休假委托",
       }),
     });
