@@ -20,6 +20,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { encodeCredential } from "@/lib/mail/transporter";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET 查询参数 schema */
 const listQuerySchema = z.object({
@@ -45,7 +46,7 @@ const createSchema = z.object({
  * 返回当前用户在指定工作区的邮箱账户列表（按创建时间降序）。
  * 不返回 credential 字段（敏感信息）。
  */
-export async function GET(req: NextRequest) {
+async function getMailAccounts(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -131,7 +132,7 @@ export async function GET(req: NextRequest) {
  * credential（明文密码）存储前经 Base64 编码。
  * 利用 @@unique([userId, email]) 防止重复添加同一邮箱。
  */
-export async function POST(req: NextRequest) {
+async function postMailAccounts(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -229,3 +230,7 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getMailAccounts);
+
+export const POST = withRed(postMailAccounts);

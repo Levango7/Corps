@@ -29,6 +29,7 @@ import {
 } from "@/lib/ai/prompts/semantic-search";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** 搜索范围枚举：消息 / 文档 / 待办 / 决策 */
@@ -162,6 +163,9 @@ async function postAiSemanticSearch(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 6) 用 reasonerModel 理解查询意图，生成扩展关键词（非流式）

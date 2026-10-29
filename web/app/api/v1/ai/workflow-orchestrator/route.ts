@@ -36,6 +36,7 @@ import {
   type ExistingWorkflowSummary,
 } from "@/lib/ai/prompts/workflow-orchestrator";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 // ── 请求体 schema ──
@@ -261,6 +262,9 @@ async function postAiWorkflowOrchestrator(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   // 6) LLM 生成工作流定义（非流式，defaultModel）
   let workflow: WorkflowDefinition;

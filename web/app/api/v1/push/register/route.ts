@@ -14,6 +14,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { withGuc } from "@/lib/auth";
+import { withRed } from "@/lib/red-metrics";
 
 /** 平台枚举（与 PushToken.platform 一致） */
 const platformEnum = z.enum(["android", "ios", "harmonyos"]);
@@ -36,7 +37,7 @@ const unregisterSchema = z.object({
  * upsert 到 PushToken 表（以 userId+platform+token 为唯一键）。
  * 同一设备重复注册时幂等（updatedAt 刷新）。
  */
-export async function POST(req: NextRequest) {
+async function postPushRegister(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -111,7 +112,7 @@ export async function POST(req: NextRequest) {
  * 从 PushToken 表删除指定 platform+token 记录（限定当前用户，防越权删除他人 token）。
  * 不存在时幂等返回成功（删除 0 行不报错）。
  */
-export async function DELETE(req: NextRequest) {
+async function deletePushRegister(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -169,3 +170,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postPushRegister);
+
+export const DELETE = withRed(deletePushRegister);

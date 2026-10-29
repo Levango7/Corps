@@ -6,6 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { sendPush } from "@/lib/web-push";
 import { sendPushEmail, renderPushEmailHtml } from "@/lib/ai/push-email";
 import { normalizeEmailLocale } from "@/lib/email-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/ai-push-web — AI 推送 Web Push 发送器（每 15 分钟定时调用）
@@ -39,7 +40,7 @@ const LOOKBACK_MS = 24 * 60 * 60 * 1000;
 /** summary 截断长度（Web Push payload body 上限） */
 const SUMMARY_MAX = 100;
 
-export async function GET(req: NextRequest) {
+async function getCronAiPushWeb(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -279,3 +280,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronAiPushWeb);

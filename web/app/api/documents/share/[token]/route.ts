@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithShareToken, setTxGuc } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/documents/share/{token} — 公开分享链接（无需登录）
@@ -21,7 +22,10 @@ import { apiMsg } from "@/lib/api-messages";
  *    POST /api/documents/share/{token}/verify 在校验密码后返回。
  * 注意 hasPassword 是派生布尔值，绝不把 sharePassword 哈希本身下发给客户端。
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function getDocumentsShareByToken(
+  _req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const { token } = await params;
 
   try {
@@ -90,3 +94,5 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     );
   }
 }
+
+export const GET = withRed(getDocumentsShareByToken);

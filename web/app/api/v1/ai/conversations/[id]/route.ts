@@ -10,6 +10,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** 从 URL 路径提取对话 ID，并校验是否为合法 UUID */
@@ -141,6 +142,9 @@ async function deleteAiConversationsById(req: NextRequest) {
         { status: 500 },
       );
     if (!ctx.ok) return authFailure(ctx, req);
+    // AI 域资源纳入权限矩阵（2026-10-22 用户拍板：viewer 只读）。
+    const denied = await requirePermission(ctx, "ai", "delete", req);
+    if (denied) return denied;
 
     // P2-4: 原子化删除——单步 deleteMany 带 userId + workspaceId 条件，
     // 避免先查询再删除的并发竞态（中间可能有并发删除）
