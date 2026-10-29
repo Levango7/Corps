@@ -78,6 +78,9 @@ async function patchTasksDecisionsByIdByDid(
         data: {
           markdown: validated.markdown,
           version: validated.baseVersion + 1,
+          // 内容改了 ⇒ 上一次的「已复盘」不再覆盖新版本（#48 的语义边界）。
+          // 不复位的话，复盘率会长期停留在"改过就算复盘过"的虚高值。
+          reviewedAt: null,
           versions: {
             create: {
               workspaceId: wid,

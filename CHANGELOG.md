@@ -6,9 +6,9 @@
 
 （暂无；下一版本从这里开始记）
 
-## [0.9.0] - 2026-10-28
+## [0.9.0] - 2026-10-30
 
-自 v0.8.2 起 **118 个提交**（截至 `37a9e42`，实测 `git rev-list --count v0.8.2..main`）。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
+自 v0.8.2 起 **147 个提交**（截至 `a720f4d`，实测 `git rev-list --count v0.8.2..main`）。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
 消息搜索对中文真正可用、可观测与契约债务连续清偿，并把 a11y / 权限 / 契约做成
 **只允许收缩的机器判据**（不再靠人记得复核）。
 
@@ -25,19 +25,32 @@
 - **可观测 RED 三维接线**：Errors 走 `instrumentation.ts` 的 `onRequestError`（#163）；
   Rate / Duration 分两批接（#170 contacts/announcements/activity 域、#189
   analytics/billing/permissions/presence 首批 7 个端点），随后逐域铺开到
-  **241 个 route 文件 / 377 处**（`git grep -l "withRed(" -- "web/app/api/**/route.ts" | wc -l`）。
+  **289 个 route 文件 / 450 处**（`git grep -l "withRed(" -- "web/app/api/**/route.ts" | wc -l`）。
   过程中暴露并迁移了若干权限门禁误判（`remote-control` 的 T4→T3、`ai/feedback` 等）——
   迁移不改总盲区，只是按 handler 精确切分后的真实归属。
 - **事件面双向契约**：把只在白名单挂着、没有任何 emit 站点的 10 个事件接通，并把埋点门禁
-  补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **37 名**。
+  补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **40 名**。
 - **权限矩阵补口**：approvals 域纳入 `lib/permissions.ts` 矩阵，permission-gate T3 债务
-  **154 → 133**（`scripts/permission-gate-unscoped-baseline.txt`）。
+  **154 → 94**（`scripts/permission-gate-unscoped-baseline.txt`）。
 - **SAST 两条腿**：CodeQL（javascript-typescript，#174）与 Gitleaks 密钥扫描（#177）。
   Gitleaks 首跑 4 处命中经逐条复核均为误报，按"带理由豁免"落库而不是放宽扫描。
-- **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **10 个**（calendar/goals/forms/
+- **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **22 个**（calendar/goals/forms/
   recycle-bin/wiki/whiteboards/time-entries/activity/contact-groups 等）。
 - **文档台账**：`OPEN-DECISIONS`（工程外阻碍项集中登记）、内部 SLI 口径、`ROADMAP-2026Q4`
   的基线 burn-down 表（承诺值与实测值由 `check_burndown.py` 对账）。
+- **真实浏览器 a11y 基线（#45 B1b，PR #192）**：接 `@axe-core/playwright`，在 Chromium 里
+  按 WCAG 2.1 A/AA 扫描登录页与 6 个已登录页（board / my-tasks / im / decisions / documents /
+  settings），把命中的 rule × 归一化选择器存成 **34 条**基线（`web/tests/a11y-axe-baseline.json`）。
+  判据双向：出现基线外的键判红，基线里已消失的键也判红——只允许收缩，不允许偷偷长回去。
+  选择器归一化（去 `:nth-child`、hex/uuid → `{id}`、数字 → `{n}`）抽成纯函数并配 14 例单测，
+  另做变异验证（去掉 nth 归一化 / 把 `stale` 恒置空，各红一条）。
+- **决策复盘与 AI 提炼可度量（#48，PR #193）**：白名单新增 `decision_reviewed` /
+  `ai_extract_started` / `ai_extract_failed`，口径见 `docs/analytics/FUNNEL-METRICS.md` §4.4。
+  决策页新增「标记已复盘」动作（`POST .../decisions/{did}/review`，落库 `decisions.reviewed_at`），
+  事件**只在未复盘→已复盘的跃迁上发**：重复点不重复计数、撤销复盘不发；
+  刻意**没有** `ai_extract_confirmed`（该流程只把结果拷到剪贴板，没有"确认/采纳"动作可打点，
+  硬造会与 `create_decision` 形成两个事实源）。`ai_extract_failed` 的 `reason` 区分
+  `llm_error`（LLM 失败但规则版兜住，用户仍有结果）与 `rules_error`（整体失败）。
 
 ### Changed
 
@@ -49,8 +62,10 @@
   对用户完全静默。
 - **e2e 夹具独立化（#168）**：19 处 `describe.serial` 改为每条用例自带账号，
   去掉"第一条失败 → 后面全跳过"的级联遮蔽（serial 只保留有真实先后依赖的组）。
-- **契约清偿四批**：未声明契约路由 **203 → 170**；`api/openapi.yaml` 现有 117 条路径。
-- **零覆盖基线 602 → 592**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径。
+- **契约清偿四批**：未声明契约路由 **203 → 119**；`api/openapi.yaml` 现有 169 条路径。
+- **零覆盖基线 602 → 539**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径。
+- **编辑决策会清空复盘标记**：`PATCH .../decisions/{did}` 现在把 `reviewed_at` 置空。
+  不复位的话复盘率会长期停在"改过就算复盘过"的虚高值。
 
 ### Fixed
 

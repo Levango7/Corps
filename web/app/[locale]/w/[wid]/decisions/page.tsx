@@ -24,6 +24,7 @@ import {
   Sparkles,
   ClipboardCopy,
   ListChecks,
+  CheckCircle2,
 } from "lucide-react";
 import { api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
@@ -42,6 +43,11 @@ interface Decision {
   authorName: string;
   createdAt: string;
   updatedAt: string;
+  /**
+   * 复盘时间戳（#48）：null/缺失 = 未复盘。
+   * 语义是「人工点过标记已复盘」，不是"看过"；编辑决策会把它清空。
+   */
+  reviewedAt?: string | null;
   /**
    * 执行进度（F1 决策驱动执行）：
    *  - actionItemCount：行动项总数（null=后端尚未返回，前端不显示进度列）
@@ -170,6 +176,38 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
     setAiSource("");
     setAiResult(null);
     setAiErr("");
+  }
+
+  /** 正在提交复盘状态的决策 id（按钮转圈 + 防重复点击） */
+  const [reviewBusy, setReviewBusy] = useState<Set<string>>(new Set());
+
+  /**
+   * 标记 / 撤销「已复盘」。
+   *
+   * 服务端只在 未复盘→已复盘 的跃迁上发 decision_reviewed 事件（见 review 路由），
+   * 所以这里不需要前端埋点；重复点同一行也不会把复盘数刷高。
+   */
+  async function toggleReviewed(d: Decision) {
+    const next = !d.reviewedAt;
+    setReviewBusy((prev) => new Set(prev).add(d.id));
+    try {
+      const j = await api<{ reviewedAt: string | null }>(
+        `/api/v1/workspaces/${wid}/tasks/${d.taskId}/decisions/${d.id}/review`,
+        { method: "POST", body: JSON.stringify({ reviewed: next }) },
+      );
+      setDecisions((prev) =>
+        prev.map((x) => (x.id === d.id ? { ...x, reviewedAt: j.reviewedAt } : x)),
+      );
+      toast("success", next ? t("reviewedToast") : t("unreviewedToast"));
+    } catch (e) {
+      toast("error", e instanceof Error ? e.message : t("reviewFailedToast"));
+    } finally {
+      setReviewBusy((prev) => {
+        const n = new Set(prev);
+        n.delete(d.id);
+        return n;
+      });
+    }
   }
 
   /**
@@ -376,6 +414,13 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                       <span className="shrink-0 px-[var(--space-1)] py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--border)] text-[length:var(--text-xs)] font-[family-name:var(--font-mono)] text-[var(--fg-2)]">
                         v{d.version}
                       </span>
+                      {/* #48：已复盘徽标（只反映后端 reviewedAt，不做前端推导） */}
+                      {d.reviewedAt && (
+                        <span className="shrink-0 inline-flex items-center gap-[var(--space-1)] px-[var(--space-1)] py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--success)]">
+                          <CheckCircle2 size={11} aria-hidden />
+                          {t("reviewedBadge")}
+                        </span>
+                      )}
                     </header>
 
                     {/* 中间：markdown 内容摘要（纯文本，截取 200 字符） */}
@@ -434,6 +479,21 @@ export default function DecisionsPage({ params }: { params: Promise<{ wid: strin
                           </span>
                         </>
                       )}
+                      {/* #48 复盘动作：显式宣告，不是"看过"；点击后由服务端发 decision_reviewed */}
+                      <button
+                        type="button"
+                        onClick={() => toggleReviewed(d)}
+                        disabled={reviewBusy.has(d.id)}
+                        aria-pressed={Boolean(d.reviewedAt)}
+                        className="ml-auto shrink-0 inline-flex items-center gap-[var(--space-1)] px-[var(--space-2)] py-0.5 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] hover:text-[var(--fg)] disabled:opacity-60 transition-colors duration-[var(--motion-fast)]"
+                      >
+                        {reviewBusy.has(d.id) ? (
+                          <Loader2 size={11} className="animate-spin" aria-hidden />
+                        ) : (
+                          <CheckCircle2 size={11} aria-hidden />
+                        )}
+                        {d.reviewedAt ? t("unreviewAction") : t("reviewAction")}
+                      </button>
                     </footer>
                   </article>
                 </li>
