@@ -19,7 +19,7 @@
 | 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0**；定时 Smoke 目标已从临时隧道切至 Vercel 实例（2026-10-25 连续 success，库曾一度 down 后自愈，疑免费档冷启动待定论） |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭；v0.8.2 修复容器镜像源单点（`ARG NODE_IMAGE` 回 Docker Hub） |
-| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **133**（10-26 approvals 批次清 14 条）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
+| 质量基线 | 零覆盖 **602**（10-03 为 643，−41）/ T3 **94**（10-29 AI 域收敛批清 40 条，134→94）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
 | **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 40.8%（目标 60%），`tests/api` 路由级测试 10/20；**RED-Rate/Duration** 全量接线完成（2026-10-29：第十一批补齐 uid 面 v1 域 / cron / share / uploads / health 等收尾域并含 `/api/metrics` 自身，448 / 448 个 handler；达标线自 #191 起即「全量」、由 `score_maturity` 运行时计算）；**SLO/SLI 内部口径文档 1 份**（`docs/SLI-internal-definition.md`，只定义 SLI 与盲区，正式实例前按负面清单不做对外 SLO 承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
@@ -84,7 +84,7 @@
 | 基线 | 当前（2026-10-12） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 592 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im |
-| `permission-gate` T3 | 134 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒；2026-10-29 RED 第十一批接线后检测器再次按 handler 精确切分，POST /api/v1/remote-control 同类自 T4 迁移至此，T3 +1 / T4 −1，总盲区 164 不变） |
+| `permission-gate` T3 | 94 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒；2026-10-29 RED 第十一批接线后检测器再次按 handler 精确切分，POST /api/v1/remote-control 同类自 T4 迁移至此，T3 +1 / T4 −1，总盲区 164 不变；2026-10-29 AI 域收敛批：40 个 handler 接 `requirePermission(ctx,"ai",*)`（2026-10-22 用户拍板 viewer 只读），T3 134→94，总盲区 164→124；留 T3 诚实登记：chat/completion/format/summarize/translate/feedback 六条会话级自助工具 + push/schedules(本人日程)/templates/{id}(公共模板混合语义) 两条定制口径 + task-breakdown/voice/preferences(无工作区 ctx) + orchestrate(动态 actionPerms，静态检测器看不见)） |
 | `api-contract` undeclared | 154 | **150** | 每周契约化 ≥5 条路由（2026-10-28 approvals 域 16 条契约化，openapi 117→133 paths） |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
