@@ -107,16 +107,24 @@ describe("详情 / 更新 / 删除", () => {
     });
     const json = await res.json();
     expect(res.status).toBe(200);
-    expect(json.data.doc.title).toBe("改名后的主文档");
+    // data 直接是 doc（非 { doc } 包装）
+    expect(json.data.title).toBe("改名后的主文档");
   });
 
-  it("PATCH /documents/{id} 空 body 返回 400", async () => {
+  it("PATCH /documents/{id} 空 body 容忍为 no-op（200，title 不变）", async () => {
+    // updateDocSchema 全字段 optional 且无 minProperties——空对象通过校验，返回原文档（不改动）
+    const before = await fetch(`${BASE}/workspaces/${wid}/documents/${docId}`, {
+      headers: auth(ownerToken),
+    }).then((r) => r.json());
+
     const res = await fetch(`${BASE}/workspaces/${wid}/documents/${docId}`, {
       method: "PATCH",
       headers: auth(ownerToken),
       body: JSON.stringify({}),
     });
-    expect(res.status).toBe(400);
+    const json = await res.json();
+    expect(res.status).toBe(200);
+    expect(json.data.title).toBe(before.data.title);
   });
 
   it("跨工作区隔离：B 的 token 读 A 的文档 403", async () => {
