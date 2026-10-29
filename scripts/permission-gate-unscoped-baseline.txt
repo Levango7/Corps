@@ -47,7 +47,6 @@ POST /api/v1/ai/chat
 POST /api/v1/ai/completion
 POST /api/v1/ai/feedback
 POST /api/v1/ai/format
-POST /api/v1/ai/mail-assistant
 POST /api/v1/ai/orchestrate
 POST /api/v1/ai/summarize
 POST /api/v1/ai/task-breakdown
