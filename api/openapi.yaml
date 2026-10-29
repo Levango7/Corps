@@ -5744,7 +5744,7 @@ paths:
     get:
       tags: [timetrack]
       summary: List time entries (startTime descending)
-      description: Rows carry user {id,name,email} and task {id,title} summaries.
+      description: "Rows carry user {id,name,email} and task {id,title} summaries."
       operationId: listTimeEntries
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -6010,7 +6010,7 @@ paths:
         - $ref: '#/components/parameters/Wid'
       responses:
         '200':
-          description: Gantt payload ({ items })
+          description: "Gantt payload ({ items })"
           content:
             application/json:
               schema:
@@ -6032,7 +6032,7 @@ paths:
         - $ref: '#/components/parameters/Wid'
       responses:
         '200':
-          description: Timeline payload ({ items })
+          description: "Timeline payload ({ items })"
           content:
             application/json:
               schema:
@@ -6060,7 +6060,7 @@ paths:
           schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
       responses:
         '200':
-          description: Page list ({ items, total, hasMore }; items are page trees)
+          description: "Page list ({ items, total, hasMore }; items are page trees)"
           content:
             application/json:
               schema:
@@ -6187,7 +6187,7 @@ paths:
           schema: { type: integer, minimum: 0, default: 0 }
       responses:
         '200':
-          description: Whiteboard list ({ items, total, hasMore })
+          description: "Whiteboard list ({ items, total, hasMore })"
           content:
             application/json:
               schema:
@@ -6938,7 +6938,7 @@ paths:
               required: [name, nodes]
               properties:
                 name: { type: string, minLength: 1, maxLength: 200 }
-                description: { type: string }
+                description: "{ type: string }"
                 nodes:
                   type: array
                   minItems: 1
@@ -7002,7 +7002,7 @@ paths:
               type: object
               properties:
                 name: { type: string, minLength: 1, maxLength: 200 }
-                description: { type: string }
+                description: "{ type: string }"
                 nodes:
                   type: array
                   items:
@@ -7092,7 +7092,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI usage logs
-      description: Legacy envelope code=0; data is { logs, total } (not paginated by page/limit).
+      description: "Legacy envelope code=0; data is { logs, total } (not paginated by page/limit)."
       operationId: getAiUsageLogs
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7153,7 +7153,7 @@ paths:
         - $ref: '#/components/parameters/Wid'
       responses:
         '200':
-          description: Dashboard aggregates { today{ calls, tokens, cost }, month{...}, topCapabilities[] }
+          description: "Dashboard aggregates { today{ calls, tokens, cost }, month{...}, topCapabilities[] }"
           content:
             application/json:
               schema:
@@ -7166,7 +7166,7 @@ paths:
     post:
       tags: [ai]
       summary: Execute a voice command
-      description: Parses and dispatches a natural-language voice command; data = { id, intent, parameters, confidence, response, executed } (code=200).
+      description: "Parses and dispatches a natural-language voice command; data = { id, intent, parameters, confidence, response, executed } (code=200)."
       operationId: postAiVoiceCommand
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7227,7 +7227,7 @@ paths:
     get:
       tags: [ai]
       summary: Voice command history
-      description: data = { items, total, page, pageSize } (code=200).
+      description: "data = { items, total, page, pageSize } (code=200)."
       operationId: getAiVoiceHistory
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7417,7 +7417,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI push records (cursor pagination)
-      description: data = { items, nextCursor, hasMore } (cursor-based, code=200).
+      description: "data = { items, nextCursor, hasMore } (cursor-based, code=200)."
       operationId: listAiPushRecords
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7473,7 +7473,7 @@ paths:
     get:
       tags: [ai]
       summary: List my AI personalization recommendations
-      description: Query type/applied filters; data = { recommendations } (code=200).
+      description: "Query type/applied filters; data = { recommendations } (code=200)."
       operationId: listAiRecommendations
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7529,7 +7529,7 @@ paths:
     get:
       tags: [ai]
       summary: List my AI behavior history
-      description: Query capability/limit; data = { behaviors, total } (code=200).
+      description: "Query capability/limit; data = { behaviors, total } (code=200)."
       operationId: listAiBehaviors
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7566,7 +7566,7 @@ paths:
                 type: { type: string }
       responses:
         '200':
-          description: Generated recommendations (data = { recommendations })
+          description: "Generated recommendations (data = { recommendations })"
           content:
             application/json:
               schema:
@@ -7577,7 +7577,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI templates (public + workspace private)
-      description: Legacy envelope code=0; data = { items, total, skip, take }.
+      description: "Legacy envelope code=0; data = { items, total, skip, take }."
       operationId: listAiTemplates
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7708,7 +7708,7 @@ paths:
     post:
       tags: [ai]
       summary: Instantiate a workflow from an AI template
-      description: Body { wid, name? }; creates a workflow from the template (code=0, HTTP 201).
+      description: "Body { wid, name? }; creates a workflow from the template (code=0, HTTP 201)."
       operationId: instantiateAiTemplate
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7738,7 +7738,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI meeting sessions (cursor pagination)
-      description: Query status/cursor/limit; data = { items, nextCursor, hasMore } (code=0 legacy).
+      description: "Query status/cursor/limit; data = { items, nextCursor, hasMore } (code=0 legacy)."
       operationId: listAiMeetingSessions
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -7862,7 +7862,7 @@ paths:
                 wid: { type: string, format: uuid }
       responses:
         '200':
-          description: Analysis result (data = { summary, insights… }, code=200)
+          description: "Analysis result (data = { summary, insights… }, code=200)"
           content:
             application/json:
               schema:
@@ -8023,7 +8023,7 @@ paths:
     post:
       tags: [ai]
       summary: AI burndown analysis (non-streaming)
-      description: Body { wid, period? }; data = { reportId, summary, idealLine, actualLine, predictedCompletion, deviation, insights } (code=200). Persisted as an analysis report.
+      description: "Body { wid, period? }; data = { reportId, summary, idealLine, actualLine, predictedCompletion, deviation, insights } (code=200). Persisted as an analysis report."
       operationId: postAiAnalysisBurndown
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8045,7 +8045,7 @@ paths:
     post:
       tags: [ai]
       summary: AI bottleneck analysis (non-streaming)
-      description: Body { wid }; data = { reportId, summary, bottlenecks, criticalPath, insights } (code=200).
+      description: "Body { wid }; data = { reportId, summary, bottlenecks, criticalPath, insights } (code=200)."
       operationId: postAiAnalysisBottleneck
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8067,7 +8067,7 @@ paths:
     post:
       tags: [ai]
       summary: AI team performance analysis (non-streaming)
-      description: Body { wid, period? }; data = { reportId, summary, members, insights } (code=200).
+      description: "Body { wid, period? }; data = { reportId, summary, members, insights } (code=200)."
       operationId: postAiAnalysisTeamPerformance
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8089,7 +8089,7 @@ paths:
     post:
       tags: [ai]
       summary: AI weekly report (non-streaming)
-      description: Body { wid, weekStart? }; data = { reportId, summary, completed, planned, risks, milestones, insights } (code=200).
+      description: "Body { wid, weekStart? }; data = { reportId, summary, completed, planned, risks, milestones, insights } (code=200)."
       operationId: postAiAnalysisWeeklyReport
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8111,7 +8111,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI analysis reports
-      description: Query type/page/pageSize; data = { items, total, page, pageSize } (code=200).
+      description: "Query type/page/pageSize; data = { items, total, page, pageSize } (code=200)."
       operationId: listAiAnalysisReports
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8139,7 +8139,7 @@ paths:
     post:
       tags: [ai]
       summary: Extract knowledge graph nodes/edges from a source (non-streaming)
-      description: Body { wid, sourceType(document|meeting|chat|task), sourceId }; data = { nodes, edges } (code=200).
+      description: "Body { wid, sourceType(document|meeting|chat|task), sourceId }; data = { nodes, edges } (code=200)."
       operationId: postAiKnowledgeExtract
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8156,7 +8156,7 @@ paths:
                 sourceId: { type: string }
       responses:
         '200':
-          description: Extracted graph (data = { nodes, edges })
+          description: "Extracted graph (data = { nodes, edges })"
           content:
             application/json:
               schema:
@@ -8169,7 +8169,7 @@ paths:
     post:
       tags: [ai]
       summary: Knowledge-graph grounded QA (non-streaming)
-      description: Body { wid, question }; data = { answer, relatedNodes } (code=200).
+      description: "Body { wid, question }; data = { answer, relatedNodes } (code=200)."
       operationId: postAiKnowledgeQuery
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8218,7 +8218,7 @@ paths:
     get:
       tags: [ai]
       summary: Get the knowledge graph (nodes + edges)
-      description: Query type/limit; data = { nodes, edges } (code=200).
+      description: "Query type/limit; data = { nodes, edges } (code=200)."
       operationId: getAiKnowledgeGraph
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8243,7 +8243,7 @@ paths:
     get:
       tags: [documents]
       summary: List document comments
-      description: data = { items, total } (non-paginated; code=200).
+      description: "data = { items, total } (non-paginated; code=200)."
       operationId: listDocumentComments
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8514,7 +8514,7 @@ paths:
     get:
       tags: [documents]
       summary: List document share links (passwordHash stripped)
-      description: data = { items, total, hasMore } (code=200).
+      description: "data = { items, total, hasMore } (code=200)."
       operationId: listDocumentShareLinks
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8639,7 +8639,7 @@ paths:
     get:
       tags: [documents]
       summary: List document versions
-      description: data = { items, currentVersion, page, limit, total, hasMore } (code=200).
+      description: "data = { items, currentVersion, page, limit, total, hasMore } (code=200)."
       operationId: listDocumentVersions
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8749,7 +8749,7 @@ paths:
     post:
       tags: [documents]
       summary: Batch grant document permissions
-      description: data = { successCount, failedCount, failures[{ documentId, error }] } (code=201).
+      description: "data = { successCount, failedCount, failures[{ documentId, error }] } (code=201)."
       operationId: batchDocumentPermissions
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8778,7 +8778,7 @@ paths:
     get:
       tags: [databases]
       summary: List workspace databases
-      description: data = { items, page, limit, total, hasMore } (code=200).
+      description: "data = { items, page, limit, total, hasMore } (code=200)."
       operationId: listDatabases
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -8905,7 +8905,7 @@ paths:
     get:
       tags: [databases]
       summary: List database fields
-      description: data = { items, total, hasMore } (code=200).
+      description: "data = { items, total, hasMore } (code=200)."
       operationId: listDatabaseFields
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -9027,7 +9027,7 @@ paths:
     get:
       tags: [databases]
       summary: List database records
-      description: data = { items, page, limit, total, hasMore } (code=200).
+      description: "data = { items, page, limit, total, hasMore } (code=200)."
       operationId: listDatabaseRecords
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -9145,7 +9145,7 @@ paths:
     get:
       tags: [databases]
       summary: List database views
-      description: data = { items, total, hasMore } (code=200).
+      description: "data = { items, total, hasMore } (code=200)."
       operationId: listDatabaseViews
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -9401,7 +9401,7 @@ paths:
               required: [description]
               properties:
                 wid: { type: string, format: uuid }
-                description: { type: string, minLength: 1 }
+                description: "{ type: string, minLength: 1 }"
                 duration: { type: integer, minimum: 5 }
                 attendees: { type: array, items: { type: string, format: uuid } }
       responses:
@@ -9907,6 +9907,557 @@ paths:
               schema: { type: string }
         '400':
           $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/push/register:
+    post:
+      tags: [push]
+      summary: Register a device push token (FCM/APNs/Huawei Push Kit)
+      description: Legacy envelope code=0.
+      operationId: registerPushDevice
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Device token + platform fields (see handler schema).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Device registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [push]
+      summary: Unregister a device push token
+      description: Legacy envelope code=0.
+      operationId: unregisterPushDevice
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Device unregistered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/push/unsubscribe:
+    post:
+      tags: [push]
+      summary: Unsubscribe a Web Push subscription
+      description: "data = { unsubscribed: true } (code=200)."
+      operationId: unsubscribeWebPush
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Web Push subscription endpoint/keys payload.
+              additionalProperties: true
+      responses:
+        '200':
+          description: Unsubscribed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/push/subscribe:
+    post:
+      tags: [push]
+      summary: Subscribe to Web Push
+      description: "data = { subscribed: true } (code=200)."
+      operationId: subscribeWebPush
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Web Push subscription payload (endpoint + keys).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Subscribed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/push/vapid:
+    get:
+      tags: [push]
+      summary: Get the VAPID public key
+      description: "data = { publicKey } (code=200)."
+      operationId: getVapidPublicKey
+      responses:
+        '200':
+          description: VAPID public key
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/push/send:
+    post:
+      tags: [push]
+      summary: Send a push notification (admin only)
+      description: Legacy envelope code=0; data null.
+      operationId: sendPushNotification
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Push target + payload (admin gate).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Push sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/mail/accounts:
+    get:
+      tags: [mail]
+      summary: List my mailbox accounts
+      description: Legacy envelope code=0; data is the accounts array.
+      operationId: listMailAccounts
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Account list (bare array)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MailAccountList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [mail]
+      summary: Add a mailbox account
+      operationId: createMailAccount
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Account credentials/config (see handler schema).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Account added
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MailAccount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/mail/accounts/{id}:
+    patch:
+      tags: [mail]
+      summary: Update a mailbox account configuration
+      operationId: patchMailAccount
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated account
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MailAccount'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [mail]
+      summary: Delete a mailbox account
+      operationId: deleteMailAccount
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Account deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/mail/inbox:
+    get:
+      tags: [mail]
+      summary: Mail inbox / list
+      description: Query status/isRead/page/pageSize; legacy envelope code=0 with a paginated page.
+      operationId: listMailInbox
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: status
+          in: query
+          schema: { type: string, enum: [sent, received, draft] }
+        - name: isRead
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Mail page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MailInbox'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/mail/send:
+    post:
+      tags: [mail]
+      summary: Send an email
+      description: "Body { wid, accountId, to, cc?, bcc?, subject, bodyText, bodyHtml?, inReplyTo? } (legacy envelope code=0)."
+      operationId: sendMail
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [accountId, to, subject, bodyText]
+              properties:
+                accountId: { type: string, format: uuid }
+                to: { type: array, items: { type: string } }
+                cc: { type: array, items: { type: string } }
+                bcc: { type: array, items: { type: string } }
+                subject: { type: string, maxLength: 500 }
+                bodyText: { type: string }
+                bodyHtml: { type: string }
+                inReplyTo: { type: string }
+      responses:
+        '200':
+          description: Mail sent
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/mail/{id}:
+    get:
+      tags: [mail]
+      summary: Mail detail
+      operationId: getMail
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Mail detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Mail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [mail]
+      summary: Update mail flags (isRead, isStarred)
+      operationId: patchMail
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                isRead: { type: boolean }
+                isStarred: { type: boolean }
+      responses:
+        '200':
+          description: Updated mail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Mail'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files:
+    get:
+      tags: [files]
+      summary: List workspace file assets
+      description: "data = { items, page, limit, total, hasMore } (code=200)."
+      operationId: listFileAssets
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: File asset list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FileAssetList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files/upload:
+    post:
+      tags: [files]
+      summary: Upload a file asset
+      operationId: uploadFileAsset
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Upload payload (see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: File asset created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FileAsset'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files/{fid}:
+    get:
+      tags: [files]
+      summary: File asset detail
+      operationId: getFileAsset
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: File asset detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FileAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [files]
+      summary: Delete a file asset
+      operationId: deleteFileAsset
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: File asset deleted (data null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files/{fid}/download:
+    get:
+      tags: [files]
+      summary: Download a file asset
+      operationId: downloadFileAsset
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: File download (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files/{fid}/move:
+    patch:
+      tags: [files]
+      summary: Move a file asset to another folder
+      description: data = updated fileAsset (code=200).
+      operationId: moveFileAsset
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Moved file asset
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FileAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files/{fid}/versions:
+    get:
+      tags: [files]
+      summary: List file asset versions
+      description: "data = { items, total, hasMore } (code=200)."
+      operationId: listFileVersions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Version list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FileVersionList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/files/{fid}/versions/{vid}/restore:
+    post:
+      tags: [files]
+      summary: Restore a file asset version
+      description: data = result.data (code=200).
+      operationId: restoreFileVersion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: vid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Version restored
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FileAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
 
@@ -12971,3 +13522,67 @@ components:
         data:
           type: object
           description: Streaming envelope replaced by a Vercel AI SDK Data Stream (text/event-stream).
+    Envelope_FileAsset:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: File asset row (fileAsset table shape).
+    Envelope_FileAssetList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_FileVersionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_MailAccount:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Mailbox account row (credentials/config).
+    Envelope_MailAccountList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: Bare array of mailbox account rows.
+          items: { type: object }
+    Envelope_Mail:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Mail row (flags, subject, body…).
+    Envelope_MailInbox:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Mail inbox page (pagination keys per handler).
