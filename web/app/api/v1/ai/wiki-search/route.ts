@@ -26,6 +26,7 @@ import {
   buildWikiSearchUserPrompt,
 } from "@/lib/ai/prompts/wiki-search";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
@@ -91,6 +92,9 @@ async function postAiWikiSearch(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 6) PostgreSQL ILIKE 全文检索候选 WikiPage（最多 20 条）

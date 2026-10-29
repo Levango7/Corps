@@ -11,6 +11,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 合法收藏目标类型枚举 */
 const TARGET_TYPE_VALUES = [
@@ -42,7 +43,7 @@ interface CheckResult {
  * 检查当前用户是否已收藏指定目标。
  * 返回 { favorited: boolean, favoriteId: string | null }。
  */
-export async function GET(req: NextRequest) {
+async function getFavoritesCheck(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -115,3 +116,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getFavoritesCheck);

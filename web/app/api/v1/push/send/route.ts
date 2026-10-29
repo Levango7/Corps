@@ -19,6 +19,7 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { sendPushToUser } from "@/lib/push/unified";
+import { withRed } from "@/lib/red-metrics";
 
 /** 发送推送请求体 */
 const sendSchema = z.object({
@@ -56,7 +57,7 @@ function isPushAdmin(userId: string): boolean {
  * 管理员向指定用户的所有已注册设备发送推送通知。
  * 跨平台（Android/iOS/HarmonyOS）自动分发，未配置环境变量的平台静默跳过。
  */
-export async function POST(req: NextRequest) {
+async function postPushSend(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -121,3 +122,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postPushSend);

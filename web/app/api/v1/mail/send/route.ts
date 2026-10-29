@@ -22,6 +22,7 @@ import { authFailure } from "@/lib/auth-response";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { sendMail } from "@/lib/mail/transporter";
+import { withRed } from "@/lib/red-metrics";
 
 /** POST 发送邮件 schema */
 const sendSchema = z.object({
@@ -44,7 +45,7 @@ const sendSchema = z.object({
  * 3. 写入 Mail 记录（status: "sent"，sentAt: now）
  * 4. SMTP 连接/发送失败 → 503 mailSmtpError
  */
-export async function POST(req: NextRequest) {
+async function postMailSend(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -189,3 +190,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postMailSend);

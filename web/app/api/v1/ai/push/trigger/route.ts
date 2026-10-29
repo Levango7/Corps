@@ -29,6 +29,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { CAPABILITIES, type PushCapability, generatePush } from "@/lib/ai/push-runner";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 const triggerSchema = z.object({
@@ -85,6 +86,9 @@ async function postAiPushTrigger(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 6) 校验 schedule 归属当前用户（外键约束 + 权限）

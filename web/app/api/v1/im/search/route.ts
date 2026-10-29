@@ -41,6 +41,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { likeContainsPattern } from "@/lib/like-escape";
+import { withRed } from "@/lib/red-metrics";
 
 /** query 参数校验 schema */
 const searchSchema = z.object({
@@ -77,7 +78,7 @@ export interface MessageSearchResult {
   rank: number;
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function getImSearch(req: NextRequest): Promise<NextResponse> {
   // 1) 认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -238,3 +239,5 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 }
+
+export const GET = withRed(getImSearch);

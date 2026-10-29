@@ -24,6 +24,7 @@ import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { buildImReplySystemPrompt, buildImReplyUserPrompt } from "@/lib/ai/prompts/im-reply";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
@@ -87,6 +88,9 @@ async function postAiImReply(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 6) 查询最近 20 条消息（按 messageId/conversationId/taskId 过滤）

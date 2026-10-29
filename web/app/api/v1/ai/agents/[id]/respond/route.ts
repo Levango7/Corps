@@ -32,6 +32,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { Prisma } from "@prisma/client";
 import { buildAgentResponsePrompt } from "@/lib/ai/prompts/agent-collaboration";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** POST schema */
@@ -147,6 +148,9 @@ async function postAiAgentsRespondById(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   // 7) Agent 响应
   try {

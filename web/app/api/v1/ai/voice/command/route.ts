@@ -36,6 +36,7 @@ import {
   type VoiceIntentResult,
 } from "@/lib/ai/prompts/voice-intent-parse";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** POST schema */
@@ -165,6 +166,9 @@ async function postAiVoiceCommand(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   // 6) AI 意图解析 + 持久化
   try {

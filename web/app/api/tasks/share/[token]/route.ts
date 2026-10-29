@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithShareToken, setTxGuc } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/tasks/share/{token} — 任务公开只读分享（无需登录）。
@@ -15,7 +16,10 @@ import { apiMsg } from "@/lib/api-messages";
  * RLS 下抛 Inconsistent query result）。
  * 脱敏：不返回 assignee.email、creator、评论、聊天与附件。
  */
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ token: string }> }) {
+async function getTasksShareByToken(
+  _req: NextRequest,
+  { params }: { params: Promise<{ token: string }> },
+) {
   const { token } = await params;
 
   try {
@@ -87,3 +91,5 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ tok
     );
   }
 }
+
+export const GET = withRed(getTasksShareByToken);

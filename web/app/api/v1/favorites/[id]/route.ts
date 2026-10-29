@@ -16,6 +16,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** PATCH 更新收藏 schema（note 可选，传 null 清空） */
 const updateSchema = z.object({
@@ -40,7 +41,7 @@ function extractId(req: NextRequest): string | null {
  * 更新指定收藏的备注字段。
  * 通过 workspaceId + userId + id 三重过滤确保只能操作自己的收藏。
  */
-export async function PATCH(req: NextRequest) {
+async function patchFavoritesById(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -152,7 +153,7 @@ export async function PATCH(req: NextRequest) {
  * 取消收藏（删除指定收藏记录）。
  * 通过 workspaceId + userId + id 三重过滤确保只能删除自己的收藏。
  */
-export async function DELETE(req: NextRequest) {
+async function deleteFavoritesById(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -212,3 +213,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export const PATCH = withRed(patchFavoritesById);
+
+export const DELETE = withRed(deleteFavoritesById);

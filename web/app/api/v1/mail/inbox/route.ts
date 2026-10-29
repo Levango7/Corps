@@ -13,6 +13,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { z } from "zod";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** 邮件状态枚举 */
 const STATUS_VALUES = ["draft", "sent", "received"] as const;
@@ -34,7 +35,7 @@ const listQuerySchema = z.object({
  * 返回当前用户在指定工作区的邮件列表（按 createdAt 降序分页）。
  * 支持按 accountId / status / isRead / isStarred 过滤。
  */
-export async function GET(req: NextRequest) {
+async function getMailInbox(req: NextRequest) {
   // 1) 基础认证
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
@@ -158,3 +159,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getMailInbox);
