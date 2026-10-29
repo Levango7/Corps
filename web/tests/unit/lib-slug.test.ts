@@ -108,9 +108,6 @@ describe("generateSlug —— 唯一性重试", () => {
   it("预检查询经 provision 逃生口（op 参数透传）", async () => {
     const { runWithAuthOp } = await import("@/lib/auth");
     await generateSlug("x");
-    expect(runWithAuthOp).toHaveBeenCalledWith(
-      "provision",
-      expect.any(Function),
-    );
+    expect(runWithAuthOp).toHaveBeenCalledWith("provision", expect.any(Function));
   });
 });

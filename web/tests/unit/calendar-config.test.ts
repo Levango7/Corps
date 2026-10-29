@@ -264,7 +264,9 @@ describe("buildAuthorizeUrl", () => {
     expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
     expect(p.get("response_type")).toBe("code");
     expect(p.get("client_id")).toBe("g-id");
-    expect(p.get("redirect_uri")).toBe("http://localhost:3000/api/v1/auth/calendar/google/callback");
+    expect(p.get("redirect_uri")).toBe(
+      "http://localhost:3000/api/v1/auth/calendar/google/callback",
+    );
     expect(p.get("scope")).toContain("calendar.events");
     expect(p.get("state")).toBe("st");
     expect(p.get("code_challenge")).toBe("ch");
@@ -273,7 +275,9 @@ describe("buildAuthorizeUrl", () => {
 
   it("googleStyle：追加 access_type=offline + prompt=consent（强制 refresh_token 与同意页）", () => {
     process.env.GOOGLE_CLIENT_ID = "g-id";
-    const url = new URL(buildAuthorizeUrl("google", { state: "s", challenge: "c", redirectUri: "r" }));
+    const url = new URL(
+      buildAuthorizeUrl("google", { state: "s", challenge: "c", redirectUri: "r" }),
+    );
     expect(url.searchParams.get("access_type")).toBe("offline");
     expect(url.searchParams.get("prompt")).toBe("consent");
   });

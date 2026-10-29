@@ -22,7 +22,7 @@ describe("evaluateFormula —— 字段引用与字面量", () => {
     expect(evaluateFormula("{{单价}} * {{数量}}", { 单价: 10, 数量: 3 })).toBe(30);
   });
 
-  it("字符串字面量与转义 \\n \t \\\\ \\\"", () => {
+  it('字符串字面量与转义 \\n \t \\\\ \\"', () => {
     expect(evaluateFormula('"hello"', {})).toBe("hello");
     expect(evaluateFormula('"a\\nb"', {})).toBe("a\nb");
     expect(evaluateFormula('"a\\tb"', {})).toBe("a\tb");
@@ -68,7 +68,7 @@ describe("evaluateFormula —— 运算符", () => {
     expect(evaluateFormula("true && false", {})).toBe(false);
     expect(evaluateFormula("true || false", {})).toBe(true);
     expect(evaluateFormula("!true", {})).toBe(false);
-    expect(evaluateFormula('!{{done}}', { done: false })).toBe(true);
+    expect(evaluateFormula("!{{done}}", { done: false })).toBe(true);
   });
 
   it('字符串与数字比较（{{状态}} == "done" 形态）', () => {
@@ -79,18 +79,18 @@ describe("evaluateFormula —— 运算符", () => {
 
 describe("evaluateFormula —— 三元与方法/函数", () => {
   it("三元条件返回对应分支", () => {
-    expect(
-      evaluateFormula('{{状态}} == "done" ? "完成" : "进行中"', { 状态: "done" }),
-    ).toBe("完成");
-    expect(
-      evaluateFormula('{{状态}} == "done" ? "完成" : "进行中"', { 状态: "todo" }),
-    ).toBe("进行中");
+    expect(evaluateFormula('{{状态}} == "done" ? "完成" : "进行中"', { 状态: "done" })).toBe(
+      "完成",
+    );
+    expect(evaluateFormula('{{状态}} == "done" ? "完成" : "进行中"', { 状态: "todo" })).toBe(
+      "进行中",
+    );
   });
 
   it("字符串方法 .length / .toUpperCase() / .toLowerCase()", () => {
     expect(evaluateFormula("{{名称}}.length", { 名称: "hello" })).toBe(5);
-    expect(evaluateFormula('{{名称}}.toUpperCase()', { 名称: "abc" })).toBe("ABC");
-    expect(evaluateFormula('{{名称}}.toLowerCase()', { 名称: "ABC" })).toBe("abc");
+    expect(evaluateFormula("{{名称}}.toUpperCase()", { 名称: "abc" })).toBe("ABC");
+    expect(evaluateFormula("{{名称}}.toLowerCase()", { 名称: "ABC" })).toBe("abc");
   });
 
   it("数学函数 round / floor / ceil / abs / min / max", () => {

@@ -94,7 +94,11 @@ describe("computeRollup —— 六种聚合", () => {
   });
 
   it("record.data 非对象（数组/原始值/字符串数字字段）时字段读出 undefined，聚合安全降级", () => {
-    const bad = [{ id: "x", data: [1, 2] }, { id: "y", data: "str" }, { id: "z" }] as unknown as DatabaseRecord[];
+    const bad = [
+      { id: "x", data: [1, 2] },
+      { id: "y", data: "str" },
+      { id: "z" },
+    ] as unknown as DatabaseRecord[];
     expect(computeRollup(bad, "price", "sum")).toBe(0);
     expect(computeRollup(bad, "price", "avg")).toBeNull();
     expect(computeRollup(bad, "price", "array")).toEqual(["", "", ""]);
@@ -131,9 +135,9 @@ describe("readRelationOptions", () => {
   });
 
   it("displayFieldId 非 string 时被忽略（不进结果）", () => {
-    expect(
-      readRelationOptions(field({ targetDatabaseId: "db-1", displayFieldId: 42 })),
-    ).toEqual({ targetDatabaseId: "db-1" });
+    expect(readRelationOptions(field({ targetDatabaseId: "db-1", displayFieldId: 42 }))).toEqual({
+      targetDatabaseId: "db-1",
+    });
   });
 });
 
@@ -142,25 +146,31 @@ describe("readRollupOptions", () => {
     const opts = readRollupOptions(
       field({ relationFieldId: "f-rel", targetFieldId: "f-price", aggregation: "sum" }),
     );
-    expect(opts).toEqual({ relationFieldId: "f-rel", targetFieldId: "f-price", aggregation: "sum" });
+    expect(opts).toEqual({
+      relationFieldId: "f-rel",
+      targetFieldId: "f-price",
+      aggregation: "sum",
+    });
   });
 
   it("任一必需字段缺失或类型错误返回 null", () => {
-    expect(readRollupOptions(field({ relationFieldId: "f-rel", targetFieldId: "f-price" }))).toBeNull();
     expect(
-      readRollupOptions(field({ relationFieldId: "f-rel", aggregation: "sum" })),
+      readRollupOptions(field({ relationFieldId: "f-rel", targetFieldId: "f-price" })),
     ).toBeNull();
+    expect(readRollupOptions(field({ relationFieldId: "f-rel", aggregation: "sum" }))).toBeNull();
+    expect(readRollupOptions(field({ targetFieldId: "f-price", aggregation: "sum" }))).toBeNull();
     expect(
-      readRollupOptions(field({ targetFieldId: "f-price", aggregation: "sum" })),
-    ).toBeNull();
-    expect(
-      readRollupOptions(field({ relationFieldId: 1, targetFieldId: "f-price", aggregation: "sum" })),
+      readRollupOptions(
+        field({ relationFieldId: 1, targetFieldId: "f-price", aggregation: "sum" }),
+      ),
     ).toBeNull();
   });
 
   it("aggregation 不在六种合法值内返回 null", () => {
     expect(
-      readRollupOptions(field({ relationFieldId: "f-rel", targetFieldId: "f", aggregation: "avg42" })),
+      readRollupOptions(
+        field({ relationFieldId: "f-rel", targetFieldId: "f", aggregation: "avg42" }),
+      ),
     ).toBeNull();
     expect(
       readRollupOptions(field({ relationFieldId: "f-rel", targetFieldId: "f", aggregation: 1 })),

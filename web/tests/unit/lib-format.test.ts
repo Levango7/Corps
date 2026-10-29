@@ -75,11 +75,16 @@ describe("formatRelativeDueDate —— 天粒度相对日期", () => {
     const en: TimeT = (key, values) => {
       const n = values?.days ?? values?.count ?? 0;
       switch (key) {
-        case "overdueDays": return `overdue ${n}d`;
-        case "dueToday": return "today";
-        case "dueTomorrow": return "tomorrow";
-        case "dueInDays": return `in ${n}d`;
-        default: return key;
+        case "overdueDays":
+          return `overdue ${n}d`;
+        case "dueToday":
+          return "today";
+        case "dueTomorrow":
+          return "tomorrow";
+        case "dueInDays":
+          return `in ${n}d`;
+        default:
+          return key;
       }
     };
     expect(formatRelativeDueDate(isoOn(-2), en).text).toBe("overdue 2d");

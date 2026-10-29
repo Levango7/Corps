@@ -198,9 +198,7 @@ describe("applyPermissionOnApproval —— 幂等与升级", () => {
       instance({ nodes: [{ name: "x", order: 0, permissionGrant: { permission: "edit" } }] }),
       "w-1",
     );
-    expect(updated).toEqual([
-      { permission: "edit", source: "explicit", grantedBy: "u-applicant" },
-    ]);
+    expect(updated).toEqual([{ permission: "edit", source: "explicit", grantedBy: "u-applicant" }]);
     expect(audits).toEqual([
       {
         workspaceId: "w-1",
@@ -236,14 +234,14 @@ describe("applyPermissionOnApproval —— 错误处理", () => {
       code: "P2002",
       clientVersion: "6.0.0",
     });
-    await expect(
-      applyPermissionOnApproval(tx, instance(), "w-1"),
-    ).resolves.toBeUndefined();
+    await expect(applyPermissionOnApproval(tx, instance(), "w-1")).resolves.toBeUndefined();
     expect(audits).toHaveLength(0);
   });
 
   it("create 抛其他错误 → 向上抛出（由调用方决定回滚还是重试）", async () => {
     createError = new Error("connection lost");
-    await expect(applyPermissionOnApproval(tx, instance(), "w-1")).rejects.toThrow("connection lost");
+    await expect(applyPermissionOnApproval(tx, instance(), "w-1")).rejects.toThrow(
+      "connection lost",
+    );
   });
 });

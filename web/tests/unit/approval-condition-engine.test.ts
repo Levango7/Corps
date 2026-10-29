@@ -57,7 +57,11 @@ describe("evaluateCondition", () => {
     const node: ConditionNode = {
       ...amountNode,
       conditions: [
-        { label: "坏表达式", expression: { "!!!": "not-json-logic" } as never, targetNodeId: "bad" },
+        {
+          label: "坏表达式",
+          expression: { "!!!": "not-json-logic" } as never,
+          targetNodeId: "bad",
+        },
         { label: "默认", expression: true, targetNodeId: "auto" },
       ],
     };
@@ -78,11 +82,27 @@ describe("evaluateAllConditions", () => {
   const graph: ApprovalNodeGraph = {
     nodes: [
       { nodeId: "start", name: "开始", type: "start", order: -1 },
-      { nodeId: "cond-1", name: "金额", type: "condition", order: 1, conditions: amountNode.conditions },
-      { nodeId: "cond-2", name: "类型", type: "condition", order: 2, conditions: [
-        { label: "采购", expression: { "==": [{ var: "type" }, "purchase"] }, targetNodeId: "t-purchase" },
-        { label: "默认", expression: true, targetNodeId: "t-other" },
-      ] },
+      {
+        nodeId: "cond-1",
+        name: "金额",
+        type: "condition",
+        order: 1,
+        conditions: amountNode.conditions,
+      },
+      {
+        nodeId: "cond-2",
+        name: "类型",
+        type: "condition",
+        order: 2,
+        conditions: [
+          {
+            label: "采购",
+            expression: { "==": [{ var: "type" }, "purchase"] },
+            targetNodeId: "t-purchase",
+          },
+          { label: "默认", expression: true, targetNodeId: "t-other" },
+        ],
+      },
       { nodeId: "manager", name: "主管", type: "approval", order: 3 },
     ],
     edges: [],
@@ -123,7 +143,13 @@ describe("getActiveNodes", () => {
       nodes: [
         { nodeId: "start", name: "开始", type: "start", order: -1 },
         { nodeId: "a1", name: "主管", type: "approval", order: 1 },
-        { nodeId: "cond", name: "金额", type: "condition", order: 2, conditions: amountNode.conditions },
+        {
+          nodeId: "cond",
+          name: "金额",
+          type: "condition",
+          order: 2,
+          conditions: amountNode.conditions,
+        },
         { nodeId: "big", name: "总监", type: "approval", order: 3 },
         { nodeId: "small", name: "自动通过", type: "approval", order: 4 },
         { nodeId: "cc1", name: "抄送财务", type: "cc", order: 5, ccUserIds: ["u-fin"] },
@@ -225,7 +251,11 @@ describe("buildNodeGraph", () => {
       { name: "抄送", order: 1, type: "cc", ccUserIds: ["u-2"], ccRole: "fin" },
     ]);
     const countersign = g.nodes.find((n) => n.name === "会签");
-    expect(countersign).toMatchObject({ mode: "countersign", requiredCount: 2, approverUserId: "u-1" });
+    expect(countersign).toMatchObject({
+      mode: "countersign",
+      requiredCount: 2,
+      approverUserId: "u-1",
+    });
     const cc = g.nodes.find((n) => n.name === "抄送");
     expect(cc).toMatchObject({ type: "cc", ccUserIds: ["u-2"], ccRole: "fin" });
   });
@@ -243,10 +273,15 @@ describe("buildNodeGraph", () => {
 
   it("condition 节点 → 每个分支一条带 conditionLabel 的边（不再按顺序连下一节点）", () => {
     const g = buildNodeGraph([
-      { name: "金额", order: 0, type: "condition", conditions: [
-        { label: "大", expression: true, targetNodeId: "big" },
-        { label: "小", expression: true, targetNodeId: "small" },
-      ] },
+      {
+        name: "金额",
+        order: 0,
+        type: "condition",
+        conditions: [
+          { label: "大", expression: true, targetNodeId: "big" },
+          { label: "小", expression: true, targetNodeId: "small" },
+        ],
+      },
       { name: "主管", order: 1 },
     ]);
     const condEdges = g.edges.filter((e) => e.fromNodeId === "node-0");
@@ -259,10 +294,15 @@ describe("buildNodeGraph", () => {
   it("中间的 condition 节点：分支边取代顺序边（不再连 node-N+1），其后节点继续连 end", () => {
     const g = buildNodeGraph([
       { name: "主管", order: 0 },
-      { name: "金额", order: 1, type: "condition", conditions: [
-        { label: "大", expression: true, targetNodeId: "node-2" },
-        { label: "小", expression: true, targetNodeId: "end" },
-      ] },
+      {
+        name: "金额",
+        order: 1,
+        type: "condition",
+        conditions: [
+          { label: "大", expression: true, targetNodeId: "node-2" },
+          { label: "小", expression: true, targetNodeId: "end" },
+        ],
+      },
       { name: "总监", order: 2 },
     ]);
     expect(g.edges).toEqual([
@@ -277,10 +317,19 @@ describe("buildNodeGraph", () => {
   it("端到端：扁平带条件 → 图 → 条件求值 → 活跃节点", () => {
     const g = buildNodeGraph([
       { name: "主管", order: 0 },
-      { name: "金额", order: 1, type: "condition", conditions: [
-        { label: "大于1000", expression: { ">": [{ var: "amount" }, 1000] }, targetNodeId: "node-2" },
-        { label: "默认", expression: true, targetNodeId: "end" },
-      ] },
+      {
+        name: "金额",
+        order: 1,
+        type: "condition",
+        conditions: [
+          {
+            label: "大于1000",
+            expression: { ">": [{ var: "amount" }, 1000] },
+            targetNodeId: "node-2",
+          },
+          { label: "默认", expression: true, targetNodeId: "end" },
+        ],
+      },
       { name: "总监", order: 2 },
     ]);
     const cache = evaluateAllConditions(g, { amount: 5000 });
@@ -291,10 +340,19 @@ describe("buildNodeGraph", () => {
   it("端到端：小额走默认分支 → 只剩主管", () => {
     const g = buildNodeGraph([
       { name: "主管", order: 0 },
-      { name: "金额", order: 1, type: "condition", conditions: [
-        { label: "大于1000", expression: { ">": [{ var: "amount" }, 1000] }, targetNodeId: "node-2" },
-        { label: "默认", expression: true, targetNodeId: "end" },
-      ] },
+      {
+        name: "金额",
+        order: 1,
+        type: "condition",
+        conditions: [
+          {
+            label: "大于1000",
+            expression: { ">": [{ var: "amount" }, 1000] },
+            targetNodeId: "node-2",
+          },
+          { label: "默认", expression: true, targetNodeId: "end" },
+        ],
+      },
       { name: "总监", order: 2 },
     ]);
     const active = getActiveNodes(g, evaluateAllConditions(g, { amount: 100 }));

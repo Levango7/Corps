@@ -23,9 +23,8 @@ const tx = {
 let runWithWorkspaceImpl: (wid: string, fn: (tx: never) => Promise<unknown>) => Promise<unknown>;
 
 vi.mock("@/lib/auth", () => ({
-  runWithWorkspace: vi.fn(
-    async (wid: string, fn: (tx: never) => Promise<unknown>) =>
-      runWithWorkspaceImpl(wid, fn),
+  runWithWorkspace: vi.fn(async (wid: string, fn: (tx: never) => Promise<unknown>) =>
+    runWithWorkspaceImpl(wid, fn),
   ),
 }));
 
@@ -49,8 +48,7 @@ import { getPaymentProvider } from "@/lib/payments";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  runWithWorkspaceImpl = async (_wid: string, fn: (tx: never) => Promise<unknown>) =>
-    fn(tx);
+  runWithWorkspaceImpl = async (_wid: string, fn: (tx: never) => Promise<unknown>) => fn(tx);
   tx.member.count.mockResolvedValue(5);
   tx.workspace.update.mockResolvedValue(undefined);
 });
