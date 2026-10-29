@@ -2,11 +2,6 @@
 # 档位：矩阵外资源域、完全无角色判断（只读成员可写面，未评估）
 # 修法：先在 lib/permissions.ts 的 MODULES 里定义该资源应有权限并接 requirePermission，再从基线删除；新增未评估的写接口会直接 CI 失败。
 # 判定口径为 handler 级；重建本文件前请逐条确认语义。
-DELETE /api/v1/ai/agents/{id}
-DELETE /api/v1/ai/conversations/{id}
-DELETE /api/v1/ai/knowledge/nodes/{id}
-DELETE /api/v1/ai/meetings/sessions/{id}
-DELETE /api/v1/ai/push/schedules/{id}
 DELETE /api/v1/ai/templates/{id}
 DELETE /api/v1/auth/calendar/disconnect/{provider}
 DELETE /api/v1/favorites/{id}
@@ -26,16 +21,8 @@ DELETE /api/v1/workspaces/{wid}/recycle-bin/{id}
 DELETE /api/v1/workspaces/{wid}/wiki/{pageId}
 DELETE /api/v1/workspaces/{wid}/workflows/{wfid}
 DELETE /api/{path}
-PATCH /api/v1/ai/agents/{id}
-PATCH /api/v1/ai/meetings/sessions/{id}
-PATCH /api/v1/ai/meetings/sessions/{id}/actions
-PATCH /api/v1/ai/meetings/sessions/{id}/decisions
-PATCH /api/v1/ai/personalization/recommendations/{id}
-PATCH /api/v1/ai/push/records/{id}
 PATCH /api/v1/ai/push/schedules
-PATCH /api/v1/ai/push/schedules/{id}
 PATCH /api/v1/ai/templates/{id}
-PATCH /api/v1/ai/voice/command/{id}
 PATCH /api/v1/ai/voice/preferences
 PATCH /api/v1/favorites/{id}
 PATCH /api/v1/im/messages/{id}
@@ -56,44 +43,15 @@ PATCH /api/v1/workspaces/{wid}/project-templates/{tid}
 PATCH /api/v1/workspaces/{wid}/wiki/{pageId}
 PATCH /api/v1/workspaces/{wid}/workflows/{wfid}
 PATCH /api/{path}
-POST /api/v1/ai/agents
-POST /api/v1/ai/agents/coordinate
-POST /api/v1/ai/agents/{id}/respond
-POST /api/v1/ai/approval-advice
-POST /api/v1/ai/calendar-schedule
 POST /api/v1/ai/chat
 POST /api/v1/ai/completion
-POST /api/v1/ai/conversations
-# 2026-10-28 自 T4 基线迁移（非新增缺口）：检测器对 withRed 接线形态按 handler 精确切分后，
-# POST /ai/feedback 的真实状态暴露——其函数体从未有过角色判断（原 T4 判定误把同文件
-# GET handler 里的 isManager 比较并入了 POST 块）。总盲区面不变（T4 -1 / T3 +1）。
 POST /api/v1/ai/feedback
-POST /api/v1/ai/follow-up-suggestions
 POST /api/v1/ai/format
-POST /api/v1/ai/im-reply
-POST /api/v1/ai/knowledge/extract
-POST /api/v1/ai/knowledge/query
 POST /api/v1/ai/mail-assistant
-POST /api/v1/ai/meeting-summary
-POST /api/v1/ai/meetings/sessions
-POST /api/v1/ai/meetings/sessions/{id}/analyze
-POST /api/v1/ai/meetings/sessions/{id}/transcript
 POST /api/v1/ai/orchestrate
-POST /api/v1/ai/personalization/generate
-POST /api/v1/ai/project-insight
-POST /api/v1/ai/push/schedules
-POST /api/v1/ai/push/trigger
-POST /api/v1/ai/semantic-search
 POST /api/v1/ai/summarize
 POST /api/v1/ai/task-breakdown
-POST /api/v1/ai/templates
-POST /api/v1/ai/templates/{id}/instantiate
-POST /api/v1/ai/todo-extract
 POST /api/v1/ai/translate
-POST /api/v1/ai/voice/command
-POST /api/v1/ai/wiki-search
-POST /api/v1/ai/workflow-build
-POST /api/v1/ai/workflow-orchestrator
 POST /api/v1/auth/login
 POST /api/v1/auth/logout
 POST /api/v1/auth/refresh
@@ -110,10 +68,6 @@ POST /api/v1/push/register
 POST /api/v1/push/send
 POST /api/v1/push/subscribe
 POST /api/v1/push/unsubscribe
-# 2026-10-29 自 T4 基线迁移（非新增缺口）：检测器对 withRed 接线形态按 handler 精确切分后，
-# POST /api/v1/remote-control 的真实状态暴露——其函数体只有目标用户的成员存在性校验
-#（tx.member.findFirst），从无角色判断（原 T4 判定把同文件 GET handler 里 role 查询参数的
-# === 比较并入了 POST 块，实为列表筛选而非角色门禁）。总盲区面不变（T4 -1 / T3 +1）。
 POST /api/v1/remote-control
 POST /api/v1/remote-control/signal
 POST /api/v1/sync

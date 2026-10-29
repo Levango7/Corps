@@ -13,6 +13,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** 决策合法状态枚举 */
@@ -193,6 +194,9 @@ async function patchAiMeetingsSessionsDecisionsById(req: NextRequest) {
         { status: 500 },
       );
     if (!ctx.ok) return authFailure(ctx, req);
+    // AI 域资源纳入权限矩阵（2026-10-22 用户拍板：viewer 只读）。
+    const denied = await requirePermission(ctx, "ai", "update", req);
+    if (denied) return denied;
 
     // 先校验会话归属，防止同工作区其他成员修改他人会议的决策
     const session = await runWithWorkspace(

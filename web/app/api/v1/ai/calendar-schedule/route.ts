@@ -28,6 +28,7 @@ import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
 import { cleanJsonResponse } from "@/lib/ai/orchestrator";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** 排程上下文聚合范围：今日会议 + 逾期/阻塞任务 + 今日工时 */
@@ -130,6 +131,9 @@ async function postAiCalendarSchedule(req: NextRequest) {
       { status: 500 },
     );
   if (!ctx.ok) return authFailure(ctx, req);
+  // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+  const denied = await requirePermission(ctx, "ai", "create", req);
+  if (denied) return denied;
 
   try {
     // 6) 聚合工作区上下文（今日会议 + 逾期/阻塞任务 + 今日工时）

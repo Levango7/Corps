@@ -14,6 +14,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { requirePermission } from "@/lib/permissions";
 import { withRed } from "@/lib/red-metrics";
 
 /** 合法角色枚举（与 schema 注释保持一致） */
@@ -176,6 +177,9 @@ async function postAiAgents(req: NextRequest) {
         { status: 500 },
       );
     if (!ctx.ok) return authFailure(ctx, req);
+    // AI 生成面纳入权限矩阵（2026-10-22 用户拍板：viewer 只读 ⇒ 不能触发生成）。
+    const denied = await requirePermission(ctx, "ai", "create", req);
+    if (denied) return denied;
 
     const agent = await runWithWorkspace(
       body.wid,
