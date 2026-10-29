@@ -114,10 +114,25 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
     await page.getByRole("button", { name: "编辑布局" }).click();
     const gear = page.locator('[aria-label="configure widget"]').first();
     await expect(gear).toBeVisible({ timeout: 20_000 });
-    await gear.click();
 
     const dialog = page.locator('[role="dialog"][aria-modal="true"]').first();
-    await expect(dialog).toBeVisible({ timeout: 10_000 });
+    // 点齿轮偶发"点了没反应"（2026-10-29 实测：同一 tree 在 PR 事件下绿、在 main
+    // 事件下连续两轮红，每次都停在这一步且首次/重试耗时一字不差 11.4s——是点击
+    // 落在水合/重渲染完成之前的时序抖动，不是打开链路坏了）。所以这里点完若弹层
+    // 未出现就再点，最多 3 次。本用例测的是弹层的**几何与挂载点**，不是"打开
+    // 按钮一次必中"，兜底重试不会掩盖任何被测行为；打开链路真坏了时 3 次全失败，
+    // 最终断言照样红。
+    let opened = false;
+    for (let attempt = 0; attempt < 3 && !opened; attempt++) {
+      await gear.click();
+      try {
+        await expect(dialog).toBeVisible({ timeout: 4_000 });
+        opened = true;
+      } catch {
+        // 这一次点击没生效，重试
+      }
+    }
+    expect(opened, "点齿轮 3 次后弹层仍未出现——打开链路真坏了，不是时序抖动").toBe(true);
     // 等 3D 翻转入场（rotateX -90 → 0）结束，几何才稳定
     await page.waitForTimeout(700);
 
