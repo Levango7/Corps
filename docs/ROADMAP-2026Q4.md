@@ -85,7 +85,7 @@
 |---|---|---|---|
 | `zero-coverage-baseline.txt` | 539 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im（10-29 清算波 592→550，提前达成 90 天目标；10-29 lib 域 b1：11 个 lib 文件补 207 例单测，550→539） |
 | `permission-gate` T3 | 94 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒；2026-10-29 RED 第十一批接线后检测器再次按 handler 精确切分，POST /api/v1/remote-control 同类自 T4 迁移至此，T3 +1 / T4 −1，总盲区 164 不变；2026-10-29 AI 域收敛批：40 个 handler 接 `requirePermission(ctx,"ai",*)`（2026-10-22 用户拍板 viewer 只读），T3 134→94，总盲区 164→124；留 T3 诚实登记：chat/completion/format/summarize/translate/feedback 六条会话级自助工具 + push/schedules(本人日程)/templates/{id}(公共模板混合语义) 两条定制口径 + task-breakdown/voice/preferences(无工作区 ctx) + orchestrate(动态 actionPerms，静态检测器看不见)） |
-| `api-contract` undeclared | 119 | **150** | 每周契约化 ≥5 条路由（2026-10-29 两批 ai 切片共 35 条契约化，**90 天目标 150 已达标**，openapi 133→168 paths；后续按剩余域继续清偿） |
+| `api-contract` undeclared | 99 | **150** | 每周契约化 ≥5 条路由（2026-10-29 三批共 55 条契约化：ai 切片 35 + documents/databases/recycle-bin 20，**90 天目标 150 大幅超额**，openapi 133→188 paths；后续按剩余域继续清偿） |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）
