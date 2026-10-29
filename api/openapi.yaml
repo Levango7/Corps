@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 153 paths (updated 2026-10-29). The service also
+    Coverage: this contract declares 168 paths (updated 2026-10-29). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -7675,6 +7675,511 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meetings/sessions:
+    get:
+      tags: [ai]
+      summary: List AI meeting sessions (cursor pagination)
+      description: Query status/cursor/limit; data = { items, nextCursor, hasMore } (code=0 legacy).
+      operationId: listAiMeetingSessions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, completed, archived] }
+        - name: cursor
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Session list page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingSessionPage'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [ai]
+      summary: Create an AI meeting session
+      operationId: createAiMeetingSession
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Session fields (title, participants, startTime…; see handler).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Session created (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meetings/sessions/{id}:
+    get:
+      tags: [ai]
+      summary: Meeting session detail (includes actionItems + decisions)
+      operationId: getAiMeetingSession
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Session detail (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingSession'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [ai]
+      summary: Update a meeting session (status / title / endTime)
+      operationId: patchAiMeetingSession
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                status: { type: string, enum: [active, completed, archived] }
+                title: { type: string, maxLength: 200 }
+                endTime: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Updated session (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meetings/sessions/{id}/analyze:
+    post:
+      tags: [ai]
+      summary: Analyze meeting transcript (non-streaming)
+      operationId: analyzeAiMeetingSession
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wid: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Analysis result (data = { summary, insights… }, code=200)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingAnalysis'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meetings/sessions/{id}/actions:
+    get:
+      tags: [ai]
+      summary: List session action items
+      description: Query status; data is the actions array (code=0).
+      operationId: listAiMeetingActions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, done, dismissed] }
+      responses:
+        '200':
+          description: Action item list (bare array)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingActionList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [ai]
+      summary: Update an action item status
+      operationId: patchAiMeetingAction
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [actionId, status]
+              properties:
+                actionId: { type: string }
+                status: { type: string, enum: [pending, done, dismissed] }
+      responses:
+        '200':
+          description: Updated action item (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingAction'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meetings/sessions/{id}/decisions:
+    get:
+      tags: [ai]
+      summary: List session decisions
+      description: Query status; data is the decisions array (code=0).
+      operationId: listAiMeetingDecisions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: status
+          in: query
+          schema: { type: string, enum: [proposed, confirmed, rejected] }
+      responses:
+        '200':
+          description: Decision list (bare array)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingDecisionList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [ai]
+      summary: Update a decision status
+      operationId: patchAiMeetingDecision
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decisionId, status]
+              properties:
+                decisionId: { type: string }
+                status: { type: string, enum: [proposed, confirmed, rejected] }
+      responses:
+        '200':
+          description: Updated decision (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingDecision'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meetings/sessions/{id}/transcript:
+    post:
+      tags: [ai]
+      summary: Append a transcript segment to a meeting session
+      operationId: appendAiMeetingTranscript
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [speaker, text]
+              properties:
+                wid: { type: string, format: uuid }
+                speaker: { type: string, maxLength: 200 }
+                text: { type: string, minLength: 1 }
+                timestamp: { type: string, format: date-time }
+      responses:
+        '200':
+          description: Segment appended; data = the session (code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingSession'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/analysis/burndown:
+    post:
+      tags: [ai]
+      summary: AI burndown analysis (non-streaming)
+      description: Body { wid, period? }; data = { reportId, summary, idealLine, actualLine, predictedCompletion, deviation, insights } (code=200). Persisted as an analysis report.
+      operationId: postAiAnalysisBurndown
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAnalysisRequest'
+      responses:
+        '200':
+          description: Burndown report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAnalysisBurndown'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/analysis/bottleneck:
+    post:
+      tags: [ai]
+      summary: AI bottleneck analysis (non-streaming)
+      description: Body { wid }; data = { reportId, summary, bottlenecks, criticalPath, insights } (code=200).
+      operationId: postAiAnalysisBottleneck
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAnalysisRequest'
+      responses:
+        '200':
+          description: Bottleneck report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAnalysisBottleneck'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/analysis/team-performance:
+    post:
+      tags: [ai]
+      summary: AI team performance analysis (non-streaming)
+      description: Body { wid, period? }; data = { reportId, summary, members, insights } (code=200).
+      operationId: postAiAnalysisTeamPerformance
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAnalysisRequest'
+      responses:
+        '200':
+          description: Team performance report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAnalysisTeamPerformance'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/analysis/weekly-report:
+    post:
+      tags: [ai]
+      summary: AI weekly report (non-streaming)
+      description: Body { wid, weekStart? }; data = { reportId, summary, completed, planned, risks, milestones, insights } (code=200).
+      operationId: postAiAnalysisWeeklyReport
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AiAnalysisRequest'
+      responses:
+        '200':
+          description: Weekly report
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAnalysisWeeklyReport'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/analysis/reports:
+    get:
+      tags: [ai]
+      summary: List AI analysis reports
+      description: Query type/page/pageSize; data = { items, total, page, pageSize } (code=200).
+      operationId: listAiAnalysisReports
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: type
+          in: query
+          schema: { type: string, enum: [burndown, bottleneck, team-performance, weekly-report] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Report list page
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAnalysisReportList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/knowledge/extract:
+    post:
+      tags: [ai]
+      summary: Extract knowledge graph nodes/edges from a source (non-streaming)
+      description: Body { wid, sourceType(document|meeting|chat|task), sourceId }; data = { nodes, edges } (code=200).
+      operationId: postAiKnowledgeExtract
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sourceType, sourceId]
+              properties:
+                wid: { type: string, format: uuid }
+                sourceType: { type: string, enum: [document, meeting, chat, task] }
+                sourceId: { type: string }
+      responses:
+        '200':
+          description: Extracted graph (data = { nodes, edges })
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiKnowledgeGraph'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/knowledge/query:
+    post:
+      tags: [ai]
+      summary: Knowledge-graph grounded QA (non-streaming)
+      description: Body { wid, question }; data = { answer, relatedNodes } (code=200).
+      operationId: postAiKnowledgeQuery
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                wid: { type: string, format: uuid }
+                question: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Answer with related nodes
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiKnowledgeQuery'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/knowledge/nodes/{id}:
+    delete:
+      tags: [ai]
+      summary: Delete a knowledge graph node (cascades related edges)
+      operationId: deleteAiKnowledgeNode
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Node deleted (data null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/knowledge/graph:
+    get:
+      tags: [ai]
+      summary: Get the knowledge graph (nodes + edges)
+      description: Query type/limit; data = { nodes, edges } (code=200).
+      operationId: getAiKnowledgeGraph
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: type
+          in: query
+          schema: { type: string }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 500, default: 100 }
+      responses:
+        '200':
+          description: Knowledge graph
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiKnowledgeGraph'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -10215,3 +10720,162 @@ components:
         data:
           type: object
           description: Workflow row created by template instantiation.
+    AiAnalysisRequest:
+      type: object
+      required: [wid]
+      properties:
+        wid: { type: string, format: uuid }
+        period:
+          type: object
+          properties:
+            start: { type: string, format: date }
+            end: { type: string, format: date }
+        weekStart: { type: string, format: date }
+    Envelope_AiMeetingSession:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Meeting session row (aiMeetingSession table shape; detail includes actionItems + decisions).
+    Envelope_AiMeetingSessionPage:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, nextCursor, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            nextCursor:
+              type: string
+              nullable: true
+            hasMore: { type: boolean }
+    Envelope_AiMeetingAnalysis:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Meeting analysis result ({ summary, insights… }).
+    Envelope_AiMeetingAction:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Meeting action item row.
+    Envelope_AiMeetingActionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: Bare array of action item rows.
+          items: { type: object }
+    Envelope_AiMeetingDecision:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Meeting decision row.
+    Envelope_AiMeetingDecisionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: Bare array of decision rows.
+          items: { type: object }
+    Envelope_AiAnalysisBurndown:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [reportId, summary]
+          properties:
+            reportId: { type: string }
+            summary: { type: string }
+            idealLine: { type: array, items: { type: object } }
+            actualLine: { type: array, items: { type: object } }
+            predictedCompletion: { type: string, nullable: true }
+            deviation: { type: number }
+            insights: { type: array, items: { type: string } }
+    Envelope_AiAnalysisBottleneck:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [reportId, summary]
+          properties:
+            reportId: { type: string }
+            summary: { type: string }
+            bottlenecks: { type: array, items: { type: object } }
+            criticalPath: { type: array, items: { type: string } }
+            insights: { type: array, items: { type: string } }
+    Envelope_AiAnalysisTeamPerformance:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [reportId, summary, members]
+          properties:
+            reportId: { type: string }
+            summary: { type: string }
+            members: { type: array, items: { type: object } }
+            insights: { type: array, items: { type: string } }
+    Envelope_AiAnalysisWeeklyReport:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [reportId, summary]
+          properties:
+            reportId: { type: string }
+            summary: { type: string }
+            completed: { type: array, items: { type: object } }
+            planned: { type: array, items: { type: object } }
+            risks: { type: array, items: { type: object } }
+            milestones: { type: array, items: { type: object } }
+            insights: { type: array, items: { type: string } }
+    Envelope_AiAnalysisReportList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, page, pageSize]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+            page: { type: integer, minimum: 1 }
+            pageSize: { type: integer, minimum: 1 }
+    Envelope_AiKnowledgeGraph:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [nodes, edges]
+          properties:
+            nodes: { type: array, items: { type: object } }
+            edges: { type: array, items: { type: object } }
+    Envelope_AiKnowledgeQuery:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [answer, relatedNodes]
+          properties:
+            answer: { type: string }
+            relatedNodes: { type: array, items: { type: object } }

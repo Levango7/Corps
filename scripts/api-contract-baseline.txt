@@ -8,11 +8,6 @@
 # 重建方式：python scripts/check_api_contract.py --write-baseline
 # 格式：每行一个路由路径，'#' 开头为注释。
 
-/api/v1/ai/analysis/bottleneck
-/api/v1/ai/analysis/burndown
-/api/v1/ai/analysis/reports
-/api/v1/ai/analysis/team-performance
-/api/v1/ai/analysis/weekly-report
 /api/v1/ai/announcement-draft
 /api/v1/ai/approval-advice
 /api/v1/ai/assistant/chat
@@ -31,19 +26,9 @@
 /api/v1/ai/format
 /api/v1/ai/im-reply
 /api/v1/ai/knowledge-qa
-/api/v1/ai/knowledge/extract
-/api/v1/ai/knowledge/graph
-/api/v1/ai/knowledge/nodes/{id}
-/api/v1/ai/knowledge/query
 /api/v1/ai/mail-assistant
 /api/v1/ai/meeting-flow
 /api/v1/ai/meeting-summary
-/api/v1/ai/meetings/sessions
-/api/v1/ai/meetings/sessions/{id}
-/api/v1/ai/meetings/sessions/{id}/actions
-/api/v1/ai/meetings/sessions/{id}/analyze
-/api/v1/ai/meetings/sessions/{id}/decisions
-/api/v1/ai/meetings/sessions/{id}/transcript
 /api/v1/ai/orchestrate
 /api/v1/ai/project-insight
 /api/v1/ai/semantic-search
