@@ -222,7 +222,7 @@ describe("normalizePlan", () => {
   });
 
   it("summary / reasoning 超长按 Unicode 码点截断（不截断 emoji 代理对）", () => {
-    const summary = "🔥".repeat(101); // 101 个码点，slice 会拆代理对
+    const summary = "𠀀".repeat(101); // 101 个码点（CJK Ext B 表意文字），slice 会拆代理对
     const reasoning = "a".repeat(600);
     const plan = normalizePlan({ summary, reasoning, actions: [] })!;
     expect(Array.from(plan.summary)).toHaveLength(100);
