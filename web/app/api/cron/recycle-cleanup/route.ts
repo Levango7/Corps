@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * POST /api/cron/recycle-cleanup — 回收站自动清理 cron job
@@ -13,7 +14,7 @@ import { apiMsg } from "@/lib/api-messages";
  *
  * 响应：{ code: 200, data: { deletedTasks: number, deletedDocuments: number, retentionDays: number } }
  */
-export async function POST(req: NextRequest) {
+async function postCronRecycleCleanup(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -61,3 +62,5 @@ export async function POST(req: NextRequest) {
     );
   }
 }
+
+export const POST = withRed(postCronRecycleCleanup);

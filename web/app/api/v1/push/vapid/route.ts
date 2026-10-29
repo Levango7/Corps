@@ -7,9 +7,10 @@ import { getUserId, unauthorizedResponse } from "@/lib/ai/shared";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { getVapidPublicKey } from "@/lib/web-push";
+import { withRed } from "@/lib/red-metrics";
 
 /** GET /api/v1/push/vapid — 返回 VAPID 公钥 */
-export async function GET(req: NextRequest) {
+async function getPushVapid(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) return unauthorizedResponse(req);
 
@@ -28,3 +29,5 @@ export async function GET(req: NextRequest) {
   }
   return NextResponse.json({ code: 200, data: { publicKey } });
 }
+
+export const GET = withRed(getPushVapid);

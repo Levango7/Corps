@@ -17,6 +17,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
+import { withRed } from "@/lib/red-metrics";
 
 /** PATCH 更新邮件 schema */
 const patchSchema = z.object({
@@ -36,7 +37,7 @@ const querySchema = z.object({
  *
  * 返回邮件完整信息（含正文）。仅允许邮件所属账户的拥有者查看。
  */
-export async function GET(
+async function getMailById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -150,7 +151,7 @@ export async function GET(
  *
  * 仅允许邮件所属账户的拥有者更新。
  */
-export async function PATCH(
+async function patchMailById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -279,7 +280,7 @@ export async function PATCH(
  *
  * 仅允许邮件所属账户的拥有者删除。
  */
-export async function DELETE(
+async function deleteMailById(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ): Promise<NextResponse> {
@@ -383,3 +384,9 @@ export async function DELETE(
     );
   }
 }
+
+export const GET = withRed(getMailById);
+
+export const PATCH = withRed(patchMailById);
+
+export const DELETE = withRed(deleteMailById);

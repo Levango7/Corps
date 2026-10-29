@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 // 复用同一份字段投影，保证 GET / PATCH 返回结构一致
 const userSelect = {
@@ -36,7 +37,7 @@ async function getUserId(req: NextRequest): Promise<string | null> {
  * GET /api/v1/users/me
  * 返回当前登录用户的个人资料。
  */
-export async function GET(req: NextRequest) {
+async function getUserMe(req: NextRequest) {
   try {
     const userId = await getUserId(req);
     if (!userId) {
@@ -81,7 +82,7 @@ const updateSchema = z.object({
  * PATCH /api/v1/users/me
  * 更新当前登录用户的个人资料（name / image）。
  */
-export async function PATCH(req: NextRequest) {
+async function patchUserMe(req: NextRequest) {
   try {
     const userId = await getUserId(req);
     if (!userId) {
@@ -121,3 +122,7 @@ export async function PATCH(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getUserMe);
+
+export const PATCH = withRed(patchUserMe);

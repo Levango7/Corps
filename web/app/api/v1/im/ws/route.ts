@@ -31,6 +31,7 @@ import { verifyAccessToken } from "@/lib/jwt";
 import { imManager } from "@/lib/im/ws-server";
 import type { IMWebSocket } from "@/lib/im/types";
 import type { IncomingMessage } from "http";
+import { withRed } from "@/lib/red-metrics";
 
 // ─── API Route 占位 handler ───────────────────────────────────
 
@@ -43,7 +44,7 @@ import type { IncomingMessage } from "http";
  * 认证逻辑仍在此执行（复用 authenticate），用于在非 WebSocket 客户端
  * 直接请求此端点时返回正确的 401 而非 426。
  */
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function getImWsUpgrade(req: NextRequest): Promise<NextResponse> {
   // 验证认证（复用工作区无关的 authenticate，仅校验 token 有效性）
   const payload = await authenticate(req);
   if (!payload) {
@@ -255,3 +256,5 @@ export { imManager } from "@/lib/im/ws-server";
  *  - 多实例：需引入 Redis Pub/Sub 跨实例广播（见 ws-server.ts 文件头注释）
  *  - Serverless（Vercel 等）：不支持 WebSocket，需改用 SSE 或托管 WebSocket 服务
  */
+
+export const GET = withRed(getImWsUpgrade);

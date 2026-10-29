@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * CORS 预检白名单：仅放行应用自身 origin（NEXT_PUBLIC_APP_URL 与本地开发端口）。
@@ -11,7 +12,7 @@ const allowedOrigins = new Set(
   ) as string[],
 );
 
-export async function OPTIONS(req: NextRequest) {
+async function optionsCors(req: NextRequest) {
   const origin = req.headers.get("origin");
   const headers = new Headers();
   headers.set("Access-Control-Allow-Methods", "GET, POST, PATCH, DELETE, OPTIONS");
@@ -44,22 +45,34 @@ async function notFound(req: NextRequest) {
   );
 }
 
-export async function GET(req: NextRequest) {
+async function getApiNotFound(req: NextRequest) {
   return notFound(req);
 }
 
-export async function POST(req: NextRequest) {
+async function postApiNotFound(req: NextRequest) {
   return notFound(req);
 }
 
-export async function PATCH(req: NextRequest) {
+async function patchApiNotFound(req: NextRequest) {
   return notFound(req);
 }
 
-export async function PUT(req: NextRequest) {
+async function putApiNotFound(req: NextRequest) {
   return notFound(req);
 }
 
-export async function DELETE(req: NextRequest) {
+async function deleteApiNotFound(req: NextRequest) {
   return notFound(req);
 }
+
+export const OPTIONS = withRed(optionsCors);
+
+export const GET = withRed(getApiNotFound);
+
+export const POST = withRed(postApiNotFound);
+
+export const PATCH = withRed(patchApiNotFound);
+
+export const PUT = withRed(putApiNotFound);
+
+export const DELETE = withRed(deleteApiNotFound);
