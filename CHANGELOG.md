@@ -30,8 +30,9 @@
   迁移不改总盲区，只是按 handler 精确切分后的真实归属。
 - **事件面双向契约**：把只在白名单挂着、没有任何 emit 站点的 10 个事件接通，并把埋点门禁
   补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **40 名**。
-- **权限矩阵补口**：approvals 域纳入 `lib/permissions.ts` 矩阵，permission-gate T3 债务
-  **154 → 94**（`scripts/permission-gate-unscoped-baseline.txt`）。
+- **权限门禁盲区收敛**：approvals 域纳入 `lib/permissions.ts` 矩阵，AI 域 40 个 handler
+  接上 `requirePermission`（#210），permission-gate T3 债务 **154 → 94**
+  （`scripts/permission-gate-unscoped-baseline.txt`；总盲区 164 → 124）。
 - **SAST 两条腿**：CodeQL（javascript-typescript，#174）与 Gitleaks 密钥扫描（#177）。
   Gitleaks 首跑 4 处命中经逐条复核均为误报，按"带理由豁免"落库而不是放宽扫描。
 - **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **22 个**（calendar/goals/forms/
@@ -62,7 +63,8 @@
   对用户完全静默。
 - **e2e 夹具独立化（#168）**：19 处 `describe.serial` 改为每条用例自带账号，
   去掉"第一条失败 → 后面全跳过"的级联遮蔽（serial 只保留有真实先后依赖的组）。
-- **契约清偿四批**：未声明契约路由 **203 → 99**；`api/openapi.yaml` 现有 189 条路径。
+- **契约逐批清偿**（不计数——批次还在追加）：未声明契约路由 **203 → 99**，
+  `api/openapi.yaml` 现有 189 条路径（`python scripts/check_api_contract.py` 现测）。
 - **零覆盖基线 602 → 539**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径。
 - **编辑决策会清空复盘标记**：`PATCH .../decisions/{did}` 现在把 `reviewed_at` 置空。
   不复位的话复盘率会长期停在"改过就算复盘过"的虚高值。
