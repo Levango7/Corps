@@ -121,6 +121,25 @@ psql "$DATABASE_OWNER_URL" -v ON_ERROR_STOP=1 \
 - `rls-activate.sql` 建的 `corps_app` 是 `NOBYPASSRLS` 角色，脚本同时给全部租户表加 `ENABLE + FORCE ROW LEVEL SECURITY`（FORCE 的意义正是堵表 owner 的旁路）。激活后若继续用 owner 连接串，未设置 `app.*` GUC 的查询会**静默返回空集**而不是全集 —— `lib/payments/types.ts:69`、`stripe-provider.ts:144`、`billing/portal/route.ts:22` 记录的三类历史缺陷就是这个形态（订阅查不到 → 恒 400）。
 - **未跑激活脚本时线上是什么状态**：整个迁移目录里只有一张表把 RLS 写进了迁移 —— `web/prisma/migrations/20260912000002_add_temporary_grants/migration.sql:31-52`，对 `temporary_grants` 做 `ENABLE + FORCE ROW LEVEL SECURITY` 并建 4 条策略（策略读 `app.workspace_id`，另给 `app.auth_op='cron'` 开了口子）。其余租户表的 ENABLE/FORCE 与策略**只存在于 `db/rls-activate.sql`**（该脚本按清单动态下发，不是在迁移里逐表写死），`prisma migrate deploy` 不会带来它们。所以只用 Neon owner 连接串部署时，租户隔离实际依赖应用层的 `workspaceId` 过滤；别因为 ADR/巡检报告里记着"81 张受保护表 / 272 条策略"就认为线上已经通电 —— 那组数字是 `scripts/check_rls_exemptions.py:144-151` **静态解析 `db/rls-activate.sql` 文本**得出的，证明的是"脚本会建这些策略"，不证明"目标库执行过这个脚本"。要在具体库上确认，得直接查数据库状态（`pg_class.relrowsecurity` / `relforcerowsecurity` 与 `pg_policies`）。
 
+那条确认命令已经落成脚本，不要再手敲（手敲容易漏掉 FORCE，也容易把"ENABLE 了但没策略"
+当成通电）：
+
+```bash
+# 1) 引擎层状态：期望 rls_on = 81、rls_forced = 81、policies = 272
+#    第 2 节会列出未被覆盖的表——它们必须恰好等于 ADR-010 的豁免基线，多出来就是激活没覆盖到
+psql "$DATABASE_OWNER_URL" -v ON_ERROR_STOP=1 -f db/rls-verify.sql
+
+# 2) 换 DATABASE_URL 到 corps_app 之后，验 GUC 通路（必须三条同时成立）：
+#    无 GUC → 0 行；对 GUC → 该工作区行数；错 GUC → 0 行
+psql "$DATABASE_URL" -v workspace_id=<某个真实工作区 uuid> -f db/rls-verify.sql
+```
+
+`db/rls-verify.sql` 的第 4 节刻意用 `BEGIN … ROLLBACK` 包住：它只读、不写任何数据。
+
+**2026-10-28 实测记录**（postgres:18.6 + 全量迁移的一次性库，非生产）：激活后
+`81 / 81 / 272`；以 `corps_app` 连接时无 GUC 读到 **0** 行（静默空集，不是报错——这正是
+历史上三次"订阅查不到 / 恒 400"的形态）、对 GUC 读到 **1** 行、错 GUC 仍是 **0** 行。
+
 ### 计费相关（可选，未配置则计费页隐藏升级入口）
 
 | 变量名 | 说明 |
