@@ -240,11 +240,16 @@ describe("state 签名：signState / verifyState", () => {
 
   it("R9D-01：生产环境缺 CALENDAR_STATE_SECRET 与 JWT_ACCESS_SECRET → signState 抛错", () => {
     vi.stubEnv("NODE_ENV", "production");
+    // CI 的 test job 会给 vitest 进程注入 JWT_ACCESS_SECRET（集成测试共用），
+    // 必须显式清掉两个密钥，否则 getStateSecret 走回退分支而不抛错（假绿）。
+    delete process.env.CALENDAR_STATE_SECRET;
+    delete process.env.JWT_ACCESS_SECRET;
     expect(() => signState(payload)).toThrow(/CALENDAR_STATE_SECRET|JWT_ACCESS_SECRET/);
   });
 
   it("生产环境有 JWT_ACCESS_SECRET 回退（兼容已部署实例）", () => {
     vi.stubEnv("NODE_ENV", "production");
+    delete process.env.CALENDAR_STATE_SECRET;
     process.env.JWT_ACCESS_SECRET = "jwt-fallback";
     const state = signState(payload);
     expect(verifyState(state)).toEqual(payload);
