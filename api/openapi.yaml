@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 169 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 189 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -8239,6 +8239,1095 @@ paths:
           $ref: '#/components/responses/Unauthorized'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/comments:
+    get:
+      tags: [documents]
+      summary: List document comments
+      description: data = { items, total } (non-paginated; code=200).
+      operationId: listDocumentComments
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Comment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentCommentList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [documents]
+      summary: Create a document comment
+      description: Body requires anchorPath/anchorText/body; mentions/parentId optional.
+      operationId: createDocumentComment
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [anchorPath, anchorText, body]
+              properties:
+                anchorPath: { type: string, maxLength: 100 }
+                anchorText: { type: string, minLength: 1 }
+                body: { type: string, minLength: 1, maxLength: 10000 }
+                mentions: { type: array, items: { type: string, format: uuid } }
+                parentId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Comment created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentComment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/comments/{commentId}:
+    patch:
+      tags: [documents]
+      summary: Edit or resolve a document comment
+      operationId: patchDocumentComment
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: commentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated comment
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentComment'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [documents]
+      summary: Delete a document comment
+      operationId: deleteDocumentComment
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: commentId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: "Comment deleted (data = { id, deleted: true })"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/convert:
+    post:
+      tags: [documents]
+      summary: Convert document format (e.g. markdown to HTML)
+      description: Returns the converted payload plus, when a format is projected, the document projection.
+      operationId: convertDocument
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Conversion target and options (see handler).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Converted content
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentConvert'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/permissions:
+    get:
+      tags: [documents]
+      summary: List document-level permissions
+      operationId: listDocumentPermissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Permission list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentPermissionList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [documents]
+      summary: Grant a document-level permission
+      operationId: createDocumentPermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Grantee + permission level (see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Permission granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentPermission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/permissions/{pid}:
+    patch:
+      tags: [documents]
+      summary: Update a document-level permission
+      operationId: patchDocumentPermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: pid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Partial permission fields (see handler schema).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentPermission'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [documents]
+      summary: Revoke a document-level permission
+      operationId: deleteDocumentPermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: pid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: "Permission revoked (data = { id, deleted: true })"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/share-links:
+    get:
+      tags: [documents]
+      summary: List document share links (passwordHash stripped)
+      description: data = { items, total, hasMore } (code=200).
+      operationId: listDocumentShareLinks
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Share link list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentShareLinkList'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [documents]
+      summary: Create a document share link
+      description: May require a password; the response strips passwordHash (safeData).
+      operationId: createDocumentShareLink
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Link options (expiresAt, password…; see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentShareLink'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/share-links/{sid}:
+    patch:
+      tags: [documents]
+      summary: Update a document share link
+      operationId: patchDocumentShareLink
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: sid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated share link (passwordHash stripped)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentShareLink'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [documents]
+      summary: Delete a document share link
+      operationId: deleteDocumentShareLink
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: sid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Share link deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/versions:
+    get:
+      tags: [documents]
+      summary: List document versions
+      description: data = { items, currentVersion, page, limit, total, hasMore } (code=200).
+      operationId: listDocumentVersions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Version list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentVersionList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [documents]
+      summary: Create a document version snapshot
+      operationId: createDocumentVersion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Version created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentVersion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/{id}/versions/{versionId}:
+    get:
+      tags: [documents]
+      summary: Document version detail
+      operationId: getDocumentVersion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: versionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Version detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentVersion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [documents]
+      summary: Restore from a document version
+      operationId: restoreDocumentVersion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: versionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Restored; returns the document with the version markdown
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentVersion'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/documents/batch-permissions:
+    post:
+      tags: [documents]
+      summary: Batch grant document permissions
+      description: data = { successCount, failedCount, failures[{ documentId, error }] } (code=201).
+      operationId: batchDocumentPermissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Batch payload (documentIds + grant…; see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Batch result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DocumentBatchResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases:
+    get:
+      tags: [databases]
+      summary: List workspace databases
+      description: data = { items, page, limit, total, hasMore } (code=200).
+      operationId: listDatabases
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Database list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [databases]
+      summary: Create a database
+      operationId: createDatabase
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Database fields (name, icon…; see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Database created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Database'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}:
+    get:
+      tags: [databases]
+      summary: Database detail (fields + views)
+      operationId: getDatabase
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Database detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Database'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [databases]
+      summary: Update a database
+      operationId: patchDatabase
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated database
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Database'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [databases]
+      summary: Delete a database
+      operationId: deleteDatabase
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Database deleted (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}/fields:
+    get:
+      tags: [databases]
+      summary: List database fields
+      description: data = { items, total, hasMore } (code=200).
+      operationId: listDatabaseFields
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: Field list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseFieldList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [databases]
+      summary: Create a database field
+      operationId: createDatabaseField
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Field definition (name, type, options…; see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Field created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseField'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}/fields/{fid}:
+    patch:
+      tags: [databases]
+      summary: Update a database field
+      operationId: patchDatabaseField
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated field
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseField'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [databases]
+      summary: Delete a database field
+      operationId: deleteDatabaseField
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Field deleted (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}/records:
+    get:
+      tags: [databases]
+      summary: List database records
+      description: data = { items, page, limit, total, hasMore } (code=200).
+      operationId: listDatabaseRecords
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Record list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseRecordList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [databases]
+      summary: Create a database record
+      operationId: createDatabaseRecord
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Record values keyed by field (see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: Record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseRecord'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}/records/{rid}:
+    patch:
+      tags: [databases]
+      summary: Update a database record
+      operationId: patchDatabaseRecord
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated record
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseRecord'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [databases]
+      summary: Delete a database record
+      operationId: deleteDatabaseRecord
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: rid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Record deleted (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}/views:
+    get:
+      tags: [databases]
+      summary: List database views
+      description: data = { items, total, hasMore } (code=200).
+      operationId: listDatabaseViews
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 200, default: 100 }
+      responses:
+        '200':
+          description: View list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseViewList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [databases]
+      summary: Create a database view
+      operationId: createDatabaseView
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: View definition (type, filters, sorts…; see handler schema).
+              additionalProperties: true
+      responses:
+        '201':
+          description: View created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseView'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/databases/{dbid}/views/{vid}:
+    patch:
+      tags: [databases]
+      summary: Update a database view
+      operationId: patchDatabaseView
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: vid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated view
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_DatabaseView'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [databases]
+      summary: Delete a database view
+      operationId: deleteDatabaseView
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: dbid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: vid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: View deleted (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/recycle-bin:
+    get:
+      tags: [recycle-bin]
+      summary: List soft-deleted items in the workspace recycle bin
+      operationId: listRecycleBin
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Recycle bin list (paginated; code=200)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RecycleBinList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/recycle-bin/{id}:
+    post:
+      tags: [recycle-bin]
+      summary: Restore a soft-deleted item
+      operationId: restoreRecycleBinItem
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item restored (data null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [recycle-bin]
+      summary: Permanently delete a recycle-bin item
+      operationId: purgeRecycleBinItem
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Item purged (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -10938,3 +12027,194 @@ components:
           properties:
             answer: { type: string }
             relatedNodes: { type: array, items: { type: object } }
+    Envelope_DocumentComment:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Document comment row (anchor + body + author).
+    Envelope_DocumentCommentList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+    Envelope_DocumentConvert:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Converted payload (markdown→html etc.); shape per handler.
+    Envelope_DocumentPermission:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Document-level permission row (grantee + level).
+    Envelope_DocumentPermissionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Permission list (shape per handler; items/total or bare array).
+    Envelope_DocumentShareLink:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Share link row with passwordHash stripped (safeData).
+    Envelope_DocumentShareLinkList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_DocumentVersion:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Document version row (markdown snapshot + metadata).
+    Envelope_DocumentVersionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, currentVersion, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            currentVersion: { type: integer, minimum: 1 }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_DocumentBatchResult:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [successCount, failedCount, failures]
+          properties:
+            successCount: { type: integer, minimum: 0 }
+            failedCount: { type: integer, minimum: 0 }
+            failures:
+              type: array
+              items:
+                type: object
+                properties:
+                  documentId: { type: string }
+                  error: { type: string }
+    Envelope_Database:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Database row (multi-dimensional table container; fields/views included on detail).
+    Envelope_DatabaseList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_DatabaseField:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Database field definition row.
+    Envelope_DatabaseFieldList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_DatabaseRecord:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Database record row (values keyed by field).
+    Envelope_DatabaseRecordList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_DatabaseView:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Database view definition row (type/filters/sorts).
+    Envelope_DatabaseViewList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_RecycleBinList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Recycle bin page (items of soft-deleted rows; pagination keys per handler).
