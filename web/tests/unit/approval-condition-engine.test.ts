@@ -13,6 +13,9 @@ import type {
   FlatApprovalNode,
 } from "@/lib/approval/condition-engine";
 
+// json-logic-js 求值真常量（条件类型声明为 object，true 需要一次绕过以满足类型）
+const TRUE_EXPR = true as unknown as object;
+
 /**
  * 条件审批引擎（lib/approval/condition-engine.ts）契约。
  *
@@ -28,7 +31,7 @@ const amountNode: ConditionNode = {
   order: 2,
   conditions: [
     { label: "大于1000", expression: { ">": [{ var: "amount" }, 1000] }, targetNodeId: "manager" },
-    { label: "默认", expression: true, targetNodeId: "auto" },
+    { label: "默认", expression: TRUE_EXPR, targetNodeId: "auto" },
   ],
 };
 
@@ -47,7 +50,7 @@ describe("evaluateCondition", () => {
       conditions: [
         { label: "大于1000", expression: { ">": [{ var: "amount" }, 1000] }, targetNodeId: "a" },
         { label: "大于500", expression: { ">": [{ var: "amount" }, 500] }, targetNodeId: "b" },
-        { label: "默认", expression: true, targetNodeId: "c" },
+        { label: "默认", expression: TRUE_EXPR, targetNodeId: "c" },
       ],
     };
     expect(evaluateCondition(node, { amount: 700 })).toBe("b");
@@ -62,7 +65,7 @@ describe("evaluateCondition", () => {
           expression: { "!!!": "not-json-logic" } as never,
           targetNodeId: "bad",
         },
-        { label: "默认", expression: true, targetNodeId: "auto" },
+        { label: "默认", expression: TRUE_EXPR, targetNodeId: "auto" },
       ],
     };
     expect(evaluateCondition(node, {})).toBe("auto");
@@ -100,7 +103,7 @@ describe("evaluateAllConditions", () => {
             expression: { "==": [{ var: "type" }, "purchase"] },
             targetNodeId: "t-purchase",
           },
-          { label: "默认", expression: true, targetNodeId: "t-other" },
+          { label: "默认", expression: TRUE_EXPR, targetNodeId: "t-other" },
         ],
       },
       { nodeId: "manager", name: "主管", type: "approval", order: 3 },
@@ -126,7 +129,7 @@ describe("evaluateAllConditions", () => {
   });
 
   it("condition 节点缺 conditions 字段 → 不进缓存（不抛错）", () => {
-    const broken = {
+    const broken: ApprovalNodeGraph = {
       ...graph,
       nodes: [
         ...graph.nodes.filter((n) => n.type !== "condition"),
@@ -278,8 +281,8 @@ describe("buildNodeGraph", () => {
         order: 0,
         type: "condition",
         conditions: [
-          { label: "大", expression: true, targetNodeId: "big" },
-          { label: "小", expression: true, targetNodeId: "small" },
+          { label: "大", expression: TRUE_EXPR, targetNodeId: "big" },
+          { label: "小", expression: TRUE_EXPR, targetNodeId: "small" },
         ],
       },
       { name: "主管", order: 1 },
@@ -299,8 +302,8 @@ describe("buildNodeGraph", () => {
         order: 1,
         type: "condition",
         conditions: [
-          { label: "大", expression: true, targetNodeId: "node-2" },
-          { label: "小", expression: true, targetNodeId: "end" },
+          { label: "大", expression: TRUE_EXPR, targetNodeId: "node-2" },
+          { label: "小", expression: TRUE_EXPR, targetNodeId: "end" },
         ],
       },
       { name: "总监", order: 2 },
@@ -327,7 +330,7 @@ describe("buildNodeGraph", () => {
             expression: { ">": [{ var: "amount" }, 1000] },
             targetNodeId: "node-2",
           },
-          { label: "默认", expression: true, targetNodeId: "end" },
+          { label: "默认", expression: TRUE_EXPR, targetNodeId: "end" },
         ],
       },
       { name: "总监", order: 2 },
@@ -350,7 +353,7 @@ describe("buildNodeGraph", () => {
             expression: { ">": [{ var: "amount" }, 1000] },
             targetNodeId: "node-2",
           },
-          { label: "默认", expression: true, targetNodeId: "end" },
+          { label: "默认", expression: TRUE_EXPR, targetNodeId: "end" },
         ],
       },
       { name: "总监", order: 2 },
@@ -369,7 +372,7 @@ describe("validateConditionExpression", () => {
   });
 
   it("null / undefined / 非对象 → false", () => {
-    expect(validateConditionExpression(null)).toBe(false);
+    expect(validateConditionExpression(null as unknown as object)).toBe(false);
     expect(validateConditionExpression(undefined as never)).toBe(false);
     expect(validateConditionExpression("amount > 1000" as never)).toBe(false);
     expect(validateConditionExpression(42 as never)).toBe(false);

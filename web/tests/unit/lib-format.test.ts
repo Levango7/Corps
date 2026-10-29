@@ -129,7 +129,7 @@ describe("dueMeta", () => {
 describe("relativeTime / relTime", () => {
   it("relativeTime 无值返回 null", () => {
     expect(relativeTime(undefined)).toBeNull();
-    expect(relativeTime(null)).toBeNull();
+    expect(relativeTime(null as unknown as string | undefined)).toBeNull();
   });
 
   it("relativeTime 无效日期返回 null，不抛错", () => {
@@ -228,25 +228,28 @@ describe("markdownToPlainText", () => {
 });
 
 describe("sortTasks", () => {
-  const tasks = [
+  type Task = { id: string; updatedAt: string; dueDate: string | null; priority: string };
+  const tasks: Task[] = [
     { id: "1", updatedAt: "2026-10-01T00:00:00.000Z", dueDate: isoOn(2), priority: "low" },
     { id: "2", updatedAt: "2026-10-05T00:00:00.000Z", dueDate: isoOn(0), priority: "high" },
     { id: "3", updatedAt: "2026-10-03T00:00:00.000Z", dueDate: null, priority: "medium" },
-  ] as Array<Record<string, unknown>>;
+  ];
+  // recent/due 不需要 rank，但签名的 priorityOrder 是必填——传空 Record 即可（查表全 undefined）
+  const noRank: Record<string, number> = {};
 
   it("recent → updatedAt 倒序（最新在前）", () => {
-    const out = sortTasks([...tasks] as never, "recent");
+    const out = sortTasks(tasks, "recent", noRank);
     expect(out.map((t) => t.id)).toEqual(["2", "3", "1"]);
   });
 
   it("due → dueDate 升序，无 dueDate 排到最后（不报错）", () => {
-    const out = sortTasks([...tasks] as never, "due");
+    const out = sortTasks(tasks, "due", noRank);
     expect(out[0].id).toBe("2");
     expect(out[out.length - 1].id).toBe("3");
   });
 
   it("priority → 按 priorityOrder 的 rank 排（Record：等级 → 序号）", () => {
-    const out = sortTasks([...tasks] as never, "priority", {
+    const out = sortTasks(tasks, "priority", {
       high: 0,
       medium: 1,
       low: 2,
@@ -255,13 +258,13 @@ describe("sortTasks", () => {
   });
 
   it("priority 中 priorityOrder 未覆盖的等级比较结果为 0（保持原序，不挪到末尾）", () => {
-    const out = sortTasks([...tasks] as never, "priority", { high: 0 });
+    const out = sortTasks(tasks, "priority", { high: 0 });
     // low/medium 无 rank → NaN → 比较为 0，仅 high(2) 不前移；原序 [1,2,3] 中 2 不动
     expect(out.map((t) => t.id)).toEqual(["1", "2", "3"]);
   });
 
   it("空数组返回空数组（不抛错）", () => {
-    expect(sortTasks([], "recent")).toEqual([]);
-    expect(sortTasks([], "due")).toEqual([]);
+    expect(sortTasks([], "recent", noRank)).toEqual([]);
+    expect(sortTasks([], "due", noRank)).toEqual([]);
   });
 });

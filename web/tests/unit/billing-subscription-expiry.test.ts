@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Prisma } from "@prisma/client";
 
 /**
  * 国内一次性订阅到期懒降级（lib/billing/subscription-expiry.ts）契约。
@@ -13,7 +14,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 let currentSub: Record<string, unknown> | null;
 let txCalls: string[];
 
-const tx = {
+const txMock = {
   subscription: {
     findFirst: vi.fn(async () => currentSub),
     update: vi.fn(async () => {
@@ -27,13 +28,16 @@ const tx = {
       return undefined;
     }),
   },
-} as never;
+};
+const tx = txMock as unknown as Prisma.TransactionClient;
 
 vi.mock("@/lib/auth", () => ({
-  runWithAuthOp: vi.fn(async (_op: string, fn: (tx: never) => Promise<unknown>) => {
-    txCalls.push(`op:webhook`);
-    return fn(tx);
-  }),
+  runWithAuthOp: vi.fn(
+    async (_op: string, fn: (tx: Prisma.TransactionClient) => Promise<unknown>) => {
+      txCalls.push(`op:webhook`);
+      return fn(tx);
+    },
+  ),
 }));
 
 vi.mock("@/lib/payments", () => ({
@@ -132,7 +136,7 @@ describe("expireSubscriptionIfDue —— 到期降级", () => {
 
 describe("expireSubscriptionIfDue —— 失败不阻断", () => {
   it("tx 抛错 → catch 记 error 日志，函数 resolve（读路径惰性触发不阻断主流程）", async () => {
-    tx.subscription.findFirst.mockRejectedValueOnce(new Error("db unavailable"));
+    txMock.subscription.findFirst.mockRejectedValueOnce(new Error("db unavailable"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(expireSubscriptionIfDue("w-1")).resolves.toBeUndefined();
     expect(errSpy).toHaveBeenCalledTimes(1);

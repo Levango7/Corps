@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { Prisma } from "@prisma/client";
 
 /**
  * Pro 席位门控（lib/billing/seat-policy.ts）契约。
@@ -12,19 +13,24 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
  * 本地 seatLimit 口径必须已生效（R9D-08：结构化日志含 wid/provider 上下文）。
  */
 
-const tx = {
+const txMock = {
   subscription: {
     findUnique: vi.fn(),
   },
   member: { count: vi.fn() },
   workspace: { update: vi.fn() },
-} as never;
+};
+const tx = txMock as unknown as Prisma.TransactionClient;
 
-let runWithWorkspaceImpl: (wid: string, fn: (tx: never) => Promise<unknown>) => Promise<unknown>;
+let runWithWorkspaceImpl: (
+  wid: string,
+  fn: (tx: Prisma.TransactionClient) => Promise<unknown>,
+) => Promise<unknown>;
 
 vi.mock("@/lib/auth", () => ({
-  runWithWorkspace: vi.fn(async (wid: string, fn: (tx: never) => Promise<unknown>) =>
-    runWithWorkspaceImpl(wid, fn),
+  runWithWorkspace: vi.fn(
+    async (wid: string, fn: (tx: Prisma.TransactionClient) => Promise<unknown>) =>
+      runWithWorkspaceImpl(wid, fn),
   ),
 }));
 
@@ -48,9 +54,12 @@ import { getPaymentProvider } from "@/lib/payments";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  runWithWorkspaceImpl = async (_wid: string, fn: (tx: never) => Promise<unknown>) => fn(tx);
-  tx.member.count.mockResolvedValue(5);
-  tx.workspace.update.mockResolvedValue(undefined);
+  runWithWorkspaceImpl = async (
+    _wid: string,
+    fn: (tx: Prisma.TransactionClient) => Promise<unknown>,
+  ) => fn(tx);
+  txMock.member.count.mockResolvedValue(5);
+  txMock.workspace.update.mockResolvedValue(undefined);
 });
 
 describe("evaluateSeatGate —— 未达上限", () => {
@@ -69,19 +78,19 @@ describe("evaluateSeatGate —— 未达上限", () => {
 
 describe("evaluateSeatGate —— 达上限", () => {
   it("pro + Stripe 订阅 → 不拦截、autoExpand=true（成员规模不限承诺）", async () => {
-    tx.subscription.findUnique.mockResolvedValue({ provider: "stripe" });
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "stripe" });
     const r = await evaluateSeatGate(tx, "w-1", { plan: "pro", seatLimit: 5 }, 5);
     expect(r).toEqual({ full: false, autoExpand: true, seatLimit: 5 });
   });
 
   it("pro + 国内一次性通道（alipay/wechat）→ full=true 拦截", async () => {
-    tx.subscription.findUnique.mockResolvedValue({ provider: "alipay" });
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "alipay" });
     const r = await evaluateSeatGate(tx, "w-1", { plan: "pro", seatLimit: 5 }, 5);
     expect(r).toEqual({ full: true, plan: "pro", seatLimit: 5 });
   });
 
   it("pro + 无订阅记录 → full=true 拦截", async () => {
-    tx.subscription.findUnique.mockResolvedValue(null);
+    txMock.subscription.findUnique.mockResolvedValue(null);
     const r = await evaluateSeatGate(tx, "w-1", { plan: "pro", seatLimit: 5 }, 5);
     expect(r.full).toBe(true);
   });
@@ -93,7 +102,7 @@ describe("evaluateSeatGate —— 达上限", () => {
   });
 
   it("达上限时按 workspaceId 查订阅（select 仅 provider）", async () => {
-    tx.subscription.findUnique.mockResolvedValue({ provider: "stripe" });
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "stripe" });
     await evaluateSeatGate(tx, "w-99", { plan: "pro", seatLimit: 1 }, 1);
     expect(tx.subscription.findUnique).toHaveBeenCalledWith({
       where: { workspaceId: "w-99" },
@@ -104,8 +113,8 @@ describe("evaluateSeatGate —— 达上限", () => {
 
 describe("expandProSeatsAfterJoin", () => {
   it("seatLimit 同步为最新成员数（本地口径立即生效）", async () => {
-    tx.member.count.mockResolvedValue(6);
-    tx.subscription.findUnique.mockResolvedValue({ provider: "alipay", stripeSubId: null });
+    txMock.member.count.mockResolvedValue(6);
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "alipay", stripeSubId: null });
     await expandProSeatsAfterJoin("w-1");
     expect(tx.member.count).toHaveBeenCalledWith({ where: { workspaceId: "w-1" } });
     expect(tx.workspace.update).toHaveBeenCalledWith({
@@ -115,28 +124,31 @@ describe("expandProSeatsAfterJoin", () => {
   });
 
   it("pro + stripe + stripeSubId → 通道侧订阅 quantity 同步（按实际人数）", async () => {
-    tx.member.count.mockResolvedValue(7);
-    tx.subscription.findUnique.mockResolvedValue({ provider: "stripe", stripeSubId: "sub_abc" });
+    txMock.member.count.mockResolvedValue(7);
+    txMock.subscription.findUnique.mockResolvedValue({
+      provider: "stripe",
+      stripeSubId: "sub_abc",
+    });
     await expandProSeatsAfterJoin("w-1");
     expect(getPaymentProvider).toHaveBeenCalledWith("stripe");
     expect(syncSubscription).toHaveBeenCalledWith({ providerOrderId: "sub_abc", seats: 7 });
   });
 
   it("provider 非 stripe → 不触发通道侧同步（国内一次性通道无订阅对象）", async () => {
-    tx.subscription.findUnique.mockResolvedValue({ provider: "wechat", stripeSubId: null });
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "wechat", stripeSubId: null });
     await expandProSeatsAfterJoin("w-1");
     expect(getPaymentProvider).not.toHaveBeenCalled();
   });
 
   it("stripe 但无 stripeSubId → 不同步（缺通道侧订阅引用，不编造调用）", async () => {
-    tx.subscription.findUnique.mockResolvedValue({ provider: "stripe", stripeSubId: null });
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "stripe", stripeSubId: null });
     await expandProSeatsAfterJoin("w-1");
     expect(getPaymentProvider).not.toHaveBeenCalled();
   });
 
   it("R9D-08：通道侧同步抛错 → 不向上抛（本地席位口径已生效），且日志含 wid/provider 上下文", async () => {
-    tx.member.count.mockResolvedValue(8);
-    tx.subscription.findUnique.mockResolvedValue({ provider: "stripe", stripeSubId: "sub_x" });
+    txMock.member.count.mockResolvedValue(8);
+    txMock.subscription.findUnique.mockResolvedValue({ provider: "stripe", stripeSubId: "sub_x" });
     syncSubscription.mockRejectedValueOnce(new Error("stripe down"));
     const errSpy = vi.spyOn(console, "error").mockImplementation(() => {});
     await expect(expandProSeatsAfterJoin("w-1")).resolves.toBeUndefined();

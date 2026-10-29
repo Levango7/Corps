@@ -1,5 +1,5 @@
 // @vitest-environment node
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { Buffer } from "buffer";
 import {
   getProviderConfig,
@@ -43,6 +43,7 @@ beforeEach(() => {
 });
 
 afterEach(() => {
+  vi.unstubAllEnvs();
   for (const k of ENV_KEYS) {
     if (saved[k] === undefined) delete process.env[k];
     else process.env[k] = saved[k];
@@ -238,12 +239,12 @@ describe("state 签名：signState / verifyState", () => {
   });
 
   it("R9D-01：生产环境缺 CALENDAR_STATE_SECRET 与 JWT_ACCESS_SECRET → signState 抛错", () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     expect(() => signState(payload)).toThrow(/CALENDAR_STATE_SECRET|JWT_ACCESS_SECRET/);
   });
 
   it("生产环境有 JWT_ACCESS_SECRET 回退（兼容已部署实例）", () => {
-    process.env.NODE_ENV = "production";
+    vi.stubEnv("NODE_ENV", "production");
     process.env.JWT_ACCESS_SECRET = "jwt-fallback";
     const state = signState(payload);
     expect(verifyState(state)).toEqual(payload);

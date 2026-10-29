@@ -37,7 +37,7 @@ const tx = {
       return undefined;
     }),
   },
-} as never;
+} as unknown as Prisma.TransactionClient;
 
 function instance(overrides: Record<string, unknown> = {}) {
   return {
