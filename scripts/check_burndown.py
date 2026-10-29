@@ -279,6 +279,20 @@ def mutate_first_baseline(text: str, pattern: str, repl: str) -> str:
     return "\n".join(out) + "\n"
 
 
+def mutate_baseline(text: str, key: str, pattern: str, repl: str) -> str:
+    """只改 key 对应的那条 BASELINE 行 —— 自检要在多条基线里精确定位某一行时用。"""
+    out: list[str] = []
+    done = False
+    for ln in text.splitlines():
+        if not done and re.match(rf"BASELINE\s+{re.escape(key)}\s", ln):
+            new = re.sub(pattern, repl, ln, count=1)
+            done = new != ln
+            out.append(new)
+        else:
+            out.append(ln)
+    return "\n".join(out) + "\n"
+
+
 def self_test() -> int:
     """五种变异必须各自因正确的红因变红；判据失效时自检自己红。"""
     original = PLAN.read_text(encoding="utf-8") if PLAN.exists() else ""
@@ -318,8 +332,18 @@ def self_test() -> int:
     # 4. 窗口已跑完却没清偿 -> BURND_BEHIND
     #    （不能直接把 due 挪到今天：窗口压缩后「每天清偿量」暴涨，宽限额度会淹没整段承诺，
     #     那是门禁自身的漏洞，已用 MALFORMED 规则堵住；这里用「窗口早已开始并结束」仿真逾期）
-    overdue = mutate_first_baseline(original, r"start_date=\d{4}-\d{2}-\d{2}", "start_date=2020-01-01")
-    cases.append(("窗口跑完仍未达标 -> BURND_BEHIND", overdue, None, {"BURND_BEHIND"}))
+    #    必须挑一条「当前值仍未达标」的行变异：已达标的行无论窗口怎么提前都不会 BEHIND
+    #    （zero-coverage 于 2026-10-29 提前撞到目标值后，暴露了「只变异首行」这一隐含前提）。
+    _, ref_rows = check_raw(PLAN, today)
+    unmet = [r["key"] for r in ref_rows if r["current"] is not None and r["current"] > r["target"]]
+    if unmet:
+        overdue = mutate_baseline(original, unmet[0], r"start_date=\d{4}-\d{2}-\d{2}", "start_date=2020-01-01")
+        cases.append((f"窗口跑完仍未达标（{unmet[0]}） -> BURND_BEHIND", overdue, None, {"BURND_BEHIND"}))
+    else:
+        # 全部基线都已达标时，把首行 target 压到 1 再造一条未达标，验证 BEHIND 判据仍有效
+        forced = mutate_first_baseline(original, r"start_date=\d{4}-\d{2}-\d{2}", "start_date=2020-01-01")
+        forced = mutate_first_baseline(forced, r"target=\d+", "target=1")
+        cases.append(("全部达标后强制未达标 -> BURND_BEHIND", forced, None, {"BURND_BEHIND"}))
 
     # 5. 路线图数字与实测不符 -> BURND_DOC_DRIFT
     #    不能靠字面串替换（如 "| 643 |"）：路线图一改措辞或数字，替换就落空，
