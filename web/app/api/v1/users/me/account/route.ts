@@ -3,6 +3,7 @@ import { auth, authenticate } from "@/lib/auth";
 import { z } from "zod";
 import { previewAccountDeletion, deleteAccount } from "@/lib/account-deletion";
 import { apiLocale, apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * 账户删除端点组（阶段 2-3：隐私政策"删除账户"承诺兑现）。
@@ -27,7 +28,7 @@ async function getUserId(req: NextRequest): Promise<string | null> {
   return payload?.sub ?? null;
 }
 
-export async function GET(req: NextRequest) {
+async function getUserMeAccount(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) {
     return NextResponse.json(
@@ -53,7 +54,7 @@ const deleteSchema = z.object({
   confirmEmail: z.string().email(),
 });
 
-export async function DELETE(req: NextRequest) {
+async function deleteUserMeAccount(req: NextRequest) {
   const userId = await getUserId(req);
   if (!userId) {
     return NextResponse.json(
@@ -117,3 +118,7 @@ export async function DELETE(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getUserMeAccount);
+
+export const DELETE = withRed(deleteUserMeAccount);

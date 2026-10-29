@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { apiMsg } from "@/lib/api-messages";
-import { redMetricsText } from "@/lib/red-metrics";
+import { redMetricsText, withRed } from "@/lib/red-metrics";
 
 /**
  * Prometheus 指标端点 — /api/metrics
@@ -28,7 +28,7 @@ import { redMetricsText } from "@/lib/red-metrics";
  * `Authorization: Bearer <token>`（见 docs/runbook-deploy.md §8.2）。
  */
 
-export async function GET(req: NextRequest) {
+async function getMetrics(req: NextRequest) {
   // 可选令牌门：设置了 METRICS_TOKEN 才校验，未设置维持开放的"网络层负责"姿态。
   const metricsToken = process.env.METRICS_TOKEN;
   if (metricsToken && req.headers.get("authorization") !== `Bearer ${metricsToken}`) {
@@ -92,3 +92,5 @@ export async function GET(req: NextRequest) {
     },
   });
 }
+
+export const GET = withRed(getMetrics);

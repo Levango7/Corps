@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { runWithAuthOp } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/check-expired-permissions — 过期临时授权回收（定时调用）
@@ -27,7 +28,7 @@ import { apiMsg } from "@/lib/api-messages";
  * temporary_grants 行；Member.role 恢复通过在同一事务内按 workspace_id 分组
  * 处理，避免跨租户 RLS 冲突。
  */
-export async function GET(req: NextRequest) {
+async function getCronCheckExpiredPermissions(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -101,3 +102,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronCheckExpiredPermissions);

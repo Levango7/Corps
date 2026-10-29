@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { cleanupOrphanUploads } from "@/lib/uploads-cleanup";
 import { apiMsg } from "@/lib/api-messages";
+import { withRed } from "@/lib/red-metrics";
 
 /**
  * GET /api/cron/cleanup-uploads — IM 附件孤儿文件清理（审计 P2）。
@@ -11,7 +12,7 @@ import { apiMsg } from "@/lib/api-messages";
  * 鉴权：CRON_SECRET Bearer（与 /api/cron/due-reminders 同模式）。
  * 调度建议：每周一次即可（孤儿无害，仅占空间）。
  */
-export async function GET(req: NextRequest) {
+async function getCronCleanupUploads(req: NextRequest) {
   const secret = process.env.CRON_SECRET;
   if (!secret) {
     return NextResponse.json(
@@ -38,3 +39,5 @@ export async function GET(req: NextRequest) {
     );
   }
 }
+
+export const GET = withRed(getCronCleanupUploads);
