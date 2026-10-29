@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 189 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 209 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -9328,6 +9328,587 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalError'
+  /api/v1/ai/announcement-draft:
+    post:
+      tags: [ai]
+      summary: AI announcement smart drafting (streaming)
+      description: "Body { wid, topic?, scope? }. Returns a Vercel AI SDK UI Message Stream (text/event-stream)."
+      operationId: postAiAnnouncementDraft
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wid: { type: string, format: uuid }
+                topic: { type: string }
+                scope: { type: string }
+      responses:
+        '200':
+          description: Streaming announcement draft
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/approval-advice:
+    post:
+      tags: [ai]
+      summary: AI approval risk advice (streaming with staged progress)
+      description: "Body { wid, approvalInstanceId }. Streams data-progress parts then the advice (text/event-stream)."
+      operationId: postAiApprovalAdvice
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [approvalInstanceId]
+              properties:
+                wid: { type: string, format: uuid }
+                approvalInstanceId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Streaming approval advice
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/calendar-schedule:
+    post:
+      tags: [ai]
+      summary: AI calendar smart scheduling (non-streaming)
+      description: "Body { wid, description, duration?, attendees? }; data = { suggestions: ScheduleSuggestion[] } (code=200)."
+      operationId: postAiCalendarSchedule
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [description]
+              properties:
+                wid: { type: string, format: uuid }
+                description: { type: string, minLength: 1 }
+                duration: { type: integer, minimum: 5 }
+                attendees: { type: array, items: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Schedule suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiScheduleSuggestions'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/chat:
+    post:
+      tags: [ai]
+      summary: AI document QA chat (streaming)
+      description: "Body { question, documentContent, history? }. Vercel AI SDK Data Stream (text/event-stream)."
+      operationId: postAiChat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, documentContent]
+              properties:
+                question: { type: string, minLength: 1 }
+                documentContent: { type: string }
+                history: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: Streaming chat answer
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/completion:
+    post:
+      tags: [ai]
+      summary: AI document continuation (streaming)
+      description: "Body { text } (text before the cursor). Vercel AI SDK Data Stream (text/event-stream)."
+      operationId: postAiCompletion
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses:
+        '200':
+          description: Streaming continuation
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/daily-report:
+    post:
+      tags: [ai]
+      summary: AI daily report (streaming)
+      description: "Body { wid, date?, userId? }. Vercel AI SDK UI Message Stream (text/event-stream)."
+      operationId: postAiDailyReport
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wid: { type: string, format: uuid }
+                date: { type: string, format: date }
+                userId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Streaming daily report
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/decision-assistant:
+    post:
+      tags: [ai]
+      summary: AI decision assistant (non-streaming)
+      description: "Body { wid, question, context? }; data = { options, recommendation, historicalRefs } (code=200). 503 when the LLM key is not configured."
+      operationId: postAiDecisionAssistant
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                wid: { type: string, format: uuid }
+                question: { type: string, minLength: 1 }
+                context: { type: string }
+      responses:
+        '200':
+          description: Decision options with recommendation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiDecisionAssistant'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/doc-qa:
+    post:
+      tags: [ai]
+      summary: AI document QA (simplified RAG, streaming)
+      description: "Body { wid, question, docIds? }. Vercel AI SDK UI Message Stream (text/event-stream)."
+      operationId: postAiDocQa
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                wid: { type: string, format: uuid }
+                question: { type: string, minLength: 1 }
+                docIds: { type: array, items: { type: string, format: uuid } }
+      responses:
+        '200':
+          description: Streaming document QA
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/feedback:
+    get:
+      tags: [ai]
+      summary: List AI result feedback (paginated)
+      description: Legacy envelope code=0; data is a paginated feedback page.
+      operationId: listAiFeedback
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Feedback page (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiFeedbackList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [ai]
+      summary: Submit AI result feedback
+      description: Legacy envelope code=0; data is the created feedback row.
+      operationId: postAiFeedback
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Feedback payload (target, rating, comment…; see handler schema).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Feedback submitted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiFeedback'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/follow-up-suggestions:
+    post:
+      tags: [ai]
+      summary: Generate follow-up question suggestions (non-streaming)
+      description: "Body { wid, question, answer }; data = { suggestions: string[] } (code=200)."
+      operationId: postAiFollowUpSuggestions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question, answer]
+              properties:
+                wid: { type: string, format: uuid }
+                question: { type: string, minLength: 1 }
+                answer: { type: string, minLength: 1 }
+      responses:
+        '200':
+          description: Follow-up suggestions
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiFollowUpSuggestions'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/format:
+    post:
+      tags: [ai]
+      summary: AI document formatting (streaming)
+      description: "Body { text } (selected messy text). Vercel AI SDK Data Stream (text/event-stream)."
+      operationId: postAiFormat
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses:
+        '200':
+          description: Streaming formatted text
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/im-reply:
+    post:
+      tags: [ai]
+      summary: IM smart reply suggestions (non-streaming)
+      description: "Body { wid, conversationId?, taskId?, messageId? }; data = ImReplySuggestion[] (code=200)."
+      operationId: postAiImReply
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wid: { type: string, format: uuid }
+                conversationId: { type: string, format: uuid }
+                taskId: { type: string, format: uuid }
+                messageId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Reply suggestions (bare array in data)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiImReply'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/knowledge-qa:
+    post:
+      tags: [ai]
+      summary: Cross-module AI knowledge QA (streaming)
+      description: "Body { wid, question, scope?, conversationId? }. Vercel AI SDK UI Message Stream (text/event-stream); loads conversation history when conversationId is present."
+      operationId: postAiKnowledgeQa
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [question]
+              properties:
+                wid: { type: string, format: uuid }
+                question: { type: string, minLength: 1 }
+                scope: { type: string }
+                conversationId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Streaming knowledge QA
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/mail-assistant:
+    post:
+      tags: [ai]
+      summary: AI mail assistant (draft / summarize / classify / reply)
+      description: "Body { wid, action, content, context? }; the data shape depends on the action (legacy envelope code=0)."
+      operationId: postAiMailAssistant
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action, content]
+              properties:
+                wid: { type: string, format: uuid }
+                action: { type: string, enum: [draft, summarize, classify, reply] }
+                content: { type: string }
+                context: { type: string }
+      responses:
+        '200':
+          description: Assistant result (shape depends on action; legacy envelope code=0)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMailAssistant'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meeting-summary:
+    post:
+      tags: [ai]
+      summary: AI meeting summary generation (non-streaming)
+      description: "Body { wid, transcript (1-50000), meetingTitle?, sessionId? }; data = { title, keyPoints, decisions, actionItems, participants } (legacy envelope code=0)."
+      operationId: postAiMeetingSummary
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [transcript]
+              properties:
+                wid: { type: string, format: uuid }
+                transcript: { type: string, minLength: 1, maxLength: 50000 }
+                meetingTitle: { type: string, maxLength: 200 }
+                sessionId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Meeting summary
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingSummary'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/meeting-flow:
+    post:
+      tags: [ai]
+      summary: AI meeting full flow (pre agenda / post summary phases)
+      description: "Body { wid, phase(\"pre\"|\"post\"), … }; pre uses deepseek-reasoner for agenda suggestions, post generates the summary (code=200)."
+      operationId: postAiMeetingFlow
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [phase]
+              properties:
+                wid: { type: string, format: uuid }
+                phase: { type: string, enum: [pre, post] }
+                sessionId: { type: string, format: uuid }
+                transcript: { type: string }
+      responses:
+        '200':
+          description: Meeting flow result per phase
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiMeetingFlow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/orchestrate:
+    post:
+      tags: [ai]
+      summary: AI cross-capability orchestration plan (non-streaming)
+      description: "Body { wid, userRequest? }; data = OrchestrationPlan (code=200)."
+      operationId: postAiOrchestrate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wid: { type: string, format: uuid }
+                userRequest: { type: string }
+      responses:
+        '200':
+          description: Orchestration plan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiOrchestration'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/project-insight:
+    post:
+      tags: [ai]
+      summary: AI project manager insight (streaming)
+      description: "Body { wid, scope }. Vercel AI SDK UI Message Stream (text/event-stream)."
+      operationId: postAiProjectInsight
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                wid: { type: string, format: uuid }
+                scope: { type: string }
+      responses:
+        '200':
+          description: Streaming project insight
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/semantic-search:
+    post:
+      tags: [ai]
+      summary: AI semantic search (non-streaming)
+      description: "Body { wid, query, scope?, limit? }; data = { messages, wikis, todos, decisions, expandedKeywords, intent } (legacy envelope code=0)."
+      operationId: postAiSemanticSearch
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [query]
+              properties:
+                wid: { type: string, format: uuid }
+                query: { type: string, minLength: 1 }
+                scope: { type: string }
+                limit: { type: integer, minimum: 1, maximum: 50 }
+      responses:
+        '200':
+          description: Semantic search results across modules
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiSemanticSearch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/summarize:
+    post:
+      tags: [ai]
+      summary: AI document summarization (streaming)
+      description: "Body { text } (selected text). Vercel AI SDK Data Stream (text/event-stream)."
+      operationId: postAiSummarize
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text]
+              properties:
+                text: { type: string }
+      responses:
+        '200':
+          description: Streaming summary
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
 
 components:
   securitySchemes:
@@ -12218,3 +12799,175 @@ components:
         data:
           type: object
           description: Recycle bin page (items of soft-deleted rows; pagination keys per handler).
+    Envelope_AiScheduleSuggestions:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [suggestions]
+          properties:
+            suggestions:
+              type: array
+              description: ScheduleSuggestion entries (slot + attendees + reasoning).
+              items: { type: object }
+    Envelope_AiDecisionAssistant:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [options, recommendation]
+          properties:
+            options: { type: array, items: { type: object } }
+            recommendation: { type: string }
+            historicalRefs: { type: array, items: { type: object } }
+    Envelope_AiFeedback:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: AI feedback row (target + rating + comment…).
+    Envelope_AiFeedbackList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Paginated feedback page (keys per handler).
+    Envelope_AiFollowUpSuggestions:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [suggestions]
+          properties:
+            suggestions: { type: array, items: { type: string } }
+    Envelope_AiImReply:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: Bare array of ImReplySuggestion entries.
+          items: { type: object }
+    Envelope_AiMailAssistant:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: "Shape depends on action: draft→{subject, body}, summarize→{summary}, classify→{category, confidence, reason}, reply→{reply}."
+    Envelope_AiMeetingSummary:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [title, keyPoints, decisions, actionItems, participants]
+          properties:
+            title: { type: string }
+            keyPoints: { type: array, items: { type: string } }
+            decisions: { type: array, items: { type: object } }
+            actionItems: { type: array, items: { type: object } }
+            participants: { type: array, items: { type: string } }
+    Envelope_AiMeetingFlow:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: "Per-phase result — pre: agenda suggestions; post: summary blocks."
+    Envelope_AiOrchestration:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: OrchestrationPlan (steps, capability mapping…).
+    Envelope_AiSemanticSearch:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [expandedKeywords, intent]
+          properties:
+            messages: { type: array, items: { type: object } }
+            wikis: { type: array, items: { type: object } }
+            todos: { type: array, items: { type: object } }
+            decisions: { type: array, items: { type: object } }
+            expandedKeywords: { type: array, items: { type: string } }
+            intent: { type: string }
+    Envelope_AiAnnouncementDraftStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK UI Message Stream (text/event-stream).
+    Envelope_AiApprovalAdviceStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope with data-progress parts then advice.
+    Envelope_AiChatStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK Data Stream (text/event-stream).
+    Envelope_AiCompletionStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK Data Stream (text/event-stream).
+    Envelope_AiDailyReportStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK UI Message Stream (text/event-stream).
+    Envelope_AiDocQaStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK UI Message Stream (text/event-stream).
+    Envelope_AiFormatStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK Data Stream (text/event-stream).
+    Envelope_AiKnowledgeQaStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK UI Message Stream (text/event-stream).
+    Envelope_AiProjectInsightStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK UI Message Stream (text/event-stream).
+    Envelope_AiSummarizeStream:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Streaming envelope replaced by a Vercel AI SDK Data Stream (text/event-stream).
