@@ -1188,7 +1188,13 @@
     "aiCopySuccess": "已复制到剪贴板",
     "aiCopyFailed": "复制失败，请手动选择复制",
     "aiFailed": "提炼失败，请稍后重试",
-    "searchAria": "搜索决策记录"
+    "searchAria": "搜索决策记录",
+    "reviewedBadge": "已复盘",
+    "reviewAction": "标记已复盘",
+    "unreviewAction": "撤销复盘",
+    "reviewedToast": "已标记为已复盘",
+    "unreviewedToast": "已撤销复盘标记",
+    "reviewFailedToast": "复盘状态更新失败，请重试"
   },
   "members": {
     "invitePlaceholder": "输入邮箱地址（未注册也可邀请）",

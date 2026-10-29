@@ -64,6 +64,7 @@ async function getDecisions(req: NextRequest, { params }: { params: Promise<{ wi
             version: true,
             createdAt: true,
             updatedAt: true,
+            reviewedAt: true,
             taskId: true,
             authorId: true,
             task: { select: { title: true } },
@@ -88,6 +89,8 @@ async function getDecisions(req: NextRequest, { params }: { params: Promise<{ wi
       authorName: d.author?.name ?? "",
       createdAt: d.createdAt,
       updatedAt: d.updatedAt,
+      // #48：复盘时间戳（null = 未复盘）。列表页据此渲染「已复盘」徽标与按钮状态。
+      reviewedAt: d.reviewedAt,
     }));
 
     // R8C-06：统一分页响应格式 { code, data: { items, page, limit, total, hasMore } }

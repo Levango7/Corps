@@ -827,6 +827,10 @@ model Decision {
   authorId    String?  @map("author_id") @db.Uuid
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   updatedAt   DateTime @updatedAt @map("updated_at") @db.Timestamptz
+  /// 复盘时间戳（#48）：人工显式点「标记已复盘」时写入，不由停留时长/打开次数推导。
+  /// 语义边界——编辑决策会把它清空（内容变了，上次复盘不覆盖新版本）；
+  /// 「谁复盘的」不落列，只进 analytics 事件 decision_reviewed 与审计日志，避免两处真理源。
+  reviewedAt  DateTime? @map("reviewed_at") @db.Timestamptz
 
   task        Task                 @relation(fields: [taskId], references: [id], onDelete: Cascade)
   workspace   Workspace            @relation(fields: [workspaceId], references: [id], onDelete: Cascade)

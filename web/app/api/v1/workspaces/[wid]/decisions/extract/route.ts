@@ -13,6 +13,7 @@ import { generateText } from "ai";
 import { requireReasonerModel } from "@/lib/ai/deepseek";
 import { isAiConfigured } from "@/lib/ai/shared";
 import { authFailure } from "@/lib/auth-response";
+import { trackServerEvent } from "@/lib/analytics-server";
 import { withRed } from "@/lib/red-metrics";
 
 const schema = z.object({
@@ -185,6 +186,15 @@ async function postDecisionsExtract(
     );
   }
 
+  // #48：ai_extract_started —— 用户确实发起了一次提炼（校验已过），带 aiConfigured
+  // 维度，便于把"AI 路径的失败率"与"整体失败率"分开算（分母不同）。
+  await trackServerEvent({
+    userId: ctx.payload.sub,
+    workspaceId: wid,
+    name: "ai_extract_started",
+    props: { aiConfigured: isAiConfigured() },
+  });
+
   // 1) AI 已配置时优先用 LLM（deepseek-reasoner）提取
   if (isAiConfigured()) {
     try {
@@ -203,6 +213,14 @@ async function postDecisionsExtract(
       // llmResult === null：LLM 返回空结果或结构不符，fallback 到规则版
     } catch (error) {
       console.error("[POST decisions/extract] LLM error, fallback to rules:", error);
+      // #48：LLM 失败但规则版兜住了 —— 用户仍拿到结果，所以这不是"整体失败"，
+      // 但它是"AI 路径失败"，必须可测；reason 区分开，避免与整体失败混算。
+      await trackServerEvent({
+        userId: ctx.payload.sub,
+        workspaceId: wid,
+        name: "ai_extract_failed",
+        props: { reason: "llm_error", fallback: "rules-v1" },
+      });
     }
   }
 
@@ -215,6 +233,13 @@ async function postDecisionsExtract(
     });
   } catch (error) {
     console.error("[POST decisions/extract] error:", error);
+    // #48：整体失败 —— 用户什么都没拿到。
+    await trackServerEvent({
+      userId: ctx.payload.sub,
+      workspaceId: wid,
+      name: "ai_extract_failed",
+      props: { reason: "rules_error" },
+    });
     return NextResponse.json(
       { code: 500, message: apiMsg(req, "internalError"), data: null },
       { status: 500 },

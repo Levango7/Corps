@@ -19,8 +19,8 @@ describe("analytics-whitelist", () => {
    * 由 tests/unit/analytics-event-contract.test.ts 断言「注释数字 == 集合大小」，
    * 所以漏改任一处都会红：这里挡「加了名字没更新预期」，契约测试挡「加了名字没回写注释」。
    */
-  it("含 37 名（20 旧 + 9 新 + 3 spec §8 + 2 筛选视图 + 3 闭环/导出）", () => {
-    expect(ALLOWED_EVENT_NAMES.size).toBe(37);
+  it("含 40 名（20 旧 + 9 新 + 3 spec §8 + 2 筛选视图 + 3 闭环/导出 + 3 决策漏斗）", () => {
+    expect(ALLOWED_EVENT_NAMES.size).toBe(40);
   });
 
   it("9 个新增事件名均在集合内", () => {
