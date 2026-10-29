@@ -181,7 +181,7 @@ describe("state 签名：signState / verifyState", () => {
   it("载荷被篡改（改 body 不改 mac）→ null", () => {
     process.env.CALENDAR_STATE_SECRET = "test-secret";
     const state = signState(payload);
-    const [body, mac] = state.split(".");
+    const [, mac] = state.split(".");
     const tampered = Buffer.from(
       JSON.stringify({ ...payload, userId: "attacker" }),
       "utf8",
