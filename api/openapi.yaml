@@ -7048,7 +7048,7 @@ paths:
       description: Returns the effective usage limit row (legacy envelope code=0).
       operationId: getAiUsageLimits
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WorkspaceId'
       responses:
         '200':
           description: Usage limit row
@@ -7065,8 +7065,6 @@ paths:
       summary: Update the workspace AI usage limits
       description: Requires owner/admin. Legacy envelope code=0.
       operationId: updateAiUsageLimits
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -7075,6 +7073,9 @@ paths:
               type: object
               description: Limit fields (daily/monthly call and token caps; see bodySchema in the handler).
               additionalProperties: true
+              required: [workspaceId]
+              properties:
+                workspaceId: { type: string, format: uuid }
       responses:
         '200':
           description: Updated usage limit row
@@ -7095,7 +7096,7 @@ paths:
       description: "Legacy envelope code=0; data is { logs, total } (not paginated by page/limit)."
       operationId: getAiUsageLogs
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WorkspaceId'
         - name: capability
           in: query
           schema: { type: string }
@@ -7126,7 +7127,7 @@ paths:
       description: Totals plus per-capability breakdown (legacy envelope code=0).
       operationId: getAiUsageStats
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WorkspaceId'
         - name: from
           in: query
           schema: { type: string, format: date }
@@ -7150,7 +7151,7 @@ paths:
       summary: AI usage dashboard (today/month aggregates + top capabilities)
       operationId: getAiUsageDashboard
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WorkspaceId'
       responses:
         '200':
           description: "Dashboard aggregates { today{ calls, tokens, cost }, month{...}, topCapabilities[] }"
@@ -7168,16 +7169,15 @@ paths:
       summary: Execute a voice command
       description: "Parses and dispatches a natural-language voice command; data = { id, intent, parameters, confidence, response, executed } (code=200)."
       operationId: postAiVoiceCommand
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [text]
+              required: [text, workspaceId]
               properties:
+                workspaceId: { type: string, format: uuid }
                 text: { type: string, minLength: 1, maxLength: 2000 }
                 execute: { type: boolean }
       responses:
@@ -7198,7 +7198,6 @@ paths:
       description: Legacy envelope code=0; data is null on success.
       operationId: patchAiVoiceCommand
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7209,8 +7208,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [executed]
+              required: [executed, workspaceId]
               properties:
+                workspaceId: { type: string, format: uuid }
                 executed: { type: boolean }
       responses:
         '200':
@@ -7230,7 +7230,7 @@ paths:
       description: "data = { items, total, page, pageSize } (code=200)."
       operationId: getAiVoiceHistory
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: page
           in: query
           schema: { type: integer, minimum: 1, default: 1 }
@@ -7253,8 +7253,6 @@ paths:
       tags: [ai]
       summary: Get my voice preferences
       operationId: getAiVoicePreferences
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       responses:
         '200':
           description: Voice preferences object
@@ -7270,8 +7268,6 @@ paths:
       tags: [ai]
       summary: Update my voice preferences
       operationId: patchAiVoicePreferences
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -7297,8 +7293,6 @@ paths:
       summary: Trigger an AI push manually
       description: Creates a push record immediately (code=200, HTTP 201).
       operationId: postAiPushTrigger
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -7307,6 +7301,9 @@ paths:
               type: object
               description: Trigger payload (see triggerSchema in the handler).
               additionalProperties: true
+              required: [wid]
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '201':
           description: Push record created
@@ -7325,7 +7322,7 @@ paths:
       description: data is the schedules array itself (code=200, not wrapped in items).
       operationId: listAiPushSchedules
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
       responses:
         '200':
           description: Schedule list (bare array in data)
@@ -7341,8 +7338,6 @@ paths:
       tags: [ai]
       summary: Create an AI push schedule
       operationId: createAiPushSchedule
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -7351,6 +7346,9 @@ paths:
               type: object
               description: Schedule fields (see createSchema in the handler).
               additionalProperties: true
+              required: [wid]
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '201':
           description: Schedule created
@@ -7368,7 +7366,6 @@ paths:
       summary: Update an AI push schedule
       operationId: patchAiPushSchedule
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7381,6 +7378,9 @@ paths:
               type: object
               description: Partial schedule fields (see patchSchema in the handler).
               additionalProperties: true
+              required: [wid]
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '200':
           description: Updated schedule
@@ -7397,7 +7397,7 @@ paths:
       summary: Delete an AI push schedule
       operationId: deleteAiPushSchedule
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -7420,7 +7420,7 @@ paths:
       description: "data = { items, nextCursor, hasMore } (cursor-based, code=200)."
       operationId: listAiPushRecords
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
@@ -7444,7 +7444,6 @@ paths:
       summary: Mark a push record read/unread
       operationId: patchAiPushRecord
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7455,8 +7454,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [read]
+              required: [read, wid]
               properties:
+                wid: { type: string, format: uuid }
                 read: { type: boolean }
       responses:
         '200':
@@ -7476,7 +7476,7 @@ paths:
       description: "Query type/applied filters; data = { recommendations } (code=200)."
       operationId: listAiRecommendations
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: type
           in: query
           schema: { type: string }
@@ -7500,7 +7500,6 @@ paths:
       summary: Mark a recommendation applied/rejected
       operationId: patchAiRecommendation
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7511,8 +7510,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [applied]
+              required: [applied, wid]
               properties:
+                wid: { type: string, format: uuid }
                 applied: { type: boolean }
       responses:
         '200':
@@ -7532,7 +7532,7 @@ paths:
       description: "Query capability/limit; data = { behaviors, total } (code=200)."
       operationId: listAiBehaviors
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: capability
           in: query
           schema: { type: string }
@@ -7555,14 +7555,14 @@ paths:
       tags: [ai]
       summary: Generate personalization recommendations
       operationId: postAiPersonalizationGenerate
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
             schema:
               type: object
+              required: [wid]
               properties:
+                wid: { type: string, format: uuid }
                 type: { type: string }
       responses:
         '200':
@@ -7580,7 +7580,7 @@ paths:
       description: "Legacy envelope code=0; data = { items, total, skip, take }."
       operationId: listAiTemplates
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: category
           in: query
           schema: { type: string }
@@ -7612,8 +7612,6 @@ paths:
       summary: Create an AI template
       description: Legacy envelope code=0.
       operationId: createAiTemplate
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -7622,6 +7620,8 @@ paths:
               type: object
               description: Template fields (see handler for the schema).
               additionalProperties: true
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '201':
           description: Template created
@@ -7639,7 +7639,6 @@ paths:
       summary: AI template detail
       operationId: getAiTemplate
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7660,7 +7659,6 @@ paths:
       summary: Update an AI template
       operationId: updateAiTemplate
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7688,7 +7686,6 @@ paths:
       summary: Delete an AI template
       operationId: deleteAiTemplate
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7711,7 +7708,6 @@ paths:
       description: "Body { wid, name? }; creates a workflow from the template (code=0, HTTP 201)."
       operationId: instantiateAiTemplate
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7721,7 +7717,9 @@ paths:
           application/json:
             schema:
               type: object
+              required: [wid]
               properties:
+                wid: { type: string, format: uuid }
                 name: { type: string, maxLength: 200 }
       responses:
         '201':
@@ -7741,7 +7739,7 @@ paths:
       description: "Query status/cursor/limit; data = { items, nextCursor, hasMore } (code=0 legacy)."
       operationId: listAiMeetingSessions
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: status
           in: query
           schema: { type: string, enum: [active, completed, archived] }
@@ -7766,8 +7764,6 @@ paths:
       tags: [ai]
       summary: Create an AI meeting session
       operationId: createAiMeetingSession
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -7776,6 +7772,9 @@ paths:
               type: object
               description: Session fields (title, participants, startTime…; see handler).
               additionalProperties: true
+              required: [wid]
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '201':
           description: Session created (code=0)
@@ -7793,7 +7792,7 @@ paths:
       summary: Meeting session detail (includes actionItems + decisions)
       operationId: getAiMeetingSession
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -7814,7 +7813,6 @@ paths:
       summary: Update a meeting session (status / title / endTime)
       operationId: patchAiMeetingSession
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7825,7 +7823,9 @@ paths:
           application/json:
             schema:
               type: object
+              required: [wid]
               properties:
+                wid: { type: string, format: uuid }
                 status: { type: string, enum: [active, completed, archived] }
                 title: { type: string, maxLength: 200 }
                 endTime: { type: string, format: date-time }
@@ -7848,7 +7848,6 @@ paths:
       summary: Analyze meeting transcript (non-streaming)
       operationId: analyzeAiMeetingSession
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7878,7 +7877,7 @@ paths:
       description: Query status; data is the actions array (code=0).
       operationId: listAiMeetingActions
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -7902,7 +7901,6 @@ paths:
       summary: Update an action item status
       operationId: patchAiMeetingAction
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7913,8 +7911,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [actionId, status]
+              required: [actionId, status, wid]
               properties:
+                wid: { type: string, format: uuid }
                 actionId: { type: string }
                 status: { type: string, enum: [pending, done, dismissed] }
       responses:
@@ -7935,7 +7934,7 @@ paths:
       description: Query status; data is the decisions array (code=0).
       operationId: listAiMeetingDecisions
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -7959,7 +7958,6 @@ paths:
       summary: Update a decision status
       operationId: patchAiMeetingDecision
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -7970,8 +7968,9 @@ paths:
           application/json:
             schema:
               type: object
-              required: [decisionId, status]
+              required: [decisionId, status, wid]
               properties:
+                wid: { type: string, format: uuid }
                 decisionId: { type: string }
                 status: { type: string, enum: [proposed, confirmed, rejected] }
       responses:
@@ -7991,7 +7990,6 @@ paths:
       summary: Append a transcript segment to a meeting session
       operationId: appendAiMeetingTranscript
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -8025,8 +8023,6 @@ paths:
       summary: AI burndown analysis (non-streaming)
       description: "Body { wid, period? }; data = { reportId, summary, idealLine, actualLine, predictedCompletion, deviation, insights } (code=200). Persisted as an analysis report."
       operationId: postAiAnalysisBurndown
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -8047,8 +8043,6 @@ paths:
       summary: AI bottleneck analysis (non-streaming)
       description: "Body { wid }; data = { reportId, summary, bottlenecks, criticalPath, insights } (code=200)."
       operationId: postAiAnalysisBottleneck
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -8069,8 +8063,6 @@ paths:
       summary: AI team performance analysis (non-streaming)
       description: "Body { wid, period? }; data = { reportId, summary, members, insights } (code=200)."
       operationId: postAiAnalysisTeamPerformance
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -8091,8 +8083,6 @@ paths:
       summary: AI weekly report (non-streaming)
       description: "Body { wid, weekStart? }; data = { reportId, summary, completed, planned, risks, milestones, insights } (code=200)."
       operationId: postAiAnalysisWeeklyReport
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -8114,7 +8104,7 @@ paths:
       description: "Query type/page/pageSize; data = { items, total, page, pageSize } (code=200)."
       operationId: listAiAnalysisReports
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: type
           in: query
           schema: { type: string, enum: [burndown, bottleneck, team-performance, weekly-report] }
@@ -8141,8 +8131,6 @@ paths:
       summary: Extract knowledge graph nodes/edges from a source (non-streaming)
       description: "Body { wid, sourceType(document|meeting|chat|task), sourceId }; data = { nodes, edges } (code=200)."
       operationId: postAiKnowledgeExtract
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -8171,8 +8159,6 @@ paths:
       summary: Knowledge-graph grounded QA (non-streaming)
       description: "Body { wid, question }; data = { answer, relatedNodes } (code=200)."
       operationId: postAiKnowledgeQuery
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -8198,7 +8184,7 @@ paths:
       summary: Delete a knowledge graph node (cascades related edges)
       operationId: deleteAiKnowledgeNode
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -8221,7 +8207,7 @@ paths:
       description: "Query type/limit; data = { nodes, edges } (code=200)."
       operationId: getAiKnowledgeGraph
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: type
           in: query
           schema: { type: string }
@@ -9334,8 +9320,6 @@ paths:
       summary: AI announcement smart drafting (streaming)
       description: "Body { wid, topic?, scope? }. Returns a Vercel AI SDK UI Message Stream (text/event-stream)."
       operationId: postAiAnnouncementDraft
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9362,8 +9346,6 @@ paths:
       summary: AI approval risk advice (streaming with staged progress)
       description: "Body { wid, approvalInstanceId }. Streams data-progress parts then the advice (text/event-stream)."
       operationId: postAiApprovalAdvice
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9390,8 +9372,6 @@ paths:
       summary: AI calendar smart scheduling (non-streaming)
       description: "Body { wid, description, duration?, attendees? }; data = { suggestions: ScheduleSuggestion[] } (code=200)."
       operationId: postAiCalendarSchedule
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9471,8 +9451,6 @@ paths:
       summary: AI daily report (streaming)
       description: "Body { wid, date?, userId? }. Vercel AI SDK UI Message Stream (text/event-stream)."
       operationId: postAiDailyReport
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -9496,8 +9474,6 @@ paths:
       summary: AI decision assistant (non-streaming)
       description: "Body { wid, question, context? }; data = { options, recommendation, historicalRefs } (code=200). 503 when the LLM key is not configured."
       operationId: postAiDecisionAssistant
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9524,8 +9500,6 @@ paths:
       summary: AI document QA (simplified RAG, streaming)
       description: "Body { wid, question, docIds? }. Vercel AI SDK UI Message Stream (text/event-stream)."
       operationId: postAiDocQa
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9554,7 +9528,7 @@ paths:
       description: Legacy envelope code=0; data is a paginated feedback page.
       operationId: listAiFeedback
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WorkspaceId'
         - name: page
           in: query
           schema: { type: integer, minimum: 1, default: 1 }
@@ -9577,8 +9551,6 @@ paths:
       summary: Submit AI result feedback
       description: Legacy envelope code=0; data is the created feedback row.
       operationId: postAiFeedback
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9587,6 +9559,9 @@ paths:
               type: object
               description: Feedback payload (target, rating, comment…; see handler schema).
               additionalProperties: true
+              required: [workspaceId]
+              properties:
+                workspaceId: { type: string, format: uuid }
       responses:
         '200':
           description: Feedback submitted
@@ -9606,8 +9581,6 @@ paths:
       summary: Generate follow-up question suggestions (non-streaming)
       description: "Body { wid, question, answer }; data = { suggestions: string[] } (code=200)."
       operationId: postAiFollowUpSuggestions
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9659,8 +9632,6 @@ paths:
       summary: IM smart reply suggestions (non-streaming)
       description: "Body { wid, conversationId?, taskId?, messageId? }; data = ImReplySuggestion[] (code=200)."
       operationId: postAiImReply
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9687,8 +9658,6 @@ paths:
       summary: Cross-module AI knowledge QA (streaming)
       description: "Body { wid, question, scope?, conversationId? }. Vercel AI SDK UI Message Stream (text/event-stream); loads conversation history when conversationId is present."
       operationId: postAiKnowledgeQa
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9717,8 +9686,6 @@ paths:
       summary: AI mail assistant (draft / summarize / classify / reply)
       description: "Body { wid, action, content, context? }; the data shape depends on the action (legacy envelope code=0)."
       operationId: postAiMailAssistant
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9748,8 +9715,6 @@ paths:
       summary: AI meeting summary generation (non-streaming)
       description: "Body { wid, transcript (1-50000), meetingTitle?, sessionId? }; data = { title, keyPoints, decisions, actionItems, participants } (legacy envelope code=0)."
       operationId: postAiMeetingSummary
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9779,8 +9744,6 @@ paths:
       summary: AI meeting full flow (pre agenda / post summary phases)
       description: "Body { wid, phase(\"pre\"|\"post\"), … }; pre uses deepseek-reasoner for agenda suggestions, post generates the summary (code=200)."
       operationId: postAiMeetingFlow
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -9810,8 +9773,6 @@ paths:
       summary: AI cross-capability orchestration plan (non-streaming)
       description: "Body { wid, userRequest? }; data = OrchestrationPlan (code=200)."
       operationId: postAiOrchestrate
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -9835,8 +9796,6 @@ paths:
       summary: AI project manager insight (streaming)
       description: "Body { wid, scope }. Vercel AI SDK UI Message Stream (text/event-stream)."
       operationId: postAiProjectInsight
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         content:
           application/json:
@@ -9859,8 +9818,6 @@ paths:
       summary: AI semantic search (non-streaming)
       description: "Body { wid, query, scope?, limit? }; data = { messages, wikis, todos, decisions, expandedKeywords, intent } (legacy envelope code=0)."
       operationId: postAiSemanticSearch
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -10053,7 +10010,7 @@ paths:
       description: Legacy envelope code=0; data is the accounts array.
       operationId: listMailAccounts
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
       responses:
         '200':
           description: Account list (bare array)
@@ -10069,8 +10026,6 @@ paths:
       tags: [mail]
       summary: Add a mailbox account
       operationId: createMailAccount
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -10079,6 +10034,9 @@ paths:
               type: object
               description: Account credentials/config (see handler schema).
               additionalProperties: true
+              required: [wid]
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '200':
           description: Account added
@@ -10096,7 +10054,6 @@ paths:
       summary: Update a mailbox account configuration
       operationId: patchMailAccount
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -10108,6 +10065,9 @@ paths:
             schema:
               type: object
               additionalProperties: true
+              required: [wid]
+              properties:
+                wid: { type: string, format: uuid }
       responses:
         '200':
           description: Updated account
@@ -10124,7 +10084,7 @@ paths:
       summary: Delete a mailbox account
       operationId: deleteMailAccount
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -10147,7 +10107,7 @@ paths:
       description: Query status/isRead/page/pageSize; legacy envelope code=0 with a paginated page.
       operationId: listMailInbox
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: status
           in: query
           schema: { type: string, enum: [sent, received, draft] }
@@ -10177,16 +10137,15 @@ paths:
       summary: Send an email
       description: "Body { wid, accountId, to, cc?, bcc?, subject, bodyText, bodyHtml?, inReplyTo? } (legacy envelope code=0)."
       operationId: sendMail
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
           application/json:
             schema:
               type: object
-              required: [accountId, to, subject, bodyText]
+              required: [accountId, to, subject, bodyText, wid]
               properties:
+                wid: { type: string, format: uuid }
                 accountId: { type: string, format: uuid }
                 to: { type: array, items: { type: string } }
                 cc: { type: array, items: { type: string } }
@@ -10212,7 +10171,7 @@ paths:
       summary: Mail detail
       operationId: getMail
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -10233,7 +10192,6 @@ paths:
       summary: Update mail flags (isRead, isStarred)
       operationId: patchMail
       parameters:
-        - $ref: '#/components/parameters/Wid'
         - name: id
           in: path
           required: true
@@ -10244,7 +10202,9 @@ paths:
           application/json:
             schema:
               type: object
+              required: [wid]
               properties:
+                wid: { type: string, format: uuid }
                 isRead: { type: boolean }
                 isStarred: { type: boolean }
       responses:
@@ -11416,8 +11376,6 @@ paths:
       summary: AI assistant conversational chat (orchestrator, multi-turn)
       description: "Body { wid, message, phase?, taskId?, previousOutput?, conversationId? } (legacy envelope code=0). data = AssistantResult + conversationId; user/assistant messages are persisted, history loaded when conversationId is given."
       operationId: postAiAssistantChat
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -11457,7 +11415,7 @@ paths:
       description: "Query wid (required) and id? — no id returns the user's recent 20 conversations; with id returns that conversation's messages (legacy envelope code=0)."
       operationId: getAiAssistantConversations
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: query
           required: false
@@ -11507,7 +11465,7 @@ paths:
       description: "Query wid (required). New envelope code=200; data = conversation rows (id/title/scopes/createdAt/updatedAt/_count), newest first, max 50."
       operationId: listAiConversations
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
       responses:
         '200':
           description: Conversation list (bare array in data)
@@ -11526,8 +11484,6 @@ paths:
       summary: Create an AI conversation
       description: "Body { wid, title, scopes? }; requires the ai/create permission (viewer 403). New envelope code=200; data = created conversation row."
       operationId: createAiConversation
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -11561,7 +11517,7 @@ paths:
       description: "Query wid (required) + path id (UUID; invalid id is 400). Workspace + user double filter, 404 otherwise. New envelope code=200; data = conversation with messages[] (id/role/content/metadata/createdAt, ascending)."
       operationId: getAiConversation
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -11587,7 +11543,7 @@ paths:
       description: "Query wid (required) + path id. Requires the ai/delete permission (403). New envelope code=200; data = null."
       operationId: deleteAiConversation
       parameters:
-        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/WidQuery'
         - name: id
           in: path
           required: true
@@ -11649,8 +11605,6 @@ paths:
       summary: AI todo extraction from message/document/email content (non-streaming)
       description: "Body { wid, source, content, context? } (code=200). data = { todos, reasoning }; priorities/due dates/assignees are inferred."
       operationId: postAiTodoExtract
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -11770,8 +11724,6 @@ paths:
       summary: Wiki semantic search (ILIKE candidates + LLM rerank, non-streaming)
       description: "Body { wid, query, limit? } (code=200). data = { results } with pageId/title/relevanceScore/summary/highlight, relevance order."
       operationId: postAiWikiSearch
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -11806,8 +11758,6 @@ paths:
       summary: Build a workflow from a natural-language description (non-streaming)
       description: "Body { wid, description } (code=200). data = { name, description, trigger, actions }."
       operationId: postAiWorkflowBuild
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
@@ -11841,8 +11791,6 @@ paths:
       summary: Orchestrate a workflow definition from a description (trigger/nodes/edges)
       description: "Body { wid, description, existingWorkflows? } (legacy envelope code=0). data = WorkflowDefinition (trigger + nodes + edges + explanation) after cleanJsonResponse/normalize validation."
       operationId: postAiWorkflowOrchestrator
-      parameters:
-        - $ref: '#/components/parameters/Wid'
       requestBody:
         required: true
         content:
