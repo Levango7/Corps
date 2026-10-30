@@ -528,15 +528,9 @@ lib/calendar/oauth.ts
 lib/calendar/outlook-client.ts
 lib/calendar/reconcile.ts
 lib/calendar/sync.ts
-lib/csv-export.ts
-lib/dashboard-layout-helpers.ts
-lib/default-layouts.ts
-lib/favorites.ts
 lib/i18n-navigation.ts
-lib/i18n-routing.ts
 lib/im/types.ts
 lib/im/ws-server.ts
-lib/livekit-utils.ts
 lib/mail/transporter.ts
 lib/push/unified.ts
 lib/shutdown.ts
@@ -545,7 +539,6 @@ lib/uploads-cleanup.ts
 lib/use-long-press.ts
 lib/web-push.ts
 lib/webrtc/peer-connection.ts
-lib/webrtc/remote-control-events.ts
 lib/webrtc/signaling.ts
 lib/workflow/executor.ts
 lib/workflow/triggers.ts
