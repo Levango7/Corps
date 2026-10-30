@@ -19,8 +19,8 @@
 | 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0**；定时 Smoke 目标已从临时隧道切至 Vercel 实例（2026-10-25 连续 success，库曾一度 down 后自愈，疑免费档冷启动待定论） |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭；v0.8.2 修复容器镜像源单点（`ARG NODE_IMAGE` 回 Docker Hub） |
-| 质量基线 | 零覆盖 **539**（10-03 为 643，−104；10-29 清算波达 90 天目标，同日 lib 域 b1 再清 11 个文件）/ T3 **94**（10-29 AI 域收敛批清 40 条，134→94）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
-| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 40.8%（目标 60%），`tests/api` 路由级测试 10/20；**RED-Rate/Duration** 全量接线完成（2026-10-29：第十一批补齐 uid 面 v1 域 / cron / share / uploads / health 等收尾域并含 `/api/metrics` 自身，448 / 448 个 handler；达标线自 #191 起即「全量」、由 `score_maturity` 运行时计算）；**SLO/SLI 内部口径文档 1 份**（`docs/SLI-internal-definition.md`，只定义 SLI 与盲区，正式实例前按负面清单不做对外 SLO 承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
+| 质量基线 | 零覆盖 **539**（10-03 为 643，−104；10-29 清算波达 90 天目标，同日 lib 域 b1 再清 11 个文件）/ T3 **54**（10-29 AI 域收敛批 134→94；10-30 收敛批 A 94→69、批 B 69→54，两批均「member=crud 与 choke point 逐条等价」零运行时变化）/ 契约未声明 **0**（10-30 九批共 154 条 + #204 的 16 条 = 170→0 全部清偿，覆盖率 100%、openapi 288 paths；**基线已空，新增路由必须当场入契约**；另有悬空 $ref 守门 check_openapi_refs.py 入 CI）——burn-down 计划见 §2 |
+| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 **100%**（10-30 清零，40.8%→100%，目标 60% 大幅超额），`tests/api` 路由级测试 **22/20**（对方会话并行扩充后已超额）；**RED-Rate/Duration** 全量接线完成（2026-10-29：第十一批补齐 uid 面 v1 域 / cron / share / uploads / health 等收尾域并含 `/api/metrics` 自身，448 / 448 个 handler；达标线自 #191 起即「全量」、由 `score_maturity` 运行时计算）；**SLO/SLI 内部口径文档 1 份**（`docs/SLI-internal-definition.md`，只定义 SLI 与盲区，正式实例前按负面清单不做对外 SLO 承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -39,8 +39,17 @@
   **已决策（2026-10-04，ADR-012）**：降级为"本地编辑 + 版本历史"，`server/collab/`
   保留但不收编——该 WS 服务端零鉴权，先收编等于用一个卖点换 P0 跨租户漏洞。
   收编前置条件（含令牌鉴权）见 ADR-012 末节；本条不再作为待办。
-- 401/403 语义统一（choke point 拒绝走 401）——需要统一错误出口设计。
-- lint 的 40 条 warning 清零（React hooks 依赖缺失等）。
+- ~~401/403 语义统一（choke point 拒绝走 401）——需要统一错误出口设计。~~
+  **已完成（2026-10-30 对树核对）**：统一出口 = `web/lib/auth-response.ts` 的 `authFailure()`
+  （`DenialReason → 401/403` 一一对应：`unauthenticated`→401，`workspace_mismatch` /
+  `not_a_member` / `write_policy`→403）；`web/app` 下 **239** 个文件走
+  `getWorkspaceContextV2`（拒绝带 `status:403, reason:"write_policy"`），旧 V1
+  `getWorkspaceContext` 的 `null→401` 路径 **0 个生产调用点**（仅存定义与注释），
+  该历史权衡不再有实际影响。
+- ~~lint 的 40 条 warning 清零（React hooks 依赖缺失等）。~~
+  **已完成（2026-10-07 实测；2026-10-30 复测）**：CI Lint job 以
+  `npx eslint . --max-warnings 0` 关死闸门（error/warning 都判红）；全仓 1029 文件
+  实测 **0 error / 0 warning**，新增 warning 只能真修或写带理由的 disable。
 
 ### 1.2 体验打磨清单（每次自用后更新）
 
