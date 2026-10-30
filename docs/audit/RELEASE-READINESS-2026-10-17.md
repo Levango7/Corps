@@ -210,6 +210,14 @@ done
 后果定性要克制，别写成"供应链被劫持"：Tauri updater 校验签名，域名易主也推不动未签更新；
 真实后果是**自动更新结构性不可用**（DNS 层就失败）+ **iOS/Android 壳加载的是第三方站点**。
 
+> **2026-10-21 已修（上表保留为当时的证据，不要再照它行动）**：8 处全部由 `e4da60f3`（PR #143）改掉。
+> 修法不是"换一个写死的域名"（项目至今没有固定域名），而是**缺失时显式失败**：
+> `desktop/scripts/prepare-mobile.mjs` 删掉 `|| 'https://corps.com'` 兜底，未设 `CORPS_WEB_URL` 直接 exit 1；
+> iOS / Android / HarmonyOS 壳改哨兵值 `https://REPLACE_ME.invalid`（RFC 2606 保留 TLD，永不解析）；
+> updater 的 `endpoints` 置空、改由构建期 `scripts/prepare-release.mjs` 从
+> `CORPS_UPDATER_ENDPOINT` / `CORPS_UPDATER_PUBKEY` 注入（只设一个就 exit 1）。
+> 现测：`git grep -n 'corps\.com' -- ':!docs/audit'` 零命中。仍欠 owner 的只剩"真实域名本身"。
+
 影响面：这**不是**"正在伤害用户"的缺陷——`tauri-build.yml` 与 `mobile-build.yml` 最近一次成功都是
 2026-09-30T20:57:42Z，最新 release `v0.7.2` 的 `assets=0`（§2），产物没发出去。
 它属"下一次发桌面/移动包必炸"。
@@ -252,7 +260,7 @@ wc -l components/ChatPanel.tsx components/chat/*                                
 | 1 | `SMOKE_TARGET_URL`：填稳定 URL 还是关 schedule | 已把误读成本做好（PR #113） | 一个可达的部署地址，或一句"关掉" |
 | 2 | 切不切版本；若切，去重迁移（删数据）在生产何时、由哪个角色执行 | 已把 4 条迁移与角色坑数清楚 | 拍板 + 属主连接串的执行授权 |
 | 3 | ~~Vercel 恒红待定位~~ **已闭合（2026-10-21，见 §5.1）**：根因是 `overrides.next` 与 `dependencies.next` 冲突，main `dba802cb` 已修，main 与带该修复的 PR 都 success | 日志、逐分支对照、main 首次 success 均实测 | **不欠输入**：不动 Vercel 配置、不需断开集成，只需各 PR 合并前 Update branch |
-| 4 | 真实生产域名（桌面/移动壳与 updater 现在指向别人的 `corps.com` 与不存在的 `releases.corps.com`） | 已列全 8 处引用点 | 域名本身 + 归属确认 |
+| 4 | 真实生产域名 | **「指向别人站点」部分已收口（2026-10-21，`e4da60f3`，见 §6）**：8 处改成 fail-loud / 哨兵值，不会再把包指向第三方；<br>剩下的是**域名本身**——没有它就发不了桌面/移动包 | 域名 + 归属确认 |
 
 另有两条不欠 owner 输入、纯粹欠工时的：#28（ADR-013 的整合本体）、
 #29（**已收口 2026-10-25**：`describe.serial` 从 **16 组 / 15 个文件** 降到 **4 组 / 4 个文件**，
