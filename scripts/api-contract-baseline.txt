@@ -8,19 +8,6 @@
 # 重建方式：python scripts/check_api_contract.py --write-baseline
 # 格式：每行一个路由路径，'#' 开头为注释。
 
-/api/v1/ai/assistant/chat
-/api/v1/ai/assistant/conversations
-/api/v1/ai/assistant/suggestions
-/api/v1/ai/conversations
-/api/v1/ai/conversations/{id}
-/api/v1/ai/task-breakdown
-/api/v1/ai/todo-extract
-/api/v1/ai/tools
-/api/v1/ai/tools/execute
-/api/v1/ai/translate
-/api/v1/ai/wiki-search
-/api/v1/ai/workflow-build
-/api/v1/ai/workflow-orchestrator
 /api/v1/favorites/check
 /api/v1/favorites/{id}
 /api/v1/im/messages/{id}
