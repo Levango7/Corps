@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-b5 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-10-30 22:56 | 2026-10-31 04:56 | 零覆盖清偿波 b5：google-client/outlook-client/usage-middleware/behavior-tracker 4 文件
+F:/Nexus/corps-wt-cb5 | chore/contract-batch5 | api/openapi.yaml,scripts/api-contract-baseline.txt,web/tests/api/wiki.test.ts,web/tests/api/whiteboards.test.ts | wb-cb5rebase | 2026-10-30 23:34 | 2026-10-31 05:34 | 给 #183 重锚 main：摘掉与 #205 重复的 tests/api 两份文件（保留 main 上已有的），只留契约声明与 #178 非法 YAML 修复；不碰 docs/ROADMAP-2026Q4.md（zcode-red2 认领中）
