@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /v1/workspaces/{wid}/objectives — OKR 目标列表
@@ -124,6 +125,10 @@ async function postObjectives(req: NextRequest, { params }: { params: Promise<{ 
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：objectives 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "objectives", "create", req);
+  if (denied) return denied;
   // 限流：每分钟 30 次创建
   const limited = await checkRateLimit(req, "okr-objective-create", { windowMs: 60_000, max: 30 });
   if (limited) return limited;

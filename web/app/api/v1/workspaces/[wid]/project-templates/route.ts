@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * 模板内单个任务项的结构（templateData.tasks[] 的元素）。
@@ -153,6 +154,10 @@ async function postProjectTemplates(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：projectTemplates 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "projectTemplates", "create", req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const validated = createTemplateSchema.parse(body);

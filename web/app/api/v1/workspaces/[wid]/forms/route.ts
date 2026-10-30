@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /v1/workspaces/{wid}/forms — 表单列表
@@ -126,6 +127,10 @@ async function postForms(req: NextRequest, { params }: { params: Promise<{ wid: 
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：forms 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "forms", "create", req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const validated = createSchema.parse(body);

@@ -8,6 +8,7 @@ import { handlePrismaError } from "@/lib/prisma-error";
 import { z } from "zod";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * 云盘文件上传 API · /api/v1/workspaces/{wid}/files/upload
@@ -97,6 +98,10 @@ async function postFilesUpload(req: NextRequest, { params }: { params: Promise<{
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：files 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "files", "create", req);
+  if (denied) return denied;
   // 声明在 try 块外，以便 catch 块能访问并清理已写入磁盘的文件（防磁盘泄漏）
   let savedPath: string | null = null;
 

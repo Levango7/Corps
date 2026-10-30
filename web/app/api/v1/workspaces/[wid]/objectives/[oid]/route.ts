@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /v1/workspaces/{wid}/objectives/{oid} — 目标详情（含关键结果列表）
@@ -85,6 +86,10 @@ async function patchObjectivesByOid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：objectives 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "objectives", "update", req);
+  if (denied) return denied;
   const limited = await checkRateLimit(req, "okr-objective-update", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
 
@@ -152,6 +157,10 @@ async function deleteObjectivesByOid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：objectives 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "objectives", "delete", req);
+  if (denied) return denied;
   const limited = await checkRateLimit(req, "okr-objective-delete", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
 

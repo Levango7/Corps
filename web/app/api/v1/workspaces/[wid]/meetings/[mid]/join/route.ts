@@ -5,6 +5,7 @@ import { AccessToken } from "livekit-server-sdk";
 import bcrypt from "bcryptjs";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/join — 加入会议（获取 LiveKit token）
@@ -36,6 +37,10 @@ async function postMeetingsJoinByMid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：meetings 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "meetings", "update", req);
+  if (denied) return denied;
   try {
     const userId = ctx.payload.sub;
 

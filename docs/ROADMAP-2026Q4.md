@@ -19,8 +19,8 @@
 | 部署 | `deploy/` 一键脚本 + 回滚脚本 + 部署包真跑验证（PASS=11 FAIL=0）；正式实例仍为 **0**；定时 Smoke 目标已从临时隧道切至 Vercel 实例（2026-10-25 连续 success，库曾一度 down 后自愈，疑免费档冷启动待定论） |
 | 合规 | 隐私政策已披露 AI 子处理方与跨境传输；支付口径对齐事实（官方实例仅 Stripe） |
 | 供应链 | 三个 major 已升级（TS 6.0.3 / Prisma 7.10.1 / Stripe 22.6.2），原 issue #32 已关闭；v0.8.2 修复容器镜像源单点（`ARG NODE_IMAGE` 回 Docker Hub） |
-| 质量基线 | 零覆盖 **539**（10-03 为 643，−104；10-29 清算波达 90 天目标，同日 lib 域 b1 再清 11 个文件）/ T3 **94**（10-29 AI 域收敛批清 40 条，134→94）/ 契约未声明 **172**（205 → 201 → 196 → 191 → 186 → 179 → 172：10-25 AI agents + activity/announcements/contacts，10-26 三批共 19 条——calendar/objectives/key-results 5 + meetings/time-entries 7 + dashboard widgets/wiki/whiteboards 7）——burn-down 计划见 §2 |
-| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 40.8%（目标 60%），`tests/api` 路由级测试 10/20；**RED-Rate/Duration** 全量接线完成（2026-10-29：第十一批补齐 uid 面 v1 域 / cron / share / uploads / health 等收尾域并含 `/api/metrics` 自身，448 / 448 个 handler；达标线自 #191 起即「全量」、由 `score_maturity` 运行时计算）；**SLO/SLI 内部口径文档 1 份**（`docs/SLI-internal-definition.md`，只定义 SLI 与盲区，正式实例前按负面清单不做对外 SLO 承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
+| 质量基线 | 零覆盖 **539**（10-03 为 643，−104；10-29 清算波达 90 天目标，同日 lib 域 b1 再清 11 个文件）/ T3 **54**（10-29 AI 域收敛批 134→94；10-30 收敛批 A 94→69、批 B 69→54，两批均「member=crud 与 choke point 逐条等价」零运行时变化）/ 契约未声明 **0**（10-30 九批共 154 条 + #204 的 16 条 = 170→0 全部清偿，覆盖率 100%、openapi 288 paths；**基线已空，新增路由必须当场入契约**；另有悬空 $ref 守门 check_openapi_refs.py 入 CI）——burn-down 计划见 §2 |
+| **已知短板**（非退步，存量欠账） | **API 层**：契约覆盖率 **100%**（10-30 清零，40.8%→100%，目标 60% 大幅超额），`tests/api` 路由级测试 **22/20**（对方会话并行扩充后已超额）；**RED-Rate/Duration** 全量接线完成（2026-10-29：第十一批补齐 uid 面 v1 域 / cron / share / uploads / health 等收尾域并含 `/api/metrics` 自身，448 / 448 个 handler；达标线自 #191 起即「全量」、由 `score_maturity` 运行时计算）；**SLO/SLI 内部口径文档 1 份**（`docs/SLI-internal-definition.md`，只定义 SLI 与盲区，正式实例前按负面清单不做对外 SLO 承诺）；渗透测试三件套停留在 2026-08-27，未覆盖十月新增暴露面 |
 | 用户 | 0。打磨期的验收标准由本图定义，不以外部用户数据为准 |
 
 ---
@@ -39,8 +39,17 @@
   **已决策（2026-10-04，ADR-012）**：降级为"本地编辑 + 版本历史"，`server/collab/`
   保留但不收编——该 WS 服务端零鉴权，先收编等于用一个卖点换 P0 跨租户漏洞。
   收编前置条件（含令牌鉴权）见 ADR-012 末节；本条不再作为待办。
-- 401/403 语义统一（choke point 拒绝走 401）——需要统一错误出口设计。
-- lint 的 40 条 warning 清零（React hooks 依赖缺失等）。
+- ~~401/403 语义统一（choke point 拒绝走 401）——需要统一错误出口设计。~~
+  **已完成（2026-10-30 对树核对）**：统一出口 = `web/lib/auth-response.ts` 的 `authFailure()`
+  （`DenialReason → 401/403` 一一对应：`unauthenticated`→401，`workspace_mismatch` /
+  `not_a_member` / `write_policy`→403）；`web/app` 下 **239** 个文件走
+  `getWorkspaceContextV2`（拒绝带 `status:403, reason:"write_policy"`），旧 V1
+  `getWorkspaceContext` 的 `null→401` 路径 **0 个生产调用点**（仅存定义与注释），
+  该历史权衡不再有实际影响。
+- ~~lint 的 40 条 warning 清零（React hooks 依赖缺失等）。~~
+  **已完成（2026-10-07 实测；2026-10-30 复测）**：CI Lint job 以
+  `npx eslint . --max-warnings 0` 关死闸门（error/warning 都判红）；全仓 1029 文件
+  实测 **0 error / 0 warning**，新增 warning 只能真修或写带理由的 disable。
 
 ### 1.2 体验打磨清单（每次自用后更新）
 
@@ -83,9 +92,9 @@
 
 | 基线 | 当前（2026-10-12） | 90 天目标 | 每周节奏 |
 |---|---|---|---|
-| `zero-coverage-baseline.txt` | 539 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im（10-29 清算波 592→550，提前达成 90 天目标；10-29 lib 域 b1：11 个 lib 文件补 207 例单测，550→539） |
-| `permission-gate` T3 | 94 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒；2026-10-29 RED 第十一批接线后检测器再次按 handler 精确切分，POST /api/v1/remote-control 同类自 T4 迁移至此，T3 +1 / T4 −1，总盲区 164 不变；2026-10-29 AI 域收敛批：40 个 handler 接 `requirePermission(ctx,"ai",*)`（2026-10-22 用户拍板 viewer 只读），T3 134→94，总盲区 164→124；留 T3 诚实登记：chat/completion/format/summarize/translate/feedback 六条会话级自助工具 + push/schedules(本人日程)/templates/{id}(公共模板混合语义) 两条定制口径 + task-breakdown/voice/preferences(无工作区 ctx) + orchestrate(动态 actionPerms，静态检测器看不见)） |
-| `api-contract` undeclared | 99 | **150** | 每周契约化 ≥5 条路由（2026-10-29 三批共 55 条契约化：ai 切片 35 + documents/databases/recycle-bin 20，**90 天目标 150 大幅超额**，openapi 133→188 paths；后续按剩余域继续清偿） |
+| `zero-coverage-baseline.txt` | 517 | **550** | 每周清 ≥8 个文件；优先 permissions/orchestrator/payments/im（10-29 清算波 592→550，提前达成 90 天目标；10-29 lib 域 b1：11 个 lib 文件补 207 例单测，550→539；10-30 lib 域 b2：7 个 lib 文件补 52 例单测——csv-export/default-layouts/dashboard-layout-helpers/favorites/livekit-utils/i18n-routing/webrtc-remote-control-events，539→532，同时把「12 列网格布局项不重叠」的用户反馈回归钉进 default-layouts 测试；同日 lib 域 b3：web-push/calendar-oauth/uploads-cleanup/ai-stream 4 文件补 35 例（VAPID 410-Gone 判定与惰性配置、OAuth PKCE/续期/撤销错误面、附件清理「被引用绝不删/不确定一律保留」双红线、AI 三阶段进度时序），532→528；同日 lib 域 b4：workspace-events/analytics-server/shutdown/mail-transporter 4 文件补 25 例（事件总线隔离与幂等退订、埋点终态签名与失败必记日志、优雅关闭只注册 SIGTERM/SIGINT 且幂等+超时兜底、credential AES-GCM 往返与 nodemailer 即用即关），528→524；同日 lib 域 b5：google-client/outlook-client/usage-middleware/behavior-tracker 4 文件补 31 例（全天事件「end 排他次日」与 UTC 归一、多提醒取最早、删除 404 幂等、配额断言先于模型调用、行为聚合接受率分母与未知 action 边界），524→520；同日 lib 域 b6：calendar-reconcile/workflow-triggers/ai-push-runner 3 文件补 25 例（对账三阶段「error 重置/过期只告警/孤儿映射清理」与单条失败不炸批、事件触发器匹配与「不向调用方抛」、safeSlice 代理对截断与 LLM 输出防御性解析），520→517） |
+| `permission-gate` T3 | 54 | **80** | 运行时已被 choke point 保护；静态数字每周 ≥6 收敛（2026-10-28 检测器按 handler 精确切分，POST /ai/feedback 的真实无门禁状态自 T4 暴露迁移至此，总盲区守恒；2026-10-29 RED 第十一批接线后检测器再次按 handler 精确切分，POST /api/v1/remote-control 同类自 T4 迁移至此，T3 +1 / T4 −1，总盲区 164 不变；2026-10-29 AI 域收敛批：40 个 handler 接 `requirePermission(ctx,"ai",*)`（2026-10-22 用户拍板 viewer 只读），T3 134→94，总盲区 164→124；**2026-10-30 T3 收敛批 A：forms/objectives/projectTemplates/workflows/wiki 五模块入矩阵（owner/admin/member 可写、viewer 只读；member=crud 与 choke point 现状逐条等价=零运行时行为变化），25 个 handler 接线，T3 94→69（达 90 天目标）；同日 T3 收敛批 B：meetings（含 meeting-minutes）/files/calendar/dashboard/recycleBin 五模块同口径入矩阵，15 个 handler 接线，T3 69→54**；留 T3 诚实登记：chat/completion/format/summarize/translate/feedback 六条会话级自助工具 + push/schedules(本人日程)/templates/{id}(公共模板混合语义) 两条定制口径 + task-breakdown/voice/preferences(无工作区 ctx) + orchestrate(动态 actionPerms，静态检测器看不见) + 用户级/回调面（auth、webhooks、favorites、mail、push、notifications、users/me、/api/{path}）待后续批次或维持诚实挂账） |
+| `api-contract` undeclared | 0 | **150** | 每周契约化 ≥5 条路由（2026-10-29/30 **九批共 154 条契约化，基线清零**：ai 切片 35 + 单条 20 + documents/databases/recycle-bin 20 + push/mail/files 17 + workflows/spaces/meetings/project-templates/forms 19 + ai 收尾 13 + 顶层零星 15 + wid 下零星 14 与 `/api/{path}` 兜底 1，**90 天目标 150 大幅超额、覆盖率 100%**，openapi 133→288 paths；此后新增路由必须同步契约（基线已空，无法再挂账）；另有悬空 $ref 守门 check_openapi_refs.py 入 CI） |
 | `write-access-registry` | 28 条 | 不缩量，按 `review_by` 到期复核 | 过期即 CI 红（机制已有） |
 
 > **「当前」列只写纯数字。** `scripts/check_burndown.py` 的 doc-drift 校验（以及它的自测注入）
