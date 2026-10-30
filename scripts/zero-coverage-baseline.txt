@@ -521,5 +521,3 @@ lib/calendar/sync.ts
 lib/i18n-navigation.ts
 lib/im/types.ts
 lib/im/ws-server.ts
-lib/webrtc/peer-connection.ts
-lib/workflow/executor.ts
