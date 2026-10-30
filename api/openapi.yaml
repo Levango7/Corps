@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 245 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 258 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -11410,6 +11410,474 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
 
+  /api/v1/ai/assistant/chat:
+    post:
+      tags: [ai]
+      summary: AI assistant conversational chat (orchestrator, multi-turn)
+      description: "Body { wid, message, phase?, taskId?, previousOutput?, conversationId? } (legacy envelope code=0). data = AssistantResult + conversationId; user/assistant messages are persisted, history loaded when conversationId is given."
+      operationId: postAiAssistantChat
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, message]
+              properties:
+                wid: { type: string, format: uuid }
+                message: { type: string, minLength: 1, maxLength: 10000 }
+                phase:
+                  type: string
+                  enum: [created, in_progress, review, completed, blocked]
+                  default: in_progress
+                taskId: { type: string, format: uuid }
+                previousOutput: { type: string }
+                conversationId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Assistant reply (capabilityId/content/suggestions/recommendedNext) + conversationId
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAssistantReply'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/assistant/conversations:
+    get:
+      tags: [ai]
+      summary: AI assistant conversation history (list, or messages of one conversation)
+      description: "Query wid (required) and id? — no id returns the user's recent 20 conversations; with id returns that conversation's messages (legacy envelope code=0)."
+      operationId: getAiAssistantConversations
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: query
+          required: false
+          description: Conversation id; when present returns that conversation's messages instead of the list.
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: "Either { conversations } or { messages } in data"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAssistantHistory'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/assistant/suggestions:
+    get:
+      tags: [ai]
+      summary: AI assistant capability suggestions for a task phase
+      description: "Query phase? (default in_progress; unknown values fall back to in_progress). Legacy envelope code=0; data = { phase, suggestions }."
+      operationId: getAiAssistantSuggestions
+      parameters:
+        - name: phase
+          in: query
+          schema:
+            type: string
+            enum: [created, in_progress, review, completed, blocked]
+            default: in_progress
+      responses:
+        '200':
+          description: Suggested capabilities for the phase
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiAssistantSuggestions'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/conversations:
+    get:
+      tags: [ai]
+      summary: List AI conversations of the caller in a workspace
+      description: "Query wid (required). New envelope code=200; data = conversation rows (id/title/scopes/createdAt/updatedAt/_count), newest first, max 50."
+      operationId: listAiConversations
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Conversation list (bare array in data)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiConversationList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [ai]
+      summary: Create an AI conversation
+      description: "Body { wid, title, scopes? }; requires the ai/create permission (viewer 403). New envelope code=200; data = created conversation row."
+      operationId: createAiConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, title]
+              properties:
+                wid: { type: string, format: uuid }
+                title: { type: string, minLength: 1, maxLength: 200 }
+                scopes: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiConversation'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/conversations/{id}:
+    get:
+      tags: [ai]
+      summary: Get an AI conversation with its messages
+      description: "Query wid (required) + path id (UUID; invalid id is 400). Workspace + user double filter, 404 otherwise. New envelope code=200; data = conversation with messages[] (id/role/content/metadata/createdAt, ascending)."
+      operationId: getAiConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Conversation detail with messages
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiConversationDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [ai]
+      summary: Delete an AI conversation (cascades its messages)
+      description: "Query wid (required) + path id. Requires the ai/delete permission (403). New envelope code=200; data = null."
+      operationId: deleteAiConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Conversation deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/task-breakdown:
+    post:
+      tags: [ai]
+      summary: AI task breakdown into subtasks (non-streaming)
+      description: "Body { taskTitle, taskDescription?, context? } (code=200). data = { subtasks, reasoning }. Workspace comes from the auth token; 429 when the AI quota is exceeded and 503 when AI is not configured."
+      operationId: postAiTaskBreakdown
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [taskTitle]
+              properties:
+                taskTitle: { type: string, minLength: 1, maxLength: 200 }
+                taskDescription: { type: string, maxLength: 5000 }
+                context: { type: string, maxLength: 2000 }
+      responses:
+        '200':
+          description: Subtasks with reasoning
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiTaskBreakdown'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/InternalError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/todo-extract:
+    post:
+      tags: [ai]
+      summary: AI todo extraction from message/document/email content (non-streaming)
+      description: "Body { wid, source, content, context? } (code=200). data = { todos, reasoning }; priorities/due dates/assignees are inferred."
+      operationId: postAiTodoExtract
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, source, content]
+              properties:
+                wid: { type: string, format: uuid }
+                source: { type: string, enum: [message, document, email] }
+                content: { type: string, minLength: 1, maxLength: 10000 }
+                context:
+                  type: object
+                  properties:
+                    taskId: { type: string, format: uuid }
+                    conversationId: { type: string, format: uuid }
+                    assignees: { type: array, items: { type: string } }
+      responses:
+        '200':
+          description: Extracted todos with reasoning
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiTodoExtract'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/InternalError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/tools:
+    get:
+      tags: [ai]
+      summary: List registered AI tools (name/description/JSON-Schema parameters)
+      description: "Legacy envelope code=0; data = { tools }. execute callbacks are never serialized."
+      operationId: getAiTools
+      responses:
+        '200':
+          description: Tool metadata list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiToolList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/tools/execute:
+    post:
+      tags: [ai]
+      summary: Execute a registered AI tool in a workspace (RLS transaction)
+      description: "Body { toolName, args?, workspaceId } (legacy envelope code=0). Side-effect tools (e.g. create_task) require the mapped write permission — viewers get 403; data = { result } (success/data/error)."
+      operationId: postAiToolsExecute
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [toolName, workspaceId]
+              properties:
+                toolName: { type: string, minLength: 1, maxLength: 100 }
+                args: { type: object, additionalProperties: true }
+                workspaceId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Tool result
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiToolResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/translate:
+    post:
+      tags: [ai]
+      summary: AI text translation (streaming)
+      description: "Body { text, targetLang } where targetLang is zh|en|ja. Vercel AI SDK UI Message Stream (text/event-stream); 503 when AI service is unavailable."
+      operationId: postAiTranslate
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [text, targetLang]
+              properties:
+                text: { type: string, minLength: 1, maxLength: 20000 }
+                targetLang: { type: string, enum: [zh, en, ja] }
+      responses:
+        '200':
+          description: Streaming translation
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/wiki-search:
+    post:
+      tags: [ai]
+      summary: Wiki semantic search (ILIKE candidates + LLM rerank, non-streaming)
+      description: "Body { wid, query, limit? } (code=200). data = { results } with pageId/title/relevanceScore/summary/highlight, relevance order."
+      operationId: postAiWikiSearch
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, query]
+              properties:
+                wid: { type: string, format: uuid }
+                query: { type: string, minLength: 1, maxLength: 500 }
+                limit: { type: integer, minimum: 1, maximum: 20, default: 10 }
+      responses:
+        '200':
+          description: Reranked wiki search results
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiWikiSearch'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/InternalError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/workflow-build:
+    post:
+      tags: [ai]
+      summary: Build a workflow from a natural-language description (non-streaming)
+      description: "Body { wid, description } (code=200). data = { name, description, trigger, actions }."
+      operationId: postAiWorkflowBuild
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, description]
+              properties:
+                wid: { type: string, format: uuid }
+                description: { type: string, minLength: 1, maxLength: 2000 }
+      responses:
+        '200':
+          description: Draft workflow definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiWorkflowBuild'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/InternalError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/ai/workflow-orchestrator:
+    post:
+      tags: [ai]
+      summary: Orchestrate a workflow definition from a description (trigger/nodes/edges)
+      description: "Body { wid, description, existingWorkflows? } (legacy envelope code=0). data = WorkflowDefinition (trigger + nodes + edges + explanation) after cleanJsonResponse/normalize validation."
+      operationId: postAiWorkflowOrchestrator
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, description]
+              properties:
+                wid: { type: string, format: uuid }
+                description: { type: string, minLength: 1, maxLength: 2000 }
+                existingWorkflows:
+                  type: array
+                  items:
+                    type: object
+                    properties:
+                      name: { type: string, maxLength: 200 }
+                      triggerEvent: { type: string, maxLength: 100 }
+                      nodeCount: { type: integer, minimum: 0, maximum: 100 }
+      responses:
+        '200':
+          description: Normalized workflow definition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiWorkflowDefinition'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          $ref: '#/components/responses/InternalError'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
 components:
   securitySchemes:
     cronSecret:
@@ -14535,3 +15003,163 @@ components:
         data:
           type: object
           description: Mail inbox page (pagination keys per handler).
+    Envelope_AiAssistantReply:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [capabilityId, phase, content, conversationId]
+          properties:
+            capabilityId: { type: string }
+            phase: { type: string, enum: [created, in_progress, review, completed, blocked] }
+            content: { type: string }
+            suggestions: { type: array, items: { type: string } }
+            nextPhase: { type: string, enum: [created, in_progress, review, completed, blocked] }
+            recommendedNext:
+              type: object
+              properties:
+                nextCapability: { type: string }
+                reason: { type: string }
+            conversationId: { type: string, format: uuid, nullable: true }
+    Envelope_AiAssistantHistory:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: "Either { conversations } (no id) or { messages } (id given)."
+          properties:
+            conversations:
+              type: array
+              description: Recent 20 conversations { id, createdAt, updatedAt, _count{ messages } }.
+              items: { type: object }
+            messages:
+              type: array
+              description: Message rows { role, content, capability? } in ascending order.
+              items: { type: object }
+    Envelope_AiAssistantSuggestions:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [phase, suggestions]
+          properties:
+            phase: { type: string, enum: [created, in_progress, review, completed, blocked] }
+            suggestions:
+              type: array
+              items: { type: object }
+    Envelope_AiConversation:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [id, title, scopes, createdAt, updatedAt]
+          properties:
+            id: { type: string, format: uuid }
+            title: { type: string }
+            scopes: { type: array, items: { type: string } }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    Envelope_AiConversationList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: Conversation rows with _count{ messages } (bare array in data).
+          items: { type: object }
+    Envelope_AiConversationDetail:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Conversation row plus messages[] (id/role/content/metadata/createdAt).
+    Envelope_AiTaskBreakdown:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [subtasks, reasoning]
+          properties:
+            subtasks: { type: array, items: { type: object } }
+            reasoning: { type: string }
+    Envelope_AiTodoExtract:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [todos, reasoning]
+          properties:
+            todos: { type: array, items: { type: object } }
+            reasoning: { type: string }
+    Envelope_AiToolList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [tools]
+          properties:
+            tools:
+              type: array
+              items:
+                type: object
+                required: [name, description]
+                properties:
+                  name: { type: string }
+                  description: { type: string }
+                  parameters: { type: object }
+    Envelope_AiToolResult:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [result]
+          properties:
+            result:
+              type: object
+              description: ToolResult { success, data?, error? }.
+    Envelope_AiWikiSearch:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [results]
+          properties:
+            results:
+              type: array
+              items:
+                type: object
+                properties:
+                  pageId: { type: string, format: uuid }
+                  title: { type: string }
+                  relevanceScore: { type: number }
+                  summary: { type: string }
+                  highlight: { type: string }
+    Envelope_AiWorkflowBuild:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [name, description, trigger, actions]
+          properties:
+            name: { type: string }
+            description: { type: string }
+            trigger: { type: object }
+            actions: { type: array, items: { type: object } }
+    Envelope_AiWorkflowDefinition:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: WorkflowDefinition { trigger, nodes, edges, explanation? }.
