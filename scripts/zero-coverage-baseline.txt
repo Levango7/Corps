@@ -521,7 +521,6 @@ lib/ai/assistant/orchestrator.ts
 lib/ai/behavior-tracker.ts
 lib/ai/push-runner.ts
 lib/ai/usage-middleware.ts
-lib/analytics-server.ts
 lib/calendar/google-client.ts
 lib/calendar/outlook-client.ts
 lib/calendar/reconcile.ts
@@ -529,13 +528,10 @@ lib/calendar/sync.ts
 lib/i18n-navigation.ts
 lib/im/types.ts
 lib/im/ws-server.ts
-lib/mail/transporter.ts
 lib/push/unified.ts
-lib/shutdown.ts
 lib/sync/offline-cache.ts
 lib/use-long-press.ts
 lib/webrtc/peer-connection.ts
 lib/webrtc/signaling.ts
 lib/workflow/executor.ts
 lib/workflow/triggers.ts
-lib/workspace-events.ts
