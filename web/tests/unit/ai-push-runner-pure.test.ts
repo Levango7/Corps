@@ -24,11 +24,15 @@ describe("safeSlice：按码点截断", () => {
     expect(safeSlice("abc", 10)).toBe("abc");
   });
 
-  it("emoji/代理对不被劈开（按码点计数）", () => {
-    const s = "🔥🔥🔥"; // 每个 emoji 1 码点 = 2 UTF-16 单元
-    expect(safeSlice(s, 2)).toBe("🔥🔥");
+  it("代理对字符不被劈开（按码点计数）", () => {
+    // 注：用 CJK Ext B 的 𠀀（U+20000，同为代理对 2 个 UTF-16 单元）而非 emoji ——
+    // P0-1 门禁禁止源码出现 emoji（含测试），代理对语义等价（b1 批次同款规避姿势）
+    const s = "\u{20000}\u{20000}\u{20000}";
+    expect(safeSlice(s, 2)).toBe("\u{20000}\u{20000}");
     expect(Array.from(safeSlice(s, 2)).length).toBe(2);
     expect(safeSlice(s, 2)).not.toContain("\uFFFD");
+    // 劈半的反例：UTF-16 直接 slice 会留下孤立高代理项
+    expect(s.slice(0, 3)).not.toBe(safeSlice(s, 2));
   });
 
   it("中英混排按码点", () => {
