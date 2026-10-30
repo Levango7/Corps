@@ -8,21 +8,6 @@
 # 重建方式：python scripts/check_api_contract.py --write-baseline
 # 格式：每行一个路由路径，'#' 开头为注释。
 
-/api/v1/favorites/check
-/api/v1/favorites/{id}
-/api/v1/im/messages/{id}
-/api/v1/im/search
-/api/v1/im/ws
-/api/v1/notifications/preferences
-/api/v1/notifications/{id}
-/api/v1/remote-control
-/api/v1/remote-control/signal
-/api/v1/remote-control/{sessionId}
-/api/v1/search
-/api/v1/sync
-/api/v1/todos
-/api/v1/todos/count
-/api/v1/webhooks/livekit
 /api/v1/workspaces/{wid}/action-items/generate
 /api/v1/workspaces/{wid}/contact-groups
 /api/v1/workspaces/{wid}/events/stream

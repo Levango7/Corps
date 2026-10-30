@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 258 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 273 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -7468,7 +7468,7 @@ paths:
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
-          $ref: '#/components/schemas/InternalError'
+          $ref: '#/components/responses/InternalError'
   /api/v1/ai/personalization/recommendations:
     get:
       tags: [ai]
@@ -10464,7 +10464,7 @@ paths:
     get:
       tags: [workflows]
       summary: List workflows
-      description: "Query active/take/skip (code=200)."
+      description: "Query active/take/skip (code=0 legacy envelope; data = { items, total, skip, take })."
       operationId: listWorkflows
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11878,6 +11878,695 @@ paths:
           $ref: '#/components/responses/InternalError'
         '503':
           $ref: '#/components/responses/InternalError'
+  /api/v1/favorites/check:
+    get:
+      tags: [favorites]
+      summary: Check whether the caller has favorited a target
+      description: "Query wid + type + targetId (legacy envelope code=0). data = { favorited, favoriteId } (favoriteId null when not favorited)."
+      operationId: getFavoritesCheck
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [task, document, message, wiki, whiteboard, form, meeting]
+        - name: targetId
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Favorite state for the target
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FavoriteCheck'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/favorites/{id}:
+    patch:
+      tags: [favorites]
+      summary: Update a favorite's note
+      description: "Query wid + path id (UUID). Body { note? } (legacy envelope code=0); data = updated favorite row. Workspace + user double filter, 404 otherwise."
+      operationId: patchFavoriteById
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                note: { type: string }
+      responses:
+        '200':
+          description: Favorite updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Favorite'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [favorites]
+      summary: Remove a favorite
+      description: "Query wid + path id. Legacy envelope code=0; data = null."
+      operationId: deleteFavoriteById
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Favorite removed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/im/messages/{id}:
+    patch:
+      tags: [im]
+      summary: Edit an IM message (author only, within 5 minutes)
+      description: "Body { workspaceId, body } (code=200). Author-only; editable for 5 minutes (admin revoke is not time-limited); revoked messages are 409; data = updated message row."
+      operationId: patchImMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId, body]
+              properties:
+                workspaceId: { type: string, format: uuid }
+                body: { type: string, minLength: 1, maxLength: 10000 }
+      responses:
+        '200':
+          description: Message edited (editedAt bumped)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ImMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [im]
+      summary: Revoke an IM message (soft delete, within 5 minutes; admins exempt)
+      description: "Body { workspaceId } (DELETE carries the workspace in the JSON body, code=200). Author can revoke own messages; admins can revoke others' without the time limit; data = null."
+      operationId: deleteImMessage
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId]
+              properties:
+                workspaceId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Message revoked (revokedAt set, row kept)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/im/search:
+    get:
+      tags: [im]
+      summary: IM message full-text search (tsvector union ILIKE substring)
+      description: "Query workspaceId + q (required) + conversationId? + limit?. Two matches unioned: body_tsv @@ plainto_tsquery('simple') via GIN, plus ILIKE substring via trigram (substring-only rows rank 0). Legacy envelope code=0; data = results."
+      operationId: getImSearch
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: conversationId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: Ranked message hits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ImSearchResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/im/ws:
+    get:
+      tags: [im]
+      summary: IM WebSocket upgrade placeholder (Route Handlers cannot do HTTP 101)
+      description: "Next.js 16 Route Handlers cannot perform the WebSocket upgrade, so this API route always answers 426 Upgrade Required after a token check; the real upgrade is handled by the custom server (handleImUpgrade/authenticateUpgrade in the same module), which uses ?wid to bind the connection."
+      operationId: getImWsUpgrade
+      parameters:
+        - name: wid
+          in: query
+          required: false
+          description: Workspace id used by the custom-server upgrade path; the API-route placeholder itself only validates the token.
+          schema: { type: string, format: uuid }
+      responses:
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '426':
+          description: Upgrade Required — WebSocket needs the custom server
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+  /api/v1/notifications/preferences:
+    get:
+      tags: [notifications]
+      summary: Get (or create defaults for) the caller's notification preferences
+      description: "User-level data (no workspace); legacy envelope code=0; data = preference row (id/emailNotify/pushNotify/dndEnabled/dndStart/dndEnd/createdAt/updatedAt)."
+      operationId: getNotificationsPreferences
+      responses:
+        '200':
+          description: Notification preferences
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_NotificationPreference'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [notifications]
+      summary: Update the caller's notification preferences
+      description: "Body { emailNotify?, pushNotify?, dndEnabled?, dndStart?, dndEnd? } where dnd times are HH:mm. Legacy envelope code=0; data = updated preference row."
+      operationId: patchNotificationsPreferences
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                emailNotify: { type: boolean }
+                pushNotify: { type: boolean }
+                dndEnabled: { type: boolean }
+                dndStart: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+                dndEnd: { type: string, pattern: '^([01]\d|2[0-3]):[0-5]\d$' }
+      responses:
+        '200':
+          description: Preferences updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_NotificationPreference'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/notifications/{id}:
+    patch:
+      tags: [notifications]
+      summary: Mark a notification read/unread
+      description: "Query workspaceId (required) + path id. Body { read } (legacy envelope code=0); ownership verified before updating (404 otherwise); data = updated notification."
+      operationId: patchNotificationById
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [read]
+              properties:
+                read: { type: boolean }
+      responses:
+        '200':
+          description: Notification updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Notification'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [notifications]
+      summary: Delete a notification
+      description: "Query workspaceId (required) + path id. Legacy envelope code=0; data = null."
+      operationId: deleteNotificationById
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Notification deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/search:
+    get:
+      tags: [search]
+      summary: Unified full-text search (messages + wiki pages)
+      description: "Query workspaceId + q (required) + type (all|message|wiki, default all) + limit. tsvector GIN + trigram union per source; legacy envelope code=0; data = { messages, wikis }."
+      operationId: getUnifiedSearch
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: q
+          in: query
+          required: true
+          schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: type
+          in: query
+          schema: { type: string, enum: [all, message, wiki], default: all }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 50, default: 20 }
+      responses:
+        '200':
+          description: Message and wiki hits
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SearchResults'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/sync:
+    get:
+      tags: [sync]
+      summary: Incremental pull of module changes since a timestamp
+      description: "Query workspaceId + since? (ms timestamp). Returns per-module rows with updatedAt/createdAt > since (max 200 per module; task/decision/document/notification). Legacy envelope code=0; data = { changes, serverTime }."
+      operationId: getSyncPull
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: since
+          in: query
+          schema: { type: integer, description: Millisecond epoch timestamp; defaults to 0. }
+      responses:
+        '200':
+          description: Changes per module + serverTime
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SyncChanges'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [sync]
+      summary: Batch upload offline sync operations (LWW conflict detection)
+      description: "Body { workspaceId, operations } (max 500 ops; per-module payload schemas validated). Update ops check remote updatedAt first (last-write-wins; losers are reported). Legacy envelope code=0; data = { accepted, conflicts }."
+      operationId: postSyncUpload
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [workspaceId, operations]
+              properties:
+                workspaceId: { type: string, format: uuid }
+                operations:
+                  type: array
+                  maxItems: 500
+                  items:
+                    type: object
+                    required: [id, workspaceId, module, op, targetId, payload, createdAt]
+                    properties:
+                      id: { type: string }
+                      workspaceId: { type: string, format: uuid }
+                      module: { type: string, enum: [task, decision, document, notification] }
+                      op: { type: string, enum: [create, update, delete] }
+                      targetId: { type: string, format: uuid }
+                      payload: { type: object, additionalProperties: true }
+                      createdAt: { type: integer, minimum: 0 }
+      responses:
+        '200':
+          description: "Accepted/conflict tallies"
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SyncUpload'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/todos:
+    get:
+      tags: [todos]
+      summary: Aggregated cross-module todo list for the caller
+      description: "Query workspaceId + type (all|task|approval|meeting|document) + status? (pending|completed) + limit. Aggregates tasks/approvals/meeting participants/document-comment mentions; sorted by dueDate/createdAt. Legacy envelope code=0; data = sorted todo items."
+      operationId: getTodos
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: type
+          in: query
+          schema: { type: string, enum: [all, task, approval, meeting, document], default: all }
+        - name: status
+          in: query
+          schema: { type: string, enum: [pending, completed] }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Aggregated todo items (bare array in data)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TodoList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/todos/count:
+    get:
+      tags: [todos]
+      summary: Pending todo counts for the caller (total + by type)
+      description: "Query workspaceId. Counts only pending items. Legacy envelope code=0; data = { total, byType { task, approval, meeting, document } }."
+      operationId: getTodosCount
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: Todo counts
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TodoCount'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/remote-control:
+    get:
+      tags: [remote-control]
+      summary: List remote-control sessions in a workspace
+      description: "Query workspaceId + role (initiator|target|all) + status (active|pending|all). Legacy envelope code=0; data = session DTOs."
+      operationId: listRemoteControlSessions
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: role
+          in: query
+          schema: { type: string, enum: [initiator, target, all], default: all }
+        - name: status
+          in: query
+          schema: { type: string, enum: [active, pending, all], default: all }
+      responses:
+        '200':
+          description: Session list (bare array in data)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RemoteControlSessionList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [remote-control]
+      summary: Create a remote-control request (screen share + input forwarding)
+      description: "Body { targetUserId, workspaceId } (legacy envelope code=0, HTTP 201). Cannot target yourself (400); target must be a workspace member. Session expires after 30 minutes."
+      operationId: createRemoteControlSession
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [targetUserId, workspaceId]
+              properties:
+                targetUserId: { type: string, format: uuid }
+                workspaceId: { type: string, format: uuid }
+      responses:
+        '201':
+          description: Session created (pending)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RemoteControlSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/remote-control/signal:
+    get:
+      tags: [remote-control]
+      summary: Remote-control signaling channel (SSE receive)
+      description: "Query workspaceId. Long-lived EventSource stream (text/event-stream) forwarding signaling messages via the server event bus (WebSocket upgrade is unavailable in Route Handlers)."
+      operationId: getRemoteControlSignal
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+      responses:
+        '200':
+          description: SSE signaling stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [remote-control]
+      summary: Send a signaling message to the session peer
+      description: "Body = SignalingMessage (type/fromUserId/toUserId/sessionId + sdp or ice candidate fields, workspaceId). Membership + session participant checks apply (403); forwarded via EventEmitter. Legacy envelope code=0; data = null."
+      operationId: postRemoteControlSignal
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [type, fromUserId, toUserId, sessionId, workspaceId]
+              description: "Discriminated by type; sdp for offer/answer, candidate { candidate, sdpMid, sdpMLineIndex, usernameFragment } for ice, reason for bye."
+              additionalProperties: true
+      responses:
+        '200':
+          description: Signaling message forwarded
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/remote-control/{sessionId}:
+    patch:
+      tags: [remote-control]
+      summary: Accept / reject / end a remote-control session
+      description: "Body { action: accept|reject|end, reason? } + query workspaceId. accept/reject only by the target; end by either party. State machine: pending→active→ended / pending→rejected. Legacy envelope code=0; data = session DTO."
+      operationId: patchRemoteControlSession
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [action]
+              properties:
+                action: { type: string, enum: [accept, reject, end] }
+                reason: { type: string, maxLength: 200 }
+      responses:
+        '200':
+          description: Session state updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RemoteControlSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '410':
+          description: Session expired (past expiresAt)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [remote-control]
+      summary: End a remote-control session
+      description: "Query workspaceId + path sessionId. Either participant may end. Legacy envelope code=0; data = session DTO."
+      operationId: deleteRemoteControlSession
+      parameters:
+        - $ref: '#/components/parameters/WorkspaceId'
+        - name: sessionId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Session ended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_RemoteControlSession'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/webhooks/livekit:
+    post:
+      tags: [webhooks]
+      summary: LiveKit server webhook (signature verified via livekit-server-sdk)
+      description: "LiveKit Server callback for room_started / room_finished / participant_joined / participant_left / egress events. Signature verified with WebhookReceiver; 501 when LiveKit is not configured, 401 on signature failure."
+      operationId: postWebhooksLivekit
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: Raw LiveKit webhook event (verified before processing).
+              additionalProperties: true
+      responses:
+        '200':
+          description: Event accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '501':
+          description: LiveKit not configured
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
 components:
   securitySchemes:
     cronSecret:
@@ -11913,6 +12602,18 @@ components:
     Wid:
       name: wid
       in: path
+      required: true
+      description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403/404.
+      schema: { type: string, format: uuid }
+    WidQuery:
+      name: wid
+      in: query
+      required: true
+      description: Workspace id (query form). Must equal the JWT `wid` claim; mismatch is 403/404.
+      schema: { type: string, format: uuid }
+    WorkspaceId:
+      name: workspaceId
+      in: query
       required: true
       description: Workspace id. Must equal the JWT `wid` claim; mismatch is 403/404.
       schema: { type: string, format: uuid }
@@ -15163,3 +15864,280 @@ components:
         data:
           type: object
           description: WorkflowDefinition { trigger, nodes, edges, explanation? }.
+    Envelope_FavoriteCheck:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [favorited, favoriteId]
+          properties:
+            favorited: { type: boolean }
+            favoriteId: { type: string, format: uuid, nullable: true }
+    Envelope_Favorite:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Favorite row (id/targetType/targetId/note/createdAt…).
+    Envelope_ImMessage:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Message row after edit (body/editedAt/revokedAt…).
+    Envelope_ImSearchResults:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: "MessageSearchResult[] { messageId, authorId, authorName, authorImage, body, conversationId, conversationTitle, createdAt, rank }."
+          items: { type: object }
+    Envelope_NotificationPreference:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [id, emailNotify, pushNotify, dndEnabled, dndStart, dndEnd]
+          properties:
+            id: { type: string, format: uuid }
+            emailNotify: { type: boolean }
+            pushNotify: { type: boolean }
+            dndEnabled: { type: boolean }
+            dndStart: { type: string, example: "22:00" }
+            dndEnd: { type: string, example: "08:00" }
+            createdAt: { type: string, format: date-time }
+            updatedAt: { type: string, format: date-time }
+    Envelope_Notification:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Notification row (type/title/body/read/createdAt…).
+    Envelope_SearchResults:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [messages, wikis]
+          properties:
+            messages:
+              type: array
+              description: "UnifiedMessageResult[] { messageId, authorId, authorName, authorImage, body, conversationId, …, rank }."
+              items: { type: object }
+            wikis:
+              type: array
+              description: "UnifiedWikiResult[] { pageId, title, slug, updatedAt, rank }."
+              items: { type: object }
+    Envelope_SyncChanges:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [changes, serverTime]
+          properties:
+            changes:
+              type: object
+              required: [task, decision, document, notification]
+              properties:
+                task: { type: array, items: { type: object } }
+                decision: { type: array, items: { type: object } }
+                document: { type: array, items: { type: object } }
+                notification: { type: array, items: { type: object } }
+            serverTime: { type: integer, description: Millisecond epoch timestamp. }
+    Envelope_SyncUpload:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [accepted, conflicts]
+          properties:
+            accepted: { type: integer, minimum: 0 }
+            conflicts:
+              type: array
+              description: Operations rejected by last-write-wins conflict detection.
+              items: { type: object }
+    Envelope_TodoList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: "Aggregated todo items (source module + id/title/dueDate/status…), sorted by dueDate/createdAt."
+          items: { type: object }
+    Envelope_TodoCount:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [total, byType]
+          properties:
+            total: { type: integer, minimum: 0 }
+            byType:
+              type: object
+              required: [task, approval, meeting, document]
+              properties:
+                task: { type: integer, minimum: 0 }
+                approval: { type: integer, minimum: 0 }
+                meeting: { type: integer, minimum: 0 }
+                document: { type: integer, minimum: 0 }
+    Envelope_RemoteControlSession:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [id, initiatorId, targetId, status, expiresAt, createdAt]
+          properties:
+            id: { type: string, format: uuid }
+            initiatorId: { type: string, format: uuid }
+            targetId: { type: string, format: uuid }
+            status: { type: string, enum: [pending, active, ended, rejected, failed] }
+            expiresAt: { type: string, format: date-time }
+            createdAt: { type: string, format: date-time }
+    Envelope_RemoteControlSessionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: array
+          description: RemoteControlSessionDTO[] (bare array in data).
+          items: { type: object }
+    Envelope_Workflow:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Workflow row (id/name/description/trigger/actions/active…; legacy envelope code=0).
+    Envelope_WorkflowList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, skip, take]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            skip: { type: integer, minimum: 0 }
+            take: { type: integer, minimum: 1 }
+    Envelope_WorkflowExecution:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Execution row (id/workflowId/status/result…; legacy envelope code=0).
+    Envelope_WorkflowExecutionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, skip, take]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            skip: { type: integer, minimum: 0 }
+            take: { type: integer, minimum: 1 }
+    Envelope_Space:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Space row (id/name/icon/sortOrder…).
+    Envelope_SpaceList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+    Envelope_SpaceFolder:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Space folder row (id/spaceId/name/parentId/sortOrder…).
+    Envelope_SpaceFolderList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+    Envelope_SpacePermission:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Space-level permission row (id/spaceId/subject/role…).
+    Envelope_SpacePermissionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_ProjectTemplate:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Project template row (id/name/description/tasks/…).
+    Envelope_ProjectTemplateList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items: { type: array, items: { type: object } }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_Form:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Form row (id/title/fields[]…; legacy envelope code=0).
+    Envelope_FormList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, skip, take]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            skip: { type: integer, minimum: 0 }
+            take: { type: integer, minimum: 1 }
