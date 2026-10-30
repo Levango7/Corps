@@ -7,3 +7,4 @@
 F:/Nexus/corps-wt-oapisyn | chore/openapi-yaml-syntax-gate | scripts/check_openapi_syntax.py,.github/workflows/ci.yml | wb-oapisyn | 2026-10-31 00:27 | 2026-10-31 05:27 | 给 api/openapi.yaml 建一道 YAML 语法门禁（scripts/check_openapi_syntax.py + CI 步骤 + --self-test 反向验证）：现有两条契约门禁都是正则，抓不到语法错误（#178 曾带进非法 YAML）
 F:/Nexus/corps-wt-a11y-axe | feat/decision-review | docs/audit/RELEASE-READINESS-2026-10-17.md | qoder-corps-reverify | 2026-10-31 00:47 | 2026-10-31 08:47 | 审计台账 §6/§9 作废标注：8 处 corps.com 已于 e4da60f3 修正，原文仍称未动
 F:/Nexus/corps-wt-a11y-axe | docs/0.9.0-followups | README.md | qoder-corps-reverify | 2026-10-31 03:26 | 2026-10-31 09:26 | 0.9.0 镜像引用更新（tag/Release/镜像已实测存在）
+F:/Nexus/corps-wt-red2 | feat/zerocov-b10 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-10-31 04:23 | 2026-10-31 12:23 | 零覆盖清偿波 b10（lib 域收官）：im-ws-server/calendar-sync/account-deletion 3 文件
