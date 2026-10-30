@@ -7,6 +7,7 @@ import { importLayoutSchema, extractPref, buildPrefData } from "@/lib/dashboard-
 import { z } from "zod";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * F3 Widget 仪表盘 — 布局导入 API。
@@ -36,6 +37,10 @@ async function postDashboardLayoutImport(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：dashboard 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "dashboard", "create", req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const validated = importLayoutSchema.parse(body);

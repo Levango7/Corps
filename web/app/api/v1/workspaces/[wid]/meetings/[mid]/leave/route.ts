@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * POST /v1/workspaces/{wid}/meetings/{mid}/leave — 离开会议
@@ -26,6 +27,10 @@ async function postMeetingsLeaveByMid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：meetings 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "meetings", "update", req);
+  if (denied) return denied;
   try {
     const userId = ctx.payload.sub;
 

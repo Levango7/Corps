@@ -3,6 +3,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * POST /v1/workspaces/{wid}/recycle-bin/{id} — 恢复软删除条目
@@ -27,6 +28,10 @@ async function postRecycleBinById(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：recycleBin 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "recycleBin", "update", req);
+  if (denied) return denied;
   try {
     // 先查 Task：必须是当前工作区且已软删除
     const task = await runWithWorkspace(
@@ -137,6 +142,10 @@ async function deleteRecycleBinById(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：recycleBin 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "recycleBin", "delete", req);
+  if (denied) return denied;
   try {
     // 先查 Task：必须是当前工作区且已软删除
     const task = await runWithWorkspace(

@@ -4,6 +4,7 @@ import { syncAllTasks } from "@/lib/calendar/sync";
 import { apiMsg } from "@/lib/api-messages";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * POST /api/v1/workspaces/{wid}/calendar/sync
@@ -24,6 +25,10 @@ async function postCalendarSync(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：calendar 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "calendar", "update", req);
+  if (denied) return denied;
   try {
     const result = await syncAllTasks(ctx.payload.sub);
     return NextResponse.json({

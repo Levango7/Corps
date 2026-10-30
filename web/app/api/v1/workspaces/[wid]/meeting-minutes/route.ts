@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import type { Prisma } from "@prisma/client";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /v1/workspaces/{wid}/meeting-minutes — 工作区会议纪要列表
@@ -147,6 +148,10 @@ async function postMeetingMinutes(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：meetings 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "meetings", "create", req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const validated = createMinutesSchema.parse(body);

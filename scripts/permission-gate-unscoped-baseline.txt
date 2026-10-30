@@ -11,8 +11,6 @@ DELETE /api/v1/notifications/{id}
 DELETE /api/v1/push/register
 DELETE /api/v1/remote-control/{sessionId}
 DELETE /api/v1/users/me/account
-DELETE /api/v1/workspaces/{wid}/calendar/events/{eventId}
-DELETE /api/v1/workspaces/{wid}/recycle-bin/{id}
 DELETE /api/{path}
 PATCH /api/v1/ai/push/schedules
 PATCH /api/v1/ai/templates/{id}
@@ -25,8 +23,6 @@ PATCH /api/v1/notifications/preferences
 PATCH /api/v1/notifications/{id}
 PATCH /api/v1/remote-control/{sessionId}
 PATCH /api/v1/users/me
-PATCH /api/v1/workspaces/{wid}/calendar/events/{eventId}
-PATCH /api/v1/workspaces/{wid}/files/{fid}/move
 PATCH /api/v1/workspaces/{wid}/notifications
 PATCH /api/{path}
 POST /api/v1/ai/chat
@@ -58,16 +54,5 @@ POST /api/v1/remote-control/signal
 POST /api/v1/sync
 POST /api/v1/webhooks/livekit
 POST /api/v1/workspaces
-POST /api/v1/workspaces/{wid}/calendar/events
-POST /api/v1/workspaces/{wid}/calendar/sync
-POST /api/v1/workspaces/{wid}/dashboard/layout/import
-POST /api/v1/workspaces/{wid}/files/upload
-POST /api/v1/workspaces/{wid}/files/{fid}/versions/{vid}/restore
-POST /api/v1/workspaces/{wid}/meeting-minutes
-POST /api/v1/workspaces/{wid}/meetings
-POST /api/v1/workspaces/{wid}/meetings/{mid}/join
-POST /api/v1/workspaces/{wid}/meetings/{mid}/leave
-POST /api/v1/workspaces/{wid}/recycle-bin/{id}
 POST /api/{path}
-PUT /api/v1/workspaces/{wid}/dashboard/layout
 PUT /api/{path}
