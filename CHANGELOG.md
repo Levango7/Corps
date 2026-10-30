@@ -8,7 +8,7 @@
 
 ## [0.9.0] - 2026-10-30
 
-自 v0.8.2 起 **149 个提交**（截至 `a7299ac`，实测 `git rev-list --count v0.8.2..a7299ac`；不含本版切版提交）。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
+自 v0.8.2 起 **164 个提交**（截至 `bdd4baa`，实测 `git rev-list --count v0.8.2..bdd4baa`；不含本版切版提交）。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
 消息搜索对中文真正可用、可观测与契约债务连续清偿，并把 a11y / 权限 / 契约做成
 **只允许收缩的机器判据**（不再靠人记得复核）。
 
@@ -30,9 +30,12 @@
   迁移不改总盲区，只是按 handler 精确切分后的真实归属。
 - **事件面双向契约**：把只在白名单挂着、没有任何 emit 站点的 10 个事件接通，并把埋点门禁
   补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **40 名**。
-- **权限门禁盲区收敛**：approvals 域纳入 `lib/permissions.ts` 矩阵，AI 域 40 个 handler
-  接上 `requirePermission`（#210），permission-gate T3 债务 **154 → 94**
-  （`scripts/permission-gate-unscoped-baseline.txt`；总盲区 164 → 124）。
+- **权限门禁盲区收敛**：approvals 域纳入 `lib/permissions.ts` 矩阵；AI 域 40 个 handler（#210）、
+  收敛批 A（forms/objectives/projectTemplates/workflows/wiki，#223）与批 B
+  （meetings/files/calendar/dashboard/recycleBin，#224）接上 `requirePermission`。
+  permission-gate **T3 154 → 54 / T4 30**，总盲区 **164 → 84**
+  （`scripts/permission-gate-unscoped-*.txt`）；三批都是「member=crud 与 choke point 逐条等价」的
+  零运行时变化迁移——只改写法，不改谁能做什么。
 - **SAST 两条腿**：CodeQL（javascript-typescript，#174）与 Gitleaks 密钥扫描（#177）。
   Gitleaks 首跑 4 处命中经逐条复核均为误报，按"带理由豁免"落库而不是放宽扫描。
 - **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **22 个**（calendar/goals/forms/
@@ -63,9 +66,12 @@
   对用户完全静默。
 - **e2e 夹具独立化（#168）**：19 处 `describe.serial` 改为每条用例自带账号，
   去掉"第一条失败 → 后面全跳过"的级联遮蔽（serial 只保留有真实先后依赖的组）。
-- **契约逐批清偿**（不计数——批次还在追加）：未声明契约路由 **203 → 99**，
-  `api/openapi.yaml` 现有 189 条路径（`python scripts/check_api_contract.py` 现测）。
-- **零覆盖基线 602 → 539**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径。
+- **契约清偿到零**：未声明契约路由 **203 → 0**（覆盖率 40.8% → **100%**），
+  `api/openapi.yaml` 现有 **288** 条路径，`scripts/api-contract-baseline.txt` 已清空——
+  **新增路由必须当场入契约**，漏一条就判红。配套新增 `check_openapi_refs.py`（悬空 `$ref` 守门）
+  与 openapi YAML 语法门禁（正则扫不到的那一类）。
+- **零覆盖基线 602 → 517**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径
+  （9 文件清算波 + lib 域 b1–b6 逐批：592 → 550 → 539 → 517）。
 - **编辑决策会清空复盘标记**：`PATCH .../decisions/{did}` 现在把 `reviewed_at` 置空。
   不复位的话复盘率会长期停在"改过就算复盘过"的虚高值。
 
