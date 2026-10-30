@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * GET /v1/workspaces/{wid}/objectives/{oid}/key-results — 关键结果列表
@@ -109,6 +110,10 @@ async function postObjectivesKeyResultsByOid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：objectives 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "objectives", "create", req);
+  if (denied) return denied;
   const limited = await checkRateLimit(req, "okr-key-result-create", { windowMs: 60_000, max: 30 });
   if (limited) return limited;
 

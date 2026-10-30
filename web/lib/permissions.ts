@@ -71,6 +71,16 @@ export const MODULES = [
   // POST /v1/workspaces/{wid}/presence 心跳需 update（写 onlineAt）
   // GET  /v1/workspaces/{wid}/presence 查询在线成员需 read
   "presence",
+  // 2026-10-30 T3 收敛批 A：五个工作区内容域从矩阵外纳入（forms/objectives/
+  // projectTemplates/workflows/wiki）。这些写 handler 此前「完全无角色判断」，
+  // 运行时靠 write-policy choke point 拦 viewer —— 纳入矩阵 = 让静态声明与
+  // 运行时对齐，口径沿用 AI/approvals 的既有拍板：owner/admin/member 可写、
+  // viewer 只读（member=crud 与 choke point 现状逐条等价，零运行时行为变化）。
+  "forms",
+  "objectives",
+  "projectTemplates",
+  "workflows",
+  "wiki",
 ] as const;
 
 /** 角色列表 */
@@ -115,6 +125,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     ai: "crud",
     approvals: "crud",
     presence: "crud",
+    forms: "crud",
+    objectives: "crud",
+    projectTemplates: "crud",
+    workflows: "crud",
+    wiki: "crud",
   },
   admin: {
     tasks: "crud",
@@ -134,6 +149,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     ai: "crud",
     approvals: "crud",
     presence: "crud",
+    forms: "crud",
+    objectives: "crud",
+    projectTemplates: "crud",
+    workflows: "crud",
+    wiki: "crud",
   },
   member: {
     tasks: "crud",
@@ -154,6 +174,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     ai: "crud",
     approvals: "crud",
     presence: "rud",
+    forms: "crud",
+    objectives: "crud",
+    projectTemplates: "crud",
+    workflows: "crud",
+    wiki: "crud",
   },
   viewer: {
     tasks: "r",
@@ -173,6 +198,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     ai: "r",
     approvals: "r",
     presence: "r",
+    forms: "r",
+    objectives: "r",
+    projectTemplates: "r",
+    workflows: "r",
+    wiki: "r",
   },
 };
 

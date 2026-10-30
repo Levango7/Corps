@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /** templateData 结构（与列表路由一致，用于 PATCH 校验） */
 const templateDataSchema = z.object({
@@ -89,6 +90,10 @@ async function patchProjectTemplatesByTid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：projectTemplates 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "projectTemplates", "update", req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const validated = updateTemplateSchema.parse(body);
@@ -161,6 +166,10 @@ async function deleteProjectTemplatesByTid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：projectTemplates 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "projectTemplates", "delete", req);
+  if (denied) return denied;
   try {
     // 先校验归属，再删除
     const existing = await runWithWorkspace(
