@@ -81,6 +81,14 @@ export const MODULES = [
   "projectTemplates",
   "workflows",
   "wiki",
+  // 2026-10-30 T3 收敛批 B：再纳入五个工作区资源域（meetings 含 meeting-minutes /
+  // files / calendar / dashboard 布局 / recycleBin）。口径同批 A：owner/admin/member
+  // 可写、viewer 只读；member=crud 与 write-policy choke point 现状逐条等价。
+  "meetings",
+  "files",
+  "calendar",
+  "dashboard",
+  "recycleBin",
 ] as const;
 
 /** 角色列表 */
@@ -130,6 +138,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     projectTemplates: "crud",
     workflows: "crud",
     wiki: "crud",
+    meetings: "crud",
+    files: "crud",
+    calendar: "crud",
+    dashboard: "crud",
+    recycleBin: "crud",
   },
   admin: {
     tasks: "crud",
@@ -154,6 +167,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     projectTemplates: "crud",
     workflows: "crud",
     wiki: "crud",
+    meetings: "crud",
+    files: "crud",
+    calendar: "crud",
+    dashboard: "crud",
+    recycleBin: "crud",
   },
   member: {
     tasks: "crud",
@@ -179,6 +197,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     projectTemplates: "crud",
     workflows: "crud",
     wiki: "crud",
+    meetings: "crud",
+    files: "crud",
+    calendar: "crud",
+    dashboard: "crud",
+    recycleBin: "crud",
   },
   viewer: {
     tasks: "r",
@@ -203,6 +226,11 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     projectTemplates: "r",
     workflows: "r",
     wiki: "r",
+    meetings: "r",
+    files: "r",
+    calendar: "r",
+    dashboard: "r",
+    recycleBin: "r",
   },
 };
 

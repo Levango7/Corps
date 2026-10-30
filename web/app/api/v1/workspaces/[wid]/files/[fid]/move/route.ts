@@ -5,6 +5,7 @@ import { apiMsg } from "@/lib/api-messages";
 import { handlePrismaError } from "@/lib/prisma-error";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * 云盘文件移动 API · /api/v1/workspaces/{wid}/files/{fid}/move
@@ -36,6 +37,10 @@ async function patchFilesMoveByFid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 B：files 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "files", "update", req);
+  if (denied) return denied;
   try {
     const body = await req.json();
     const validated = moveFileSchema.parse(body);
