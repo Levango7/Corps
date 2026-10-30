@@ -4,34 +4,76 @@
 
 ## [Unreleased]
 
+（暂无；下一版本从这里开始记）
+
+## [0.9.0] - 2026-10-30
+
+自 v0.8.2 起 **164 个提交**（截至 `bdd4baa`，实测 `git rev-list --count v0.8.2..bdd4baa`；不含本版切版提交）。这一版的主题是「把能跑推到能交付」：设计系统有了地基、
+消息搜索对中文真正可用、可观测与契约债务连续清偿，并把 a11y / 权限 / 契约做成
+**只允许收缩的机器判据**（不再靠人记得复核）。
+
 ### Added
 
-- **决策复盘与 AI 提炼可度量（决策漏斗最后三个口子）**：白名单新增
-  `decision_reviewed` / `ai_extract_started` / `ai_extract_failed`，口径见
-  `docs/analytics/FUNNEL-METRICS.md` §4.4。
-  - 决策页新增「标记已复盘」动作（`POST .../decisions/{did}/review`，
-    落库 `decisions.reviewed_at`）。事件**只在未复盘→已复盘的跃迁上发**，重复点不重复计数、
-    撤销复盘不发；编辑决策会清空该标记（内容变了 = 未复盘内容）。
-  - 刻意**没有** `ai_extract_confirmed`：该流程只把 AI 结果拷到剪贴板，没有"确认/采纳"动作
-    可打点，硬造会与 `create_decision` 形成两个事实源。要算采用率时在 `create_decision` 上
-    加 `source: "ai_extract"` 维度即可。
-  - `ai_extract_failed` 的 `reason` 区分 `llm_error`（LLM 失败但规则版兜住，用户仍有结果）
-    与 `rules_error`（整体失败）——混成一个数会把"降级"误读成"不可用"。
+- **设计系统地基层（#45 第一批，PR #186）**：`globals.css` 补 `@theme inline` 共 **35 个**
+  语义别名（`--color-bg/surface/fg/…`、`--shadow-flat/hover` 等），使 Tailwind 语义类
+  （`bg-surface`、`text-fg`）真正落到 `design-tokens.css` 的 token 上；新增 11 个 UI 原语
+  （Button / Input / Textarea / Select / Dialog / Sheet / Tabs / Toolbar / Table / Toast / EmptyState），
+  其中 Dialog 走 portal + 遮罩按钮 + Esc、Tabs 的 keydown 落在每个 `role="tab"` 上（ARIA 正确形态），
+  Button 默认 44px 命中区、`sm` 通过 `after:-inset-y-1.5` 补足而不改变视觉尺寸。
+  配套 `scripts/check_theme_tokens.py`（别名悬空/自引用/重复/低于地板都判红，自带 5 变体自测）
+  与 25 例原语 a11y 契约单测（含一条 `@ts-expect-error`：缺 `label` 的 IconButton 编译期就该拒绝）。
+- **可观测 RED 三维接线**：Errors 走 `instrumentation.ts` 的 `onRequestError`（#163）；
+  Rate / Duration 分两批接（#170 contacts/announcements/activity 域、#189
+  analytics/billing/permissions/presence 首批 7 个端点），随后逐域铺开到
+  **289 个 route 文件 / 450 处**（`git grep -l "withRed(" -- "web/app/api/**/route.ts" | wc -l`）。
+  过程中暴露并迁移了若干权限门禁误判（`remote-control` 的 T4→T3、`ai/feedback` 等）——
+  迁移不改总盲区，只是按 handler 精确切分后的真实归属。
+- **事件面双向契约**：把只在白名单挂着、没有任何 emit 站点的 10 个事件接通，并把埋点门禁
+  补成双向（既挡"打了没进白名单"，也挡"白名单里有但没人打"）。白名单现 **40 名**。
+- **权限门禁盲区收敛**：approvals 域纳入 `lib/permissions.ts` 矩阵；AI 域 40 个 handler（#210）、
+  收敛批 A（forms/objectives/projectTemplates/workflows/wiki，#223）与批 B
+  （meetings/files/calendar/dashboard/recycleBin，#224）接上 `requirePermission`。
+  permission-gate **T3 154 → 54 / T4 30**，总盲区 **164 → 84**
+  （`scripts/permission-gate-unscoped-*.txt`）；三批都是「member=crud 与 choke point 逐条等价」的
+  零运行时变化迁移——只改写法，不改谁能做什么。
+- **SAST 两条腿**：CodeQL（javascript-typescript，#174）与 Gitleaks 密钥扫描（#177）。
+  Gitleaks 首跑 4 处命中经逐条复核均为误报，按"带理由豁免"落库而不是放宽扫描。
+- **路由级测试补量**：`web/tests/api/` 从 **1 个文件** 增至 **22 个**（calendar/goals/forms/
+  recycle-bin/wiki/whiteboards/time-entries/activity/contact-groups 等）。
+- **文档台账**：`OPEN-DECISIONS`（工程外阻碍项集中登记）、内部 SLI 口径、`ROADMAP-2026Q4`
+  的基线 burn-down 表（承诺值与实测值由 `check_burndown.py` 对账）。
+- **真实浏览器 a11y 基线（#45 B1b，PR #192）**：接 `@axe-core/playwright`，在 Chromium 里
+  按 WCAG 2.1 A/AA 扫描登录页与 6 个已登录页（board / my-tasks / im / decisions / documents /
+  settings），把命中的 rule × 归一化选择器存成 **34 条**基线（`web/tests/a11y-axe-baseline.json`）。
+  判据双向：出现基线外的键判红，基线里已消失的键也判红——只允许收缩，不允许偷偷长回去。
+  选择器归一化（去 `:nth-child`、hex/uuid → `{id}`、数字 → `{n}`）抽成纯函数并配 14 例单测，
+  另做变异验证（去掉 nth 归一化 / 把 `stale` 恒置空，各红一条）。
+- **决策复盘与 AI 提炼可度量（#48，PR #193）**：白名单新增 `decision_reviewed` /
+  `ai_extract_started` / `ai_extract_failed`，口径见 `docs/analytics/FUNNEL-METRICS.md` §4.4。
+  决策页新增「标记已复盘」动作（`POST .../decisions/{did}/review`，落库 `decisions.reviewed_at`），
+  事件**只在未复盘→已复盘的跃迁上发**：重复点不重复计数、撤销复盘不发；
+  刻意**没有** `ai_extract_confirmed`（该流程只把结果拷到剪贴板，没有"确认/采纳"动作可打点，
+  硬造会与 `create_decision` 形成两个事实源）。`ai_extract_failed` 的 `reason` 区分
+  `llm_error`（LLM 失败但规则版兜住，用户仍有结果）与 `rules_error`（整体失败）。
 
 ### Changed
 
+- **旧聊天实现树彻底收敛（#185，ADR-013）**：删除 `components/ChatPanel.tsx` 与
+  `components/chat/*`（**8 文件 / 2,145 行**）。它不是"暂时没挂载"——实测其自身链路已坏
+  （历史加载缺 reads/attachments、标记已读撞 100 上限死循环、服务端搜索分支永不可达）。
+  唯一非重复机制「操作失败就地提示」迁进 `components/im/MessageItem.tsx`，并修掉真缺陷：
+  `IMClient` 用 `.catch(() => {})` 吞、`TaskChatPanel` 用 `void` 丢弃，会话内编辑/撤回失败
+  对用户完全静默。
+- **e2e 夹具独立化（#168）**：19 处 `describe.serial` 改为每条用例自带账号，
+  去掉"第一条失败 → 后面全跳过"的级联遮蔽（serial 只保留有真实先后依赖的组）。
+- **契约清偿到零**：未声明契约路由 **203 → 0**（覆盖率 40.8% → **100%**），
+  `api/openapi.yaml` 现有 **288** 条路径，`scripts/api-contract-baseline.txt` 已清空——
+  **新增路由必须当场入契约**，漏一条就判红。配套新增 `check_openapi_refs.py`（悬空 `$ref` 守门）
+  与 openapi YAML 语法门禁（正则扫不到的那一类）。
+- **零覆盖基线 602 → 517**：清偿方式都是"补真用例把它跑出覆盖"，不是把文件挪出统计口径
+  （9 文件清算波 + lib 域 b1–b6 逐批：592 → 550 → 539 → 517）。
 - **编辑决策会清空复盘标记**：`PATCH .../decisions/{did}` 现在把 `reviewed_at` 置空。
   不复位的话复盘率会长期停在"改过就算复盘过"的虚高值。
-
-### Removed
-
-- **两条零调用方的重复消息搜索端点**：`GET /v1/workspaces/{wid}/im/search` 与
-  `GET /v1/workspaces/{wid}/tasks/{id}/messages/search`。全仓（含 e2e/tests/桌面壳）除自身、
-  基线清单与本 ADR 外无任何引用；其能力由 `/v1/im/search` 完全覆盖——任务会话本身带
-  `conversation_id`，限定单会话用 `conversationId` 参数即可。
-  同步 `scripts/api-contract-baseline.txt` 172 → 170、`scripts/zero-coverage-baseline.txt` −2。
-  这两条路由此前只在「未声明契约」豁免清单里，不在 `api/openapi.yaml`，因此不构成对外契约破坏；
-  若有仓外调用方按此清单迁移到 `/v1/im/search`。
 
 ### Fixed
 
@@ -50,6 +92,15 @@
   没有 Prisma `contains` 自带的转义，实测未转义时查询 `100%` 会退化成「以 100 开头」，
   同一库误命中 296 行，转义后 1 行。
 
+### Removed
+
+- **两条零调用方的重复消息搜索端点**：`GET /v1/workspaces/{wid}/im/search` 与
+  `GET /v1/workspaces/{wid}/tasks/{id}/messages/search`。全仓（含 e2e/tests/桌面壳）除自身、
+  基线清单与本 ADR 外无任何引用；其能力由 `/v1/im/search` 完全覆盖——任务会话本身带
+  `conversation_id`，限定单会话用 `conversationId` 参数即可。
+  同步 `scripts/api-contract-baseline.txt` 172 → 170、`scripts/zero-coverage-baseline.txt` −2。
+  这两条路由此前只在「未声明契约」豁免清单里，不在 `api/openapi.yaml`，因此不构成对外契约破坏；
+  若有仓外调用方按此清单迁移到 `/v1/im/search`。
 
 ## [0.8.2] - 2026-10-22
 
