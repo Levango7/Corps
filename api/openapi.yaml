@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 226 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 245 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -10456,6 +10456,955 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_FileAsset'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/workflows:
+    get:
+      tags: [workflows]
+      summary: List workflows
+      description: "Query active/take/skip (code=200)."
+      operationId: listWorkflows
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: active
+          in: query
+          schema: { type: string, enum: ['true', 'false'] }
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Workflow list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WorkflowList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [workflows]
+      summary: Create a workflow
+      operationId: createWorkflow
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Workflow created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Workflow'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/workflows/{wfid}:
+    get:
+      tags: [workflows]
+      summary: Workflow detail
+      operationId: getWorkflow
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Workflow'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [workflows]
+      summary: Update a workflow
+      operationId: patchWorkflow
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated workflow
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Workflow'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [workflows]
+      summary: Delete a workflow
+      operationId: deleteWorkflow
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Workflow deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/workflows/{wfid}/executions:
+    get:
+      tags: [workflows]
+      summary: List workflow executions
+      operationId: listWorkflowExecutions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Execution list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WorkflowExecutionList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [workflows]
+      summary: Trigger a workflow execution
+      operationId: triggerWorkflowExecution
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Execution triggered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_WorkflowExecution'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/workflows/{wfid}/executions/{eid}/cancel:
+    post:
+      tags: [workflows]
+      summary: Cancel a workflow execution
+      operationId: cancelWorkflowExecution
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Execution cancelled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/workflows/{wfid}/executions/{eid}/retry:
+    post:
+      tags: [workflows]
+      summary: Retry a failed workflow execution
+      operationId: retryWorkflowExecution
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: wfid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: eid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Execution retried
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/spaces:
+    get:
+      tags: [spaces]
+      summary: List spaces in the workspace
+      operationId: listSpaces
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Space list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpaceList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [spaces]
+      summary: Create a space
+      operationId: createSpace
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Space created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Space'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [spaces]
+      summary: Batch update spaces
+      operationId: patchSpaces
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Spaces updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpaceList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [spaces]
+      summary: Batch delete spaces
+      operationId: deleteSpaces
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Spaces deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/spaces/{spaceId}/folders:
+    get:
+      tags: [spaces]
+      summary: List folders in a space
+      description: data = { items, total } (code=200).
+      operationId: listSpaceFolders
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Folder list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpaceFolderList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [spaces]
+      summary: Create a folder in a space
+      operationId: createSpaceFolder
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Folder created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpaceFolder'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [spaces]
+      summary: Update a folder
+      operationId: patchSpaceFolder
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Folder updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpaceFolder'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [spaces]
+      summary: Delete a folder
+      operationId: deleteSpaceFolder
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Folder deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions:
+    get:
+      tags: [spaces]
+      summary: List space-level permissions
+      operationId: listSpacePermissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Space permission list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpacePermissionList'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [spaces]
+      summary: Grant a space-level permission
+      operationId: createSpacePermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '201':
+          description: Permission granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpacePermission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/spaces/{spaceId}/permissions/{pid}:
+    patch:
+      tags: [spaces]
+      summary: Update a space-level permission
+      operationId: patchSpacePermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: pid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated permission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_SpacePermission'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [spaces]
+      summary: Revoke a space-level permission
+      operationId: deleteSpacePermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: spaceId
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: pid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Permission revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings/{mid}/join:
+    post:
+      tags: [meetings]
+      summary: Join a meeting
+      operationId: joinMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Joined (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings/{mid}/leave:
+    post:
+      tags: [meetings]
+      summary: Leave a meeting
+      operationId: leaveMeeting
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Left (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings/{mid}/recording/start:
+    post:
+      tags: [meetings]
+      summary: Start meeting recording
+      operationId: startMeetingRecording
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Recording started (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meetings/{mid}/recording/stop:
+    post:
+      tags: [meetings]
+      summary: Stop meeting recording
+      operationId: stopMeetingRecording
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Recording stopped (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/project-templates:
+    get:
+      tags: [project-templates]
+      summary: List project templates
+      operationId: listProjectTemplates
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Template list (code=200)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProjectTemplateList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [project-templates]
+      summary: Create a project template
+      operationId: createProjectTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Template created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProjectTemplate'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/project-templates/{tid}:
+    get:
+      tags: [project-templates]
+      summary: Project template detail
+      operationId: getProjectTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProjectTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [project-templates]
+      summary: Update a project template
+      operationId: patchProjectTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated template
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ProjectTemplate'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [project-templates]
+      summary: Delete a project template
+      description: "data = { id: tid } (code=200)."
+      operationId: deleteProjectTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Template deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/project-templates/{tid}/apply:
+    post:
+      tags: [project-templates]
+      summary: Apply a project template (instantiate a project)
+      operationId: applyProjectTemplate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: tid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Template applied (shape per handler)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/forms:
+    get:
+      tags: [forms]
+      summary: List forms
+      description: Legacy envelope code=0; data = { items, total, skip, take }.
+      operationId: listForms
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: take
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+        - name: skip
+          in: query
+          schema: { type: integer, minimum: 0, default: 0 }
+      responses:
+        '200':
+          description: Form list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FormList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [forms]
+      summary: Create a form
+      description: "Body: { title, fields: [{ id, type, label, required… }] min 1 } (legacy envelope code=0, HTTP 201)."
+      operationId: createForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, fields]
+              properties:
+                title: { type: string, maxLength: 200 }
+                fields:
+                  type: array
+                  minItems: 1
+                  items: { type: object }
+      responses:
+        '201':
+          description: Form created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Form'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/forms/{fid}:
+    get:
+      tags: [forms]
+      summary: Form detail (fields + submission count)
+      description: Legacy envelope code=0.
+      operationId: getForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Form detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Form'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [forms]
+      summary: Update a form
+      description: Legacy envelope code=0.
+      operationId: patchForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: true
+      responses:
+        '200':
+          description: Updated form
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Form'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [forms]
+      summary: Delete a form
+      description: Legacy envelope code=0; data null.
+      operationId: deleteForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Form deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/forms/{fid}/submissions:
+    get:
+      tags: [forms]
+      summary: List form submissions
+      description: Legacy envelope code=0; shape per handler.
+      operationId: listFormSubmissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Submission list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [forms]
+      summary: Submit a form response
+      description: data keyed by fieldId (legacy envelope code=0).
+      operationId: submitForm
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              description: fieldId → value map.
+              additionalProperties: true
+      responses:
+        '200':
+          description: Submission accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '404':
           $ref: '#/components/responses/NotFound'
         '500':
