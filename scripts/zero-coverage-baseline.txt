@@ -523,8 +523,6 @@ lib/i18n-navigation.ts
 lib/im/types.ts
 lib/im/ws-server.ts
 lib/push/unified.ts
-lib/sync/offline-cache.ts
-lib/use-long-press.ts
 lib/webrtc/peer-connection.ts
 lib/webrtc/signaling.ts
 lib/workflow/executor.ts
