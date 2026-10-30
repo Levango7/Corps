@@ -6,6 +6,7 @@ import { checkRateLimit } from "@/lib/rate-limit";
 import { computeProgress } from "@/lib/okr";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * 顶级 KeyResult 端点 · /v1/workspaces/{wid}/key-results/{kid}
@@ -55,6 +56,10 @@ async function patchKeyResultsByKid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：objectives 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "objectives", "update", req);
+  if (denied) return denied;
   // 限流：每分钟 60 次更新（进度面板可能高频拖动滑块）
   const limited = await checkRateLimit(req, "okr-key-result-update", {
     windowMs: 60_000,
@@ -156,6 +161,10 @@ async function deleteKeyResultsByKid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：objectives 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "objectives", "delete", req);
+  if (denied) return denied;
   const limited = await checkRateLimit(req, "okr-key-result-delete", {
     windowMs: 60_000,
     max: 30,

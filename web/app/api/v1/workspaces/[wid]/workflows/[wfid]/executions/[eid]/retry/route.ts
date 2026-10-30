@@ -6,6 +6,7 @@ import { executeWorkflow } from "@/lib/workflow/executor";
 import { logger } from "@/lib/logger";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
+import { requirePermission } from "@/lib/permissions";
 
 /**
  * POST /v1/workspaces/{wid}/workflows/{wfid}/executions/{eid}/retry — 重试执行
@@ -37,6 +38,10 @@ async function postWorkflowsExecutionsRetryByWfidByEid(
     );
   if (!ctx.ok) return authFailure(ctx, req);
 
+  // 2026-10-30 T3 收敛批 A：workflows 纳入权限矩阵（viewer 只读；
+  // member 可写与 write-policy choke point 现状等价）。
+  const denied = await requirePermission(ctx, "workflows", "create", req);
+  if (denied) return denied;
   try {
     // 1. 查询执行记录，确认存在且属于该工作区 + workflowId 匹配
     const existing = await runWithWorkspace(
