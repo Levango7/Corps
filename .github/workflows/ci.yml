@@ -287,6 +287,23 @@ jobs:
         run: python scripts/check_openapi_refs.py
       - name: Mutation-check the ref guard itself
         run: python scripts/check_openapi_refs.py --self-test
+      # 上面两份都是正则，**不读 YAML 语法**：#178 曾写进 `description: Deleted ({ id,
+      # deleted: true })`——未加引号的值里含 ": "，PyYAML 直接报错而两道正则全绿，
+      # 非法 YAML 一路合进 main（客户端 codegen 会直接崩）。本脚本补这条线，只判
+      # 「解析器读不读得动」+ 重复键（safe_load 对重复键是静默后者覆盖前者，
+      # 手写 openapi 时重复一个 path 键会让整条端点凭空消失，正则扫不出来）。
+      - name: Install PyYAML (only the YAML syntax guard needs it)
+        run: |
+          python -m pip install --break-system-packages pyyaml==6.0.3 ||
+          python -m pip install --user pyyaml==6.0.3 ||
+          python -m pip install pyyaml==6.0.3
+      # 三级回退的写法是因为 runner 镜像的 pip 版本不一：22.04 的 pip 22 不认
+      # --break-system-packages，24.04 的 PEP 668 又必须带它。三级全失败时下一步会
+      # 明确报「缺少 PyYAML」并判红——本门禁刻意不静默跳过（静默跳过 = 永远绿的空门禁）。
+      - name: Check OpenAPI YAML syntax (parser-level, not regex)
+        run: python scripts/check_openapi_syntax.py
+      - name: Mutation-check the YAML syntax guard itself
+        run: python scripts/check_openapi_syntax.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
