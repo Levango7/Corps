@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 273 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 288 paths (updated 2026-10-30). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -12567,6 +12567,870 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope'
+  /api/v1/workspaces/{wid}/action-items/generate:
+    post:
+      tags: [ai]
+      summary: Generate action items from a decision (LLM)
+      description: "Body { decisionMarkdown, decisionId? } (code=200). With decisionId, Tasks are created and linked via DecisionActionItem; without it only the parsed list is returned. Requires decision write permission (403); 503 when AI is not configured (no fallback)."
+      operationId: postActionItemsGenerate
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [decisionMarkdown]
+              properties:
+                decisionMarkdown: { type: string, minLength: 1 }
+                decisionId: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Generated action items
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ActionItems'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/contact-groups:
+    get:
+      tags: [contacts]
+      summary: List contact groups (with contact counts)
+      description: "Query page/pageSize (code=200). data = { items, total, hasMore }."
+      operationId: listContactGroups
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Contact group list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ContactGroupList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [contacts]
+      summary: Create a contact group
+      description: "Body { name } (code=201, requires contacts/create). Duplicate names are 409."
+      operationId: createContactGroup
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '201':
+          description: Group created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ContactGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [contacts]
+      summary: Rename a contact group
+      description: "Body { id?, name } (or ?gid= query) (code=200, requires contacts/update). data = updated group."
+      operationId: patchContactGroup
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: gid
+          in: query
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [name]
+              properties:
+                id: { type: string, format: uuid }
+                name: { type: string, minLength: 1, maxLength: 100 }
+      responses:
+        '200':
+          description: Group updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ContactGroup'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [contacts]
+      summary: Delete a contact group
+      description: "Query ?gid= (code=200, requires contacts/delete). data = { id, deleted: true }."
+      operationId: deleteContactGroup
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: gid
+          in: query
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Group deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/events/stream:
+    get:
+      tags: [events]
+      summary: Workspace event stream (SSE)
+      description: "Long-lived text/event-stream of workspace events (data frames are JSON; ': heartbeat' comments every 30 s; idle timeout 10 min). Connection setup is rate limited (20/min) and a per-user concurrent SSE slot cap applies (429 tooManySseConnections)."
+      operationId: getWorkspaceEventsStream
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: SSE event stream
+          content:
+            text/event-stream:
+              schema: { type: string }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '429':
+          description: Too many concurrent SSE connections
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/folders/{fid}/permissions:
+    get:
+      tags: [Sharing]
+      summary: List folder-level permissions
+      description: "Query page/pageSize (code=200). data = { items, total, hasMore }; 404 when the folder is not in the workspace."
+      operationId: listFolderPermissions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Folder permission list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FolderPermissionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Sharing]
+      summary: Grant a folder-level permission
+      description: "Body { granteeType, granteeId, permission } (code=201). Requires manage on the folder (403); the grantee must be a workspace member (400); duplicate grants are 409."
+      operationId: createFolderPermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [granteeType, granteeId, permission]
+              properties:
+                granteeType: { type: string, enum: [user, role] }
+                granteeId: { type: string, minLength: 1, maxLength: 100 }
+                permission: { type: string, enum: [view, comment, edit, manage] }
+      responses:
+        '201':
+          description: Permission granted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FolderPermission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/folders/{fid}/permissions/{pid}:
+    patch:
+      tags: [Sharing]
+      summary: Update a folder-level permission
+      description: "Body { permission? } (code=200). Requires manage on the folder (403); 404 when the grant does not exist."
+      operationId: patchFolderPermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: pid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                permission: { type: string, enum: [view, comment, edit, manage] }
+      responses:
+        '200':
+          description: Permission updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_FolderPermission'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [Sharing]
+      summary: Revoke a folder-level permission
+      description: "Code=200; data = { id, deleted: true }. Requires manage on the folder (403)."
+      operationId: deleteFolderPermission
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: fid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: pid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Permission revoked
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/im/online:
+    get:
+      tags: [messages]
+      summary: Online user ids for the workspace IM
+      description: "Code=200; data = { userIds, total } (recently online members)."
+      operationId: getImOnline
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Online users
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ImOnline'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meeting-minutes:
+    get:
+      tags: [meeting-minutes]
+      summary: List meeting minutes
+      description: "Query page/limit/meetingId? (code=200). Newest first; data = { items, page, limit, total, hasMore }."
+      operationId: listMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: meetingId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Minutes list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutesList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [meeting-minutes]
+      summary: Create meeting minutes
+      description: "Body { title, content?, meetingId?, attendees?, actionItems? } (code=201). Attendees need name; action items need title."
+      operationId: createMeetingMinutes
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                content: { type: string }
+                meetingId: { type: string, format: uuid }
+                attendees:
+                  type: array
+                  items:
+                    type: object
+                    required: [name]
+                    properties:
+                      userId: { type: string, format: uuid }
+                      name: { type: string, minLength: 1, maxLength: 100 }
+                      role: { type: string, maxLength: 50 }
+                actionItems:
+                  type: array
+                  items:
+                    type: object
+                    required: [title]
+                    properties:
+                      title: { type: string, minLength: 1, maxLength: 200 }
+                      assigneeId: { type: string, format: uuid }
+                      dueDate: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Minutes created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutes'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/meeting-minutes/{mid}:
+    get:
+      tags: [meeting-minutes]
+      summary: Meeting minutes detail
+      description: "Code=200; data = minutes row (404 when not in the workspace)."
+      operationId: getMeetingMinutesById
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Minutes detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutes'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [meeting-minutes]
+      summary: Update meeting minutes
+      description: "Body { title?, content?, attendees?, actionItems? } (code=200); 403 without write permission."
+      operationId: patchMeetingMinutesById
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                content: { type: string, minLength: 1 }
+                attendees: { type: array, items: { type: object } }
+                actionItems: { type: array, items: { type: object } }
+      responses:
+        '200':
+          description: Minutes updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_MeetingMinutes'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [meeting-minutes]
+      summary: Delete meeting minutes
+      description: "Code=200; data = null; 403 without permission."
+      operationId: deleteMeetingMinutesById
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Minutes deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/objectives/{oid}/key-results:
+    get:
+      tags: [objectives]
+      summary: List key results of an objective
+      description: "Query page/pageSize (code=200). data = { items, total, hasMore }."
+      operationId: listObjectiveKeyResults
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: oid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Key result list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_KeyResultList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [objectives]
+      summary: Create a key result under an objective
+      description: "Body { title, targetValue, currentValue?, unit?, weight?, ownerId?, dueDate? } (code=201)."
+      operationId: createObjectiveKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: oid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [title, targetValue]
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                targetValue: { type: number }
+                currentValue: { type: number }
+                unit: { type: string, maxLength: 20 }
+                weight: { type: number, minimum: 0 }
+                ownerId: { type: string, format: uuid }
+                dueDate: { type: string, format: date-time }
+      responses:
+        '201':
+          description: Key result created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_KeyResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/objectives/{oid}/key-results/{krid}:
+    patch:
+      tags: [objectives]
+      summary: Update a key result (recomputes parent objective progress)
+      description: "Body { title?, targetValue?, currentValue?, unit?, weight?, ownerId?, dueDate? } (code=200). Parent objective progress is recomputed as a side effect."
+      operationId: patchObjectiveKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: oid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: krid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                title: { type: string, minLength: 1, maxLength: 200 }
+                targetValue: { type: number }
+                currentValue: { type: number }
+                unit: { type: string, maxLength: 20, nullable: true }
+                weight: { type: number, minimum: 0 }
+                ownerId: { type: string, format: uuid, nullable: true }
+                dueDate: { type: string, format: date-time, nullable: true }
+      responses:
+        '200':
+          description: Key result updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_KeyResult'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [objectives]
+      summary: Delete a key result (recomputes parent objective progress)
+      description: "Code=200; data = null. Parent objective progress is recomputed."
+      operationId: deleteObjectiveKeyResult
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: oid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: krid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Key result deleted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/permissions/audit-logs:
+    get:
+      tags: [permissions]
+      summary: Query permission audit logs
+      description: "Query targetType/granteeType/operatorId/action/startDate/endDate/page/pageSize. Code=200; data = { items, total, hasMore } (newest first)."
+      operationId: getPermissionAuditLogs
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: targetType
+          in: query
+          schema: { type: string, enum: [document, folder, space] }
+        - name: granteeType
+          in: query
+          schema: { type: string, enum: [user, role] }
+        - name: operatorId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: action
+          in: query
+          schema: { type: string, enum: [grant, revoke, update] }
+        - name: startDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: endDate
+          in: query
+          schema: { type: string, format: date-time }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: pageSize
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+      responses:
+        '200':
+          description: Audit log entries
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AuditLogList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/presence:
+    get:
+      tags: [presence]
+      summary: Workspace member presence roster
+      description: "Legacy envelope code=0; data = { items [{ userId, name, image, role, online, onlineAt }], total, onlineCount }."
+      operationId: getPresence
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Presence roster
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PresenceRoster'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [presence]
+      summary: Presence heartbeat (updates the caller's onlineAt)
+      description: "Requires presence/update (403). Legacy envelope code=0; data = { onlineAt }."
+      operationId: postPresence
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      responses:
+        '200':
+          description: Heartbeat accepted
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_PresenceHeartbeat'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/tasks/{id}/conversation:
+    post:
+      tags: [messages]
+      summary: Get or create the conversation linked to a task
+      description: "Requires messages/create (403). Existing task conversation returns code=200; a new one returns code=201 (HTTP 201 in both cases per handler). data = conversation. 404 when the task is not in the workspace."
+      operationId: postTaskConversation
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+      responses:
+        '200':
+          description: Existing conversation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Conversation'
+        '201':
+          description: Conversation created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_Conversation'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/tasks/{id}/messages/{mid}:
+    patch:
+      tags: [messages]
+      summary: Edit or recall a task message (author only, 30-minute recall window)
+      description: "Body discriminated by action: { action: 'recall' } or { action: 'edit', body }. Author only (403; errors may carry reason 'recallExpired'); recalled messages are 409; requires messages/update. Legacy envelope code=0; data = updated message row."
+      operationId: patchTaskMessage
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - name: mid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              oneOf:
+                - type: object
+                  required: [action]
+                  properties:
+                    action: { type: string, enum: [recall] }
+                - type: object
+                  required: [action, body]
+                  properties:
+                    action: { type: string, enum: [edit] }
+                    body: { type: string, minLength: 1, maxLength: 10000 }
+      responses:
+        '200':
+          description: Message updated/recalled
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_TaskMessage'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '409':
+          $ref: '#/components/responses/Conflict'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/{path}:
+    options:
+      tags: [system]
+      summary: CORS preflight for the app's own origins (catch-all)
+      description: "Catch-all OPTIONS handler: 204 with CORS headers for whitelisted origins (NEXT_PUBLIC_APP_URL, localhost:3000); non-whitelisted origins get 204 without Access-Control-Allow-Origin."
+      operationId: optionsApiCatchAll
+      responses:
+        '204':
+          description: Preflight response (headers only, no body)
+    get:
+      tags: [system]
+      summary: JSON 404 for unmatched /api paths (catch-all)
+      description: "Unmatched /api routes return a JSON ErrorEnvelope 404 instead of Next.js' HTML 404 (business routes live under /api/v1 and match first)."
+      operationId: getApiCatchAllNotFound
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
+    post:
+      tags: [system]
+      summary: JSON 404 for unmatched /api paths (catch-all)
+      description: "See GET; same JSON ErrorEnvelope 404."
+      operationId: postApiCatchAllNotFound
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
+    patch:
+      tags: [system]
+      summary: JSON 404 for unmatched /api paths (catch-all)
+      description: "See GET; same JSON ErrorEnvelope 404."
+      operationId: patchApiCatchAllNotFound
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
+    put:
+      tags: [system]
+      summary: JSON 404 for unmatched /api paths (catch-all)
+      description: "See GET; same JSON ErrorEnvelope 404."
+      operationId: putApiCatchAllNotFound
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
+    delete:
+      tags: [system]
+      summary: JSON 404 for unmatched /api paths (catch-all)
+      description: "See GET; same JSON ErrorEnvelope 404."
+      operationId: deleteApiCatchAllNotFound
+      responses:
+        '404':
+          $ref: '#/components/responses/NotFound'
 components:
   securitySchemes:
     cronSecret:
@@ -16141,3 +17005,147 @@ components:
             total: { type: integer, minimum: 0 }
             skip: { type: integer, minimum: 0 }
             take: { type: integer, minimum: 1 }
+    Envelope_ActionItems:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [actionItems]
+          properties:
+            actionItems:
+              type: array
+              description: ParsedActionItem[] (title/assignee/dueDate…).
+              items: { type: object }
+    Envelope_ContactGroup:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Contact group row (id/name/_count…).
+    Envelope_ContactGroupList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_ImOnline:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [userIds, total]
+          properties:
+            userIds: { type: array, items: { type: string, format: uuid } }
+            total: { type: integer, minimum: 0 }
+    Envelope_MeetingMinutes:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Meeting minutes row (id/title/content/attendees[]/actionItems[]/…).
+    Envelope_MeetingMinutesList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items: { type: array, items: { type: object } }
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_KeyResult:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Key result row (id/title/targetValue/currentValue/unit/weight/progress…).
+    Envelope_KeyResultList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_FolderPermission:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Folder permission row (id/folderId/granteeType/granteeId/permission…).
+    Envelope_FolderPermissionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_AuditLogList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, hasMore]
+          properties:
+            items:
+              type: array
+              description: "Audit entries (targetType/action/operator/grantee/reason/createdAt…)."
+              items: { type: object }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_PresenceRoster:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, total, onlineCount]
+          properties:
+            items: { type: array, items: { type: object } }
+            total: { type: integer, minimum: 0 }
+            onlineCount: { type: integer, minimum: 0 }
+    Envelope_PresenceHeartbeat:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [onlineAt]
+          properties:
+            onlineAt: { type: string, format: date-time }
+    Envelope_Conversation:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Conversation row (id/taskId/workspaceId/…).
+    Envelope_TaskMessage:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          description: Task message row after edit/recall (body/editedAt/recalledAt…).
