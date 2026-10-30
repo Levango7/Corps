@@ -280,6 +280,13 @@ jobs:
       - uses: actions/checkout@v7
       - name: Check API contract drift
         run: python scripts/check_api_contract.py
+      # 上面那份用正则解析，不看 $ref：引用了不存在的 schema 也放行（2026-10-30 实测
+      # #218 带进 15 处悬空引用一路合进 main）。本脚本补这条线：每个
+      # #/components/... 内部引用必须有定义；--self-test 注入一条悬空引用，守门器必须因它变红。
+      - name: Check OpenAPI $ref resolution (no dangling internal refs)
+        run: python scripts/check_openapi_refs.py
+      - name: Mutation-check the ref guard itself
+        run: python scripts/check_openapi_refs.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
