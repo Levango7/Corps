@@ -124,7 +124,7 @@ api/          # openapi.yaml 契约
 - **变更日志**：[CHANGELOG.md](./CHANGELOG.md)
 - **部署手册**：[docs/runbook-deploy.md](./docs/runbook-deploy.md)
 - **发布页**：[Releases](https://github.com/Levango7/Corps/releases)（v0.5.0–v0.7.2 已于 2026-10-01 补齐，v0.8.0 起逐个补齐；其中 v0.7.1 无容器镜像）
-- **镜像**：`docker pull ghcr.io/levango7/corps:0.8.2`（由 `v0.8.2` tag 触发的 CI 发布；历史 `0.7.1`、`0.8.0`、`0.8.1` 镜像实际不存在——`0.8.0` 的 Security Audit 判红导致 `Build` 与 `Publish image` 连锁 skip；`0.8.1` 虽全绿，但 Dockerfile 写死的第三方镜像源 `docker.m.daocloud.io` 已失效（GitHub runner 上 NXDOMAIN），Docker 构建失败。修复见 `web/Dockerfile` 的 `ARG NODE_IMAGE`：默认回 Docker Hub 官方 `node:22-alpine`，国内/内网换源用 `--build-arg NODE_IMAGE=...` 覆盖）
+- **镜像**：`docker pull ghcr.io/levango7/corps:0.9.0`（由 `v0.9.0` tag 触发的 CI 发布，`:0.9.0` / `:0.9` / `:sha-<commit>` 三标签同 digest；`0.9.0` 起不再有"文档宣称有镜像、实际没发出去"的历史问题；历史 `0.7.1`、`0.8.0`、`0.8.1` 镜像实际不存在——`0.8.0` 的 Security Audit 判红导致 `Build` 与 `Publish image` 连锁 skip；`0.8.1` 虽全绿，但 Dockerfile 写死的第三方镜像源 `docker.m.daocloud.io` 已失效（GitHub runner 上 NXDOMAIN），Docker 构建失败。修复见 `web/Dockerfile` 的 `ARG NODE_IMAGE`：默认回 Docker Hub 官方 `node:22-alpine`，国内/内网换源用 `--build-arg NODE_IMAGE=...` 覆盖）
 - **定价**：内置定价页（Pro ¥29.9/人/月，年付 ¥299）。两处数字分属两张表，勿混用——`web/lib/pricing.ts` 的 `PRICING_MATRIX` 是**功能对比表**：22 个功能行中 Free 全量 14 行 + 受限 3 行（决策条数 / 人数 / 附件大小）= 可用 17 行；同文件 `PRICING_PLANS.free.features` 是**套餐卡要点列表**：21 条（`pricing.features.free.f01–f21`，中英词条齐备）。逐项 Free/Pro 归属以 `PRICING_MATRIX` 为准。
 
 ---
