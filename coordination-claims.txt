@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-red2 | feat/zerocov-b4 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-10-30 22:02 | 2026-10-31 04:02 | 零覆盖清偿波 b4：workspace-events/analytics-server/shutdown/mail-transporter 4 文件
