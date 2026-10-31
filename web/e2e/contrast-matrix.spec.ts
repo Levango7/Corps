@@ -58,7 +58,8 @@ const AA_MIN = 4.5;
  * 为什么用清单而不是继续藏在"基线 × 0.9"里：藏在基线里的问题是**不可见**的——
  * 看门禁全绿，没人知道有两处文字其实读不清。登记出来，问题才有人认领。
  *
- * 当前两项，均有实测数据支撑（contrast-probe.mjs，2026-10-14 复验一致）：
+ * 当前六项，均有实测数据支撑（contrast-probe.mjs；danger/accent 两项 2026-10-14 复验一致，
+ * meta 四项 2026-10-31 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测）：
  *
  * 1. light danger/surface = 4.32（差 AA 0.18）
  *    `--p-danger: #dc3d4a` 作文字色（--prio-high-fg / --danger）出现在任务优先级、
@@ -77,6 +78,20 @@ const AA_MIN = 4.5;
  *    并同步改使用处。这是设计系统级变更，影响租户换肤的 color-mix 派生链，故单独排期。
  */
 const AA_EXEMPT: Record<string, string> = {
+  "light|meta/surface":
+    "2.80 < AA 4.5（差 1.70）。--p-meta: #9a9a96 是全站**使用最广的次要文字层**" +
+    "（`text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处），本清单此前压根没有 meta 配对，" +
+    "于是令牌矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；" +
+    "axe 基线里 34 条中有 27 条 color-contrast 就是它（web/tests/a11y-axe-baseline.json）。" +
+    "最难的那一面是 --surface-2（chip 底）= 2.56，不在本清单但在修法里必须一起过：" +
+    "改 --p-meta 到 #707069 可让 light 三面分别到 4.94 / 4.69 / 4.53，" +
+    "但那样 meta 与 muted(#6b6b68=4.85) 几乎同深、层级塌陷 —— 属设计决策，需 owner 定：" +
+    "①只压暗 meta（层级塌陷）②同时把 muted 压到 #5a5a57 重建成两档（视觉改动更大但层级保住）",
+  "light|meta/bg": "2.66 < AA 4.5。与 light|meta/surface 同一根因，修法同上",
+  "dark|meta/surface":
+    "3.18 < AA 4.5。dark 的 --p-meta: #6a6a62 同样不达标（--surface-2 上 3.01）；" +
+    "过 AA 需要往亮走（#909087=muted 为 5.10），light/dark 必须一起改，否则只是把缺口换了个主题",
+  "dark|meta/bg": "3.46 < AA 4.5。与 dark|meta/surface 同一根因，修法同上",
   "light|danger/surface":
     "4.32 < AA 4.5（差 0.18）。--p-danger 调深一档即可达 4.84（色值与推导见上方注释），属设计决策待确认",
   "dark|accent/surface":
@@ -94,6 +109,8 @@ const CONTRAST_PAIRS: Record<string, [string, string]> = {
   // key 集不一致 → 断言「缺少配对」当场红。两处清单必须保持同集（2026-10-13 首跑实测）。
   "fg-2/surface": ["--fg-2", "--surface"],
   "muted/surface": ["--muted", "--surface"],
+  "meta/surface": ["--meta", "--surface"],
+  "meta/bg": ["--meta", "--bg"],
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
   "accent/surface": ["--accent", "--surface"],
@@ -108,6 +125,8 @@ const BASELINE: Record<string, Record<string, number>> = {
     "fg/bg": 16.39,
     "fg-2/surface": 10.79,
     "muted/surface": 5.29,
+    "meta/surface": 2.8,
+    "meta/bg": 2.66,
     "on-accent/accent": 4.98,
     "danger/surface": 4.32,
     "accent/surface": 4.93,
@@ -117,6 +136,8 @@ const BASELINE: Record<string, Record<string, number>> = {
     "fg/bg": 17.14,
     "fg-2/surface": 10.32,
     "muted/surface": 5.39,
+    "meta/surface": 3.18,
+    "meta/bg": 3.46,
     "on-accent/accent": 4.51,
     "danger/surface": 5.34,
     "accent/surface": 3.85,

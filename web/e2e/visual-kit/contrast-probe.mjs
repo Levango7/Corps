@@ -32,6 +32,8 @@ const PAIRS = {
   "fg/bg": ["--fg", "--bg"],
   "fg-2/surface": ["--fg-2", "--surface"],
   "muted/surface": ["--muted", "--surface"],
+  "meta/surface": ["--meta", "--surface"],
+  "meta/bg": ["--meta", "--bg"],
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
   "accent/surface": ["--accent", "--surface"],
