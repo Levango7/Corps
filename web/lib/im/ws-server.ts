@@ -479,9 +479,11 @@ class IMConnectionManager {
    * 由于无法从内存反查用户参与的所有会话（仅知道已订阅的会话），
    * 此处遍历该用户所有 socket 订阅的会话集合去重后广播。
    */
-  broadcastPresence(userId: string, online: boolean): void {
+  broadcastPresence(userId: string, online: boolean, seedConversationIds?: Iterable<string>): void {
     // 收集该用户所有 socket 订阅的会话 ID（去重）
-    const conversationIds = new Set<string>();
+    // seedConversationIds：断开场景下「刚被清理的那条 socket」的会话——清理发生在广播之前，
+    // 单连接用户（最常见）若不传种子，会话集会恒为空、offline 永远发不出去。
+    const conversationIds = new Set<string>(seedConversationIds ?? []);
     const sockets = this.userSockets.get(userId);
     if (sockets) {
       for (const ws of sockets) {
@@ -524,6 +526,11 @@ class IMConnectionManager {
 
     const userId = this.socketUser.get(ws);
 
+    // 先快照本 socket 的会话集：清理会删掉 socketConversations[ws]，而离线广播
+    // 要靠它确定「该通知哪些会话」——不先存下来，单连接用户（最常见）的 offline
+    // 会因会话集恒空而永远发不出去。
+    const disconnectedConversations = this.socketConversations.get(ws);
+
     // 清理 socket → conversation 索引，同步清理 conversation → socket
     const convSet = this.socketConversations.get(ws);
     if (convSet) {
@@ -552,8 +559,10 @@ class IMConnectionManager {
         sockets.delete(ws);
         if (sockets.size === 0) {
           this.userSockets.delete(userId);
-          // 该用户已无任何活跃连接，广播离线
-          this.broadcastPresence(userId, false);
+          // 该用户已无任何活跃连接，广播离线。
+          // 种子 = 刚断开的 socket 的会话（清理前的快照）：userSockets 此刻已清空，
+          // 仅靠内表收集会得到空集，单连接场景的 offline 就发不出去。
+          this.broadcastPresence(userId, false, disconnectedConversations);
         }
       }
     }

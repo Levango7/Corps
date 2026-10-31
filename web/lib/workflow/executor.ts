@@ -117,6 +117,8 @@ export async function executeWorkflow(
 
     // 4. 逐个执行动作
     const results: ActionResult[] = [];
+    /** 是否因取消而提前退出：cancelled 是终态，不得被第 5 步的终态判定覆写 */
+    let cancelled = false;
     for (let i = 0; i < actions.length; i++) {
       // 每次执行动作前检查是否已被取消（cancel API 可在执行期间将 status 改为 "cancelled"）
       const current = await runWithWorkspace(workspaceId, (tx) =>
@@ -126,6 +128,7 @@ export async function executeWorkflow(
         }),
       );
       if (current?.status === "cancelled") {
+        cancelled = true;
         logger.info("[workflow:executor] execution cancelled, aborting remaining actions", {
           workflowId,
           executionId,
@@ -150,7 +153,20 @@ export async function executeWorkflow(
       }
     }
 
-    // 5. 判定整体状态：有动作失败 → failed，否则 → completed
+    // 5. 判定整体状态：已取消 → 保持 cancelled（终态，不覆写）；有动作失败 → failed；否则 → completed
+    if (cancelled) {
+      // cancelled 由 cancel API 写入，是终态；此处若继续写 completed/failed 会把
+      // 用户可见的取消结果偷偷改成成功/失败（测试曾按旧行为钉过，本批修正）。
+      logger.info(
+        "[workflow:executor] execution stayed cancelled (terminal), skipping final status",
+        {
+          workflowId,
+          executionId,
+          actionCount: results.length,
+        },
+      );
+      return;
+    }
     const hasFailure = results.some((r) => r.status === "failed");
     if (hasFailure) {
       await runWithWorkspace(workspaceId, (tx) =>

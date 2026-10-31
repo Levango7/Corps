@@ -297,7 +297,7 @@ describe("广播：typing / read / 在线状态", () => {
     expect(ws1.sent).toHaveLength(0);
   });
 
-  it("断开：清理订阅台账；**单连接场景 presence offline 实际不发**（现有行为，缺口注记）", async () => {
+  it("断开：清理订阅台账，且单连接用户断开时对端**收到** presence offline（会话集取断开前快照）", async () => {
     setTx({ workspaceId: "ws-1", isMember: true });
     const conversation = cid("pres");
     const u1 = uid("p1");
@@ -313,16 +313,12 @@ describe("广播：typing / read / 在线状态", () => {
     await vi.waitFor(() => expect(imManager.getConversationSubscriberCount(conversation)).toBe(2));
 
     ws1.onclose?.({ code: 1000, reason: "" });
-    await Promise.resolve();
+    // 对端（u2 在同一会话）收到 u1 的 offline —— 会话集在清理前已快照
+    await vi.waitFor(() => expect(ws2.sent.length).toBe(1));
+    expect(sentOf(ws2)[0]).toMatchObject({ type: "presence", userId: u1, online: false });
     // 台账清理正确：u1 的订阅被清出、在线数回落
     expect(imManager.getConversationSubscriberCount(conversation)).toBe(1);
     expect(imManager.getOnlineUserCount()).toBe(before + 1); // 只剩 u2
-    // 缺口注记：handleDisconnect 在调用 broadcastPresence 之前已删空
-    // socketConversations[ws] 与 userSockets[u1]（size 归零分支），而
-    // broadcastPresence 正是从这两张表收集会话——单连接用户断开时
-    // conversationIds 恒为空集，presence offline **发不出去**（对端不会收到离线）。
-    // 多端场景下剩余设备的会话仍可能收到（语义另议）。是否修留待裁决（需产品确认离线语义）。
-    expect(ws2.sent).toHaveLength(0);
   });
 
   it("广播跳过非 OPEN socket（send 不触达已关闭连接）", async () => {
