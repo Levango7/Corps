@@ -6,4 +6,3 @@
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-oapisyn | chore/openapi-yaml-syntax-gate | scripts/check_openapi_syntax.py,.github/workflows/ci.yml | wb-oapisyn | 2026-10-31 00:27 | 2026-10-31 05:27 | 给 api/openapi.yaml 建一道 YAML 语法门禁（scripts/check_openapi_syntax.py + CI 步骤 + --self-test 反向验证）：现有两条契约门禁都是正则，抓不到语法错误（#178 曾带进非法 YAML）
 F:/Nexus/corps-wt-red2 | feat/zerocov-b11 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-10-31 05:36 | 2026-10-31 13:36 | 零覆盖清偿波 b11（lib 域终章）：calendar-sync/account-deletion 2 文件
-F:/Nexus/corps-wt-a11y-axe | docs/0.9.0-followups | design/design-tokens.css,web/app/globals.css,web/components/**,web/app/[locale]/**,web/tests/a11y-axe-baseline.json,web/e2e/a11y-core.spec.ts | qoder-corps-reverify | 2026-10-31 22:06 | 2026-11-01 04:06 | 任务 #57 第一批：清 aria-prohibited-attr 7 条 + kbd 对比度 6 条，同提交删对应基线行
