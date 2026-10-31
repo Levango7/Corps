@@ -183,7 +183,7 @@ describe("动作失败与取消", () => {
     );
   });
 
-  it("执行前状态为 cancelled：停止剩余动作", async () => {
+  it("执行前状态为 cancelled：停止剩余动作，且**不覆写终态**（保持 cancelled）", async () => {
     h.workflowRow = {
       actions: [action("create_task", { title: "A" }), action("create_task", { title: "B" })],
       name: "wf",
@@ -195,9 +195,12 @@ describe("动作失败与取消", () => {
     const creates = h.calls.filter((c) => c.model === "task" && c.method === "create");
     expect(creates).toHaveLength(0);
     expect(h.warnLog.length + h.errorLog.length).toBe(0);
-    // 现状注记：cancelled 提前 break 后仍会走终态判定，因无失败动作被写成 completed。
-    // 这与 "cancelled 是终态" 的直觉不符，属既有行为；如需改为保留 cancelled 需产品/后续批裁决。
-    expect(finalUpdate().status).toBe("completed");
+    // cancelled 是终态：只应有起步那条 running 写入，不得再写 completed/failed
+    expect(h.executionUpdates).toHaveLength(1);
+    expect(h.executionUpdates[0].status).toBe("running");
+    expect(
+      h.infoLog.some((args) => String((args as unknown[])[0]).includes("stayed cancelled")),
+    ).toBe(true);
   });
 
   it("逐动作前都查一次执行状态（取消检查）", async () => {
