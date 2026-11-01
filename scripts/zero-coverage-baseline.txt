@@ -398,8 +398,6 @@ components/dashboard/widgets/PriorityDistWidget.tsx
 components/dashboard/widgets/RecentActivityWidget.tsx
 components/dashboard/widgets/TaskStatsWidget.tsx
 components/dashboard/widgets/TeamLoadWidget.tsx
-components/dashboard/widgets/WidgetError.tsx
-components/dashboard/widgets/WidgetStates.tsx
 components/dashboard/widgets/index.tsx
 components/database/BoardView.tsx
 components/database/CalendarView.tsx
@@ -493,7 +491,6 @@ components/timetrack/TimeReport.tsx
 components/timetrack/TimeTracker.tsx
 components/todo/TodoCenter.tsx
 components/todo/TodoWidget.tsx
-components/web-vitals-reporter.tsx
 components/whiteboard/WhiteboardCanvas.tsx
 components/whiteboard/WhiteboardList.tsx
 components/whiteboard/WhiteboardToolbar.tsx
