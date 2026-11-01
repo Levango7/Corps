@@ -304,7 +304,6 @@ components/DocumentPreview.tsx
 components/DocumentVersionHistory.tsx
 components/KnowledgeBase.tsx
 components/LanguageSwitcher.tsx
-components/Logo.tsx
 components/MilestoneFilter.tsx
 components/Onboarding.tsx
 components/OnlinePresence.tsx
@@ -319,7 +318,6 @@ components/SidebarNavClient.tsx
 components/SubtaskSection.tsx
 components/SwipeToDismiss.tsx
 components/TaskFilterBar.tsx
-components/ThemeToggle.tsx
 components/UserMenu.tsx
 components/WidgetGrid.tsx
 components/ai/AgentMessageFlow.tsx
@@ -448,7 +446,6 @@ components/meetings/MeetingRoom.tsx
 components/members/MemberList.tsx
 components/members/TemporaryGrantModal.tsx
 components/members/TransferOwnership.tsx
-components/members/helpers.tsx
 components/minutes/MinutesDetail.tsx
 components/minutes/MinutesEditor.tsx
 components/minutes/MinutesList.tsx
@@ -463,10 +460,8 @@ components/remote-control/RemoteControlPanel.tsx
 components/remote-control/RemoteViewer.tsx
 components/settings/SettingsDangerZone.tsx
 components/settings/SettingsDataExport.tsx
-components/settings/SettingsOverview.tsx
 components/settings/SettingsPreferences.tsx
 components/settings/SettingsProfile.tsx
-components/shell/IMBadge.tsx
 components/sync/OfflineIndicator.tsx
 components/sync/SyncStatus.tsx
 components/task/DecisionHistoryDialog.tsx
