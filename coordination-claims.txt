@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y-details | feat/a11y-axe-details | web/e2e/a11y-axe-keys.ts,web/e2e/a11y-core.spec.ts,web/tests/unit/a11y-axe-details.test.ts,web/tests/a11y-axe-baseline.json,scripts/p0-content-baseline.txt,CHANGELOG.md,.github/workflows/ci.yml | qoder-corps-reverify | 2026-11-01 11:35 | 2026-11-01 17:35 | PR #243 axe 取色现场 + ci.yml 产物通道（always()）
+F:/Nexus/corps-wt-red2 | feat/zerocov-c3 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-11-01 11:56 | 2026-11-01 17:56 | components 线 c3：WidgetStates/WidgetError/web-vitals-reporter 3 组件
