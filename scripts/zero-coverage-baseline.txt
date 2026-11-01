@@ -302,10 +302,8 @@ components/DocumentComments.tsx
 components/DocumentListView.tsx
 components/DocumentPreview.tsx
 components/DocumentVersionHistory.tsx
-components/DueTag.tsx
 components/KnowledgeBase.tsx
 components/LanguageSwitcher.tsx
-components/LanguageSwitcherClient.tsx
 components/Logo.tsx
 components/MilestoneFilter.tsx
 components/Onboarding.tsx
@@ -321,11 +319,8 @@ components/SidebarNavClient.tsx
 components/SubtaskSection.tsx
 components/SwipeToDismiss.tsx
 components/TaskFilterBar.tsx
-components/TaskLabels.tsx
 components/ThemeToggle.tsx
 components/UserMenu.tsx
-components/ViewToggle.tsx
-components/ViewToggleClient.tsx
 components/WidgetGrid.tsx
 components/ai/AgentMessageFlow.tsx
 components/ai/AiAnalysisDashboard.tsx
