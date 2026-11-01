@@ -50,7 +50,7 @@ web/lib/chat-events.ts P0-1 3
 web/lib/crypto.ts P0-1 1
 web/lib/workspace-events.ts P0-1 3
 web/prisma/seed.ts P0-1 16
-# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（3 个文件 / 33 处）──
+# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（4 个文件 / 42 处）──
 # 2026-10-12 收紧：CalendarEventDialog 的 placeholder="#3b82f6" 已改 "#RRGGBB"（PR #76）
 # ——实测该处是 <input type="text">，placeholder 是纯文本 HTML 属性、var() 不生效，
 # 而 #3b82f6 也不是品牌色（--accent 是 #4263eb），无等价 token 可换。
@@ -89,9 +89,16 @@ web/prisma/seed.ts P0-1 16
 #   `toHexString()` 结果（#9a9a96 / #f4f4f1 / #fefefc），把它们换成 var(--…) 就测不到
 #   那个形状了。与上面"PWA theme-color 必须是字面量"同一条判据：值无法由令牌表达才登记，
 #   且**只登记这一个文件**——别处再冒硬编码色仍按 NEW_P0_4 判红。
+# 2026-11-02 新增（对比度内核那一批）：web/tests/unit/contrast-kernel.test.ts 9 处。
+#   与上一条同一判据、同一形态：这 9 个字面量是**被测对象本身**——内核 parse()/alphaOf()
+#   吃的就是 "#abc" / "#4263eb" / "color(srgb 0.26 0.39 0.92)" 这类串，换成 var(--…) 内核
+#   就没东西可解析了。注意 e2e/contrast-matrix.spec.ts 的豁免理由里**没有**登记 hex
+#   （原先有 4 处，已挪进 /* */ 注释）：那儿是说明文字不是输入，能挪就该挪，
+#   登记门槛是"无法由令牌表达"，不是"写在测试里"。
 web/app/[locale]/layout.tsx P0-4 2
 web/lib/html-palette.ts P0-4 22
 web/tests/unit/a11y-axe-details.test.ts P0-4 9
+web/tests/unit/contrast-kernel.test.ts P0-4 9
 # ── P0-5 禁用缓动（cubic-bezier(0.68,-0.55,0.265,1.55) 或第二控制点 y>1 过冲）（0 个文件 / 0 处）──
 # 2026-10-12 清零（PR #75）：design-tokens.css 的 --ease-bounce / --motion-spring
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源
