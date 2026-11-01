@@ -304,6 +304,15 @@ jobs:
         run: python scripts/check_openapi_syntax.py
       - name: Mutation-check the YAML syntax guard itself
         run: python scripts/check_openapi_syntax.py --self-test
+      # 上面四步管的是"契约文件本身对不对"，管不到"实现的响应体符不符合契约约定"。
+      # 响应体 code 应等于 HTTP 状态码——这条约定没有文档写过，但 web/lib/api.ts:114
+      # 与 web/components/pwa/PushSubscribe.tsx:63 在真实消费它，所以 code: 0 会被读成失败。
+      # 实测存量 63 文件 / 101 处（第二套方言），故用棘轮：只判新增/变多，减少只提示。
+      # 口径与清偿路线见 docs/API-CONVENTIONS.md。
+      - name: Check response envelope code convention (ratchet)
+        run: python scripts/check_response_envelope.py
+      - name: Mutation-check the envelope guard itself
+        run: python scripts/check_response_envelope.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
