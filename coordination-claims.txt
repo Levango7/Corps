@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-shell-opaque | feat/shell-layers-opaque | web/app/design-tokens.css,design/design-tokens.css,web/e2e/contrast-matrix.spec.ts,web/e2e/visual-kit/**,web/e2e/ui-visual.spec.ts-snapshots/**,web/tests/unit/contrast-kernel.test.ts,web/tests/a11y-axe-baseline.json,scripts/p0-content-baseline.txt,CHANGELOG.md | qoder-shell-opaque | 2026-11-01T19:13Z | 2026-11-02T01:13Z | 路线 A：外壳层 color-mix 权重补满变实色 + 对比度内核取 used value + 矩阵射程恢复（只在 tests/unit 新建 contrast-kernel.test.ts 一个文件，不碰 zero-coverage-baseline.txt）
-F:/Nexus/corps-wt-red2 | feat/zerocov-c9 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-11-01T21:43Z | 2026-11-02T03:43Z | components 线 c9 待合 + c10 ai 族继续（feat/zerocov-c9）
