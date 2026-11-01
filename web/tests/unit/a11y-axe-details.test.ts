@@ -9,18 +9,23 @@ import { collectDetails, collectKeys, type AxeViolationLike } from "../../e2e/a1
  * 2026-10-31 归因 `--meta` 那批时，27 条 color-contrast 静态只能核到 15 条，
  * 余 12 条卡在继承色查不到 —— 所以把这些数打进日志/落盘，归因才不用猜。
  *
- * 断言对着四类失效设计：
+ * 断言对着五类失效设计：
  *  ① 键算得和 collectKeys 不一致 → 现场数据挂不到任何基线项上（等于没采）
  *  ② 只翻 node.any → 落在 failed/all/none 的取色数据被读成空（假阴性）
  *  ③ 同键多节点时取第一条 → 最差项被藏起来，"修好了"是假的
  *  ④ 空 violations 也返回 {} → 夹具没执行过的那一行会被当成"通过"
+ *  ⑤ relatedNodes 读错层（挂在节点上而非 check 上）→ bgNodes 恒空但测试仍绿。
+ *     这一条是本会话真踩过的：第一版夹具照着我脑中的形状写在节点上，CI 产物 27 条
+ *     bgNodes 全空。所以除了"真形状能用"，还留了一条"假形状不能用"的反向对照。
  */
 
 /**
- * 复刻一次真实形状。两点按 axe 的实际输出：
+ * 复刻一次真实形状。三点按 axe 的实际输出：
  *  - `target` 是**跨 frame 的数组**，同页面里只有一段，段内已经是 `a > b > c` 整串
  *    （基线键里看到的 ` > ` 就来自这里，不是数组拼出来的）
  *  - 字段名逐字抄 axe-core 4.14.0 `colorContrastEvaluate` 的 `this.data(...)`
+ *  - `relatedNodes` 在 **check** 上，每条含 `target` 与 `html`（复现：真浏览器里渲染一层
+ *    半透明底，把 `violations[0].nodes[0]` 整坨 dump 出来——节点顶层没有这个键）
  */
 function contrastViolation(nodes: AxeViolationLike["nodes"]): AxeViolationLike[] {
   return [{ id: "color-contrast", impact: "serious", nodes }];
@@ -181,21 +186,67 @@ describe("collectDetails —— 取色数据", () => {
     expect(details[keys[0]].contrastRatio).toBe(2.45);
   });
 
-  it("relatedNodes 带进 bgNodes：背景是叠加出来时，只看 bgColor 会误判", () => {
+  it("check.relatedNodes 带进 bgNodes + bgHtml：背景是叠加出来时，只看 bgColor 说不清谁画的", () => {
+    const longHtml = `<section class="shell">${"内容".repeat(200)}</section>`;
     const details = collectDetails(
       "/w/:wid/documents",
       contrastViolation([
         {
           target: ["section > p"],
-          any: [{ id: "color-contrast", message: "m", data: colorData() }],
-          relatedNodes: [{ target: ["section"] }, { target: ["body"] }],
+          any: [
+            {
+              id: "color-contrast",
+              message: "m",
+              data: colorData(),
+              relatedNodes: [
+                { target: [".shell"], html: longHtml },
+                { target: [["html", "body"]], html: '<body class="dark"></body>' },
+                { target: [], html: "<div></div>" },
+              ],
+            },
+          ],
         },
       ]),
     );
-    expect(details["/w/:wid/documents :: color-contrast :: section > p"].bgNodes).toEqual([
-      "section",
-      "body",
-    ]);
+    const d = details["/w/:wid/documents :: color-contrast :: section > p"];
+    expect(d.bgNodes).toEqual([".shell", "html body"]);
+    // 只取最近那一层的 outerHTML，且截到 200 字符（列表项整坨文案塞进来的话产物没法看）
+    expect(d.bgHtml).toHaveLength(200);
+    expect(d.bgHtml).toBe(longHtml.slice(0, 200));
+  });
+
+  it("把 relatedNodes 挂在节点上（我第一版的错形状）不会产出 bgNodes —— 反向对照", () => {
+    // 这条断言的意义是"读错层就采不到"，而不是"读错层也能凑出东西"。
+    // axe 4.14.0 节点顶层实测只有 all/any/failureSummary/html/impact/none/target。
+    const node = {
+      target: ["section > p"],
+      any: [{ id: "color-contrast", message: "m", data: colorData() }],
+    } as AxeViolationLike["nodes"][0] & { relatedNodes?: unknown };
+    node.relatedNodes = [{ target: ["section"] }, { target: ["body"] }];
+    const details = collectDetails("/w/:wid/documents", contrastViolation([node]));
+    const d = details["/w/:wid/documents :: color-contrast :: section > p"];
+    expect(d.bgNodes).toBeUndefined();
+    expect(d.bgHtml).toBeUndefined();
+  });
+
+  it("bgNodes 空字符串段被丢掉（relatedNodes 有 target 但为空的层不进产物）", () => {
+    const details = collectDetails(
+      "/login",
+      contrastViolation([
+        {
+          target: ["p"],
+          any: [
+            {
+              id: "color-contrast",
+              message: "m",
+              data: colorData(),
+              relatedNodes: [{ target: ["body"] }, { target: [] }],
+            },
+          ],
+        },
+      ]),
+    );
+    expect(details["/login :: color-contrast :: p"].bgNodes).toEqual(["body"]);
   });
 
   it("messageKey 原样带出（equalRatio / shortTextContent 这类值本身不可信的情况要看得见）", () => {

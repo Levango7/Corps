@@ -20,10 +20,19 @@ export interface AxeCheckLike {
   message?: string;
   /** axe 各 check 自己决定形状；color-contrast 的形状见 collectDetails 的注释 */
   data?: unknown;
+  /**
+   * **背景贡献链在 check 这一层**，不在节点那一层。
+   * 实测（axe 4.14.0，真浏览器渲染半透明底）节点顶层键只有
+   * `all / any / failureSummary / html / impact / none / target`，没有 relatedNodes；
+   * 把 relatedNodes 当节点字段读会稳定拿到空数组 —— #243 第一版就是这么错的。
+   */
+  relatedNodes?: readonly AxeRelatedLike[];
 }
 
 export interface AxeRelatedLike {
   target?: readonly (string | readonly string[])[];
+  /** axe 直接给出该背景层的 outerHTML 片段，是"谁把底色画上去"的最短路径 */
+  html?: string;
 }
 
 export interface AxeNodeLike {
@@ -42,8 +51,6 @@ export interface AxeNodeLike {
   none?: readonly AxeCheckLike[];
   /** axe 4.x 里失败项也会直接汇总到 failed */
   failed?: readonly AxeCheckLike[];
-  /** 贡献背景色的祖先节点；背景是叠加出来的时，只看 bgColor 会误判 */
-  relatedNodes?: readonly AxeRelatedLike[];
 }
 
 export interface AxeViolationLike {
@@ -86,15 +93,20 @@ export function collectKeys(routeKey: string, violations: AxeViolationLike[]): s
  * 一条违规的**现场数据**。
  *
  * 为什么要它：基线键只有「路由 + 规则 + 选择器」，选择器是 axe 挑的**最小唯一**类集合，
- * 里面没有色令牌 ≠ 这个元素不经过令牌。2026-10-31 归因 `--meta` 那批时，27 条里静态
- * 只能核到 15 条（选择器带 `--meta` 的 5 + kbd 6 + 侧栏分组标签 4），余 12 条卡在
- * 「继承来的颜色查不到」。把 fg/bg/比值打进日志之后，归因不必再靠读源码猜。
+ * 里面没有色令牌 ≠ 这个元素不经过令牌。第一批收窄后靠静态读源码只能核到一部分，
+ * 且会把方向读错 —— 这份数据到手后的真实分布是：27 条前景全是令牌
+ * （`--p-meta` 21 / `--p-muted` 4 / `--p-accent` 2），而其中 16 条的**实际底色不在任何
+ * `--p-*` 里**（半透明外壳层叠加出来的合成色）。也就是说"令牌够不够暗"根本不是全貌。
  *
- * 字段来源不是抄文档，是从装的这份 axe-core 里读出来的：
- * `axe.js` 的 `colorContrastEvaluate`（4.14.0 在 31632–31641 行）`this.data({fgColor,
- * bgColor, contrastRatio, fontSize, fontWeight, messageKey, expectedContrastRatio,
- * shadowColor, colorParse})`；颜色是 `toHexString()` 的输出，`fontSize` 形如
- * `9.0pt (12px)`，`expectedContrastRatio` 形如 `4.5:1`。
+ * 字段来源逐条实测，不是照抄文档：
+ *  - 色值八项来自 `axe.js` 的 `colorContrastEvaluate`（4.14.0 在 31632–31641 行）
+ *    `this.data({fgColor, bgColor, contrastRatio, fontSize, fontWeight, messageKey,
+ *    expectedContrastRatio, shadowColor, colorParse})`；颜色是 `toHexString()` 的输出，
+ *    `fontSize` 形如 `9.0pt (12px)`，`expectedContrastRatio` 形如 `4.5:1`
+ *  - **背景贡献链挂在 check 上，不在节点上**。节点顶层键实测只有
+ *    `all / any / failureSummary / html / impact / none / target`（复现：真浏览器里渲染一层
+ *    半透明底，把 `violations[0].nodes[0]` 的键整坨 dump 出来即可）。第一版把 `relatedNodes`
+ *    当节点字段读，CI 产物里 27 条 bgNodes 全空——形状要抄真输出，不能凭印象。
  */
 export interface ViolationDetail {
   rule: string;
@@ -108,8 +120,10 @@ export interface ViolationDetail {
   shadowColor?: string;
   /** axe 判定用的键（如 shortTextContent / equalRatio），非空时数值本身不可信 */
   messageKey?: string;
-  /** 贡献背景的祖先链；空集意味着"背景不是从元素自己算出来的" */
+  /** 背景贡献链（由近及远，挂在 check 上而非节点上）；合成底场景只看 bgColor 说不清是谁画的 */
   bgNodes?: string[];
+  /** 最近那层背景的 outerHTML 片段（截 200 字符），直接指向"哪块板子刷了这层色" */
+  bgHtml?: string;
   /** 首个未通过 check 的 message，供非对比度类规则也能定位 */
   message?: string;
 }
@@ -153,22 +167,30 @@ export function collectDetails(
       const checks = failedChecks(node);
       // 一个节点的 any 里只有一个 color-contrast check（规则就挂了这一条 check），
       // 所以这里取第一个色形状的数据即可；跨节点的最差取值在下面按键合并时做。
+      // 记住**是哪个 check**：背景贡献链挂在 check 上，不在节点上。
       let color: ColorData | undefined;
+      let colorCheck: AxeCheckLike | undefined;
       for (const check of checks) {
         if (isColorData(check.data)) {
           color = check.data;
+          colorCheck = check;
           break;
         }
       }
       const firstMessage = checks.find((c) => typeof c.message === "string")?.message;
-      const bgNodes = (node.relatedNodes ?? [])
+      const bgNodes = (colorCheck?.relatedNodes ?? [])
         .map((rn) => (rn.target ?? []).map((t) => (Array.isArray(t) ? t.join(" ") : t)).join(" "))
         .filter((s) => s.length > 0);
+      // 最近的那一层背景（axe 按由近及远排）直接给 outerHTML，省掉"猜是谁画的"。
+      // 截到 200 字符：一条列表项的 outerHTML 可能整坨塞着文案，产物会胀到没法看。
+      const rawHtml = (colorCheck?.relatedNodes ?? [])[0]?.html;
+      const bgHtml = rawHtml ? rawHtml.slice(0, 200) : undefined;
       const detail: ViolationDetail = {
         rule: v.id,
         impact: node.impact ?? v.impact ?? null,
         ...(firstMessage ? { message: firstMessage } : {}),
         ...(bgNodes.length ? { bgNodes } : {}),
+        ...(bgHtml ? { bgHtml } : {}),
       };
       if (color) {
         if (color.fgColor !== undefined) detail.fgColor = color.fgColor;
