@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-c6 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-11-01 20:39 | 2026-11-02 02:39 | components 线 c7：dashboard/widgets 族组件零覆盖测试
-F:/Nexus/corps-wt-shell-opaque | feat/shell-layers-opaque | web/app/design-tokens.css,web/tests/a11y-axe-baseline.json,web/e2e/ui-visual.spec.ts-snapshots/**,CHANGELOG.md | qoder-shell-opaque | 2026-11-01T18:44Z | 2026-11-01T22:44Z | 路线 A：两个外壳层 color-mix 权重补满变实色（视觉零漂移），恢复对比度矩阵射程
