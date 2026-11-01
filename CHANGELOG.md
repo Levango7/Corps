@@ -4,6 +4,20 @@
 
 ## [Unreleased]
 
+### Added
+
+- **axe 基线条目现在有取色现场**：`web/e2e/a11y-core.spec.ts` 除了基线键，另把每条违规的
+  `fgColor` / `bgColor` / `contrastRatio` / `expectedContrastRatio` / `fontSize` / `fontWeight` /
+  `messageKey` / `relatedNodes`（背景链）摊出来，三个出口 = Playwright 附件 `a11y-axe-details` +
+  `web/test-results/a11y-axe-details.json` + 日志 `A11Y_AXE_DETAILS=` 一行。
+  动机是上一批归因时撞到的墙：基线键里的选择器是 axe 挑的**最小唯一**类集合，选择器里没出色令牌
+  ≠ 该元素不经过令牌，所以 27 条 `color-contrast` 静态只能核到 15 条，余 12 条（含一条写着
+  `text-[var(--muted)]`、本机按令牌算四面全过 AA 却仍被判红的反常项）无法归因。
+  字段名取自本机所装 axe-core 4.14.0 的 `colorContrastEvaluate`（`axe.js:31632-31641`），不是照抄文档。
+  **这份数据不参与红绿**——不参与判定的采数不能冒充门禁；键的算法收成 `nodeKey()` 由
+  `collectKeys` / `collectDetails` 共用，防两处各算一套把数据挂错条目。
+  新增 `web/tests/unit/a11y-axe-details.test.ts` 9 例，6 条变异全部打红。
+
 ### Changed
 
 - **axe 基线第一批收窄 34 → 27**：`aria-prohibited-attr` 7 条全清——`components/Toast.tsx` 的

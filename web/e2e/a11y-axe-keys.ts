@@ -67,9 +67,7 @@ export function normalizeSelector(selector: string): string {
 
 /** 一个节点对应的基线键（collectKeys 与 collectDetails 共用，防止两处键算得不一样）。 */
 export function nodeKey(routeKey: string, ruleId: string, node: AxeNodeLike): string {
-  const target = node.target
-    .map((t) => (Array.isArray(t) ? t.join(" ") : (t as string)))
-    .join(" ");
+  const target = node.target.map((t) => (Array.isArray(t) ? t.join(" ") : (t as string))).join(" ");
   return violationKey(routeKey, ruleId, normalizeSelector(target));
 }
 

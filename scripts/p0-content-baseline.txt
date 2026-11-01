@@ -50,7 +50,7 @@ web/lib/chat-events.ts P0-1 3
 web/lib/crypto.ts P0-1 1
 web/lib/workspace-events.ts P0-1 3
 web/prisma/seed.ts P0-1 16
-# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（2 个文件 / 24 处）──
+# ── P0-4 硬编码色值（#rgb/#rgba/#rrggbb/#rrggbbaa 字面量）（3 个文件 / 33 处）──
 # 2026-10-12 收紧：CalendarEventDialog 的 placeholder="#3b82f6" 已改 "#RRGGBB"（PR #76）
 # ——实测该处是 <input type="text">，placeholder 是纯文本 HTML 属性、var() 不生效，
 # 而 #3b82f6 也不是品牌色（--accent 是 #4263eb），无等价 token 可换。
@@ -84,8 +84,14 @@ web/prisma/seed.ts P0-1 16
 #     浅色/深色的 --p-accent（#4263EB / #4973D1），已按注释标注来源。保持不动。
 # 2026-10-16 摘除协同孤儿（ADR-017 / PR #109）：第四类"协作光标调色板"随
 #   web/components/CollaborationProvider.tsx 一并删除（-1 文件 / -4 处），该类现为零。
+# 2026-11-01 新增（axe 取色现场那一批）：web/tests/unit/a11y-axe-details.test.ts 9 处。
+#   这里的字面量是**被测对象本身**：collectDetails 吃的就是 axe-core 4.14.0 真实吐出的
+#   `toHexString()` 结果（#9a9a96 / #f4f4f1 / #fefefc），把它们换成 var(--…) 就测不到
+#   那个形状了。与上面"PWA theme-color 必须是字面量"同一条判据：值无法由令牌表达才登记，
+#   且**只登记这一个文件**——别处再冒硬编码色仍按 NEW_P0_4 判红。
 web/app/[locale]/layout.tsx P0-4 2
 web/lib/html-palette.ts P0-4 22
+web/tests/unit/a11y-axe-details.test.ts P0-4 9
 # ── P0-5 禁用缓动（cubic-bezier(0.68,-0.55,0.265,1.55) 或第二控制点 y>1 过冲）（0 个文件 / 0 处）──
 # 2026-10-12 清零（PR #75）：design-tokens.css 的 --ease-bounce / --motion-spring
 # 两个 token 已删（它们的消费类是死类，人眼评审看不见——这正是把扫描扩到 token 源

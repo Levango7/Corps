@@ -30,6 +30,15 @@ import { registerAndLogin, uniqueEmail } from "./helpers";
  * 所以流程是：CI 首跑红 → 从日志里的 `A11Y_AXE_SNAPSHOT=` 或 `a11y-axe-snapshot` 附件
  * 取出 JSON → 写进 `web/tests/a11y-axe-baseline.json` → 重跑转绿。
  * 本机若能起服务，可 `A11Y_AXE_WRITE_BASELINE=1 npx playwright test a11y-core`。
+ *
+ * ## 现场取色数据（不参与红绿）
+ *
+ * 键只能定位「哪条规则的哪个位置」，归因不到「那个位置的 fg/bg 各是多少」——
+ * 而选择器是 axe 挑的最小唯一类集合，里面没出色令牌 ≠ 该元素不经过令牌。
+ * 所以每次 analyze 同时摊一份 `collectDetails(...)`，落三个出口：
+ * Playwright 附件 `a11y-axe-details`、`test-results/a11y-axe-details.json`、
+ * 日志 `A11Y_AXE_DETAILS=` 一行（日志会截长行，所以文件是主通道）。
+ * 刻意**不**把它变成断言：不参与判定的采数冒充门禁，只会让人以为已经守住了。
  */
 
 const BASELINE_PATH = resolve(process.cwd(), "tests/a11y-axe-baseline.json");

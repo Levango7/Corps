@@ -45,7 +45,13 @@ describe("collectDetails —— 键的一致性", () => {
       {
         target: ["kbd"],
         impact: "serious",
-        any: [{ id: "color-contrast", message: "Elements must have sufficient contrast", data: colorData() }],
+        any: [
+          {
+            id: "color-contrast",
+            message: "Elements must have sufficient contrast",
+            data: colorData(),
+          },
+        ],
       },
     ]);
     const keys = collectKeys("/w/:wid/board", violations);
@@ -62,7 +68,13 @@ describe("collectDetails —— 键的一致性", () => {
         nodes: [
           {
             target: ["main > button"],
-            any: [{ id: "button-name", message: "Button must have a non-empty accessible name", data: null }],
+            any: [
+              {
+                id: "button-name",
+                message: "Button must have a non-empty accessible name",
+                data: null,
+              },
+            ],
           },
         ],
       },
@@ -120,9 +132,29 @@ describe("collectDetails —— 取色数据", () => {
 
   it("failed / all / none 三组里的取色数据一样要读到（只翻 any 就会假阴性）", () => {
     const cases: Array<[string, AxeViolationLike["nodes"][0]]> = [
-      ["failed", { target: ["p"], failed: [{ id: "color-contrast", message: "m", data: colorData({ contrastRatio: 1.11 }) }] }],
-      ["all", { target: ["p"], all: [{ id: "color-contrast", message: "m", data: colorData({ contrastRatio: 1.22 }) }] }],
-      ["none", { target: ["p"], none: [{ id: "color-contrast", message: "m", data: colorData({ contrastRatio: 1.33 }) }] }],
+      [
+        "failed",
+        {
+          target: ["p"],
+          failed: [
+            { id: "color-contrast", message: "m", data: colorData({ contrastRatio: 1.11 }) },
+          ],
+        },
+      ],
+      [
+        "all",
+        {
+          target: ["p"],
+          all: [{ id: "color-contrast", message: "m", data: colorData({ contrastRatio: 1.22 }) }],
+        },
+      ],
+      [
+        "none",
+        {
+          target: ["p"],
+          none: [{ id: "color-contrast", message: "m", data: colorData({ contrastRatio: 1.33 }) }],
+        },
+      ],
     ];
     for (const [group, node] of cases) {
       const details = collectDetails("/login", contrastViolation([node]));
@@ -192,7 +224,10 @@ describe("collectDetails —— 取色数据", () => {
     const details = collectDetails(
       "/login",
       contrastViolation([
-        { target: ["div"], any: [{ id: "aria-prohibited-attr", message: "m", data: { role: null } }] },
+        {
+          target: ["div"],
+          any: [{ id: "aria-prohibited-attr", message: "m", data: { role: null } }],
+        },
       ]),
     );
     const d = details["/login :: color-contrast :: div"];
