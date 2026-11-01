@@ -181,6 +181,10 @@ export function ToastProvider({ children }: { children: ReactNode }) {
       {children}
       <div
         className="fixed bottom-[var(--space-4)] right-[var(--space-4)] pb-safe z-[var(--z-toast)] flex flex-col gap-2 pointer-events-none"
+        // axe aria-prohibited-attr 实测只在**容器为空**时成立（有子节点的 div 带 aria-label 不报）：
+        // 空 div 是隐式 generic，而 generic 禁止可命名。页面静默时 toast 列表就是空的，
+        // 所以 6 个已登录页 + 登录页各打一枪。region 允许命名，两种状态都干净。
+        role="region"
         aria-live="polite"
         aria-label={tToast("regionLabel")}
       >

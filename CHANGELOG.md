@@ -4,6 +4,25 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **axe 基线第一批收窄 34 → 27**：`aria-prohibited-attr` 7 条全清——`components/Toast.tsx` 的
+  `aria-live` 容器补 `role="region"`。触发条件本机实测过（axe-core 4.14，Playwright 直接量四种形态）：
+  **空** `<div aria-label>` 判红、同形态补 `role="region"` 干净、**有子节点**的 `<div aria-label>` 干净——
+  即只在容器为空时成立，而页面静默时 toast 列表正是空的，所以 6 个已登录页 + 登录页各打一枪。
+  纯语义修正，无视觉变化。
+- **对比度矩阵第一次覆盖到 `--meta` 这一档**：`contrast-matrix.spec.ts` 与
+  `visual-kit/contrast-probe.mjs` 的配对清单里**原本没有 meta**，所以这道门一直守着 7 个达标配对，
+  把真正不达标的那档漏在门外——本机现测 `--meta` 为 light 2.80/2.66、dark 3.18/3.46（AA 要 4.5）。
+  它压在四面底上由难到易是 light `--surface-3` 2.38 < `--surface-2` 2.56 < `--bg` 2.66 <
+  `--surface` 2.80（dark 同向：2.71 / 3.01 / 3.18 / 3.46），本清单只补了其中两面。现已补进 `meta/surface` + `meta/bg` 两条配对、
+  按实测值建基线，并把 4 项不达标显式登记进 `AA_EXEMPT`（带实测数与三条改档路线）。
+  改完之后，**防豁免腐烂**那条断言会逼着把豁免删掉，改一半也会被棘轮抓住。
+  但**不写成"27 条 = 一个根因"**：按源码核到 `--p-meta` 的是 15 条（选择器带 `--meta` 的 5 条 +
+  `kbd` 6 条 + 侧栏分组标签 4 条），余 12 条的选择器里没有色令牌——axe 只挑「最小唯一」类集合，
+  没写不等于不用，静态无法唯一定档（`className="mt-1 …"` 全仓 56 处，16 处带 `--meta`、24 处带
+  `--muted`）。第二批先把 axe 的 `fgColor`/`bgColor`/`contrastRatio` 一起进快照，归因才不靠猜。
+
 （暂无；下一版本从这里开始记）
 
 ## [0.9.0] - 2026-10-30
