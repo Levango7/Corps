@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-a11y-axe | fix/a11y-axe-shrink-1 | design/design-tokens.css,web/app/globals.css,web/components/**,web/app/[locale]/**,web/tests/a11y-axe-baseline.json,web/e2e/a11y-core.spec.ts,web/e2e/contrast-matrix.spec.ts,web/e2e/visual-kit/contrast-probe.mjs | qoder-corps-reverify | 2026-10-31 22:11 | 2026-11-01 04:11 | #57 axe 基线收窄第一批：Toast 容器补 role=region 清 aria-prohibited-attr 7 条
+F:/Nexus/corps-wt-red2 | feat/zerocov-c1 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-11-01 08:19 | 2026-11-01 14:19 | components 线试点波 c1：ProgressSteps/ConfirmDialog 组件测试
