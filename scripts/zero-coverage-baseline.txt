@@ -354,7 +354,6 @@ components/ai/MeetingSummaryPanel.tsx
 components/ai/MultiAgentPanel.tsx
 components/ai/OrchestrationPanel.tsx
 components/ai/PersonalizationPanel.tsx
-components/ai/ProgressSteps.tsx
 components/ai/ProjectInsightView.tsx
 components/ai/TaskBreakdownDialog.tsx
 components/ai/TemplateEditor.tsx
@@ -486,7 +485,6 @@ components/settings/SettingsProfile.tsx
 components/shell/IMBadge.tsx
 components/sync/OfflineIndicator.tsx
 components/sync/SyncStatus.tsx
-components/task/ConfirmDialog.tsx
 components/task/DecisionHistoryDialog.tsx
 components/task/TaskComments.tsx
 components/task/TaskDecisions.tsx
