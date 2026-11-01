@@ -81,30 +81,37 @@ const AA_MIN = 4.5;
  *    （四项 2026-10-31 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测）
  *    `--p-meta`（light #9a9a96 / dark #6a6a62）是全站**使用最广的次要文字层**：
  *    `text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处。本清单此前压根没有 meta 配对，
- *    于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；axe 基线 34 条
- *    中有 27 条 color-contrast 就是它（web/tests/a11y-axe-baseline.json）。
- *    最难的一面是 --surface-2（chip 底）= 2.56，不在本清单但修法必须一起过。
- *    候选色值（light 三面 = surface / bg / surface-2）：
- *      --p-meta → #707069 → 4.94 / 4.69 / 4.53 三面全过 AA
- *      但 --p-muted 是 #6b6b68（light 面板上 4.85），与 #707069 几乎同深 → 层级塌陷
- *      dark 要过 AA 得**往亮走**（#909087 即现 --p-muted 为 5.10），与 light 方向相反
+ *    于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外。
+ *    axe 基线余下 27 条 color-contrast 里**已按源码核到这一档的是 15 条**（选择器直接带
+ *    --meta 的 5 条 + kbd 6 条 = app/[locale]/w/[wid]/layout.tsx:506 压在 bg-[var(--surface-2)]
+ *    上 + 侧栏分组标签 4 条 = components/SidebarNavClient.tsx:92/101/117/126）；
+ *    余 12 条**未归因**，不写成"同一个根因"（理由见 web/tests/a11y-axe-baseline.json 的 note）。
+ *    四面底由难到易：--surface-3 2.38 < --surface-2（chip 底，kbd 实测压在这面）2.56 <
+ *    --bg 2.66 < --surface 2.80；本清单只登记了后两面，前两面不在清单里但修法必须一起过。
+ *    候选色值（对 surface / bg / surface-2 / surface-3 四面）：
+ *      --p-meta → #707069 → 4.94 / 4.69 / 4.53 / **4.21** —— 三面过、surface-3 仍差 0.29
+ *      但 --p-muted 是 #6b6b68（同四面 5.29 / 5.03 / 4.85 / 4.51），与 #707069 几乎同深 → 层级塌陷
+ *      dark 要过 AA 得**往亮走**（#909087 即现 --p-muted 为 5.39 / 5.86 / 5.10 / 4.60），与 light 反向
  *    所以需 owner 定档：
- *      ① 只压暗 meta —— 缺口清了，但 meta 与 muted 塌成一层
+ *      ① 只压暗 meta —— 已核到的 15 条清了（若要连 surface-3 也过还得再深一档），但 meta 与 muted 塌成一层
  *      ② 同时把 muted 压到 #5a5a57、重建成两档 —— 视觉改动更大（1600+ 用法受影响、
  *         ui-visual 快照要重录），但层级关系保住
+ *      ③ 第二批先把 axe 的 fgColor/bgColor/contrastRatio 一起进快照，把余 12 条归完因再动令牌
  */
 const AA_EXEMPT: Record<string, string> = {
   "light|meta/surface":
     "2.80 < AA 4.5（差 1.70）。--p-meta 是全站**使用最广的次要文字层**" +
     "（`text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处），本清单此前压根没有 meta 配对，" +
     "于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；" +
-    "axe 基线里 34 条中有 27 条 color-contrast 就是它（web/tests/a11y-axe-baseline.json）。" +
-    "最难的那一面是 --surface-2（chip 底）= 2.56，不在本清单但在修法里必须一起过。" +
-    "候选色值与两条改档路线（①只压暗 meta 会层级塌陷 ②同时压暗 muted 重建两档）见上方注释第 3 条 —— " +
-    "属设计决策，需 owner 定后再动",
+    "axe 基线余下 27 条 color-contrast 里已按源码核到这一档的是 15 条，余 12 条未归因" +
+    "（判据与逐条出处见 web/tests/a11y-axe-baseline.json 的 note）。" +
+    "四面底由难到易是 surface-3 2.38 < surface-2（chip 底，kbd 实测压在这面）2.56 < bg 2.66 < surface 2.80，" +
+    "本清单只登记了后两面，另两面修法里必须一起过。" +
+    "候选色值与三条路线（①只压暗 meta 会层级塌陷 ②同时压暗 muted 重建两档 ③先把余 12 条归完因）" +
+    "见上方注释第 3 条 —— 属设计决策，需 owner 定后再动",
   "light|meta/bg": "2.66 < AA 4.5。与 light|meta/surface 同一根因，修法同上",
   "dark|meta/surface":
-    "3.18 < AA 4.5。dark 的 --p-meta 同样不达标（--surface-2 上 3.01）；" +
+    "3.18 < AA 4.5。dark 的 --p-meta 同样不达标（四面由难到易 surface-3 2.71 < surface-2 3.01 < bg 3.18 < surface 3.46）；" +
     "过 AA 需要往**亮**走，与 light 方向相反，所以两个主题必须一起定档，否则只是把缺口换了个主题。色值见上方注释第 3 条",
   "dark|meta/bg": "3.46 < AA 4.5。与 dark|meta/surface 同一根因，修法同上",
   "light|danger/surface":
