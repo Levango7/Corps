@@ -8,8 +8,10 @@
  *   ② 核心 UI 元素在两套主题下都真实可见且无横向溢出
  *   ③ 令牌本身有值（缺失会让主题静默退化）
  *
- * 基线 = 2026-10-12 本机实测值（contrast-probe.mjs 取数：Playwright + design-tokens.css，
+ * 基线 = 本机实测值（contrast-probe.mjs 取数：Playwright + design-tokens.css，
  * 纯令牌计算、不起 server；对着 committed 版 design-tokens.css 复验一致）。
+ * 每次动色值都要重新取数，**取数日期与命令记在 BASELINE 表上方的注释里**——
+ * 2026-10-12 首版、2026-11-02 路线 A 重取、2026-11-02 路线 B 整表重取（现值）。
  *
  * ⚠️ 2026-10-14 口径修正（重要）：此前本文件用共享模板的 ABS_FLOOR = 1.5 作绝对底线，
  * 实际底线是 max(1.5, 基线 × 0.9)。问题在于**它锁死的是"当前实测值"，而不是 WCAG 标准**，
@@ -29,13 +31,14 @@
  * 口径：实测值 ≥ 基线 × 0.9（允许 10% 抖动，退步超过一成就红）。
  * ⚠️ 调基线必须在提交信息里说明原因，不要为了变绿而下调。
  *
- * 令牌配对（corps 特定，基于 design-tokens.css 的 --p-* 层）：
- *   --text/--panel  —— 正文/面板
- *   --text/--bg     —— 正文/页面底
- *   --muted/--panel —— 次要文字/面板
- *   --on-accent/--accent —— 强调按钮上的字/强调底色
- *   --danger/--panel —— 危险色文字/面板
- *   --accent/--panel —— 强调色文字/面板
+ * 令牌配对（corps 特定，基于 design-tokens.css 的 --p-* 与 --shell-* 层，共 18 组）：
+ *   --fg   / --surface、--bg、--shell-content        —— 正文
+ *   --fg-2 / --surface                               —— 次正文
+ *   --muted / --meta × (--surface / --bg / --surface-2 / --surface-3
+ *                        / --shell-sidebar / --shell-content) —— 两个次要文字档 × 六面底
+ *   --on-accent/--accent、--danger/--surface、--accent/--surface —— 强调与危险语义
+ *   （键集与 visual-kit/contrast-probe.mjs 的 PAIRS、BASELINE 表必须一致，
+ *    由 tests/unit/contrast-kernel.test.ts 判）
  */
 
 import { expect, test } from "@playwright/test";
@@ -58,10 +61,23 @@ const AA_MIN = 4.5;
  * 为什么用清单而不是继续藏在"基线 × 0.9"里：藏在基线里的问题是**不可见**的——
  * 看门禁全绿，没人知道有两处文字其实读不清。登记出来，问题才有人认领。
  *
- * 当前十一项（2026-11-02 由六项变十一项：A 把外壳两层补成实色后，新增的五组外壳配对
- * 第一次算得出数，暴露出来的缺口按"登记而不是藏进基线"的同一口径入表）。
- * 均有实测数据支撑（contrast-probe.mjs；danger/accent 两项 2026-10-14 复验一致，
- * meta 四项 2026-10-31 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测）：
+ * 当前两项（2026-11-02 由十一项收到两项）。收掉的是 meta / muted 那九项，走的是路线 B，
+ * 而 B 之所以不能是"把 meta 调浅一点"，是一条数学天花板，不是审美取舍：
+ *   连纯白 #ffffff 做底，过 AA 4.5 的最浅灰也只能到 #767673；旧 --p-meta 是 #9a9a96
+ *   （纯白上 2.82）—— 也就是「比 muted 更浅的一档次要文字」**在任何合法背景上都不可能达标**。
+ *   抬到刚过线的 #686865 又与当时 muted #6b6b68 只差 1.05（dark 抬到 #909088 与现 muted
+ *   差 1.00 = 同一个色），两档名义上存在、肉眼分不开。
+ * 所以 B 的做法是两档一起重建：层级靠**间距**表达而不是靠"更浅"（两两对比 <1.3 就分不开）。
+ * 落地实测（`node e2e/visual-kit/contrast-probe.mjs`，18 组配对 × 两套主题，数在 BASELINE 表）：
+ *   light meta 最低 4.70（压在 --shell-content）/ muted 最低 6.39
+ *   dark  meta 最低 4.66（同一面）/ muted 最低 6.39
+ *   阶梯间距 fg→fg-2→muted→meta：light 1.60 / 1.39 / 1.36，dark 1.53 / 1.36 / 1.37
+ *   派生面也一起过了：状态徽章 `color-mix(--muted 12%, transparent)` 上的 muted 文字，
+ *   light 最差从 3.79 → 5.40、dark 从 3.83 → 5.10（这类面矩阵按令牌配不出来，故单独算过）。
+ * 那九项为什么曾经存在（历史脉络，防下一个人重走）：A（外壳两层补成实色）之前这些配对读的是
+ * 声明原文——未求值的 `color-mix(...)` 串，解析返回 null，而本文件当时写的是「null 就跳过」，
+ * 所以矩阵对它们持续报绿；A 之后第一次算得出数，才把这九项登记进来。逐条归因与取数口径的
+ * 完整记录见 web/tests/a11y-axe-baseline.json 的 note。
  *
  * 1. light danger/surface = 4.32（差 AA 0.18）
  *    `--p-danger: #dc3d4a` 作文字色（--prio-high-fg / --danger）出现在任务优先级、
@@ -78,78 +94,8 @@ const AA_MIN = 4.5;
  *      #5b83db        → 文字 4.72 ✓ / 白字 3.68 ✗
  *    正解是**分离令牌**：引入 --accent-on-surface（作文字，取亮）与保留 --accent（作背景，取暗），
  *    并同步改使用处。这是设计系统级变更，影响租户换肤的 color-mix 派生链，故单独排期。
- *
- * 3. light meta/surface = 2.80、meta/bg = 2.66；dark meta/surface = 3.18、meta/bg = 3.46
- *    （四项 2026-10-31 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测）
- *    `--p-meta`（light #9a9a96 / dark #6a6a62）是全站**使用最广的次要文字层**：
- *    `text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处。本清单此前压根没有 meta 配对，
- *    于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外。
- *    axe 基线余下 27 条 color-contrast 的归因**已完成**（2026-11-02，路线 A 之前靠
- *    web/e2e/a11y-core.spec.ts 摊出的取色现场数据算的，判据与逐条出处见
- *    web/tests/a11y-axe-baseline.json 的 note）：27 条前景全是令牌（--p-meta 21 /
- *    --p-muted 4 / --p-accent 2），底色里 14 条压在 --shell-content(7) 与
- *    --shell-sidebar(7) 两层上、6 条 kbd 自绘 --p-surface-2、5 条卡片 --p-surface、
- *    2 条是选中态按钮的内联 style（绕过令牌）。
- *    四面底由难到易：--surface-3 2.38 < --surface-2（chip 底，kbd 实测压在这面）2.56 <
- *    --bg 2.66 < --surface 2.80；本清单只登记了后两面，前两面不在清单里但修法必须一起过。
- *    候选色值（对 surface / bg / surface-2 / surface-3 四面）：
- *      --p-meta → #707069 → 4.94 / 4.69 / 4.53 / **4.21** —— 三面过、surface-3 仍差 0.29
- *      但 --p-muted 是 #6b6b68（同四面 5.29 / 5.03 / 4.85 / 4.51），与 #707069 几乎同深 → 层级塌陷
- *      dark 要过 AA 得**往亮走**（#909087 即现 --p-muted 为 5.39 / 5.86 / 5.10 / 4.60），与 light 反向
- *    所以需 owner 定档：
- *      ① 只压暗 meta —— 已核到的 15 条清了（若要连 surface-3 也过还得再深一档），但 meta 与 muted 塌成一层
- *      ② 同时把 muted 压到 #5a5a57、重建成两档 —— 视觉改动更大（1600+ 用法受影响、
- *         ui-visual 快照要重录），但层级关系保住
- *      ③ 先把取色现场数据进快照、把余 12 条归完因再动令牌
- *    **2026-11-02 owner 定档 C = 先 A 后 B**：A 把外壳两层的 color-mix 权重补满
- *    （80+10 → 90+10、66+14 → 87+13，dark 三条同理）使层变实色，逐通道屏幕漂移 ≤ 1/255
- *    （压平公式与 axe 真产物逐值对齐过：mix 结果 #eef4f8 以 α0.9 叠在 --bg #f8f8f6 上
- *     = 实测 #eff4f8，公式对得上才有资格用它反解权重）；
- *    A 之后上面这些半透明合成底变成可判定的实色，本清单也才第一次真能把它们算出来
- *    —— 于是新增 5 组外壳配对，并把 A 暴露出来的缺口登记进 AA_EXEMPT。
- *    B（抬 --p-meta / 必要时连 --p-muted 重建两档）按 A 之后这批实色难面反推色值。
  */
 const AA_EXEMPT: Record<string, string> = {
-  "light|meta/surface":
-    "2.80 < AA 4.5（差 1.70）。--p-meta 是全站**使用最广的次要文字层**" +
-    "（`text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处），本清单此前压根没有 meta 配对，" +
-    "于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；" +
-    "axe 基线余下 27 条 color-contrast 里已按源码核到这一档的是 15 条，余 12 条未归因" +
-    "（判据与逐条出处见 web/tests/a11y-axe-baseline.json 的 note）。" +
-    "四面底由难到易是 surface-3 2.38 < surface-2（chip 底，kbd 实测压在这面）2.56 < bg 2.66 < surface 2.80，" +
-    "本清单只登记了后两面，另两面修法里必须一起过。" +
-    "候选色值与三条路线（①只压暗 meta 会层级塌陷 ②同时压暗 muted 重建两档 ③先把余 12 条归完因）" +
-    "见上方注释第 3 条 —— 属设计决策，需 owner 定后再动",
-  "light|meta/bg": "2.66 < AA 4.5。与 light|meta/surface 同一根因，修法同上",
-  "dark|meta/surface":
-    "3.18 < AA 4.5。dark 的 --p-meta 同样不达标（四面由难到易 surface-3 2.71 < surface-2 3.01 < bg 3.18 < surface 3.46）；" +
-    "过 AA 需要往**亮**走，与 light 方向相反，所以两个主题必须一起定档，否则只是把缺口换了个主题。色值见上方注释第 3 条",
-  "dark|meta/bg": "3.46 < AA 4.5。与 dark|meta/surface 同一根因，修法同上",
-  /* 以下五条是 A（外壳层补成实色）之后**新暴露**出来的缺口 —— 不是新变坏，是原来看不见。
-     半透明时代这些配对算不出颜色，走的是「null 就跳过」，所以矩阵一直显示全绿。
-     现在它们进了 AA 硬底线判定，先登记再按路线 B 收口。
-     A 之后这四层的实色（P0-4 不许把 hex 写进字符串字面量，所以记在这儿）：
-       light --shell-sidebar = #eff5f8    light --shell-content = #e2e9ee
-       dark  --shell-sidebar = #1e232d    dark  --shell-content = #232933
-     路线 B 挑 --p-meta / --p-muted 的新色值时，最难的那面是 light #e2e9ee / dark #232933。 */
-  "light|meta/shell-sidebar":
-    "2.57 < AA 4.5（差 1.93）。压在 light 侧栏实色层上的分组标签，即 axe 产物里 " +
-    "--shell-sidebar 那 7 条。修法同 light|meta/surface（路线 B 抬 --p-meta），" +
-    "但 B 的候选色值必须**以这一组为难面**来验算，不能再只看 surface/bg 两面",
-  "light|meta/shell-content":
-    "2.30 < AA 4.5（差 2.20，全站最难的一面）。压在 light 内容实色底布上的次要文字，" +
-    "即 axe 产物里 --shell-content 那 7 条；与 axe 现场实测 2.30 逐值对齐（矩阵与运行时不再是两套数）。" +
-    "B 若要 meta 在四面底全过 AA，得按这一面反推色值，不是按 surface 反推",
-  "light|muted/shell-content":
-    "4.36 < AA 4.5（差 0.14）。这是**A 之后才发现的第二档缺口**：--p-muted 在四面 --p-* 实色上" +
-    "都达标（5.29/5.03/4.85/4.51），压在半蓝的内容底布上就差 0.14。说明 B 光抬 --p-meta 不够，" +
-    "要么 muted 也压暗一档（回到「层级塌陷」那条权衡），要么把 --shell-content 调浅 —— 属设计决策",
-  "dark|meta/shell-sidebar":
-    "2.89 < AA 4.5。dark 侧栏实色层上的分组标签；与 light|meta/shell-sidebar 同因，" +
-    "但方向相反（dark 要往**亮**走），必须与 light 一起定档",
-  "dark|meta/shell-content":
-    "2.68 < AA 4.5。dark 内容实色底布上的次要文字，四面里最难；同 dark|meta/shell-sidebar 修法。" +
-    "注意 dark 侧 axe 还没覆盖（a11y-core.spec.ts 不切 data-theme），这一组目前只有矩阵的数",
   "light|danger/surface":
     "4.32 < AA 4.5（差 0.18）。--p-danger 调深一档即可达 4.84（色值与推导见上方注释），属设计决策待确认",
   "dark|accent/surface":
@@ -172,6 +118,13 @@ const CONTRAST_PAIRS: Record<string, [string, string]> = {
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
   "accent/surface": ["--accent", "--surface"],
+  /* 四面实色底 × 两个次要文字档（2026-11-02 补，路线 B）。豁免注释里一直写着
+     「--surface-2 / --surface-3 这两面不在清单里，但修法必须一起过」——B 就是那次修法，
+     所以把那两面收进射程，而不是改完令牌就宣称做完。 */
+  "meta/surface-2": ["--meta", "--surface-2"],
+  "meta/surface-3": ["--meta", "--surface-3"],
+  "muted/surface-2": ["--muted", "--surface-2"],
+  "muted/surface-3": ["--muted", "--surface-3"],
   /* 外壳三层配对（2026-11-02 补，路线 A）。此前清单只有 --surface/--bg 这类实色令牌配对，
      而应用正文区与侧栏**真正压着**的是 --shell-content / --shell-sidebar：axe 现场数据
      （main run 41319565816 的产物）显示 27 条 color-contrast 违规里 14 条的底就是这两层。
@@ -184,43 +137,53 @@ const CONTRAST_PAIRS: Record<string, [string, string]> = {
   "fg/shell-content": ["--fg", "--shell-content"],
 };
 
-/* 基线表（待实测填入 —— 首跑后从 _probe/contrast-actual.txt 复制真实值）
-   初始全 0 → 首跑会全红，这是**预期的**（基线必须先实测）。
-   填入后删除此注释。 */
+/* 基线表：值一律来自本机实测（`node e2e/visual-kit/contrast-probe.mjs`，它注入
+   design-tokens.css 后用同一个内核算 used value），不是按公式推的。
+   改任何一档色值都要重新取数再填，别顺手"修正"成想要的数。
+   2026-11-02（路线 B）整表重取：meta / muted 两档压暗（light）与提亮（dark）后，
+   18 组配对里除 danger(light) 4.32 与 accent(dark) 3.85 之外全部 ≥ AA 4.5。
+   键集必须与 CONTRAST_PAIRS / contrast-probe.mjs 的 PAIRS 一致 ——
+   tests/unit/contrast-kernel.test.ts 判这条（少一个键就是那一套静默不判）。 */
 const BASELINE: Record<string, Record<string, number>> = {
   light: {
     "fg/surface": 17.26,
     "fg/bg": 16.39,
     "fg-2/surface": 10.79,
-    "muted/surface": 5.29,
-    "meta/surface": 2.8,
-    "meta/bg": 2.66,
+    "muted/surface": 7.76,
+    "meta/surface": 5.7,
+    "meta/bg": 5.42,
     "on-accent/accent": 4.98,
     "danger/surface": 4.32,
     "accent/surface": 4.93,
-    // 下面五组是 2026-11-02 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测
-    // （A 把两层补成实色之后取的数；与 axe 现场数据互相印证：meta/shell-content 2.30
-    //  对得上产物里压在 #e2e9ee 上那 7 条的 2.30）
-    "meta/shell-sidebar": 2.57,
-    "meta/shell-content": 2.3,
-    "muted/shell-sidebar": 4.86,
-    "muted/shell-content": 4.36,
+    "meta/surface-2": 5.23,
+    "meta/surface-3": 4.86,
+    "muted/surface-2": 7.11,
+    "muted/surface-3": 6.62,
+    // 外壳两层（A 补成实色、B 压暗文字档之后重取；A 之前这两层算不出色）
+    "meta/shell-sidebar": 5.24,
+    "meta/shell-content": 4.7,
+    "muted/shell-sidebar": 7.13,
+    "muted/shell-content": 6.39,
     "fg/shell-content": 14.21,
   },
   dark: {
     "fg/surface": 15.75,
     "fg/bg": 17.14,
     "fg-2/surface": 10.32,
-    "muted/surface": 5.39,
-    "meta/surface": 3.18,
-    "meta/bg": 3.46,
+    "muted/surface": 7.59,
+    "meta/surface": 5.54,
+    "meta/bg": 6.02,
     "on-accent/accent": 4.51,
     "danger/surface": 5.34,
     "accent/surface": 3.85,
-    "meta/shell-sidebar": 2.89,
-    "meta/shell-content": 2.68,
-    "muted/shell-sidebar": 4.89,
-    "muted/shell-content": 4.54,
+    "meta/surface-2": 5.24,
+    "meta/surface-3": 4.72,
+    "muted/surface-2": 7.18,
+    "muted/surface-3": 6.47,
+    "meta/shell-sidebar": 5.02,
+    "meta/shell-content": 4.66,
+    "muted/shell-sidebar": 6.89,
+    "muted/shell-content": 6.39,
     "fg/shell-content": 13.28,
   },
 };

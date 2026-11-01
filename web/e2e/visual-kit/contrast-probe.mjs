@@ -37,6 +37,12 @@ const PAIRS = {
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
   "accent/surface": ["--accent", "--surface"],
+  // 四面实色底 × 两个次要文字档（2026-11-02 补，路线 B）。键集必须与
+  // contrast-matrix.spec.ts 的 CONTRAST_PAIRS 一致——tests/unit/contrast-kernel.test.ts 判这条。
+  "meta/surface-2": ["--meta", "--surface-2"],
+  "meta/surface-3": ["--meta", "--surface-3"],
+  "muted/surface-2": ["--muted", "--surface-2"],
+  "muted/surface-3": ["--muted", "--surface-3"],
   // 外壳三层的配对（2026-11-02 补）。此前清单只有 --surface/--bg 这类实色令牌配对，
   // 而应用正文区/侧栏真正压着的是 --shell-content / --shell-sidebar —— axe 现场数据显示
   // 27 条违规里 14 条的底就是这两层（当时它们还是半透明色，矩阵结构上看不见）。
