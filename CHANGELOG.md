@@ -14,6 +14,9 @@
   ≠ 该元素不经过令牌，所以 27 条 `color-contrast` 静态只能核到 15 条，余 12 条（含一条写着
   `text-[var(--muted)]`、本机按令牌算四面全过 AA 却仍被判红的反常项）无法归因。
   字段名取自本机所装 axe-core 4.14.0 的 `colorContrastEvaluate`（`axe.js:31632-31641`），不是照抄文档。
+  CI 侧另加一条 `Upload axe contrast details`（`if: always()`）单独收 `test-results/a11y-axe-details.json`：
+  紧邻的 Playwright 产物步是 `if: failure()`，而这份数据恰恰只在基线全绿的 run 里才有——沿用
+  `failure()` 会让通道从来没产出过（接线存在 ≠ 调用能通过）。
   **这份数据不参与红绿**——不参与判定的采数不能冒充门禁；键的算法收成 `nodeKey()` 由
   `collectKeys` / `collectDetails` 共用，防两处各算一套把数据挂错条目。
   新增 `web/tests/unit/a11y-axe-details.test.ts` 9 例，6 条变异全部打红。

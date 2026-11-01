@@ -38,6 +38,9 @@ import { registerAndLogin, uniqueEmail } from "./helpers";
  * 所以每次 analyze 同时摊一份 `collectDetails(...)`，落三个出口：
  * Playwright 附件 `a11y-axe-details`、`test-results/a11y-axe-details.json`、
  * 日志 `A11Y_AXE_DETAILS=` 一行（日志会截长行，所以文件是主通道）。
+ * CI 侧那个文件由 `.github/workflows/ci.yml` 的 **`Upload axe contrast details`**（`if: always()`）
+ * 单独收成产物 `a11y-axe-details`：上一条 Playwright 产物是 `if: failure()`，而基线长期是绿的，
+ * 跟着 failure() 就等于这条通道从来没产出过。
  * 刻意**不**把它变成断言：不参与判定的采数冒充门禁，只会让人以为已经守住了。
  */
 
