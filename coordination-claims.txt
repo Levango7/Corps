@@ -6,3 +6,4 @@
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-c6 | web/tests/unit/**,scripts/zero-coverage-baseline.txt,docs/ROADMAP-2026Q4.md | zcode-red2 | 2026-11-01 20:39 | 2026-11-02 02:39 | components 线 c7：dashboard/widgets 族组件零覆盖测试
 F:/Nexus/corps-wt-coord-utc | fix/coord-claims-utc | scripts/check_coordination_claims.py,docs/COORDINATION.md,CHANGELOG.md | qoder-coord-utc | 2026-11-01 22:43 | 2026-11-02 02:43 | 认领表时区口径改成 UTC（存/读统一带 Z），修掉幻影 +8h 占用
+F:/Nexus/corps-wt-a11y-note | docs/a11y-attribution-note | web/tests/a11y-axe-baseline.json,CHANGELOG.md | qoder-a11y-note | 2026-11-01T16:46Z | 2026-11-01T20:46Z | 把 27 条色对比的现场归因写进 axe 基线 note
