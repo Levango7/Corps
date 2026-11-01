@@ -57,6 +57,22 @@
   没写不等于不用，静态无法唯一定档（`className="mt-1 …"` 全仓 56 处，16 处带 `--meta`、24 处带
   `--muted`）。第二批先把 axe 的 `fgColor`/`bgColor`/`contrastRatio` 一起进快照，归因才不靠猜。
 
+### Fixed
+
+- **认领表的时区口径统一到 UTC（修掉「幻影 +8 小时占用」）**：`scripts/check_coordination_claims.py`
+  把 `since` / `expires` 存成**本机墙钟**（`datetime.now()`，无时区），读的人却可能是另一台机器 ——
+  CI runner 的墙钟就是 UTC。于是一条本机 UTC+8 写的「4 小时认领」在 CI 看来要 12 小时才过期，
+  过期行照常参与 `CLAIM_CONFLICT` 判定，把无关 PR 判红（2026-11-01 的 #243 实测撞到一次，
+  当时只能靠 `prune` 手动解）。现在读写一律 UTC 且带 `Z`：`parse_dt` 恒返回 aware datetime，
+  `now_default()` 用 `datetime.now(timezone.utc)`，`render_line` 与所有显示口径都带 `Z`。
+  **不带 Z 的存量行按 UTC 读**——CI 原本就是这么读的，所以对存量行不改变判定，
+  不会出现「新规则把别人已释放的资源又占上」。
+  判据自带射程（6 条变异全部打红）：到期前 1 分钟仍占用 / 到点即释放 / 到期后 8 小时绝不复活，
+  再加 `COORD_NOW` 带与不带 Z 是同一瞬间、`render_line` 输出必须带 Z、
+  以及一条**不设 COORD_NOW 也必须是 UTC**（旧缺陷 `datetime.now()` 是 naive，
+  `utcoffset()` 返回 `None`，这条在任何时区的机器都抓得住回退）。
+  `DT_RE` 同时接受两种写法，`--self-test` 里那条 Z 格式的负例防的就是"新格式一上线存量表就全红"。
+
 （暂无；下一版本从这里开始记）
 
 ## [0.9.0] - 2026-10-30

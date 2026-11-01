@@ -22,6 +22,12 @@ check_coordination_claims.py — §6 认领协议：活态认领表的读写 + �
 
       worktree | 分支 | 路径 glob | agent | since | expires | 意图
 
+      **时间一律 UTC 并带 `Z`**（`YYYY-MM-DDTHH:MMZ`）。不带 Z 的旧行按 UTC 读，判定与
+      改之前 CI 的行为一致（见 parse_dt 的注释）。为什么非得显式：写入用的是**本机墙钟**，
+      而读的人可能是 UTC+8 的本机，也可能是 UTC 的 CI runner —— 同一行两种读法差 8 小时，
+      于是「已经过期的人还在挡全仓 PR」（2026-11-01 实测撞到，那条 02:39 到期的行在 CI
+      看来还要等到 10:39）。
+
 断言（三种红因）：
   CLAIM_STORE_MISSING   活态表取不到（分支/文件不存在，或 fetch 失败）——取不到就红
   CLAIM_MALFORMED       列数不对 / 字段为空 / expires<=since / worktree 非绝对路径 / glob 绝对路径
@@ -56,7 +62,7 @@ import re
 import subprocess
 import sys
 from dataclasses import dataclass
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
@@ -65,7 +71,9 @@ COLUMNS = ("worktree", "分支", "路径 glob", "agent", "since", "expires", "�
 DEFAULT_STORE_BRANCH = "coordination-claims"
 DEFAULT_STORE_FILE = "coordination-claims.txt"
 ABS_PATH_RE = re.compile(r"^(?:[A-Za-z]:[\\/]|/)")
-DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2})?$")
+# 带 Z 是新格式；不带 Z 是存量行的写法，按 UTC 读（见 parse_dt）
+DT_RE = re.compile(r"^\d{4}-\d{2}-\d{2}(?:[ T]\d{2}:\d{2}Z?)?$")
+UTC = timezone.utc
 
 
 def store_branch() -> str:
@@ -108,16 +116,35 @@ class Claim:
 
 def now_default() -> datetime:
     raw = os.environ.get("COORD_NOW")
-    return parse_dt(raw) if raw else datetime.now()
+    return parse_dt(raw) if raw else datetime.now(UTC)
 
 
 def parse_dt(raw: str) -> datetime:
+    """一律返回**带时区的 UTC** 时间。
+
+    为什么这是缺陷而不只是整洁问题：写入侧用的是 `datetime.now()`（本机墙钟），
+    读取侧却是另一台机器——本机 UTC+8 写下「11-02 02:39 过期」，CI runner 拿自己的
+    UTC 墙钟比同一行，那行要到 **10:39 UTC** 才算过期，白挡全仓 PR 八小时；
+    2026-11-01 的 #243 就红过一次（一条早该失效的重复认领仍被判 CLAIM_CONFLICT）。
+    反过来 CI 写的行拿到本机又会被读成"提前 8 小时过期"，认领保护直接失效。
+
+    不带 Z 的存量行按 UTC 读：CI 以前也是这么读的（runner 的墙钟就是 UTC），
+    所以这一支不改变既有判定，本机 `list` 的显示会随之与 CI 对齐。
+    """
+    s = raw.strip()
+    if s.endswith("Z"):
+        s = s[:-1]
     for fmt in ("%Y-%m-%d %H:%M", "%Y-%m-%dT%H:%M", "%Y-%m-%d"):
         try:
-            return datetime.strptime(raw.strip(), fmt)
+            return datetime.strptime(s, fmt).replace(tzinfo=UTC)
         except ValueError:
             continue
-    raise ValueError(f"不是 YYYY-MM-DD[ HH:MM]：{raw}")
+    raise ValueError(f"不是 YYYY-MM-DD[ HH:MM][Z]：{raw}")
+
+
+def fmt_dt(c: datetime, spec: str = "%Y-%m-%d %H:%M") -> str:
+    """显示口径：一律标 UTC 并带 Z，避免读的人再拿本机钟去猜。"""
+    return f"{c:{spec}}Z"
 
 
 def render_line(c: Claim) -> str:
@@ -127,8 +154,8 @@ def render_line(c: Claim) -> str:
             c.branch,
             c.path_glob,
             c.agent,
-            f"{c.since:%Y-%m-%d %H:%M}",
-            f"{c.expires:%Y-%m-%d %H:%M}",
+            fmt_dt(c.since, "%Y-%m-%dT%H:%M"),
+            fmt_dt(c.expires, "%Y-%m-%dT%H:%M"),
             c.intent,
         ]
     )
@@ -195,8 +222,8 @@ def conflicts(claims: list[Claim], now: datetime) -> list[str]:
             continue
         out.append(
             f"CLAIM_CONFLICT {c.worktree} 的 `{c.path_glob}` 被两条未过期认领占用："
-            f"{prev.agent}（到期 {prev.expires:%Y-%m-%d %H:%M}） / "
-            f"{c.agent}（到期 {c.expires:%Y-%m-%d %H:%M}）"
+            f"{prev.agent}（到期 {fmt_dt(prev.expires)}） / "
+            f"{c.agent}（到期 {fmt_dt(c.expires)}）"
         )
     return out
 
@@ -476,7 +503,7 @@ def cmd_check(now: datetime) -> int:
         # 只提示不判红：过期即已释放；判红会让一个忘记 release 的人卡死全仓 PR
         print("提示（不判红）：以下认领已过期，视为已释放 —— 跑 `prune` 可一次清掉：")
         for c in expired:
-            print(f"    {c.worktree}  `{c.path_glob}`  {c.agent}  到期 {c.expires:%Y-%m-%d %H:%M}")
+            print(f"    {c.worktree}  `{c.path_glob}`  {c.agent}  到期 {fmt_dt(c.expires)}")
 
     problems = errors + conflict_list
     if problems:
@@ -505,12 +532,12 @@ def cmd_list(now: datetime) -> int:
     for c in live:
         print(
             f"  {c.worktree}  [{c.branch}]  `{c.path_glob}`  {c.agent}"
-            f"  {c.since:%m-%d %H:%M}→{c.expires:%m-%d %H:%M}  {c.intent}"
+            f"  {fmt_dt(c.since, '%m-%d %H:%M')}→{fmt_dt(c.expires, '%m-%d %H:%M')}  {c.intent}"
         )
     if expired:
         print(f"已过期（{len(expired)}，视为已释放）：")
         for c in expired:
-            print(f"  {c.worktree}  `{c.path_glob}`  {c.agent}  到期 {c.expires:%m-%d %H:%M}")
+            print(f"  {c.worktree}  `{c.path_glob}`  {c.agent}  到期 {fmt_dt(c.expires, '%m-%d %H:%M')}")
     return 0
 
 def split_expired(text: str, now: datetime) -> tuple[list[str], list[str]]:
@@ -591,7 +618,7 @@ def cmd_preflight(
         for c in live_here:
             mine_tag = "（你自己的）" if agent and c.agent.lower() == agent.lower() else ""
             print(
-                f"    {c.agent}{mine_tag}  `{c.path_glob}`  到期 {c.expires:%Y-%m-%d %H:%M}  {c.intent}"
+                f"    {c.agent}{mine_tag}  `{c.path_glob}`  到期 {fmt_dt(c.expires)}  {c.intent}"
             )
     else:
         print("  未过期认领：无")
@@ -711,10 +738,18 @@ def self_test() -> int:
     为什么必须有负例：本门禁最容易坏的方式不是漏报，而是**把「过期」当「冲突」**——
     那会让一个忘记 release 的人卡死全仓 PR（正是 §6.4 承诺不会发生的事）。
     """
-    now = datetime(2027, 1, 1, 0, 0)  # 固定「现在」，让注入行的活跃/过期完全可控
+    now = datetime(2027, 1, 1, 0, 0, tzinfo=UTC)  # 固定「现在」，让注入行的活跃/过期完全可控
     wt = "F:/Nexus/corps-wt-selftest"
     good = render_line(
-        Claim(wt, "test/x", "docs/**", "cline-selftest", datetime(2026, 1, 1), datetime(2030, 1, 1), "注入行（活跃）")
+        Claim(
+            wt,
+            "test/x",
+            "docs/**",
+            "cline-selftest",
+            datetime(2026, 1, 1, tzinfo=UTC),
+            datetime(2030, 1, 1, tzinfo=UTC),
+            "注入行（活跃）",
+        )
     )
     six = f"{wt} | test/x | docs/** | cline-selftest | 2026-01-01 00:00 | 2030-01-01 00:00"
     empty_intent = f"{wt} | test/x | docs/** | cline-selftest | 2026-01-01 00:00 | 2030-01-01 00:00 | "
@@ -748,6 +783,30 @@ def self_test() -> int:
         else:
             print(f"  OK   {name} -> {sorted(expected & got) if expected else '不判红'}")
 
+    # ── 时区口径：判据必须落在**同一个瞬间**上，不受"读的人在哪台机器"影响 ──────
+    # 这是 2026-11-01 那次假红的直接回归测试：旧写法把本机墙钟（UTC+8）当 UTC 存进去，
+    # CI 再按自己的 UTC 墙钟比同一行 —— 一条 4 小时的认领被放大成 12 小时，
+    # 于是「早该失效的重复认领」仍然把 #243 判成 CLAIM_CONFLICT。
+    # 三条一起才咬得住：只测"到点释放"的话，把 now 写成 datetime.now() 也能过。
+    tz_row = f"{wt} | test/tz | docs/** | cline-tz | 2027-01-01T00:00Z | 2027-01-01T04:00Z | 边界用例"
+    tz_dup = f"{wt} | test/tz | docs/** | cline-tz2 | 2027-01-01T00:00Z | 2027-01-01T04:00Z | 同资源第二条"
+
+    def conflicts_at(now_at: datetime) -> set[str]:
+        cl, _ = parse_claims(f"{tz_row}\n{tz_dup}\n")
+        return {p.split()[0] for p in conflicts(cl, now_at) if p.split()}
+
+    tz_cases: list[tuple[str, set[str], set[str]]] = [
+        ("到期前 1 分钟仍占用（不误放）", conflicts_at(datetime(2027, 1, 1, 3, 59, tzinfo=UTC)), {"CLAIM_CONFLICT"}),
+        ("到点即释放", conflicts_at(datetime(2027, 1, 1, 4, 0, tzinfo=UTC)), set()),
+        ("到期后 8 小时绝不复活（幻影 +8h 那一刀）", conflicts_at(datetime(2027, 1, 1, 12, 0, tzinfo=UTC)), set()),
+    ]
+    for name, got, want in tz_cases:
+        if got != want:
+            print(f"  FAIL {name}：实得 {sorted(got)}，期望 {sorted(want)}")
+            ok = False
+        else:
+            print(f"  OK   {name} -> {sorted(got) or '不判红'}")
+
     # 纯函数断言（不联网、不碰 git）：
     #  · render ↔ parse 必须往返一致 —— 否则「claim 写进去的行」自己都读不回来
     #  · same_worktree 不归一正/反斜杠与大小写，认领匹配会**静默失效**
@@ -755,13 +814,22 @@ def self_test() -> int:
     #  · mk_tree_input 必须**保留**存储分支上的其它条目（脚本不该成为删数据的工具）
     parsed, perr = parse_claims(good + "\n")
     base_entries = "100644 blob aaa\tcoordination-claims.txt\n100644 blob bbb\tnotes.md\n"
-    far = datetime(2030, 1, 1)
+    far = datetime(2030, 1, 1, tzinfo=UTC)
 
     def _claim(agent: str) -> Claim:
-        return Claim("F:/Nexus/corps-wt-x", "test/x", "docs/**", agent, datetime(2026, 1, 1), far, "注入")
+        return Claim(
+            "F:/Nexus/corps-wt-x", "test/x", "docs/**", agent, datetime(2026, 1, 1, tzinfo=UTC), far, "注入"
+        )
 
     pure_cases: list[tuple[str, object, object]] = [
         ("render↔parse 往返一致", (not perr and len(parsed) == 1 and render_line(parsed[0]) == good), True),
+        ("parse_dt 返回带时区的 UTC", parse_dt("2027-01-01 04:00").utcoffset() == timedelta(0), True),
+        ("存量不带 Z 的行与带 Z 的行是同一瞬间", parse_dt("2027-01-01 04:00") == parse_dt("2027-01-01T04:00Z"), True),
+        (
+            "写出的时间字段一律带 Z（本机钟不再冒充 UTC）",
+            all(cell.strip().endswith("Z") for cell in render_line(_claim("me")).split("|")[4:6]),
+            True,
+        ),
         ("same_worktree 归一正/反斜杠", same_worktree("F:/Nexus/corps-wt-x", Path("F:\\Nexus\\corps-wt-x")), True),
         ("same_worktree 不混淆不同路径", same_worktree("F:/Nexus/corps-wt-x", Path("F:/Nexus/corps-wt-y")), False),
         ("他人在认领 -> blocked_other", decide([_claim("other")], True, "me"), "blocked_other"),
@@ -784,6 +852,27 @@ def self_test() -> int:
         ("classify_overlap 新鲜 -> stop", classify_overlap(0.5, 4), "stop"),
         ("classify_overlap 读不到 mtime -> stop（宁可停手）", classify_overlap(-1.0, 4), "stop"),
         ("classify_overlap 陈旧 -> warn（遗留脏树不拦人）", classify_overlap(50.0, 4), "warn"),
+    ]
+    # now_default 单独跑：它读 os.environ，放进 pure_cases 会让整表依赖执行顺序。
+    # 「不设 COORD_NOW」那格才是真回归点——旧写法就是 datetime.now()（本机钟 + 无时区），
+    # 而 naive 的 utcoffset() 是 None，所以这格在任何时区的机器上都能抓到回退。
+    orig_coord_now = os.environ.get("COORD_NOW")
+    try:
+        os.environ["COORD_NOW"] = "2027-01-01 04:00"
+        nd_naive = now_default()
+        os.environ["COORD_NOW"] = "2027-01-01T04:00Z"
+        nd_z = now_default()
+        del os.environ["COORD_NOW"]
+        nd_real = now_default()
+    finally:
+        if orig_coord_now is None:
+            os.environ.pop("COORD_NOW", None)
+        else:
+            os.environ["COORD_NOW"] = orig_coord_now
+    pure_cases += [
+        ("COORD_NOW 不带 Z 也按 UTC 读", nd_naive == datetime(2027, 1, 1, 4, 0, tzinfo=UTC), True),
+        ("COORD_NOW 带 Z 与不带 Z 落在同一瞬间", nd_z == nd_naive, True),
+        ("不设 COORD_NOW 也用 UTC 时钟", nd_real.utcoffset() == timedelta(0), True),
     ]
     for name, got, want in pure_cases:
         if got != want:
