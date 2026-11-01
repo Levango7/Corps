@@ -419,16 +419,7 @@ components/files/FilePreviewDialog.tsx
 components/files/FileUploader.tsx
 components/files/FileVersionList.tsx
 components/files/FileVersionRestore.tsx
-components/files/PdfPreview.tsx
 components/files/TextPreview.tsx
-components/files/VideoPreview.tsx
-components/files/previews/AudioPreview.tsx
-components/files/previews/CodePreview.tsx
-components/files/previews/ImagePreview.tsx
-components/files/previews/MarkdownPreview.tsx
-components/files/previews/OfficePreview.tsx
-components/files/previews/PdfPreview.tsx
-components/files/previews/VideoPreview.tsx
 components/form/FormBuilder.tsx
 components/form/FormList.tsx
 components/form/FormPreview.tsx
