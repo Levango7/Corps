@@ -392,14 +392,6 @@ components/documents/FolderPermissionPanel.tsx
 components/documents/PermissionAuditLogPage.tsx
 components/documents/ShareDialogEnhanced.tsx
 components/editor/AiChatPanel.tsx
-components/files/FileBrowser.tsx
-components/files/FileGridItem.tsx
-components/files/FileListItem.tsx
-components/files/FilePreview.tsx
-components/files/FileUploader.tsx
-components/files/FileVersionList.tsx
-components/files/FileVersionRestore.tsx
-components/files/TextPreview.tsx
 components/form/FormBuilder.tsx
 components/form/FormList.tsx
 components/form/FormPreview.tsx
