@@ -76,21 +76,36 @@ const AA_MIN = 4.5;
  *      #5b83db        → 文字 4.72 ✓ / 白字 3.68 ✗
  *    正解是**分离令牌**：引入 --accent-on-surface（作文字，取亮）与保留 --accent（作背景，取暗），
  *    并同步改使用处。这是设计系统级变更，影响租户换肤的 color-mix 派生链，故单独排期。
+ *
+ * 3. light meta/surface = 2.80、meta/bg = 2.66；dark meta/surface = 3.18、meta/bg = 3.46
+ *    （四项 2026-10-31 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测）
+ *    `--p-meta`（light #9a9a96 / dark #6a6a62）是全站**使用最广的次要文字层**：
+ *    `text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处。本清单此前压根没有 meta 配对，
+ *    于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；axe 基线 34 条
+ *    中有 27 条 color-contrast 就是它（web/tests/a11y-axe-baseline.json）。
+ *    最难的一面是 --surface-2（chip 底）= 2.56，不在本清单但修法必须一起过。
+ *    候选色值（light 三面 = surface / bg / surface-2）：
+ *      --p-meta → #707069 → 4.94 / 4.69 / 4.53 三面全过 AA
+ *      但 --p-muted 是 #6b6b68（light 面板上 4.85），与 #707069 几乎同深 → 层级塌陷
+ *      dark 要过 AA 得**往亮走**（#909087 即现 --p-muted 为 5.10），与 light 方向相反
+ *    所以需 owner 定档：
+ *      ① 只压暗 meta —— 缺口清了，但 meta 与 muted 塌成一层
+ *      ② 同时把 muted 压到 #5a5a57、重建成两档 —— 视觉改动更大（1600+ 用法受影响、
+ *         ui-visual 快照要重录），但层级关系保住
  */
 const AA_EXEMPT: Record<string, string> = {
   "light|meta/surface":
-    "2.80 < AA 4.5（差 1.70）。--p-meta: #9a9a96 是全站**使用最广的次要文字层**" +
+    "2.80 < AA 4.5（差 1.70）。--p-meta 是全站**使用最广的次要文字层**" +
     "（`text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处），本清单此前压根没有 meta 配对，" +
-    "于是令牌矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；" +
+    "于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外；" +
     "axe 基线里 34 条中有 27 条 color-contrast 就是它（web/tests/a11y-axe-baseline.json）。" +
-    "最难的那一面是 --surface-2（chip 底）= 2.56，不在本清单但在修法里必须一起过：" +
-    "改 --p-meta 到 #707069 可让 light 三面分别到 4.94 / 4.69 / 4.53，" +
-    "但那样 meta 与 muted(#6b6b68=4.85) 几乎同深、层级塌陷 —— 属设计决策，需 owner 定：" +
-    "①只压暗 meta（层级塌陷）②同时把 muted 压到 #5a5a57 重建成两档（视觉改动更大但层级保住）",
+    "最难的那一面是 --surface-2（chip 底）= 2.56，不在本清单但在修法里必须一起过。" +
+    "候选色值与两条改档路线（①只压暗 meta 会层级塌陷 ②同时压暗 muted 重建两档）见上方注释第 3 条 —— " +
+    "属设计决策，需 owner 定后再动",
   "light|meta/bg": "2.66 < AA 4.5。与 light|meta/surface 同一根因，修法同上",
   "dark|meta/surface":
-    "3.18 < AA 4.5。dark 的 --p-meta: #6a6a62 同样不达标（--surface-2 上 3.01）；" +
-    "过 AA 需要往亮走（#909087=muted 为 5.10），light/dark 必须一起改，否则只是把缺口换了个主题",
+    "3.18 < AA 4.5。dark 的 --p-meta 同样不达标（--surface-2 上 3.01）；" +
+    "过 AA 需要往**亮**走，与 light 方向相反，所以两个主题必须一起定档，否则只是把缺口换了个主题。色值见上方注释第 3 条",
   "dark|meta/bg": "3.46 < AA 4.5。与 dark|meta/surface 同一根因，修法同上",
   "light|danger/surface":
     "4.32 < AA 4.5（差 0.18）。--p-danger 调深一档即可达 4.84（色值与推导见上方注释），属设计决策待确认",
