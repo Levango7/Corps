@@ -1,0 +1,81 @@
+# 响应信封 code 约定基线（棘轮）—— 现存 code: 0 全部登记，只许收缩、不许新增
+#
+# 由 `python scripts/check_response_envelope.py --emit` 生成/刷新，**提交前必须人工核对 diff**。
+# 每行格式：<相对仓库根的路径> <违反处数>
+#
+# 约定：响应体 code 应等于 HTTP 状态码（成功 200 / 新建 201）。这条约定没有文档写过，
+# 但 web/lib/api.ts:114 与 web/components/pwa/PushSubscribe.tsx:63 在真实消费它，
+# 所以 code: 0 会被读成"失败"。详见 docs/API-CONVENTIONS.md。
+#
+# 判据（红因集合）：
+#   NEW_FILE     基线外首次出现 code: 0   -> CI 红：新方言，真修或显式登记
+#   REGRESSION   已登记文件的处数变多      -> CI 红：只许减少
+#   （归零/减少的条目只打印提示、不判红——否则修好一处的人会被门禁卡住）
+#
+# 为什么是棘轮不是一刀切：上线时全仓已有上百处真实违反（63 文件 / 101 处），
+# 一道上线就全红的门禁只会被 --no-verify 掉。登记 ≠ 认可，每一条都是待还的技术债，
+# 清偿按域分批（见 docs/API-CONVENTIONS.md §3）。
+
+web/app/api/v1/ai/agents/[id]/messages/route.ts 1
+web/app/api/v1/ai/agents/[id]/respond/route.ts 1
+web/app/api/v1/ai/agents/[id]/route.ts 2
+web/app/api/v1/ai/agents/coordinate/route.ts 1
+web/app/api/v1/ai/agents/route.ts 2
+web/app/api/v1/ai/assistant/chat/route.ts 1
+web/app/api/v1/ai/assistant/conversations/route.ts 2
+web/app/api/v1/ai/assistant/suggestions/route.ts 1
+web/app/api/v1/ai/feedback/route.ts 2
+web/app/api/v1/ai/mail-assistant/route.ts 3
+web/app/api/v1/ai/meeting-summary/route.ts 1
+web/app/api/v1/ai/meetings/sessions/[id]/actions/route.ts 2
+web/app/api/v1/ai/meetings/sessions/[id]/analyze/route.ts 1
+web/app/api/v1/ai/meetings/sessions/[id]/decisions/route.ts 2
+web/app/api/v1/ai/meetings/sessions/[id]/route.ts 3
+web/app/api/v1/ai/meetings/sessions/[id]/transcript/route.ts 1
+web/app/api/v1/ai/meetings/sessions/route.ts 2
+web/app/api/v1/ai/push/schedules/route.ts 1
+web/app/api/v1/ai/semantic-search/route.ts 1
+web/app/api/v1/ai/templates/[id]/instantiate/route.ts 1
+web/app/api/v1/ai/templates/[id]/route.ts 3
+web/app/api/v1/ai/templates/route.ts 2
+web/app/api/v1/ai/tools/execute/route.ts 1
+web/app/api/v1/ai/tools/route.ts 1
+web/app/api/v1/ai/usage/dashboard/route.ts 1
+web/app/api/v1/ai/usage/limits/route.ts 2
+web/app/api/v1/ai/usage/logs/route.ts 1
+web/app/api/v1/ai/usage/stats/route.ts 1
+web/app/api/v1/ai/voice/command/[id]/route.ts 1
+web/app/api/v1/ai/workflow-orchestrator/route.ts 1
+web/app/api/v1/favorites/[id]/route.ts 2
+web/app/api/v1/favorites/check/route.ts 1
+web/app/api/v1/favorites/route.ts 2
+web/app/api/v1/im/search/route.ts 1
+web/app/api/v1/mail/[id]/route.ts 3
+web/app/api/v1/mail/accounts/[id]/route.ts 2
+web/app/api/v1/mail/accounts/route.ts 2
+web/app/api/v1/mail/inbox/route.ts 2
+web/app/api/v1/mail/send/route.ts 1
+web/app/api/v1/notifications/[id]/route.ts 2
+web/app/api/v1/notifications/preferences/route.ts 2
+web/app/api/v1/notifications/unread/route.ts 1
+web/app/api/v1/push/register/route.ts 2
+web/app/api/v1/push/send/route.ts 1
+web/app/api/v1/remote-control/[sessionId]/route.ts 2
+web/app/api/v1/remote-control/route.ts 2
+web/app/api/v1/remote-control/signal/route.ts 1
+web/app/api/v1/search/route.ts 1
+web/app/api/v1/sync/route.ts 2
+web/app/api/v1/todos/count/route.ts 1
+web/app/api/v1/todos/route.ts 1
+web/app/api/v1/workspaces/[wid]/documents/[id]/convert/route.ts 1
+web/app/api/v1/workspaces/[wid]/documents/[id]/share/route.ts 2
+web/app/api/v1/workspaces/[wid]/forms/[fid]/route.ts 3
+web/app/api/v1/workspaces/[wid]/forms/[fid]/submissions/route.ts 2
+web/app/api/v1/workspaces/[wid]/forms/route.ts 2
+web/app/api/v1/workspaces/[wid]/presence/route.ts 2
+web/app/api/v1/workspaces/[wid]/tasks/[id]/messages/[mid]/route.ts 1
+web/app/api/v1/workspaces/[wid]/workflows/[wfid]/executions/[eid]/cancel/route.ts 1
+web/app/api/v1/workspaces/[wid]/workflows/[wfid]/executions/[eid]/retry/route.ts 1
+web/app/api/v1/workspaces/[wid]/workflows/[wfid]/executions/route.ts 2
+web/app/api/v1/workspaces/[wid]/workflows/[wfid]/route.ts 3
+web/app/api/v1/workspaces/[wid]/workflows/route.ts 2
