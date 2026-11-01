@@ -4,6 +4,40 @@
 
 ## [Unreleased]
 
+### Added
+
+- **axe 基线条目现在有取色现场**：`web/e2e/a11y-core.spec.ts` 除了基线键，另把每条违规的
+  `fgColor` / `bgColor` / `contrastRatio` / `expectedContrastRatio` / `fontSize` / `fontWeight` /
+  `messageKey` / `bgNodes` + `bgHtml`（背景贡献链）摊出来，三个出口 = Playwright 附件 `a11y-axe-details` +
+  `web/test-results/a11y-axe-details.json` + 日志 `A11Y_AXE_DETAILS=` 一行。
+  动机是上一批归因时撞到的墙：基线键里的选择器是 axe 挑的**最小唯一**类集合，选择器里没出色令牌
+  ≠ 该元素不经过令牌，所以 27 条 `color-contrast` 静态只能核到 15 条，余 12 条（含一条写着
+  `text-[var(--muted)]`、本机按令牌算四面全过 AA 却仍被判红的反常项）无法归因。
+  字段名取自本机所装 axe-core 4.14.0 的 `colorContrastEvaluate`（`axe.js:31632-31641`），不是照抄文档。
+  CI 侧另加一条 `Upload axe contrast details`（`if: always()`）单独收 `test-results/a11y-axe-details.json`：
+  紧邻的 Playwright 产物步是 `if: failure()`，而这份数据恰恰只在基线全绿的 run 里才有——沿用
+  `failure()` 会让通道从来没产出过（接线存在 ≠ 调用能通过）。
+  **这份数据不参与红绿**——不参与判定的采数不能冒充门禁；键的算法收成 `nodeKey()` 由
+  `collectKeys` / `collectDetails` 共用，防两处各算一套把数据挂错条目。
+  新增 `web/tests/unit/a11y-axe-details.test.ts` 11 例，10 条变异全部打红。
+  **形状过错一层、已被真实产物抓到**：第一版把 `relatedNodes` 当**节点**字段读，CI 产物里 27 条
+  `bgNodes` 全空——而单测夹具照同一个想象中的形状写，所以测试是绿的、通道是废的。
+  拿真 axe + 真半透明底整坨 dump 出来才看清：节点顶层只有 `all / any / failureSummary / html /
+  impact / none / target`，`relatedNodes`（含每层 `target` 与 `html`）挂在 **check** 上。
+  现在既有"真形状能用"的正向断言，也留了一条"挂回节点上就采不到"的反向对照，并把"取最近那一层"
+  "截 200 字符""丢掉空 target"各配一条窄变异。
+- **第一次用这份现场数据重算 27 条，方向变了**（产物来自 run 41269879541；把每条 fg/bg 与
+  `web/app/design-tokens.css` 的 `:root` / `:root[data-theme="dark"]` 两块 `--p-*` 声明对照）：
+  前景 27 条全是令牌——`--p-meta` 21 / `--p-muted` 4 / `--p-accent` 2，所以"余 12 条未归因"其实是
+  静态读源码的极限，不是这 12 条不走令牌。底色这边才是问题：**16 条的实际 bgColor 不在任何 `--p-*`
+  原语里**，是 `#e2e9ee` / `#eff4f8` / `#ecf3f7` / `#ebeefa` 这类偏蓝合成底（半透明外壳层把
+  `--shell-blue` 掺进 `--surface-*` 叠出来的）。对比度矩阵按「令牌 vs 令牌」配对，结构上看不到这些层——
+  也就是说"把 `--p-meta` 调暗"这条路线即便做完，剩下的合成底仍在门外。
+  顺带把那条反常项解释掉了：`--p-muted` 那 4 条的真底是 `#e2e9ee`，实测比值 4.35 < 4.5，
+  本来就不达标，不是 axe 误判（本机按令牌算出 4.51~5.29 用的是 `--p-*` 之间的配对，底取错了）。
+  另一个盲区一并记下：`a11y-core.spec.ts` 不切 `data-theme`，所以这 27 条全是浅色态，dark 侧目前
+  只有 `contrast-matrix.spec.ts` 的本机实测数。
+
 ### Changed
 
 - **axe 基线第一批收窄 34 → 27**：`aria-prohibited-attr` 7 条全清——`components/Toast.tsx` 的

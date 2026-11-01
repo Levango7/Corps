@@ -2,7 +2,7 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { collectKeys, diffBaseline } from "./a11y-axe-keys";
+import { collectDetails, collectKeys, diffBaseline, type ViolationDetail } from "./a11y-axe-keys";
 import { registerAndLogin, uniqueEmail } from "./helpers";
 
 /**
@@ -30,10 +30,24 @@ import { registerAndLogin, uniqueEmail } from "./helpers";
  * 所以流程是：CI 首跑红 → 从日志里的 `A11Y_AXE_SNAPSHOT=` 或 `a11y-axe-snapshot` 附件
  * 取出 JSON → 写进 `web/tests/a11y-axe-baseline.json` → 重跑转绿。
  * 本机若能起服务，可 `A11Y_AXE_WRITE_BASELINE=1 npx playwright test a11y-core`。
+ *
+ * ## 现场取色数据（不参与红绿）
+ *
+ * 键只能定位「哪条规则的哪个位置」，归因不到「那个位置的 fg/bg 各是多少」——
+ * 而选择器是 axe 挑的最小唯一类集合，里面没出色令牌 ≠ 该元素不经过令牌。
+ * 所以每次 analyze 同时摊一份 `collectDetails(...)`，落三个出口：
+ * Playwright 附件 `a11y-axe-details`、`test-results/a11y-axe-details.json`、
+ * 日志 `A11Y_AXE_DETAILS=` 一行（日志会截长行，所以文件是主通道）。
+ * CI 侧那个文件由 `.github/workflows/ci.yml` 的 **`Upload axe contrast details`**（`if: always()`）
+ * 单独收成产物 `a11y-axe-details`：上一条 Playwright 产物是 `if: failure()`，而基线长期是绿的，
+ * 跟着 failure() 就等于这条通道从来没产出过。
+ * 刻意**不**把它变成断言：不参与判定的采数冒充门禁，只会让人以为已经守住了。
  */
 
 const BASELINE_PATH = resolve(process.cwd(), "tests/a11y-axe-baseline.json");
 const SNAPSHOT_PREFIX = "A11Y_AXE_SNAPSHOT=";
+/** 现场数据（fg/bg/比值）单独一行：它不进基线，只用来把「这条违规到底是谁的颜色」问清楚。 */
+const DETAILS_PREFIX = "A11Y_AXE_DETAILS=";
 /** 每条规则集：WCAG 2.1 A/AA。刻意不含 best-practice，避免把"建议"混进"不达标"。 */
 const AXE_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa"];
 
@@ -86,18 +100,21 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
     test.setTimeout(300_000);
 
     const keys: string[] = [];
+    const details: Record<string, ViolationDetail> = {};
+
+    /** 扫一次，同时产出基线键与现场数据（两件事共用同一次 analyze，避免两次渲染不一致）。 */
+    async function scanAs(routeKey: string): Promise<void> {
+      const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
+      keys.push(...collectKeys(routeKey, result.violations));
+      Object.assign(details, collectDetails(routeKey, result.violations));
+    }
 
     // 未登录页：登录是外部用户第一眼看到的面，单独扫。
     // 路径是 /auth/login（仓里没有 /login 路由——首跑就是在这里红的）。
     await page.goto("/auth/login", { waitUntil: "domcontentloaded" });
     await expect(page.locator('input[type="email"]').first()).toBeVisible({ timeout: 30_000 });
     await settle(page);
-    keys.push(
-      ...collectKeys(
-        "/login",
-        (await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze()).violations,
-      ),
-    );
+    await scanAs("/login");
 
     // 登录后逐页扫描。用固定测试账号注册，避免依赖别人种的数据。
     const wid = await registerAndLogin(page, uniqueEmail("e2e-a11y"), "E2E无障碍工作区");
@@ -115,8 +132,7 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
       expect(await page.getByText("页面未找到").count(), `页面 ${url} 渲染成了「页面未找到」`).toBe(
         0,
       );
-      const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
-      keys.push(...collectKeys(target.key, result.violations));
+      await scanAs(target.key);
     }
 
     const current = [...new Set(keys)].sort();
@@ -137,6 +153,18 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
     mkdirSync("test-results", { recursive: true });
     writeFileSync("test-results/a11y-axe-snapshot.json", JSON.stringify(snapshotPayload, null, 2));
     console.info(SNAPSHOT_PREFIX + JSON.stringify(current));
+
+    // 现场数据同批落盘：键只说"这条位置不达标"，这份说"它的 fg/bg/比值各是多少"。
+    // 长行走文件，日志里那行只是兜底（日志系统会截长行，所以不能只靠它）。
+    const detailOrder = Object.fromEntries(
+      Object.entries(details).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0)),
+    );
+    await testInfo.attach("a11y-axe-details", {
+      body: JSON.stringify(detailOrder, null, 2),
+      contentType: "application/json",
+    });
+    writeFileSync("test-results/a11y-axe-details.json", JSON.stringify(detailOrder, null, 2));
+    console.info(DETAILS_PREFIX + JSON.stringify(detailOrder));
 
     if (process.env.A11Y_AXE_WRITE_BASELINE === "1") {
       writeFileSync(BASELINE_PATH, JSON.stringify(snapshotPayload, null, 2) + "\n", "utf8");

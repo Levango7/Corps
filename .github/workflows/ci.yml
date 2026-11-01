@@ -678,6 +678,19 @@ jobs:
             web/pw-report.json
           retention-days: 7
           if-no-files-found: warn
+      # axe 取色现场（web/e2e/a11y-core.spec.ts 写的 test-results/a11y-axe-details.json）。
+      # **必须 always()，不能跟着上一条用 failure()**：axe 基线是「只许收缩」的长期存量，
+      # 每一条真违规都在的时候 CI 恒绿，而这份数据只在绿的 run 里才有意义——
+      # 挂在 failure() 等于让通道从来没产出（接线存在 ≠ 调用能通过）。
+      # 单独一个产物名 + 只指这一个文件，避免把 trace/截图的体积一起带进来。
+      - name: Upload axe contrast details
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: a11y-axe-details
+          path: web/test-results/a11y-axe-details.json
+          retention-days: 30
+          if-no-files-found: warn
 
   build:
     name: Build
