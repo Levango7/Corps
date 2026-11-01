@@ -58,7 +58,9 @@ const AA_MIN = 4.5;
  * 为什么用清单而不是继续藏在"基线 × 0.9"里：藏在基线里的问题是**不可见**的——
  * 看门禁全绿，没人知道有两处文字其实读不清。登记出来，问题才有人认领。
  *
- * 当前六项，均有实测数据支撑（contrast-probe.mjs；danger/accent 两项 2026-10-14 复验一致，
+ * 当前十一项（2026-11-02 由六项变十一项：A 把外壳两层补成实色后，新增的五组外壳配对
+ * 第一次算得出数，暴露出来的缺口按"登记而不是藏进基线"的同一口径入表）。
+ * 均有实测数据支撑（contrast-probe.mjs；danger/accent 两项 2026-10-14 复验一致，
  * meta 四项 2026-10-31 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测）：
  *
  * 1. light danger/surface = 4.32（差 AA 0.18）
@@ -82,10 +84,12 @@ const AA_MIN = 4.5;
  *    `--p-meta`（light #9a9a96 / dark #6a6a62）是全站**使用最广的次要文字层**：
  *    `text-[var(--meta)]` 607 处 / 该令牌全部用法 644 处。本清单此前压根没有 meta 配对，
  *    于是矩阵一直守着 7 个达标的配对、把真正不达标的那一档漏在门外。
- *    axe 基线余下 27 条 color-contrast 里**已按源码核到这一档的是 15 条**（选择器直接带
- *    --meta 的 5 条 + kbd 6 条 = app/[locale]/w/[wid]/layout.tsx:506 压在 bg-[var(--surface-2)]
- *    上 + 侧栏分组标签 4 条 = components/SidebarNavClient.tsx:92/101/117/126）；
- *    余 12 条**未归因**，不写成"同一个根因"（理由见 web/tests/a11y-axe-baseline.json 的 note）。
+ *    axe 基线余下 27 条 color-contrast 的归因**已完成**（2026-11-02，路线 A 之前靠
+ *    web/e2e/a11y-core.spec.ts 摊出的取色现场数据算的，判据与逐条出处见
+ *    web/tests/a11y-axe-baseline.json 的 note）：27 条前景全是令牌（--p-meta 21 /
+ *    --p-muted 4 / --p-accent 2），底色里 14 条压在 --shell-content(7) 与
+ *    --shell-sidebar(7) 两层上、6 条 kbd 自绘 --p-surface-2、5 条卡片 --p-surface、
+ *    2 条是选中态按钮的内联 style（绕过令牌）。
  *    四面底由难到易：--surface-3 2.38 < --surface-2（chip 底，kbd 实测压在这面）2.56 <
  *    --bg 2.66 < --surface 2.80；本清单只登记了后两面，前两面不在清单里但修法必须一起过。
  *    候选色值（对 surface / bg / surface-2 / surface-3 四面）：
@@ -96,7 +100,14 @@ const AA_MIN = 4.5;
  *      ① 只压暗 meta —— 已核到的 15 条清了（若要连 surface-3 也过还得再深一档），但 meta 与 muted 塌成一层
  *      ② 同时把 muted 压到 #5a5a57、重建成两档 —— 视觉改动更大（1600+ 用法受影响、
  *         ui-visual 快照要重录），但层级关系保住
- *      ③ 第二批先把 axe 的 fgColor/bgColor/contrastRatio 一起进快照，把余 12 条归完因再动令牌
+ *      ③ 先把取色现场数据进快照、把余 12 条归完因再动令牌
+ *    **2026-11-02 owner 定档 C = 先 A 后 B**：A 把外壳两层的 color-mix 权重补满
+ *    （80+10 → 90+10、66+14 → 87+13，dark 三条同理）使层变实色，逐通道屏幕漂移 ≤ 1/255
+ *    （压平公式与 axe 真产物逐值对齐过：mix 结果 #eef4f8 以 α0.9 叠在 --bg #f8f8f6 上
+ *     = 实测 #eff4f8，公式对得上才有资格用它反解权重）；
+ *    A 之后上面这些半透明合成底变成可判定的实色，本清单也才第一次真能把它们算出来
+ *    —— 于是新增 5 组外壳配对，并把 A 暴露出来的缺口登记进 AA_EXEMPT。
+ *    B（抬 --p-meta / 必要时连 --p-muted 重建两档）按 A 之后这批实色难面反推色值。
  */
 const AA_EXEMPT: Record<string, string> = {
   "light|meta/surface":
@@ -114,6 +125,31 @@ const AA_EXEMPT: Record<string, string> = {
     "3.18 < AA 4.5。dark 的 --p-meta 同样不达标（四面由难到易 surface-3 2.71 < surface-2 3.01 < bg 3.18 < surface 3.46）；" +
     "过 AA 需要往**亮**走，与 light 方向相反，所以两个主题必须一起定档，否则只是把缺口换了个主题。色值见上方注释第 3 条",
   "dark|meta/bg": "3.46 < AA 4.5。与 dark|meta/surface 同一根因，修法同上",
+  /* 以下五条是 A（外壳层补成实色）之后**新暴露**出来的缺口 —— 不是新变坏，是原来看不见。
+     半透明时代这些配对算不出颜色，走的是「null 就跳过」，所以矩阵一直显示全绿。
+     现在它们进了 AA 硬底线判定，先登记再按路线 B 收口。
+     A 之后这四层的实色（P0-4 不许把 hex 写进字符串字面量，所以记在这儿）：
+       light --shell-sidebar = #eff5f8    light --shell-content = #e2e9ee
+       dark  --shell-sidebar = #1e232d    dark  --shell-content = #232933
+     路线 B 挑 --p-meta / --p-muted 的新色值时，最难的那面是 light #e2e9ee / dark #232933。 */
+  "light|meta/shell-sidebar":
+    "2.57 < AA 4.5（差 1.93）。压在 light 侧栏实色层上的分组标签，即 axe 产物里 " +
+    "--shell-sidebar 那 7 条。修法同 light|meta/surface（路线 B 抬 --p-meta），" +
+    "但 B 的候选色值必须**以这一组为难面**来验算，不能再只看 surface/bg 两面",
+  "light|meta/shell-content":
+    "2.30 < AA 4.5（差 2.20，全站最难的一面）。压在 light 内容实色底布上的次要文字，" +
+    "即 axe 产物里 --shell-content 那 7 条；与 axe 现场实测 2.30 逐值对齐（矩阵与运行时不再是两套数）。" +
+    "B 若要 meta 在四面底全过 AA，得按这一面反推色值，不是按 surface 反推",
+  "light|muted/shell-content":
+    "4.36 < AA 4.5（差 0.14）。这是**A 之后才发现的第二档缺口**：--p-muted 在四面 --p-* 实色上" +
+    "都达标（5.29/5.03/4.85/4.51），压在半蓝的内容底布上就差 0.14。说明 B 光抬 --p-meta 不够，" +
+    "要么 muted 也压暗一档（回到「层级塌陷」那条权衡），要么把 --shell-content 调浅 —— 属设计决策",
+  "dark|meta/shell-sidebar":
+    "2.89 < AA 4.5。dark 侧栏实色层上的分组标签；与 light|meta/shell-sidebar 同因，" +
+    "但方向相反（dark 要往**亮**走），必须与 light 一起定档",
+  "dark|meta/shell-content":
+    "2.68 < AA 4.5。dark 内容实色底布上的次要文字，四面里最难；同 dark|meta/shell-sidebar 修法。" +
+    "注意 dark 侧 axe 还没覆盖（a11y-core.spec.ts 不切 data-theme），这一组目前只有矩阵的数",
   "light|danger/surface":
     "4.32 < AA 4.5（差 0.18）。--p-danger 调深一档即可达 4.84（色值与推导见上方注释），属设计决策待确认",
   "dark|accent/surface":
@@ -136,6 +172,16 @@ const CONTRAST_PAIRS: Record<string, [string, string]> = {
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
   "accent/surface": ["--accent", "--surface"],
+  /* 外壳三层配对（2026-11-02 补，路线 A）。此前清单只有 --surface/--bg 这类实色令牌配对，
+     而应用正文区与侧栏**真正压着**的是 --shell-content / --shell-sidebar：axe 现场数据
+     （main run 41319565816 的产物）显示 27 条 color-contrast 违规里 14 条的底就是这两层。
+     当时它们写成 color-mix 权重和不满 100% ⇒ 半透明色，矩阵既算不出色值也看不见叠色结果，
+     所以这道门对那 14 条是结构性的瞎。补配对 + 走 used value 解析，退化才会当场报警。 */
+  "meta/shell-sidebar": ["--meta", "--shell-sidebar"],
+  "meta/shell-content": ["--meta", "--shell-content"],
+  "muted/shell-sidebar": ["--muted", "--shell-sidebar"],
+  "muted/shell-content": ["--muted", "--shell-content"],
+  "fg/shell-content": ["--fg", "--shell-content"],
 };
 
 /* 基线表（待实测填入 —— 首跑后从 _probe/contrast-actual.txt 复制真实值）
@@ -152,6 +198,14 @@ const BASELINE: Record<string, Record<string, number>> = {
     "on-accent/accent": 4.98,
     "danger/surface": 4.32,
     "accent/surface": 4.93,
+    // 下面五组是 2026-11-02 本机 `node e2e/visual-kit/contrast-probe.mjs` 实测
+    // （A 把两层补成实色之后取的数；与 axe 现场数据互相印证：meta/shell-content 2.30
+    //  对得上产物里压在 #e2e9ee 上那 7 条的 2.30）
+    "meta/shell-sidebar": 2.57,
+    "meta/shell-content": 2.3,
+    "muted/shell-sidebar": 4.86,
+    "muted/shell-content": 4.36,
+    "fg/shell-content": 14.21,
   },
   dark: {
     "fg/surface": 15.75,
@@ -163,6 +217,11 @@ const BASELINE: Record<string, Record<string, number>> = {
     "on-accent/accent": 4.51,
     "danger/surface": 5.34,
     "accent/surface": 3.85,
+    "meta/shell-sidebar": 2.89,
+    "meta/shell-content": 2.68,
+    "muted/shell-sidebar": 4.89,
+    "muted/shell-content": 4.54,
+    "fg/shell-content": 13.28,
   },
 };
 
@@ -183,7 +242,24 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
       for (const k in base) {
         const v = pairs[k];
         expect(v, "主题 " + th + " 缺少配对 " + k).toBeTruthy();
-        if (v.c === null) continue;
+        /* 算不出来 = 红，不许跳过。旧写法是 `if (v.c === null) continue`，后果是
+           「配对里的令牌不是色值」时这道门静默放行 —— 2026-11-02 就是这么漏掉
+           --shell-* 的（当时读的是声明原文 color-mix(...)，解析器返回 null，
+           于是一路绿灯，而屏幕上那两层正把 14 条文字压在不达标的合成底上）。 */
+        expect(
+          v.c,
+          "对比度算不出来：主题 " +
+            th +
+            " 配对 " +
+            k +
+            "  [" +
+            v.fg +
+            " / " +
+            v.bg +
+            "] " +
+            "—— 令牌解析不出颜色（多半是取数口径或令牌本身写错），不要当成通过",
+        ).not.toBeNull();
+        if (v.c === null) continue; // 上一行已红，这里只是让下面的 toFixed 类型安全
         const exempt = AA_EXEMPT[th + "|" + k];
         /* 豁免项只受棘轮约束（不许比基线更差）；非豁免项必须同时满足 AA 与棘轮。
            取 max 而非只取 AA：已达标的配对若被改坏 10%，AA 未必能立刻抓到
@@ -284,6 +360,35 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
           pairs[k].bg,
           "主题 " + th + " 的背景令牌 " + CONTRAST_PAIRS[k][1] + " 为空",
         ).not.toBe("");
+        /* 配对里的令牌必须是**实色**（alpha=1）。半透明令牌的屏幕色取决于它叠在什么上面，
+           矩阵按配对算出来的那个数不代表用户看到的那个 —— 留一个半透明层在清单里，
+           这道门就又变回"给人虚假安全感"的那种门禁。这正是 A 修掉的缺陷，所以这里钉住：
+           谁再把 --shell-* 的 color-mix 权重写成不满 100%，这里直接红。
+           （权重和不满时结果 alpha = w1+w2：80%+10% 得到 alpha 0.9，不是 100% 的淡版。） */
+        expect(
+          pairs[k].bgAlpha,
+          "主题 " +
+            th +
+            " 配对 " +
+            k +
+            " 的背景令牌 " +
+            CONTRAST_PAIRS[k][1] +
+            " 是半透明（alpha " +
+            pairs[k].bgAlpha +
+            "）：color-mix 权重和须为 100%",
+        ).toBe(1);
+        expect(
+          pairs[k].fgAlpha,
+          "主题 " +
+            th +
+            " 配对 " +
+            k +
+            " 的前景令牌 " +
+            CONTRAST_PAIRS[k][0] +
+            " 是半透明（alpha " +
+            pairs[k].fgAlpha +
+            "）：文字色须是实色，否则屏幕色取决于叠在哪儿",
+        ).toBe(1);
       }
     }
   });

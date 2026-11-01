@@ -16,7 +16,7 @@
  *       git show HEAD:web/app/design-tokens.css > /tmp/tokens.css
  *       node e2e/visual-kit/contrast-probe.mjs /tmp/tokens.css
  */
-/* global document, getComputedStyle, window, console, process */
+/* global document, window, console, process */
 import fs from "node:fs";
 import path from "node:path";
 import { chromium } from "@playwright/test";
@@ -37,6 +37,15 @@ const PAIRS = {
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
   "accent/surface": ["--accent", "--surface"],
+  // 外壳三层的配对（2026-11-02 补）。此前清单只有 --surface/--bg 这类实色令牌配对，
+  // 而应用正文区/侧栏真正压着的是 --shell-content / --shell-sidebar —— axe 现场数据显示
+  // 27 条违规里 14 条的底就是这两层（当时它们还是半透明色，矩阵结构上看不见）。
+  // 补上配对，改一次层色的退化才会当场报警。
+  "meta/shell-sidebar": ["--meta", "--shell-sidebar"],
+  "meta/shell-content": ["--meta", "--shell-content"],
+  "muted/shell-sidebar": ["--muted", "--shell-sidebar"],
+  "muted/shell-content": ["--muted", "--shell-content"],
+  "fg/shell-content": ["--fg", "--shell-content"],
 };
 
 const browser = await chromium.launch({ headless: true });
@@ -53,13 +62,12 @@ for (const theme of ["light", "dark"]) {
     else el.setAttribute("data-theme", t);
   }, theme);
   const rows = await page.evaluate((pairs) => {
-    const cs = getComputedStyle(document.documentElement);
-    const g = (k) => cs.getPropertyValue(k).trim();
     const out = [];
     for (const k of Object.keys(pairs)) {
-      const fg = g(pairs[k][0]),
-        bg = g(pairs[k][1]);
-      out.push({ name: k, fg, bg, c: window.__vk.contrast(fg, bg) });
+      // 与 contrast-matrix.spec.ts 同一个口径：走 __vk.pair() 读 used value，
+      // 派生层（color-mix）才求得出颜色；这里若读声明原文会拿到未求值的串。
+      const r = window.__vk.pair(pairs[k][0], pairs[k][1]);
+      out.push({ name: k, fg: r.fg, bg: r.bg, c: r.c, bgAlpha: r.bgAlpha });
     }
     return out;
   }, PAIRS);
@@ -75,7 +83,8 @@ for (const theme of ["light", "dark"]) {
       r.fg +
       " / " +
       r.bg +
-      "]";
+      "]" +
+      (r.bgAlpha < 1 ? "  ⚠️ 底是半透明（alpha " + r.bgAlpha + "），屏幕色取决于叠在哪儿" : "");
     console.info("  " + line);
     report.push(line);
   }
