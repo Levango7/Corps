@@ -11830,7 +11830,7 @@ paths:
     get:
       tags: [favorites]
       summary: Check whether the caller has favorited a target
-      description: "Query wid + type + targetId (legacy envelope code=0). data = { favorited, favoriteId } (favoriteId null when not favorited)."
+      description: "Query wid + type + targetId. data = { favorited, favoriteId } (favoriteId null when not favorited)."
       operationId: getFavoritesCheck
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -11861,7 +11861,7 @@ paths:
     patch:
       tags: [favorites]
       summary: Update a favorite's note
-      description: "Query wid + path id (UUID). Body { note? } (legacy envelope code=0); data = updated favorite row. Workspace + user double filter, 404 otherwise."
+      description: "Query wid + path id (UUID). Body { note? }; data = updated favorite row. Workspace + user double filter, 404 otherwise."
       operationId: patchFavoriteById
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -11894,7 +11894,7 @@ paths:
     delete:
       tags: [favorites]
       summary: Remove a favorite
-      description: "Query wid + path id. Legacy envelope code=0; data = null."
+      description: "Query wid + path id. data = null."
       operationId: deleteFavoriteById
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -12051,7 +12051,7 @@ paths:
     get:
       tags: [notifications]
       summary: Get (or create defaults for) the caller's notification preferences
-      description: "User-level data (no workspace); legacy envelope code=0; data = preference row (id/emailNotify/pushNotify/dndEnabled/dndStart/dndEnd/createdAt/updatedAt)."
+      description: "User-level data (no workspace); data = preference row (id/emailNotify/pushNotify/dndEnabled/dndStart/dndEnd/createdAt/updatedAt)."
       operationId: getNotificationsPreferences
       responses:
         '200':
@@ -12067,7 +12067,7 @@ paths:
     patch:
       tags: [notifications]
       summary: Update the caller's notification preferences
-      description: "Body { emailNotify?, pushNotify?, dndEnabled?, dndStart?, dndEnd? } where dnd times are HH:mm. Legacy envelope code=0; data = updated preference row."
+      description: "Body { emailNotify?, pushNotify?, dndEnabled?, dndStart?, dndEnd? } where dnd times are HH:mm. data = updated preference row."
       operationId: patchNotificationsPreferences
       requestBody:
         required: true
@@ -12098,7 +12098,7 @@ paths:
     patch:
       tags: [notifications]
       summary: Mark a notification read/unread
-      description: "Query workspaceId (required) + path id. Body { read } (legacy envelope code=0); ownership verified before updating (404 otherwise); data = updated notification."
+      description: "Query workspaceId (required) + path id. Body { read }; ownership verified before updating (404 otherwise); data = updated notification."
       operationId: patchNotificationById
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12133,7 +12133,7 @@ paths:
     delete:
       tags: [notifications]
       summary: Delete a notification
-      description: "Query workspaceId (required) + path id. Legacy envelope code=0; data = null."
+      description: "Query workspaceId (required) + path id. data = null."
       operationId: deleteNotificationById
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12160,7 +12160,7 @@ paths:
     get:
       tags: [search]
       summary: Unified full-text search (messages + wiki pages)
-      description: "Query workspaceId + q (required) + type (all|message|wiki, default all) + limit. tsvector GIN + trigram union per source; legacy envelope code=0; data = { messages, wikis }."
+      description: "Query workspaceId + q (required) + type (all|message|wiki, default all) + limit. tsvector GIN + trigram union per source; data = { messages, wikis }."
       operationId: getUnifiedSearch
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12191,7 +12191,7 @@ paths:
     get:
       tags: [sync]
       summary: Incremental pull of module changes since a timestamp
-      description: "Query workspaceId + since? (ms timestamp). Returns per-module rows with updatedAt/createdAt > since (max 200 per module; task/decision/document/notification). Legacy envelope code=0; data = { changes, serverTime }."
+      description: "Query workspaceId + since? (ms timestamp). Returns per-module rows with updatedAt/createdAt > since (max 200 per module; task/decision/document/notification). data = { changes, serverTime }."
       operationId: getSyncPull
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12214,7 +12214,7 @@ paths:
     post:
       tags: [sync]
       summary: Batch upload offline sync operations (LWW conflict detection)
-      description: "Body { workspaceId, operations } (max 500 ops; per-module payload schemas validated). Update ops check remote updatedAt first (last-write-wins; losers are reported). Legacy envelope code=0; data = { accepted, conflicts }."
+      description: "Body { workspaceId, operations } (max 500 ops; per-module payload schemas validated). Update ops check remote updatedAt first (last-write-wins; losers are reported). data = { accepted, conflicts }."
       operationId: postSyncUpload
       requestBody:
         required: true
@@ -12256,7 +12256,7 @@ paths:
     get:
       tags: [todos]
       summary: Aggregated cross-module todo list for the caller
-      description: "Query workspaceId + type (all|task|approval|meeting|document) + status? (pending|completed) + limit. Aggregates tasks/approvals/meeting participants/document-comment mentions; sorted by dueDate/createdAt. Legacy envelope code=0; data = sorted todo items."
+      description: "Query workspaceId + type (all|task|approval|meeting|document) + status? (pending|completed) + limit. Aggregates tasks/approvals/meeting participants/document-comment mentions; sorted by dueDate/createdAt. data = sorted todo items."
       operationId: getTodos
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12286,7 +12286,7 @@ paths:
     get:
       tags: [todos]
       summary: Pending todo counts for the caller (total + by type)
-      description: "Query workspaceId. Counts only pending items. Legacy envelope code=0; data = { total, byType { task, approval, meeting, document } }."
+      description: "Query workspaceId. Counts only pending items. data = { total, byType { task, approval, meeting, document } }."
       operationId: getTodosCount
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -13218,7 +13218,7 @@ paths:
     get:
       tags: [presence]
       summary: Workspace member presence roster
-      description: "Legacy envelope code=0; data = { items [{ userId, name, image, role, online, onlineAt }], total, onlineCount }."
+      description: "Presence list; data = { items [{ userId, name, image, role, online, onlineAt }], total, onlineCount }."
       operationId: getPresence
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -13236,7 +13236,7 @@ paths:
     post:
       tags: [presence]
       summary: Presence heartbeat (updates the caller's onlineAt)
-      description: "Requires presence/update (403). Legacy envelope code=0; data = { onlineAt }."
+      description: "Requires presence/update (403). data = { onlineAt }."
       operationId: postPresence
       parameters:
         - $ref: '#/components/parameters/Wid'

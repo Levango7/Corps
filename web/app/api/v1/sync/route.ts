@@ -259,7 +259,7 @@ async function getSync(req: NextRequest) {
     };
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: {
         changes,
         serverTime: Date.now(),
@@ -367,7 +367,7 @@ async function postSync(req: NextRequest) {
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { accepted, conflicts },
       message: apiMsg(req, "ok"),
     });

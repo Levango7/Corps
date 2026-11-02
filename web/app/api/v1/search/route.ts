@@ -236,8 +236,10 @@ async function getSearch(req: NextRequest): Promise<NextResponse> {
     }));
 
     return NextResponse.json({
-      // P1-fix: code: 200 → code: 0，message 用 apiMsg 双语
-      code: 0,
+      // 2026-11-03 改回 200：此前那次「P1-fix」把状态码 200 改成了 0，方向错了——
+      // code 应等于 HTTP 状态码（见 api/openapi.yaml:13653）。当时的 message 双语
+      // 修复是对的，保留；只把 code 归位。
+      code: 200,
       data: { messages, wikis },
       message: apiMsg(req, "ok"),
     });

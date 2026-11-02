@@ -32,7 +32,7 @@ const ONLINE_WINDOW_MS = 5 * 60 * 1000;
  * POST /v1/workspaces/{wid}/presence — 心跳：更新当前用户 onlineAt 时间戳
  *
  * 前端登录后每 2 分钟调用一次，刷新在线状态。
- * 响应：{ code: 0, data: { onlineAt: ISO }, message: "OK" }
+ * 响应：{ code: 200, data: { onlineAt: ISO }, message: "OK" }
  */
 async function postPresenceHandler(
   req: NextRequest,
@@ -72,7 +72,7 @@ async function postPresenceHandler(
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { onlineAt: now.toISOString() },
       message: apiMsg(req, "ok"),
     });
@@ -89,7 +89,7 @@ async function postPresenceHandler(
  * GET /v1/workspaces/{wid}/presence — 查询工作区成员在线状态
  *
  * 查询工作区所有成员 + 其 onlineAt 时间戳，最近 5 分钟内有心跳的标记为在线。
- * 响应：{ code: 0, data: { items: [{ userId, name, image, role, online, onlineAt }], total, onlineCount }, message }
+ * 响应：{ code: 200, data: { items: [{ userId, name, image, role, online, onlineAt }], total, onlineCount }, message }
  */
 async function getPresenceHandler(
   req: NextRequest,
@@ -153,7 +153,7 @@ async function getPresenceHandler(
     const onlineCount = items.filter((i: { online: boolean }) => i.online).length;
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { items, total: items.length, onlineCount },
       message: apiMsg(req, "ok"),
     });

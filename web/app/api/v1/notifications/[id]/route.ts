@@ -142,7 +142,7 @@ async function patchNotificationsById(
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { ...updated, createdAt: updated.createdAt.toISOString() },
       message: apiMsg(req, "ok"),
     });
@@ -233,7 +233,7 @@ async function deleteNotificationsById(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: null, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: null, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[DELETE notifications/[id]] error:", error);
     return NextResponse.json(

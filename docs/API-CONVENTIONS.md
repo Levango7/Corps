@@ -34,15 +34,16 @@
 所以这是一批**潜在陷阱**而不是现存 bug：谁哪天给 `register` / `send` 接一个按 `code` 判成败的客户端，
 就会踩。把它记成"已知隐患"比记成"线上故障"更诚实，也更难被后来人当成噪声忽略。
 
-### 现状（2026-11-03，第 1 批清偿后快照）
+### 现状（2026-11-03，第 1、2 批清偿后快照）
 
 | 指标 | 数值 | 复核命令 |
 |------|------|----------|
-| 违反处数 | **82 处** | `python scripts/check_response_envelope.py` （末行「合计」） |
-| 涉及生产路由文件 | **53 个** | 同上（末行括号内） |
+| 违反处数 | **65 处** | `python scripts/check_response_envelope.py` （末行「合计」） |
+| 涉及生产路由文件 | **42 个** | 同上（末行括号内） |
 | 对照：用状态码的响应 | 389 处 | `grep -rn "code: 200\|code: 201\|code: 204" web/app/api --include=route.ts \| wc -l` |
 
-> 基线建立时（2026-11-01）是 101 处 / 63 个文件；第 1 批清偿后降到 82 / 53。
+> 基线建立时（2026-11-01）是 101 处 / 63 个文件；第 1 批（forms/workflows/documents 19 处）降到 82 / 53，
+> 第 2 批（notifications/favorites/presence/todos/search/sync 17 处）降到 65 / 42。
 > **不要把这两个数字当"当前值"引用**——每次合并后跑一遍门禁取新数。
 
 > 用朴素 `grep -c 'code: 0'` 会数出 117 处 / 65 个文件——多出的是**文档注释在描述信封格式**
@@ -93,7 +94,7 @@
 | 批次 | 域 | 处数（2026-11-01） | 状态 | 备注 |
 |------|----|--------------------|------|------|
 | 1 | `forms` 7 / `workflows` 9 / `documents` 3 | 19 | **已清偿（2026-11-03）** | 同步清掉 `api/openapi.yaml` 里 8 处 legacy 注解；测试断言改为 `toBe(res.status)` |
-| 2 | `notifications` 5 / `favorites` 5 / `presence` 2 / `sync` 2 / `todos` 2 / `search` 1 | 17 | 待做 | 前端只见 `res.ok`，风险最低 |
+| 2 | `notifications` 5 / `favorites` 5 / `presence` 2 / `sync` 2 / `todos` 2 / `search` 1 | 17 | **已清偿（2026-11-03）** | 同步清掉 14 处 legacy 注解；本批无测试断言需要改 |
 | 3 | `mail` 10 / `remote-control` 5 / `push` 3 | 18 | 待做 | `push` 的违规在 `register` / `send`，与 `PushSubscribe` 打的 `subscribe` 不是同一端点 |
 | 4 | `ai` 45 / `tasks` 1 / `im` 1 | 47 | 待做 | 最大一块，最后做 |
 
