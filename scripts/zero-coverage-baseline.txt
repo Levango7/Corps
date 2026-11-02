@@ -360,11 +360,6 @@ components/common/FavoriteList.tsx
 components/contact/ContactDetail.tsx
 components/contact/ContactGroupSidebar.tsx
 components/contact/ContactList.tsx
-components/database/BoardView.tsx
-components/database/CalendarView.tsx
-components/database/GanttView.tsx
-components/database/RelationField.tsx
-components/database/RollupField.tsx
 components/doc/PermissionManager.tsx
 components/doc/ShareDialog.tsx
 components/documents/DocumentPermissionPanel.tsx
