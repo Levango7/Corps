@@ -319,19 +319,14 @@ components/SwipeToDismiss.tsx
 components/TaskFilterBar.tsx
 components/UserMenu.tsx
 components/WidgetGrid.tsx
-components/ai/AgentMessageFlow.tsx
 components/ai/AiAnalysisDashboard.tsx
 components/ai/AiPushFeed.tsx
 components/ai/AiPushSettings.tsx
-components/ai/AnnouncementDraftPanel.tsx
 components/ai/ApprovalAdvicePanel.tsx
 components/ai/AssistantPanel.tsx
 components/ai/CalendarScheduleDialog.tsx
-components/ai/DailyReportView.tsx
 components/ai/DecisionAssistantPanel.tsx
 components/ai/DocQaPanel.tsx
-components/ai/ImReplySuggestions.tsx
-components/ai/KnowledgeExtractPanel.tsx
 components/ai/KnowledgeGraphView.tsx
 components/ai/KnowledgeQaPanel.tsx
 components/ai/MailAssistantPanel.tsx
@@ -341,7 +336,6 @@ components/ai/MeetingSummaryPanel.tsx
 components/ai/MultiAgentPanel.tsx
 components/ai/OrchestrationPanel.tsx
 components/ai/PersonalizationPanel.tsx
-components/ai/ProjectInsightView.tsx
 components/ai/TaskBreakdownDialog.tsx
 components/ai/TemplateEditor.tsx
 components/ai/TemplateMarket.tsx
