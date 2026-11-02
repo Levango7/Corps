@@ -200,7 +200,7 @@ async function postAiAssistantChat(req: NextRequest) {
 
     // 10) 返回 AssistantResult + conversationId
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { ...result, conversationId },
     });
   } catch (error) {

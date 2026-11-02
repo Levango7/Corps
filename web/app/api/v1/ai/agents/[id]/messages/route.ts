@@ -151,7 +151,7 @@ async function getAiAgentsMessagesById(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { items, total, skip, take },
       message: "OK",
     });

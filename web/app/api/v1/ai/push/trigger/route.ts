@@ -136,7 +136,7 @@ async function postAiPushTrigger(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 200, data: record }, { status: 201 });
+    return NextResponse.json({ code: 201, data: record }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/push/trigger] error:", error);
     return NextResponse.json(

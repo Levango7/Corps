@@ -47,7 +47,7 @@ async function getAiAssistantSuggestions(req: NextRequest) {
   // 3) 返回建议能力列表
   const suggestions = getSuggestionsForPhase(phase);
 
-  return NextResponse.json({ code: 0, data: { phase, suggestions } });
+  return NextResponse.json({ code: 200, data: { phase, suggestions } });
 }
 
 // RED 指标接线：Rate/Duration 通过 withRed 包装器自动记录

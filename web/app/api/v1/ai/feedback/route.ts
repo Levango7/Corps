@@ -91,7 +91,7 @@ async function postAiFeedback(req: NextRequest) {
       metadata: body.metadata as Prisma.InputJsonValue,
     });
 
-    return NextResponse.json({ code: 0, data: feedback, message: "OK" });
+    return NextResponse.json({ code: 200, data: feedback, message: "OK" });
   } catch (error) {
     console.error("[ai/feedback] POST error:", error);
     return NextResponse.json(
@@ -196,7 +196,7 @@ async function getAiFeedback(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { items, total, stats },
       message: "OK",
     });

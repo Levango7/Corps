@@ -103,7 +103,7 @@ async function getAiUsageLimits(req: NextRequest) {
       userId,
     );
 
-    return NextResponse.json({ code: 0, data: limit, message: "OK" });
+    return NextResponse.json({ code: 200, data: limit, message: "OK" });
   } catch (error) {
     console.error("[ai-usage/limits GET] error:", error);
     return NextResponse.json(
@@ -268,7 +268,7 @@ async function putAiUsageLimits(req: NextRequest) {
       }
     }
 
-    return NextResponse.json({ code: 0, data: limit, message: "OK" });
+    return NextResponse.json({ code: 200, data: limit, message: "OK" });
   } catch (error) {
     console.error("[ai-usage/limits PUT] error:", error);
     return NextResponse.json(

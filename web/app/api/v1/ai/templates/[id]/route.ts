@@ -91,7 +91,7 @@ async function getAiTemplatesById(
         { status: 404 },
       );
     }
-    return NextResponse.json({ code: 0, data: result.template, message: "OK" });
+    return NextResponse.json({ code: 200, data: result.template, message: "OK" });
   } catch (error) {
     console.error("[GET ai/templates/[id]] error:", error);
     return NextResponse.json(
@@ -169,7 +169,7 @@ async function patchAiTemplatesById(
           tx.aiWorkflowTemplate.update({ where: { id }, data }),
         );
 
-    return NextResponse.json({ code: 0, data: updated, message: "OK" });
+    return NextResponse.json({ code: 200, data: updated, message: "OK" });
   } catch (error) {
     console.error("[PATCH ai/templates/[id]] error:", error);
     return NextResponse.json(
@@ -216,7 +216,7 @@ async function deleteAiTemplatesById(
       );
     }
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 200, data: null, message: "OK" });
   } catch (error) {
     console.error("[DELETE ai/templates/[id]] error:", error);
     return NextResponse.json(

@@ -161,7 +161,7 @@ async function postAiPushSchedules(req: NextRequest) {
         }),
       ctx.payload.sub,
     );
-    return NextResponse.json({ code: 200, data: schedule }, { status: 201 });
+    return NextResponse.json({ code: 201, data: schedule }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/push/schedules] error:", error);
     return NextResponse.json(
@@ -182,7 +182,7 @@ async function postAiPushSchedules(req: NextRequest) {
  * RLS：先查 schedule 拿 workspaceId（runWithAuthOp cron 逃生口），校验 userId 归属后
  *      用 runWithWorkspace(wid) 在 RLS 事务内更新。
  *
- * 返回 { code: 0, data, message } 信封格式。
+ * 返回 { code: 200, data, message } 信封格式。
  */
 async function patchAiPushSchedules(req: NextRequest) {
   // 1) 认证
@@ -260,7 +260,7 @@ async function patchAiPushSchedules(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: updated,
       message: apiMsg(req, "ok"),
     });

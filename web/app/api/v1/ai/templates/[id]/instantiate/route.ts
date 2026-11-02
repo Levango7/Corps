@@ -221,7 +221,7 @@ async function postAiTemplatesInstantiateById(
       console.warn("[ai/templates/instantiate] usageCount 自增失败（不影响主流程）", e);
     }
 
-    return NextResponse.json({ code: 0, data: workflow, message: "OK" }, { status: 201 });
+    return NextResponse.json({ code: 201, data: workflow, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/templates/[id]/instantiate] error:", error);
     return NextResponse.json(

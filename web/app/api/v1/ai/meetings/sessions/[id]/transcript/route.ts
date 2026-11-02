@@ -150,7 +150,7 @@ async function postAiMeetingsSessionsTranscriptById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: session, message: "OK" });
+    return NextResponse.json({ code: 200, data: session, message: "OK" });
   } catch (error) {
     console.error("[POST ai/meetings/sessions/[id]/transcript] error:", error);
     return NextResponse.json(
