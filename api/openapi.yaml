@@ -9870,7 +9870,7 @@ paths:
     post:
       tags: [push]
       summary: Register a device push token (FCM/APNs/Huawei Push Kit)
-      description: Legacy envelope code=0.
+      description: Registers or refreshes the device token (upsert).
       operationId: registerPushDevice
       requestBody:
         required: true
@@ -9896,7 +9896,7 @@ paths:
     delete:
       tags: [push]
       summary: Unregister a device push token
-      description: Legacy envelope code=0.
+      description: Removes the device token for the current user.
       operationId: unregisterPushDevice
       requestBody:
         content:
@@ -9982,7 +9982,7 @@ paths:
     post:
       tags: [push]
       summary: Send a push notification (admin only)
-      description: Legacy envelope code=0; data null.
+      description: data is null on success.
       operationId: sendPushNotification
       requestBody:
         required: true
@@ -10007,7 +10007,7 @@ paths:
     get:
       tags: [mail]
       summary: List my mailbox accounts
-      description: Legacy envelope code=0; data is the accounts array.
+      description: data is the accounts array.
       operationId: listMailAccounts
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -10104,7 +10104,7 @@ paths:
     get:
       tags: [mail]
       summary: Mail inbox / list
-      description: Query status/isRead/page/pageSize; legacy envelope code=0 with a paginated page.
+      description: Query status/isRead/page/pageSize; data is a paginated page.
       operationId: listMailInbox
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -10135,7 +10135,7 @@ paths:
     post:
       tags: [mail]
       summary: Send an email
-      description: "Body { wid, accountId, to, cc?, bcc?, subject, bodyText, bodyHtml?, inReplyTo? } (legacy envelope code=0)."
+      description: "Body { wid, accountId, to, cc?, bcc?, subject, bodyText, bodyHtml?, inReplyTo? }."
       operationId: sendMail
       requestBody:
         required: true
@@ -12307,7 +12307,7 @@ paths:
     get:
       tags: [remote-control]
       summary: List remote-control sessions in a workspace
-      description: "Query workspaceId + role (initiator|target|all) + status (active|pending|all). Legacy envelope code=0; data = session DTOs."
+      description: "Query workspaceId + role (initiator|target|all) + status (active|pending|all). data = session DTOs."
       operationId: listRemoteControlSessions
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12333,7 +12333,7 @@ paths:
     post:
       tags: [remote-control]
       summary: Create a remote-control request (screen share + input forwarding)
-      description: "Body { targetUserId, workspaceId } (legacy envelope code=0, HTTP 201). Cannot target yourself (400); target must be a workspace member. Session expires after 30 minutes."
+      description: "Body { targetUserId, workspaceId }; HTTP 201. Cannot target yourself (400); target must be a workspace member. Session expires after 30 minutes."
       operationId: createRemoteControlSession
       requestBody:
         required: true
@@ -12381,7 +12381,7 @@ paths:
     post:
       tags: [remote-control]
       summary: Send a signaling message to the session peer
-      description: "Body = SignalingMessage (type/fromUserId/toUserId/sessionId + sdp or ice candidate fields, workspaceId). Membership + session participant checks apply (403); forwarded via EventEmitter. Legacy envelope code=0; data = null."
+      description: "Body = SignalingMessage (type/fromUserId/toUserId/sessionId + sdp or ice candidate fields, workspaceId). Membership + session participant checks apply (403); forwarded via EventEmitter. data = null."
       operationId: postRemoteControlSignal
       requestBody:
         required: true
@@ -12413,7 +12413,7 @@ paths:
     patch:
       tags: [remote-control]
       summary: Accept / reject / end a remote-control session
-      description: "Body { action: accept|reject|end, reason? } + query workspaceId. accept/reject only by the target; end by either party. State machine: pending→active→ended / pending→rejected. Legacy envelope code=0; data = session DTO."
+      description: "Body { action: accept|reject|end, reason? } + query workspaceId. accept/reject only by the target; end by either party. State machine: pending→active→ended / pending→rejected. data = session DTO."
       operationId: patchRemoteControlSession
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -12459,7 +12459,7 @@ paths:
     delete:
       tags: [remote-control]
       summary: End a remote-control session
-      description: "Query workspaceId + path sessionId. Either participant may end. Legacy envelope code=0; data = session DTO."
+      description: "Query workspaceId + path sessionId. Either participant may end. data = session DTO."
       operationId: deleteRemoteControlSession
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'

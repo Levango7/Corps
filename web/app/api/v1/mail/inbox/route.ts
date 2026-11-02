@@ -95,7 +95,7 @@ async function getMailInbox(req: NextRequest) {
 
     if (accountIds.length === 0) {
       return NextResponse.json({
-        code: 0,
+        code: 200,
         data: { items: [], total: 0, page, pageSize },
         message: apiMsg(req, "ok"),
       });
@@ -147,7 +147,7 @@ async function getMailInbox(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { items, total, page, pageSize },
       message: apiMsg(req, "ok"),
     });

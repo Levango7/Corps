@@ -115,7 +115,7 @@ async function getMailAccounts(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: accounts, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: accounts, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET mail/accounts] error:", error);
     return NextResponse.json(
@@ -212,7 +212,7 @@ async function postMailAccounts(req: NextRequest) {
     );
 
     return NextResponse.json(
-      { code: 0, data: account, message: apiMsg(req, "ok") },
+      { code: 201, data: account, message: apiMsg(req, "ok") },
       { status: 201 },
     );
   } catch (error) {
