@@ -423,11 +423,6 @@ components/whiteboard/WhiteboardList.tsx
 components/widgets/ActivityWidget.tsx
 components/widgets/AiInsightWidget.tsx
 components/widgets/TaskSummaryWidget.tsx
-components/wiki/WikiEditor.tsx
-components/wiki/WikiHome.tsx
-components/wiki/WikiPageView.tsx
-components/wiki/WikiSidebar.tsx
-components/wiki/WikiViewer.tsx
 components/workflow/WorkflowEditor.tsx
 components/workflow/WorkflowExecutionList.tsx
 components/workflow/WorkflowList.tsx
