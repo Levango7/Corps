@@ -405,11 +405,6 @@ components/settings/SettingsPreferences.tsx
 components/settings/SettingsProfile.tsx
 components/sync/OfflineIndicator.tsx
 components/sync/SyncStatus.tsx
-components/task/DecisionHistoryDialog.tsx
-components/task/TaskComments.tsx
-components/task/TaskDecisions.tsx
-components/task/TaskDetailHeader.tsx
-components/task/TaskPropertyAside.tsx
 components/template/TemplateApplyDialog.tsx
 components/template/TemplateEditor.tsx
 components/template/TemplateList.tsx
