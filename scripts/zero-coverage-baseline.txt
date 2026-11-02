@@ -349,14 +349,6 @@ components/ai/WorkflowOrchestratorPanel.tsx
 components/announcement/AnnouncementBanner.tsx
 components/announcement/AnnouncementEditor.tsx
 components/announcement/AnnouncementList.tsx
-components/approval/ApprovalDelegateSettings.tsx
-components/approval/ApprovalDetail.tsx
-components/approval/ApprovalFlowDiagram.tsx
-components/approval/ApprovalList.tsx
-components/approval/ApprovalListPageClient.tsx
-components/approval/ApprovalStatsDashboard.tsx
-components/approval/ApprovalSubmit.tsx
-components/approval/ApprovalTemplateManage.tsx
 components/board-parts.tsx
 components/calendar/CalendarDay.tsx
 components/calendar/CalendarEventDialog.tsx
