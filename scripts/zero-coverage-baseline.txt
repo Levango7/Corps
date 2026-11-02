@@ -350,11 +350,6 @@ components/announcement/AnnouncementBanner.tsx
 components/announcement/AnnouncementEditor.tsx
 components/announcement/AnnouncementList.tsx
 components/board-parts.tsx
-components/calendar/CalendarDay.tsx
-components/calendar/CalendarEventDialog.tsx
-components/calendar/CalendarMonth.tsx
-components/calendar/CalendarView.tsx
-components/calendar/CalendarWeek.tsx
 components/common/FavoriteButton.tsx
 components/common/FavoriteList.tsx
 components/contact/ContactDetail.tsx
