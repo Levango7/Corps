@@ -389,10 +389,6 @@ components/pwa/PwaRegister.tsx
 components/remote-control/RemoteControlDialog.tsx
 components/remote-control/RemoteControlPanel.tsx
 components/remote-control/RemoteViewer.tsx
-components/settings/SettingsDangerZone.tsx
-components/settings/SettingsDataExport.tsx
-components/settings/SettingsPreferences.tsx
-components/settings/SettingsProfile.tsx
 components/sync/OfflineIndicator.tsx
 components/sync/SyncStatus.tsx
 components/template/TemplateApplyDialog.tsx
