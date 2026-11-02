@@ -60,7 +60,7 @@ async function getWorkflowsByWfid(
       );
     }
 
-    return NextResponse.json({ code: 0, data: wf });
+    return NextResponse.json({ code: 200, data: wf });
   } catch (error) {
     console.error("[GET workflow] error:", error);
     return NextResponse.json(
@@ -135,7 +135,7 @@ async function patchWorkflowsByWfid(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: wf });
+    return NextResponse.json({ code: 200, data: wf });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -195,7 +195,7 @@ async function deleteWorkflowsByWfid(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: null });
+    return NextResponse.json({ code: 200, data: null });
   } catch (error) {
     console.error("[DELETE workflow] error:", error);
     return NextResponse.json(

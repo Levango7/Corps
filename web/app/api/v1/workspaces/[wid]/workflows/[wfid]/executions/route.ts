@@ -73,7 +73,7 @@ async function getWorkflowsExecutionsByWfid(
       ]),
     );
 
-    return NextResponse.json({ code: 0, data: { items, total, skip, take } });
+    return NextResponse.json({ code: 200, data: { items, total, skip, take } });
   } catch (error) {
     console.error("[GET workflow executions] error:", error);
     return NextResponse.json(
@@ -168,7 +168,7 @@ async function postWorkflowsExecutionsByWfid(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: latest ?? execution }, { status: 201 });
+    return NextResponse.json({ code: 201, data: latest ?? execution }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

@@ -46,7 +46,7 @@ async function getFormsByFid(
       );
     }
 
-    return NextResponse.json({ code: 0, data: form });
+    return NextResponse.json({ code: 200, data: form });
   } catch (error) {
     console.error("[GET form] error:", error);
     return NextResponse.json(
@@ -132,7 +132,7 @@ async function patchFormsByFid(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: form });
+    return NextResponse.json({ code: 200, data: form });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(
@@ -188,7 +188,7 @@ async function deleteFormsByFid(
 
     await runWithWorkspace(wid, (tx) => tx.form.delete({ where: { id: fid } }), ctx.payload.sub);
 
-    return NextResponse.json({ code: 0, data: null });
+    return NextResponse.json({ code: 200, data: null });
   } catch (error) {
     console.error("[DELETE form] error:", error);
     return NextResponse.json(

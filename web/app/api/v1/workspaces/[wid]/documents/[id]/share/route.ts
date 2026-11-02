@@ -310,7 +310,7 @@ async function postDocumentsShareById(
 
     return NextResponse.json(
       {
-        code: 0,
+        code: 201,
         data: {
           shareUrl,
           shareToken: token,
@@ -410,7 +410,7 @@ async function deleteDocumentsShareById(
 
     logger.info("document.share.revoke", { wid, id, revoked: result.revoked });
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { revoked: result.revoked },
       message: apiMsg(req, "ok"),
     });

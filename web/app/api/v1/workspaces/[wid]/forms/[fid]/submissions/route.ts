@@ -79,7 +79,7 @@ async function getFormsSubmissionsByFid(
       ]),
     );
 
-    return NextResponse.json({ code: 0, data: { items, total, skip, take } });
+    return NextResponse.json({ code: 200, data: { items, total, skip, take } });
   } catch (error) {
     console.error("[GET form submissions] error:", error);
     return NextResponse.json(
@@ -156,7 +156,7 @@ async function postFormsSubmissionsByFid(
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: submission }, { status: 201 });
+    return NextResponse.json({ code: 201, data: submission }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

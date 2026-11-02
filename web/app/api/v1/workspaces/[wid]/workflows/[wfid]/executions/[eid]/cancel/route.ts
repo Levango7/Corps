@@ -79,7 +79,7 @@ async function postWorkflowsExecutionsCancelByWfidByEid(
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: updated,
       message: apiMsg(req, "executionCancelled"),
     });
