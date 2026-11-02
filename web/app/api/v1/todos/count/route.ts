@@ -167,7 +167,7 @@ async function getTodosCount(req: NextRequest) {
       currentUserId,
     );
 
-    return NextResponse.json({ code: 0, data: result, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: result, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET todos/count] error:", error);
     return NextResponse.json(

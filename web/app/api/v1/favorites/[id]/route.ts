@@ -137,7 +137,7 @@ async function patchFavoritesById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: updated, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: updated, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[PATCH favorites/[id]] error:", error);
     return NextResponse.json(
@@ -204,7 +204,7 @@ async function deleteFavoritesById(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ code: 0, data: null, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: null, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[DELETE favorites/[id]] error:", error);
     return NextResponse.json(

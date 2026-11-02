@@ -101,7 +101,7 @@ async function getNotificationsPreferences(req: NextRequest) {
       select: selectFields,
     });
 
-    return NextResponse.json({ code: 0, data: toResult(pref), message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: toResult(pref), message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET notifications/preferences] error:", error);
     return NextResponse.json(
@@ -166,7 +166,7 @@ async function patchNotificationsPreferences(req: NextRequest) {
       select: selectFields,
     });
 
-    return NextResponse.json({ code: 0, data: toResult(pref), message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: toResult(pref), message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[PATCH notifications/preferences] error:", error);
     return NextResponse.json(

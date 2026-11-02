@@ -117,7 +117,7 @@ async function getFavorites(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: favorites, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: favorites, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET favorites] error:", error);
     return NextResponse.json(
@@ -207,7 +207,7 @@ async function postFavorites(req: NextRequest) {
     );
 
     return NextResponse.json(
-      { code: 0, data: favorite, message: apiMsg(req, "ok") },
+      { code: 201, data: favorite, message: apiMsg(req, "ok") },
       { status: 201 },
     );
   } catch (error) {

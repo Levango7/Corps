@@ -329,7 +329,7 @@ async function getTodos(req: NextRequest) {
     // 排序 + 截断
     const sorted = sortTodos(todos).slice(0, limit);
 
-    return NextResponse.json({ code: 0, data: sorted, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: sorted, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET todos] error:", error);
     return NextResponse.json(
