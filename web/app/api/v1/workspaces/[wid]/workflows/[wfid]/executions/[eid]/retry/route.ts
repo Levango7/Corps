@@ -104,7 +104,7 @@ async function postWorkflowsExecutionsRetryByWfidByEid(
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: updated,
       message: apiMsg(req, "executionRetried"),
     });

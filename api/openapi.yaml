@@ -10424,7 +10424,7 @@ paths:
     get:
       tags: [workflows]
       summary: List workflows
-      description: "Query active/take/skip (code=0 legacy envelope; data = { items, total, skip, take })."
+      description: "Query active/take/skip; data = { items, total, skip, take }."
       operationId: listWorkflows
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11188,7 +11188,7 @@ paths:
     get:
       tags: [forms]
       summary: List forms
-      description: Legacy envelope code=0; data = { items, total, skip, take }.
+      description: Form list; data = { items, total, skip, take }.
       operationId: listForms
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11212,7 +11212,7 @@ paths:
     post:
       tags: [forms]
       summary: Create a form
-      description: "Body: { title, fields: [{ id, type, label, required… }] min 1 } (legacy envelope code=0, HTTP 201)."
+      description: "Body: { title, fields: [{ id, type, label, required… }] min 1 }; HTTP 201."
       operationId: createForm
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11244,7 +11244,7 @@ paths:
     get:
       tags: [forms]
       summary: Form detail (fields + submission count)
-      description: Legacy envelope code=0.
+      description: Form detail with fields and _count.submissions.
       operationId: getForm
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11266,7 +11266,7 @@ paths:
     patch:
       tags: [forms]
       summary: Update a form
-      description: Legacy envelope code=0.
+      description: Partial update; returns the updated form.
       operationId: patchForm
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11295,7 +11295,7 @@ paths:
     delete:
       tags: [forms]
       summary: Delete a form
-      description: Legacy envelope code=0; data null.
+      description: data is null on success.
       operationId: deleteForm
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11318,7 +11318,7 @@ paths:
     get:
       tags: [forms]
       summary: List form submissions
-      description: Legacy envelope code=0; shape per handler.
+      description: data = { items, total, skip, take }.
       operationId: listFormSubmissions
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -11340,7 +11340,7 @@ paths:
     post:
       tags: [forms]
       summary: Submit a form response
-      description: data keyed by fieldId (legacy envelope code=0).
+      description: data keyed by fieldId.
       operationId: submitForm
       parameters:
         - $ref: '#/components/parameters/Wid'

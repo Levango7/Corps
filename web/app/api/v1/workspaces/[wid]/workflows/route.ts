@@ -72,7 +72,7 @@ async function getWorkflows(req: NextRequest, { params }: { params: Promise<{ wi
       ]),
     );
 
-    return NextResponse.json({ code: 0, data: { items, total, skip, take } });
+    return NextResponse.json({ code: 200, data: { items, total, skip, take } });
   } catch (error) {
     console.error("[GET workflows] error:", error);
     return NextResponse.json(
@@ -134,7 +134,7 @@ async function postWorkflows(req: NextRequest, { params }: { params: Promise<{ w
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: wf }, { status: 201 });
+    return NextResponse.json({ code: 201, data: wf }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

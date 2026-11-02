@@ -9,10 +9,10 @@ import { BASE, registerUser, authHeader } from "../helpers";
  * 2. 创建 — 201 且带回 id/name/trigger/actions；缺 trigger 400；actions 空数组 400
  * 3. 隔离与认证 — 跨工作区 403；无 token 401
  *
- * ⚠ 本域的成功响应是 `code: 0`（见 route.ts 的 `NextResponse.json({ code: 0, ... })`），
- *   而全仓其余端点一律 `code === HTTP 状态码`（200/201）。这里**按现状钉住 0**，
- *   并把不一致写明：如果哪天真统一成 200，这两条断言会红——那是预期中的红，
- *   改断言的同时才是真正"统一口径"的时刻。错误响应本身用的是 400/500，与全仓一致。
+ * 本域已于 2026-11-03 完成信封统一（第 1 批清偿）：成功响应 code 等于 HTTP 状态码
+ * （200/201），与 api/openapi.yaml:13653 的声明一致。断言写成 `toBe(res.status)` 而不是
+ * 硬编码数字——它钉的是「code 必须等于状态码」这条契约本身，不是某一次的具体取值。
+ * 错误响应本来就用 400/500，与全仓一致。
  *
  * 契约：api/openapi.yaml 尚未声明该域，本文件钉实现侧行为。
  */
@@ -50,13 +50,13 @@ beforeAll(async () => {
 });
 
 describe("GET /workflows", () => {
-  it("返回 { items, total, skip, take }，成功码是 0（与全仓不一致，见文件头）", async () => {
+  it("返回 { items, total, skip, take }，code 等于 HTTP 状态码", async () => {
     const res = await fetch(`${BASE}/workspaces/${wid}/workflows`, {
       headers: authHeader(token),
     });
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(Array.isArray(json.data.items)).toBe(true);
     expect(typeof json.data.total).toBe("number");
     expect(typeof json.data.skip).toBe("number");
@@ -80,7 +80,7 @@ describe("POST /workflows", () => {
   it("创建成功返回 201，带回 id/name/trigger/actions", async () => {
     const { status, json } = await createFlow(FLOW);
     expect(status).toBe(201);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(status);
     expect(json.data.id).toBeTruthy();
     expect(json.data.name).toBe(FLOW.name);
     expect(json.data.trigger).toEqual(FLOW.trigger);

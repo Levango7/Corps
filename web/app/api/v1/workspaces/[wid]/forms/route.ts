@@ -72,7 +72,7 @@ async function getForms(req: NextRequest, { params }: { params: Promise<{ wid: s
       ]),
     );
 
-    return NextResponse.json({ code: 0, data: { items, total, skip, take } });
+    return NextResponse.json({ code: 200, data: { items, total, skip, take } });
   } catch (error) {
     console.error("[GET forms] error:", error);
     return NextResponse.json(
@@ -151,7 +151,7 @@ async function postForms(req: NextRequest, { params }: { params: Promise<{ wid: 
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: form }, { status: 201 });
+    return NextResponse.json({ code: 201, data: form }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
       return NextResponse.json(

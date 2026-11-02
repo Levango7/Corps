@@ -9,7 +9,7 @@ import { BASE, registerUser, authHeader } from "../helpers";
  * 2. 列表（GET）— 分页信封、active 过滤、_count submissions
  * 3. 详情（GET）— 含 fields 完整定义、_count submissions
  * 3. 更新（PATCH）— 局部更新、404
- * 4. 删除（DELETE）— code: 0 + data:null，再读 404
+ * 4. 删除（DELETE）— code 等于状态码、data 为 null，再读 404
  * 4. 提交（POST /submissions）— data 为 fieldId→value 记录
  * 5. 跨工作区隔离 — B 的 token 读 A 的表单 403
  *
@@ -59,7 +59,7 @@ describe("创建表单 POST /forms", () => {
     const json = await res.json();
 
     expect(res.status).toBe(201);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(json.data.title).toBe("报名表");
     expect(json.data.active).toBe(true);
     expect(json.data.fields).toHaveLength(1);
@@ -95,7 +95,7 @@ describe("查询表单 GET /forms", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(json.data).toMatchObject({
       items: expect.any(Array),
       total: expect.any(Number),
@@ -131,7 +131,7 @@ describe("表单详情与更新 /forms/{fid}", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(json.data.fields).toHaveLength(1);
     expect(json.data._count).toHaveProperty("submissions");
   });
@@ -155,7 +155,7 @@ describe("表单详情与更新 /forms/{fid}", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(json.data.title).toBe("已改标题");
     expect(json.data.active).toBe(false);
   });
@@ -171,7 +171,7 @@ describe("表单详情与更新 /forms/{fid}", () => {
 });
 
 describe("删除与跨工作区隔离", () => {
-  it("DELETE 返回 code:0 + data:null，再读 404", async () => {
+  it("DELETE 返回 code 等于状态码且 data 为 null，再读 404", async () => {
     const created = await (await createForm({ title: "待删", fields: [validField] })).json();
     const fid = created.data.id as string;
 
@@ -182,7 +182,7 @@ describe("删除与跨工作区隔离", () => {
     const delJson = await del.json();
 
     expect(del.status).toBe(200);
-    expect(delJson.code).toBe(0);
+    expect(delJson.code).toBe(del.status);
     expect(delJson.data).toBeNull();
 
     const followUp = await fetch(`${BASE}/workspaces/${wid}/forms/${fid}`, {
@@ -215,7 +215,7 @@ describe("表单提交 POST /forms/{fid}/submissions", () => {
     const json = await res.json();
 
     expect(res.status).toBe(201);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(json.data.data).toEqual({ f1: "张三" });
   });
 
@@ -252,7 +252,7 @@ describe("跨工作区隔离（列表/详情）", () => {
 });
 
 describe("提交列表 GET /forms/{fid}/submissions", () => {
-  it("列表返回分页信封（items/total/skip/take），code=0", async () => {
+  it("列表返回分页信封（items/total/skip/take），code 等于状态码", async () => {
     const created = await (await createForm({ title: "列表测试", fields: [validField] })).json();
     const fid = created.data.id as string;
     await fetch(`${BASE}/workspaces/${wid}/forms/${fid}/submissions`, {
@@ -272,7 +272,7 @@ describe("提交列表 GET /forms/{fid}/submissions", () => {
     const json = await res.json();
 
     expect(res.status).toBe(200);
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
     expect(json.data).toMatchObject({
       items: expect.any(Array),
       total: 2,
