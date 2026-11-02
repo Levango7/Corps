@@ -408,8 +408,4 @@ components/whiteboard/WhiteboardList.tsx
 components/widgets/ActivityWidget.tsx
 components/widgets/AiInsightWidget.tsx
 components/widgets/TaskSummaryWidget.tsx
-components/workflow/WorkflowEditor.tsx
-components/workflow/WorkflowExecutionList.tsx
-components/workflow/WorkflowList.tsx
-components/workflow/WorkflowPageClient.tsx
 lib/i18n-navigation.ts
