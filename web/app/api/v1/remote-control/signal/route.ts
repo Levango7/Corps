@@ -320,7 +320,7 @@ async function postRemoteControlSignal(req: NextRequest) {
   try {
     emitSignalingMessage(body.toUserId, body);
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: null,
       message: apiMsg(req, "ok"),
     });

@@ -139,7 +139,7 @@ async function patchMailAccountsById(
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: result.account,
       message: apiMsg(req, "ok"),
     });
@@ -232,7 +232,7 @@ async function deleteMailAccountsById(
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: null,
       message: apiMsg(req, "ok"),
     });

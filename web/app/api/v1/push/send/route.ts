@@ -5,7 +5,7 @@
 //   1. 认证 + 管理员校验 + 速率限制
 //   2. body 校验
 //   3. 调用 sendPushToUser（查库获取目标用户所有设备 token，跨平台批量下发）
-//   4. 返回 { code: 0, data: null, message: 'ok' }
+//   4. 返回 { code: 200, data: null, message: 'ok' }
 //
 // 管理员校验：推送发送是全局操作（不绑定工作区），通过环境变量
 // PUSH_ADMIN_USER_IDS（逗号分隔的 UUID 列表）配置允许发送的管理员。
@@ -110,7 +110,7 @@ async function postPushSend(req: NextRequest) {
     });
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: null,
       message: apiMsg(req, "ok"),
     });

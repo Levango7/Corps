@@ -295,7 +295,7 @@ async function patchRemoteControlBySessionId(
 
     // 5) 返回更新后的会话 DTO
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: toDTO(session),
       message: apiMsg(req, "ok"),
     });
@@ -421,7 +421,7 @@ async function deleteRemoteControlBySessionId(
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: toDTO(result.session!),
       message: apiMsg(req, "ok"),
     });

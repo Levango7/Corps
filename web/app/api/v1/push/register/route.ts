@@ -93,7 +93,7 @@ async function postPushRegister(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: null,
       message: apiMsg(req, "ok"),
     });
@@ -158,7 +158,7 @@ async function deletePushRegister(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: null,
       message: apiMsg(req, "ok"),
     });

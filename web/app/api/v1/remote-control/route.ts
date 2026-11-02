@@ -194,7 +194,7 @@ async function postRemoteControl(req: NextRequest) {
       updatedAt: session.session!.updatedAt.toISOString(),
     };
 
-    return NextResponse.json({ code: 0, data: dto, message: apiMsg(req, "ok") }, { status: 201 });
+    return NextResponse.json({ code: 201, data: dto, message: apiMsg(req, "ok") }, { status: 201 });
   } catch (error) {
     console.error("[POST remote-control] error:", error);
     return NextResponse.json(
@@ -308,7 +308,7 @@ async function getRemoteControl(req: NextRequest) {
       updatedAt: s.updatedAt.toISOString(),
     }));
 
-    return NextResponse.json({ code: 0, data: dtos, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: dtos, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET remote-control] error:", error);
     return NextResponse.json(

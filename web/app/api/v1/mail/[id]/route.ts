@@ -136,7 +136,7 @@ async function getMailById(
       );
     }
 
-    return NextResponse.json({ code: 0, data: mail, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: mail, message: apiMsg(req, "ok") });
   } catch (error) {
     console.error("[GET mail/:id] error:", error);
     return NextResponse.json(
@@ -256,7 +256,7 @@ async function patchMailById(
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: result.mail,
       message: apiMsg(req, "ok"),
     });
@@ -366,7 +366,7 @@ async function deleteMailById(
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: null,
       message: apiMsg(req, "ok"),
     });

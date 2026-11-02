@@ -47,14 +47,4 @@ web/app/api/v1/ai/usage/stats/route.ts 1
 web/app/api/v1/ai/voice/command/[id]/route.ts 1
 web/app/api/v1/ai/workflow-orchestrator/route.ts 1
 web/app/api/v1/im/search/route.ts 1
-web/app/api/v1/mail/[id]/route.ts 3
-web/app/api/v1/mail/accounts/[id]/route.ts 2
-web/app/api/v1/mail/accounts/route.ts 2
-web/app/api/v1/mail/inbox/route.ts 2
-web/app/api/v1/mail/send/route.ts 1
-web/app/api/v1/push/register/route.ts 2
-web/app/api/v1/push/send/route.ts 1
-web/app/api/v1/remote-control/[sessionId]/route.ts 2
-web/app/api/v1/remote-control/route.ts 2
-web/app/api/v1/remote-control/signal/route.ts 1
 web/app/api/v1/workspaces/[wid]/tasks/[id]/messages/[mid]/route.ts 1

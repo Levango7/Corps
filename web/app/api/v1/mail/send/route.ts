@@ -177,7 +177,7 @@ async function postMailSend(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: mail,
       message: apiMsg(req, "ok"),
     });

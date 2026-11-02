@@ -30,7 +30,7 @@ describe("POST /push/register（注册/幂等/鉴权）", () => {
     });
     expect(res.status).toBe(200);
     const json = await res.json();
-    expect(json.code).toBe(0);
+    expect(json.code).toBe(res.status);
   });
 
   it("同一设备重复注册幂等（upsert 命中已存在行）", async () => {
