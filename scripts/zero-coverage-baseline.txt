@@ -366,9 +366,6 @@ components/meeting/MeetingCreate.tsx
 components/meeting/MeetingList.tsx
 components/meetings/MeetingLobby.tsx
 components/meetings/MeetingRoom.tsx
-components/members/MemberList.tsx
-components/members/TemporaryGrantModal.tsx
-components/members/TransferOwnership.tsx
 components/notifications/NotificationBadge.tsx
 components/pwa/PushSubscribe.tsx
 components/pwa/PwaRegister.tsx
