@@ -122,8 +122,19 @@ export interface ViolationDetail {
   messageKey?: string;
   /** 背景贡献链（由近及远，挂在 check 上而非节点上）；合成底场景只看 bgColor 说不清是谁画的 */
   bgNodes?: string[];
-  /** 最近那层背景的 outerHTML 片段（截 200 字符），直接指向"哪块板子刷了这层色" */
+  /**
+   * 最近那层背景的片段，来自 axe 的 `relatedNodes[].html`。
+   * ⚠️ **这个字段不可靠**：axe 自己会把每个属性值截到 ~24 字符再补 `…`（实测一条
+   * 带 254 字符 class + 82 字符 style 的按钮，交来的整段只有 92 字符，两个属性都被截）。
+   * 所以它能指位、不能当依据 —— 完整属性看 `bgAttrs`。
+   */
   bgHtml?: string;
+  /**
+   * 由近及远的背景层**完整属性**（含该层 computed backgroundColor），由 spec 回查 DOM 得到。
+   * 补这个字段的原因：`bgHtml` 被 axe 截断过一次，我照它把「`--accent` 压 `--accent-soft`」
+   * 误读成「内联 style 绕过令牌」，据此会白做一轮工。截断的读数不能冒充证据。
+   */
+  bgAttrs?: string[];
   /** 首个未通过 check 的 message，供非对比度类规则也能定位 */
   message?: string;
 }
@@ -217,6 +228,81 @@ export function collectDetails(
     }
   }
   return out;
+}
+
+/** `formatBgLayer` 的输出上限：单个属性值 / 整条字符串。 */
+export const BG_ATTR_VALUE_CAP = 200;
+export const BG_ATTR_LINE_CAP = 600;
+
+/** 背景层回查结果（页内采集、Node 侧格式化，所以这里是可以直接构造的纯数据）。 */
+export interface BgLayerRaw {
+  /** 来自 axe `relatedNodes[].target` 的选择器（bgNodes 里那串） */
+  sel: string;
+  /** 页内 `querySelector` 是否真的拿到了元素 */
+  resolved: boolean;
+  tag?: string;
+  /** 伪元素（axe 会用 `::before` / `::after` 指向画刷层） */
+  pseudo?: string;
+  attrs?: readonly (readonly [string, string])[];
+  computedBg?: string;
+}
+
+/**
+ * 把一个背景层摊成一行可读文本：`<tag a="…" b="…"> [::before] [bg=rgba(...)]`。
+ *
+ * 刻意**不含元素文本**——文本正是 `bgHtml` 撑爆产物的原因，而"谁刷了这层色"只看属性。
+ * `resolved: false` 单独成一条（而不是返回空），是为了让读的人分得清"这层查不到"
+ * 与"没有这一层"——两者混淆过一次，代价是一条错的归因。
+ */
+export function formatBgLayer(raw: BgLayerRaw): string {
+  if (!raw.resolved) return `${raw.sel} => 回查不到元素`;
+  const attrs = (raw.attrs ?? []).map(([k, v]) => {
+    const value = v.length > BG_ATTR_VALUE_CAP ? `${v.slice(0, BG_ATTR_VALUE_CAP)}…` : v;
+    return `${k}="${value}"`;
+  });
+  const parts = [
+    `<${(raw.tag ?? "element").toLowerCase()}${attrs.length ? " " : ""}${attrs.join(" ")}>`,
+  ];
+  if (raw.pseudo) parts.push(`[${raw.pseudo}]`);
+  if (raw.computedBg) parts.push(`[bg=${raw.computedBg}]`);
+  const line = parts.join(" ");
+  return line.length > BG_ATTR_LINE_CAP ? `${line.slice(0, BG_ATTR_LINE_CAP)}…` : line;
+}
+
+/**
+ * **页内**采集器：按 axe 给的选择器回查真实 DOM，摊出该层的完整属性与 computed 底色。
+ *
+ * 为什么放在这里而不是写在 spec 的 `page.evaluate` 里：Playwright 只序列化函数源码，
+ * 所以一个不依赖闭包的导出函数可以原样投进页面跑；同一个函数于是能被单测（jsdom）
+ * 与本机浏览器探针**逐字复用**，测的是真正发出去的那份代码，而不是它的抄本。
+ *
+ * `resolved: false` 单独成一条而不是省略：让读的人分得清"这层查不到"与"没有这一层"。
+ */
+export function collectBgLayers(list: readonly string[]): BgLayerRaw[] {
+  return list.map((sel): BgLayerRaw => {
+    /* 伪元素（axe 用它指向真正画刷的那一层）：宿主选择器去掉后缀再查，后缀留进输出 */
+    const m = /^(.*?)::?(before|after|marker|selection|placeholder)$/.exec(sel);
+    const host = m ? m[1] : sel;
+    let el: Element | null;
+    try {
+      el = host ? document.querySelector(host) : null;
+    } catch {
+      /* 非法或查不到的选择器：不硬失败，留 resolved:false 并带上原选择器 */
+      el = null;
+    }
+    if (!el) return { sel, resolved: false };
+    const attrs: [string, string][] = [];
+    for (const a of Array.from(el.attributes)) attrs.push([a.name, a.value]);
+    return {
+      sel,
+      resolved: true,
+      tag: el.tagName,
+      pseudo: m ? `::${m[2]}` : undefined,
+      attrs,
+      /* 伪元素的颜色不在宿主 style 里，算不出来就别硬报一个值 */
+      computedBg: m ? undefined : getComputedStyle(el).backgroundColor,
+    };
+  });
 }
 
 export interface BaselineDiff {
