@@ -386,9 +386,6 @@ components/sync/SyncStatus.tsx
 components/template/TemplateApplyDialog.tsx
 components/template/TemplateEditor.tsx
 components/template/TemplateList.tsx
-components/timetrack/TimeEntryList.tsx
-components/timetrack/TimeReport.tsx
-components/timetrack/TimeTracker.tsx
 components/todo/TodoCenter.tsx
 components/todo/TodoWidget.tsx
 components/whiteboard/WhiteboardCanvas.tsx
