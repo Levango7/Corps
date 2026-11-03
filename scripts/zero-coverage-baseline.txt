@@ -373,9 +373,6 @@ components/minutes/MinutesDetail.tsx
 components/minutes/MinutesEditor.tsx
 components/minutes/MinutesList.tsx
 components/notifications/NotificationBadge.tsx
-components/okr/KeyResultEditor.tsx
-components/okr/OKRList.tsx
-components/okr/ObjectiveDetail.tsx
 components/pwa/PushSubscribe.tsx
 components/pwa/PwaRegister.tsx
 components/sync/OfflineIndicator.tsx
