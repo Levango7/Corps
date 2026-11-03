@@ -383,9 +383,6 @@ components/remote-control/RemoteControlPanel.tsx
 components/remote-control/RemoteViewer.tsx
 components/sync/OfflineIndicator.tsx
 components/sync/SyncStatus.tsx
-components/template/TemplateApplyDialog.tsx
-components/template/TemplateEditor.tsx
-components/template/TemplateList.tsx
 components/todo/TodoCenter.tsx
 components/todo/TodoWidget.tsx
 components/whiteboard/WhiteboardCanvas.tsx
