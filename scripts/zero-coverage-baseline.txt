@@ -357,10 +357,6 @@ components/contact/ContactGroupSidebar.tsx
 components/contact/ContactList.tsx
 components/doc/PermissionManager.tsx
 components/doc/ShareDialog.tsx
-components/documents/DocumentPermissionPanel.tsx
-components/documents/FolderPermissionPanel.tsx
-components/documents/PermissionAuditLogPage.tsx
-components/documents/ShareDialogEnhanced.tsx
 components/editor/AiChatPanel.tsx
 components/layout/MobileBottomNav.tsx
 components/mail/MailComposer.tsx
