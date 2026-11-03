@@ -393,7 +393,4 @@ components/todo/TodoCenter.tsx
 components/todo/TodoWidget.tsx
 components/whiteboard/WhiteboardCanvas.tsx
 components/whiteboard/WhiteboardList.tsx
-components/widgets/ActivityWidget.tsx
-components/widgets/AiInsightWidget.tsx
-components/widgets/TaskSummaryWidget.tsx
 lib/i18n-navigation.ts
