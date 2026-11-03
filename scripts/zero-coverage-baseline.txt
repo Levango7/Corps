@@ -378,9 +378,6 @@ components/okr/OKRList.tsx
 components/okr/ObjectiveDetail.tsx
 components/pwa/PushSubscribe.tsx
 components/pwa/PwaRegister.tsx
-components/remote-control/RemoteControlDialog.tsx
-components/remote-control/RemoteControlPanel.tsx
-components/remote-control/RemoteViewer.tsx
 components/sync/OfflineIndicator.tsx
 components/sync/SyncStatus.tsx
 components/todo/TodoCenter.tsx
