@@ -40,7 +40,10 @@ function makeForm(overrides: Partial<FormItem> = {}): FormItem {
   };
 }
 
-function bodyOf(call: unknown[]): Record<string, unknown> {
+function bodyOf(call: unknown[]): {
+  fields: Array<Record<string, unknown>>;
+  [key: string]: unknown;
+} {
   return JSON.parse((call[1] as { body: string }).body);
 }
 

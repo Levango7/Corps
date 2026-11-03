@@ -25,7 +25,7 @@ vi.mock("@/components/form/FormBuilder", () => ({
   FormBuilder: (props: {
     wid: string;
     form: { id: string } | null;
-    onSaved: (form: { id: string }) => void;
+    onSaved: (form: { id: string; title?: string }) => void;
     onCancel: () => void;
   }) => (
     <div data-testid="form-builder">
