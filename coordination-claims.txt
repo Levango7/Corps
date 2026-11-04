@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-c29 | web/components/{announcement,contact,mail,common,doc,meeting,meetings,pwa,sync,todo,whiteboard,editor,layout,notifications}/**,web/tests/unit/*.test.tsx | zcode | 2026-11-04T11:02Z | 2026-11-04T17:02Z | 零覆盖 ratchet c29：为剩余 components 子目录族 29 文件补单测
+F:/Nexus/corps-wt-shell-opaque | docs/axe-attribution-soft | CHANGELOG.md,web/tests/a11y-axe-baseline.json,web/e2e/a11y-axe-keys.ts,web/e2e/a11y-core.spec.ts,web/tests/unit/a11y-bg-layer-attrs.test.ts | qoder-axe-channel | 2026-11-04T15:49Z | 2026-11-04T19:49Z | PR #273 收尾：等 12 条 required 绿后按三条硬条件合并（base 又被 #267 推动，需再 rebase 一次）
