@@ -3,9 +3,9 @@
 // 输入：{ wid, action: "draft"|"summarize"|"classify"|"reply", content, context? }
 // 输出：
 //   - draft：text/event-stream（Vercel AI SDK UI Message Stream，逐字流式邮件正文）
-//   - summarize：{ code: 0, data: { summary: string }, message }
-//   - classify：{ code: 0, data: { category, confidence, reason }, message }
-//   - reply：{ code: 0, data: { suggestions: [{ text, tone }] }, message }
+//   - summarize：{ code: 200, data: { summary: string }, message }
+//   - classify：{ code: 200, data: { category, confidence, reason }, message }
+//   - reply：{ code: 200, data: { suggestions: [{ text, tone }] }, message }
 //
 // 模型选择：
 //   - draft / summarize / reply：defaultModel（deepseek-chat，通用对话/续写）
@@ -189,7 +189,7 @@ async function postAiMailAssistant(req: NextRequest) {
       );
 
       return NextResponse.json({
-        code: 0,
+        code: 200,
         data: { summary: summary.trim() },
         message: apiMsg(req, "ok"),
       });
@@ -262,7 +262,7 @@ async function postAiMailAssistant(req: NextRequest) {
       }
 
       return NextResponse.json({
-        code: 0,
+        code: 200,
         data: classifyResult,
         message: apiMsg(req, "ok"),
       });
@@ -316,7 +316,7 @@ async function postAiMailAssistant(req: NextRequest) {
     }
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { suggestions },
       message: apiMsg(req, "ok"),
     });

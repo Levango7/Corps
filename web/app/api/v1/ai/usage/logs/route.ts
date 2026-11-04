@@ -87,7 +87,7 @@ async function getAiUsageLogs(req: NextRequest) {
       userId,
     );
 
-    return NextResponse.json({ code: 0, data: { logs, total }, message: "OK" });
+    return NextResponse.json({ code: 200, data: { logs, total }, message: "OK" });
   } catch (error) {
     console.error("[ai-usage/logs] error:", error);
     return NextResponse.json(

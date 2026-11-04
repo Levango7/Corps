@@ -1,6 +1,6 @@
 // POST /api/v1/ai/semantic-search — AI 语义搜索（非流式）
 // 输入：{ wid, query, scope?, limit? }
-// 输出：{ code: 0, data: { messages, wikis, todos, decisions, expandedKeywords, intent } }
+// 输出：{ code: 200, data: { messages, wikis, todos, decisions, expandedKeywords, intent } }
 //
 // 流程：
 // 1. 用 reasonerModel（deepseek-reasoner）理解查询意图，生成 3-5 个扩展关键词
@@ -345,7 +345,7 @@ async function postAiSemanticSearch(req: NextRequest) {
     };
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data,
       message: apiMsg(req, "ok"),
     });

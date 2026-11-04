@@ -1,6 +1,6 @@
 // POST /api/v1/ai/workflow-orchestrator — AI 工作流编排（非流式）
 // 输入：{ wid, description, existingWorkflows? }
-// 输出：{ code: 0, data: WorkflowDefinition, message: "..." }
+// 输出：{ code: 200, data: WorkflowDefinition, message: "..." }
 //
 // 流程：
 // 1. 认证 → AI 配置检查 → 限流 → body 校验 → 工作区上下文
@@ -341,7 +341,7 @@ async function postAiWorkflowOrchestrator(req: NextRequest) {
 
   // 8) 返回工作流定义
   return NextResponse.json({
-    code: 0,
+    code: 200,
     data: workflow,
     message: apiMsg(req, "ok"),
   });

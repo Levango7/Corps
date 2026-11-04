@@ -122,7 +122,7 @@ async function getAiMeetingsSessions(req: NextRequest) {
     const nextCursor = hasMore ? items[items.length - 1].id : null;
 
     const data: SessionsListResponse = { items, nextCursor, hasMore };
-    return NextResponse.json({ code: 0, data, message: "OK" });
+    return NextResponse.json({ code: 200, data, message: "OK" });
   } catch (error) {
     console.error("[GET ai/meetings/sessions] error:", error);
     return NextResponse.json(
@@ -210,7 +210,7 @@ async function postAiMeetingsSessions(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: session, message: "OK" }, { status: 201 });
+    return NextResponse.json({ code: 201, data: session, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/meetings/sessions] error:", error);
     return NextResponse.json(

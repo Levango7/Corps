@@ -119,7 +119,7 @@ async function patchAiVoiceCommandById(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 200, data: null, message: "OK" });
   } catch (error) {
     console.error("[PATCH ai/voice/command/[id]] error:", error);
     return NextResponse.json(

@@ -7045,7 +7045,7 @@ paths:
     get:
       tags: [ai]
       summary: Get the workspace AI usage limits
-      description: Returns the effective usage limit row (legacy envelope code=0).
+      description: Returns the effective usage limit row.
       operationId: getAiUsageLimits
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -7063,7 +7063,7 @@ paths:
     put:
       tags: [ai]
       summary: Update the workspace AI usage limits
-      description: Requires owner/admin. Legacy envelope code=0.
+      description: Requires owner/admin.
       operationId: updateAiUsageLimits
       requestBody:
         required: true
@@ -7093,7 +7093,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI usage logs
-      description: "Legacy envelope code=0; data is { logs, total } (not paginated by page/limit)."
+      description: "data is { logs, total } (not paginated by page/limit)."
       operationId: getAiUsageLogs
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -7124,7 +7124,7 @@ paths:
     get:
       tags: [ai]
       summary: AI usage statistics
-      description: Totals plus per-capability breakdown (legacy envelope code=0).
+      description: Totals plus per-capability breakdown.
       operationId: getAiUsageStats
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -7195,7 +7195,7 @@ paths:
     patch:
       tags: [ai]
       summary: Mark a voice command as executed
-      description: Legacy envelope code=0; data is null on success.
+      description: data is null on success.
       operationId: patchAiVoiceCommand
       parameters:
         - name: id
@@ -7577,7 +7577,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI templates (public + workspace private)
-      description: "Legacy envelope code=0; data = { items, total, skip, take }."
+      description: "data = { items, total, skip, take }."
       operationId: listAiTemplates
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -7610,7 +7610,7 @@ paths:
     post:
       tags: [ai]
       summary: Create an AI template
-      description: Legacy envelope code=0.
+      description: Creates a template.
       operationId: createAiTemplate
       requestBody:
         required: true
@@ -9525,7 +9525,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI result feedback (paginated)
-      description: Legacy envelope code=0; data is a paginated feedback page.
+      description: data is a paginated feedback page.
       operationId: listAiFeedback
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -9549,7 +9549,7 @@ paths:
     post:
       tags: [ai]
       summary: Submit AI result feedback
-      description: Legacy envelope code=0; data is the created feedback row.
+      description: data is the created feedback row.
       operationId: postAiFeedback
       requestBody:
         required: true
@@ -9684,7 +9684,7 @@ paths:
     post:
       tags: [ai]
       summary: AI mail assistant (draft / summarize / classify / reply)
-      description: "Body { wid, action, content, context? }; the data shape depends on the action (legacy envelope code=0)."
+      description: "Body { wid, action, content, context? }; the data shape depends on the action."
       operationId: postAiMailAssistant
       requestBody:
         required: true
@@ -9700,7 +9700,7 @@ paths:
                 context: { type: string }
       responses:
         '200':
-          description: Assistant result (shape depends on action; legacy envelope code=0)
+          description: Assistant result (shape depends on action)
           content:
             application/json:
               schema:
@@ -9713,7 +9713,7 @@ paths:
     post:
       tags: [ai]
       summary: AI meeting summary generation (non-streaming)
-      description: "Body { wid, transcript (1-50000), meetingTitle?, sessionId? }; data = { title, keyPoints, decisions, actionItems, participants } (legacy envelope code=0)."
+      description: "Body { wid, transcript (1-50000), meetingTitle?, sessionId? }; data = { title, keyPoints, decisions, actionItems, participants }."
       operationId: postAiMeetingSummary
       requestBody:
         required: true
@@ -9816,7 +9816,7 @@ paths:
     post:
       tags: [ai]
       summary: AI semantic search (non-streaming)
-      description: "Body { wid, query, scope?, limit? }; data = { messages, wikis, todos, decisions, expandedKeywords, intent } (legacy envelope code=0)."
+      description: "Body { wid, query, scope?, limit? }; data = { messages, wikis, todos, decisions, expandedKeywords, intent }."
       operationId: postAiSemanticSearch
       requestBody:
         required: true
@@ -11374,7 +11374,7 @@ paths:
     post:
       tags: [ai]
       summary: AI assistant conversational chat (orchestrator, multi-turn)
-      description: "Body { wid, message, phase?, taskId?, previousOutput?, conversationId? } (legacy envelope code=0). data = AssistantResult + conversationId; user/assistant messages are persisted, history loaded when conversationId is given."
+      description: "Body { wid, message, phase?, taskId?, previousOutput?, conversationId? }. data = AssistantResult + conversationId; user/assistant messages are persisted, history loaded when conversationId is given."
       operationId: postAiAssistantChat
       requestBody:
         required: true
@@ -11412,7 +11412,7 @@ paths:
     get:
       tags: [ai]
       summary: AI assistant conversation history (list, or messages of one conversation)
-      description: "Query wid (required) and id? — no id returns the user's recent 20 conversations; with id returns that conversation's messages (legacy envelope code=0)."
+      description: "Query wid (required) and id? — no id returns the user's recent 20 conversations; with id returns that conversation's messages."
       operationId: getAiAssistantConversations
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -11438,7 +11438,7 @@ paths:
     get:
       tags: [ai]
       summary: AI assistant capability suggestions for a task phase
-      description: "Query phase? (default in_progress; unknown values fall back to in_progress). Legacy envelope code=0; data = { phase, suggestions }."
+      description: "Query phase? (default in_progress; unknown values fall back to in_progress). data = { phase, suggestions }."
       operationId: getAiAssistantSuggestions
       parameters:
         - name: phase
@@ -11643,7 +11643,7 @@ paths:
     get:
       tags: [ai]
       summary: List registered AI tools (name/description/JSON-Schema parameters)
-      description: "Legacy envelope code=0; data = { tools }. execute callbacks are never serialized."
+      description: "data = { tools }; execute callbacks are never serialized."
       operationId: getAiTools
       responses:
         '200':
@@ -11660,7 +11660,7 @@ paths:
     post:
       tags: [ai]
       summary: Execute a registered AI tool in a workspace (RLS transaction)
-      description: "Body { toolName, args?, workspaceId } (legacy envelope code=0). Side-effect tools (e.g. create_task) require the mapped write permission — viewers get 403; data = { result } (success/data/error)."
+      description: "Body { toolName, args?, workspaceId }. Side-effect tools (e.g. create_task) require the mapped write permission — viewers get 403; data = { result } (success/data/error)."
       operationId: postAiToolsExecute
       requestBody:
         required: true
@@ -11789,7 +11789,7 @@ paths:
     post:
       tags: [ai]
       summary: Orchestrate a workflow definition from a description (trigger/nodes/edges)
-      description: "Body { wid, description, existingWorkflows? } (legacy envelope code=0). data = WorkflowDefinition (trigger + nodes + edges + explanation) after cleanJsonResponse/normalize validation."
+      description: "Body { wid, description, existingWorkflows? }. data = WorkflowDefinition (trigger + nodes + edges + explanation) after cleanJsonResponse/normalize validation."
       operationId: postAiWorkflowOrchestrator
       requestBody:
         required: true
@@ -11999,7 +11999,7 @@ paths:
     get:
       tags: [im]
       summary: IM message full-text search (tsvector union ILIKE substring)
-      description: "Query workspaceId + q (required) + conversationId? + limit?. Two matches unioned: body_tsv @@ plainto_tsquery('simple') via GIN, plus ILIKE substring via trigram (substring-only rows rank 0). Legacy envelope code=0; data = results."
+      description: "Query workspaceId + q (required) + conversationId? + limit?. Two matches unioned: body_tsv @@ plainto_tsquery('simple') via GIN, plus ILIKE substring via trigram (substring-only rows rank 0). data = results."
       operationId: getImSearch
       parameters:
         - $ref: '#/components/parameters/WorkspaceId'
@@ -13287,7 +13287,7 @@ paths:
     patch:
       tags: [messages]
       summary: Edit or recall a task message (author only, 30-minute recall window)
-      description: "Body discriminated by action: { action: 'recall' } or { action: 'edit', body }. Author only (403; errors may carry reason 'recallExpired'); recalled messages are 409; requires messages/update. Legacy envelope code=0; data = updated message row."
+      description: "Body discriminated by action: { action: 'recall' } or { action: 'edit', body }. Author only (403; errors may carry reason 'recallExpired'); recalled messages are 409; requires messages/update. data = updated message row."
       operationId: patchTaskMessage
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -16830,7 +16830,7 @@ components:
       properties:
         data:
           type: object
-          description: Workflow row (id/name/description/trigger/actions/active…; legacy envelope code=0).
+          description: Workflow row (id/name/description/trigger/actions/active…).
     Envelope_WorkflowList:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -16849,7 +16849,7 @@ components:
       properties:
         data:
           type: object
-          description: Execution row (id/workflowId/status/result…; legacy envelope code=0).
+          description: Execution row (id/workflowId/status/result…).
     Envelope_WorkflowExecutionList:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -16940,7 +16940,7 @@ components:
       properties:
         data:
           type: object
-          description: Form row (id/title/fields[]…; legacy envelope code=0).
+          description: Form row (id/title/fields[]…).
     Envelope_FormList:
       allOf:
         - $ref: '#/components/schemas/Envelope'

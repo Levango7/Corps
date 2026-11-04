@@ -131,7 +131,7 @@ async function getAiMeetingsSessionsDecisionsById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: decisions, message: "OK" });
+    return NextResponse.json({ code: 200, data: decisions, message: "OK" });
   } catch (error) {
     console.error("[GET ai/meetings/sessions/[id]/decisions] error:", error);
     return NextResponse.json(
@@ -233,7 +233,7 @@ async function patchAiMeetingsSessionsDecisionsById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: decision, message: "OK" });
+    return NextResponse.json({ code: 200, data: decision, message: "OK" });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2025") {
       return NextResponse.json(

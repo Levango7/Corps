@@ -1,6 +1,6 @@
 // POST /api/v1/ai/meeting-summary — AI 生成完整会议纪要（非流式）
 // 输入：{ wid, transcript (1-50000), meetingTitle?, sessionId? }
-// 输出：{ code: 0, data: { title, keyPoints, decisions, actionItems, participants }, message }
+// 输出：{ code: 200, data: { title, keyPoints, decisions, actionItems, participants }, message }
 //
 // 流程：
 //   1. 认证 + AI 配置检查 + 速率限制
@@ -266,7 +266,7 @@ async function postAiMeetingSummary(req: NextRequest) {
 
     // 7) 返回纪要
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: summary,
       message: apiMsg(req, "ok"),
     });

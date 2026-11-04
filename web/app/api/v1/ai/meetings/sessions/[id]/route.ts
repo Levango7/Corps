@@ -122,7 +122,7 @@ async function getAiMeetingsSessionsById(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ code: 0, data: session, message: "OK" });
+    return NextResponse.json({ code: 200, data: session, message: "OK" });
   } catch (error) {
     console.error("[GET ai/meetings/sessions/[id]] error:", error);
     return NextResponse.json(
@@ -217,7 +217,7 @@ async function patchAiMeetingsSessionsById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: session, message: "OK" });
+    return NextResponse.json({ code: 200, data: session, message: "OK" });
   } catch (error) {
     // P2025: 记录不存在（update where 条件不匹配）
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2025") {
@@ -300,7 +300,7 @@ async function deleteAiMeetingsSessionsById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 200, data: null, message: "OK" });
   } catch (error) {
     if (typeof error === "object" && error !== null && "code" in error && error.code === "P2025") {
       return NextResponse.json(

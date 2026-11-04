@@ -155,7 +155,7 @@ async function getAiTemplates(req: NextRequest) {
       ? runWithWorkspace(wid, listQuery, userId)
       : runWithUserContext(userId, listQuery));
 
-    return NextResponse.json({ code: 0, data: { items, total, skip, take }, message: "OK" });
+    return NextResponse.json({ code: 200, data: { items, total, skip, take }, message: "OK" });
   } catch (error) {
     console.error("[GET ai/templates] error:", error);
     return NextResponse.json(
@@ -249,7 +249,7 @@ async function postAiTemplates(req: NextRequest) {
           }),
         );
 
-    return NextResponse.json({ code: 0, data: template, message: "OK" }, { status: 201 });
+    return NextResponse.json({ code: 201, data: template, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/templates] error:", error);
     return NextResponse.json(

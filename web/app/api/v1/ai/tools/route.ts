@@ -1,5 +1,5 @@
 // GET /api/v1/ai/tools — 列出所有已注册 AI 工具
-// 输出：{ code: 0, data: { tools: [{ name, description, parameters }] }, message }
+// 输出：{ code: 200, data: { tools: [{ name, description, parameters }] }, message }
 //
 // 返回工具元信息（name + description + JSON Schema parameters）供前端渲染
 // 工具面板或供 AI 模型构造工具调用。不暴露 execute 回调（不可序列化）。
@@ -33,7 +33,7 @@ async function getAiTools(req: NextRequest) {
   }));
 
   return NextResponse.json({
-    code: 0,
+    code: 200,
     data: { tools },
     message: apiMsg(req, "ok"),
   });

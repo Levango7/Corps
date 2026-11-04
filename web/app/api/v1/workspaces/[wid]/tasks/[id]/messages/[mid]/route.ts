@@ -96,7 +96,7 @@ async function patchTasksMessagesByIdByMid(
     if (result.status === "recalled") return fail(409, "messageRevoked", "recalled");
     // 现有 revokeTimeExceeded 文案固定为 2 分钟，不能用于本端点。
     if (result.status === "expired") return fail(403, "forbidden", "recallExpired");
-    return NextResponse.json({ code: 0, data: result.message, message: apiMsg(req, "ok") });
+    return NextResponse.json({ code: 200, data: result.message, message: apiMsg(req, "ok") });
   } catch (error) {
     if (error instanceof z.ZodError) return fail(400, "validationFailed");
     if (error instanceof SyntaxError) return fail(400, "invalidBody");

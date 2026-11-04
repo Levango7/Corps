@@ -71,7 +71,7 @@ async function getAiAssistantConversations(req: NextRequest) {
           capability: m.capabilityUsed ?? undefined,
         }));
 
-      return NextResponse.json({ code: 0, data: { messages: filtered } });
+      return NextResponse.json({ code: 200, data: { messages: filtered } });
     }
 
     // 模式二：对话列表（id 缺失时，返回最近 20 条对话）
@@ -93,7 +93,7 @@ async function getAiAssistantConversations(req: NextRequest) {
       userId,
     );
 
-    return NextResponse.json({ code: 0, data: { conversations } });
+    return NextResponse.json({ code: 200, data: { conversations } });
   } catch (error) {
     logger.warn("[GET ai/assistant/conversations] error", {
       error: error instanceof Error ? error.message : String(error),

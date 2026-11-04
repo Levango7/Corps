@@ -113,7 +113,7 @@ async function getAiUsageStats(req: NextRequest) {
       byCapability,
     };
 
-    return NextResponse.json({ code: 0, data: result, message: "OK" });
+    return NextResponse.json({ code: 200, data: result, message: "OK" });
   } catch (error) {
     console.error("[ai-usage/stats] error:", error);
     return NextResponse.json(

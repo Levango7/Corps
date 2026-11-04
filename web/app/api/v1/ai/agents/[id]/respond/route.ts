@@ -283,7 +283,7 @@ async function postAiAgentsRespondById(req: NextRequest) {
       },
     );
 
-    return NextResponse.json({ code: 0, data: result, message: "OK" });
+    return NextResponse.json({ code: 200, data: result, message: "OK" });
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
     if (quotaGuard) return quotaGuard;

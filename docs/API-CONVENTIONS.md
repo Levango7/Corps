@@ -34,17 +34,17 @@
 所以这是一批**潜在陷阱**而不是现存 bug：谁哪天给 `register` / `send` 接一个按 `code` 判成败的客户端，
 就会踩。把它记成"已知隐患"比记成"线上故障"更诚实，也更难被后来人当成噪声忽略。
 
-### 现状（2026-11-03，第 1–3 批清偿后快照）
+### 现状（2026-11-03，四批全部清偿后：**已清零**）
 
 | 指标 | 数值 | 复核命令 |
 |------|------|----------|
-| 违反处数 | **47 处** | `python scripts/check_response_envelope.py` （末行「合计」） |
-| 涉及生产路由文件 | **32 个** | 同上（末行括号内） |
+| 违反处数 | **0 处** | `python scripts/check_response_envelope.py` （末行「合计」） |
+| 涉及生产路由文件 | **0 个** | 同上（末行括号内） |
 | 对照：用状态码的响应 | 389 处 | `grep -rn "code: 200\|code: 201\|code: 204" web/app/api --include=route.ts \| wc -l` |
 
-> 基线建立时（2026-11-01）是 101 处 / 63 个文件；第 1 批（forms/workflows/documents 19 处）→ 82 / 53，
-> 第 2 批（notifications/favorites/presence/todos/search/sync 17 处）→ 65 / 42，
-> 第 3 批（mail/remote-control/push 18 处）→ 47 / 32。只剩第 4 批（ai 45 + tasks 1 + im 1）。
+> 基线建立时（2026-11-01）是 101 处 / 63 个文件；四批清偿路线：forms/workflows/documents 19
+> → 六个域 17 → mail/remote-control/push 18 → ai/tasks/im 47，**全部归零**（基线文件已无条目）。
+> **门禁形态随之改变**：它从「棘轮（只许减少）」变成「一律禁止」——任何新出现的 `code: 0` 都判红。
 > **不要把这些数字当"当前值"引用**——每次合并后跑一遍门禁取新数。
 
 > 用朴素 `grep -c 'code: 0'` 会数出 117 处 / 65 个文件——多出的是**文档注释在描述信封格式**
@@ -97,7 +97,7 @@
 | 1 | `forms` 7 / `workflows` 9 / `documents` 3 | 19 | **已清偿（2026-11-03）** | 同步清掉 `api/openapi.yaml` 里 8 处 legacy 注解；测试断言改为 `toBe(res.status)` |
 | 2 | `notifications` 5 / `favorites` 5 / `presence` 2 / `sync` 2 / `todos` 2 / `search` 1 | 17 | **已清偿（2026-11-03）** | 同步清掉 14 处 legacy 注解；本批无测试断言需要改 |
 | 3 | `mail` 10 / `remote-control` 5 / `push` 3 | 18 | **已清偿（2026-11-03）** | 同步清掉 11 处 legacy 注解；`push-tokens.test.ts` 的断言改为 `toBe(res.status)` |
-| 4 | `ai` 45 / `tasks` 1 / `im` 1 | 47 | 待做 | 最大一块，最后做 |
+| 4 | `ai` 45 / `tasks` 1 / `im` 1 | 47 | **已清偿（2026-11-03）** | 清掉 24 处 legacy 注解（含 3 处在 components/schemas）；顺带修 2 处 code 与 status 不配对 |
 
 > 上表处数由基线文件按域汇总得出（`awk` 求和 = 101，与门禁合计一致），是 2026-11-01 的快照。
 > **不要当"当前值"读**——每批合入后跑一次门禁取新数。

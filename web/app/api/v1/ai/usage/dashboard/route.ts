@@ -138,7 +138,7 @@ async function getAiUsageDashboard(req: NextRequest) {
       quota,
     };
 
-    return NextResponse.json({ code: 0, data: result, message: "OK" });
+    return NextResponse.json({ code: 200, data: result, message: "OK" });
   } catch (error) {
     console.error("[ai-usage/dashboard] error:", error);
     return NextResponse.json(

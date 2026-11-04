@@ -118,7 +118,7 @@ async function getAiAgents(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: agents, message: "OK" });
+    return NextResponse.json({ code: 200, data: agents, message: "OK" });
   } catch (error) {
     console.error("[GET ai/agents] error:", error);
     return NextResponse.json(
@@ -199,7 +199,7 @@ async function postAiAgents(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: agent, message: "OK" }, { status: 201 });
+    return NextResponse.json({ code: 201, data: agent, message: "OK" }, { status: 201 });
   } catch (error) {
     console.error("[POST ai/agents] error:", error);
     return NextResponse.json(

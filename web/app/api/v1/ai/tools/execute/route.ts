@@ -1,6 +1,6 @@
 // POST /api/v1/ai/tools/execute — 执行指定 AI 工具
 // 输入：{ toolName, args, workspaceId }
-// 输出：{ code: 0, data: { result: ToolResult }, message }
+// 输出：{ code: 200, data: { result: ToolResult }, message }
 //
 // AI 安全约束：工具执行结果返回给 AI 供参考，不自动执行有副作用的操作。
 // create_task 等有副作用的工具在 AI 编排场景应由人工确认后才调用此端点。
@@ -112,7 +112,7 @@ async function postAiToolsExecute(req: NextRequest) {
     );
 
     return NextResponse.json({
-      code: 0,
+      code: 200,
       data: { result },
       message: apiMsg(req, "ok"),
     });

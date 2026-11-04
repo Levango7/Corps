@@ -162,7 +162,7 @@ async function patchAiAgentsById(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    return NextResponse.json({ code: 0, data: updated, message: "OK" });
+    return NextResponse.json({ code: 200, data: updated, message: "OK" });
   } catch (error) {
     console.error("[PATCH ai/agents/[id]] error:", error);
     return NextResponse.json(
@@ -231,7 +231,7 @@ async function deleteAiAgentsById(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ code: 0, data: null, message: "OK" });
+    return NextResponse.json({ code: 200, data: null, message: "OK" });
   } catch (error) {
     console.error("[DELETE ai/agents/[id]] error:", error);
     return NextResponse.json(
