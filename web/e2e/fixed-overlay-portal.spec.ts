@@ -138,11 +138,15 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
     // 之间仍可能存在的小窗口，不是拿来碰运气。本用例测的是弹层的几何与挂载点，
     // 重试不掩盖任何被测行为；打开链路真坏了时 3 次全失败，最终断言照样红。
     //
-    // 退役条件：连续两周 CI 的 E2E 报告里没有 type=hydration-retry 的 annotation，
+    // 退役条件：连续两周 CI 的 E2E 日志里没有 [hydration-retry] 警告，
     // 即可把整个循环删成单次 click + expect(dialog).toBeVisible()。
+    // 别写成「看 E2E 报告」：ci.yml 的 Upload Playwright artifacts 挂在
+    // if: failure()，绿的 run 根本不上传 pw-report.json；绿时只有日志可见。
     // 现在不删的理由：本机无 chromium 跑不了 Playwright，且历史上正是「PR 事件绿、
     // main 连红两轮」，一次 CI 绿不足以证明 flaky 已根治；E2E 是必需检查，
     // 红了会冻结全仓合并（见 README「门禁先红后修的落地方式」）。
+    // 进展：#282 合并点 29e7dfe 的 main 事件 15 项检查全 success（含 E2E），
+    // 但仍是单次样本，按上面的日志判据再观察两周。
     let opened = false;
     for (let attempt = 0; attempt < 3 && !opened; attempt++) {
       await gear.click();
@@ -151,6 +155,9 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
         opened = true;
       } catch {
         if (attempt === 0) {
+          // 双通道可观测：warn 进 CI 的 list reporter 日志（成功时也在，供退役判据用）；
+          // annotation 进 pw-report.json（CI 仅 failure() 时上传，供失败诊断用）。
+          console.warn("[hydration-retry] 首次点击未打开弹层：水合等待之后仍出现残余时序窗口");
           test.info().annotations.push({
             type: "hydration-retry",
             description: "首次点击未打开弹层：水合等待之后仍出现残余时序窗口",
