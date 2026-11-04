@@ -5,5 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-c29 | web/components/{announcement,contact,mail,common,doc,meeting,meetings,pwa,sync,todo,whiteboard,editor,layout,notifications}/**,web/tests/unit/*.test.tsx | zcode | 2026-11-04T11:02Z | 2026-11-04T17:02Z | 零覆盖 ratchet c29：为剩余 components 子目录族 29 文件补单测
-F:/Nexus/corps-wt-e2e-obs | fix/e2e-hydration-retry-log | web/e2e/fixed-overlay-portal.spec.ts | wb-e2e-obs | 2026-11-05 05:35 | 2026-11-05 11:35 | 补 hydration-retry 日志可观测性，让兜底退役条件可执行
 F:/Nexus/corps-wt-deps | chore/deps-g2-next | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml | qoder-deps | 2026-11-04T22:13Z | 2026-11-05T08:13Z | dependabot #257 拆组 G0-G5：逐批锁文件升级（一批一合，前批未落地不推下批）
