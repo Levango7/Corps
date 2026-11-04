@@ -77,7 +77,7 @@
   余 12 条未归因」描述的是静态读源码的极限，不是那 12 条不走令牌。底色按刷色者分布：
   `--shell-content` 7 条（#e2e9ee，`<main class="… bg-[var(--shell-content)]">`）/
   `--shell-sidebar` 7 条（#eff4f8 6 条 + #ecf3f7 1 条，后者是侧栏层叠在内容层之上）/
-  `--p-surface-2` 6 条（`kbd` 自绘）/ `--p-surface` 5 条 / 选中态按钮的内联 style 2 条（#ebeefa）。
+  `--p-surface-2` 6 条（`kbd` 自绘）/ `--p-surface` 5 条 / `--accent-soft` 落底 2 条（#ebeefa，settings 的选中态切换按钮；当时记作「内联 style」，2026-11-03 已定案，见下）。
   **27 条里 14 条由两个应用外壳层贡献**，而这俩层之所以产出门禁看不见的颜色，根因在令牌文件本身：
   `--shell-sidebar` 写成 80%+10%、`--shell-content` 写成 66%+14%，`color-mix` 的权重和不满 100%
   时结果 alpha = w1+w2，Chromium 实测把它们解析成 **alpha 0.9 / 0.8 的半透明色**（同批对照：
@@ -85,8 +85,15 @@
   叠在不同底上出不同最终色，而对比度矩阵按「令牌 vs 令牌」配对，结构上看不到这些层。
   那条「`--muted` 按令牌算全过 AA 却判红」的反常项随之解释掉：真底 #e2e9ee，实测 4.35 < 4.5，
   不是 axe 误判（本机那组数用的是 `--p-*` 之间的配对，底取错了）。
-  没归因到底的余量也如实写明：#ebeefa 那 2 条只到「内联 style、绕过令牌」这一层，
-  具体表达式被 `bgHtml` 的 200 字符截断挡住了。
+  没归因到底的余量当时写成「#ebeefa 那 2 条只到『内联 style、绕过令牌』这一层，具体表达式看不清」，
+  连**看不清的原因也写错了**：当时归到 `a11y-axe-keys.ts` 里 `slice(0, 200)` 那道闸，而实测它在这条上
+  **根本没碰到**——截断发生在 axe 那一侧，它把每个属性值截到 ~24 字符再补省略号（本机 chromium +
+  axe-core 4.14.0 复刻同一条按钮：class 254 字符、style 82 字符，交来的整段只有 92 字符）。
+  **这条归因后来被证伪**（2026-11-03）：`bgNodes` + 源码给出位点
+  `web/components/settings/SettingsPreferences.tsx:250-251`，那段 inline style 写的就是
+  `background: var(--accent-soft)` / `color: var(--accent)` —— 绕过的是 class 匹配，不是令牌。
+  教训留两条：**被截断的读数不是证据**，别把「没看清」写成「绕过」；以及**先量清截断发生在哪一侧**，
+  否则会去修一道不存在的闸。通道本身已补，见上面 `bgAttrs` 那条。
   修法三条路线连同各自的可测分母写进 note，等定档：A 补满权重让两层变实色
   （一次让 14 条可判定并恢复矩阵射程，代价是侧栏/内容底略深 + 矩阵基线重算）；
   B 只抬 `--p-meta` 到 ≥4.5（直接治 21 条，但门禁仍看不见合成底）；C 先 A 后 B。
@@ -120,8 +127,10 @@
   把注释里一直挂着的那两面（`--surface-2` / `--surface-3`）收进射程 —— 改完令牌就把面补齐，
   不留「宣称做完但门禁只守了一半」。axe 基线 `keys` 从 27 收到 2（复算过程见
   `web/tests/a11y-axe-baseline.json` 的 note）：25 条前景是 meta/muted 的条目按新色值全部过 4.5，
-  余下 2 条是 `--p-accent` 压在选中态按钮**内联 style** 的 `#ebeefa` 上（4.30），
-  修法是分离 `--accent-on-surface` 令牌，属设计系统级变更，另开一笔。
+  余下 2 条是 `--p-accent` 压在 `--accent-soft`（`color-mix(... 10%, transparent)`，半透明 tint
+  落底 #ebeefa）上（4.30），定案位点 `SettingsPreferences.tsx:250-251`。修法是给既有令牌
+  `--accent-soft-fg`（现值 = `var(--accent)`，等于没起作用）一个真值，并把 `--accent-soft` 压成实色
+  再纳入矩阵配对；这会碰 98 处 `--accent-soft` 消费面，属设计系统级变更，另开一笔。
   派生面也单独算过一遍，没有漏网的反向退化：状态徽章把 `--muted` 用成 12% tint 底
   （`color-mix(in srgb, var(--status-todo) 12%, transparent)`），文字同档 —— 这类面矩阵按
   令牌配对算不出来，故逐面复算：light 最差从 3.79 → 5.40、dark 从 3.83 → 5.10（变深/变亮

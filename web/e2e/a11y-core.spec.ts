@@ -2,7 +2,14 @@ import { test, expect, type Page } from "@playwright/test";
 import AxeBuilder from "@axe-core/playwright";
 import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { collectDetails, collectKeys, diffBaseline, type ViolationDetail } from "./a11y-axe-keys";
+import {
+  collectBgLayers,
+  collectDetails,
+  collectKeys,
+  diffBaseline,
+  formatBgLayer,
+  type ViolationDetail,
+} from "./a11y-axe-keys";
 import { registerAndLogin, uniqueEmail } from "./helpers";
 
 /**
@@ -95,6 +102,15 @@ function loadBaseline(): BaselineFile | null {
   }
 }
 
+/*
+ * 背景层的完整属性走 `collectBgLayers`（定义在 a11y-axe-keys.ts，页内执行）。
+ * 为什么需要它：axe 交来的 `relatedNodes[].html` 会把每个属性值截到 ~24 字符再补 `…`
+ * （实测：class 254 字符 + style 82 字符的那条按钮，整段只有 92 字符）。上一轮我就是照着
+ * 被截断的片段，把「`--accent` 压 `--accent-soft`」读成了「内联 style 绕过令牌」——
+ * 截断的读数不能冒充证据，所以按选择器回查真 DOM 的属性与 computed 底色。
+ * 投进页面的那段是模块导出的同一个函数：单测（jsdom）与本机浏览器探针跑的都是它本身。
+ */
+
 test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
   test("核心页面不新增 axe 违规，且基线里没有已修的陈旧项", async ({ page }, testInfo) => {
     test.setTimeout(300_000);
@@ -106,7 +122,19 @@ test.describe("axe 无障碍基线（WCAG 2.1 A/AA）", () => {
     async function scanAs(routeKey: string): Promise<void> {
       const result = await new AxeBuilder({ page }).withTags(AXE_TAGS).analyze();
       keys.push(...collectKeys(routeKey, result.violations));
-      Object.assign(details, collectDetails(routeKey, result.violations));
+      const fresh = collectDetails(routeKey, result.violations);
+      Object.assign(details, fresh);
+      /* 给每条现场数据补 bgAttrs（完整属性 + 该层 computed 底色）。不参与红绿，纯取证。 */
+      const withBg = Object.values(fresh).filter((d) => (d.bgNodes?.length ?? 0) > 0);
+      if (!withBg.length) return;
+      const all = [...new Set(withBg.flatMap((d) => d.bgNodes ?? []))];
+      const layers = await page.evaluate(collectBgLayers, all);
+      const bySel = new Map(all.map((s, i) => [s, layers[i]]));
+      for (const d of withBg) {
+        d.bgAttrs = (d.bgNodes ?? []).map((s) =>
+          formatBgLayer(bySel.get(s) ?? { sel: s, resolved: false }),
+        );
+      }
     }
 
     // 未登录页：登录是外部用户第一眼看到的面，单独扫。
