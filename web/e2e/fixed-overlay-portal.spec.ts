@@ -157,9 +157,7 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
         if (attempt === 0) {
           // 双通道可观测：warn 进 CI 的 list reporter 日志（成功时也在，供退役判据用）；
           // annotation 进 pw-report.json（CI 仅 failure() 时上传，供失败诊断用）。
-          console.warn(
-            "[hydration-retry] 首次点击未打开弹层：水合等待之后仍出现残余时序窗口",
-          );
+          console.warn("[hydration-retry] 首次点击未打开弹层：水合等待之后仍出现残余时序窗口");
           test.info().annotations.push({
             type: "hydration-retry",
             description: "首次点击未打开弹层：水合等待之后仍出现残余时序窗口",
