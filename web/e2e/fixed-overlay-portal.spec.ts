@@ -105,9 +105,25 @@ async function probeMenu(page: import("@playwright/test").Page, label: string) {
   }, label);
 }
 
+/**
+ * 等工作区壳水合完成。
+ *
+ * web/e2e/README.md「新用例约定」：waitForURL(/\/w\//) 之后不代表 UI 可用，
+ * 要等一个稳定元素。这里与 ui-style.spec.ts「工作区首页」用例用同一个信号
+ * （顶栏搜索按钮）——SSR 首屏不含客户端交互态，它出现即说明 React 事件委托
+ * 已绑定。少了这步，齿轮按钮虽 SSR 直出、toBeVisible 已通过，点击仍可能落进
+ * 水合前的静默窗口被吞掉（2026-10-29 #208 实证：同一 tree PR 绿、main 连红两轮）。
+ */
+async function waitForWorkspaceHydration(page: import("@playwright/test").Page) {
+  await expect(page.getByRole("button", { name: /搜索/ }).first()).toBeVisible({
+    timeout: 15_000,
+  });
+}
+
 test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
   test("WidgetConfigPanel 遮罩：铺满整个视口且挂在 body 下", async ({ page }) => {
     await registerAndLogin(page, uniqueEmail("e2e-fixed"));
+    await waitForWorkspaceHydration(page);
     await page.evaluate(HIJACK_PROBE);
 
     // 进入编辑模式，齿轮按钮才出现
@@ -116,12 +132,17 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
     await expect(gear).toBeVisible({ timeout: 20_000 });
 
     const dialog = page.locator('[role="dialog"][aria-modal="true"]').first();
-    // 点齿轮偶发"点了没反应"（2026-10-29 实测：同一 tree 在 PR 事件下绿、在 main
-    // 事件下连续两轮红，每次都停在这一步且首次/重试耗时一字不差 11.4s——是点击
-    // 落在水合/重渲染完成之前的时序抖动，不是打开链路坏了）。所以这里点完若弹层
-    // 未出现就再点，最多 3 次。本用例测的是弹层的**几何与挂载点**，不是"打开
-    // 按钮一次必中"，兜底重试不会掩盖任何被测行为；打开链路真坏了时 3 次全失败，
-    // 最终断言照样红。
+    // 主修是上面的 waitForWorkspaceHydration：补上 README 要求的确定性水合等待后，
+    // 点击落进静默窗口的根因已被消除。下面这层重试只作防御深度，挡的是
+    // 「工作区壳水合完成」与「DashboardGrid dynamic import(ssr:false) 挂载完成」
+    // 之间仍可能存在的小窗口，不是拿来碰运气。本用例测的是弹层的几何与挂载点，
+    // 重试不掩盖任何被测行为；打开链路真坏了时 3 次全失败，最终断言照样红。
+    //
+    // 退役条件：连续两周 CI 的 E2E 报告里没有 type=hydration-retry 的 annotation，
+    // 即可把整个循环删成单次 click + expect(dialog).toBeVisible()。
+    // 现在不删的理由：本机无 chromium 跑不了 Playwright，且历史上正是「PR 事件绿、
+    // main 连红两轮」，一次 CI 绿不足以证明 flaky 已根治；E2E 是必需检查，
+    // 红了会冻结全仓合并（见 README「门禁先红后修的落地方式」）。
     let opened = false;
     for (let attempt = 0; attempt < 3 && !opened; attempt++) {
       await gear.click();
@@ -129,7 +150,12 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
         await expect(dialog).toBeVisible({ timeout: 4_000 });
         opened = true;
       } catch {
-        // 这一次点击没生效，重试
+        if (attempt === 0) {
+          test.info().annotations.push({
+            type: "hydration-retry",
+            description: "首次点击未打开弹层：水合等待之后仍出现残余时序窗口",
+          });
+        }
       }
     }
     expect(opened, "点齿轮 3 次后弹层仍未出现——打开链路真坏了，不是时序抖动").toBe(true);
@@ -158,6 +184,7 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
 
   test("QuickActionMenu 浮窗：落在触发坐标上且挂在 body 下", async ({ page }) => {
     await registerAndLogin(page, uniqueEmail("e2e-fixed"));
+    await waitForWorkspaceHydration(page);
     await page.evaluate(HIJACK_PROBE);
 
     const cardBody = page.locator(".react-grid-item").first();
