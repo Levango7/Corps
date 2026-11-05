@@ -49,6 +49,9 @@
 
 > 用朴素 `grep -c 'code: 0'` 会数出 117 处 / 65 个文件——多出的是**文档注释在描述信封格式**
 > （例如 `ai/mail-assistant/route.ts:6` 的 `// - summarize：{ code: 0, data: ... }`）。
+> 这里说的只是代码内注释。`api/openapi.yaml` 的 `description` 属于对外契约内容，里面另有
+> 一批 `(code=0)` 表述（不含 `legacy envelope` 关键词），已于 2026-11-05 单独清偿；
+> 四批当时的判据只查 `legacy envelope`，所以「注解归零」并不等于契约描述已清。
 > 门禁先逐行剔除注释再计数，所以基线是 101。这类误报本项目踩过一次：
 > `score_maturity.py` 曾把注释里的 `withRed(` 当成真实调用点。
 

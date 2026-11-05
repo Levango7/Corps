@@ -14,7 +14,7 @@ import { BASE, registerUser, authHeader } from "../helpers";
  * 5. 跨工作区隔离 — B 的 token 读 A 的表单 403
  *
  * 契约：api/openapi.yaml 已声明该域（2026-10-27 第六批），本文件是其行为侧的钉子。
- * 注意：forms 域整域使用 LEGACY ENVELOPE (code=0)，契约中已显式标注。
+ * 注意：forms 域已于 2026-11-03 完成信封统一，成功响应 code 等于 HTTP 状态码。
  */
 
 let token: string;

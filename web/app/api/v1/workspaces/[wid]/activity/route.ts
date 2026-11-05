@@ -22,7 +22,7 @@ import { withRed } from "@/lib/red-metrics";
  * 认证：getWorkspaceContextV2 校验工作区成员身份 + RLS 上下文。
  * RLS：通过 runWithWorkspace 注入工作区上下文，跨工作区请求被拦截。
  *
- * 响应：{ code: 0, data: { items: Activity[], nextCursor: string | null }, message }
+ * 响应：{ code: 200, data: { items: Activity[], nextCursor: string | null }, message }
  * Activity: { id, type, actorId, actorName, entityType, entityId, entityTitle, createdAt }
  */
 
