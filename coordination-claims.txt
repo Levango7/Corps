@@ -5,5 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-c29 | web/components/{announcement,contact,mail,common,doc,meeting,meetings,pwa,sync,todo,whiteboard,editor,layout,notifications}/**,web/tests/unit/*.test.tsx | zcode | 2026-11-04T11:02Z | 2026-11-04T17:02Z | 零覆盖 ratchet c29：为剩余 components 子目录族 29 文件补单测
-F:/Nexus/corps-wt-deps | chore/deps-g2-next | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml | qoder-deps | 2026-11-04T22:13Z | 2026-11-05T08:13Z | dependabot #257 拆组 G0-G5：逐批锁文件升级（一批一合，前批未落地不推下批）
 F:/Nexus/corps-wt-red2 | chore/openapi-desc-gate | scripts/check_openapi_description_semantics.py,.github/workflows/ci.yml,docs/API-CONVENTIONS.md | zcode | 2026-11-05T16:16Z | 2026-11-06T00:16Z | openapi description 语义门禁：code=0/legacy envelope 判红 + self-test 反向测试 + CI 挂载
