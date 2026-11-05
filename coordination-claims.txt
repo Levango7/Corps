@@ -6,4 +6,3 @@
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/zerocov-c29 | web/components/{announcement,contact,mail,common,doc,meeting,meetings,pwa,sync,todo,whiteboard,editor,layout,notifications}/**,web/tests/unit/*.test.tsx | zcode | 2026-11-04T11:02Z | 2026-11-04T17:02Z | 零覆盖 ratchet c29：为剩余 components 子目录族 29 文件补单测
 F:/Nexus/corps-wt-deps | chore/deps-g2-next | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml | qoder-deps | 2026-11-04T22:13Z | 2026-11-05T08:13Z | dependabot #257 拆组 G0-G5：逐批锁文件升级（一批一合，前批未落地不推下批）
-F:/Nexus/corps-wt-envelope-doc | docs/envelope-description-cleanup | api/openapi.yaml,docs/API-CONVENTIONS.md,web/app/api/v1/ai/templates/route.ts,web/app/api/v1/billing/webhook/wechat/route.ts,web/app/api/v1/workspaces/*/activity/route.ts,web/tests/api/forms.test.ts,web/tests/api/approvals.test.ts | wb-envelope-doc | 2026-11-05T01:02Z | 2026-11-05T07:02Z | 信封清偿收尾：清掉 openapi description 与代码/测试头注释里残留的 code=0 表述
