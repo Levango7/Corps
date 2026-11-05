@@ -313,6 +313,16 @@ jobs:
         run: python scripts/check_response_envelope.py
       - name: Mutation-check the envelope guard itself
         run: python scripts/check_response_envelope.py --self-test
+      # 上面四步管的是"实现层"与"契约文件结构"，管不到契约**文档语义**：#284 清偿
+      # openapi 里 14 处 `description: ... (code=0)` 时发现，只要 YAML 合法、$ref 不悬空、
+      # 路由对得上，`code=0` 写进 description 就能一路合进 main——而 web/lib/api.ts:114
+      # 把 code 读成「必须等于 HTTP 状态码」，code=0 是与约定相反的成功语义。
+      # 本门禁在 openapi 文档层硬失败 `code=0` 与 `legacy envelope`（main 现状 0/0，
+      # 零存量故不上棘轮）；口径与边界见脚本 docstring。
+      - name: Check OpenAPI description semantics (no code=0 / legacy envelope)
+        run: python scripts/check_openapi_description_semantics.py
+      - name: Mutation-check the description-semantics guard itself
+        run: python scripts/check_openapi_description_semantics.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
