@@ -3,7 +3,7 @@
 // POST /api/v1/ai/templates — 创建模板
 //      Body: { wid?, name, description, category, steps, isPublic, metadata? }
 //
-// 约定：{ code, data, message }；成功 code=0；steps 用 as Prisma.InputJsonValue 转换。
+// 约定：{ code, data, message }；成功 code 等于 HTTP 状态码（GET 200 / POST 201）；steps 用 as Prisma.InputJsonValue 转换。
 
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";

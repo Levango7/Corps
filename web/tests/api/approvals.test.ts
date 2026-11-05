@@ -15,7 +15,7 @@ import { BASE, registerUser, authHeader, inviteMember, wsBoundToken } from "../h
  * 8. 跨工作区隔离 — B 的 token 读 A 的实例 403
  *
  * 契约：api/openapi.yaml 已声明该域（2026-10-28 契约批 #204，16 路径 24 方法），
- * 本文件是其行为侧的钉子。注意：approvals 域使用 code=200 新信封（非 forms 域的 code=0 legacy）。
+ * 本文件是其行为侧的钉子。注意：全仓成功响应 code 等于 HTTP 状态码（2026-11-03 四批清偿后已统一）。
  */
 
 let ownerToken: string;

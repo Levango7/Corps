@@ -3290,7 +3290,7 @@ paths:
       tags: [billing]
       summary: WeChat Pay V3 callback (HMAC-SHA256 verified)
       responses:
-        '200': { description: Accepted (code=0) }
+        '200': { description: Accepted }
         '400': { description: Signature error }
         '500':
           $ref: '#/components/responses/InternalError'
@@ -7645,7 +7645,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Template detail (code=0)
+          description: Template detail
           content:
             application/json:
               schema:
@@ -7672,7 +7672,7 @@ paths:
               additionalProperties: true
       responses:
         '200':
-          description: Updated template (code=0)
+          description: Updated template
           content:
             application/json:
               schema:
@@ -7692,7 +7692,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Template deleted (data null, code=0)
+          description: Template deleted (data null)
           content:
             application/json:
               schema:
@@ -7705,7 +7705,7 @@ paths:
     post:
       tags: [ai]
       summary: Instantiate a workflow from an AI template
-      description: "Body { wid, name? }; creates a workflow from the template (code=0, HTTP 201)."
+      description: "Body { wid, name? }; creates a workflow from the template (HTTP 201)."
       operationId: instantiateAiTemplate
       parameters:
         - name: id
@@ -7736,7 +7736,7 @@ paths:
     get:
       tags: [ai]
       summary: List AI meeting sessions (cursor pagination)
-      description: "Query status/cursor/limit; data = { items, nextCursor, hasMore } (code=0 legacy)."
+      description: "Query status/cursor/limit; data = { items, nextCursor, hasMore }."
       operationId: listAiMeetingSessions
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -7777,7 +7777,7 @@ paths:
                 wid: { type: string, format: uuid }
       responses:
         '201':
-          description: Session created (code=0)
+          description: Session created
           content:
             application/json:
               schema:
@@ -7799,7 +7799,7 @@ paths:
           schema: { type: string, format: uuid }
       responses:
         '200':
-          description: Session detail (code=0)
+          description: Session detail
           content:
             application/json:
               schema:
@@ -7831,7 +7831,7 @@ paths:
                 endTime: { type: string, format: date-time }
       responses:
         '200':
-          description: Updated session (code=0)
+          description: Updated session
           content:
             application/json:
               schema:
@@ -7874,7 +7874,7 @@ paths:
     get:
       tags: [ai]
       summary: List session action items
-      description: Query status; data is the actions array (code=0).
+      description: Query status; data is the actions array.
       operationId: listAiMeetingActions
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -7918,7 +7918,7 @@ paths:
                 status: { type: string, enum: [pending, done, dismissed] }
       responses:
         '200':
-          description: Updated action item (code=0)
+          description: Updated action item
           content:
             application/json:
               schema:
@@ -7931,7 +7931,7 @@ paths:
     get:
       tags: [ai]
       summary: List session decisions
-      description: Query status; data is the decisions array (code=0).
+      description: Query status; data is the decisions array.
       operationId: listAiMeetingDecisions
       parameters:
         - $ref: '#/components/parameters/WidQuery'
@@ -7975,7 +7975,7 @@ paths:
                 status: { type: string, enum: [proposed, confirmed, rejected] }
       responses:
         '200':
-          description: Updated decision (code=0)
+          description: Updated decision
           content:
             application/json:
               schema:
@@ -8008,7 +8008,7 @@ paths:
                 timestamp: { type: string, format: date-time }
       responses:
         '200':
-          description: Segment appended; data = the session (code=0)
+          description: Segment appended; data = the session
           content:
             application/json:
               schema:

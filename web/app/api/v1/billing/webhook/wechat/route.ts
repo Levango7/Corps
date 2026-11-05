@@ -15,7 +15,7 @@ import { withRed } from "@/lib/red-metrics";
  *  - 以 JSON 形式发送，Content-Type: application/json
  *  - 验签头：Wechatpay-Timestamp / Wechatpay-Nonce / Wechatpay-Signature
  *  - 验签失败必须返回 4xx（否则微信会持续重试）
- *  - 处理成功返回 200 { code: 0 }（微信要求 code=0 表示成功）
+ *  - 处理成功返回 HTTP 200，响应体 code 等于 HTTP 状态码（本仓统一信封）
  *
  * 幂等：processed_payment_events (provider='wechatpay-native', event_id=通知ID)
  */
