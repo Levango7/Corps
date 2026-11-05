@@ -55,6 +55,39 @@
 
 ### Changed
 
+- **依赖批次 G2：next 家族 16.4.2 → 16.4.4**（`next` / `@next/bundle-analyzer` /
+  `@next/eslint-plugin-next` 三员同步，`@next/bundle-analyzer` 由 `^16.4.2` 改为**精确 pin**）。
+  **为什么不取当时最新的 16.4.5**：它发布于 `2026-11-03T18:01Z`，动手时只有约 24 小时大，
+  pnpm 11.22 对此的反应是**自动往 `web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 里
+  追加一条 `- next@16.4.5`**。**我没有提交那条自动追加**：不为一次补丁 bump 往这份台账里添一个
+  「刚发布的版本」；16.4.4 已过窗，拿到的是同一大版本内的累积修复。
+  **顺带订正一个我先前说错的机制**（原先写成「被本仓的供应链年龄策略拦下」，是错的）。
+  隔离目录、零配置、拿一个只有 401 分钟大的 `better-auth@1.7.17` 实测：pnpm 打印
+  `Added 8 entries to minimumReleaseAgeExclude in pnpm-workspace.yaml (set
+  minimumReleaseAgeStrict to true to gate these updates with a prompt)`，然后**照装不误**
+  （rc=0，锁里就是 1.7.17）。⇒ 默认行为是「记一笔豁免」而不是「拦住」，只有
+  `minimumReleaseAgeStrict: true` 才成门。而**本仓两个键都没设**（`minimumReleaseAge` 与
+  `minimumReleaseAgeStrict` 全仓 grep 零命中，`web/pnpm-workspace.yaml` 顶层只有
+  `allowBuilds` / `minimumReleaseAgeExclude` / `overrides`），所以现有 6 条 exclude
+  （`@ai-sdk/*`、`ai@7.0.99`）是 pnpm 自动累积的台账，**这道供应链年龄门在本仓实际不设防**。
+  要不要开 strict（开了以后每次 bump 到年轻版本都要人确认一次）交 owner 定夺，本笔不擅自改。
+  另一处措辞也收回：caret 下 `@next/bundle-analyzer` 会解析到 16.4.5，与年龄门无关
+  （门本就不拦），纯粹是范围语义；改精确 pin 是为了把版本钉死、让锁文件可预测。
+  锁文件 59+/59-，用 G1 那套解析 YAML 的结构化对账逐条核过：59 条许可差异 = next 家族 12 员
+  （含 `@next/env` 与 8 个 `@next/swc-*` 平台产物随 next 一起走）+ `next-intl` 的 peer 键改写
+  + 一处 `tslib` 重指向（`@emnapi/runtime`、`rxjs` 从 2.8.1 改指 2.9.1，该条目 G1 已入锁，
+  机制与 G1 同源）；`range` 语义改动（caret→精确）单独登记进白名单后才放行，不靠放宽判据凑绿。
+  对账器变异自证仍有射程：把非白名单的 `pg@8.23.1` 改成 `8.23.99` ⇒ 判 13 条越界。
+  **验证**（仓外净副本，按 CI 形态展开）：`git archive` 必须带 `-c core.autocrlf=false`，
+  否则本机 `core.autocrlf=true` 会把副本整棵转成 CRLF，而 `.prettierrc` 要 `endOfLine: lf`
+  ⇒ prettier 恒红 1231 个文件（这条腿此前一直是废腿）。修好后副本锁文件与 git blob
+  逐字节相同（sha256 `964a72d1…`）；`pnpm install --frozen-lockfile --ignore-scripts`
+  （pnpm 11.22.0，取自 `packageManager`，与 CI 同源）报 Already up to date / rc=0，
+  装出来的 next 家族三员实值均为 16.4.4；完整 Lint 腿 19 条 rc 全 0、prettier 0 warn
+  （`check_dockerfile_base_images` 本机跑 `--offline`，因为 Docker Hub 在本机 timed out，
+  网络可达那一维只认 CI）；单测全量 3681 passed / 2 failed，两条都在
+  `tests/unit/ai-calendar-schedule-dialog.test.tsx`——该文件在 main 同一棵树上本机全量也红、
+  单跑 3/3 绿，已归因为负载抖动，与本笔无因果（diff 不含任何 React 代码）。
 - **依赖批次拆分第一批（G1，工具链）**：`typescript-eslint` 8.72.0→8.72.1、`@types/node` 26.6.5→26.6.6。
   起因是 dependabot #257 把 26 个跨 5 个家族的依赖塞进一个 PR（且分支基点已旧），按「一批一合」重做。
   锁文件差异用**解析 YAML 的结构化对账**逐条核过（字符串 diff 会被包名里的 `/` 和 peer 后缀骗）：
