@@ -10,10 +10,97 @@ updates:
     labels:
       - "dependencies"
     groups:
-      minor-and-patch:
-        update-types:
-          - "minor"
-          - "patch"
+      # 分组判据 = 「锁文件里谁的键会互相改写」：pnpm 的 lockfileVersion 9 把 peer 版本
+      # 嵌进依赖键（`next@16.4.2(...)(@types/node@26.6.5)(...)`），所以同家族拆不开——
+      # 一笔 bump 必然连带改写整片 peer 键。不共享 peer 键的绝不合到一批。
+      #
+      # 反面教材是 #257：单个 minor-and-patch 组把 26 个跨 5 个家族的依赖挤进一个 PR，
+      # 既没法按家族审、也没法按家族回滚，peer 键改写和真实升级混在同一次 diff 里。
+      #
+      # 每组都保留 update-types: [minor, patch]，与拆分前语义等价：major 一律走人工立项
+      # （ADR-014），不让机器人周期性重建合不进去的红 PR（#15/#16 的先例）。
+      # patterns 之间必须互斥（`@types/node` 不会吞 `@types/nodemailer`，glob 按整名匹配）。
+      eslint:
+        patterns:
+          - "typescript-eslint"
+          - "@typescript-eslint/*"
+          - "eslint"
+          - "@eslint/*"
+          - "eslint-*"
+        update-types: ["minor", "patch"]
+      react:
+        patterns:
+          - "react"
+          - "react-dom"
+          - "@types/react"
+          - "@types/react-dom"
+        update-types: ["minor", "patch"]
+      next:
+        patterns:
+          - "next"
+          - "@next/*"
+        update-types: ["minor", "patch"]
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+        update-types: ["minor", "patch"]
+      ai-sdk:
+        patterns:
+          - "ai"
+          - "@ai-sdk/*"
+        update-types: ["minor", "patch"]
+      tiptap:
+        patterns:
+          - "@tiptap/*"
+        update-types: ["minor", "patch"]
+      tailwind:
+        patterns:
+          - "tailwindcss"
+          - "@tailwindcss/*"
+        update-types: ["minor", "patch"]
+      vitest:
+        patterns:
+          - "vitest"
+          - "@vitest/*"
+          - "@vitejs/*"
+          - "jsdom"
+        update-types: ["minor", "patch"]
+      playwright:
+        patterns:
+          - "playwright"
+          - "@playwright/*"
+        update-types: ["minor", "patch"]
+      livekit:
+        patterns:
+          - "livekit-client"
+          - "livekit-server-sdk"
+          - "@livekit/*"
+        update-types: ["minor", "patch"]
+      auth:
+        patterns:
+          - "better-auth"
+          - "@better-auth/*"
+        update-types: ["minor", "patch"]
+      mail:
+        patterns:
+          - "nodemailer"
+          - "@types/nodemailer"
+        update-types: ["minor", "patch"]
+      node-types:
+        patterns:
+          - "@types/node"
+        update-types: ["minor", "patch"]
+      motion:
+        patterns:
+          - "framer-motion"
+          - "lucide-react"
+        update-types: ["minor", "patch"]
+      virtual-list:
+        patterns:
+          - "@tanstack/*"
+          - "react-grid-layout"
+        update-types: ["minor", "patch"]
     ignore:
       # Stripe major：ADR-014 §4.2.4 明确否决 23.0.0（触发条件：23.x 累计 ≥3 补丁
       # 且沙箱跑通全链路）。2026-10-10 已完成 18.3.0→22.6.2（见 §12）；Dependabot

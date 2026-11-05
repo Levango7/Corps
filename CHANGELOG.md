@@ -148,6 +148,18 @@
   令牌配对算不出来，故逐面复算：light 最差从 3.79 → 5.40、dark 从 3.83 → 5.10（变深/变亮
   的方向对文字档本身都是改善，不是交换）。
 
+- **dependabot 改成按家族分组（G0）**：`.github/dependabot.yml` 里那个单个 `minor-and-patch`
+  组换成 15 个家族组（eslint / react / next / prisma / ai-sdk / tiptap / tailwind / vitest /
+  playwright / livekit / auth / mail / node-types / motion / virtual-list）。
+  分组判据不是「看起来同类」，而是**锁文件里谁的键会互相改写**：pnpm lockfileVersion 9 把 peer
+  版本嵌进依赖键（`next@16.4.2(...)(@types/node@26.6.5)(...)`），同家族一笔 bump 必然连带改写
+  整片 peer 键，拆不开就一起走；不共享的绝不合并。72 个已声明依赖里 50 个进组、22 个刻意走单依赖 PR。
+  每组都保留 `update-types: [minor, patch]`，与拆分前语义等价——major 仍一律人工立项（ADR-014）。
+  配套 `scripts/check_dependabot_groups.py`（与 `verify_deploy_package.py` 同状态，手动核对工具，
+  **未接 CI**：塞进 Lint 腿等于新增门禁，得自带射程证据并改 ci.yml，那是另一笔决定）。
+  它守四条：组间 patterns 互斥、每组都锁 minor+patch、无空组、未分组清单不漂移；
+  `--self-test` 注入两个变异（加 `@types/*` 造成重叠 / 抹掉一个组的 `update-types`）都判红。
+
 ### Fixed
 
 - **认领表的时区口径统一到 UTC（修掉「幻影 +8 小时占用」）**：`scripts/check_coordination_claims.py`
