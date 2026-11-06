@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-deps | chore/deps-g3-ai-sdk | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml,.github/workflows/ci.yml,scripts/check_dependency_age.py,scripts/dependency-age-cache.json | qoder-deps | 2026-11-06T05:53Z | 2026-11-06T15:53Z | 依赖批次 B 方案：审计/合并 dependabot 家族 PR；新增依赖发布时间年龄门（脚本+缓存+CI 挂载）
-F:/Nexus/corps-wt-red2 | fix/meeting-room-deadlock | web/components/meetings/MeetingRoom.tsx,web/tests/unit/meeting-room.test.tsx,web/app/api/v1/livekit/join/route.ts,web/tests/unit/meeting-lobby.test.tsx,docker-compose.yml | zcode | 2026-11-06T19:50Z | 2026-11-07T03:50Z | P0 修复：MeetingRoom joining 死锁 + LIVEKIT_URL 内网地址下发浏览器（会议功能可用的前提）
