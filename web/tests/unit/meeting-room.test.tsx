@@ -9,14 +9,13 @@
  * data-*（真机由此发起连接），VideoConference / RoomAudioRenderer 占位，
  * useParticipants / useLocalParticipant / useDataChannel 返回固定快照。
  *
- * ⚠️ 源码行为与预期不符（未修改源码，用例 5 按实际行为固化）
- *   join 成功后组件只 setToken/setServerUrl，从未把 state 从 "joining" 推出；
- *   而 LiveKitRoom 只在末尾"非 joining"分支渲染，onConnected 又只能在它渲染后
- *   回调 —— 两者互等，界面永久停在"加入中"，房间从未建立。
- *   由此下列分支在 DOM 上均无可达入口，本文件不为它们编造断言：
- *     onConnected / onDisconnected / onError、重连（rejoin + 30s 超时）、通话计时、
- *     VideoConference / RoomAudioRenderer、录制条、参与者面板、举手、主持人转移。
- *   在 jsdom 下对这些分支写用例只能是恒真或恒假，属假覆盖，故留白等源码修复。
+ * ✅ 源码行为（2026-11-07 修复 joining 死锁后）
+ *   join 成功后 state 推进为 "connecting"，主界面（LiveKitRoom）挂载并自行连接，
+ *   onConnected 到达后翻 "connected" 并启动通话计时——互等死锁解除。
+ *   用例「join 成功 → lk-room 渲染且凭据透传」钉住该修复（防回归）。
+ *   仍未覆盖（后续可扩展）：onDisconnected / onError、重连（rejoin + 30s 超时）、
+ *   通话计时推进、录制条、举手、主持人转移——分支已有 DOM 可达入口，但涉及
+ *   计时器与桩回调编排，留待专门批次。
  *
  * 未覆盖（需真机/浏览器）：RTCPeerConnection 协商、轨道采集与渲染、LiveKit 信令。
  */
@@ -158,7 +157,9 @@ describe("MeetingRoom · 挂载请求与入口态", () => {
     await waitReady();
 
     expect(screen.queryByRole("alert")).toBeNull();
-    expect(screen.getByText("meetings.room:joining")).toBeInTheDocument();
+    // join 成功已翻 connecting（死锁修复后）：详情失败不阻塞，房间照常渲染
+    expect(screen.queryByText("meetings.room:joining")).toBeNull();
+    expect(screen.getByTestId("lk-room")).toBeInTheDocument();
   });
 
   it("重渲染不重复 join（joinedRef 防重）", async () => {
@@ -170,17 +171,16 @@ describe("MeetingRoom · 挂载请求与入口态", () => {
     expect(mocks.api.mock.calls.filter((c) => String(c[0]).endsWith("/join")).length).toBe(1);
   });
 
-  it("源码入口缺陷：join 成功仍停在 joining，token 取回但房间从未渲染", async () => {
+  it("join 成功 → 退出 joining，LiveKitRoom 渲染且 token/serverUrl 透传（2026-11-07 死锁修复回归）", async () => {
     stubHappyPath();
     render(<MeetingRoom workspaceId="w1" meetingId="m1" />);
     await waitReady();
 
-    expect(screen.getByText("meetings.room:joining")).toBeInTheDocument();
-    expect(screen.queryByTestId("lk-room")).toBeNull();
-    // 依赖"已连接"才有意义的 UI 全部缺席
-    expect(screen.queryByRole("button", { name: /meetings:startRecording/ })).toBeNull();
-    expect(screen.queryByText("00:00")).toBeNull();
-    expect(screen.queryByRole("button", { name: "meetings.room:handRaise" })).toBeNull();
+    // 全屏加入中页已被主界面取代，房间挂载并拿到凭据
+    expect(screen.queryByText("meetings.room:joining")).toBeNull();
+    const room = screen.getByTestId("lk-room");
+    expect(room.getAttribute("data-token")).toBe("jwt-token-1");
+    expect(room.getAttribute("data-url")).toBe("wss://lk.example.com");
   });
 });
 

@@ -157,6 +157,11 @@ async function postMeetingsJoinByMid(
     if (!apiKey || !apiSecret || !livekitUrl) {
       throw new Error("LiveKit 未配置（缺少 LIVEKIT_API_KEY/SECRET/URL）");
     }
+    // token 里的 url 是给**浏览器**用的接入地址：容器化部署时 LIVEKIT_URL 是
+    // 容器内网名（ws://livekit:7880），浏览器不可达——用 LIVEKIT_BROWSER_URL
+    // 覆盖下发值；未配置时回退 LIVEKIT_URL（本地 dev 两者同为 localhost 语义）。
+    // （2026-11-07 修复：compose 默认把内网名下发给浏览器导致 join 后连不上 SFU。）
+    const browserUrl = process.env.LIVEKIT_BROWSER_URL || livekitUrl;
 
     const user = await runWithWorkspace(
       wid,
@@ -197,7 +202,7 @@ async function postMeetingsJoinByMid(
       code: 200,
       data: {
         token: jwt,
-        url: livekitUrl,
+        url: browserUrl,
         roomName: result.roomName,
         e2eeEnabled,
       },

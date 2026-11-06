@@ -195,8 +195,11 @@ services:
       VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:-}
       VAPID_SUBJECT: ${VAPID_SUBJECT:-mailto:admin@corps.app}
       # LiveKit 音视频（会议/通话）：未配置时会议功能返回 503
-      # LIVEKIT_URL 为容器内接入地址（通过 livekit 服务名解析）
+      # LIVEKIT_URL 为容器内接入地址（通过 livekit 服务名解析，服务端校验用）
       LIVEKIT_URL: ${LIVEKIT_URL:-ws://livekit:7880}
+      # LIVEKIT_BROWSER_URL 下发给浏览器（token 里的接入地址）：容器内名浏览器不可达，
+      # 默认走宿主机映射端口 7881；对外部署请设为公网 wss:// 地址
+      LIVEKIT_BROWSER_URL: ${LIVEKIT_BROWSER_URL:-ws://localhost:7881}
       LIVEKIT_API_KEY: ${LIVEKIT_API_KEY:-}
       LIVEKIT_API_SECRET: ${LIVEKIT_API_SECRET:-}
       # S3 对象存储（IM 附件/录制文件）：未配置时回退本地 uploads/ 卷
