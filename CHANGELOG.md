@@ -55,6 +55,22 @@
 
 ### Changed
 
+- **依赖批次 G3：ai-sdk 家族换版**。声明范围不动的两个（caret）：`ai` `^7.0.150` 锁到 7.0.163、
+  `@ai-sdk/openai` `^4.0.101` 锁到 4.0.109；精确 pin 的两个改声明：`@ai-sdk/provider` 4.0.33→4.0.36、
+  `@ai-sdk/react` 4.0.154→4.0.167。随族自动走的传递依赖：`@ai-sdk/provider-utils` 5.0.67→5.0.75、
+  `@ai-sdk/gateway` 4.0.123→4.0.136、`@ai-sdk/mcp` 2.0.83→2.0.91。
+  目标版本按 **发布时间年龄 ≥ 24 小时** 现算（`web/_probe/g35-ages.mjs`，2026-11-06T02:55Z）：
+  该族最新版恰好都在 25.6h 前发布，所以取最新即可，**没有往 `minimumReleaseAgeExclude` 追加任何豁免**。
+  **一处工具行为要记着**：`pnpm update <pkg>` 不只改锁，还会把 `package.json` 里 caret 的**下限一起抬高**
+  （它把 `ai` 写成了 `^7.0.163`），并把同样的值写进锁的 `importers.*.specifier`。本批要的是
+  “在声明范围内换锁”，所以两步都拉回：先改回 `^7.0.150` / `^4.0.101`，再跑
+  `pnpm install --lockfile-only` 把 specifier 重新同步。**漏掉第二步的症状是 `--frozen-lockfile`
+  判 specifier 不匹配而红**，而 CI 的 install 正是冻结口径，本机非冻结安装不会复现。
+  锁文件 43+/43-，用结构化对账（base `6e4855d`）逐条核过：41 条许可差异、**0 越界**、
+  `packages 1103 -> 1103`、`snapshots 1103 -> 1103`；对账器 `--self-test` 仍把非白名单变异
+  （`pg@8.23.1`→`8.23.99`）判红。`overrides` 里钉 provider-utils 声明范围的两条有界 undici 规则
+  未被这批碰到：锁内 undici 解析版在 base↔本批之间逐字相同（7.30.1 / 8.12.2，diff 里 0 命中）。
+
 - **依赖批次 G2：next 家族 16.4.2 → 16.4.4**（`next` / `@next/bundle-analyzer` /
   `@next/eslint-plugin-next` 三员同步，`@next/bundle-analyzer` 由 `^16.4.2` 改为**精确 pin**）。
   **为什么不取当时最新的 16.4.5**：它发布于 `2026-11-03T18:01Z`，动手时只有约 24 小时大，
