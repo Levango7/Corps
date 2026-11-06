@@ -55,6 +55,32 @@
 
 ### Changed
 
+- **依赖发布时间年龄门（新门禁，已进 Lint 腿）**：`scripts/check_dependency_age.py` 读
+  `web/pnpm-lock.yaml` 的 `packages:` 段，逐个 `name@version` 查 npm 发布时间，不足
+  `--minutes`（默认 1440）即判红；**取数失败判 UNDETERMINED（退出码 2），不设"跳过还报绿"的口子**。
+  **为什么必须自己写**：`minimumReleaseAge` 只在**解析期**生效。四组 fixture 实测
+  （`@tiptap/core@3.33.0`＝9.9h 作红样本、`3.32.2`＝159h 作绿样本）：
+  无键时 pnpm 打印 `Added 2 entries to minimumReleaseAgeExclude` 后照装（rc=0）；
+  只设阈值时**全新解析**是 rc=1 `[ERR_PNPM_NO_MATURE_MATCHING_VERSION]`；
+  但**锁里已钉着年轻版本 + 干净 `node_modules` + `--frozen-lockfile` + 阈值** 仍然 rc=0 装进去。
+  dependabot 在它那侧解析并提交锁、CI 又跳过解析 ⇒ 那个开关对 dependabot 的 PR 与 CI 两头都无效。
+  顺带订正我先前两处说错的：**阈值才是开关**，`minimumReleaseAgeStrict` 只管"静默记豁免还是提示"，
+  只设 strict 不设阈值才是空门。
+  两个实现取舍：① 发布时间按 `name@version` 落成 `scripts/dependency-age-cache.json`
+  （1103 条 / 61 KB）——同一版本发布时间不可变（npm 不许覆盖发布），所以缓存没有过期问题，
+  只有"还没查到"，缺的条目现场拉取，稳态成本趋近于零（实测全命中 877 ms）；
+  ② **不读** `web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude` 台账——那是 pnpm 自己的
+  解析期豁免，拿它来免本门等于自己给自己发通行证；要放行年轻版本必须 `--allow` 点名并在 PR 写明理由。
+  **射程证据**：`--self-test` 断言四类红因集合精确相等（太年轻 / 无发布时间 / 豁免确被跳过 /
+  阈值归零对照）加边界两侧（样本 1440 分钟：阈值 1441 判红、1440 判绿）——第一版自测就把边界
+  写错了（1439 期望红，而 1440 ≥ 1439 应为绿），是自测自己抓出来的。真数据侧：把阈值抬到 1721
+  分钟，**恰好红 5 条**，与按缓存现算的期望集逐条一致（`ai@7.0.163`、`@ai-sdk/openai@4.0.109`、
+  `@ai-sdk/provider@4.0.36`、`@ai-sdk/provider-utils@5.0.75`、`@ai-sdk/react@4.0.167`，
+  均 1720.8–1720.9 分钟）。
+  **代价是要认的**：这道门一上，任何把依赖抬到 24 小时内新版的 PR（**含 dependabot 的**）都会红。
+  缓存来源：本机用 `--registry https://registry.npmmirror.com` 灌，并抽三个版本与 npmjs 真值逐字符
+  比对一致（如 `@tiptap/core@3.33.0 = 2026-11-05T18:21:37.877Z`）；CI 默认打 npmjs，缺条目现场取。
+
 - **依赖批次 G3：ai-sdk 家族换版**。声明范围不动的两个（caret）：`ai` `^7.0.150` 锁到 7.0.163、
   `@ai-sdk/openai` `^4.0.101` 锁到 4.0.109；精确 pin 的两个改声明：`@ai-sdk/provider` 4.0.33→4.0.36、
   `@ai-sdk/react` 4.0.154→4.0.167。随族自动走的传递依赖：`@ai-sdk/provider-utils` 5.0.67→5.0.75、
