@@ -77,8 +77,9 @@ export interface MeetingRoomProps {
   conversationId?: string;
 }
 
-/** 连接状态机 */
-type ConnectionState = "joining" | "connected" | "reconnecting" | "disconnected" | "error";
+/** 连接状态机：joining=拉 token 前的全屏加载；connecting=token 就绪、LiveKitRoom 挂载协商中 */
+type ConnectionState =
+  "joining" | "connecting" | "connected" | "reconnecting" | "disconnected" | "error";
 
 /** 录制状态 */
 type RecordingState = "idle" | "starting" | "active" | "stopping";
@@ -278,7 +279,11 @@ export function MeetingRoom({ workspaceId, meetingId, onLeave, conversationId }:
         if (cancelled) return;
         setToken(result.token);
         setServerUrl(result.url);
-        // token/url 就绪后 LiveKitRoom 会自动连接（connect=true）
+        // token/url 就绪 → 推出 joining，LiveKitRoom 渲染后自行连接（connect=true），
+        // onConnected 到达后翻 connected 并启动计时器。
+        // （2026-11-07 修复 joining 死锁：此前 state 从不离开 "joining"，而 LiveKitRoom
+        //   只在非 joining 分支渲染、onConnected 又只能在其渲染后回调——两者互等。）
+        setState("connecting");
 
         // 并行获取用户 ID + 会议详情，判断 host 权限（用于录制按钮可见性）
         try {
