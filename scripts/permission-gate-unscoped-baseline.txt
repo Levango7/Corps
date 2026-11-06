@@ -3,18 +3,5 @@
 # 修法：先在 lib/permissions.ts 的 MODULES 里定义该资源应有权限并接 requirePermission，再从基线删除；新增未评估的写接口会直接 CI 失败。
 # 判定口径为 handler 级；重建本文件前请逐条确认语义。
 DELETE /api/v1/ai/templates/{id}
-DELETE /api/v1/auth/calendar/disconnect/{provider}
-DELETE /api/v1/remote-control/{sessionId}
-DELETE /api/v1/users/me/account
 PATCH /api/v1/ai/templates/{id}
-PATCH /api/v1/remote-control/{sessionId}
 PATCH /api/v1/workspaces/{wid}/notifications
-POST /api/v1/ai/chat
-POST /api/v1/ai/completion
-POST /api/v1/ai/feedback
-POST /api/v1/ai/format
-POST /api/v1/ai/summarize
-POST /api/v1/ai/task-breakdown
-POST /api/v1/ai/translate
-POST /api/v1/push/send
-POST /api/v1/remote-control/signal
