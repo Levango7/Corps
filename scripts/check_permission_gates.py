@@ -188,13 +188,30 @@ IDENTITY_EXACT = frozenset(
     )
 )
 
+# 会话级自助端点（路径级精确）：与 AI_SELF_SERVICE 同裁决（登录即可、无需角色），
+# 但守卫形态是裸 getUserId 而非复合守卫，正则信号会误伤 templates 等同形态真缺口，故逐条列出
+SELF_SERVICE_EXACT = frozenset(("/api/v1/ai/feedback",))
+
 # SIGNED_WEBHOOK 信号：支付平台 / LiveKit 的签名验证（文件级，验签常量常在 handler 外定义）
 WEBHOOK_RE = re.compile(
     r"signature|hmac|LIVEKIT_API_SECRET|webhookSecret|verify.*(sig|webhook)", re.IGNORECASE
 )
 
 # OWNER_SCOPED 信号：资源属主过滤（文件级；仅对非 [wid] 路由且未落 T4 的 handler 生效）
-OWNER_RE = re.compile(r"userId\s*:\s*ctx\.payload\.sub|where\s*:\s*\{[^}]*userId")
+OWNER_RE = re.compile(
+    r"userId\s*:\s*ctx\.payload\.sub|where\s*:\s*\{[^}]*userId|\bpayload\.sub\b"
+)
+
+# GUARDED_NON_ROLE 信号（2026-11-06 裁决批，见 docstring）：非角色守卫已足额的四种形态。
+# 均为「否则将落 T3」时的排除——T4 集合不受影响。
+#   AI_SELF_SERVICE   会话级自助工具：登录 + 本人 ctx，消耗本人配额，无租户写入面
+#   ADMIN_ALLOWLIST   环境变量管理员白名单（如 PUSH_ADMIN_USER_IDS → isPushAdmin）
+#   SESSION_PARTICIPANT  会话参与方校验 / 冒充拒绝（remote-control 家族）
+#   ACCOUNT_CONFIRM   自我注销的确认门（users/me/account 的 confirmEmail 全文匹配）
+AI_SELF_SERVICE_RE = re.compile(r"getUserIdAndWorkspaceId\s*\(")
+ADMIN_ALLOWLIST_RE = re.compile(r"\bisAdmin\w*\s*\(|ADMIN_USER_IDS")
+SESSION_PARTICIPANT_RE = re.compile(r"isInitiator|isTarget|fromUserId\s*!==")
+ACCOUNT_CONFIRM_RE = re.compile(r"confirmEmail")
 
 # T1/T2 分流用的严格信号：确实调用了矩阵
 STRICT_RE = re.compile(r"requirePermission\s*\(|checkPermission\s*\(")
@@ -386,12 +403,19 @@ def classify() -> dict[str, set[str]]:
                 continue
             # 以下三类排除只作用于「否则将落 T3」的 handler（见 docstring 2026-11-06 批次）；
             # 插在 LOOSE 之后保证 T4 集合不变。
-            if path in IDENTITY_EXACT:
-                continue  # V1_AUTH_IDENTITY：身份边界端点
+            if path in IDENTITY_EXACT or path in SELF_SERVICE_EXACT:
+                continue  # V1_AUTH_IDENTITY / 会话级自助（feedback，裁决见 docstring）
             if not in_wid and OWNER_RE.search(src):
                 continue  # OWNER_SCOPED：非 [wid] 路由的资源属主过滤
             if WEBHOOK_RE.search(src):
                 continue  # SIGNED_WEBHOOK：签名验证语义
+            if (
+                AI_SELF_SERVICE_RE.search(src)
+                or ADMIN_ALLOWLIST_RE.search(src)
+                or SESSION_PARTICIPANT_RE.search(src)
+                or ACCOUNT_CONFIRM_RE.search(src)
+            ):
+                continue  # GUARDED_NON_ROLE：非角色守卫已足额（2026-11-06 裁决批）
             tiers["t1" if in_matrix else "t3"].add(entry)
     return tiers
 
