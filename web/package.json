@@ -27,8 +27,8 @@
   },
   "dependencies": {
     "@ai-sdk/openai": "^4.0.101",
-    "@ai-sdk/provider": "4.0.33",
-    "@ai-sdk/react": "4.0.154",
+    "@ai-sdk/provider": "4.0.36",
+    "@ai-sdk/react": "4.0.167",
     "@livekit/components-react": "^2.9.24",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
