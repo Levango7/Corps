@@ -42,6 +42,29 @@ check_api_contract.py 的 INTERNAL_PREFIXES 一致。
 语义排除（各档共用）：标记已读类（*/read）与分享解锁类（*/share/verify）——
 按矩阵一刀切会把 viewer 的"标已读"也 403 掉，属误伤，故显式跳过并在此说明。
 
+语义排除（2026-11-06 批次，仅作用于「否则将落 T3」的 handler，T1/T2/T4 集合不受影响）：
+2026-11-05/06 对 T3 全量 54 条逐条人工复核（PR 附件证据：文件 + 命中信号行）后，三类
+被误挂账的形态显式排除——它们不是"矩阵外角色缺口"，而是非角色语义的授权形态：
+
+  1. OWNER_SCOPED（26 条）：路由**不在 workspaces/[wid] 下**且 handler 文件内有
+     资源属主过滤（`userId: ctx.payload.sub` 或 `where: { … userId … }`）。
+     这些端点操作的是**调用者自己的资源**（favorites / mail / notifications / push
+     / users/me / events / sync / workspaces 创建 / im 自己的消息 / 邀请 token 兑换等），
+     授权语义是 owner-of-resource 而非 workspace 角色，角色矩阵不适用。
+     双重防误伤边界：a) 只对非 [wid] 路由生效——[wid] 下的写接口必须有角色判断，
+     属主过滤不能替代（workspace 资源的属主 ≠ 全体成员）；b) 插在 LOOSE 判定之后，
+     已有 ad-hoc 角色比较的仍落 T4 不变。
+  2. SIGNED_WEBHOOK（4 条）：billing/webhook×3、webhooks/livekit——认证靠
+     支付平台/LiveKit 的**签名验证**（signature/hmac/API_SECRET 信号），不靠角色。
+  3. V1_AUTH_IDENTITY（4 条）：/api/v1/auth/{login,logout,refresh,register}——
+     身份边界端点（register 公开、login/refresh 换发凭证），与 INTERNAL_PREFIXES
+     排除的 Better Auth /api/auth/ 同性质。逐条精确路径，不用前缀——
+     /api/v1/auth/calendar/* 等真实业务端点不在此列。
+
+顺带修复：INTERNAL_EXACT 写的是归一化前的段形态 `/api/[...path]`，而 is_internal
+拿到的是 normalize() 产物 `/api/{path}`，两者永不相等 → 兜底路由（catch-all）
+从未被排除，DELETE/PATCH/POST/PUT /api/{path} 四条长期挂在 T3。改为归一化后形态。
+
 运行方式：
     python scripts/check_permission_gates.py
     python scripts/check_permission_gates.py --write-baselines   # 只重建 T3/T4/T5
@@ -151,7 +174,27 @@ EXCLUDED_TAILS = (("read",), ("share", "verify"))
 
 # 与 check_api_contract.py 的 INTERNAL_PREFIXES 同口径：不是面向前后端契约的业务写接口
 INTERNAL_PREFIXES = ("/api/cron/", "/api/health", "/api/auth/", "/api/uploads/")
-INTERNAL_EXACT = ("/api/[...path]",)
+# 归一化后形态（normalize 把 [...path] 转成 {path}；旧值 "/api/[...path]" 与产物永不相等，
+# 兜底路由排除失效——2026-11-06 修复，见 docstring）
+INTERNAL_EXACT = ("/api/{path}",)
+
+# 身份边界端点（逐条精确，不用前缀——/api/v1/auth/calendar/* 是真实业务端点不在排除列）
+IDENTITY_EXACT = frozenset(
+    (
+        "/api/v1/auth/login",
+        "/api/v1/auth/logout",
+        "/api/v1/auth/refresh",
+        "/api/v1/auth/register",
+    )
+)
+
+# SIGNED_WEBHOOK 信号：支付平台 / LiveKit 的签名验证（文件级，验签常量常在 handler 外定义）
+WEBHOOK_RE = re.compile(
+    r"signature|hmac|LIVEKIT_API_SECRET|webhookSecret|verify.*(sig|webhook)", re.IGNORECASE
+)
+
+# OWNER_SCOPED 信号：资源属主过滤（文件级；仅对非 [wid] 路由且未落 T4 的 handler 生效）
+OWNER_RE = re.compile(r"userId\s*:\s*ctx\.payload\.sub|where\s*:\s*\{[^}]*userId")
 
 # T1/T2 分流用的严格信号：确实调用了矩阵
 STRICT_RE = re.compile(r"requirePermission\s*\(|checkPermission\s*\(")
@@ -340,8 +383,16 @@ def classify() -> dict[str, set[str]]:
                 continue  # 已接矩阵
             if LOOSE_RE.search(block):
                 tiers["t2" if in_matrix else "t4"].add(entry)
-            else:
-                tiers["t1" if in_matrix else "t3"].add(entry)
+                continue
+            # 以下三类排除只作用于「否则将落 T3」的 handler（见 docstring 2026-11-06 批次）；
+            # 插在 LOOSE 之后保证 T4 集合不变。
+            if path in IDENTITY_EXACT:
+                continue  # V1_AUTH_IDENTITY：身份边界端点
+            if not in_wid and OWNER_RE.search(src):
+                continue  # OWNER_SCOPED：非 [wid] 路由的资源属主过滤
+            if WEBHOOK_RE.search(src):
+                continue  # SIGNED_WEBHOOK：签名验证语义
+            tiers["t1" if in_matrix else "t3"].add(entry)
     return tiers
 
 
