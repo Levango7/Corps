@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-deps | chore/deps-g2-next | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml | qoder-deps | 2026-11-06T02:47Z | 2026-11-06T12:47Z | 依赖批次 G2-G5：逐批锁文件升级（一批一合，前批未落地不推下批）
