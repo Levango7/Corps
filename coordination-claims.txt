@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-deps | chore/deps-g2-next | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml | qoder-deps | 2026-11-06T02:47Z | 2026-11-06T12:47Z | 依赖批次 G2-G5：逐批锁文件升级（一批一合，前批未落地不推下批）
-F:/Nexus/corps-wt-red2 | HEAD | scripts/check_permission_gates.py,scripts/permission-gate-unscoped-baseline.txt,scripts/permission-gate-adhoc-baseline.txt,scripts/permission-gate-modules-unwired-baseline.txt,docs/ROADMAP-2026Q4.md | zcode | 2026-11-06T02:59Z | 2026-11-06T10:59Z | T3 门禁精度批：修 INTERNAL_EXACT 归一化失配 + 三类语义排除（属主/验签/身份边界），T3 54→16 零行为变更
