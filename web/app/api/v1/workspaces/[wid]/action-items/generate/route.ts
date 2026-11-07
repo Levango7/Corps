@@ -10,7 +10,7 @@ import { getWorkspaceContextV2, runWithWorkspace } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { generateText } from "ai";
-import { requireDefaultModel } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import { isAiConfigured, aiNotConfiguredResponse } from "@/lib/ai/shared";
 import { authFailure } from "@/lib/auth-response";
 import { withRed } from "@/lib/red-metrics";
@@ -57,10 +57,9 @@ async function generateActionItems(decisionMarkdown: string): Promise<ParsedActi
 决策内容：
 ${decisionMarkdown}`;
 
-  const result = await generateText({
-    model: requireDefaultModel(),
-    prompt,
-  });
+  const result = await callLLM("action-items:generate", {}, (model, signal) =>
+    generateText({ model, prompt, abortSignal: signal }),
+  );
 
   const cleaned = cleanJsonResponse(result.text);
   const parsed = JSON.parse(cleaned);

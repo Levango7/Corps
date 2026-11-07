@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -132,11 +133,14 @@ async function postAiWikiSearch(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildWikiSearchSystemPrompt(), requireDefaultModel()),
-          prompt: buildWikiSearchUserPrompt(body.query, pages),
-        });
+        const res = await callLLM("wiki-search:rerank", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildWikiSearchSystemPrompt(), model),
+            prompt: buildWikiSearchUserPrompt(body.query, pages),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

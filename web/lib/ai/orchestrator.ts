@@ -1,14 +1,15 @@
 // AI 跨能力联动编排引擎——聚合全量上下文 → LLM 建议联动方案 → 用户确认后执行。
 //
 // 设计要点：
-// - suggestOrchestration：在 runWithWorkspace 事务内聚合全量上下文（所有 scope），
-//   传给 reasonerModel 生成联动方案 JSON，经 cleanJsonResponse + normalizePlan 校验规范化
+// - suggestOrchestrationWithUsage：在 runWithWorkspace 事务内聚合全量上下文（所有 scope），
+//   传给 reasonerModel 生成联动方案 JSON，经 cleanJsonResponse + normalizePlan 校验规范化，透出 usage 供计量
 // - executeOrchestration：委托 executeAiActions 在 RLS 事务内原子执行（任一失败全部回滚）
 // - normalizePlan：校验 summary/reasoning 长度 + actions 数量（≤5）+ 每个 action 的 type 和必填字段
 // - 安全约束：suggestOrchestration 仅"建议"不执行；执行须经用户确认后调用 executeOrchestration
 
 import { generateText } from "ai";
-import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import { buildAiContext, type AiContextScope } from "@/lib/ai/context";
 import { executeAiActions, type AiAction, type AiActionResult } from "@/lib/ai/executor";
 import { runWithWorkspace } from "@/lib/auth";
@@ -28,6 +29,12 @@ export interface OrchestrationPlan {
   summary: string;
   reasoning: string;
   actions: AiAction[];
+}
+
+/** 联动方案生成结果（带计量）：plan + LLM usage（供 withUsageTracking 记账）。 */
+export interface OrchestrationWithUsage {
+  plan: OrchestrationPlan | null;
+  usage?: { inputTokens: number; outputTokens: number };
 }
 
 /**
@@ -61,10 +68,9 @@ export const ORCHESTRATION_SCOPES: AiContextScope[] = [
   "members:active",
 ];
 
-/** AiAction 的 8 种有效 type 枚举 */
+/** AiAction 的 7 种有效 type 枚举（linkToOkr 已于 2026-11-07 移除，见 executor.ts） */
 const VALID_ACTION_TYPES = new Set([
   "createTask",
-  "linkToOkr",
   "notify",
   "createDocument",
   "scheduleMeeting",
@@ -133,8 +139,6 @@ export function validateActionFields(a: Record<string, unknown>): boolean {
         (a.assigneeId === undefined || typeof a.assigneeId === "string") &&
         (a.dueDate === undefined || typeof a.dueDate === "string")
       );
-    case "linkToOkr":
-      return typeof a.taskId === "string" && typeof a.keyResultId === "string";
     case "notify":
       return typeof a.userId === "string" && typeof a.message === "string";
     case "createDocument":
@@ -242,11 +246,17 @@ export function normalizePlan(raw: unknown): OrchestrationPlan | null {
  * @param userRequest 用户可选的关注点（如"重点关注OKR风险"）
  * @returns 联动方案 OrchestrationPlan；LLM 输出无法解析时返回 null
  */
-export async function suggestOrchestration(
+/**
+ * 联动方案生成（带计量）：聚合全量上下文 → reasoner 生成方案 → 规范化。
+ * 返回 plan 与 LLM usage（2026-11-07 计量修复：此前 usage 被丢弃，
+ * orchestrate 计量为 0 token，限额可被该路径绕过——审计 agent.md ④-P1-3）。
+ * LLM 失败/解析失败时返回 { plan: null }（降级不抛异常）。
+ */
+export async function suggestOrchestrationWithUsage(
   wid: string,
   userId: string,
   userRequest?: string,
-): Promise<OrchestrationPlan | null> {
+): Promise<OrchestrationWithUsage> {
   // 1) 在 RLS 事务内聚合全量上下文
   const context = await runWithWorkspace(
     wid,
@@ -255,18 +265,21 @@ export async function suggestOrchestration(
   );
 
   // 2) LLM 生成联动方案（非流式，推理模型）
-  //    用 try-catch 包裹：LLM 调用可能因网络/限流/模型异常失败，
-  //    catch 时记录错误并返回 null（降级：无建议方案），不向上抛异常
+  //    try-catch 包裹：LLM 调用可能因网络/限流/模型异常失败，catch 记录错误并
+  //    降级返回无方案。callLLM：补超时防护（reasoner 60s）+ 主备切换。
   let llmResult;
   try {
-    llmResult = await generateText({
-      model: requireReasonerModel(),
-      system: withCoT(buildOrchestrationSystemPrompt(), requireReasonerModel()),
-      prompt: buildOrchestrationUserPrompt(context, userRequest),
-    });
+    llmResult = await callLLM("orchestrate:suggest", { reasoner: true }, (model, signal) =>
+      generateText({
+        model,
+        system: withCoT(buildOrchestrationSystemPrompt(), model),
+        prompt: buildOrchestrationUserPrompt(context, userRequest),
+        abortSignal: signal,
+      }),
+    );
   } catch (e) {
     console.error("[orchestrator] generateText 调用失败:", e instanceof Error ? e.message : e);
-    return null;
+    return { plan: null };
   }
 
   // 3) 解析 + 校验规范化
@@ -276,13 +289,18 @@ export async function suggestOrchestration(
     parsed = JSON.parse(cleaned);
   } catch (e) {
     console.error("[orchestrator] JSON.parse 失败:", e, "raw:", cleaned.slice(0, 200));
-    return null;
+    return { plan: null };
   }
   const plan = normalizePlan(parsed);
   if (!plan) {
     console.error("[orchestrator] normalizePlan 返回 null, raw:", cleaned.slice(0, 200));
   }
-  return plan;
+  // LLM 已真实消耗（即使 normalize 失败也要记账），usage 规范化同 assistant/orchestrator 口径
+  const usage = {
+    inputTokens: llmResult.usage?.inputTokens ?? 0,
+    outputTokens: llmResult.usage?.outputTokens ?? 0,
+  };
+  return { plan, usage };
 }
 
 /**

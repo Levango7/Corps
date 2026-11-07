@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { streamText, generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM, callLLMStream } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -141,23 +142,26 @@ async function postAiMailAssistant(req: NextRequest) {
     // ─── 起草：流式生成邮件正文 ───
     if (action === "draft") {
       const usageStartTime = Date.now();
-      const result = streamText({
-        model: requireDefaultModel(),
-        system: withCoT(buildMailDraftSystemPrompt(), requireDefaultModel()),
-        prompt: buildMailDraftUserPrompt(content, context),
-        onFinish: ({ usage }) => {
-          fireRecordUsage(
-            {
-              workspaceId: body.wid,
-              userId: ctx.payload.sub,
-              capability: "mail-assistant-draft",
-              model: requireDefaultModel().modelId,
-            },
-            usageStartTime,
-            usage,
-          );
-        },
-      });
+      const result = callLLMStream("mail-assistant:draft", {}, (model, signal) =>
+        streamText({
+          model,
+          system: withCoT(buildMailDraftSystemPrompt(), model),
+          prompt: buildMailDraftUserPrompt(content, context),
+          abortSignal: signal,
+          onFinish: ({ usage }) => {
+            fireRecordUsage(
+              {
+                workspaceId: body.wid,
+                userId: ctx.payload.sub,
+                capability: "mail-assistant-draft",
+                model: model.modelId,
+              },
+              usageStartTime,
+              usage,
+            );
+          },
+        }),
+      );
       return result.toUIMessageStreamResponse();
     }
 
@@ -171,11 +175,14 @@ async function postAiMailAssistant(req: NextRequest) {
           model: requireDefaultModel().modelId,
         },
         async () => {
-          const res = await generateText({
-            model: requireDefaultModel(),
-            system: withCoT(buildMailSummarizeSystemPrompt(), requireDefaultModel()),
-            prompt: buildMailSummarizeUserPrompt(content),
-          });
+          const res = await callLLM("mail-assistant:summarize", {}, (model, signal) =>
+            generateText({
+              model,
+              system: withCoT(buildMailSummarizeSystemPrompt(), model),
+              prompt: buildMailSummarizeUserPrompt(content),
+              abortSignal: signal,
+            }),
+          );
           return {
             result: res.text,
             usage: res.usage
@@ -205,11 +212,17 @@ async function postAiMailAssistant(req: NextRequest) {
           model: requireReasonerModel().modelId,
         },
         async () => {
-          const res = await generateText({
-            model: requireReasonerModel(),
-            system: withCoT(buildMailClassifySystemPrompt(), requireReasonerModel()),
-            prompt: buildMailClassifyUserPrompt(content),
-          });
+          const res = await callLLM(
+            "mail-assistant:classify",
+            { reasoner: true },
+            (model, signal) =>
+              generateText({
+                model,
+                system: withCoT(buildMailClassifySystemPrompt(), model),
+                prompt: buildMailClassifyUserPrompt(content),
+                abortSignal: signal,
+              }),
+          );
           return {
             result: res.text,
             usage: res.usage
@@ -278,11 +291,14 @@ async function postAiMailAssistant(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildMailReplySystemPrompt(), requireDefaultModel()),
-          prompt: buildMailReplyUserPrompt(content, context),
-        });
+        const res = await callLLM("mail-assistant:reply", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildMailReplySystemPrompt(), model),
+            prompt: buildMailReplyUserPrompt(content, context),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res.text,
           usage: res.usage

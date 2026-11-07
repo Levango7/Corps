@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -178,11 +179,14 @@ async function postAiWorkflowBuild(req: NextRequest) {
         model: requireReasonerModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireReasonerModel(),
-          system: withCoT(buildWorkflowSystemPrompt(), requireReasonerModel()),
-          prompt: buildWorkflowUserPrompt(body.description),
-        });
+        const res = await callLLM("workflow-build:generate", { reasoner: true }, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildWorkflowSystemPrompt(), model),
+            prompt: buildWorkflowUserPrompt(body.description),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

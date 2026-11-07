@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -152,15 +153,21 @@ async function postAiCalendarSchedule(req: NextRequest) {
         model: requireReasonerModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireReasonerModel(),
-          system: withCoT(buildCalendarSystemPrompt(), requireReasonerModel()),
-          prompt: buildCalendarUserPrompt(context, {
-            description: body.description,
-            duration: body.duration,
-            attendees: body.attendees,
-          }),
-        });
+        const res = await callLLM(
+          "calendar-schedule:generate",
+          { reasoner: true },
+          (model, signal) =>
+            generateText({
+              model,
+              system: withCoT(buildCalendarSystemPrompt(), model),
+              prompt: buildCalendarUserPrompt(context, {
+                description: body.description,
+                duration: body.duration,
+                attendees: body.attendees,
+              }),
+              abortSignal: signal,
+            }),
+        );
         return {
           result: res,
           usage: res.usage

@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { requireDefaultModel } from "@/lib/ai/deepseek";
+import { callLLMStream } from "@/lib/ai/llm-call";
 import {
   getUserIdAndWorkspaceId,
   unauthorizedResponse,
@@ -66,25 +66,28 @@ async function postAiChat(req: NextRequest) {
   // 5) 流式问答：system 注入文档内容作为上下文
   try {
     const usageStartTime = Date.now();
-    const result = streamText({
-      model: requireDefaultModel(),
-      system: `你是文档问答助手。根据以下文档内容回答用户问题。如果问题超出文档范围，请如实告知。\n\n文档内容：\n${body.documentContent}`,
-      messages,
-      onFinish: ({ usage }) => {
-        if (authCtx.workspaceId) {
-          fireRecordUsage(
-            {
-              workspaceId: authCtx.workspaceId,
-              userId: authCtx.userId,
-              capability: "chat",
-              model: requireDefaultModel().modelId,
-            },
-            usageStartTime,
-            usage,
-          );
-        }
-      },
-    });
+    const result = callLLMStream("chat", {}, (model, signal) =>
+      streamText({
+        model,
+        system: `你是文档问答助手。根据以下文档内容回答用户问题。如果问题超出文档范围，请如实告知。\n\n文档内容：\n${body.documentContent}`,
+        messages,
+        abortSignal: signal,
+        onFinish: ({ usage }) => {
+          if (authCtx.workspaceId) {
+            fireRecordUsage(
+              {
+                workspaceId: authCtx.workspaceId,
+                userId: authCtx.userId,
+                capability: "chat",
+                model: model.modelId,
+              },
+              usageStartTime,
+              usage,
+            );
+          }
+        },
+      }),
+    );
 
     return result.toUIMessageStreamResponse();
   } catch (error) {

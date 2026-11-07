@@ -10,6 +10,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -179,11 +180,17 @@ async function postAiAnalysisWeeklyReport(req: NextRequest) {
   let reportId: string;
   try {
     const generateFn = async () => {
-      const llmResult = await generateText({
-        model: requireReasonerModel(),
-        system: withCoT(buildWeeklyReportSystemPrompt(feedbackExamples), requireReasonerModel()),
-        prompt: buildWeeklyReportUserPrompt(wsCtx, weekData),
-      });
+      const llmResult = await callLLM(
+        "analysis-weekly-report:generate",
+        { reasoner: true },
+        (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildWeeklyReportSystemPrompt(feedbackExamples), model),
+            prompt: buildWeeklyReportUserPrompt(wsCtx, weekData),
+            abortSignal: signal,
+          }),
+      );
       return {
         result: llmResult,
         usage: llmResult.usage

@@ -12,6 +12,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -170,11 +171,14 @@ ${contextMarkdown}`,
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const llmResult = await generateText({
-          model: requireDefaultModel(),
-          system: systemPrompt,
-          prompt: body.question,
-        });
+        const llmResult = await callLLM("knowledge-query:generate", {}, (model, signal) =>
+          generateText({
+            model,
+            system: systemPrompt,
+            prompt: body.question,
+            abortSignal: signal,
+          }),
+        );
         return {
           result: llmResult.text,
           usage: {

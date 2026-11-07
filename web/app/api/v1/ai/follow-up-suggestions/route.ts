@@ -9,6 +9,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -113,11 +114,14 @@ async function postAiFollowUpSuggestions(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildFollowUpSystemPrompt(), requireDefaultModel()),
-          prompt: buildFollowUpUserPrompt(body.question, body.answer),
-        });
+        const res = await callLLM("follow-up-suggestions:generate", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildFollowUpSystemPrompt(), model),
+            prompt: buildFollowUpUserPrompt(body.question, body.answer),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

@@ -15,6 +15,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -266,11 +267,14 @@ async function postAiKnowledgeExtract(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const llmResult = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(systemPrompt, requireDefaultModel()),
-          prompt: "请提取上述内容中的知识点并输出 JSON。",
-        });
+        const llmResult = await callLLM("knowledge-extract:generate", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(systemPrompt, model),
+            prompt: "请提取上述内容中的知识点并输出 JSON。",
+            abortSignal: signal,
+          }),
+        );
         return {
           result: llmResult.text,
           usage: {

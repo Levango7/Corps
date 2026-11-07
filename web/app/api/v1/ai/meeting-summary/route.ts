@@ -20,6 +20,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -220,7 +221,6 @@ async function postAiMeetingSummary(req: NextRequest) {
 
   try {
     // 6) withUsageTracking 包装 AI 调用（reasonerModel，非流式）
-    const systemPrompt = withCoT(buildMeetingSummarySystemPrompt(), requireReasonerModel());
     const userPrompt = buildMeetingSummaryUserPrompt(body.transcript, body.meetingTitle);
 
     const summary = await withUsageTracking(
@@ -231,11 +231,17 @@ async function postAiMeetingSummary(req: NextRequest) {
         model: requireReasonerModel().modelId,
       },
       async () => {
-        const llmResult = await generateText({
-          model: requireReasonerModel(),
-          system: systemPrompt,
-          prompt: userPrompt,
-        });
+        const llmResult = await callLLM(
+          "meeting-summary:generate",
+          { reasoner: true },
+          (model, signal) =>
+            generateText({
+              model,
+              system: withCoT(buildMeetingSummarySystemPrompt(), model),
+              prompt: userPrompt,
+              abortSignal: signal,
+            }),
+        );
 
         // 解析 JSON 结果
         const cleaned = cleanJsonResponse(llmResult.text);

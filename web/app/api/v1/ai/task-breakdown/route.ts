@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserIdAndWorkspaceId,
   unauthorizedResponse,
@@ -114,11 +115,14 @@ async function postAiTaskBreakdown(req: NextRequest) {
       const feedbackExamples = authCtx.workspaceId
         ? await getFeedbackExamples(authCtx.workspaceId, "task-breakdown", 2)
         : undefined;
-      const llmResult = await generateText({
-        model: requireDefaultModel(),
-        system: withCoT(buildTaskBreakdownSystemPrompt(feedbackExamples), requireDefaultModel()),
-        prompt: buildUserPrompt(body),
-      });
+      const llmResult = await callLLM("task-breakdown:generate", {}, (model, signal) =>
+        generateText({
+          model,
+          system: withCoT(buildTaskBreakdownSystemPrompt(feedbackExamples), model),
+          prompt: buildUserPrompt(body),
+          abortSignal: signal,
+        }),
+      );
       return {
         result: llmResult,
         usage: llmResult.usage

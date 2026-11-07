@@ -20,6 +20,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -271,7 +272,6 @@ async function postAiMeetingsSessionsAnalyzeById(req: NextRequest) {
     const workspaceContext = `会议标题: ${sessionData.title}\n参与人数: ${sessionData.participantCount}`;
 
     // 9) withUsageTracking 包装 AI 调用
-    const systemPrompt = withCoT(buildMeetingAnalysisSystemPrompt(), requireReasonerModel());
     const userPrompt = buildMeetingAnalysisPrompt(transcriptText, workspaceContext);
 
     const analysisResult = await withUsageTracking(
@@ -282,11 +282,17 @@ async function postAiMeetingsSessionsAnalyzeById(req: NextRequest) {
         model: requireReasonerModel().modelId,
       },
       async () => {
-        const llmResult = await generateText({
-          model: requireReasonerModel(),
-          system: systemPrompt,
-          prompt: userPrompt,
-        });
+        const llmResult = await callLLM(
+          "meeting-analyze:generate",
+          { reasoner: true },
+          (model, signal) =>
+            generateText({
+              model,
+              system: withCoT(buildMeetingAnalysisSystemPrompt(), model),
+              prompt: userPrompt,
+              abortSignal: signal,
+            }),
+        );
 
         // 解析 JSON 结果
         const cleaned = cleanJsonResponse(llmResult.text);

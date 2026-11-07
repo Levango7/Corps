@@ -124,13 +124,16 @@ export function createAiProgressStream(
       writeProgress(writer, 3, stages.generating);
 
       // 调用 LLM 流式生成并合并到 UI 消息流
-      // try-catch：streamText 初始化或流合并失败时抛出有意义错误
+      // try-catch：streamText 初始化或流合并失败时抛出有意义错误。
+      // model 由调用方传入（非 requireXModel 语义），故不走 callLLMStream；
+      // 超时防护用 AbortSignal.timeout 内联补齐（2026-11-07，此前无 abortSignal）。
       let result;
       try {
         result = streamText({
           model: params.model,
           system: params.system,
           prompt,
+          abortSignal: AbortSignal.timeout(30_000),
           // 流结束后异步记录 usage（fire-and-forget）
           onFinish: params.usageTracking
             ? ({ usage }) => {
@@ -226,12 +229,14 @@ export function createAiJsonProgressStream<T>(
 
       // 调用 LLM（非流式，获取完整输出后解析 JSON）
       // try-catch：generateText 可能因网络/限流/模型异常失败
+      // （model 由调用方传入，不走 callLLM；超时用 AbortSignal.timeout 内联补齐）
       let result;
       try {
         result = await generateText({
           model: params.model,
           system: params.system,
           prompt,
+          abortSignal: AbortSignal.timeout(30_000),
         });
       } catch (e) {
         // usage tracking：记录失败

@@ -13,6 +13,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -258,14 +259,14 @@ async function postAiDecisionAssistant(req: NextRequest) {
 
     // 7) LLM 生成决策分析（非流式，withUsageTracking 包装记录用量）
     const generateFn = async () => {
-      const llmResult = await generateText({
-        model: requireDefaultModel(),
-        system: withCoT(
-          buildDecisionAssistantSystemPrompt(workspaceContext),
-          requireDefaultModel(),
-        ),
-        prompt: buildDecisionAssistantUserPrompt(body.question, body.context),
-      });
+      const llmResult = await callLLM("decision-assistant:generate", {}, (model, signal) =>
+        generateText({
+          model,
+          system: withCoT(buildDecisionAssistantSystemPrompt(workspaceContext), model),
+          prompt: buildDecisionAssistantUserPrompt(body.question, body.context),
+          abortSignal: signal,
+        }),
+      );
       return {
         result: llmResult,
         usage: llmResult.usage

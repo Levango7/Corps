@@ -10,6 +10,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -152,11 +153,17 @@ async function postAiAnalysisBurndown(req: NextRequest) {
   let reportId: string;
   try {
     const generateFn = async () => {
-      const llmResult = await generateText({
-        model: requireReasonerModel(),
-        system: withCoT(buildBurndownSystemPrompt(feedbackExamples), requireReasonerModel()),
-        prompt: buildBurndownUserPrompt(tasks.map(toBurndownTask), period),
-      });
+      const llmResult = await callLLM(
+        "analysis-burndown:generate",
+        { reasoner: true },
+        (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildBurndownSystemPrompt(feedbackExamples), model),
+            prompt: buildBurndownUserPrompt(tasks.map(toBurndownTask), period),
+            abortSignal: signal,
+          }),
+      );
       return {
         result: llmResult,
         usage: llmResult.usage
