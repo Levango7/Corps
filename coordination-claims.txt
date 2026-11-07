@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-deps | chore/deps-g3-ai-sdk | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml,.github/workflows/ci.yml,scripts/check_dependency_age.py,scripts/dependency-age-cache.json | qoder-deps | 2026-11-06T05:53Z | 2026-11-06T15:53Z | 依赖批次 B 方案：审计/合并 dependabot 家族 PR；新增依赖发布时间年龄门（脚本+缓存+CI 挂载）
+F:/Nexus/corps-wt-wire-ai | feat/wire-orphan-ai-pages | web/components/CommandPalette.tsx,web/lib/modules/registry.ts,web/lib/modules/icons.ts,web/components/ai/*,web/messages/*,web/app/*/w/*/ai-tools/page.tsx,web/app/*/w/*/ai-usage/*,web/app/*/w/*/assistant/*,web/tests/unit/*,docs/design/DEAD-MODULES.md | wb-wire-ai | 2026-11-07T23:21Z | 2026-11-08T07:21Z | 第一段接线：孤儿 AI 页/组件接入 Cmd+K 与 ai-tools，并订正 DEAD-MODULES 登记；零行为变更
