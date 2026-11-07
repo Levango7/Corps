@@ -83,11 +83,7 @@ describe("validateActionFields", () => {
     ).toBe(false);
   });
 
-  it("linkToOkr / notify / createDecision：双必填字符串", () => {
-    expect(validateActionFields({ type: "linkToOkr", taskId: "t1", keyResultId: "kr1" })).toBe(
-      true,
-    );
-    expect(validateActionFields({ type: "linkToOkr", taskId: "t1" })).toBe(false);
+  it("notify / createDecision：双必填字符串（linkToOkr 已于 2026-11-07 移除）", () => {
     expect(validateActionFields({ type: "notify", userId: "u1", message: "m" })).toBe(true);
     expect(validateActionFields({ type: "notify", userId: "u1" })).toBe(false);
     expect(validateActionFields({ type: "createDecision", taskId: "t1", markdown: "# 决策" })).toBe(

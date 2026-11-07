@@ -7,7 +7,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { withCoT } from "@/lib/ai/deepseek";
+import { callLLMStream } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -139,24 +140,27 @@ async function postAiAnnouncementDraft(req: NextRequest) {
 
     // 7) 流式生成公告草稿
     const usageStartTime = Date.now();
-    const result = streamText({
-      model: requireDefaultModel(),
-      system: withCoT(buildAnnouncementSystemPrompt(feedbackExamples), requireDefaultModel()),
-      prompt: buildAnnouncementUserPrompt(context, body.topic),
-      onFinish: ({ usage }) => {
-        // 流结束后异步记录 usage（fire-and-forget）
-        fireRecordUsage(
-          {
-            workspaceId: body.wid,
-            userId: ctx.payload.sub,
-            capability: "announcement-draft",
-            model: requireDefaultModel().modelId,
-          },
-          usageStartTime,
-          usage,
-        );
-      },
-    });
+    const result = callLLMStream("announcement-draft:generate", {}, (model, signal) =>
+      streamText({
+        model,
+        system: withCoT(buildAnnouncementSystemPrompt(feedbackExamples), model),
+        prompt: buildAnnouncementUserPrompt(context, body.topic),
+        abortSignal: signal,
+        onFinish: ({ usage }) => {
+          // 流结束后异步记录 usage（fire-and-forget）
+          fireRecordUsage(
+            {
+              workspaceId: body.wid,
+              userId: ctx.payload.sub,
+              capability: "announcement-draft",
+              model: model.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        },
+      }),
+    );
 
     return result.toUIMessageStreamResponse();
   } catch (error) {

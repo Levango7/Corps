@@ -23,7 +23,7 @@ import {
 } from "@/lib/ai/shared";
 import { withUsageTracking } from "@/lib/ai/usage-middleware";
 import {
-  suggestOrchestration,
+  suggestOrchestrationWithUsage,
   executeOrchestration,
   validateActionFields,
   type OrchestrationPlan,
@@ -43,13 +43,15 @@ const postSchema = z.object({
 });
 
 // ─── PATCH schema：执行联动方案 ───
-// type 用 z.enum 白名单校验（8 种合法 action），passthrough 保留其余字段，
-// 必填字段 + 枚举值校验由 validateActionFields 在 handler 内完成
+// type 用 z.enum 白名单校验（7 种合法 action），passthrough 保留其余字段，
+// 必填字段 + 枚举值校验由 validateActionFields 在 handler 内完成。
+// linkToOkr 已移除（2026-11-07 裁决）：Task 无 keyResultId 字段，executor 一直
+// 返回假成功（success:true+skipped）而 prompt 仍在教模型生成它——产品面不存在的
+// 能力不应继续出现在 LLM 白名单里；Task-OKR 关联建模后可恢复。
 const actionSchema = z
   .object({
     type: z.enum([
       "createTask",
-      "linkToOkr",
       "notify",
       "createDocument",
       "scheduleMeeting",
@@ -120,9 +122,9 @@ async function postAiOrchestrate(req: NextRequest) {
 
   // 6) 生成联动方案
   try {
-    // 用 withUsageTracking 包装 suggestOrchestration（内部 generateText 不暴露 usage，
-    // 此处记录调用耗时与成败，token 数为 0）
-    const plan = await withUsageTracking(
+    // withUsageTracking 包装 suggestOrchestrationWithUsage：usage 由内部透出
+    // （2026-11-07 计量修复：此前 usage 被丢弃，token 数恒为 0——审计 agent.md ④-P1-3）
+    const tracked = await withUsageTracking(
       {
         workspaceId: body.wid,
         userId: ctx.payload.sub,
@@ -130,12 +132,16 @@ async function postAiOrchestrate(req: NextRequest) {
         model: "deepseek-reasoner",
       },
       async () => {
-        const res = await suggestOrchestration(body.wid, ctx.payload.sub, body.userRequest);
-        return { result: res };
+        const res = await suggestOrchestrationWithUsage(
+          body.wid,
+          ctx.payload.sub,
+          body.userRequest,
+        );
+        return { result: res.plan, usage: res.usage };
       },
     );
 
-    if (!plan) {
+    if (!tracked) {
       return NextResponse.json(
         { code: 500, message: apiMsg(req, "internalError"), data: null },
         { status: 500 },
@@ -144,7 +150,7 @@ async function postAiOrchestrate(req: NextRequest) {
 
     return NextResponse.json({
       code: 200,
-      data: plan satisfies OrchestrationPlan,
+      data: tracked satisfies OrchestrationPlan,
     });
   } catch (error) {
     const quotaGuard = aiQuotaExceededResponse(req, error);
@@ -228,15 +234,24 @@ async function patchAiOrchestrate(req: NextRequest) {
 
   // 7) 写面对齐权限矩阵（与各自主工路由同规则）：此前只做成员资格校验，
   //    只读成员可经 AI 落位写任务/文档/决策/公告，绕过 lib/permissions.ts 的 viewer 只读声明。
-  //    scheduleMeeting / notify / linkToOkr 在矩阵里尚无对应模块，此处不臆断其应有权限。
+  //    - scheduleMeeting → meetings.create（meetings 模块 2026-10-30 已入矩阵）
+  //    - notify → 矩阵尚无 notifications 模块，不臆断；此处显式拒绝 viewer
+  //      （发通知给他人是写面）——诚实落 T2 登记待矩阵扩容（2026-11-07 裁决批）
   const actionPerms: Record<string, { module: string; action: "create" | "update" | "delete" }> = {
     createTask: { module: "tasks", action: "create" },
     updateTaskStatus: { module: "tasks", action: "update" },
     createDocument: { module: "documents", action: "create" },
     createDecision: { module: "decisions", action: "create" },
     sendAnnouncement: { module: "announcements", action: "create" },
+    scheduleMeeting: { module: "meetings", action: "create" },
   };
   for (const action of body.actions) {
+    if (action.type === "notify" && ctx.member.role === "viewer") {
+      return NextResponse.json(
+        { code: 403, message: apiMsg(req, "forbidden"), data: null },
+        { status: 403 },
+      );
+    }
     const need = actionPerms[action.type];
     if (!need) continue;
     const denied = await requirePermission(ctx, need.module, need.action, req);

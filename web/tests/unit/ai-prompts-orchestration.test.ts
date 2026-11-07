@@ -34,12 +34,12 @@ const ex = (over: Partial<FeedbackExample> = {}): FeedbackExample => ({
 });
 
 describe("buildOrchestrationSystemPrompt", () => {
-  it("声明全部 8 种 AiAction 类型与 JSON 顶层字段", () => {
+  it("声明全部 7 种 AiAction 类型与 JSON 顶层字段", () => {
     const p = buildOrchestrationSystemPrompt();
-    // normalizePlan 只认这 8 种 type；schema 说明缺一种即产生"校验通过但执行失败"的裂缝
+    // normalizePlan 只认这 7 种 type；schema 说明缺一种即产生"校验通过但执行失败"的裂缝
+    // （linkToOkr 已于 2026-11-07 移除：Task 无 keyResultId 字段，executor 一直假成功）
     for (const t of [
       "createTask",
-      "linkToOkr",
       "notify",
       "createDocument",
       "scheduleMeeting",

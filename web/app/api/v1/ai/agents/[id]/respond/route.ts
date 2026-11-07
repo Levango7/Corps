@@ -17,6 +17,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateText } from "ai";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -194,11 +195,14 @@ async function postAiAgentsRespondById(req: NextRequest) {
         let responseText = "";
         let handoff: string | null = null;
         try {
-          const llmResult = await generateText({
-            model: requireDefaultModel(),
-            system: withCoT(systemPrompt, requireDefaultModel()),
-            prompt: `请基于你的角色和专长响应以上消息，返回 JSON。`,
-          });
+          const llmResult = await callLLM("agent-respond:generate", {}, (model, signal) =>
+            generateText({
+              model,
+              system: withCoT(systemPrompt, model),
+              prompt: `请基于你的角色和专长响应以上消息，返回 JSON。`,
+              abortSignal: signal,
+            }),
+          );
           const parsed = safeParseJson(llmResult.text);
           const normalized = normalizeAgentResponse(parsed);
           if (normalized) {

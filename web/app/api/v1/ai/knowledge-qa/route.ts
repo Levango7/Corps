@@ -12,7 +12,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { withCoT } from "@/lib/ai/deepseek";
+import { callLLMStream } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -147,9 +148,8 @@ async function postAiKnowledgeQa(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    // 7) 组装新用户消息（包含上下文）
+    // 7) 组装新用户消息（包含上下文；系统提示在下方流式调用 lambda 内按实际模型组装）
     const userPrompt = buildKnowledgeQaUserPrompt(body.question, context);
-    const systemPrompt = withCoT(buildKnowledgeQaSystemPrompt(), requireDefaultModel());
 
     // 8) 多轮对话：加载历史消息
     let historyMessages: { role: "user" | "assistant"; content: string }[] = [];
@@ -196,18 +196,20 @@ async function postAiKnowledgeQa(req: NextRequest) {
     // 多轮对话：用 messages 参数（历史 + 新 user 消息）
     // 单次问答：用 prompt 参数（保持现有行为）
     const usageStartTime = Date.now();
-    const usageTrackingParams = {
-      workspaceId: body.wid,
-      userId: ctx.payload.sub,
-      capability: "knowledge-qa" as const,
-      model: requireDefaultModel().modelId,
-    };
-    const result =
-      conversationId !== null
+    const result = callLLMStream("knowledge-qa:answer", {}, (model, signal) => {
+      const systemPrompt = withCoT(buildKnowledgeQaSystemPrompt(), model);
+      const usageTrackingParams = {
+        workspaceId: body.wid,
+        userId: ctx.payload.sub,
+        capability: "knowledge-qa" as const,
+        model: model.modelId,
+      };
+      return conversationId !== null
         ? streamText({
-            model: requireDefaultModel(),
+            model,
             system: systemPrompt,
             messages: [...historyMessages, { role: "user" as const, content: userPrompt }],
+            abortSignal: signal,
             onFinish: async ({ text, usage }) => {
               // 流结束后异步记录 usage（fire-and-forget）
               fireRecordUsage(usageTrackingParams, usageStartTime, usage);
@@ -252,14 +254,16 @@ async function postAiKnowledgeQa(req: NextRequest) {
             },
           })
         : streamText({
-            model: requireDefaultModel(),
+            model,
             system: systemPrompt,
             prompt: userPrompt,
+            abortSignal: signal,
             onFinish: ({ usage }) => {
               // 流结束后异步记录 usage（fire-and-forget）
               fireRecordUsage(usageTrackingParams, usageStartTime, usage);
             },
           });
+    });
 
     return result.toUIMessageStreamResponse();
   } catch (error) {

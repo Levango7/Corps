@@ -11,6 +11,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -163,11 +164,14 @@ async function postAiPersonalizationGenerate(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildPersonalizationSystemPrompt(), requireDefaultModel()),
-          prompt: buildPersonalizationPrompt(behaviors, body.type),
-        });
+        const res = await callLLM("personalization:generate", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildPersonalizationSystemPrompt(), model),
+            prompt: buildPersonalizationPrompt(behaviors, body.type),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

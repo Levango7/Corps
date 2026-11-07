@@ -10,7 +10,7 @@ import { getWorkspaceContextV2 } from "@/lib/auth";
 import { z } from "zod";
 import { apiMsg } from "@/lib/api-messages";
 import { generateText } from "ai";
-import { requireReasonerModel } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import { isAiConfigured } from "@/lib/ai/shared";
 import { authFailure } from "@/lib/auth-response";
 import { trackServerEvent } from "@/lib/analytics-server";
@@ -129,10 +129,9 @@ async function extractByLLM(sourceText: string): Promise<{
 ${sourceText}`;
 
   // deepseek-reasoner 不支持 system message，用 prompt（等价单条 user message）传入
-  const result = await generateText({
-    model: requireReasonerModel(),
-    prompt,
-  });
+  const result = await callLLM("decisions:extract", { reasoner: true }, (model, signal) =>
+    generateText({ model, prompt, abortSignal: signal }),
+  );
 
   const cleaned = cleanJsonResponse(result.text);
   const parsed = JSON.parse(cleaned);

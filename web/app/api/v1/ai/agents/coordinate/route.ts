@@ -16,7 +16,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { generateText } from "ai";
-import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -236,11 +237,17 @@ async function postAiAgentsCoordinate(req: NextRequest) {
 
         let assignments: Assignment[] = [];
         try {
-          const coordResult = await generateText({
-            model: requireReasonerModel(),
-            system: withCoT(coordinationSystemPrompt, requireReasonerModel()),
-            prompt: `请分析以上任务并分配给各 Agent，返回 JSON。`,
-          });
+          const coordResult = await callLLM(
+            "agents-coordinate:assign",
+            { reasoner: true },
+            (model, signal) =>
+              generateText({
+                model,
+                system: withCoT(coordinationSystemPrompt, model),
+                prompt: `请分析以上任务并分配给各 Agent，返回 JSON。`,
+                abortSignal: signal,
+              }),
+          );
           const parsed = safeParseJson(coordResult.text);
           assignments = normalizeAssignments(parsed, validAgentNames);
         } catch (e) {
@@ -274,11 +281,14 @@ async function postAiAgentsCoordinate(req: NextRequest) {
           );
 
           try {
-            const agentResult = await generateText({
-              model: requireDefaultModel(),
-              system: withCoT(responseSystemPrompt, requireDefaultModel()),
-              prompt: `请基于你的角色和专长响应以上消息，返回 JSON。`,
-            });
+            const agentResult = await callLLM("agents-coordinate:respond", {}, (model, signal) =>
+              generateText({
+                model,
+                system: withCoT(responseSystemPrompt, model),
+                prompt: `请基于你的角色和专长响应以上消息，返回 JSON。`,
+                abortSignal: signal,
+              }),
+            );
             const parsed = safeParseJson(agentResult.text);
             const normalized = normalizeAgentResponse(parsed);
             if (normalized) {

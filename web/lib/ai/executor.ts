@@ -3,8 +3,7 @@
 // 设计要点：
 // - 所有操作经 runWithWorkspace 包裹，注入 app.workspace_id / app.user_id GUC，受行级安全策略约束
 // - createTask：创建任务，workspaceId/createdBy 由引擎强制设置（不接受外部传入，防越权）
-// - linkToOkr：Task 模型当前无 keyResultId 字段，跳过并返回 skipped 标记（保留接口供未来扩展）
-// - notify：创建站内通知
+// - notify：创建站内通知（矩阵暂无 notifications 模块，orchestrate 层显式拒 viewer）
 // - createDocument：创建文档，workspaceId 由引擎强制设置，authorId 默认取当前用户
 // - scheduleMeeting：安排会议，roomName 用 crypto.randomUUID 生成保证唯一，可批量创建参与者
 // - updateTaskStatus：更新任务状态，RLS 已注入 workspace_id GUC 确保只更新当前工作区任务
@@ -17,7 +16,7 @@ import { randomUUID } from "crypto";
 import type { Prisma } from "@prisma/client";
 import { runWithWorkspace } from "@/lib/auth";
 
-/** AI 可执行的操作类型 */
+/** AI 可执行的操作类型（linkToOkr 已于 2026-11-07 移除：Task 无 keyResultId 字段，executor 一直假成功） */
 export type AiAction =
   | {
       type: "createTask";
@@ -27,7 +26,6 @@ export type AiAction =
       assigneeId?: string;
       dueDate?: string;
     }
-  | { type: "linkToOkr"; taskId: string; keyResultId: string }
   | { type: "notify"; userId: string; message: string }
   | { type: "createDocument"; title: string; markdown: string; authorId?: string }
   | {
@@ -157,18 +155,6 @@ async function executeAction(
         `[ai-executor] createTask: id=${created.id} title="${created.title.slice(0, 50).replace(/["\n]/g, " ")}" by=${userId} wid=${wid}`,
       );
       return { success: true, result: created };
-    }
-
-    case "linkToOkr": {
-      // Task 模型当前无 keyResultId 字段（OKR 与任务无直接关联），跳过关联操作。
-      // 保留接口以便未来模型扩展时启用——届时在此处补充 tx.task.update 逻辑。
-      console.info(
-        `[ai-executor] linkToOkr skipped: task=${action.taskId} -> kr=${action.keyResultId} (no keyResultId field on Task)`,
-      );
-      return {
-        success: true,
-        result: { skipped: true, reason: "Task 模型无 keyResultId 字段，已跳过 OKR 关联" },
-      };
     }
 
     case "notify": {

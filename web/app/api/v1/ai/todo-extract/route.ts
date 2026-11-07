@@ -8,6 +8,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserIdAndWorkspaceId,
   unauthorizedResponse,
@@ -189,11 +190,14 @@ async function postAiTodoExtract(req: NextRequest) {
   try {
     const source: TodoExtractSource = body.source;
     const generateFn = async () => {
-      const llmResult = await generateText({
-        model: requireReasonerModel(),
-        system: withCoT(buildTodoExtractSystemPrompt(), requireReasonerModel()),
-        prompt: buildTodoExtractUserPrompt(source, body.content, { assignees }),
-      });
+      const llmResult = await callLLM("todo-extract:extract", { reasoner: true }, (model, signal) =>
+        generateText({
+          model,
+          system: withCoT(buildTodoExtractSystemPrompt(), model),
+          prompt: buildTodoExtractUserPrompt(source, body.content, { assignees }),
+          abortSignal: signal,
+        }),
+      );
       return {
         result: llmResult,
         usage: llmResult.usage

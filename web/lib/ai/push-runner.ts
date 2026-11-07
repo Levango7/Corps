@@ -170,6 +170,9 @@ export async function generatePush(opts: {
           model,
           system: systemPrompt,
           prompt: userPrompt,
+          // model 由调用方传入（非 requireXModel 语义），不走 callLLM；
+          // 超时用 AbortSignal.timeout 内联补齐（2026-11-07，此前无 abortSignal）
+          abortSignal: AbortSignal.timeout(30_000),
         });
         return {
           result,

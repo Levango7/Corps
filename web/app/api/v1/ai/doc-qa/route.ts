@@ -13,7 +13,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { withCoT } from "@/lib/ai/deepseek";
+import { callLLMStream } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -118,33 +119,35 @@ async function postAiDocQa(req: NextRequest) {
       ctx.payload.sub,
     );
 
-    // 7) 组装 prompt（系统提示 + 含文档上下文的用户提示）
+    // 7) 组装用户 prompt（含文档上下文；系统提示在下方流式调用内按实际模型组装）
     const userPrompt = buildDocQaUserPrompt(
       body.question,
       documents.map((d) => ({ title: d.title, content: d.content })),
     );
-    const systemPrompt = withCoT(buildDocQaSystemPrompt(), requireReasonerModel());
 
     // 8) 流式生成回答（reasonerModel 提供更强的推理能力用于文档定位与引用）
     const usageStartTime = Date.now();
-    const result = streamText({
-      model: requireReasonerModel(),
-      system: systemPrompt,
-      prompt: userPrompt,
-      onFinish: ({ usage }) => {
-        // 流结束后异步记录 usage（fire-and-forget）
-        fireRecordUsage(
-          {
-            workspaceId: body.wid,
-            userId: ctx.payload.sub,
-            capability: "doc-qa",
-            model: requireReasonerModel().modelId,
-          },
-          usageStartTime,
-          usage,
-        );
-      },
-    });
+    const result = callLLMStream("doc-qa:answer", { reasoner: true }, (model, signal) =>
+      streamText({
+        model,
+        system: withCoT(buildDocQaSystemPrompt(), model),
+        prompt: userPrompt,
+        abortSignal: signal,
+        onFinish: ({ usage }) => {
+          // 流结束后异步记录 usage（fire-and-forget）
+          fireRecordUsage(
+            {
+              workspaceId: body.wid,
+              userId: ctx.payload.sub,
+              capability: "doc-qa",
+              model: model.modelId,
+            },
+            usageStartTime,
+            usage,
+          );
+        },
+      }),
+    );
 
     return result.toUIMessageStreamResponse();
   } catch (error) {

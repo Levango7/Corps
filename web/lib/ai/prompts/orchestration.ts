@@ -1,8 +1,9 @@
 // 跨能力联动编排 prompt 模板——分析工作区全量上下文，建议可执行的联动方案。
 //
-// 联动方案为 AiAction 序列（最多 5 个），覆盖 8 种操作类型：
-// createTask / linkToOkr / notify / createDocument / scheduleMeeting /
+// 联动方案为 AiAction 序列（最多 5 个），覆盖 7 种操作类型：
+// createTask / notify / createDocument / scheduleMeeting /
 // updateTaskStatus / createDecision / sendAnnouncement
+// （linkToOkr 已于 2026-11-07 移除：Task 无 keyResultId 字段，executor 一直假成功）
 //
 // 安全约束：本 prompt 仅"建议"方案，不执行任何操作；执行须经用户确认后
 // 由 executeOrchestration → executeAiActions 在 RLS 事务内原子执行。
@@ -27,30 +28,27 @@ export function buildOrchestrationSystemPrompt(feedbackExamples?: FeedbackExampl
   "actions": [AiAction, ...]
 }
 
-## AiAction 类型（共 8 种）
+## AiAction 类型（共 7 种）
 
 1. createTask — 创建任务
    { "type": "createTask", "title": string, "description": string, "priority": "low|medium|high|urgent", "assigneeId"?: string, "dueDate"?: string(ISO) }
 
-2. linkToOkr — 关联任务到 OKR 关键结果
-   { "type": "linkToOkr", "taskId": string, "keyResultId": string }
-
-3. notify — 发送站内通知
+2. notify — 发送站内通知
    { "type": "notify", "userId": string, "message": string }
 
-4. createDocument — 创建文档
+3. createDocument — 创建文档
    { "type": "createDocument", "title": string, "markdown": string, "authorId"?: string }
 
-5. scheduleMeeting — 安排会议
+4. scheduleMeeting — 安排会议
    { "type": "scheduleMeeting", "title": string, "description"?: string, "scheduledAt": string(ISO), "participantIds"?: string[] }
 
-6. updateTaskStatus — 更新任务状态
+5. updateTaskStatus — 更新任务状态
    { "type": "updateTaskStatus", "taskId": string, "status": "todo|in_progress|review|done" }
 
-7. createDecision — 创建决策记录
+6. createDecision — 创建决策记录
    { "type": "createDecision", "taskId": string, "markdown": string }
 
-8. sendAnnouncement — 发送公告
+7. sendAnnouncement — 发送公告
    { "type": "sendAnnouncement", "title": string, "content": string, "announcementType"?: "info|warning|urgent", "targetAudience"?: object }
 
 ## 联动场景示例

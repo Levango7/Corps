@@ -5,7 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { streamText } from "ai";
 import { z } from "zod";
-import { requireDefaultModel } from "@/lib/ai/deepseek";
+import { callLLMStream } from "@/lib/ai/llm-call";
 import {
   getUserIdAndWorkspaceId,
   unauthorizedResponse,
@@ -56,25 +56,28 @@ async function postAiSummarize(req: NextRequest) {
   // 4) 流式摘要
   try {
     const usageStartTime = Date.now();
-    const result = streamText({
-      model: requireDefaultModel(),
-      system: SYSTEM_PROMPT,
-      messages: [{ role: "user", content: body.text }],
-      onFinish: ({ usage }) => {
-        if (authCtx.workspaceId) {
-          fireRecordUsage(
-            {
-              workspaceId: authCtx.workspaceId,
-              userId: authCtx.userId,
-              capability: "summarize",
-              model: requireDefaultModel().modelId,
-            },
-            usageStartTime,
-            usage,
-          );
-        }
-      },
-    });
+    const result = callLLMStream("summarize:generate", {}, (model, signal) =>
+      streamText({
+        model,
+        system: SYSTEM_PROMPT,
+        messages: [{ role: "user", content: body.text }],
+        abortSignal: signal,
+        onFinish: ({ usage }) => {
+          if (authCtx.workspaceId) {
+            fireRecordUsage(
+              {
+                workspaceId: authCtx.workspaceId,
+                userId: authCtx.userId,
+                capability: "summarize",
+                model: model.modelId,
+              },
+              usageStartTime,
+              usage,
+            );
+          }
+        },
+      }),
+    );
 
     return result.toUIMessageStreamResponse();
   } catch (error) {

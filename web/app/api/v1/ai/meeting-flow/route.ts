@@ -7,6 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -107,14 +108,20 @@ async function postAiMeetingFlow(req: NextRequest) {
           model: requireReasonerModel().modelId,
         },
         async () => {
-          const res = await generateText({
-            model: requireReasonerModel(),
-            system: withCoT(buildPreMeetingSystemPrompt(), requireReasonerModel()),
-            prompt: buildPreMeetingPrompt({
-              agenda: body.agenda!,
-              participants: body.participants,
-            }),
-          });
+          const res = await callLLM(
+            "meeting-flow:pre-agenda",
+            { reasoner: true },
+            (model, signal) =>
+              generateText({
+                model,
+                system: withCoT(buildPreMeetingSystemPrompt(), model),
+                prompt: buildPreMeetingPrompt({
+                  agenda: body.agenda!,
+                  participants: body.participants,
+                }),
+                abortSignal: signal,
+              }),
+          );
           return {
             result: res,
             usage: res.usage
@@ -177,11 +184,14 @@ async function postAiMeetingFlow(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildPostMeetingSystemPrompt(), requireDefaultModel()),
-          prompt: buildPostMeetingPrompt(body.transcript!),
-        });
+        const res = await callLLM("meeting-flow:post-summary", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildPostMeetingSystemPrompt(), model),
+            prompt: buildPostMeetingPrompt(body.transcript!),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

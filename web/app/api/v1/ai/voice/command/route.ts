@@ -17,6 +17,7 @@ import { z } from "zod";
 import { generateText } from "ai";
 import { Prisma } from "@prisma/client";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -181,11 +182,14 @@ async function postAiVoiceCommand(req: NextRequest) {
       },
       async () => {
         // 6.1) 调用 AI 解析意图
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildVoiceIntentSystemPrompt(), requireDefaultModel()),
-          prompt: buildVoiceIntentPrompt(body.transcript, ""),
-        });
+        const res = await callLLM("voice-command:parse-intent", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildVoiceIntentSystemPrompt(), model),
+            prompt: buildVoiceIntentPrompt(body.transcript, ""),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

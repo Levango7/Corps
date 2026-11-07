@@ -10,6 +10,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -131,11 +132,14 @@ async function postAiImReply(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(buildImReplySystemPrompt(), requireDefaultModel()),
-          prompt: buildImReplyUserPrompt(messages),
-        });
+        const res = await callLLM("im-reply:generate", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildImReplySystemPrompt(), model),
+            prompt: buildImReplyUserPrompt(messages),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage

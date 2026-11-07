@@ -10,6 +10,7 @@ import { generateText } from "ai";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { requireReasonerModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -172,11 +173,17 @@ async function postAiAnalysisBottleneck(req: NextRequest) {
   let reportId: string;
   try {
     const generateFn = async () => {
-      const llmResult = await generateText({
-        model: requireReasonerModel(),
-        system: withCoT(buildBottleneckSystemPrompt(feedbackExamples), requireReasonerModel()),
-        prompt: buildBottleneckUserPrompt(tasks.map(toBottleneckTask), deps),
-      });
+      const llmResult = await callLLM(
+        "analysis-bottleneck:generate",
+        { reasoner: true },
+        (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(buildBottleneckSystemPrompt(feedbackExamples), model),
+            prompt: buildBottleneckUserPrompt(tasks.map(toBottleneckTask), deps),
+            abortSignal: signal,
+          }),
+      );
       return {
         result: llmResult,
         usage: llmResult.usage

@@ -52,12 +52,12 @@ const fallbackReasonerModel = openai("o3-mini");
 // ---------------------------------------------------------------------------
 
 /** DeepSeek API key 是否已配置 */
-function isDeepSeekConfigured(): boolean {
+export function isDeepSeekConfigured(): boolean {
   return !!process.env.DEEPSEEK_API_KEY;
 }
 
 /** OpenAI API key 是否已配置 */
-function isOpenAIConfigured(): boolean {
+export function isOpenAIConfigured(): boolean {
   return !!process.env.OPENAI_API_KEY;
 }
 
@@ -85,6 +85,16 @@ export function getReasonerModel(): LanguageModelV4 | null {
   if (isDeepSeekConfigured()) return deepseekReasonerModel;
   if (isOpenAIConfigured()) return fallbackReasonerModel;
   return null;
+}
+
+/**
+ * 获取 fallback 模型 — callLLM/withFallback 的第二调用使用（2026-11-07 接线）。
+ *
+ * 与 getDefaultModel/getReasonerModel 不同：**不判断 DeepSeek 是否已配置**，
+ * 恒返回 OpenAI 侧模型（withFallback 内部已保证仅在主备都配置时才会用到它）。
+ */
+export function getFallbackModel(reasoner = false): LanguageModelV4 {
+  return reasoner ? fallbackReasonerModel : fallbackDefaultModel;
 }
 
 /**

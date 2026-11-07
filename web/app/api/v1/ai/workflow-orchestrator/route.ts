@@ -18,6 +18,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { generateText } from "ai";
 import { z } from "zod";
 import { requireDefaultModel, withCoT } from "@/lib/ai/deepseek";
+import { callLLM } from "@/lib/ai/llm-call";
 import {
   getUserId,
   unauthorizedResponse,
@@ -277,16 +278,19 @@ async function postAiWorkflowOrchestrator(req: NextRequest) {
         model: requireDefaultModel().modelId,
       },
       async () => {
-        const res = await generateText({
-          model: requireDefaultModel(),
-          system: withCoT(
-            buildWorkflowOrchestratorSystemPrompt(
-              body.existingWorkflows as ExistingWorkflowSummary[] | undefined,
+        const res = await callLLM("workflow-orchestrator:generate", {}, (model, signal) =>
+          generateText({
+            model,
+            system: withCoT(
+              buildWorkflowOrchestratorSystemPrompt(
+                body.existingWorkflows as ExistingWorkflowSummary[] | undefined,
+              ),
+              model,
             ),
-            requireDefaultModel(),
-          ),
-          prompt: buildWorkflowOrchestratorUserPrompt(body.description),
-        });
+            prompt: buildWorkflowOrchestratorUserPrompt(body.description),
+            abortSignal: signal,
+          }),
+        );
         return {
           result: res,
           usage: res.usage
