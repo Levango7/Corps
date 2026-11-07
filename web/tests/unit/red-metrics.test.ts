@@ -29,6 +29,7 @@ import {
  */
 
 const URL = "http://localhost:3000/api/metrics";
+const TOKEN = "test-metrics-token";
 
 afterEach(() => {
   vi.unstubAllEnvs();
@@ -153,10 +154,11 @@ describe("withRed — Rate/Duration/按状态码的错误", () => {
 describe("/api/metrics 端点真的带上 RED series", () => {
   it("注册表非空时响应体包含 RED 指标", async () => {
     // 这组用例证明的是**接线**，不是模块行为：直接打 GET 处理器。
-    vi.stubEnv("METRICS_TOKEN", "");
+    // METRICS_TOKEN 起必填（fail-closed，2026-11-07），此处 stub 有效令牌过门。
+    vi.stubEnv("METRICS_TOKEN", TOKEN);
     recordError({ route: "/api/v1/tasks", method: "POST" });
 
-    const res = await GET(new NextRequest(URL));
+    const res = await GET(new NextRequest(URL, { headers: { authorization: `Bearer ${TOKEN}` } }));
     const body = await res.text();
 
     expect(res.status).toBe(200);
