@@ -29,9 +29,22 @@ import { redMetricsText, withRed } from "@/lib/red-metrics";
  */
 
 async function getMetrics(req: NextRequest) {
-  // 可选令牌门：设置了 METRICS_TOKEN 才校验，未设置维持开放的"网络层负责"姿态。
+  // 令牌门（2026-11-07 起 fail-closed）：指标含逐路由流量/错误/耗时与进程信息，
+  // 未配置 METRICS_TOKEN 时拒绝访问（此前"未设置维持开放、由网络层负责"——
+  // 公开部署一旦漏配 ingress 即信息泄露，见产品化审计 backend.md P1-2）。
+  // 部署方须在 .env 设置 METRICS_TOKEN，拉取方以 `Authorization: Bearer <token>` 访问。
   const metricsToken = process.env.METRICS_TOKEN;
-  if (metricsToken && req.headers.get("authorization") !== `Bearer ${metricsToken}`) {
+  if (!metricsToken) {
+    return NextResponse.json(
+      {
+        code: 403,
+        message: "METRICS_TOKEN not configured — metrics endpoint is disabled (fail-closed)",
+        data: null,
+      },
+      { status: 403 },
+    );
+  }
+  if (req.headers.get("authorization") !== `Bearer ${metricsToken}`) {
     return NextResponse.json(
       { code: 401, message: apiMsg(req, "unauthorized"), data: null },
       { status: 401 },

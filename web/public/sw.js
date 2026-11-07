@@ -138,3 +138,44 @@ self.addEventListener("fetch", (event) => {
     }),
   );
 });
+
+// ── Web Push（2026-11-07 补最后一环）────────────────────────────────────────
+// 服务端（lib/push/unified.ts）三平台的 payload 统一为 JSON：
+//   { title, body, url? } —— url 为点击通知后的落地页（缺省回 /）。
+// 此前 sw.js 缺 push/notificationclick 监听，推送到达不显示（审计 ecosystem.md P1-4）。
+self.addEventListener("push", (event) => {
+  let payload = { title: "corps", body: "" };
+  try {
+    if (event.data) payload = { ...payload, ...event.data.json() };
+  } catch {
+    // 非 JSON payload（兼容纯文本）：降级显示原文
+    payload = { title: "corps", body: event.data ? event.data.text() : "" };
+  }
+  event.waitUntil(
+    self.registration.showNotification(payload.title, {
+      body: payload.body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      tag: "corps-push",
+      data: { url: payload.url || "/" },
+    }),
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const target = (event.notification.data && event.notification.data.url) || "/";
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clientList) => {
+      // 已有打开的窗口 → 聚焦并导航到落地页；否则开新窗口
+      for (const client of clientList) {
+        if ("focus" in client) {
+          client.focus();
+          if ("navigate" in client) return client.navigate(target);
+          return;
+        }
+      }
+      return self.clients.openWindow(target);
+    }),
+  );
+});

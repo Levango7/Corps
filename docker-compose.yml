@@ -216,7 +216,9 @@ services:
       SENTRY_RELEASE: ${SENTRY_RELEASE:-}
       # 告警 webhook（兼容飞书/企业微信/Slack 自定义机器人）
       ERROR_WEBHOOK_URL: ${ERROR_WEBHOOK_URL:-}
-      # /api/metrics 端点级令牌门（可选；未设置时端点开放，由网络层限制。
+      # /api/metrics 端点级令牌门（2026-11-07 起 fail-closed：未设置时端点拒绝访问——
+      # 指标含逐路由流量/错误/耗时与进程信息，漏配网络层限制即信息泄露；
+      # 拉取方（Prometheus 等）需以 Bearer <METRICS_TOKEN> 访问
       # 见 docs/runbook-deploy.md §8.2）
       METRICS_TOKEN: ${METRICS_TOKEN:-}
     ports:
