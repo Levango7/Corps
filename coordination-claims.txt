@@ -4,5 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-deps | chore/deps-g3-ai-sdk | web/package.json,web/pnpm-lock.yaml,.github/dependabot.yml,.github/workflows/ci.yml,scripts/check_dependency_age.py,scripts/dependency-age-cache.json | qoder-deps | 2026-11-06T05:53Z | 2026-11-06T15:53Z | 依赖批次 B 方案：审计/合并 dependabot 家族 PR；新增依赖发布时间年龄门（脚本+缓存+CI 挂载）
-F:/Nexus/corps-wt-deps | chore/deps-age-gate | web/package.json,web/pnpm-lock.yaml,scripts/dependency-age-cache.json | qoder-deps | 2026-11-08T04:13Z | 2026-11-08T12:13Z | dependabot 家族批 #289/#288 按年龄门审计后串行合并；年龄门缓存补齐
