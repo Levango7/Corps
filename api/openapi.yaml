@@ -384,10 +384,12 @@ paths:
   /api/v1/workspaces/{wid}/search:
     get:
       tags: [workspaces]
-      summary: Search tasks and decisions within a workspace
+      summary: Search documents, tasks and decisions within a workspace
       description: >
-        Case-insensitive substring match over task title/description and decision
-        markdown. Used by the command palette (Cmd+K).
+        Case-insensitive substring match over document title/markdown, task
+        title/description and decision markdown. Matches from all types are merged
+        into one list ordered by updatedAt desc, then truncated to `limit`.
+        Used by the command palette (Cmd+K).
       operationId: searchWorkspace
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -395,13 +397,17 @@ paths:
           in: query
           required: true
           schema: { type: string, minLength: 1, maxLength: 200 }
+        - name: type
+          in: query
+          schema: { type: string, enum: [all, document, task, decision], default: all }
+          description: Restrict the search to one content type; `all` covers documents, tasks and decisions.
         - name: limit
           in: query
           schema: { type: integer, minimum: 1, default: 20, maximum: 100 }
-          description: Maximum number of results to return per category (tasks/decisions), clamped to [1, 100].
+          description: Maximum number of items in the merged result list (not per type), clamped to [1, 100].
       responses:
         '200':
-          description: Matching tasks and decisions
+          description: Matching documents, tasks and decisions
           content:
             application/json:
               schema:
@@ -13933,29 +13939,31 @@ components:
           $ref: '#/components/schemas/SearchData'
     SearchData:
       type: object
-      required: [tasks, decisions]
+      required: [items, total]
       properties:
-        tasks:
+        items:
           type: array
           items:
-            type: object
-            properties:
-              id: { type: string, format: uuid }
-              kind: { type: string, enum: [task] }
-              title: { type: string }
-              status: { type: string, enum: [todo, in_progress, review, done] }
-              priority: { type: string, enum: [low, medium, high, urgent] }
-        decisions:
-          type: array
-          items:
-            type: object
-            properties:
-              id: { type: string, format: uuid }
-              kind: { type: string, enum: [decision] }
-              title: { type: string }
-              snippet: { type: string }
-              taskId: { type: string, format: uuid }
-              href: { type: string }
+            $ref: '#/components/schemas/SearchItem'
+        total:
+          type: integer
+          description: Number of items returned; equals items.length after the `limit` cap.
+    SearchItem:
+      type: object
+      required: [type, id, title, snippet, href, updatedAt]
+      properties:
+        type:
+          type: string
+          enum: [document, task, decision]
+        id: { type: string, format: uuid }
+        title: { type: string }
+        snippet:
+          type: string
+          description: Match context (about 50 chars either side of the hit). Plain text — the client escapes it.
+        href:
+          type: string
+          description: Workspace-relative target path, e.g. /w/{wid}/documents/{id} or /w/{wid}/task/{id}.
+        updatedAt: { type: string, format: date-time }
 
     # ---- users ----
     User:
