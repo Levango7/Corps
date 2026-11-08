@@ -96,10 +96,10 @@ const AA_MIN = 4.5;
  *    并同步改使用处。这是设计系统级变更，影响租户换肤的 color-mix 派生链，故单独排期。
  */
 const AA_EXEMPT: Record<string, string> = {
-  "light|danger/surface":
-    "4.32 < AA 4.5（差 0.18）。--p-danger 调深一档即可达 4.84（色值与推导见上方注释），属设计决策待确认",
-  "dark|accent/surface":
-    "3.85 < AA 4.5（差 0.65）。单一色值无法同时满足「accent 作文字」与「白字在 accent 上」，需分离 --accent-on-surface 令牌，设计系统级变更",
+  // 2026-11-07 清空：原两条已修——
+  //   light|danger/surface（4.32→4.84，--p-danger #dc3d4a→#d33240）
+  //   dark|accent/surface（3.85→7.31，分离 --accent-on-surface 令牌，mix 62% white 派生保租户换肤联动）
+  // 新增配对 accent-on-surface/surface 与 accent-soft-fg/accent-soft 已纳入矩阵射程。
 };
 
 /* 两套主题：light 是默认态（无 data-theme 属性），dark 用 data-theme="dark" */
@@ -117,7 +117,14 @@ const CONTRAST_PAIRS: Record<string, [string, string]> = {
   "meta/bg": ["--meta", "--bg"],
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
-  "accent/surface": ["--accent", "--surface"],
+  // accent-on-surface/surface（2026-11-07 替换 accent/surface）：dark 的 --accent
+  // 兼任背景（白字压底 4.51），作文字恒 3.85——数学死锁已用分离令牌解决
+  //（--p-accent-on-surface = mix 62% white，租户换肤自动联动）。原键测的是
+  // 「accent 作文字」的旧语义，新键测的是修复后的前景令牌。
+  "accent-on-surface/surface": ["--accent-on-surface", "--surface"],
+  // accent-soft-fg/accent-soft（2026-11-07 补）：钉住 axe 基线余量 2 条的根因
+  //（settings 选中态按钮 accent 压 accent-soft 4.30）——soft-fg 已给真值。
+  "accent-soft-fg/accent-soft": ["--accent-soft-fg", "--accent-soft"],
   /* 四面实色底 × 两个次要文字档（2026-11-03 补，路线 B）。豁免注释里一直写着
      「--surface-2 / --surface-3 这两面不在清单里，但修法必须一起过」——B 就是那次修法，
      所以把那两面收进射程，而不是改完令牌就宣称做完。 */
@@ -145,6 +152,9 @@ const CONTRAST_PAIRS: Record<string, [string, string]> = {
    键集必须与 CONTRAST_PAIRS / contrast-probe.mjs 的 PAIRS 一致 ——
    tests/unit/contrast-kernel.test.ts 判这条（少一个键就是那一套静默不判）。 */
 const BASELINE: Record<string, Record<string, number>> = {
+  // 2026-11-07 重取（node e2e/visual-kit/contrast-probe.mjs）：danger 调深、
+  // accent/surface 键替换为 accent-on-surface/surface（分离令牌）+ 新增
+  // accent-soft-fg/accent-soft（钉 axe 余量 2 条根因），AA_EXEMPT 同步清空。
   light: {
     "fg/surface": 17.26,
     "fg/bg": 16.39,
@@ -153,13 +163,13 @@ const BASELINE: Record<string, Record<string, number>> = {
     "meta/surface": 5.7,
     "meta/bg": 5.42,
     "on-accent/accent": 4.98,
-    "danger/surface": 4.32,
-    "accent/surface": 4.93,
+    "danger/surface": 4.84,
+    "accent-on-surface/surface": 4.93,
+    "accent-soft-fg/accent-soft": 5.23,
     "meta/surface-2": 5.23,
     "meta/surface-3": 4.86,
     "muted/surface-2": 7.11,
     "muted/surface-3": 6.62,
-    // 外壳两层（A 补成实色、B 压暗文字档之后重取；A 之前这两层算不出色）
     "meta/shell-sidebar": 5.24,
     "meta/shell-content": 4.7,
     "muted/shell-sidebar": 7.13,
@@ -175,7 +185,8 @@ const BASELINE: Record<string, Record<string, number>> = {
     "meta/bg": 6.02,
     "on-accent/accent": 4.51,
     "danger/surface": 5.34,
-    "accent/surface": 3.85,
+    "accent-on-surface/surface": 7.31,
+    "accent-soft-fg/accent-soft": 6.6,
     "meta/surface-2": 5.24,
     "meta/surface-3": 4.72,
     "muted/surface-2": 7.18,
