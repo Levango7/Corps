@@ -248,7 +248,7 @@ export function SettingsPreferences() {
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
                   background: active ? "var(--accent-soft)" : "var(--surface)",
-                  color: active ? "var(--accent)" : "var(--fg-2)",
+                  color: active ? "var(--accent-soft-fg)" : "var(--fg-2)",
                 }}
               >
                 <Icon size={18} />
@@ -279,7 +279,7 @@ export function SettingsPreferences() {
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
                   background: active ? "var(--accent-soft)" : "var(--surface)",
-                  color: active ? "var(--accent)" : "var(--fg-2)",
+                  color: active ? "var(--accent-soft-fg)" : "var(--fg-2)",
                 }}
               >
                 <Icon size={16} />
@@ -351,7 +351,7 @@ export function SettingsPreferences() {
                 style={{
                   borderColor: active ? "var(--accent)" : "var(--border)",
                   background: active ? "var(--accent-soft)" : "var(--surface)",
-                  color: active ? "var(--accent)" : "var(--fg-2)",
+                  color: active ? "var(--accent-soft-fg)" : "var(--fg-2)",
                 }}
               >
                 <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
