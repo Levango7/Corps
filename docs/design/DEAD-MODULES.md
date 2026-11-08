@@ -39,3 +39,21 @@
 2. P1：旧聊天树按 ADR-013 迁移后删除；
 3. P2：`mail` / `todo` / `remote-control` / `sync` 逐项裁决（补页面 or 删除）；
 4. 每删一项，同步摘除零覆盖基线与相关 i18n 键，并跑 `scripts/check_zero_coverage_ratchet.py` 自证。
+
+## 5. 2026-11-08 补：顶层页导航覆盖率门禁
+
+`scripts/check_nav_coverage.py` 已在 CI 的 `api-contract` job 挂载（含 `--self-test`）：
+扫描 `web/app/[locale]/w/[wid]/<segment>/page.tsx` 的**顶层静态**路由段，要求每一段
+都能从三份壳层入口清单到达 —— `web/lib/modules/registry.ts`（侧栏注册表）、
+`web/components/CommandPalette.tsx`（Cmd+K）、`web/app/[locale]/w/[wid]/layout.tsx`
+（顶栏铃铛等硬链接）。main 现状 33/33 全覆盖、孤儿 0，故零存量硬失败，没有基线文件。
+
+**口径边界，别误读**：
+
+- 本门禁**不覆盖二级页**。§2 登记的 `settings/permissions` 与 `settings/calendar`
+  仍是无导航入口的人工 P1 项；门禁绿灯只说明顶层页没新增孤儿，不等于全站没有
+  藏起来的页面。二级页要接进父页 Tab / 组件链接，判定口径不同，需另立门禁。
+- `notifications` 不算孤儿：它走 `layout.tsx` 的顶栏铃铛入口。只认注册表 + Cmd+K
+  的窄口径会把它误报成孤儿，进而把一个本来可达的页面钉成永久豁免。
+- 新增顶层页必须同步挂进三份清单之一，否则 CI 判红；确属不该有壳层入口的页面
+  （如 OAuth 回跳落地页）在脚本的 `ALLOWED_ORPHANS` 显式登记并写明理由，不要删门禁。
