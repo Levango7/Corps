@@ -173,7 +173,7 @@ export function SettingsPreferences() {
               <button
                 key={v.id}
                 onClick={() => pickView(v.id)}
-                className={`w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${active ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)]"}`}
+                className={`w-full sm:flex-1 flex items-center justify-center gap-2 py-2.5 rounded-[var(--radius-md)] border transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 ${active ? "border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent-soft-fg)]" : "border-[var(--border)] bg-[var(--surface)] text-[var(--fg-2)]"}`}
               >
                 <Icon size={16} />
                 <span className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]">
@@ -323,7 +323,7 @@ export function SettingsPreferences() {
                 />
                 <span
                   className="text-[length:var(--text-sm)] font-[weight:var(--weight-medium)]"
-                  style={{ color: active ? "var(--accent)" : "var(--fg-2)" }}
+                  style={{ color: active ? "var(--accent-soft-fg)" : "var(--fg-2)" }}
                 >
                   {accentNames[c.id]}
                 </span>
