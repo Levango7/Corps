@@ -3,8 +3,9 @@
 /**
  * AI 工具中心页面 · /w/[wid]/ai-tools
  *
- * 聚合 12 个 AI 能力组件，通过 Tab 导航切换（P1「AI 五页并一」：后 4 个原本是独立页面，
+ * 聚合 24 个 AI 能力组件，通过 Tab 导航切换（P1「AI 五页并一」：后 4 个原本是独立页面，
  * 现收进本中枢；旧路由保留不删，深链不碎）：
+ * （末 12 个为既有零引用组件接线，非新增能力）
  *  - 语义搜索（SemanticSearchPanel）
  *  - 邮件助手（MailAssistantPanel）
  *  - 待办提取（TodoExtractDialog，Dialog 模式，按钮触发）
@@ -127,6 +128,72 @@ const AnnouncementDraftPanel = dynamic(
     loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
   },
 );
+const AgentMessageFlow = dynamic(() => import("@/components/ai/AgentMessageFlow"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const AiAnalysisDashboard = dynamic(
+  () => import("@/components/ai/AiAnalysisDashboard").then((m) => m.AiAnalysisDashboard),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const KnowledgeExtractPanel = dynamic(
+  () => import("@/components/ai/KnowledgeExtractPanel").then((m) => m.KnowledgeExtractPanel),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const KnowledgeGraphView = dynamic(
+  () => import("@/components/ai/KnowledgeGraphView").then((m) => m.KnowledgeGraphView),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const MeetingAiPanel = dynamic(() => import("@/components/ai/MeetingAiPanel"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const MultiAgentPanel = dynamic(() => import("@/components/ai/MultiAgentPanel"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const OrchestrationPanel = dynamic(() => import("@/components/ai/OrchestrationPanel"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const PersonalizationPanel = dynamic(
+  () => import("@/components/ai/PersonalizationPanel").then((m) => m.PersonalizationPanel),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const TemplateMarket = dynamic(() => import("@/components/ai/TemplateMarket"), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const ToolPanel = dynamic(() => import("@/components/ai/ToolPanel").then((m) => m.ToolPanel), {
+  ssr: false,
+  loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+});
+const VoiceCommandBar = dynamic(
+  () => import("@/components/ai/VoiceCommandBar").then((m) => m.VoiceCommandBar),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
+const VoiceSettings = dynamic(
+  () => import("@/components/ai/VoiceSettings").then((m) => m.VoiceSettings),
+  {
+    ssr: false,
+    loading: () => <div className="animate-pulse h-32 rounded-lg bg-[var(--surface-2)]" />,
+  },
+);
 
 // ─── Tab 定义 ──────────────────────────────────────────────────────────────────
 
@@ -144,7 +211,19 @@ type TabId =
   | "insight"
   | "knowledgeQa"
   | "dailyReport"
-  | "announcementDraft";
+  | "announcementDraft"
+  | "agentMessageFlow"
+  | "aiAnalysis"
+  | "knowledgeExtract"
+  | "knowledgeGraph"
+  | "meetingAi"
+  | "multiAgent"
+  | "orchestration"
+  | "personalization"
+  | "templateMarket"
+  | "toolPanel"
+  | "voiceCommand"
+  | "voiceSettings";
 
 /** Tab 配置项 */
 interface TabConfig {
@@ -216,6 +295,66 @@ const TABS: TabConfig[] = [
     id: "announcementDraft",
     labelKey: "announcementDraft",
     Icon: Megaphone,
+  },
+  {
+    id: "agentMessageFlow",
+    labelKey: "agentMessageFlow",
+    Icon: MessageSquare,
+  },
+  {
+    id: "aiAnalysis",
+    labelKey: "aiAnalysis",
+    Icon: LineChart,
+  },
+  {
+    id: "knowledgeExtract",
+    labelKey: "knowledgeExtract",
+    Icon: FileText,
+  },
+  {
+    id: "knowledgeGraph",
+    labelKey: "knowledgeGraph",
+    Icon: Workflow,
+  },
+  {
+    id: "meetingAi",
+    labelKey: "meetingAi",
+    Icon: FileText,
+  },
+  {
+    id: "multiAgent",
+    labelKey: "multiAgent",
+    Icon: Sparkles,
+  },
+  {
+    id: "orchestration",
+    labelKey: "orchestration",
+    Icon: Workflow,
+  },
+  {
+    id: "personalization",
+    labelKey: "personalization",
+    Icon: Lightbulb,
+  },
+  {
+    id: "templateMarket",
+    labelKey: "templateMarket",
+    Icon: BookOpen,
+  },
+  {
+    id: "toolPanel",
+    labelKey: "toolPanel",
+    Icon: ListTodo,
+  },
+  {
+    id: "voiceCommand",
+    labelKey: "voiceCommand",
+    Icon: MessageSquare,
+  },
+  {
+    id: "voiceSettings",
+    labelKey: "voiceSettings",
+    Icon: Sparkles,
   },
 ];
 
@@ -384,6 +523,102 @@ export default function AiToolsPage({ params }: { params: Promise<{ wid: string 
               fallback={<AiFallback name={tabLabel(TABS[11])} />}
             >
               <AnnouncementDraftPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "agentMessageFlow" && (
+            <SafeComponent
+              name={tabLabel(TABS[12])}
+              fallback={<AiFallback name={tabLabel(TABS[12])} />}
+            >
+              <AgentMessageFlow wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "aiAnalysis" && (
+            <SafeComponent
+              name={tabLabel(TABS[13])}
+              fallback={<AiFallback name={tabLabel(TABS[13])} />}
+            >
+              <AiAnalysisDashboard wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "knowledgeExtract" && (
+            <SafeComponent
+              name={tabLabel(TABS[14])}
+              fallback={<AiFallback name={tabLabel(TABS[14])} />}
+            >
+              <KnowledgeExtractPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "knowledgeGraph" && (
+            <SafeComponent
+              name={tabLabel(TABS[15])}
+              fallback={<AiFallback name={tabLabel(TABS[15])} />}
+            >
+              <KnowledgeGraphView wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "meetingAi" && (
+            <SafeComponent
+              name={tabLabel(TABS[16])}
+              fallback={<AiFallback name={tabLabel(TABS[16])} />}
+            >
+              <MeetingAiPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "multiAgent" && (
+            <SafeComponent
+              name={tabLabel(TABS[17])}
+              fallback={<AiFallback name={tabLabel(TABS[17])} />}
+            >
+              <MultiAgentPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "orchestration" && (
+            <SafeComponent
+              name={tabLabel(TABS[18])}
+              fallback={<AiFallback name={tabLabel(TABS[18])} />}
+            >
+              <OrchestrationPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "personalization" && (
+            <SafeComponent
+              name={tabLabel(TABS[19])}
+              fallback={<AiFallback name={tabLabel(TABS[19])} />}
+            >
+              <PersonalizationPanel wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "templateMarket" && (
+            <SafeComponent
+              name={tabLabel(TABS[20])}
+              fallback={<AiFallback name={tabLabel(TABS[20])} />}
+            >
+              <TemplateMarket wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "toolPanel" && (
+            <SafeComponent
+              name={tabLabel(TABS[21])}
+              fallback={<AiFallback name={tabLabel(TABS[21])} />}
+            >
+              <ToolPanel workspaceId={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "voiceCommand" && (
+            <SafeComponent
+              name={tabLabel(TABS[22])}
+              fallback={<AiFallback name={tabLabel(TABS[22])} />}
+            >
+              <VoiceCommandBar wid={wid} />
+            </SafeComponent>
+          )}
+          {activeTab === "voiceSettings" && (
+            <SafeComponent
+              name={tabLabel(TABS[23])}
+              fallback={<AiFallback name={tabLabel(TABS[23])} />}
+            >
+              <VoiceSettings />
             </SafeComponent>
           )}
         </section>

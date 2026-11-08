@@ -381,10 +381,24 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         href: `/w/${wid}/settings`,
         icon: Settings,
       },
+      {
+        id: "nav-ai-usage",
+        titleKey: "ai.usage.pageTitle",
+        kind: "nav",
+        href: `/w/${wid}/ai-usage`,
+        icon: BarChart3,
+      },
+      {
+        id: "nav-assistant",
+        titleKey: "assistant.welcome",
+        kind: "nav",
+        href: `/w/${wid}/assistant`,
+        icon: MessageSquare,
+      },
     ];
 
     const q = query.trim().toLowerCase();
-    // query 为空：仅展示核心导航项（避免 29 项长列表；完整入口在侧栏分组里）
+    // query 为空：仅展示核心导航项（避免 33 项长列表；其余入口在搜索态可达）
     if (!q) return navItems.slice(0, 8);
     // query 非空：先本地匹配导航项（titleKey 翻译后 contains，零请求即时出），
     // 再拼接搜索端点返回的文档 + 任务 + 决策结果（分组显示）
