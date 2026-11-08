@@ -137,6 +137,19 @@ jobs:
       # tag 不存在 / registry 临时故障，八类红因各自独立，外加"warn 与阻断级的边界"断言。
       # 没有这一条，上面的检测器退化成一个永远 PASS 的假门禁也没人知道。
       - run: python ../scripts/check_dockerfile_base_images.py --self-test
+      # 依赖发布时间年龄门（2026-11-06 补）：dependabot 按家族分组后（G0）会自己开批次 PR，
+      # 而 pnpm 的 `minimumReleaseAge` 只在**解析期**生效 —— 四组 fixture 实测：锁里已经钉着
+      # 年轻版本时，干净 `node_modules` + `--frozen-lockfile` + 阈值照样 rc=0 把它装进去。
+      # dependabot 在它那侧解析并提交锁、CI 又跳过解析 ⇒ 那个开关两头都管不到。
+      # 判据：`web/pnpm-lock.yaml` 的 `packages:` 段里每个 name@version，其 npm 发布时间
+      # 距今不少于 `--minutes`（默认 1440 分钟）。任一条不足即判红。
+      # 代价是要认的：这条门一上，任何把依赖抬到 24 小时内新版的 PR（**含 dependabot 的**）
+      # 都会红；想过关要么等它过窗，要么 `--allow` 点名并在 PR 里写明理由。
+      # 取数失败 ⇒ UNDETERMINED 判红（退出码 2）——判定不了不等于通过，没有"跳过还报绿"的口子。
+      - run: python ../scripts/check_dependency_age.py
+      # 注入式自测：四类红因（太年轻 / 无发布时间 / 豁免确被跳过 / 阈值归零对照）+ 边界两侧，
+      # 断言红因集合精确相等。没有这一条，上面的检查退化成永远 PASS 也没人知道。
+      - run: python ../scripts/check_dependency_age.py --self-test
       # 成熟度评分棘轮（2026-10-25 补）：路线图把验收判据写成「成熟度评分提升」，
       # 但仓库里从来没有能跑的评分器 —— 09-27 那版是人工手感分，且其综合 8.4 那一行
       # 已被自己的复核记录判为「不再作为结论使用」。这道门禁把成熟度变成计算题。
