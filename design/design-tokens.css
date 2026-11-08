@@ -46,7 +46,9 @@
   /* Semantic */
   --p-success: #1a9e6b;
   --p-warn: #c9881a;
-  --p-danger: #dc3d4a;
+  /* 原 #dc3d4a：作文字色（--prio-high-fg/--danger）压 surface 4.32 < AA 4.5。
+     #d33240 = 4.84（色相观感几乎不变），2026-11-07 对比度矩阵批调整。 */
+  --p-danger: #d33240;
 
   /* Focus ring (accent @ 28%，对应 #4263EB） */
   --p-accent-ring: rgba(66, 99, 235, 0.28);
@@ -117,8 +119,17 @@
   --accent: var(--p-accent);
   --accent-hover: color-mix(in srgb, var(--accent) 88%, var(--mix-black));
   --accent-active: color-mix(in srgb, var(--accent) 78%, var(--mix-black));
-  --accent-soft: color-mix(in srgb, var(--accent) 10%, transparent);
-  --accent-soft-fg: var(--accent);
+  /* accent-soft 压成实色（混入 surface 而非 transparent）：
+     权重和不满 100% 时 alpha<1，同一令牌叠不同底出不同最终色，axe/矩阵不可判定
+     （渲染结果与原 rgba 等价——合成数学相同，只是令牌本身可计算）。 */
+  --accent-soft: color-mix(in srgb, var(--accent) 10%, var(--p-surface));
+  /* accent-soft-fg 给真值（原 = var(--accent) 等于没起作用）：
+     soft 底上的文字/图标用深一档 accent，light 实测 5.23 ≥ AA。
+     修复 axe 基线余量 2 条（settings 选中态按钮 accent 压 accent-soft 4.30）。 */
+  --accent-soft-fg: var(--p-accent-dk);
+  /* accent 作**文字色**（前景）用 on-surface 变体；作**背景**（白字压底）仍用 --accent。
+     light 下 accent 本身达标（4.93），两值相同；dark 下分离（见 dark 块）。 */
+  --accent-on-surface: var(--p-accent);
   --on-accent: var(--p-on-accent);
   /* --accent-fg：solid 强调色背景上的前景色（白色）。
    * 注意：此变量语义为"solid 背景前景"，必须保持高对比度白色，
@@ -141,7 +152,8 @@
 
   /* —— 任务状态/优先级点色（C-extension，复用语义色）—— */
   --status-todo-fg: var(--muted);
-  --status-doing-fg: var(--accent);
+  /* light 下 accent 本身作文字达标（4.93）；dark 块 override 指向 accent-on-surface */
+  --status-doing-fg: var(--accent-on-surface);
   --status-warn-fg: var(--warn); /* review 状态前景：评审/警告色 */
   --status-done-fg: var(--success);
   --prio-high-fg: var(--danger);
@@ -328,8 +340,15 @@
   --p-accent: #4973d1;
   --p-accent-dk: #5b8ef5;
   --p-accent-dkr: #7b9cf7;
-  --p-accent-soft: rgba(73, 115, 209, 0.16);
+  /* accent-soft 实色化（混入 surface）：渲染与原 rgba(0.16) 合成等价，令牌可判定 */
+  --p-accent-soft: color-mix(in srgb, var(--p-accent) 16%, var(--p-surface));
   --p-on-accent: #ffffff;
+  /* accent-on-surface（作文字色，取亮）：mix 派生而非硬编码——租户覆盖 --p-accent
+     后自动联动（默认蓝派生 #8ea8e2：on surface 7.31 / shell-content 6.16 /
+     accent-soft 实色 6.17；租户绿 #1f7a4d 派生 #74ad91 全部 ≥5.6，均过 AA）。
+     原 --accent 作文字在 dark = 3.85 ✗，而它作背景白字 4.51 ✓——单一色值数学上
+     两头不可兼得，故分离令牌（contrast-matrix 豁免第 2 条的定案修法）。 */
+  --p-accent-on-surface: color-mix(in srgb, var(--p-accent) 62%, #ffffff);
 
   --p-success: #34c98a;
   --p-warn: #e0a93a;
@@ -340,6 +359,14 @@
   --elev-md: 0 4px 12px rgba(0, 0, 0, 0.46);
   --elev-lg: 0 12px 32px rgba(0, 0, 0, 0.56);
   --elev-hover: 0 6px 18px rgba(0, 0, 0, 0.5), 0 2px 6px rgba(0, 0, 0, 0.36);
+
+  /* 语义层 override（dark）：
+     - accent-soft-fg：dark 的 --p-accent-dk(#5b8ef5) 压 accent-soft 实色不足 AA，
+       统一走 accent-on-surface（#8ea8e2 on soft 6.17）。
+     - accent-on-surface / status-doing-fg 无需 override——它们引用的
+       --p-accent-on-surface 在本块已重定义，CSS 自定义属性按级联求值自动联动。 */
+  --accent-soft-fg: var(--p-accent-on-surface);
+  --accent-on-surface: var(--p-accent-on-surface);
 
   /* Defined for future use; currently hover states use --surface-2 directly */
   --hover-soft: color-mix(in srgb, var(--p-surface-2) 80%, var(--p-accent) 8%);
