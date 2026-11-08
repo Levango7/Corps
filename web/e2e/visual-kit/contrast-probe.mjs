@@ -36,7 +36,14 @@ const PAIRS = {
   "meta/bg": ["--meta", "--bg"],
   "on-accent/accent": ["--on-accent", "--accent"],
   "danger/surface": ["--danger", "--surface"],
-  "accent/surface": ["--accent", "--surface"],
+  // accent-on-surface/surface（2026-11-07 替换 accent/surface）：dark 的 --accent
+  // 兼任背景（白字压底 4.51），作文字恒 3.85——数学死锁已用分离令牌解决
+  //（--p-accent-on-surface = mix 62% white，租户换肤自动联动）。原键测的是
+  // 「accent 作文字」的旧语义，新键测的是修复后的前景令牌。
+  "accent-on-surface/surface": ["--accent-on-surface", "--surface"],
+  // accent-soft-fg/accent-soft（2026-11-07 补）：钉住 axe 基线余量 2 条的根因
+  //（settings 选中态按钮 accent 压 accent-soft 4.30）——soft-fg 已给真值。
+  "accent-soft-fg/accent-soft": ["--accent-soft-fg", "--accent-soft"],
   // 四面实色底 × 两个次要文字档（2026-11-03 补，路线 B）。键集必须与
   // contrast-matrix.spec.ts 的 CONTRAST_PAIRS 一致——tests/unit/contrast-kernel.test.ts 判这条。
   "meta/surface-2": ["--meta", "--surface-2"],
