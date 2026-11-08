@@ -336,6 +336,17 @@ jobs:
         run: python scripts/check_openapi_description_semantics.py
       - name: Mutation-check the description-semantics guard itself
         run: python scripts/check_openapi_description_semantics.py --self-test
+      # 上面各步管的是 API 契约与响应体，管不到「页面有没有入口」：#300 之前
+      # ai-usage / assistant 是有页面 + 有 API + 有 i18n，却在侧栏注册表和 Cmd+K
+      # 里都查无此项的孤儿。入口事实源固定为三份壳层清单（注册表 / Cmd+K /
+      # 工作区 layout.tsx 的顶栏链接），刻意不全仓扫——页面自引用会让门禁自我失效。
+      # main 现状 33 个顶层静态页面全覆盖、零存量，故硬失败而不上棘轮；二级页
+      # 不在此门禁口径内，见 docs/design/DEAD-MODULES.md §2。口径与 --self-test
+      # 的 5 个场景见脚本 docstring。本 job 实为轻量 Python 门禁集中点，故挂这里。
+      - name: Check workspace navigation coverage (no orphan top-level pages)
+        run: python scripts/check_nav_coverage.py
+      - name: Mutation-check the nav coverage guard itself
+        run: python scripts/check_nav_coverage.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
