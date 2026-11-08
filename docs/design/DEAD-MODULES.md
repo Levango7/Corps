@@ -19,9 +19,13 @@
 | 页面 | 判据 | 处置 |
 | --- | --- | --- |
 | `/w/{wid}/settings/permissions`（权限矩阵） | 仅自身文件引用；导航无入口 | **应接进「成员」或「设置」**——权限矩阵是对外卖点之一，现在 owner 根本到不了 |
-| `/w/{wid}/ai-usage`（AI 用量/限额） | 仅 `e2e/route-health.spec.ts` 列举，无 UI 引用 | 接进「设置」或删除（AI 限额属于运营信息，建议放设置页） |
 | `/w/{wid}/settings/calendar`（日历同步设置） | 零引用 | 接进「设置」或删除 |
-| `/w/{wid}/assistant`（AI 助理对话） | 无 UI 引用（仅 e2e 列举） | 与「AI 五页并一」一起处理：并入 `/ai` 或删除 |
+
+> **2026-11-08 订正**：`/w/{wid}/ai-usage` 与 `/w/{wid}/assistant` 原先登记在本表，
+> 现已通过 Cmd+K（`web/components/CommandPalette.tsx` 的 `navItems` 末尾两项）接入，
+> 不再属于「无入口」。两者沿用既有页面与 API，未新增能力域；侧栏注册表
+> `WORKSPACE_MODULES` 仍为 31 项 —— 改注册表会连带 16 处单测断言与
+> `dashboard-chromium-linux.png` 视觉基线，本轮按「零行为变更」原则不动侧栏。
 
 ## 3. 为什么写这张表
 
@@ -31,7 +35,7 @@
 
 ## 4. 建议顺序
 
-1. P1：把 `settings/permissions`、`ai-usage` 接进入口（这两个是"已经能用却被藏起来"）；
+1. P1：把 `settings/permissions` 接进入口（"已经能用却被藏起来"；`ai-usage` / `assistant` 已于 2026-11-08 经 Cmd+K 接线，见 §2 订正）；
 2. P1：旧聊天树按 ADR-013 迁移后删除；
 3. P2：`mail` / `todo` / `remote-control` / `sync` 逐项裁决（补页面 or 删除）；
 4. 每删一项，同步摘除零覆盖基线与相关 i18n 键，并跑 `scripts/check_zero_coverage_ratchet.py` 自证。
