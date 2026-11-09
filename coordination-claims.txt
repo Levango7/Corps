@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-red2 | chore/closeout-remote-imap | web/e2e/*.spec.ts,web/components/approval/* | zcode | 2026-11-09T19:51Z | 2026-11-09T23:51Z | 7 长尾域交互 E2E（已交付审批域 2/2；余会议/文档/多维表格/表单/白板/OKR）+ 审批域两处产品缺口（内置模板无 UI 入口、确认按钮与工具栏同名）
