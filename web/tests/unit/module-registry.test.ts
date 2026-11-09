@@ -65,7 +65,7 @@ describe("模块注册表：结构与秩序", () => {
       "decisions",
     ]);
     expect(modulesInGroup("collaboration").map((m) => m.id)).toEqual([
-      "meetings",
+      "remote-control",
       "meeting-minutes",
       "approvals",
       "announcements",
