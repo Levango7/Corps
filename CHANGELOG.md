@@ -54,6 +54,21 @@
   历史上这两三份清单漂过，红得莫名其妙。7 条变异全部打红，含两条「少一个键就静默不判」。
 
 ### Changed
+- **dependabot 家族批按年龄门审计后三连合（#285 / #289 / #288）**：每包都过 `check_dependency_age.py`
+  的 24h 门，合并时刻发布年龄实测（发布时间直取 npm registry，审计工具 `web/_probe/dep-pr-ages.mjs`）：
+  eslint 10.13.0→10.14.0 160.0h @`949fbaa`、better-auth 1.7.12→1.7.17 85.0h @`6bf944f`、
+  `@tiptap/*` 12 包 3.32.0→3.32.2 229.0h @`755d046`。
+- **跨批回退是真风险**：#289/#288 的基期早于 #285，未 rebase 时会把 eslint 10.14.0 顶回 10.13.0；
+  审计器把「回退」单列一类并直接判不可合，rebase 到 0 回退后才合。
+- **base 漂移的处理**：#288 合入前 main 被 #302/#303 推走两次，把 main 合入 dependabot 分支后先逐字节
+  核对依赖面与上一全绿头一致（`git diff origin/main..HEAD` 只剩 `web/package.json` + `web/pnpm-lock.yaml`），
+  再按「12 条 required 全绿 + MERGEABLE + CLEAN + base==main tip」四条件合并。
+- **本机年龄门两次 RC=2 不当绿用**：registry TLS 握手超时导致个别包取数失败（每次失败的包不同），属读数
+  故障不是判红；权威读数是 CI Lint 腿（同一依赖面 PASS，锁内 1108 个版本全过）。
+- **只读发现**：`web/pnpm-workspace.yaml` 的 `minimumReleaseAgeExclude`（6 条 `@ai-sdk/*`）是死配置——
+  全仓没有任何 `minimumReleaseAge` 阈值，pnpm 的解析期年龄开关根本没开；年龄门也刻意不消费这份豁免
+  名单（拿被监管方自己的豁免来免自己的门＝自己发通行证）。
+
 
 - **依赖发布时间年龄门（新门禁，已进 Lint 腿）**：`scripts/check_dependency_age.py` 读
   `web/pnpm-lock.yaml` 的 `packages:` 段，逐个 `name@version` 查 npm 发布时间，不足
