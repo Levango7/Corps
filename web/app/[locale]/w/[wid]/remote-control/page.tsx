@@ -3,18 +3,18 @@
 /**
  * 远程控制页面 · /w/[wid]/remote-control
  *
- * 入口：点击侧栏 "remote-control" 进入
+ * 入口：侧栏「远程控制」（注册表 collaboration 组首位）
  * 内容：远程控制面板 + 活跃会话时的远程查看器
  *
  * 数据流：
- * - 获取当前 workspaceId + currentUserId（从布局上下文）
- * - 加载 RemoteControlPanel（已有侧栏入口逻辑复用）
- * - 当有活跃会话且当前用户是控制方时，渲染 RemoteViewer
+ * - wid 来自路由 params；currentUserId 来自 /api/v1/users/me（与 board 页同口径）
+ * - RemoteControlPanel 负责会话列表与接受/拒绝/结束（API 驱动）
+ * - 当前用户是活跃会话的发起方时，创建 RemoteControlSession 并接信令，
+ *   渲染 RemoteViewer（视频流 + 键鼠输入回传）
  *
  * 设计：
  * - 与其他页面风格一致（顶部标题 + 主体区域）
- * - 响应式：桌面双栏（左侧面板 + 右侧查看器），移动端抽屉切换
- * - 复用 RemoteControlPanel + RemoteViewer 组件
+ * - 响应式：桌面双栏（左侧面板 + 右侧查看器），移动端上下堆叠
  */
 
 import { useEffect, useState } from "react";
@@ -25,23 +25,8 @@ import { Loader2, Monitor, ChevronLeft, MonitorOff } from "lucide-react";
 import { api } from "@/lib/api";
 import { RemoteControlPanel } from "@/components/remote-control/RemoteControlPanel";
 import { RemoteViewer } from "@/components/remote-control/RemoteViewer";
-import { type RemoteControlSessionDTO } from "@/components/remote-control/RemoteControlPanel";
-
-interface RemoteControlSessionDTO {
-  id: string;
-  workspaceId: string;
-  initiatorId: string;
-  targetId: string;
-  status: string; // pending | active | rejected | ended | failed
-  endReason: string | null;
-  expiresAt: string;
-  acceptedAt: string | null;
-  endedAt: string | null;
-  createdAt: string;
-  updatedAt: string;
-  initiatorId: string;
-  targetId: string;
-}
+import type { RemoteControlSessionDTO } from "@/components/remote-control/RemoteControlPanel";
+import { useRemoteControlSession } from "@/lib/use-remote-control-session";
 
 export default function RemoteControlPage({ params }: { params: Promise<{ wid: string }> }) {
   const { wid } = use(params);
@@ -60,7 +45,7 @@ export default function RemoteControlPage({ params }: { params: Promise<{ wid: s
         const me = await api<{ user: { id: string } }>("/api/v1/users/me");
         if (!cancelled) setCurrentUserId(me.user.id);
       } catch {
-        // 静默失败
+        // 静默失败：拿不到 userId 时面板仍可渲染（发起/接受按钮会因缺 id 降级）
       }
     })();
     return () => {
@@ -68,22 +53,41 @@ export default function RemoteControlPage({ params }: { params: Promise<{ wid: s
     };
   }, []);
 
-  // 加载数据
+  // 加载会话列表
   useEffect(() => {
     let cancelled = false;
     (async () => {
       setLoading(true);
-      await Promise.all([
-        api<RemoteControlSessionDTO[]>(`/api/v1/remote-control?workspaceId=${wid}`).then(
-          setSessions,
-        ),
-      ]);
-      if (!cancelled) setLoading(false);
+      try {
+        const data = await api<RemoteControlSessionDTO[]>(
+          `/api/v1/remote-control?workspaceId=${wid}`,
+        );
+        if (!cancelled) setSessions(data);
+      } catch (err) {
+        console.error("[RemoteControlPage] loadSessions failed:", err);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
     })();
     return () => {
       cancelled = true;
     };
   }, [wid]);
+
+  // 当前用户作为控制方的活跃会话
+  const activeSession = sessions.find(
+    (s) => s.status === "active" && s.initiatorId === currentUserId,
+  );
+
+  // WebRTC 会话（仅活跃会话时创建；信令经 SSE + POST）
+  const session = useRemoteControlSession({
+    workspaceId: wid,
+    sessionId: activeSession?.id ?? null,
+    role: "controller",
+    selfUserId: currentUserId,
+    peerUserId: activeSession?.targetId ?? null,
+    enabled: !!activeSession,
+  });
 
   if (loading) {
     return (
@@ -93,11 +97,6 @@ export default function RemoteControlPage({ params }: { params: Promise<{ wid: s
       </div>
     );
   }
-
-  // 查找当前用户是否有活跃会话（作为控制方）
-  const currentActiveSession = sessions.find(
-    (s) => s.status === "active" && s.initiatorId === currentUserId,
-  );
 
   return (
     <div className="min-h-dvh flex flex-col">
@@ -125,32 +124,28 @@ export default function RemoteControlPage({ params }: { params: Promise<{ wid: s
           <RemoteControlPanel
             workspaceId={wid}
             currentUserId={currentUserId}
-            onActiveSession={(session) =>
-              setSessions((prev) => prev.map((s) => (s.id === session.id ? session : s)))
+            onActiveSession={(updated) =>
+              setSessions((prev) => prev.map((s) => (s.id === updated.id ? updated : s)))
             }
           />
         </aside>
 
         {/* 右侧：远程查看器（仅活跃会话时显示） */}
-        {currentActiveSession && (
+        {activeSession && session ? (
           <div className="flex-1 relative min-w-0">
             <RemoteViewer
-              sessionId={currentActiveSession.id}
+              sessionId={activeSession.id}
               workspaceId={wid}
-              session={currentActiveSession}
+              session={session}
               onEnd={() =>
                 setSessions((prev) =>
-                  prev.map((s) =>
-                    s.id === currentActiveSession.id ? { ...s, status: "ended" } : s,
-                  ),
+                  prev.map((s) => (s.id === activeSession.id ? { ...s, status: "ended" } : s)),
                 )
               }
             />
           </div>
-        )}
-
-        {/* 无活跃会话时的空状态 */}
-        {!currentActiveSession && (
+        ) : (
+          /* 无活跃会话时的空状态 */
           <div className="flex-1 flex flex-col items-center justify-center px-4">
             <MonitorOff size={64} className="text-[var(--muted)] mb-4" />
             <h2 className="text-[length:var(--text-lg)] font-medium text-[var(--fg)] mb-2">

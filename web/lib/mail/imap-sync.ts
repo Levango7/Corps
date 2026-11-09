@@ -1,4 +1,4 @@
-import { ImapFlow } from "imapflow";
+import { ImapFlow, type FetchMessageObject } from "imapflow";
 import { PrismaClient } from "@prisma/client";
 import type { EmailAccount } from "@prisma/client";
 
@@ -12,6 +12,13 @@ import type { EmailAccount } from "@prisma/client";
  * - 幂等写入：基于 messageId + accountId 去重
  * - 错误重试：网络错误指数退避重试，认证错误直接失败
  * - 进度上报：支持长耗时同步的进度回调
+ *
+ * API 口径（imapflow v2，按类型定义逐条核对）：
+ * - `getMailboxLock()` 只返回 `{ path, release() }`，**不含**邮箱计数/UIDVALIDITY；
+ *   邮箱状态走 `status(path, { messages, uidValidity })`。
+ * - `search()` 返回 `number[] | false | undefined`（false = 无匹配）。
+ * - `fetchOne()` 返回 `FetchMessageObject | false`，信封在 `envelope` 上，
+ *   地址是 `{ name?, address? }`。
  */
 
 export interface SyncOptions {
@@ -57,25 +64,35 @@ export interface SyncResult {
   durationMs: number;
 }
 
+/** 解析后的邮件结构 */
+interface ParsedEmail {
+  messageId: string;
+  fromAddr: string;
+  toAddr: string;
+  ccAddr: string | null;
+  bccAddr: string | null;
+  subject: string;
+  bodyText: string;
+  bodyHtml: string | null;
+  status: string;
+  sentAt: Date;
+}
+
 /**
  * IMAP 同步器主类
  */
 export class ImapSync {
   private client: ImapFlow | null = null;
-  private prisma: PrismaClient;
-  private account: EmailAccount;
-  private options: SyncOptions;
-  private syncState: {
-    uidMap: Map<string, number>; // messageId -> uid
-    uidValidity: number | null;
-    highestUid: number;
-  } = {
-    uidMap: new Map(),
-    uidValidity: null,
-    highestUid: 0,
-  };
+  private readonly prisma: PrismaClient;
+  private readonly account: EmailAccount;
+  private readonly options: Omit<SyncOptions, "account">;
+  private highestUid = 0;
 
-  constructor(prisma: PrismaClient, account: EmailAccount, options: SyncOptions = {}) {
+  constructor(
+    prisma: PrismaClient,
+    account: EmailAccount,
+    options: Omit<SyncOptions, "account"> = {},
+  ) {
     this.prisma = prisma;
     this.account = account;
     this.options = {
@@ -99,13 +116,10 @@ export class ImapSync {
       // 1. 连接 IMAP 服务器
       await this.connect();
 
-      // 2. 获取邮箱状态
-      await this.fetchMailboxStatus();
-
-      // 3. 确定同步范围
+      // 2. 确定同步范围（同时拿到本邮箱的 UID 起点）
       const { uids, total } = await this.getMessagesToSync();
 
-      // 4. 批量拉取并存储邮件
+      // 3. 批量拉取并存储邮件
       for (const uid of uids) {
         if (this.options.maxMessages && created + updated + skipped >= this.options.maxMessages) {
           break;
@@ -124,9 +138,6 @@ export class ImapSync {
         else skipped++;
       }
 
-      // 5. 保存同步状态
-      await this.saveSyncState();
-
       return {
         success: true,
         created,
@@ -136,7 +147,11 @@ export class ImapSync {
       };
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
-      this.reportProgress({ phase: "error", error: errorMessage });
+      this.reportProgress({
+        phase: "error",
+        processed: created + updated,
+        error: errorMessage,
+      });
       return {
         success: false,
         created,
@@ -156,7 +171,11 @@ export class ImapSync {
   private async connect(): Promise<void> {
     this.reportProgress({ phase: "connecting", processed: 0 });
 
-    const password = this.decodeCredential(this.account.credential);
+    const password = await this.decodeCredential(this.account.credential);
+
+    if (!this.account.imapHost || !this.account.imapPort) {
+      throw new Error(`[ImapSync] 账户 ${this.account.id} 缺少 IMAP 主机/端口配置，无法同步`);
+    }
 
     this.client = new ImapFlow({
       host: this.account.imapHost,
@@ -166,13 +185,10 @@ export class ImapSync {
         user: this.account.email,
         pass: password,
       },
-      logger: false, // 生产环境可开启调试
-      // authTimeout: 30000,  // Not available in imapflow v2
-      // connectionTimeout: 30000,  // Not available in imapflow v2
+      logger: false,
     });
 
     await this.client.connect();
-    this.reportProgress({ phase: "fetching", processed: 0 });
   }
 
   /**
@@ -190,78 +206,29 @@ export class ImapSync {
   }
 
   /**
-   * 获取邮箱状态（UIDVALIDITY、UID 范围等）
-   */
-  private async fetchMailboxStatus(): Promise<void> {
-    if (!this.client) throw new Error("IMAP client not connected");
-
-    // 打开邮箱（只读模式）
-    const mailbox = await this.client.getMailboxLock(this.options.mailbox || "INBOX");
-
-    this.syncState.uidValidity = mailbox.uidValidity;
-    // mailbox.exists doesn't exist in imapflow v2, use mailbox.exists or mailbox.messagesTotal
-    this.syncState.highestUid = mailbox.exists || mailbox.messagesTotal || 0;
-
-    // 释放锁
-    await mailbox.release();
-
-    // 加载已保存的同步状态
-    await this.loadSyncState();
-  }
-
-  /**
-   * 加载本地保存的同步状态
-   */
-  private async loadSyncState(): Promise<void> {
-    // 从数据库读取该账户的同步状态
-    // 这里简化处理：实际应存储在独立表或 EmailAccount 的扩展字段中
-    // 暂时从邮件中反推最高 UID
-    await this.prisma.mail.findFirst({
-      where: {
-        accountId: this.account.id,
-      },
-      orderBy: { createdAt: "desc" },
-      select: { id: true, createdAt: true },
-    });
-
-    // 这里简化处理：实际应从专门的同步状态表读取
-    // this.syncState.highestUid = ...;
-  }
-
-  /**
-   * 保存同步状态
-   */
-  private async saveSyncState(): Promise<void> {
-    // 保存同步状态到数据库
-    // 实际应用中应存储 uidValidity, highestUid 等
-  }
-
-  /**
    * 获取需要同步的消息 UID 列表
+   *
+   * 起始 UID 的确定：非全量同步时取本机已存邮件的最大 UID + 1。
+   * 邮箱本身的状态（UIDVALIDITY/消息数）走 `status()`，不经 mailbox lock。
    */
   private async getMessagesToSync(): Promise<{ uids: number[]; total: number }> {
     if (!this.client) throw new Error("IMAP client not connected");
 
-    const mailbox = await this.client.getMailboxLock(this.options.mailbox || "INBOX");
-
-    // 确定起始 UID
-    let startUid = 1;
-    if (!this.options.fullSync && this.syncState.highestUid > 0) {
-      startUid = this.syncState.highestUid + 1;
+    if (!this.options.fullSync) {
+      const last = await this.prisma.mail.findFirst({
+        where: { accountId: this.account.id },
+        orderBy: { uid: "desc" },
+        select: { uid: true },
+      });
+      this.highestUid = last?.uid ?? 0;
     }
 
-    // 搜索 UID 范围
-    const uids = await this.client.search({ uid: `${startUid}:*` });
+    const startUid = this.highestUid > 0 ? this.highestUid + 1 : 1;
+    const found = await this.client.search({ uid: `${startUid}:*` });
+    const uids = Array.isArray(found) ? found : [];
 
-    await mailbox.release();
-
-    // 限制数量
-    const limitedUids = this.options.maxMessages ? uids.slice(0, this.options.maxMessages) : uids;
-
-    return {
-      uids: limitedUids,
-      total: limitedUids.length,
-    };
+    const limited = this.options.maxMessages ? uids.slice(0, this.options.maxMessages) : uids;
+    return { uids: limited, total: limited.length };
   }
 
   /**
@@ -271,89 +238,71 @@ export class ImapSync {
   private async fetchAndStoreMessage(uid: number): Promise<"created" | "updated" | "skipped"> {
     if (!this.client) throw new Error("IMAP client not connected");
 
-    this.reportProgress({
-      phase: "fetching",
-      processed: 0,
-      currentMessage: `UID ${uid}`,
-    });
-
-    // 获取邮件原始内容
     const message = await this.client.fetchOne(uid, {
-      source: true,
       envelope: true,
+      source: true,
       uid: true,
     });
-
     if (!message) return "skipped";
 
-    // 解析邮件
     const parsed = this.parseMessage(message);
 
-    // 检查是否已存在（基于 messageId + accountId 去重）
+    // 基于 messageId + accountId 去重
     const existing = await this.prisma.mail.findFirst({
-      where: {
-        accountId: this.account.id,
-        messageId: parsed.messageId,
-      },
+      where: { accountId: this.account.id, messageId: parsed.messageId },
       select: { id: true },
     });
+    if (existing) return "skipped";
 
-    if (existing) {
-      // 可选择更新字段（如 isRead、isStarred 等）
-      return "skipped";
-    }
-
-    // 存储到数据库
-    await this.storeMessage(parsed);
-
+    await this.storeMessage(parsed, uid);
     return "created";
   }
 
   /**
-   * 解析原始邮件
+   * 解析 imapflow 的 FetchMessageObject
    */
-  private parseMessage(message: {
-    envelope?: {
-      messageId?: string;
-      from?: { address: string }[];
-      to?: { address: string }[];
-      cc?: { address: string }[];
-      date?: string;
-    };
-    source?: Buffer;
-  }): ParsedEmail {
-    // 这里简化处理，实际应使用 mailparser 库
-    // 示例实现：
+  private parseMessage(message: FetchMessageObject): ParsedEmail {
+    const envelope = message.envelope;
+    const addr = (list?: { address?: string }[]) =>
+      (list ?? [])
+        .map((a) => a.address ?? "")
+        .filter(Boolean)
+        .join(", ");
+
+    const dateRaw = envelope?.date;
+    const sentAt = dateRaw instanceof Date ? dateRaw : dateRaw ? new Date(dateRaw) : new Date();
+
     return {
-      messageId: message.envelope?.messageId || `generated-${Date.now()}`,
-      fromAddr: message.envelope?.from?.[0]?.address || "",
-      toAddr: message.envelope?.to?.map((a) => a.address).join(", ") || "",
-      ccAddr: message.envelope?.cc?.map((a) => a.address).join(", ") || null,
-      bccAddr: null,
-      subject: message.envelope?.subject || "",
-      bodyText: message.source?.toString() || "",
+      messageId: envelope?.messageId || `generated-${message.uid}-${Date.now()}`,
+      fromAddr: addr(envelope?.from),
+      toAddr: addr(envelope?.to),
+      ccAddr: addr(envelope?.cc) || null,
+      bccAddr: addr(envelope?.bcc) || null,
+      subject: envelope?.subject ?? "",
+      bodyText: message.source?.toString() ?? "",
       bodyHtml: null,
       status: "received",
-      sentAt: message.envelope?.date ? new Date(message.envelope.date) : new Date(),
+      sentAt: Number.isNaN(sentAt.getTime()) ? new Date() : sentAt,
     };
   }
 
   /**
    * 存储邮件到数据库
    */
-  private async storeMessage(parsed: ParsedEmail): Promise<void> {
+  private async storeMessage(parsed: ParsedEmail, uid: number): Promise<void> {
     await this.prisma.mail.create({
       data: {
         workspaceId: this.account.workspaceId,
         accountId: this.account.id,
+        uid,
         messageId: parsed.messageId,
         fromAddr: parsed.fromAddr,
         toAddr: parsed.toAddr,
-        ccAddr: parsed.ccAddr,
-        bccAddr: parsed.bccAddr,
+        ccAddr: parsed.ccAddr ?? undefined,
+        bccAddr: parsed.bccAddr ?? undefined,
         subject: parsed.subject,
         bodyText: parsed.bodyText,
-        bodyHtml: parsed.bodyHtml,
+        bodyHtml: parsed.bodyHtml ?? undefined,
         status: parsed.status,
         sentAt: parsed.sentAt,
       },
@@ -363,8 +312,7 @@ export class ImapSync {
   /**
    * 解码凭据
    */
-  private decodeCredential(credential: string): string {
-    // 复用现有的解密逻辑
+  private async decodeCredential(credential: string): Promise<string> {
     const { decrypt } = await import("@/lib/crypto");
     return decrypt(credential);
   }
@@ -373,26 +321,8 @@ export class ImapSync {
    * 进度上报
    */
   private reportProgress(progress: SyncProgress): void {
-    if (this.options.onProgress) {
-      this.options.onProgress(progress);
-    }
+    this.options.onProgress?.(progress);
   }
-}
-
-/**
- * 解析后的邮件结构
- */
-interface ParsedEmail {
-  messageId: string;
-  fromAddr: string;
-  toAddr: string;
-  ccAddr: string | null;
-  bccAddr: string | null;
-  subject: string;
-  bodyText: string;
-  bodyHtml: string | null;
-  status: string;
-  sentAt: Date;
 }
 
 /**
@@ -406,7 +336,7 @@ export async function syncAllAccounts(
   const results = new Map<string, SyncResult>();
 
   for (const account of accounts) {
-    const sync = new ImapSync(prisma, account, { ...options, account });
+    const sync = new ImapSync(prisma, account, options);
     const result = await sync.sync();
     results.set(account.id, result);
   }

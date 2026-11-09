@@ -62,13 +62,28 @@ export interface IceCandidatePayload {
 
 /** 信令消息联合类型（判别联合，type 字段区分） */
 export type SignalingMessage =
-  | { type: "offer"; fromUserId: string; toUserId: string; sessionId: string; sdp: string }
-  | { type: "answer"; fromUserId: string; toUserId: string; sessionId: string; sdp: string }
+  | {
+      type: "offer";
+      fromUserId: string;
+      toUserId: string;
+      sessionId: string;
+      workspaceId: string;
+      sdp: string;
+    }
+  | {
+      type: "answer";
+      fromUserId: string;
+      toUserId: string;
+      sessionId: string;
+      workspaceId: string;
+      sdp: string;
+    }
   | {
       type: "ice-candidate";
       fromUserId: string;
       toUserId: string;
       sessionId: string;
+      workspaceId: string;
       candidate: IceCandidatePayload;
     }
   | {
@@ -78,12 +93,19 @@ export type SignalingMessage =
       sessionId: string;
       workspaceId: string;
     }
-  | { type: "accept-control"; fromUserId: string; toUserId: string; sessionId: string }
+  | {
+      type: "accept-control";
+      fromUserId: string;
+      toUserId: string;
+      sessionId: string;
+      workspaceId: string;
+    }
   | {
       type: "reject-control";
       fromUserId: string;
       toUserId: string;
       sessionId: string;
+      workspaceId: string;
       reason?: string;
     }
   | {
@@ -91,6 +113,7 @@ export type SignalingMessage =
       fromUserId: string;
       toUserId: string;
       sessionId: string;
+      workspaceId: string;
       reason?: string;
     };
 

@@ -1281,6 +1281,7 @@ CREATE TABLE public.mails (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     workspace_id uuid NOT NULL,
     account_id uuid NOT NULL,
+    uid integer,
     message_id character varying(500),
     from_addr character varying(500) NOT NULL,
     to_addr text NOT NULL,
