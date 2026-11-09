@@ -35,6 +35,11 @@ check_permission_gates.py — 角色权限矩阵落地缺口门禁（五档，�
     深层路由按叶子段误判档位。该错由注入式变异测试抓出，非肉眼复核。
   2026-09-30  MODULES 由 12 扩到 14（新增 databases、databaseRecords）后，本脚本改为读真源；
     多维表格 9 个容器/字段/视图写 handler 由 T4 正确落回 T2（20 → 29，T4 33 → 24）。
+  2026-11-09  模块名提取正则由 `\\w+` 收窄为 ASCII 标识符 `[A-Za-z_][A-Za-z0-9_]*`
+    （两处：MODULES 真源解析、requirePermission 调用点扫描）。`\\w` 在 Python 3 按 Unicode
+    匹配，注释里被引号包裹的中文会被当成模块名——真源侧让矩阵凭空多出一个模块，
+    扫描侧让门禁以"未知模块"假红。本仓库当前 MODULES 与调用点均为 ASCII，故口径收紧后
+    五档计数与基线零变化（已逐项核对）。
 
 T3 排除内部端点（cron 调度、探活、Better Auth 托管、上传代理、兜底路由），口径与
 check_api_contract.py 的 INTERNAL_PREFIXES 一致。
@@ -123,6 +128,18 @@ MODULE_BY_SEGMENT = {
 # 并校验映射结果确实存在于 MODULES，不存在即报错退出。
 PERMISSIONS_TS = ROOT / "web" / "lib" / "permissions.ts"
 
+# 模块名的取值形态：只可能是 ASCII 标识符。
+# 不用 \w 的原因：Python 3 的 \w 默认按 Unicode 匹配字母，注释里被引号包裹的中文
+# （'权限'、'审批'）会被当成模块名抓出来，两处消费方各有一种坏法：
+#   load_matrix_modules → 矩阵凭空多出一个模块，MODULE_BY_SEGMENT 一致性检查随之误报；
+#   find_wired_modules  → 落进 unknown 集合，门禁以“调用了矩阵中不存在的模块”假红，
+#                         修法提示（除 owner 外全 403）与真实原因无关，误导排查。
+# 不用 re.ASCII 全局 flag：本文件其他正则要吃中文注释与中文路径说明。
+# 已知代价（显式记录，别当成没发现）：调用点若真传了非标识符的模块名，本门禁不再把它
+# 报进 unknown。该形态在 MODULES 里根本不可能合法（同一个正则解析真源），等价于必然
+# 403 的确定性缺陷；换取的是注释里的中文不再制造假红——假红的代价更高（没人再信这份清单）。
+MODULE_NAME_PATTERN = r"[\"']([A-Za-z_][A-Za-z0-9_]*)[\"']"
+
 
 def load_matrix_modules() -> set[str]:
     src = PERMISSIONS_TS.read_text(encoding="utf-8")
@@ -134,7 +151,7 @@ def load_matrix_modules() -> set[str]:
             file=sys.stderr,
         )
         sys.exit(2)
-    mods = set(re.findall(r"[\"'](\w+)[\"']", m.group(1)))
+    mods = set(re.findall(MODULE_NAME_PATTERN, m.group(1)))
     if not mods:
         print("ERROR: MODULES 解析结果为空，拒绝继续（空集合会让所有路由都被判为矩阵外）", file=sys.stderr)
         sys.exit(2)
@@ -340,10 +357,11 @@ def find_wired_modules() -> tuple[set[str], list[str]]:
     必须剔除注释：注释里写到 `requirePermission("tasks","delete")` 这种说明语，
     会被朴素正则当成真实调用点，从而把动作名 `"delete"` 误读成模块名并误报"未知模块"
     （实测命中：tasks/[id]/route.ts:99 的口径对齐注释）。判定方式是"匹配点之前同一行
-    已有 // 就跳过"，同时要求匹配片段本身不跨注释。
+    已有 // 就跳过"，同时要求匹配片段本身不跨注释。块注释（/* */）不在该守卫覆盖范围内，
+    因此模块名形态另由 MODULE_NAME_PATTERN 限定为 ASCII 标识符——中文注释里的 '权限' 抓不出来。
     """
     used: set[str] = set()
-    call_re = re.compile(r"requirePermission\s*\(\s*[^,]+,\s*[\"'](\w+)[\"']")
+    call_re = re.compile(r"requirePermission\s*\(\s*[^,]+,\s*" + MODULE_NAME_PATTERN)
     targets = list(API_ALL.rglob("route.ts")) + list((ROOT / "web" / "lib").rglob("*.ts"))
     for p in targets:
         txt = p.read_text(encoding="utf-8", errors="ignore")
