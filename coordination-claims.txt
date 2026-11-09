@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-dir-rebase | docs/direction-rebase-20261109 | docs/decisions/OPEN-DECISIONS.md,docs/ROADMAP-2026Q4.md | wb-dir-rebase | 2026-11-09T07:18Z | 2026-11-09T13:18Z | Phase 0 方向重估：登记政务/招标 7 类缺口 + ROADMAP §6
