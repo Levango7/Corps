@@ -176,13 +176,20 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
         const key = f.key.trim();
         if (key) content[key] = f.value;
       }
-      // 不选模板时，构造默认单节点审批流
+      // 不选模板时，构造默认单节点审批流。
+      //
+      // 三个坑（2026-11-10 E2E 实测：不带模板发起审批必然 400）：
+      //  - order 是后端 schema 的必填项（z.number().int().min(0)），漏了整单被拒；
+      //  - 后端节点字段是 approverUserId（单数），此前写 approverIds（复数数组）
+      //    会被 zod 静默剥掉 ⇒ 节点没有审批人，即使过校验也永远轮不到人；
+      //  - content 必须是 record，空内容要给 {} 而不是 ""（见下）。
       const defaultNodes = templateId
         ? undefined
         : [
             {
               name: t("approver"),
-              approverIds: [selectedApproverId],
+              approverUserId: selectedApproverId,
+              order: 0,
             },
           ];
       await api(`/api/v1/workspaces/${workspaceId}/approvals/instances`, {
@@ -191,8 +198,10 @@ export function ApprovalSubmit({ workspaceId, onClose, onSubmitted }: ApprovalSu
           templateId: templateId || undefined,
           title: title.trim(),
           description: description.trim() || undefined,
-          // 确保 content 有默认值，避免 undefined 导致后端校验失败
-          content: Object.keys(content).length > 0 ? content : "",
+          // content 是 z.record(...) 必填：空内容必须给 {}。
+          // 此前给 ""（字符串）⇒ 后端 invalid_type 直接 400，
+          // 也就是说「不填审批内容就发」这条最常见路径从来没成功过。
+          content: Object.keys(content).length > 0 ? content : {},
           nodes: defaultNodes,
         }),
       });

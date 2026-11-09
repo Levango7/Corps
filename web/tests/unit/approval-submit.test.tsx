@@ -188,8 +188,10 @@ describe("ApprovalSubmit", () => {
       body: JSON.stringify({
         title: "Ad-hoc request",
         description: "extra context",
-        content: "",
-        nodes: [{ name: "approval:approver", approverIds: ["m-1"] }],
+        // content 必须是 record：空内容给 {}（给 "" 会被后端 z.record 判 400）
+        content: {},
+        // 节点三要素：name + approverUserId（单数，后端只认这个）+ order（必填）
+        nodes: [{ name: "approval:approver", approverUserId: "m-1", order: 0 }],
       }),
     });
     expect(onSubmitted).toHaveBeenCalledTimes(1);
