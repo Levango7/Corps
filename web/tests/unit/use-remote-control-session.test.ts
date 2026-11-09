@@ -1,7 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { renderHook, act, cleanup } from "@testing-library/react";
-import type { RemoteControlSessionState } from "@/lib/webrtc/peer-connection";
 
 /**
  * useRemoteControlSession 契约（lib/use-remote-control-session.ts）
