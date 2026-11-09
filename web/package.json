@@ -26,7 +26,7 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.101",
+    "@ai-sdk/openai": "^4.0.109",
     "@ai-sdk/provider": "4.0.36",
     "@ai-sdk/react": "4.0.167",
     "@livekit/components-react": "^2.9.24",
