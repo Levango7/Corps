@@ -336,6 +336,21 @@ jobs:
         run: python scripts/check_openapi_description_semantics.py
       - name: Mutation-check the description-semantics guard itself
         run: python scripts/check_openapi_description_semantics.py --self-test
+      # 上面各步管的是"契约文件对不对"和"响应体 code 对不对"，管不到"字段对不对"：
+      # openapi 声明 `data.required: [userIds]`、实现却返回 `{ items }`，两个名字指同一
+      # 语义，前面所有门禁全绿（实测存量 5 处，见 scripts/contract-fields-baseline.txt）。
+      # 本门禁做单向包含：openapi 的 data.required ⊆ 实现 data 字面量对象的 keys。
+      # 口径边界（务必看脚本 docstring，别把它当万能）：
+      #   - 只认 `code` 字面量恰好为 200 的 NextResponse.json；不看 status 参数
+      #   - 只覆盖 data 是**字面量对象**的分支：实测 378 个成功分支里 22% 可比对，
+      #     另有约 41%（58 处）是 `data: <变量>` / null，抓不到；spread 也抓不到
+      #   - 所有 skip 类别都会打印计数：覆盖率悄悄下滑比红更危险，禁止改成静默跳过
+      #   - 基线 5 处是真实缺陷（待还债务），不是"允许的写法"；修好要跑 --emit 删行
+      # 不要用这个门禁替代 code review：它只保证字段名存在，不保证类型/语义/嵌套结构。
+      - name: Check response fields against OpenAPI schemas
+        run: python scripts/check_contract_fields.py
+      - name: Mutation-check the contract-fields guard itself
+        run: python scripts/check_contract_fields.py --self-test
       # 上面各步管的是 API 契约与响应体，管不到「页面有没有入口」：#300 之前
       # ai-usage / assistant 是有页面 + 有 API + 有 i18n，却在侧栏注册表和 Cmd+K
       # 里都查无此项的孤儿。入口事实源固定为三份壳层清单（注册表 / Cmd+K /
