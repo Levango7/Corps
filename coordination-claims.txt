@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-ledger | docs/todo-ledger-correction | docs/decisions/OPEN-DECISIONS.md,docs/decisions/README.md,docs/decisions/ADR-014*.md,docs/ROADMAP-2026Q4.md,docs/API-CONVENTIONS.md,docs/market/pricing-redesign-v2.md,docs/market/pricing-strategy.md,docs/market/pricing-page-spec.md,.github/workflows/smoke.yml | wb-ledger | 2026-11-09 13:45 | 2026-11-09 21:45 | 按 origin/main 订正过时 TODO 台账登记（B 类 8 条），纯文档零行为变更
