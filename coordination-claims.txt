@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-contract-fields | chore/contract-fields-gate | scripts/check_contract_fields.py,scripts/contract-fields-baseline.txt,.github/workflows/ci.yml | wb-contract-fields | 2026-11-09 16:34 | 2026-11-10 00:34 | 新增字段级契约一致性门禁（openapi data.required ⊆ 实现 data keys）+ CI 接线
