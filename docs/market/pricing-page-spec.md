@@ -4,6 +4,8 @@
 > 作者：商业化决策分析师 ｜ 面向读者：前后端开发
 > 依据：SPEC.md v0.1.0（§1 产品定义 / §2 MVP 范围 / §8 设计 Token / §10 边界约束）、design-tokens.css（303 行，Token 唯一定义层）、ADR-003（2026-08-26 收口版，支付通道路线）、pricing-strategy.md（2026-08-26 两档制定价）、web/lib/analytics.ts 与 web/app/api/v1/events/route.ts（埋点现状）
 > 前置依赖：本文定价数字（¥59/¥590）以 pricing-strategy.md 拍板为准；若价格调整仅需改第 4 节常量表
+>
+> **历史口径订正（2026-11-09）**：本文所载 ¥59/¥590 系列（含 §9:290 的 SEO title）为 2026-08-26 拍板时的**已过期初稿数值**，保留作决策史料、不改写不删行；现行定价以 2026-09-02 用户拍板的 **¥29.9/人/月、¥299/人/年** 为准（`docs/market/pricing-redesign-v2.md` §5、`README.md:28/:128`；`docs/market/competitive-analysis.md:3` 已声明「凡出现 ¥59 的 corps 定价均已过期」）。
 
 ---
 

@@ -29,7 +29,7 @@
 #   之前把硬失败放在每日 01:00 UTC 一个 job，是为了让"未配置"每天只提醒一次
 #   （每 15 分钟红一次会发 96 封邮件，把真故障告警淹没）。现在统一成
 #   "每次运行都红"，邮件量随之上升。
-#   之所以仍选统一失败：当前**根本没有可用目标**（SMOKE_TARGET_URL 未设置），
+#   之所以仍选统一失败（2026-10-20 历史缘由）：当时**没有可用监控目标**（SMOKE_TARGET_URL 未设置；该变量现已指向 Vercel 生产实例 corps-five.vercel.app），
 #   这时高频门禁全绿 = "以为有监控、实际没有"，属于本仓反复出现的那类
 #   "坏状态在配置面、代码面看不出来"。频率噪声是运维成本，
 #   假绿是正确性成本——后者更贵。
@@ -92,7 +92,7 @@ jobs:
           TARGET_URL: ${{ vars.SMOKE_TARGET_URL }}
         run: |
           if [ -z "$TARGET_URL" ]; then
-            echo "::error::SMOKE_TARGET_URL 未配置——当前没有任何健康监控，等于生产裸奔。"
+            echo "::error::SMOKE_TARGET_URL 未配置——本工作流当前没有健康监控目标（这不等于没有生产实例：Vercel 生产实例 corps-five.vercel.app 已在运行），等于监控缺位。"
             echo "启用方式：gh variable set SMOKE_TARGET_URL --body https://你的域名"
             exit 1
           fi

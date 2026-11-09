@@ -145,6 +145,8 @@ pricing-strategy.md §4 自己也承认：¥59 是"国际对标感 + 本地可�
 
 ## 4. 拍板后实施清单（不含本评审稿外的代码动作）
 
+> §4 为 2026-09-02 拍板**前**的评审稿清单，下列 checkbox 保留作历史记录；最终实施状态以 §5「拍板结果（2026-09-02）」为准（§5 第 4 条：已全部同步完成）。
+
 - [ ] `web/lib/pricing.ts`：PRICING_PLANS 常量改 ¥39/¥390 + 清单替换（单点改价承诺）
 - [ ] `web/messages/zh.json` + `en.json`：pricing 命名空间清单与 FAQ 同步（年付省 ¥78、日单价话术）
 - [ ] `web/app/[locale]/w/[wid]/billing/page.tsx`：PLANS 同步（页面私有口径与 pricing.ts 对齐）
