@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-gate-regex | fix/permission-gate-cjk-regex | scripts/check_permission_gates.py,scripts/permission-gate*.txt | wb-gate-regex | 2026-11-09 16:11 | 2026-11-09 22:11 | 修权限门禁正则把中文注释误抓成模块名的缺陷（OPEN: existing-design-boundary）
