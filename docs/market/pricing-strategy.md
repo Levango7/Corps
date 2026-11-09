@@ -4,6 +4,8 @@
 > 状态：**ACCEPTED（2026-08-26 用户拍板通过）** ｜ 决策人：用户（产品负责人）
 > 基于：SPEC.md v0.1.0 + ADR-003（2026-08-26 收口版）+ competitive-analysis.md + billing 前后端代码现状
 > 关联：`docs/decisions/ADR-003-计费方案.md`（支付通道路线）、`docs/market/pricing-page-spec.md`（定价页规格）
+>
+> **历史口径订正（2026-11-09）**：本文所载 Pro ¥59/人/月、¥590/人/年 为 2026-08-26 拍板时的**已过期初稿数值**；现行定价以 2026-09-02 用户拍板的 **¥29.9/人/月、¥299/人/年** 为准（`docs/market/pricing-redesign-v2.md` §5、`README.md:28/:128`；`docs/market/competitive-analysis.md:3` 已声明「凡出现 ¥59 的 corps 定价均已过期」）。本文 ¥59 系列数值保留作决策史料，不改写、不删行（`:129`「调整需重新评审」的冻结语义指向本文历史文本，现行数值不在其冻结范围内）。
 
 ---
 
