@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-deps | deps/tiptap-288 | web/package.json,web/pnpm-lock.yaml,scripts/dependency-age-cache.json,CHANGELOG.md | qoder-deps | 2026-11-08T17:12Z | 2026-11-08T23:12Z | dependabot 家族批 #288 tiptap 按年龄门审计后合并；随后补 B 批次合并 CHANGELOG 汇总条目
