@@ -167,7 +167,7 @@ describe("FormBuilder", () => {
   it("空标题保存显示错误且不调用 api", () => {
     renderBuilder();
     fireEvent.click(screen.getByRole("button", { name: "form:save" }));
-    expect(screen.getByText("form:title")).toBeInTheDocument();
+    expect(screen.getByText("form:titleRequired")).toBeInTheDocument();
     expect(mocks.api).not.toHaveBeenCalled();
   });
 
@@ -177,7 +177,7 @@ describe("FormBuilder", () => {
     fireEvent.click(screen.getByRole("button", { name: "form:addField" }));
     fireEvent.click(screen.getByRole("button", { name: "form:save" }));
     const banner = document.querySelector('div[class*="danger-soft"] > span');
-    expect(banner?.textContent).toBe("form:addField");
+    expect(banner?.textContent).toBe("form:addFieldRequired");
   });
 
   it("新建保存走 POST：标题 trim、空描述省略、空 label 字段丢弃、非选项类型剥离 options", async () => {
@@ -268,9 +268,9 @@ describe("FormBuilder", () => {
   it("错误条 X 按钮清空错误", () => {
     renderBuilder();
     fireEvent.click(screen.getByRole("button", { name: "form:save" }));
-    expect(screen.getByText("form:title")).toBeInTheDocument();
+    expect(screen.getByText("form:titleRequired")).toBeInTheDocument();
     const dismiss = screen.getAllByRole("button", { name: "form:removeField" }).at(-1)!;
     fireEvent.click(dismiss);
-    expect(screen.queryByText("form:title")).not.toBeInTheDocument();
+    expect(screen.queryByText("form:titleRequired")).not.toBeInTheDocument();
   });
 });
