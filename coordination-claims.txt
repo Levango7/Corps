@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-red2 | chore/meetings-e2e | web/e2e/*.spec.ts,web/components/approval/*,web/components/form/*,web/messages/zh.json,web/messages/en.json,web/tests/unit/form-builder.test.tsx,web/app/[locale]/w/[wid]/databases/shared.ts | zcode | 2026-11-10T09:03Z | 2026-11-10T13:03Z | 长尾域交互 E2E：审批/表单/会议域已交付（PR 315/319/322）；databases 域 E2E 抓到真缺陷 shared.ts 误用 m.userId（/members 序列化字段为 id）致所有者 canManage 恒假，修该文件；余文档/白板/OKR E2E + 审批域两处产品缺口
