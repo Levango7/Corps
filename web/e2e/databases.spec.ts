@@ -22,7 +22,9 @@ test.describe("多维表格：内联创建 → 详情页渲染 / 空态与列表
     const title = `E2E需求池-${Date.now()}`;
 
     await page.goto(`/w/${wid}/databases`);
-    await expect(page.getByRole("button", { name: "新建多维表格" })).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("button", { name: "新建多维表格" })).toBeVisible({
+      timeout: 10_000,
+    });
 
     // 点「新建多维表格」展开内联表单（非 dialog），填名称后提交
     await page.getByRole("button", { name: "新建多维表格" }).first().click();
@@ -32,8 +34,12 @@ test.describe("多维表格：内联创建 → 详情页渲染 / 空态与列表
     // 创建成功 → 连带补默认字段/视图后跳详情页
     await expect(page).toHaveURL(/\/databases\/[^/]+$/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("navigation", { name: "视图切换" })).toBeVisible({ timeout: 10_000 });
-    await expect(page.getByText("0 条记录", { exact: true }).first()).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByRole("navigation", { name: "视图切换" })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByText("0 条记录", { exact: true }).first()).toBeVisible({
+      timeout: 10_000,
+    });
   });
 
   test("列表空态与创建后卡片出现：回列表后新库出现在卡片网格", async ({ page }) => {
@@ -42,7 +48,9 @@ test.describe("多维表格：内联创建 → 详情页渲染 / 空态与列表
 
     await page.goto(`/w/${wid}/databases`);
     // 新工作区无库：空态文案可见（items 判空口径曾在 v04 注释里出过 bug，这里钉住）
-    await expect(page.getByText("还没有多维表格", { exact: true }).first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByText("还没有多维表格", { exact: true }).first()).toBeVisible({
+      timeout: 15_000,
+    });
 
     await page.getByRole("button", { name: "新建多维表格" }).first().click();
     await page.getByLabel("名称").fill(title);
@@ -51,7 +59,11 @@ test.describe("多维表格：内联创建 → 详情页渲染 / 空态与列表
 
     // 回列表页：新库卡片出现，标题文本 + 打开链接 aria-label 双口径
     await page.goto(`/w/${wid}/databases`);
-    await expect(page.getByText(title, { exact: true }).filter({ visible: true }).first()).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("link", { name: `打开 ${title}` })).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page.getByText(title, { exact: true }).filter({ visible: true }).first(),
+    ).toBeVisible({ timeout: 15_000 });
+    await expect(page.getByRole("link", { name: `打开 ${title}` })).toBeVisible({
+      timeout: 10_000,
+    });
   });
 });
