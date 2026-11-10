@@ -3346,6 +3346,8 @@
     "approverRole": "Approver Role",
     "approverUser": "Specific User",
     "addTemplate": "New Template",
+    "importBuiltin": "Import built-in templates",
+    "importBuiltinResult": "Imported {imported} built-in templates, skipped {skipped} existing",
     "templateEmpty": "No templates yet",
     "confirmDeleteTemplate": "Delete this template?",
     "save": "Save",
