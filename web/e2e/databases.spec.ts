@@ -8,7 +8,7 @@ import { uniqueEmail, registerAndLogin } from "./helpers";
  *  - DatabaseList 的内联新建表单（不是 dialog）：点「新建多维表格」后 form 出现在页面上，
  *    提交按钮文案「创建」与页面级按钮「新建多维表格」不同名，列表页内唯一
  *  - 创建连带补默认字段 + 默认表格视图后 router.push 进详情页（与表单域留列表不同）
- *  - DatabaseEditor 详情页：h1 渲染库标题、视图切换 tablist、记录数「0 条记录」
+ *  - DatabaseEditor 详情页：h1 渲染库标题、视图切换 tablist、记录数「0 条」
  *  - 列表空态「还没有多维表格」与创建后卡片出现（标题文本定位，不用卡片序号）
  *
  * 断言口径：
@@ -34,10 +34,10 @@ test.describe("多维表格：内联创建 → 详情页渲染 / 空态与列表
     // 创建成功 → 连带补默认字段/视图后跳详情页
     await expect(page).toHaveURL(/\/databases\/[^/]+$/, { timeout: 15_000 });
     await expect(page.getByRole("heading", { name: title })).toBeVisible({ timeout: 15_000 });
-    await expect(page.getByRole("navigation", { name: "视图切换" })).toBeVisible({
+    await expect(page.getByRole("tablist", { name: "视图切换" })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.getByText("0 条记录", { exact: true }).first()).toBeVisible({
+    await expect(page.getByText("0 条", { exact: true }).first()).toBeVisible({
       timeout: 10_000,
     });
   });
