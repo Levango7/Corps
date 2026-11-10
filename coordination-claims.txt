@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-red2 | chore/meetings-e2e | web/e2e/databases.spec.ts,web/app/[locale]/w/[wid]/databases/shared.ts | zcode | 2026-11-10T16:07Z | 2026-11-10T20:07Z | 数据库域 E2E 两条与共享角色匹配修复，纯中文无管道符
