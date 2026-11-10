@@ -1,0 +1,18 @@
+# 字段级契约基线（棘轮）——openapi data.required 有、实现 data 字面量没有的字段
+#
+# 由 `python scripts/check_contract_fields.py --emit` 生成/刷新，**提交前必须人工核对 diff**。
+# 每行格式（TAB 分隔）：<相对仓库根的路径>	<HTTP 方法>	<缺失字段,按字母序>
+#
+# 判据（红因集合）：
+#   NEW_FILE     基线外的路径首次出现字段缺失  -> CI 红
+#   REGRESSION   已登记路径的同类缺失处数变多  -> CI 红
+#   （减少/清零只打印提示、不判红——否则修好一处的人会被门禁卡住）
+#
+# 登记 ≠ 认可：这 5 条都是真实缺陷，清偿要改业务代码，不在本门禁的批次里做。
+# 只允许收缩：修好后跑 --emit 删掉对应行。
+
+web/app/api/v1/workspaces/[wid]/im/online/route.ts	GET	userIds
+web/app/api/v1/workspaces/[wid]/permissions/route.ts	GET	overrides
+web/app/api/v1/workspaces/[wid]/permissions/route.ts	PATCH	overrides,roles
+web/app/api/v1/workspaces/[wid]/tasks/[id]/share/verify/route.ts	POST	markdown
+web/app/api/v1/workspaces/[wid]/tasks/route.ts	GET	hasMore,page,total
