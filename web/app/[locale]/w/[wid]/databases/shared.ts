@@ -148,16 +148,19 @@ export function recordDataAsObject(data: unknown): Record<string, unknown> {
  *
  * 与 `components/im/ConversationSettings.tsx` 同一套做法：
  * `/users/me` 拿自己的 id，再从 `/workspaces/{wid}/members` 里找该成员的 role。
- * 任一步失败都返回 null（调用方按只读降级，不炸页面）。
+ * 注意两个 members 端点的序列化字段**不同**：会话成员端点返回 `userId`，
+ * 工作区成员端点返回的是 `id`（= m.user.id）。曾照搬 `userId` 口径导致
+ * find 永不命中、所有者也被当成无权限（列表页只渲染 emptyNoPermission），
+ * 这里必须按 `id` 匹配。任一步失败都返回 null（调用方按只读降级，不炸页面）。
  */
 export async function fetchMyWorkspaceRole(wid: string): Promise<Role | null> {
   try {
     const [me, members] = await Promise.all([
       api<{ id: string }>("/api/v1/users/me").catch(() => ({ id: "" })),
-      apiList<{ userId: string; role: Role }>(`/api/v1/workspaces/${wid}/members`),
+      apiList<{ id: string; role: Role }>(`/api/v1/workspaces/${wid}/members`),
     ]);
     if (!me.id) return null;
-    return members.find((m) => m.userId === me.id)?.role ?? null;
+    return members.find((m) => m.id === me.id)?.role ?? null;
   } catch {
     return null;
   }
