@@ -53,7 +53,9 @@ test.describe("表单：新建 → 列表 → 提交", () => {
     // 填了名称但一个字段都没有 → 字段校验错误
     await page.getByLabel("名称").fill("缺字段表单");
     await page.getByRole("button", { name: "保存" }).click();
-    await expect(page.getByText("请至少添加一个字段").filter({ visible: true }).first()).toBeVisible({
+    await expect(
+      page.getByText("请至少添加一个字段").filter({ visible: true }).first(),
+    ).toBeVisible({
       timeout: 10_000,
     });
   });
