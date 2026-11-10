@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-red2 | feat/e2e-whiteboard-okr | web/e2e/whiteboards.spec.ts,web/e2e/okr.spec.ts | zcode | 2026-11-10T21:07Z | 2026-11-11T01:07Z | 白板与OKR域交互端到端各两条，纯中文无管道符
