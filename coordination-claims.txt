@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | chore/meetings-e2e | web/e2e/databases.spec.ts,web/app/[locale]/w/[wid]/databases/shared.ts | zcode | 2026-11-10T14:31Z | 2026-11-10T18:31Z | 数据库域 E2E 两条与共享角色匹配修复，纯中文无管道符
+F:/Nexus/corps-wt-red2 | chore/meetings-e2e | web/e2e/databases.spec.ts,web/app/[locale]/w/[wid]/databases/shared.ts | zcode | 2026-11-10T15:56Z | 2026-11-10T19:56Z | 数据库域 E2E 两条与共享角色匹配修复，纯中文无管道符
