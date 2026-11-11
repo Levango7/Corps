@@ -49,6 +49,8 @@ corps 解决的正是这个问题——**讨论结论自动落位成任务与决
 | 15分钟上手指引 | ✅ | ✅ | ❌ | ❌ | ❌ | ❌ |
 | 高保真设计系统 | ✅(Calm Precision) | ❌ | ✅ | ✅ | ✅ | ❌ |
 
+> 注：「多租户隔离（RLS引擎层）」的 ✅ 指能力事实——策略库覆盖 81 张业务表、CI 加固模式回归守护；容器化部署默认通电（docker-compose `RLS_ACTIVATE=true`），Vercel SaaS 实例激活收尾中（#51）。口径见 `docs/security/COMPLIANCE-MAPPING-v0.md`。
+
 ### 2.3 竞品详细分析
 
 #### Trello（最直接对手）
@@ -107,7 +109,7 @@ corps 解决的正是这个问题——**讨论结论自动落位成任务与决
 
 | 优势项 | 证据来源 | 竞争壁垒 |
 |--------|----------|----------|
-| 引擎层多租户隔离（RLS） | ADR-001、schema.sql（318行RLS策略）、app_role NOBYPASSRLS | Trello/Linear 无此能力 |
+| 引擎层多租户隔离（RLS） | ADR-001/006、db/rls-activate.sql（81 表 ENABLE+FORCE、272 条策略）、corps_app NOBYPASSRLS | Trello/Linear 无此能力 |
 | 设计系统完备 | DESIGN.md（272行）、design-tokens.css（286行）、prototype/index.html（1668行） | Calm Precision 设计语言独特 |
 | 决策记录差异化 | SPEC.md AC-10（版本留痕+双向回链）、decisions+decision_versions 双表设计 | 竞品均无原生态支持 |
 | 认证基础设施 | Better Auth 1.3.28 + scrypt + 15min/7d JWT轮换 | TS原生认证 |
