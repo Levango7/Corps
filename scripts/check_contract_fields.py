@@ -18,9 +18,9 @@ check_contract_fields.py — 字段级契约一致性门禁（需要 PyYAML）
 - `check_openapi_refs.py`   管「$ref 有没有悬空」
 - `check_openapi_syntax.py` 管「YAML 解析器读不读得动」
 - `check_response_envelope.py` 管「code 是否等于 HTTP 状态码」
-全都管不到「声明了 `userIds` 但实现返回 `items`」这类字段漂移。实测存量 5 处
-（见 scripts/contract-fields-baseline.txt），其中 im/online 的 `userIds` 与
-`items` 是**同一个语义两个名字**，前端按契约取 `userIds` 会拿到 undefined。
+全都管不到「声明了 `userIds` 但实现返回 `items`」这类字段漂移。登记项是契约与
+实现之间的字段差异，可能由任一侧写错造成，需逐条尽调后判定改哪一侧；当前条目
+与历史快照见 scripts/contract-fields-baseline.txt（由 --emit 维护）。
 
 ## 口径（刻意克制，只判无歧义的一类）
 
@@ -103,7 +103,7 @@ HEADER = """\
 #   REGRESSION   已登记路径的同类缺失处数变多  -> CI 红
 #   （减少/清零只打印提示、不判红——否则修好一处的人会被门禁卡住）
 #
-# 登记 ≠ 认可：这 5 条都是真实缺陷，清偿要改业务代码，不在本门禁的批次里做。
+# 登记 ≠ 认可：登记项只是待核对的字段差异；清偿可能落在契约侧或实现侧，需逐条尽调后判定，本门禁不预设改哪一侧。
 # 只允许收缩：修好后跑 --emit 删掉对应行。
 """
 
@@ -649,9 +649,9 @@ def run() -> int:
         for line in reds:
             print("  " + line)
         print(
-            "\n修复方式（按优先级）：\n"
-            "  1. 让实现返回 openapi 声明的字段（改业务代码，推荐）\n"
-            "  2. 如果契约写错了，改 api/openapi.yaml 并走契约评审\n"
+            "\n修复方式（逐条尽调后判定改哪一侧，本门禁不预设）：\n"
+            "  1. 若契约写错、实现正确：订正 api/openapi.yaml 的 data.required / properties\n"
+            "  2. 若契约正确、实现漏字段：让实现返回 openapi 声明的字段\n"
             f"  3. 确属历史存量且本轮不修，才追加到 {BASELINE.name}（并在 PR 里说明）"
         )
         return 1
