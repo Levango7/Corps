@@ -28,9 +28,9 @@ corps 的核心就一件事：**把"讨论结论 → 决策记录 → 任务"做
 
 技术上自己比较得意的几点：
 
-- PostgreSQL **行级安全（RLS）** 做多租户隔离——跨工作区请求在数据库引擎层被拦截，不靠应用代码自觉
+- PostgreSQL **行级安全（RLS）** 做多租户隔离——策略覆盖全部 81 张业务表并经 CI 加固模式验证；生产实例激活收尾中，激活后跨工作区请求由数据库引擎层拦截，不靠应用代码自觉
 - 中英双语完整支持（不是翻译插件的半吊子）
-- CI 七道关卡：lint / 安全审计 / 单测 / **加固模式 RLS 回归**（以最小权限角色连接跑全量集成测试）/ 生产构建 / 浏览器 E2E / 镜像发布
+- CI 十二道关卡：lint / 安全审计 / 单测 / **加固模式 RLS 回归**（以最小权限角色连接跑全量集成测试）/ 生产构建 / 浏览器 E2E / 镜像发布等
 
 免费版 10 人以内全功能（21 项），Pro ¥29.9/人/月解锁无限席位和决策记录上限。
 
@@ -61,9 +61,9 @@ corps closes that loop:
 ✅ In-task chat with inline attachment preview (image lightbox / embedded PDF)
 
 Engineering details we're proud of:
-🔒 Multi-tenant isolation at the **database engine level** (PostgreSQL RLS) — cross-workspace requests are blocked by the database itself, not app code
+🔒 Multi-tenant isolation at the **database engine level** (PostgreSQL RLS) — policies cover all 81 business tables and are CI-verified in hardened mode; production activation in progress
 🌍 Full Chinese/English bilingual UI
-🧪 7-gate CI including a **hardened RLS regression suite** that runs the full integration suite as a least-privilege role
+🧪 12-gate CI including a **hardened RLS regression suite** that runs the full integration suite as a least-privilege role
 
 Free for teams up to 10 with everything above (21 features). Pro at ¥29.9/seat/month unlocks unlimited seats & decision history.
 
@@ -73,7 +73,7 @@ Self-host in one command: `docker pull ghcr.io/levango7/corps:0.4.0`
 
 ## 即刻/朋友圈短版（中文，< 150 字）
 
-做了个叫 corps 的团队协作工具：讨论结论直接固化为决策记录，版本留痕、双向回链任务，"为什么这么定"永远可查。子任务进度自动汇总、被卡任务标红、文档中心支持公开分享、决策里能画 mermaid 流程图、一键导出 PDF。多租户隔离做在数据库引擎层（RLS），不是应用层自觉。免费 10 人全功能。在线体验已备好演示数据。
+做了个叫 corps 的团队协作工具：讨论结论直接固化为决策记录，版本留痕、双向回链任务，"为什么这么定"永远可查。子任务进度自动汇总、被卡任务标红、文档中心支持公开分享、决策里能画 mermaid 流程图、一键导出 PDF。多租户隔离做在数据库引擎层（RLS，81 张业务表策略已覆盖，生产激活收尾中），不是应用层自觉。免费 10 人全功能。在线体验已备好演示数据。
 
 ---
 
