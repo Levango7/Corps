@@ -952,7 +952,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_PermissionMatrix'
+                $ref: '#/components/schemas/Envelope_PermissionPatchResult'
         '400':
           $ref: '#/components/responses/BadRequest'
         '401':
@@ -4771,7 +4771,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_ShareVerifyResponse'
+                $ref: '#/components/schemas/Envelope_TaskShareVerifyResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '404':
@@ -14642,6 +14642,16 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PermissionMatrix'
+    Envelope_PermissionPatchResult:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [role, permissions]
+          properties:
+            role: { type: string, enum: [member, viewer] }
+            permissions: { type: object }
     UpdatePermissionRequest:
       type: object
       required: [role, module, actions]
@@ -14856,6 +14866,19 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/ShareVerifyResponse'
+    Envelope_TaskShareVerifyResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [id, title]
+          properties:
+            id: { type: string, format: uuid }
+            title: { type: string }
+            description: { type: string, nullable: true }
+            status: { type: string }
+            priority: { type: string }
     ShareAccessLog:
       type: object
       required: [id, accessedAt]
@@ -16997,9 +17020,16 @@ components:
       properties:
         data:
           type: object
-          required: [userIds, total]
+          required: [items, total]
           properties:
-            userIds: { type: array, items: { type: string, format: uuid } }
+            items:
+              type: array
+              items:
+                type: object
+                required: [userId, lastSeen]
+                properties:
+                  userId: { type: string, format: uuid }
+                  lastSeen: { type: string, format: date-time }
             total: { type: integer, minimum: 0 }
     Envelope_MeetingMinutes:
       allOf:
