@@ -1,6 +1,8 @@
 # corps 安全审计报告
 
 > 日期：2026-08-23 ｜ 审计范围：web/ 全目录 + db/schema.sql
+>
+> 2026-11-11 口径订正（#51 未闭，C 口径）：本报告成文时 RLS 加固模式尚未落地。§1.6 的 `app_role` 与 `schema.sql L53/L56/L296` 引用已失准（现行运行时角色为 `corps_app`，见 `db/rls-activate.sql`）；§3 授权 9/10 与数据隔离 10/10 按「RLS 引擎层强制」打分，隐含生产已通电，而生产 RLS 至今未激活（#51），故该两格自本注起不作对外依据。全仓 RLS 口径唯一事实源：`docs/security/COMPLIANCE-MAPPING-v0.md`。
 
 ---
 
