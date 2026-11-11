@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/approval-builtin-ui | web/components/approval/ApprovalTemplateManage.tsx,web/messages/zh.json,web/messages/en.json,web/tests/unit/approval-template-manage.test.tsx | zcode | 2026-11-10T22:08Z | 2026-11-11T02:08Z | 审批模板管理页一键导入内置模板入口，纯中文无管道符
+F:/Nexus/corps-wt-red2 | feat/approval-builtin-ui | web/tests/unit/ai-multi-agent-panel.test.tsx | zcode | 2026-11-11T06:53Z | 2026-11-11T10:53Z | 修复该测试在CI环境的系统性偶发挂点，纯中文无管道符
