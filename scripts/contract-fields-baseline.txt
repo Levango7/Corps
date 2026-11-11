@@ -8,8 +8,7 @@
 #   REGRESSION   已登记路径的同类缺失处数变多  -> CI 红
 #   （减少/清零只打印提示、不判红——否则修好一处的人会被门禁卡住）
 #
-# 登记 ≠ 认可：这 5 条都是真实缺陷，清偿要改业务代码，不在本门禁的批次里做。
+# 登记 ≠ 认可：登记项只是待核对的字段差异；清偿可能落在契约侧或实现侧，需逐条尽调后判定，本门禁不预设改哪一侧。
 # 只允许收缩：修好后跑 --emit 删掉对应行。
 
-web/app/api/v1/workspaces/[wid]/permissions/route.ts	GET	overrides
 web/app/api/v1/workspaces/[wid]/tasks/route.ts	GET	hasMore,page,total
