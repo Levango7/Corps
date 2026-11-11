@@ -923,7 +923,7 @@ paths:
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Envelope_PermissionMatrix'
+                $ref: '#/components/schemas/Envelope_PermissionMatrixResponse'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -4752,7 +4752,7 @@ paths:
       description: >
         Authenticated endpoint (workspace membership required) used by members to
         preview a password-protected task share. Body: { password }. On success
-        returns the task content { id, title, markdown }; on mismatch returns
+        returns the task content { id, title, description, status, priority }; on mismatch returns
         401. Unknown/expired/disabled share → 404. Public (no-login) access uses
         the /api/tasks/share/{token} path instead.
       operationId: verifyTaskSharePassword
@@ -12852,7 +12852,7 @@ paths:
     get:
       tags: [messages]
       summary: Online user ids for the workspace IM
-      description: "Code=200; data = { userIds, total } (recently online members)."
+      description: "Code=200; data = { items, total } (recently online members)."
       operationId: getImOnline
       parameters:
         - $ref: '#/components/parameters/Wid'
@@ -14642,6 +14642,29 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/PermissionMatrix'
+    Envelope_PermissionMatrixResponse:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [roles, modules, total, hasMore]
+          properties:
+            roles:
+              type: object
+              description: Merged permission matrix keyed by role, then by module (Action[] per cell).
+              additionalProperties:
+                type: object
+                additionalProperties:
+                  type: array
+                  items:
+                    type: string
+                    enum: [read, create, update, delete]
+            modules:
+              type: array
+              items: { type: string }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
     Envelope_PermissionPatchResult:
       allOf:
         - $ref: '#/components/schemas/Envelope'
