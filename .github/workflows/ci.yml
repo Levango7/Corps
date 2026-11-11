@@ -362,6 +362,24 @@ jobs:
         run: python scripts/check_nav_coverage.py
       - name: Mutation-check the nav coverage guard itself
         run: python scripts/check_nav_coverage.py --self-test
+      # 上面各步管的是「页面有没有入口」的并集口径，管不到「注册表里的模块在
+      # Cmd+K 里点不点得到」：registry.ts 自述是唯一事实源，但 CommandPalette.tsx
+      # 实际硬编码了第二份 navItems 清单，两者并未复用。#315 只改 registry
+      # （meetings→remote-control）、漏改 Cmd+K，并集门禁取并集仍全绿，抓不到这类
+      # 单向漂移。本门禁做单向包含：registry.path ⊆ navItems.href 的 segment 集合。
+      # 口径边界（务必看脚本 docstring，别把它当万能）：
+      #   - 只比归一化后的 segment；不比 id / icon / titleKey vs labelKey / 顺序 / group
+      #   - 必须先精确切出 navItems 数组，只认 kind:"nav" + id 前缀 nav-，
+      #     否则搜索结果项与注释自引用会被误算成入口
+      #   - Cmd+K 多出的 ai-usage / assistant 是 #300 有意产品差异，单向口径不判红
+      #   - main 现状 31/31 零存量，故硬失败而非棘轮；豁免只走
+      #     ALLOWED_MISSING_IN_CMDK 显式登记（可审计），无隐藏基线文件
+      #   - 过渡护栏，不替代根因修复（让 CommandPalette 真正复用 registry），
+      #     更不替代 code review；新开 job 不在必需检查清单里拦不住合并，故挂这里
+      - name: Check registry module inclusion in Cmd+K (no missing palette entry)
+        run: python scripts/check_registry_cmdk.py
+      - name: Mutation-check the registry/cmdk inclusion guard itself
+        run: python scripts/check_registry_cmdk.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
