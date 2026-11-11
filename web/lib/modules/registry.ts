@@ -77,6 +77,13 @@ export const WORKSPACE_MODULES: readonly WorkspaceModule[] = [
 
   // ── 协作 ──
   {
+    id: "meetings",
+    path: "/meetings",
+    labelKey: "menu.meetings",
+    icon: "meetings",
+    group: "collaboration",
+  },
+  {
     id: "remote-control",
     path: "/remote-control",
     labelKey: "menu.remoteControl",

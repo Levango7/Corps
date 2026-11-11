@@ -17,6 +17,7 @@ import {
   MessageSquare,
   Video,
   NotebookPen,
+  Monitor,
   CheckCircle2,
   Megaphone,
   Calendar as CalendarIcon,
@@ -205,6 +206,13 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         kind: "nav",
         href: `/w/${wid}/meetings`,
         icon: Video,
+      },
+      {
+        id: "nav-remote-control",
+        titleKey: "nav.menu.remoteControl",
+        kind: "nav",
+        href: `/w/${wid}/remote-control`,
+        icon: Monitor,
       },
       {
         id: "nav-meeting-minutes",
