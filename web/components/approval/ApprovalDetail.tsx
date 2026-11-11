@@ -242,17 +242,15 @@ export function ApprovalDetail({ approvalId, workspaceId }: ApprovalDetailProps)
         setDetail(d);
         setCurrentUserId(me.id || null);
 
-        // 拉取抄送列表
-        // TODO(P2, 见 docs/audit/ENVELOPE-CONSUMPTION-2026-10-06.md §4)：该端点目前只有 POST、
-        // 没有 GET，所以下面这个无 method 的请求恒 405，被 catch 吞掉 ⇒ 抄送列表永远为空。
-        // 修法是给 cc/route.ts 补 GET（含 requirePermission 与 RLS 过滤）或改从详情响应里取。
+        // 拉取抄送列表（GET /approvals/instances/{aid}/cc，2026-10-07 补齐；
+        // 历史缺陷与修复见 docs/audit/ENVELOPE-CONSUMPTION-2026-10-06.md §4）
         try {
           const cc = await api<CcUser[]>(
             `/api/v1/workspaces/${workspaceId}/approvals/instances/${approvalId}/cc`,
           );
           if (!cancelled) setCcUsers(cc);
         } catch {
-          // 抄送 API 可能不存在，从详情中提取（如果有的话）
+          // 抄送读取失败 ⇒ 保持空列表，不阻塞详情渲染
           if (!cancelled) setCcUsers([]);
         }
       } catch (e) {

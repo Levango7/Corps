@@ -134,6 +134,15 @@ psql "$DATABASE_OWNER_URL" -v ON_ERROR_STOP=1 -f db/rls-verify.sql
 psql "$DATABASE_URL" -v workspace_id=<某个真实工作区 uuid> -f db/rls-verify.sql
 ```
 
+没有 psql 的环境（如本机 Windows + Python）用同判据的 Python 版，覆盖 §1-3 引擎层 + §4 GUC 通路三线：
+
+```bash
+python3 scripts/check_rls_posture.py "$DATABASE_OWNER_URL"                    # §1-3 引擎层（任何角色）
+python3 scripts/check_rls_posture.py "$DATABASE_URL" --guc-workspace <uuid>   # §4（DATABASE_URL 已是 corps_app 时）
+```
+
+owner 连接串 + `--guc-workspace` 会被判 HARD-3d 拒绝（rolbypassrls 角色测 GUC 通路是假绿），不是脚本缺陷。
+
 `db/rls-verify.sql` 的第 4 节刻意用 `BEGIN … ROLLBACK` 包住：它只读、不写任何数据。
 
 **2026-10-28 实测记录**（postgres:18.6 + 全量迁移的一次性库，非生产）：激活后
