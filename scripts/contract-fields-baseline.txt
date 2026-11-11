@@ -11,8 +11,5 @@
 # 登记 ≠ 认可：这 5 条都是真实缺陷，清偿要改业务代码，不在本门禁的批次里做。
 # 只允许收缩：修好后跑 --emit 删掉对应行。
 
-web/app/api/v1/workspaces/[wid]/im/online/route.ts	GET	userIds
 web/app/api/v1/workspaces/[wid]/permissions/route.ts	GET	overrides
-web/app/api/v1/workspaces/[wid]/permissions/route.ts	PATCH	overrides,roles
-web/app/api/v1/workspaces/[wid]/tasks/[id]/share/verify/route.ts	POST	markdown
 web/app/api/v1/workspaces/[wid]/tasks/route.ts	GET	hasMore,page,total
