@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-red2 | feat/approval-builtin-ui | web/components/approval/ApprovalTemplateManage.tsx,web/components/ai/MultiAgentPanel.tsx,web/messages/zh.json,web/messages/en.json,web/tests/unit/approval-template-manage.test.tsx | zcode | 2026-11-11T07:41Z | 2026-11-11T11:41Z | 审批内置模板导入入口与多智能体面板选中态竞态修复，纯中文无管道符
