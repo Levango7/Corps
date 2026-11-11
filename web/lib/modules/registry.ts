@@ -84,13 +84,6 @@ export const WORKSPACE_MODULES: readonly WorkspaceModule[] = [
     group: "collaboration",
   },
   {
-    id: "remote-control",
-    path: "/remote-control",
-    labelKey: "menu.remoteControl",
-    icon: "remoteControl",
-    group: "collaboration",
-  },
-  {
     id: "meeting-minutes",
     path: "/meeting-minutes",
     labelKey: "menu.meetingMinutes",
@@ -123,6 +116,13 @@ export const WORKSPACE_MODULES: readonly WorkspaceModule[] = [
     path: "/contacts",
     labelKey: "menu.contacts",
     icon: "contacts",
+    group: "collaboration",
+  },
+  {
+    id: "remote-control",
+    path: "/remote-control",
+    labelKey: "menu.remoteControl",
+    icon: "remoteControl",
     group: "collaboration",
   },
 
