@@ -6,3 +6,4 @@
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-red2 | feat/approval-builtin-ui | web/components/approval/ApprovalTemplateManage.tsx,web/components/ai/MultiAgentPanel.tsx,web/messages/zh.json,web/messages/en.json,web/tests/unit/approval-template-manage.test.tsx | zcode | 2026-11-11T07:41Z | 2026-11-11T11:41Z | 审批内置模板导入入口与多智能体面板选中态竞态修复，纯中文无管道符
 F:/Nexus/corps-wt-315 | chore/closeout-remote-imap | web/lib/modules/registry.ts,web/components/CommandPalette.tsx | qoder-cn | 2026-11-11T22:39Z | 2026-11-12T02:39Z | 修 #315 的 registry⊆Cmd+K 门禁红：注册表恢复 meetings 项 + remote-control 进 Cmd+K
+F:/Nexus/corps-wt-contract-b3 | fix/openapi-contract-fields-b3 | api/openapi.yaml,scripts/contract-fields-baseline.txt | wb-contract-fix-b3 | 2026-11-11T23:35Z | 2026-11-12T07:35Z | 字段级契约清偿批3：Envelope_TaskList.data 改互斥 oneOf 分支 + 基线归零
