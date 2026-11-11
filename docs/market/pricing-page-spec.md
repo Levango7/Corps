@@ -86,7 +86,7 @@
 |----|-------------|------|----------------|
 | 决策不散落 | `GitBranch` | 结论自动落位 | 讨论结论一键固化为决策记录，版本留痕、双向回链任务，不再手动搬运 |
 | 看板即上手 | `KanbanSquare` | 15 分钟跑起来 | 看板/列表双视图 + 拖拽改状态，乐观更新零等待；Cmd+K 全局检索任务与决策 |
-| 隔离够硬核 | `ShieldCheck` | 数据引擎级隔离 | PostgreSQL 行级安全（RLS）强制多租户隔离，跨工作区请求一律拦截 |
+| 隔离够硬核 | `ShieldCheck` | 数据引擎级隔离 | PostgreSQL 行级安全（RLS）强制多租户隔离，策略覆盖全部 81 张业务表（生产实例激活收尾中） |
 
 - 布局：lg 及以上三等分栅格（gap `var(--space-8)`）；卡片 `background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-8)`，hover 抬升 `box-shadow: var(--elev-hover)`（过渡 `var(--motion-base) var(--ease-standard)`）。
 - 图标统一封装单一组件（传入名称），禁 emoji、禁止混用其他图标库（SPEC §8 锁定 Lucide）。
@@ -208,7 +208,7 @@ export const PRICING_PLANS = {
 | **团队与安全** |||
 | 成员规模 | ≤10 人 | 不限（产品定位服务 5–30 人） |
 | Owner/Admin/Member 三级 RBAC | ✅ | ✅ |
-| 多租户引擎级隔离（PostgreSQL RLS） | ✅ | ✅ |
+| 多租户引擎级隔离（PostgreSQL RLS；容器化部署已通电，SaaS 实例激活收尾中 #51） | ✅ | ✅ |
 | **数据与计费** |||
 | 附件单文件大小 | 10MB | 50MB |
 | 成员变更自动同步席位数量 | — | ✅ |
