@@ -31,8 +31,25 @@ async function getHealth(req: NextRequest) {
         uptimeSec: Math.round(process.uptime()),
       },
     });
-  } catch {
-    logger.error("database probe failed", { endpoint: "health" });
+  } catch (err) {
+    // 脱敏硬要求：Prisma 探测失败的 err.message 常含主机名+端口甚至连接串
+    // （DATABASE_URL），绝不能把原始消息 / stack / String(err) 写进日志。
+    // 日志里的 message 只取代码内常量，errorName / prismaCode 也均为安全标识。
+    const isTimeout = err instanceof Error && err.message.includes("Database probe timeout");
+    const rawCode =
+      typeof err === "object" && err !== null && "code" in err
+        ? (err as { code?: unknown }).code
+        : undefined;
+    const prismaCode =
+      typeof rawCode === "string" && /^P\d{4}$/.test(rawCode) ? rawCode : undefined;
+
+    logger.error("database probe failed", {
+      endpoint: "health",
+      errorName: err instanceof Error ? err.name : "NonError",
+      message: isTimeout ? "Database probe timeout" : "database probe error",
+      isTimeout,
+      ...(prismaCode ? { prismaCode } : {}),
+    });
     return NextResponse.json(
       {
         code: 503,
