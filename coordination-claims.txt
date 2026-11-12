@@ -4,8 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-315 | chore/closeout-remote-imap | web/lib/modules/registry.ts,web/components/CommandPalette.tsx | qoder-cn | 2026-11-11T22:39Z | 2026-11-12T02:39Z | 修 #315 的 registry⊆Cmd+K 门禁红：注册表恢复 meetings 项 + remote-control 进 Cmd+K
-F:/Nexus/corps-wt-contract-b3 | fix/openapi-contract-fields-b3 | api/openapi.yaml,scripts/contract-fields-baseline.txt | wb-contract-fix-b3 | 2026-11-11T23:35Z | 2026-11-12T07:35Z | 字段级契约清偿批3：Envelope_TaskList.data 改互斥 oneOf 分支 + 基线归零
-F:/Nexus/corps-wt-315 | chore/closeout-remote-imap | web/lib/modules/registry.ts,web/tests/unit/module-registry.test.ts | corps-maturity | 2026-11-12 07:37 | 2026-11-12 11:37 | 修 #315 红：恢复 meetings 后注册表 31→32 的计数与顺序契约更新
-F:/Nexus/corps-wt-perm | fix/permissions-matrix-contract | scripts/check_permission_gates.py,scripts/permission-gate-baseline.txt,scripts/permission-gate-adhoc-baseline.txt,scripts/permission-gate-unscoped-baseline.txt,scripts/permission-gate-unscoped-adhoc-baseline.txt,scripts/permission-gate-modules-unwired-baseline.txt | corps-maturity | 2026-11-12 09:12 | 2026-11-12 13:12 | 修 OPEN-DECISIONS L30：MODULES 解析 \w 含中文致注释中文被误抓成假模块，收紧 [A-Za-z_]\w*，五档计数前后对比单独 PR
-F:/Nexus/corps-wt-deps | fix/a11y-d2p-d4 | web/e2e/contrast-matrix.spec.ts,web/e2e/visual-kit/contrast-probe.mjs,web/e2e/visual-kit/usage-scan.mjs,docs/audit/a11y-usage-enum-2026-11-12.md | corps-maturity | 2026-11-12T04:53Z | 2026-11-12T10:53Z | #63 D2' danger 豁免登记入对比度矩阵 + D4 语义文字用法面枚举落盘
+F:/Nexus/corps-wt-e2e-domains | feat/domain-e2e-batch | web/e2e/decisions.spec.ts,web/e2e/wiki.spec.ts,web/e2e/recycle-bin.spec.ts,web/e2e/time-tracking.spec.ts | zcode | 2026-11-12 19:02 | 2026-11-13 03:02 | 长尾域交互 E2E 四域：decisions 全流程（讨论到固化到回链）/ wiki CRUD / 回收站恢复与彻底删 / 工时记录
