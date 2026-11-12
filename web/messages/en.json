@@ -3738,6 +3738,8 @@
     "close": "Close",
     "loading": "Loading…",
     "loadFailed": "Failed to load",
+    "titleRequired": "Please enter a form name",
+    "addFieldRequired": "Add at least one field",
     "saveFailed": "Failed to save",
     "deleteFailed": "Failed to delete",
     "submitFailed": "Failed to submit"

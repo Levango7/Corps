@@ -3738,6 +3738,8 @@
     "close": "关闭",
     "loading": "加载中…",
     "loadFailed": "加载失败",
+    "titleRequired": "请输入表单名称",
+    "addFieldRequired": "请至少添加一个字段",
     "saveFailed": "保存失败",
     "deleteFailed": "删除失败",
     "submitFailed": "提交失败"
