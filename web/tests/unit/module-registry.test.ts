@@ -42,10 +42,10 @@ function navMessages(locale: "zh" | "en"): Record<string, string> {
 }
 
 describe("模块注册表：结构与秩序", () => {
-  it("31 个静态模块，id 与 path 均唯一", () => {
-    expect(WORKSPACE_MODULES).toHaveLength(31);
-    expect(new Set(WORKSPACE_MODULES.map((m) => m.id)).size).toBe(31);
-    expect(new Set(WORKSPACE_MODULES.map((m) => m.path)).size).toBe(31);
+  it("32 个静态模块，id 与 path 均唯一", () => {
+    expect(WORKSPACE_MODULES).toHaveLength(32);
+    expect(new Set(WORKSPACE_MODULES.map((m) => m.id)).size).toBe(32);
+    expect(new Set(WORKSPACE_MODULES.map((m) => m.path)).size).toBe(32);
   });
 
   it("组内顺序与改造前侧栏逐项一致（本阶段像素不变的契约）", () => {
@@ -71,6 +71,7 @@ describe("模块注册表：结构与秩序", () => {
       "announcements",
       "calendar",
       "contacts",
+      "remote-control",
     ]);
     expect(modulesInGroup("knowledge").map((m) => m.id)).toEqual([
       "documents",
@@ -114,29 +115,29 @@ describe("模块注册表：结构与秩序", () => {
     }
   });
 
-  it("viewer 隐藏成员/计费/分析三项，其余 28 项可见", () => {
+  it("viewer 隐藏成员/计费/分析三项，其余 29 项可见", () => {
     const hidden = WORKSPACE_MODULES.filter((m) => m.viewerHidden).map((m) => m.id);
     expect(hidden.sort()).toEqual(["analytics", "billing", "members"]);
-    expect(modulesForRole("viewer")).toHaveLength(28);
-    expect(modulesForRole("member")).toHaveLength(31);
+    expect(modulesForRole("viewer")).toHaveLength(29);
+    expect(modulesForRole("member")).toHaveLength(32);
   });
 
   /**
-   * P1-B 默认可见性：首屏 = 核心 6 + 管理 4，其余 21 项进「更多」。
-   * 这里钉三件事：数量、**不丢不重**（两边并集恰好 31）、以及「可选 ≠ 删除」——
-   * 21 项仍全部在更多里、仍各自有页（上面那条 page.tsx 断言对全表生效）。
+   * P1-B 默认可见性：首屏 = 核心 6 + 管理 4，其余 22 项进「更多」。
+   * 这里钉三件事：数量、**不丢不重**（两边并集恰好 32）、以及「可选 ≠ 删除」——
+   * 22 项仍全部在更多里、仍各自有页（上面那条 page.tsx 断言对全表生效）。
    */
-  it("首屏 10 项 / 「更多」21 项，两边并集恰好 31、互不重叠", () => {
+  it("首屏 10 项 / 「更多」22 项，两边并集恰好 32、互不重叠", () => {
     const primary = primaryModulesForRole("member");
     const optional = optionalModulesForRole("member");
     expect(primary).toHaveLength(10);
-    expect(optional).toHaveLength(21);
+    expect(optional).toHaveLength(22);
     // 顺序不重要（注册表顺序 ≠ 清单书写顺序），集合必须等于声明的首屏清单
     expect(primary.map((m) => m.id).sort()).toEqual([...DEFAULT_VISIBLE_MODULE_IDS].sort());
 
     const ids = [...primary, ...optional].map((m) => m.id);
-    expect(ids).toHaveLength(31);
-    expect(new Set(ids).size, "有模块同时出现在首屏与「更多」，或两处都缺席").toBe(31);
+    expect(ids).toHaveLength(32);
+    expect(new Set(ids).size, "有模块同时出现在首屏与「更多」，或两处都缺席").toBe(32);
 
     // 管理组固定压在首屏末尾（documents 属于知识组但默认可见，不能按 group 推导）
     expect(primary.slice(-4).map((m) => m.id)).toEqual([
@@ -152,7 +153,7 @@ describe("模块注册表：结构与秩序", () => {
   it("viewer 的首屏少 3 项（成员/计费/分析），「更多」不变", () => {
     expect(primaryModulesForRole("viewer")).toHaveLength(7);
     expect(primaryModulesForRole("viewer").map((m) => m.id)).not.toContain("members");
-    expect(optionalModulesForRole("viewer")).toHaveLength(21);
+    expect(optionalModulesForRole("viewer")).toHaveLength(22);
   });
 
   /**
@@ -176,7 +177,7 @@ describe("模块注册表：结构与秩序", () => {
     }
     expect(sidebarSectionsForRole("member").primary).toHaveLength(6);
     expect(sidebarSectionsForRole("member").admin).toHaveLength(4);
-    expect(sidebarSectionsForRole("member").more).toHaveLength(21);
+    expect(sidebarSectionsForRole("member").more).toHaveLength(22);
   });
 
   it("moduleHref 拼出工作区路径（根模块不带多余斜杠）", () => {
@@ -224,14 +225,14 @@ describe("侧栏分区：工作区启用的可选模块（P1-B2）", () => {
     const pinned = groups.flatMap((g) => g.modules.map((m) => m.id));
 
     expect(pinned.sort()).toEqual([...enabled].sort());
-    expect(more).toHaveLength(19);
+    expect(more).toHaveLength(20);
     expect(more.map((m) => m.id)).not.toContain("wiki");
 
     const all = [...primary, ...groups.flatMap((g) => g.modules), ...more, ...admin].map(
       (m) => m.id,
     );
-    expect(all).toHaveLength(31);
-    expect(new Set(all).size, "启用开关让某个模块重复出现或消失").toBe(31);
+    expect(all).toHaveLength(32);
+    expect(new Set(all).size, "启用开关让某个模块重复出现或消失").toBe(32);
   });
 
   it("归位到原分组：wiki 属知识组、okr 属规划组", () => {
@@ -247,11 +248,11 @@ describe("侧栏分区：工作区启用的可选模块（P1-B2）", () => {
   it("不传启用列表时与 P1-B1 完全一致（默认全部在「更多」）", () => {
     const { groups, more } = sidebarSectionsForRole("member");
     expect(groups).toEqual([]);
-    expect(more).toHaveLength(21);
+    expect(more).toHaveLength(22);
   });
 
   it("viewer 启用某项时也生效（角色过滤在前）", () => {
     const { more } = sidebarSectionsForRole("viewer", ["wiki"]);
-    expect(more).toHaveLength(20);
+    expect(more).toHaveLength(21);
   });
 });

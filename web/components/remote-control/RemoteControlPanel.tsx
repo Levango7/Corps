@@ -34,7 +34,7 @@ import { SignalingClient, type SignalingMessage } from "@/lib/webrtc/signaling";
 // ─── 类型 ──────────────────────────────────────────────────────
 
 /** 远程控制会话 DTO */
-interface RemoteControlSessionDTO {
+export interface RemoteControlSessionDTO {
   id: string;
   workspaceId: string;
   initiatorId: string;
