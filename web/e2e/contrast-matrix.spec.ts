@@ -146,7 +146,7 @@ const GAP_REGISTER: Record<
     sites: 26,
     reason:
       "错误提示条 26 处静态确认（面板卡片底 surface；AiPushFeed:212 … MemberList:338，含 IncomingCallNotification:108 通话条与 KnowledgeBase:468 移动抽屉实例；全量表 docs/audit/A11Y-GAP-ENUMERATION-2026-11-12.md）",
-    fix: "文案色换 --danger-fg（globals.css #7f1d1d，SettingsDangerZone 既有 idiom，压 12% 叠 surface 实测 8.34）；备选 tint 不透明化（设计决策，另立项）",
+    fix: "文案色换 --danger-fg（SettingsDangerZone 既有 idiom，压 12% 叠 surface 实测 8.34）；备选 tint 不透明化（设计决策，另立项）",
   },
   "light|danger-soft-12|shell-content": {
     tint: "--danger-soft",
