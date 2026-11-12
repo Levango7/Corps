@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
 
 /**
  * MultiAgentPanel 契约（components/ai/MultiAgentPanel.tsx）：
@@ -81,6 +81,15 @@ async function loadedOne() {
   render(<MultiAgentPanel wid={WID} />);
   // 名字同时出现在列表项与详情 h3，断言取复数
   await waitFor(() => expect(screen.getAllByText("拆解员").length).toBeGreaterThan(0));
+  // 关键：等「选中 Agent → 表单」同步 effect 跑完再返回。
+  // 不 flush 的话，那个 effect 可能在测试点了「创建」之后才落地，
+  // 把 startCreate() 清空的表单重新填回 Agent 数据（capabilities 尤其明显），
+  // 于是「点 chip 切换」会变成「取消已选中项」，断言随渲染时机翻转 —— 本文件
+  // 历史上两次 flaky（保存按钮 disabled / capabilities 数组）都是同一个竞态。
+  await act(async () => {
+    await Promise.resolve();
+    await Promise.resolve();
+  });
 }
 
 beforeEach(() => {
