@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-e2e-domains | feat/domain-e2e-batch | web/e2e/decisions.spec.ts,web/e2e/wiki.spec.ts,web/e2e/recycle-bin.spec.ts,web/e2e/time-tracking.spec.ts | zcode | 2026-11-12 19:02 | 2026-11-13 03:02 | 长尾域交互 E2E 四域：decisions 全流程（讨论到固化到回链）/ wiki CRUD / 回收站恢复与彻底删 / 工时记录
-F:/Nexus/corps-wt-deps | fix/a11y-d2p-d4 | web/e2e/contrast-matrix.spec.ts | corps-maturity | 2026-11-12T11:25Z | 2026-11-12T15:25Z | #63 D2'+D4 收尾：P0-4 Lint 红修（spec fix 串去 hex）
