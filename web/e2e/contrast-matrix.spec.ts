@@ -31,7 +31,7 @@
  * 口径：实测值 ≥ 基线 × 0.9（允许 10% 抖动，退步超过一成就红）。
  * ⚠️ 调基线必须在提交信息里说明原因，不要为了变绿而下调。
  *
- * 令牌配对（corps 特定，基于 design-tokens.css 的 --p-* 与 --shell-* 层，共 18 组）：
+ * 令牌配对（corps 特定，基于 design-tokens.css 的 --p-* 与 --shell-* 层，共 19 组）：
  *   --fg   / --surface、--bg、--shell-content        —— 正文
  *   --fg-2 / --surface                               —— 次正文
  *   --muted / --meta × (--surface / --bg / --surface-2 / --surface-3
@@ -100,6 +100,106 @@ const AA_EXEMPT: Record<string, string> = {
   //   light|danger/surface（4.32→4.84，--p-danger #dc3d4a→#d33240）
   //   dark|accent/surface（3.85→7.31，分离 --accent-on-surface 令牌，mix 62% white 派生保租户换肤联动）
   // 新增配对 accent-on-surface/surface 与 accent-soft-fg/accent-soft 已纳入矩阵射程。
+};
+
+/**
+ * 在册缺口登记（GAP_REGISTER）—— 与 AA_EXEMPT 是两件不同的东西，读别搞混：
+ * AA_EXEMPT 是**豁免**（放宽门禁底线，让不达标配对合法活着）；这里登记的
+ * 是**矩阵射程外、但静态源码里逐点确认过的不达标组合**，不放行、不假装清了，
+ * 只把实测数 / 出现点 / 修复方向钉进代码，并靠下面第 5 个 test 双向棘轮：
+ *   ① 缺口必须**仍然**不达标（重算 ≥ 4.5 = 已修好 → 请删除条目毕业，回 AA 硬底线）
+ *   ② 登记值必须**仍然**新鲜（CI 真浏览器重算，偏差 > 0.10 = 令牌动过没重取数）
+ *   ③ 结构守卫：sites ≥ 1 且 reason/fix 非空（0 消费者 = 死键禁令，
+ *      没有实据出现点的组合不许占用登记册——数学上不达标但无人使用的不算缺口）
+ *
+ * 为什么需要它：第 4 个 test 钉死矩阵配对的前背景 alpha 必须为 1（半透明底
+ * 的屏幕色取决于叠在哪个面上，令牌配对算不出用户看到的颜色），而
+ * --danger-soft = color-mix(--danger 12%, transparent) 正是半透明 tint，
+ * 它压在不同壳面上得到不同屏幕色。这批组合矩阵 structurally 测不了，
+ * 于是逐点静态确认后登记在这里，数值用与矩阵同一内核的数学算
+ * （/f/tmp/a11y-register.mjs，2026-11-12；该数学已对齐 CI 真浏览器探针
+ * 38/38 基线），并由第 5 个 test 在 CI 真浏览器里重算复核。
+ *
+ * 键 = `<主题>|<tint>|<底面>`。tint 字段要么是令牌名（--danger-soft），
+ * 要么是源码里原样的 inline color-mix（board/announcements 的 10% tint）。
+ * 底面归因 = 静态祖先链分析（卡片 surface / 壳两层）；站点级运行时确认
+ * 留给修法批的 bgAttrs 采数通道（web/e2e/a11y-core.spec.ts 的 bgAttrs 字段）。
+ *
+ * 未登记但已核实的边角（防下一个人重走）：
+ *   · dark|12%|surface = 4.61、dark|10%|surface = 4.72、light|10%|surface = 4.19
+ *     前两者今天已达标；light 10% 叠 surface 数学上 4.19 不达标但**静态零站点**
+ *     （dead-key 禁令：无人使用的不占用登记册）。
+ *   · MeetingRoom.tsx:569 录制徽标是 12% tint 压在**视频像素**上（非令牌底面），
+ *     屏幕色随画面流动态变化，静态登记不出稳定值 → 修法批用 bgAttrs 运行时取证。
+ *   · SettingsDangerZone 的 --danger-fg（globals.css #7f1d1d / #fca5a5）压同族
+ *     tint 全主题达标（light 8.34 / dark 7.88 等），是本登记册各条的首选修法 idiom。
+ */
+const GAP_REGISTER: Record<
+  string,
+  { tint: string; underlay: string; value: number; sites: number; reason: string; fix: string }
+> = {
+  /* —— 12% danger-soft 族（bg-[var(--danger-soft)] + text-[var(--danger)]）—— */
+  "light|danger-soft-12|surface": {
+    tint: "--danger-soft",
+    underlay: "--surface",
+    value: 4.06,
+    sites: 26,
+    reason:
+      "错误提示条 26 处静态确认（面板卡片底 surface；AiPushFeed:212 … MemberList:338，含 IncomingCallNotification:108 通话条与 KnowledgeBase:468 移动抽屉实例；全量表 docs/audit/A11Y-GAP-ENUMERATION-2026-11-12.md）",
+    fix: "文案色换 --danger-fg（SettingsDangerZone 既有 idiom，压 12% 叠 surface 实测 8.34）；备选 tint 不透明化（设计决策，另立项）",
+  },
+  "light|danger-soft-12|shell-content": {
+    tint: "--danger-soft",
+    underlay: "--shell-content",
+    value: 3.37,
+    sites: 1,
+    reason: "MilestoneFilter:159 加载失败条直接挂板面内容层（无卡片底），light 3.37",
+    fix: "同 surface 族：换 --danger-fg；或给该条独立不透明底",
+  },
+  "light|danger-soft-12|shell-sidebar": {
+    tint: "--danger-soft",
+    underlay: "--shell-sidebar",
+    value: 3.75,
+    sites: 1,
+    reason:
+      "KnowledgeBase:468 目录树错误条在桌面端 aside（bg-[var(--shell-sidebar)]）；同一行移动端实例落 surface，已在 surface 条计",
+    fix: "同 surface 族：换 --danger-fg；或给目录树错误条独立不透明底",
+  },
+  /* —— 10% inline tint 族（bg-[color-mix(in_srgb,var(--danger)_10%,transparent)]）—— */
+  "light|danger-tint-10|shell-content": {
+    tint: "color-mix(in srgb, var(--danger) 10%, transparent)",
+    underlay: "--shell-content",
+    value: 3.48,
+    sites: 4,
+    reason:
+      "board/page.tsx:417,427 与 announcements/page.tsx:486,497 的操作/加载错误条，inline 10% tint 叠壳内容层",
+    fix: "同 12% 族：换 --danger-fg；或把 inline tint 提到 12% 以上并复用 danger-soft",
+  },
+  /* —— dark 同族（同一批 JSX 站点，dark 主题下的读数）—— */
+  "dark|danger-soft-12|shell-content": {
+    tint: "--danger-soft",
+    underlay: "--shell-content",
+    value: 3.9,
+    sites: 1,
+    reason: "MilestoneFilter:159 的 dark 面（与 light 同站点）",
+    fix: "同 light 条",
+  },
+  "dark|danger-soft-12|shell-sidebar": {
+    tint: "--danger-soft",
+    underlay: "--shell-sidebar",
+    value: 4.19,
+    sites: 1,
+    reason: "KnowledgeBase:468 目录树错误条桌面 aside 的 dark 面（与 light 同站点）",
+    fix: "同 light 条",
+  },
+  "dark|danger-tint-10|shell-content": {
+    tint: "color-mix(in srgb, var(--danger) 10%, transparent)",
+    underlay: "--shell-content",
+    value: 4.0,
+    sites: 4,
+    reason: "board/announcements 四处的 dark 面（与 light 同站点）",
+    fix: "同 light 条",
+  },
 };
 
 /* 两套主题：light 是默认态（无 data-theme 属性），dark 用 data-theme="dark" */
@@ -365,5 +465,78 @@ test.describe("渲染层对比度矩阵（视觉回归模板）", () => {
         ).toBe(1);
       }
     }
+  });
+
+  test("在册缺口仍不达标且登记数未漂移（防缺口腐烂）", async ({ page }) => {
+    /* 与 AA_EXEMPT 的反腐断言互补：豁免项要求"仍然不达标"，登记项同样要求
+       "仍然不达标"（已修好就毕业删除），外加登记值新鲜度与结构守卫。 */
+    const problems: string[] = [];
+    const recomputed: string[] = [];
+    for (const key of Object.keys(GAP_REGISTER)) {
+      const e = GAP_REGISTER[key];
+      if (e.sites < 1) problems.push(key + ": sites < 1 —— 无实据出现点的登记是死键");
+      if (!e.reason.trim() || !e.fix.trim()) problems.push(key + ": reason / fix 必填");
+      const [theme, tintName, underName] = key.split("|");
+      if (!THEMES.includes(theme)) problems.push(key + ": 主题段不在 " + THEMES.join("/"));
+      if (CONTRAST_PAIRS[tintName + "/" + underName]) {
+        problems.push(key + ": 与矩阵配对键冲突（应进 CONTRAST_PAIRS 走 AA 硬底线，而非登记册）");
+      }
+      await applyTheme(page, theme);
+      const v = await page.evaluate(
+        ({ fgTok, tint, underTok }: { fgTok: string; tint: string; underTok: string }) => {
+          const vk = window.__vk;
+          if (!vk) return null;
+          const cssColor = (cv: string) => {
+            const d = document.createElement("div");
+            document.body.appendChild(d);
+            d.style.color = "";
+            d.style.setProperty("color", cv);
+            const out = getComputedStyle(d).color;
+            d.remove();
+            return out;
+          };
+          const fg = vk.resolve(fgTok);
+          const tintValue = tint.startsWith("--") ? vk.resolve(tint).value : cssColor(tint);
+          const tintAlpha = vk.alphaOf(tintValue);
+          const under = vk.resolve(underTok);
+          const tc = vk.parse(tintValue);
+          const uc = vk.parse(under.value);
+          if (!tc || !uc) return null;
+          const screen = tc.map((x: number, i: number) =>
+            Math.round(x * tintAlpha + uc[i] * (1 - tintAlpha)),
+          );
+          return vk.contrast(fg.value, "rgb(" + screen.join(", ") + ")");
+        },
+        { fgTok: "--danger", tint: e.tint, underTok: e.underlay },
+      );
+      if (v === null) {
+        problems.push(key + ": CI 重算失败（tint/底面令牌解析不出色值）");
+        continue;
+      }
+      recomputed.push(
+        key + " = " + v.toFixed(2) + "（登记 " + e.value + "，sites " + e.sites + "）",
+      );
+      if (v >= AA_MIN) {
+        problems.push(
+          key +
+            " 现为 " +
+            v.toFixed(2) +
+            "，已达标 —— 请从 GAP_REGISTER 删除该条（毕业），让它回到 AA 硬底线",
+        );
+      }
+      if (Math.abs(v - e.value) > 0.1) {
+        problems.push(
+          key +
+            " 登记值过期：登记 " +
+            e.value +
+            " / CI 实测 " +
+            v.toFixed(2) +
+            " —— 重新取数后更新",
+        );
+      }
+    }
+    expect(problems, "GAP_REGISTER 反腐断言失败：\n  " + problems.join("\n  ")).toEqual([]);
+    /* 重算值落盘，供登记值修订时对照（与 contrast-actual 同口径） */
+    dumpReport(recomputed, "contrast-gap-actual");
   });
 });
