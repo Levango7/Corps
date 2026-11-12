@@ -25,7 +25,10 @@ test.describe("知识库：建页 → 编辑保存 → 预览 → 子页 → 删
     test.setTimeout(120_000);
     const wid = await registerAndLogin(page, uniqueEmail("e2e-wiki"), "E2E知识库工作区");
     const parentTitle = `E2Ewiki父页-${Date.now()}`;
-    const childTitle = `E2Ewiki子页-${Date.now()}`;
+    // 子页标题须与父页拉开 slug：slugify 会丢弃全部非 ASCII 字符（route 实测），
+    // 同一 tick 求值的 Date.now() 同值会让父子 slug 完全相同，撞工作区
+    // slug 唯一约束返回 409「页面标识冲突」，建页流程中断在子页
+    const childTitle = `E2Ewiki子页-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
     const bodyText = `E2E-WIKI-BODY-${Date.now()}`;
     const content = `# E2E 标题\n\n${bodyText}`;
 
@@ -37,8 +40,12 @@ test.describe("知识库：建页 → 编辑保存 → 预览 → 子页 → 删
     page.once("dialog", (dialog) => dialog.accept(parentTitle));
     await page.getByRole("button", { name: "新建页面", exact: true }).click();
     // 创建后选中进编辑页（URL /wiki/<id>，标题 input 值为 prompt 标题）
+    // 标题 input 用 placeholder 锚定：侧栏搜索框同为 type=text，
+    // 直选 input[type="text"] 会 strict 命中 2 个（WikiEditor/WikiSidebar 实测 markup）
     await page.waitForURL(/\/wiki\//, { timeout: 10_000 });
-    await expect(page.locator('input[type="text"]')).toHaveValue(parentTitle, { timeout: 10_000 });
+    await expect(page.getByPlaceholder("输入页面标题")).toHaveValue(parentTitle, {
+      timeout: 10_000,
+    });
 
     // ── 编辑内容 + 手动保存（dirty 守卫：保存后按钮禁用）──
     await page.locator("textarea").fill(content);
@@ -62,7 +69,9 @@ test.describe("知识库：建页 → 编辑保存 → 预览 → 子页 → 删
     await page.getByText(parentTitle, { exact: true }).hover();
     await page.locator('button[aria-label="new subpage"]').click();
     await page.waitForURL(/\/wiki\//, { timeout: 10_000 });
-    await expect(page.locator('input[type="text"]')).toHaveValue(childTitle, { timeout: 10_000 });
+    await expect(page.getByPlaceholder("输入页面标题")).toHaveValue(childTitle, {
+      timeout: 10_000,
+    });
 
     // ── 树中父子都在 ──
     await page.goto(`/w/${wid}/wiki`);
@@ -71,7 +80,9 @@ test.describe("知识库：建页 → 编辑保存 → 预览 → 子页 → 删
 
     // ── 删除子页（window.confirm：accept 即确认）──
     await page.getByText(childTitle, { exact: true }).click();
-    await expect(page.locator('input[type="text"]')).toHaveValue(childTitle, { timeout: 10_000 });
+    await expect(page.getByPlaceholder("输入页面标题")).toHaveValue(childTitle, {
+      timeout: 10_000,
+    });
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "删除", exact: true }).click();
     await page.waitForURL(/\/w\/[^/]+\/wiki$/, { timeout: 10_000 });
@@ -79,7 +90,9 @@ test.describe("知识库：建页 → 编辑保存 → 预览 → 子页 → 删
 
     // ── 删除父页（deleteConfirm 语义：子页面将变为根页面；本例树已空）──
     await page.getByText(parentTitle, { exact: true }).click();
-    await expect(page.locator('input[type="text"]')).toHaveValue(parentTitle, { timeout: 10_000 });
+    await expect(page.getByPlaceholder("输入页面标题")).toHaveValue(parentTitle, {
+      timeout: 10_000,
+    });
     page.once("dialog", (dialog) => dialog.accept());
     await page.getByRole("button", { name: "删除", exact: true }).click();
     await page.waitForURL(/\/w\/[^/]+\/wiki$/, { timeout: 10_000 });

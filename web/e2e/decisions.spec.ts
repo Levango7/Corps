@@ -111,7 +111,13 @@ test.describe("决策记录：讨论 → 固化 → 列表 → 复盘 → 回链
     });
 
     // 关闭对话框（全程不发送 POST extract：CI 无 AI 后端，端点必挂）
-    await page.getByRole("button", { name: "关闭", exact: true }).click();
+    // dialog 内 X 图标按钮（仅 aria-label=关闭）与页脚文本按钮都叫「关闭」，
+    // hasText 过滤只留带文本的页脚按钮（decisions/page.tsx 实测 markup）
+    await page
+      .getByRole("dialog")
+      .getByRole("button", { name: "关闭", exact: true })
+      .filter({ hasText: "关闭" })
+      .click();
     await expect(page.getByText("AI 决策提炼")).not.toBeVisible({ timeout: 10_000 });
   });
 

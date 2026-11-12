@@ -35,8 +35,13 @@ test.describe("工时记录：开始 → 停止 → 列表编辑删除 → 报�
       timeout: 10_000,
     });
     await page.getByRole("combobox").selectOption({ label: taskTitle });
-    await page.locator('input[type="text"]').fill(desc);
-    await page.getByRole("button", { name: "计费", exact: true }).click();
+    // 描述框无 type 属性（TimeTracker.tsx 实测 markup），全页唯一锚点是 maxLength=500；
+    // input[type="text"] 永远匹配不到它（fill 曾因此超时 120s）
+    await page.locator('input[maxlength="500"]').fill(desc);
+    // 计费切换按钮文案随状态翻转（TimeTracker.tsx 实测 markup：
+    // billable ? 「计费」 : 「不计费」），初始 billable=false 显示「不计费」，
+    // 按当前文案点；点后变「计费」+ aria-pressed=true 由下方断言接住
+    await page.getByRole("button", { name: "不计费", exact: true }).click();
     await expect(page.getByRole("button", { name: "计费", exact: true })).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -49,11 +54,11 @@ test.describe("工时记录：开始 → 停止 → 列表编辑删除 → 报�
     await expect(page.getByRole("button", { name: "停止", exact: true })).toBeVisible({
       timeout: 10_000,
     });
-    await expect(page.locator('input[type="text"]')).toBeHidden({ timeout: 10_000 });
+    await expect(page.locator('input[maxlength="500"]')).toBeHidden({ timeout: 10_000 });
 
     // ── 停止计时：表单回来 + 列表出现该条（行容器内断言，避开表单区同名文本）──
     await page.getByRole("button", { name: "停止", exact: true }).click();
-    await expect(page.locator('input[type="text"]')).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('input[maxlength="500"]')).toBeVisible({ timeout: 10_000 });
     const row = page.locator("ul li").first();
     await expect(row.getByText(desc, { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(row.getByText("计费", { exact: true })).toBeVisible({ timeout: 10_000 });
@@ -61,7 +66,9 @@ test.describe("工时记录：开始 → 停止 → 列表编辑删除 → 报�
 
     // ── 行内编辑：改描述 → 保存 → 旧描述消失 ──
     await row.getByRole("button", { name: "编辑", exact: true }).click();
-    await row.locator('input[type="text"]').fill(descEdited);
+    // 行内编辑描述框同样无 type（TimeEntryList.tsx 实测 markup）；row 内另两个
+    // input 都是 type=number，input:not([type]) 在行容器内唯一定位描述框
+    await row.locator("input:not([type])").fill(descEdited);
     await row.getByRole("button", { name: "保存", exact: true }).click();
     await expect(row.getByText(descEdited, { exact: true })).toBeVisible({ timeout: 10_000 });
     await expect(row.getByText(desc, { exact: true })).not.toBeVisible();
@@ -82,7 +89,9 @@ test.describe("工时记录：开始 → 停止 → 列表编辑删除 → 报�
     await createTask(page, taskTitle);
     await page.goto(`/w/${wid}/time-tracking`);
     await page.getByRole("combobox").selectOption({ label: taskTitle });
-    await page.locator('input[type="text"]').fill(desc);
+    // 描述框无 type 属性（TimeTracker.tsx 实测 markup），全页唯一锚点是 maxLength=500；
+    // input[type="text"] 永远匹配不到它（fill 曾因此超时 120s）
+    await page.locator('input[maxlength="500"]').fill(desc);
     await page.getByRole("button", { name: "开始", exact: true }).click();
     await expect(page.getByRole("button", { name: "停止", exact: true })).toBeVisible({
       timeout: 10_000,
