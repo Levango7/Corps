@@ -97,6 +97,10 @@ export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManagePr
     template: ApprovalTemplate | null; // null = 新建
   } | null>(null);
 
+  // 内置模板导入：进行中与结果提示（幂等导入，重复执行由服务端按名称去重跳过）
+  const [importing, setImporting] = useState(false);
+  const [importResult, setImportResult] = useState("");
+
   const loadTemplates = useCallback(async () => {
     setLoading(true);
     setError("");
@@ -151,22 +155,60 @@ export function ApprovalTemplateManage({ workspaceId }: ApprovalTemplateManagePr
     }
   }
 
+  /** 一键导入内置审批模板（请假/报销/采购/合同/入职）：服务端按名称去重，已存在的跳过 */
+  async function handleImportBuiltin() {
+    if (importing) return;
+    setImporting(true);
+    setError("");
+    setImportResult("");
+    try {
+      const data = await api<{
+        created: number;
+        skipped: number;
+        details: { name: string; skipped: boolean }[];
+      }>(`/api/v1/workspaces/${workspaceId}/approvals/templates`, {
+        method: "POST",
+        body: JSON.stringify({ action: "init-builtin" }),
+      });
+      setImportResult(t("importBuiltinResult", { imported: data.created, skipped: data.skipped }));
+      await loadTemplates();
+    } catch (e) {
+      setError(e instanceof ApiError || e instanceof Error ? e.message : t("operationFailed"));
+    } finally {
+      setImporting(false);
+    }
+  }
+
   return (
     <div className="max-w-[var(--container-max)] mx-auto px-[var(--space-4)] py-[var(--space-6)]">
       <div className="flex items-center justify-between mb-[var(--space-5)]">
         <h1 className="text-[length:var(--text-2xl)] font-[weight:var(--weight-semibold)] text-[var(--fg)] tracking-[var(--tracking-tight)]">
           {t("templateManage")}
         </h1>
-        <button
-          onClick={() => setEditDialog({ template: null })}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
-        >
-          <Plus size={14} />
-          {t("addTemplate")}
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleImportBuiltin}
+            disabled={importing}
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface)] text-[var(--fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {importing && <Loader2 size={14} className="animate-spin" />}
+            {t("importBuiltin")}
+          </button>
+          <button
+            onClick={() => setEditDialog({ template: null })}
+            className="inline-flex items-center gap-1.5 h-9 px-3 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] transition-colors duration-[var(--motion-fast)]"
+          >
+            <Plus size={14} />
+            {t("addTemplate")}
+          </button>
+        </div>
       </div>
 
       {error && <p className="mb-3 text-[length:var(--text-sm)] text-[var(--danger)]">{error}</p>}
+
+      {importResult && (
+        <p className="mb-3 text-[length:var(--text-sm)] text-[var(--success)]">{importResult}</p>
+      )}
 
       {loading ? (
         <div className="py-[var(--space-12)] text-center text-[var(--muted)]">

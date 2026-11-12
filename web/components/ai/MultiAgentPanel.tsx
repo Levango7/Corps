@@ -130,6 +130,9 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
 
   // AbortController：组件卸载时中止进行中的请求
   const abortRef = useRef<AbortController | null>(null);
+  // isCreating 的同步镜像：异步回调（列表加载）里读最新创建态，
+  // 避免把选中态抢回并覆盖创建中的表单
+  const isCreatingRef = useRef(false);
 
   /** 加载 Agent 列表 */
   async function loadAgents() {
@@ -144,9 +147,11 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
       });
       if (ac.signal.aborted) return;
       setAgents(data);
-      // 默认选中第一个 Agent
-      if (data.length > 0 && !selectedId) {
-        setSelectedId(data[0].id);
+      // 默认选中第一个 Agent（functional update 读最新选中态 + isCreatingRef
+      // 读最新创建态：列表响应晚于「点创建」时不得把选中态抢回，
+      // 否则 [selectedId, agents] effect 会用 agent 值覆盖创建中的表单）
+      if (data.length > 0) {
+        setSelectedId((prev) => prev ?? (isCreatingRef.current ? null : data[0].id));
       }
     } catch (e) {
       if (ac.signal.aborted || (e instanceof Error && e.name === "AbortError")) return;
@@ -166,7 +171,8 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [wid]);
 
-  /** 选中 Agent 时同步表单数据 */
+  /** 选中 Agent 时同步表单数据；无选中时（初始态）自动选中第一个；
+   *  创建中不自动抢选（否则会覆盖创建中的表单） */
   useEffect(() => {
     if (selectedId) {
       const agent = agents.find((a) => a.id === selectedId);
@@ -187,6 +193,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
 
   /** 开始创建新 Agent */
   function startCreate() {
+    isCreatingRef.current = true;
     setIsCreating(true);
     setEditing(true);
     setSelectedId(null);
@@ -203,6 +210,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
   /** 开始编辑当前 Agent */
   function startEdit() {
     if (!selectedId) return;
+    isCreatingRef.current = false;
     setIsCreating(false);
     setEditing(true);
   }
@@ -210,6 +218,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
   /** 取消编辑 */
   function cancelEdit() {
     setEditing(false);
+    isCreatingRef.current = false;
     setIsCreating(false);
     // 恢复表单数据
     if (selectedId) {
@@ -272,6 +281,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
         toast("success", t("edit"));
       }
       setEditing(false);
+      isCreatingRef.current = false;
       setIsCreating(false);
     } catch (e) {
       if (process.env.NODE_ENV === "development")
@@ -294,6 +304,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
       setAgents((prev) => prev.filter((a) => a.id !== selectedId));
       setSelectedId(null);
       setEditing(false);
+      isCreatingRef.current = false;
       setIsCreating(false);
       toast("success", t("edit"));
     } catch (e) {
@@ -419,6 +430,7 @@ export default function MultiAgentPanel({ wid }: MultiAgentPanelProps) {
                   key={agent.id}
                   type="button"
                   onClick={() => {
+                    isCreatingRef.current = false;
                     setSelectedId(agent.id);
                     setEditing(false);
                     setIsCreating(false);
