@@ -51,6 +51,7 @@
     "bcryptjs": "^3.0.3",
     "better-auth": "1.7.17",
     "framer-motion": "^14.6.0",
+    "imapflow": "^2.11.0",
     "ioredis": "6.0.0",
     "json-logic-js": "^2.0.5",
     "jsonwebtoken": "9.0.3",

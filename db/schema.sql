@@ -2,7 +2,7 @@
 -- 生成时间: 2026-10-27（pg_dump 18.6，--no-owner --no-privileges --no-policies；
 --   按 docs/audit/MATURITY-2026Q4-BATCH2.md §3 的增量拼接口径补行，
 --   新增行与 pg_dump 对已迁移库的产物逐字相同）
--- 对应迁移: 20261028000000_add_decision_reviewed_at（100 表，含 2026-09-04 后新增的 73 张表）
+-- 对应迁移: 20261109000000_add_mail_uid（100 表，含 2026-09-04 后新增的 73 张表与 mails.uid）
 -- 表结构权威 = web/prisma/schema.prisma + web/prisma/migrations/；
 -- RLS 权威 = 下方 rls-activate.sql（entrypoint 实际执行的就是它，守卫测试亦以它为准）。
 --
@@ -1281,6 +1281,7 @@ CREATE TABLE public.mails (
     id uuid DEFAULT gen_random_uuid() NOT NULL,
     workspace_id uuid NOT NULL,
     account_id uuid NOT NULL,
+    uid integer,
     message_id character varying(500),
     from_addr character varying(500) NOT NULL,
     to_addr text NOT NULL,

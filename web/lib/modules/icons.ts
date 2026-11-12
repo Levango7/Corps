@@ -30,6 +30,7 @@ import {
   CreditCard,
   BarChart3,
   Settings,
+  Monitor, // Added for remote-control
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
@@ -72,6 +73,7 @@ export const MODULE_ICONS = {
   billing: CreditCard,
   analytics: BarChart3,
   settings: Settings,
+  remoteControl: Monitor, // Added for remote control
 } as const satisfies Record<string, LucideIcon>;
 
 export type ModuleIconName = keyof typeof MODULE_ICONS;
