@@ -96,6 +96,10 @@ interface MockOpts {
   onDelete?: (url: string) => void;
   postError?: unknown;
   onPost?: (url: string, body?: string) => void;
+  /** POST 立即返回的值（默认 {}）；导入成功路径需要真实形状 */
+  postResult?: unknown;
+  /** POST 返回永不 resolve 的挂起 promise（测导入进行中态） */
+  postPending?: Promise<unknown>;
   /** 保存成功后重载（第二次 GET）返回的模板列表 */
   reload?: unknown;
 }
@@ -116,7 +120,8 @@ function mockApi(opts: MockOpts = {}) {
     if (init?.method === "POST") {
       if (opts.postError) throw opts.postError;
       opts.onPost?.(url, init.body);
-      return {};
+      if (opts.postPending) return opts.postPending;
+      return opts.postResult ?? {};
     }
     if (url === TEMPLATES) {
       if (opts.templatesError) throw opts.templatesError;
@@ -494,5 +499,74 @@ describe("ApprovalTemplateManage", () => {
     fireEvent.click(screen.getByRole("button", { name: "approval:addTemplate" }));
     fireEvent.click(screen.getByRole("presentation"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});
+
+describe("导入内置模板入口", () => {
+  it("renders the import button, posts the init action, reloads and shows the result banner", async () => {
+    let postBody = "";
+    await renderLoaded({
+      templates: envelope([]),
+      postResult: { created: 5, skipped: 0, details: [] },
+      reload: envelope([mkTemplate({ id: "t-9", name: "请假" })]),
+      onPost: (_url, body) => {
+        postBody = body ?? "";
+      },
+    });
+    // 空态与导入按钮同时可见
+    expect(screen.getByText("approval:templateEmpty")).toBeInTheDocument();
+    const importBtn = screen.getByRole("button", { name: "approval:importBuiltin" });
+    await act(async () => {
+      fireEvent.click(importBtn);
+    });
+    // POST 载荷是 init-builtin 动作
+    expect(postBody).toBe(JSON.stringify({ action: "init-builtin" }));
+    // 结果横幅出现，列表重载后新模板出现，错误横幅不出现
+    expect(screen.getByText(/approval:importBuiltinResult/)).toBeInTheDocument();
+    expect(screen.getByText("请假")).toBeInTheDocument();
+    expect(screen.queryByText("approval:operationFailed")).not.toBeInTheDocument();
+  });
+
+  it("shows skipped-only result when all builtin templates already exist (idempotent)", async () => {
+    await renderLoaded({
+      templates: envelope([BUDGET]),
+      postResult: { created: 0, skipped: 5, details: [] },
+      reload: envelope([BUDGET]),
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "approval:importBuiltin" }));
+    });
+    expect(
+      screen.getByText('approval:importBuiltinResult:{"imported":0,"skipped":5}'),
+    ).toBeInTheDocument();
+    // 列表仍是原模板，无重复追加
+    expect(screen.getAllByText("Budget")).toHaveLength(1);
+  });
+
+  it("surfaces the failure through the error banner", async () => {
+    await renderLoaded({
+      templates: envelope([]),
+      postError: new ApiErrorMock("forbidden", 403),
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "approval:importBuiltin" }));
+    });
+    expect(screen.getByText("forbidden")).toBeInTheDocument();
+    expect(screen.queryByText(/approval:importBuiltinResult/)).not.toBeInTheDocument();
+  });
+
+  it("disables the button while the import request is in flight", async () => {
+    await renderLoaded({
+      templates: envelope([]),
+      postPending: new Promise(() => {}),
+    });
+    const importBtn = screen.getByRole("button", { name: "approval:importBuiltin" });
+    await act(async () => {
+      fireEvent.click(importBtn);
+    });
+    expect(importBtn).toBeDisabled();
+    // 请求在途：结果横幅与错误横幅均未出现
+    expect(screen.queryByText(/approval:importBuiltinResult/)).not.toBeInTheDocument();
+    expect(screen.queryByText("approval:operationFailed")).not.toBeInTheDocument();
   });
 });

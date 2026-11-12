@@ -3346,6 +3346,8 @@
     "approverRole": "审批角色",
     "approverUser": "指定用户",
     "addTemplate": "新建模板",
+    "importBuiltin": "导入内置模板",
+    "importBuiltinResult": "已导入 {imported} 个内置模板，跳过已存在 {skipped} 个",
     "templateEmpty": "暂无模板",
     "confirmDeleteTemplate": "确认删除此模板？",
     "save": "保存",
