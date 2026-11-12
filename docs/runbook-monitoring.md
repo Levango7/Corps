@@ -88,7 +88,7 @@ DB 探测失败返回 503 `{ data:{ status:"degraded", db:"down" } }`。
 ### 4.2 仍待引入（按需选型）
 
 - **Sentry source map 上传**：需要精确堆栈还原时补上（上报通道已就绪，仅差构建期映射）。
-- **UptimeRobot**：需要分钟级外部拨测、比 GitHub cron 更细粒度且不想维护 workflow 时接入（最轻量拨测）。
+- **UptimeRobot**：需要分钟级外部拨测、比 GitHub cron 更细粒度且不想维护 workflow 时接入（最轻量拨测）。（2026-11-12 业主裁：分钟级监控走本条；开户与目标配置是 owner 动作，落地前 SLI 口径不变。）
 - **Prometheus**：多实例部署、需要 RED 指标（速率/错误/耗时）与长期趋势图时接入（自建指标栈，运维成本最高）。
 
 一句话建议：**先配 DSN/webhook（实现已就绪，零改动）** → 再 UptimeRobot（加密拨测频率）→
