@@ -1,7 +1,7 @@
 /**
  * 工作区模块注册表 —— **分组、路由、权限的唯一事实源**。
  *
- * 背景（2026-10-20 产品方案 §5）：侧栏有 31 个静态入口，高频与一年点一次的模块
+ * 背景（2026-10-20 产品方案 §5）：侧栏有 33 个静态入口，高频与一年点一次的模块
  * 在首屏同等显眼；用户拍板「功能不做减法、做整合」。先把「有哪些模块、在哪个组、
  * 谁看不见」收进这张表，布局 / Cmd+K / 设置页 / 计费矩阵都从这里读，避免第二份清单漂移。
  *
@@ -49,7 +49,7 @@ export const MODULE_GROUPS: readonly ModuleGroup[] = [
 ];
 
 /**
- * 31 个静态模块（与改造前侧栏一一对应；收藏是动态项，不在表内）。
+ * 33 个静态模块（与改造前侧栏一一对应；收藏是动态项，不在表内）。
  *
  * **顺序即侧栏顺序**：本阶段必须与改造前逐项一致（见单测的组内顺序快照），
  * 否则 dashboard 的视觉基线会因为侧栏像素变化而红。
@@ -116,6 +116,14 @@ export const WORKSPACE_MODULES: readonly WorkspaceModule[] = [
     path: "/contacts",
     labelKey: "menu.contacts",
     icon: "contacts",
+    group: "collaboration",
+  },
+  // P1 公文 A1（任务 #83）：收发文登记 + 交换留痕；默认进「更多」（设计文档 §3 L1）。
+  {
+    id: "gov-doc",
+    path: "/gov-doc",
+    labelKey: "menu.govDoc",
+    icon: "govDoc",
     group: "collaboration",
   },
   {

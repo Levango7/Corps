@@ -4,7 +4,23 @@
 
 ## [Unreleased]
 
-（暂无；下一版本从这里开始记）
+### Added
+
+- **P1 公文模块 A1（形态 B 能力集 + A 骨架）**：收发文登记 / 状态机（拟稿→审核→签发→交换/归档，
+  只前进与归档）/ 流程意见 / 交换留痕 / OFD 附件登记。四个 Prisma 对象（`GovDoc` / `GovDocOpinion` /
+  `GovDocExchange` / `GovDocAttachment`）＋ 全 additive 迁移 `20261112000000_add_gov_doc_tables`；
+  四表进 `db/rls-activate.sql`（ENABLE+FORCE＋各 4 条 workspace_id 谓词策略）与 `db/schema.sql` 快照。
+  模块注册表加 `gov-doc`（默认「更多」，首屏 10 入口不动，module-registry 单测计数 31→32）、
+  Cmd+K 入口、图标与 zh/en 翻译（govDoc 命名空间 36 键）。
+  API：`/api/v1/workspaces/{wid}/gov-docs` 主表 CRUD ＋ `/{id}/exchanges|opinions|attachments`
+  子资源读写，全部经 `getWorkspaceContextV2` 墙＋`requirePermission(ctx, "govDocs", …)`（权限矩阵
+  owner/admin/member=crud、viewer=r，`check_permission_gates.py` 的 MODULE_BY_SEGMENT 同步映射），
+  信封 code==HTTP status；openapi.yaml 新增 5 path ＋ govDocs tag＋ GovDoc 族 schema（契约覆盖率 100%）。
+  事件面：`gov_doc_created` / `gov_doc_signed` / `gov_doc_exchanged` 进白名单（40→43）并在对应写站点
+  emit（签发事件只在真实跃迁到 signed 时发，口径同 decision_reviewed）；**不进 CORE_EVENTS**
+  （改 CORE_EVENTS＝改 ACCEPTED 口径，须业主另拍）。
+  **OFD 选型待核（设计文档 §8-1）**：附件端点只登记版本/哈希/预览产物引用，不渲染，能力清单不写「支持 OFD」。
+  零覆盖棘轮：5 个新 route 文件按 announcements 先例登记 `scripts/zero-coverage-baseline.txt`。
 
 ## [0.9.1] - 2026-11-09
 

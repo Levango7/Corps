@@ -89,6 +89,10 @@ export const MODULES = [
   "calendar",
   "dashboard",
   "recycleBin",
+  // 公文（P1 公文 A1，任务 #83）：收发文登记 + 交换留痕。口径同 AI/approvals/forms 批：
+  // owner/admin/member 全程可写（登记/签发/交换留痕都是成员正当操作），viewer 只读。
+  // OFD 预览选型待核（设计文档 §8-1），本期只登记不渲染，权限面不单列预览轴。
+  "govDocs",
 ] as const;
 
 /** 角色列表 */
@@ -143,6 +147,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     calendar: "crud",
     dashboard: "crud",
     recycleBin: "crud",
+    govDocs: "crud",
   },
   admin: {
     tasks: "crud",
@@ -172,6 +177,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     calendar: "crud",
     dashboard: "crud",
     recycleBin: "crud",
+    govDocs: "crud",
   },
   member: {
     tasks: "crud",
@@ -202,6 +208,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     calendar: "crud",
     dashboard: "crud",
     recycleBin: "crud",
+    govDocs: "crud",
   },
   viewer: {
     tasks: "r",
@@ -231,6 +238,7 @@ const DEFAULT_PERMISSIONS: Record<string, Record<string, string>> = {
     calendar: "r",
     dashboard: "r",
     recycleBin: "r",
+    govDocs: "r",
   },
 };
 

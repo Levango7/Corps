@@ -224,6 +224,11 @@ app/api/v1/workspaces/[wid]/folders/[fid]/permissions/route.ts
 app/api/v1/workspaces/[wid]/forms/[fid]/route.ts
 app/api/v1/workspaces/[wid]/forms/[fid]/submissions/route.ts
 app/api/v1/workspaces/[wid]/forms/route.ts
+app/api/v1/workspaces/[wid]/gov-docs/[id]/attachments/route.ts
+app/api/v1/workspaces/[wid]/gov-docs/[id]/exchanges/route.ts
+app/api/v1/workspaces/[wid]/gov-docs/[id]/opinions/route.ts
+app/api/v1/workspaces/[wid]/gov-docs/[id]/route.ts
+app/api/v1/workspaces/[wid]/gov-docs/route.ts
 app/api/v1/workspaces/[wid]/im/online/route.ts
 app/api/v1/workspaces/[wid]/key-results/[kid]/route.ts
 app/api/v1/workspaces/[wid]/labels/route.ts
