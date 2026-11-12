@@ -39,14 +39,20 @@ function dateToEndISO(date: string): string | undefined {
   if (!date) return undefined;
   return new Date(date + "T23:59:59").toISOString();
 }
+/** 本地 Date → YYYY-MM-DD：直接按本地时区取月日；toISOString 走 UTC 转换，
+ *  本地零点在 UTC+8 下会落到前一天，致默认日期范围整体回退一天 */
+function localDateISO(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
 
 export function TimeReport({ wid, refreshKey }: { wid: string; refreshKey?: number }) {
   const t = useTranslations("timetrack");
   // 默认本月范围
   const now = new Date();
   const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
-  const [startDate, setStartDate] = useState(firstDay.toISOString().slice(0, 10));
-  const [endDate, setEndDate] = useState(now.toISOString().slice(0, 10));
+  const [startDate, setStartDate] = useState(localDateISO(firstDay));
+  const [endDate, setEndDate] = useState(localDateISO(now));
   const [groupBy, setGroupBy] = useState<"user" | "task" | "day">("user");
   const [data, setData] = useState<ReportData | null>(null);
   const [loading, setLoading] = useState(true);
