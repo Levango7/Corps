@@ -67,6 +67,8 @@ tags:
     description: Workspace dashboard widget layout and widget data (F3)
   - name: Sharing
     description: Document/task share settings, password verification and access logs (F5)
+  - name: govDocs
+    description: Government document registry (incoming/outgoing), review trail and exchange log (P1 A1; OFD preview selection pending)
 security:
   - bearerAuth: []
 
@@ -5119,6 +5121,305 @@ paths:
                     properties:
                       id: { type: string, format: uuid }
                       deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs:
+    get:
+      tags: [govDocs]
+      summary: List government documents (newest registered first)
+      operationId: listGovDocs
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: direction
+          in: query
+          schema: { type: string, enum: [incoming, outgoing] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, review, signed, exchanged, archived] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Government document list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Register an incoming/outgoing government document
+      description: Requires govDocs:create in the permission matrix.
+      operationId: createGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocRequest'
+      responses:
+        '201':
+          description: Government document registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDoc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}:
+    get:
+      tags: [govDocs]
+      summary: Government document detail (opinions, exchanges, attachments)
+      operationId: getGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Government document detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDoc'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [govDocs]
+      summary: Update a government document or advance its status
+      description: >
+        Requires govDocs:update. Status follows the draft->review->signed->exchanged->archived
+        state machine (forward + archive only); an invalid transition maps to 400.
+      operationId: updateGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGovDocRequest'
+      responses:
+        '200':
+          description: Updated government document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDoc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [govDocs]
+      summary: Delete a government document
+      operationId: deleteGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}/exchanges:
+    get:
+      tags: [govDocs]
+      summary: List exchange records of a government document (newest first)
+      operationId: listGovDocExchanges
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Exchange record list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocExchangeList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Record an exchange (send/receive) of a government document
+      description: Requires govDocs:create in the permission matrix.
+      operationId: createGovDocExchange
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocExchangeRequest'
+      responses:
+        '201':
+          description: Exchange record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocExchange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}/opinions:
+    get:
+      tags: [govDocs]
+      summary: List review opinions of a government document (oldest first)
+      operationId: listGovDocOpinions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Opinion list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocOpinionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Submit a review opinion on a government document
+      description: Requires govDocs:create in the permission matrix.
+      operationId: createGovDocOpinion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocOpinionRequest'
+      responses:
+        '201':
+          description: Opinion created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocOpinion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}/attachments:
+    get:
+      tags: [govDocs]
+      summary: List registered attachments of a government document (version ascending)
+      operationId: listGovDocAttachments
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Attachment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocAttachmentList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Register an attachment (version/hash/preview reference) of a government document
+      description: >
+        Requires govDocs:create in the permission matrix. OFD parsing/preview selection is
+        still pending review; this endpoint only records the attachment, it does not render.
+      operationId: createGovDocAttachment
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocAttachmentRequest'
+      responses:
+        '201':
+          description: Attachment registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocAttachment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -13480,6 +13781,12 @@ components:
       required: true
       description: Announcement id (UUID).
       schema: { type: string, format: uuid }
+    GovDocId:
+      name: id
+      in: path
+      required: true
+      description: Government document id (UUID).
+      schema: { type: string, format: uuid }
     ContactId:
       name: cid
       in: path
@@ -15061,6 +15368,207 @@ components:
           type: string
           format: date-time
           nullable: true
+    GovDoc:
+      type: object
+      required: [id, title, direction, secretLevel, urgency, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        docNo: { type: string, nullable: true }
+        title: { type: string }
+        direction: { type: string, enum: [incoming, outgoing] }
+        secretLevel: { type: string, enum: [internal, secret, confidential, topsecret] }
+        urgency: { type: string, enum: [normal, urgent, extraurgent] }
+        source: { type: string, nullable: true }
+        destination: { type: string, nullable: true }
+        status: { type: string, enum: [draft, review, signed, exchanged, archived] }
+        createdBy: { type: string, format: uuid, nullable: true }
+        remarks: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        creator:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        opinions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GovDocOpinion'
+        exchanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GovDocExchange'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/GovDocAttachment'
+    GovDocOpinion:
+      type: object
+      required: [id, conclusion, content, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        conclusion: { type: string, enum: [agree, reject, amend] }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+        authorId: { type: string, format: uuid, nullable: true }
+        author:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    GovDocExchange:
+      type: object
+      required: [id, direction, channel, exchangedAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        direction: { type: string, enum: [incoming, outgoing] }
+        channel: { type: string }
+        operatorId: { type: string, format: uuid, nullable: true }
+        exchangedAt: { type: string, format: date-time }
+        note: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        operator:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    GovDocAttachment:
+      type: object
+      required: [id, version, fileHash, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        fileHash: { type: string }
+        previewRef: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    Envelope_GovDoc:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDoc'
+    Envelope_GovDocList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDoc'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_GovDocExchange:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDocExchange'
+    Envelope_GovDocExchangeList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDocExchange'
+    Envelope_GovDocOpinion:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDocOpinion'
+    Envelope_GovDocOpinionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDocOpinion'
+    Envelope_GovDocAttachment:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDocAttachment'
+    Envelope_GovDocAttachmentList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDocAttachment'
+    CreateGovDocRequest:
+      type: object
+      required: [title]
+      properties:
+        docNo: { type: string, minLength: 1, maxLength: 64 }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        direction: { type: string, enum: [incoming, outgoing] }
+        secretLevel: { type: string, enum: [internal, secret, confidential, topsecret] }
+        urgency: { type: string, enum: [normal, urgent, extraurgent] }
+        source: { type: string, minLength: 1, maxLength: 200 }
+        destination: { type: string, minLength: 1, maxLength: 200 }
+        remarks: { type: string }
+    UpdateGovDocRequest:
+      type: object
+      minProperties: 1
+      properties:
+        docNo: { type: string, minLength: 1, maxLength: 64 }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        direction: { type: string, enum: [incoming, outgoing] }
+        secretLevel: { type: string, enum: [internal, secret, confidential, topsecret] }
+        urgency: { type: string, enum: [normal, urgent, extraurgent] }
+        source: { type: string, minLength: 1, maxLength: 200 }
+        destination: { type: string, minLength: 1, maxLength: 200 }
+        status: { type: string, enum: [draft, review, signed, exchanged, archived] }
+        remarks: { type: string }
+    CreateGovDocExchangeRequest:
+      type: object
+      required: [channel]
+      properties:
+        direction: { type: string, enum: [incoming, outgoing] }
+        channel: { type: string, minLength: 1, maxLength: 50 }
+        exchangedAt: { type: string, format: date-time }
+        note: { type: string }
+    CreateGovDocOpinionRequest:
+      type: object
+      required: [conclusion, content]
+      properties:
+        conclusion: { type: string, enum: [agree, reject, amend] }
+        content: { type: string, minLength: 1 }
+    CreateGovDocAttachmentRequest:
+      type: object
+      required: [fileHash]
+      properties:
+        version: { type: integer, minimum: 1 }
+        fileHash: { type: string, minLength: 1, maxLength: 128 }
+        previewRef: { type: string, minLength: 1, maxLength: 500 }
     Contact:
       type: object
       required: [id, name]

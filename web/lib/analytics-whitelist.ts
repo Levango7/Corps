@@ -6,9 +6,10 @@
  *  - 客户端 dev 环境 warn 非法名（见 analytics.ts track()），生产环境仍由服务端静默丢弃。
  *  - 白名单追加 9 名与 SDK 改造同一 PR 合入，避免「事件已打、闸门未开」的静默丢弃窗口期。
  *
- * 计数：40 名（实测。原注释写 32，集合实际早已是 34 —— 有两处新增没回写；
+ * 计数：43 名（实测。原注释写 32，集合实际早已是 34 —— 有两处新增没回写；
  * P1-C 再 +3：workspace_create / decision_landed / export_pdf；
- * #48 再 +3：decision_reviewed / ai_extract_started / ai_extract_failed。
+ * #48 再 +3：decision_reviewed / ai_extract_started / ai_extract_failed；
+ * P1 公文 A1 再 +3：gov_doc_created / gov_doc_signed / gov_doc_exchanged。
  * 该数字由 tests/unit/analytics-event-contract.test.ts 断言，不再靠人记得改。）
  */
 export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
@@ -78,4 +79,14 @@ export const ALLOWED_EVENT_NAMES: ReadonlySet<string> = new Set([
   //   decision_created / task_from_decision）。
   "ai_extract_started",
   "ai_extract_failed",
+  // ─── P1 公文 A1（2026-11-12，任务 #83；设计文档 GOV-DOC-P1-design-v0.md §7）───
+  // 公文生命周期三事件，只进白名单 + emit 站点 + 反向棘轮，**不进 CORE_EVENTS**
+  // （改 CORE_EVENTS ＝ 改 FUNNEL-METRICS §2.1 的 ACCEPTED 口径，须业主另拍）。
+  // WAW 挂钩用独立渗透率口径（设计文档 §6/§7）。
+  // gov_doc_created：登记收发文（建 gov_docs 行）。
+  // gov_doc_signed：签发（status 跃迁到 signed）。
+  // gov_doc_exchanged：交换留痕（建 gov_doc_exchanges 行，收发时间/通道/操作人）。
+  "gov_doc_created",
+  "gov_doc_signed",
+  "gov_doc_exchanged",
 ]);

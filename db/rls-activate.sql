@@ -65,7 +65,9 @@ BEGIN
     'share_link_permissions','spaces','time_entries','user_dashboard_prefs','whiteboards',
     'wiki_pages','workflows','workflow_executions',
     -- ADR-010 G4 收编：share_access_logs（workspace_id 写入时反查落列）
-    'share_access_logs'
+    'share_access_logs',
+    -- P1 公文 A1（任务 #83）：四对象，全 workspace_id 谓词
+    'gov_docs','gov_doc_opinions','gov_doc_exchanges','gov_doc_attachments'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -1412,4 +1414,84 @@ CREATE POLICY p_share_access_logs_update ON share_access_logs FOR UPDATE
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 DROP POLICY IF EXISTS p_share_access_logs_delete ON share_access_logs;
 CREATE POLICY p_share_access_logs_delete ON share_access_logs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_docs（工作区级，按 workspace_id 隔离；P1 公文 A1 主表）──
+-- 公文主表：收发文登记 + 状态机（draft→review→signed→exchanged/archived）。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_docs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_docs FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_docs_select ON gov_docs;
+CREATE POLICY p_gov_docs_select ON gov_docs FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_docs_insert ON gov_docs;
+CREATE POLICY p_gov_docs_insert ON gov_docs FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_docs_update ON gov_docs;
+CREATE POLICY p_gov_docs_update ON gov_docs FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_docs_delete ON gov_docs;
+CREATE POLICY p_gov_docs_delete ON gov_docs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_doc_opinions（工作区级，按 workspace_id 隔离；P1 公文 A1 流程意见）──
+-- 审核意见留痕（人/时/结论），从属于公文所在工作区。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_doc_opinions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_doc_opinions FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_doc_opinions_select ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_select ON gov_doc_opinions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_opinions_insert ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_insert ON gov_doc_opinions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_opinions_update ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_update ON gov_doc_opinions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_opinions_delete ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_delete ON gov_doc_opinions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_doc_exchanges（工作区级，按 workspace_id 隔离；P1 公文 A1 交换记录）──
+-- 交换留痕（收发时间/通道/操作人），从属于公文所在工作区。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_doc_exchanges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_doc_exchanges FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_doc_exchanges_select ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_select ON gov_doc_exchanges FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_exchanges_insert ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_insert ON gov_doc_exchanges FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_exchanges_update ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_update ON gov_doc_exchanges FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_exchanges_delete ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_delete ON gov_doc_exchanges FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_doc_attachments（工作区级，按 workspace_id 隔离；P1 公文 A1 OFD 附件）──
+-- OFD 附件登记（版本/哈希/预览产物引用；OFD 预览选型待核 §8-1，只登记不渲染）。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_doc_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_doc_attachments FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_doc_attachments_select ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_select ON gov_doc_attachments FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_attachments_insert ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_insert ON gov_doc_attachments FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_attachments_update ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_update ON gov_doc_attachments FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_attachments_delete ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_delete ON gov_doc_attachments FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);

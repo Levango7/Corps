@@ -1,8 +1,8 @@
 -- corps 数据库 schema（由 pg_dump --schema-only 生成 + RLS 层来自 rls-activate.sql）
--- 生成时间: 2026-10-27（pg_dump 18.6，--no-owner --no-privileges --no-policies；
+-- 生成时间: 2026-11-12（pg_dump 18.6，--no-owner --no-privileges --no-policies；
 --   按 docs/audit/MATURITY-2026Q4-BATCH2.md §3 的增量拼接口径补行，
 --   新增行与 pg_dump 对已迁移库的产物逐字相同）
--- 对应迁移: 20261109000000_add_mail_uid（100 表，含 2026-09-04 后新增的 73 张表与 mails.uid）
+-- 对应迁移: 20261112000000_add_gov_doc_tables（104 表，含 2026-09-04 后新增的 77 张表与 mails.uid）
 -- 表结构权威 = web/prisma/schema.prisma + web/prisma/migrations/；
 -- RLS 权威 = 下方 rls-activate.sql（entrypoint 实际执行的就是它，守卫测试亦以它为准）。
 --
@@ -1179,6 +1179,83 @@ CREATE TABLE public.forms (
 );
 
 ALTER TABLE ONLY public.forms FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_doc_attachments; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_doc_attachments (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    gov_doc_id uuid NOT NULL,
+    version integer DEFAULT 1 NOT NULL,
+    file_hash character varying(128) NOT NULL,
+    preview_ref character varying(500),
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_doc_attachments FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_doc_exchanges; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_doc_exchanges (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    gov_doc_id uuid NOT NULL,
+    direction character varying(20) DEFAULT 'incoming'::character varying NOT NULL,
+    channel character varying(50) NOT NULL,
+    operator_id uuid,
+    exchanged_at timestamp with time zone NOT NULL,
+    note text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_doc_exchanges FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_doc_opinions; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_doc_opinions (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    gov_doc_id uuid NOT NULL,
+    author_id uuid,
+    conclusion character varying(20) NOT NULL,
+    content text NOT NULL,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_doc_opinions FORCE ROW LEVEL SECURITY;
+
+
+--
+-- Name: gov_docs; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gov_docs (
+    id uuid NOT NULL,
+    workspace_id uuid NOT NULL,
+    doc_no character varying(64),
+    title character varying(200) NOT NULL,
+    direction character varying(20) DEFAULT 'incoming'::character varying NOT NULL,
+    secret_level character varying(20) DEFAULT 'internal'::character varying NOT NULL,
+    urgency character varying(20) DEFAULT 'normal'::character varying NOT NULL,
+    source character varying(200),
+    destination character varying(200),
+    status character varying(20) DEFAULT 'draft'::character varying NOT NULL,
+    created_by uuid,
+    remarks text,
+    created_at timestamp with time zone DEFAULT CURRENT_TIMESTAMP NOT NULL,
+    updated_at timestamp with time zone NOT NULL
+);
+
+ALTER TABLE ONLY public.gov_docs FORCE ROW LEVEL SECURITY;
 
 
 --
@@ -2488,6 +2565,38 @@ ALTER TABLE ONLY public.forms
 
 
 --
+-- Name: gov_doc_attachments gov_doc_attachments_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_attachments
+    ADD CONSTRAINT gov_doc_attachments_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gov_docs gov_docs_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_docs
+    ADD CONSTRAINT gov_docs_pkey PRIMARY KEY (id);
+
+
+--
 -- Name: invitations invitations_pkey; Type: CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -3546,6 +3655,41 @@ CREATE INDEX form_submissions_form_id_submitted_at_idx ON public.form_submission
 --
 
 CREATE INDEX forms_workspace_id_active_idx ON public.forms USING btree (workspace_id, active);
+
+
+--
+-- Name: gov_doc_attachments_workspace_id_gov_doc_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_doc_attachments_workspace_id_gov_doc_id_idx ON public.gov_doc_attachments USING btree (workspace_id, gov_doc_id);
+
+
+--
+-- Name: gov_doc_exchanges_workspace_id_gov_doc_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_doc_exchanges_workspace_id_gov_doc_id_idx ON public.gov_doc_exchanges USING btree (workspace_id, gov_doc_id);
+
+
+--
+-- Name: gov_doc_opinions_workspace_id_gov_doc_id_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_doc_opinions_workspace_id_gov_doc_id_idx ON public.gov_doc_opinions USING btree (workspace_id, gov_doc_id);
+
+
+--
+-- Name: gov_docs_workspace_id_direction_status_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_docs_workspace_id_direction_status_idx ON public.gov_docs USING btree (workspace_id, direction, status);
+
+
+--
+-- Name: gov_docs_workspace_id_updated_at_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX gov_docs_workspace_id_updated_at_idx ON public.gov_docs USING btree (workspace_id, updated_at);
 
 
 --
@@ -5243,6 +5387,86 @@ ALTER TABLE ONLY public.forms
 
 
 --
+-- Name: gov_doc_attachments gov_doc_attachments_gov_doc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_attachments
+    ADD CONSTRAINT gov_doc_attachments_gov_doc_id_fkey FOREIGN KEY (gov_doc_id) REFERENCES public.gov_docs(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_attachments gov_doc_attachments_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_attachments
+    ADD CONSTRAINT gov_doc_attachments_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_gov_doc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_gov_doc_id_fkey FOREIGN KEY (gov_doc_id) REFERENCES public.gov_docs(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_operator_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_operator_id_fkey FOREIGN KEY (operator_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: gov_doc_exchanges gov_doc_exchanges_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_exchanges
+    ADD CONSTRAINT gov_doc_exchanges_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_author_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_author_id_fkey FOREIGN KEY (author_id) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_gov_doc_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_gov_doc_id_fkey FOREIGN KEY (gov_doc_id) REFERENCES public.gov_docs(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_doc_opinions gov_doc_opinions_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_doc_opinions
+    ADD CONSTRAINT gov_doc_opinions_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
+-- Name: gov_docs gov_docs_created_by_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_docs
+    ADD CONSTRAINT gov_docs_created_by_fkey FOREIGN KEY (created_by) REFERENCES public.users(id) ON UPDATE CASCADE ON DELETE SET NULL;
+
+
+--
+-- Name: gov_docs gov_docs_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gov_docs
+    ADD CONSTRAINT gov_docs_workspace_id_fkey FOREIGN KEY (workspace_id) REFERENCES public.workspaces(id) ON UPDATE CASCADE ON DELETE CASCADE;
+
+
+--
 -- Name: invitations invitations_workspace_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: -
 --
 
@@ -5858,7 +6082,7 @@ ALTER TABLE ONLY public.yjs_persistence
 
 
 -- ============================================================================
--- RLS 激活与策略（来自 db/rls-activate.sql，2026-10-20 同步版）
+-- RLS 激活与策略（来自 db/rls-activate.sql，2026-11-12 同步版）
 -- ============================================================================
 
 -- ===========================================================================
@@ -5928,7 +6152,9 @@ BEGIN
     'share_link_permissions','spaces','time_entries','user_dashboard_prefs','whiteboards',
     'wiki_pages','workflows','workflow_executions',
     -- ADR-010 G4 收编：share_access_logs（workspace_id 写入时反查落列）
-    'share_access_logs'
+    'share_access_logs',
+    -- P1 公文 A1（任务 #83）：四对象，全 workspace_id 谓词
+    'gov_docs','gov_doc_opinions','gov_doc_exchanges','gov_doc_attachments'
   ] LOOP
     EXECUTE format('ALTER TABLE %I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('ALTER TABLE %I FORCE  ROW LEVEL SECURITY', t);
@@ -7275,4 +7501,84 @@ CREATE POLICY p_share_access_logs_update ON share_access_logs FOR UPDATE
   WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
 DROP POLICY IF EXISTS p_share_access_logs_delete ON share_access_logs;
 CREATE POLICY p_share_access_logs_delete ON share_access_logs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_docs（工作区级，按 workspace_id 隔离；P1 公文 A1 主表）──
+-- 公文主表：收发文登记 + 状态机（draft→review→signed→exchanged/archived）。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_docs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_docs FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_docs_select ON gov_docs;
+CREATE POLICY p_gov_docs_select ON gov_docs FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_docs_insert ON gov_docs;
+CREATE POLICY p_gov_docs_insert ON gov_docs FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_docs_update ON gov_docs;
+CREATE POLICY p_gov_docs_update ON gov_docs FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_docs_delete ON gov_docs;
+CREATE POLICY p_gov_docs_delete ON gov_docs FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_doc_opinions（工作区级，按 workspace_id 隔离；P1 公文 A1 流程意见）──
+-- 审核意见留痕（人/时/结论），从属于公文所在工作区。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_doc_opinions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_doc_opinions FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_doc_opinions_select ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_select ON gov_doc_opinions FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_opinions_insert ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_insert ON gov_doc_opinions FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_opinions_update ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_update ON gov_doc_opinions FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_opinions_delete ON gov_doc_opinions;
+CREATE POLICY p_gov_doc_opinions_delete ON gov_doc_opinions FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_doc_exchanges（工作区级，按 workspace_id 隔离；P1 公文 A1 交换记录）──
+-- 交换留痕（收发时间/通道/操作人），从属于公文所在工作区。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_doc_exchanges ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_doc_exchanges FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_doc_exchanges_select ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_select ON gov_doc_exchanges FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_exchanges_insert ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_insert ON gov_doc_exchanges FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_exchanges_update ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_update ON gov_doc_exchanges FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_exchanges_delete ON gov_doc_exchanges;
+CREATE POLICY p_gov_doc_exchanges_delete ON gov_doc_exchanges FOR DELETE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+
+-- ── gov_doc_attachments（工作区级，按 workspace_id 隔离；P1 公文 A1 OFD 附件）──
+-- OFD 附件登记（版本/哈希/预览产物引用；OFD 预览选型待核 §8-1，只登记不渲染）。
+-- 无 auth_op 逃生口。ENABLE/FORCE 在本块重复一次，保证块自包含、可重跑。
+ALTER TABLE gov_doc_attachments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE gov_doc_attachments FORCE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS p_gov_doc_attachments_select ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_select ON gov_doc_attachments FOR SELECT
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_attachments_insert ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_insert ON gov_doc_attachments FOR INSERT
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_attachments_update ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_update ON gov_doc_attachments FOR UPDATE
+  USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid)
+  WITH CHECK (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
+DROP POLICY IF EXISTS p_gov_doc_attachments_delete ON gov_doc_attachments;
+CREATE POLICY p_gov_doc_attachments_delete ON gov_doc_attachments FOR DELETE
   USING (workspace_id = NULLIF(current_setting('app.workspace_id', true), '')::uuid);
