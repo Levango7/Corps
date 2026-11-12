@@ -207,6 +207,7 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
                   type="text"
                   value={fTitle}
                   onChange={(e) => setFTitle(e.target.value)}
+                  aria-label={t("docTitle")}
                   required
                   maxLength={200}
                   className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
@@ -220,6 +221,7 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
                   type="text"
                   value={fDocNo}
                   onChange={(e) => setFDocNo(e.target.value)}
+                  aria-label={t("docNo")}
                   maxLength={64}
                   className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                 />
@@ -275,6 +277,7 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
                     type="text"
                     value={fSource}
                     onChange={(e) => setFSource(e.target.value)}
+                    aria-label={t("source")}
                     maxLength={200}
                     className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                   />
@@ -288,6 +291,7 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
                     type="text"
                     value={fDestination}
                     onChange={(e) => setFDestination(e.target.value)}
+                    aria-label={t("destination")}
                     maxLength={200}
                     className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
                   />
@@ -301,6 +305,7 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
               <textarea
                 value={fRemarks}
                 onChange={(e) => setFRemarks(e.target.value)}
+                aria-label={t("remarks")}
                 rows={2}
                 className="w-full px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
               />

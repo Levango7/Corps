@@ -249,11 +249,11 @@ describe("侧栏分区：工作区启用的可选模块（P1-B2）", () => {
   it("不传启用列表时与 P1-B1 完全一致（默认全部在「更多」）", () => {
     const { groups, more } = sidebarSectionsForRole("member");
     expect(groups).toEqual([]);
-    expect(more).toHaveLength(22);
+    expect(more).toHaveLength(23);
   });
 
   it("viewer 启用某项时也生效（角色过滤在前）", () => {
     const { more } = sidebarSectionsForRole("viewer", ["wiki"]);
-    expect(more).toHaveLength(21);
+    expect(more).toHaveLength(22);
   });
 });
