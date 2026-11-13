@@ -380,6 +380,18 @@ jobs:
         run: python scripts/check_registry_cmdk.py
       - name: Mutation-check the registry/cmdk inclusion guard itself
         run: python scripts/check_registry_cmdk.py --self-test
+      # check_api_contract.py 只比 path 集合，不读 HTTP method：path 里声明了 get、
+      # 实现还导出 PATCH 时，上面所有契约门禁全绿（2026-11-13 实测 main 上有
+      # 7 个 path / 8 个缺失 operation，字段级门禁只把它计入
+      # `skip · 该方法未声明` 而不判红）。本门禁补单向包含：
+      # 实现 route.ts 导出的 method ⊆ openapi 该 path 声明的 operation。
+      # 零存量故硬失败、不上棘轮、不设基线；path 未声明仍归差集门禁管。
+      # 正则解析、不依赖 PyYAML；口径与覆盖率边界见脚本 docstring。
+      # 与 registry/cmdk 门禁同理：新开 job 不在必需检查清单里拦不住合并，故挂这里。
+      - name: Check OpenAPI HTTP method coverage
+        run: python scripts/check_openapi_method_coverage.py
+      - name: Mutation-check the method coverage guard itself
+        run: python scripts/check_openapi_method_coverage.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。

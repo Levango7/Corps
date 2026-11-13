@@ -2884,6 +2884,58 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}:
+    patch:
+      tags: [messages]
+      summary: Update a conversation member role, or toggle own muted state
+      description: >
+        Body takes exactly one of { role } or { muted }. Role changes are
+        owner-only; setting role to owner transfers ownership and demotes the
+        caller to admin. Muted toggles are self-only.
+      operationId: patchConversationMember
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: uid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [owner, admin, member] }
+                muted: { type: boolean }
+              description: Exactly one of role / muted must be supplied.
+      responses:
+        '200':
+          description: Member updated; transferred is true only on ownership transfer
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [transferred]
+                    properties:
+                      transferred: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     delete:
       tags: [messages]
       summary: Remove a member from conversation (owner/admin)
@@ -4456,6 +4508,80 @@ paths:
   # F5: SHARING — documents
   # ===========================================================================
   /api/v1/workspaces/{wid}/documents/{id}/share:
+    delete:
+      tags: [Sharing]
+      summary: Revoke document sharing (clears token, password and slug)
+      description: >
+        Clears shareToken / shareExpiresAt / sharePassword / shareSlug and
+        resets visibility to private. The old share link stops working immediately.
+      operationId: revokeDocumentShare
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Sharing revoked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Sharing]
+      summary: Create a share link for a document
+      operationId: createDocumentShare
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility: { type: string, enum: [public, private] }
+                expiresIn:
+                  type: integer
+                  minimum: 0
+                  description: Validity in hours; 0 or omitted means never expires.
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [shareUrl, shareToken, expiresAt, visibility]
+                    properties:
+                      shareUrl: { type: string }
+                      shareToken: { type: string }
+                      expiresAt: { type: string, format: date-time, nullable: true }
+                      visibility: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [Sharing]
       summary: Get share settings for a document
@@ -4514,6 +4640,55 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/documents/{id}/versions/compare:
+    get:
+      tags: [Documents]
+      summary: Compare two document versions (GET compatibility entry)
+      description: >
+        Query-only compatibility entry used by DocumentVersionHistory. Accepts
+        from / to (version numbers) or fromId / toId (version row ids) as query
+        parameters and forwards to the POST handler, so both methods share one
+        implementation and one response shape.
+      operationId: getDocumentVersionCompare
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+        - name: from
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: to
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: fromId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: toId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Version metadata and line-level diff
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [from, to, diff, stats]
+                    properties:
+                      from: { type: object }
+                      to: { type: object }
+                      diff: { type: array, items: { type: object } }
+                      stats: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [Documents]
       summary: Compare two document versions (line-level diff)
@@ -7623,6 +7798,38 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/ai/push/schedules:
+    patch:
+      tags: [ai]
+      summary: Update an AI push schedule (quiet hours / frequency)
+      operationId: patchAiPushSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scheduleId]
+              properties:
+                scheduleId: { type: string, format: uuid }
+                quietHoursStart: { type: integer, minimum: 0, maximum: 23 }
+                quietHoursEnd: { type: integer, minimum: 0, maximum: 23 }
+                frequency: { type: string }
+              description: At least one of quietHoursStart / quietHoursEnd / frequency must be supplied.
+      responses:
+        '200':
+          description: Updated schedule row
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiPushSchedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [ai]
       summary: List AI push schedules
@@ -8094,6 +8301,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/ai/meetings/sessions/{id}:
+    delete:
+      tags: [ai]
+      summary: Delete a meeting session (cascades action items and decisions)
+      operationId: deleteAiMeetingSession
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Session deleted (data is null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [ai]
       summary: Meeting session detail (includes actionItems + decisions)
@@ -10075,6 +10305,53 @@ paths:
         '503':
           $ref: '#/components/responses/InternalError'
   /api/v1/ai/orchestrate:
+    patch:
+      tags: [ai]
+      summary: Execute an orchestration plan (applies write actions)
+      description: >
+        Body { wid, actions[] }. Each action is checked against the permission
+        matrix before execution; viewer is refused for notify. All actions run
+        inside one RLS transaction. Returns data { success, results }.
+      operationId: executeAiOrchestration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, actions]
+              properties:
+                wid: { type: string, format: uuid }
+                actions:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  items: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Actions executed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [success, results]
+                    properties:
+                      success: { type: boolean }
+                      results:
+                        type: array
+                        items: { type: object, additionalProperties: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [ai]
       summary: AI cross-capability orchestration plan (non-streaming)
@@ -10473,6 +10750,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/mail/{id}:
+    delete:
+      tags: [mail]
+      summary: Delete a mail (scoped to the caller's own accounts)
+      operationId: deleteMail
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Mail deleted (data is null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [mail]
       summary: Mail detail
