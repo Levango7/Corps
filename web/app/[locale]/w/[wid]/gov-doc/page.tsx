@@ -9,12 +9,22 @@
  *  - 状态机：拟稿 → 审核 → 签发 → 交换/归档（状态跃迁走 PATCH，详见 API 注释）
  *  - OFD 预览：选型待核（§8-1），本页只登记不渲染（见 ofdPending 提示）
  *
- * 交换留痕 / 流程意见 / 附件登记的 UI 在后续批补（API 已提供）。
+ * 交换留痕 / 流程意见 / 附件登记：卡片展开区懒加载 GET，登记表单限可管理角色（API 由 A1 提供）。
  */
 import { use, useEffect, useMemo, useState } from "react";
 import { useTranslations } from "next-intl";
 import { api } from "@/lib/api";
-import { Plus, Loader2, ScrollText, Search } from "lucide-react";
+import {
+  Plus,
+  Loader2,
+  ScrollText,
+  Search,
+  ChevronDown,
+  ChevronUp,
+  ArrowLeftRight,
+  MessageSquare,
+  Paperclip,
+} from "lucide-react";
 
 type GovDocStatus = "draft" | "review" | "signed" | "exchanged" | "archived";
 type Direction = "incoming" | "outgoing";
@@ -31,6 +41,34 @@ interface GovDocItem {
   status: GovDocStatus;
   createdAt: string;
   creator: { id: string; name: string | null; email: string } | null;
+}
+
+interface GovDocExchange {
+  id: string;
+  direction: Direction;
+  channel: string;
+  operatorId: string | null;
+  operator: { id: string; name: string | null; email: string } | null;
+  exchangedAt: string;
+  note: string | null;
+  createdAt: string;
+}
+
+interface GovDocOpinion {
+  id: string;
+  conclusion: "agree" | "reject" | "amend";
+  content: string;
+  authorId: string | null;
+  author: { id: string; name: string | null; email: string } | null;
+  createdAt: string;
+}
+
+interface GovDocAttachment {
+  id: string;
+  version: number;
+  fileHash: string;
+  previewRef: string | null;
+  createdAt: string;
 }
 
 const STATUS_TOKEN: Record<GovDocStatus, string> = {
@@ -53,6 +91,7 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
   const [search, setSearch] = useState("");
   const [role, setRole] = useState<string>("member");
   const [formOpen, setFormOpen] = useState(false);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
 
@@ -443,8 +482,23 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
                       ) : null}
                     </div>
                   </div>
-                  <ScrollText size={16} className="shrink-0 text-[var(--muted)] mt-1" />
+                  <div className="flex items-center gap-2 shrink-0 mt-1">
+                    <button
+                      type="button"
+                      onClick={() => setExpandedId((cur) => (cur === doc.id ? null : doc.id))}
+                      aria-expanded={expandedId === doc.id}
+                      aria-label={expandedId === doc.id ? t("collapse") : t("expand")}
+                      className="inline-flex items-center gap-1 h-8 px-2 rounded-[var(--radius-sm)] border border-[var(--border)] text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)] hover:bg-[var(--surface-2)] transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+                    >
+                      {expandedId === doc.id ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      {expandedId === doc.id ? t("collapse") : t("expand")}
+                    </button>
+                    <ScrollText size={16} className="text-[var(--muted)]" />
+                  </div>
                 </div>
+                {expandedId === doc.id && (
+                  <GovDocDetail wid={wid} docId={doc.id} canManage={canManage} />
+                )}
               </li>
             ))}
           </ul>
@@ -452,4 +506,601 @@ export default function GovDocPage({ params }: { params: Promise<{ wid: string }
       </div>
     </main>
   );
+}
+
+interface PanelProps {
+  wid: string;
+  docId: string;
+  canManage: boolean;
+}
+
+function GovDocDetail({ wid, docId, canManage }: PanelProps) {
+  return (
+    <div className="mt-3 rounded-[var(--radius-md)] border border-[var(--border)] bg-[var(--surface-2)] p-[var(--space-3)] space-y-4">
+      <ExchangePanel wid={wid} docId={docId} canManage={canManage} />
+      <OpinionPanel wid={wid} docId={docId} canManage={canManage} />
+      <AttachmentPanel wid={wid} docId={docId} canManage={canManage} />
+    </div>
+  );
+}
+
+function ExchangePanel({ wid, docId, canManage }: PanelProps) {
+  const t = useTranslations("govDoc");
+  const tButton = useTranslations("button");
+  const tErr = useTranslations("error");
+  const [items, setItems] = useState<GovDocExchange[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [fDirection, setFDirection] = useState<Direction>("outgoing");
+  const [fChannel, setFChannel] = useState("");
+  const [fExchangedAt, setFExchangedAt] = useState("");
+  const [fNote, setFNote] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await api<{ items: GovDocExchange[] }>(
+          `/api/v1/workspaces/${wid}/gov-docs/${docId}/exchanges`,
+        );
+        if (!cancelled) {
+          setItems(data.items);
+          setError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error && e.message.includes("fetch")
+              ? tErr("networkConnectFailed")
+              : t("loadExchangesFailed"),
+          );
+          setItems([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [wid, docId, refreshKey, t, tErr]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fChannel.trim()) return;
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      await api<GovDocExchange>(`/api/v1/workspaces/${wid}/gov-docs/${docId}/exchanges`, {
+        method: "POST",
+        body: JSON.stringify({
+          direction: fDirection,
+          channel: fChannel.trim(),
+          exchangedAt: fExchangedAt ? new Date(fExchangedAt).toISOString() : undefined,
+          note: fNote.trim() || undefined,
+        }),
+      });
+      setRefreshKey((k) => k + 1);
+      setFChannel("");
+      setFExchangedAt("");
+      setFNote("");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : t("createFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section aria-label={t("exchanges")}>
+      <h3 className="mb-2 flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
+        <ArrowLeftRight size={14} className="text-[var(--accent)]" />
+        {t("exchanges")}
+      </h3>
+      {error && (
+        <div className="mb-2 rounded-[var(--radius-sm)] p-2 text-[length:var(--text-xs)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]">
+          <span>{error}</span>
+          <button
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            {tButton("retry")}
+          </button>
+        </div>
+      )}
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-2 rounded-[var(--radius-sm)] p-2 text-[length:var(--text-xs)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
+        >
+          <span>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            {t("close")}
+          </button>
+        </div>
+      )}
+      {canManage && (
+        <form
+          onSubmit={submit}
+          className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3"
+          aria-label={t("exchangeCreate")}
+        >
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("direction")}
+            </span>
+            <select
+              value={fDirection}
+              onChange={(e) => setFDirection(e.target.value as Direction)}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            >
+              <option value="incoming">{t("incoming")}</option>
+              <option value="outgoing">{t("outgoing")}</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("exchangeChannel")} *
+            </span>
+            <input
+              type="text"
+              value={fChannel}
+              onChange={(e) => setFChannel(e.target.value)}
+              aria-label={t("exchangeChannel")}
+              required
+              maxLength={50}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("exchangeTime")}
+            </span>
+            <input
+              type="datetime-local"
+              value={fExchangedAt}
+              onChange={(e) => setFExchangedAt(e.target.value)}
+              aria-label={t("exchangeTime")}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("remarks")}
+            </span>
+            <input
+              type="text"
+              value={fNote}
+              onChange={(e) => setFNote(e.target.value)}
+              aria-label={t("remarks")}
+              maxLength={200}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <div className="sm:col-span-2 flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={!fChannel.trim() || submitting}
+              className="h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              {submitting && <Loader2 size={14} className="inline animate-spin mr-1" />}
+              {t("exchangeCreate")}
+            </button>
+          </div>
+        </form>
+      )}
+      {loading ? (
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
+          <Loader2 size={12} className="inline animate-spin mr-1" />
+          {t("exchanges")}
+        </p>
+      ) : items.length === 0 ? (
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("exchangeEmpty")}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((x) => (
+            <li
+              key={x.id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
+            >
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--muted)]">
+                {t(x.direction)}
+              </span>
+              <span>{x.channel}</span>
+              <span className="text-[var(--muted)]">
+                {t("exchangeTime")}: {new Date(x.exchangedAt).toLocaleString()}
+              </span>
+              {x.operator?.name || x.operator?.email ? (
+                <span className="text-[var(--muted)]">{x.operator.name || x.operator.email}</span>
+              ) : null}
+              {x.note && <span className="w-full text-[var(--muted)]">{x.note}</span>}
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function OpinionPanel({ wid, docId, canManage }: PanelProps) {
+  const t = useTranslations("govDoc");
+  const tButton = useTranslations("button");
+  const tErr = useTranslations("error");
+  const [items, setItems] = useState<GovDocOpinion[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [fConclusion, setFConclusion] = useState<"agree" | "reject" | "amend">("agree");
+  const [fContent, setFContent] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await api<{ items: GovDocOpinion[] }>(
+          `/api/v1/workspaces/${wid}/gov-docs/${docId}/opinions`,
+        );
+        if (!cancelled) {
+          setItems(data.items);
+          setError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error && e.message.includes("fetch")
+              ? tErr("networkConnectFailed")
+              : t("loadOpinionsFailed"),
+          );
+          setItems([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [wid, docId, refreshKey, t, tErr]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fContent.trim()) return;
+    setActionError(null);
+    setSubmitting(true);
+    try {
+      await api<GovDocOpinion>(`/api/v1/workspaces/${wid}/gov-docs/${docId}/opinions`, {
+        method: "POST",
+        body: JSON.stringify({ conclusion: fConclusion, content: fContent.trim() }),
+      });
+      setRefreshKey((k) => k + 1);
+      setFContent("");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : t("createFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section aria-label={t("opinions")}>
+      <h3 className="mb-2 flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
+        <MessageSquare size={14} className="text-[var(--accent)]" />
+        {t("opinions")}
+      </h3>
+      {error && (
+        <div className="mb-2 rounded-[var(--radius-sm)] p-2 text-[length:var(--text-xs)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]">
+          <span>{error}</span>
+          <button
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            {tButton("retry")}
+          </button>
+        </div>
+      )}
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-2 rounded-[var(--radius-sm)] p-2 text-[length:var(--text-xs)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
+        >
+          <span>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            {t("close")}
+          </button>
+        </div>
+      )}
+      {canManage && (
+        <form
+          onSubmit={submit}
+          className="mb-3 space-y-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3"
+          aria-label={t("opinionCreate")}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <label className="block">
+              <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+                {t("opinionConclusion")}
+              </span>
+              <select
+                value={fConclusion}
+                onChange={(e) => setFConclusion(e.target.value as "agree" | "reject" | "amend")}
+                className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+              >
+                <option value="agree">{t("agree")}</option>
+                <option value="reject">{t("reject")}</option>
+                <option value="amend">{t("amend")}</option>
+              </select>
+            </label>
+          </div>
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("opinionContent")} *
+            </span>
+            <textarea
+              value={fContent}
+              onChange={(e) => setFContent(e.target.value)}
+              aria-label={t("opinionContent")}
+              required
+              rows={2}
+              maxLength={2000}
+              className="w-full px-3 py-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <div className="flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={!fContent.trim() || submitting}
+              className="h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              {submitting && <Loader2 size={14} className="inline animate-spin mr-1" />}
+              {t("opinionCreate")}
+            </button>
+          </div>
+        </form>
+      )}
+      {loading ? (
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
+          <Loader2 size={12} className="inline animate-spin mr-1" />
+          {t("opinions")}
+        </p>
+      ) : items.length === 0 ? (
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("opinionEmpty")}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((o) => (
+            <li
+              key={o.id}
+              className="rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] px-2.5 py-2 space-y-1"
+            >
+              <div className="flex items-center gap-2 flex-wrap text-[length:var(--text-xs)]">
+                <span className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--accent-soft)] text-[var(--fg-2)]">
+                  {t(o.conclusion)}
+                </span>
+                {o.author?.name || o.author?.email ? (
+                  <span className="text-[var(--muted)]">{o.author.name || o.author.email}</span>
+                ) : null}
+                <span className="text-[var(--muted)]">
+                  {new Date(o.createdAt).toLocaleString()}
+                </span>
+              </div>
+              <p className="text-[length:var(--text-sm)] text-[var(--fg)] break-words">
+                {o.content}
+              </p>
+            </li>
+          ))}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+function AttachmentPanel({ wid, docId, canManage }: PanelProps) {
+  const t = useTranslations("govDoc");
+  const tButton = useTranslations("button");
+  const tErr = useTranslations("error");
+  const [items, setItems] = useState<GovDocAttachment[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [fVersion, setFVersion] = useState("");
+  const [fFileHash, setFFileHash] = useState("");
+  const [fPreviewRef, setFPreviewRef] = useState("");
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const data = await api<{ items: GovDocAttachment[] }>(
+          `/api/v1/workspaces/${wid}/gov-docs/${docId}/attachments`,
+        );
+        if (!cancelled) {
+          setItems(data.items);
+          setError(null);
+        }
+      } catch (e) {
+        if (!cancelled) {
+          setError(
+            e instanceof Error && e.message.includes("fetch")
+              ? tErr("networkConnectFailed")
+              : t("loadAttachmentsFailed"),
+          );
+          setItems([]);
+        }
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [wid, docId, refreshKey, t, tErr]);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!fFileHash.trim()) return;
+    setActionError(null);
+    setSubmitting(true);
+    const v = fVersion.trim();
+    try {
+      await api<GovDocAttachment>(`/api/v1/workspaces/${wid}/gov-docs/${docId}/attachments`, {
+        method: "POST",
+        body: JSON.stringify({
+          version: v ? Number(v) : undefined,
+          fileHash: fFileHash.trim(),
+          previewRef: fPreviewRef.trim() || undefined,
+        }),
+      });
+      setRefreshKey((k) => k + 1);
+      setFVersion("");
+      setFFileHash("");
+      setFPreviewRef("");
+    } catch (err) {
+      setActionError(err instanceof Error ? err.message : t("createFailed"));
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section aria-label={t("attachments")}>
+      <h3 className="mb-2 flex items-center gap-1.5 text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] text-[var(--fg)]">
+        <Paperclip size={14} className="text-[var(--accent)]" />
+        {t("attachments")}
+      </h3>
+      {error && (
+        <div className="mb-2 rounded-[var(--radius-sm)] p-2 text-[length:var(--text-xs)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]">
+          <span>{error}</span>
+          <button
+            onClick={() => setRefreshKey((k) => k + 1)}
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            {tButton("retry")}
+          </button>
+        </div>
+      )}
+      {actionError && (
+        <div
+          role="alert"
+          className="mb-2 rounded-[var(--radius-sm)] p-2 text-[length:var(--text-xs)] flex items-center justify-between bg-[color-mix(in_srgb,var(--danger)_10%,transparent)] border border-[color-mix(in_srgb,var(--danger)_30%,transparent)] text-[var(--danger)]"
+        >
+          <span>{actionError}</span>
+          <button
+            onClick={() => setActionError(null)}
+            className="underline hover:opacity-80 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+          >
+            {t("close")}
+          </button>
+        </div>
+      )}
+      {canManage && (
+        <form
+          onSubmit={submit}
+          className="mb-3 grid grid-cols-1 sm:grid-cols-2 gap-2 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] p-3"
+          aria-label={t("attachmentCreate")}
+        >
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("attachmentVersion")}
+            </span>
+            <input
+              type="number"
+              min={1}
+              step={1}
+              value={fVersion}
+              onChange={(e) => setFVersion(e.target.value)}
+              aria-label={t("attachmentVersion")}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <label className="block">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("attachmentHash")} *
+            </span>
+            <input
+              type="text"
+              value={fFileHash}
+              onChange={(e) => setFFileHash(e.target.value)}
+              aria-label={t("attachmentHash")}
+              required
+              maxLength={128}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <label className="block sm:col-span-2">
+            <span className="block mb-1 text-[length:var(--text-xs)] font-[weight:var(--weight-medium)] text-[var(--fg-2)]">
+              {t("attachmentPreview")}
+            </span>
+            <input
+              type="text"
+              value={fPreviewRef}
+              onChange={(e) => setFPreviewRef(e.target.value)}
+              aria-label={t("attachmentPreview")}
+              maxLength={500}
+              className="w-full h-9 px-3 rounded-[var(--radius-sm)] border border-[var(--border)] bg-[var(--surface)] text-[length:var(--text-sm)] text-[var(--fg)] outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)]"
+            />
+          </label>
+          <div className="sm:col-span-2 flex items-center gap-2">
+            <button
+              type="submit"
+              disabled={!fFileHash.trim() || submitting}
+              className="h-9 px-4 rounded-[var(--radius-md)] bg-[var(--accent)] text-[var(--accent-fg)] text-[length:var(--text-sm)] font-[weight:var(--weight-medium)] hover:bg-[var(--accent-hover)] disabled:opacity-50 transition-colors duration-[var(--motion-fast)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--accent-ring)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg)]"
+            >
+              {submitting && <Loader2 size={14} className="inline animate-spin mr-1" />}
+              {t("attachmentCreate")}
+            </button>
+          </div>
+        </form>
+      )}
+      {loading ? (
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">
+          <Loader2 size={12} className="inline animate-spin mr-1" />
+          {t("attachments")}
+        </p>
+      ) : items.length === 0 ? (
+        <p className="text-[length:var(--text-xs)] text-[var(--muted)]">{t("attachmentEmpty")}</p>
+      ) : (
+        <ul className="space-y-1.5">
+          {items.map((a) => (
+            <li
+              key={a.id}
+              className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[length:var(--text-xs)] text-[var(--fg-2)]"
+            >
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded-[var(--radius-sm)] bg-[var(--surface-2)] text-[var(--muted)]">
+                {t("attachmentVersion")}: {a.version}
+              </span>
+              <span title={a.fileHash}>{shortHash(a.fileHash)}</span>
+              {a.previewRef && (
+                <span className="text-[var(--muted)]">
+                  {t("attachmentPreview")}: {a.previewRef}
+                </span>
+              )}
+              <span className="text-[var(--muted)]">{new Date(a.createdAt).toLocaleString()}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+      <p className="mt-2 text-[length:var(--text-xs)] text-[var(--meta)]">
+        {t("attachmentPending")}
+      </p>
+    </section>
+  );
+}
+
+function shortHash(h: string) {
+  return h.length > 16 ? `${h.slice(0, 12)}…${h.slice(-4)}` : h;
 }
