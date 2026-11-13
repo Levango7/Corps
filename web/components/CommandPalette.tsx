@@ -26,6 +26,7 @@ import {
   PenTool,
   Table2,
   FolderOpen,
+  ScrollText,
   ClipboardList,
   Trash2,
   Target,
@@ -248,6 +249,13 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
         kind: "nav",
         href: `/w/${wid}/contacts`,
         icon: ContactIcon,
+      },
+      {
+        id: "nav-gov-doc",
+        titleKey: "nav.menu.govDoc",
+        kind: "nav",
+        href: `/w/${wid}/gov-doc`,
+        icon: ScrollText,
       },
       {
         id: "nav-documents",
