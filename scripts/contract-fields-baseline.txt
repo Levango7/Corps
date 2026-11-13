@@ -10,5 +10,3 @@
 #
 # 登记 ≠ 认可：登记项只是待核对的字段差异；清偿可能落在契约侧或实现侧，需逐条尽调后判定，本门禁不预设改哪一侧。
 # 只允许收缩：修好后跑 --emit 删掉对应行。
-
-web/app/api/v1/workspaces/[wid]/tasks/route.ts	GET	hasMore,page,total

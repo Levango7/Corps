@@ -14066,16 +14066,27 @@ components:
       properties:
         data:
           type: object
-          required: [items, page, limit, total, hasMore]
+          required: [items, limit]
           properties:
             items:
               type: array
               items:
                 $ref: '#/components/schemas/Task'
-            page: { type: integer, minimum: 1 }
             limit: { type: integer, minimum: 1 }
-            total: { type: integer, minimum: 0 }
-            hasMore: { type: boolean }
+          oneOf:
+            - type: object
+              required: [nextCursor]
+              properties:
+                nextCursor:
+                  type: string
+                  nullable: true
+                  description: Cursor for the next page (last item id when full, otherwise null).
+            - type: object
+              required: [page, total, hasMore]
+              properties:
+                page: { type: integer, minimum: 1 }
+                total: { type: integer, minimum: 0 }
+                hasMore: { type: boolean }
     Envelope_Member:
       allOf:
         - $ref: '#/components/schemas/Envelope'
