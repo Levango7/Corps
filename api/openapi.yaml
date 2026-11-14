@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 288 paths (updated 2026-10-30). The service also
+    Coverage: this contract declares 293 paths (updated 2026-11-12). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -67,6 +67,8 @@ tags:
     description: Workspace dashboard widget layout and widget data (F3)
   - name: Sharing
     description: Document/task share settings, password verification and access logs (F5)
+  - name: govDocs
+    description: Government document registry (incoming/outgoing), review trail and exchange log (P1 A1; OFD preview selection pending)
 security:
   - bearerAuth: []
 
@@ -2882,6 +2884,58 @@ paths:
           $ref: '#/components/responses/NotFound'
 
   /api/v1/workspaces/{wid}/conversations/{cid}/members/{uid}:
+    patch:
+      tags: [messages]
+      summary: Update a conversation member role, or toggle own muted state
+      description: >
+        Body takes exactly one of { role } or { muted }. Role changes are
+        owner-only; setting role to owner transfers ownership and demotes the
+        caller to admin. Muted toggles are self-only.
+      operationId: patchConversationMember
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: cid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+        - name: uid
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                role: { type: string, enum: [owner, admin, member] }
+                muted: { type: boolean }
+              description: Exactly one of role / muted must be supplied.
+      responses:
+        '200':
+          description: Member updated; transferred is true only on ownership transfer
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [transferred]
+                    properties:
+                      transferred: { type: boolean }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     delete:
       tags: [messages]
       summary: Remove a member from conversation (owner/admin)
@@ -4454,6 +4508,80 @@ paths:
   # F5: SHARING — documents
   # ===========================================================================
   /api/v1/workspaces/{wid}/documents/{id}/share:
+    delete:
+      tags: [Sharing]
+      summary: Revoke document sharing (clears token, password and slug)
+      description: >
+        Clears shareToken / shareExpiresAt / sharePassword / shareSlug and
+        resets visibility to private. The old share link stops working immediately.
+      operationId: revokeDocumentShare
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      responses:
+        '200':
+          description: Sharing revoked
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [revoked]
+                    properties:
+                      revoked: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [Sharing]
+      summary: Create a share link for a document
+      operationId: createDocumentShare
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                visibility: { type: string, enum: [public, private] }
+                expiresIn:
+                  type: integer
+                  minimum: 0
+                  description: Validity in hours; 0 or omitted means never expires.
+      responses:
+        '201':
+          description: Share link created
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [shareUrl, shareToken, expiresAt, visibility]
+                    properties:
+                      shareUrl: { type: string }
+                      shareToken: { type: string }
+                      expiresAt: { type: string, format: date-time, nullable: true }
+                      visibility: { type: string }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [Sharing]
       summary: Get share settings for a document
@@ -4512,6 +4640,55 @@ paths:
           $ref: '#/components/responses/InternalError'
 
   /api/v1/workspaces/{wid}/documents/{id}/versions/compare:
+    get:
+      tags: [Documents]
+      summary: Compare two document versions (GET compatibility entry)
+      description: >
+        Query-only compatibility entry used by DocumentVersionHistory. Accepts
+        from / to (version numbers) or fromId / toId (version row ids) as query
+        parameters and forwards to the POST handler, so both methods share one
+        implementation and one response shape.
+      operationId: getDocumentVersionCompare
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/DocumentId'
+        - name: from
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: to
+          in: query
+          schema: { type: integer, minimum: 1 }
+        - name: fromId
+          in: query
+          schema: { type: string, format: uuid }
+        - name: toId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Version metadata and line-level diff
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [from, to, diff, stats]
+                    properties:
+                      from: { type: object }
+                      to: { type: object }
+                      diff: { type: array, items: { type: object } }
+                      stats: { type: object }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '429':
+          $ref: '#/components/responses/TooManyRequests'
+        '500':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [Documents]
       summary: Compare two document versions (line-level diff)
@@ -5119,6 +5296,305 @@ paths:
                     properties:
                       id: { type: string, format: uuid }
                       deleted: { type: boolean }
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs:
+    get:
+      tags: [govDocs]
+      summary: List government documents (newest registered first)
+      operationId: listGovDocs
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - name: direction
+          in: query
+          schema: { type: string, enum: [incoming, outgoing] }
+        - name: status
+          in: query
+          schema: { type: string, enum: [draft, review, signed, exchanged, archived] }
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 50 }
+      responses:
+        '200':
+          description: Government document list (paginated)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocList'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Register an incoming/outgoing government document
+      description: Requires govDocs:create in the permission matrix.
+      operationId: createGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocRequest'
+      responses:
+        '201':
+          description: Government document registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDoc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}:
+    get:
+      tags: [govDocs]
+      summary: Government document detail (opinions, exchanges, attachments)
+      operationId: getGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Government document detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDoc'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    patch:
+      tags: [govDocs]
+      summary: Update a government document or advance its status
+      description: >
+        Requires govDocs:update. Status follows the draft->review->signed->exchanged->archived
+        state machine (forward + archive only); an invalid transition maps to 400.
+      operationId: updateGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateGovDocRequest'
+      responses:
+        '200':
+          description: Updated government document
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDoc'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    delete:
+      tags: [govDocs]
+      summary: Delete a government document
+      operationId: deleteGovDoc
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  code: { type: integer, example: 200 }
+                  data:
+                    type: object
+                    nullable: true
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}/exchanges:
+    get:
+      tags: [govDocs]
+      summary: List exchange records of a government document (newest first)
+      operationId: listGovDocExchanges
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Exchange record list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocExchangeList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Record an exchange (send/receive) of a government document
+      description: Requires govDocs:create in the permission matrix.
+      operationId: createGovDocExchange
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocExchangeRequest'
+      responses:
+        '201':
+          description: Exchange record created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocExchange'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}/opinions:
+    get:
+      tags: [govDocs]
+      summary: List review opinions of a government document (oldest first)
+      operationId: listGovDocOpinions
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Opinion list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocOpinionList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Submit a review opinion on a government document
+      description: Requires govDocs:create in the permission matrix.
+      operationId: createGovDocOpinion
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocOpinionRequest'
+      responses:
+        '201':
+          description: Opinion created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocOpinion'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+  /api/v1/workspaces/{wid}/gov-docs/{id}/attachments:
+    get:
+      tags: [govDocs]
+      summary: List registered attachments of a government document (version ascending)
+      operationId: listGovDocAttachments
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      responses:
+        '200':
+          description: Attachment list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocAttachmentList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+    post:
+      tags: [govDocs]
+      summary: Register an attachment (version/hash/preview reference) of a government document
+      description: >
+        Requires govDocs:create in the permission matrix. OFD parsing/preview selection is
+        still pending review; this endpoint only records the attachment, it does not render.
+      operationId: createGovDocAttachment
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/GovDocId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateGovDocAttachmentRequest'
+      responses:
+        '201':
+          description: Attachment registered
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_GovDocAttachment'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -7322,6 +7798,38 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/ai/push/schedules:
+    patch:
+      tags: [ai]
+      summary: Update an AI push schedule (quiet hours / frequency)
+      operationId: patchAiPushSchedule
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [scheduleId]
+              properties:
+                scheduleId: { type: string, format: uuid }
+                quietHoursStart: { type: integer, minimum: 0, maximum: 23 }
+                quietHoursEnd: { type: integer, minimum: 0, maximum: 23 }
+                frequency: { type: string }
+              description: At least one of quietHoursStart / quietHoursEnd / frequency must be supplied.
+      responses:
+        '200':
+          description: Updated schedule row
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_AiPushSchedule'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [ai]
       summary: List AI push schedules
@@ -7793,6 +8301,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/ai/meetings/sessions/{id}:
+    delete:
+      tags: [ai]
+      summary: Delete a meeting session (cascades action items and decisions)
+      operationId: deleteAiMeetingSession
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Session deleted (data is null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [ai]
       summary: Meeting session detail (includes actionItems + decisions)
@@ -9774,6 +10305,53 @@ paths:
         '503':
           $ref: '#/components/responses/InternalError'
   /api/v1/ai/orchestrate:
+    patch:
+      tags: [ai]
+      summary: Execute an orchestration plan (applies write actions)
+      description: >
+        Body { wid, actions[] }. Each action is checked against the permission
+        matrix before execution; viewer is refused for notify. All actions run
+        inside one RLS transaction. Returns data { success, results }.
+      operationId: executeAiOrchestration
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [wid, actions]
+              properties:
+                wid: { type: string, format: uuid }
+                actions:
+                  type: array
+                  minItems: 1
+                  maxItems: 5
+                  items: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Actions executed
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/Envelope'
+                properties:
+                  data:
+                    type: object
+                    required: [success, results]
+                    properties:
+                      success: { type: boolean }
+                      results:
+                        type: array
+                        items: { type: object, additionalProperties: true }
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '500':
+          $ref: '#/components/responses/InternalError'
+        '503':
+          $ref: '#/components/responses/InternalError'
     post:
       tags: [ai]
       summary: AI cross-capability orchestration plan (non-streaming)
@@ -10172,6 +10750,29 @@ paths:
         '500':
           $ref: '#/components/responses/InternalError'
   /api/v1/mail/{id}:
+    delete:
+      tags: [mail]
+      summary: Delete a mail (scoped to the caller's own accounts)
+      operationId: deleteMail
+      parameters:
+        - $ref: '#/components/parameters/WidQuery'
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: Mail deleted (data is null)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
     get:
       tags: [mail]
       summary: Mail detail
@@ -13480,6 +14081,12 @@ components:
       required: true
       description: Announcement id (UUID).
       schema: { type: string, format: uuid }
+    GovDocId:
+      name: id
+      in: path
+      required: true
+      description: Government document id (UUID).
+      schema: { type: string, format: uuid }
     ContactId:
       name: cid
       in: path
@@ -13759,16 +14366,27 @@ components:
       properties:
         data:
           type: object
-          required: [items, page, limit, total, hasMore]
+          required: [items, limit]
           properties:
             items:
               type: array
               items:
                 $ref: '#/components/schemas/Task'
-            page: { type: integer, minimum: 1 }
             limit: { type: integer, minimum: 1 }
-            total: { type: integer, minimum: 0 }
-            hasMore: { type: boolean }
+          oneOf:
+            - type: object
+              required: [nextCursor]
+              properties:
+                nextCursor:
+                  type: string
+                  nullable: true
+                  description: Cursor for the next page (last item id when full, otherwise null).
+            - type: object
+              required: [page, total, hasMore]
+              properties:
+                page: { type: integer, minimum: 1 }
+                total: { type: integer, minimum: 0 }
+                hasMore: { type: boolean }
     Envelope_Member:
       allOf:
         - $ref: '#/components/schemas/Envelope'
@@ -15061,6 +15679,207 @@ components:
           type: string
           format: date-time
           nullable: true
+    GovDoc:
+      type: object
+      required: [id, title, direction, secretLevel, urgency, status, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        docNo: { type: string, nullable: true }
+        title: { type: string }
+        direction: { type: string, enum: [incoming, outgoing] }
+        secretLevel: { type: string, enum: [internal, secret, confidential, topsecret] }
+        urgency: { type: string, enum: [normal, urgent, extraurgent] }
+        source: { type: string, nullable: true }
+        destination: { type: string, nullable: true }
+        status: { type: string, enum: [draft, review, signed, exchanged, archived] }
+        createdBy: { type: string, format: uuid, nullable: true }
+        remarks: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        updatedAt: { type: string, format: date-time }
+        creator:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+        opinions:
+          type: array
+          items:
+            $ref: '#/components/schemas/GovDocOpinion'
+        exchanges:
+          type: array
+          items:
+            $ref: '#/components/schemas/GovDocExchange'
+        attachments:
+          type: array
+          items:
+            $ref: '#/components/schemas/GovDocAttachment'
+    GovDocOpinion:
+      type: object
+      required: [id, conclusion, content, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        conclusion: { type: string, enum: [agree, reject, amend] }
+        content: { type: string }
+        createdAt: { type: string, format: date-time }
+        authorId: { type: string, format: uuid, nullable: true }
+        author:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    GovDocExchange:
+      type: object
+      required: [id, direction, channel, exchangedAt, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        direction: { type: string, enum: [incoming, outgoing] }
+        channel: { type: string }
+        operatorId: { type: string, format: uuid, nullable: true }
+        exchangedAt: { type: string, format: date-time }
+        note: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+        operator:
+          type: object
+          nullable: true
+          properties:
+            id: { type: string }
+            name: { type: string, nullable: true }
+            email: { type: string }
+    GovDocAttachment:
+      type: object
+      required: [id, version, fileHash, createdAt]
+      properties:
+        id: { type: string, format: uuid }
+        version: { type: integer, minimum: 1 }
+        fileHash: { type: string }
+        previewRef: { type: string, nullable: true }
+        createdAt: { type: string, format: date-time }
+    Envelope_GovDoc:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDoc'
+    Envelope_GovDocList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items, page, limit, total, hasMore]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDoc'
+            page: { type: integer, minimum: 1 }
+            limit: { type: integer, minimum: 1 }
+            total: { type: integer, minimum: 0 }
+            hasMore: { type: boolean }
+    Envelope_GovDocExchange:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDocExchange'
+    Envelope_GovDocExchangeList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDocExchange'
+    Envelope_GovDocOpinion:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDocOpinion'
+    Envelope_GovDocOpinionList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDocOpinion'
+    Envelope_GovDocAttachment:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/GovDocAttachment'
+    Envelope_GovDocAttachmentList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/GovDocAttachment'
+    CreateGovDocRequest:
+      type: object
+      required: [title]
+      properties:
+        docNo: { type: string, minLength: 1, maxLength: 64 }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        direction: { type: string, enum: [incoming, outgoing] }
+        secretLevel: { type: string, enum: [internal, secret, confidential, topsecret] }
+        urgency: { type: string, enum: [normal, urgent, extraurgent] }
+        source: { type: string, minLength: 1, maxLength: 200 }
+        destination: { type: string, minLength: 1, maxLength: 200 }
+        remarks: { type: string }
+    UpdateGovDocRequest:
+      type: object
+      minProperties: 1
+      properties:
+        docNo: { type: string, minLength: 1, maxLength: 64 }
+        title: { type: string, minLength: 1, maxLength: 200 }
+        direction: { type: string, enum: [incoming, outgoing] }
+        secretLevel: { type: string, enum: [internal, secret, confidential, topsecret] }
+        urgency: { type: string, enum: [normal, urgent, extraurgent] }
+        source: { type: string, minLength: 1, maxLength: 200 }
+        destination: { type: string, minLength: 1, maxLength: 200 }
+        status: { type: string, enum: [draft, review, signed, exchanged, archived] }
+        remarks: { type: string }
+    CreateGovDocExchangeRequest:
+      type: object
+      required: [channel]
+      properties:
+        direction: { type: string, enum: [incoming, outgoing] }
+        channel: { type: string, minLength: 1, maxLength: 50 }
+        exchangedAt: { type: string, format: date-time }
+        note: { type: string }
+    CreateGovDocOpinionRequest:
+      type: object
+      required: [conclusion, content]
+      properties:
+        conclusion: { type: string, enum: [agree, reject, amend] }
+        content: { type: string, minLength: 1 }
+    CreateGovDocAttachmentRequest:
+      type: object
+      required: [fileHash]
+      properties:
+        version: { type: integer, minimum: 1 }
+        fileHash: { type: string, minLength: 1, maxLength: 128 }
+        previewRef: { type: string, minLength: 1, maxLength: 500 }
     Contact:
       type: object
       required: [id, name]

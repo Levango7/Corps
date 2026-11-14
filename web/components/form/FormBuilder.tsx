@@ -103,13 +103,16 @@ export function FormBuilder({ wid, form, onSaved, onCancel }: FormBuilderProps) 
     e.preventDefault();
     if (saving) return;
     if (!title.trim()) {
-      setError(t("title"));
+      // 专用错误词条：此前复用 t("title")（=「表单」），
+      // 校验失败时用户只看到「表单」两个字，等于没有反馈。
+      setError(t("titleRequired"));
       return;
     }
     // 校验字段 label 非空
     const validFields = fields.filter((f) => f.label.trim());
     if (validFields.length === 0) {
-      setError(t("addField"));
+      // 同上：此前复用 t("addField")（=「添加字段」按钮文案）
+      setError(t("addFieldRequired"));
       return;
     }
     setSaving(true);

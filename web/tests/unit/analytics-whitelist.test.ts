@@ -4,7 +4,7 @@ import { describe, it, expect } from "vitest";
  * analytics-whitelist 单元测试
  *
  * 验证：
- *  - 导出集合规模（当前 37 名：20 旧 + 9 新 + 3 spec §8 + 2 筛选视图 + 3 闭环/导出）
+ *  - 导出集合规模（当前 43 名：20 旧 + 9 新 + 3 spec §8 + 2 筛选视图 + 3 闭环/导出 + 3 决策漏斗 + 3 公文）
  *  - 无重复
  *  - 9 个新增事件名均在集合内
  *  - spec §8 三事件（定价线消费）均在集合内
@@ -19,8 +19,8 @@ describe("analytics-whitelist", () => {
    * 由 tests/unit/analytics-event-contract.test.ts 断言「注释数字 == 集合大小」，
    * 所以漏改任一处都会红：这里挡「加了名字没更新预期」，契约测试挡「加了名字没回写注释」。
    */
-  it("含 40 名（20 旧 + 9 新 + 3 spec §8 + 2 筛选视图 + 3 闭环/导出 + 3 决策漏斗）", () => {
-    expect(ALLOWED_EVENT_NAMES.size).toBe(40);
+  it("含 43 名（20 旧 + 9 新 + 3 spec §8 + 2 筛选视图 + 3 闭环/导出 + 3 决策漏斗 + 3 公文）", () => {
+    expect(ALLOWED_EVENT_NAMES.size).toBe(43);
   });
 
   it("9 个新增事件名均在集合内", () => {

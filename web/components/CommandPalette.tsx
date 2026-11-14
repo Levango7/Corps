@@ -2,45 +2,11 @@
 
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "@/lib/i18n-navigation";
-import {
-  Search,
-  LayoutDashboard,
-  FileText,
-  CheckSquare,
-  CornerDownLeft,
-  Kanban,
-  Users,
-  CreditCard,
-  Settings,
-  Scale,
-  X,
-  MessageSquare,
-  Video,
-  NotebookPen,
-  Monitor,
-  CheckCircle2,
-  Megaphone,
-  Calendar as CalendarIcon,
-  Contact as ContactIcon,
-  BookOpen,
-  PenTool,
-  Table2,
-  FolderOpen,
-  ClipboardList,
-  Trash2,
-  Target,
-  GitBranch,
-  LayoutTemplate,
-  Clock,
-  BarChart3,
-  Wand2,
-  Lightbulb,
-  HelpCircle,
-  Newspaper,
-  PenLine,
-} from "lucide-react";
+import { Search, FileText, CheckSquare, CornerDownLeft, Scale, X } from "lucide-react";
 import { api } from "@/lib/api";
 import { useTranslations } from "next-intl";
+import { MODULE_ICONS, type ModuleIconName } from "@/lib/modules/icons";
+import { WORKSPACE_MODULES, moduleHref } from "@/lib/modules/registry";
 
 /** 搜索结果类型 */
 type SearchType = "document" | "task" | "decision";
@@ -99,6 +65,23 @@ const SEARCH_ICONS: Record<SearchType, typeof FileText> = {
   task: CheckSquare,
   decision: Scale,
 };
+
+/**
+ * Cmd+K 独有的两项：注册表**刻意未收录**的产品差异（#300 接线时确定）。
+ *
+ * 为什么不并进 registry：registry 是侧栏 / 设置 / 模块可见性的事实源，这两项
+ * 不在侧栏出现；并进去会改变侧栏与视觉基线。所以它们留在命令面板，但只保留
+ * path / titleKey / icon 三项数据，不再重复写 href 模板与图标组件引用。
+ */
+const CMDK_EXTRA_NAV: readonly {
+  id: string;
+  titleKey: string;
+  path: string;
+  icon: ModuleIconName;
+}[] = [
+  { id: "nav-ai-usage", titleKey: "ai.usage.pageTitle", path: "/ai-usage", icon: "analytics" },
+  { id: "nav-assistant", titleKey: "assistant.welcome", path: "/assistant", icon: "im" },
+];
 
 export default function CommandPalette({ wid, onClose }: { wid: string; onClose: () => void }) {
   const t = useTranslations("command");
@@ -164,245 +147,24 @@ export default function CommandPalette({ wid, onClose }: { wid: string; onClose:
   }, [query, wid]);
 
   const items = useMemo<CmdItem[]>(() => {
+    // 单一事实源：导航项由 registry 派生，不再手写第二份清单。
+    // 顺序即 registry 顺序（= 侧栏顺序）；空态仍只展示前 8 项。
+    // id 保持旧形态：overview 用 nav-home（既有 E2E / 埋点按它索引），其余 nav-<id>。
     const navItems: CmdItem[] = [
-      {
-        id: "nav-home",
-        titleKey: "nav.menu.overview",
-        kind: "nav",
-        href: `/w/${wid}`,
-        icon: LayoutDashboard,
-      },
-      {
-        id: "nav-board",
-        titleKey: "nav.menu.board",
-        kind: "nav",
-        href: `/w/${wid}/board`,
-        icon: Kanban,
-      },
-      {
-        id: "nav-my-tasks",
-        titleKey: "nav.menu.myTasks",
-        kind: "nav",
-        href: `/w/${wid}/my-tasks`,
-        icon: CheckSquare,
-      },
-      {
-        id: "nav-im",
-        titleKey: "nav.menu.messages",
-        kind: "nav",
-        href: `/w/${wid}/im`,
-        icon: MessageSquare,
-      },
-      {
-        id: "nav-decisions",
-        titleKey: "nav.menu.decisions",
-        kind: "nav",
-        href: `/w/${wid}/decisions`,
-        icon: Scale,
-      },
-      {
-        id: "nav-meetings",
-        titleKey: "nav.menu.meetings",
-        kind: "nav",
-        href: `/w/${wid}/meetings`,
-        icon: Video,
-      },
-      {
-        id: "nav-remote-control",
-        titleKey: "nav.menu.remoteControl",
-        kind: "nav",
-        href: `/w/${wid}/remote-control`,
-        icon: Monitor,
-      },
-      {
-        id: "nav-meeting-minutes",
-        titleKey: "nav.menu.meetingMinutes",
-        kind: "nav",
-        href: `/w/${wid}/meeting-minutes`,
-        icon: NotebookPen,
-      },
-      {
-        id: "nav-approvals",
-        titleKey: "nav.menu.approvals",
-        kind: "nav",
-        href: `/w/${wid}/approvals`,
-        icon: CheckCircle2,
-      },
-      {
-        id: "nav-announcements",
-        titleKey: "nav.menu.announcements",
-        kind: "nav",
-        href: `/w/${wid}/announcements`,
-        icon: Megaphone,
-      },
-      {
-        id: "nav-calendar",
-        titleKey: "nav.menu.calendar",
-        kind: "nav",
-        href: `/w/${wid}/calendar`,
-        icon: CalendarIcon,
-      },
-      {
-        id: "nav-contacts",
-        titleKey: "nav.menu.contacts",
-        kind: "nav",
-        href: `/w/${wid}/contacts`,
-        icon: ContactIcon,
-      },
-      {
-        id: "nav-documents",
-        titleKey: "nav.menu.documents",
-        kind: "nav",
-        href: `/w/${wid}/documents`,
-        icon: FileText,
-      },
-      {
-        id: "nav-files",
-        titleKey: "nav.menu.files",
-        kind: "nav",
-        href: `/w/${wid}/files`,
-        icon: FolderOpen,
-      },
-      {
-        id: "nav-wiki",
-        titleKey: "nav.menu.wiki",
-        kind: "nav",
-        href: `/w/${wid}/wiki`,
-        icon: BookOpen,
-      },
-      {
-        id: "nav-whiteboards",
-        titleKey: "nav.menu.whiteboards",
-        kind: "nav",
-        href: `/w/${wid}/whiteboards`,
-        icon: PenTool,
-      },
-      {
-        id: "nav-databases",
-        titleKey: "nav.menu.databases",
-        kind: "nav",
-        href: `/w/${wid}/databases`,
-        icon: Table2,
-      },
-      {
-        id: "nav-forms",
-        titleKey: "nav.menu.forms",
-        kind: "nav",
-        href: `/w/${wid}/forms`,
-        icon: ClipboardList,
-      },
-      {
-        id: "nav-recycle-bin",
-        titleKey: "nav.menu.recycleBin",
-        kind: "nav",
-        href: `/w/${wid}/recycle-bin`,
-        icon: Trash2,
-      },
-      {
-        id: "nav-okr",
-        titleKey: "nav.menu.okr",
-        kind: "nav",
-        href: `/w/${wid}/okr`,
-        icon: Target,
-      },
-      {
-        id: "nav-workflows",
-        titleKey: "nav.menu.workflows",
-        kind: "nav",
-        href: `/w/${wid}/workflows`,
-        icon: GitBranch,
-      },
-      {
-        id: "nav-templates",
-        titleKey: "nav.menu.templates",
-        kind: "nav",
-        href: `/w/${wid}/templates`,
-        icon: LayoutTemplate,
-      },
-      {
-        id: "nav-time-tracking",
-        titleKey: "nav.menu.timeTracking",
-        kind: "nav",
-        href: `/w/${wid}/time-tracking`,
-        icon: Clock,
-      },
-      {
-        id: "nav-ai-tools",
-        titleKey: "nav.menu.aiTools",
-        kind: "nav",
-        href: `/w/${wid}/ai-tools`,
-        icon: Wand2,
-      },
-      {
-        id: "nav-insight",
-        titleKey: "nav.menu.insight",
-        kind: "nav",
-        href: `/w/${wid}/insight`,
-        icon: Lightbulb,
-      },
-      {
-        id: "nav-knowledge-qa",
-        titleKey: "nav.menu.knowledgeQa",
-        kind: "nav",
-        href: `/w/${wid}/knowledge-qa`,
-        icon: HelpCircle,
-      },
-      {
-        id: "nav-daily-report",
-        titleKey: "nav.menu.dailyReport",
-        kind: "nav",
-        href: `/w/${wid}/daily-report`,
-        icon: Newspaper,
-      },
-      {
-        id: "nav-announcement-draft",
-        titleKey: "nav.menu.announcementDraft",
-        kind: "nav",
-        href: `/w/${wid}/announcement-draft`,
-        icon: PenLine,
-      },
-      {
-        id: "nav-members",
-        titleKey: "nav.menu.members",
-        kind: "nav",
-        href: `/w/${wid}/members`,
-        icon: Users,
-      },
-      {
-        id: "nav-billing",
-        titleKey: "nav.menu.billing",
-        kind: "nav",
-        href: `/w/${wid}/billing`,
-        icon: CreditCard,
-      },
-      {
-        id: "nav-analytics",
-        titleKey: "nav.menu.analytics",
-        kind: "nav",
-        href: `/w/${wid}/analytics`,
-        icon: BarChart3,
-      },
-      {
-        id: "nav-settings",
-        titleKey: "nav.menu.settings",
-        kind: "nav",
-        href: `/w/${wid}/settings`,
-        icon: Settings,
-      },
-      {
-        id: "nav-ai-usage",
-        titleKey: "ai.usage.pageTitle",
-        kind: "nav",
-        href: `/w/${wid}/ai-usage`,
-        icon: BarChart3,
-      },
-      {
-        id: "nav-assistant",
-        titleKey: "assistant.welcome",
-        kind: "nav",
-        href: `/w/${wid}/assistant`,
-        icon: MessageSquare,
-      },
+      ...WORKSPACE_MODULES.map((m) => ({
+        id: m.id === "overview" ? "nav-home" : `nav-${m.id}`,
+        titleKey: `nav.${m.labelKey}`,
+        kind: "nav" as const,
+        href: moduleHref(m, wid),
+        icon: MODULE_ICONS[m.icon],
+      })),
+      ...CMDK_EXTRA_NAV.map((item) => ({
+        id: item.id,
+        titleKey: item.titleKey,
+        kind: "nav" as const,
+        href: `/w/${wid}${item.path}`,
+        icon: MODULE_ICONS[item.icon],
+      })),
     ];
 
     const q = query.trim().toLowerCase();

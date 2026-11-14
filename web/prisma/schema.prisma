@@ -180,6 +180,10 @@ model User {
   pushSubscriptions         PushSubscription[]
   // 原生 App 推送 token（FCM/APNs/Huawei Push Kit），用于跨平台统一推送
   pushTokens                PushToken[]
+  // P1 公文：创建的公文 / 流程意见作者 / 交换操作人
+  createdGovDocs      GovDoc[]         @relation("GovDocCreator")
+  govDocOpinions      GovDocOpinion[]  @relation("GovDocOpinionAuthor")
+  govDocExchanges     GovDocExchange[] @relation("GovDocExchangeOperator")
 
   @@map("users")
 }
@@ -297,6 +301,11 @@ model Workspace {
   remoteControlSessions RemoteControlSession[]
   // ADR-010 G4：分享访问日志（写入时反查归属工作区）
   shareAccessLogs        ShareAccessLog[]
+  // P1 公文（A1：收发文登记 + 交换留痕；OFD 预览选型待核 §8-1）
+  govDocs            GovDoc[]
+  govDocOpinions     GovDocOpinion[]
+  govDocExchanges    GovDocExchange[]
+  govDocAttachments  GovDocAttachment[]
 
   @@index([ownerId])
   @@map("workspaces")
@@ -2697,4 +2706,101 @@ model AssistantMessage {
 
   @@index([conversationId])
   @@map("assistant_messages")
+}
+
+/// 公文（P1 A1：收发文登记 + 交换留痕；A 分期骨架的状态机）
+/// status：draft（拟稿）→ review（审核）→ signed（签发）→ exchanged（交换）/ archived（归档）
+/// direction：incoming（收文）/ outgoing（发文）
+/// OFD 预览选型待核（设计文档 §8-1）：本期只做登记与留痕，不承诺渲染能力。
+model GovDoc {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  /// 发文字号（如「X政发〔2026〕1号」），登记时可后补
+  docNo       String?   @map("doc_no") @db.VarChar(64)
+  title       String    @db.VarChar(200)
+  direction   String    @default("incoming") @db.VarChar(20)
+  /// 密级（internal/secret/confidential/topsecret 的取值口径随等保条款核 §8-4）
+  secretLevel String    @default("internal") @map("secret_level") @db.VarChar(20)
+  /// 紧急程度（normal/urgent/extraurgent）
+  urgency     String    @default("normal") @db.VarChar(20)
+  /// 来文单位（收文）
+  source      String?   @db.VarChar(200)
+  /// 发文对象（发文）
+  destination String?   @db.VarChar(200)
+  status      String    @default("draft") @db.VarChar(20)
+  createdBy   String?   @map("created_by") @db.Uuid
+  remarks     String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  updatedAt   DateTime  @updatedAt @map("updated_at") @db.Timestamptz
+
+  workspace   Workspace      @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  creator     User?          @relation("GovDocCreator", fields: [createdBy], references: [id], onDelete: SetNull)
+  opinions    GovDocOpinion[]
+  exchanges   GovDocExchange[]
+  attachments GovDocAttachment[]
+
+  @@index([workspaceId, direction, status])
+  @@index([workspaceId, updatedAt])
+  @@map("gov_docs")
+}
+
+/// 流程意见 — 审核意见留痕（人/时/结论）
+model GovDocOpinion {
+  id         String   @id @default(uuid()) @db.Uuid
+  workspaceId String  @map("workspace_id") @db.Uuid
+  govDocId   String   @map("gov_doc_id") @db.Uuid
+  authorId   String?  @map("author_id") @db.Uuid
+  /// 结论（agree/reject/amend）
+  conclusion String   @db.VarChar(20)
+  content    String   @db.Text
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace  Workspace   @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  govDoc     GovDoc      @relation(fields: [govDocId], references: [id], onDelete: Cascade)
+  author     User?       @relation("GovDocOpinionAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, govDocId])
+  @@map("gov_doc_opinions")
+}
+
+/// 交换记录 — 收发时间/通道/操作人（交换留痕）
+model GovDocExchange {
+  id          String    @id @default(uuid()) @db.Uuid
+  workspaceId String    @map("workspace_id") @db.Uuid
+  govDocId    String    @map("gov_doc_id") @db.Uuid
+  /// 本次交换方向（incoming=收文登记 / outgoing=发文交换）
+  direction   String    @default("incoming") @db.VarChar(20)
+  /// 交换通道（secrecy=机要 / internal=内网 / email=邮件……口径随 §8-3 对接核）
+  channel     String    @db.VarChar(50)
+  operatorId  String?   @map("operator_id") @db.Uuid
+  /// 收发时间（交换发生时刻，区别于落库时刻）
+  exchangedAt DateTime  @map("exchanged_at") @db.Timestamptz
+  note        String?   @db.Text
+  createdAt   DateTime  @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace   Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  govDoc      GovDoc       @relation(fields: [govDocId], references: [id], onDelete: Cascade)
+  operator    User?        @relation("GovDocExchangeOperator", fields: [operatorId], references: [id], onDelete: SetNull)
+
+  @@index([workspaceId, govDocId])
+  @@map("gov_doc_exchanges")
+}
+
+/// OFD 附件 — 版本/哈希/预览产物引用（OFD 预览选型待核 §8-1，只登记不渲染）
+model GovDocAttachment {
+  id         String   @id @default(uuid()) @db.Uuid
+  workspaceId String  @map("workspace_id") @db.Uuid
+  govDocId   String   @map("gov_doc_id") @db.Uuid
+  version    Int      @default(1)
+  /// 文件内容哈希（算法口径随 OFD 选型定，先按 sha256 hex 落库）
+  fileHash   String   @map("file_hash") @db.VarChar(128)
+  /// 预览产物引用（对象存储 key / 转换服务返回的产物 id；形态待核 §8-1）
+  previewRef String?  @map("preview_ref") @db.VarChar(500)
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+
+  workspace  Workspace    @relation(fields: [workspaceId], references: [id], onDelete: Cascade)
+  govDoc     GovDoc       @relation(fields: [govDocId], references: [id], onDelete: Cascade)
+
+  @@index([workspaceId, govDocId])
+  @@map("gov_doc_attachments")
 }

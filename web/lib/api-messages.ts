@@ -591,6 +591,9 @@ export const API_MESSAGES = {
   /* ── 公告（任务 233）── */
   announcementNotFound: { zh: "公告不存在", en: "Announcement not found" },
 
+  /* ── 公文（P1 公文 A1，任务 #83）── */
+  govDocNotFound: { zh: "公文不存在", en: "Government document not found" },
+
   /* ── 会议纪要（任务 232）── */
   minutesNotFound: { zh: "会议纪要不存在", en: "Meeting minutes not found" },
 

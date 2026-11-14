@@ -113,6 +113,9 @@ MODULE_BY_SEGMENT = {
     # 联系人分组是 contacts 数据域的子资源：分组 CRUD 归 contacts 模块管
     # （矩阵内已有 owner/admin=crud、member=cr、viewer=r 的既有语义，无需新模块）
     "contact-groups": "contacts",
+    # 公文（P1 公文 A1）：/gov-docs 主表与 /gov-docs/{id}/exchanges|opinions|attachments
+    # 子资源同属 govDocs 域（矩阵 owner/admin/member=crud、viewer=r）
+    "gov-docs": "govDocs",
     "labels": "tasks",
     "milestones": "tasks",
     # 多维表格在矩阵里是**两个**模块（容器 vs 记录数据面），按路径段区分：
