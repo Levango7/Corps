@@ -18,10 +18,11 @@ check_write_access_registry.py — 写接口「覆盖 or 登记」二选一门�
                          过期未复核（review_by < 今天）同样红 —— 登记表不是终身豁免书。
 
 三种 red 因自检：注入变异必须各自**因正确的红因**变红，否则判据坏了会永远绿灯。
+--self-test 另验 --emit 的三条不变式：默认复核日不次日过期 / 不销毁已有 reason / 不批量续期。
 
 用法：
   python scripts/check_write_access_registry.py              门禁检查
-  python scripts/check_write_access_registry.py --emit       按现状重刷登记表
+  python scripts/check_write_access_registry.py --emit       补齐缺失条目（保留既有 reason / review_by，不续期）
   python scripts/check_write_access_registry.py --self-test  跑变异自检
 退出码：0 通过；1 断言失败；2 自检未如期变红。
 """
@@ -55,6 +56,9 @@ HANDLER_RE = re.compile(
 CHOKE_POINT_RE = re.compile(r"\bgetWorkspaceContext(?:V2)?\s*\(")
 
 ENTRY_RE = re.compile(r"^(POST|PUT|PATCH|DELETE)\s+(\S+)\s+reason=(\S+)\s+review_by=(\d{4}-\d{2}-\d{2})$")
+
+# 新登记条目至少要留出一个可执行的复核窗口；不足则顺延到次年年底。
+MIN_REVIEW_WINDOW_DAYS = 30
 
 
 def route_from_file(rel: str) -> str:
@@ -164,27 +168,61 @@ def check_raw() -> tuple[list[str], dict[tuple[str, str], bool]]:
     return errors, handlers
 
 
-def emit() -> int:
-    handlers = collect_write_handlers()
-    today = date.today()
-    review = date(today.year, 12, 31)
+def default_review_date(today: date) -> date:
+    """新登记条目的默认复核日：当年年底；剩余窗口不足 30 天则顺延次年年底。
+
+    旧的 `date(today.year, 12, 31)` 在 12-30 / 12-31 运行 --emit 时，会生成
+    次日（甚至当天）就触发 REVIEW_OVERDUE 的条目 —— 门禁还没开始复核就先红了。
+    """
+    year_end = date(today.year, 12, 31)
+    if (year_end - today).days < MIN_REVIEW_WINDOW_DAYS:
+        return date(today.year + 1, 12, 31)
+    return year_end
+
+
+def registry_lines(
+    handlers: dict[tuple[str, str], bool],
+    prior: dict[tuple[str, str], tuple[str, str]],
+    today: date,
+) -> list[str]:
+    """按现状生成登记表行（纯函数，可冻结 today 做变异测试）。
+
+    --emit 的语义是「补齐」，不是「重刷」：
+      * 已登记且仍未进墙的 handler：**原样保留** reason 与 review_by。
+        重刷若销毁人工论证、或把 28 条统一写成新日期，等于批量续期，
+        会让「登记表不是终身豁免书」失效 —— 过期复核日必须由人工重新论证。
+      * 新出现的未进墙 handler：写占位 reason + default_review_date(today)。
+      * 已进墙或已不存在的条目：不再输出（由 check_raw 的 REGISTRY_ROT 判红）。
+    """
     lines = [
         "# 写接口登记册 —— 未经过 getWorkspaceContext 的写 handler 必须在此说明原因",
         "#",
         "# 格式：METHOD PATH reason=一句话说明为什么不进墙 review_by=YYYY-MM-DD",
         "#   - 进墙（文件调用了 getWorkspaceContext）的 handler 不得出现在这里，出现即 REGISTRY_ROT 红",
         "#   - review_by 过期同样红：登记表不是终身豁免书，到期必须重新论证",
-        f"# 由 python scripts/check_write_access_registry.py --emit 重刷于 {today.isoformat()}",
+        "#   - --emit 只补齐缺失条目并保留既有 reason / review_by，不替任何人续期",
+        f"# 由 python scripts/check_write_access_registry.py --emit 生成于 {today.isoformat()}",
         "#",
     ]
     for (method, route), covered in sorted(handlers.items()):
         if covered:
             continue
-        lines.append(
-            f"{method} {route} reason=TO_BE_CLASSIFIED review_by={review.isoformat()}"
-        )
+        key = (method, route)
+        if key in prior:
+            reason, review_by = prior[key]
+        else:
+            reason = "TO_BE_CLASSIFIED"
+            review_by = default_review_date(today).isoformat()
+        lines.append(f"{method} {route} reason={reason} review_by={review_by}")
+    return lines
+
+
+def emit() -> int:
+    handlers = collect_write_handlers()
+    prior = load_registry()
+    lines = registry_lines(handlers, prior, date.today())
     REGISTRY.write_text("\n".join(lines) + "\n", encoding="utf-8")
-    n = len(lines) - 7
+    n = sum(1 for ln in lines if ln and not ln.startswith("#"))
     print(f"written {REGISTRY.name}: {n} entries")
     return 0
 
@@ -244,6 +282,9 @@ def self_test() -> int:
     mutations.append(("把复核日改成过去 -> REVIEW_OVERDUE", lines3, {"REVIEW_OVERDUE"}))
 
     ok = True
+    if not self_test_emit(handlers, original):
+        ok = False
+
     for name, patched, expected in mutations:
         try:
             REGISTRY.write_text("\n".join(patched) + "\n", encoding="utf-8")
@@ -261,6 +302,79 @@ def self_test() -> int:
 
     print("self-test PASS" if ok else "self-test FAILED: 判据失效")
     return 0 if ok else 2
+
+
+def self_test_emit(
+    handlers: dict[tuple[str, str], bool], registry_text: str | None
+) -> bool:
+    """--emit 的不变式；任一破坏即判 self-test 失败（exit 2）。
+
+    变异点对齐三个真实缺陷：次日过期 / 销毁 reason / 批量续期。
+    断言用构造夹具 + 冻结日期，不依赖真实当天，也不写登记表。
+    """
+    ok = True
+    frozen = date(2026, 11, 15)  # 冻结夹具：与当天日期无关，保证断言可复现
+
+    # 1) 默认复核日：30 天窗口边界与年末顺延
+    for today, expected in [
+        (date(2026, 6, 1), date(2026, 12, 31)),
+        (date(2026, 12, 1), date(2026, 12, 31)),  # 恰好 30 天，不顺延
+        (date(2026, 12, 2), date(2027, 12, 31)),  # 29 天，顺延
+        (date(2026, 12, 31), date(2027, 12, 31)),  # 年末当天，顺延
+    ]:
+        got = default_review_date(today)
+        if got != expected:
+            print(f"  FAIL 默认复核日 {today} 应为 {expected}，实得 {got}")
+            ok = False
+
+    # 2) 夹具：已有（故意已过期）/ 新增 / 已进墙 / 已消失 四类 key
+    fake_handlers = {
+        ("POST", "/api/v1/probe/existing"): False,
+        ("POST", "/api/v1/probe/new"): False,
+        ("POST", "/api/v1/probe/covered"): True,
+    }
+    fake_prior = {
+        ("POST", "/api/v1/probe/existing"): ("既有人工论证", "2000-01-01"),
+        ("POST", "/api/v1/probe/gone"): ("残留", "2099-01-01"),
+    }
+    body = [
+        ln
+        for ln in registry_lines(fake_handlers, fake_prior, frozen)
+        if ln and not ln.startswith("#")
+    ]
+    want_existing = "POST /api/v1/probe/existing reason=既有人工论证 review_by=2000-01-01"
+    want_new = (
+        f"POST /api/v1/probe/new reason=TO_BE_CLASSIFIED "
+        f"review_by={default_review_date(frozen).isoformat()}"
+    )
+    if len(body) != 2 or want_existing not in body or want_new not in body:
+        print(f"  FAIL registry_lines 复用/补齐/跳过语义被破坏：{body}")
+        ok = False
+
+    # 3) 真实登记表：按现状重生成的条目行必须与现有逐字相同（emit 幂等）
+    if registry_text:
+        prior: dict[tuple[str, str], tuple[str, str]] = {}
+        for ln in registry_text.splitlines():
+            m = ENTRY_RE.match(ln.strip())
+            if m:
+                prior[(m.group(1), m.group(2))] = (m.group(3), m.group(4))
+        regenerated = [
+            ln
+            for ln in registry_lines(handlers, prior, date.today())
+            if ln and not ln.startswith("#")
+        ]
+        current = [
+            s
+            for s in (ln.strip() for ln in registry_text.splitlines())
+            if s and not s.startswith("#")
+        ]
+        if regenerated != current:
+            print("  FAIL 按现状重生成会改动既有条目（emit 不再是幂等补齐；若有 REGISTRY_ROT 先修表）")
+            ok = False
+
+    if ok:
+        print("  OK   emit 不变式（不次日过期 / 不销毁 reason / 不批量续期 / 幂等）")
+    return ok
 
 
 if __name__ == "__main__":
