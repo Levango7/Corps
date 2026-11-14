@@ -187,6 +187,32 @@ describe("模块注册表：结构与秩序", () => {
     expect(moduleHref(overview, "w1")).toBe("/w/w1");
     expect(moduleHref(board, "w1")).toBe("/w/w1/board");
   });
+
+  /**
+   * 根因守卫：Cmd+K 的第二份手写清单已删除（2026-11-14），导航项改为从
+   * WORKSPACE_MODULES 派生。这里钉住三件事，防止它悄悄长回来：
+   * 1. 必须直接 map 全量注册表；
+   * 2. 不得在注册表上 slice/filter 截断（那会真的漏入口）；
+   * 3. navItems 段内不得再出现 href 字面量模板（第二份清单的形态特征）。
+   *
+   * 与 scripts/check_registry_cmdk.py 是两层防线：门禁在 CI 里判红，
+   * 这条断言在单测里更早暴露（本地 `vitest` 就能看到）。
+   */
+  it("Cmd+K 导航项由 registry 派生（不存在第二份手写清单）", () => {
+    const src = readFileSync(join(WEB_ROOT, "components/CommandPalette.tsx"), "utf-8");
+    expect(src, "Cmd+K 应直接 map 全量注册表").toMatch(/WORKSPACE_MODULES\s*\.\s*map\s*\(/);
+    expect(src, "派生时不得截断注册表（会漏入口）").not.toMatch(
+      /WORKSPACE_MODULES\s*\.\s*(slice|filter)\s*\(/,
+    );
+    const start = src.indexOf("const navItems");
+    const end = src.lastIndexOf("const q = query");
+    expect(start, "找不到 navItems 声明").toBeGreaterThan(-1);
+    expect(end, "找不到 navItems 之后的锚点").toBeGreaterThan(start);
+    expect(
+      src.slice(start, end),
+      "navItems 里重新出现 href 字面量模板 = 第二份清单复活",
+    ).not.toMatch(/href:\s*`\/w\/\$\{wid\}(?=[/`])/);
+  });
 });
 
 describe("模块注册表：与真实页面 / 词条 / 图标一致", () => {
