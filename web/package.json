@@ -26,9 +26,9 @@
     "db:seed": "tsx prisma/seed.ts"
   },
   "dependencies": {
-    "@ai-sdk/openai": "^4.0.101",
-    "@ai-sdk/provider": "4.0.36",
-    "@ai-sdk/react": "4.0.167",
+    "@ai-sdk/openai": "^4.0.114",
+    "@ai-sdk/provider": "4.0.37",
+    "@ai-sdk/react": "4.0.173",
     "@livekit/components-react": "^2.9.24",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
@@ -47,7 +47,7 @@
     "@tiptap/starter-kit": "^3.33.1",
     "@tiptap/suggestion": "^3.33.1",
     "@types/nodemailer": "^8.0.2",
-    "ai": "^7.0.150",
+    "ai": "^7.0.169",
     "bcryptjs": "^3.0.3",
     "better-auth": "1.7.17",
     "framer-motion": "^14.6.0",
