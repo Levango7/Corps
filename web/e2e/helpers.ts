@@ -63,6 +63,20 @@ export async function login(page: Page, email: string, password = TEST_PASSWORD)
 }
 
 /**
+ * 等通讯录侧栏首拉完成（首个 GET /contact-groups 响应落地）。
+ * 侧栏挂载 GET 若慢于建组响应落回，会用旧空列表覆盖建组的乐观 append
+ * （实测组合跑 flaky：服务端 201 但侧栏组按钮丢失），建组前先同步掉这扇竞态窗。
+ * 响应已到则立即继续；超时（如首拉被编译拖住）也继续，不制造固定 sleep。
+ */
+export async function waitForContactGroupsLoaded(page: Page): Promise<void> {
+  await page
+    .waitForResponse((r) => r.url().includes("/contact-groups") && r.request().method() === "GET", {
+      timeout: 10_000,
+    })
+    .catch(() => undefined);
+}
+
+/**
  * 在工作区内通过 NewTaskDialog UI 创建一条任务。
  *
  * 2026-09-27 修复：此前因 Ripple 组件 pointer-events 拦截 + useEffect 异步拉取
