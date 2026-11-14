@@ -29,6 +29,12 @@ web/components/CommandPalette.tsx 实际在 useMemo 里硬编码了第二份 nav
   文件其它 href 字面量、注释里的 `/w/${wid}/self` 自引用会被误算成入口，让漏挂的
   模块「被兜住」而判绿。registry 侧同样只切 WORKSPACE_MODULES 数组，避免把
   moduleHref() 里的模板字符串等误算。
+- **派生形态优先（2026-11-14 根因修复后）**：若 CommandPalette 直接从
+  `WORKSPACE_MODULES.map(...)` 生成导航项（import 了该符号、用 moduleHref 拼 href、
+  且未在 WORKSPACE_MODULES 上 slice/filter 截断），判为**结构派生**并直接 PASS：
+  来源就是注册表全量，结构上不可能漏挂。必须保留这一支 —— 派生落地后 navItems 里
+  不再有 33 个 href 模板，字面量口径会得到空集合并把正常状态判红。
+  截断（`WORKSPACE_MODULES.slice/filter`）单独判红，那是真的会漏入口。
 
 ## 零存量 → 硬失败，不上棘轮
 
@@ -36,11 +42,12 @@ origin/main 现状 registry 31 项、Cmd+K 33 项，单向包含成立（31/31�
 棘轮是浪费，故直接硬失败。若将来出现合法的无 Cmd+K 入口模块，不要删门禁、不要塞
 隐藏基线文件，在 ALLOWED_MISSING_IN_CMDK 显式登记并写清理由（可见、可审计）。
 
-## 过渡护栏，不替代根因修复
+## 根因修复已落地（2026-11-14），本门禁转为「防第二份清单复活」
 
-真正的修复是让 CommandPalette 复用 registry 这一份事实源，从根上消灭第二份清单。
-本门禁只是过渡护栏：它保证「注册表里的模块在命令面板点得到」，不保证翻译键、图标、
-分组、权限、页面是否真的存在，也不替代 code review。根因修复不在本批。
+CommandPalette 的 navItems 已改为从 WORKSPACE_MODULES 派生，第二份手写清单不存在。
+本门禁保留两条口径：派生形态（结构保证不漏）直接 PASS；若有人退回字面量清单，
+则照旧做单向包含检查，漏挂仍判红。它仍不保证翻译键 / 图标 / 权限 / 页面存在，
+也不替代 code review。
 
 ## 退出码
 
@@ -83,9 +90,41 @@ RE_OBJ_HREF = re.compile(r"\bhref\s*:\s*`([^`]*)`")
 # href 模板形态：/w/${xxx} 或 /w/${xxx}/... → 取出 /... 相对段
 RE_HREF_PREFIX = re.compile(r"^/w/\$\{[^}]+\}(/.*)?$")
 
+# 派生形态（根因修复后的正常形态）：导航项由注册表全量 map 出来。
+RE_DERIVE_IMPORT = re.compile(
+    r'import\s*\{[^}]*\bWORKSPACE_MODULES\b[^}]*\}\s*from\s*["\']@/lib/modules/registry["\']'
+)
+RE_DERIVE_MAP = re.compile(r"\bWORKSPACE_MODULES\s*\.\s*map\s*\(")
+RE_DERIVE_TRUNCATE = re.compile(r"\bWORKSPACE_MODULES\s*\.\s*(?:slice|filter)\s*\(")
+RE_DERIVE_HREF = re.compile(r"\bmoduleHref\s*\(")
+
 
 class MissingSource(Exception):
     """事实源缺失 / 不可读 / 解析异常：判红，不静默跳过。"""
+
+
+def detect_derivation(text: str) -> str | None:
+    """识别「导航项由注册表派生」的形态；返回原因串，未识别返回 None。
+
+    为什么必须有这一支：根因修复（让 CommandPalette 复用 registry）落地后，
+    navItems 里不再有 33 个 href 模板字面量，纯字面量解析只会得到空集合并判红
+    —— 门禁会反过来阻止它本该促成的修复。
+
+    判据刻意严：必须同时有 import + `WORKSPACE_MODULES.map` + `moduleHref(`，
+    且不得在 WORKSPACE_MODULES 上 slice/filter（那会真的漏项）。注释先剔除，
+    避免文档里的示例代码冒充派生。
+    """
+    clean = _strip_comments(text)
+    trunc = RE_DERIVE_TRUNCATE.search(clean)
+    if trunc:
+        return f"TRUNCATED:{trunc.group(0)}"
+    if not RE_DERIVE_IMPORT.search(clean):
+        return None
+    if not RE_DERIVE_MAP.search(clean):
+        return None
+    if not RE_DERIVE_HREF.search(clean):
+        return None
+    return "WORKSPACE_MODULES.map -> moduleHref"
 
 
 def _scan_delimited(text: str, start: int, opener: str, closer: str) -> tuple[str, int]:
@@ -264,6 +303,16 @@ def run_gate(root: Path) -> int:
     except OSError as exc:
         print(f"FAIL: 事实源缺失或不可读（{exc}）")
         return 2
+    derived = detect_derivation(cmdk_text)
+    if derived and not derived.startswith("TRUNCATED:"):
+        print(
+            f"Cmd+K 导航项由 registry 派生（{derived}，未截断）"
+            " —— 结构上不可能漏挂，判 PASS"
+        )
+        return 0
+    if derived:
+        print(f"FAIL: 派生时对 WORKSPACE_MODULES 做了截断/过滤（{derived}）—— 会漏掉入口")
+        return 1
     try:
         registry_segments = parse_registry_paths(reg_text)
         cmdk_segments = parse_cmdk_segments(cmdk_text)
@@ -346,8 +395,11 @@ def _probe(
 def self_test() -> int:
     """反向测试：违规样本必须变红、干净样本必须回绿、缺源必须判 2。"""
     failures: list[str] = []
+    total = 0
 
     def check(label: str, got: object, expected: object) -> None:
+        nonlocal total
+        total += 1
         if got != expected:
             failures.append(f"{label}: expected {expected!r}, got {got!r}")
 
@@ -424,15 +476,69 @@ def self_test() -> int:
     _, _, m8b = _probe(["/a", "/b"], [], allowed=frozenset({"/a"}))
     check("⑧b allowlist exempts only the listed item", m8b, ["/b"])
 
+    # ⑨-⑫ 派生形态（2026-11-14 根因修复后的正常形态）：走 run_gate 全链路验证，
+    # 只测比较器测不出「入口被整段换成 map」这一层的判定。
+    def probe_gate(reg_src: str, cmd_src: str) -> int:
+        with tempfile.TemporaryDirectory() as d:
+            root = Path(d)
+            (root / REGISTRY_REL).parent.mkdir(parents=True, exist_ok=True)
+            (root / CMDK_REL).parent.mkdir(parents=True, exist_ok=True)
+            (root / REGISTRY_REL).write_text(reg_src, encoding="utf-8")
+            (root / CMDK_REL).write_text(cmd_src, encoding="utf-8")
+            return run_gate(root)
+
+    derive_reg = (
+        'export const WORKSPACE_MODULES = [{ id: "a", path: "/a" }, { id: "b", path: "/b" }];\n'
+    )
+    derive_cmd = (
+        'import { WORKSPACE_MODULES, moduleHref } from "@/lib/modules/registry";\n'
+        "export default function CP({ wid }: { wid: string }) {\n"
+        "  const navItems = [\n"
+        "    ...WORKSPACE_MODULES.map((m) => ({ id: `nav-${m.id}`, kind: \"nav\", href: moduleHref(m, wid) })),\n"
+        "  ];\n"
+        "  return navItems.slice(0, 8);\n"
+        "}\n"
+    )
+    check("⑨ derived form (map + moduleHref) must PASS", probe_gate(derive_reg, derive_cmd), 0)
+    check(
+        "⑩ derived but truncated by slice must FAIL",
+        probe_gate(
+            derive_reg,
+            derive_cmd.replace("WORKSPACE_MODULES.map", "WORKSPACE_MODULES.slice(0, 1).map"),
+        ),
+        1,
+    )
+    check(
+        "⑪ derived without registry import must FAIL",
+        probe_gate(
+            derive_reg,
+            derive_cmd.replace(
+                'import { WORKSPACE_MODULES, moduleHref } from "@/lib/modules/registry";\n',
+                "",
+            ),
+        ),
+        1,
+    )
+    check(
+        "⑫ derive pattern only inside a comment must NOT count",
+        probe_gate(
+            derive_reg,
+            "// WORKSPACE_MODULES.map + moduleHref（文档示例，不是真实派生）\n"
+            'const navItems = [{ id: "nav-a", kind: "nav", href: `/w/${wid}/zzz` }];\n',
+        ),
+        1,
+    )
+
     if failures:
         print("SELF-TEST FAIL（门禁自身失真，禁止上线）:")
         for item in failures:
             print(f"  - {item}")
         return 2
     print(
-        "SELF-TEST PASS: 9/9 断言通过（①干净树含根项绿 / ②漏挂红 / ③改名红 / "
+        f"SELF-TEST PASS: {total}/{total} 断言通过（①干净树含根项绿 / ②漏挂红 / ③改名红 / "
         "④Cmd+K多项仍绿 / ⑤命名空间差异不判红 / ⑥种入项不计 / ⑦缺源判2 / "
-        "⑧红因集合精确 / ⑧b豁免语义）；比较器恒空或豁免全放行都会让红场景断言失败"
+        "⑧红因集合精确 / ⑧b豁免语义 / ⑨派生形态绿 / ⑩截断红 / ⑪缺import红 / "
+        "⑫注释不算派生）；比较器恒空、豁免全放行、或派生识别只看注释都会让对应断言失败"
     )
     return 0
 
