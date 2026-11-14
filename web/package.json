@@ -32,7 +32,7 @@
     "@livekit/components-react": "^2.9.24",
     "@prisma/adapter-pg": "7.10.1",
     "@prisma/client": "7.10.1",
-    "@tailwindcss/postcss": "4.3.3",
+    "@tailwindcss/postcss": "4.3.5",
     "@tanstack/react-virtual": "^3.14.22",
     "@tiptap/core": "^3.32.2",
     "@tiptap/extension-placeholder": "^3.32.2",
@@ -68,7 +68,7 @@
     "react-dom": "19.3.1",
     "react-grid-layout": "^2.3.0",
     "stripe": "22.6.2",
-    "tailwindcss": "4.3.3",
+    "tailwindcss": "4.3.5",
     "web-push": "^3.6.7",
     "zod": "4.6.7"
   },
