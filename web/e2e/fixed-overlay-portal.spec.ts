@@ -113,11 +113,22 @@ async function probeMenu(page: import("@playwright/test").Page, label: string) {
  * （顶栏搜索按钮）——SSR 首屏不含客户端交互态，它出现即说明 React 事件委托
  * 已绑定。少了这步，齿轮按钮虽 SSR 直出、toBeVisible 已通过，点击仍可能落进
  * 水合前的静默窗口被吞掉（2026-10-29 #208 实证：同一 tree PR 绿、main 连红两轮）。
+ *
+ * 但「顶栏搜索可见」只证明工作区**壳**水合完成，不证明概览页 Widget 子树已挂载：
+ * DashboardGrid 是 dynamic(ssr:false) + loadLayout() 异步，未 loaded 时走
+ * DashboardGridSkeleton（DashboardGrid.tsx:416-418，不含 .react-grid-item）。
+ * 齿轮按钮由 WidgetCard 渲染，其 React 事件委托要等 RGL chunk + 布局 + Widget
+ * 树全部 commit 才绑定。故下面再等首个 .react-grid-item 可见 —— 该类名出现
+ * 等价于 skeleton 已退出。2026-11-14 尽调：34 个有效 E2E job 中 10 个仍命中
+ * [hydration-retry]（29.4%，跨 6 天），命中用例耗时 6.0~6.4s、未命中 3.1~3.2s，
+ * 正是这个残余窗口。3 次点击重试保留为防御深度（退役条件见下方重试注释）。
  */
 async function waitForWorkspaceHydration(page: import("@playwright/test").Page) {
   await expect(page.getByRole("button", { name: /搜索/ }).first()).toBeVisible({
     timeout: 15_000,
   });
+  const firstWidget = page.locator(".react-grid-item").first();
+  await expect(firstWidget).toBeVisible({ timeout: 20_000 });
 }
 
 test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
@@ -132,10 +143,10 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
     await expect(gear).toBeVisible({ timeout: 20_000 });
 
     const dialog = page.locator('[role="dialog"][aria-modal="true"]').first();
-    // 主修是上面的 waitForWorkspaceHydration：补上 README 要求的确定性水合等待后，
-    // 点击落进静默窗口的根因已被消除。下面这层重试只作防御深度，挡的是
-    // 「工作区壳水合完成」与「DashboardGrid dynamic import(ssr:false) 挂载完成」
-    // 之间仍可能存在的小窗口，不是拿来碰运气。本用例测的是弹层的几何与挂载点，
+    // 主修是上面的 waitForWorkspaceHydration：壳水合 + 首个 .react-grid-item
+    // 可见（= Widget 树已 commit）两道确定性等待，把点击落进静默窗口的根因消除。
+    // 下面这层重试只作防御深度，挡的是 Widget 树挂载与齿轮按钮事件绑定之间
+    // 仍可能存在的极窄残余窗口，不是拿来碰运气。本用例测的是弹层的几何与挂载点，
     // 重试不掩盖任何被测行为；打开链路真坏了时 3 次全失败，最终断言照样红。
     //
     // 退役条件：连续两周 CI 的 E2E 日志里没有 [hydration-retry] 警告，
@@ -145,8 +156,10 @@ test.describe("fixed 浮层不被祖先 transform/perspective 劫持", () => {
     // 现在不删的理由：本机无 chromium 跑不了 Playwright，且历史上正是「PR 事件绿、
     // main 连红两轮」，一次 CI 绿不足以证明 flaky 已根治；E2E 是必需检查，
     // 红了会冻结全仓合并（见 README「门禁先红后修的落地方式」）。
-    // 进展：#282 合并点 29e7dfe 的 main 事件 15 项检查全 success（含 E2E），
-    // 但仍是单次样本，按上面的日志判据再观察两周。
+    // 量化基线（2026-11-14 尽调）：#282/#283 之后 34 个有效 E2E job 中 10 个仍
+    // 命中 [hydration-retry]（29.4%，跨 11-08~11-14 共 6 天），命中用例耗时
+    // 6.0~6.4s、未命中 3.1~3.2s。本轮补 Widget 子树等待后，按上面的日志判据
+    // 重新观察两周：要求每一个 E2E job 计数为 0，且耗时收敛为单峰 ~3.1s。
     let opened = false;
     for (let attempt = 0; attempt < 3 && !opened; attempt++) {
       await gear.click();
