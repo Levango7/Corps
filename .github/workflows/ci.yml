@@ -392,6 +392,21 @@ jobs:
         run: python scripts/check_openapi_method_coverage.py
       - name: Mutation-check the method coverage guard itself
         run: python scripts/check_openapi_method_coverage.py --self-test
+      # 上面各步只做「实现 ⊆ 契约」的**正向**包含（path 差集 / method / 字段级），
+      # 反向完全没人管：openapi 可以声明一个根本没有 route.ts 的端点，客户端
+      # codegen 会照着生成调用 404 的方法，而所有既有门禁全绿（2026-11-14 实测
+      # main 上就有 2 条：/api/v1/auth/request-password-reset 与
+      # /api/v1/auth/reset-password。前端实际 fetch 的是 Better Auth 托管的
+      # /api/auth/*，被 INTERNAL_PREFIXES 明确豁免，这两条既无实现也不属于公开契约）。
+      # 本门禁补反向单向包含：契约已声明 path ⊆ 实现 route ∪ 内部豁免 ∪ 显式登记。
+      # 复用 check_api_contract.py 的 collect_routes / parse_openapi_paths /
+      # is_internal，不另写一套正则；内部端点（如 /api/uploads/{path+}）跳过；
+      # 零存量故硬失败、不设基线、不上棘轮；源缺失 / 解析出 0 条 path 一律 exit 2。
+      # 与其余门禁同理：新开 job 不在必需检查清单里拦不住合并，故挂这里。
+      - name: Check OpenAPI paths have implementations (no ghost paths)
+        run: python scripts/check_openapi_impl_coverage.py
+      - name: Mutation-check the ghost-path guard itself
+        run: python scripts/check_openapi_impl_coverage.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
