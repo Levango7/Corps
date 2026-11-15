@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-e2e-domains | feat/domain-e2e-batch | web/components/contact/ContactGroupSidebar.tsx,web/tests/unit/contact-group-sidebar.test.tsx | zcode | 2026-11-15T05:09Z | 2026-11-15T09:09Z | 通讯录侧栏竞态产品修复：挂载GET序号守卫防旧响应覆盖建组乐观append+回归单测
