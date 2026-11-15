@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-escflake | fix/escape-flake-settle | web/tests/unit/ai-calendar-schedule-dialog.test.tsx | esc-flake-b1 | 2026-11-15 16:50 | 2026-11-15 20:50 | 修 Escape 用例竞态：沿用 settleIdle 约定
