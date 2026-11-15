@@ -9,7 +9,7 @@
  * 数据流：挂载时拉 GET /contact-groups；新建/删除后本地更新。
  */
 
-import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import { useTranslations } from "next-intl";
 import { Users, FolderPlus, Trash2, Loader2, X } from "lucide-react";
 import { api } from "@/lib/api";
@@ -31,6 +31,9 @@ export function ContactGroupSidebar({
 }) {
   const t = useTranslations("contact");
   const [groups, setGroups] = useState<ContactGroupItem[]>([]);
+  // 竞态守卫：挂载 GET 与每次新建/删除各自推进序号；GET 落回时若序号已前进，
+  // 说明响应早于写操作发出，其旧数组会覆盖建组/删组的乐观结果，直接丢弃。
+  const rev = useRef(0);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
@@ -40,13 +43,14 @@ export function ContactGroupSidebar({
 
   useEffect(() => {
     let cancelled = false;
+    const myRev = ++rev.current;
     (async () => {
       setLoading(true);
       try {
         const data = await api<{ items: ContactGroupItem[]; total: number; hasMore: boolean }>(
           `/api/v1/workspaces/${wid}/contact-groups`,
         );
-        if (!cancelled) setGroups(data.items);
+        if (!cancelled && rev.current === myRev) setGroups(data.items);
       } catch {
         /* 静默：侧栏加载失败不阻塞主列表 */
       } finally {
@@ -69,6 +73,7 @@ export function ContactGroupSidebar({
         method: "POST",
         body: JSON.stringify({ name }),
       });
+      rev.current += 1;
       setGroups((prev) =>
         [...prev, { ...created, _count: { contacts: 0 } }].sort((a, b) =>
           a.name.localeCompare(b.name),
@@ -91,6 +96,7 @@ export function ContactGroupSidebar({
       await api(`/api/v1/workspaces/${wid}/contact-groups?gid=${gid}`, {
         method: "DELETE",
       });
+      rev.current += 1;
       setGroups((prev) => prev.filter((g) => g.id !== gid));
       // 若删除的是当前选中分组，回退到「全部」
       if (selectedGroupId === gid) onSelectGroup(null);

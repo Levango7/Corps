@@ -192,6 +192,32 @@ describe("ContactGroupSidebar", () => {
     expect(container.querySelector("form")).toBeNull();
   });
 
+  it("挂载 GET 晚于建组落回时旧响应不覆盖乐观 append（竞态守卫回归）", async () => {
+    let releaseGet: (v: unknown) => void = () => {};
+    mocks.api
+      .mockReturnValueOnce(
+        new Promise((resolve) => {
+          releaseGet = resolve;
+        }),
+      )
+      .mockResolvedValueOnce({ id: "g-2", name: "Late" });
+    const { container } = renderSidebar();
+    // 挂载 GET 悬挂中即点建组（POST 先落，乐观 append 生效）
+    fireEvent.click(screen.getByLabelText("contact:addGroup"));
+    fireEvent.change(screen.getByPlaceholderText("contact:groupName"), {
+      target: { value: "Late" },
+    });
+    fireEvent.click(screen.getByLabelText("contact:create"));
+    // loading=true 期间列表整体不渲染，这里以调用计数判 POST 已落而非以文案判渲染
+    await waitFor(() => expect(mocks.api).toHaveBeenCalledTimes(2));
+    // 旧的 GET 响应此时才落回（不含 Late）：序号已前进，整段丢弃而非合并
+    releaseGet(payload([group("g-1", "Core", 3)]));
+    await waitFor(() => expect(screen.queryByText("contact:loading")).toBeNull());
+    expect(screen.getByText("Late")).toBeInTheDocument();
+    expect(screen.queryByText("Core")).toBeNull();
+    expect(container.querySelector("form")).toBeNull();
+  });
+
   it("创建失败显示 e.message，输入框保留且分组数不变", async () => {
     mocks.api
       .mockResolvedValueOnce(payload([group("g-1", "Core", 3)]))
