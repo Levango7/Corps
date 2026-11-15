@@ -76,6 +76,18 @@ export async function waitForContactGroupsLoaded(page: Page): Promise<void> {
     .catch(() => undefined);
 }
 
+/** NewTaskDialog 可选夹具字段：不传的字段保持对话框默认（状态待办/优先级中/未指派/无截止日期）。 */
+export interface CreateTaskOptions {
+  /** 状态（选 value，与 status 命名空间文案解耦） */
+  status?: "todo" | "in_progress" | "review" | "done";
+  /** 优先级（选 value） */
+  priority?: "low" | "medium" | "high" | "urgent";
+  /** 指派人下拉里的显示文本（成员 name；注册未传 name 时默认为邮箱 @ 前本地部分，见 register route.ts:52）；不传=未指派 */
+  assigneeLabel?: string;
+  /** 截止日期，原生 date 输入框格式 YYYY-MM-DD */
+  dueDate?: string;
+}
+
 /**
  * 在工作区内通过 NewTaskDialog UI 创建一条任务。
  *
@@ -87,7 +99,11 @@ export async function waitForContactGroupsLoaded(page: Page): Promise<void> {
  *
  * @returns 任务标题（供后续在看板/详情页定位）
  */
-export async function createTask(page: Page, title: string): Promise<string> {
+export async function createTask(
+  page: Page,
+  title: string,
+  opts: CreateTaskOptions = {},
+): Promise<string> {
   const wid = extractWorkspaceId(page.url());
   // 「新建任务」入口只存在于看板页：空状态 action 与标题行工具栏的 create 按钮，
   // 两处文案均为「新建任务」（task.create / status.newTask）。概览页从未有该入口，
@@ -100,6 +116,31 @@ export async function createTask(page: Page, title: string): Promise<string> {
   await page.locator('[role="dialog"][aria-busy="false"]').waitFor({ state: "attached" });
   // 填写标题
   await page.getByLabel(/标题|Title/).fill(title);
+  const dialog = page.getByRole("dialog");
+  // 三个 select 的标签未 htmlFor 控件（getByLabel 不可达），按「精确选项名」锚定其父 select：
+  // 状态=「待办」选项、优先级=「中」选项、负责人=「未指派」选项。
+  // 不选 hasText 子串：状态组文案「进行中」也含「中」会误配（实测 strict 双命中）。
+  if (opts.status) {
+    await dialog
+      .getByRole("option", { name: "待办", exact: true })
+      .locator("xpath=..")
+      .selectOption({ value: opts.status });
+  }
+  if (opts.priority) {
+    await dialog
+      .getByRole("option", { name: "中", exact: true })
+      .locator("xpath=..")
+      .selectOption({ value: opts.priority });
+  }
+  if (opts.assigneeLabel) {
+    await dialog
+      .getByRole("option", { name: "未指派", exact: true })
+      .locator("xpath=..")
+      .selectOption({ label: opts.assigneeLabel });
+  }
+  if (opts.dueDate) {
+    await dialog.locator('input[type="date"]').fill(opts.dueDate);
+  }
   // 点击创建按钮（提交表单）
   await page.getByRole("button", { name: /创建|Create/ }).click();
   // 等待对话框关闭
