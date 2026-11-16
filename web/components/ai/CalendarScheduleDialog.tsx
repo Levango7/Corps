@@ -86,14 +86,18 @@ export default function CalendarScheduleDialog({
   }, []);
 
   // ── Escape 关闭 ──
+  // 忙碌态走 ref、不进 effect 依赖：监听器不必随 loading 重挂，也就没有
+  // 「loading 已翻 false、监听器还是旧闭包」的窗口（旧写法会让 Escape 被吞一次）。
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !loading) onClose();
+      if (e.key === "Escape" && !loadingRef.current) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [open, onClose, loading]);
+  }, [open, onClose]);
 
   // ── 关闭时重置状态 ──
   useEffect(() => {
