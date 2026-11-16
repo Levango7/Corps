@@ -5,4 +5,3 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-e2e-domains | fix/analytics-403-locale | web/app/[locale]/w/[wid]/analytics/page.tsx web/e2e/analytics.spec.ts | zcode | 2026-11-16T03:38Z | 2026-11-16T05:38Z | 分析页 ErrorState 403 判定修复收尾（PR 352 在途，代码已提交；收尾期防并发，至合并完成）
-F:/Nexus/corps-wt-escape-ref | fix/escape-listener-ref | web/components/ai/CalendarScheduleDialog.tsx,web/components/ai/WorkflowBuildDialog.tsx,web/components/ai/TaskBreakdownDialog.tsx,web/components/ai/TemplateEditor.tsx | esc-ref-b1 | 2026-11-16 11:44 | 2026-11-16 17:44 | Escape 监听忙碌态门控改 useRef，消除重挂竞态
