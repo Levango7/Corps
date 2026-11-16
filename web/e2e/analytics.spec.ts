@@ -4,8 +4,8 @@ import { createTask, registerAndLogin, uniqueEmail } from "./helpers";
 // 分析域：只读仪表盘，唯一交互面是错误态重试按钮（本批不制造假 500，不覆盖）。
 // 覆盖=真实数据链：注册落 register_success + 建任务落 create_task（均服务端同步埋点，
 // 见 app/api/v1/auth/register/route.ts 与 tasks/route.ts 的 trackServerEvent），概览页聚合渲染。
-// 边界诚实说明：成员 403 分支（needAdmin）需「加入他人工作区的非 admin」夹具，
-// 邀请链路成本高，留待后续批次；API 层 403 由 requirePermission 门禁侧覆盖。
+// 成员 403 边界：owner 邀请 member 后直访分析页，requirePermission 门禁返 403，
+// ErrorState 按 ApiError.status 走 needAdmin 分支（zh 文案「禁止访问」不命中英文正则的旧缺陷已修）。
 test.describe("分析：概览仪表盘真实数据渲染", () => {
   test("新工作区壳层 + 注册事件落漏斗/热门事件", async ({ page }) => {
     test.setTimeout(120_000);
@@ -76,5 +76,35 @@ test.describe("分析：概览仪表盘真实数据渲染", () => {
     await expect(page.getByText("暂无数据", { exact: true })).toHaveCount(0);
     // 趋势折线 svg 仍挂网
     await expect(page.getByRole("img", { name: "趋势图表" })).toBeVisible();
+  });
+
+  test("普通成员直访分析页：403 落 needAdmin 权限提示且无重试按钮", async ({ page, browser }) => {
+    // 双账号夹具（沿用 viewer-readonly.spec.ts 的多 context 惯例）：
+    // B 先注册（邀请链对已注册受邀者走事务内直建成员，免一次性 token 邮件链路），
+    // 再由 A 以 owner 身份邀请进 A 的工作区，角色 member。
+    test.setTimeout(120_000);
+    const memberCtx = await browser.newContext({ locale: "zh-CN" });
+    const mp = await memberCtx.newPage();
+    const memberEmail = uniqueEmail("e2e-ana-member");
+    await registerAndLogin(mp, memberEmail, "成员自有工作区");
+
+    const ownerEmail = uniqueEmail("e2e-ana-owner");
+    const wid = await registerAndLogin(page, ownerEmail, "E2E分析权限工作区");
+    const invite = await page.request.post(`/api/v1/workspaces/${wid}/members/invite`, {
+      data: { email: memberEmail, role: "member" },
+    });
+    expect(invite.status(), "owner 邀请成员应成功").toBe(201);
+
+    // B 直访 A 的分析页：API 层 requirePermission 返 403，前端按 ApiError.status 走权限不足分支
+    await mp.goto(`/w/${wid}/analytics`);
+    await expect(mp.getByText("需要管理员权限", { exact: true })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(mp.getByText("仅拥有者或管理员可查看分析数据。", { exact: true })).toBeVisible();
+    // 反证：非 403 分支的文案与重试按钮均不可见（旧实现 zh 落此处＝重试永远 403 空转）
+    await expect(mp.getByText("加载失败", { exact: true })).toHaveCount(0);
+    await expect(mp.getByRole("button", { name: "重试" })).toHaveCount(0);
+
+    await memberCtx.close();
   });
 });

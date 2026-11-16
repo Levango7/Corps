@@ -41,7 +41,7 @@ import {
   Repeat,
   Layers,
 } from "lucide-react";
-import { api } from "@/lib/api";
+import { ApiError, api } from "@/lib/api";
 import { Skeleton } from "@/components/Skeleton";
 import EmptyState from "@/components/EmptyState";
 import { useTranslations } from "next-intl";
@@ -95,6 +95,9 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
   const tButton = useTranslations("button");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  // 403 专属态：ErrorState 据此走「权限不足」分支。判定走 HTTP 状态码而非错误文案——
+  // zh 服务端体是「禁止访问」，不命中任何英文正则（见 ErrorState 注释）。
+  const [forbidden, setForbidden] = useState(false);
   // 重试计数器：递增触发 useEffect 重新加载
   const [retryCount, setRetryCount] = useState(0);
 
@@ -102,12 +105,18 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
     let cancelled = false;
     setLoading(true);
     setError("");
+    setForbidden(false);
     api<OverviewData>(`/api/v1/workspaces/${wid}/analytics/overview`)
       .then((d) => {
         if (!cancelled) setData(d);
       })
       .catch((e: unknown) => {
-        if (!cancelled) setError(e instanceof Error ? e.message : t("loadFailed"));
+        if (!cancelled) {
+          setError(e instanceof Error ? e.message : t("loadFailed"));
+          // ApiError.status 由 api() 原样带回（lib/api.ts 抛错即带 status），
+          // 不靠 message 文案匹配——「禁止访问」/「Forbidden」逐 locale 不同。
+          setForbidden(e instanceof ApiError && e.status === 403);
+        }
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -122,6 +131,7 @@ export default function AnalyticsPage({ params }: { params: Promise<{ wid: strin
     return (
       <ErrorState
         message={error}
+        forbidden={forbidden}
         onRetry={() => setRetryCount((c) => c + 1)}
         retryLabel={tButton("retry")}
       />
@@ -456,18 +466,20 @@ function DailyTrendChart({ daily, maxDaily }: { daily: DailyPoint[]; maxDaily: n
   );
 }
 
-/** 错误状态：403 时提示权限不足；非 403 提供重试按钮。 */
+/** 错误状态：403 时提示权限不足（重试必然再次 403，故不给重试按钮）；非 403 提供重试。 */
 function ErrorState({
   message,
+  forbidden,
   onRetry,
   retryLabel,
 }: {
   message: string;
+  /** 是否 403 权限不足：由页面按 ApiError.status 判定后传入，此处不匹配文案（locale 无关） */
+  forbidden: boolean;
   onRetry: () => void;
   retryLabel: string;
 }) {
   const t = useTranslations("analytics");
-  const forbidden = /403|Forbidden/i.test(message);
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex flex-col items-center justify-center py-[var(--space-16)] text-center">
