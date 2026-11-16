@@ -68,11 +68,15 @@ export function ConfirmDialog({
   }, [open]);
 
   // Escape 关闭 + Tab focus trap（只在 !deleting 时允许 Escape 关闭）
+  // deleting 只参与 ESC 判定，走 ref 不进依赖：否则忙碌态一变就重跑本 effect，
+  // 焦点陷阱被无谓重挂，ESC 还会命中旧闭包被吞。
+  const deletingRef = useRef(deleting);
+  deletingRef.current = deleting;
   useEffect(() => {
     if (!open) return;
     const container = dialogRef.current;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !deleting) {
+      if (e.key === "Escape" && !deletingRef.current) {
         e.preventDefault();
         onClose();
         return;
@@ -101,7 +105,7 @@ export function ConfirmDialog({
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [open, deleting, onClose]);
+  }, [open, onClose]);
 
   if (!open) return null;
 

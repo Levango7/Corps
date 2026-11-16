@@ -25,7 +25,7 @@
  *  - 列表/版本都一次拉 100 条（API limit 上限），不做翻页 UI；超出后由后续迭代补。
  */
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { FileAsset, FileVersion } from "@prisma/client";
 import { useTranslations } from "next-intl";
 import { X } from "lucide-react";
@@ -157,10 +157,18 @@ export function FileManagerPage({ wid }: { wid: string }) {
 
   // 版本弹层开着时：ESC 关闭 + 锁背景滚动。
   // 回滚确认弹窗自带 ESC 处理，这里判 !restoreTarget 避免一次按键关掉两层。
+  // restoring / restoreTarget 只参与 ESC 判定，走 ref 不进依赖：否则忙碌态一变就重跑本
+  // effect，「锁背景滚动」会先解锁再上锁，且 ESC 会命中旧闭包被吞。
+  const restoringRef = useRef(restoring);
+  restoringRef.current = restoring;
+  const restoreTargetRef = useRef(restoreTarget);
+  restoreTargetRef.current = restoreTarget;
   useEffect(() => {
     if (!versionsTarget) return;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !restoring && !restoreTarget) setVersionsTarget(null);
+      if (e.key !== "Escape") return;
+      if (restoringRef.current || restoreTargetRef.current) return;
+      setVersionsTarget(null);
     };
     window.addEventListener("keydown", onKeyDown);
     const prevOverflow = document.body.style.overflow;
@@ -169,7 +177,7 @@ export function FileManagerPage({ wid }: { wid: string }) {
       window.removeEventListener("keydown", onKeyDown);
       document.body.style.overflow = prevOverflow;
     };
-  }, [versionsTarget, restoring, restoreTarget]);
+  }, [versionsTarget]);
 
   const previewProps = previewFile
     ? {
