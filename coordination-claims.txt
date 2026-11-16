@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-e2e-domains | fix/analytics-403-locale | web/app/[locale]/w/[wid]/analytics/page.tsx web/e2e/analytics.spec.ts | zcode | 2026-11-16T03:38Z | 2026-11-16T05:38Z | 分析页 ErrorState 403 判定修复收尾（PR 352 在途，代码已提交；收尾期防并发，至合并完成）
+F:/Nexus/corps-wt-confirmspy | fix/confirm-spy-restore | web/tests/unit/ai-multi-agent-panel.test.tsx | flaky-root-cause | 2026-11-16 16:08 | 2026-11-16 20:08 | 修复 confirm spy 未 restore 的测试卫生项
