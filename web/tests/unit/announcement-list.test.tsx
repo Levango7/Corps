@@ -75,7 +75,10 @@ const LIST_URL = (suffix: string) => `/api/v1/workspaces/${WID}/announcements?${
 beforeEach(() => {
   mocks.api.mockReset();
 });
-afterEach(() => cleanup());
+afterEach(() => {
+  cleanup();
+  vi.restoreAllMocks();
+});
 
 describe("AnnouncementList", () => {
   it("挂载 GET（无过滤时 URL 以 ? 结尾）", async () => {
