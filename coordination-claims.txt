@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/corps-wt-e2e-domains | fix/contact-group-sidebar-race | web/app/[locale]/w/[wid]/analytics/page.tsx web/e2e/analytics.spec.ts | zcode | 2026-11-15T09:08Z | 2026-11-15T13:08Z | 修分析页 ErrorState 403 判定：zh 服务端体「禁止访问」不命中 /403｜Forbidden/i 正则致中文成员落加载失败+重试空转；改按 ApiError.status 分支，并补成员 403 边界 E2E（owner 邀请 member 后直访分析页断言 needAdmin 文案+重试按钮缺席）
