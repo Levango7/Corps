@@ -196,11 +196,15 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
   }, [confirm.open]);
 
   // Escape 关闭 + Tab focus trap
+  // confirmLoading 只参与 ESC 判定，走 ref 不进依赖：否则忙碌态一变就重跑本 effect，
+  // 焦点陷阱被无谓重挂，ESC 还会命中旧闭包被吞。
+  const confirmLoadingRef = useRef(confirmLoading);
+  confirmLoadingRef.current = confirmLoading;
   useEffect(() => {
     if (!confirm.open) return;
     const container = confirmDialogRef.current;
     const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !confirmLoading) {
+      if (e.key === "Escape" && !confirmLoadingRef.current) {
         e.preventDefault();
         setConfirm((c) => ({ ...c, open: false }));
         return;
@@ -229,7 +233,7 @@ export function RecycleBin({ workspaceId }: { workspaceId: string }) {
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [confirm.open, confirmLoading]);
+  }, [confirm.open]);
 
   function openConfirm(title: string, message: string, onConfirm: () => void) {
     setConfirm({ open: true, title, message, onConfirm });
