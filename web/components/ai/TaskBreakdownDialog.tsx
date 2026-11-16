@@ -116,13 +116,17 @@ export default function TaskBreakdownDialog({
   }, [taskTitle, t]);
 
   // ── Escape 关闭 ──
+  // 忙碌态走 ref、不进 effect 依赖：监听器不随 submitting 重挂，
+  // 也就不会出现「状态已变、闭包还是旧值」而吞掉 Escape 的窗口。
+  const submittingRef = useRef(submitting);
+  submittingRef.current = submitting;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !submitting) onClose();
+      if (e.key === "Escape" && !submittingRef.current) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, submitting]);
+  }, [onClose]);
 
   function updateSubtask(localId: string, patch: Partial<EditableSubtask>) {
     setSubtasks((prev) => prev.map((s) => (s.localId === localId ? { ...s, ...patch } : s)));
