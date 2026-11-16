@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import "@testing-library/jest-dom/vitest";
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { render, screen, fireEvent, cleanup, waitFor } from "@testing-library/react";
+import { render, screen, fireEvent, cleanup, waitFor, act } from "@testing-library/react";
 
 /**
  * CalendarScheduleDialog 契约（components/ai/CalendarScheduleDialog.tsx）：
@@ -96,6 +96,21 @@ function durationInput() {
 }
 function generateButton() {
   return screen.getByText(`${NS}:generate`).closest("button") as HTMLButtonElement;
+}
+
+/**
+ * 显式等到「非 loading」并 flush passive effects，再做 Escape / 遮罩操作。
+ *
+ * 竞态根因：Escape 走 window keydown 原生监听，由 useEffect 按 [open, onClose, loading]
+ * 闭包重挂。建议列表出现（loading=false 的那次提交）与该 passive effect 执行之间没有
+ * 先后保证——过早 keyDown 会命中仍挂着的 loading=true 旧闭包（被源码 !loading 门控忽略），
+ * 于是 onClose 记 0 次、断言偶发红（#348 的 Unit Coverage Ratchet 就因这条卡过一整轮 CI）。
+ * 约定与 ai-workflow-build-dialog.test.tsx 的 settleIdle() 保持一致。
+ */
+async function settleIdle() {
+  // loading 期间关闭按钮 disabled；它恢复 enabled 即说明 loading 已翻 false
+  await waitFor(() => expect(screen.getByLabelText("button:close")).toBeEnabled());
+  await act(async () => {});
 }
 
 beforeEach(() => {
@@ -282,6 +297,8 @@ describe("CalendarScheduleDialog", () => {
 
     resolveApi({ suggestions: [SUG_A] });
     await waitFor(() => expect(screen.getByText("评审会议")).toBeInTheDocument());
+    // 建议列表出现 ≠ Escape 监听已按 loading=false 重挂（见 settleIdle 注释）
+    await settleIdle();
     fireEvent.keyDown(window, { key: "Escape" });
     expect(mocks.onClose).toHaveBeenCalledTimes(1);
   });
