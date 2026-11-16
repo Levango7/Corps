@@ -64,13 +64,17 @@ export default function WorkflowBuildDialog({
   }, []);
 
   // ── Escape 关闭 ──
+  // 忙碌态走 ref、不进 effect 依赖：监听器不随 submitting/loading 重挂，
+  // 也就不会出现「状态已变、闭包还是旧值」而吞掉 Escape 的窗口。
+  const busyRef = useRef(submitting || loading);
+  busyRef.current = submitting || loading;
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && !submitting && !loading) onClose();
+      if (e.key === "Escape" && !busyRef.current) onClose();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onClose, submitting, loading]);
+  }, [onClose]);
 
   async function generate() {
     if (loading || !description.trim()) return;
