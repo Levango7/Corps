@@ -19,7 +19,7 @@
  * 来源：经验 2026-09-11-prefers-reduced-motion-global-block-and-max-duration
  */
 
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { AlertTriangle, RotateCcw, Loader2 } from "lucide-react";
 import { useTranslations } from "next-intl";
 
@@ -45,15 +45,19 @@ export function FileVersionRestore({
   const t = useTranslations("files.versionRestore");
 
   // ESC 键取消（回滚进行中时禁用，避免误触中断）
+  // loading 走 ref、不进 effect 依赖：监听器不必随 loading 重挂，
+  // 也就没有「loading 已翻 false、监听器还是旧闭包」的窗口（旧写法会让 ESC 被吞一次）。
+  const loadingRef = useRef(loading);
+  loadingRef.current = loading;
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape" && !loading) {
+      if (e.key === "Escape" && !loadingRef.current) {
         onCancel();
       }
     }
     document.addEventListener("keydown", handleKeyDown);
     return () => document.removeEventListener("keydown", handleKeyDown);
-  }, [onCancel, loading]);
+  }, [onCancel]);
 
   return (
     <div
