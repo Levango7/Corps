@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-e2e-domains | fix/analytics-403-locale | web/app/[locale]/w/[wid]/analytics/page.tsx web/e2e/analytics.spec.ts | zcode | 2026-11-16T03:38Z | 2026-11-16T05:38Z | 分析页 ErrorState 403 判定修复收尾（PR 352 在途，代码已提交；收尾期防并发，至合并完成）
