@@ -106,8 +106,10 @@ describeDb("AI 日调用配额（真并发 + 真 DB）", () => {
       expect(r.reason, "拒绝必须以 AiQuotaExceededError 形态抛出").toBeInstanceOf(
         AiQuotaExceededError,
       );
-      expect((r.reason as AiQuotaExceededError).reason).toBe("Daily call limit exceeded");
-      expect((r.reason as AiQuotaExceededError).usagePercent).toBe(1);
+      expect((r.reason as InstanceType<typeof AiQuotaExceededError>).reason).toBe(
+        "Daily call limit exceeded",
+      );
+      expect((r.reason as InstanceType<typeof AiQuotaExceededError>).usagePercent).toBe(1);
     }
   });
 
