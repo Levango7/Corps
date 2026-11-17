@@ -28,7 +28,12 @@ import {
  * 用 save/restore 保证不污染其他测试的 process.env。
  */
 
-const ENV_KEYS = ["FLAG_NEW_EDITOR_ROLLOUT", "FLAG_NEW_EDITOR_WORKSPACES", "FLAG_AI_DIGEST_ROLLOUT", "FLAG_AI_DIGEST_WORKSPACES"];
+const ENV_KEYS = [
+  "FLAG_NEW_EDITOR_ROLLOUT",
+  "FLAG_NEW_EDITOR_WORKSPACES",
+  "FLAG_AI_DIGEST_ROLLOUT",
+  "FLAG_AI_DIGEST_WORKSPACES",
+];
 
 let saved: Record<string, string | undefined>;
 
@@ -60,7 +65,19 @@ describe("parseFlagRollout", () => {
   });
 
   it("空串 / 拼错 / 语义含糊的值一律 fail-closed 到 off", () => {
-    for (const raw of ["", "   ", undefined, null, "ONN", "0", "1", "true", "enabled", "percentage", "rollout"]) {
+    for (const raw of [
+      "",
+      "   ",
+      undefined,
+      null,
+      "ONN",
+      "0",
+      "1",
+      "true",
+      "enabled",
+      "percentage",
+      "rollout",
+    ]) {
       expect(parseFlagRollout(raw as string | undefined)).toBe("off");
     }
   });
