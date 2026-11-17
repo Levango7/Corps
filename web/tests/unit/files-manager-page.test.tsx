@@ -275,8 +275,28 @@ describe("FileManagerPage（云盘容器）", () => {
   });
 
   it("回滚：确认弹窗带版本号/文件名 → POST restore → 版本与文件两个列表都刷新 + toast", async () => {
-    mocks.apiList.mockResolvedValueOnce([F1]);
-    mocks.api.mockResolvedValueOnce({ items: [V2, V1], currentVersion: 2 });
+    // 五个请求共用 api / apiList 两个 mock：按 URL+method 分发代替位置队列——
+    // effect 触发顺序变化不会让队列取值错位（各端点的期望值与断言对象不变）
+    const filesUrl = `/api/v1/workspaces/${WID}/files?limit=100`;
+    const versionsUrl = `/api/v1/workspaces/${WID}/files/f1/versions?limit=100`;
+    const restoreUrl = `/api/v1/workspaces/${WID}/files/f1/versions/v-1/restore`;
+    let versionsFetches = 0;
+    mocks.api.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === restoreUrl && opts?.method === "POST") return Promise.resolve(null);
+      if (url === versionsUrl) {
+        versionsFetches += 1;
+        // 首次打开：权威当前版本是 2；回滚成功后的版本刷新：已是 1
+        return Promise.resolve({
+          items: [V2, V1],
+          currentVersion: versionsFetches === 1 ? 2 : 1,
+        });
+      }
+      return Promise.reject(new Error(`unexpected api call: ${opts?.method ?? "GET"} ${url}`));
+    });
+    mocks.apiList.mockImplementation((url: string) => {
+      if (url === filesUrl) return Promise.resolve([F1]);
+      return Promise.reject(new Error(`unexpected apiList call: ${url}`));
+    });
     render(<FileManagerPage wid={WID} />);
     await screen.findByTestId("stub-browser");
     fireEvent.click(screen.getByTestId("stub-versions-open"));
@@ -287,9 +307,6 @@ describe("FileManagerPage（云盘容器）", () => {
     expect(confirm).toHaveAttribute("data-version", "1");
     expect(confirm).toHaveAttribute("data-name", "需求文档.txt");
 
-    mocks.api.mockResolvedValueOnce(null); // POST restore
-    mocks.api.mockResolvedValueOnce({ items: [V2, V1], currentVersion: 1 }); // 版本列表刷新
-    mocks.apiList.mockResolvedValueOnce([F1]); // 文件列表刷新
     fireEvent.click(screen.getByTestId("stub-restore-go"));
 
     await waitFor(() =>
