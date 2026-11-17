@@ -9,9 +9,17 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
  * message 是否走 apiMsg 既有键"没有集成级断言——恰好是 500 最容易在重构中
  * 退化成裸文本/HTML 的路径。
  *
- * 覆盖的两个写端点（documents 系列）：
- *  1. POST /workspaces/{wid}/documents           —— 新建文档
- *  2. POST /workspaces/{wid}/documents/{id}/comments —— 新建批注
+ * 覆盖的三个写端点（documents 系列）：
+ *  1. POST /workspaces/{wid}/documents               —— 新建文档（catch-all → 500）
+ *  2. POST /workspaces/{wid}/documents/{id}/comments —— 新建批注（DL-14 契约：P2003 → 409）
+ *  3. POST /workspaces/{wid}/documents/{id}/permissions —— 添加权限（catch-all → 500）
+ *
+ * 关于 comments 的 409（CI 首跑红因修正，2026-11-17）：
+ *  comments 的 catch 走 lib/prisma-error.ts 的 handlePrismaError（DL-14 统一
+ *  收口），classifyPrismaError 显式把 P2003（外键违约）映射为 409 +
+ *  prismaForeignKeyViolation 键——这是**有意的统一契约**，不是吞错误。
+ *  该用例因此钉死 409 契约本身（status + prismaCode + message 键）；"任何
+ *  非 P2002 上游错误 → 500"的假设对该路由不成立。
  *
  * 故障注入方式（mock 层面断连，经团队裁决允许）：
  *  - 只 mock @/lib/auth 的 runWithWorkspace，注入**真实的**
@@ -20,16 +28,19 @@ import { describe, it, expect, beforeAll, vi } from "vitest";
  *    模块内部实现）、角色门禁、Zod 校验、错误出口全部走真实代码。
  *  - getWorkspaceContextV2 对 runWithWorkspace 的调用是 lib/auth 模块内部
  *    闭包引用，不受本 mock 影响（认证仍查真库）；路由 handler 拿到的是
- *    mock 后的导出绑定，进入 try 块后第一次 DB 写即抛 P2003 → 走既有
- *    catch → 500 internalError 信封。
- *  - 两个端点的 requirePermission 均为 owner 角色短路（无 DB 查询），
- *    不会在进入 try 之前被 mock 误伤。
+ *    mock 后的导出绑定，进入 try 块后第一次 DB 操作即抛 P2003。
+ *  - 三个端点的权限判定对 owner 均为短路（无 DB 查询），不会在进入
+ *    catch 之前被 mock 误伤；documents/permissions 的 catch 对非 Zod、
+ *    非 P2002 错误走 catch-all → 500 internalError（main 实测代码）。
  *
  * 断言口径（不钉脆弱文案全文）：
- *  - status === 500；信封键恰为 { code, message, data }；code === 500；
- *    data === null；message 非空且必须等于 api-messages.ts 的 internalError
- *    键值（zh 或 en，不假设无语言头时的默认语种）——即"走既有键"，
- *    route 内任何本地硬编码文案都会变红。
+ *  - 500 用例：status === 500；信封键恰为 { code, message, data }；
+ *    code === 500；data === null；message 非空且必须等于 api-messages.ts
+ *    的 internalError 键值（zh 或 en，不假设无语言头时的默认语种）——
+ *    即"走既有键"，route 内任何本地硬编码文案都会变红。
+ *  - comments 409 用例：status === 409；信封键恰为 handlePrismaError 的
+ *    { code, message, prismaCode, data }；prismaCode === "P2003"；message
+ *    必须等于 prismaForeignKeyViolation 键值。
  */
 
 // 本测试进程自签自验 JWT（signAccessToken/verifyAccessToken 同进程同密钥同
@@ -88,7 +99,7 @@ async function expect500Envelope(res: Response): Promise<void> {
   ).toContain(body.message);
 }
 
-describeDb("documents 写端点 5xx 错误信封（上游 DB 失败注入）", () => {
+describeDb("documents 写端点上游失败信封（500 catch-all + 409 DL-14 契约）", () => {
   beforeAll(async () => {
     const u = await registerUser({ prefix: "env5xx", workspaceName: "5xx 信封工作区" });
     serverToken = u.accessToken;
@@ -123,9 +134,10 @@ describeDb("documents 写端点 5xx 错误信封（上游 DB 失败注入）", (
     await expect500Envelope(res);
   });
 
-  it("POST documents/{id}/comments：DB 写失败 → 500 + 标准信封", async () => {
+  it("POST documents/{id}/comments：上游 P2003 → 409 契约信封（DL-14 handlePrismaError 统一映射）", async () => {
     const { NextRequest } = await import("next/server");
     const { POST } = await import("@/app/api/v1/workspaces/[wid]/documents/[id]/comments/route");
+    const { API_MESSAGES } = await import("@/lib/api-messages");
 
     const req = new NextRequest(`${BASE}/workspaces/${wid}/documents/${docId}/comments`, {
       method: "POST",
@@ -135,6 +147,42 @@ describeDb("documents 写端点 5xx 错误信封（上游 DB 失败注入）", (
         anchorText: "锚点文本",
         body: "上游失败探针批注",
       }),
+    });
+    const res = await POST(req, { params: Promise.resolve({ wid, id: docId }) });
+
+    // comments 路由 catch 走 handlePrismaError（DL-14）：P2003 显式映射为
+    // 409 + prismaForeignKeyViolation。这里钉死该统一契约，而非 500。
+    expect(res.status, "P2003 必须按 DL-14 统一契约映射为 409").toBe(409);
+    const body = (await res.json()) as {
+      code?: number;
+      message?: string;
+      prismaCode?: string;
+      data?: unknown;
+    };
+    expect(Object.keys(body).sort(), "信封键必须恰为 code/data/message/prismaCode").toEqual([
+      "code",
+      "data",
+      "message",
+      "prismaCode",
+    ]);
+    expect(body.code).toBe(409);
+    expect(body.prismaCode, "必须携带 Prisma 错误码供客户端精细处理").toBe("P2003");
+    expect(body.data).toBeNull();
+    expect(
+      [API_MESSAGES.prismaForeignKeyViolation.zh, API_MESSAGES.prismaForeignKeyViolation.en],
+      "message 必须取自 api-messages 的 prismaForeignKeyViolation 键",
+    ).toContain(body.message);
+  });
+
+  it("POST documents/{id}/permissions：DB 写失败 → 500 + 标准信封（catch-all 路径）", async () => {
+    const { NextRequest } = await import("next/server");
+    const { POST } = await import("@/app/api/v1/workspaces/[wid]/documents/[id]/permissions/route");
+
+    const req = new NextRequest(`${BASE}/workspaces/${wid}/documents/${docId}/permissions`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${localToken}`, "Content-Type": "application/json" },
+      // 校验可通过即可：真正的故障注入发生在首个 runWithWorkspace 调用（文档存在性检查）
+      body: JSON.stringify({ granteeType: "user", granteeId: wid, permission: "view" }),
     });
     const res = await POST(req, { params: Promise.resolve({ wid, id: docId }) });
     await expect500Envelope(res);
