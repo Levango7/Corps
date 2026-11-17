@@ -4,4 +4,3 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
-F:/Nexus/Corps-wt-test-harden | test/integration-concurrency-5xx | web/tests/integration/api-error-envelope-5xx.test.ts | test-hardening | 2026-11-17 15:43 | 2026-11-17 18:43 | 修复 5xx 用例：comments 改断言 409 契约 + 补 permissions 真 500 用例
