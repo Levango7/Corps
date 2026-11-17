@@ -126,8 +126,10 @@ mv -f "${_tmp_ver}" "${CORPS_VERSION_FILE}.previous"
 printf '\n%s  回滚完成：%s → %s%s\n' "${_C_BLD}${_C_GRN}" "${CURRENT_TAG}" "${TARGET_TAG}" "${_C_RST}" >&2
 printf '\n' >&2
 printf '  ⚠ 数据库未回滚。prisma migrate deploy 只前滚不回退。\n' >&2
+printf '    回滚镜像后，DB schema 可能领先（迁移已应用）或落后（回退到带旧 schema 的备份）于代码。\n' >&2
 printf '    若回滚后出现 schema 相关报错（旧代码 + 新 schema），需从备份恢复：\n' >&2
 printf '      bash deploy/scripts/restore.sh --list      # 列出可用备份\n' >&2
 printf '      bash deploy/scripts/restore.sh --dry-run <文件>  # 先在临时库验证\n' >&2
+printf '    完整恢复 SOP（含判定与验证点）：docs/runbook-migration-rollback.md\n' >&2
 printf '\n' >&2
 exit 0

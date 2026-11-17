@@ -165,9 +165,14 @@ describe("MailList", () => {
   });
 
   it("打开未读详情：GET /mail/{id}?wid + PATCH {wid,isRead:true}，行状态翻转为已读", async () => {
-    mocks.api.mockResolvedValueOnce(listResponse([M1]));
-    mocks.api.mockResolvedValueOnce(DETAIL1);
-    mocks.api.mockResolvedValueOnce(undefined);
+    // 列表/详情/标记已读三个请求共用一个 api mock：按 URL+method 分发代替位置队列
+    mocks.api.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === "/api/v1/mail/inbox?wid=ws-ml-1&pageSize=50")
+        return Promise.resolve(listResponse([M1]));
+      if (url === "/api/v1/mail/m-1?wid=ws-ml-1") return Promise.resolve(DETAIL1);
+      if (url === "/api/v1/mail/m-1" && opts?.method === "PATCH") return Promise.resolve(undefined);
+      return Promise.reject(new Error(`unexpected api call: ${opts?.method ?? "GET"} ${url}`));
+    });
     renderList();
     await waitFor(() => expect(screen.queryByText("mail:loading")).toBeFalsy());
 

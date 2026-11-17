@@ -152,15 +152,20 @@ describe("PermissionManager", () => {
   });
 
   it("权限为空 → noMembers 空态；permissions 接口失败也被 catch 吞掉显示 noMembers", async () => {
-    mocks.api.mockResolvedValueOnce({ items: [] });
-    mocks.apiList.mockResolvedValueOnce(MEMBERS);
+    // 两棵树共用同一 mock：按「树」显式分发代替 Once 位置队列（期望值不变）
+    let secondTree = false;
+    mocks.api.mockImplementation(() =>
+      secondTree ? Promise.reject(new Error("perm boom")) : Promise.resolve({ items: [] }),
+    );
+    mocks.apiList.mockImplementation(() =>
+      secondTree ? Promise.resolve([]) : Promise.resolve(MEMBERS),
+    );
     const first = renderManager();
     await waitFor(() => expect(screen.getByText("doc:noMembers")).toBeInTheDocument());
     first.unmount();
 
     // cleanup 后不能对已卸载树 rerender——重新 render 一棵新树
-    mocks.api.mockRejectedValueOnce(new Error("perm boom"));
-    mocks.apiList.mockResolvedValueOnce([]);
+    secondTree = true;
     renderManager();
     await waitFor(() => expect(screen.getByText("doc:noMembers")).toBeInTheDocument());
     expect(screen.queryByText("perm boom")).toBeFalsy();
@@ -182,9 +187,11 @@ describe("PermissionManager", () => {
 
   it("添加权限：POST body 精确 → 新行追加（email 回退显示）并重置选择", async () => {
     const created = { ...P1, id: "p-3", granteeId: "u-2", permission: "edit" };
-    mocks.api.mockResolvedValueOnce({ items: [] });
+    // GET（初始列表）与 POST（创建）同走 PERM_URL：按 method 分发代替位置队列
+    mocks.api.mockImplementation((url: string, opts?: { method?: string }) =>
+      opts?.method === "POST" ? Promise.resolve(created) : Promise.resolve({ items: [] }),
+    );
     mocks.apiList.mockResolvedValueOnce(MEMBERS);
-    mocks.api.mockResolvedValueOnce(created);
     const { container } = renderManager();
     await waitFor(() => expect(screen.queryByText("doc:loading")).toBeFalsy());
 
@@ -218,9 +225,13 @@ describe("PermissionManager", () => {
   });
 
   it("行内级别修改：PATCH /permissions/{pid} body { permission }，行替换为响应值", async () => {
-    mocks.api.mockResolvedValueOnce({ items: [P1] });
+    // GET（初始列表）与 PATCH（行内修改）不同端点：按 URL+method 分发代替位置队列
+    mocks.api.mockImplementation((url: string, opts?: { method?: string }) => {
+      if (url === `${PERM_URL}/p-1` && opts?.method === "PATCH")
+        return Promise.resolve({ ...P1, permission: "manage" });
+      return Promise.resolve({ items: [P1] });
+    });
     mocks.apiList.mockResolvedValueOnce(MEMBERS);
-    mocks.api.mockResolvedValueOnce({ ...P1, permission: "manage" });
     const { container } = renderManager();
     await waitFor(() => expect(screen.queryByText("doc:loading")).toBeFalsy());
 
@@ -248,9 +259,13 @@ describe("PermissionManager", () => {
   it("删除：confirm true → DELETE /permissions/{pid}，行移除", async () => {
     const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     try {
-      mocks.api.mockResolvedValueOnce({ items: [P1, P2] });
+      // GET（初始列表）与 DELETE（删行）不同端点：按 URL+method 分发代替位置队列
+      mocks.api.mockImplementation((url: string, opts?: { method?: string }) => {
+        if (url === `${PERM_URL}/p-1` && opts?.method === "DELETE")
+          return Promise.resolve(undefined);
+        return Promise.resolve({ items: [P1, P2] });
+      });
       mocks.apiList.mockResolvedValueOnce(MEMBERS);
-      mocks.api.mockResolvedValueOnce(undefined);
       const { container } = renderManager();
       await waitFor(() => expect(screen.queryByText("doc:loading")).toBeFalsy());
 
