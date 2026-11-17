@@ -339,11 +339,8 @@ describe("token 刷新（提前窗口 + 并发共享锁）", () => {
 
     const p1 = syncTaskToCalendar("t1", "conn-1");
     const p2 = syncTaskToCalendar("t1", "conn-1");
-    // 自旋等待两个调用都推进到刷新点（中间隔着多层 await）
-    for (let i = 0; i < 50 && h.refreshAccessToken.mock.calls.length === 0; i++) {
-      await Promise.resolve();
-    }
-    expect(h.refreshAccessToken).toHaveBeenCalledTimes(1);
+    // 条件等待代替固定 tick 自旋：无论上游 await 链多深，轮询到刷新真正发出为止
+    await vi.waitFor(() => expect(h.refreshAccessToken).toHaveBeenCalledTimes(1));
     resolveRefresh({ access_token: fx("a2"), expires_in: 3600 });
     const [r1, r2] = await Promise.all([p1, p2]);
     expect(r1.success).toBe(true);
