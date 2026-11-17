@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/Corps-wt-test-harden | test/integration-concurrency-5xx | web/tests/integration/ai-usage-quota-concurrent.test.ts | test-hardening | 2026-11-17 16:04 | 2026-11-17 18:04 | 修 TS2749 两行类型错误（InstanceType&lt;typeof&gt;）
