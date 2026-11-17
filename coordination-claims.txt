@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-e2edec | feat/decision-loop-e2e | web/e2e/decision-loop.spec.ts,web/e2e/helpers.ts | ? | 2026-11-17T17:00Z | 2026-11-17T21:00Z | #44② 决策闭环 E2E：会后落位/决策追溯两场景（新人上手需示例工作区=未立项，C 场景不写）；本机 e2e 环境自建（compose pg+pnpm install+chromium）
