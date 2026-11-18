@@ -7,3 +7,4 @@
 F:/Nexus/corps-wt-e2edec | feat/decision-loop-e2e | web/e2e/decision-loop.spec.ts,web/e2e/helpers.ts | ? | 2026-11-17T17:00Z | 2026-11-17T21:00Z | #44② 决策闭环 E2E：会后落位/决策追溯两场景（新人上手需示例工作区=未立项，C 场景不写）；本机 e2e 环境自建（compose pg+pnpm install+chromium）
 F:/Nexus/corps-wt-e2edec | feat/decision-loop-e2e | web/e2e/decision-loop.spec.ts,web/e2e/helpers.ts | ? | 2026-11-18T12:13Z | 2026-11-20T12:13Z | #44② 决策闭环 E2E（PR #366 冻结等 picomatch 上游修复；解红后 rebase+合并）
 F:/Nexus/corps-wt-e2e-domains | feat/remote-control-e2e | web/e2e/remote-control.spec.ts | zcode | 2026-11-18T15:03Z | 2026-11-18T19:03Z | 远程控制域交互 E2E：双账号会话生命周期 UI 主线（发起/接受/结束）+ 拒绝路径 + 权限边界（自发起/非成员/非参与方/重复处理）；不碰 helpers.ts（他线占用）；视频流面诚实披露不测
+F:/Nexus/corps-wt-actions | feat/action-items-api | web/app/api/v1/workspaces/[wid]/tasks/[id]/decisions/[did]/action-items/*,api/openapi.yaml | ? | 2026-11-18T16:39Z | 2026-11-20T16:39Z | #95 决策行动项面板接线：GET 列表 + PATCH 勾选两路由 + openapi 声明
