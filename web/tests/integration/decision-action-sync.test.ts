@@ -44,7 +44,13 @@ async function postDecision(
   wid: string,
   taskId: string,
   markdown: string,
-): Promise<{ status: number; actionItems?: ActionSync; message?: string; code?: number }> {
+): Promise<{
+  status: number;
+  actionItems?: ActionSync;
+  decisionId?: string;
+  message?: string;
+  code?: number;
+}> {
   const res = await fetch(`${BASE}/workspaces/${wid}/tasks/${taskId}/decisions`, {
     method: "POST",
     headers: { ...authHeader(owner.accessToken), "Content-Type": "application/json" },
@@ -53,13 +59,14 @@ async function postDecision(
   const body = (await res.json().catch(() => null)) as {
     code?: number;
     message?: string;
-    data?: { actionItems?: ActionSync };
+    data?: { id?: string; actionItems?: ActionSync };
   } | null;
   return {
     status: res.status,
     code: body?.code,
     message: body?.message,
     actionItems: body?.data?.actionItems,
+    decisionId: body?.data?.id,
   };
 }
 
@@ -171,6 +178,150 @@ describe("决策闭环：行动项→任务→完成（接线）", () => {
     expect(plain.status).toBe(201);
     expect(plain.actionItems?.created).toBe(0);
     expect(plain.actionItems?.tasks ?? []).toHaveLength(0);
+  });
+
+  it("行动项列表端点：顺序/字段回读齐全，勾选镜像到关联任务状态", async () => {
+    const suffix = Date.now();
+    const created = await createTask(owner.accessToken, wid, {
+      title: `面板母任务-${suffix}`,
+    });
+    expect(created.status).toBe(201);
+    const panelTaskId = created.body.data!.id!;
+
+    const markdown = [
+      "## 决定",
+      "面板接线。",
+      "",
+      "## 执行计划",
+      `- [ ] @${owner.user.email} ${due1} 面板行动项A-${suffix} #high`,
+      `- [ ] ${due2} 面板行动项B-${suffix}`,
+    ].join("\n");
+    const saved = await postDecision(owner, wid, panelTaskId, markdown);
+    expect(saved.status).toBe(201);
+    const decisionId = saved.decisionId;
+    expect(decisionId, "决策响应必须带 id：列表端点按它取行动项").toBeTruthy();
+
+    const itemsUrl = `${BASE}/workspaces/${wid}/tasks/${panelTaskId}/decisions/${decisionId}/action-items`;
+    const listRes = await fetch(itemsUrl, { headers: authHeader(owner.accessToken) });
+    expect(listRes.status).toBe(200);
+    const listBody = (await listRes.json()) as {
+      code?: number;
+      data?: {
+        items?: Array<{
+          id: string;
+          title: string;
+          completed: boolean;
+          priority: string;
+          assignee: { id: string; name: string; email: string } | null;
+          dueDate: string | null;
+          taskId: string | null;
+        }>;
+      };
+    };
+    expect(listBody.code).toBe(200);
+    const items = listBody.data?.items ?? [];
+    // 顺序按 lineIndex：面板渲染依赖它保持与 markdown 同序
+    expect(items).toHaveLength(2);
+    expect(items[0].title).toBe(`面板行动项A-${suffix}`);
+    expect(items[0].completed).toBe(false);
+    expect(items[0].priority).toBe("high");
+    expect(items[0].assignee?.id).toBe(owner.user.id);
+    expect(items[0].dueDate?.startsWith(due1)).toBe(true);
+    expect(items[0].taskId, "面板点勾选时要能回链关联任务").toBeTruthy();
+    expect(items[1].title).toBe(`面板行动项B-${suffix}`);
+    expect(items[1].assignee).toBeNull();
+    expect(items[1].priority).toBe("medium");
+
+    const toggle = (itemId: string, completed: boolean) =>
+      fetch(`${itemsUrl}/${itemId}`, {
+        method: "PATCH",
+        headers: {
+          ...authHeader(owner.accessToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ completed }),
+      });
+
+    const doneRes = await toggle(items[0].id, true);
+    expect(doneRes.status).toBe(200);
+    const doneBody = (await doneRes.json()) as { data?: { completed?: boolean } };
+    expect(doneBody.data?.completed).toBe(true);
+    const afterDone = await listTasks(owner, wid);
+    expect(
+      afterDone.find((t) => t.id === items[0].taskId)?.status,
+      "勾选行动项必须镜像到关联任务（与 parser 同口径）",
+    ).toBe("done");
+
+    const backRes = await toggle(items[0].id, false);
+    expect(backRes.status).toBe(200);
+    const afterBack = await listTasks(owner, wid);
+    expect(afterBack.find((t) => t.id === items[0].taskId)?.status).toBe("todo");
+
+    const listAgain = await fetch(itemsUrl, {
+      headers: authHeader(owner.accessToken),
+    });
+    const againBody = (await listAgain.json()) as typeof listBody;
+    expect(againBody.data?.items?.[0].completed).toBe(false);
+  });
+
+  it("行动项端点：决策不在该任务下 → 404，未知行动项 → 404", async () => {
+    const created = await createTask(owner.accessToken, wid, {
+      title: `错位母任务-${Date.now()}`,
+    });
+    expect(created.status).toBe(201);
+    const otherTaskId = created.body.data!.id!;
+    const saved = await postDecision(
+      owner,
+      wid,
+      otherTaskId,
+      "## 决定\n错位取证用。\n\n## 执行计划\n- [ ] 2026-12-20 错位行动项",
+    );
+    expect(saved.status).toBe(201);
+    const decisionId = saved.decisionId!;
+
+    // 决策属于 otherTask，用母任务 id 去取 → 404（不跨任务泄漏）
+    const crossTask = await fetch(
+      `${BASE}/workspaces/${wid}/tasks/${taskId}/decisions/${decisionId}/action-items`,
+      { headers: authHeader(owner.accessToken) },
+    );
+    expect(crossTask.status).toBe(404);
+    const crossBody = (await crossTask.json()) as { code?: number; message?: string };
+    expect(crossBody.code).toBe(404);
+    // message 走 apiMsg 本地化：测试请求不带 NEXT_LOCALE/Accept-Language → zh
+    expect(crossBody.message).toBe("决策不存在");
+
+    const unknownItem = await fetch(
+      `${BASE}/workspaces/${wid}/tasks/${otherTaskId}/decisions/${decisionId}/action-items/${crypto.randomUUID()}`,
+      {
+        method: "PATCH",
+        headers: {
+          ...authHeader(owner.accessToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ completed: true }),
+      },
+    );
+    expect(unknownItem.status).toBe(404);
+    const unknownBody = (await unknownItem.json()) as {
+      code?: number;
+      message?: string;
+    };
+    expect(unknownBody.code).toBe(404);
+    expect(unknownBody.message).toBe("行动项不存在");
+
+    // 参数形状错误 → 400（zod），不能静默当 false
+    const badBody = await fetch(
+      `${BASE}/workspaces/${wid}/tasks/${otherTaskId}/decisions/${decisionId}/action-items/whatever`,
+      {
+        method: "PATCH",
+        headers: {
+          ...authHeader(owner.accessToken),
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ completed: "yes" }),
+      },
+    );
+    expect(badBody.status).toBe(400);
   });
 
   it("免费版第 11 条决策被服务端挡下（402），不是只在定价文案里", async () => {
