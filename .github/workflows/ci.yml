@@ -460,8 +460,13 @@ jobs:
       - run: pnpm install --frozen-lockfile --ignore-scripts
       # 仅审计生产依赖；--audit-level=high 表示 high/critical 漏洞会让命令退出非 0
       # moderate/low 漏洞会打印但不影响退出码，避免过度阻塞迭代
+      # --ignore：精准豁免 2026-11-18 新披露的 picomatch ReDoS（GHSA-fc5q-39xc-vjpf）。
+      #   上游最新 4.0.7 仍受影响、暂无修复版；该包仅用于构建期 glob 匹配，
+      #   运行时不接受用户输入作 glob 模式，实际可利用性低。
+      #   复核期限 2026-12-31：picomatch 发布 >4.0.7 后必须移除本豁免。
+      #   其余 high/critical 漏洞仍照常阻断。
       - name: Audit production deps (high/critical block CI)
-        run: pnpm audit --prod --audit-level=high
+        run: pnpm audit --prod --audit-level=high --ignore=GHSA-fc5q-39xc-vjpf
       # audit 失败时打印完整 advisory 列表（定位阻断漏洞名）
       - name: Audit details on failure
         if: failure()
