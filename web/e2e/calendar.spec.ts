@@ -101,8 +101,10 @@ test.describe("日历集成：设置页 + OAuth + 同步 + SyncBadge", () => {
     // connect 端点未配置 client_id 时返回 500 JSON
     await page.getByRole("button", { name: "连接 Google 日历" }).click();
 
-    // 等待导航完成（重定向到 connect 端点或 Google 授权页）
-    await page.waitForTimeout(3000);
+    // 等待导航完成：connect 端点（未配 OAuth 凭证时返回 500 JSON）或 Google 授权页
+    await page.waitForURL(/accounts\.google\.com|\/api\/v1\/auth\/calendar\/connect\/google/, {
+      timeout: 10_000,
+    });
 
     // URL 应已变化（发生了重定向）
     const newUrl = page.url();
@@ -125,7 +127,12 @@ test.describe("日历集成：设置页 + OAuth + 同步 + SyncBadge", () => {
 
     const currentUrl = page.url();
     await page.getByRole("button", { name: "连接 Outlook 日历" }).click();
-    await page.waitForTimeout(3000);
+
+    // 等待导航完成：connect 端点（未配 OAuth 凭证时返回 500 JSON）或 Microsoft 授权页
+    await page.waitForURL(
+      /login\.microsoftonline\.com|\/api\/v1\/auth\/calendar\/connect\/outlook/,
+      { timeout: 10_000 },
+    );
 
     const newUrl = page.url();
     expect(newUrl).not.toBe(currentUrl);

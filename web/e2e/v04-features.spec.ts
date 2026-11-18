@@ -150,7 +150,6 @@ test.describe("v0.4 新功能：文档中心", () => {
     await editor.blur();
 
     await page.getByRole("button", { name: "发布" }).click();
-    await page.waitForTimeout(1000);
 
     await page.getByRole("button", { name: "返回列表" }).click();
     await expect(page.getByText("E2E 测试文档")).toBeVisible({ timeout: 10_000 });
