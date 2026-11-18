@@ -4,6 +4,7 @@ import { authFailure } from "@/lib/auth-response";
 import { z } from "zod";
 import { Prisma } from "@prisma/client";
 import { apiMsg } from "@/lib/api-messages";
+import { handlePrismaError } from "@/lib/prisma-error";
 import { withRed } from "@/lib/red-metrics";
 
 /**
@@ -259,6 +260,13 @@ async function postDocumentsPermissionsById(
         { code: 409, message: apiMsg(req, "prismaUniqueConstraint"), data: null },
         { status: 409 },
       );
+    }
+    // P2003：外键违约，统一按 DL-14 映射为 409（与 comments/versions 一致）
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2003"
+    ) {
+      return handlePrismaError(error, req);
     }
     console.error("[POST document permission] error:", error);
     return NextResponse.json(
