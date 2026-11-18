@@ -194,10 +194,7 @@ async function postDocuments(req: NextRequest, { params }: { params: Promise<{ w
       );
     }
     // P2003：外键违约，统一按 DL-14 映射为 409（与 comments/versions 一致）
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === "P2003"
-    ) {
+    if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2003") {
       return handlePrismaError(error, req);
     }
     console.error("[POST document] error:", error);
