@@ -359,12 +359,11 @@ test.describe("日历集成：设置页 + OAuth + 同步 + SyncBadge", () => {
       });
     });
 
+    // 条件等待代替固定 sleep：显式等待 disconnect API 请求发出
+    // （确认对话框已自动接受；route.fulfill 的请求同样会被 waitForResponse 捕获）
+    const disconnectResp = page.waitForResponse("**/api/v1/auth/calendar/disconnect/google");
     await disconnectBtn.click();
-
-    // 断开后状态应刷新（mock 已解除，会重新请求 status API）
-    // 由于我们 mock 了 status 返回已连接，刷新后仍显示已连接
-    // 这里主要验证确认对话框被触发且 disconnect API 被调用
-    await page.waitForTimeout(2000);
+    await disconnectResp;
   });
 
   // ── 立即同步按钮（已连接状态）──
