@@ -87,12 +87,12 @@ describe("withUsageTracking", () => {
     h.recordAiUsage.mockRejectedValue(new Error("db down"));
     const res = await withUsageTracking(PARAMS, async () => ({ result: "ok" }));
     expect(res).toBe("ok");
-    // catch 在微任务里 —— 等一轮事件循环
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(h.err).toHaveBeenCalledWith(
-      "[usage-tracking] Failed to record usage:",
-      expect.any(Error),
+    // 条件等待代替固定微任务 tick：轮询到 catch 里的 console.error 真正发出为止
+    await vi.waitFor(() =>
+      expect(h.err).toHaveBeenCalledWith(
+        "[usage-tracking] Failed to record usage:",
+        expect.any(Error),
+      ),
     );
   });
 });
@@ -120,11 +120,12 @@ describe("fireRecordUsage（流式 onFinish）", () => {
   it("记录失败只 console.error（流式路径不能因埋点炸掉）", async () => {
     h.recordAiUsage.mockRejectedValue(new Error("db down"));
     expect(() => fireRecordUsage(PARAMS, Date.now())).not.toThrow();
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(h.err).toHaveBeenCalledWith(
-      "[usage-tracking] Failed to record stream usage:",
-      expect.any(Error),
+    // 条件等待代替固定微任务 tick：轮询到流式 catch 里的 console.error 真正发出为止
+    await vi.waitFor(() =>
+      expect(h.err).toHaveBeenCalledWith(
+        "[usage-tracking] Failed to record stream usage:",
+        expect.any(Error),
+      ),
     );
   });
 });
