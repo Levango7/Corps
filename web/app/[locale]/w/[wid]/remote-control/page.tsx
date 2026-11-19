@@ -42,8 +42,9 @@ export default function RemoteControlPage({ params }: { params: Promise<{ wid: s
     let cancelled = false;
     (async () => {
       try {
-        const me = await api<{ user: { id: string } }>("/api/v1/users/me");
-        if (!cancelled) setCurrentUserId(me.user.id);
+        // users/me 的 data 直接摊平用户对象（含 id/email），无嵌套 user 键
+        const me = await api<{ id: string }>("/api/v1/users/me");
+        if (!cancelled) setCurrentUserId(me.id);
       } catch {
         // 静默失败：拿不到 userId 时面板仍可渲染（发起/接受按钮会因缺 id 降级）
       }
