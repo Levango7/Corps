@@ -48,9 +48,9 @@ export interface RemoteControlSessionDTO {
   updatedAt: string;
 }
 
-/** 工作区成员（简化） */
+/** 工作区成员（与 GET /members 实际返回对齐：id=用户 id，无 userId 键） */
 interface WorkspaceMember {
-  userId: string;
+  id: string;
   name: string | null;
   email: string;
   image: string | null;
@@ -104,8 +104,8 @@ export function RemoteControlPanel({
       const data = await api<{ items: WorkspaceMember[] }>(
         `/api/v1/workspaces/${workspaceId}/members?limit=100`,
       );
-      // 过滤掉自己
-      setMembers(data.items.filter((m) => m.userId !== currentUserId));
+      // 过滤掉自己（返回条目以 id 标识用户）
+      setMembers(data.items.filter((m) => m.id !== currentUserId));
     } catch (err) {
       console.error("[RemoteControlPanel] loadMembers failed:", err);
     }
@@ -216,7 +216,7 @@ export function RemoteControlPanel({
 
   // 获取用户显示名
   const getUserName = (userId: string): string => {
-    const member = members.find((m) => m.userId === userId);
+    const member = members.find((m) => m.id === userId);
     return member?.name ?? member?.email ?? userId.slice(0, 8);
   };
 
@@ -268,7 +268,7 @@ export function RemoteControlPanel({
           >
             <option value="">{t("selectUser")}</option>
             {members.map((m) => (
-              <option key={m.userId} value={m.userId}>
+              <option key={m.id} value={m.id}>
                 {m.name ?? m.email}
               </option>
             ))}
