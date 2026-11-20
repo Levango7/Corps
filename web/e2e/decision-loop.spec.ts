@@ -7,11 +7,12 @@ import { registerAndLogin, uniqueEmail, createTask, extractWorkspaceId } from ".
  * 与 decisions.spec.ts 的分工：
  *  - decisions.spec.ts 钉的是「讨论 → 固化决策 → 列表可见 / 搜索 / 复盘 / 回链」
  *    里的**决策记录本身**；
- *  - 本文件钉的是产品楔子里另外两段（PRODUCT-DESIGN-2026Q4 §8.2）：
+ *  - 本文件钉的是产品楔子里另外三段（PRODUCT-DESIGN-2026Q4 §8.2）：
  *    A 会后落位：决策 Markdown 里的行动项**真的变成任务**，完成率面板与看板同步可见；
  *    B 决策追溯：任务详情内联决策内容 + 版本号，决策列表回链任务 ≤1 点击。
  *    这两段此前只有 lib 层集成测试，UI 接线断掉时既有用例全绿（函数正确 ≠ 被调用）。
- *  - C 新人上手（示例工作区）依赖尚未立项的能力，本文件不覆盖。
+ *    C 执行追踪面板：勾选行动项经 PATCH 落库（刷新后回读），并镜像到看板「已完成」列；
+ *  - D 新人上手（示例工作区）依赖尚未立项的能力，本文件不覆盖。
  */
 
 /** 从看板点任务卡进入详情（与 decisions.spec.ts 同款：draggable 卡片过滤 + 可见）。 */
@@ -68,10 +69,7 @@ test.describe("决策闭环：会后落位与决策追溯", () => {
     await expect(decisionsSection.getByText("采购预算复核")).toBeVisible();
 
     // ── 落位第二面：行动项真的建出了任务（不是只写进决策 Markdown）──
-    // 已知缺口（本用例发现，另行登记）：决策卡片内「执行追踪」面板的
-    // GET/PATCH .../decisions/{did}/action-items 端点尚未实现（面板恒显示
-    // 「暂无行动项 + 文件不存在」），故这里不经过面板，直接钉「任务落库」这一
-    // 产品面：POST /decisions 在同一事务里 sync 行动项→Task。
+    // 这里经看板钉「任务落库」；面板勾选闭环见下方「执行追踪面板」用例。
     await page.goto(`/w/${wid}/board`);
     const card = (title: string) =>
       page
@@ -114,5 +112,77 @@ test.describe("决策闭环：会后落位与决策追溯", () => {
     await expect(page.locator("section#decisions").getByText("采用方案 C")).toBeVisible({
       timeout: 10_000,
     });
+  });
+
+  test("执行追踪面板：勾选落库、刷新回读、看板镜像到已完成列", async ({ page }) => {
+    const email = uniqueEmail("panel");
+    const wid = await registerAndLogin(page, email);
+    const taskTitle = `面板闭环母任务-${Date.now()}`;
+    await createTask(page, taskTitle);
+    await openTaskDetail(page, taskTitle);
+
+    await saveDecision(
+      page,
+      [
+        "## 决定",
+        "采用方案 D。",
+        "",
+        "## 执行计划",
+        "- [ ] @panel 2026-12-20 采购预算复核 #high",
+        "- [ ] 2026-12-21 只带日期的行动项",
+      ].join("\n"),
+    );
+
+    // ── 第一面：面板读的是 GET /action-items（#95 的读取端点）──
+    // 端点缺失时面板恒显「暂无行动项」，随后所有断言都会在这里失守。
+    const panel = page.locator('section[aria-label="执行追踪"]').first();
+    await expect(panel).toBeVisible({ timeout: 15_000 });
+    await expect(panel.getByText("暂无行动项")).toHaveCount(0);
+    const review = panel.getByRole("checkbox", { name: "采购预算复核" });
+    const dateOnly = panel.getByRole("checkbox", { name: "只带日期的行动项" });
+    await expect(review).toBeVisible({ timeout: 10_000 });
+    await expect(review).not.toBeChecked();
+    await expect(dateOnly).not.toBeChecked();
+    await expect(panel.getByText("0/2", { exact: true })).toBeVisible();
+
+    // ── 第二面：勾选走 PATCH，面板进度立即 1/2 ──
+    await review.click();
+    await expect(review).toBeChecked();
+    await expect(panel.getByText("1/2", { exact: true })).toBeVisible({ timeout: 10_000 });
+    await expect(dateOnly).not.toBeChecked();
+
+    // ── 第三面：刷新后仍是勾选态 —— 读的是落库结果，不是前端乐观值 ──
+    await page.reload();
+    const panelAfterReload = page.locator('section[aria-label="执行追踪"]').first();
+    await expect(panelAfterReload.getByRole("checkbox", { name: "采购预算复核" })).toBeChecked({
+      timeout: 30_000,
+    });
+    await expect(panelAfterReload.getByText("1/2", { exact: true })).toBeVisible();
+
+    // ── 第四面：勾选镜像到关联任务 —— 看板卡片移到「已完成」列 ──
+    await page.goto(`/w/${wid}/board`);
+    const boardCard = (column: string) =>
+      page
+        .locator(`div[aria-label="${column}"]`)
+        .locator('div[draggable="true"]')
+        .filter({ hasText: "采购预算复核" })
+        .filter({ visible: true })
+        .first();
+    await expect(boardCard("已完成")).toBeVisible({ timeout: 10_000 });
+    await expect(
+      page
+        .locator('div[aria-label="待办"]')
+        .locator('div[draggable="true"]')
+        .filter({ hasText: "采购预算复核" }),
+    ).toHaveCount(0);
+    // 未勾选的那条仍留在待办，证明移动的是被勾选任务而非整列刷新
+    await expect(
+      page
+        .locator('div[aria-label="待办"]')
+        .locator('div[draggable="true"]')
+        .filter({ hasText: "只带日期的行动项" })
+        .filter({ visible: true })
+        .first(),
+    ).toBeVisible();
   });
 });

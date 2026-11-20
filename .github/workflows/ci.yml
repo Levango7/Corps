@@ -467,6 +467,15 @@ jobs:
       #   其余 high/critical 漏洞仍照常阻断。
       - name: Audit production deps (high/critical block CI)
         run: pnpm audit --prod --audit-level=high --ignore=GHSA-fc5q-39xc-vjpf
+      # 豁免到期探测（2026-11-21 补）：上面的人工注释期限是提醒，不是判据 ——
+      # 若 12-31 之前上游就发了修复版，CI 仍会静默带着 --ignore 放行。
+      # 本门禁每次 CI 查 npm registry 的 picomatch latest，>4.0.7 即判红，
+      # 强制移除豁免并升级；取数失败 UNDETERMINED 判红，不静默跳过。
+      # 挂 audit job（已是 required），新开 job 不在必需清单里拦不住合并。
+      - name: Detect upstream fix for picomatch advisory (invalidate ignore)
+        run: python ../scripts/check_picomatch_fix.py
+      - name: Mutation-check the picomatch fix detector itself
+        run: python ../scripts/check_picomatch_fix.py --self-test
       # audit 失败时打印完整 advisory 列表（定位阻断漏洞名）
       - name: Audit details on failure
         if: failure()
