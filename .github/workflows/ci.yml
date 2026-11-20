@@ -407,6 +407,22 @@ jobs:
         run: python scripts/check_openapi_impl_coverage.py
       - name: Mutation-check the ghost-path guard itself
         run: python scripts/check_openapi_impl_coverage.py --self-test
+      # 2026-11-21：上面所有契约门禁都自带 --self-test，唯独最基础的
+      # check_api_contract.py 没有——它是全部「契约漂移」判定的根，若差集判据
+      # 被改空（例如恒返空集），其余 self-test 全绿也发现不了。本步注入三组
+      # 集合：基线外新增 route 必红、基线含已成立条目必红、基线内条目放行；
+      # self-test 只跑内存集合，不读/写真实基线文件。
+      - name: Mutation-check the API contract path guard itself
+        run: python scripts/check_api_contract.py --self-test
+      # 2026-11-21：dependabot 家族分组此前只是手动核对工具（脚本 docstring
+      # 自述「未接入 CI」）：分组一旦被并回单个大组（#257 的 26 依赖跨 5 家族
+      # 挤一个 PR）或漏锁 minor+patch，机器人会周期性重建无法按家族审/回滚的
+      # 红 PR。脚本自带两个变异 self-test 证明判据有射程。挂本 job 因为这里
+      # 已装 PyYAML、且是 required check（新开 job 不在清单里拦不住合并）。
+      - name: Check dependabot family groups
+        run: python scripts/check_dependabot_groups.py
+      - name: Mutation-check the dependabot groups guard itself
+        run: python scripts/check_dependabot_groups.py --self-test
 
   # 角色权限矩阵落地缺口防回归：判定口径是 handler 级（同文件内 DELETE 有门禁、
   # PATCH 没有的情形真实存在，按文件统计会误判为已覆盖）。
