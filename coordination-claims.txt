@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-e2e-domains | feat/e2e-batch-content | web/e2e/gov-doc.spec.ts web/e2e/documents.spec.ts web/e2e/files.spec.ts | zcode | 2026-11-20T20:12Z | 2026-11-21T00:12Z | 内容域三域交互 E2E：gov-doc（公文列表/详情/意见交流）+ documents（文档中心）+ files（云盘上传列表版本）；不碰 helpers.ts
+F:/Nexus/corps-wt-gatewiring | chore/gate-wiring-3 | .github/workflows/shellcheck.yml,.github/workflows/ci.yml,scripts/check_api_contract.py,scripts/check_dependabot_groups.py | gate-wiring | 2026-11-21 04:31 | 2026-11-21 08:31 | 接线三条已有门禁：shellcheck 去 paths 过滤并升 required、dependabot groups 自检接 CI、api contract 补 self-test
