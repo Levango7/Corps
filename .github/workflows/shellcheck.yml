@@ -14,19 +14,18 @@
 #   若将来确实需要豁免，正确做法是行内 `# shellcheck disable=SCxxxx` 并写明理由，
 #   而不是放宽全局阈值。
 #
-# 不并入 ci.yml 的原因：ci.yml 已有在途改动，且 shell 检查与前端检查
-# 关注点不同，分开后触发条件也能按 *.sh 路径过滤，避免每次前端改动都跑。
+# 不并入 ci.yml 的原因：shell 检查与前端检查关注点不同（ci.yml 的 Lint
+# 只对 web/ 跑 prettier/eslint，看不懂 shell）。本 workflow 独立成 job，
+# 2026-11-21 起 "Shell script lint" 升为 main 的 required check。
+# 因此不设 paths 过滤：pull_request 一旦按 *.sh 过滤，非 shell 的 PR
+# 不会产出该 check run，required check 永远 pending 会卡死合并。
+# shellcheck 本身只跑几秒，全 PR 触发的开销可忽略。
 # =============================================================================
 name: Shellcheck
 
 on:
   push:
-    paths:
-      - "**.sh"
-      - ".github/workflows/shellcheck.yml"
   pull_request:
-    paths:
-      - "**.sh"
   workflow_dispatch:
 
 jobs:
