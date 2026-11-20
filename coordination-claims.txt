@@ -5,3 +5,4 @@
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
 F:/Nexus/corps-wt-e2e-domains | feat/e2e-batch-members | web/e2e/members.spec.ts web/e2e/notifications.spec.ts web/e2e/settings.spec.ts | zcode | 2026-11-20T10:38Z | 2026-11-20T14:38Z | 管理面三域交互 E2E：members（成员列表/邀请/角色/移除）+ notifications（列表/未读/已读）+ settings（偏好读写）；不碰 helpers.ts
+F:/Nexus/corps-wt-e2e-domains | feat/e2e-batch-members | web/e2e/members.spec.ts web/e2e/notifications.spec.ts web/e2e/settings.spec.ts web/app/api/v1/workspaces/[wid]/members/invite/route.ts web/app/api/v1/workspaces/[wid]/tasks/route.ts | zcode | 2026-11-20T11:24Z | 2026-11-20T15:24Z | 管理面三域 E2E 加两产品修复：invite 写后 members 缓存失效 + tasks 他派写 task_assigned 通知（E2E 驱动出的真缺陷）；settings 保存按钮 section 作用域修正
