@@ -9,7 +9,7 @@ info:
     row for that workspace, then runs all tenant queries inside a transaction with
     app.workspace_id / app.user_id set (RLS binds at engine level in hardened
     deployments — see db/schema.sql).
-    Coverage: this contract declares 291 paths (updated 2026-11-14). The service also
+    Coverage: this contract declares 293 paths (updated 2026-11-19). The service also
     exposes additional routes that are not yet documented here; the authoritative
     gap list and its drift guard live in scripts/check_api_contract.py and
     scripts/api-contract-baseline.txt. New routes must be added here, or explicitly
@@ -1412,6 +1412,85 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Envelope_ActionSyncResponse'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/action-items:
+    # ADDED (#95)：任务详情「执行追踪」面板此前请求该路径，但 main 上从未实现，
+    # 面板恒显示「暂无行动项」且勾选永不落库。数据真源为 DecisionActionItem
+    # （保存决策时由 decision-action-parser 同步产生），removed=true 的历史行不返回。
+    get:
+      tags: [decisions]
+      summary: '[ADDED] List action items of a decision'
+      description: >
+        Action items parsed from this decision's markdown, each carrying the id of
+        the task it was synced into (null if not yet synced). Items removed from the
+        markdown (removed=true) are excluded. Sorted by the item's line index in the
+        source markdown so the panel mirrors the decision text order.
+      operationId: listDecisionActionItems
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/Did'
+      responses:
+        '200':
+          description: Action items listed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ActionItemList'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          $ref: '#/components/responses/Forbidden'
+        '404':
+          $ref: '#/components/responses/NotFound'
+        '500':
+          $ref: '#/components/responses/InternalError'
+
+  /api/v1/workspaces/{wid}/tasks/{id}/decisions/{did}/action-items/{itemId}:
+    # ADDED (#95)：勾选行动项 = 执行态变更，门禁用 tasks:update（矩阵里
+    # decisions 对 member 只有 cr；勾选不同步决策内容、不产生新版本）。
+    patch:
+      tags: [decisions]
+      summary: '[ADDED] Toggle a decision action item (completed on/off)'
+      description: >
+        Sets `completed` on one action item. The change is mirrored to the linked
+        task status (done/todo) with the same semantics as decision sync, unless the
+        task was manually edited by a user (userModified), in which case the task is
+        left untouched. Requires task write permission; viewers are read-only.
+      operationId: toggleDecisionActionItem
+      parameters:
+        - $ref: '#/components/parameters/Wid'
+        - $ref: '#/components/parameters/TaskId'
+        - $ref: '#/components/parameters/Did'
+        - $ref: '#/components/parameters/ItemId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [completed]
+              properties:
+                completed:
+                  type: boolean
+                  description: true = 已完成（勾选），false = 未完成（取消勾选）。
+      responses:
+        '200':
+          description: Updated action item
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Envelope_ActionItem'
+        '400':
+          $ref: '#/components/responses/BadRequest'
         '401':
           $ref: '#/components/responses/Unauthorized'
         '403':
@@ -14009,6 +14088,12 @@ components:
       required: true
       description: Decision id (UUID).
       schema: { type: string, format: uuid }
+    ItemId:
+      name: itemId
+      in: path
+      required: true
+      description: Decision action item id (UUID).
+      schema: { type: string, format: uuid }
     DocumentId:
       name: id
       in: path
@@ -15151,6 +15236,62 @@ components:
       properties:
         data:
           $ref: '#/components/schemas/ActionSyncResponse'
+
+    # ---- #95: decision action items（执行追踪面板）----
+    ActionItem:
+      type: object
+      required: [id, title, completed, priority]
+      properties:
+        id:
+          type: string
+          format: uuid
+          description: DecisionActionItem id (stable within the decision version).
+        title:
+          type: string
+          description: Action item title (the checked line minus @assignee/date/priority markers).
+        completed:
+          type: boolean
+          description: Whether the item is checked in the decision markdown.
+        assignee:
+          type: object
+          nullable: true
+          description: Matched workspace member (null when the item has no @mention).
+          properties:
+            id: { type: string, format: uuid }
+            name: { type: string, nullable: true }
+            email: { type: string, format: email }
+        dueDate:
+          type: string
+          format: date-time
+          nullable: true
+          description: Due date in the decision markdown (null when absent).
+        priority:
+          type: string
+          enum: [low, medium, high, urgent]
+          description: Priority parsed from the #high style tag (default medium).
+        taskId:
+          type: string
+          format: uuid
+          nullable: true
+          description: Task created/linked by action-item sync (null before sync).
+    Envelope_ActionItemList:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          type: object
+          required: [items]
+          properties:
+            items:
+              type: array
+              items:
+                $ref: '#/components/schemas/ActionItem'
+    Envelope_ActionItem:
+      allOf:
+        - $ref: '#/components/schemas/Envelope'
+      properties:
+        data:
+          $ref: '#/components/schemas/ActionItem'
 
     # ---- F2: permission matrix ----
     PermissionOverride:
