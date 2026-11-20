@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { revalidateTag } from "next/cache";
 import { getWorkspaceContextV2, runWithSeatCheck, runWithWorkspace } from "@/lib/auth";
 import { trackServerEvent } from "@/lib/analytics-server";
 import { prisma } from "@/lib/prisma";
@@ -305,6 +306,10 @@ async function postMembersInvite(
       },
     });
 
+    // 成员列表有 30s 缓存（cachedQuery）：已注册受邀者直加成成员后必须立即失效，
+    // 否则邀请后 30s 内列表仍是旧数据（E2E 实证：邀请成功但列表不刷新）。
+    // 注：profile 必须是 { expire: 0 }（立即过期）——"max" 是 30 天长缓存策略，不是立即。
+    revalidateTag(`members:${wid}`, { expire: 0 });
     return NextResponse.json({ code: 201, data: result.member }, { status: 201 });
   } catch (error) {
     if (error instanceof z.ZodError) {
