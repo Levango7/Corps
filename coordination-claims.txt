@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-e2e-domains | feat/e2e-batch-content | web/e2e/gov-doc.spec.ts web/e2e/documents.spec.ts web/e2e/files.spec.ts | zcode | 2026-11-20T20:12Z | 2026-11-21T00:12Z | 内容域三域交互 E2E：gov-doc（公文列表/详情/意见交流）+ documents（文档中心）+ files（云盘上传列表版本）；不碰 helpers.ts
