@@ -43,6 +43,7 @@ export const API_MESSAGES = {
   /* ── 资源不存在 ── */
   taskNotFound: { zh: "任务不存在", en: "Task not found" },
   decisionNotFound: { zh: "决策不存在", en: "Decision not found" },
+  actionItemNotFound: { zh: "行动项不存在", en: "Action item not found" },
   documentNotFound: { zh: "文档不存在", en: "Document not found" },
   whiteboardNotFound: { zh: "白板不存在", en: "Whiteboard not found" },
   memberNotFound: { zh: "成员不存在", en: "Member not found" },
