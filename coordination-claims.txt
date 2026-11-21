@@ -4,3 +4,4 @@
 # 不走 PR + CI —— 这样认领在**合并前**就可见。为什么不在仓库文件里：见脚本 docstring。
 #
 # 格式：worktree | 分支 | 路径 glob | agent | since | expires | 意图
+F:/Nexus/corps-wt-e2e-domains | feat/e2e-batch-ai | web/e2e/ai-tools.spec.ts web/e2e/ai-usage.spec.ts web/e2e/insight.spec.ts web/e2e/daily-report.spec.ts | zcode | 2026-11-21T15:33Z | 2026-11-21T19:33Z | AI 面四域交互 E2E：ai-tools（工具中心壳层/未配置提示）+ ai-usage（用量读数）+ insight（项目经理壳层）+ daily-report（日报壳层）；避开 AI 真调用（CI 无 Provider），不碰 helpers.ts
