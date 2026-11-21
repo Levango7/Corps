@@ -121,6 +121,7 @@ app/api/v1/mail/accounts/[id]/route.ts
 app/api/v1/mail/accounts/route.ts
 app/api/v1/mail/inbox/route.ts
 app/api/v1/mail/send/route.ts
+app/api/v1/mail/sync/route.ts
 app/api/v1/notifications/[id]/route.ts
 app/api/v1/notifications/preferences/route.ts
 app/api/v1/notifications/unread/route.ts
